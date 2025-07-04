@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Table,
   TableBody,
@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import FormularioEmpleado from "./FormularioEmpleado";
 import EstadoEmpleadoDialog from "./EstadoEmpleadoDialog";
 import { twMerge } from "tailwind-merge";
+import axios from "axios";
 
 export default function TablaEmpleados() {
   const [soloLectura, setSoloLectura] = useState(false);
@@ -34,6 +35,11 @@ export default function TablaEmpleados() {
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState(null);
   const { dataUser } = useAuth();
+  const [tab, setTab] = useState("personales");
+
+  useEffect(() => {
+    console.log("El tab en tablaEmpleados:", tab);
+  }, [tab]);
 
   const id_empresa = dataUser?.id_empresa;
 
@@ -70,7 +76,7 @@ export default function TablaEmpleados() {
     <div>
       {modoFormulario ? (
         <FormularioEmpleado
-          key={editar ? values?.id_empleado : "nuevo"}
+          key={`formulario-${values?.id_empleado || "nuevo"}`}
           editar={editar}
           values={values}
           page={page}
@@ -133,12 +139,20 @@ export default function TablaEmpleados() {
                       return (
                         <TableRow
                           key={index}
-                          onClick={() => {
-                            if (item) {
-                              setValues(item);
+                          onClick={async () => {
+                            try {
+                              const { data } = await axios.get(
+                                `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados/${item.id_empleado}`
+                              );
+                              setValues(data); // Aquí ya vendrán los datos de nómina también
                               setEditar(false);
                               setModoFormulario(true);
                               setSoloLectura(true);
+                            } catch (error) {
+                              console.error(
+                                "Error al obtener empleado completo",
+                                error
+                              );
                             }
                           }}
                           className={twMerge(
@@ -159,18 +173,27 @@ export default function TablaEmpleados() {
                               <div>
                                 <Button
                                   variant="outline"
-                                  onClick={(e) => {
+                                  onClick={async (e) => {
                                     e.stopPropagation();
-                                    setValues(item);
-                                    setEditar(true);
-                                    setModoFormulario(true);
-                                    setSoloLectura(false);
-                                    setSelected(null);
+                                    try {
+                                      const { data } = await axios.get(
+                                        `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados/${item.id_empleado}`
+                                      );
+                                      setValues(data);
+                                      setEditar(true);
+                                      setModoFormulario(true);
+                                      setSoloLectura(false);
+                                      setSelected(null);
+                                    } catch (error) {
+                                      console.error(
+                                        "Error al obtener empleado completo",
+                                        error
+                                      );
+                                    }
                                   }}
                                   className={twMerge(
                                     "decoration-transparent !line-through-0 !no-underline font-semibold",
-                                    item.estado === "Inactivo" &&
-                                      "text-blue-600 border-blue-600"
+                                    item.estado === "Inactivo" && "text-black"
                                   )}
                                 >
                                   Editar

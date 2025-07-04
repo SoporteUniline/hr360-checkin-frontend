@@ -1,4 +1,5 @@
 "use client";
+
 import {
   Dialog,
   DialogContent,
@@ -24,21 +25,28 @@ export default function EstadoEmpleadoDialog({ item, limit, page, className }) {
       await axios.put(
         `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados/${item.id_empleado}`,
         {
+          ...item,
           estado: item.estado === "Activo" ? "Inactivo" : "Activo",
           motivo_baja: item.estado === "Activo" ? motivo : null,
           fecha_baja: item.estado === "Activo" ? new Date() : null,
         }
       );
+
       enqueueSnackbar(
         item.estado === "Activo"
           ? "Empleado inactivado"
           : "Empleado reactivado",
         { variant: "success" }
       );
-      mutate(
-        `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados?empresa=${item.empresa}&page=${page}&limit=${limit}`
-      );
+
+      // ✅ Cierra el modal de inmediato
       setOpen(false);
+      setMotivo("");
+
+      // ✅ Refresca los datos en segundo plano
+      mutate(
+        `/checador/empleados?empresa=${item.id_empresa}&page=${page}&limit=${limit}`
+      );
     } catch (err) {
       enqueueSnackbar("Error al cambiar estado", { variant: "error" });
     }
@@ -85,7 +93,13 @@ export default function EstadoEmpleadoDialog({ item, limit, page, className }) {
           )}
 
           <DialogFooter className="flex justify-end gap-2 pt-4">
-            <Button variant="ghost" onClick={() => setOpen(false)}>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setOpen(false);
+                setMotivo("");
+              }}
+            >
               Cancelar
             </Button>
             <Button

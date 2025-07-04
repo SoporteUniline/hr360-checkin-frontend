@@ -12,6 +12,8 @@ export default function ImageUpload({
   soloLectura = false, // 👈 NUEVO
 }) {
   const inputRef = useRef(null);
+  const tieneImagenValida =
+    imagePreview && imagePreview !== "null" && imagePreview !== "undefined";
 
   const handleImageChange = (e) => {
     if (soloLectura) return; // 👈 Bloquea cambios
@@ -43,7 +45,7 @@ export default function ImageUpload({
           }
         >
           <Avatar className="w-24 h-24">
-            <AvatarImage src={imagePreview || undefined} />
+            <AvatarImage src={tieneImagenValida ? imagePreview : undefined} />
             <AvatarFallback>👤</AvatarFallback>
           </Avatar>
         </div>
@@ -56,7 +58,7 @@ export default function ImageUpload({
           onChange={handleImageChange}
         />
 
-        {imagePreview && !soloLectura && (
+        {tieneImagenValida && !soloLectura && (
           <div className="flex flex-col justify-center">
             <Button
               type="button"
