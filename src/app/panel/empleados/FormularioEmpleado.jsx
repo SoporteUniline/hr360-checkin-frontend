@@ -207,6 +207,7 @@ export default function FormularioEmpleado({
   }, [form.watch("forma_calculo")]);
 
   const onInvalidSubmit = (errors) => {
+    console.log(errors);
     enqueueSnackbar(
       "Tienes campos obligatorios vacíos, por favor llena los campos requeridos",
       { variant: "warning" }
