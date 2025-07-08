@@ -34,6 +34,11 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ComboboxSucursal } from "@/components/ComboboxSucursal";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { schemaEmpleado } from "@/schemas/schemaEmpleado";
+import TabPersonales from "./tabs/TabPersonales";
+import TabLaborales from "./tabs/TabLaborales";
+import TabJornada from "./tabs/TabJornada";
+import TabNomina from "./tabs/TabNomina";
+import TabCuentasBancarias from "./tabs/TabCuentasBancarias";
 
 export default function FormularioEmpleado({
   modoFormulario,
@@ -46,8 +51,32 @@ export default function FormularioEmpleado({
   setEditar,
   setSoloLectura,
 }) {
+  console.log(values);
   const [tab, setTab] = useState("personales");
   const fueDesdeLectura = useRef(false);
+  const construirHorariosDesdeDatos = (data) => {
+    const dias = data.dias_trabajo?.split(",") || [];
+
+    // Si el objeto data ya tiene horarios, úsalos para cada día
+    if (
+      data.horarios &&
+      Array.isArray(data.horarios) &&
+      data.horarios.length > 0
+    ) {
+      // Aquí mapeamos los días para asegurarnos de que cada día de dias_trabajo tenga horario, o vacío si no está
+      return dias.map((dia) => {
+        const horarioExistente = data.horarios.find((h) => h.dia === dia);
+        return horarioExistente || { dia, entrada: "", salida: "" };
+      });
+    }
+
+    // Si no hay horarios, inicializa vacíos o con defaults
+    return dias.map((dia) => ({
+      dia,
+      entrada: "", // o null o lo que prefieras
+      salida: "",
+    }));
+  };
 
   const { enqueueSnackbar } = useSnackbar();
   const { dataUser } = useAuth();
@@ -90,26 +119,83 @@ export default function FormularioEmpleado({
             periodo_pago: "Semanal",
             forma_pago: "Fijo",
             forma_calculo: "$",
+            banco: "",
+            otro_banco: "",
+            tipo_cuenta: "Cuenta", // o "CLABE"
+            numero_cuenta: "",
+            solicitar_gps: "", // antes era gps_requerido
+            lugar_checkin: null, // o {} si esperas objeto
+            lugar_checkout: null,
           },
   });
 
   useEffect(() => {
-    if (editar && values) {
+    if ((editar || soloLectura) && values) {
+      // Asegúrate que values.horarios siempre esté definido
+      const {
+        cuenta_bancaria = {},
+        horarios,
+        hrs_por_dia,
+        hrs_de_comida,
+        ...restoEmpleado
+      } = values;
+
+      const horariosIniciales =
+        horarios && horarios.length > 0
+          ? horarios
+          : construirHorariosDesdeDatos(values);
+
+      let banco = cuenta_bancaria.banco || "";
+      let otro_banco = cuenta_bancaria.otro_banco || "";
+
+      const bancosComunes = [
+        "BBVA",
+        "Banorte",
+        "Santander",
+        "HSBC",
+        "Scotiabank",
+        "Citibanamex",
+        "Banco Azteca",
+      ];
+
+      // Si el banco guardado no está en la lista, se debe tratar como "Otro"
+      if (banco && !bancosComunes.includes(banco)) {
+        otro_banco = banco;
+        banco = "Otro";
+      }
+
       form.reset({
-        ...values,
-        hrs_por_dia: Number(values.hrs_por_dia) || 0,
-        hrs_de_comida: Number(values.hrs_de_comida) || 0,
+        ...restoEmpleado,
+        horarios: horariosIniciales,
+        hrs_por_dia: Number(hrs_por_dia) || 0,
+        hrs_de_comida: Number(hrs_de_comida) || 0,
+        numero_cuenta: cuenta_bancaria.numero_cuenta || "",
+        banco,
+        otro_banco,
+        tipo_cuenta: cuenta_bancaria.tipo_cuenta || "Cuenta",
+        solicitar_gps:
+          restoEmpleado.solicitar_gps === 1
+            ? "Sí"
+            : restoEmpleado.solicitar_gps === 0
+            ? "No"
+            : "",
+        lugar_checkin:
+          typeof restoEmpleado.lugar_checkin === "string"
+            ? JSON.parse(restoEmpleado.lugar_checkin)
+            : restoEmpleado.lugar_checkin || null,
+        lugar_checkout:
+          typeof restoEmpleado.lugar_checkout === "string"
+            ? JSON.parse(restoEmpleado.lugar_checkout)
+            : restoEmpleado.lugar_checkout || null,
       });
 
-      // Solo cambiar el tab si NO viene desde lectura
       if (!fueDesdeLectura.current) {
         setTab("personales");
       }
 
-      // Resetear la bandera
       fueDesdeLectura.current = false;
     }
-  }, [editar, values]);
+  }, [editar, values, soloLectura]);
 
   useEffect(() => {
     const forma = form.watch("forma_calculo");
@@ -121,7 +207,6 @@ export default function FormularioEmpleado({
   }, [form.watch("forma_calculo")]);
 
   const onInvalidSubmit = (errors) => {
-    console.log(errors);
     enqueueSnackbar(
       "Tienes campos obligatorios vacíos, por favor llena los campos requeridos",
       { variant: "warning" }
@@ -151,6 +236,8 @@ export default function FormularioEmpleado({
 
     const erroresNomina = ["periodo_pago", "forma_pago", "forma_calculo"];
 
+    const erroresCuentas = ["banco", "tipo_cuenta", "numero_cuenta"];
+
     const errorKeys = Object.keys(errors);
 
     if (errorKeys.some((e) => erroresPersonales.includes(e))) {
@@ -161,11 +248,23 @@ export default function FormularioEmpleado({
       setTab("jornada");
     } else if (errorKeys.some((e) => erroresNomina.includes(e))) {
       setTab("nomina");
+    } else if (errorKeys.some((e) => erroresCuentas.includes(e))) {
+      setTab("cuentas");
     }
   };
 
   const onValidSubmit = async (data) => {
     data.id_empresa = dataUser?.id_empresa;
+
+    if (data.banco === "Otro" && data.otro_banco?.trim()) {
+      data.banco = data.otro_banco.trim();
+    }
+    delete data.otro_banco;
+
+    // Construir horarios si no existen
+    if (!data.horarios || data.horarios.length === 0) {
+      data.horarios = construirHorariosDesdeDatos(data);
+    }
 
     try {
       // Validar CURP y correo solo si NO estás editando
@@ -211,13 +310,19 @@ export default function FormularioEmpleado({
         return;
       }
 
+      data.id_empresa = dataUser?.id_empresa;
+
       const formData = new FormData();
 
       delete data.nombre_empresa;
 
       // Adjuntar todos los campos del formulario
       Object.keys(data).forEach((key) => {
-        formData.append(key, data[key]);
+        if (Array.isArray(data[key]) || typeof data[key] === "object") {
+          formData.append(key, JSON.stringify(data[key]));
+        } else {
+          formData.append(key, data[key]);
+        }
       });
 
       // Adjuntar imagen si existe
@@ -371,23 +476,30 @@ export default function FormularioEmpleado({
         </div>
 
         <Tabs value={tab} onValueChange={setTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 ">
-            <TabsTrigger value="personales">
-              <User className="mr-2 h-4 w-4" />
-              Datos personales
-            </TabsTrigger>
-            <TabsTrigger value="laborales">
-              <BriefcaseBusiness className="mr-2 h-4 w-4" />
-              Datos laborales
-            </TabsTrigger>
-            <TabsTrigger value="jornada">
-              <Hammer className="mr-2 h-4 w-4" /> Jornada laboral
-            </TabsTrigger>
-            <TabsTrigger value="nomina">
-              <Icon icon="mdi:cash" className="mr-2 h-4 w-4" />
-              Datos de nómina
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto">
+            <TabsList className="flex-nowrap w-max min-w-full">
+              <TabsTrigger value="personales">
+                <User className="mr-2 h-4 w-4" />
+                Datos personales
+              </TabsTrigger>
+              <TabsTrigger value="laborales">
+                <BriefcaseBusiness className="mr-2 h-4 w-4" />
+                Datos laborales
+              </TabsTrigger>
+              <TabsTrigger value="jornada">
+                <Hammer className="mr-2 h-4 w-4" /> Jornada laboral
+              </TabsTrigger>
+              <TabsTrigger value="nomina">
+                <Icon icon="mdi:cash" className="mr-2 h-4 w-4" />
+                Datos de nómina
+              </TabsTrigger>
+              <TabsTrigger value="cuentas">
+                {/* <Icon icon="mdi:cash" className="mr-2 h-4 w-4" /> */}
+                <Icon icon="rivet-icons:money" className="mr-2 h-4 w-4" />
+                Cuentas bancarias
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
           <motion.div layout className="w-full">
             <AnimatePresence mode="wait">
@@ -401,505 +513,26 @@ export default function FormularioEmpleado({
                 className="relative w-full overflow-hidden"
               >
                 {tab === "personales" && (
-                  <section className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mx-1 my-3">
-                      {[
-                        { name: "apellido_paterno", label: "Apellido Paterno" },
-                        { name: "apellido_materno", label: "Apellido Materno" },
-                        {
-                          name: "fecha_nacimiento",
-                          label: "Fecha de nacimiento",
-                          type: "date",
-                        },
-                        { name: "telefono", label: "Teléfono" },
-                        { name: "correo", label: "Correo", type: "email" },
-                      ].map(({ name, label, type = "text" }) => (
-                        <FormField
-                          key={name}
-                          name={name}
-                          control={form.control}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{label}</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type={type}
-                                  disabled={soloLectura}
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      ))}
-
-                      <FormField
-                        name="curp"
-                        control={form.control}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>CURP</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                disabled={soloLectura}
-                                maxLength={18}
-                                className="uppercase"
-                                placeholder="Ej. GOLA850705HDFRRN09"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        name="rfc"
-                        control={form.control}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>RFC</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                disabled={soloLectura}
-                                maxLength={13}
-                                className="uppercase"
-                                placeholder="Ej. GOLA8507052A1"
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        name="nss"
-                        control={form.control}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>NSS</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                disabled={soloLectura}
-                                maxLength={11}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        name="sexo"
-                        control={form.control}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Sexo</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                              disabled={soloLectura}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Selecciona el sexo" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="Masculino">
-                                  Masculino
-                                </SelectItem>
-                                <SelectItem value="Femenino">
-                                  Femenino
-                                </SelectItem>
-                                <SelectItem value="Otro">Otro</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        name="estado_civil"
-                        control={form.control}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Estado Civil</FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                              disabled={soloLectura}
-                            >
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Selecciona el estado civil" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="Soltero">Soltero</SelectItem>
-                                <SelectItem value="Casado">Casado</SelectItem>
-                                <SelectItem value="Divorciado">
-                                  Divorciado
-                                </SelectItem>
-                                <SelectItem value="Viudo">Viudo</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        name="direccion"
-                        control={form.control}
-                        render={({ field }) => (
-                          <FormItem className="col-span-full">
-                            <FormLabel>Dirección</FormLabel>
-                            <FormControl>
-                              <Input {...field} disabled={soloLectura} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </section>
+                  <TabPersonales form={form} soloLectura={soloLectura} />
                 )}
 
                 {tab === "laborales" && (
-                  <section className="space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mx-1 my-3">
-                      <FormField
-                        name="nombre_empresa"
-                        control={form.control}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Empresa</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                value={dataUser?.nombre_empresa || ""}
-                                disabled
-                                readOnly
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        name="sucursal"
-                        control={form.control}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Unidad de negocio o sucursal</FormLabel>
-                            <ComboboxSucursal
-                              value={field.value}
-                              onChange={(val) => field.onChange(val)}
-                              disabled={soloLectura}
-                            />
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {[
-                        { name: "departamento", label: "Departamento" },
-
-                        {
-                          name: "fecha_ingreso",
-                          label: "Fecha de ingreso",
-                          type: "date",
-                        },
-                        { name: "nip", label: "Código de empleado" },
-                      ].map(({ name, label, type = "text" }) => (
-                        <FormField
-                          key={name}
-                          name={name}
-                          control={form.control}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>{label}</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type={type}
-                                  disabled={soloLectura}
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      ))}
-                    </div>
-                  </section>
+                  <TabLaborales
+                    form={form}
+                    soloLectura={soloLectura}
+                    dataUser={dataUser}
+                  />
                 )}
 
                 {tab === "jornada" && (
-                  <section className="space-y-6 px-4 py-2">
-                    {/* Días de trabajo */}
-                    <FormField
-                      name="dias_trabajo"
-                      control={form.control}
-                      render={({ field }) => {
-                        const dias = [
-                          { label: "L", value: "Lunes" },
-                          { label: "M", value: "Martes" },
-                          { label: "I", value: "Miércoles" },
-                          { label: "J", value: "Jueves" },
-                          { label: "V", value: "Viernes" },
-                          { label: "S", value: "Sábado" },
-                          { label: "D", value: "Domingo" },
-                        ];
-
-                        const diasSeleccionados = field.value
-                          ? field.value.split(",")
-                          : [];
-
-                        const toggleDia = (diaValue) => {
-                          const nuevosDias = diasSeleccionados.includes(
-                            diaValue
-                          )
-                            ? diasSeleccionados.filter((d) => d !== diaValue)
-                            : [...diasSeleccionados, diaValue];
-                          field.onChange(nuevosDias.join(","));
-                        };
-
-                        return (
-                          <FormItem>
-                            <FormLabel className="text-base font-medium mb-2 block">
-                              Días de trabajo
-                            </FormLabel>
-                            <div className="flex flex-wrap gap-3">
-                              {dias.map(({ label, value }) => {
-                                const activo =
-                                  diasSeleccionados.includes(value);
-                                return (
-                                  <button
-                                    disabled={soloLectura}
-                                    key={value}
-                                    type="button"
-                                    title={value}
-                                    onClick={() => toggleDia(value)}
-                                    className={twMerge(
-                                      "w-10 h-10 rounded-full border text-sm font-bold shadow-sm transition-all",
-                                      activo
-                                        ? "bg-blue-600 text-white border-blue-600"
-                                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-100"
-                                    )}
-                                  >
-                                    {label}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                            <FormMessage />
-                          </FormItem>
-                        );
-                      }}
-                    />
-
-                    {/* Horarios */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      {[
-                        { name: "hrs_por_dia", label: "Horas por día" },
-                        { name: "hrs_de_comida", label: "Horas de comida" },
-                      ].map(({ name, label }) => (
-                        <FormField
-                          key={name}
-                          name={name}
-                          control={form.control}
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-base font-medium">
-                                {label}
-                              </FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  placeholder="0"
-                                  disabled={soloLectura}
-                                  {...field}
-                                  value={field.value ?? ""}
-                                  onChange={(e) =>
-                                    field.onChange(Number(e.target.value))
-                                  }
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      ))}
-                    </div>
-                  </section>
+                  <TabJornada form={form} soloLectura={soloLectura} />
                 )}
 
                 {tab === "nomina" && (
-                  <section className="space-y-6 px-4 py-2">
-                    <FormField
-                      name="periodo_pago"
-                      control={form.control}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Periodo de pago</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            disabled={soloLectura}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecciona un periodo" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {[
-                                "Diario",
-                                "Semanal",
-                                "Catorcenal",
-                                "Quincenal",
-                                "Mensual",
-                                "Por hora",
-                              ].map((op) => (
-                                <SelectItem key={op} value={op}>
-                                  {op}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      name="forma_pago"
-                      control={form.control}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Forma de pago</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            disabled={soloLectura}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecciona la forma de pago" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {["Fijo", "Comisiones", "Fijo + Comisiones"].map(
-                                (op) => (
-                                  <SelectItem key={op} value={op}>
-                                    {op}
-                                  </SelectItem>
-                                )
-                              )}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      name="forma_calculo"
-                      control={form.control}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Forma de cálculo</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            disabled={soloLectura}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecciona la forma de cálculo" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {["$", "%", "Ambos"].map((op) => (
-                                <SelectItem key={op} value={op}>
-                                  {op}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    {["$", "Ambos"].includes(form.watch("forma_calculo")) && (
-                      <FormField
-                        name="sueldo_por_hora"
-                        control={form.control}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Sueldo por hora ($)</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                disabled={soloLectura}
-                                {...field}
-                                value={field.value ?? ""} // clave para evitar null
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  field.onChange(
-                                    value ? parseFloat(value) : null
-                                  );
-
-                                  // Si sólo seleccionó $, limpia porcentaje
-                                  if (form.getValues("forma_calculo") === "$") {
-                                    form.setValue("porcentaje", null);
-                                  }
-                                }}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    )}
-
-                    {["%", "Ambos"].includes(form.watch("forma_calculo")) && (
-                      <FormField
-                        name="porcentaje"
-                        control={form.control}
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Porcentaje (%)</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                disabled={soloLectura}
-                                {...field}
-                                value={field.value ?? ""}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  field.onChange(
-                                    value ? parseFloat(value) : null
-                                  );
-
-                                  // Si sólo seleccionó %, limpia sueldo_por_hora
-                                  if (form.getValues("forma_calculo") === "%") {
-                                    form.setValue("sueldo_por_hora", null);
-                                  }
-                                }}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    )}
-                  </section>
+                  <TabNomina form={form} soloLectura={soloLectura} />
+                )}
+                {tab === "cuentas" && (
+                  <TabCuentasBancarias form={form} soloLectura={soloLectura} />
                 )}
               </motion.div>
             </AnimatePresence>

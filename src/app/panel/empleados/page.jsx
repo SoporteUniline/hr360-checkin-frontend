@@ -35,11 +35,6 @@ export default function TablaEmpleados() {
   const [filter, setFilter] = useState("");
   const [selected, setSelected] = useState(null);
   const { dataUser } = useAuth();
-  const [tab, setTab] = useState("personales");
-
-  useEffect(() => {
-    console.log("El tab en tablaEmpleados:", tab);
-  }, [tab]);
 
   const id_empresa = dataUser?.id_empresa;
 
