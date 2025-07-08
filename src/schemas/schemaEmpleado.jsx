@@ -96,12 +96,14 @@ export const schemaEmpleado = z
         lat: z.number(),
         lng: z.number(),
       })
+      .nullable()
       .optional(),
     lugar_checkout: z
       .object({
         lat: z.number(),
         lng: z.number(),
       })
+      .nullable()
       .optional(),
 
     banco: z.string().min(1, "Selecciona un banco"),
