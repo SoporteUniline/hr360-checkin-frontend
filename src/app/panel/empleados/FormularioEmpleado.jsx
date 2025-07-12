@@ -283,7 +283,8 @@ export default function FormularioEmpleado({
         }
       );
 
-      const { existeCorreo, existeCurp, existeRfc, existeNss } = response.data;
+      const { existeCorreo, existeCurp, existeRfc, existeNss, existeNip } =
+        response.data;
 
       if (existeCorreo) {
         enqueueSnackbar("Ya existe un empleado con ese correo", {
@@ -311,14 +312,34 @@ export default function FormularioEmpleado({
         return;
       }
 
+      if (existeNip) {
+        enqueueSnackbar("Ya existe un empleado con ese NIP", {
+          variant: "warning",
+        });
+        return;
+      }
+
       data.id_empresa = dataUser?.id_empresa;
 
       const formData = new FormData();
 
       delete data.nombre_empresa;
 
-      // Adjuntar todos los campos del formulario
+      [
+        "id_jefe_inmediato",
+        "id_autoriza_vacaciones",
+        "id_autoriza_permisos",
+      ].forEach((campo) => {
+        if (data[campo] === "" || data[campo] === "null") {
+          data[campo] = null;
+        }
+      });
+
       Object.keys(data).forEach((key) => {
+        if (data[key] === null || data[key] === undefined) {
+          return; // No lo adjuntes
+        }
+
         if (Array.isArray(data[key]) || typeof data[key] === "object") {
           formData.append(key, JSON.stringify(data[key]));
         } else {

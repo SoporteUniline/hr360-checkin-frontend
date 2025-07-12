@@ -21,6 +21,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
 export default function Home() {
+  const { dataUser } = useAuth();
   const { isLoggedIn, isAuthChecked } = useAuth();
   const token = Cookies.get("token");
   const router = useRouter();
@@ -35,7 +36,9 @@ export default function Home() {
     error,
     isLoading,
   } = useSWR(
-    `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/reloj/ultimos`,
+    dataUser?.id_empresa
+      ? `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/reloj/ultimos?id_empresa=${dataUser.id_empresa}`
+      : null,
     fetcherWithToken
   );
 
@@ -72,9 +75,20 @@ export default function Home() {
         hour12: false,
       });
 
+      if (!dataUser?.id_empresa) {
+        enqueueSnackbar("Empresa no definida para este usuario", {
+          variant: "error",
+        });
+        return;
+      }
+
       const { data } = await axiosInstance.post(
         `/checador/reloj/registrar`,
-        { codigo, hora },
+        {
+          codigo,
+          hora,
+          id_empresa: dataUser.id_empresa,
+        },
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -190,8 +204,9 @@ export default function Home() {
                   <TableRow>
                     <TableCell>Código</TableCell>
                     <TableCell>Nombre</TableCell>
-                    <TableCell>Movimiento</TableCell>
-                    <TableCell>Hora</TableCell>
+                    <TableCell>Entrada</TableCell>
+                    <TableCell>Salida</TableCell>
+                    <TableCell>Estado</TableCell>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -205,10 +220,13 @@ export default function Home() {
                           <div className="h-4 bg-gray-200 rounded animate-pulse w-40" />
                         </TableCell>
                         <TableCell>
-                          <div className="h-4 bg-gray-200 rounded animate-pulse w-24" />
+                          <div className="h-4 bg-gray-200 rounded animate-pulse w-16" />
                         </TableCell>
                         <TableCell>
                           <div className="h-4 bg-gray-200 rounded animate-pulse w-16" />
+                        </TableCell>
+                        <TableCell>
+                          <div className="h-4 bg-gray-200 rounded animate-pulse w-20" />
                         </TableCell>
                       </TableRow>
                     ))
@@ -217,26 +235,26 @@ export default function Home() {
                       <TableRow key={i}>
                         <TableCell>{mov.nip}</TableCell>
                         <TableCell>{mov.nombre}</TableCell>
+                        <TableCell>{mov.entrada || "-"}</TableCell>
+                        <TableCell>{mov.salida || "-"}</TableCell>
                         <TableCell>
                           <span
                             className={twMerge(
                               "px-3 py-1 rounded-full text-white text-sm font-semibold",
-                              mov.movimiento.toLowerCase() === "entrada"
+                              mov.estado === "Abierto"
                                 ? "bg-green-600"
-                                : "bg-red-600"
+                                : "bg-gray-600"
                             )}
                           >
-                            {mov.movimiento}
+                            {mov.estado}
                           </span>
                         </TableCell>
-
-                        <TableCell>{mov.hora}</TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
                       <TableCell
-                        colSpan={4}
+                        colSpan={5}
                         className="text-center text-gray-500"
                       >
                         No hay registros aún
