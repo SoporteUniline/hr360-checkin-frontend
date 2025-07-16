@@ -12,6 +12,7 @@ import {
   Building,
   BriefcaseBusiness,
   UsersIcon,
+  BadgeCheck,
   UserRound,
   CircleUserRoundIcon,
   ClockIcon,
@@ -36,6 +37,12 @@ const items = [
     url: "/panel/empleados",
     rol: "Recruiter",
     icon: UsersIcon,
+  },
+  {
+    title: "Control de asistencia",
+    url: "/panel/control-asistencia",
+    rol: "Recruiter",
+    icon: BadgeCheck,
   },
   // {
   //   title: "Postulaciones",

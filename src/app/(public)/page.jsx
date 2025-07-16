@@ -21,14 +21,24 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
 export default function Home() {
-  const { dataUser } = useAuth();
-  const { isLoggedIn, isAuthChecked } = useAuth();
+  const { dataUser, isLoggedIn, isAuthChecked } = useAuth();
   const token = Cookies.get("token");
   const router = useRouter();
   const [horaActual, setHoraActual] = useState("");
   const [codigoEmpleado, setCodigoEmpleado] = useState("");
   const { enqueueSnackbar } = useSnackbar();
   const [popupInfo, setPopupInfo] = useState(null);
+  const [registrando, setRegistrando] = useState(false);
+
+  const formatearHora = (fechaString) => {
+    if (!fechaString) return "-";
+    return new Date(fechaString).toLocaleTimeString("es-MX", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
+  };
 
   const {
     data: movimientos,
@@ -64,17 +74,12 @@ export default function Home() {
   };
 
   const registrarMovimiento = async () => {
+    if (registrando) return;
+    setRegistrando(true);
     const codigo = codigoEmpleado.trim();
     if (!codigo) return;
 
     try {
-      const hora = new Date().toLocaleTimeString("es-MX", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: false,
-      });
-
       if (!dataUser?.id_empresa) {
         enqueueSnackbar("Empresa no definida para este usuario", {
           variant: "error",
@@ -86,7 +91,6 @@ export default function Home() {
         `/checador/reloj/registrar`,
         {
           codigo,
-          hora,
           id_empresa: dataUser.id_empresa,
         },
         {
@@ -146,6 +150,8 @@ export default function Home() {
           variant: "error",
         });
       }
+    } finally {
+      setRegistrando(false);
     }
   };
 
@@ -188,11 +194,16 @@ export default function Home() {
                   onChange={manejarCambioCodigo}
                   className="w-full text-center"
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") registrarMovimiento();
+                    if (e.key === "Enter" && !registrando)
+                      registrarMovimiento();
                   }}
                 />
-                <Button onClick={registrarMovimiento} className="mt-3 w-full">
-                  Registrar
+                <Button
+                  onClick={registrarMovimiento}
+                  disabled={registrando}
+                  className="mt-3 w-full"
+                >
+                  {registrando ? "Registrando..." : "Registrar"}
                 </Button>
               </div>
             </div>
@@ -235,8 +246,8 @@ export default function Home() {
                       <TableRow key={i}>
                         <TableCell>{mov.nip}</TableCell>
                         <TableCell>{mov.nombre}</TableCell>
-                        <TableCell>{mov.entrada || "-"}</TableCell>
-                        <TableCell>{mov.salida || "-"}</TableCell>
+                        <TableCell>{formatearHora(mov.entrada)}</TableCell>
+                        <TableCell>{formatearHora(mov.salida)}</TableCell>
                         <TableCell>
                           <span
                             className={twMerge(
