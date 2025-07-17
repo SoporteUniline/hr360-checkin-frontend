@@ -19,32 +19,42 @@ import { useAuth } from "@/context/AuthContext";
 import ErrorPage from "@/components/ErrorPage";
 import LoadingTable from "@/components/LoadingTable";
 import { Button } from "@/components/ui/button";
+import TablePagination from "@/components/TablePagination";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 export default function ControlAsistencia() {
   const { dataUser } = useAuth();
+  const [fecha, setFecha] = useState(
+    dayjs().tz("America/Mexico_City").format("YYYY-MM-DD")
+  );
+  const [page, setPage] = useState(1);
+  const limit = 10;
   const [filtroEmpleado, setFiltroEmpleado] = useState("");
-
-  // Obtener la fecha actual en zona horaria de México
-  const fechaActual = dayjs().tz("America/Mexico_City").format("YYYY-MM-DD");
 
   const { data, error, isLoading, mutate } = useSWR(
     dataUser?.id_empresa
-      ? `/checador/asistencias?empresa=${dataUser.id_empresa}&fecha=${fechaActual}`
+      ? `/checador/asistencias?empresa=${dataUser.id_empresa}&${
+          fecha ? `fecha=${fecha}&` : ""
+        }page=${page}&limit=${limit}`
       : null,
-    fetcherWithToken,
-    { refreshInterval: 60000 } // Opcional: refrescar cada 60 segundos
+    fetcherWithToken
   );
 
-  const registros = data || [];
+  const registros = Array.isArray(data?.registros) ? data.registros : [];
+  const totalPages = data?.totalPages || 1;
+  const currentPage = data?.currentPage || 1;
 
   const filtrados = registros.filter((r) =>
     `${r.nombre} ${r.apellido_paterno} ${r.apellido_materno || ""}`
       .toLowerCase()
       .includes(filtroEmpleado.toLowerCase())
   );
+
+  const onPageChange = (newPage) => {
+    setPage(newPage);
+  };
 
   console.log(filtrados);
 
@@ -63,6 +73,16 @@ export default function ControlAsistencia() {
           onChange={(e) => setFiltroEmpleado(e.target.value)}
           className="w-full max-w-md"
         />
+
+        <Input
+          type="date"
+          value={fecha}
+          onChange={(e) => {
+            setFecha(e.target.value);
+            setPage(1); // reinicia la página al cambiar fecha
+          }}
+          className="max-w-xs"
+        />
       </div>
 
       {filtrados.length === 0 ? (
@@ -70,44 +90,61 @@ export default function ControlAsistencia() {
           No hay registros para hoy o búsqueda sin resultados.
         </div>
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Empleado</TableHead>
-              <TableHead className="text-center">Tipo de registro</TableHead>
-              <TableHead className="text-center">Entrada</TableHead>
-              <TableHead className="text-center">Salida</TableHead>
-              <TableHead className="text-center">Estado</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtrados.map((reg, i) => (
-              <TableRow key={i}>
-                <TableCell>{`${reg.nombre} ${reg.apellido_paterno}`}</TableCell>
-                <TableCell className="text-center">
-                  {reg.tipo_registro_nombre}
-                </TableCell>
-
-                <TableCell className="text-center">
-                  {reg.entrada ? reg.entrada.slice(11, 19) : "-"}
-                </TableCell>
-
-                <TableCell className="text-center">
-                  {reg.salida ? reg.salida.slice(11, 19) : "-"}
-                </TableCell>
-                <TableCell className="text-center">
-                  <span
-                    className={`px-2 py-1 rounded-full text-sm text-white ${
-                      reg.estado === "Abierto" ? "bg-green-600" : "bg-gray-500"
-                    }`}
-                  >
-                    {reg.estado}
-                  </span>
-                </TableCell>
+        <>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Empleado</TableHead>
+                <TableHead>Tipo de registro</TableHead>
+                {!fecha && <TableHead className="text-center">Fecha</TableHead>}
+                <TableHead className="text-center">Entrada</TableHead>
+                <TableHead className="text-center">Salida</TableHead>
+                <TableHead className="text-center">Estado</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {filtrados.map((reg, i) => (
+                <TableRow key={i}>
+                  <TableCell>{`${reg.nombre} ${reg.apellido_paterno}`}</TableCell>
+                  <TableCell>{reg.tipo_registro_nombre}</TableCell>
+                  {!fecha && (
+                    <TableCell className="text-center">
+                      {reg.fecha
+                        ? dayjs(reg.fecha)
+                            .tz("America/Mexico_City")
+                            .format("DD-MM-YYYY")
+                        : "-"}
+                    </TableCell>
+                  )}
+
+                  <TableCell className="text-center">
+                    {reg.entrada ? reg.entrada.slice(11, 19) : "-"}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    {reg.salida ? reg.salida.slice(11, 19) : "-"}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <span
+                      className={`px-2 py-1 rounded-full text-sm text-white ${
+                        reg.estado === "Abierto"
+                          ? "bg-green-600"
+                          : "bg-gray-500"
+                      }`}
+                    >
+                      {reg.estado}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <TablePagination
+            page={page}
+            limit={limit}
+            total={data?.total || 0}
+            onPageChange={onPageChange}
+          />
+        </>
       )}
     </div>
   );

@@ -100,7 +100,6 @@ export default function FormularioEmpleado({
             correo: "",
             curp: "",
             departamento: "",
-            dias_trabajo: "Lunes,Martes,Miércoles,Jueves,Viernes",
             direccion: "",
             estado_civil: "Soltero",
             fecha_ingreso: "",
@@ -262,10 +261,16 @@ export default function FormularioEmpleado({
     }
     delete data.otro_banco;
 
-    // Construir horarios si no existen
+    // 🔁 CONSTRUIR horarios si no existen
     if (!data.horarios || data.horarios.length === 0) {
       data.horarios = construirHorariosDesdeDatos(data);
     }
+
+    // ✅ GENERAR `dias_trabajo` solo con días que tengan entrada y salida
+    const diasTrabajo = data.horarios
+      .filter((h) => h.entrada && h.salida)
+      .map((h) => h.dia);
+    data.dias_trabajo = diasTrabajo.join(",");
 
     try {
       // Validar CURP y correo solo si NO estás editando
