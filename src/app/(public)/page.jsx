@@ -246,8 +246,14 @@ export default function Home() {
                       <TableRow key={i}>
                         <TableCell>{mov.nip}</TableCell>
                         <TableCell>{mov.nombre}</TableCell>
-                        <TableCell>{formatearHora(mov.entrada)}</TableCell>
-                        <TableCell>{formatearHora(mov.salida)}</TableCell>
+                        <TableCell>
+                          {/* Lógica para Entrada: si entrada_corregida existe, úsala; de lo contrario, usa entrada */}
+                          {formatearHora(mov.entrada_corregida || mov.entrada)}
+                        </TableCell>
+                        <TableCell>
+                          {/* Lógica para Salida: si salida_corregida existe, úsala; de lo contrario, usa salida */}
+                          {formatearHora(mov.salida_corregida || mov.salida)}
+                        </TableCell>
                         <TableCell>
                           <span
                             className={twMerge(

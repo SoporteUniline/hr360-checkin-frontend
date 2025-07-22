@@ -20,11 +20,15 @@ import ErrorPage from "@/components/ErrorPage";
 import LoadingTable from "@/components/LoadingTable";
 import { Button } from "@/components/ui/button";
 import TablePagination from "@/components/TablePagination";
+import FormularioEditarAsistencia from "./FormularioEditarAsistencia"; // nuevo componente de formulario
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 export default function ControlAsistencia() {
+  const [modoFormulario, setModoFormulario] = useState(false);
+  const [registroSeleccionado, setRegistroSeleccionado] = useState(null);
+
   const { dataUser } = useAuth();
   const [fecha, setFecha] = useState(
     dayjs().tz("America/Mexico_City").format("YYYY-MM-DD")
@@ -56,8 +60,6 @@ export default function ControlAsistencia() {
     setPage(newPage);
   };
 
-  console.log(filtrados);
-
   if (isLoading) return <LoadingTable rows={10} />;
   if (error) {
     console.error(error);
@@ -66,84 +68,112 @@ export default function ControlAsistencia() {
 
   return (
     <div>
-      <div className="mb-3 w-full flex gap-3 justify-between items-center">
-        <Input
-          placeholder="Buscar empleado por nombre..."
-          value={filtroEmpleado}
-          onChange={(e) => setFiltroEmpleado(e.target.value)}
-          className="w-full max-w-md"
-        />
-
-        <Input
-          type="date"
-          value={fecha}
-          onChange={(e) => {
-            setFecha(e.target.value);
-            setPage(1); // reinicia la página al cambiar fecha
+      {modoFormulario ? (
+        <FormularioEditarAsistencia
+          registro={registroSeleccionado}
+          setRegistroSeleccionado={setRegistroSeleccionado}
+          modoFormulario={modoFormulario}
+          setModoFormulario={setModoFormulario}
+          empresaId={dataUser?.id_empresa}
+          onGuardado={() => {
+            mutate();
+            setRegistroSeleccionado(null);
           }}
-          className="max-w-xs"
+          onCancel={() => setRegistroSeleccionado(null)}
         />
-      </div>
-
-      {filtrados.length === 0 ? (
-        <div className="text-center text-muted-foreground py-10">
-          No hay registros para hoy o búsqueda sin resultados.
-        </div>
       ) : (
         <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Empleado</TableHead>
-                <TableHead>Tipo de registro</TableHead>
-                {!fecha && <TableHead className="text-center">Fecha</TableHead>}
-                <TableHead className="text-center">Entrada</TableHead>
-                <TableHead className="text-center">Salida</TableHead>
-                <TableHead className="text-center">Estado</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtrados.map((reg, i) => (
-                <TableRow key={i}>
-                  <TableCell>{`${reg.nombre} ${reg.apellido_paterno}`}</TableCell>
-                  <TableCell>{reg.tipo_registro_nombre}</TableCell>
-                  {!fecha && (
-                    <TableCell className="text-center">
-                      {reg.fecha
-                        ? dayjs(reg.fecha)
-                            .tz("America/Mexico_City")
-                            .format("DD-MM-YYYY")
-                        : "-"}
-                    </TableCell>
-                  )}
-
-                  <TableCell className="text-center">
-                    {reg.entrada ? reg.entrada.slice(11, 19) : "-"}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {reg.salida ? reg.salida.slice(11, 19) : "-"}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <span
-                      className={`px-2 py-1 rounded-full text-sm text-white ${
-                        reg.estado === "Abierto"
-                          ? "bg-green-600"
-                          : "bg-gray-500"
-                      }`}
-                    >
-                      {reg.estado}
-                    </span>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <TablePagination
-            page={page}
-            limit={limit}
-            total={data?.total || 0}
-            onPageChange={onPageChange}
-          />
+          <div className="mb-3 w-full flex gap-3 justify-between items-center">
+            <Input
+              placeholder="Buscar empleado por nombre..."
+              value={filtroEmpleado}
+              onChange={(e) => setFiltroEmpleado(e.target.value)}
+              className="w-full max-w-md"
+            />
+            <Input
+              type="date"
+              value={fecha}
+              onChange={(e) => {
+                setFecha(e.target.value);
+                setPage(1);
+              }}
+              className="max-w-xs"
+            />
+          </div>
+          {filtrados.length === 0 ? (
+            <div className="text-center text-muted-foreground py-10">
+              No hay registros para hoy o búsqueda sin resultados.
+            </div>
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Empleado</TableHead>
+                    <TableHead>Tipo de registro</TableHead>
+                    {!fecha && (
+                      <TableHead className="text-center">Fecha</TableHead>
+                    )}
+                    <TableHead className="text-center">Entrada</TableHead>
+                    <TableHead className="text-center">Salida</TableHead>
+                    <TableHead className="text-center">Estado</TableHead>
+                    <TableHead className="text-center">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtrados.map((reg, i) => (
+                    <TableRow key={i}>
+                      <TableCell>{`${reg.nombre} ${reg.apellido_paterno}`}</TableCell>
+                      <TableCell>{reg.tipo_registro_nombre}</TableCell>
+                      {!fecha && (
+                        <TableCell className="text-center">
+                          {reg.fecha
+                            ? dayjs(reg.fecha)
+                                .tz("America/Mexico_City")
+                                .format("DD-MM-YYYY")
+                            : "-"}
+                        </TableCell>
+                      )}
+                      <TableCell className="text-center">
+                        {reg.entrada ? reg.entrada.slice(11, 19) : "-"}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {reg.salida ? reg.salida.slice(11, 19) : "-"}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span
+                          className={`px-2 py-1 rounded-full text-sm text-white ${
+                            reg.estado === "Abierto"
+                              ? "bg-green-600"
+                              : "bg-gray-500"
+                          }`}
+                        >
+                          {reg.estado}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setRegistroSeleccionado(reg);
+                            setModoFormulario(true);
+                          }}
+                        >
+                          Editar
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              <TablePagination
+                page={page}
+                limit={limit}
+                total={data?.total || 0}
+                onPageChange={onPageChange}
+              />
+            </>
+          )}
         </>
       )}
     </div>
