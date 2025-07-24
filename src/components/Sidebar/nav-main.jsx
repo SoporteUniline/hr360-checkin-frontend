@@ -39,8 +39,8 @@ const items = [
     icon: UsersIcon,
   },
   {
-    title: "Control de asistencia",
-    url: "/panel/control-asistencia",
+    title: "Registro de asistencias",
+    url: "/panel/registro-asistencia",
     rol: "Recruiter",
     icon: BadgeCheck,
   },
