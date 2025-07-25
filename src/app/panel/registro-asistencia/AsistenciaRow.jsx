@@ -1,0 +1,422 @@
+// src/components/AsistenciaRow.jsx
+import dayjs from "dayjs";
+import { TableCell, TableRow } from "@/components/ui/table";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Textarea } from "@/components/ui/textarea";
+
+export default function AsistenciaRow({
+  registro,
+  fecha,
+  isEditing,
+  editingRowData,
+  isSaving,
+  empleados,
+  tiposPermiso,
+  handleEditClick,
+  handleCancelEdit,
+  handleFieldChange,
+  handleSaveClick,
+}) {
+  const currentData = isEditing ? editingRowData : registro;
+  const areTimeInputsDisabled = !currentData.correccion;
+
+  console.log(tiposPermiso);
+
+  return (
+    <TableRow key={registro.id}>
+      {isEditing ? (
+        <>
+          <TableCell>{`${registro.nombre} ${registro.apellido_paterno}`}</TableCell>
+          <TableCell>
+            <Select
+              value={
+                currentData.id_tipo_permiso
+                  ? String(currentData.id_tipo_permiso)
+                  : ""
+              }
+              onValueChange={(val) => handleFieldChange("id_tipo_permiso", val)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Tipo" />
+              </SelectTrigger>
+              <SelectContent className="max-h-60 overflow-y-auto">
+                {tiposPermiso?.map((tipo) => (
+                  <SelectItem key={tipo.id} value={String(tipo.id)}>
+                    {tipo.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </TableCell>
+          {!fecha && (
+            <TableCell className="text-center">
+              {dayjs(currentData.fecha).format("DD-MM-YYYY")}
+            </TableCell>
+          )}
+          <TableCell className="text-center">
+            <ToggleGroup
+              type="single"
+              value={currentData.correccion ? "1" : "0"}
+              onValueChange={(val) =>
+                handleFieldChange("correccion", val === "1")
+              }
+            >
+              <ToggleGroupItem value="0">❌</ToggleGroupItem>
+              <ToggleGroupItem value="1">✅</ToggleGroupItem>
+            </ToggleGroup>
+          </TableCell>
+          <TableCell className="text-center">
+            <Input
+              type="time"
+              value={currentData.entrada?.slice(11, 16) || ""}
+              onChange={(e) => {
+                const hora = e.target.value;
+                const nuevaEntrada = hora
+                  ? `${currentData.fecha.slice(0, 10)} ${hora}:00`
+                  : null;
+                handleFieldChange("entrada", nuevaEntrada);
+              }}
+              // Disable input if correccion is false
+              disabled={areTimeInputsDisabled}
+            />
+          </TableCell>
+          <TableCell className="text-center">
+            <Input
+              type="time"
+              value={currentData.salida?.slice(11, 16) || ""}
+              onChange={(e) => {
+                const hora = e.target.value;
+                const nuevaSalida = hora
+                  ? `${currentData.fecha.slice(0, 10)} ${hora}:00`
+                  : null;
+                handleFieldChange("salida", nuevaSalida);
+              }}
+              // Disable input if correccion is false
+              disabled={areTimeInputsDisabled}
+            />
+          </TableCell>
+          <TableCell className="text-center">
+            <Select
+              value={
+                currentData.autorizado_por
+                  ? String(currentData.autorizado_por)
+                  : ""
+              }
+              onValueChange={(val) => handleFieldChange("autorizado_por", val)}
+              disabled={areTimeInputsDisabled}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Autorizado por" />
+              </SelectTrigger>
+              <SelectContent className="max-h-60 overflow-y-auto">
+                {empleados?.map((emp) => (
+                  <SelectItem
+                    key={emp.id_empleado}
+                    value={String(emp.id_empleado)}
+                  >
+                    {emp.nombre} {emp.apellido_paterno}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </TableCell>
+          <TableCell className="text-center">
+            <ToggleGroup
+              type="single"
+              value={currentData.asistencia ? "1" : "0"}
+              onValueChange={(val) =>
+                handleFieldChange("asistencia", val === "1")
+              }
+            >
+              <ToggleGroupItem value="0">❌</ToggleGroupItem>
+              <ToggleGroupItem value="1">✅</ToggleGroupItem>
+            </ToggleGroup>
+          </TableCell>
+          <TableCell className="text-center">
+            <ToggleGroup
+              type="single"
+              value={currentData.goce_sueldo ? "1" : "0"}
+              onValueChange={(val) =>
+                handleFieldChange("goce_sueldo", val === "1")
+              }
+            >
+              <ToggleGroupItem value="0">❌</ToggleGroupItem>
+              <ToggleGroupItem value="1">✅</ToggleGroupItem>
+            </ToggleGroup>
+          </TableCell>
+          <TableCell className="text-center">
+            <ToggleGroup
+              type="single"
+              value={currentData.pago_triple ? "1" : "0"}
+              onValueChange={(val) =>
+                handleFieldChange("pago_triple", val === "1")
+              }
+            >
+              <ToggleGroupItem value="0">❌</ToggleGroupItem>
+              <ToggleGroupItem value="1">✅</ToggleGroupItem>
+            </ToggleGroup>
+          </TableCell>
+
+          <TableCell className="text-center">
+            <ToggleGroup
+              type="single"
+              value={currentData.es_domingo ? "1" : "0"}
+              onValueChange={(val) =>
+                handleFieldChange("es_domingo", val === "1")
+              }
+            >
+              <ToggleGroupItem value="0">❌</ToggleGroupItem>
+              <ToggleGroupItem value="1">✅</ToggleGroupItem>
+            </ToggleGroup>
+          </TableCell>
+          <TableCell className="text-center">
+            <Input
+              type="number"
+              step="0.1"
+              min="0"
+              value={currentData.prima_dominical || 0}
+              onChange={(e) =>
+                handleFieldChange("prima_dominical", e.target.value)
+              }
+            />
+          </TableCell>
+          <TableCell className="text-center">
+            <ToggleGroup
+              type="single"
+              value={currentData.es_festivo ? "1" : "0"}
+              onValueChange={(val) =>
+                handleFieldChange("es_festivo", val === "1")
+              }
+            >
+              <ToggleGroupItem value="0">❌</ToggleGroupItem>
+              <ToggleGroupItem value="1">✅</ToggleGroupItem>
+            </ToggleGroup>
+          </TableCell>
+          <TableCell className="text-center">
+            <Input
+              type="number"
+              step="0.1"
+              min="0"
+              value={currentData.porcentaje_dia_festivo || 0}
+              onChange={(e) =>
+                handleFieldChange("porcentaje_dia_festivo", e.target.value)
+              }
+            />
+          </TableCell>
+          <TableCell className="text-center">
+            <ToggleGroup
+              type="single"
+              value={currentData.hrs_extra ? "1" : "0"}
+              onValueChange={(val) =>
+                handleFieldChange("hrs_extra", val === "1")
+              }
+            >
+              <ToggleGroupItem value="0">❌</ToggleGroupItem>
+              <ToggleGroupItem value="1">✅</ToggleGroupItem>
+            </ToggleGroup>
+          </TableCell>
+          <TableCell className="text-center">
+            <Select
+              value={currentData.forma_pago_extras || ""}
+              onValueChange={(val) =>
+                handleFieldChange("forma_pago_extras", val)
+              }
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Forma de pago" />
+              </SelectTrigger>
+              <SelectContent className="max-h-60 overflow-y-auto">
+                <SelectItem value="Tiempo por tiempo">
+                  ⌛ Tiempo por tiempo
+                </SelectItem>
+                <SelectItem value="Descuento sobre nómina">
+                  💸 Descuento sobre nómina
+                </SelectItem>
+                <SelectItem value="Pago de horas extras">
+                  💰 Pago de horas extras
+                </SelectItem>
+                <SelectItem value="Reposición de tiempo por tiempo">
+                  🔁 Reposición de tiempo por tiempo
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </TableCell>
+          <TableCell className="text-center">
+            <Select
+              value={
+                currentData.extras_autorizadas_por
+                  ? String(currentData.extras_autorizadas_por)
+                  : ""
+              }
+              onValueChange={(val) =>
+                handleFieldChange("extras_autorizadas_por", val)
+              }
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Autorizadas por" />
+              </SelectTrigger>
+              <SelectContent className="max-h-60 overflow-y-auto">
+                {empleados?.map((emp) => (
+                  <SelectItem
+                    key={emp.id_empleado}
+                    value={String(emp.id_empleado)}
+                  >
+                    {emp.nombre} {emp.apellido_paterno}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </TableCell>
+          <TableCell className="text-center">
+            <Input
+              type="number"
+              step="0.1"
+              min="0"
+              value={currentData.hrs_comida || 0}
+              onChange={(e) => handleFieldChange("hrs_comida", e.target.value)}
+            />
+          </TableCell>
+          <TableCell className="text-center">
+            <Textarea
+              value={currentData.notas || ""}
+              onChange={(e) => handleFieldChange("notas", e.target.value)}
+              className="min-w-[150px]"
+            />
+          </TableCell>
+          <TableCell className="text-center">
+            <Textarea
+              value={currentData.notas_hrs_extra || ""}
+              onChange={(e) =>
+                handleFieldChange("notas_hrs_extra", e.target.value)
+              }
+              className="min-w-[150px]"
+            />
+          </TableCell>
+          <TableCell className="text-center">
+            <span
+              className={`px-2 py-1 rounded-full text-sm text-white ${
+                currentData.estado === "Abierto"
+                  ? "bg-green-600"
+                  : "bg-gray-500"
+              }`}
+            >
+              {currentData.estado}
+            </span>
+          </TableCell>
+          <TableCell className="sticky right-0 bg-background z-10 text-center flex items-center gap-2">
+            <Button
+              size="sm"
+              onClick={() => handleSaveClick(registro.id)}
+              disabled={isSaving}
+            >
+              {isSaving ? "Guardando..." : "Guardar"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleCancelEdit}
+              disabled={isSaving}
+            >
+              Cancelar
+            </Button>
+          </TableCell>
+        </>
+      ) : (
+        <>
+          <TableCell>{`${registro.nombre} ${registro.apellido_paterno}`}</TableCell>
+          <TableCell>{registro.tipo_registro_nombre}</TableCell>
+          {!fecha && (
+            <TableCell className="text-center">
+              {registro.fecha
+                ? dayjs(registro.fecha)
+                    .tz("America/Mexico_City")
+                    .format("DD-MM-YYYY")
+                : "-"}
+            </TableCell>
+          )}
+          <TableCell className="text-center">
+            {registro.correccion === 1 ? "✅" : "✖️"}
+          </TableCell>
+          <TableCell className="text-center">
+            {registro.entrada ? registro.entrada.slice(11, 19) : "-"}
+          </TableCell>
+          <TableCell className="text-center">
+            {registro.salida ? registro.salida.slice(11, 19) : "-"}
+          </TableCell>
+          <TableCell className="text-center">
+            {registro.nombre_autorizador
+              ? `${registro.nombre_autorizador} ${registro.apellido_paterno_autorizador} ${registro.apellido_materno_autorizador}`
+              : ""}
+          </TableCell>
+          <TableCell className="text-center">
+            {registro.asistencia === 1 ? "✅" : "✖️"}
+          </TableCell>
+          <TableCell className="text-center">
+            {registro.goce_sueldo === 1 ? "✅" : "✖️"}
+          </TableCell>
+          <TableCell className="text-center">
+            {registro.pago_triple === 1 ? "✅" : "✖️"}
+          </TableCell>
+
+          <TableCell className="text-center">
+            {registro.es_domingo === 1 ? "✅" : "✖️"}
+          </TableCell>
+          <TableCell className="text-center">
+            {registro.prima_dominical ? `${registro.prima_dominical} %` : "-"}
+          </TableCell>
+          <TableCell className="text-center">
+            {registro.es_festivo === 1 ? "✅" : "✖️"}
+          </TableCell>
+          <TableCell className="text-center">
+            {registro.porcentaje_dia_festivo
+              ? `${registro.porcentaje_dia_festivo} %`
+              : "-"}
+          </TableCell>
+          <TableCell className="text-center">
+            {registro.hrs_extra === 1 ? "✅" : "✖️"}
+          </TableCell>
+          <TableCell className="text-center">
+            {registro.forma_pago_extras ? registro.forma_pago_extras : "-"}
+          </TableCell>
+          <TableCell className="text-center">
+            {registro.nombre_extra_autorizador
+              ? `${registro.nombre_extra_autorizador} ${registro.apellido_paterno_extra_autorizador} ${registro.apellido_materno_extra_autorizador}`
+              : ""}
+          </TableCell>
+          <TableCell className="text-center">
+            {registro.hrs_comida ? registro.hrs_comida : "-"}
+          </TableCell>
+          <TableCell className="text-center">
+            {registro.notas ? registro.notas : "-"}
+          </TableCell>
+          <TableCell className="text-center">
+            {registro.notas_hrs_extra ? registro.notas_hrs_extra : "-"}
+          </TableCell>
+          <TableCell className="text-center">
+            <span
+              className={`px-2 py-1 rounded-full text-sm text-white ${
+                registro.estado === "Abierto" ? "bg-green-600" : "bg-gray-500"
+              }`}
+            >
+              {registro.estado}
+            </span>
+          </TableCell>
+          <TableCell className="sticky right-0 bg-background z-10 text-center">
+            <Button size="sm" onClick={() => handleEditClick(registro)}>
+              Editar
+            </Button>
+          </TableCell>
+        </>
+      )}
+    </TableRow>
+  );
+}
