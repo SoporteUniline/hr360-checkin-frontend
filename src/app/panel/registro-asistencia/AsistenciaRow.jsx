@@ -78,6 +78,11 @@ export default function AsistenciaRow({
             <Input
               type="time"
               value={currentData.entrada?.slice(11, 16) || ""}
+              max={
+                currentData.salida
+                  ? currentData.salida.slice(11, 16)
+                  : undefined
+              }
               onChange={(e) => {
                 const hora = e.target.value;
                 const nuevaEntrada = hora
@@ -85,7 +90,6 @@ export default function AsistenciaRow({
                   : null;
                 handleFieldChange("entrada", nuevaEntrada);
               }}
-              // Disable input if correccion is false
               disabled={areTimeInputsDisabled}
             />
           </TableCell>
@@ -93,6 +97,11 @@ export default function AsistenciaRow({
             <Input
               type="time"
               value={currentData.salida?.slice(11, 16) || ""}
+              min={
+                currentData.entrada
+                  ? currentData.entrada.slice(11, 16)
+                  : undefined
+              }
               onChange={(e) => {
                 const hora = e.target.value;
                 const nuevaSalida = hora
@@ -100,7 +109,6 @@ export default function AsistenciaRow({
                   : null;
                 handleFieldChange("salida", nuevaSalida);
               }}
-              // Disable input if correccion is false
               disabled={areTimeInputsDisabled}
             />
           </TableCell>
@@ -312,22 +320,24 @@ export default function AsistenciaRow({
               {currentData.estado}
             </span>
           </TableCell>
-          <TableCell className="sticky right-0 bg-background z-10 text-center flex items-center gap-2">
-            <Button
-              size="sm"
-              onClick={() => handleSaveClick(registro.id)}
-              disabled={isSaving}
-            >
-              {isSaving ? "Guardando..." : "Guardar"}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleCancelEdit}
-              disabled={isSaving}
-            >
-              Cancelar
-            </Button>
+          <TableCell className="sticky right-0 bg-background z-10 text-center p-0">
+            <div className="flex items-center justify-center gap-2 h-full px-2">
+              <Button
+                size="sm"
+                onClick={() => handleSaveClick(registro.id)}
+                disabled={isSaving}
+              >
+                {isSaving ? "Guardando..." : "Guardar"}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleCancelEdit}
+                disabled={isSaving}
+              >
+                Cancelar
+              </Button>
+            </div>
           </TableCell>
         </>
       ) : (
