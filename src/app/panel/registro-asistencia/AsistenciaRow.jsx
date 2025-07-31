@@ -1,4 +1,4 @@
-// src/components/AsistenciaRow.jsx
+// src/app/panel/registro-asistencia/AsistenciaRow.jsx
 import dayjs from "dayjs";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";

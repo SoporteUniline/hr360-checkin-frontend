@@ -1,4 +1,3 @@
-// src/app/panel/registro-asistencia/page.jsx
 "use client";
 
 import { useState } from "react";
@@ -8,18 +7,16 @@ import timezone from "dayjs/plugin/timezone";
 import { useAuth } from "@/context/AuthContext";
 import ErrorPage from "@/components/ErrorPage";
 import LoadingTable from "@/components/LoadingTable";
-import AsistenciaTable from "./AsistenciaTable";
-import AsistenciaFilters from "./AsistenciaFilters";
-import useAsistenciaData from "@/hooks/useAsistenciaData";
-import useEmpleadosData from "@/hooks/useEmpleadosData";
-import useTiposPermisoData from "@/hooks/useTiposPermisoData";
-import useAsistenciaActions from "@/hooks/useAsistenciaActions";
+import EntradasSalidasTable from "./EntradasSalidasTable";
+import EntradasSalidasFilters from "./EntradasSalidasFilter";
+import useRelojChecadorData from "@/hooks/useRelojChecador";
+import useEntradaSalida from "@/hooks/useEntradaSalida"; // <-- ¡IMPORTA EL NUEVO HOOK AQUÍ!
 import TablePagination from "@/components/TablePagination";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-export default function ControlAsistencia() {
+export default function RegistroEntradasSalidas() {
   const [fecha, setFecha] = useState(
     dayjs().tz("America/Mexico_City").format("YYYY-MM-DD")
   );
@@ -29,15 +26,14 @@ export default function ControlAsistencia() {
 
   const { dataUser } = useAuth();
 
-  // Hooks para cargar datos
-  const { data, error, isLoading, mutate } = useAsistenciaData(
+  // Hook para cargar datos (este ya lo tienes y es para la tabla de movimientos)
+  const { data, error, isLoading, mutate } = useRelojChecadorData(
     dataUser?.id_empresa,
     fecha,
     page,
     limit
   );
-  const { data: empleados } = useEmpleadosData(dataUser?.id_empresa);
-  const { data: tiposPermiso } = useTiposPermisoData();
+  console.log(data);
 
   const registros = Array.isArray(data?.registros) ? data.registros : [];
   const totalPages = data?.totalPages || 1;
@@ -53,28 +49,27 @@ export default function ControlAsistencia() {
     setPage(newPage);
   };
 
-  // Hook para la lógica de edición y guardado
   const {
-    editingRowId,
-    setEditingRowId,
-    editingRowData,
-    setEditingRowData,
-    isSaving,
-    handleEditClick,
-    handleCancelEdit,
-    handleFieldChange,
-    handleSaveClick,
-  } = useAsistenciaActions(mutate); // Pasa 'mutate' para revalidar la tabla
+    editingMovimientoId,
+    editingMovimientoData,
+    isSavingMovimiento,
+    handleEditMovimientoClick,
+    handleCancelMovimientoEdit,
+    handleMovimientoFieldChange,
+    handleSaveMovimientoClick,
+  } = useEntradaSalida(mutate);
 
   if (isLoading) return <LoadingTable rows={10} />;
   if (error) {
     console.error(error);
-    return <ErrorPage message="Error al cargar los registros de asistencia" />;
+    return (
+      <ErrorPage message="Error al cargar los registros de entradas y salidas" />
+    );
   }
 
   return (
     <div>
-      <AsistenciaFilters
+      <EntradasSalidasFilters
         filtroEmpleado={filtroEmpleado}
         setFiltroEmpleado={setFiltroEmpleado}
         fecha={fecha}
@@ -82,18 +77,16 @@ export default function ControlAsistencia() {
         setPage={setPage}
       />
 
-      <AsistenciaTable
-        filtrados={filtrados}
+      <EntradasSalidasTable
+        registros={filtrados}
         fecha={fecha}
-        editingRowId={editingRowId}
-        editingRowData={editingRowData}
-        isSaving={isSaving}
-        empleados={empleados?.data}
-        tiposPermiso={tiposPermiso?.data}
-        handleEditClick={handleEditClick}
-        handleCancelEdit={handleCancelEdit}
-        handleFieldChange={handleFieldChange}
-        handleSaveClick={handleSaveClick}
+        editingMovimientoId={editingMovimientoId}
+        editingMovimientoData={editingMovimientoData}
+        isSavingMovimiento={isSavingMovimiento}
+        handleEditMovimientoClick={handleEditMovimientoClick}
+        handleCancelMovimientoEdit={handleCancelMovimientoEdit}
+        handleMovimientoFieldChange={handleMovimientoFieldChange}
+        handleSaveMovimientoClick={handleSaveMovimientoClick}
       />
 
       {filtrados.length > 0 && (

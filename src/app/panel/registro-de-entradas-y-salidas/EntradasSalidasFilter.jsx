@@ -1,7 +1,7 @@
 // src/app/panel/registro-asistencia/AsistenciaFilters.jsx
 import { Input } from "@/components/ui/input";
 
-export default function AsistenciaFilters({
+export default function EntradasSalidasFilter({
   filtroEmpleado,
   setFiltroEmpleado,
   fecha,

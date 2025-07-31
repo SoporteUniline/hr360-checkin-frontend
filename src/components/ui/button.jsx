@@ -61,7 +61,7 @@ function Button({
       ) : startIcon ? (
         startIcon
       ) : null}
-      {...props?.children ?? ""}
+      {props.children}
       {endIcon}
     </Comp>
   );

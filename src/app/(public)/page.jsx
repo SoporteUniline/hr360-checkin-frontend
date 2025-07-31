@@ -1,6 +1,16 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Icon } from "@iconify/react";
+// Importaciones de iconos de Lucide React para un estilo más moderno
+import {
+  Clock,
+  User,
+  CheckCircle,
+  XCircle,
+  Users,
+  Timer,
+  Calendar,
+} from "lucide-react";
+// Componentes de Shadcn UI y otras utilidades que ya usas
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,7 +24,7 @@ import useSWR from "swr";
 import { fetcher, fetcherWithToken } from "@/lib/fetcher";
 import ErrorPage from "@/components/ErrorPage";
 import { useSnackbar } from "notistack";
-import { twMerge } from "tailwind-merge";
+import { twMerge } from "tailwind-merge"; // Para fusionar clases de Tailwind
 import Cookies from "js-cookie";
 import axiosInstance from "@/lib/axios";
 import { useRouter } from "next/navigation";
@@ -25,11 +35,13 @@ export default function Home() {
   const token = Cookies.get("token");
   const router = useRouter();
   const [horaActual, setHoraActual] = useState("");
+  const [fechaActual, setFechaActual] = useState(""); // Añadido para la fecha en el nuevo diseño
   const [codigoEmpleado, setCodigoEmpleado] = useState("");
   const { enqueueSnackbar } = useSnackbar();
   const [popupInfo, setPopupInfo] = useState(null);
   const [registrando, setRegistrando] = useState(false);
 
+  // Función para formatear la hora (tu lógica original)
   const formatearHora = (fechaString) => {
     if (!fechaString) return "-";
     return new Date(fechaString).toLocaleTimeString("es-MX", {
@@ -40,18 +52,25 @@ export default function Home() {
     });
   };
 
+  // Hook SWR para obtener los movimientos (tu lógica original)
   const {
-    data: movimientos,
+    data: registrosData,
     mutate,
     error,
     isLoading,
   } = useSWR(
     dataUser?.id_empresa
-      ? `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/reloj/ultimos?id_empresa=${dataUser.id_empresa}`
+      ? `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/reloj/registros-del-dia?id_empresa=${dataUser.id_empresa}`
       : null,
     fetcherWithToken
   );
 
+  const movimientos = registrosData?.registrosHoy || [];
+  const movimientosParaTabla = movimientos.slice(0, 10);
+  const empleadosActivos = registrosData?.activosHoy || 0;
+  const totalRegistros = registrosData?.totalRegistrosHoy || 0;
+
+  // Efecto para actualizar la hora y la fecha (tu lógica original + fecha)
   useEffect(() => {
     const actualizarHora = () => {
       const ahora = new Date();
@@ -62,6 +81,26 @@ export default function Home() {
         hour12: false,
       });
       setHoraActual(hora);
+
+      // Genera la fecha completa con el día en minúsculas
+      const fechaCompleta = ahora.toLocaleDateString("es-MX", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+
+      // 1. Divide la cadena de la fecha en partes
+      // Por ejemplo, "jueves, 31 de julio de 2025" se convierte en ["jueves", "31 de julio de 2025"]
+      const [dia, ...restoDeFecha] = fechaCompleta.split(", ");
+
+      // 2. Capitaliza la primera letra del día (ej. "jueves" -> "Jueves")
+      const diaCapitalizado = dia.charAt(0).toUpperCase() + dia.slice(1);
+
+      // 3. Vuelve a unir la fecha con la primera letra en mayúscula
+      const fechaFinal = [diaCapitalizado, ...restoDeFecha].join(", ");
+
+      setFechaActual(fechaFinal);
     };
 
     actualizarHora();
@@ -69,10 +108,12 @@ export default function Home() {
     return () => clearInterval(intervalo);
   }, []);
 
+  // Manejador de cambio de código de empleado (tu lógica original)
   const manejarCambioCodigo = (e) => {
     setCodigoEmpleado(e.target.value.toUpperCase());
   };
 
+  // Función para registrar movimiento (tu lógica original, intacta)
   const registrarMovimiento = async () => {
     if (registrando) return;
     setRegistrando(true);
@@ -100,14 +141,12 @@ export default function Home() {
         }
       );
 
-      // Ya no necesitas hacer otra llamada para obtener al empleado,
-      // porque el backend te lo manda junto con el movimiento
       const { movimiento, empleado } = data;
 
       setPopupInfo({
         nombre: `${empleado.nombre} ${empleado.apellido_paterno}`,
         foto_perfil: empleado.foto_perfil || "/assets/user.png",
-        movimiento, // Aquí usas directamente el movimiento que registró el backend
+        movimiento,
         success: true,
       });
 
@@ -117,7 +156,7 @@ export default function Home() {
         variant: "success",
       });
       setCodigoEmpleado("");
-      mutate();
+      mutate(); // Vuelve a cargar los movimientos después de un registro exitoso
     } catch (err) {
       if (err.response) {
         const status = err.response.status;
@@ -155,155 +194,306 @@ export default function Home() {
     }
   };
 
+  // Si hay un error al cargar los datos iniciales, muestra la página de error
   if (error)
     return <ErrorPage message="No se pudieron cargar los registros." />;
 
   return (
     <>
-      <main className="min-h-screen flex flex-col items-center justify-center bg-gray-100 p-4">
-        <h1 className="text-3xl font-bold mb-6">Reloj Checador</h1>
-
+      {/* Contenedor principal con gradiente y padding del diseño modificado */}
+      <main className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 p-4">
+        {/* Contenido condicional basado en isLoggedIn */}
         {!isLoggedIn ? (
-          <div className="flex flex-col justify-center items-center bg-gray-100 p-6 w-full max-w-md">
-            <Icon
-              icon="mdi:clock-outline"
-              className="text-[120px] text-slate-700"
-            />
-            <h2 className="text-5xl font-bold text-slate-800 mt-4">
-              {horaActual}
-            </h2>
-            <p className="mt-2 text-lg text-slate-500">Hora actual</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-6xl items-stretch">
-            {/* Sección izquierda: Reloj + input */}
-            <div className="flex flex-col justify-center items-center bg-white p-6 rounded-xl shadow-md w-full h-full">
-              <Icon
-                icon="mdi:clock-outline"
-                className="text-[120px] text-slate-700"
-              />
-              <h2 className="text-5xl font-bold text-slate-800 mt-4">
+          // Sección para cuando no hay login (más estilizada)
+          <div className="max-w-md mx-auto">
+            <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl border border-slate-200/50 p-8 text-center">
+              <div className="relative mb-6">
+                <div className="w-26 h-26 mx-auto bg-gradient-to-br from-slate-600 to-slate-800 rounded-full flex items-center justify-center shadow-xl">
+                  <Clock className="w-16 h-16 text-white" />
+                </div>
+              </div>
+              <h2 className="text-6xl font-bold text-slate-800 mb-2 tracking-tight">
                 {horaActual}
               </h2>
-              <p className="mt-2 text-lg text-slate-500">Hora actual</p>
+              <p className="text-lg text-slate-500 mb-8">{fechaActual}</p>
+            </div>
+          </div>
+        ) : (
+          // Layout de 2 columnas para el usuario logueado
+          <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-6">
+            {/* Panel de reloj y registro (columna izquierda) */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Reloj principal y formulario de registro */}
+              <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-slate-200/50 p-6 text-center">
+                <div className="relative mb-6">
+                  <div className="w-28 h-28 mx-auto bg-gradient-to-br from-slate-600 to-slate-800 rounded-full flex items-center justify-center shadow-xl transform hover:scale-105 transition-transform duration-300">
+                    <Clock className="w-16 h-16 text-white animate-pulse" />
+                  </div>
+                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full animate-ping"></div>
+                </div>
 
-              <div className="w-full mt-8">
-                <Input
-                  placeholder="Ingresa tu código"
-                  value={codigoEmpleado}
-                  onChange={manejarCambioCodigo}
-                  className="w-full text-center"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && !registrando)
-                      registrarMovimiento();
-                  }}
-                />
-                <Button
-                  onClick={registrarMovimiento}
-                  disabled={registrando}
-                  className="mt-3 w-full"
-                >
-                  {registrando ? "Registrando..." : "Registrar"}
-                </Button>
+                <h2 className="text-5xl font-bold text-slate-800 mb-2 tracking-tight font-mono">
+                  {horaActual}
+                </h2>
+                <p className="text-lg text-slate-500 mb-8">{fechaActual}</p>
+
+                {/* Formulario de registro usando tu componente Input de Shadcn UI */}
+                <div className="space-y-4">
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <Input
+                      type="text"
+                      placeholder="Ingresa tu código"
+                      value={codigoEmpleado}
+                      onChange={manejarCambioCodigo}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !registrando)
+                          registrarMovimiento();
+                      }}
+                      // Clases de estilo del input modificado aplicadas a tu componente Input
+                      className="w-full pl-12 pr-4 py-4 text-center text-lg font-semibold border-2 border-slate-200 rounded-2xl focus:border-slate-600 focus:ring-4 focus:ring-slate-200 transition-all duration-300 bg-slate-50/50"
+                    />
+                  </div>
+
+                  {/* Botón de registro usando tu componente Button de Shadcn UI */}
+                  <Button
+                    onClick={registrarMovimiento}
+                    disabled={registrando}
+                    // Clases de estilo del botón modificado aplicadas a tu componente Button
+                    className="w-full py-4 bg-gradient-to-r from-slate-700 to-slate-800 text-white font-bold text-lg rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:transform-none"
+                  >
+                    {registrando ? (
+                      <div className="flex items-center justify-center space-x-2">
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Registrando...</span>
+                      </div>
+                    ) : (
+                      "Registrar Entrada/Salida"
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Stats cards con datos reales */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200/50 p-6 text-center">
+                  <div className="w-12 h-12 mx-auto bg-green-100 rounded-xl flex items-center justify-center mb-3">
+                    <CheckCircle className="w-6 h-6 text-green-600" />
+                  </div>
+                  <div className="text-2xl font-bold text-slate-800">
+                    {empleadosActivos}
+                  </div>
+                  <div className="text-sm text-slate-600">
+                    Empleados Activos
+                  </div>
+                </div>
+
+                <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200/50 p-6 text-center">
+                  <div className="w-12 h-12 mx-auto bg-slate-100 rounded-xl flex items-center justify-center mb-3">
+                    <Calendar className="w-6 h-6 text-slate-600" />
+                  </div>
+                  <div className="text-2xl font-bold text-slate-800">
+                    {totalRegistros}
+                  </div>
+                  <div className="text-sm text-slate-600">Registros Hoy</div>
+                </div>
               </div>
             </div>
 
-            <div className="bg-white p-6 rounded-xl shadow-md w-full h-full">
-              <h3 className="text-xl font-semibold mb-4">Últimos registros</h3>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableCell>Código</TableCell>
-                    <TableCell>Nombre</TableCell>
-                    <TableCell>Entrada</TableCell>
-                    <TableCell>Salida</TableCell>
-                    <TableCell>Estado</TableCell>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                    [...Array(5)].map((_, i) => (
-                      <TableRow key={i}>
-                        <TableCell>
-                          <div className="h-4 bg-gray-200 rounded animate-pulse w-20" />
+            {/* Tabla de registros (columna derecha) */}
+            <div className="lg:col-span-3">
+              <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-slate-200/50 overflow-hidden">
+                <div className="px-6 py-5 border-b border-slate-200">
+                  <h3 className="text-2xl font-bold text-slate-800 flex items-center space-x-3">
+                    <Users className="w-6 h-6" />
+                    <span>Últimos registros</span>
+                  </h3>
+                </div>
+
+                <div className="overflow-x-auto">
+                  {/* Usa tu componente Table de Shadcn UI */}
+                  <Table>
+                    {/* Thead con los nuevos estilos de tabla */}
+                    <TableHeader className="bg-slate-50">
+                      <TableRow>
+                        <TableCell className="px-6 py-2 text-center text-sm font-semibold text-slate-700">
+                          Código
                         </TableCell>
-                        <TableCell>
-                          <div className="h-4 bg-gray-200 rounded animate-pulse w-40" />
+                        <TableCell className="px-6 py-2 text-left text-sm font-semibold text-slate-700">
+                          Empleado
                         </TableCell>
-                        <TableCell>
-                          <div className="h-4 bg-gray-200 rounded animate-pulse w-16" />
+                        <TableCell className="px-6 py-2 text-center text-sm font-semibold text-slate-700">
+                          Entrada
                         </TableCell>
-                        <TableCell>
-                          <div className="h-4 bg-gray-200 rounded animate-pulse w-16" />
+                        <TableCell className="px-6 py-2 text-center text-sm font-semibold text-slate-700">
+                          Salida
                         </TableCell>
-                        <TableCell>
-                          <div className="h-4 bg-gray-200 rounded animate-pulse w-20" />
+                        <TableCell className="px-6 py-2 text-center text-sm font-semibold text-slate-700">
+                          Estado
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : movimientos?.length > 0 ? (
-                    movimientos.map((mov, i) => (
-                      <TableRow key={i}>
-                        <TableCell>{mov.nip}</TableCell>
-                        <TableCell>{mov.nombre}</TableCell>
-                        <TableCell>
-                          {/* Lógica para Entrada: si entrada_corregida existe, úsala; de lo contrario, usa entrada */}
-                          {formatearHora(mov.entrada_corregida || mov.entrada)}
-                        </TableCell>
-                        <TableCell>
-                          {/* Lógica para Salida: si salida_corregida existe, úsala; de lo contrario, usa salida */}
-                          {formatearHora(mov.salida_corregida || mov.salida)}
-                        </TableCell>
-                        <TableCell>
-                          <span
-                            className={twMerge(
-                              "px-3 py-1 rounded-full text-white text-sm font-semibold",
-                              mov.estado === "Abierto"
-                                ? "bg-green-600"
-                                : "bg-gray-600"
-                            )}
+                    </TableHeader>
+                    <TableBody className="divide-y divide-slate-100">
+                      {/* Lógica de carga (esqueleto) */}
+                      {isLoading ? (
+                        [...Array(5)].map((_, i) => (
+                          <TableRow key={i}>
+                            <TableCell>
+                              <div className="h-4 bg-gray-200 rounded animate-pulse w-20" />
+                            </TableCell>
+                            <TableCell>
+                              <div className="h-4 bg-gray-200 rounded animate-pulse w-40" />
+                            </TableCell>
+                            <TableCell>
+                              <div className="h-4 bg-gray-200 rounded animate-pulse w-16" />
+                            </TableCell>
+                            <TableCell>
+                              <div className="h-4 bg-gray-200 rounded animate-pulse w-16" />
+                            </TableCell>
+                            <TableCell>
+                              <div className="h-4 bg-gray-200 rounded animate-pulse w-20" />
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : // Mapeo de tus movimientos reales
+                      movimientosParaTabla?.length > 0 ? (
+                        movimientosParaTabla.map((mov, i) => (
+                          <TableRow
+                            key={i}
+                            className="hover:bg-slate-50/50 transition-colors duration-200"
                           >
-                            {mov.estado}
-                          </span>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell
-                        colSpan={5}
-                        className="text-center text-gray-500"
-                      >
-                        No hay registros aún
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                            <TableCell className="px-6">
+                              <div className="flex items-center space-x-3">
+                                <span className="text-sm font-bold text-slate-700">
+                                  {mov.nip}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="px-6">
+                              <div className="font-medium text-slate-800">
+                                {mov.nombre}
+                              </div>
+                            </TableCell>
+                            <TableCell className="px-6 text-center">
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                                {formatearHora(
+                                  mov.entrada_corregida || mov.entrada
+                                )}
+                              </span>
+                            </TableCell>
+                            <TableCell className="px-6 text-center">
+                              {mov.salida ? (
+                                <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                                  {formatearHora(
+                                    mov.salida_corregida || mov.salida
+                                  )}
+                                </span>
+                              ) : (
+                                <span className="text-slate-400">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="px-6 text-center">
+                              <span
+                                className={twMerge(
+                                  "inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold",
+                                  mov.estado === "Abierto"
+                                    ? "bg-green-100 text-green-800 border border-green-200"
+                                    : "bg-slate-100 text-slate-700 border border-slate-200"
+                                )}
+                              >
+                                {mov.estado === "Abierto" ? (
+                                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
+                                ) : (
+                                  <div className="w-2 h-2 bg-slate-400 rounded-full mr-2"></div>
+                                )}
+                                {mov.estado}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell
+                            colSpan={5}
+                            className="text-center text-gray-500 py-4"
+                          >
+                            No hay registros para el día de hoy aún
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
             </div>
           </div>
         )}
       </main>
 
+      {/* Popup mejorado con tus datos reales y animaciones */}
       {popupInfo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-xl shadow-lg p-6 text-center relative max-w-sm w-full animate-fade-in-up">
-            <img
-              src={popupInfo.foto_perfil}
-              alt="Foto del empleado"
-              className="w-32 h-32 object-cover rounded-full mx-auto mb-4"
-            />
-            <h3 className="text-xl font-bold">{popupInfo.nombre}</h3>
-            <p className="text-gray-600 mb-4">{popupInfo.movimiento}</p>
-            <Icon
-              icon={popupInfo.success ? "mdi:check-circle" : "mdi:close-circle"}
-              className={`text-[64px] mx-auto ${
-                popupInfo.success ? "text-green-500" : "text-red-500"
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl shadow-2xl p-8 text-center max-w-sm w-full mx-4 transform animate-bounce-in">
+            <div className="relative mb-6">
+              <img
+                src={popupInfo.foto_perfil}
+                alt="Foto del empleado"
+                className="w-24 h-24 object-cover rounded-full mx-auto border-4 border-slate-200 shadow-lg"
+              />
+              <div
+                className={`absolute -bottom-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center shadow-lg ${
+                  popupInfo.success ? "bg-green-500" : "bg-red-500"
+                }`}
+              >
+                {popupInfo.success ? (
+                  <CheckCircle className="w-5 h-5 text-white" />
+                ) : (
+                  <XCircle className="w-5 h-5 text-white" />
+                )}
+              </div>
+            </div>
+
+            <h3 className="text-2xl font-bold text-slate-800 mb-2">
+              {popupInfo.nombre}
+            </h3>
+            <p className="text-slate-600 mb-4 text-lg">
+              {popupInfo.movimiento}
+            </p>
+
+            <div
+              className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center ${
+                popupInfo.success ? "bg-green-100" : "bg-red-100"
               }`}
-            />
+            >
+              {popupInfo.success ? (
+                <CheckCircle className="w-8 h-8 text-green-500" />
+              ) : (
+                <XCircle className="w-8 h-8 text-red-500" />
+              )}
+            </div>
           </div>
         </div>
       )}
+
+      {/* Estilos CSS para la animación del popup */}
+      <style jsx>{`
+        @keyframes bounce-in {
+          0% {
+            transform: scale(0.3) translateY(-50px);
+            opacity: 0;
+          }
+          50% {
+            transform: scale(1.05);
+          }
+          100% {
+            transform: scale(1) translateY(0);
+            opacity: 1;
+          }
+        }
+        .animate-bounce-in {
+          animation: bounce-in 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+      `}</style>
     </>
   );
 }

@@ -1,4 +1,4 @@
-// src/components/AsistenciaTable.jsx
+// src/app/panel/registro-asistencia/AsistenciaTable.jsx
 import dayjs from "dayjs";
 import {
   Table,

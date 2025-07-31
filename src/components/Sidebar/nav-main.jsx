@@ -44,6 +44,12 @@ const items = [
     rol: "Recruiter",
     icon: BadgeCheck,
   },
+  {
+    title: "Registro de entradas y salidas",
+    url: "/panel/registro-de-entradas-y-salidas",
+    rol: "Recruiter",
+    icon: BadgeCheck,
+  },
   // {
   //   title: "Postulaciones",
   //   url: "/home/postulaciones",
