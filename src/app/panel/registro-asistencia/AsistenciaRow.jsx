@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Textarea } from "@/components/ui/textarea";
+import { Pencil, Save, X } from "lucide-react";
 
 export default function AsistenciaRow({
   registro,
@@ -29,13 +30,12 @@ export default function AsistenciaRow({
   const currentData = isEditing ? editingRowData : registro;
   const areTimeInputsDisabled = !currentData.correccion;
 
-  console.log(tiposPermiso);
-
   return (
     <TableRow key={registro.id}>
       {isEditing ? (
         <>
           <TableCell>{`${registro.nombre} ${registro.apellido_paterno}`}</TableCell>
+          <TableCell>{registro.departamento}</TableCell>
           <TableCell>
             <Select
               value={
@@ -57,6 +57,25 @@ export default function AsistenciaRow({
               </SelectContent>
             </Select>
           </TableCell>
+          <TableCell className="text-center">
+            {/* Muestra el estado de asistencia calculado */}
+            <span
+              className={`px-2 py-1 rounded-full text-sm text-white ${
+                currentData.estadoAsistencia === "Presente"
+                  ? "bg-green-600"
+                  : currentData.estadoAsistencia === "Ausente"
+                  ? "bg-red-600"
+                  : currentData.estadoAsistencia === "Tardanza"
+                  ? "bg-yellow-600"
+                  : currentData.estadoAsistencia === "Permiso"
+                  ? "bg-blue-600"
+                  : "bg-gray-500" // Color para Día Libre o Desconocido
+              }`}
+            >
+              {currentData.estadoAsistencia}
+            </span>
+          </TableCell>
+
           {!fecha && (
             <TableCell className="text-center">
               {dayjs(currentData.fecha).format("DD-MM-YYYY")}
@@ -326,8 +345,10 @@ export default function AsistenciaRow({
                 size="sm"
                 onClick={() => handleSaveClick(registro.id)}
                 disabled={isSaving}
+                className="bg-slate-700 hover:bg-slate-700"
               >
-                {isSaving ? "Guardando..." : "Guardar"}
+                {/* {isSaving ? "Guardando..." : "Guardar"} */}
+                <Save className="w-16 h-16 text-white bg-slate-700" />
               </Button>
               <Button
                 size="sm"
@@ -335,15 +356,34 @@ export default function AsistenciaRow({
                 onClick={handleCancelEdit}
                 disabled={isSaving}
               >
-                Cancelar
+                <X className="w-16 h-16 text-slate-700 " />
               </Button>
             </div>
           </TableCell>
         </>
       ) : (
         <>
-          <TableCell>{`${registro.nombre} ${registro.apellido_paterno}`}</TableCell>
+          <TableCell className="font-bold">{`${registro.nombre} ${registro.apellido_paterno}`}</TableCell>
+          <TableCell>{registro.departamento}</TableCell>
           <TableCell>{registro.tipo_registro_nombre}</TableCell>
+          <TableCell className="text-center">
+            {/* Muestra el estado de asistencia calculado */}
+            <span
+              className={`px-2 py-1 rounded-full text-sm text-white ${
+                registro.estadoAsistencia === "Presente"
+                  ? "bg-green-600"
+                  : registro.estadoAsistencia === "Ausente"
+                  ? "bg-red-600"
+                  : registro.estadoAsistencia === "Tardanza"
+                  ? "bg-yellow-600"
+                  : registro.estadoAsistencia === "Permiso"
+                  ? "bg-blue-600"
+                  : "bg-gray-500" // Color para Día Libre o Desconocido
+              }`}
+            >
+              {registro.estadoAsistencia}
+            </span>
+          </TableCell>
           {!fecha && (
             <TableCell className="text-center">
               {registro.fecha
@@ -421,8 +461,12 @@ export default function AsistenciaRow({
             </span>
           </TableCell>
           <TableCell className="sticky right-0 bg-background z-10 text-center">
-            <Button size="sm" onClick={() => handleEditClick(registro)}>
-              Editar
+            <Button
+              size="sm"
+              onClick={() => handleEditClick(registro)}
+              className="bg-slate-700 hover:bg-slate-700"
+            >
+              <Pencil className="w-16 h-16 text-white bg-slate-700" />
             </Button>
           </TableCell>
         </>
