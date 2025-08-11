@@ -16,6 +16,7 @@ import useEmpleadosData from "@/hooks/useEmpleadosData";
 import useTiposPermisoData from "@/hooks/useTiposPermisoData";
 import useAsistenciaActions from "@/hooks/useAsistenciaActions";
 import TablePagination from "@/components/TablePagination";
+import useDebounce from "@/hooks/useDebounce";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -30,6 +31,7 @@ export default function ControlAsistencia() {
   const [page, setPage] = useState(1);
   const limit = 10;
   const [filtroEmpleado, setFiltroEmpleado] = useState("");
+  const debouncedFiltroEmpleado = useDebounce(filtroEmpleado, 500);
   const [filtroDepartamento, setFiltroDepartamento] = useState("");
   const [departamentosUnicos, setDepartamentosUnicos] = useState([]); // Nuevo estado para departamentos únicos
   const [filtroTipoRegistro, setFiltroTipoRegistro] = useState("");
@@ -44,7 +46,11 @@ export default function ControlAsistencia() {
     fechaInicio,
     fechaFin,
     page,
-    limit
+    limit,
+    debouncedFiltroEmpleado,
+    filtroDepartamento,
+    filtroTipoRegistro,
+    filtroEstadoAsistencia
   );
   const { data: empleados } = useEmpleadosData(dataUser?.id_empresa);
   const { data: tiposPermiso } = useTiposPermisoData();
@@ -75,76 +81,10 @@ export default function ControlAsistencia() {
 
   const registros = Array.isArray(data?.registros) ? data.registros : [];
 
-  // Derivar el estado de asistencia para cada registro
-  const registrosConEstadoCalculado = registros.map((reg) => {
-    let estadoAsistencia = "Desconocido"; // Valor por defecto para casos no cubiertos
-
-    // Primero, verificar si es un día libre (no hay hora programada)
-    if (
-      reg.hora_entrada_programada === null ||
-      reg.hora_entrada_programada === undefined
-    ) {
-      estadoAsistencia = "Día Libre";
-    }
-    // Si no es día libre, entonces evaluamos los otros estados
-    else if (reg.asistencia === 1) {
-      // Si hay asistencia (asistencia = 1)
-      estadoAsistencia = "Presente";
-      // Si hay hora de entrada registrada, comparamos con la programada
-      if (reg.entrada) {
-        const entradaReal = dayjs(reg.entrada);
-        const [h, m, s] = reg.hora_entrada_programada.split(":").map(Number);
-        const horaProgramada = dayjs(reg.fecha).hour(h).minute(m).second(s);
-
-        if (entradaReal.isAfter(horaProgramada)) {
-          estadoAsistencia = "Tardanza";
-        }
-      }
-    } else if (reg.asistencia === 0 || reg.asistencia === null) {
-      // Si asistencia es 0, puede ser Ausente o Permiso
-      // if (reg.id_tipo_permiso !== null && reg.id_tipo_permiso !== undefined) {
-      //   estadoAsistencia = "Permiso";
-      // } else {
-      estadoAsistencia = "Ausente";
-      // }
-    }
-
-    return { ...reg, estadoAsistencia: estadoAsistencia }; // Usar el nuevo nombre
-  });
+  console.log(registros);
 
   const totalPages = data?.totalPages || 1;
   const currentPage = data?.currentPage || 1;
-
-  const filtrados = registrosConEstadoCalculado.filter((r) => {
-    // Filtrar por nombre de empleado
-    const nombreCompleto = `${r.nombre} ${r.apellido_paterno} ${
-      r.apellido_materno || ""
-    }`.toLowerCase();
-    const coincideEmpleado = nombreCompleto.includes(
-      filtroEmpleado.toLowerCase()
-    );
-
-    // Filtrar por departamento
-    const coincideDepartamento =
-      !filtroDepartamento || r.departamento === filtroDepartamento;
-
-    // Filtrar por tipo de registro
-    const coincideTipoRegistro =
-      !filtroTipoRegistro || r.tipo_registro_clave === filtroTipoRegistro;
-
-    // Nuevo: Filtrar por estado de asistencia calculado
-    const coincideEstadoAsistencia =
-      !filtroEstadoAsistencia || r.estadoAsistencia === filtroEstadoAsistencia; // Usar el nuevo nombre
-
-    return (
-      coincideEmpleado &&
-      coincideDepartamento &&
-      coincideTipoRegistro &&
-      coincideEstadoAsistencia
-    );
-  });
-
-  console.log(filtrados);
 
   const onPageChange = (newPage) => {
     setPage(newPage);
@@ -191,7 +131,7 @@ export default function ControlAsistencia() {
       />
 
       <AsistenciaTable
-        filtrados={filtrados}
+        filtrados={registros}
         fecha={fechaInicio}
         editingRowId={editingRowId}
         editingRowData={editingRowData}
@@ -204,7 +144,7 @@ export default function ControlAsistencia() {
         handleSaveClick={handleSaveClick}
       />
 
-      {filtrados.length > 0 && (
+      {registros.length > 0 && (
         <TablePagination
           page={page}
           limit={limit}

@@ -13,6 +13,10 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Save, X } from "lucide-react";
+import useClockCheckData from "@/hooks/useRelojChecador";
+import { mutate } from "swr";
+import { useAuth } from "@/context/AuthContext";
+import { useEffect, useState } from "react";
 
 export default function AsistenciaRow({
   registro,
@@ -30,11 +34,37 @@ export default function AsistenciaRow({
   const currentData = isEditing ? editingRowData : registro;
   const areTimeInputsDisabled = !currentData.correccion;
 
+  // console.log(registro);
+  const { dataUser } = useAuth();
+  const page = 1;
+  const limit = 10;
+  const [loadData, setLoadData] = useState(false);
+
+  const { data, error, isLoading } = useClockCheckData(
+    loadData ? dataUser?.id_empresa : null,
+    loadData ? fecha : null,
+    loadData ? registro.id_empleado : null,
+    page,
+    limit
+  );
+
+  const handleRowClick = () => {
+    setLoadData(false); // primero reset para forzar cambio
+    setTimeout(() => setLoadData(true), 0); // luego activar carga
+  };
+
+  useEffect(() => {
+    if (data) {
+      console.log("Datos cargados para empleado:", registro.id_empleado, data);
+    }
+  }, [data, registro.id_empleado]);
+
   return (
-    <TableRow key={registro.id}>
+    <TableRow key={registro.id} onClick={handleRowClick}>
       {isEditing ? (
         <>
-          <TableCell>{`${registro.nombre} ${registro.apellido_paterno}`}</TableCell>
+          <TableCell className="font-bold">{`${registro.nombre} ${registro.apellido_paterno}`}</TableCell>
+          <TableCell>{registro.nip}</TableCell>
           <TableCell>{registro.departamento}</TableCell>
           <TableCell>
             <Select
@@ -76,11 +106,9 @@ export default function AsistenciaRow({
             </span>
           </TableCell>
 
-          {!fecha && (
-            <TableCell className="text-center">
-              {dayjs(currentData.fecha).format("DD-MM-YYYY")}
-            </TableCell>
-          )}
+          <TableCell className="text-center">
+            {dayjs(currentData.fecha).format("DD/MM/YYYY")}
+          </TableCell>
           <TableCell className="text-center">
             <ToggleGroup
               type="single"
@@ -339,7 +367,10 @@ export default function AsistenciaRow({
               {currentData.estado}
             </span>
           </TableCell>
-          <TableCell className="sticky right-0 bg-background z-10 text-center p-0">
+          <TableCell
+            className="sticky right-0 bg-background z-10 text-center p-0"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-center gap-2 h-full px-2">
               <Button
                 size="sm"
@@ -364,6 +395,7 @@ export default function AsistenciaRow({
       ) : (
         <>
           <TableCell className="font-bold">{`${registro.nombre} ${registro.apellido_paterno}`}</TableCell>
+          <TableCell>{registro.nip}</TableCell>
           <TableCell>{registro.departamento}</TableCell>
           <TableCell>{registro.tipo_registro_nombre}</TableCell>
           <TableCell className="text-center">
@@ -384,15 +416,13 @@ export default function AsistenciaRow({
               {registro.estadoAsistencia}
             </span>
           </TableCell>
-          {!fecha && (
-            <TableCell className="text-center">
-              {registro.fecha
-                ? dayjs(registro.fecha)
-                    .tz("America/Mexico_City")
-                    .format("DD-MM-YYYY")
-                : "-"}
-            </TableCell>
-          )}
+          <TableCell className="text-center">
+            {registro.fecha
+              ? dayjs(registro.fecha)
+                  .tz("America/Mexico_City")
+                  .format("DD/MM/YYYY")
+              : "-"}
+          </TableCell>
           <TableCell className="text-center">
             {registro.correccion === 1 ? "✅" : "✖️"}
           </TableCell>
@@ -460,7 +490,10 @@ export default function AsistenciaRow({
               {registro.estado}
             </span>
           </TableCell>
-          <TableCell className="sticky right-0 bg-background z-10 text-center">
+          <TableCell
+            className="sticky right-0 bg-background z-10 text-center"
+            onClick={(e) => e.stopPropagation()}
+          >
             <Button
               size="sm"
               onClick={() => handleEditClick(registro)}

@@ -53,7 +53,6 @@ export default function AsistenciaFilters({
     { value: "Presente", label: "Presente" },
     { value: "Ausente", label: "Ausente" },
     { value: "Tardanza", label: "Tardanza" },
-    { value: "Permiso", label: "Permiso" },
     { value: "Día Libre", label: "Día Libre" },
   ];
 

@@ -7,15 +7,35 @@ export default function useAsistenciaData(
   fechaInicio,
   fechaFin,
   page,
-  limit
+  limit,
+  debouncedFiltroEmpleado,
+  filtroDepartamento,
+  filtroTipoRegistro,
+  filtroEstadoAsistencia
 ) {
-  const url = idEmpresa
-    ? `/checador/asistencias?empresa=${idEmpresa}&fechaInicio=${fechaInicio}&fechaFin=${fechaFin}&page=${page}&limit=${limit}`
-    : null;
+  let url = null;
+  if (idEmpresa) {
+    const params = new URLSearchParams({
+      empresa: idEmpresa,
+      fechaInicio,
+      fechaFin,
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+
+    if (debouncedFiltroEmpleado)
+      params.append("filtroEmpleado", debouncedFiltroEmpleado);
+    if (filtroDepartamento)
+      params.append("filtroDepartamento", filtroDepartamento);
+    if (filtroTipoRegistro)
+      params.append("filtroTipoRegistro", filtroTipoRegistro);
+    if (filtroEstadoAsistencia)
+      params.append("filtroEstadoAsistencia", filtroEstadoAsistencia);
+
+    url = `/checador/asistencias?${params.toString()}`;
+  }
 
   const { data, error, isLoading, mutate } = useSWR(url, fetcherWithToken);
-
-  // console.log(data);
 
   return { data, error, isLoading, mutate };
 }

@@ -24,6 +24,7 @@ export default function AsistenciaTable({
   handleFieldChange,
   handleSaveClick,
 }) {
+  // console.log(filtrados);
   if (filtrados.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-10">
@@ -44,6 +45,7 @@ export default function AsistenciaTable({
         <TableHeader>
           <TableRow>
             <TableHead className="text-white bg-slate-700 ">Empleado</TableHead>
+            <TableHead className="text-white bg-slate-700 ">Código</TableHead>
             <TableHead className="text-white bg-slate-700 ">
               Departamento
             </TableHead>
@@ -53,11 +55,11 @@ export default function AsistenciaTable({
             <TableHead className="text-white bg-slate-700 ">
               Estado asistencia
             </TableHead>
-            {!fecha && (
-              <TableHead className="text-white bg-slate-700 text-center">
-                Fecha
-              </TableHead>
-            )}
+
+            <TableHead className="text-white bg-slate-700 text-center">
+              Fecha
+            </TableHead>
+
             <TableHead className="text-white bg-slate-700 text-center">
               Corrección
             </TableHead>

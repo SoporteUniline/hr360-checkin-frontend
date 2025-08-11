@@ -30,6 +30,7 @@ export default function RegistroEntradasSalidas() {
   const { data, error, isLoading, mutate } = useRelojChecadorData(
     dataUser?.id_empresa,
     fecha,
+    null,
     page,
     limit
   );
