@@ -81,7 +81,7 @@ export default function ControlAsistencia() {
 
   const registros = Array.isArray(data?.registros) ? data.registros : [];
 
-  console.log(registros);
+  // console.log(registros);
 
   const totalPages = data?.totalPages || 1;
   const currentPage = data?.currentPage || 1;

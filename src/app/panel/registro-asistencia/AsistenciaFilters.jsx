@@ -62,8 +62,8 @@ export default function AsistenciaFilters({
   };
 
   return (
-    <div className="mb-3 w-full flex gap-3 justify-between items-center">
-      <div className="flex flex-col gap-2">
+    <div className="flex flex-col md:flex-row md:flex-wrap md:justify-start gap-4 mb-4 p-4">
+      <div className="flex flex-col gap-2 w-full md:w-auto">
         <Label htmlFor="fecha_inicio">Fecha Inicio</Label>
         <Input
           id="fecha_inicio"
@@ -73,11 +73,9 @@ export default function AsistenciaFilters({
             setFechaInicio(e.target.value);
             setPage(1);
           }}
-          className="max-w-xs"
-          placeholder="Fecha de Inicio"
         />
       </div>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 w-full md:w-auto">
         <Label htmlFor="fecha_fin">Fecha Fin</Label>
         <Input
           id="fecha_fin"
@@ -87,22 +85,19 @@ export default function AsistenciaFilters({
             setFechaFin(e.target.value);
             setPage(1);
           }}
-          className="max-w-xs"
-          placeholder="Fecha de Fin"
         />
       </div>
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 w-full md:w-auto">
         <Label htmlFor="empleado">Empleado</Label>
         <Input
           id="empleado"
           placeholder="Buscar por nombre..."
           value={filtroEmpleado}
           onChange={(e) => setFiltroEmpleado(e.target.value)}
-          className="w-full max-w-md"
         />
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 w-full md:w-auto">
         <Label htmlFor="departamento">Departamento</Label>
         <Combobox
           name="departamento"
@@ -115,7 +110,7 @@ export default function AsistenciaFilters({
       </div>
 
       {/* Nuevo filtro de Tipo de Registro */}
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 w-full md:w-auto">
         <Label htmlFor="tipo_registro">Tipo de Registro</Label>
         <Combobox
           name="tipo_registro"
@@ -127,7 +122,7 @@ export default function AsistenciaFilters({
         />
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 w-full md:w-auto">
         <Label htmlFor="estado_asistencia">Estado de Asistencia</Label>
         <Combobox
           name="estado_asistencia"

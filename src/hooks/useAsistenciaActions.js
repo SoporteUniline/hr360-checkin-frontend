@@ -122,13 +122,11 @@ export default function useAsistenciaActions(mutateTable) {
       setEditingRowData({});
       mutateTable(); // Revalida los datos de la tabla para mostrar los cambios
     } catch (error) {
-      console.error("❌ Error al actualizar asistencia:", error);
-      enqueueSnackbar(
-        `Error al actualizar asistencia: ${
-          error.response?.data?.message || error.message
-        }`,
-        { variant: "error" }
-      );
+      const msg = error.response?.data?.message || error.message;
+      console.error("❌ Error al actualizar asistencia:", msg);
+      enqueueSnackbar(`Error al actualizar asistencia: ${msg}`, {
+        variant: "error",
+      });
     } finally {
       setIsSaving(false);
     }
