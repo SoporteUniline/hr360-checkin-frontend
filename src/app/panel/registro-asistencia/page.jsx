@@ -142,6 +142,7 @@ export default function ControlAsistencia() {
         handleCancelEdit={handleCancelEdit}
         handleFieldChange={handleFieldChange}
         handleSaveClick={handleSaveClick}
+        mutateAsistencia={mutate}
       />
 
       {registros.length > 0 && (

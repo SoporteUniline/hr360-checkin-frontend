@@ -34,6 +34,7 @@ export default function HistorialEmpleadoDialog({
   isOpen,
   onOpenChange,
   empleado,
+  mutateAsistencia,
 }) {
   const { dataUser } = useAuth();
   const page = 1;
@@ -216,7 +217,12 @@ export default function HistorialEmpleadoDialog({
                           <Button
                             size="icon"
                             variant="ghost"
-                            onClick={() => handleSaveMovimientoClick()}
+                            onClick={async () => {
+                              await handleSaveMovimientoClick();
+                              if (mutateAsistencia) {
+                                await mutateAsistencia();
+                              }
+                            }}
                             disabled={isSavingMovimiento}
                           >
                             <SaveIcon className="h-4 w-4 text-green-600" />

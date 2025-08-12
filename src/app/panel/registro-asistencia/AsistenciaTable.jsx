@@ -23,6 +23,7 @@ export default function AsistenciaTable({
   handleCancelEdit,
   handleFieldChange,
   handleSaveClick,
+  mutateAsistencia,
 }) {
   // console.log(filtrados);
   if (filtrados.length === 0) {
@@ -135,6 +136,7 @@ export default function AsistenciaTable({
               handleCancelEdit={handleCancelEdit}
               handleFieldChange={handleFieldChange}
               handleSaveClick={handleSaveClick}
+              mutateAsistencia={mutateAsistencia}
             />
           ))}
         </TableBody>

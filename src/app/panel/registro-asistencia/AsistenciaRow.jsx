@@ -28,6 +28,7 @@ export default function AsistenciaRow({
   handleCancelEdit,
   handleFieldChange,
   handleSaveClick,
+  mutateAsistencia,
 }) {
   const currentData = isEditing ? editingRowData : registro;
   const areTimeInputsDisabled = !currentData.correccion;
@@ -502,6 +503,7 @@ export default function AsistenciaRow({
         onOpenChange={setIsModalOpen}
         empleado={registro}
         fecha={fecha}
+        mutateAsistencia={mutateAsistencia}
       />
     </>
   );
