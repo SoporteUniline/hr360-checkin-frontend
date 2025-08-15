@@ -1,3 +1,4 @@
+import { ComboboxEstadoCivil } from "@/components/ComboboxEstadoCivil";
 import {
   FormField,
   FormItem,
@@ -136,24 +137,12 @@ export default function TabPersonales({ form, soloLectura }) {
           control={form.control}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Estado Civil</FormLabel>
-              <Select
-                onValueChange={field.onChange}
-                defaultValue={field.value}
+              <FormLabel>Estado civil</FormLabel>
+              <ComboboxEstadoCivil
+                value={field.value}
+                onChange={(val) => field.onChange(val)}
                 disabled={soloLectura}
-              >
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona el estado civil" />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="Soltero">Soltero</SelectItem>
-                  <SelectItem value="Casado">Casado</SelectItem>
-                  <SelectItem value="Divorciado">Divorciado</SelectItem>
-                  <SelectItem value="Viudo">Viudo</SelectItem>
-                </SelectContent>
-              </Select>
+              />
               <FormMessage />
             </FormItem>
           )}

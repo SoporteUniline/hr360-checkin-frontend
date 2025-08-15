@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import useSWR from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
+import { ComboboxDepartamento } from "@/components/ComboboxDepartamento";
 
 export default function TabLaborales({ form, soloLectura, dataUser }) {
   const { data: empleados } = useSWR(
@@ -74,9 +75,23 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
           )}
         />
 
-        {[
-          { name: "departamento", label: "Departamento" },
+        <FormField
+          name="departamento"
+          control={form.control}
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Departamento</FormLabel>
+              <ComboboxDepartamento
+                value={field.value}
+                onChange={(val) => field.onChange(val)}
+                disabled={soloLectura}
+              />
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
+        {[
           {
             name: "fecha_ingreso",
             label: "Fecha de ingreso",
