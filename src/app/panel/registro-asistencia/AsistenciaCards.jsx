@@ -16,7 +16,6 @@ const AsistenciaCards = ({ totals }) => {
     total_presentes = 0,
     total_tardanzas = 0,
     total_ausencias = 0,
-    total_descansos = 0, // Incluimos el total de permisos
   } = totals || {};
 
   // Define la configuración de las tarjetas en un array para facilitar el renderizado
@@ -45,16 +44,10 @@ const AsistenciaCards = ({ totals }) => {
       bgColor: "bg-white",
       textColor: "text-slate-700",
     },
-    {
-      title: "Descansos",
-      count: total_descansos,
-      bgColor: "bg-white",
-      textColor: "text-slate-700",
-    },
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       {cards.map((card, index) => (
         <div
           key={index}

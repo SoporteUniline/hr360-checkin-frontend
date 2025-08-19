@@ -34,6 +34,8 @@ export default function AsistenciaRow({
   const areTimeInputsDisabled = !currentData.correccion;
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  console.log(currentData);
+
   const handleRowClick = () => {
     if (!isEditing) {
       setIsModalOpen(true);
@@ -59,9 +61,27 @@ export default function AsistenciaRow({
                     ? String(currentData.id_tipo_permiso)
                     : ""
                 }
-                onValueChange={(val) =>
-                  handleFieldChange("id_tipo_permiso", val)
-                }
+                onValueChange={(val) => {
+                  // Encuentra el objeto de permiso seleccionado
+                  const seleccionado = tiposPermiso.find(
+                    (tipo) => String(tipo.id) === val
+                  );
+
+                  console.log(seleccionado);
+
+                  handleFieldChange("id_tipo_permiso", seleccionado?.id);
+                  handleFieldChange(
+                    "tipo_registro_nombre",
+                    seleccionado?.nombre || ""
+                  );
+                  handleFieldChange("correccion", 1);
+                  handleFieldChange(
+                    "asistencia",
+                    seleccionado?.cuenta_como_asistencia
+                  );
+                  handleFieldChange("goce_sueldo", seleccionado?.goce_sueldo);
+                  handleFieldChange("es_festivo", seleccionado?.es_festivo);
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Tipo" />
@@ -76,7 +96,6 @@ export default function AsistenciaRow({
               </Select>
             </TableCell>
             <TableCell className="text-center">
-              {/* Muestra el estado de asistencia calculado */}
               <span
                 className={`px-2 py-1 rounded-full text-sm text-white ${
                   currentData.estadoAsistencia === "Presente"

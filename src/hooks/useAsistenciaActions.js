@@ -31,6 +31,16 @@ export default function useAsistenciaActions(mutateTable) {
 
     const dataToSend = { ...editingRowData };
 
+    console.log("Datos que se van a enviar al backend:", dataToSend);
+
+    // if (!dataToSend.entrada) {
+    //   enqueueSnackbar("Debes capturar la hora de entrada antes de guardar 🚨", {
+    //     variant: "warning",
+    //   });
+    //   setIsSaving(false);
+    //   return; // detener aquí
+    // }
+
     // Limpiar campos no necesarios para el backend
     const fieldsToRemove = [
       "apellido_materno",
