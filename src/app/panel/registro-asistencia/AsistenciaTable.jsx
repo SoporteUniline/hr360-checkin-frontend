@@ -1,15 +1,12 @@
 // src/app/panel/registro-asistencia/AsistenciaTable.jsx
-import dayjs from "dayjs";
 import {
   Table,
   TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import AsistenciaRow from "./AsistenciaRow"; // Importa el componente de fila
-import { twMerge } from "tailwind-merge";
+import AsistenciaRow from "./AsistenciaRow";
 
 export default function AsistenciaTable({
   filtrados,
@@ -25,7 +22,6 @@ export default function AsistenciaTable({
   handleSaveClick,
   mutateAsistencia,
 }) {
-  // console.log(filtrados);
   if (filtrados.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-10">

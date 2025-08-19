@@ -1,5 +1,4 @@
 import React from "react";
-
 /**
  * Componente que muestra un resumen de las asistencias en formato de tarjetas.
  * Recibe un objeto 'totals' con los contadores.
@@ -10,7 +9,6 @@ import React from "react";
  * @param {number} totals.total_ausencias - Total de empleados ausentes hoy.
  */
 const AsistenciaCards = ({ totals }) => {
-  // Maneja el caso en que 'totals' sea null o undefined
   const {
     total_empleados = 0,
     total_presentes = 0,
@@ -18,7 +16,6 @@ const AsistenciaCards = ({ totals }) => {
     total_ausencias = 0,
   } = totals || {};
 
-  // Define la configuración de las tarjetas en un array para facilitar el renderizado
   const cards = [
     {
       title: "Total Empleados",

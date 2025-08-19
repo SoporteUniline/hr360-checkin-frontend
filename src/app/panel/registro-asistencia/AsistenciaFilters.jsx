@@ -17,8 +17,8 @@ export default function AsistenciaFilters({
   filtroTipoRegistro,
   setFiltroTipoRegistro,
   tiposRegistro = [],
-  filtroEstadoAsistencia, // Nuevo prop: el valor actual del filtro de estado de asistencia
-  setFiltroEstadoAsistencia, // Nuevo prop: la función para actualizar el filtro de estado de asistencia
+  filtroEstadoAsistencia,
+  setFiltroEstadoAsistencia,
 }) {
   const departamentoOptions = [
     { value: "", label: "Todos los departamentos" },
@@ -36,16 +36,14 @@ export default function AsistenciaFilters({
     })),
   ];
 
-  // La lógica para deseleccionar un valor se debe manejar dentro del Combobox.
-  // Aquí, simplemente establecemos el nuevo valor del filtro.
   const handleDepartamentoChange = (value) => {
     setFiltroDepartamento(value);
-    setPage(1); // Reinicia la paginación
+    setPage(1);
   };
 
   const handleTipoRegistroChange = (value) => {
     setFiltroTipoRegistro(value);
-    setPage(1); // Reinicia la paginación
+    setPage(1);
   };
 
   const estadoAsistenciaOptions = [
@@ -57,7 +55,7 @@ export default function AsistenciaFilters({
 
   const handleEstadoAsistenciaChange = (value) => {
     setFiltroEstadoAsistencia(value);
-    setPage(1); // Reinicia la paginación
+    setPage(1);
   };
 
   return (
@@ -108,7 +106,6 @@ export default function AsistenciaFilters({
         />
       </div>
 
-      {/* Nuevo filtro de Tipo de Registro */}
       <div className="flex flex-col gap-2 w-full md:w-auto">
         <Label htmlFor="tipo_registro">Tipo de Registro</Label>
         <Combobox

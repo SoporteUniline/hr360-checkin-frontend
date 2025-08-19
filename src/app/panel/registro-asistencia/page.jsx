@@ -2,21 +2,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
+import useDebounce from "@/hooks/useDebounce";
+import AsistenciaFilters from "./AsistenciaFilters";
+import AsistenciaDataContainer from "./AsistenciaDataContainer";
+import useEmpleadosData from "@/hooks/useEmpleadosData";
+import useTiposPermisoData from "@/hooks/useTiposPermisoData";
+import AsistenciaCards from "./AsistenciaCards";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
-import { useAuth } from "@/context/AuthContext";
-import ErrorPage from "@/components/ErrorPage";
-import LoadingTable from "@/components/LoadingTable";
-import AsistenciaTable from "./AsistenciaTable";
-import AsistenciaFilters from "./AsistenciaFilters";
-import AsistenciaCards from "./AsistenciaCards";
-import useAsistenciaData from "@/hooks/useAsistenciaData";
-import useEmpleadosData from "@/hooks/useEmpleadosData";
-import useTiposPermisoData from "@/hooks/useTiposPermisoData";
-import useAsistenciaActions from "@/hooks/useAsistenciaActions";
-import TablePagination from "@/components/TablePagination";
-import useDebounce from "@/hooks/useDebounce";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -33,26 +28,15 @@ export default function ControlAsistencia() {
   const [filtroEmpleado, setFiltroEmpleado] = useState("");
   const debouncedFiltroEmpleado = useDebounce(filtroEmpleado, 500);
   const [filtroDepartamento, setFiltroDepartamento] = useState("");
-  const [departamentosUnicos, setDepartamentosUnicos] = useState([]); // Nuevo estado para departamentos únicos
+  const [departamentosUnicos, setDepartamentosUnicos] = useState([]);
   const [filtroTipoRegistro, setFiltroTipoRegistro] = useState("");
   const [tiposRegistroUnicos, setTiposRegistroUnicos] = useState([]);
   const [filtroEstadoAsistencia, setFiltroEstadoAsistencia] = useState("");
 
   const { dataUser } = useAuth();
+  const idEmpresa = dataUser?.id_empresa;
 
-  // Hooks para cargar datos
-  const { data, error, isLoading, mutate } = useAsistenciaData(
-    dataUser?.id_empresa,
-    fechaInicio,
-    fechaFin,
-    page,
-    limit,
-    debouncedFiltroEmpleado,
-    filtroDepartamento,
-    filtroTipoRegistro,
-    filtroEstadoAsistencia
-  );
-  const { data: empleados } = useEmpleadosData(dataUser?.id_empresa);
+  const { data: empleados } = useEmpleadosData(idEmpresa);
   const { data: tiposPermiso } = useTiposPermisoData();
 
   useEffect(() => {
@@ -79,35 +63,18 @@ export default function ControlAsistencia() {
     }
   }, [tiposPermiso]);
 
-  const registros = Array.isArray(data?.registros) ? data.registros : [];
-
-  // console.log(registros);
-
-  const totalPages = data?.totalPages || 1;
-  const currentPage = data?.currentPage || 1;
-
-  const onPageChange = (newPage) => {
-    setPage(newPage);
-  };
-
-  // Hook para la lógica de edición y guardado
-  const {
-    editingRowId,
-    setEditingRowId,
-    editingRowData,
-    setEditingRowData,
-    isSaving,
-    handleEditClick,
-    handleCancelEdit,
-    handleFieldChange,
-    handleSaveClick,
-  } = useAsistenciaActions(mutate); // Pasa 'mutate' para revalidar la tabla
-
-  if (isLoading) return <LoadingTable rows={10} />;
-  if (error) {
-    console.error(error);
-    return <ErrorPage message="Error al cargar los registros de asistencia" />;
-  }
+  const { ui, data } = AsistenciaDataContainer({
+    idEmpresa,
+    fechaInicio,
+    fechaFin,
+    page,
+    limit,
+    debouncedFiltroEmpleado,
+    filtroDepartamento,
+    filtroTipoRegistro,
+    filtroEstadoAsistencia,
+    setPage,
+  });
 
   return (
     <div>
@@ -129,30 +96,7 @@ export default function ControlAsistencia() {
         filtroEstadoAsistencia={filtroEstadoAsistencia}
         setFiltroEstadoAsistencia={setFiltroEstadoAsistencia}
       />
-
-      <AsistenciaTable
-        filtrados={registros}
-        fecha={fechaInicio}
-        editingRowId={editingRowId}
-        editingRowData={editingRowData}
-        isSaving={isSaving}
-        empleados={empleados?.data}
-        tiposPermiso={tiposPermiso?.data}
-        handleEditClick={handleEditClick}
-        handleCancelEdit={handleCancelEdit}
-        handleFieldChange={handleFieldChange}
-        handleSaveClick={handleSaveClick}
-        mutateAsistencia={mutate}
-      />
-
-      {registros.length > 0 && (
-        <TablePagination
-          page={page}
-          limit={limit}
-          total={data?.total || 0}
-          onPageChange={onPageChange}
-        />
-      )}
+      {ui}
     </div>
   );
 }

@@ -1,5 +1,4 @@
 // src/app/panel/registro-asistencia/HistorialEmpleadoDialog.jsx
-
 import React, { useEffect, useState } from "react";
 import dayjs from "dayjs";
 import {
@@ -40,7 +39,6 @@ export default function HistorialEmpleadoDialog({
   const page = 1;
   const limit = 10;
 
-  // Llama al hook useClockCheckData solo si el modal está abierto
   const { data, error, isLoading, mutate } = useClockCheckData(
     isOpen ? dataUser?.id_empresa : null,
     isOpen ? empleado?.fecha : null,
