@@ -47,7 +47,10 @@ export async function middleware(request) {
 
     return NextResponse.next();
   } catch (err) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    // Borrar cookie expirado y dejar que el frontend maneje la redirección
+    const response = NextResponse.next();
+    response.cookies.delete("token");
+    return response;
   }
 }
 

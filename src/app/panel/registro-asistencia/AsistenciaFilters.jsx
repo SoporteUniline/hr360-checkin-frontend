@@ -20,6 +20,7 @@ export default function AsistenciaFilters({
   filtroEstadoAsistencia,
   setFiltroEstadoAsistencia,
 }) {
+  // Options dinámicas
   const departamentoOptions = [
     { value: "", label: "Todos los departamentos" },
     ...departamentos.map((depto) => ({
@@ -36,16 +37,6 @@ export default function AsistenciaFilters({
     })),
   ];
 
-  const handleDepartamentoChange = (value) => {
-    setFiltroDepartamento(value);
-    setPage(1);
-  };
-
-  const handleTipoRegistroChange = (value) => {
-    setFiltroTipoRegistro(value);
-    setPage(1);
-  };
-
   const estadoAsistenciaOptions = [
     { value: "", label: "Todos los estados" },
     { value: "Presente", label: "Presente" },
@@ -53,82 +44,105 @@ export default function AsistenciaFilters({
     { value: "Tardanza", label: "Tardanza" },
   ];
 
-  const handleEstadoAsistenciaChange = (value) => {
-    setFiltroEstadoAsistencia(value);
-    setPage(1);
-  };
+  // Config de filtros
+  const filtros = [
+    {
+      id: "fecha_inicio",
+      label: "Fecha Inicio",
+      component: "input",
+      type: "date",
+      value: fechaInicio,
+      onChange: (e) => {
+        setFechaInicio(e.target.value);
+        setPage(1);
+      },
+    },
+    {
+      id: "fecha_fin",
+      label: "Fecha Fin",
+      component: "input",
+      type: "date",
+      value: fechaFin,
+      onChange: (e) => {
+        setFechaFin(e.target.value);
+        setPage(1);
+      },
+    },
+    {
+      id: "empleado",
+      label: "Empleado",
+      component: "input",
+      placeholder: "Buscar por nombre...",
+      value: filtroEmpleado,
+      onChange: (e) => setFiltroEmpleado(e.target.value),
+    },
+    {
+      id: "departamento",
+      label: "Departamento",
+      component: "combobox",
+      options: departamentoOptions,
+      value: filtroDepartamento,
+      onChange: (value) => {
+        setFiltroDepartamento(value);
+        setPage(1);
+      },
+      placeholder: "Elige un departamento...",
+      emptyText: "No se encontraron departamentos.",
+    },
+    {
+      id: "tipo_registro",
+      label: "Tipo de Registro",
+      component: "combobox",
+      options: tipoRegistroOptions,
+      value: filtroTipoRegistro,
+      onChange: (value) => {
+        setFiltroTipoRegistro(value);
+        setPage(1);
+      },
+      placeholder: "Elige un tipo...",
+      emptyText: "No se encontraron tipos de registro.",
+    },
+    {
+      id: "estado_asistencia",
+      label: "Estado de Asistencia",
+      component: "combobox",
+      options: estadoAsistenciaOptions,
+      value: filtroEstadoAsistencia,
+      onChange: (value) => {
+        setFiltroEstadoAsistencia(value);
+        setPage(1);
+      },
+      placeholder: "Elige un estado...",
+      emptyText: "No se encontraron estados.",
+    },
+  ];
 
   return (
-    <div className="flex flex-col md:flex-row md:flex-wrap md:justify-start gap-4 mb-4 p-4">
-      <div className="flex flex-col gap-2 w-full md:w-auto">
-        <Label htmlFor="fecha_inicio">Fecha Inicio</Label>
-        <Input
-          id="fecha_inicio"
-          type="date"
-          value={fechaInicio}
-          onChange={(e) => {
-            setFechaInicio(e.target.value);
-            setPage(1);
-          }}
-        />
-      </div>
-      <div className="flex flex-col gap-2 w-full md:w-auto">
-        <Label htmlFor="fecha_fin">Fecha Fin</Label>
-        <Input
-          id="fecha_fin"
-          type="date"
-          value={fechaFin}
-          onChange={(e) => {
-            setFechaFin(e.target.value);
-            setPage(1);
-          }}
-        />
-      </div>
-      <div className="flex flex-col gap-2 w-full md:w-auto">
-        <Label htmlFor="empleado">Empleado</Label>
-        <Input
-          id="empleado"
-          placeholder="Buscar por nombre..."
-          value={filtroEmpleado}
-          onChange={(e) => setFiltroEmpleado(e.target.value)}
-        />
-      </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4 p-4">
+      {filtros.map((filtro) => (
+        <div key={filtro.id} className="flex flex-col gap-2 w-full">
+          <Label htmlFor={filtro.id}>{filtro.label}</Label>
 
-      <div className="flex flex-col gap-2 w-full md:w-auto">
-        <Label htmlFor="departamento">Departamento</Label>
-        <Combobox
-          name="departamento"
-          options={departamentoOptions}
-          value={filtroDepartamento}
-          onChange={handleDepartamentoChange}
-          placeholder="Elige un departamento..."
-          emptyText="No se encontraron departamentos."
-        />
-      </div>
-
-      <div className="flex flex-col gap-2 w-full md:w-auto">
-        <Label htmlFor="tipo_registro">Tipo de Registro</Label>
-        <Combobox
-          name="tipo_registro"
-          options={tipoRegistroOptions}
-          value={filtroTipoRegistro}
-          onChange={handleTipoRegistroChange}
-          placeholder="Elige un tipo..."
-          emptyText="No se encontraron tipos de registro."
-        />
-      </div>
-
-      <div className="flex flex-col gap-2 w-full md:w-auto">
-        <Label htmlFor="estado_asistencia">Estado de Asistencia</Label>
-        <Combobox
-          name="estado_asistencia"
-          options={estadoAsistenciaOptions}
-          value={filtroEstadoAsistencia}
-          onChange={handleEstadoAsistenciaChange}
-          placeholder="Elige un estado..."
-          emptyText="No se encontraron estados."
-        />
-      </div>
+          {filtro.component === "input" ? (
+            <Input
+              id={filtro.id}
+              type={filtro.type || "text"}
+              placeholder={filtro.placeholder}
+              value={filtro.value}
+              onChange={filtro.onChange}
+            />
+          ) : (
+            <Combobox
+              name={filtro.id}
+              options={filtro.options}
+              value={filtro.value}
+              onChange={filtro.onChange}
+              placeholder={filtro.placeholder}
+              emptyText={filtro.emptyText}
+            />
+          )}
+        </div>
+      ))}
     </div>
   );
 }

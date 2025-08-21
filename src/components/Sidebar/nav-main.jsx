@@ -16,6 +16,8 @@ import {
   UserRound,
   CircleUserRoundIcon,
   ClockIcon,
+  LibraryBig,
+  ClipboardCheck,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -39,6 +41,12 @@ const items = [
     icon: UsersIcon,
   },
   {
+    title: "Catálogos",
+    url: "/panel/catalogos",
+    rol: "Recruiter",
+    icon: LibraryBig,
+  },
+  {
     title: "Registro de asistencias",
     url: "/panel/registro-asistencia",
     rol: "Recruiter",
@@ -48,7 +56,7 @@ const items = [
     title: "Registro de entradas y salidas",
     url: "/panel/registro-de-entradas-y-salidas",
     rol: "Recruiter",
-    icon: BadgeCheck,
+    icon: ClipboardCheck,
   },
   // {
   //   title: "Postulaciones",
