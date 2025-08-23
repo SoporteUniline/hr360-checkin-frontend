@@ -37,11 +37,11 @@ export function ComboboxEstadoCivil({ value, onChange, disabled }) {
         {
           params: {
             id_empresa: dataUser?.id_empresa,
-            search: query,
+            nombre: query,
           },
         }
       );
-      setOptions(res.data || []);
+      setOptions(res.data.estados_civiles || []);
     } catch (err) {
       console.error("Error al cargar estados civiles", err);
     } finally {
@@ -68,6 +68,7 @@ export function ComboboxEstadoCivil({ value, onChange, disabled }) {
       });
       await fetchEstadosCiviles("");
       onChange(nuevo.nombre);
+      setSearch("");
       setOpen(false);
     } catch (error) {
       if (error.response?.status === 409) {
@@ -85,7 +86,15 @@ export function ComboboxEstadoCivil({ value, onChange, disabled }) {
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        if (!nextOpen) {
+          setSearch("");
+        }
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -124,6 +133,7 @@ export function ComboboxEstadoCivil({ value, onChange, disabled }) {
                   onSelect={(val) => {
                     onChange(val);
                     setOpen(false);
+                    setSearch("");
                   }}
                 >
                   {estado.nombre}

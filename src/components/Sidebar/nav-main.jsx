@@ -1,4 +1,5 @@
 "use client";
+
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -8,32 +9,23 @@ import {
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/context/AuthContext";
 import {
-  HomeIcon,
-  Building,
-  BriefcaseBusiness,
   UsersIcon,
   BadgeCheck,
-  UserRound,
+  ClipboardCheck,
   CircleUserRoundIcon,
   ClockIcon,
   LibraryBig,
-  ClipboardCheck,
+  UserRound,
+  BookText,
+  Building,
+  Store,
+  Handshake,
+  Landmark,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
 
 const items = [
-  // {
-  //   title: "Empresas",
-  //   url: "/dashboard/empresas",
-  //   rol: "Admin",
-  //   icon: Building,
-  // },
-  // {
-  //   title: "Usuarios",
-  //   url: "/dashboard/usuarios",
-  //   rol: "Admin",
-  //   icon: UsersIcon,
-  // },
   {
     title: "Empleados",
     url: "/panel/empleados",
@@ -42,34 +34,51 @@ const items = [
   },
   {
     title: "Catálogos",
-    url: "/panel/catalogos",
     rol: "Recruiter",
     icon: LibraryBig,
+    children: [
+      {
+        title: "Tipos de registro",
+        url: "/panel/catalogos/tipos-registro",
+        icon: BookText,
+      },
+      {
+        title: "Departamentos",
+        url: "/panel/catalogos/departamentos",
+        icon: Building,
+      },
+      { title: "Sucursales", url: "/panel/catalogos/sucursales", icon: Store },
+      {
+        title: "Estado civil",
+        url: "/panel/catalogos/estado-civil",
+        icon: Handshake,
+      },
+      // {
+      //   title: "Cuentas bancarias",
+      //   url: "/panel/catalogos/cuentas-bancarias",
+      //   icon: Landmark,
+      // },
+    ],
   },
   {
-    title: "Registro de asistencias",
+    title: "Asistencias",
     url: "/panel/registro-asistencia",
     rol: "Recruiter",
     icon: BadgeCheck,
   },
   {
-    title: "Registro de entradas y salidas",
+    title: "Entradas y salidas",
     url: "/panel/registro-de-entradas-y-salidas",
     rol: "Recruiter",
     icon: ClipboardCheck,
   },
-  // {
-  //   title: "Postulaciones",
-  //   url: "/home/postulaciones",
-  //   rol: "User",
-  //   icon: UsersIcon,
-  // },
 ];
 
 export function NavMain() {
   const router = useRouter();
   const path = usePathname();
   const { dataUser } = useAuth();
+  const [open, setOpen] = useState();
 
   const handleClick = (href) => {
     router.push(href);
@@ -93,14 +102,48 @@ export function NavMain() {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     tooltip={item.title}
-                    onClick={() => handleClick(item.url)}
+                    onClick={() => {
+                      if (item.children) {
+                        setOpen(open === item.title ? null : item.title);
+                      } else {
+                        handleClick(item.url);
+                      }
+                    }}
                     className={`${
                       path === item.url ? "bg-slate-300 text-slate-900" : ""
-                    } cursor-pointer`}
+                    } cursor-pointer flex justify-between`}
                   >
-                    {item.icon && <item.icon />}
-                    <span>{item.title}</span>
+                    <div className="flex items-center gap-2">
+                      {item.icon && <item.icon />}
+                      <span>{item.title}</span>
+                    </div>
+                    {item.children && (
+                      <span className="text-xs">
+                        {open === item.title ? "▲" : "▼"}
+                      </span>
+                    )}
                   </SidebarMenuButton>
+
+                  {/* Submenú */}
+                  {item.children && open === item.title && (
+                    <div className="ml-6 mt-1 flex flex-col gap-1">
+                      {item.children.map((child) => (
+                        <SidebarMenuButton
+                          key={child.title}
+                          tooltip={child.title}
+                          onClick={() => handleClick(child.url)}
+                          className={`${
+                            path === child.url
+                              ? "bg-slate-200 text-slate-900"
+                              : ""
+                          } cursor-pointer flex items-center gap-2 text-sm`}
+                        >
+                          {child.icon && <child.icon />}
+                          <span>{child.title}</span>
+                        </SidebarMenuButton>
+                      ))}
+                    </div>
+                  )}
                 </SidebarMenuItem>
               )
           )}
@@ -111,8 +154,10 @@ export function NavMain() {
               onClick={() => handleClick("/")}
               className="cursor-pointer"
             >
-              <ClockIcon />
-              <span>Reloj checador</span>
+              <div className="flex items-center gap-2">
+                <ClockIcon size={24} />
+                <span>Reloj checador</span>
+              </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
@@ -121,8 +166,10 @@ export function NavMain() {
               onClick={() => handleClick(perfilRoute)}
               className="cursor-pointer"
             >
-              <CircleUserRoundIcon />
-              <span>Perfil</span>
+              <div className="flex items-center gap-2">
+                <CircleUserRoundIcon size={24} />
+                <span>Perfil</span>
+              </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

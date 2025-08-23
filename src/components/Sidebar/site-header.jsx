@@ -7,9 +7,9 @@ export function SiteHeader() {
   const location = usePathname();
 
   function capitalizeFirstLetter() {
-    const title = location.split("/")[2] ?? "Panel Reclutador";
+    const segments = location.split("/").filter(Boolean);
+    const title = segments[segments.length - 1] ?? "Panel Reclutador";
 
-    // Si el título contiene guiones, lo separamos y capitalizamos cada palabra
     const palabras = title
       .split("-")
       .map((palabra) => palabra.charAt(0).toUpperCase() + palabra.slice(1));

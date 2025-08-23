@@ -41,7 +41,7 @@ export function ComboboxDepartamento({ value, onChange, disabled }) {
           },
         }
       );
-      setOptions(res.data || []);
+      setOptions(res.data.departamentos || []);
     } catch (err) {
       console.error("Error al cargar departamentos", err);
     } finally {
@@ -68,6 +68,7 @@ export function ComboboxDepartamento({ value, onChange, disabled }) {
       });
       await fetchDepartamentos(""); // refresca la lista para que aparezca el nuevo
       onChange(nuevo.nombre);
+      setSearch("");
       setOpen(false);
     } catch (error) {
       if (error.response?.status === 409) {
@@ -83,7 +84,15 @@ export function ComboboxDepartamento({ value, onChange, disabled }) {
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        if (!nextOpen) {
+          setSearch("");
+        }
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -122,6 +131,7 @@ export function ComboboxDepartamento({ value, onChange, disabled }) {
                   onSelect={(val) => {
                     onChange(val);
                     setOpen(false);
+                    setSearch("");
                   }}
                 >
                   {departamento.nombre}

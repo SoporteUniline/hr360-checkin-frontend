@@ -41,7 +41,7 @@ export function ComboboxSucursal({ value, onChange, disabled }) {
           },
         }
       );
-      setOptions(res.data || []);
+      setOptions(res.data.sucursales || []);
     } catch (err) {
       console.error("Error al cargar sucursales", err);
     } finally {
@@ -66,6 +66,7 @@ export function ComboboxSucursal({ value, onChange, disabled }) {
       enqueueSnackbar("Sucursal creada correctamente", { variant: "success" });
       await fetchSucursales(""); // refresca la lista para que aparezca la nueva sucursal
       onChange(nueva.nombre);
+      setSearch("");
       setOpen(false);
     } catch (error) {
       // Aquí detectamos si el error es porque la sucursal ya existe
@@ -81,7 +82,15 @@ export function ComboboxSucursal({ value, onChange, disabled }) {
   };
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        if (!nextOpen) {
+          setSearch("");
+        }
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -120,6 +129,7 @@ export function ComboboxSucursal({ value, onChange, disabled }) {
                   onSelect={(val) => {
                     onChange(val);
                     setOpen(false);
+                    setSearch("");
                   }}
                 >
                   {sucursal.nombre}
