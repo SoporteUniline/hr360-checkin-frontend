@@ -61,12 +61,11 @@ export default function EntradasSalidasFilter({
   ];
 
   return (
-    <div className="mb-3 w-full flex gap-3 justify-between items-center">
+    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4 mb-4 ">
       <Input
         placeholder="Buscar empleado por nombre..."
         value={filtroEmpleado}
         onChange={(e) => setFiltroEmpleado(e.target.value)}
-        className="w-full max-w-md"
       />
 
       <Input
@@ -76,36 +75,31 @@ export default function EntradasSalidasFilter({
           setFecha(e.target.value);
           setPage(1);
         }}
-        className="max-w-xs"
       />
 
-      <div className="w-full max-w-xs">
-        <Combobox
-          options={departamentos}
-          value={departamento}
-          onChange={(val) => {
-            setDepartamento(val);
-            setPage(1);
-          }}
-          placeholder={loading ? "Cargando..." : "Selecciona un departamento"}
-          emptyText="No hay departamentos"
-          name="departamento"
-        />
-      </div>
+      <Combobox
+        options={departamentos}
+        value={departamento}
+        onChange={(val) => {
+          setDepartamento(val);
+          setPage(1);
+        }}
+        placeholder={loading ? "Cargando..." : "Selecciona un departamento"}
+        emptyText="No hay departamentos"
+        name="departamento"
+      />
 
-      <div className="w-full max-w-xs">
-        <Combobox
-          options={estadoOptions}
-          value={estado}
-          onChange={(val) => {
-            setEstado(val);
-            setPage(1);
-          }}
-          placeholder="Selecciona un estado"
-          emptyText="No hay estados"
-          name="estado"
-        />
-      </div>
+      <Combobox
+        options={estadoOptions}
+        value={estado}
+        onChange={(val) => {
+          setEstado(val);
+          setPage(1);
+        }}
+        placeholder="Selecciona un estado"
+        emptyText="No hay estados"
+        name="estado"
+      />
     </div>
   );
 }
