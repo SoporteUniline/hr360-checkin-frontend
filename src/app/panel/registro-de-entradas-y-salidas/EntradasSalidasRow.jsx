@@ -1,8 +1,8 @@
-// src/app/panel/registro-asistencia/AsistenciaRow.jsx
 import dayjs from "dayjs";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Pencil, Save, X } from "lucide-react";
 export default function EntradasSalidasRow({
   registro,
   fecha,
@@ -29,34 +29,40 @@ export default function EntradasSalidasRow({
 
   return (
     <TableRow key={registro.id}>
-      {/* Celdas para mostrar datos cuando NO se está editando */}
       {!isEditing && (
         <>
-          <TableCell>{`${registro.nombre} ${registro.apellido_paterno}`}</TableCell>
-          {!fecha && ( // Mostrar fecha de entrada si no hay filtro de fecha principal
+          <TableCell>
+            <p className="font-bold">{`${registro.nombre} ${registro.apellido_paterno}`}</p>
+            <p className="text-xs text-gray-500">Puesto: {registro.puesto}</p>
+          </TableCell>
+          <TableCell>
+            <p className="font-bold text-gray-500">{registro.departamento}</p>
+            <p className="text-xs text-gray-500">{registro.sucursal}</p>
+          </TableCell>
+          {!fecha && (
             <TableCell className="text-center">
               {formatDate(registro.entrada)}
             </TableCell>
           )}
-          <TableCell className="text-center">
+          <TableCell className="text-center text-green-500 font-bold">
             {formatTime(registro.entrada)}
           </TableCell>
-          {!fecha && ( // Mostrar fecha de salida si no hay filtro de fecha principal
-            <TableCell className="text-center">
+          {!fecha && (
+            <TableCell className="text-center ">
               {formatDate(registro.salida)}
             </TableCell>
           )}
-          <TableCell className="text-center">
+          <TableCell className="text-center text-red-500 font-bold">
             {formatTime(registro.salida)}
           </TableCell>
-          <TableCell className="text-center">
+          <TableCell className="text-center text-green-500 font-bold">
             {registro.entrada_corregida
-              ? formatTime(registro.entrada_corregida) // Usa formatTime aquí
+              ? formatTime(registro.entrada_corregida)
               : "-"}
           </TableCell>
-          <TableCell className="text-center">
+          <TableCell className="text-center text-red-500 font-bold">
             {registro.salida_corregida
-              ? formatTime(registro.salida_corregida) // Usa formatTime aquí
+              ? formatTime(registro.salida_corregida)
               : "-"}
           </TableCell>
           <TableCell className="text-center">
@@ -72,19 +78,25 @@ export default function EntradasSalidasRow({
             <Button
               size="sm"
               onClick={() => handleEditMovimientoClick(registro)}
+              className="bg-slate-700 hover:bg-slate-700"
             >
-              Editar
+              <Pencil className="w-16 h-16 text-white bg-slate-700" />
             </Button>
           </TableCell>
         </>
       )}
 
-      {/* Celdas para mostrar inputs cuando SÍ se está editando */}
       {isEditing && (
         <>
-          <TableCell>{`${registro.nombre} ${registro.apellido_paterno}`}</TableCell>
+          <TableCell>
+            <p className="font-bold">{`${registro.nombre} ${registro.apellido_paterno}`}</p>
+            <p className="text-xs">Puesto: {registro.puesto}</p>
+          </TableCell>
+          <TableCell>
+            <p className="font-bold text-gray-500">{registro.departamento}</p>
+            <p className="text-xs text-gray-500">{registro.sucursal}</p>
+          </TableCell>
 
-          {/* Oculta las columnas de fecha si el filtro está activo (o si no las quieres ver en edición) */}
           {!fecha && (
             <TableCell className="text-center">
               {currentData.entrada_corregida
@@ -94,8 +106,7 @@ export default function EntradasSalidasRow({
           )}
 
           <TableCell className="text-center">
-            {formatTime(registro.entrada)}{" "}
-            {/* Siempre muestra la hora original */}
+            {formatTime(registro.entrada)}
           </TableCell>
 
           {!fecha && (
@@ -107,15 +118,12 @@ export default function EntradasSalidasRow({
           )}
 
           <TableCell className="text-center">
-            {formatTime(registro.salida)}{" "}
-            {/* Siempre muestra la hora original */}
+            {formatTime(registro.salida)}
           </TableCell>
 
           <TableCell className="text-center">
             <Input
               type="time"
-              // Usar 'currentData.entrada_corregida' para el valor del input, si existe.
-              // slice(11, 16) para obtener "HH:mm" del formato "YYYY-MM-DD HH:mm:ss"
               value={
                 currentData.entrada_corregida
                   ? dayjs(currentData.entrada_corregida).format("HH:mm")
@@ -128,7 +136,6 @@ export default function EntradasSalidasRow({
               }
               onChange={(e) => {
                 const hora = e.target.value;
-                // Combina la fecha base con la hora seleccionada
                 const nuevaEntradaCorregida = hora
                   ? dayjs(`${baseDateForCorrection} ${hora}`).format(
                       "YYYY-MM-DD HH:mm:ss"
@@ -144,7 +151,6 @@ export default function EntradasSalidasRow({
           <TableCell className="text-center">
             <Input
               type="time"
-              // Usar 'currentData.salida_corregida' para el valor del input, si existe.
               value={
                 currentData.salida_corregida
                   ? dayjs(currentData.salida_corregida).format("HH:mm")
@@ -157,7 +163,6 @@ export default function EntradasSalidasRow({
               }
               onChange={(e) => {
                 const hora = e.target.value;
-                // Combina la fecha base con la hora seleccionada
                 const nuevaSalidaCorregida = hora
                   ? dayjs(`${baseDateForCorrection} ${hora}`).format(
                       "YYYY-MM-DD HH:mm:ss"
@@ -188,8 +193,9 @@ export default function EntradasSalidasRow({
                 size="sm"
                 onClick={handleSaveMovimientoClick}
                 disabled={isSaving}
+                className="bg-slate-700 hover:bg-slate-700"
               >
-                {isSaving ? "Guardando..." : "Guardar"}
+                <Save className="w-16 h-16 text-white bg-slate-700" />
               </Button>
               <Button
                 size="sm"
@@ -197,7 +203,7 @@ export default function EntradasSalidasRow({
                 onClick={handleCancelMovimientoEdit}
                 disabled={isSaving}
               >
-                Cancelar
+                <X className="w-16 h-16 text-slate-700 " />
               </Button>
             </div>
           </TableCell>

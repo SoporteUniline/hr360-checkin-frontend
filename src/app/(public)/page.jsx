@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState } from "react";
-// Importaciones de iconos de Lucide React para un estilo más moderno
 import {
   Clock,
   User,
@@ -10,7 +9,6 @@ import {
   Timer,
   Calendar,
 } from "lucide-react";
-// Componentes de Shadcn UI y otras utilidades que ya usas
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +22,7 @@ import useSWR from "swr";
 import { fetcher, fetcherWithToken } from "@/lib/fetcher";
 import ErrorPage from "@/components/ErrorPage";
 import { useSnackbar } from "notistack";
-import { twMerge } from "tailwind-merge"; // Para fusionar clases de Tailwind
+import { twMerge } from "tailwind-merge";
 import Cookies from "js-cookie";
 import axiosInstance from "@/lib/axios";
 import { useRouter } from "next/navigation";
@@ -35,13 +33,12 @@ export default function Home() {
   const token = Cookies.get("token");
   const router = useRouter();
   const [horaActual, setHoraActual] = useState("");
-  const [fechaActual, setFechaActual] = useState(""); // Añadido para la fecha en el nuevo diseño
+  const [fechaActual, setFechaActual] = useState("");
   const [codigoEmpleado, setCodigoEmpleado] = useState("");
   const { enqueueSnackbar } = useSnackbar();
   const [popupInfo, setPopupInfo] = useState(null);
   const [registrando, setRegistrando] = useState(false);
 
-  // Función para formatear la hora (tu lógica original)
   const formatearHora = (fechaString) => {
     if (!fechaString) return "-";
     return new Date(fechaString).toLocaleTimeString("es-MX", {
@@ -52,7 +49,6 @@ export default function Home() {
     });
   };
 
-  // Hook SWR para obtener los movimientos (tu lógica original)
   const {
     data: registrosData,
     mutate,
@@ -70,7 +66,6 @@ export default function Home() {
   const empleadosActivos = registrosData?.activosHoy || 0;
   const totalRegistros = registrosData?.totalRegistrosHoy || 0;
 
-  // Efecto para actualizar la hora y la fecha (tu lógica original + fecha)
   useEffect(() => {
     const actualizarHora = () => {
       const ahora = new Date();
@@ -82,7 +77,6 @@ export default function Home() {
       });
       setHoraActual(hora);
 
-      // Genera la fecha completa con el día en minúsculas
       const fechaCompleta = ahora.toLocaleDateString("es-MX", {
         weekday: "long",
         year: "numeric",
@@ -90,14 +84,10 @@ export default function Home() {
         day: "numeric",
       });
 
-      // 1. Divide la cadena de la fecha en partes
-      // Por ejemplo, "jueves, 31 de julio de 2025" se convierte en ["jueves", "31 de julio de 2025"]
       const [dia, ...restoDeFecha] = fechaCompleta.split(", ");
 
-      // 2. Capitaliza la primera letra del día (ej. "jueves" -> "Jueves")
       const diaCapitalizado = dia.charAt(0).toUpperCase() + dia.slice(1);
 
-      // 3. Vuelve a unir la fecha con la primera letra en mayúscula
       const fechaFinal = [diaCapitalizado, ...restoDeFecha].join(", ");
 
       setFechaActual(fechaFinal);
@@ -108,12 +98,10 @@ export default function Home() {
     return () => clearInterval(intervalo);
   }, []);
 
-  // Manejador de cambio de código de empleado (tu lógica original)
   const manejarCambioCodigo = (e) => {
     setCodigoEmpleado(e.target.value.toUpperCase());
   };
 
-  // Función para registrar movimiento (tu lógica original, intacta)
   const registrarMovimiento = async () => {
     if (registrando) return;
     setRegistrando(true);
@@ -156,7 +144,7 @@ export default function Home() {
         variant: "success",
       });
       setCodigoEmpleado("");
-      mutate(); // Vuelve a cargar los movimientos después de un registro exitoso
+      mutate();
     } catch (err) {
       if (err.response) {
         const status = err.response.status;
@@ -194,17 +182,13 @@ export default function Home() {
     }
   };
 
-  // Si hay un error al cargar los datos iniciales, muestra la página de error
   if (error)
     return <ErrorPage message="No se pudieron cargar los registros." />;
 
   return (
     <>
-      {/* Contenedor principal con gradiente y padding del diseño modificado */}
       <main className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 p-4">
-        {/* Contenido condicional basado en isLoggedIn */}
         {!isLoggedIn ? (
-          // Sección para cuando no hay login (más estilizada)
           <div className="max-w-md mx-auto">
             <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl border border-slate-200/50 p-8 text-center">
               <div className="relative mb-6">
@@ -219,11 +203,8 @@ export default function Home() {
             </div>
           </div>
         ) : (
-          // Layout de 2 columnas para el usuario logueado
           <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-6">
-            {/* Panel de reloj y registro (columna izquierda) */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Reloj principal y formulario de registro */}
               <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-slate-200/50 p-6 text-center">
                 <div className="relative mb-6">
                   <div className="w-28 h-28 mx-auto bg-gradient-to-br from-slate-600 to-slate-800 rounded-full flex items-center justify-center shadow-xl transform hover:scale-105 transition-transform duration-300">
@@ -237,7 +218,6 @@ export default function Home() {
                 </h2>
                 <p className="text-lg text-slate-500 mb-8">{fechaActual}</p>
 
-                {/* Formulario de registro usando tu componente Input de Shadcn UI */}
                 <div className="space-y-4">
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -250,16 +230,13 @@ export default function Home() {
                         if (e.key === "Enter" && !registrando)
                           registrarMovimiento();
                       }}
-                      // Clases de estilo del input modificado aplicadas a tu componente Input
                       className="w-full pl-12 pr-4 py-4 text-center text-lg font-semibold border-2 border-slate-200 rounded-2xl focus:border-slate-600 focus:ring-4 focus:ring-slate-200 transition-all duration-300 bg-slate-50/50"
                     />
                   </div>
 
-                  {/* Botón de registro usando tu componente Button de Shadcn UI */}
                   <Button
                     onClick={registrarMovimiento}
                     disabled={registrando}
-                    // Clases de estilo del botón modificado aplicadas a tu componente Button
                     className="w-full py-4 bg-gradient-to-r from-slate-700 to-slate-800 text-white font-bold text-lg rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:transform-none"
                   >
                     {registrando ? (
@@ -274,7 +251,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Stats cards con datos reales */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200/50 p-6 text-center">
                   <div className="w-12 h-12 mx-auto bg-green-100 rounded-xl flex items-center justify-center mb-3">
@@ -300,7 +276,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Tabla de registros (columna derecha) */}
             <div className="lg:col-span-3">
               <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-slate-200/50 overflow-hidden">
                 <div className="px-6 py-5 border-b border-slate-200">
@@ -311,9 +286,7 @@ export default function Home() {
                 </div>
 
                 <div className="overflow-x-auto">
-                  {/* Usa tu componente Table de Shadcn UI */}
                   <Table>
-                    {/* Thead con los nuevos estilos de tabla */}
                     <TableHeader className="bg-slate-50">
                       <TableRow>
                         <TableCell className="px-6 py-2 text-center text-sm font-semibold text-slate-700">
@@ -334,7 +307,6 @@ export default function Home() {
                       </TableRow>
                     </TableHeader>
                     <TableBody className="divide-y divide-slate-100">
-                      {/* Lógica de carga (esqueleto) */}
                       {isLoading ? (
                         [...Array(5)].map((_, i) => (
                           <TableRow key={i}>
@@ -355,8 +327,7 @@ export default function Home() {
                             </TableCell>
                           </TableRow>
                         ))
-                      ) : // Mapeo de tus movimientos reales
-                      movimientosParaTabla?.length > 0 ? (
+                      ) : movimientosParaTabla?.length > 0 ? (
                         movimientosParaTabla.map((mov, i) => (
                           <TableRow
                             key={i}
@@ -382,7 +353,7 @@ export default function Home() {
                               </span>
                             </TableCell>
                             <TableCell className="px-6 text-center">
-                              {mov.salida ? (
+                              {mov.salida_corregida || mov.salida ? (
                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
                                   {formatearHora(
                                     mov.salida_corregida || mov.salida
@@ -430,7 +401,6 @@ export default function Home() {
         )}
       </main>
 
-      {/* Popup mejorado con tus datos reales y animaciones */}
       {popupInfo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-3xl shadow-2xl p-8 text-center max-w-sm w-full mx-4 transform animate-bounce-in">
@@ -475,7 +445,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* Estilos CSS para la animación del popup */}
       <style jsx>{`
         @keyframes bounce-in {
           0% {

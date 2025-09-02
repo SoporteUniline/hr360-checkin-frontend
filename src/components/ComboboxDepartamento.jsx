@@ -30,43 +30,53 @@ export function ComboboxDepartamento({ value, onChange, disabled }) {
   const { enqueueSnackbar } = useSnackbar();
 
   const fetchDepartamentos = async (query) => {
+    if (!dataUser?.id_empresa) return;
+
     try {
       setLoading(true);
       const res = await axios.get(
         `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/departamentos`,
         {
           params: {
-            id_empresa: dataUser?.id_empresa,
-            search: query,
+            id_empresa: dataUser.id_empresa,
+            nombre: query || "",
           },
         }
       );
       setOptions(res.data.departamentos || []);
     } catch (err) {
-      console.error("Error al cargar departamentos", err);
+      console.error("❌ Error al cargar departamentos", err);
     } finally {
       setLoading(false);
     }
   };
 
   React.useEffect(() => {
+    if (!dataUser?.id_empresa) return;
     fetchDepartamentos(search);
-  }, [search, open]);
+  }, [search, open, dataUser?.id_empresa]);
 
   const handleCreate = async () => {
+    if (!dataUser?.id_empresa) {
+      enqueueSnackbar("No se encontró la empresa, intenta recargar.", {
+        variant: "error",
+      });
+      return;
+    }
+
     try {
       const res = await axios.post(
         `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/departamentos`,
         {
           nombre: search,
-          id_empresa: dataUser?.id_empresa,
+          id_empresa: dataUser.id_empresa,
         }
       );
       const nuevo = res.data;
       enqueueSnackbar("Departamento creado correctamente", {
         variant: "success",
       });
-      await fetchDepartamentos(""); // refresca la lista para que aparezca el nuevo
+      await fetchDepartamentos("");
       onChange(nuevo.nombre);
       setSearch("");
       setOpen(false);
@@ -145,8 +155,13 @@ export function ComboboxDepartamento({ value, onChange, disabled }) {
                   />
                 </CommandItem>
               ))}
-              {options.length === 0 && (
+              {options.length === 0 && !loading && (
                 <CommandEmpty>No hay resultados.</CommandEmpty>
+              )}
+              {loading && (
+                <CommandItem disabled className="opacity-50">
+                  Cargando...
+                </CommandItem>
               )}
             </CommandGroup>
           </CommandList>

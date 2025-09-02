@@ -1,17 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import EntradasSalidasFilters from "./EntradasSalidasFilter";
+import { StatCard } from "@/components/Cards";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
-import { useAuth } from "@/context/AuthContext";
-import ErrorPage from "@/components/ErrorPage";
-import LoadingTable from "@/components/LoadingTable";
-import EntradasSalidasTable from "./EntradasSalidasTable";
-import EntradasSalidasFilters from "./EntradasSalidasFilter";
-import useRelojChecadorData from "@/hooks/useRelojChecador";
-import useEntradaSalida from "@/hooks/useEntradaSalida"; // <-- ¡IMPORTA EL NUEVO HOOK AQUÍ!
-import TablePagination from "@/components/TablePagination";
+import useDebounce from "@/hooks/useDebounce";
+import EntradasSalidasDataContainer from "./EntradasSalidasDataContainer";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -23,81 +20,49 @@ export default function RegistroEntradasSalidas() {
   const [page, setPage] = useState(1);
   const limit = 10;
   const [filtroEmpleado, setFiltroEmpleado] = useState("");
+  const filtroNombre = useDebounce(filtroEmpleado, 500);
+  const [departamento, setDepartamento] = useState("");
+  const [estado, setEstado] = useState("");
 
   const { dataUser } = useAuth();
+  const idEmpresa = dataUser?.id_empresa;
 
-  // Hook para cargar datos (este ya lo tienes y es para la tabla de movimientos)
-  const { data, error, isLoading, mutate } = useRelojChecadorData(
-    dataUser?.id_empresa,
+  const { ui, data } = EntradasSalidasDataContainer({
+    idEmpresa,
     fecha,
-    null,
     page,
-    limit
-  );
-  console.log(data);
-
-  const registros = Array.isArray(data?.registros) ? data.registros : [];
-  const totalPages = data?.totalPages || 1;
-  const currentPage = data?.currentPage || 1;
-
-  const filtrados = registros.filter((r) =>
-    `${r.nombre} ${r.apellido_paterno} ${r.apellido_materno || ""}`
-      .toLowerCase()
-      .includes(filtroEmpleado.toLowerCase())
-  );
-
-  const onPageChange = (newPage) => {
-    setPage(newPage);
-  };
-
-  const {
-    editingMovimientoId,
-    editingMovimientoData,
-    isSavingMovimiento,
-    handleEditMovimientoClick,
-    handleCancelMovimientoEdit,
-    handleMovimientoFieldChange,
-    handleSaveMovimientoClick,
-  } = useEntradaSalida(mutate);
-
-  if (isLoading) return <LoadingTable rows={10} />;
-  if (error) {
-    console.error(error);
-    return (
-      <ErrorPage message="Error al cargar los registros de entradas y salidas" />
-    );
-  }
+    limit,
+    filtroNombre,
+    departamento,
+    estado,
+    setPage,
+  });
 
   return (
     <div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <StatCard title="Registros hoy" count={data?.totalHoy || 0} />
+        <StatCard title="Empleados únicos" count={data?.empleados || 0} />
+        <StatCard
+          title="Jornadas completas"
+          count={data?.jornadas_completas || 0}
+        />
+        <StatCard title="Pendientes" count={data?.pendientes || 0} />
+      </div>
+
       <EntradasSalidasFilters
         filtroEmpleado={filtroEmpleado}
         setFiltroEmpleado={setFiltroEmpleado}
         fecha={fecha}
         setFecha={setFecha}
+        departamento={departamento}
+        setDepartamento={setDepartamento}
+        estado={estado}
+        setEstado={setEstado}
         setPage={setPage}
       />
 
-      <EntradasSalidasTable
-        registros={filtrados}
-        fecha={fecha}
-        editingMovimientoId={editingMovimientoId}
-        editingMovimientoData={editingMovimientoData}
-        isSavingMovimiento={isSavingMovimiento}
-        handleEditMovimientoClick={handleEditMovimientoClick}
-        handleCancelMovimientoEdit={handleCancelMovimientoEdit}
-        handleMovimientoFieldChange={handleMovimientoFieldChange}
-        handleSaveMovimientoClick={handleSaveMovimientoClick}
-      />
-
-      {filtrados.length > 0 && (
-        <TablePagination
-          page={page}
-          limit={limit}
-          total={data?.total || 0}
-          onPageChange={onPageChange}
-        />
-      )}
+      {ui}
     </div>
   );
 }

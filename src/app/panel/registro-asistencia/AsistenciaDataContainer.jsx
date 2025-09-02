@@ -1,4 +1,3 @@
-// src/app/panel/registro-asistencia/AsistenciaDataContainer.jsx
 "use client";
 
 import useAsistenciaData from "@/hooks/useAsistenciaData";
@@ -73,7 +72,7 @@ export default function AsistenciaDataContainer({
           editingRowData={editingRowData}
           isSaving={isSaving}
           empleados={empleados?.data}
-          tiposPermiso={tiposPermiso?.data}
+          tiposPermiso={tiposPermiso}
           handleEditClick={handleEditClick}
           handleCancelEdit={handleCancelEdit}
           handleFieldChange={handleFieldChange}

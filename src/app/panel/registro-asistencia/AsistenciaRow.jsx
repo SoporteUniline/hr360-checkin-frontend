@@ -1,4 +1,3 @@
-// src/app/panel/registro-asistencia/AsistenciaRow.jsx
 import dayjs from "dayjs";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
@@ -23,7 +22,7 @@ export default function AsistenciaRow({
   editingRowData,
   isSaving,
   empleados,
-  tiposPermiso,
+  tiposPermiso: { tiposPermiso: tiposPermisoArray } = {},
   handleEditClick,
   handleCancelEdit,
   handleFieldChange,
@@ -33,8 +32,6 @@ export default function AsistenciaRow({
   const currentData = isEditing ? editingRowData : registro;
   const areTimeInputsDisabled = !currentData.correccion;
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  console.log(currentData);
 
   const handleRowClick = () => {
     if (!isEditing) {
@@ -62,12 +59,9 @@ export default function AsistenciaRow({
                     : ""
                 }
                 onValueChange={(val) => {
-                  // Encuentra el objeto de permiso seleccionado
-                  const seleccionado = tiposPermiso.find(
+                  const seleccionado = tiposPermisoArray.find(
                     (tipo) => String(tipo.id) === val
                   );
-
-                  console.log(seleccionado);
 
                   handleFieldChange("id_tipo_permiso", seleccionado?.id);
                   handleFieldChange(
@@ -87,7 +81,7 @@ export default function AsistenciaRow({
                   <SelectValue placeholder="Tipo" />
                 </SelectTrigger>
                 <SelectContent className="max-h-60 overflow-y-auto">
-                  {tiposPermiso?.map((tipo) => (
+                  {tiposPermisoArray?.map((tipo) => (
                     <SelectItem key={tipo.id} value={String(tipo.id)}>
                       {tipo.nombre}
                     </SelectItem>
@@ -106,7 +100,7 @@ export default function AsistenciaRow({
                     ? "bg-yellow-600"
                     : currentData.estadoAsistencia === "Permiso"
                     ? "bg-blue-600"
-                    : "bg-gray-500" // Color para Día Libre o Desconocido
+                    : "bg-gray-500"
                 }`}
               >
                 {currentData.estadoAsistencia}
@@ -389,7 +383,6 @@ export default function AsistenciaRow({
                   disabled={isSaving}
                   className="bg-slate-700 hover:bg-slate-700"
                 >
-                  {/* {isSaving ? "Guardando..." : "Guardar"} */}
                   <Save className="w-16 h-16 text-white bg-slate-700" />
                 </Button>
                 <Button
@@ -410,7 +403,6 @@ export default function AsistenciaRow({
             <TableCell>{registro.departamento}</TableCell>
             <TableCell>{registro.tipo_registro_nombre}</TableCell>
             <TableCell className="text-center">
-              {/* Muestra el estado de asistencia calculado */}
               <span
                 className={`px-2 py-1 rounded-full text-sm text-white ${
                   registro.estadoAsistencia === "Presente"
@@ -421,7 +413,7 @@ export default function AsistenciaRow({
                     ? "bg-yellow-600"
                     : registro.estadoAsistencia === "Permiso"
                     ? "bg-blue-600"
-                    : "bg-gray-500" // Color para Día Libre o Desconocido
+                    : "bg-gray-500"
                 }`}
               >
                 {registro.estadoAsistencia}
