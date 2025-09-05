@@ -14,6 +14,7 @@ import { useState } from "react";
 import axios from "axios";
 import { mutate } from "swr";
 import { useSnackbar } from "notistack";
+import { ShieldCheck, Trash2 } from "lucide-react";
 
 export default function EstadoEmpleadoDialog({ item, limit, page, className }) {
   const { enqueueSnackbar } = useSnackbar();
@@ -56,13 +57,17 @@ export default function EstadoEmpleadoDialog({ item, limit, page, className }) {
     <>
       <Button
         className={item.estado === "Inactivo" ? className : ""}
-        variant={item.estado === "Activo" ? "destructive" : "outline"}
+        variant={item.estado === "Activo" ? "destructive" : "reactivate"}
         onClick={(e) => {
           e.stopPropagation(); // 👈 Para que no se dispare el onClick de la fila
           setOpen(true);
         }}
       >
-        {item.estado === "Activo" ? "Eliminar" : "Reactivar"}
+        {item.estado === "Activo" ? (
+          <Trash2 />
+        ) : (
+          <ShieldCheck className="text-white" />
+        )}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>

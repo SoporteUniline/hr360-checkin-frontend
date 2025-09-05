@@ -43,8 +43,11 @@ export default function HistorialEmpleadoDialog({
     isOpen ? dataUser?.id_empresa : null,
     isOpen ? empleado?.fecha : null,
     isOpen ? empleado?.id_empleado : null,
+    null,
     page,
-    limit
+    limit,
+    null,
+    null
   );
 
   const formatTime = (dateTimeString) => {

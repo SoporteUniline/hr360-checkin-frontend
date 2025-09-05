@@ -1,9 +1,28 @@
-// src/hooks/useEmpleadosData.js
 import useSWR from "swr";
 import { fetcherWithToken } from "@/lib/fetcher";
 
-export default function useEmpleadosData(idEmpresa) {
-  const url = idEmpresa ? `/checador/empleados?empresa=${idEmpresa}` : null;
-  const { data, error, isLoading } = useSWR(url, fetcherWithToken);
-  return { data, error, isLoading };
+export default function useEmpleadosData(
+  idEmpresa,
+  page,
+  limit,
+  filtroNombre,
+  departamento,
+  estado,
+  fechaDesde
+) {
+  let url = null;
+
+  if (idEmpresa) {
+    url =
+      `/checador/empleados?empresa=${idEmpresa}` +
+      (filtroNombre ? `&nombre=${encodeURIComponent(filtroNombre)}` : "") +
+      (departamento ? `&departamento=${departamento}` : "") +
+      (estado ? `&estado=${estado}` : "") +
+      (fechaDesde ? `&fechaDesde=${fechaDesde}` : "") +
+      `&page=${page}&limit=${limit}`;
+  }
+
+  const { data, error, isLoading, mutate } = useSWR(url, fetcherWithToken);
+
+  return { data, error, isLoading, mutate };
 }

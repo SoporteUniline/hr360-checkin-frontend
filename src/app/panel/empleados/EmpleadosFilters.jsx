@@ -1,41 +1,37 @@
 "use client";
 
-import * as React from "react";
-import axios from "axios";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label"; // 👈 importamos Label
 import { Combobox } from "@/components/Combobox";
 import { useAuth } from "@/context/AuthContext";
 import { useSnackbar } from "notistack";
-import { Label } from "@/components/ui/label";
+import { useEffect, useState } from "react";
+import axios from "axios";
 
-export default function EntradasSalidasFilter({
+export default function EmpleadosFilters({
   filtroEmpleado,
   setFiltroEmpleado,
-  fecha,
-  setFecha,
   departamento,
   setDepartamento,
   estado,
   setEstado,
   setPage,
+  fechaDesde,
+  setFechaDesde,
 }) {
-  const [departamentos, setDepartamentos] = React.useState([]);
-  const [loading, setLoading] = React.useState(false);
+  const [departamentos, setDepartamentos] = useState([]);
+  const [loading, setLoading] = useState(false);
   const { dataUser } = useAuth();
   const { enqueueSnackbar } = useSnackbar();
 
   const fetchDepartamentos = async () => {
     if (!dataUser?.id_empresa) return;
-
     try {
       setLoading(true);
       const res = await axios.get(
         `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/departamentos`,
-        {
-          params: { id_empresa: dataUser.id_empresa },
-        }
+        { params: { id_empresa: dataUser.id_empresa } }
       );
-
       setDepartamentos([
         { value: "", label: "Todos los departamentos" },
         ...(res.data.departamentos || []).map((d) => ({
@@ -44,30 +40,31 @@ export default function EntradasSalidasFilter({
         })),
       ]);
     } catch (error) {
-      console.error("❌ Error al cargar departamentos:", error);
+      console.error(error);
       enqueueSnackbar("Error al cargar departamentos", { variant: "error" });
     } finally {
       setLoading(false);
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetchDepartamentos();
   }, [dataUser?.id_empresa]);
 
   const estadoOptions = [
-    { value: "", label: "Todos los estados" },
-    { value: "Abierto", label: "Abierto" },
-    { value: "Cerrado", label: "Cerrado" },
+    { value: "", label: "Todos" },
+    { value: "Activo", label: "Activo" },
+    { value: "Inactivo", label: "Inactivo" },
   ];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4 mb-4 ">
+    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">
+      {/* Buscar empleado */}
       <div className="flex flex-col gap-2">
         <Label htmlFor="buscarEmpleado">Buscar empleado</Label>
         <Input
           id="buscarEmpleado"
-          placeholder="Buscar empleado por nombre..."
+          placeholder="Nombre, puesto, email..."
           value={filtroEmpleado}
           onChange={(e) => {
             setFiltroEmpleado(e.target.value);
@@ -76,19 +73,7 @@ export default function EntradasSalidasFilter({
         />
       </div>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="fecha">Fecha</Label>
-        <Input
-          id="fecha"
-          type="date"
-          value={fecha}
-          onChange={(e) => {
-            setFecha(e.target.value);
-            setPage(1);
-          }}
-        />
-      </div>
-
+      {/* Departamento */}
       <div className="flex flex-col gap-2">
         <Label htmlFor="departamento">Departamento</Label>
         <Combobox
@@ -104,6 +89,7 @@ export default function EntradasSalidasFilter({
         />
       </div>
 
+      {/* Estado */}
       <div className="flex flex-col gap-2">
         <Label htmlFor="estado">Estado</Label>
         <Combobox
@@ -116,6 +102,20 @@ export default function EntradasSalidasFilter({
           placeholder="Todos los estados"
           emptyText="No hay estados"
           name="estado"
+        />
+      </div>
+
+      {/* Fecha desde */}
+      <div className="flex flex-col gap-2">
+        <Label htmlFor="fechaDesde">Desde fecha de ingreso</Label>
+        <Input
+          id="fechaDesde"
+          type="date"
+          value={fechaDesde}
+          onChange={(e) => {
+            setFechaDesde(e.target.value);
+            setPage(1);
+          }}
         />
       </div>
     </div>
