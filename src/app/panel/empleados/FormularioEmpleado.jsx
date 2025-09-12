@@ -51,7 +51,6 @@ export default function FormularioEmpleado({
   setEditar,
   setSoloLectura,
 }) {
-  console.log(values);
   const [tab, setTab] = useState("personales");
   const fueDesdeLectura = useRef(false);
   const construirHorariosDesdeDatos = (data) => {

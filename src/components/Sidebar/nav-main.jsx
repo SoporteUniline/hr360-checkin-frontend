@@ -72,6 +72,12 @@ const items = [
     rol: "Recruiter",
     icon: ClipboardCheck,
   },
+  {
+    title: "Reloj Checador",
+    url: "/",
+    rol: "Recruiter",
+    icon: ClockIcon,
+  },
 ];
 
 export function NavMain() {
@@ -114,7 +120,7 @@ export function NavMain() {
                     } cursor-pointer flex justify-between`}
                   >
                     <div className="flex items-center gap-2">
-                      {item.icon && <item.icon />}
+                      {item.icon && <item.icon size={16} />}
                       <span>{item.title}</span>
                     </div>
                     {item.children && (
@@ -138,7 +144,7 @@ export function NavMain() {
                               : ""
                           } cursor-pointer flex items-center gap-2 text-sm`}
                         >
-                          {child.icon && <child.icon />}
+                          {child.icon && <child.icon size={16} />}
                           <span>{child.title}</span>
                         </SidebarMenuButton>
                       ))}
@@ -148,7 +154,7 @@ export function NavMain() {
               )
           )}
 
-          <SidebarMenuItem>
+          {/* <SidebarMenuItem>
             <SidebarMenuButton
               tooltip="Home"
               onClick={() => handleClick("/")}
@@ -159,7 +165,7 @@ export function NavMain() {
                 <span>Reloj checador</span>
               </div>
             </SidebarMenuButton>
-          </SidebarMenuItem>
+          </SidebarMenuItem> */}
           <SidebarMenuItem>
             <SidebarMenuButton
               tooltip="Perfil"
@@ -167,7 +173,7 @@ export function NavMain() {
               className="cursor-pointer"
             >
               <div className="flex items-center gap-2">
-                <CircleUserRoundIcon size={24} />
+                <CircleUserRoundIcon size={16} />
                 <span>Perfil</span>
               </div>
             </SidebarMenuButton>

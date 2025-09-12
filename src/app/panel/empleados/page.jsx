@@ -8,6 +8,7 @@ import EmpleadosDataContainer from "./EmpleadosDataContainer";
 import FormularioEmpleado from "./FormularioEmpleado";
 import { StatCard } from "@/components/Cards";
 import { Button } from "@/components/ui/button";
+import axios from "axios";
 
 export default function RegistroEmpleados() {
   const [page, setPage] = useState(1);
@@ -26,11 +27,23 @@ export default function RegistroEmpleados() {
   const { dataUser } = useAuth();
   const idEmpresa = dataUser?.id_empresa;
 
-  const abrirFormulario = (
+  const abrirFormulario = async (
     empleado = null,
     modoEditar = false,
     lectura = false
   ) => {
+    if (empleado) {
+      try {
+        const { data } = await axios.get(
+          `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados/${empleado.id_empleado}`
+        );
+        empleado = data; // ahora incluye horarios y cuenta_bancaria
+      } catch (error) {
+        console.error("Error al obtener empleado:", error);
+        return;
+      }
+    }
+
     setValues(empleado);
     setEditar(modoEditar);
     setModoFormulario(true);
