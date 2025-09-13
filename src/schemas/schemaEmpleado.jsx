@@ -47,7 +47,7 @@ export const schemaEmpleado = z
     nip: z.string().min(1, "El código de empleado es obligatorio"),
 
     // Jornada
-    dias_trabajo: z.string(),
+    // dias_trabajo: z.string(),
     hrs_por_dia: z
       .number({ invalid_type_error: "Las horas por día deben ser un número" })
       .min(0, "Las horas por día son obligatorias"),
