@@ -15,7 +15,10 @@ const FacialRecognitionModal = ({ isOpen, onClose, onSuccess, idEmpresa }) => {
   const videoRef = useRef(null);
   const detectionIntervalRef = useRef(null);
   const countdownTimeoutRef = useRef(null);
-  const isProcessingRef = useRef(false); // 🔹 ref para evitar duplicados
+
+  const isProcessingRef = useRef(false);
+  const lastCheckTimeRef = useRef(0); // 🔹 guarda el último registro
+  const MIN_INTERVAL = 8000; // 🔹 8 segundos de separación
 
   const shutdownCamera = () => {
     try {
@@ -36,7 +39,7 @@ const FacialRecognitionModal = ({ isOpen, onClose, onSuccess, idEmpresa }) => {
         );
       }
       setStream(null);
-      isProcessingRef.current = false; // 🔹 resetear al cerrar
+      isProcessingRef.current = false;
     } catch (err) {
       console.error("Error apagando cámara:", err);
     }
@@ -48,15 +51,6 @@ const FacialRecognitionModal = ({ isOpen, onClose, onSuccess, idEmpresa }) => {
     setCountdown(0);
     setShowSuccessMessage(false);
     setFaceDetected(false);
-    isProcessingRef.current = false; // 🔹 resetear también aquí
-  };
-
-  const cancelCountdown = () => {
-    if (countdownTimeoutRef.current) {
-      clearTimeout(countdownTimeoutRef.current);
-      countdownTimeoutRef.current = null;
-    }
-    setCountdown(0);
     isProcessingRef.current = false;
   };
 
@@ -151,42 +145,27 @@ const FacialRecognitionModal = ({ isOpen, onClose, onSuccess, idEmpresa }) => {
       if (detection) {
         setFaceDetected(true);
         if (!isProcessingRef.current) {
-          isProcessingRef.current = true; // 🔹 arranca solo una vez
+          isProcessingRef.current = true;
           startDelay();
         }
       } else {
-        if (isProcessingRef.current) {
-          cancelCountdown(); // 👈 aquí cancelas si se perdió el rostro
-        }
         setFaceDetected(false);
       }
     }, 300);
   };
 
-  // Countdown
-  // const startCountdown = () => {
-  //   setCountdown(5);
-
-  //   const runCountdown = (count) => {
-  //     if (count > 0) {
-  //       countdownTimeoutRef.current = setTimeout(() => {
-  //         setCountdown(count - 1);
-  //         runCountdown(count - 1);
-  //       }, 1000);
-  //     } else {
-  //       captureAndRecognize();
-  //     }
-  //   };
-
-  //   runCountdown(5);
-  // };
-
   // Delay sin mostrar conteo
   const startDelay = () => {
-    // no usamos setCountdown para que no aparezca nada en UI
+    const now = Date.now();
+    if (now - lastCheckTimeRef.current < MIN_INTERVAL) {
+      // 👈 en cooldown, ignorar
+      isProcessingRef.current = false;
+      return;
+    }
+
     countdownTimeoutRef.current = setTimeout(() => {
       captureAndRecognize();
-    }, 2000); // espera 1.5 segundos antes de tomar la captura
+    }, 2000); // 2 segundos quieto antes de tomar foto
   };
 
   // Captura y reconocimiento
@@ -233,6 +212,7 @@ const FacialRecognitionModal = ({ isOpen, onClose, onSuccess, idEmpresa }) => {
       const data = await response.json();
 
       if (response.ok) {
+        lastCheckTimeRef.current = Date.now(); // 👈 actualizar último registro
         setShowSuccessMessage(true);
         onSuccess(data);
 
@@ -241,12 +221,12 @@ const FacialRecognitionModal = ({ isOpen, onClose, onSuccess, idEmpresa }) => {
           setIsLoading(false);
           setFaceDetected(false);
           setError("");
-          isProcessingRef.current = false; // 🔹 listo para siguiente empleado
-        }, 8000);
+          isProcessingRef.current = false;
+        }, 500); // 👈 corto, el cooldown ya bloquea
       } else {
         setError(data.error || "Error en reconocimiento facial");
         setIsLoading(false);
-        setTimeout(() => (isProcessingRef.current = false), 8000); // 🔹 permitir reintento
+        isProcessingRef.current = false;
       }
     } catch (err) {
       console.error("Error reconocimiento:", err);
@@ -259,7 +239,7 @@ const FacialRecognitionModal = ({ isOpen, onClose, onSuccess, idEmpresa }) => {
   const handleClose = () => {
     cleanupAll();
     setFaceApiLoaded(false);
-    isProcessingRef.current = false; // 🔹 resetear
+    isProcessingRef.current = false;
     onClose();
   };
 
@@ -322,15 +302,6 @@ const FacialRecognitionModal = ({ isOpen, onClose, onSuccess, idEmpresa }) => {
                       Rostro detectado
                     </div>
                   )}
-
-                {/* {showSuccessMessage && (
-                  <div className="absolute inset-0 bg-green-500/90 rounded-lg flex items-center justify-center">
-                    <div className="text-center text-white">
-                      <CheckCircle className="w-16 h-16 mx-auto mb-2" />
-                      <p className="text-xl font-bold">¡Registro exitoso!</p>
-                    </div>
-                  </div>
-                )} */}
               </div>
 
               {error && (
@@ -347,8 +318,8 @@ const FacialRecognitionModal = ({ isOpen, onClose, onSuccess, idEmpresa }) => {
                   <ul className="text-blue-600 text-sm mt-1 space-y-1">
                     <li>• Colóquese frente a la cámara</li>
                     <li>• El recuadro se pondrá verde al detectar su rostro</li>
-                    <li>• Se iniciará un conteo regresivo automáticamente</li>
-                    <li>• Manténgase quieto durante la captura</li>
+                    <li>• Se iniciará automáticamente la captura</li>
+                    <li>• Manténgase quieto durante la toma</li>
                   </ul>
                 </div>
 
