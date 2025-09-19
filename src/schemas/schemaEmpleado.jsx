@@ -114,6 +114,7 @@ export const schemaEmpleado = z
       .min(10, "Debe tener al menos 10 dígitos")
       .max(18, "Máximo 18 dígitos")
       .regex(/^\d+$/, "Solo números"),
+    descriptor_facial: z.array(z.number()).optional(),
   })
   .superRefine((data, ctx) => {
     if (

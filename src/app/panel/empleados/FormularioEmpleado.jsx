@@ -39,6 +39,7 @@ import TabLaborales from "./tabs/TabLaborales";
 import TabJornada from "./tabs/TabJornada";
 import TabNomina from "./tabs/TabNomina";
 import TabCuentasBancarias from "./tabs/TabCuentasBancarias";
+import TabReconocimiento from "./tabs/TabReconocimiento";
 
 export default function FormularioEmpleado({
   modoFormulario,
@@ -126,6 +127,12 @@ export default function FormularioEmpleado({
             lugar_checkout: null,
           },
   });
+
+  const valores = form.watch();
+
+  useEffect(() => {
+    console.log(valores);
+  }, [valores]);
 
   useEffect(() => {
     if ((editar || soloLectura) && values) {
@@ -341,7 +348,7 @@ export default function FormularioEmpleado({
 
       Object.keys(data).forEach((key) => {
         if (data[key] === null || data[key] === undefined) {
-          return; // No lo adjuntes
+          return;
         }
 
         if (Array.isArray(data[key]) || typeof data[key] === "object") {
@@ -524,6 +531,10 @@ export default function FormularioEmpleado({
                 <Icon icon="rivet-icons:money" className="mr-2 h-4 w-4" />
                 Cuentas bancarias
               </TabsTrigger>
+              <TabsTrigger value="reconocimiento">
+                <Icon icon="mdi:face-recognition" className="mr-2 h-4 w-4" />
+                Escanear rostro
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -557,8 +568,21 @@ export default function FormularioEmpleado({
                 {tab === "nomina" && (
                   <TabNomina form={form} soloLectura={soloLectura} />
                 )}
+
                 {tab === "cuentas" && (
                   <TabCuentasBancarias form={form} soloLectura={soloLectura} />
+                )}
+
+                {/* 🔹 CAMBIO: Solo renderizar TabReconocimiento cuando esté activo */}
+                {tab === "reconocimiento" && (
+                  <TabReconocimiento
+                    form={form}
+                    soloLectura={soloLectura}
+                    active={tab === "reconocimiento"}
+                    setDescriptor={(descriptor) =>
+                      form.setValue("descriptor_facial", descriptor)
+                    }
+                  />
                 )}
               </motion.div>
             </AnimatePresence>

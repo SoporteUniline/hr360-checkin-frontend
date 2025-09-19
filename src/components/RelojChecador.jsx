@@ -7,6 +7,7 @@ import {
   XCircle,
   Users,
   Calendar,
+  Camera,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -26,14 +27,13 @@ import Cookies from "js-cookie";
 import axiosInstance from "@/lib/axios";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import FacialRecognitionModal from "./FacialRecognitionModal";
 
 export default function RelojChecador({ idEmpresa }) {
-  const { dataUser, isLoggedIn } = useAuth();
-  const token = Cookies.get("token");
-  const router = useRouter();
   const [horaActual, setHoraActual] = useState("");
   const [fechaActual, setFechaActual] = useState("");
   const [codigoEmpleado, setCodigoEmpleado] = useState("");
+  const [showFacialModal, setShowFacialModal] = useState(false);
   const { enqueueSnackbar } = useSnackbar();
   const [popupInfo, setPopupInfo] = useState(null);
   const [registrando, setRegistrando] = useState(false);
@@ -132,6 +132,21 @@ export default function RelojChecador({ idEmpresa }) {
     }
   };
 
+  const handleFacialRecognitionSuccess = (data) => {
+    const { message, empleado } = data;
+
+    setPopupInfo({
+      nombre: `${empleado.nombre} ${empleado.apellido_paterno}`,
+      foto_perfil: empleado.foto_perfil || "/assets/user.png",
+      movimiento: message,
+      success: true,
+    });
+
+    setTimeout(() => setPopupInfo(null), 3000);
+    enqueueSnackbar("Registro facial realizado", { variant: "success" });
+    mutate();
+  };
+
   if (error)
     return <ErrorPage message="No se pudieron cargar los registros." />;
 
@@ -162,8 +177,22 @@ export default function RelojChecador({ idEmpresa }) {
                     value={codigoEmpleado}
                     onChange={manejarCambioCodigo}
                     onKeyDown={(e) => {
-                      if (e.key === "Enter" && !registrando)
+                      if (
+                        e.key === "Enter" &&
+                        !registrando &&
+                        codigoEmpleado.trim() !== ""
+                      ) {
                         registrarMovimiento();
+                      } else if (
+                        e.key === "Enter" &&
+                        codigoEmpleado.trim() === ""
+                      ) {
+                        // opcional: mostrar un snackbar o borde rojo
+                        enqueueSnackbar(
+                          "Ingresa un código antes de registrar",
+                          { variant: "warning" }
+                        );
+                      }
                     }}
                     className="w-full pl-12 pr-4 py-4 text-center text-lg font-semibold border-2 border-slate-200 rounded-2xl focus:border-slate-600 focus:ring-4 focus:ring-slate-200 transition-all duration-300 bg-slate-50/50"
                   />
@@ -171,7 +200,7 @@ export default function RelojChecador({ idEmpresa }) {
 
                 <Button
                   onClick={registrarMovimiento}
-                  disabled={registrando}
+                  disabled={registrando || !codigoEmpleado.trim()}
                   className="w-full py-4 bg-gradient-to-r from-slate-700 to-slate-800 text-white font-bold text-lg rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:transform-none"
                 >
                   {registrando ? (
@@ -182,6 +211,14 @@ export default function RelojChecador({ idEmpresa }) {
                   ) : (
                     "Registrar Entrada/Salida"
                   )}
+                </Button>
+
+                <Button
+                  onClick={() => setShowFacialModal(true)}
+                  className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold text-lg rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-2"
+                >
+                  <Camera className="w-5 h-5" />
+                  <span>Reconocimiento Facial</span>
                 </Button>
               </div>
             </div>
@@ -332,6 +369,13 @@ export default function RelojChecador({ idEmpresa }) {
           </div>
         </div>
       </main>
+
+      <FacialRecognitionModal
+        isOpen={showFacialModal}
+        onClose={() => setShowFacialModal(false)}
+        onSuccess={handleFacialRecognitionSuccess}
+        idEmpresa={idEmpresa}
+      />
 
       {popupInfo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
