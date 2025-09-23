@@ -3,6 +3,7 @@ import { Camera, X, Loader, CheckCircle } from "lucide-react";
 import { enqueueSnackbar } from "notistack";
 
 const FacialRecognitionModal = ({ isOpen, onClose, onSuccess, idEmpresa }) => {
+  const [cameraFacing, setCameraFacing] = useState("user");
   const [error, setError] = useState("");
   const [faceApiLoaded, setFaceApiLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -100,7 +101,7 @@ const FacialRecognitionModal = ({ isOpen, onClose, onSuccess, idEmpresa }) => {
           video: {
             width: { ideal: 640 },
             height: { ideal: 480 },
-            facingMode: "user",
+            facingMode: cameraFacing,
           },
         });
 
@@ -122,7 +123,7 @@ const FacialRecognitionModal = ({ isOpen, onClose, onSuccess, idEmpresa }) => {
 
     startCamera();
     return () => shutdownCamera();
-  }, [isOpen, faceApiLoaded]);
+  }, [isOpen, faceApiLoaded, cameraFacing]);
 
   useEffect(() => () => cleanupAll(), []);
 
@@ -283,6 +284,17 @@ const FacialRecognitionModal = ({ isOpen, onClose, onSuccess, idEmpresa }) => {
                       : "border-gray-200"
                   }`}
                 />
+                <button
+                  onClick={() =>
+                    setCameraFacing((prev) =>
+                      prev === "user" ? "environment" : "user"
+                    )
+                  }
+                  className="mt-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition"
+                >
+                  Cambiar cámara
+                </button>
+
                 <canvas ref={canvasRef} style={{ display: "none" }} />
 
                 {countdown > 0 && (
