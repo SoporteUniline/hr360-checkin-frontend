@@ -12,6 +12,9 @@ import AsistenciaCards from "./AsistenciaCards";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import FormularioAsistenciasMasivas from "@/components/FormularioAsistenciasMasivas";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -39,6 +42,14 @@ export default function ControlAsistencia() {
   const { data: empleados } = useEmpleadosData(idEmpresa);
   const { data: tiposPermiso } = useTiposPermisoData();
 
+  const [modoFormulario, setModoFormulario] = useState(false);
+  const [values, setValues] = useState(null);
+
+  const abrirFormulario = () => {
+    setValues(null);
+    setModoFormulario(true);
+  };
+
   useEffect(() => {
     if (empleados?.data) {
       const uniqueDepartamentos = [
@@ -63,7 +74,7 @@ export default function ControlAsistencia() {
     }
   }, [tiposPermiso]);
 
-  const { ui, data } = AsistenciaDataContainer({
+  const { ui, data, mutate } = AsistenciaDataContainer({
     idEmpresa,
     fechaInicio,
     fechaFin,
@@ -78,6 +89,25 @@ export default function ControlAsistencia() {
 
   return (
     <div>
+      <div className="flex gap-2 mb-5 justify-end">
+        <Button
+          onClick={abrirFormulario}
+          className=" shadow-lg transition-all duration-200 hover:shadow-xl"
+        >
+          <Plus className="w-5 h-5 mr-2" />
+          Registrar Asistencia Masiva
+        </Button>
+      </div>
+
+      {modoFormulario && (
+        <FormularioAsistenciasMasivas
+          values={values}
+          setModoFormulario={setModoFormulario}
+          mutate={mutate}
+          idEmpresa={idEmpresa}
+        />
+      )}
+
       <AsistenciaCards totals={data} />
       <AsistenciaFilters
         filtroEmpleado={filtroEmpleado}

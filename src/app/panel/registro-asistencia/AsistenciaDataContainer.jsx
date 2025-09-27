@@ -90,5 +90,6 @@ export default function AsistenciaDataContainer({
       </>
     ),
     data,
+    mutate,
   };
 }
