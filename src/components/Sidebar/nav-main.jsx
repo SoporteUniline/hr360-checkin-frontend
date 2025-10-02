@@ -21,6 +21,7 @@ import {
   Store,
   Handshake,
   Landmark,
+  PartyPopper,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -59,6 +60,12 @@ const items = [
       //   icon: Landmark,
       // },
     ],
+  },
+  {
+    title: "Días festivos",
+    url: "/panel/festivos",
+    rol: "Recruiter",
+    icon: PartyPopper,
   },
   {
     title: "Asistencias",
