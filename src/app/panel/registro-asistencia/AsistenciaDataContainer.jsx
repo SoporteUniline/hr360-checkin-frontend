@@ -20,6 +20,7 @@ export default function AsistenciaDataContainer({
   filtroTipoRegistro,
   filtroEstadoAsistencia,
   setPage,
+  onLimitChange,
 }) {
   const { data, error, isLoading, mutate } = useAsistenciaData(
     idEmpresa,
@@ -38,7 +39,10 @@ export default function AsistenciaDataContainer({
 
   const registros = Array.isArray(data?.registros) ? data.registros : [];
   const totalPages = data?.totalPages || 1;
-  const currentPage = data?.currentPage || 1;
+  const currentPage = data?.page || 1;
+
+  const mostrarPaginacion = data?.aplicarPaginacion !== false;
+  const totalRegistros = data?.total || 0;
 
   const onPageChange = (newPage) => {
     setPage(newPage);
@@ -79,13 +83,32 @@ export default function AsistenciaDataContainer({
           handleSaveClick={handleSaveClick}
           mutateAsistencia={mutate}
         />
-        {registros.length > 0 && (
+
+        {mostrarPaginacion && registros.length > 0 && (
           <TablePagination
-            page={page}
+            page={currentPage}
             limit={limit}
-            total={data?.total || 0}
+            total={totalRegistros}
+            totalPages={totalPages}
             onPageChange={onPageChange}
+            onLimitChange={onLimitChange}
           />
+        )}
+
+        {!mostrarPaginacion && registros.length > 0 && (
+          <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded text-center">
+            <p className="text-gray-600">
+              Mostrando <strong>{registros.length}</strong> registros de{" "}
+              <strong>{totalRegistros}</strong> totales
+              {fechaInicio &&
+                fechaFin &&
+                ` para el rango de fechas seleccionado`}
+            </p>
+            <p className="text-sm text-gray-500 mt-1">
+              La paginación está desactivada para rangos de fechas mayores a un
+              día
+            </p>
+          </div>
         )}
       </>
     ),

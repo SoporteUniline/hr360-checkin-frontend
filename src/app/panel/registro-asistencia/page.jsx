@@ -20,6 +20,16 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 export default function ControlAsistencia() {
+  // Valores iniciales para los filtros
+  const getInitialFilters = () => ({
+    fechaInicio: dayjs().tz("America/Mexico_City").format("YYYY-MM-DD"),
+    fechaFin: dayjs().tz("America/Mexico_City").format("YYYY-MM-DD"),
+    filtroEmpleado: "",
+    filtroDepartamento: "",
+    filtroTipoRegistro: "",
+    filtroEstadoAsistencia: "",
+    page: 1,
+  });
   const [fechaInicio, setFechaInicio] = useState(
     dayjs().tz("America/Mexico_City").format("YYYY-MM-DD")
   );
@@ -27,7 +37,7 @@ export default function ControlAsistencia() {
     dayjs().tz("America/Mexico_City").format("YYYY-MM-DD")
   );
   const [page, setPage] = useState(1);
-  const limit = 10;
+  const [limit, setLimit] = useState(10);
   const [filtroEmpleado, setFiltroEmpleado] = useState("");
   const debouncedFiltroEmpleado = useDebounce(filtroEmpleado, 500);
   const [filtroDepartamento, setFiltroDepartamento] = useState("");
@@ -48,6 +58,22 @@ export default function ControlAsistencia() {
   const abrirFormulario = () => {
     setValues(null);
     setModoFormulario(true);
+  };
+
+  const handleLimitChange = (newLimit) => {
+    setLimit(newLimit);
+  };
+
+  // Función para limpiar todos los filtros
+  const handleResetFilters = () => {
+    const initial = getInitialFilters();
+    setFechaInicio(initial.fechaInicio);
+    setFechaFin(initial.fechaFin);
+    setFiltroEmpleado(initial.filtroEmpleado);
+    setFiltroDepartamento(initial.filtroDepartamento);
+    setFiltroTipoRegistro(initial.filtroTipoRegistro);
+    setFiltroEstadoAsistencia(initial.filtroEstadoAsistencia);
+    setPage(initial.page);
   };
 
   useEffect(() => {
@@ -85,20 +111,11 @@ export default function ControlAsistencia() {
     filtroTipoRegistro,
     filtroEstadoAsistencia,
     setPage,
+    onLimitChange: handleLimitChange,
   });
 
   return (
     <div>
-      <div className="flex gap-2 mb-5 justify-end">
-        <Button
-          onClick={abrirFormulario}
-          className=" shadow-lg transition-all duration-200 hover:shadow-xl"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Registrar Asistencia Masiva
-        </Button>
-      </div>
-
       {modoFormulario && (
         <FormularioAsistenciasMasivas
           values={values}
@@ -125,6 +142,8 @@ export default function ControlAsistencia() {
         tiposRegistro={tiposRegistroUnicos}
         filtroEstadoAsistencia={filtroEstadoAsistencia}
         setFiltroEstadoAsistencia={setFiltroEstadoAsistencia}
+        onResetFilters={handleResetFilters}
+        abrirFormulario={abrirFormulario}
       />
       {ui}
     </div>

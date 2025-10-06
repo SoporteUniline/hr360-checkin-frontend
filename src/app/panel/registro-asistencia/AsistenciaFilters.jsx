@@ -2,6 +2,8 @@
 import { Combobox } from "@/components/Combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Plus, RotateCcw } from "lucide-react"; // Icono para resetear
 
 export default function AsistenciaFilters({
   filtroEmpleado,
@@ -19,6 +21,8 @@ export default function AsistenciaFilters({
   tiposRegistro = [],
   filtroEstadoAsistencia,
   setFiltroEstadoAsistencia,
+  onResetFilters,
+  abrirFormulario,
 }) {
   // Options dinámicas
   const departamentoOptions = [
@@ -118,31 +122,50 @@ export default function AsistenciaFilters({
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4 p-4">
-      {filtros.map((filtro) => (
-        <div key={filtro.id} className="flex flex-col gap-2 w-full">
-          <Label htmlFor={filtro.id}>{filtro.label}</Label>
+    <div className="space-y-4">
+      <div className="flex justify-end gap-4">
+        <Button
+          onClick={abrirFormulario}
+          className=" shadow-lg transition-all duration-200 hover:shadow-xl"
+        >
+          <Plus className="w-5 h-5 mr-2" />
+          Registrar Asistencia Masiva
+        </Button>
+        <Button
+          onClick={onResetFilters}
+          variant="outline"
+          className="flex items-center gap-2"
+        >
+          <RotateCcw className="w-4 h-4" />
+          Limpiar Filtros
+        </Button>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4 p-4">
+        {filtros.map((filtro) => (
+          <div key={filtro.id} className="flex flex-col gap-2 w-full">
+            <Label htmlFor={filtro.id}>{filtro.label}</Label>
 
-          {filtro.component === "input" ? (
-            <Input
-              id={filtro.id}
-              type={filtro.type || "text"}
-              placeholder={filtro.placeholder}
-              value={filtro.value}
-              onChange={filtro.onChange}
-            />
-          ) : (
-            <Combobox
-              name={filtro.id}
-              options={filtro.options}
-              value={filtro.value}
-              onChange={filtro.onChange}
-              placeholder={filtro.placeholder}
-              emptyText={filtro.emptyText}
-            />
-          )}
-        </div>
-      ))}
+            {filtro.component === "input" ? (
+              <Input
+                id={filtro.id}
+                type={filtro.type || "text"}
+                placeholder={filtro.placeholder}
+                value={filtro.value}
+                onChange={filtro.onChange}
+              />
+            ) : (
+              <Combobox
+                name={filtro.id}
+                options={filtro.options}
+                value={filtro.value}
+                onChange={filtro.onChange}
+                placeholder={filtro.placeholder}
+                emptyText={filtro.emptyText}
+              />
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
