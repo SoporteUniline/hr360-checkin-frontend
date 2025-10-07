@@ -40,6 +40,7 @@ import TabJornada from "./tabs/TabJornada";
 import TabNomina from "./tabs/TabNomina";
 import TabCuentasBancarias from "./tabs/TabCuentasBancarias";
 import TabReconocimiento from "./tabs/TabReconocimiento";
+import TabGPS from "./tabs/TabGPS";
 
 export default function FormularioEmpleado({
   modoFormulario,
@@ -535,6 +536,10 @@ export default function FormularioEmpleado({
                 <Icon icon="mdi:face-recognition" className="mr-2 h-4 w-4" />
                 Escanear rostro
               </TabsTrigger>
+              <TabsTrigger value="gps">
+                <Icon icon="mdi:map-marker" className="mr-2 h-4 w-4" />
+                GPS
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -583,6 +588,10 @@ export default function FormularioEmpleado({
                       form.setValue("descriptor_facial", descriptor)
                     }
                   />
+                )}
+
+                {tab === "gps" && (
+                  <TabGPS form={form} soloLectura={soloLectura} />
                 )}
               </motion.div>
             </AnimatePresence>

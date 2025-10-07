@@ -86,8 +86,9 @@ export default function ControlAsistencia() {
   }, [empleados]);
 
   useEffect(() => {
-    if (tiposPermiso?.data) {
-      const uniqueTipos = tiposPermiso.data.map((tipo) => ({
+    console.log(tiposPermiso);
+    if (tiposPermiso) {
+      const uniqueTipos = tiposPermiso.tiposPermiso.map((tipo) => ({
         clave: tipo.clave,
         nombre: tipo.nombre,
       }));

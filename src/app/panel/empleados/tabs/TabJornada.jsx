@@ -128,56 +128,6 @@ export default function TabJornada({ form, soloLectura }) {
 
   return (
     <section className="space-y-6 px-4 py-2">
-      <FormField
-        name="solicitar_gps"
-        control={form.control}
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>¿Solicitar GPS para reloj checador?</FormLabel>
-            <FormControl>
-              <select
-                {...field}
-                disabled={soloLectura}
-                className="border rounded p-2"
-              >
-                <option value="">Selecciona</option>
-                <option value="Sí">Sí</option>
-                <option value="No">No</option>
-              </select>
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-
-      {form.watch("solicitar_gps") === "Sí" &&
-        form.watch("lugar_checkin_lat") !== null && (
-          <div className="space-y-4">
-            <FormField
-              name="lugar_checkin"
-              control={form.control}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Lugar Check-In</FormLabel>
-                  <MapaSelector value={field.value} onChange={field.onChange} />
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              name="lugar_checkout"
-              control={form.control}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Lugar Check-Out</FormLabel>
-                  <MapaSelector value={field.value} onChange={field.onChange} />
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        )}
-
       {/* Asignación rápida */}
       <div className="border rounded-xl p-4 bg-slate-50 shadow-sm space-y-4">
         <FormLabel className="text-base font-semibold block mb-1">
