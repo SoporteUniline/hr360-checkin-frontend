@@ -1,4 +1,5 @@
 import { ComboboxEstadoCivil } from "@/components/ComboboxEstadoCivil";
+import { FormLabelWithAsterisk } from "@/components/FormLabelWithAsterisk";
 import {
   FormField,
   FormItem,
@@ -23,26 +24,31 @@ export default function TabPersonales({ form, soloLectura }) {
           {
             name: "apellido_paterno",
             label: "Apellido Paterno",
+            required: true,
           },
           {
             name: "apellido_materno",
             label: "Apellido Materno",
+            required: true,
           },
           {
             name: "fecha_nacimiento",
             label: "Fecha de nacimiento",
             type: "date",
+            required: false,
           },
-          { name: "telefono", label: "Teléfono" },
-          { name: "correo", label: "Correo", type: "email" },
-        ].map(({ name, label, type = "text" }) => (
+          { name: "telefono", label: "Teléfono", required: false },
+          { name: "correo", label: "Correo", type: "email", required: false },
+        ].map(({ name, label, type = "text", required = false }) => (
           <FormField
             key={name}
             name={name}
             control={form.control}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{label}</FormLabel>
+                <FormLabelWithAsterisk required={required}>
+                  {label}
+                </FormLabelWithAsterisk>
                 <FormControl>
                   <Input type={type} disabled={soloLectura} {...field} />
                 </FormControl>
@@ -113,7 +119,7 @@ export default function TabPersonales({ form, soloLectura }) {
               <FormLabel>Sexo</FormLabel>
               <Select
                 onValueChange={field.onChange}
-                defaultValue={field.value}
+                value={field.value !== "" ? field.value : "sin-seleccion"}
                 disabled={soloLectura}
               >
                 <FormControl>
@@ -122,6 +128,9 @@ export default function TabPersonales({ form, soloLectura }) {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
+                  <SelectItem value="sin-seleccion">
+                    Selecciona una opción
+                  </SelectItem>
                   <SelectItem value="Masculino">Masculino</SelectItem>
                   <SelectItem value="Femenino">Femenino</SelectItem>
                   <SelectItem value="Otro">Otro</SelectItem>
@@ -139,8 +148,10 @@ export default function TabPersonales({ form, soloLectura }) {
             <FormItem>
               <FormLabel>Estado civil</FormLabel>
               <ComboboxEstadoCivil
-                value={field.value}
-                onChange={(val) => field.onChange(val)}
+                value={field.value !== "" ? field.value : "sin-seleccion"}
+                onChange={(val) =>
+                  field.onChange(val === "" ? "sin-seleccion" : val)
+                }
                 disabled={soloLectura}
               />
               <FormMessage />

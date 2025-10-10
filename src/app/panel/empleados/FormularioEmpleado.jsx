@@ -55,6 +55,8 @@ export default function FormularioEmpleado({
 }) {
   const [tab, setTab] = useState("personales");
   const fueDesdeLectura = useRef(false);
+  const nombreInputRef = useRef(null);
+
   const construirHorariosDesdeDatos = (data) => {
     const dias = data.dias_trabajo?.split(",") || [];
 
@@ -102,7 +104,7 @@ export default function FormularioEmpleado({
             curp: "",
             departamento: "",
             direccion: "",
-            estado_civil: "Soltero",
+            estado_civil: "sin-seleccion",
             fecha_ingreso: "",
             fecha_nacimiento: "",
             hrs_de_comida: "",
@@ -113,12 +115,12 @@ export default function FormularioEmpleado({
             nss: "",
             puesto: "",
             rfc: "",
-            sexo: "Masculino",
+            sexo: "sin-seleccion",
             sucursal: "",
             telefono: "",
-            periodo_pago: "Semanal",
-            forma_pago: "Fijo",
-            forma_calculo: "$",
+            periodo_pago: "sin-seleccion",
+            forma_pago: "sin-seleccion",
+            forma_calculo: "sin-seleccion",
             banco: "",
             otro_banco: "",
             tipo_cuenta: "Cuenta", // o "CLABE"
@@ -126,6 +128,8 @@ export default function FormularioEmpleado({
             solicitar_gps: "", // antes era gps_requerido
             lugar_checkin: null, // o {} si esperas objeto
             lugar_checkout: null,
+            checar_gps: false,
+            usar_reloj_checador: true,
           },
   });
 
@@ -151,8 +155,8 @@ export default function FormularioEmpleado({
           ? horarios
           : construirHorariosDesdeDatos(values);
 
-      let banco = cuenta_bancaria.banco || "";
-      let otro_banco = cuenta_bancaria.otro_banco || "";
+      let banco = cuenta_bancaria?.banco || "";
+      let otro_banco = cuenta_bancaria?.otro_banco || "";
 
       const bancosComunes = [
         "BBVA",
@@ -175,10 +179,14 @@ export default function FormularioEmpleado({
         horarios: horariosIniciales,
         hrs_por_dia: Number(hrs_por_dia) || 0,
         hrs_de_comida: Number(hrs_de_comida) || 0,
-        numero_cuenta: cuenta_bancaria.numero_cuenta || "",
+        numero_cuenta: cuenta_bancaria?.numero_cuenta || "",
         banco,
         otro_banco,
-        tipo_cuenta: cuenta_bancaria.tipo_cuenta || "Cuenta",
+        tipo_cuenta: cuenta_bancaria?.tipo_cuenta || "Cuenta",
+        // Asegurar valores numéricos válidos
+        sueldo_por_hora: restoEmpleado.sueldo_por_hora || null,
+        porcentaje: restoEmpleado.porcentaje || null,
+        descriptor_facial: restoEmpleado.descriptor_facial || [],
         solicitar_gps:
           restoEmpleado.solicitar_gps === 1
             ? "Sí"
@@ -193,6 +201,9 @@ export default function FormularioEmpleado({
           typeof restoEmpleado.lugar_checkout === "string"
             ? JSON.parse(restoEmpleado.lugar_checkout)
             : restoEmpleado.lugar_checkout || null,
+        checar_gps: restoEmpleado.checar_gps === 1 ? true : false,
+        usar_reloj_checador:
+          restoEmpleado.usar_reloj_checador === 1 ? true : false,
       });
 
       if (!fueDesdeLectura.current) {
@@ -213,50 +224,36 @@ export default function FormularioEmpleado({
   }, [form.watch("forma_calculo")]);
 
   const onInvalidSubmit = (errors) => {
-    console.log(errors);
+    console.log("ERRORES DE VALIDACIÓN:", errors);
+    console.log("VALORES ACTUALES DEL FORM:", form.getValues());
     enqueueSnackbar(
       "Tienes campos obligatorios vacíos, por favor llena los campos requeridos",
       { variant: "warning" }
     );
 
-    const erroresPersonales = [
-      "apellido_paterno",
-      "apellido_materno",
-      "fecha_nacimiento",
-      "telefono",
-      "correo",
-      "curp",
-      "rfc",
-      "nss",
-      "sexo",
-      "estado_civil",
-      "direccion",
-    ];
-    const erroresLaborales = [
-      "nombre_empresa",
-      "sucursal",
-      "departamento",
-      "fecha_ingreso",
-      "nip",
-    ];
-    const erroresJornada = ["dias_trabajo", "hrs_por_dia", "hrs_de_comida"];
-
-    const erroresNomina = ["periodo_pago", "forma_pago", "forma_calculo"];
-
-    const erroresCuentas = ["banco", "tipo_cuenta", "numero_cuenta"];
-
     const errorKeys = Object.keys(errors);
 
-    if (errorKeys.some((e) => erroresPersonales.includes(e))) {
-      setTab("personales");
-    } else if (errorKeys.some((e) => erroresLaborales.includes(e))) {
-      setTab("laborales");
-    } else if (errorKeys.some((e) => erroresJornada.includes(e))) {
-      setTab("jornada");
-    } else if (errorKeys.some((e) => erroresNomina.includes(e))) {
-      setTab("nomina");
-    } else if (errorKeys.some((e) => erroresCuentas.includes(e))) {
-      setTab("cuentas");
+    const tabsConErrores = {
+      personales: ["apellido_paterno", "apellido_materno", "nombre"],
+      laborales: ["puesto", "sucursal"],
+      jornada: ["hrs_por_dia", "hrs_de_comida", "horarios"],
+      nomina: [
+        "periodo_pago",
+        "forma_pago",
+        "forma_calculo",
+        "sueldo_por_hora",
+        "porcentaje",
+      ],
+      cuentas: [],
+    };
+
+    // Encontrar el primer tab que tenga errores (en orden de prioridad)
+    const tabConError = Object.entries(tabsConErrores).find(([tab, campos]) =>
+      errorKeys.some((errorKey) => campos.includes(errorKey))
+    );
+
+    if (tabConError) {
+      setTab(tabConError[0]);
     }
   };
 
@@ -401,6 +398,16 @@ export default function FormularioEmpleado({
     }
   };
 
+  useEffect(() => {
+    if (modoFormulario && nombreInputRef.current && !editar && !soloLectura) {
+      const timer = setTimeout(() => {
+        nombreInputRef.current?.focus();
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+  }, [modoFormulario, editar, soloLectura]);
+
   const { data, isLoading, error } = useSWR(
     `/users/${dataUser?.id_usuario}`,
     fetcherWithToken,
@@ -477,9 +484,11 @@ export default function FormularioEmpleado({
                     <FormControl>
                       <Input
                         {...field}
+                        ref={nombreInputRef}
                         disabled={soloLectura}
                         placeholder="Ingrese el nombre del empleado"
                         className="w-full text-lg sm:text-xl md:text-2xl lg:text-3xl h-12 border-0 border-white focus:border-b-blue-600 focus:ring-0 rounded-none"
+                        autoFocus
                       />
                     </FormControl>
                   </FormItem>
@@ -536,10 +545,10 @@ export default function FormularioEmpleado({
                 <Icon icon="mdi:face-recognition" className="mr-2 h-4 w-4" />
                 Escanear rostro
               </TabsTrigger>
-              <TabsTrigger value="gps">
+              {/* <TabsTrigger value="gps">
                 <Icon icon="mdi:map-marker" className="mr-2 h-4 w-4" />
                 GPS
-              </TabsTrigger>
+              </TabsTrigger> */}
             </TabsList>
           </div>
 
@@ -590,9 +599,9 @@ export default function FormularioEmpleado({
                   />
                 )}
 
-                {tab === "gps" && (
+                {/* {tab === "gps" && (
                   <TabGPS form={form} soloLectura={soloLectura} />
-                )}
+                )} */}
               </motion.div>
             </AnimatePresence>
           </motion.div>

@@ -31,6 +31,18 @@ export default function TabJornada({ form, soloLectura }) {
   const [regresoComidaComun, setRegresoComidaComun] = useState("");
 
   const horarios = form.watch("horarios") || [];
+  const { errors, isSubmitted } = form.formState;
+
+  const isDiaCompleto = (horario) => {
+    return (
+      horario.entrada &&
+      horario.salida_comida &&
+      horario.regreso_comida &&
+      horario.salida
+    );
+  };
+
+  const diasCompletos = horarios.filter(isDiaCompleto).length;
 
   function calcularHoras(inicio, fin) {
     if (!inicio || !fin) return 0;
@@ -50,7 +62,15 @@ export default function TabJornada({ form, soloLectura }) {
     if (horarios.length < 7) {
       const nuevos = DIAS_SEMANA.map((dia) => {
         const existente = horarios.find((h) => h.dia === dia);
-        return existente || { dia, entrada: "", salida: "" };
+        return (
+          existente || {
+            dia,
+            entrada: "",
+            salida_comida: "",
+            regreso_comida: "",
+            salida: "",
+          }
+        );
       });
       form.setValue("horarios", nuevos, { shouldValidate: true });
     }
@@ -128,6 +148,23 @@ export default function TabJornada({ form, soloLectura }) {
 
   return (
     <section className="space-y-6 px-4 py-2">
+      {/* Indicador de días completos */}
+      {/* {diasCompletos > 0 && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+          <p className="text-green-800 text-sm font-medium">
+            ✅ {diasCompletos} día(s) completo(s) configurado(s)
+          </p>
+        </div>
+      )} */}
+
+      {/* Mensaje de error */}
+      {isSubmitted && errors.horarios && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+          <p className="text-red-800 text-sm font-medium">
+            ❌ {errors.horarios.message}
+          </p>
+        </div>
+      )}
       {/* Asignación rápida */}
       <div className="border rounded-xl p-4 bg-slate-50 shadow-sm space-y-4">
         <FormLabel className="text-base font-semibold block mb-1">

@@ -11,17 +11,19 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
-// Carga dinámica del mapa (importante para Next.js)
-const MapaSelector = dynamic(() => import("@/components/MapaSelector"), {
-  ssr: false,
-  loading: () => (
-    <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center">
-      Cargando mapa...
-    </div>
-  ),
-});
+// Carga dinámica del mapa de Google
+const MapaSelectorGoogle = dynamic(
+  () => import("@/components/MapaSelectorGoogle"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center">
+        Cargando Google Maps...
+      </div>
+    ),
+  }
+);
 
-// tabs/TabGPS.jsx - Versión mejorada
 export default function TabGPS({ form, soloLectura }) {
   const usarGPS = form.watch("solicitar_gps") === "Sí";
   const [cargandoGPS, setCargandoGPS] = useState(false);
@@ -61,8 +63,8 @@ export default function TabGPS({ form, soloLectura }) {
         form.setValue("lugar_checkout", nuevaUbicacion);
       }
 
-      // 🔍 Opcional: Geocodificación inversa para obtener dirección
-      // await obtenerDireccion(latitude, longitude, tipo);
+      // 🔍 Geocodificación inversa con Google
+      await obtenerDireccionGoogle(latitude, longitude, tipo);
     } catch (error) {
       console.error("Error GPS:", error);
       let mensaje = "No se pudo obtener la ubicación";
@@ -86,25 +88,33 @@ export default function TabGPS({ form, soloLectura }) {
     }
   };
 
-  // 🔍 Función opcional para obtener dirección (geocodificación inversa)
-  const obtenerDireccion = async (lat, lng, tipo) => {
+  // 🔍 Función para obtener dirección con Google Geocoding
+  const obtenerDireccionGoogle = async (lat, lng, tipo) => {
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`
-      );
-      const data = await response.json();
+      // Usamos la API de geocodificación de Google directamente desde el cliente
+      const geocoder = new window.google.maps.Geocoder();
 
-      if (data.display_name) {
+      const response = await geocoder.geocode({
+        location: { lat, lng },
+      });
+
+      if (response.results[0]) {
+        const address = response.results[0].formatted_address;
         const campo = tipo === "checkin" ? "lugar_checkin" : "lugar_checkout";
         const valorActual = form.getValues(campo);
+
         form.setValue(campo, {
           ...valorActual,
-          address: data.display_name,
-          city: data.address?.city || data.address?.town,
+          address: address,
+          formattedAddress: address,
+          city:
+            response.results[0].address_components.find((comp) =>
+              comp.types.includes("locality")
+            )?.long_name || "",
         });
       }
     } catch (error) {
-      console.log("No se pudo obtener la dirección:", error);
+      console.log("No se pudo obtener la dirección con Google:", error);
     }
   };
 
@@ -130,6 +140,54 @@ export default function TabGPS({ form, soloLectura }) {
         </ul>
       </div>
     );
+  };
+
+  // Función para buscar dirección manualmente
+  // Función para buscar dirección manualmente
+  const buscarDireccion = async (query, tipo) => {
+    // Validación fuerte antes de continuar
+    if (!query || typeof query !== "string" || !query.trim()) {
+      setErrorGPS("Por favor escribe una dirección válida antes de buscar.");
+      return;
+    }
+
+    // Limpieza del texto
+    const textoLimpio = query.trim();
+    setErrorGPS(null);
+    setCargandoGPS(true);
+
+    try {
+      if (!window.google || !window.google.maps) {
+        throw new Error("Google Maps no está disponible todavía");
+      }
+
+      const geocoder = new window.google.maps.Geocoder();
+      const response = await geocoder.geocode({ address: textoLimpio });
+
+      if (!response.results || response.results.length === 0) {
+        setErrorGPS("No se encontraron resultados para esa dirección.");
+        return;
+      }
+
+      const location = response.results[0].geometry.location;
+      const address = response.results[0].formatted_address;
+
+      const nuevaUbicacion = {
+        lat: location.lat(),
+        lng: location.lng(),
+        address,
+        formattedAddress: address,
+        timestamp: new Date().toISOString(),
+      };
+
+      const campo = tipo === "checkin" ? "lugar_checkin" : "lugar_checkout";
+      form.setValue(campo, nuevaUbicacion);
+    } catch (error) {
+      console.error("Error en búsqueda de dirección:", error);
+      setErrorGPS("❌ No se pudo encontrar la dirección. Intenta con otra.");
+    } finally {
+      setCargandoGPS(false);
+    }
   };
 
   return (
@@ -185,6 +243,63 @@ export default function TabGPS({ form, soloLectura }) {
             </div>
           )}
 
+          {/* Búsqueda de direcciones */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <FormLabel>Buscar dirección Check-In</FormLabel>
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  placeholder="Ej: Av. Reforma 123, CDMX"
+                  onKeyPress={(e) => {
+                    if (e.key === "Enter") {
+                      buscarDireccion(e.target.value, "checkin");
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  onClick={() => {
+                    const input = document.querySelector(
+                      'input[placeholder*="Check-In"]'
+                    );
+                    buscarDireccion(input?.value, "checkin");
+                  }}
+                  variant="outline"
+                >
+                  🔍 Buscar
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <FormLabel>Buscar dirección Check-Out</FormLabel>
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  placeholder="Ej: Av. Insurgentes 456, CDMX"
+                  onKeyPress={(e) => {
+                    if (e.key === "Enter") {
+                      buscarDireccion(e.target.value, "checkout");
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  onClick={() => {
+                    const input = document.querySelector(
+                      'input[placeholder*="Check-Out"]'
+                    );
+                    buscarDireccion(input?.value, "checkout");
+                  }}
+                  variant="outline"
+                >
+                  🔍 Buscar
+                </Button>
+              </div>
+            </div>
+          </div>
+
           <div className="grid md:grid-cols-2 gap-6">
             {/* Check-In */}
             <div className="space-y-4">
@@ -206,7 +321,7 @@ export default function TabGPS({ form, soloLectura }) {
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <MapaSelector
+                    <MapaSelectorGoogle
                       value={field.value}
                       onChange={field.onChange}
                       height="300px"
@@ -227,6 +342,12 @@ export default function TabGPS({ form, soloLectura }) {
                         {field.value.address && (
                           <p className="mt-1">
                             <strong>Dirección:</strong> {field.value.address}
+                          </p>
+                        )}
+                        {field.value.timestamp && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Obtenido:{" "}
+                            {new Date(field.value.timestamp).toLocaleString()}
                           </p>
                         )}
                       </div>
@@ -257,7 +378,7 @@ export default function TabGPS({ form, soloLectura }) {
                 control={form.control}
                 render={({ field }) => (
                   <FormItem>
-                    <MapaSelector
+                    <MapaSelectorGoogle
                       value={field.value}
                       onChange={field.onChange}
                       height="300px"
@@ -280,6 +401,12 @@ export default function TabGPS({ form, soloLectura }) {
                             <strong>Dirección:</strong> {field.value.address}
                           </p>
                         )}
+                        {field.value.timestamp && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Obtenido:{" "}
+                            {new Date(field.value.timestamp).toLocaleString()}
+                          </p>
+                        )}
                       </div>
                     )}
                     <FormMessage />
@@ -292,25 +419,41 @@ export default function TabGPS({ form, soloLectura }) {
           {/* Instrucciones */}
           <div className="bg-blue-50 p-4 rounded-lg">
             <h4 className="font-semibold text-blue-800 mb-2">
-              💡 ¿El GPS no es preciso?
+              💡 Instrucciones para usar Google Maps
             </h4>
             <ul className="text-sm text-blue-700 list-disc list-inside space-y-1">
               <li>
-                <strong>Haz clic directamente en el mapa</strong> para una
-                selección manual precisa
+                <strong>Haz clic directamente en el mapa</strong> para
+                seleccionar una ubicación precisa
               </li>
               <li>
-                Asegúrate de tener <strong>ubicación habilitada</strong> en tu
-                navegador
+                <strong>Arrastra el marcador</strong> para ajustar la posición
+                manualmente
+              </li>
+              <li>
+                Usa la <strong>búsqueda de direcciones</strong> para encontrar
+                lugares específicos
+              </li>
+              <li>
+                El botón <strong>"Usar mi ubicación"</strong> activa el GPS de
+                tu dispositivo
               </li>
               <li>
                 Para mayor precisión, <strong>conéctate a WiFi</strong> y sal a
                 un área abierta
               </li>
-              <li>
-                Puedes ajustar manualmente arrastrando el marcador en el mapa
-              </li>
             </ul>
+          </div>
+
+          {/* Información de Google Maps */}
+          <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+            <p className="text-sm text-green-700 flex items-center gap-2">
+              <span>✅</span>
+              <span>
+                <strong>Google Maps activado</strong> - Usando la API de Google
+                Maps Platform
+              </span>
+            </p>
           </div>
         </div>
       )}

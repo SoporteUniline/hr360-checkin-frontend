@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input";
 import useSWR from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { ComboboxDepartamento } from "@/components/ComboboxDepartamento";
+import { FormLabelWithAsterisk } from "@/components/FormLabelWithAsterisk";
+import { Switch } from "@/components/ui/switch";
 
 export default function TabLaborales({ form, soloLectura, dataUser }) {
   const { data: empleados } = useSWR(
@@ -64,7 +66,9 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
           control={form.control}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Unidad de negocio o sucursal</FormLabel>
+              <FormLabelWithAsterisk required={true}>
+                Unidad de negocio o sucursal
+              </FormLabelWithAsterisk>
               <ComboboxSucursal
                 value={field.value}
                 onChange={(val) => field.onChange(val)}
@@ -96,16 +100,18 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
             name: "fecha_ingreso",
             label: "Fecha de ingreso",
             type: "date",
+            required: false,
           },
-          { name: "nip", label: "Código de empleado" },
-        ].map(({ name, label, type = "text" }) => (
+        ].map(({ name, label, type = "text", required = false }) => (
           <FormField
             key={name}
             name={name}
             control={form.control}
             render={({ field }) => (
               <FormItem>
-                <FormLabel>{label}</FormLabel>
+                <FormLabelWithAsterisk required={required}>
+                  {label}
+                </FormLabelWithAsterisk>
                 <FormControl>
                   <Input type={type} disabled={soloLectura} {...field} />
                 </FormControl>
@@ -114,6 +120,71 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
             )}
           />
         ))}
+
+        <FormField
+          name="checar_gps"
+          control={form.control}
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel className="text-base">Checar GPS</FormLabel>
+                <div className="text-sm text-muted-foreground">
+                  Requerir ubicación GPS al checar entrada/salida
+                </div>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  disabled={soloLectura}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          name="usar_reloj_checador"
+          control={form.control}
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel className="text-base">Usar reloj checador</FormLabel>
+                <div className="text-sm text-muted-foreground">
+                  Permitir que el empleado use el sistema de checador
+                </div>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  disabled={soloLectura}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        {[{ name: "nip", label: "Código de empleado", required: false }].map(
+          ({ name, label, type = "text", required = false }) => (
+            <FormField
+              key={name}
+              name={name}
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabelWithAsterisk required={required}>
+                    {label}
+                  </FormLabelWithAsterisk>
+                  <FormControl>
+                    <Input type={type} disabled={soloLectura} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )
+        )}
 
         {responsables.map(({ name, label }) => (
           <FormField

@@ -13,6 +13,7 @@
     "push-env-production": "npx dotenv-vault@latest push production"
   },
   "dependencies": {
+    "@googlemaps/react-wrapper": "^1.2.0",
     "@hookform/resolvers": "^5.0.1",
     "@radix-ui/react-accordion": "^1.2.10",
     "@radix-ui/react-alert-dialog": "^1.1.14",

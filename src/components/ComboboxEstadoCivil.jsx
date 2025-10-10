@@ -85,6 +85,21 @@ export function ComboboxEstadoCivil({ value, onChange, disabled }) {
     }
   };
 
+  // Función para limpiar la selección
+  const handleClearSelection = () => {
+    onChange(""); // Cambia a string vacío
+    setOpen(false);
+    setSearch("");
+  };
+
+  // Determinar el texto del botón
+  const getDisplayText = () => {
+    if (value === "" || value === "sin-seleccion") {
+      return "Selecciona o crea un estado civil...";
+    }
+    return value;
+  };
+
   return (
     <Popover
       open={open}
@@ -103,7 +118,7 @@ export function ComboboxEstadoCivil({ value, onChange, disabled }) {
           className="w-full justify-between"
           disabled={disabled}
         >
-          {value || "Selecciona o crea un estado civil..."}
+          {getDisplayText()}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -117,6 +132,19 @@ export function ComboboxEstadoCivil({ value, onChange, disabled }) {
           />
           <CommandList>
             <CommandGroup>
+              {/* Opción para limpiar selección */}
+              {value && value !== "" && value !== "sin-seleccion" && (
+                <CommandItem
+                  onSelect={handleClearSelection}
+                  className="text-gray-600 hover:bg-gray-100"
+                >
+                  <div className="w-4 h-4 mr-2 border border-gray-400 rounded flex items-center justify-center">
+                    ×
+                  </div>
+                  Limpiar selección
+                </CommandItem>
+              )}
+
               {search && (
                 <CommandItem
                   onSelect={handleCreate}
@@ -126,6 +154,7 @@ export function ComboboxEstadoCivil({ value, onChange, disabled }) {
                   Crear “{search}”
                 </CommandItem>
               )}
+
               {options.map((estado) => (
                 <CommandItem
                   key={estado.id_estado_civil}
@@ -140,13 +169,17 @@ export function ComboboxEstadoCivil({ value, onChange, disabled }) {
                   <Check
                     className={cn(
                       "ml-auto",
-                      value === estado.nombre ? "opacity-100" : "opacity-0"
+                      value === estado.nombre ||
+                        (value === "sin-seleccion" && estado.nombre === "")
+                        ? "opacity-100"
+                        : "opacity-0"
                     )}
                   />
                 </CommandItem>
               ))}
-              {options.length === 0 && (
-                <CommandEmpty>No hay resultados.</CommandEmpty>
+
+              {options.length === 0 && !search && (
+                <CommandEmpty>No hay estados civiles registrados.</CommandEmpty>
               )}
             </CommandGroup>
           </CommandList>

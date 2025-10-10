@@ -97,22 +97,26 @@ export default function EmpleadosTable({
                     </Avatar>
                     <div className="flex flex-col">
                       <section className="font-bold">{nombreCompleto}</section>
-                      <section className="text-gray-500">
-                        <span className="font-bold">Código:</span> {emp.nip}
-                      </section>
+                      {emp?.nip ? (
+                        <section className="text-gray-500">
+                          <span className="font-bold">Código:</span> {emp.nip}
+                        </section>
+                      ) : null}
                     </div>
                   </div>
                 </TableCell>
                 <TableCell className="font-bold w-auto">{emp.puesto}</TableCell>
                 <TableCell className="flex justify-center">
-                  <div className="rounded-xl border px-4 py-1 my-2">
-                    {emp.departamento}
-                  </div>
+                  {emp.departamento ? (
+                    <div className="rounded-xl border px-4 py-1 my-2">
+                      {emp.departamento}
+                    </div>
+                  ) : null}
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col text-gray-600">
-                    <div>📧 {emp.correo}</div>
-                    <div>📱 {emp.telefono}</div>
+                    {emp?.correo ? <div>📧 {emp.correo}</div> : null}
+                    {emp?.telefono ? <div>📱 {emp.telefono}</div> : null}
                   </div>
                 </TableCell>
                 <TableCell>

@@ -13,6 +13,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { FormLabelWithAsterisk } from "@/components/FormLabelWithAsterisk";
 
 export default function TabNomina({ form, soloLectura }) {
   return (
@@ -22,10 +23,12 @@ export default function TabNomina({ form, soloLectura }) {
         control={form.control}
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Periodo de pago</FormLabel>
+            <FormLabelWithAsterisk required={true}>
+              Periodo de pago
+            </FormLabelWithAsterisk>
             <Select
               onValueChange={field.onChange}
-              defaultValue={field.value}
+              value={field.value !== "" ? field.value : "sin-seleccion"}
               disabled={soloLectura}
             >
               <FormControl>
@@ -34,6 +37,9 @@ export default function TabNomina({ form, soloLectura }) {
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
+                <SelectItem value="sin-seleccion">
+                  Selecciona un periodo
+                </SelectItem>
                 {[
                   "Diario",
                   "Semanal",
@@ -52,15 +58,18 @@ export default function TabNomina({ form, soloLectura }) {
           </FormItem>
         )}
       />
+
       <FormField
         name="forma_pago"
         control={form.control}
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Forma de pago</FormLabel>
+            <FormLabelWithAsterisk required={true}>
+              Forma de pago
+            </FormLabelWithAsterisk>
             <Select
               onValueChange={field.onChange}
-              defaultValue={field.value}
+              value={field.value !== "" ? field.value : "sin-seleccion"}
               disabled={soloLectura}
             >
               <FormControl>
@@ -69,6 +78,9 @@ export default function TabNomina({ form, soloLectura }) {
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
+                <SelectItem value="sin-seleccion">
+                  Selecciona una forma de pago
+                </SelectItem>
                 {["Fijo", "Comisiones", "Fijo + Comisiones"].map((op) => (
                   <SelectItem key={op} value={op}>
                     {op}
@@ -80,15 +92,18 @@ export default function TabNomina({ form, soloLectura }) {
           </FormItem>
         )}
       />
+
       <FormField
         name="forma_calculo"
         control={form.control}
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Forma de cálculo</FormLabel>
+            <FormLabelWithAsterisk required={true}>
+              Forma de cálculo
+            </FormLabelWithAsterisk>
             <Select
               onValueChange={field.onChange}
-              defaultValue={field.value}
+              value={field.value !== "" ? field.value : "sin-seleccion"}
               disabled={soloLectura}
             >
               <FormControl>
@@ -97,6 +112,9 @@ export default function TabNomina({ form, soloLectura }) {
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
+                <SelectItem value="sin-seleccion">
+                  Selecciona una forma de cálculo
+                </SelectItem>
                 {["$", "%", "Ambos"].map((op) => (
                   <SelectItem key={op} value={op}>
                     {op}
@@ -108,6 +126,7 @@ export default function TabNomina({ form, soloLectura }) {
           </FormItem>
         )}
       />
+
       {["$", "Ambos"].includes(form.watch("forma_calculo")) && (
         <FormField
           name="sueldo_por_hora"
@@ -121,12 +140,10 @@ export default function TabNomina({ form, soloLectura }) {
                   step="0.01"
                   disabled={soloLectura}
                   {...field}
-                  value={field.value ?? ""} // clave para evitar null
+                  value={field.value ?? ""}
                   onChange={(e) => {
                     const value = e.target.value;
                     field.onChange(value ? parseFloat(value) : null);
-
-                    // Si sólo seleccionó $, limpia porcentaje
                     if (form.getValues("forma_calculo") === "$") {
                       form.setValue("porcentaje", null);
                     }
@@ -156,8 +173,6 @@ export default function TabNomina({ form, soloLectura }) {
                   onChange={(e) => {
                     const value = e.target.value;
                     field.onChange(value ? parseFloat(value) : null);
-
-                    // Si sólo seleccionó %, limpia sueldo_por_hora
                     if (form.getValues("forma_calculo") === "%") {
                       form.setValue("sueldo_por_hora", null);
                     }
