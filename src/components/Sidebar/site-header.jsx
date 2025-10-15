@@ -8,7 +8,12 @@ export function SiteHeader() {
 
   function capitalizeFirstLetter() {
     const segments = location.split("/").filter(Boolean);
-    const title = segments[segments.length - 1] ?? "Panel Reclutador";
+    let title = segments[segments.length - 1] ?? "Panel Reclutador";
+
+    // Si el último segmento es un número, tomamos el anterior
+    if (!isNaN(Number(title)) && segments.length > 1) {
+      title = segments[segments.length - 2];
+    }
 
     const palabras = title
       .split("-")

@@ -14,6 +14,7 @@ import useSWR, { mutate } from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { useEffect, useState } from "react";
 import TablePagination from "@/components/TablePagination";
+import { useRouter } from "next/navigation";
 
 export default function SucursalesTable({
   id_empresa,
@@ -24,6 +25,7 @@ export default function SucursalesTable({
   onTotalChange,
   onLoad,
 }) {
+  const router = useRouter();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const key = `${swrKey}&page=${page}&limit=${limit}&nombre=${filter}`;
@@ -69,7 +71,11 @@ export default function SucursalesTable({
                 <Button
                   size="icon"
                   variant="secondary"
-                  onClick={() => onEdit(suc, sucursales)}
+                  onClick={() =>
+                    router.push(
+                      `/panel/catalogos/sucursales/${suc.id_sucursal}`
+                    )
+                  }
                 >
                   <Edit className="h-4 w-4" />
                 </Button>
