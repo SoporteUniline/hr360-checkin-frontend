@@ -71,11 +71,7 @@ export default function SucursalesTable({
                 <Button
                   size="icon"
                   variant="secondary"
-                  onClick={() =>
-                    router.push(
-                      `/panel/catalogos/sucursales/${suc.id_sucursal}`
-                    )
-                  }
+                  onClick={() => onEdit(suc, sucursales)}
                 >
                   <Edit className="h-4 w-4" />
                 </Button>

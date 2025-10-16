@@ -22,16 +22,17 @@ import {
   Handshake,
   Landmark,
   PartyPopper,
+  MapPin,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
 const items = [
   {
-    title: "Empleados",
-    url: "/panel/empleados",
+    title: "Asistencias",
+    url: "/panel/registro-asistencia",
     rol: "Recruiter",
-    icon: UsersIcon,
+    icon: BadgeCheck,
   },
   {
     title: "Catálogos",
@@ -39,21 +40,27 @@ const items = [
     icon: LibraryBig,
     children: [
       {
-        title: "Tipos de registro",
-        url: "/panel/catalogos/tipos-registro",
-        icon: BookText,
+        title: "Áreas de Check",
+        url: "/panel/catalogos/areas-check",
+        icon: MapPin,
       },
       {
         title: "Departamentos",
         url: "/panel/catalogos/departamentos",
         icon: Building,
       },
-      { title: "Sucursales", url: "/panel/catalogos/sucursales", icon: Store },
       {
         title: "Estado civil",
         url: "/panel/catalogos/estado-civil",
         icon: Handshake,
       },
+      { title: "Sucursales", url: "/panel/catalogos/sucursales", icon: Store },
+      {
+        title: "Tipos de registro",
+        url: "/panel/catalogos/tipos-registro",
+        icon: BookText,
+      },
+
       // {
       //   title: "Cuentas bancarias",
       //   url: "/panel/catalogos/cuentas-bancarias",
@@ -68,16 +75,22 @@ const items = [
     icon: PartyPopper,
   },
   {
-    title: "Asistencias",
-    url: "/panel/registro-asistencia",
+    title: "Empleados",
+    url: "/panel/empleados",
     rol: "Recruiter",
-    icon: BadgeCheck,
+    icon: UsersIcon,
   },
   {
     title: "Entradas y salidas",
     url: "/panel/registro-de-entradas-y-salidas",
     rol: "Recruiter",
     icon: ClipboardCheck,
+  },
+  {
+    title: "Perfil",
+    rol: "Recruiter",
+    icon: CircleUserRoundIcon,
+    url: "/panel/cuenta",
   },
   {
     title: "Reloj Checador",
@@ -173,7 +186,7 @@ export function NavMain() {
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem> */}
-          <SidebarMenuItem>
+          {/* <SidebarMenuItem>
             <SidebarMenuButton
               tooltip="Perfil"
               onClick={() => handleClick(perfilRoute)}
@@ -184,7 +197,7 @@ export function NavMain() {
                 <span>Perfil</span>
               </div>
             </SidebarMenuButton>
-          </SidebarMenuItem>
+          </SidebarMenuItem> */}
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>
