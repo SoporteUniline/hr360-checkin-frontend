@@ -1,13 +1,16 @@
-import dynamic from "next/dynamic";
+"use client";
+
+import { useEffect, useState } from "react";
+import axios from "axios";
 import {
   FormField,
   FormItem,
   FormLabel,
-  FormControl,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useEffect, useState } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/context/AuthContext";
 
 const DIAS_SEMANA = [
   "Lunes",
@@ -19,30 +22,77 @@ const DIAS_SEMANA = [
   "Domingo",
 ];
 
-const MapaSelector = dynamic(() => import("@/components/MapaSelector"), {
-  ssr: false,
-});
-
-export default function TabJornada({ form, soloLectura }) {
+export default function TabJornada({ form, soloLectura, empleadoId }) {
+  const { dataUser } = useAuth();
   const [diasSeleccionados, setDiasSeleccionados] = useState([]);
   const [entradaComun, setEntradaComun] = useState("");
   const [salidaComun, setSalidaComun] = useState("");
   const [salidaComidaComun, setSalidaComidaComun] = useState("");
   const [regresoComidaComun, setRegresoComidaComun] = useState("");
+  const [areas, setAreas] = useState([]);
+  const [areasAsignadas, setAreasAsignadas] = useState([]);
 
   const horarios = form.watch("horarios") || [];
+  const usarReloj = form.watch("usar_reloj_checador");
   const { errors, isSubmitted } = form.formState;
 
-  const isDiaCompleto = (horario) => {
-    return (
-      horario.entrada &&
-      horario.salida_comida &&
-      horario.regreso_comida &&
-      horario.salida
-    );
-  };
+  useEffect(() => {
+    if (!usarReloj) return;
+    const fetchAreas = async () => {
+      try {
+        const { data } = await axios.get(
+          `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/area_check2`,
+          {
+            params: {
+              id_empresa: dataUser?.id_empresa,
+            },
+          }
+        );
+        setAreas(data.data);
+      } catch (error) {
+        console.error("Error al obtener áreas:", error);
+      }
+    };
+    fetchAreas();
+  }, [usarReloj]);
 
-  const diasCompletos = horarios.filter(isDiaCompleto).length;
+  useEffect(() => {
+    if (!usarReloj || !empleadoId) return;
+    const fetchAsignadas = async () => {
+      try {
+        const { data } = await axios.get(
+          `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados/area_check/${empleadoId}/areas`
+        );
+        setAreasAsignadas(data.map((a) => a.id_area));
+      } catch (error) {
+        console.error("Error al obtener áreas del empleado", error);
+      }
+    };
+
+    fetchAsignadas();
+  }, [empleadoId, usarReloj]);
+
+  const toggleArea = async (id_area, checked) => {
+    try {
+      if (checked) {
+        await axios.post(
+          `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados/area_check/${empleadoId}/asignar-area`,
+          {
+            areas: [id_area],
+          }
+        );
+
+        setAreasAsignadas((prev) => [...prev, id_area]);
+      } else {
+        await axios.delete(
+          `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados/area_check/${empleadoId}/quitar-area/${id_area}`
+        );
+        setAreasAsignadas((prev) => prev.filter((id) => id !== id_area));
+      }
+    } catch (error) {
+      console.error("Error al modificar área:", error);
+    }
+  };
 
   function calcularHoras(inicio, fin) {
     if (!inicio || !fin) return 0;
@@ -148,16 +198,6 @@ export default function TabJornada({ form, soloLectura }) {
 
   return (
     <section className="space-y-6 px-4 py-2">
-      {/* Indicador de días completos */}
-      {/* {diasCompletos > 0 && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-          <p className="text-green-800 text-sm font-medium">
-            ✅ {diasCompletos} día(s) completo(s) configurado(s)
-          </p>
-        </div>
-      )} */}
-
-      {/* Mensaje de error */}
       {isSubmitted && errors.horarios && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3">
           <p className="text-red-800 text-sm font-medium">
@@ -342,6 +382,45 @@ export default function TabJornada({ form, soloLectura }) {
           />
         ))}{" "}
       </div>
+      {/* 🔹 Áreas permitidas (solo si usar_reloj_checador = true) */}
+      {usarReloj && (
+        <div className="border rounded-xl p-4 bg-slate-50 shadow-sm">
+          <FormLabel className="text-base font-semibold block mb-3">
+            Áreas donde el empleado puede checar
+          </FormLabel>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {areas.map((area) => {
+              const asignada = areasAsignadas.includes(area.id_area);
+              return (
+                <div
+                  key={area.id_area}
+                  className={`border rounded-lg p-3 flex items-center justify-between ${
+                    asignada
+                      ? "bg-blue-50 border-blue-300"
+                      : "bg-white border-gray-200"
+                  }`}
+                >
+                  <div>
+                    <p className="font-medium">{area.nombre_area}</p>
+                    <p className="text-xs text-gray-500">
+                      {area.latitud}, {area.longitud}
+                    </p>
+                  </div>
+                  {!soloLectura && (
+                    <Checkbox
+                      checked={asignada}
+                      onCheckedChange={(checked) =>
+                        toggleArea(area.id_area, checked)
+                      }
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </section>
   );
 }

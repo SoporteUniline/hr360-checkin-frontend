@@ -576,7 +576,11 @@ export default function FormularioEmpleado({
                 )}
 
                 {tab === "jornada" && (
-                  <TabJornada form={form} soloLectura={soloLectura} />
+                  <TabJornada
+                    form={form}
+                    soloLectura={soloLectura}
+                    empleadoId={values?.id_empleado}
+                  />
                 )}
 
                 {tab === "nomina" && (
