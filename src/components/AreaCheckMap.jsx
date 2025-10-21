@@ -142,6 +142,18 @@ export default function AreaCheckMap({ area, onChange }) {
           </Button>
         </div>
       </div>
+      <div className="space-y-2">
+        <Label htmlFor="radio_metros">Radio permitido (metros)</Label>
+        <Input
+          id="radio_metros"
+          type="number"
+          min={10}
+          max={1000}
+          value={area.radio_metros || ""}
+          onChange={(e) => onChange({ ...area, radio_metros: e.target.value })}
+          placeholder="Ej. 100"
+        />
+      </div>
 
       {/* Mapa */}
       <div className="border rounded-lg overflow-hidden relative">

@@ -63,6 +63,9 @@ export const schemaEmpleado = z
       .min(0, "Las horas de comida son obligatorias"),
     horarios: z.array(horarioSchema),
 
+    // Jornada - OPCIONALES
+    areasAsignadas: z.array(z.number()).optional(),
+
     // Nómina - OBLIGATORIOS
     periodo_pago: z
       .string()

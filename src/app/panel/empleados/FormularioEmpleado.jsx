@@ -330,6 +330,8 @@ export default function FormularioEmpleado({
 
       data.id_empresa = dataUser?.id_empresa;
 
+      console.log("Áreas asignadas que se van a enviar:", data.areasAsignadas);
+
       const formData = new FormData();
 
       delete data.nombre_empresa;

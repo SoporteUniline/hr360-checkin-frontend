@@ -72,26 +72,12 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
     fetchAsignadas();
   }, [empleadoId, usarReloj]);
 
-  const toggleArea = async (id_area, checked) => {
-    try {
-      if (checked) {
-        await axios.post(
-          `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados/area_check/${empleadoId}/asignar-area`,
-          {
-            areas: [id_area],
-          }
-        );
-
-        setAreasAsignadas((prev) => [...prev, id_area]);
-      } else {
-        await axios.delete(
-          `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados/area_check/${empleadoId}/quitar-area/${id_area}`
-        );
-        setAreasAsignadas((prev) => prev.filter((id) => id !== id_area));
-      }
-    } catch (error) {
-      console.error("Error al modificar área:", error);
-    }
+  const toggleArea = (id_area) => {
+    setAreasAsignadas((prev) =>
+      prev.includes(id_area)
+        ? prev.filter((id) => id !== id_area)
+        : [...prev, id_area]
+    );
   };
 
   function calcularHoras(inicio, fin) {
@@ -155,6 +141,10 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
     form.setValue("hrs_por_dia", promedioHoras, { shouldValidate: true });
     form.setValue("hrs_de_comida", promedioComidas, { shouldValidate: true });
   }, [horarios, form]);
+
+  useEffect(() => {
+    form.setValue("areasAsignadas", areasAsignadas);
+  }, [areasAsignadas, form]);
 
   const toggleDiaSeleccionado = (dia) => {
     setDiasSeleccionados((prev) =>
