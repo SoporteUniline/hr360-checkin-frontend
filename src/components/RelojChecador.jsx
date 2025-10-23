@@ -102,9 +102,34 @@ export default function RelojChecador({ idEmpresa }) {
         return;
       }
 
+      // Obtener ubicación actual del usuario
+      let latitud_actual = null;
+      let longitud_actual = null;
+
+      try {
+        const position = await new Promise((resolve, reject) =>
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0,
+          })
+        );
+        latitud_actual = position.coords.latitude;
+        longitud_actual = position.coords.longitude;
+      } catch (geoError) {
+        enqueueSnackbar("No se pudo obtener la ubicación. Activa el GPS.", {
+          variant: "error",
+        });
+        setRegistrando(false);
+        return;
+      }
+
+      // Enviar datos al backend
       const { data } = await axiosInstance.post(`/checador/reloj/registrar`, {
         codigo,
         id_empresa: idEmpresa,
+        latitud_actual,
+        longitud_actual,
       });
 
       const { movimiento, empleado } = data;

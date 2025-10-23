@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import { Camera, X, Loader, CheckCircle } from "lucide-react";
 import { enqueueSnackbar } from "notistack";
+import axiosInstance from "@/lib/axios";
 
 const FacialRecognitionModal = ({ isOpen, onClose, onSuccess, idEmpresa }) => {
   const [cameraFacing, setCameraFacing] = useState("user");
@@ -169,10 +170,14 @@ const FacialRecognitionModal = ({ isOpen, onClose, onSuccess, idEmpresa }) => {
     }, 2000); // 2 segundos quieto antes de tomar foto
   };
 
+  const errorCriticalRef = useRef(false);
+
   // Captura y reconocimiento
   const captureAndRecognize = async () => {
     if (!videoRef.current || !canvasRef.current || !faceApiLoaded || !isOpen)
       return;
+
+    if (errorCriticalRef.current) return;
 
     setIsLoading(true);
     setError("");
@@ -196,49 +201,70 @@ const FacialRecognitionModal = ({ isOpen, onClose, onSuccess, idEmpresa }) => {
         return;
       }
 
+      let latitud_actual = null;
+      let longitud_actual = null;
+
+      try {
+        const position = await new Promise((resolve, reject) =>
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0,
+          })
+        );
+        latitud_actual = position.coords.latitude;
+        longitud_actual = position.coords.longitude;
+      } catch (geoError) {
+        enqueueSnackbar("No se pudo obtener la ubicación. Activa el GPS.", {
+          variant: "error",
+        });
+        setIsLoading(false);
+        isProcessingRef.current = false;
+        return;
+      }
+
       const descriptor = Array.from(detection.descriptor);
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/reloj/registrar-facial`,
+      const { data } = await axiosInstance.post(
+        `/checador/reloj/registrar-facial`,
         {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            descriptor_facial: descriptor,
-            id_empresa: idEmpresa,
-            liveness_verified: false,
-          }),
+          descriptor_facial: descriptor,
+          id_empresa: idEmpresa,
+          latitud_actual,
+          longitud_actual,
         }
       );
 
-      const data = await response.json();
+      lastCheckTimeRef.current = Date.now();
+      setShowSuccessMessage(true);
+      onSuccess(data);
 
-      if (response.ok) {
-        lastCheckTimeRef.current = Date.now(); // 👈 actualizar último registro
-        setShowSuccessMessage(true);
-        onSuccess(data);
-
-        setTimeout(() => {
-          setShowSuccessMessage(false);
-          setIsLoading(false);
-          setFaceDetected(false);
-          setError("");
-          isProcessingRef.current = false;
-        }, 500); // 👈 corto, el cooldown ya bloquea
-      } else {
-        setError(data.error || "Error en reconocimiento facial");
+      setTimeout(() => {
+        setShowSuccessMessage(false);
         setIsLoading(false);
+        setFaceDetected(false);
+        setError("");
         isProcessingRef.current = false;
-      }
+      }, 500);
     } catch (err) {
-      console.error("Error reconocimiento:", err);
-      setError("Error al procesar el reconocimiento facial");
+      const message =
+        err.response?.data?.error || "Error en reconocimiento facial";
+
+      setError(message);
+      enqueueSnackbar(message, { variant: "error" });
       setIsLoading(false);
+
+      // 🧠 Evita reintentos automáticos del mismo ciclo
+      // pero permite nuevos intentos cuando se detecte otro rostro.
       isProcessingRef.current = false;
+
+      // 🚫 Elimina esta línea si la tienes
+      // errorCriticalRef.current = true;
     }
   };
 
   const handleClose = () => {
     cleanupAll();
+    errorCriticalRef.current = false;
     setFaceApiLoaded(false);
     isProcessingRef.current = false;
     onClose();

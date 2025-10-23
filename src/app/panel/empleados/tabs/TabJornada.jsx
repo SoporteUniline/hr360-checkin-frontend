@@ -33,11 +33,11 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
   const [areasAsignadas, setAreasAsignadas] = useState([]);
 
   const horarios = form.watch("horarios") || [];
-  const usarReloj = form.watch("usar_reloj_checador");
+  const usarGPS = form.watch("checar_gps");
   const { errors, isSubmitted } = form.formState;
 
   useEffect(() => {
-    if (!usarReloj) return;
+    if (!usarGPS) return;
     const fetchAreas = async () => {
       try {
         const { data } = await axios.get(
@@ -54,10 +54,10 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
       }
     };
     fetchAreas();
-  }, [usarReloj]);
+  }, [usarGPS]);
 
   useEffect(() => {
-    if (!usarReloj || !empleadoId) return;
+    if (!usarGPS || !empleadoId) return;
     const fetchAsignadas = async () => {
       try {
         const { data } = await axios.get(
@@ -70,7 +70,7 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
     };
 
     fetchAsignadas();
-  }, [empleadoId, usarReloj]);
+  }, [empleadoId, usarGPS]);
 
   const toggleArea = (id_area) => {
     setAreasAsignadas((prev) =>
@@ -373,7 +373,7 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
         ))}{" "}
       </div>
       {/* 🔹 Áreas permitidas (solo si usar_reloj_checador = true) */}
-      {usarReloj && (
+      {usarGPS && (
         <div className="border rounded-xl p-4 bg-slate-50 shadow-sm">
           <FormLabel className="text-base font-semibold block mb-3">
             Áreas donde el empleado puede checar
