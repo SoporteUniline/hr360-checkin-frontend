@@ -165,6 +165,41 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
           )}
         />
 
+        <div className="col-span-2">
+          <FormField
+            name="metodo_chequeo"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem className="flex flex-col gap-1 rounded-lg border p-4">
+                <FormLabel className="text-base">Método de chequeo</FormLabel>
+                <div className="text-sm text-muted-foreground mb-2">
+                  Selecciona cómo el empleado registrará su entrada/salida
+                </div>
+                <Select
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  disabled={soloLectura}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue
+                        placeholder="Selecciona un método"
+                        className="text-xs"
+                      />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="codigo">Código</SelectItem>
+                    <SelectItem value="facial">Facial</SelectItem>
+                    <SelectItem value="ambos">Ambos</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
         {[{ name: "nip", label: "Código de empleado", required: false }].map(
           ({ name, label, type = "text", required = false }) => (
             <FormField

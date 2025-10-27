@@ -45,6 +45,8 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
           {
             params: {
               id_empresa: dataUser?.id_empresa,
+              limit: 9999,
+              page: 1,
             },
           }
         );
@@ -379,36 +381,42 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
             Áreas donde el empleado puede checar
           </FormLabel>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {areas.map((area) => {
-              const asignada = areasAsignadas.includes(area.id_area);
-              return (
-                <div
-                  key={area.id_area}
-                  className={`border rounded-lg p-3 flex items-center justify-between ${
-                    asignada
-                      ? "bg-blue-50 border-blue-300"
-                      : "bg-white border-gray-200"
-                  }`}
-                >
-                  <div>
-                    <p className="font-medium">{area.nombre_area}</p>
-                    <p className="text-xs text-gray-500">
-                      {area.latitud}, {area.longitud}
-                    </p>
+          {areas.length === 0 ? (
+            <p className="text-gray-500 italic text-sm">
+              ⚠️ No hay áreas registradas todavía. Crea una en el sistema.
+            </p>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {areas.map((area) => {
+                const asignada = areasAsignadas.includes(area.id_area);
+                return (
+                  <div
+                    key={area.id_area}
+                    className={`border rounded-lg p-3 flex items-center justify-between ${
+                      asignada
+                        ? "bg-blue-50 border-blue-300"
+                        : "bg-white border-gray-200"
+                    }`}
+                  >
+                    <div>
+                      <p className="font-medium">{area.nombre_area}</p>
+                      <p className="text-xs text-gray-500">
+                        {area.latitud}, {area.longitud}
+                      </p>
+                    </div>
+                    {!soloLectura && (
+                      <Checkbox
+                        checked={asignada}
+                        onCheckedChange={(checked) =>
+                          toggleArea(area.id_area, checked)
+                        }
+                      />
+                    )}
                   </div>
-                  {!soloLectura && (
-                    <Checkbox
-                      checked={asignada}
-                      onCheckedChange={(checked) =>
-                        toggleArea(area.id_area, checked)
-                      }
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </section>

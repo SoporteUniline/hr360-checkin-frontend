@@ -52,6 +52,10 @@ export const schemaEmpleado = z
     nip: z.string().optional(),
     checar_gps: z.boolean().default(false).optional(),
     usar_reloj_checador: z.boolean().default(true).optional(),
+    metodo_chequeo: z
+      .enum(["codigo", "facial", "ambos"])
+      .default("ambos")
+      .optional(),
 
     // Jornada - OBLIGATORIOS
     hrs_por_dia: z
