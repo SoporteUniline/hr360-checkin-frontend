@@ -11,7 +11,13 @@ export default function useAsistenciaData(
   debouncedFiltroEmpleado,
   filtroDepartamento,
   filtroTipoRegistro,
-  filtroEstadoAsistencia
+  filtroEstadoAsistencia,
+  soloPresentes,
+  soloAusentes,
+  horasExtra,
+  sinGoceDeSueldo,
+  diasFestivos,
+  requiereAutorizacion
 ) {
   let url = null;
   if (idEmpresa) {
@@ -31,6 +37,12 @@ export default function useAsistenciaData(
       params.append("filtroTipoRegistro", filtroTipoRegistro);
     if (filtroEstadoAsistencia)
       params.append("filtroEstadoAsistencia", filtroEstadoAsistencia);
+    if (soloPresentes) params.append("soloPresentes", "1");
+    if (soloAusentes) params.append("soloAusentes", "1");
+    if (horasExtra) params.append("horasExtra", "1");
+    if (sinGoceDeSueldo) params.append("sinGoceDeSueldo", "0");
+    if (diasFestivos) params.append("diasFestivos", "1");
+    if (requiereAutorizacion) params.append("requiereAutorizacion", "1");
 
     url = `/checador/asistencias?${params.toString()}`;
   }

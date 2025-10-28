@@ -21,6 +21,15 @@ export default function AsistenciaDataContainer({
   filtroEstadoAsistencia,
   setPage,
   onLimitChange,
+  mostrarCamposExtras,
+  abrirFormulario,
+  onResetFilters,
+  soloPresentes,
+  soloAusentes,
+  horasExtra,
+  sinGoceDeSueldo,
+  diasFestivos,
+  requiereAutorizacion,
 }) {
   const { data, error, isLoading, mutate } = useAsistenciaData(
     idEmpresa,
@@ -31,7 +40,13 @@ export default function AsistenciaDataContainer({
     debouncedFiltroEmpleado,
     filtroDepartamento,
     filtroTipoRegistro,
-    filtroEstadoAsistencia
+    filtroEstadoAsistencia,
+    soloPresentes,
+    soloAusentes,
+    horasExtra,
+    sinGoceDeSueldo,
+    diasFestivos,
+    requiereAutorizacion
   );
 
   const { data: empleados } = useEmpleadosData(idEmpresa);
@@ -82,6 +97,9 @@ export default function AsistenciaDataContainer({
           handleFieldChange={handleFieldChange}
           handleSaveClick={handleSaveClick}
           mutateAsistencia={mutate}
+          mostrarCamposExtras={mostrarCamposExtras}
+          abrirFormulario={abrirFormulario}
+          onResetFilters={onResetFilters}
         />
 
         {mostrarPaginacion && registros.length > 0 && (

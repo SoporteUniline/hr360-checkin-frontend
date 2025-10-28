@@ -29,6 +29,12 @@ export default function ControlAsistencia() {
     filtroTipoRegistro: "",
     filtroEstadoAsistencia: "",
     page: 1,
+    filtroPresentes: false,
+    filtroAusentes: false,
+    filtroHorasExtra: false,
+    filtroSinGoceDeSueldo: false,
+    filtroDiasFestivos: false,
+    filtroRequiereAutorizacion: false,
   });
   const [fechaInicio, setFechaInicio] = useState(
     dayjs().tz("America/Mexico_City").format("YYYY-MM-DD")
@@ -45,6 +51,13 @@ export default function ControlAsistencia() {
   const [filtroTipoRegistro, setFiltroTipoRegistro] = useState("");
   const [tiposRegistroUnicos, setTiposRegistroUnicos] = useState([]);
   const [filtroEstadoAsistencia, setFiltroEstadoAsistencia] = useState("");
+  const [mostrarCamposExtras, setMostrarCamposExtras] = useState(false);
+  const [soloPresentes, setSoloPresentes] = useState(false);
+  const [soloAusentes, setSoloAusentes] = useState(false);
+  const [horasExtra, setHorasExtra] = useState(false);
+  const [sinGoceDeSueldo, setSinGoceDeSueldo] = useState(false);
+  const [diasFestivos, setDiasFestivos] = useState(false);
+  const [requiereAutorizacion, setRequiereAutorizacion] = useState(false);
 
   const { dataUser } = useAuth();
   const idEmpresa = dataUser?.id_empresa;
@@ -74,6 +87,13 @@ export default function ControlAsistencia() {
     setFiltroTipoRegistro(initial.filtroTipoRegistro);
     setFiltroEstadoAsistencia(initial.filtroEstadoAsistencia);
     setPage(initial.page);
+    setSoloPresentes(initial.filtroPresentes);
+    setSoloAusentes(initial.filtroAusentes);
+    setHorasExtra(initial.filtroHorasExtra);
+    setSinGoceDeSueldo(initial.filtroSinGoceDeSueldo);
+    setDiasFestivos(initial.filtroDiasFestivos);
+    setRequiereAutorizacion(initial.filtroRequiereAutorizacion);
+    setMostrarCamposExtras(false);
   };
 
   useEffect(() => {
@@ -113,6 +133,15 @@ export default function ControlAsistencia() {
     filtroEstadoAsistencia,
     setPage,
     onLimitChange: handleLimitChange,
+    mostrarCamposExtras,
+    abrirFormulario,
+    onResetFilters: handleResetFilters,
+    soloPresentes,
+    soloAusentes,
+    horasExtra,
+    sinGoceDeSueldo,
+    diasFestivos,
+    requiereAutorizacion,
   });
 
   return (
@@ -145,6 +174,20 @@ export default function ControlAsistencia() {
         setFiltroEstadoAsistencia={setFiltroEstadoAsistencia}
         onResetFilters={handleResetFilters}
         abrirFormulario={abrirFormulario}
+        mostrarCamposExtras={mostrarCamposExtras}
+        setMostrarCamposExtras={setMostrarCamposExtras}
+        soloPresentes={soloPresentes}
+        setSoloPresentes={setSoloPresentes}
+        soloAusentes={soloAusentes}
+        setSoloAusentes={setSoloAusentes}
+        horasExtra={horasExtra}
+        setHorasExtra={setHorasExtra}
+        sinGoceDeSueldo={sinGoceDeSueldo}
+        setSinGoceDeSueldo={setSinGoceDeSueldo}
+        diasFestivos={diasFestivos}
+        setDiasFestivos={setDiasFestivos}
+        requiereAutorizacion={requiereAutorizacion}
+        setRequiereAutorizacion={setRequiereAutorizacion}
       />
       {ui}
     </div>
