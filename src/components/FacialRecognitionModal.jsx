@@ -274,8 +274,8 @@ const FacialRecognitionModal = ({ isOpen, onClose, onSuccess, idEmpresa }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl p-6 max-w-lg w-full mx-4">
-        <div className="flex justify-between items-center mb-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] mx-4 flex flex-col overflow-hidden">
+        <div className="flex justify-between items-center p-4 border-b sticky top-0 bg-white z-10">
           <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
             <Camera className="w-5 h-5" />
             Reconocimiento Facial
@@ -288,100 +288,104 @@ const FacialRecognitionModal = ({ isOpen, onClose, onSuccess, idEmpresa }) => {
           </button>
         </div>
 
-        <div className="text-center">
-          {!faceApiLoaded ? (
-            <div className="py-8">
-              <Loader className="w-8 h-8 animate-spin mx-auto mb-4" />
-              <p className="text-gray-600">Cargando sistema...</p>
-            </div>
-          ) : (
-            <>
-              <div className="relative mb-4">
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  muted
-                  playsInline
-                  className={`w-full max-w-md mx-auto rounded-lg border-4 transition-colors duration-300 ${
-                    faceDetected && !isLoading && !showSuccessMessage
-                      ? "border-green-400"
-                      : showSuccessMessage
-                      ? "border-green-500"
-                      : "border-gray-200"
-                  }`}
-                />
-                <button
-                  onClick={() =>
-                    setCameraFacing((prev) =>
-                      prev === "user" ? "environment" : "user"
-                    )
-                  }
-                  className="mt-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition"
-                >
-                  Cambiar cámara
-                </button>
+        <div className="flex-1 overflow-y-auto p-6">
+          <div className="text-center">
+            {!faceApiLoaded ? (
+              <div className="py-8">
+                <Loader className="w-8 h-8 animate-spin mx-auto mb-4" />
+                <p className="text-gray-600">Cargando sistema...</p>
+              </div>
+            ) : (
+              <>
+                <div className="relative mb-4">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    muted
+                    playsInline
+                    className={`w-full max-w-md mx-auto rounded-lg border-4 transition-colors duration-300 ${
+                      faceDetected && !isLoading && !showSuccessMessage
+                        ? "border-green-400"
+                        : showSuccessMessage
+                        ? "border-green-500"
+                        : "border-gray-200"
+                    }`}
+                  />
+                  <button
+                    onClick={() =>
+                      setCameraFacing((prev) =>
+                        prev === "user" ? "environment" : "user"
+                      )
+                    }
+                    className="mt-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition"
+                  >
+                    Cambiar cámara
+                  </button>
 
-                <canvas ref={canvasRef} style={{ display: "none" }} />
+                  <canvas ref={canvasRef} style={{ display: "none" }} />
 
-                {countdown > 0 && (
-                  <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
-                    <div className="text-6xl font-bold text-white animate-pulse">
-                      {countdown}
-                    </div>
-                  </div>
-                )}
-
-                {faceDetected &&
-                  countdown === 0 &&
-                  !isLoading &&
-                  !showSuccessMessage && (
-                    <div className="absolute top-2 right-2 bg-green-500 text-white px-3 py-1 rounded-lg text-sm font-semibold flex items-center gap-1">
-                      <CheckCircle className="w-4 h-4" />
-                      Rostro detectado
+                  {countdown > 0 && (
+                    <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+                      <div className="text-6xl font-bold text-white animate-pulse">
+                        {countdown}
+                      </div>
                     </div>
                   )}
-              </div>
 
-              {error && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
-                  <p className="text-red-600 text-sm">{error}</p>
-                </div>
-              )}
-
-              <div className="space-y-3">
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                  <p className="text-blue-700 text-sm font-medium">
-                    Instrucciones:
-                  </p>
-                  <ul className="text-blue-600 text-sm mt-1 space-y-1">
-                    <li>• Colóquese frente a la cámara</li>
-                    <li>• El recuadro se pondrá verde al detectar su rostro</li>
-                    <li>• Se iniciará automáticamente la captura</li>
-                    <li>• Manténgase quieto durante la toma</li>
-                  </ul>
+                  {faceDetected &&
+                    countdown === 0 &&
+                    !isLoading &&
+                    !showSuccessMessage && (
+                      <div className="absolute top-2 right-2 bg-green-500 text-white px-3 py-1 rounded-lg text-sm font-semibold flex items-center gap-1">
+                        <CheckCircle className="w-4 h-4" />
+                        Rostro detectado
+                      </div>
+                    )}
                 </div>
 
-                <p className="text-gray-600 text-sm">
-                  {isLoading
-                    ? "Procesando reconocimiento facial..."
-                    : showSuccessMessage
-                    ? "¡Listo! Esperando próximo empleado..."
-                    : countdown > 0
-                    ? "Preparando captura..."
-                    : faceDetected
-                    ? "Rostro detectado - iniciando en un momento..."
-                    : "Esperando detección de rostro..."}
-                </p>
-
-                {isLoading && (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader className="w-8 h-8 animate-spin text-blue-600 mr-3" />
-                    <span className="text-gray-600">Procesando...</span>
+                {error && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                    <p className="text-red-600 text-sm">{error}</p>
                   </div>
                 )}
-              </div>
-            </>
-          )}
+
+                <div className="space-y-3">
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                    <p className="text-blue-700 text-sm font-medium">
+                      Instrucciones:
+                    </p>
+                    <ul className="text-blue-600 text-sm mt-1 space-y-1">
+                      <li>• Colóquese frente a la cámara</li>
+                      <li>
+                        • El recuadro se pondrá verde al detectar su rostro
+                      </li>
+                      <li>• Se iniciará automáticamente la captura</li>
+                      <li>• Manténgase quieto durante la toma</li>
+                    </ul>
+                  </div>
+
+                  <p className="text-gray-600 text-sm">
+                    {isLoading
+                      ? "Procesando reconocimiento facial..."
+                      : showSuccessMessage
+                      ? "¡Listo! Esperando próximo empleado..."
+                      : countdown > 0
+                      ? "Preparando captura..."
+                      : faceDetected
+                      ? "Rostro detectado - iniciando en un momento..."
+                      : "Esperando detección de rostro..."}
+                  </p>
+
+                  {isLoading && (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader className="w-8 h-8 animate-spin text-blue-600 mr-3" />
+                      <span className="text-gray-600">Procesando...</span>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>
