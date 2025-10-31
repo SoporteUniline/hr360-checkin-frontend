@@ -10,7 +10,7 @@ const FacialRecognitionModal = ({ isOpen, onClose, onSuccess, idEmpresa }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
-  const [stream, setStream] = useState(null);
+  const streamRef = useRef(null);
   const [faceDetected, setFaceDetected] = useState(false);
 
   const canvasRef = useRef(null);
@@ -20,7 +20,7 @@ const FacialRecognitionModal = ({ isOpen, onClose, onSuccess, idEmpresa }) => {
 
   const isProcessingRef = useRef(false);
   const lastCheckTimeRef = useRef(0); // 🔹 guarda el último registro
-  const MIN_INTERVAL = 8000; // 🔹 8 segundos de separación
+  const MIN_INTERVAL = 3000; // 🔹 3 segundos de separación
 
   const shutdownCamera = () => {
     try {
@@ -28,22 +28,47 @@ const FacialRecognitionModal = ({ isOpen, onClose, onSuccess, idEmpresa }) => {
         clearInterval(detectionIntervalRef.current);
         detectionIntervalRef.current = null;
       }
+
       if (countdownTimeoutRef.current) {
         clearTimeout(countdownTimeoutRef.current);
         countdownTimeoutRef.current = null;
       }
-      if (videoRef.current) videoRef.current.pause();
-      if (stream) stream.getTracks().forEach((track) => track.stop());
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-        requestAnimationFrame(
-          () => videoRef.current && videoRef.current.load()
-        );
+
+      // Detener las pistas del stream
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
       }
-      setStream(null);
+
+      // Limpiar video
+      if (videoRef.current) {
+        const vid = videoRef.current;
+        vid.pause();
+        vid.srcObject = null;
+        vid.currentTime = 0;
+        vid.removeAttribute("src");
+      }
+
+      // Limpiar canvas
+      if (canvasRef.current) {
+        const ctx = canvasRef.current.getContext("2d");
+        if (ctx)
+          ctx.clearRect(
+            0,
+            0,
+            canvasRef.current.width,
+            canvasRef.current.height
+          );
+      }
+
+      // Reset flags
       isProcessingRef.current = false;
+      setFaceDetected(false);
+      setIsLoading(false);
+
+      console.log("✅ Cámara detenida correctamente en el espacio tiempo");
     } catch (err) {
-      console.error("Error apagando cámara:", err);
+      console.error("❌ Error apagando cámara:", err);
     }
   };
 
@@ -93,7 +118,7 @@ const FacialRecognitionModal = ({ isOpen, onClose, onSuccess, idEmpresa }) => {
       if (!isOpen || !faceApiLoaded) return;
 
       try {
-        if (stream) {
+        if (streamRef.current) {
           shutdownCamera();
           await new Promise((resolve) => setTimeout(resolve, 100));
         }
@@ -106,9 +131,19 @@ const FacialRecognitionModal = ({ isOpen, onClose, onSuccess, idEmpresa }) => {
           },
         });
 
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            // console.log("Permiso de GPS concedido", pos.coords);
+          },
+          (err) => {
+            console.warn("No se pudo obtener ubicación al inicio:", err);
+          },
+          { enableHighAccuracy: true, timeout: 5000 }
+        );
+
         if (videoRef.current && isOpen) {
           videoRef.current.srcObject = mediaStream;
-          setStream(mediaStream);
+          streamRef.current = mediaStream;
           videoRef.current.onloadedmetadata = () => {
             setTimeout(() => isOpen && startFaceDetection(), 800);
           };
@@ -167,7 +202,7 @@ const FacialRecognitionModal = ({ isOpen, onClose, onSuccess, idEmpresa }) => {
 
     countdownTimeoutRef.current = setTimeout(() => {
       captureAndRecognize();
-    }, 2000); // 2 segundos quieto antes de tomar foto
+    }, 1000); // 2 segundos quieto antes de tomar foto
   };
 
   const errorCriticalRef = useRef(false);
@@ -237,6 +272,9 @@ const FacialRecognitionModal = ({ isOpen, onClose, onSuccess, idEmpresa }) => {
       lastCheckTimeRef.current = Date.now();
       setShowSuccessMessage(true);
       onSuccess(data);
+      // 🔹 Apaga cámara manualmente primero
+      shutdownCamera();
+      handleClose();
 
       setTimeout(() => {
         setShowSuccessMessage(false);

@@ -102,24 +102,37 @@ export default function RelojChecador({ idEmpresa }) {
         return;
       }
 
-      // Obtener ubicación actual del usuario
       let latitud_actual = null;
       let longitud_actual = null;
 
-      try {
-        const position = await new Promise((resolve, reject) =>
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0,
-          })
-        );
-        latitud_actual = position.coords.latitude;
-        longitud_actual = position.coords.longitude;
-      } catch (geoError) {
-        enqueueSnackbar("No se pudo obtener la ubicación. Activa el GPS.", {
-          variant: "error",
-        });
+      // Revisar permiso antes de pedir ubicación
+      const estadoPermiso = await navigator.permissions.query({
+        name: "geolocation",
+      });
+
+      if (
+        estadoPermiso.state === "granted" ||
+        estadoPermiso.state === "prompt"
+      ) {
+        // Solo pedimos ubicación si es necesario
+        try {
+          const position = await new Promise((resolve, reject) =>
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 10000,
+            })
+          );
+          latitud_actual = position.coords.latitude;
+          longitud_actual = position.coords.longitude;
+        } catch {
+          enqueueSnackbar("No se pudo obtener la ubicación. Activa el GPS.", {
+            variant: "error",
+          });
+          setRegistrando(false);
+          return;
+        }
+      } else {
+        enqueueSnackbar("Permiso de ubicación denegado.", { variant: "error" });
         setRegistrando(false);
         return;
       }
@@ -146,8 +159,7 @@ export default function RelojChecador({ idEmpresa }) {
       setCodigoEmpleado("");
       mutate();
     } catch (err) {
-      // Si es un error de Axios con respuesta del backend
-      if (err.response && err.response.data && err.response.data.error) {
+      if (err.response?.data?.error) {
         enqueueSnackbar(err.response.data.error, { variant: "error" });
       } else {
         enqueueSnackbar("Error desconocido al registrar", { variant: "error" });
