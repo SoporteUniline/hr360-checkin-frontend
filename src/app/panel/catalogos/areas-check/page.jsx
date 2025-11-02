@@ -24,6 +24,7 @@ import AreaCheckMap from "@/components/AreaCheckMap";
 import { useAuth } from "@/context/AuthContext";
 import TablePagination from "@/components/TablePagination";
 import debounce from "lodash.debounce";
+import ModalArea from "@/components/ModalArea";
 
 function AreaCard({ area, onEdit, onDelete }) {
   return (
@@ -162,30 +163,32 @@ export default function AreasCheckPage() {
   });
 
   const abrirModalNuevaArea = () => {
-    setEditandoArea(null);
-    setNuevaArea({ nombre_area: "", latitud: null, longitud: null });
+    setEditandoArea({
+      nombre_area: "",
+      latitud: null,
+      longitud: null,
+    });
     setMostrarModal(true);
   };
 
   const abrirModalEditar = (area) => {
     setEditandoArea(area);
-    setNuevaArea(area);
-    setMostrarModal(true);
+    setTimeout(() => setMostrarModal(true), 0);
   };
 
   const cerrarModal = () => {
     setMostrarModal(false);
     setEditandoArea(null);
-    setNuevaArea({ nombre_area: "", latitud: null, longitud: null });
+    setEditandoArea({ nombre_area: "", latitud: null, longitud: null });
   };
 
-  const guardarArea = async () => {
-    if (!nuevaArea.nombre_area.trim()) {
+  const guardarArea = async (formData) => {
+    if (!formData?.nombre_area?.trim()) {
       enqueueSnackbar("El nombre del área es requerido", { variant: "error" });
       return;
     }
 
-    if (!nuevaArea.latitud || !nuevaArea.longitud) {
+    if (!formData.latitud || !formData.longitud) {
       enqueueSnackbar("Debes seleccionar una ubicación en el mapa", {
         variant: "error",
       });
@@ -195,15 +198,15 @@ export default function AreasCheckPage() {
     setGuardando(true);
     try {
       const datos = {
-        ...nuevaArea,
-        id_empresa: dataUser.id_empresa, // 🔹 Se agrega aquí
-        latitud: Number(nuevaArea.latitud),
-        longitud: Number(nuevaArea.longitud),
+        ...formData,
+        id_empresa: dataUser.id_empresa,
+        latitud: Number(formData.latitud),
+        longitud: Number(formData.longitud),
       };
 
-      if (editandoArea) {
+      if (formData.id_area) {
         await axios.put(
-          `${API_URL}/checador/area_check2/${editandoArea.id_area}`,
+          `${API_URL}/checador/area_check2/${formData.id_area}`,
           datos
         );
         enqueueSnackbar("Área actualizada exitosamente", {
@@ -217,7 +220,6 @@ export default function AreasCheckPage() {
       await mutate();
       cerrarModal();
     } catch (error) {
-      // console.error(error);
       enqueueSnackbar(error.response?.data?.error || "Error guardando área", {
         variant: "error",
       });
@@ -324,43 +326,13 @@ export default function AreasCheckPage() {
         </div>
       )}
 
-      <Modal
+      <ModalArea
         isOpen={mostrarModal}
         onClose={cerrarModal}
-        title={editandoArea ? "Editar Área" : "Nueva Área"}
-      >
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="nombre_area">Nombre del Área</Label>
-            <Input
-              id="nombre_area"
-              value={nuevaArea.nombre_area}
-              onChange={(e) =>
-                setNuevaArea({ ...nuevaArea, nombre_area: e.target.value })
-              }
-            />
-          </div>
-          <AreaCheckMap area={nuevaArea} onChange={setNuevaArea} />
-          <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button
-              variant="outline"
-              onClick={cerrarModal}
-              disabled={guardando}
-            >
-              <X className="h-4 w-4 mr-2" />
-              Cancelar
-            </Button>
-            <Button onClick={guardarArea} disabled={guardando}>
-              {guardando ? (
-                <div className="h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
-              {editandoArea ? "Actualizar" : "Crear"} Área
-            </Button>
-          </div>
-        </div>
-      </Modal>
+        onSave={guardarArea}
+        initialData={editandoArea}
+        loading={guardando}
+      />
 
       {/* AlertDialog para confirmar eliminación */}
       <AlertDialog

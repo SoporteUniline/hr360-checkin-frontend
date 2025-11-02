@@ -97,12 +97,17 @@ export default function AsistenciaTable({
                 <TableHead className="text-white bg-slate-700 text-center">
                   Autorizado por
                 </TableHead>
-                <TableHead className="text-white bg-slate-700 text-center">
-                  ¿Asistió?
-                </TableHead>
-                <TableHead className="text-white bg-slate-700 text-center">
-                  ¿Goce de sueldo?
-                </TableHead>
+              </>
+            )}
+            <TableHead className="text-white bg-slate-700 text-center">
+              ¿Asistió?
+            </TableHead>
+            <TableHead className="text-white bg-slate-700 text-center">
+              ¿Goce de sueldo?
+            </TableHead>
+
+            {mostrarCamposExtras && (
+              <>
                 <TableHead className="text-white bg-slate-700 text-center">
                   ¿Pago triple?
                 </TableHead>

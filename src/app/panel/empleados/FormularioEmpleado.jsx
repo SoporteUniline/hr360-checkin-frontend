@@ -130,6 +130,7 @@ export default function FormularioEmpleado({
             lugar_checkout: null,
             checar_gps: false,
             usar_reloj_checador: true,
+            areasAsignadas: [],
           },
   });
 

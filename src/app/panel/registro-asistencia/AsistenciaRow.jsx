@@ -180,30 +180,36 @@ export default function AsistenciaRow({
                     </SelectContent>
                   </Select>
                 </TableCell>
-                <TableCell className="text-center">
-                  <ToggleGroup
-                    type="single"
-                    value={currentData.asistencia ? "1" : "0"}
-                    onValueChange={(val) =>
-                      handleFieldChange("asistencia", val === "1")
-                    }
-                  >
-                    <ToggleGroupItem value="0">❌</ToggleGroupItem>
-                    <ToggleGroupItem value="1">✅</ToggleGroupItem>
-                  </ToggleGroup>
-                </TableCell>
-                <TableCell className="text-center">
-                  <ToggleGroup
-                    type="single"
-                    value={currentData.goce_sueldo ? "1" : "0"}
-                    onValueChange={(val) =>
-                      handleFieldChange("goce_sueldo", val === "1")
-                    }
-                  >
-                    <ToggleGroupItem value="0">❌</ToggleGroupItem>
-                    <ToggleGroupItem value="1">✅</ToggleGroupItem>
-                  </ToggleGroup>
-                </TableCell>
+              </>
+            )}
+
+            <TableCell className="text-center">
+              <ToggleGroup
+                type="single"
+                value={currentData.asistencia ? "1" : "0"}
+                onValueChange={(val) =>
+                  handleFieldChange("asistencia", val === "1")
+                }
+              >
+                <ToggleGroupItem value="0">❌</ToggleGroupItem>
+                <ToggleGroupItem value="1">✅</ToggleGroupItem>
+              </ToggleGroup>
+            </TableCell>
+            <TableCell className="text-center">
+              <ToggleGroup
+                type="single"
+                value={currentData.goce_sueldo ? "1" : "0"}
+                onValueChange={(val) =>
+                  handleFieldChange("goce_sueldo", val === "1")
+                }
+              >
+                <ToggleGroupItem value="0">❌</ToggleGroupItem>
+                <ToggleGroupItem value="1">✅</ToggleGroupItem>
+              </ToggleGroup>
+            </TableCell>
+
+            {mostrarCamposExtras && (
+              <>
                 <TableCell className="text-center">
                   <ToggleGroup
                     type="single"
@@ -281,6 +287,7 @@ export default function AsistenciaRow({
                 <ToggleGroupItem value="1">✅</ToggleGroupItem>
               </ToggleGroup>
             </TableCell>
+
             {mostrarCamposExtras && (
               <>
                 <TableCell className="text-center">
@@ -445,18 +452,22 @@ export default function AsistenciaRow({
               {registro.salida ? registro.salida.slice(11, 19) : "-"}
             </TableCell>
             {mostrarCamposExtras && (
+              <TableCell className="text-center">
+                {registro.nombre_autorizador
+                  ? `${registro.nombre_autorizador} ${registro.apellido_paterno_autorizador} ${registro.apellido_materno_autorizador}`
+                  : ""}
+              </TableCell>
+            )}
+
+            <TableCell className="text-center">
+              {registro.asistencia === 1 ? "✅" : "✖️"}
+            </TableCell>
+            <TableCell className="text-center">
+              {registro.goce_sueldo === 1 ? "✅" : "✖️"}
+            </TableCell>
+
+            {mostrarCamposExtras && (
               <>
-                <TableCell className="text-center">
-                  {registro.nombre_autorizador
-                    ? `${registro.nombre_autorizador} ${registro.apellido_paterno_autorizador} ${registro.apellido_materno_autorizador}`
-                    : ""}
-                </TableCell>
-                <TableCell className="text-center">
-                  {registro.asistencia === 1 ? "✅" : "✖️"}
-                </TableCell>
-                <TableCell className="text-center">
-                  {registro.goce_sueldo === 1 ? "✅" : "✖️"}
-                </TableCell>
                 <TableCell className="text-center">
                   {registro.pago_triple === 1 ? "✅" : "✖️"}
                 </TableCell>
@@ -479,6 +490,7 @@ export default function AsistenciaRow({
                 </TableCell>
               </>
             )}
+
             <TableCell className="text-center">
               {registro.hrs_extra === 1 ? "✅" : "✖️"}
             </TableCell>

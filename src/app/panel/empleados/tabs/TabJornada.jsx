@@ -23,64 +23,14 @@ const DIAS_SEMANA = [
 ];
 
 export default function TabJornada({ form, soloLectura, empleadoId }) {
-  const { dataUser } = useAuth();
   const [diasSeleccionados, setDiasSeleccionados] = useState([]);
   const [entradaComun, setEntradaComun] = useState("");
   const [salidaComun, setSalidaComun] = useState("");
   const [salidaComidaComun, setSalidaComidaComun] = useState("");
   const [regresoComidaComun, setRegresoComidaComun] = useState("");
-  const [areas, setAreas] = useState([]);
-  const [areasAsignadas, setAreasAsignadas] = useState([]);
 
   const horarios = form.watch("horarios") || [];
-  const usarGPS = form.watch("checar_gps");
   const { errors, isSubmitted } = form.formState;
-
-  useEffect(() => {
-    if (!usarGPS) return;
-    const fetchAreas = async () => {
-      try {
-        const { data } = await axios.get(
-          `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/area_check2`,
-          {
-            params: {
-              id_empresa: dataUser?.id_empresa,
-              limit: 9999,
-              page: 1,
-            },
-          }
-        );
-        setAreas(data.data);
-      } catch (error) {
-        console.error("Error al obtener áreas:", error);
-      }
-    };
-    fetchAreas();
-  }, [usarGPS]);
-
-  useEffect(() => {
-    if (!usarGPS || !empleadoId) return;
-    const fetchAsignadas = async () => {
-      try {
-        const { data } = await axios.get(
-          `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados/area_check/${empleadoId}/areas`
-        );
-        setAreasAsignadas(data.map((a) => a.id_area));
-      } catch (error) {
-        console.error("Error al obtener áreas del empleado", error);
-      }
-    };
-
-    fetchAsignadas();
-  }, [empleadoId, usarGPS]);
-
-  const toggleArea = (id_area) => {
-    setAreasAsignadas((prev) =>
-      prev.includes(id_area)
-        ? prev.filter((id) => id !== id_area)
-        : [...prev, id_area]
-    );
-  };
 
   function calcularHoras(inicio, fin) {
     if (!inicio || !fin) return 0;
@@ -143,10 +93,6 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
     form.setValue("hrs_por_dia", promedioHoras, { shouldValidate: true });
     form.setValue("hrs_de_comida", promedioComidas, { shouldValidate: true });
   }, [horarios, form]);
-
-  useEffect(() => {
-    form.setValue("areasAsignadas", areasAsignadas);
-  }, [areasAsignadas, form]);
 
   const toggleDiaSeleccionado = (dia) => {
     setDiasSeleccionados((prev) =>
@@ -374,51 +320,6 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
           />
         ))}{" "}
       </div>
-      {/* 🔹 Áreas permitidas (solo si usar_reloj_checador = true) */}
-      {usarGPS && (
-        <div className="border rounded-xl p-4 bg-slate-50 shadow-sm">
-          <FormLabel className="text-base font-semibold block mb-3">
-            Áreas donde el empleado puede checar
-          </FormLabel>
-
-          {areas.length === 0 ? (
-            <p className="text-gray-500 italic text-sm">
-              ⚠️ No hay áreas registradas todavía. Crea una en el sistema.
-            </p>
-          ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {areas.map((area) => {
-                const asignada = areasAsignadas.includes(area.id_area);
-                return (
-                  <div
-                    key={area.id_area}
-                    className={`border rounded-lg p-3 flex items-center justify-between ${
-                      asignada
-                        ? "bg-blue-50 border-blue-300"
-                        : "bg-white border-gray-200"
-                    }`}
-                  >
-                    <div>
-                      <p className="font-medium">{area.nombre_area}</p>
-                      <p className="text-xs text-gray-500">
-                        {area.latitud}, {area.longitud}
-                      </p>
-                    </div>
-                    {!soloLectura && (
-                      <Checkbox
-                        checked={asignada}
-                        onCheckedChange={(checked) =>
-                          toggleArea(area.id_area, checked)
-                        }
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
     </section>
   );
 }

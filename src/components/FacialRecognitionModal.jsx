@@ -65,8 +65,6 @@ const FacialRecognitionModal = ({ isOpen, onClose, onSuccess, idEmpresa }) => {
       isProcessingRef.current = false;
       setFaceDetected(false);
       setIsLoading(false);
-
-      console.log("✅ Cámara detenida correctamente en el espacio tiempo");
     } catch (err) {
       console.error("❌ Error apagando cámara:", err);
     }

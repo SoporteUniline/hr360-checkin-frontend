@@ -159,6 +159,7 @@ export default function RelojChecador({ idEmpresa }) {
       setCodigoEmpleado("");
       mutate();
     } catch (err) {
+      setCodigoEmpleado("");
       if (err.response?.data?.error) {
         enqueueSnackbar(err.response.data.error, { variant: "error" });
       } else {

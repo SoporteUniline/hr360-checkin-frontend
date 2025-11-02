@@ -19,8 +19,105 @@ import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { ComboboxDepartamento } from "@/components/ComboboxDepartamento";
 import { FormLabelWithAsterisk } from "@/components/FormLabelWithAsterisk";
 import { Switch } from "@/components/ui/switch";
+import axios from "axios";
+import { useEffect, useState } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
+import ModalArea from "@/components/ModalArea";
+import { Button } from "@/components/ui/button";
 
 export default function TabLaborales({ form, soloLectura, dataUser }) {
+  const [areas, setAreas] = useState([]);
+  const [areasAsignadas, setAreasAsignadas] = useState([]);
+  const [mostrarModalArea, setMostrarModalArea] = useState(false);
+  const [guardandoArea, setGuardandoArea] = useState(false);
+
+  const crearArea = async (formData) => {
+    if (!formData?.nombre_area?.trim()) {
+      alert("El nombre del área es requerido");
+      return;
+    }
+
+    if (!formData.latitud || !formData.longitud) {
+      alert("Debes seleccionar una ubicación en el mapa");
+      return;
+    }
+
+    setGuardandoArea(true);
+    try {
+      const datos = {
+        ...formData,
+        id_empresa: dataUser?.id_empresa,
+        latitud: Number(formData.latitud),
+        longitud: Number(formData.longitud),
+      };
+
+      await axios.post(
+        `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/area_check2`,
+        datos
+      );
+
+      // 🔁 Actualiza la lista local de áreas
+      setAreas((prev) => [...prev, datos]);
+
+      setMostrarModalArea(false);
+    } catch (error) {
+      console.error("Error creando área:", error);
+      alert("Error al crear el área");
+    } finally {
+      setGuardandoArea(false);
+    }
+  };
+
+  const toggleArea = (id_area) => {
+    setAreasAsignadas((prev) =>
+      prev.includes(id_area)
+        ? prev.filter((id) => id !== id_area)
+        : [...prev, id_area]
+    );
+  };
+
+  useEffect(() => {
+    if (!form.watch("checar_gps")) return;
+    const fetchAreas = async () => {
+      try {
+        const { data } = await axios.get(
+          `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/area_check2`,
+          {
+            params: {
+              id_empresa: dataUser?.id_empresa,
+              limit: 9999,
+              page: 1,
+            },
+          }
+        );
+        setAreas(data.data);
+      } catch (error) {
+        console.error("Error al obtener áreas:", error);
+      }
+    };
+    fetchAreas();
+  }, [form.watch("checar_gps"), dataUser]);
+
+  useEffect(() => {
+    const empleadoId = form.watch("id_empleado");
+    if (!form.watch("checar_gps") || !empleadoId) return;
+    const fetchAsignadas = async () => {
+      try {
+        const { data } = await axios.get(
+          `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados/area_check/${empleadoId}/areas`
+        );
+        setAreasAsignadas(data.map((a) => a.id_area));
+      } catch (error) {
+        console.error("Error al obtener áreas del empleado", error);
+      }
+    };
+    fetchAsignadas();
+  }, [form.watch("checar_gps"), form.watch("id_empleado")]);
+
+  useEffect(() => {
+    form.setValue("areasAsignadas", areasAsignadas);
+  }, [areasAsignadas]);
+
   const { data: empleados } = useSWR(
     `/checador/empleados?empresa=${dataUser?.id_empresa}&page=1&limit=500`,
     fetcherWithToken,
@@ -121,51 +218,7 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
           />
         ))}
 
-        <FormField
-          name="checar_gps"
-          control={form.control}
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <FormLabel className="text-base">Checar GPS</FormLabel>
-                <div className="text-sm text-muted-foreground">
-                  Requerir ubicación GPS al checar entrada/salida
-                </div>
-              </div>
-              <FormControl>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                  disabled={soloLectura}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          name="usar_reloj_checador"
-          control={form.control}
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <FormLabel className="text-base">Usar reloj checador</FormLabel>
-                <div className="text-sm text-muted-foreground">
-                  Permitir que el empleado use el sistema de checador
-                </div>
-              </div>
-              <FormControl>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                  disabled={soloLectura}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-
-        <div className="col-span-2">
+        <div className="col-span-1 sm:col-span-2">
           <FormField
             name="metodo_chequeo"
             control={form.control}
@@ -259,7 +312,107 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
             )}
           />
         ))}
+
+        <FormField
+          name="checar_gps"
+          control={form.control}
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel className="text-base">Checar GPS</FormLabel>
+                <div className="text-sm text-muted-foreground">
+                  Requerir ubicación GPS al checar entrada/salida
+                </div>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  disabled={soloLectura}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          name="usar_reloj_checador"
+          control={form.control}
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel className="text-base">Usar reloj checador</FormLabel>
+                <div className="text-sm text-muted-foreground">
+                  Permitir que el empleado use el sistema de checador
+                </div>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                  disabled={soloLectura}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        {/* <Button size="sm" onClick={() => setMostrarModalArea(true)}>
+          + Crear nueva área
+        </Button> */}
+        {/* 🔹 Áreas permitidas (solo si usar_reloj_checador = true) */}
+        <div className="col-span-1 sm:col-span-2">
+          {form.watch("checar_gps") && (
+            <div className="border rounded-xl p-4 bg-slate-50 shadow-sm">
+              <FormLabel className="text-base font-semibold block mb-3">
+                Áreas donde el empleado puede checar
+              </FormLabel>
+
+              {areas.length === 0 ? (
+                <p className="text-gray-500 italic text-sm">
+                  ⚠️ No hay áreas registradas todavía. Crea una en el sistema.
+                </p>
+              ) : (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {areas.map((area) => {
+                    const asignada = areasAsignadas.includes(area.id_area);
+                    return (
+                      <div
+                        key={area.id_area}
+                        className={`border rounded-lg p-3 flex items-center justify-between ${
+                          asignada
+                            ? "bg-blue-50 border-blue-300"
+                            : "bg-white border-gray-200"
+                        }`}
+                      >
+                        <div>
+                          <p className="font-medium">{area.nombre_area}</p>
+                          <p className="text-xs text-gray-500">
+                            {area.latitud}, {area.longitud}
+                          </p>
+                        </div>
+                        {!soloLectura && (
+                          <Checkbox
+                            checked={asignada}
+                            onCheckedChange={() => toggleArea(area.id_area)}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
+      <ModalArea
+        isOpen={mostrarModalArea}
+        onClose={() => setMostrarModalArea(false)}
+        onSave={crearArea}
+        initialData={null}
+        loading={guardandoArea}
+      />
     </section>
   );
 }
