@@ -23,6 +23,7 @@ import {
   Landmark,
   PartyPopper,
   MapPin,
+  BriefcaseBusiness,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -53,6 +54,11 @@ const items = [
         title: "Estado civil",
         url: "/panel/catalogos/estado-civil",
         icon: Handshake,
+      },
+      {
+        title: "Puestos",
+        url: "/panel/catalogos/puestos",
+        icon: BriefcaseBusiness,
       },
       { title: "Sucursales", url: "/panel/catalogos/sucursales", icon: Store },
       {
