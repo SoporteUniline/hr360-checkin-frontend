@@ -56,11 +56,11 @@ const items = [
         url: "/panel/catalogos/estado-civil",
         icon: Handshake,
       },
-      {
-        title: "Puestos",
-        url: "/panel/catalogos/puestos",
-        icon: BriefcaseBusiness,
-      },
+      // {
+      //   title: "Puestos",
+      //   url: "/panel/catalogos/puestos",
+      //   icon: BriefcaseBusiness,
+      // },
       { title: "Sucursales", url: "/panel/catalogos/sucursales", icon: Store },
       {
         title: "Tipos de registro",
