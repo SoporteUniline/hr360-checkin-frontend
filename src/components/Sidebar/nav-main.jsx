@@ -23,6 +23,7 @@ import {
   Landmark,
   PartyPopper,
   MapPin,
+  FileSpreadsheet, // añadido para Reporte de horas
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -85,6 +86,12 @@ const items = [
     url: "/panel/registro-de-entradas-y-salidas",
     rol: "Recruiter",
     icon: ClipboardCheck,
+  },
+  {
+    title: "Reporte de horas",
+    url: "/panel/reporte-horas",
+    rol: "Recruiter",
+    icon: FileSpreadsheet,
   },
   {
     title: "Perfil",
