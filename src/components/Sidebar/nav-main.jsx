@@ -25,11 +25,18 @@ import {
   MapPin,
   BriefcaseBusiness,
   FileSpreadsheet,
+  LayoutDashboard,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 
 const items = [
+  {
+    title: "Dashboard",
+    url: "/panel/dashboard",
+    rol: "Recruiter",
+    icon: LayoutDashboard,
+  },
   {
     title: "Asistencias",
     url: "/panel/registro-asistencia",
