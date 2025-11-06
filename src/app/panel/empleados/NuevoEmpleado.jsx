@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import FormularioEmpleado from "./FormularioEmpleado";
+import { useState } from "react";
 
 export default function NuevoEmpleado({
   editar = false,
@@ -17,10 +18,15 @@ export default function NuevoEmpleado({
   page,
   limit,
 }) {
+  const [abrirModal, setAbrirModal] = useState(false);
+
   return (
-    <Dialog>
+    <Dialog open={abrirModal} onOpenChange={setAbrirModal}>
       <DialogTrigger asChild>
-        <Button variant={editar ? "ghost" : "default"}>
+        <Button
+          variant={editar ? "ghost" : "default"}
+          onClick={() => setAbrirModal(true)}
+        >
           {editar ? "Editar" : "Nuevo Empleado"}
         </Button>
       </DialogTrigger>
@@ -35,6 +41,7 @@ export default function NuevoEmpleado({
           values={values}
           page={page}
           limit={limit}
+          onClose={() => setAbrirModal(false)}
         />
       </DialogContent>
     </Dialog>

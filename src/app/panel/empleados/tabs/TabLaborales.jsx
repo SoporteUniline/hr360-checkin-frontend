@@ -24,8 +24,10 @@ import { useEffect, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import ModalArea from "@/components/ModalArea";
 import { Button } from "@/components/ui/button";
+import { useSnackbar } from "notistack";
 
 export default function TabLaborales({ form, soloLectura, dataUser }) {
+  const { enqueueSnackbar } = useSnackbar();
   const [areas, setAreas] = useState([]);
   const [areasAsignadas, setAreasAsignadas] = useState([]);
   const [mostrarModalArea, setMostrarModalArea] = useState(false);
@@ -61,8 +63,11 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
 
       setMostrarModalArea(false);
     } catch (error) {
-      console.error("Error creando área:", error);
-      alert("Error al crear el área");
+      console.log("Error creando área:", error);
+
+      enqueueSnackbar(error?.response?.data?.error, {
+        variant: "error", // 🔴 color rojo de error
+      });
     } finally {
       setGuardandoArea(false);
     }
@@ -357,9 +362,17 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
           )}
         />
 
-        {/* <Button size="sm" onClick={() => setMostrarModalArea(true)}>
-          + Crear nueva área
-        </Button> */}
+        {form.watch("checar_gps") && (
+          <Button
+            size="sm"
+            onClick={() => setMostrarModalArea(true)}
+            type="button"
+            className="col-span-1 sm:col-span-2"
+          >
+            + Crear nueva área
+          </Button>
+        )}
+
         {/* 🔹 Áreas permitidas (solo si usar_reloj_checador = true) */}
         <div className="col-span-1 sm:col-span-2">
           {form.watch("checar_gps") && (
@@ -374,11 +387,11 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
                 </p>
               ) : (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {areas.map((area) => {
+                  {areas.map((area, index) => {
                     const asignada = areasAsignadas.includes(area.id_area);
                     return (
                       <div
-                        key={area.id_area}
+                        key={area.id_area ?? `area-temp-${index}`}
                         className={`border rounded-lg p-3 flex items-center justify-between ${
                           asignada
                             ? "bg-blue-50 border-blue-300"

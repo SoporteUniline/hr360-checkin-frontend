@@ -52,6 +52,7 @@ export default function FormularioEmpleado({
   soloLectura = false,
   setEditar,
   setSoloLectura,
+  onClose,
 }) {
   const [tab, setTab] = useState("personales");
   const fueDesdeLectura = useRef(false);
@@ -376,6 +377,7 @@ export default function FormularioEmpleado({
         );
         enqueueSnackbar("Empleado actualizado", { variant: "success" });
         setTab("personales");
+        onClose?.();
       } else {
         await axios.post(
           `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados`,
@@ -388,6 +390,7 @@ export default function FormularioEmpleado({
         );
         enqueueSnackbar("Empleado registrado", { variant: "success" });
         setTab("personales");
+        onClose?.();
       }
 
       mutate(

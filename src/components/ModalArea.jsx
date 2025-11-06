@@ -20,6 +20,12 @@ export default function ModalArea({
     longitud: null,
   });
 
+  useEffect(() => {
+    if (!isOpen) {
+      setFormData({ nombre_area: "", latitud: null, longitud: null });
+    }
+  }, [isOpen]);
+
   // 🧠 Esto es lo importante:
   useEffect(() => {
     if (initialData) {
