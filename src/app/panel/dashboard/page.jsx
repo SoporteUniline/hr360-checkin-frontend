@@ -49,9 +49,12 @@ export default async function PanelDashboardPage() {
   let data = null;
   let empresaId = null;
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("token")?.value || null;
-
+    // Compatibilidad Next 14/15: cookies() puede ser síncrono o Promise
+    let cookieStore = cookies();
+    if (typeof cookieStore?.then === "function") {
+      cookieStore = await cookieStore; // Next 15+ (API asíncrona)
+    }
+    const token = cookieStore?.get("token")?.value || null;
     if (token) {
       const vRes = await fetch(`${base}/users/verify/token`, {
         headers: { Authorization: `Bearer ${token}` },
