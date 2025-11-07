@@ -75,7 +75,7 @@ export default function AsistenciaRow({
                     seleccionado?.cuenta_como_asistencia
                   );
                   handleFieldChange("goce_sueldo", seleccionado?.goce_sueldo);
-                  handleFieldChange("es_festivo", seleccionado?.es_festivo);
+                  // handleFieldChange("es_festivo", seleccionado?.es_festivo);
                 }}
               >
                 <SelectTrigger>
