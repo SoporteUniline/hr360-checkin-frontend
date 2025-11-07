@@ -24,17 +24,32 @@ import PermisosTable from "./PermisosTable";
 import WeeklyTrend from "./WeeklyTrend";
 
 function monthShortUpperWithDot(dateStr) {
-  const d = new Date(dateStr + "T00:00:00Z");
-  let m = d.toLocaleString("es-MX", { month: "short" });
-  m = m.replace(/\./g, "").slice(0, 3).toUpperCase() + ".";
+  // Normaliza fechas de solo día al horario de México usando mediodía UTC
+  // para evitar desfaces por zona horaria (se usa en tarjetas de cumpleaños)
+  const d = new Date(dateStr + "T12:00:00Z");
+  const m = new Intl.DateTimeFormat("es-MX", {
+    month: "short",
+    timeZone: "America/Mexico_City",
+  })
+    .format(d)
+    .replace(/\./g, "")
+    .slice(0, 3)
+    .toUpperCase() + ".";
   return m;
 }
 
 function fmtDayMonthDe(dateStr) {
-  const d = new Date(dateStr + "T00:00:00Z");
-  const day = String(d.getUTCDate()).padStart(2, "0");
-  const mon = d
-    .toLocaleString("es-MX", { month: "short" })
+  // Presenta "dd de mmm" en horario de México (se usa en varias chips)
+  const d = new Date(dateStr + "T12:00:00Z");
+  const day = new Intl.DateTimeFormat("es-MX", {
+    day: "2-digit",
+    timeZone: "America/Mexico_City",
+  }).format(d);
+  const mon = new Intl.DateTimeFormat("es-MX", {
+    month: "short",
+    timeZone: "America/Mexico_City",
+  })
+    .format(d)
     .replace(/\./g, "")
     .toLowerCase();
   return `${day} de ${mon}`;
@@ -231,11 +246,10 @@ export default async function PanelDashboardPage() {
                       >
                         <div className="grid w-14 h-14 place-content-center rounded-lg bg-amber-50 text-amber-800 border border-amber-200">
                           <div className="text-2xl font-bold leading-none">
-                            {String(
-                              new Date(
-                                c.fecha_nacimiento + "T00:00:00Z"
-                              ).getUTCDate()
-                            ).padStart(2, "0")}
+                            {new Intl.DateTimeFormat("es-MX", {
+                              day: "2-digit",
+                              timeZone: "America/Mexico_City",
+                            }).format(new Date(c.fecha_nacimiento + "T12:00:00Z"))}
                           </div>
                           <div className="text-[10px] uppercase leading-none mt-1 tracking-wide">
                             {monthShortUpperWithDot(c.fecha_nacimiento)}
@@ -293,11 +307,10 @@ export default async function PanelDashboardPage() {
                         >
                           <div className="grid w-14 h-14 place-content-center rounded-lg bg-indigo-50 text-indigo-900 border border-indigo-200 font-bold leading-none">
                             <div className="text-2xl">
-                              {String(
-                                new Date(
-                                  a.fecha_ingreso + "T00:00:00Z"
-                                ).getUTCDate()
-                              ).padStart(2, "0")}
+                              {new Intl.DateTimeFormat("es-MX", {
+                                day: "2-digit",
+                                timeZone: "America/Mexico_City",
+                              }).format(new Date(a.fecha_ingreso + "T12:00:00Z"))}
                             </div>
                           </div>
                           <div className="min-w-0">
@@ -496,12 +509,14 @@ export default async function PanelDashboardPage() {
                             <td className="px-3 py-2">{t.nombre_empresa}</td>
                             <td className="px-3 py-2 text-amber-700">
                               {t.hora_entrada
-                                ? new Date(
-                                    t.hora_entrada + "Z"
-                                  ).toLocaleTimeString("es-MX", {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })
+                                ? new Date(t.hora_entrada + "Z").toLocaleTimeString(
+                                    "es-MX",
+                                    {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                      timeZone: "America/Mexico_City",
+                                    }
+                                  )
                                 : "-"}
                             </td>
                           </tr>
