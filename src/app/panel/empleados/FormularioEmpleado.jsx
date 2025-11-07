@@ -132,6 +132,7 @@ export default function FormularioEmpleado({
             checar_gps: false,
             usar_reloj_checador: true,
             areasAsignadas: [],
+            new_pass: "",
           },
   });
 
@@ -206,6 +207,7 @@ export default function FormularioEmpleado({
         checar_gps: restoEmpleado.checar_gps === 1 ? true : false,
         usar_reloj_checador:
           restoEmpleado.usar_reloj_checador === 1 ? true : false,
+        new_pass: "",
       });
 
       if (!fueDesdeLectura.current) {
@@ -236,7 +238,15 @@ export default function FormularioEmpleado({
     const errorKeys = Object.keys(errors);
 
     const tabsConErrores = {
-      personales: ["apellido_paterno", "apellido_materno", "nombre"],
+      personales: [
+        "apellido_paterno",
+        "apellido_materno",
+        "nombre",
+        "correo",
+        "curp",
+        "telefono",
+        "rfc",
+      ],
       laborales: ["puesto", "sucursal"],
       jornada: ["hrs_por_dia", "hrs_de_comida", "horarios"],
       nomina: [
@@ -246,10 +256,9 @@ export default function FormularioEmpleado({
         "sueldo_por_hora",
         "porcentaje",
       ],
-      cuentas: [],
+      cuentas: ["banco", "numero_cuenta", "tipo_cuenta"],
     };
 
-    // Encontrar el primer tab que tenga errores (en orden de prioridad)
     const tabConError = Object.entries(tabsConErrores).find(([tab, campos]) =>
       errorKeys.some((errorKey) => campos.includes(errorKey))
     );
@@ -347,6 +356,11 @@ export default function FormularioEmpleado({
           data[campo] = null;
         }
       });
+
+      // 👇 Solo incluir la contraseña si el input no está vacío
+      if (!data.new_pass || data.new_pass.trim() === "") {
+        delete data.new_pass;
+      }
 
       Object.keys(data).forEach((key) => {
         if (data[key] === null || data[key] === undefined) {

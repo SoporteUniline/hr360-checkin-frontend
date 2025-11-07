@@ -22,9 +22,9 @@ export const schemaEmpleado = z
     telefono: z.string().optional(),
     correo: z
       .string()
-      .email("Correo electrónico no válido")
-      .optional()
-      .or(z.literal("")),
+      .min(1, "El correo electrónico es obligatorio")
+      .email("Correo electrónico no válido"),
+
     curp: z.string().optional().or(z.literal("")),
     rfc: z.string().optional().or(z.literal("")),
     nss: z
@@ -46,6 +46,7 @@ export const schemaEmpleado = z
     sucursal: z.string().min(1, "La sucursal es obligatoria"),
 
     // Laborales - OPCIONALES
+    new_pass: z.string().optional().or(z.literal("")),
     departamento: z.string().optional(),
     nombre_empresa: z.string().optional(),
     fecha_ingreso: z.string().optional(),

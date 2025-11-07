@@ -5,6 +5,7 @@ import {
   FormLabel,
   FormControl,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form";
 import {
   Select,
@@ -258,24 +259,52 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
           />
         </div>
 
+        <div className="col-span-1 sm:col-span-2">
+          <FormField
+            name="new_pass"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabelWithAsterisk required={true}>
+                  Contraseña
+                </FormLabelWithAsterisk>
+                <FormControl>
+                  <Input
+                    type="password"
+                    placeholder="Nueva contraseña"
+                    {...field}
+                    disabled={soloLectura}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+                <FormDescription>
+                  Deja vacío si no deseas cambiar la contraseña.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
         {[{ name: "nip", label: "Código de empleado", required: false }].map(
           ({ name, label, type = "text", required = false }) => (
-            <FormField
-              key={name}
-              name={name}
-              control={form.control}
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabelWithAsterisk required={required}>
-                    {label}
-                  </FormLabelWithAsterisk>
-                  <FormControl>
-                    <Input type={type} disabled={soloLectura} {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div key={name}>
+              <FormField
+                name={name}
+                control={form.control}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabelWithAsterisk required={required}>
+                      {label}
+                    </FormLabelWithAsterisk>
+                    <FormControl>
+                      <Input type={type} disabled={soloLectura} {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />{" "}
+            </div>
           )
         )}
 

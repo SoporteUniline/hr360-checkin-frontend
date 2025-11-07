@@ -38,7 +38,7 @@ export default function TabPersonales({ form, soloLectura }) {
             required: false,
           },
           { name: "telefono", label: "Teléfono", required: false },
-          { name: "correo", label: "Correo", type: "email", required: false },
+          { name: "correo", label: "Correo", type: "email", required: true },
         ].map(({ name, label, type = "text", required = false }) => (
           <FormField
             key={name}
