@@ -24,35 +24,89 @@ import PermisosTable from "./PermisosTable";
 import WeeklyTrend from "./WeeklyTrend";
 
 function monthShortUpperWithDot(dateStr) {
-  // Normaliza fechas de solo día al horario de México usando mediodía UTC
-  // para evitar desfaces por zona horaria (se usa en tarjetas de cumpleaños)
-  const d = new Date(dateStr + "T12:00:00Z");
-  const m = new Intl.DateTimeFormat("es-MX", {
-    month: "short",
-    timeZone: "America/Mexico_City",
-  })
-    .format(d)
-    .replace(/\./g, "")
-    .slice(0, 3)
-    .toUpperCase() + ".";
+  const d = new Date(dateStr + "T00:00:00Z");
+  let m = d.toLocaleString("es-MX", { month: "short" });
+  m = m.replace(/\./g, "").slice(0, 3).toUpperCase() + ".";
   return m;
 }
 
 function fmtDayMonthDe(dateStr) {
-  // Presenta "dd de mmm" en horario de México (se usa en varias chips)
-  const d = new Date(dateStr + "T12:00:00Z");
-  const day = new Intl.DateTimeFormat("es-MX", {
-    day: "2-digit",
-    timeZone: "America/Mexico_City",
-  }).format(d);
-  const mon = new Intl.DateTimeFormat("es-MX", {
-    month: "short",
-    timeZone: "America/Mexico_City",
-  })
-    .format(d)
+  const d = new Date(dateStr + "T00:00:00Z");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  const mon = d
+    .toLocaleString("es-MX", { month: "short" })
     .replace(/\./g, "")
     .toLowerCase();
   return `${day} de ${mon}`;
+}
+
+// Utilidades de fecha/hora independientes del huso del servidor/navegador.
+// Se alinean al horario de México. Relacionado con: redlab_back/modules/attendance/controllers/dashboardController.js
+const MONTHS_SHORT_ES = [
+  "ene",
+  "feb",
+  "mar",
+  "abr",
+  "may",
+  "jun",
+  "jul",
+  "ago",
+  "sep",
+  "oct",
+  "nov",
+  "dic",
+];
+
+function parseYMD(dateStr) {
+  // dateStr esperado: YYYY-MM-DD
+  const [y, m, d] = String(dateStr).split("-").map(Number);
+  if (!y || !m || !d) return null;
+  return { y, m, d };
+}
+
+function monthShortUpperMX(dateStr) {
+  // Devuelve "ENE." "FEB." etc. a partir del YMD sin convertir zonas horarias
+  const parts = parseYMD(dateStr);
+  if (!parts) return "";
+  const idx = Math.min(Math.max(parts.m - 1, 0), 11);
+  return (MONTHS_SHORT_ES[idx] || "").slice(0, 3).toUpperCase() + ".";
+}
+
+function fmtDayMonthDeMX(dateStr) {
+  // Devuelve "DD de mmm" usando el YMD literal
+  const parts = parseYMD(dateStr);
+  if (!parts) return "";
+  const day = String(parts.d).padStart(2, "0");
+  const mon = (MONTHS_SHORT_ES[parts.m - 1] || "").toLowerCase();
+  return `${day} de ${mon}`;
+}
+
+function formatTimeMexico(datetimeStr) {
+  // Muestra HH:mm respetando México. Si no hay zona, usa la parte horaria literal.
+  if (!datetimeStr) return "-";
+  const hasTZ = /[zZ]|[+\-]\d{2}:?\d{2}$/.test(datetimeStr);
+  if (hasTZ) {
+    try {
+      const d = new Date(datetimeStr);
+      return d.toLocaleTimeString("es-MX", {
+        timeZone: "America/Mexico_City",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (_) {}
+  }
+  const m = String(datetimeStr).match(/(\d{2}:\d{2})/);
+  if (m) return m[1];
+  try {
+    const d = new Date(datetimeStr);
+    return d.toLocaleTimeString("es-MX", {
+      timeZone: "America/Mexico_City",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch (_) {
+    return "-";
+  }
 }
 
 import { cookies } from "next/headers";
@@ -246,13 +300,14 @@ export default async function PanelDashboardPage() {
                       >
                         <div className="grid w-14 h-14 place-content-center rounded-lg bg-amber-50 text-amber-800 border border-amber-200">
                           <div className="text-2xl font-bold leading-none">
-                            {new Intl.DateTimeFormat("es-MX", {
-                              day: "2-digit",
-                              timeZone: "America/Mexico_City",
-                            }).format(new Date(c.fecha_nacimiento + "T12:00:00Z"))}
+                            {String(
+                              new Date(
+                                c.fecha_nacimiento + "T00:00:00Z"
+                              ).getUTCDate()
+                            ).padStart(2, "0")}
                           </div>
                           <div className="text-[10px] uppercase leading-none mt-1 tracking-wide">
-                            {monthShortUpperWithDot(c.fecha_nacimiento)}
+                            {monthShortUpperMX(c.fecha_nacimiento)}
                           </div>
                         </div>
                         <div className="min-w-0">
@@ -265,7 +320,7 @@ export default async function PanelDashboardPage() {
                         </div>
                         <div className="ml-auto">
                           <span className="inline-flex h-9 min-w-[110px] items-center justify-center rounded-full bg-amber-50 text-amber-800 border border-amber-200 px-3 text-sm font-medium">
-                            {fmtDayMonthDe(c.fecha_nacimiento)}
+                            {fmtDayMonthDeMX(c.fecha_nacimiento)}
                           </span>
                         </div>
                       </li>
@@ -307,10 +362,11 @@ export default async function PanelDashboardPage() {
                         >
                           <div className="grid w-14 h-14 place-content-center rounded-lg bg-indigo-50 text-indigo-900 border border-indigo-200 font-bold leading-none">
                             <div className="text-2xl">
-                              {new Intl.DateTimeFormat("es-MX", {
-                                day: "2-digit",
-                                timeZone: "America/Mexico_City",
-                              }).format(new Date(a.fecha_ingreso + "T12:00:00Z"))}
+                              {String(
+                                new Date(
+                                  a.fecha_ingreso + "T00:00:00Z"
+                                ).getUTCDate()
+                              ).padStart(2, "0")}
                             </div>
                           </div>
                           <div className="min-w-0">
@@ -324,7 +380,7 @@ export default async function PanelDashboardPage() {
                           </div>
                           <div className="ml-auto">
                             <span className="inline-flex h-9 min-w-[110px] items-center justify-center rounded-full bg-sky-50 text-sky-900 border border-sky-200 px-3 text-sm font-medium">
-                              {fmtDayMonthDe(a.fecha_ingreso)}
+                              {fmtDayMonthDeMX(a.fecha_ingreso)}
                             </span>
                           </div>
                         </li>
@@ -508,16 +564,7 @@ export default async function PanelDashboardPage() {
                             <td className="px-3 py-2">{t.nombre_empleado}</td>
                             <td className="px-3 py-2">{t.nombre_empresa}</td>
                             <td className="px-3 py-2 text-amber-700">
-                              {t.hora_entrada
-                                ? new Date(t.hora_entrada + "Z").toLocaleTimeString(
-                                    "es-MX",
-                                    {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                      timeZone: "America/Mexico_City",
-                                    }
-                                  )
-                                : "-"}
+                              {t.hora_entrada ? formatTimeMexico(t.hora_entrada) : "-"}
                             </td>
                           </tr>
                         ))}
