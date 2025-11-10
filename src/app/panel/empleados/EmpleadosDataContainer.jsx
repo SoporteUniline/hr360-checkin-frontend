@@ -5,6 +5,7 @@ import EmpleadosTable from "./EmpleadosTable";
 import TablePagination from "@/components/TablePagination";
 import LoadingTable from "@/components/LoadingTable";
 import ErrorPage from "@/components/ErrorPage";
+import { useEffect } from "react";
 
 export default function EmpleadosDataContainer({
   idEmpresa,

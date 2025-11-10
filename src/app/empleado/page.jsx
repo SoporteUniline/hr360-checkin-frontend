@@ -3,11 +3,11 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-export default function PanelPage() {
+export default function EmpleadoPanelPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.push("/panel/dashboard");
+    router.push("/empleado/inicio");
   }, []);
 
   return null;

@@ -51,20 +51,24 @@ export default function LoginPage() {
       Cookies.set("token", token, { expires: 1 });
       login(token);
 
-      if (tipo_usuario === "User") {
+      const rutas = {
+        User: "/home",
+        Recruiter: "/panel",
+        Admin: "/dashboard",
+        Empleado: "/empleado",
+      };
+
+      const destino = rutas[tipo_usuario];
+
+      if (destino) {
         enqueueSnackbar("Inicio de sesión exitoso", { variant: "success" });
-        router.push("/home");
-      } else if (tipo_usuario === "Recruiter") {
-        enqueueSnackbar("Inicio de sesión exitoso", { variant: "success" });
-        router.push("/panel");
-      } else if (tipo_usuario === "Admin") {
-        enqueueSnackbar("Inicio de sesión exitoso", { variant: "success" });
-        router.push("/dashboard");
+        router.push(destino);
       } else {
         enqueueSnackbar("El tipo usuario de este usuario no existe", {
           variant: "error",
         });
       }
+
       setTimeout(() => {
         setLoading(false);
       }, 2000);

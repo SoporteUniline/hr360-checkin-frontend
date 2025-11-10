@@ -429,7 +429,7 @@ export default function FormularioEmpleado({
   }, [modoFormulario, editar, soloLectura]);
 
   const { data, isLoading, error } = useSWR(
-    `/users/${dataUser?.id_usuario}`,
+    dataUser?.id_usuario ? `/users/${dataUser.id_usuario}` : null,
     fetcherWithToken,
     swr_config
   );

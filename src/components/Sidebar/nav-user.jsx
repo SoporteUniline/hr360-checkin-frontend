@@ -32,6 +32,7 @@ export function NavUser() {
     fetcherWithToken,
     swr_config
   );
+
   const { isMobile } = useSidebar();
 
   const router = useRouter();
@@ -49,10 +50,18 @@ export function NavUser() {
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={data?.url_imagen} alt={data?.nombre} />
-                <AvatarFallback>
-                  {obtenerIniciales(data?.nombre)}
-                </AvatarFallback>
+                {dataUser?.esEmpleado ? (
+                  <AvatarFallback>
+                    {obtenerIniciales(dataUser?.nombre)}
+                  </AvatarFallback>
+                ) : (
+                  <>
+                    <AvatarImage src={data?.url_imagen} alt={data?.nombre} />
+                    <AvatarFallback>
+                      {obtenerIniciales(dataUser?.nombre)}
+                    </AvatarFallback>
+                  </>
+                )}
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{dataUser?.nombre}</span>
@@ -72,10 +81,18 @@ export function NavUser() {
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={data?.url_imagen} alt={data?.nombre} />
-                  <AvatarFallback>
-                    {obtenerIniciales(dataUser?.nombre)}
-                  </AvatarFallback>
+                  {dataUser?.esEmpleado ? (
+                    <AvatarFallback>
+                      {obtenerIniciales(dataUser?.nombre)}
+                    </AvatarFallback>
+                  ) : (
+                    <>
+                      <AvatarImage src={data?.url_imagen} alt={data?.nombre} />
+                      <AvatarFallback>
+                        {obtenerIniciales(dataUser?.nombre)}
+                      </AvatarFallback>
+                    </>
+                  )}
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">
@@ -88,15 +105,20 @@ export function NavUser() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem
-                onClick={() => router.push(`/${location}/cuenta`)}
-              >
-                <UserCircleIcon />
-                Mi cuenta
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
+            {dataUser?.esEmpleado ? null : (
+              <>
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    onClick={() => router.push(`/${location}/cuenta`)}
+                  >
+                    <UserCircleIcon />
+                    Mi cuenta
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+              </>
+            )}
+
             <DropdownMenuItem onClick={logout}>
               <LogOutIcon />
               Cerrar sesión

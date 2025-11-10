@@ -48,6 +48,7 @@ export default function Navbar() {
   const { nombre, correo, tipo_usuario } = dataUser ?? {};
 
   const getDashboardPath = () => {
+    console.log(tipo_usuario);
     switch (tipo_usuario) {
       case "Admin":
         return "/dashboard";
@@ -55,8 +56,10 @@ export default function Navbar() {
         return "/home";
       case "Recruiter":
         return "/panel";
+      case "Empleado":
+        return "/empleado";
       default:
-        return;
+        return "/";
     }
   };
 
@@ -142,26 +145,42 @@ export default function Navbar() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Avatar className="cursor-pointer">
-                      <AvatarImage
-                        src={imagenData?.url_imagen}
-                        alt={imagenData?.nombre || "@shadcn"}
-                      />
-                      <AvatarFallback>
-                        {obtenerIniciales(dataUser?.nombre)}
-                      </AvatarFallback>
+                      {dataUser?.esEmpleado ? (
+                        <AvatarFallback>
+                          {obtenerIniciales(dataUser?.nombre)}
+                        </AvatarFallback>
+                      ) : (
+                        <>
+                          <AvatarImage
+                            src={imagenData?.url_imagen}
+                            alt={imagenData?.nombre || "@shadcn"}
+                          />
+                          <AvatarFallback>
+                            {obtenerIniciales(dataUser?.nombre)}
+                          </AvatarFallback>
+                        </>
+                      )}
                     </Avatar>
                   </DropdownMenuTrigger>
 
                   <DropdownMenuContent className="w-56">
                     <div className="flex items-center gap-3 p-2">
                       <Avatar>
-                        <AvatarImage
-                          src={imagenData?.url_imagen}
-                          alt={imagenData?.nombre || "@shadcn"}
-                        />
-                        <AvatarFallback>
-                          {obtenerIniciales(dataUser?.nombre)}
-                        </AvatarFallback>
+                        {dataUser?.esEmpleado ? (
+                          <AvatarFallback>
+                            {obtenerIniciales(dataUser?.nombre)}
+                          </AvatarFallback>
+                        ) : (
+                          <>
+                            <AvatarImage
+                              src={imagenData?.url_imagen}
+                              alt={imagenData?.nombre || "@shadcn"}
+                            />
+                            <AvatarFallback>
+                              {obtenerIniciales(dataUser?.nombre)}
+                            </AvatarFallback>
+                          </>
+                        )}
                       </Avatar>
                       <div>
                         <p className="text-sm font-medium leading-none">
