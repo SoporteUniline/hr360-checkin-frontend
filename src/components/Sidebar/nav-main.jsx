@@ -26,6 +26,7 @@ import {
   BriefcaseBusiness,
   FileSpreadsheet,
   LayoutDashboard,
+  FileText,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -81,6 +82,12 @@ const items = [
       //   icon: Landmark,
       // },
     ],
+  },
+  {
+    title: "Permisos",
+    url: "/panel/permisos",
+    rol: "Recruiter",
+    icon: FileText,
   },
   {
     title: "Días festivos",

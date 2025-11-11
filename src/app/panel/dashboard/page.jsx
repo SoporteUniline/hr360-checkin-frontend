@@ -697,14 +697,11 @@ export default async function PanelDashboardPage() {
               Análisis y estadísticas
             </div>
           </Link>
-          <div
-            className="group relative rounded-xl border bg-white p-6 text-center opacity-60 cursor-not-allowed"
-            aria-disabled="true"
-            title="Próximamente"
+          <Link
+            href="/panel/permisos"
+            className="group rounded-xl border bg-white p-6 text-center hover:shadow-sm transition"
+            title="Ir a Permisos"
           >
-            <span className="absolute right-2 top-2 inline-flex items-center rounded-full border border-zinc-200 bg-zinc-50 px-2 py-0.5 text-[10px] font-semibold text-zinc-600">
-              Próximamente
-            </span>
             <div className="mx-auto mb-3 grid size-12 place-content-center rounded-full border border-rose-200 bg-rose-50">
               <FileCheck className="size-6 text-rose-600" />
             </div>
@@ -712,7 +709,7 @@ export default async function PanelDashboardPage() {
             <div className="text-xs text-zinc-500 mt-1">
               Solicitudes y ausencias
             </div>
-          </div>
+          </Link>
           <Link
             href="/panel/cuenta"
             className="group rounded-xl border bg-white p-6 text-center hover:shadow-sm transition"
