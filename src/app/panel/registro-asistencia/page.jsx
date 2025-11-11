@@ -12,15 +12,12 @@ import AsistenciaCards from "./AsistenciaCards";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
 import FormularioAsistenciasMasivas from "@/components/FormularioAsistenciasMasivas";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 export default function ControlAsistencia() {
-  // Valores iniciales para los filtros
   const getInitialFilters = () => ({
     fechaInicio: dayjs().tz("America/Mexico_City").format("YYYY-MM-DD"),
     fechaFin: dayjs().tz("America/Mexico_City").format("YYYY-MM-DD"),
@@ -77,7 +74,6 @@ export default function ControlAsistencia() {
     setLimit(newLimit);
   };
 
-  // Función para limpiar todos los filtros
   const handleResetFilters = () => {
     const initial = getInitialFilters();
     setFechaInicio(initial.fechaInicio);
@@ -108,10 +104,11 @@ export default function ControlAsistencia() {
   useEffect(() => {
     console.log(tiposPermiso);
     if (tiposPermiso) {
-      const uniqueTipos = tiposPermiso.tiposPermiso.map((tipo) => ({
+      const uniqueTipos = tiposPermiso?.tiposPermiso.map((tipo) => ({
         clave: tipo.clave,
         nombre: tipo.nombre,
       }));
+      console.log(uniqueTipos);
       const distinctTipos = Array.from(
         new Map(uniqueTipos.map((item) => [item.clave, item])).values()
       );

@@ -1,4 +1,3 @@
-// src/hooks/useTiposPermisoData.js
 import useSWR from "swr";
 import { fetcherWithToken } from "@/lib/fetcher";
 

@@ -1,4 +1,3 @@
-// src/app/panel/registro-asistencia/AsistenciaTable.jsx
 import {
   Table,
   TableBody,
@@ -9,7 +8,8 @@ import {
 } from "@/components/ui/table";
 import AsistenciaRow from "./AsistenciaRow";
 import { Button } from "@/components/ui/button";
-import { Plus, RotateCcw } from "lucide-react";
+import { Plus, RotateCcw, FileSpreadsheet } from "lucide-react";
+import { exportToExcel } from "@/utils/exportExcelJS";
 
 export default function AsistenciaTable({
   filtrados,
@@ -28,13 +28,63 @@ export default function AsistenciaTable({
   abrirFormulario,
   onResetFilters,
 }) {
-  // if (filtrados.length === 0) {
-  //   return (
-  //     <div className="text-center text-muted-foreground py-10">
-  //       No hay registros para hoy o búsqueda sin resultados.
-  //     </div>
-  //   );
-  // }
+  const columns = [
+    { header: "Nombre", key: "nombre" },
+    { header: "Apellido Paterno", key: "apellido_paterno" },
+    { header: "Apellido Materno", key: "apellido_materno" },
+    { header: "Código", key: "nip" },
+    { header: "Departamento", key: "departamento" },
+    { header: "Tipo de Registro", key: "tipo_registro_nombre" },
+    { header: "Fecha", key: "fecha" },
+    { header: "Corrección", key: "correccion" },
+    { header: "Entrada", key: "entrada" },
+    { header: "Salida", key: "salida" },
+    { header: "Autorizado por", key: "autorizado_por" },
+    { header: "¿Asistió?", key: "asistencia" },
+    { header: "¿Goce de Sueldo?", key: "goce_sueldo" },
+    { header: "¿Pago Triple?", key: "pago_triple" },
+    { header: "¿Es domingo?", key: "es_domingo" },
+    { header: "Prima Dominical", key: "prima_dominical" },
+    { header: "Es Festivo", key: "es_festivo" },
+    { header: "Porcentaje Día Festivo", key: "porcentaje_dia_festivo" },
+    { header: "¿Trabajó horas extra?", key: "hrs_extra" },
+    { header: "Forma de pago horas extra", key: "forma_pago_extras" },
+    { header: "Horas extras autorizadas por", key: "extras_autorizadas_por" },
+    { header: "Horas de comida", key: "hrs_comida" },
+    { header: "Observaciones", key: "notas" },
+    { header: "Notas horas extra", key: "notas_hrs_extra" },
+    { header: "Estado", key: "estado" },
+    { header: "Estado Asistencia", key: "estadoAsistencia" },
+  ];
+
+  const exportData = filtrados.map((r) => ({
+    nombre: r.nombre,
+    apellido_paterno: r.apellido_paterno,
+    apellido_materno: r.apellido_materno,
+    nip: r.nip,
+    departamento: r.departamento,
+    tipo_registro_nombre: r.tipo_registro_nombre,
+    fecha: r.fecha,
+    correccion: r.correcion ? "Sí" : "No",
+    entrada: r.entrada ?? "-",
+    salida: r.salida ?? "-",
+    autorizado_por: r.autorizado_por ?? "-",
+    asistencia: r.asistencia ? "Sí" : "No",
+    goce_sueldo: r.goce_sueldo ? "Sí" : "No",
+    pago_triple: r.pago_triple ? "Sí" : "No",
+    es_domingo: r.es_domingo ? "Sí" : "No",
+    prima_dominical: r.prima_dominical ?? "-",
+    es_festivo: r.es_festivo ? "Sí" : "No",
+    porcentaje_dia_festivo: r.porcentaje_dia_festivo ?? "-",
+    hrs_extra: r.hrs_extra ? "Sí" : "No",
+    forma_pago_extras: r.forma_pago_extras ?? "-",
+    extras_autorizadas_por: r.extras_autorizadas_por ?? "-",
+    hrs_comida: r.hrs_comida ?? "-",
+    notas: r.notas ?? "-",
+    notas_hrs_extra: r.notas_hrs_extra ?? "-",
+    estado: r.estado ?? "-",
+    estadoAsistencia: r.estadoAsistencia,
+  }));
 
   return (
     <>
@@ -43,6 +93,19 @@ export default function AsistenciaTable({
           <h1>Registros de Asistencia</h1>
         </div>
         <div className="flex flex-col md:flex-row flex-wrap justify-end gap-3 w-full md:w-auto">
+          <Button
+            onClick={() =>
+              exportToExcel(exportData, columns, "Reporte_Asistencias", {
+                sheetName: "Asistencias",
+                headerColor: "15803D",
+              })
+            }
+            className="bg-emerald-600 hover:bg-emerald-700 shadow-lg"
+          >
+            <FileSpreadsheet className="w-5 h-5 mr-2" />
+            Exportar Excel
+          </Button>
+
           <Button
             onClick={abrirFormulario}
             className="bg-violet-700 shadow-lg transition-all duration-200 hover:shadow-xl hover:bg-violet-800 w-full sm:w-auto"

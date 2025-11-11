@@ -33,7 +33,7 @@ export async function middleware(request) {
     const secret = new TextEncoder().encode(process.env.JWT_SECRET);
     const { payload } = await jwtVerify(token, secret);
     const tipoUsuario = (payload.tipo_usuario || "").trim();
-    console.log("🧠 Tipo de usuario detectado:", tipoUsuario);
+    // console.log("🧠 Tipo de usuario detectado:", tipoUsuario);
 
     if (pathname === "/login" || pathname === "/register") {
       const redirectTo = defaultRedirects[tipoUsuario] || "/";
