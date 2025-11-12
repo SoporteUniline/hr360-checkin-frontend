@@ -1,4 +1,6 @@
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -30,6 +32,9 @@ export default function AsistenciaRow({
   mutateAsistencia,
   mostrarCamposExtras,
 }) {
+  // Asegurar parsers de zona horaria local/UTC solo en este componente
+  dayjs.extend(utc);
+  dayjs.extend(timezone);
   const currentData = isEditing ? editingRowData : registro;
   const areTimeInputsDisabled = !currentData.correccion;
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -435,7 +440,8 @@ export default function AsistenciaRow({
             <TableCell>{registro.tipo_registro_nombre}</TableCell>
             <TableCell className="text-center">
               {registro.fecha
-                ? dayjs(registro.fecha)
+                ? dayjs
+                    .utc(registro.fecha) // interpretar como UTC si viene con "Z" del backend
                     .tz("America/Mexico_City")
                     .format("DD/MM/YYYY")
                 : "-"}

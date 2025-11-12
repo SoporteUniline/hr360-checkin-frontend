@@ -47,13 +47,17 @@ export default function TablePagination({
   };
 
   return (
-    <div className="flex items-center justify-between px-4 py-2">
-      <div className="text-sm text-muted-foreground flex-1">
+    // Pie de tabla responsivo:
+    // - flex-col en móviles para apilar información, selector y navegación.
+    // - sm:flex-row para mantener el layout horizontal en pantallas medianas+.
+    // - gap para espaciar elementos cuando se apilan.
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-2">
+      <div className="text-sm text-muted-foreground sm:flex-1 text-center sm:text-left">
         Página <span className="font-medium">{page}</span> de{" "}
         <span className="font-medium">{totalPages}</span> — {total} registros
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 flex-wrap justify-center sm:justify-end">
         {/* Mostrar selector solo si onLimitChange fue proporcionado */}
         {showLimitSelector && (
           <div className="flex items-center gap-2">
@@ -90,7 +94,8 @@ export default function TablePagination({
           </div>
         )}
 
-        <Pagination className="w-auto">
+        {/* La navegación ocupa todo el ancho en móviles para centrarse correctamente */}
+        <Pagination className="w-full sm:w-auto justify-center sm:justify-start">
           <PaginationContent>
             <PaginationItem>
               <Button
