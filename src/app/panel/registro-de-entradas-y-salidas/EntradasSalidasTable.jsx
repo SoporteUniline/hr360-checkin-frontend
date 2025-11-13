@@ -53,13 +53,13 @@ export default function EntradasSalidasTable({
       puesto: r.puesto,
       departamento: r.departamento,
       sucursal: r.sucursal,
-      entrada: r.entrada ? dayjs(r.entrada).format("YYYY-MM-DD HH:mm:ss") : "-",
+      entrada: r.entrada ? dayjs(r.entrada).format("DD/MM/YYYY HH:mm:ss") : "-",
       entrada_corregida: r.entrada_corregida
-        ? dayjs(r.entrada_corregida).format("YYYY-MM-DD HH:mm:ss")
+        ? dayjs(r.entrada_corregida).format("DD/MM/YYYY HH:mm:ss")
         : "-",
-      salida: r.salida ? dayjs(r.salida).format("YYYY-MM-DD HH:mm:ss") : "-",
+      salida: r.salida ? dayjs(r.salida).format("DD/MM/YYYY HH:mm:ss") : "-",
       salida_corregida: r.salida_corregida
-        ? dayjs(r.salida_corregida).format("YYYY-MM-DD HH:mm:ss")
+        ? dayjs(r.salida_corregida).format("DD/MM/YYYY HH:mm:ss")
         : "-",
       estado: r.estado,
     }));
