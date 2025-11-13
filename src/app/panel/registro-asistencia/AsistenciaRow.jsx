@@ -32,7 +32,6 @@ export default function AsistenciaRow({
   mutateAsistencia,
   mostrarCamposExtras,
 }) {
-  // Asegurar parsers de zona horaria local/UTC solo en este componente
   dayjs.extend(utc);
   dayjs.extend(timezone);
   const currentData = isEditing ? editingRowData : registro;
@@ -441,8 +440,7 @@ export default function AsistenciaRow({
             <TableCell className="text-center">
               {registro.fecha
                 ? dayjs
-                    .utc(registro.fecha) // interpretar como UTC si viene con "Z" del backend
-                    .tz("America/Mexico_City")
+                    .tz(registro.fecha, "America/Mexico_City")
                     .format("DD/MM/YYYY")
                 : "-"}
             </TableCell>
