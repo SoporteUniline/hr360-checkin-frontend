@@ -105,7 +105,10 @@ export default function PermisoDialog({ open, setOpen, editItem, idEmpresa, tipo
     if (!form.fecha_fin) errs.push("La fecha fin es obligatoria.");
 
     const hoy = dayjs().format("YYYY-MM-DD");
-    if (form.fecha_inicio && form.fecha_inicio < hoy) {
+    // Regla: solo en creación exigimos que inicio sea hoy o futuro.
+    // En edición permitimos fechas pasadas para no forzar cambios y evitar
+    // efectos secundarios en asistencias al cancelar parcialmente.
+    if (!isEdit && form.fecha_inicio && form.fecha_inicio < hoy) {
       errs.push("La fecha de inicio no puede ser anterior a hoy.");
     }
     if (form.fecha_fin && form.fecha_fin < form.fecha_inicio) {
@@ -131,14 +134,27 @@ export default function PermisoDialog({ open, setOpen, editItem, idEmpresa, tipo
     setLoading(true);
     try {
       if (isEdit && idsTarget.length === 1) {
-        await permisosApi.actualizar(editItem.id, {
-          id_empleado: Number(idsTarget[0]),
-          id_tipo_permiso: Number(form.id_tipo_permiso),
-          fecha_inicio: form.fecha_inicio,
-          fecha_fin: form.fecha_fin || null,
-          motivo: form.motivo || null,
-          id_empresa: idEmpresa,
-        });
+        // Evitar actualizaciones innecesarias que podrían re-sincronizar rangos:
+        const fieldsChanged =
+          String(editItem.id_empleado) !== String(idsTarget[0]) ||
+          String(editItem.id_tipo_permiso) !== String(form.id_tipo_permiso) ||
+          (editItem.fecha_inicio
+            ? dayjs(editItem.fecha_inicio).format("YYYY-MM-DD")
+            : "") !== form.fecha_inicio ||
+          (editItem.fecha_fin ? dayjs(editItem.fecha_fin).format("YYYY-MM-DD") : "") !==
+            (form.fecha_fin || "") ||
+          String(editItem.motivo || "") !== String(form.motivo || "");
+
+        if (fieldsChanged) {
+          await permisosApi.actualizar(editItem.id, {
+            id_empleado: Number(idsTarget[0]),
+            id_tipo_permiso: Number(form.id_tipo_permiso),
+            fecha_inicio: form.fecha_inicio,
+            fecha_fin: form.fecha_fin || null,
+            motivo: form.motivo || null,
+            id_empresa: idEmpresa,
+          });
+        }
         // Si el estado cambió respecto al original, actualizar estado
         if (form.estado && form.estado !== editItem?.estado) {
           await permisosApi.actualizarEstado(editItem.id, form.estado);
@@ -186,7 +202,12 @@ export default function PermisoDialog({ open, setOpen, editItem, idEmpresa, tipo
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-xl">
+      {/* Ajuste responsivo:
+         - max-w-[95vw]: asegura que en móviles el modal no desborde el viewport.
+         - sm:max-w-xl: mantiene el ancho previsto en pantallas >= sm.
+         - max-h-[85vh] overflow-y-auto: permite scroll interno si el contenido crece.
+         Relación: este modal se invoca desde `src/app/panel/permisos/page.jsx`. */}
+      <DialogContent className="max-w-[95vw] sm:max-w-xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>➕ {isEdit ? "Editar Permiso" : "Nuevo Permiso"}</DialogTitle>
         </DialogHeader>

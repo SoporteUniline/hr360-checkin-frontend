@@ -288,41 +288,42 @@ export default function PermisosPage() {
       </Card>
 
       {/* Estadísticas rápidas */}
-      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-l-4" style={{ borderLeftColor: "#3498db" }}>
-          <CardHeader className="pb-2">
+      {/* En móvil se compacta el espacio vertical y tipografías para no ocupar demasiada altura. */}
+      <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="border-l-4 py-3 sm:py-6" style={{ borderLeftColor: "#3498db" }}>
+          <CardHeader className="pb-1 sm:pb-2">
             <CardTitle className="text-xs text-muted-foreground uppercase">Total Permisos</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between">
-            <div className="text-3xl font-extrabold">{estadisticas.total}</div>
-            <div>📋</div>
+            <div className="text-2xl sm:text-3xl font-extrabold">{estadisticas.total}</div>
+            <div className="text-xl sm:text-2xl">📋</div>
           </CardContent>
         </Card>
-        <Card className="border-l-4" style={{ borderLeftColor: "#f59e0b" }}>
-          <CardHeader className="pb-2">
+        <Card className="border-l-4 py-3 sm:py-6" style={{ borderLeftColor: "#f59e0b" }}>
+          <CardHeader className="pb-1 sm:pb-2">
             <CardTitle className="text-xs text-muted-foreground uppercase">Pendientes</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between">
-            <div className="text-3xl font-extrabold">{estadisticas.pendientes}</div>
-            <div>⏳</div>
+            <div className="text-2xl sm:text-3xl font-extrabold">{estadisticas.pendientes}</div>
+            <div className="text-xl sm:text-2xl">⏳</div>
           </CardContent>
         </Card>
-        <Card className="border-l-4" style={{ borderLeftColor: "#27ae60" }}>
-          <CardHeader className="pb-2">
+        <Card className="border-l-4 py-3 sm:py-6" style={{ borderLeftColor: "#27ae60" }}>
+          <CardHeader className="pb-1 sm:pb-2">
             <CardTitle className="text-xs text-muted-foreground uppercase">Aprobados</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between">
-            <div className="text-3xl font-extrabold">{estadisticas.aprobados}</div>
-            <div>✅</div>
+            <div className="text-2xl sm:text-3xl font-extrabold">{estadisticas.aprobados}</div>
+            <div className="text-xl sm:text-2xl">✅</div>
           </CardContent>
         </Card>
-        <Card className="border-l-4" style={{ borderLeftColor: "#e74c3c" }}>
-          <CardHeader className="pb-2">
+        <Card className="border-l-4 py-3 sm:py-6" style={{ borderLeftColor: "#e74c3c" }}>
+          <CardHeader className="pb-1 sm:pb-2">
             <CardTitle className="text-xs text-muted-foreground uppercase">Rechazados</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center justify-between">
-            <div className="text-3xl font-extrabold">{estadisticas.rechazados}</div>
-            <div>❌</div>
+            <div className="text-2xl sm:text-3xl font-extrabold">{estadisticas.rechazados}</div>
+            <div className="text-xl sm:text-2xl">❌</div>
           </CardContent>
         </Card>
       </div>

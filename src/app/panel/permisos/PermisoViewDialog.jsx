@@ -35,7 +35,12 @@ export default function PermisoViewDialog({ open, setOpen, item }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-2xl">
+      {/* Ajuste responsivo:
+         - max-w-[95vw]: ocupa el 95% del ancho en móviles.
+         - sm:max-w-2xl: respeta el ancho grande en pantallas mayores.
+         - max-h-[85vh] overflow-y-auto: evita desbordes verticales y permite scroll.
+         Relación: abierto desde `src/app/panel/permisos/page.jsx`. */}
+      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Detalles del permiso</span>
