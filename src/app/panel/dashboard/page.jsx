@@ -158,7 +158,11 @@ export default async function PanelDashboardPage() {
     data.totalEmpleados > 0
       ? Math.round((data.presentesHoy / data.totalEmpleados) * 100)
       : 0;
-  const distribTotal = (data.distribucionAsistencia || []).reduce(
+  // Preferir distribución detallada si viene del backend; fallback a la clásica
+  const distribData = (data.distribucionAsistenciaDetallada && Array.isArray(data.distribucionAsistenciaDetallada))
+    ? data.distribucionAsistenciaDetallada
+    : (data.distribucionAsistencia || []);
+  const distribTotal = distribData.reduce(
     (acc, it) => acc + (it.count || 0),
     0
   );
@@ -433,7 +437,7 @@ export default async function PanelDashboardPage() {
               <div className="space-y-5">
                 <div className="h-6 w-full overflow-hidden rounded-md border bg-white">
                   <div className="flex h-full w-full">
-                    {data.distribucionAsistencia
+                    {distribData
                       .filter((d) => d.count > 0)
                       .map((d) => {
                         const pct = Math.round((d.count / distribTotal) * 100);
@@ -443,6 +447,12 @@ export default async function PanelDashboardPage() {
                           rose: "bg-rose-500",
                           violet: "bg-violet-500",
                           indigo: "bg-indigo-500",
+                          sky: "bg-sky-500",
+                          fuchsia: "bg-fuchsia-500",
+                          cyan: "bg-cyan-500",
+                          teal: "bg-teal-500",
+                          lime: "bg-lime-500",
+                          orange: "bg-orange-500",
                         }[d.color];
                         return (
                           <div
@@ -456,7 +466,7 @@ export default async function PanelDashboardPage() {
                   </div>
                 </div>
                 <ul className="flex flex-wrap gap-x-6 gap-y-2">
-                  {data.distribucionAsistencia
+                  {distribData
                     .filter((d) => d.count > 0)
                     .map((d) => {
                       const pct = Math.round((d.count / distribTotal) * 100);
@@ -466,6 +476,12 @@ export default async function PanelDashboardPage() {
                         rose: "bg-rose-500",
                         violet: "bg-violet-500",
                         indigo: "bg-indigo-500",
+                        sky: "bg-sky-500",
+                        fuchsia: "bg-fuchsia-500",
+                        cyan: "bg-cyan-500",
+                        teal: "bg-teal-500",
+                        lime: "bg-lime-500",
+                        orange: "bg-orange-500",
                       }[d.color];
                       return (
                         <li
