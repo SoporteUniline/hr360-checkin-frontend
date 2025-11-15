@@ -1,39 +1,22 @@
 "use client";
 import { useEffect, useState } from "react";
-import {
-  Clock,
-  User,
-  CheckCircle,
-  XCircle,
-  Users,
-  Calendar,
-  Camera,
-} from "lucide-react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableCell,
-} from "@/components/ui/table";
+import { CheckCircle, XCircle } from "lucide-react";
 import useSWR from "swr";
-import { fetcher, fetcherWithToken } from "@/lib/fetcher";
+import { fetcher } from "@/lib/fetcher";
 import ErrorPage from "@/components/ErrorPage";
 import { useSnackbar } from "notistack";
-import { twMerge } from "tailwind-merge";
-import Cookies from "js-cookie";
 import axiosInstance from "@/lib/axios";
-import { useRouter } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
-import FacialRecognitionModal from "./FacialRecognitionModal";
+import FacialRecognitionPanel from "./FacialRecognitionPanel";
+import ClockDisplay from "./Clock/ClockDisplay";
+import EmployeeInput from "./Clock/EmployeeInput";
+import StatsCards from "./Clock/StatsCards";
+import RecordsTable from "./Clock/RecordsTable";
 
 export default function RelojChecador({ idEmpresa }) {
   const [horaActual, setHoraActual] = useState("");
   const [fechaActual, setFechaActual] = useState("");
   const [codigoEmpleado, setCodigoEmpleado] = useState("");
-  const [showFacialModal, setShowFacialModal] = useState(false);
+  const [mostrarCamara, setMostrarCamara] = useState(true);
   const { enqueueSnackbar } = useSnackbar();
   const [popupInfo, setPopupInfo] = useState(null);
   const [registrando, setRegistrando] = useState(false);
@@ -85,9 +68,6 @@ export default function RelojChecador({ idEmpresa }) {
     return () => clearInterval(intervalo);
   }, []);
 
-  const manejarCambioCodigo = (e) =>
-    setCodigoEmpleado(e.target.value.toUpperCase());
-
   const registrarMovimiento = async () => {
     if (registrando) return;
     setRegistrando(true);
@@ -105,7 +85,6 @@ export default function RelojChecador({ idEmpresa }) {
       let latitud_actual = null;
       let longitud_actual = null;
 
-      // Revisar permiso antes de pedir ubicación
       const estadoPermiso = await navigator.permissions.query({
         name: "geolocation",
       });
@@ -114,7 +93,6 @@ export default function RelojChecador({ idEmpresa }) {
         estadoPermiso.state === "granted" ||
         estadoPermiso.state === "prompt"
       ) {
-        // Solo pedimos ubicación si es necesario
         try {
           const position = await new Promise((resolve, reject) =>
             navigator.geolocation.getCurrentPosition(resolve, reject, {
@@ -137,7 +115,6 @@ export default function RelojChecador({ idEmpresa }) {
         return;
       }
 
-      // Enviar datos al backend
       const { data } = await axiosInstance.post(`/checador/reloj/registrar`, {
         codigo,
         id_empresa: idEmpresa,
@@ -185,235 +162,73 @@ export default function RelojChecador({ idEmpresa }) {
     mutate();
   };
 
+  const abrirCamara = () => setMostrarCamara(true);
+  const cerrarCamara = () => setMostrarCamara(false);
+
   if (error)
     return <ErrorPage message="No se pudieron cargar los registros." />;
 
   return (
     <>
       <main className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 p-4">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-5 gap-6">
-          <div className="lg:col-span-2 space-y-6">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-6">
+          <div className="hidden md:block lg:col-span-4 md:col-span-5 space-y-6">
             <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-slate-200/50 p-6 text-center">
-              <div className="relative mb-6">
-                <div className="w-28 h-28 mx-auto bg-gradient-to-br from-slate-600 to-slate-800 rounded-full flex items-center justify-center shadow-xl transform hover:scale-105 transition-transform duration-300">
-                  <Clock className="w-16 h-16 text-white animate-pulse" />
-                </div>
-                <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full animate-ping"></div>
-              </div>
-
-              <h2 className="text-5xl font-bold text-slate-800 mb-2 tracking-tight font-mono">
-                {horaActual}
-              </h2>
-              <p className="text-lg text-slate-500 mb-8">{fechaActual}</p>
-
-              <div className="space-y-4">
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
-                  <Input
-                    type="text"
-                    placeholder="Ingresa tu código"
-                    value={codigoEmpleado}
-                    onChange={manejarCambioCodigo}
-                    onKeyDown={(e) => {
-                      if (
-                        e.key === "Enter" &&
-                        !registrando &&
-                        codigoEmpleado.trim() !== ""
-                      ) {
-                        registrarMovimiento();
-                      } else if (
-                        e.key === "Enter" &&
-                        codigoEmpleado.trim() === ""
-                      ) {
-                        // opcional: mostrar un snackbar o borde rojo
-                        enqueueSnackbar(
-                          "Ingresa un código antes de registrar",
-                          { variant: "warning" }
-                        );
-                      }
-                    }}
-                    className="w-full pl-12 pr-4 py-4 text-center text-lg font-semibold border-2 border-slate-200 rounded-2xl focus:border-slate-600 focus:ring-4 focus:ring-slate-200 transition-all duration-300 bg-slate-50/50"
-                  />
-                </div>
-
-                <Button
-                  onClick={registrarMovimiento}
-                  disabled={registrando || !codigoEmpleado.trim()}
-                  className="w-full py-4 bg-gradient-to-r from-slate-700 to-slate-800 text-white font-bold text-lg rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:transform-none"
-                >
-                  {registrando ? (
-                    <div className="flex items-center justify-center space-x-2">
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      <span>Registrando...</span>
-                    </div>
-                  ) : (
-                    "Registrar Entrada/Salida"
-                  )}
-                </Button>
-
-                <Button
-                  onClick={() => setShowFacialModal(true)}
-                  className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold text-lg rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-2"
-                >
-                  <Camera className="w-5 h-5" />
-                  <span>Reconocimiento Facial</span>
-                </Button>
-              </div>
+              <ClockDisplay horaActual={horaActual} fechaActual={fechaActual} />
+              <EmployeeInput
+                codigo={codigoEmpleado}
+                setCodigo={setCodigoEmpleado}
+                handleRegistrar={registrarMovimiento}
+                handleOpenFacialModal={() => setMostrarCamara((prev) => !prev)}
+                registrando={registrando}
+                enqueueSnackbar={enqueueSnackbar}
+              />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200/50 p-6 text-center">
-                <div className="w-12 h-12 mx-auto bg-green-100 rounded-xl flex items-center justify-center mb-3">
-                  <CheckCircle className="w-6 h-6 text-green-600" />
-                </div>
-                <div className="text-2xl font-bold text-slate-800">
-                  {empleadosActivos}
-                </div>
-                <div className="text-sm text-slate-600">Empleados Activos</div>
-              </div>
-
-              <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200/50 p-6 text-center">
-                <div className="w-12 h-12 mx-auto bg-slate-100 rounded-xl flex items-center justify-center mb-3">
-                  <Calendar className="w-6 h-6 text-slate-600" />
-                </div>
-                <div className="text-2xl font-bold text-slate-800">
-                  {totalRegistros}
-                </div>
-                <div className="text-sm text-slate-600">Registros Hoy</div>
-              </div>
-            </div>
+            <StatsCards
+              empleadosActivos={empleadosActivos}
+              totalRegistros={totalRegistros}
+            />
           </div>
 
-          <div className="lg:col-span-3">
-            <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-slate-200/50 overflow-hidden">
-              <div className="px-6 py-5 border-b border-slate-200">
-                <h3 className="text-2xl font-bold text-slate-800 flex items-center space-x-3">
-                  <Users className="w-6 h-6" />
-                  <span>Últimos registros</span>
-                </h3>
-              </div>
+          <div className="lg:col-span-8 md:col-span-7 md:space-y-6">
+            <div className="block md:hidden mb-2 text-center">
+              <h1 className="text-md font-bold text-slate-800">
+                HR360 - Control de Asistencia
+              </h1>
+              <p className="text-lg text-slate-600 font-bold">{horaActual}</p>
+              <p className="text-xs text-slate-500">{fechaActual}</p>
+            </div>
 
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader className="bg-slate-50">
-                    <TableRow>
-                      <TableCell className="px-6 py-2 text-center text-sm font-semibold text-slate-700">
-                        Código
-                      </TableCell>
-                      <TableCell className="px-6 py-2 text-left text-sm font-semibold text-slate-700">
-                        Empleado
-                      </TableCell>
-                      <TableCell className="px-6 py-2 text-center text-sm font-semibold text-slate-700">
-                        Entrada
-                      </TableCell>
-                      <TableCell className="px-6 py-2 text-center text-sm font-semibold text-slate-700">
-                        Salida
-                      </TableCell>
-                      <TableCell className="px-6 py-2 text-center text-sm font-semibold text-slate-700">
-                        Estado
-                      </TableCell>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody className="divide-y divide-slate-100">
-                    {isLoading ? (
-                      [...Array(5)].map((_, i) => (
-                        <TableRow key={i}>
-                          <TableCell>
-                            <div className="h-4 bg-gray-200 rounded animate-pulse w-20" />
-                          </TableCell>
-                          <TableCell>
-                            <div className="h-4 bg-gray-200 rounded animate-pulse w-40" />
-                          </TableCell>
-                          <TableCell>
-                            <div className="h-4 bg-gray-200 rounded animate-pulse w-16" />
-                          </TableCell>
-                          <TableCell>
-                            <div className="h-4 bg-gray-200 rounded animate-pulse w-16" />
-                          </TableCell>
-                          <TableCell>
-                            <div className="h-4 bg-gray-200 rounded animate-pulse w-20" />
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : movimientosParaTabla?.length > 0 ? (
-                      movimientosParaTabla.map((mov, i) => (
-                        <TableRow
-                          key={i}
-                          className="hover:bg-slate-50/50 transition-colors duration-200"
-                        >
-                          <TableCell className="px-6">
-                            <div className="flex items-center space-x-3">
-                              <span className="text-sm font-bold text-slate-700">
-                                {mov.nip}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-6">
-                            <div className="font-medium text-slate-800">
-                              {mov.nombre}
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-6 text-center">
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                              {formatearHora(
-                                mov.entrada_corregida || mov.entrada
-                              )}
-                            </span>
-                          </TableCell>
-                          <TableCell className="px-6 text-center">
-                            {mov.salida_corregida || mov.salida ? (
-                              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
-                                {formatearHora(
-                                  mov.salida_corregida || mov.salida
-                                )}
-                              </span>
-                            ) : (
-                              <span className="text-slate-400">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell className="px-6 text-center">
-                            <span
-                              className={twMerge(
-                                "inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold",
-                                mov.estado === "Abierto"
-                                  ? "bg-green-100 text-green-800 border border-green-200"
-                                  : "bg-slate-100 text-slate-700 border border-slate-200"
-                              )}
-                            >
-                              {mov.estado === "Abierto" ? (
-                                <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-                              ) : (
-                                <div className="w-2 h-2 bg-slate-400 rounded-full mr-2"></div>
-                              )}
-                              {mov.estado}
-                            </span>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell
-                          colSpan={5}
-                          className="text-center text-gray-500 py-4"
-                        >
-                          No hay registros para el día de hoy aún
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+            <FacialRecognitionPanel
+              isOpen={mostrarCamara}
+              onOpen={abrirCamara}
+              onClose={cerrarCamara}
+              onSuccess={handleFacialRecognitionSuccess}
+              idEmpresa={idEmpresa}
+              handleOpenFacialModal={() => setMostrarCamara((prev) => !prev)}
+            />
+            <div className="block md:hidden bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200/50 p-4">
+              <EmployeeInput
+                codigo={codigoEmpleado}
+                setCodigo={setCodigoEmpleado}
+                handleRegistrar={registrarMovimiento}
+                handleOpenFacialModal={() => setMostrarCamara((prev) => !prev)}
+                registrando={registrando}
+                enqueueSnackbar={enqueueSnackbar}
+              />
+            </div>
+
+            <div className="hidden md:block">
+              <RecordsTable
+                movimientos={movimientos}
+                isLoading={isLoading}
+                formatearHora={formatearHora}
+              />
             </div>
           </div>
         </div>
       </main>
-
-      <FacialRecognitionModal
-        isOpen={showFacialModal}
-        onClose={() => setShowFacialModal(false)}
-        onSuccess={handleFacialRecognitionSuccess}
-        idEmpresa={idEmpresa}
-      />
 
       {popupInfo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
