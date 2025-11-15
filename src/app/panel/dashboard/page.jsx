@@ -158,7 +158,11 @@ export default async function PanelDashboardPage() {
     data.totalEmpleados > 0
       ? Math.round((data.presentesHoy / data.totalEmpleados) * 100)
       : 0;
-  const distribTotal = (data.distribucionAsistencia || []).reduce(
+  // Preferir distribución detallada si viene del backend; fallback a la clásica
+  const distribData = (data.distribucionAsistenciaDetallada && Array.isArray(data.distribucionAsistenciaDetallada))
+    ? data.distribucionAsistenciaDetallada
+    : (data.distribucionAsistencia || []);
+  const distribTotal = distribData.reduce(
     (acc, it) => acc + (it.count || 0),
     0
   );
@@ -166,18 +170,18 @@ export default async function PanelDashboardPage() {
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-6">
       {/* Resumen superior */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-white">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-xs font-semibold uppercase tracking-wide text-zinc-600">
               TOTAL EMPLEADOS
             </CardTitle>
-            <div className="grid size-8 place-content-center rounded-md border border-violet-200 bg-violet-50">
-              <UsersRound className="size-4 text-violet-600" />
+            <div className="grid size-7 sm:size-8 place-content-center rounded-md border border-violet-200 bg-violet-50">
+              <UsersRound className="size-4 sm:size-4 text-violet-600" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-semibold">{data.totalEmpleados}</div>
+            <div className="text-3xl sm:text-4xl font-semibold">{data.totalEmpleados}</div>
             <div className="text-xs text-zinc-500 mt-1">
               Personal activo en el sistema
             </div>
@@ -188,12 +192,12 @@ export default async function PanelDashboardPage() {
             <CardTitle className="text-xs font-semibold uppercase tracking-wide text-zinc-600">
               PRESENTES HOY
             </CardTitle>
-            <div className="grid size-8 place-content-center rounded-md border border-emerald-200 bg-emerald-50">
-              <CheckCircle2 className="size-4 text-emerald-600" />
+            <div className="grid size-7 sm:size-8 place-content-center rounded-md border border-emerald-200 bg-emerald-50">
+              <CheckCircle2 className="size-4 sm:size-4 text-emerald-600" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-semibold">{data.presentesHoy}</div>
+            <div className="text-3xl sm:text-4xl font-semibold">{data.presentesHoy}</div>
             <div className="text-xs text-zinc-500 mt-1">
               {asistenciaPct}% de asistencia
             </div>
@@ -204,12 +208,12 @@ export default async function PanelDashboardPage() {
             <CardTitle className="text-xs font-semibold uppercase tracking-wide text-zinc-600">
               TARDANZAS HOY
             </CardTitle>
-            <div className="grid size-8 place-content-center rounded-md border border-pink-200 bg-pink-50">
-              <AlarmClock className="size-4 text-pink-600" />
+            <div className="grid size-7 sm:size-8 place-content-center rounded-md border border-pink-200 bg-pink-50">
+              <AlarmClock className="size-4 sm:size-4 text-pink-600" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-semibold">{data.tardanzasHoy}</div>
+            <div className="text-3xl sm:text-4xl font-semibold">{data.tardanzasHoy}</div>
             <div className="text-xs text-zinc-500 mt-1">
               Llegadas después de las 9:00 AM
             </div>
@@ -220,12 +224,12 @@ export default async function PanelDashboardPage() {
             <CardTitle className="text-xs font-semibold uppercase tracking-wide text-zinc-600">
               EVENTOS DEL MES
             </CardTitle>
-            <div className="grid size-8 place-content-center rounded-md border border-violet-200 bg-violet-50">
-              <CalendarDays className="size-4 text-violet-600" />
+            <div className="grid size-7 sm:size-8 place-content-center rounded-md border border-violet-200 bg-violet-50">
+              <CalendarDays className="size-4 sm:size-4 text-violet-600" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-semibold">{data.eventosMes}</div>
+            <div className="text-3xl sm:text-4xl font-semibold">{data.eventosMes}</div>
             <div className="text-xs text-zinc-500 mt-1">
               Cumpleaños y aniversarios
             </div>
@@ -246,28 +250,28 @@ export default async function PanelDashboardPage() {
               <CardTitle className="text-base">Asistencias de Hoy</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-3 gap-3">
-                <div className="rounded-lg border p-3 text-center flex flex-col items-center justify-center gap-1 h-20">
-                  <div className="text-emerald-600 text-xl font-semibold">
+              <div className="grid grid-cols-2 2xl:grid-cols-3 gap-3">
+                <div className="rounded-lg border p-3 text-center flex flex-col items-center justify-center gap-1 h-16 sm:h-20 xl:h-auto">
+                  <div className="text-emerald-600 text-lg sm:text-xl font-semibold">
                     {data.presentesHoy}
                   </div>
-                  <div className="text-[11px] text-zinc-500 mt-1 uppercase tracking-wide leading-none">
+                  <div className="text-[10px] sm:text-[11px] xl:text-[10px] 2xl:text-[11px] text-zinc-500 mt-1 uppercase tracking-normal leading-snug break-words">
                     PRESENTES
                   </div>
                 </div>
-                <div className="rounded-lg border p-3 text-center flex flex-col items-center justify-center gap-1 h-20">
-                  <div className="text-amber-600 text-xl font-semibold">
+                <div className="rounded-lg border p-3 text-center flex flex-col items-center justify-center gap-1 h-16 sm:h-20 xl:h-auto">
+                  <div className="text-amber-600 text-lg sm:text-xl font-semibold">
                     {data.tardanzasHoy}
                   </div>
-                  <div className="text-[11px] text-zinc-500 mt-1 uppercase tracking-wide leading-none">
+                  <div className="text-[10px] sm:text-[11px] xl:text-[10px] 2xl:text-[11px] text-zinc-500 mt-1 uppercase tracking-normal leading-snug break-words">
                     TARDANZAS
                   </div>
                 </div>
-                <div className="rounded-lg border p-3 text-center flex flex-col items-center justify-center gap-1 h-20">
-                  <div className="text-rose-600 text-xl font-semibold">
+                <div className="rounded-lg border p-3 text-center flex flex-col items-center justify-center gap-1 h-16 sm:h-20 xl:h-auto">
+                  <div className="text-rose-600 text-lg sm:text-xl font-semibold">
                     {data.ausentesHoy}
                   </div>
-                  <div className="text-[11px] text-zinc-500 mt-1 uppercase tracking-wide leading-none">
+                  <div className="text-[10px] sm:text-[11px] xl:text-[10px] 2xl:text-[11px] text-zinc-500 mt-1 uppercase tracking-normal leading-snug break-words">
                     AUSENTES
                   </div>
                 </div>
@@ -433,7 +437,7 @@ export default async function PanelDashboardPage() {
               <div className="space-y-5">
                 <div className="h-6 w-full overflow-hidden rounded-md border bg-white">
                   <div className="flex h-full w-full">
-                    {data.distribucionAsistencia
+                    {distribData
                       .filter((d) => d.count > 0)
                       .map((d) => {
                         const pct = Math.round((d.count / distribTotal) * 100);
@@ -443,6 +447,12 @@ export default async function PanelDashboardPage() {
                           rose: "bg-rose-500",
                           violet: "bg-violet-500",
                           indigo: "bg-indigo-500",
+                          sky: "bg-sky-500",
+                          fuchsia: "bg-fuchsia-500",
+                          cyan: "bg-cyan-500",
+                          teal: "bg-teal-500",
+                          lime: "bg-lime-500",
+                          orange: "bg-orange-500",
                         }[d.color];
                         return (
                           <div
@@ -456,7 +466,7 @@ export default async function PanelDashboardPage() {
                   </div>
                 </div>
                 <ul className="flex flex-wrap gap-x-6 gap-y-2">
-                  {data.distribucionAsistencia
+                  {distribData
                     .filter((d) => d.count > 0)
                     .map((d) => {
                       const pct = Math.round((d.count / distribTotal) * 100);
@@ -466,6 +476,12 @@ export default async function PanelDashboardPage() {
                         rose: "bg-rose-500",
                         violet: "bg-violet-500",
                         indigo: "bg-indigo-500",
+                        sky: "bg-sky-500",
+                        fuchsia: "bg-fuchsia-500",
+                        cyan: "bg-cyan-500",
+                        teal: "bg-teal-500",
+                        lime: "bg-lime-500",
+                        orange: "bg-orange-500",
                       }[d.color];
                       return (
                         <li
@@ -660,65 +676,65 @@ export default async function PanelDashboardPage() {
         <div className="mb-3 flex items-center gap-2">
           <span className="text-lg font-semibold">Accesos Rápidos</span>
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
           <Link
             href="/"
-            className="group rounded-xl border bg-white p-6 text-center hover:shadow-sm transition"
+            className="group rounded-xl border bg-white p-4 sm:p-6 text-center hover:shadow-sm transition"
           >
-            <div className="mx-auto mb-3 grid size-12 place-content-center rounded-full border border-sky-200 bg-sky-50">
-              <Clock className="size-6 text-sky-600" />
+            <div className="mx-auto mb-2 sm:mb-3 grid size-10 sm:size-12 place-content-center rounded-full border border-sky-200 bg-sky-50">
+              <Clock className="size-5 sm:size-6 text-sky-600" />
             </div>
-            <div className="font-medium">Reloj Checador</div>
-            <div className="text-xs text-zinc-500 mt-1">
+            <div className="font-medium text-sm sm:text-base">Reloj Checador</div>
+            <div className="text-[11px] sm:text-xs text-zinc-500 mt-1">
               Registros de entrada y salida
             </div>
           </Link>
           <Link
             href="/panel/empleados"
-            className="group rounded-xl border bg-white p-6 text-center hover:shadow-sm transition"
+            className="group rounded-xl border bg-white p-4 sm:p-6 text-center hover:shadow-sm transition"
           >
-            <div className="mx-auto mb-3 grid size-12 place-content-center rounded-full border border-violet-200 bg-violet-50">
-              <Users className="size-6 text-violet-600" />
+            <div className="mx-auto mb-2 sm:mb-3 grid size-10 sm:size-12 place-content-center rounded-full border border-violet-200 bg-violet-50">
+              <Users className="size-5 sm:size-6 text-violet-600" />
             </div>
-            <div className="font-medium">Empleados</div>
-            <div className="text-xs text-zinc-500 mt-1">
+            <div className="font-medium text-sm sm:text-base">Empleados</div>
+            <div className="text-[11px] sm:text-xs text-zinc-500 mt-1">
               Gestión de personal
             </div>
           </Link>
           <Link
             href="/panel/reporte-horas"
-            className="group rounded-xl border bg-white p-6 text-center hover:shadow-sm transition"
+            className="group rounded-xl border bg-white p-4 sm:p-6 text-center hover:shadow-sm transition"
           >
-            <div className="mx-auto mb-3 grid size-12 place-content-center rounded-full border border-indigo-200 bg-indigo-50">
-              <BarChart3 className="size-6 text-indigo-600" />
+            <div className="mx-auto mb-2 sm:mb-3 grid size-10 sm:size-12 place-content-center rounded-full border border-indigo-200 bg-indigo-50">
+              <BarChart3 className="size-5 sm:size-6 text-indigo-600" />
             </div>
-            <div className="font-medium">Reportes</div>
-            <div className="text-xs text-zinc-500 mt-1">
+            <div className="font-medium text-sm sm:text-base">Reportes</div>
+            <div className="text-[11px] sm:text-xs text-zinc-500 mt-1">
               Análisis y estadísticas
             </div>
           </Link>
           <Link
             href="/panel/permisos"
-            className="group rounded-xl border bg-white p-6 text-center hover:shadow-sm transition"
+            className="group rounded-xl border bg-white p-4 sm:p-6 text-center hover:shadow-sm transition"
             title="Ir a Permisos"
           >
-            <div className="mx-auto mb-3 grid size-12 place-content-center rounded-full border border-rose-200 bg-rose-50">
-              <FileCheck className="size-6 text-rose-600" />
+            <div className="mx-auto mb-2 sm:mb-3 grid size-10 sm:size-12 place-content-center rounded-full border border-rose-200 bg-rose-50">
+              <FileCheck className="size-5 sm:size-6 text-rose-600" />
             </div>
-            <div className="font-medium">Permisos</div>
-            <div className="text-xs text-zinc-500 mt-1">
+            <div className="font-medium text-sm sm:text-base">Permisos</div>
+            <div className="text-[11px] sm:text-xs text-zinc-500 mt-1">
               Solicitudes y ausencias
             </div>
           </Link>
           <Link
             href="/panel/cuenta"
-            className="group rounded-xl border bg-white p-6 text-center hover:shadow-sm transition"
+            className="group rounded-xl border bg-white p-4 sm:p-6 text-center hover:shadow-sm transition"
           >
-            <div className="mx-auto mb-3 grid size-12 place-content-center rounded-full border border-zinc-200 bg-zinc-50">
-              <Settings className="size-6 text-zinc-700" />
+            <div className="mx-auto mb-2 sm:mb-3 grid size-10 sm:size-12 place-content-center rounded-full border border-zinc-200 bg-zinc-50">
+              <Settings className="size-5 sm:size-6 text-zinc-700" />
             </div>
-            <div className="font-medium">Configuración</div>
-            <div className="text-xs text-zinc-500 mt-1">
+            <div className="font-medium text-sm sm:text-base">Configuración</div>
+            <div className="text-[11px] sm:text-xs text-zinc-500 mt-1">
               Ajustes del sistema
             </div>
           </Link>
