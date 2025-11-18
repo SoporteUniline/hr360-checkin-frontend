@@ -2,11 +2,19 @@
 
 import React from "react";
 import dayjs from "dayjs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import LoadingTable from "@/components/LoadingTable";
 import { Eye, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatDateDMY } from "@/lib/formatDate";
 
 /**
  * Tabla de solicitudes de permiso.
@@ -14,14 +22,22 @@ import { cn } from "@/lib/utils";
  *  - Usada por `page.jsx` (misma carpeta)
  *  - Acciones de eliminar se delegan al diálogo de confirmación del padre
  */
-export default function PermisosTable({ items, loading, onEdit, onChanged, onView }) {
+export default function PermisosTable({
+  items,
+  loading,
+  onEdit,
+  onChanged,
+  onView,
+}) {
   if (loading) return <LoadingTable />;
   if (!Array.isArray(items) || items.length === 0) {
     return (
       <div className="text-center py-16">
         <div className="text-6xl mb-3 opacity-50">📭</div>
         <div className="font-semibold">Sin permisos para mostrar</div>
-        <div className="text-sm text-muted-foreground">Ajusta los filtros o crea un nuevo permiso.</div>
+        <div className="text-sm text-muted-foreground">
+          Ajusta los filtros o crea un nuevo permiso.
+        </div>
       </div>
     );
   }
@@ -39,7 +55,9 @@ export default function PermisosTable({ items, loading, onEdit, onChanged, onVie
             <TableHead className="whitespace-nowrap">Días</TableHead>
             <TableHead className="whitespace-nowrap">Estado</TableHead>
             <TableHead className="whitespace-nowrap">Solicitado</TableHead>
-            <TableHead className="whitespace-nowrap text-right">Acciones</TableHead>
+            <TableHead className="whitespace-nowrap text-right">
+              Acciones
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -49,7 +67,9 @@ export default function PermisosTable({ items, loading, onEdit, onChanged, onVie
             const dias = Math.max(1, df.diff(di, "day") + 1);
             return (
               <TableRow key={row.id} className="hover:bg-accent/40">
-                <TableCell className="text-muted-foreground font-semibold">{String(row.id).padStart(3, "0")}</TableCell>
+                <TableCell className="text-muted-foreground font-semibold">
+                  {String(row.id).padStart(3, "0")}
+                </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-md bg-primary text-primary-foreground grid place-items-center font-bold">
@@ -62,8 +82,12 @@ export default function PermisosTable({ items, loading, onEdit, onChanged, onVie
                         .toUpperCase()}
                     </div>
                     <div>
-                      <div className="font-semibold leading-tight">{row.empleado_nombre}</div>
-                      <div className="text-xs text-muted-foreground">ID empleado: {row.id_empleado}</div>
+                      <div className="font-semibold leading-tight">
+                        {row.empleado_nombre}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        ID empleado: {row.id_empleado}
+                      </div>
                     </div>
                   </div>
                 </TableCell>
@@ -77,20 +101,33 @@ export default function PermisosTable({ items, loading, onEdit, onChanged, onVie
                     {row.tipo_permiso_nombre}
                   </span>
                 </TableCell>
-                <TableCell className="font-mono text-sm">{di.format("YYYY-MM-DD")}</TableCell>
-                <TableCell className="font-mono text-sm">{row.fecha_fin ? df.format("YYYY-MM-DD") : "-"}</TableCell>
+                <TableCell className="font-mono text-sm">
+                  {formatDateDMY(di)}
+                </TableCell>
+                <TableCell className="font-mono text-sm">
+                  {row.fecha_fin ? formatDateDMY(df) : "-"}
+                </TableCell>
                 <TableCell>
-                  <span className="inline-block px-2 py-1 rounded-md bg-muted font-bold text-sm">{dias}</span>
+                  <span className="inline-block px-2 py-1 rounded-md bg-muted font-bold text-sm">
+                    {dias}
+                  </span>
                 </TableCell>
                 <TableCell>
                   <EstadoBadge estado={row.estado} />
                 </TableCell>
                 <TableCell className="font-mono text-sm">
-                  {row.marca_tiempo ? dayjs(row.marca_tiempo).format("YYYY-MM-DD") : "-"}
+                  {row.marca_tiempo
+                    ? formatDateDMY(dayjs(row.marca_tiempo))
+                    : "-"}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
-                    <Button size="icon" variant="secondary" onClick={() => onEdit(row)} title="Editar">
+                    <Button
+                      size="icon"
+                      variant="secondary"
+                      onClick={() => onEdit(row)}
+                      title="Editar"
+                    >
                       <Pencil className="h-4 w-4" />
                     </Button>
                     <Button
@@ -114,12 +151,33 @@ export default function PermisosTable({ items, loading, onEdit, onChanged, onVie
 }
 
 function EstadoBadge({ estado }) {
-  const base = "inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold";
-  if (estado === "Pendiente") return <span className={cn(base, "bg-yellow-100 text-yellow-900")}>⏳ Pendiente</span>;
-  if (estado === "Aprobado") return <span className={cn(base, "bg-green-100 text-green-900")}>✅ Aprobado</span>;
-  if (estado === "Rechazado") return <span className={cn(base, "bg-red-100 text-red-900")}>❌ Rechazado</span>;
-  if (estado === "Cancelado") return <span className={cn(base, "bg-slate-200 text-slate-700")}>⚪ Cancelado</span>;
-  return <span className={cn(base, "bg-slate-200 text-slate-700")}>{estado || "—"}</span>;
+  const base =
+    "inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold";
+  if (estado === "Pendiente")
+    return (
+      <span className={cn(base, "bg-yellow-100 text-yellow-900")}>
+        ⏳ Pendiente
+      </span>
+    );
+  if (estado === "Aprobado")
+    return (
+      <span className={cn(base, "bg-green-100 text-green-900")}>
+        ✅ Aprobado
+      </span>
+    );
+  if (estado === "Rechazado")
+    return (
+      <span className={cn(base, "bg-red-100 text-red-900")}>❌ Rechazado</span>
+    );
+  if (estado === "Cancelado")
+    return (
+      <span className={cn(base, "bg-slate-200 text-slate-700")}>
+        ⚪ Cancelado
+      </span>
+    );
+  return (
+    <span className={cn(base, "bg-slate-200 text-slate-700")}>
+      {estado || "—"}
+    </span>
+  );
 }
-
-

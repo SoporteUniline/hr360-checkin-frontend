@@ -7,6 +7,7 @@
 
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { formatDateDMY } from "@/lib/formatDate";
 
 function Pill({ color = "zinc", children }) {
   const map = {
@@ -18,7 +19,11 @@ function Pill({ color = "zinc", children }) {
   };
   const cls = map[color] || map.zinc;
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium ${cls}`}>{children}</span>
+    <span
+      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium ${cls}`}
+    >
+      {children}
+    </span>
   );
 }
 
@@ -68,12 +73,15 @@ export default function PermisosTable({ rows = [] }) {
           </Button>
         </div>
         <Pill color="amber">
-          {filter === "activos" ? activosCount : filtered.length} {filter === "terminados" ? "terminados" : "registros"}
+          {filter === "activos" ? activosCount : filtered.length}{" "}
+          {filter === "terminados" ? "terminados" : "registros"}
         </Pill>
       </div>
 
       {filtered.length === 0 ? (
-        <div className="text-sm text-zinc-500">No hay permisos para el filtro seleccionado.</div>
+        <div className="text-sm text-zinc-500">
+          No hay permisos para el filtro seleccionado.
+        </div>
       ) : (
         <div className="overflow-auto rounded-lg border">
           <table className="w-full text-sm">
@@ -91,12 +99,22 @@ export default function PermisosTable({ rows = [] }) {
             <tbody className="divide-y">
               {filtered.map((p, idx) => (
                 <tr key={`perm-${idx}`} className="bg-white">
-                  <td className="p-3 whitespace-pre-line font-medium text-zinc-800">{p.nombre_empleado}</td>
+                  <td className="p-3 whitespace-pre-line font-medium text-zinc-800">
+                    {p.nombre_empleado}
+                  </td>
                   <td className="p-3 text-zinc-600">{p.nombre_empresa}</td>
-                  <td className="p-3"><Pill color="amber">{p.tipo}</Pill></td>
-                  <td className="p-3"><Pill color="sky">{p.status?.label || ""}</Pill></td>
-                  <td className="p-3 text-zinc-700">{new Date(p.inicio + "T00:00:00Z").toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" })}</td>
-                  <td className="p-3 text-emerald-700 font-medium">{new Date(p.regresa + "T00:00:00Z").toLocaleDateString("es-MX", { day: "numeric", month: "short", year: "numeric" })}</td>
+                  <td className="p-3">
+                    <Pill color="amber">{p.tipo}</Pill>
+                  </td>
+                  <td className="p-3">
+                    <Pill color="sky">{p.status?.label || ""}</Pill>
+                  </td>
+                  <td className="p-3 text-zinc-700">
+                    {formatDateDMY(p.inicio)}
+                  </td>
+                  <td className="p-3 text-emerald-700 font-medium">
+                    {formatDateDMY(p.regresa)}
+                  </td>
                   <td className="p-3 text-center font-semibold">{p.dias}</td>
                 </tr>
               ))}
@@ -107,5 +125,3 @@ export default function PermisosTable({ rows = [] }) {
     </div>
   );
 }
-
-

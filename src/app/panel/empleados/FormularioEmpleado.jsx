@@ -391,7 +391,7 @@ export default function FormularioEmpleado({
         );
         enqueueSnackbar("Empleado actualizado", { variant: "success" });
         setTab("personales");
-        onClose?.();
+        // onClose?.();
       } else {
         await axios.post(
           `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados`,
@@ -405,13 +405,12 @@ export default function FormularioEmpleado({
         enqueueSnackbar("Empleado registrado", { variant: "success" });
         setTab("personales");
         onClose?.();
+        setModoFormulario(false);
       }
 
       mutate(
         `/checador/empleados?empresa=${data.id_empresa}&page=${page}&limit=${limit}`
       );
-
-      setModoFormulario(false); // 👈 regresar a la lista
     } catch (error) {
       console.error(error);
       enqueueSnackbar("Error al guardar empleado", { variant: "error" });
