@@ -409,7 +409,7 @@ const FacialRecognitionPanel = ({
                     autoPlay
                     muted
                     playsInline
-                    className="w-full object-cover border-0 md:border-4 rounded-none md:rounded-lg aspect-video"
+                    className="w-full object-cover border-0 md:border-4 rounded-none md:rounded-lg"
                   />
                   <div className="md:hidden absolute top-4 right-3 flex gap-3">
                     <Button

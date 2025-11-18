@@ -14,6 +14,7 @@ import { Pencil } from "lucide-react";
 import EstadoEmpleadoDialog from "./EstadoEmpleadoDialog";
 import dayjs from "dayjs";
 import "dayjs/locale/es";
+import { formatDateDMY } from "@/lib/formatDate";
 
 dayjs.locale("es");
 
@@ -120,7 +121,9 @@ export default function EmpleadosTable({
                   </div>
                 </TableCell>
                 <TableCell>
-                  {dayjs(emp.fecha_ingreso).format("D MMM YYYY")}
+                  {emp.fecha_ingreso
+                    ? formatDateDMY(dayjs(emp.fecha_ingreso))
+                    : "-"}
                 </TableCell>
                 <TableCell>
                   <span
