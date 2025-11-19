@@ -1,8 +1,5 @@
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
-import { Capacitor } from "@capacitor/core";
-import { FileSystem, Directory, Encoding } from "@capacitor/filesystem";
-import { useSnackbar } from "notistack";
 
 export const exportToExcel = async (
   data = [],
@@ -10,8 +7,6 @@ export const exportToExcel = async (
   baseFilename = "Reporte",
   options = {}
 ) => {
-  const { enqueueSnackbar } = useSnackbar();
-
   if (!data.length) {
     console.warn("No hay datos para exportar");
     return;
@@ -51,42 +46,7 @@ export const exportToExcel = async (
     .replace(" ", "_")
     .replace(/:/g, "-");
 
-  const filename = `${baseFilename}_${formattedDate}.xlsx`;
-
   const buffer = await workbook.xlsx.writeBuffer();
-  const isNative = Capacitor.isNativePlatform();
-
-  if (!isNative) {
-    const blob = new Blob([buffer], { type: "application/octet-stream" });
-    saveAs(blob, filename);
-    return;
-  }
-
-  try {
-    const base64Data = bufferToBase64(buffer);
-
-    await FileSystem.writeFile({
-      path: filename,
-      data: base64Data,
-      directory: Directory.Documents,
-    });
-    enqueueSnackbar(`Archivo guardado en Documentos: ${filename}`, {
-      variant: "success",
-    });
-  } catch (error) {
-    console.error("Error guardando archivo en dispositivo:", err);
-    enqueueSnackbar(`No se pudo guardar el archivo`, {
-      variant: "error",
-    });
-  }
-
-  const bufferToBase64 = (buffer) => {
-    let binary = "";
-    const bytes = new Uint8Array(buffer);
-    const length = bytes.byteLength;
-    for (let i = 0; i < length; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    return btoa(binary);
-  };
+  const blob = new Blob([buffer], { type: "application/octet-stream" });
+  saveAs(blob, `${baseFilename}_${formattedDate}.xlsx`);
 };
