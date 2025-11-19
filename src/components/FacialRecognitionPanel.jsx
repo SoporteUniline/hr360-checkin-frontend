@@ -5,6 +5,7 @@ import axiosInstance from "@/lib/axios";
 import { Button } from "./ui/button";
 import { Camera as CapacitorCamera } from "@capacitor/camera";
 import { Geolocation } from "@capacitor/geolocation";
+import { App } from "@capacitor/app";
 
 const FacialRecognitionPanel = ({
   isOpen,
@@ -31,6 +32,14 @@ const FacialRecognitionPanel = ({
   const isProcessingRef = useRef(false);
   const lastCheckTimeRef = useRef(0);
   const MIN_INTERVAL = 3000;
+
+  const abrirAjustesGPS = () => {
+    try {
+      App.openSystemSettings();
+    } catch (e) {
+      window.location.href = "app-settings:";
+    }
+  };
 
   const shutdownCamera = () => {
     try {
@@ -129,10 +138,19 @@ const FacialRecognitionPanel = ({
           await CapacitorCamera.requestPermissions();
         }
 
-        const gpsStatus = await Geolocation.checkPermissions();
-        if (gpsStatus.location !== "granted") {
-          await Geolocation.requestPermissions();
-        }
+        await Geolocation.requestPermissions();
+
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            console.log("GPS OK", pos.coords);
+          },
+          (err) => {
+            if (err.code === 1 || err.code === 2) {
+              abrirAjustesGPS();
+            }
+          },
+          { enableHighAccuracy: true, timeout: 5000 }
+        );
 
         const mediaStream = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -141,16 +159,6 @@ const FacialRecognitionPanel = ({
             facingMode: cameraFacing,
           },
         });
-
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            // console.log("Permiso de GPS concedido", pos.coords);
-          },
-          (err) => {
-            console.warn("No se pudo obtener ubicación al inicio:", err);
-          },
-          { enableHighAccuracy: true, timeout: 5000 }
-        );
 
         if (videoRef.current && isOpen) {
           videoRef.current.srcObject = mediaStream;
@@ -247,13 +255,12 @@ const FacialRecognitionPanel = ({
       let longitud_actual = null;
 
       try {
-        const position = await new Promise((resolve, reject) =>
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0,
-          })
-        );
+        await Geolocation.requestPermissions();
+
+        const position = await Geolocation.getCurrentPosition({
+          enableHighAccuracy: true,
+        });
+
         latitud_actual = position.coords.latitude;
         longitud_actual = position.coords.longitude;
       } catch (geoError) {
