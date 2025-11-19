@@ -3,6 +3,8 @@ import { Camera, Loader, CheckCircle, Power, RotateCcw } from "lucide-react";
 import { enqueueSnackbar } from "notistack";
 import axiosInstance from "@/lib/axios";
 import { Button } from "./ui/button";
+import { Camera as CapacitorCamera } from "@capacitor/camera";
+import { Geolocation } from "@capacitor/geolocation";
 
 const FacialRecognitionPanel = ({
   isOpen,
@@ -119,6 +121,17 @@ const FacialRecognitionPanel = ({
         if (streamRef.current) {
           shutdownCamera();
           await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+
+        const status = await CapacitorCamera.checkPermissions();
+
+        if (status.camera !== "granted") {
+          await CapacitorCamera.requestPermissions();
+        }
+
+        const gpsStatus = await Geolocation.checkPermissions();
+        if (gpsStatus.location !== "granted") {
+          await Geolocation.requestPermissions();
         }
 
         const mediaStream = await navigator.mediaDevices.getUserMedia({

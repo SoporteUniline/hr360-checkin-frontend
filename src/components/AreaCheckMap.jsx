@@ -7,8 +7,8 @@ import { Label } from "@/components/ui/label";
 import { MapPin, Navigation, Search } from "lucide-react";
 import dynamic from "next/dynamic";
 import { useSnackbar } from "notistack";
+import { useGPS } from "@/hooks/Capacitor/useGPS";
 
-// Carga dinámica de Google Maps
 const MapComponent = dynamic(() => import("./MapaSelectorGoogle"), {
   ssr: false,
 });
@@ -17,26 +17,30 @@ export default function AreaCheckMap({ area, onChange }) {
   const { enqueueSnackbar } = useSnackbar();
   const [cargando, setCargando] = useState(false);
   const searchInputRef = useRef(null);
+  const { getCurrentLocation, loading } = useGPS();
 
-  // Al iniciar, intentar obtener ubicación del usuario si no hay coordenadas
   useEffect(() => {
-    if (!area?.latitud || !area?.longitud) {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const { latitude, longitude } = position.coords;
-            onChange({ ...area, latitud: latitude, longitud: longitude });
-          },
-          () => {
-            // Si falla, usar coordenadas por defecto (CDMX)
-            onChange({ ...area, latitud: 19.4326, longitud: -99.1332 });
-          },
-          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-        );
-      } else {
-        onChange({ ...area, latitud: 19.4326, longitud: -99.1332 });
+    const init = async () => {
+      if (!area?.latitud || !area?.longitud) {
+        const pos = await getCurrentLocation();
+
+        if (pos) {
+          onChange({
+            ...area,
+            latitud: pos.lat,
+            longitud: pos.lng,
+          });
+        } else {
+          onChange({
+            ...area,
+            latitud: 19.4326,
+            longitud: -99.1332,
+          });
+        }
       }
-    }
+    };
+
+    init();
   }, []);
 
   // Cuando se hace clic en el mapa
@@ -44,30 +48,23 @@ export default function AreaCheckMap({ area, onChange }) {
     onChange({ ...area, latitud: coords.lat, longitud: coords.lng });
   };
 
-  // Botón para obtener ubicación actual
-  const obtenerUbicacionActual = () => {
-    if (!navigator.geolocation) {
-      enqueueSnackbar("Tu navegador no soporta geolocalización", {
+  const obtenerUbicacionActual = async () => {
+    setCargando(true);
+    const pos = await getCurrentLocation();
+
+    if (pos) {
+      onChange({
+        ...area,
+        latitud: pos.lat,
+        longitud: pos.lng,
+      });
+    } else {
+      enqueueSnackbar("No se pudo obtener tu ubicación", {
         variant: "error",
       });
-      return;
     }
 
-    setCargando(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        onChange({ ...area, latitud: latitude, longitud: longitude });
-        setCargando(false);
-      },
-      () => {
-        setCargando(false);
-        enqueueSnackbar("No se pudo obtener tu ubicación", {
-          variant: "error",
-        });
-      },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
-    );
+    setCargando(false);
   };
 
   // Buscar una dirección manualmente
