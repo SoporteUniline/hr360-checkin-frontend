@@ -11,6 +11,7 @@ import ClockDisplay from "./Clock/ClockDisplay";
 import EmployeeInput from "./Clock/EmployeeInput";
 import StatsCards from "./Clock/StatsCards";
 import RecordsTable from "./Clock/RecordsTable";
+import { useGPS } from "@/hooks/Capacitor/useGPS";
 
 export default function RelojChecador({ idEmpresa }) {
   const [horaActual, setHoraActual] = useState("");
@@ -20,6 +21,7 @@ export default function RelojChecador({ idEmpresa }) {
   const { enqueueSnackbar } = useSnackbar();
   const [popupInfo, setPopupInfo] = useState(null);
   const [registrando, setRegistrando] = useState(false);
+  const { getCurrentLocation, loading: loadingGPS, error: gpsError } = useGPS();
 
   const formatearHora = (fechaString) => {
     if (!fechaString) return "-";
@@ -69,6 +71,11 @@ export default function RelojChecador({ idEmpresa }) {
   }, []);
 
   const registrarMovimiento = async () => {
+    if (gpsError) {
+      enqueueSnackbar(gpsError, { variant: "error" });
+      return;
+    }
+
     if (registrando) return;
     setRegistrando(true);
     const codigo = codigoEmpleado.trim();
@@ -85,32 +92,14 @@ export default function RelojChecador({ idEmpresa }) {
       let latitud_actual = null;
       let longitud_actual = null;
 
-      const estadoPermiso = await navigator.permissions.query({
-        name: "geolocation",
-      });
-
-      if (
-        estadoPermiso.state === "granted" ||
-        estadoPermiso.state === "prompt"
-      ) {
-        try {
-          const position = await new Promise((resolve, reject) =>
-            navigator.geolocation.getCurrentPosition(resolve, reject, {
-              enableHighAccuracy: true,
-              timeout: 10000,
-            })
-          );
-          latitud_actual = position.coords.latitude;
-          longitud_actual = position.coords.longitude;
-        } catch {
-          enqueueSnackbar("No se pudo obtener la ubicación. Activa el GPS.", {
-            variant: "error",
-          });
-          setRegistrando(false);
-          return;
-        }
+      const pos = await getCurrentLocation();
+      if (pos) {
+        latitud_actual = pos.lat;
+        longitud_actual = pos.lng;
       } else {
-        enqueueSnackbar("Permiso de ubicación denegado.", { variant: "error" });
+        enqueueSnackbar("No se pudo obtener la ubicación. Activa el GPS.", {
+          variant: "error",
+        });
         setRegistrando(false);
         return;
       }
@@ -180,7 +169,7 @@ export default function RelojChecador({ idEmpresa }) {
                 setCodigo={setCodigoEmpleado}
                 handleRegistrar={registrarMovimiento}
                 handleOpenFacialModal={() => setMostrarCamara((prev) => !prev)}
-                registrando={registrando}
+                registrando={registrando || loadingGPS}
                 enqueueSnackbar={enqueueSnackbar}
               />
             </div>

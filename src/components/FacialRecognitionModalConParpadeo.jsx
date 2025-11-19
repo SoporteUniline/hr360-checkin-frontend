@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import { Camera, X, Loader, Eye } from "lucide-react";
 import { enqueueSnackbar } from "notistack";
+import { Camera as CapacitorCamera } from "@capacitor/camera";
 
 const FacialRecognitionModalConParpaedo = ({
   isOpen,
@@ -108,6 +109,12 @@ const FacialRecognitionModalConParpaedo = ({
         if (stream) {
           shutdownCamera();
           await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+
+        const statusCamera = await CapacitorCamera.checkPermissions();
+
+        if (statusCamera.camera !== "granted") {
+          await CapacitorCamera.requestPermissions();
         }
 
         const mediaStream = await navigator.mediaDevices.getUserMedia({

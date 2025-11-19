@@ -13,6 +13,14 @@
     "push-env-production": "npx dotenv-vault@latest push production"
   },
   "dependencies": {
+    "@capacitor-community/camera-preview": "^7.0.2",
+    "@capacitor/android": "^7.4.4",
+    "@capacitor/app": "^7.1.0",
+    "@capacitor/camera": "^7.0.2",
+    "@capacitor/cli": "^7.4.4",
+    "@capacitor/core": "^7.4.4",
+    "@capacitor/filesystem": "^7.1.4",
+    "@capacitor/geolocation": "^7.1.5",
     "@googlemaps/react-wrapper": "^1.2.0",
     "@hookform/resolvers": "^5.0.1",
     "@radix-ui/react-accordion": "^1.2.10",
@@ -72,6 +80,7 @@
     "zod": "^3.24.3"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@eslint/eslintrc": "^3",
     "@iconify/react": "^6.0.0",
     "@netlify/plugin-nextjs": "^5.11.2",

@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { faceapi, loadFaceApiModels, isFaceApiReady } from "@/lib/faceapi";
 import { useSnackbar } from "notistack";
+import { Camera as CapacitorCamera } from "@capacitor/camera";
 
 export default function TabReconocimiento({
   setDescriptor,
@@ -86,6 +87,12 @@ export default function TabReconocimiento({
     stopCamera();
 
     try {
+      const statusCamera = await CapacitorCamera.checkPermissions();
+
+      if (statusCamera.camera !== "granted") {
+        await CapacitorCamera.requestPermissions();
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           width: { ideal: 300 },

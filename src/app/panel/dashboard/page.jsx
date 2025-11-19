@@ -250,26 +250,25 @@ export default async function PanelDashboardPage() {
               <CardTitle className="text-base">Asistencias de Hoy</CardTitle>
             </CardHeader>
             <CardContent>
-              {/* En pantallas angostas, apilar SIEMPRE en una sola columna; solo en >=xl usar 3 columnas */}
-              <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
-                <div className="rounded-lg border p-3 text-center flex flex-col items-center justify-center gap-1 min-h-20 sm:min-h-24 xl:h-auto">
-                  <div className="text-emerald-600 text-lg sm:text-xl font-semibold leading-none">
+              <div className="grid grid-cols-2 2xl:grid-cols-3 gap-3">
+                <div className="rounded-lg border p-3 text-center flex flex-col items-center justify-center gap-1 h-16 sm:h-20 xl:h-auto">
+                  <div className="text-emerald-600 text-lg sm:text-xl font-semibold">
                     {data.presentesHoy}
                   </div>
                   <div className="text-[10px] sm:text-[11px] xl:text-[10px] 2xl:text-[11px] text-zinc-500 mt-1 uppercase tracking-normal leading-snug break-words">
                     PRESENTES
                   </div>
                 </div>
-                <div className="rounded-lg border p-3 text-center flex flex-col items-center justify-center gap-1 min-h-20 sm:min-h-24 xl:h-auto">
-                  <div className="text-amber-600 text-lg sm:text-xl font-semibold leading-none">
+                <div className="rounded-lg border p-3 text-center flex flex-col items-center justify-center gap-1 h-16 sm:h-20 xl:h-auto">
+                  <div className="text-amber-600 text-lg sm:text-xl font-semibold">
                     {data.tardanzasHoy}
                   </div>
                   <div className="text-[10px] sm:text-[11px] xl:text-[10px] 2xl:text-[11px] text-zinc-500 mt-1 uppercase tracking-normal leading-snug break-words">
                     TARDANZAS
                   </div>
                 </div>
-                <div className="rounded-lg border p-3 text-center flex flex-col items-center justify-center gap-1 min-h-20 sm:min-h-24 xl:h-auto">
-                  <div className="text-rose-600 text-lg sm:text-xl font-semibold leading-none">
+                <div className="rounded-lg border p-3 text-center flex flex-col items-center justify-center gap-1 h-16 sm:h-20 xl:h-auto">
+                  <div className="text-rose-600 text-lg sm:text-xl font-semibold">
                     {data.ausentesHoy}
                   </div>
                   <div className="text-[10px] sm:text-[11px] xl:text-[10px] 2xl:text-[11px] text-zinc-500 mt-1 uppercase tracking-normal leading-snug break-words">

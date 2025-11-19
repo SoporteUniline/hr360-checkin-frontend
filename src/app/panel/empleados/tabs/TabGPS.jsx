@@ -1,4 +1,5 @@
 // tabs/TabGPS.jsx
+import { useGPS } from "@/hooks/Capacitor/useGPS";
 import dynamic from "next/dynamic";
 import {
   FormField,
@@ -26,66 +27,27 @@ const MapaSelectorGoogle = dynamic(
 
 export default function TabGPS({ form, soloLectura }) {
   const usarGPS = form.watch("solicitar_gps") === "Sí";
-  const [cargandoGPS, setCargandoGPS] = useState(false);
+  const { getCurrentLocation, loading, error } = useGPS();
+  const cargandoGPS = loading;
   const [errorGPS, setErrorGPS] = useState(null);
+  const [loadingManual, setLoadingManual] = useState(false);
 
   const obtenerUbicacionActual = async (tipo = "checkin") => {
-    if (!navigator.geolocation) {
-      setErrorGPS("Tu navegador no soporta geolocalización");
+    const ubicacion = await getCurrentLocation();
+    if (!ubicacion) {
+      setErrorGPS("No se pudo obtener la ubicación");
       return;
     }
 
-    setCargandoGPS(true);
-    setErrorGPS(null);
-
-    try {
-      const position = await new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true, // ✅ GPS en lugar de WiFi
-          timeout: 15000, // 15 segundos
-          maximumAge: 0, // No usar cache
-        });
-      });
-
-      const { latitude, longitude, accuracy } = position.coords;
-
-      const nuevaUbicacion = {
-        lat: latitude,
-        lng: longitude,
-        accuracy: accuracy,
-        timestamp: new Date().toISOString(),
-        address: `Ubicación ${tipo} - ${new Date().toLocaleString()}`,
-      };
-
-      if (tipo === "checkin") {
-        form.setValue("lugar_checkin", nuevaUbicacion);
-      } else {
-        form.setValue("lugar_checkout", nuevaUbicacion);
-      }
-
-      // 🔍 Geocodificación inversa con Google
-      await obtenerDireccionGoogle(latitude, longitude, tipo);
-    } catch (error) {
-      console.error("Error GPS:", error);
-      let mensaje = "No se pudo obtener la ubicación";
-
-      switch (error.code) {
-        case error.PERMISSION_DENIED:
-          mensaje =
-            "❌ Permiso de ubicación denegado. Por favor habilita la ubicación en tu navegador.";
-          break;
-        case error.POSITION_UNAVAILABLE:
-          mensaje =
-            "📡 No se puede acceder al GPS. Verifica tu conexión o sal a un área abierta.";
-          break;
-        case error.TIMEOUT:
-          mensaje = "⏰ Tiempo de espera agotado. Intenta nuevamente.";
-          break;
-      }
-      setErrorGPS(mensaje);
-    } finally {
-      setCargandoGPS(false);
+    // Guardamos coords en checkin o checkout
+    if (tipo === "checkin") {
+      form.setValue("lugar_checkin", ubicacion);
+    } else {
+      form.setValue("lugar_checkout", ubicacion);
     }
+
+    // Geocodificación inversa con Google (esto lo dejas igual)
+    await obtenerDireccionGoogle(ubicacion.lat, ubicacion.lng, tipo);
   };
 
   // 🔍 Función para obtener dirección con Google Geocoding
@@ -154,7 +116,7 @@ export default function TabGPS({ form, soloLectura }) {
     // Limpieza del texto
     const textoLimpio = query.trim();
     setErrorGPS(null);
-    setCargandoGPS(true);
+    setLoadingManual(true);
 
     try {
       if (!window.google || !window.google.maps) {
@@ -186,7 +148,7 @@ export default function TabGPS({ form, soloLectura }) {
       console.error("Error en búsqueda de dirección:", error);
       setErrorGPS("❌ No se pudo encontrar la dirección. Intenta con otra.");
     } finally {
-      setCargandoGPS(false);
+      setLoadingManual(false);
     }
   };
 
@@ -251,8 +213,9 @@ export default function TabGPS({ form, soloLectura }) {
                 <Input
                   type="text"
                   placeholder="Ej: Av. Reforma 123, CDMX"
-                  onKeyPress={(e) => {
+                  onKeyDown={(e) => {
                     if (e.key === "Enter") {
+                      e.preventDefault();
                       buscarDireccion(e.target.value, "checkin");
                     }
                   }}
@@ -278,8 +241,9 @@ export default function TabGPS({ form, soloLectura }) {
                 <Input
                   type="text"
                   placeholder="Ej: Av. Insurgentes 456, CDMX"
-                  onKeyPress={(e) => {
+                  onKeyDown={(e) => {
                     if (e.key === "Enter") {
+                      e.preventDefault();
                       buscarDireccion(e.target.value, "checkout");
                     }
                   }}
