@@ -27,6 +27,7 @@ import {
   FileSpreadsheet,
   LayoutDashboard,
   FileText,
+  CalendarDays,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -94,6 +95,14 @@ const items = [
     url: "/panel/festivos",
     rol: "Recruiter",
     icon: PartyPopper,
+  },
+  {
+    // Botón de navegación para el nuevo panel de vacaciones
+    // Relacionado con: src/app/panel/vacaciones/page.jsx
+    title: "Panel Vacaciones",
+    url: "/panel/vacaciones",
+    rol: "Recruiter",
+    icon: CalendarDays,
   },
   {
     title: "Empleados",

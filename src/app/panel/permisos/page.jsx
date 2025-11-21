@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import dayjs from "dayjs";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Download, Plus, Search } from "lucide-react";
 import usePermisosData from "@/hooks/usePermisosData";
+import useEmpleadosData from "@/hooks/useEmpleadosData";
 import useTiposPermisoData from "@/hooks/useTiposPermisoData";
 import TablePagination from "@/components/TablePagination";
 import PermisosTable from "./PermisosTable";
@@ -79,6 +80,28 @@ export default function PermisosPage() {
   };
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / limit)), [total, limit]);
+
+  // Buscador con sugerencias (como en Vacaciones)
+  const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
+  const [hoveredSuggestionIndex, setHoveredSuggestionIndex] = useState(-1);
+  const [activeSearchBox, setActiveSearchBox] = useState(null); // 'filters' | 'toolbar' | null
+
+  // Cargar sugerencias de empleados desde catálogo de empleados (limit 8)
+  const empleadosSugResp = useEmpleadosData(idEmpresa, 1, 8, empleado, "", "", "");
+  const sugerencias = useMemo(() => {
+    const list = empleadosSugResp?.data?.data || [];
+    return list.map((e) => ({
+      id_empleado: e.id_empleado,
+      nombre_completo: [e.nombre, e.apellido_paterno, e.apellido_materno].filter(Boolean).join(" "),
+    }));
+  }, [empleadosSugResp?.data]);
+
+  const handleSelectEmpleado = (emp) => {
+    if (!emp) return;
+    setEmpleado(emp.nombre_completo || "");
+    setIsSuggestionsOpen(false);
+    setPage(1);
+  };
 
   const limpiarFiltros = () => {
     setEmpleado("");
@@ -222,11 +245,63 @@ export default function PermisosPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase text-muted-foreground">Empleado</label>
-              <Input
-                placeholder="Nombre del empleado"
-                value={empleado}
-                onChange={(e) => setEmpleado(e.target.value)}
-              />
+              <div className="relative">
+                <Input
+                  placeholder="Nombre del empleado"
+                  value={empleado}
+                  onChange={(e) => {
+                    setEmpleado(e.target.value);
+                    setIsSuggestionsOpen(true);
+                    setHoveredSuggestionIndex(0);
+                    setActiveSearchBox("filters");
+                  }}
+                  onFocus={() => {
+                    setActiveSearchBox("filters");
+                    setIsSuggestionsOpen(!!empleado);
+                  }}
+                  onBlur={() => {
+                    setTimeout(() => {
+                      setIsSuggestionsOpen(false);
+                      setActiveSearchBox(null);
+                    }, 120);
+                  }}
+                  onKeyDown={(e) => {
+                    if (!isSuggestionsOpen || activeSearchBox !== "filters" || sugerencias.length === 0) return;
+                    if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      setHoveredSuggestionIndex((prev) =>
+                        prev + 1 >= sugerencias.length ? 0 : prev + 1
+                      );
+                    } else if (e.key === "ArrowUp") {
+                      e.preventDefault();
+                      setHoveredSuggestionIndex((prev) =>
+                        prev - 1 < 0 ? sugerencias.length - 1 : prev - 1
+                      );
+                    } else if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleSelectEmpleado(sugerencias[hoveredSuggestionIndex] || sugerencias[0]);
+                    } else if (e.key === "Escape") {
+                      setIsSuggestionsOpen(false);
+                    }
+                  }}
+                />
+                {isSuggestionsOpen && activeSearchBox === "filters" && sugerencias.length > 0 ? (
+                  <div className="absolute left-0 right-0 mt-1 z-20 rounded-md border bg-white shadow">
+                    <ul className="max-h-64 overflow-auto">
+                      {sugerencias.map((emp, idx) => (
+                        <li
+                          key={emp.id_empleado}
+                          onMouseDown={() => handleSelectEmpleado(emp)}
+                          onMouseEnter={() => setHoveredSuggestionIndex(idx)}
+                          className={`px-3 py-2 cursor-pointer text-sm ${idx === hoveredSuggestionIndex ? "bg-slate-100" : ""}`}
+                        >
+                          {emp.nombre_completo}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
+              </div>
             </div>
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase text-muted-foreground">Tipo de Permiso</label>
@@ -336,8 +411,62 @@ export default function PermisosPage() {
             className="pl-9"
             placeholder="Buscar empleado..."
             value={empleado}
-            onChange={(e) => setEmpleado(e.target.value)}
+            onChange={(e) => {
+              setEmpleado(e.target.value);
+              setIsSuggestionsOpen(true);
+              setHoveredSuggestionIndex(0);
+              setActiveSearchBox("toolbar");
+            }}
+            onFocus={() => {
+              setActiveSearchBox("toolbar");
+              setIsSuggestionsOpen(!!empleado);
+            }}
+            onBlur={() => {
+              setTimeout(() => {
+                setIsSuggestionsOpen(false);
+                setActiveSearchBox(null);
+              }, 120);
+            }}
+            onKeyDown={(e) => {
+              if (!isSuggestionsOpen || activeSearchBox !== "toolbar" || sugerencias.length === 0) return;
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                setHoveredSuggestionIndex((prev) =>
+                  prev + 1 >= sugerencias.length ? 0 : prev + 1
+                );
+              } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                setHoveredSuggestionIndex((prev) =>
+                  prev - 1 < 0 ? sugerencias.length - 1 : prev - 1
+                );
+              } else if (e.key === "Enter") {
+                e.preventDefault();
+                handleSelectEmpleado(
+                  sugerencias[hoveredSuggestionIndex] || sugerencias[0]
+                );
+              } else if (e.key === "Escape") {
+                setIsSuggestionsOpen(false);
+              }
+            }}
           />
+          {isSuggestionsOpen && activeSearchBox === "toolbar" && sugerencias.length > 0 ? (
+            <div className="absolute left-0 right-0 mt-1 z-20 rounded-md border bg-white shadow">
+              <ul className="max-h-64 overflow-auto">
+                {sugerencias.map((emp, idx) => (
+                  <li
+                    key={emp.id_empleado}
+                    onMouseDown={() => handleSelectEmpleado(emp)}
+                    onMouseEnter={() => setHoveredSuggestionIndex(idx)}
+                    className={`px-3 py-2 cursor-pointer text-sm ${
+                      idx === hoveredSuggestionIndex ? "bg-slate-100" : ""
+                    }`}
+                  >
+                    {emp.nombre_completo}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={exportarExcel}>

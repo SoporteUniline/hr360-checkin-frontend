@@ -5,6 +5,7 @@ import { Separator } from "@/components/ui/separator";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
+import { formatDateDMY, formatDateDMYTime } from "@/lib/formatDate";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
@@ -14,13 +15,13 @@ dayjs.extend(timezone);
  */
 export default function PermisoViewDialog({ open, setOpen, item }) {
   if (!item) return null;
-  const di = item.fecha_inicio ? dayjs(item.fecha_inicio).format("YYYY-MM-DD") : "-";
-  const df = item.fecha_fin ? dayjs(item.fecha_fin).format("YYYY-MM-DD") : "-";
+  const di = item.fecha_inicio ? formatDateDMY(item.fecha_inicio) : "-";
+  const df = item.fecha_fin ? formatDateDMY(item.fecha_fin) : "-";
   const created = item.marca_tiempo
-    ? dayjs.tz(item.marca_tiempo, "America/Mexico_City").format("YYYY-MM-DD HH:mm")
+    ? formatDateDMYTime(dayjs.tz(item.marca_tiempo, "America/Mexico_City"))
     : "-";
   const updated = item.fecha_actualizacion
-    ? dayjs.tz(item.fecha_actualizacion, "America/Mexico_City").format("YYYY-MM-DD HH:mm")
+    ? formatDateDMYTime(dayjs.tz(item.fecha_actualizacion, "America/Mexico_City"))
     : "-";
   // Cálculo del total de días del permiso.
   // Relación: este valor se muestra en este mismo modal; las fechas provienen
