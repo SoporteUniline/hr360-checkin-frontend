@@ -28,7 +28,7 @@ export default function RecordsTable({
         <Table>
           <TableHeader className="bg-slate-50">
             <TableRow>
-              <TableCell className="px-6 py-2 text-center text-sm font-semibold text-slate-700">
+              <TableCell className="px-6 py-2 text-left text-sm font-semibold text-slate-700">
                 Código
               </TableCell>
               <TableCell className="px-6 py-2 text-left text-sm font-semibold text-slate-700">

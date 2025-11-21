@@ -3,9 +3,6 @@ import { Camera, Loader, CheckCircle, Power, RotateCcw } from "lucide-react";
 import { enqueueSnackbar } from "notistack";
 import axiosInstance from "@/lib/axios";
 import { Button } from "./ui/button";
-import { Camera as CapacitorCamera } from "@capacitor/camera";
-import { Geolocation } from "@capacitor/geolocation";
-import { App } from "@capacitor/app";
 
 const FacialRecognitionPanel = ({
   isOpen,
@@ -32,14 +29,6 @@ const FacialRecognitionPanel = ({
   const isProcessingRef = useRef(false);
   const lastCheckTimeRef = useRef(0);
   const MIN_INTERVAL = 3000;
-
-  const abrirAjustesGPS = () => {
-    try {
-      App.openSystemSettings();
-    } catch (e) {
-      window.location.href = "app-settings:";
-    }
-  };
 
   const shutdownCamera = () => {
     try {
@@ -132,26 +121,6 @@ const FacialRecognitionPanel = ({
           await new Promise((resolve) => setTimeout(resolve, 100));
         }
 
-        const status = await CapacitorCamera.checkPermissions();
-
-        if (status.camera !== "granted") {
-          await CapacitorCamera.requestPermissions();
-        }
-
-        await Geolocation.requestPermissions();
-
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            console.log("GPS OK", pos.coords);
-          },
-          (err) => {
-            if (err.code === 1 || err.code === 2) {
-              abrirAjustesGPS();
-            }
-          },
-          { enableHighAccuracy: true, timeout: 5000 }
-        );
-
         const mediaStream = await navigator.mediaDevices.getUserMedia({
           video: {
             width: { ideal: 640 },
@@ -159,6 +128,16 @@ const FacialRecognitionPanel = ({
             facingMode: cameraFacing,
           },
         });
+
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            // console.log("Permiso de GPS concedido", pos.coords);
+          },
+          (err) => {
+            console.warn("No se pudo obtener ubicación al inicio:", err);
+          },
+          { enableHighAccuracy: true, timeout: 5000 }
+        );
 
         if (videoRef.current && isOpen) {
           videoRef.current.srcObject = mediaStream;
@@ -168,6 +147,7 @@ const FacialRecognitionPanel = ({
           };
         } else mediaStream.getTracks().forEach((t) => t.stop());
       } catch (err) {
+        console.log(err);
         setError("No se pudo acceder a la cámara");
         enqueueSnackbar("No se pudo acceder a la cámara", {
           variant: "error",
@@ -255,12 +235,13 @@ const FacialRecognitionPanel = ({
       let longitud_actual = null;
 
       try {
-        await Geolocation.requestPermissions();
-
-        const position = await Geolocation.getCurrentPosition({
-          enableHighAccuracy: true,
-        });
-
+        const position = await new Promise((resolve, reject) =>
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0,
+          })
+        );
         latitud_actual = position.coords.latitude;
         longitud_actual = position.coords.longitude;
       } catch (geoError) {
