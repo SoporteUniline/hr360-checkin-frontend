@@ -13,7 +13,11 @@ import StatsCards from "./Clock/StatsCards";
 import RecordsTable from "./Clock/RecordsTable";
 import { useGPS } from "@/hooks/Capacitor/useGPS";
 
-export default function RelojChecador({ idEmpresa }) {
+export default function RelojChecador({
+  idEmpresa,
+  modoEmpleado = false,
+  idEmpleado = null,
+}) {
   const [horaActual, setHoraActual] = useState("");
   const [fechaActual, setFechaActual] = useState("");
   const [codigoEmpleado, setCodigoEmpleado] = useState("");
@@ -33,14 +37,18 @@ export default function RelojChecador({ idEmpresa }) {
     });
   };
 
+  const endpoint = modoEmpleado
+    ? `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/reloj/registros-del-dia-empleado?id_empleado=${idEmpleado}`
+    : `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/reloj/registros-del-dia?id_empresa=${idEmpresa}`;
+
   const {
     data: registrosData,
     mutate,
     error,
     isLoading,
   } = useSWR(
-    idEmpresa
-      ? `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/reloj/registros-del-dia?id_empresa=${idEmpresa}`
+    (modoEmpleado && idEmpleado) || (!modoEmpleado && idEmpresa)
+      ? endpoint
       : null,
     fetcher
   );

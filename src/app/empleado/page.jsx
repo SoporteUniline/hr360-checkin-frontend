@@ -7,7 +7,7 @@ export default function EmpleadoPanelPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.push("/empleado/inicio");
+    router.push("/empleado/panel/solicitudes");
   }, []);
 
   return null;

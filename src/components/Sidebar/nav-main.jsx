@@ -125,6 +125,18 @@ const items = [
     rol: "Recruiter",
     icon: ClockIcon,
   },
+  {
+    title: "Solicitud de permisos",
+    url: "/empleado/panel/solicitudes",
+    rol: "Empleado",
+    icon: FileText,
+  },
+  {
+    title: "Reloj Checador",
+    url: "/empleado/reloj-checador",
+    rol: "Empleado",
+    icon: ClockIcon,
+  },
 ];
 
 export function NavMain() {
