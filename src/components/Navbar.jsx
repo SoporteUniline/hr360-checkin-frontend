@@ -141,6 +141,33 @@ export default function Navbar() {
               </Link>
             </NavigationMenuItem> */}
             <NavigationMenuItem>
+              {/* Menú Vacaciones (desplegable): Panel Vacaciones + Vacaciones por ley */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className={twMerge(
+                      navigationMenuTriggerStyle(),
+                      pathname?.startsWith("/panel/vacaciones") && "font-medium"
+                    )}
+                  >
+                    Vacaciones
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56">
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link href="/panel/vacaciones" className="w-full">
+                      Panel vacaciones
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link href="/panel/vacaciones/por-ley" className="w-full">
+                      Vacaciones por ley
+                    </Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </NavigationMenuItem>
+            <NavigationMenuItem>
               {isLoggedIn ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -307,6 +334,26 @@ const MenuResposive = ({
                 )}
               >
                 Capacitación
+              </Link>
+            </DrawerClose>
+
+            {/* Menú responsive: Vacaciones */}
+            <div className="pt-1" />
+            <div className="text-[11px] uppercase text-muted-foreground px-1">Vacaciones</div>
+            <DrawerClose asChild>
+              <Link
+                href="/panel/vacaciones"
+                className={twMerge(navigationMenuTriggerStyle())}
+              >
+                Panel vacaciones
+              </Link>
+            </DrawerClose>
+            <DrawerClose asChild>
+              <Link
+                href="/panel/vacaciones/por-ley"
+                className={twMerge(navigationMenuTriggerStyle())}
+              >
+                Vacaciones por ley
               </Link>
             </DrawerClose>
 

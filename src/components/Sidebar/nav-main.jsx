@@ -97,12 +97,23 @@ const items = [
     icon: PartyPopper,
   },
   {
-    // Botón de navegación para el nuevo panel de vacaciones
-    // Relacionado con: src/app/panel/vacaciones/page.jsx
-    title: "Panel Vacaciones",
-    url: "/panel/vacaciones",
+    // Menú desplegable de Vacaciones (como Catálogos)
+    // Relacionado con: /panel/vacaciones y /panel/vacaciones/por-ley
+    title: "Vacaciones",
     rol: "Recruiter",
     icon: CalendarDays,
+    children: [
+      {
+        title: "Panel vacaciones",
+        url: "/panel/vacaciones",
+        icon: CalendarDays,
+      },
+      {
+        title: "Vacaciones por ley",
+        url: "/panel/vacaciones/por-ley",
+        icon: Landmark,
+      },
+    ],
   },
   {
     title: "Empleados",
