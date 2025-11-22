@@ -113,6 +113,11 @@ const items = [
         url: "/panel/vacaciones/por-ley",
         icon: Landmark,
       },
+      {
+        title: "Vacaciones por periodo",
+        url: "/panel/vacaciones/por-periodo",
+        icon: FileText,
+      },
     ],
   },
   {
