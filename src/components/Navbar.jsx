@@ -164,6 +164,11 @@ export default function Navbar() {
                       Vacaciones por ley
                     </Link>
                   </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link href="/panel/vacaciones/por-periodo" className="w-full">
+                      Vacaciones por periodo
+                    </Link>
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </NavigationMenuItem>

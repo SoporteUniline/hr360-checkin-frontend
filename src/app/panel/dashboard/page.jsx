@@ -245,7 +245,7 @@ export default async function PanelDashboardPage() {
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
           {/* Asistencias de hoy */}
-          <Card className="bg-white lg:col-span-3">
+          <Card className="bg-white lg:col-span-6">
             <CardHeader className="flex items-center justify-between">
               <CardTitle className="text-base">Asistencias de Hoy</CardTitle>
             </CardHeader>
@@ -279,8 +279,52 @@ export default async function PanelDashboardPage() {
             </CardContent>
           </Card>
 
+          {/* Presentes de hoy (lista) */}
+          <Card className="bg-white lg:col-span-6">
+            <CardHeader className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <CheckCircle2 className="size-4 text-emerald-600" /> Presentes de Hoy
+              </CardTitle>
+              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+                {data.presentesHoy} presente{data.presentesHoy !== 1 ? "s" : ""}
+              </span>
+            </CardHeader>
+            <CardContent>
+              {!data.presentesDetalle || data.presentesDetalle.length === 0 ? (
+                <div className="text-sm text-zinc-500">No hay presentes registrados hoy</div>
+              ) : (
+                <div className="max-h-48 sm:max-h-56 overflow-y-auto">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-zinc-50 text-zinc-600">
+                          <th className="text-left px-3 py-2 font-medium w-12">#</th>
+                          <th className="text-left px-3 py-2 font-medium">Empleado</th>
+                          <th className="text-left px-3 py-2 font-medium">Empresa</th>
+                          <th className="text-left px-3 py-2 font-medium">Hora de entrada</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {data.presentesDetalle.map((p, idx) => (
+                          <tr key={`p-${p.id_asistencia}`} className="hover:bg-zinc-50">
+                            <td className="px-3 py-2 text-zinc-500">{idx + 1}</td>
+                            <td className="px-3 py-2">{p.nombre_empleado}</td>
+                            <td className="px-3 py-2">{p.nombre_empresa}</td>
+                            <td className="px-3 py-2 text-emerald-700">
+                              {p.hora_entrada ? formatTimeMexico(p.hora_entrada) : "-"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Cumpleaños */}
-          <Card className="bg-white lg:col-span-4">
+          <Card className="bg-white lg:col-span-6">
             <CardHeader className="flex items-center justify-between">
               <CardTitle className="text-base flex items-center gap-2">
                 <Gift className="size-4 text-amber-600" /> Cumpleaños
@@ -336,7 +380,7 @@ export default async function PanelDashboardPage() {
           </Card>
 
           {/* Aniversarios */}
-          <Card className="bg-white lg:col-span-5">
+          <Card className="bg-white lg:col-span-6">
             <CardHeader className="flex items-center justify-between">
               <CardTitle className="text-base flex items-center gap-2">
                 <PartyPopper className="size-4 text-indigo-600" /> Aniversarios

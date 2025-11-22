@@ -264,7 +264,8 @@ export default function PermisoDialog({ open, setOpen, editItem, idEmpresa, tipo
                 value={empleadosBusqueda}
                 onChange={(e) => setEmpleadosBusqueda(e.target.value)}
               />
-              <div className="max-h-56 overflow-auto rounded-md border">
+              {/* Limitar a 3 elementos visibles antes de hacer scroll */}
+              <div className="max-h-36 overflow-auto rounded-md border">
                 <ul className="divide-y">
                   {filteredEmpleados.map((e) => {
                     const checked = empleadoIds.includes(e.id);
