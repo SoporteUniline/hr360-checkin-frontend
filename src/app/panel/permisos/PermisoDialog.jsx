@@ -2,12 +2,24 @@
 
 import React, { useEffect, useState } from "react";
 import dayjs from "dayjs";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { permisosApi } from "@/lib/permisosApi";
 import { useAuth } from "@/context/AuthContext";
 import axios from "@/lib/axios";
@@ -17,7 +29,14 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // Dialog para crear/editar una solicitud de permiso.
 // - Se relaciona con: src/lib/permisosApi.js y src/app/panel/permisos/page.jsx
-export default function PermisoDialog({ open, setOpen, editItem, idEmpresa, tiposPermiso, onSaved }) {
+export default function PermisoDialog({
+  open,
+  setOpen,
+  editItem,
+  idEmpresa,
+  tiposPermiso,
+  onSaved,
+}) {
   const isEdit = Boolean(editItem);
   const { dataUser } = useAuth();
   const usuarioId = dataUser?.id_empleado || null; // reservado para auditoría futura
@@ -47,13 +66,18 @@ export default function PermisoDialog({ open, setOpen, editItem, idEmpresa, tipo
     (async () => {
       try {
         const token = Cookies.get("token");
-        const res = await axios.get(`/checador/empleados?empresa=${idEmpresa}&page=1&limit=1000`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const res = await axios.get(
+          `/checador/empleados?empresa=${idEmpresa}&page=1&limit=1000`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
         const list = Array.isArray(res.data?.data) ? res.data.data : [];
         const mapped = list.map((e) => ({
           id: String(e.id_empleado),
-          nombre: [e.nombre, e.apellido_paterno, e.apellido_materno].filter(Boolean).join(" "),
+          nombre: [e.nombre, e.apellido_paterno, e.apellido_materno]
+            .filter(Boolean)
+            .join(" "),
         }));
         setEmpleados(mapped);
         // Prefill: en edición, fijar empleado; en creación, limpiar selección múltiple
@@ -72,8 +96,12 @@ export default function PermisoDialog({ open, setOpen, editItem, idEmpresa, tipo
     if (!open) return;
     setForm({
       id_tipo_permiso: String(editItem?.id_tipo_permiso || ""),
-      fecha_inicio: editItem?.fecha_inicio ? dayjs(editItem.fecha_inicio).format("YYYY-MM-DD") : "",
-      fecha_fin: editItem?.fecha_fin ? dayjs(editItem.fecha_fin).format("YYYY-MM-DD") : "",
+      fecha_inicio: editItem?.fecha_inicio
+        ? dayjs(editItem.fecha_inicio).format("YYYY-MM-DD")
+        : "",
+      fecha_fin: editItem?.fecha_fin
+        ? dayjs(editItem.fecha_fin).format("YYYY-MM-DD")
+        : "",
       motivo: editItem?.motivo || "",
       estado: editItem?.estado || "Pendiente",
     });
@@ -95,7 +123,9 @@ export default function PermisoDialog({ open, setOpen, editItem, idEmpresa, tipo
 
   async function guardar() {
     if (isExpired) {
-      enqueueSnackbar("Este permiso ya finalizó y no puede editarse.", { variant: "warning" });
+      enqueueSnackbar("Este permiso ya finalizó y no puede editarse.", {
+        variant: "warning",
+      });
       return;
     }
     // Validaciones de formulario con mensajes amigables
@@ -141,8 +171,9 @@ export default function PermisoDialog({ open, setOpen, editItem, idEmpresa, tipo
           (editItem.fecha_inicio
             ? dayjs(editItem.fecha_inicio).format("YYYY-MM-DD")
             : "") !== form.fecha_inicio ||
-          (editItem.fecha_fin ? dayjs(editItem.fecha_fin).format("YYYY-MM-DD") : "") !==
-            (form.fecha_fin || "") ||
+          (editItem.fecha_fin
+            ? dayjs(editItem.fecha_fin).format("YYYY-MM-DD")
+            : "") !== (form.fecha_fin || "") ||
           String(editItem.motivo || "") !== String(form.motivo || "");
 
         if (fieldsChanged) {
@@ -159,7 +190,9 @@ export default function PermisoDialog({ open, setOpen, editItem, idEmpresa, tipo
         if (form.estado && form.estado !== editItem?.estado) {
           await permisosApi.actualizarEstado(editItem.id, form.estado);
         }
-        enqueueSnackbar("Permiso actualizado correctamente.", { variant: "success" });
+        enqueueSnackbar("Permiso actualizado correctamente.", {
+          variant: "success",
+        });
       } else {
         const payloads = idsTarget.map((id) => ({
           id_empleado: Number(id),
@@ -169,16 +202,22 @@ export default function PermisoDialog({ open, setOpen, editItem, idEmpresa, tipo
           motivo: form.motivo || null,
           id_empresa: idEmpresa,
         }));
-        const created = await Promise.all(payloads.map((p) => permisosApi.crear(p)));
+        const created = await Promise.all(
+          payloads.map((p) => permisosApi.crear(p))
+        );
         // Aprobar automáticamente todos los creados
         const createdIds = created
           .map((r) => r?.id)
           .filter((x) => typeof x === "number" || typeof x === "string");
         if (createdIds.length > 0) {
           await Promise.all(
-            createdIds.map((permId) => permisosApi.actualizarEstado(permId, "Aprobado"))
+            createdIds.map((permId) =>
+              permisosApi.actualizarEstado(permId, "Aprobado")
+            )
           );
-          enqueueSnackbar("Permiso(s) creado(s) correctamente.", { variant: "success" });
+          enqueueSnackbar("Permiso(s) creado(s) correctamente.", {
+            variant: "success",
+          });
         }
       }
       onSaved?.();
@@ -200,6 +239,10 @@ export default function PermisoDialog({ open, setOpen, editItem, idEmpresa, tipo
     e.nombre.toLowerCase().includes(empleadosBusqueda.trim().toLowerCase())
   );
 
+  const arrayFiltered = tiposPermiso.filter(
+    (permiso) => permiso.es_permiso === 1
+  );
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {/* Ajuste responsivo:
@@ -209,7 +252,9 @@ export default function PermisoDialog({ open, setOpen, editItem, idEmpresa, tipo
          Relación: este modal se invoca desde `src/app/panel/permisos/page.jsx`. */}
       <DialogContent className="max-w-[95vw] sm:max-w-xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>➕ {isEdit ? "Editar Permiso" : "Nuevo Permiso"}</DialogTitle>
+          <DialogTitle>
+            ➕ {isEdit ? "Editar Permiso" : "Nuevo Permiso"}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
@@ -219,15 +264,21 @@ export default function PermisoDialog({ open, setOpen, editItem, idEmpresa, tipo
               <Label>Tipo de Permiso</Label>
               <Select
                 value={form.id_tipo_permiso}
-                onValueChange={(v) => setForm((f) => ({ ...f, id_tipo_permiso: v }))}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, id_tipo_permiso: v }))
+                }
                 disabled={isExpired}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar tipo..." />
                 </SelectTrigger>
-                <SelectContent className="max-h-64 overflow-y-auto" position="popper" align="start">
-                  {Array.isArray(tiposPermiso) &&
-                    tiposPermiso.map((t) => (
+                <SelectContent
+                  className="max-h-64 overflow-y-auto"
+                  position="popper"
+                  align="start"
+                >
+                  {Array.isArray(arrayFiltered) &&
+                    arrayFiltered.map((t) => (
                       <SelectItem key={t.id} value={String(t.id)}>
                         {t.nombre}
                       </SelectItem>
@@ -270,14 +321,19 @@ export default function PermisoDialog({ open, setOpen, editItem, idEmpresa, tipo
                   {filteredEmpleados.map((e) => {
                     const checked = empleadoIds.includes(e.id);
                     return (
-                      <li key={`emp-${e.id}`} className="flex items-center gap-3 p-2">
+                      <li
+                        key={`emp-${e.id}`}
+                        className="flex items-center gap-3 p-2"
+                      >
                         <input
                           type="checkbox"
                           className="size-4"
                           checked={checked}
                           onChange={() =>
                             setEmpleadoIds((prev) =>
-                              prev.includes(e.id) ? prev.filter((x) => x !== e.id) : [...prev, e.id]
+                              prev.includes(e.id)
+                                ? prev.filter((x) => x !== e.id)
+                                : [...prev, e.id]
                             )
                           }
                         />
@@ -292,10 +348,18 @@ export default function PermisoDialog({ open, setOpen, editItem, idEmpresa, tipo
               <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <div>{empleadoIds.length} seleccionados</div>
                 <div className="flex items-center gap-2">
-                  <Button type="button" variant="ghost" onClick={() => setEmpleadoIds(empleados.map((e) => e.id))}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setEmpleadoIds(empleados.map((e) => e.id))}
+                  >
                     Seleccionar todos
                   </Button>
-                  <Button type="button" variant="ghost" onClick={() => setEmpleadoIds([])}>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setEmpleadoIds([])}
+                  >
                     Limpiar
                   </Button>
                 </div>
@@ -311,7 +375,9 @@ export default function PermisoDialog({ open, setOpen, editItem, idEmpresa, tipo
                 type="date"
                 value={form.fecha_inicio}
                 min={dayjs().format("YYYY-MM-DD")}
-                onChange={(e) => setForm((f) => ({ ...f, fecha_inicio: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, fecha_inicio: e.target.value }))
+                }
                 disabled={isExpired}
               />
             </div>
@@ -321,7 +387,9 @@ export default function PermisoDialog({ open, setOpen, editItem, idEmpresa, tipo
                 type="date"
                 value={form.fecha_fin}
                 min={form.fecha_inicio || dayjs().format("YYYY-MM-DD")}
-                onChange={(e) => setForm((f) => ({ ...f, fecha_fin: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, fecha_fin: e.target.value }))
+                }
                 disabled={isExpired}
               />
             </div>
@@ -339,29 +407,29 @@ export default function PermisoDialog({ open, setOpen, editItem, idEmpresa, tipo
                 const estadoOriginal = editItem?.estado || form.estado;
                 const isApproved = estadoOriginal === "Aprobado";
                 return (
-              <Select
-                value={form.estado}
-                onValueChange={(v) => setForm((f) => ({ ...f, estado: v }))}
-                  disabled={isExpired}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {isApproved ? (
-                    <>
-                      <SelectItem value="Cancelado">Cancelado</SelectItem>
-                    </>
-                  ) : (
-                    <>
-                      <SelectItem value="Pendiente">Pendiente</SelectItem>
-                      <SelectItem value="Aprobado">Aprobado</SelectItem>
-                      <SelectItem value="Rechazado">Rechazado</SelectItem>
-                      <SelectItem value="Cancelado">Cancelado</SelectItem>
-                    </>
-                  )}
-                </SelectContent>
-              </Select>
+                  <Select
+                    value={form.estado}
+                    onValueChange={(v) => setForm((f) => ({ ...f, estado: v }))}
+                    disabled={isExpired}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {isApproved ? (
+                        <>
+                          <SelectItem value="Cancelado">Cancelado</SelectItem>
+                        </>
+                      ) : (
+                        <>
+                          <SelectItem value="Pendiente">Pendiente</SelectItem>
+                          <SelectItem value="Aprobado">Aprobado</SelectItem>
+                          <SelectItem value="Rechazado">Rechazado</SelectItem>
+                          <SelectItem value="Cancelado">Cancelado</SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
                 );
               })()}
             </div>
@@ -386,7 +454,8 @@ export default function PermisoDialog({ open, setOpen, editItem, idEmpresa, tipo
             <Alert>
               <AlertTitle>Permiso finalizado</AlertTitle>
               <AlertDescription>
-                Este permiso ya terminó. La edición está deshabilitada para evitar inconsistencias.
+                Este permiso ya terminó. La edición está deshabilitada para
+                evitar inconsistencias.
               </AlertDescription>
             </Alert>
           ) : null}
@@ -398,14 +467,20 @@ export default function PermisoDialog({ open, setOpen, editItem, idEmpresa, tipo
               rows={4}
               placeholder="Describe el motivo del permiso..."
               value={form.motivo}
-              onChange={(e) => setForm((f) => ({ ...f, motivo: e.target.value }))}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, motivo: e.target.value }))
+              }
               disabled={isExpired}
             />
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="secondary" onClick={() => setOpen(false)} disabled={loading}>
+          <Button
+            variant="secondary"
+            onClick={() => setOpen(false)}
+            disabled={loading}
+          >
             Cancelar
           </Button>
           <Button onClick={guardar} disabled={loading || isExpired}>
@@ -416,5 +491,3 @@ export default function PermisoDialog({ open, setOpen, editItem, idEmpresa, tipo
     </Dialog>
   );
 }
-
-

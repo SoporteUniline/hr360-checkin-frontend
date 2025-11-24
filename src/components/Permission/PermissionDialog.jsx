@@ -114,6 +114,10 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
     }
   };
 
+  const arrayFiltered = arrayTiposPermiso?.filter((permiso) => {
+    return permiso.es_permiso === 1;
+  });
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent>
@@ -146,7 +150,7 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
                 </SelectTrigger>
 
                 <SelectContent className="max-h-60 overflow-y-auto">
-                  {arrayTiposPermiso?.map((permiso) => (
+                  {arrayFiltered?.map((permiso) => (
                     <SelectItem key={permiso.id} value={String(permiso.id)}>
                       {permiso.nombre}
                     </SelectItem>
