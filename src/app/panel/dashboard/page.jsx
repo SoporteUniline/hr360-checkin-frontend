@@ -4,6 +4,7 @@
 // - Relacionado con: redlab_back/modules/attendance/controllers/dashboardController.js
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -117,13 +118,14 @@ export default async function PanelDashboardPage() {
     process.env.NEXT_PUBLIC_RUTA_BACKEND || "http://localhost:4000/api";
   let data = null;
   let empresaId = null;
+  let token = null;
   try {
     // Compatibilidad Next 14/15: cookies() puede ser síncrono o Promise
     let cookieStore = cookies();
     if (typeof cookieStore?.then === "function") {
       cookieStore = await cookieStore; // Next 15+ (API asíncrona)
     }
-    const token = cookieStore?.get("token")?.value || null;
+    token = cookieStore?.get("token")?.value || null;
     if (token) {
       const vRes = await fetch(`${base}/users/verify/token`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -143,6 +145,25 @@ export default async function PanelDashboardPage() {
   } catch (_) {
     data = null;
   }
+
+  // Cargar tabla de asistencias de HOY (informativa)
+  let asistenciasHoy = [];
+  try {
+    if (empresaId && data?.fecha) {
+      const aUrl = new URL(`${base}/checador/asistencias`);
+      aUrl.searchParams.set("empresa", String(empresaId));
+      aUrl.searchParams.set("fechaInicio", String(data.fecha));
+      aUrl.searchParams.set("fechaFin", String(data.fecha));
+      aUrl.searchParams.set("page", "1");
+      aUrl.searchParams.set("limit", "200");
+      const aRes = await fetch(aUrl.toString(), {
+        cache: "no-store",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const aJson = await aRes.json().catch(() => null);
+      if (aJson?.registros) asistenciasHoy = aJson.registros;
+    }
+  } catch (_) {}
 
   if (!data) {
     return (
@@ -166,6 +187,21 @@ export default async function PanelDashboardPage() {
     (acc, it) => acc + (it.count || 0),
     0
   );
+
+  function formatDateDMY(ymd) {
+    if (!ymd) return "-";
+    const m = String(ymd).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+    try {
+      const d = new Date(ymd);
+      const dd = String(d.getUTCDate()).padStart(2, "0");
+      const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
+      const yy = d.getUTCFullYear();
+      return `${dd}/${mm}/${yy}`;
+    } catch {
+      return String(ymd);
+    }
+  }
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-6">
@@ -245,7 +281,7 @@ export default async function PanelDashboardPage() {
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
           {/* Asistencias de hoy */}
-          <Card className="bg-white lg:col-span-6">
+          <Card className="bg-white lg:col-span-4">
             <CardHeader className="flex items-center justify-between">
               <CardTitle className="text-base">Asistencias de Hoy</CardTitle>
             </CardHeader>
@@ -279,52 +315,8 @@ export default async function PanelDashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Presentes de hoy (lista) */}
-          <Card className="bg-white lg:col-span-6">
-            <CardHeader className="flex items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2">
-                <CheckCircle2 className="size-4 text-emerald-600" /> Presentes de Hoy
-              </CardTitle>
-              <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
-                {data.presentesHoy} presente{data.presentesHoy !== 1 ? "s" : ""}
-              </span>
-            </CardHeader>
-            <CardContent>
-              {!data.presentesDetalle || data.presentesDetalle.length === 0 ? (
-                <div className="text-sm text-zinc-500">No hay presentes registrados hoy</div>
-              ) : (
-                <div className="max-h-48 sm:max-h-56 overflow-y-auto">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="bg-zinc-50 text-zinc-600">
-                          <th className="text-left px-3 py-2 font-medium w-12">#</th>
-                          <th className="text-left px-3 py-2 font-medium">Empleado</th>
-                          <th className="text-left px-3 py-2 font-medium">Empresa</th>
-                          <th className="text-left px-3 py-2 font-medium">Hora de entrada</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y">
-                        {data.presentesDetalle.map((p, idx) => (
-                          <tr key={`p-${p.id_asistencia}`} className="hover:bg-zinc-50">
-                            <td className="px-3 py-2 text-zinc-500">{idx + 1}</td>
-                            <td className="px-3 py-2">{p.nombre_empleado}</td>
-                            <td className="px-3 py-2">{p.nombre_empresa}</td>
-                            <td className="px-3 py-2 text-emerald-700">
-                              {p.hora_entrada ? formatTimeMexico(p.hora_entrada) : "-"}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
           {/* Cumpleaños */}
-          <Card className="bg-white lg:col-span-6">
+          <Card className="bg-white lg:col-span-4">
             <CardHeader className="flex items-center justify-between">
               <CardTitle className="text-base flex items-center gap-2">
                 <Gift className="size-4 text-amber-600" /> Cumpleaños
@@ -380,7 +372,7 @@ export default async function PanelDashboardPage() {
           </Card>
 
           {/* Aniversarios */}
-          <Card className="bg-white lg:col-span-6">
+          <Card className="bg-white lg:col-span-4">
             <CardHeader className="flex items-center justify-between">
               <CardTitle className="text-base flex items-center gap-2">
                 <PartyPopper className="size-4 text-indigo-600" /> Aniversarios
@@ -440,27 +432,98 @@ export default async function PanelDashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Permisos activos con filtros */}
-          <Card className="bg-white lg:col-span-12 xl:col-span-12 mt-4 lg:mt-0">
-            <CardHeader className="flex items-center justify-between">
-              <CardTitle className="text-base">Permisos Activos</CardTitle>
-              <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800">
-                {
-                  (data.permisosRangos || []).filter(
-                    (p) =>
-                      !String(p?.status?.label || "")
-                        .toLowerCase()
-                        .startsWith("terminado")
-                  ).length
-                }{" "}
-                activos
-              </span>
-            </CardHeader>
-            <CardContent>
-              <PermisosTable rows={data.permisosRangos || []} />
-            </CardContent>
-          </Card>
+          {/* (Permisos Activos se reubica debajo del detalle de asistencias) */}
         </div>
+      </div>
+
+      {/* Detalle de Asistencias Hoy (informativo) */}
+      <div className="mt-6">
+        <Card className="bg-white">
+          <CardHeader className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <CheckCircle2 className="size-4 text-emerald-600" /> Asistencias de Hoy · Detalle
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {asistenciasHoy.length === 0 ? (
+              <div className="text-sm text-zinc-500">No hay registros de asistencia para hoy.</div>
+            ) : (
+              <div className="overflow-x-auto max-h-[420px] overflow-y-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-zinc-50 text-zinc-600">
+                      <TableHead className="text-left px-3 py-2">Empleado</TableHead>
+                      <TableHead className="text-left px-3 py-2">Departamento</TableHead>
+                      <TableHead className="text-left px-3 py-2">Tipo de registro</TableHead>
+                      <TableHead className="text-center px-3 py-2">Fecha</TableHead>
+                      <TableHead className="text-center px-3 py-2">Entrada</TableHead>
+                      <TableHead className="text-center px-3 py-2">Salida</TableHead>
+                      <TableHead className="text-center px-3 py-2">¿Asistió?</TableHead>
+                      <TableHead className="text-center px-3 py-2">¿Goce de sueldo?</TableHead>
+                      <TableHead className="text-center px-3 py-2">¿Horas extra?</TableHead>
+                      <TableHead className="text-left px-3 py-2">Observaciones</TableHead>
+                      <TableHead className="text-center px-3 py-2">Estado</TableHead>
+                      <TableHead className="text-left px-3 py-2">Estado asistencia</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {asistenciasHoy.map((r) => (
+                      <TableRow key={r.id} className="hover:bg-zinc-50">
+                        <TableCell className="px-3 py-2">
+                          {[r.nombre, r.apellido_paterno, r.apellido_materno].filter(Boolean).join(" ")}
+                        </TableCell>
+                        <TableCell className="px-3 py-2">{r.departamento || "-"}</TableCell>
+                        <TableCell className="px-3 py-2">{r.tipo_registro_nombre || "-"}</TableCell>
+                        <TableCell className="px-3 py-2 text-center">{formatDateDMY(r.fecha)}</TableCell>
+                        <TableCell className="px-3 py-2 text-center">
+                          {r.entrada ? formatTimeMexico(r.entrada) : "-"}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-center">
+                          {r.salida ? formatTimeMexico(r.salida) : "-"}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-center">
+                          {r.asistencia ? "Sí" : "No"}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-center">
+                          {r.goce_sueldo ? "Sí" : "No"}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-center">
+                          {r.hrs_extra ? "Sí" : "No"}
+                        </TableCell>
+                        <TableCell className="px-3 py-2">{r.notas || "-"}</TableCell>
+                        <TableCell className="px-3 py-2 text-center">{r.estado || "-"}</TableCell>
+                        <TableCell className="px-3 py-2">{r.estadoAsistencia || "-"}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Permisos activos con filtros (reubicado debajo del detalle) */}
+      <div className="mt-6">
+        <Card className="bg-white">
+          <CardHeader className="flex items-center justify-between">
+            <CardTitle className="text-base">Permisos Activos</CardTitle>
+            <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800">
+              {
+                (data.permisosRangos || []).filter(
+                  (p) =>
+                    !String(p?.status?.label || "")
+                      .toLowerCase()
+                      .startsWith("terminado")
+                ).length
+              }{" "}
+              activos
+            </span>
+          </CardHeader>
+          <CardContent>
+            <PermisosTable rows={data.permisosRangos || []} />
+          </CardContent>
+        </Card>
       </div>
 
       {/* Distribución y Tendencia */}
