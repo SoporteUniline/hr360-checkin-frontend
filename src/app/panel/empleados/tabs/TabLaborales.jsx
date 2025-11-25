@@ -33,6 +33,8 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
   const [areasAsignadas, setAreasAsignadas] = useState([]);
   const [mostrarModalArea, setMostrarModalArea] = useState(false);
   const [guardandoArea, setGuardandoArea] = useState(false);
+  const checarGPS = form.watch("checar_gps");
+  const empleadoId = form.watch("id_empleado");
 
   const crearArea = async (formData) => {
     if (!formData?.nombre_area?.trim()) {
@@ -83,7 +85,8 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
   };
 
   useEffect(() => {
-    if (!form.watch("checar_gps")) return;
+    if (!checarGPS) return;
+
     const fetchAreas = async () => {
       try {
         const { data } = await axios.get(
@@ -101,12 +104,13 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
         console.error("Error al obtener áreas:", error);
       }
     };
+
     fetchAreas();
-  }, [form.watch("checar_gps"), dataUser]);
+  }, [checarGPS, dataUser?.id_empresa]);
 
   useEffect(() => {
-    const empleadoId = form.watch("id_empleado");
-    if (!form.watch("checar_gps") || !empleadoId) return;
+    if (!checarGPS || !empleadoId) return;
+
     const fetchAsignadas = async () => {
       try {
         const { data } = await axios.get(
@@ -117,8 +121,9 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
         console.error("Error al obtener áreas del empleado", error);
       }
     };
+
     fetchAsignadas();
-  }, [form.watch("checar_gps"), form.watch("id_empleado")]);
+  }, [checarGPS, empleadoId]);
 
   useEffect(() => {
     form.setValue("areasAsignadas", areasAsignadas);
