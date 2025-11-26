@@ -160,6 +160,11 @@ export default function Navbar() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild className="cursor-pointer">
+                    <Link href="/panel/vacaciones/registro" className="w-full">
+                      Registro de vacaciones
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild className="cursor-pointer">
                     <Link href="/panel/vacaciones/por-ley" className="w-full">
                       Vacaciones por ley
                     </Link>
@@ -351,6 +356,14 @@ const MenuResposive = ({
                 className={twMerge(navigationMenuTriggerStyle())}
               >
                 Panel vacaciones
+              </Link>
+            </DrawerClose>
+            <DrawerClose asChild>
+              <Link
+                href="/panel/vacaciones/registro"
+                className={twMerge(navigationMenuTriggerStyle())}
+              >
+                Registro de vacaciones
               </Link>
             </DrawerClose>
             <DrawerClose asChild>

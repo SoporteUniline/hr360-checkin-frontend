@@ -15,6 +15,7 @@ import dayjs from "dayjs";
 export default function AsistenciaTable({
   filtrados,
   fecha,
+  readOnly = false, // Si true, oculta acciones/botones (vista informativa)
   editingRowId,
   editingRowData,
   isSaving,
@@ -89,42 +90,44 @@ export default function AsistenciaTable({
 
   return (
     <>
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between bg-slate-700 shadow-md px-4 py-3 rounded-tl-md rounded-tr-md gap-3">
-        <div className="flex items-center text-lg font-bold text-white">
-          <h1>Registros de Asistencia</h1>
-        </div>
-        <div className="flex flex-col md:flex-row flex-wrap justify-end gap-3 w-full md:w-auto">
-          <Button
-            onClick={() =>
-              exportToExcel(exportData, columns, "Reporte_Asistencias", {
-                sheetName: "Asistencias",
-                headerColor: "15803D",
-              })
-            }
-            className="bg-emerald-600 hover:bg-emerald-700 shadow-lg"
-          >
-            <FileSpreadsheet className="w-5 h-5 mr-2" />
-            Exportar Excel
-          </Button>
+      {!readOnly && (
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between bg-slate-700 shadow-md px-4 py-3 rounded-tl-md rounded-tr-md gap-3">
+          <div className="flex items-center text-lg font-bold text-white">
+            <h1>Registros de Asistencia</h1>
+          </div>
+          <div className="flex flex-col md:flex-row flex-wrap justify-end gap-3 w-full md:w-auto">
+            <Button
+              onClick={() =>
+                exportToExcel(exportData, columns, "Reporte_Asistencias", {
+                  sheetName: "Asistencias",
+                  headerColor: "15803D",
+                })
+              }
+              className="bg-emerald-600 hover:bg-emerald-700 shadow-lg"
+            >
+              <FileSpreadsheet className="w-5 h-5 mr-2" />
+              Exportar Excel
+            </Button>
 
-          <Button
-            onClick={abrirFormulario}
-            className="bg-violet-700 shadow-lg transition-all duration-200 hover:shadow-xl hover:bg-violet-800 w-full sm:w-auto"
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            Registrar Asistencia Masiva
-          </Button>
+            <Button
+              onClick={abrirFormulario}
+              className="bg-violet-700 shadow-lg transition-all duration-200 hover:shadow-xl hover:bg-violet-800 w-full sm:w-auto"
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Registrar Asistencia Masiva
+            </Button>
 
-          <Button
-            onClick={onResetFilters}
-            variant="outline"
-            className="flex items-center gap-2 w-full sm:w-auto"
-          >
-            <RotateCcw className="w-4 h-4" />
-            Limpiar Filtros
-          </Button>
+            <Button
+              onClick={onResetFilters}
+              variant="outline"
+              className="flex items-center gap-2 w-full sm:w-auto"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Limpiar Filtros
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       <Table>
         <TableHeader>
@@ -224,9 +227,11 @@ export default function AsistenciaTable({
                 Estado asistencia
               </TableHead>
             )}
-            <TableHead className="text-white bg-slate-700 sticky right-0 z-10 text-center ">
-              Acciones
-            </TableHead>
+            {!readOnly && (
+              <TableHead className="text-white bg-slate-700 sticky right-0 z-10 text-center ">
+                Acciones
+              </TableHead>
+            )}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -245,6 +250,7 @@ export default function AsistenciaTable({
                 key={reg.id}
                 registro={reg}
                 fecha={fecha}
+                readOnly={readOnly}
                 isEditing={editingRowId === reg.id}
                 editingRowData={editingRowData}
                 isSaving={isSaving}

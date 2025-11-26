@@ -15,6 +15,7 @@ export default function AsistenciaDataContainer({
   fechaFin,
   page,
   limit,
+  readOnly = false, // Si true, solo lectura y sin acciones
   debouncedFiltroEmpleado,
   filtroDepartamento,
   filtroTipoRegistro,
@@ -87,6 +88,7 @@ export default function AsistenciaDataContainer({
         <AsistenciaTable
           filtrados={registros}
           fecha={fechaInicio}
+          readOnly={readOnly}
           editingRowId={editingRowId}
           editingRowData={editingRowData}
           isSaving={isSaving}
