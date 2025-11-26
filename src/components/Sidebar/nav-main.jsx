@@ -97,6 +97,12 @@ const items = [
     icon: PartyPopper,
   },
   {
+    title: "Reglas de aviso",
+    url: "/panel/reglas-aviso",
+    rol: "Recruiter",
+    icon: CalendarDays,
+  },
+  {
     // Menú desplegable de Vacaciones (como Catálogos)
     // Relacionado con: /panel/vacaciones y /panel/vacaciones/por-ley
     title: "Vacaciones",
