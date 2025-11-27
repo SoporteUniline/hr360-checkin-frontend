@@ -125,6 +125,13 @@ const items = [
         url: "/panel/vacaciones/por-periodo",
         icon: FileText,
       },
+      {
+        title: "Registro de vacaciones",
+        // Nueva vista que reutiliza la tabla de asistencias filtrando por Vacaciones
+        // Relacionado con: src/app/panel/vacaciones/registro/page.jsx
+        url: "/panel/vacaciones/registro",
+        icon: ClipboardCheck,
+      },
     ],
   },
   {
