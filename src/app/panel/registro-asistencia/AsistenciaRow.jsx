@@ -20,6 +20,7 @@ import HistorialEmpleadoDialog from "./HistorialEmpleadoDialog";
 export default function AsistenciaRow({
   registro,
   fecha,
+  readOnly = false, // Si true, fila solo lectura y sin columna de acciones
   isEditing,
   editingRowData,
   isSaving,
@@ -51,7 +52,7 @@ export default function AsistenciaRow({
         onClick={handleRowClick}
         className={!isEditing ? "cursor-pointer" : ""}
       >
-        {isEditing ? (
+        {isEditing && !readOnly ? (
           <>
             <TableCell className="font-bold">{`${registro.nombre} ${registro.apellido_paterno}`}</TableCell>
             {mostrarCamposExtras && <TableCell>{registro.nip}</TableCell>}
@@ -407,29 +408,32 @@ export default function AsistenciaRow({
                 </span>
               </TableCell>
             )}
-            <TableCell
-              className="sticky right-0 bg-background z-10 text-center p-0"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-center gap-2 h-full px-2">
-                <Button
-                  size="sm"
-                  onClick={() => handleSaveClick(registro.id)}
-                  disabled={isSaving}
-                  className="bg-slate-700 hover:bg-slate-700"
-                >
-                  <Save className="w-16 h-16 text-white bg-slate-700" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleCancelEdit}
-                  disabled={isSaving}
-                >
-                  <X className="w-16 h-16 text-slate-700 " />
-                </Button>
-              </div>
-            </TableCell>
+            {!readOnly && (
+              <TableCell
+                className="sticky right-0 bg-background z-10 text-center p-0"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-center gap-2 h-full px-2">
+                  <Button
+                    size="sm"
+                    onClick={() => handleSaveClick(registro.id)}
+                    disabled={isSaving}
+                    className="bg-slate-700 hover:bg-slate-700"
+                  >
+                    <Save className="w-16 h-16 text-white bg-slate-700" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleCancelEdit}
+                    disabled={isSaving}
+                  >
+                    <X className="w-16 h-16 text-slate-700 "
+                    />
+                  </Button>
+                </div>
+              </TableCell>
+            )}
           </>
         ) : (
           <>
@@ -551,18 +555,20 @@ export default function AsistenciaRow({
                 </span>
               </TableCell>
             )}
-            <TableCell
-              className="sticky right-0 bg-background z-10 text-center"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Button
-                size="sm"
-                onClick={() => handleEditClick(registro)}
-                className="bg-slate-700 hover:bg-slate-700"
+            {!readOnly && (
+              <TableCell
+                className="sticky right-0 bg-background z-10 text-center"
+                onClick={(e) => e.stopPropagation()}
               >
-                <Pencil className="w-16 h-16 text-white bg-slate-700" />
-              </Button>
-            </TableCell>
+                <Button
+                  size="sm"
+                  onClick={() => handleEditClick(registro)}
+                  className="bg-slate-700 hover:bg-slate-700"
+                >
+                  <Pencil className="w-16 h-16 text-white bg-slate-700" />
+                </Button>
+              </TableCell>
+            )}
           </>
         )}
       </TableRow>
