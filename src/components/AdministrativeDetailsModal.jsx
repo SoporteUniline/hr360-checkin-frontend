@@ -6,7 +6,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Card, CardContent, CardHeader } from "./ui/card";
 import dayjs from "dayjs";
 import "dayjs/locale/es";
 import { twMerge } from "tailwind-merge";
@@ -17,8 +16,6 @@ dayjs.locale("es");
 export const AdministrativeDetailsModal = ({ open, onClose, acta }) => {
   if (!acta) return null;
 
-  console.log(acta);
-
   const formatSancion = (str) => {
     if (!str) return "";
     return str.replace(/_/g, " ").toUpperCase();
@@ -26,7 +23,9 @@ export const AdministrativeDetailsModal = ({ open, onClose, acta }) => {
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-h-[80vh]">
+      <DialogContent
+        className={twMerge("sm:max-w-xl md:max-w-2xl lg:max-w-3xl")}
+      >
         <DialogHeader className="border-b-2 pb-2">
           <DialogTitle className="text-md">📋 Acta {acta.folio}</DialogTitle>
         </DialogHeader>
@@ -116,7 +115,7 @@ export const AdministrativeDetailsModal = ({ open, onClose, acta }) => {
             </div>
           </CardCompact>
           <CardCompact title="👤 Información Administrativa">
-            <div className="flex justify-between pb-1 border-b-1">
+            <div className="flex justify-between pt-1 pb-2 border-b-1">
               <p className="text-gray-500">Elabora:</p>
               <p className="font-semibold">{acta.nombre_quien_elabora}</p>
             </div>
@@ -136,13 +135,17 @@ export const AdministrativeDetailsModal = ({ open, onClose, acta }) => {
                 {acta.estatus}
               </span>
             </div>
-            <div className="flex justify-between pt-1 pb-2 border-b-1">
+            <div className="flex justify-between pt-2 pb-2 border-b-1">
               <p className="text-gray-500">Reincidencia:</p>
-              <p>{acta.es_reincidencia ? "⚠️ SÍ" : "🪪 NO"}</p>
+              <p className="font-semibold">
+                {acta.es_reincidencia ? "⚠️ SÍ" : "🪪 NO"}
+              </p>
             </div>
             <div className="flex justify-between pt-1 pb-2">
               <p className="text-gray-500">Fecha de creación:</p>
-              <p>{dayjs(acta.fecha_creacion).format("DD/MM/YYYY HH:mm")}</p>
+              <p className="font-semibold">
+                {dayjs(acta.fecha_creacion).format("DD/MM/YYYY HH:mm")}
+              </p>
             </div>
           </CardCompact>
         </div>

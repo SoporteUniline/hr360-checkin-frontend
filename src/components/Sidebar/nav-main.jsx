@@ -158,12 +158,12 @@ const items = [
     rol: "Recruiter",
     icon: FileSpreadsheet,
   },
-  // {
-  //   title: "Actas administrativas",
-  //   url: "/panel/actas-administrativas",
-  //   rol: "Recruiter",
-  //   icon: FolderClosed,
-  // },
+  {
+    title: "Actas administrativas",
+    url: "/panel/actas-administrativas",
+    rol: "Recruiter",
+    icon: FolderClosed,
+  },
   {
     title: "Perfil",
     rol: "Recruiter",

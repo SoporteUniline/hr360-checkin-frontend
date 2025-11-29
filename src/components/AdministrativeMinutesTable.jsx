@@ -12,10 +12,12 @@ import dayjs from "dayjs";
 import "dayjs/locale/es";
 import React, { useState } from "react";
 import { AdministrativeDetailsModal } from "./AdministrativeDetailsModal";
+import { RotateCcw } from "lucide-react";
+import { Button } from "./ui/button";
 
 dayjs.locale("es");
 
-export const AdministrativeTable = ({ actas }) => {
+export const AdministrativeTable = ({ actas, limpiarFiltros }) => {
   const [selectedActa, setSelectedActa] = useState(null);
   const [open, setOpen] = useState(false);
 
@@ -24,20 +26,22 @@ export const AdministrativeTable = ({ actas }) => {
     setOpen(true);
   };
 
-  if (!actas || actas.length === 0) {
-    return (
-      <div className="text-center text-muted-foreground py-10">
-        No hay registros de actas administrativas.
-      </div>
-    );
-  }
-
   return (
     <>
-      <div className="bg-slate-700 shadow-md px-4 py-3 rounded-tl-md rounded-tr-md">
-        <h2 className="text-lg font-bold bg-slate-700 text-white">
-          Lista de actas administrativas
-        </h2>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between bg-slate-700 shadow-md px-4 py-3 rounded-tl-md rounded-tr-md gap-3">
+        <div className="flex items-center text-lg font-bold text-white">
+          <h1>Lista de actas administrativas</h1>
+        </div>
+        <div className="flex flex-col md:flex-row flex-wrap justify-end gap-3 w-full md:w-auto">
+          <Button
+            onClick={limpiarFiltros}
+            variant="outline"
+            className="flex items-center gap-2 w-full sm:w-auto"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Limpiar Filtros
+          </Button>
+        </div>
       </div>
 
       <Table>
@@ -59,6 +63,17 @@ export const AdministrativeTable = ({ actas }) => {
         </TableHeader>
 
         <TableBody>
+          {!actas ||
+            (actas.length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={6}
+                  className="text-center text-muted-foreground py-10"
+                >
+                  No hay registros de actas administrativas.
+                </TableCell>
+              </TableRow>
+            ))}
           {actas.map((acta) => (
             <TableRow
               key={acta.id_acta}
@@ -66,7 +81,10 @@ export const AdministrativeTable = ({ actas }) => {
               onClick={() => handleRowClick(acta)}
             >
               <TableCell className="font-bold">{acta.folio}</TableCell>
-              <TableCell>{acta.nombre_empleado}</TableCell>
+              <TableCell>
+                {acta.nombre_empleado} {acta.apellido_paterno_empleado}{" "}
+                {acta.apellido_materno_empleado}
+              </TableCell>
               <TableCell>{acta.nombre_tipo_acta}</TableCell>
               <TableCell>
                 <span

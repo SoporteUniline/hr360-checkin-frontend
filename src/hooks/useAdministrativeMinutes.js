@@ -1,13 +1,25 @@
 import { fetcherWithToken } from "@/lib/fetcher";
 import useSWR from "swr";
 
-export const useAdministrativeMinutes = (id_empresa, page = 1, limit = 10) => {
+export const useAdministrativeMinutes = (
+  id_empresa,
+  page = 1,
+  limit = 10,
+  filters = {}
+) => {
   const shouldFetch = Boolean(id_empresa);
 
+  const query = new URLSearchParams({
+    id_empresa,
+    page,
+    limit,
+    empleado: filters.empleado || "",
+    folio: filters.folio || "",
+    estatus: filters.estatus || "",
+  }).toString();
+
   const { data, error, isLoading, mutate } = useSWR(
-    shouldFetch
-      ? `/checador/administrativeMinutes?id_empresa=${id_empresa}&page=${page}&limit=${limit}`
-      : null,
+    shouldFetch ? `/checador/administrativeMinutes?${query}` : null,
     fetcherWithToken
   );
 
