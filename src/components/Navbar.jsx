@@ -178,6 +178,17 @@ export default function Navbar() {
               </DropdownMenu>
             </NavigationMenuItem>
             <NavigationMenuItem>
+              <Link
+                href="/panel/contratos"
+                className={twMerge(
+                  navigationMenuTriggerStyle(),
+                  pathname === "/panel/contratos" && "font-medium"
+                )}
+              >
+                Contratos
+              </Link>
+            </NavigationMenuItem>
+            <NavigationMenuItem>
               {isLoggedIn ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -372,6 +383,14 @@ const MenuResposive = ({
                 className={twMerge(navigationMenuTriggerStyle())}
               >
                 Vacaciones por ley
+              </Link>
+            </DrawerClose>
+            <DrawerClose asChild>
+              <Link
+                href="/panel/contratos"
+                className={twMerge(navigationMenuTriggerStyle())}
+              >
+                Contratos
               </Link>
             </DrawerClose>
 

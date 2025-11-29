@@ -91,6 +91,12 @@ const items = [
     icon: FileText,
   },
   {
+    title: "Contratos",
+    url: "/panel/contratos",
+    rol: "Recruiter",
+    icon: FileText,
+  },
+  {
     title: "Días festivos",
     url: "/panel/festivos",
     rol: "Recruiter",
