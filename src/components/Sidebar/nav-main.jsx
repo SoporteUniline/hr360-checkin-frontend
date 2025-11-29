@@ -28,6 +28,7 @@ import {
   LayoutDashboard,
   FileText,
   CalendarDays,
+  FolderClosed,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -157,6 +158,12 @@ const items = [
     rol: "Recruiter",
     icon: FileSpreadsheet,
   },
+  // {
+  //   title: "Actas administrativas",
+  //   url: "/panel/actas-administrativas",
+  //   rol: "Recruiter",
+  //   icon: FolderClosed,
+  // },
   {
     title: "Perfil",
     rol: "Recruiter",
