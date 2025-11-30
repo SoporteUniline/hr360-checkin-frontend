@@ -43,7 +43,7 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
             <div className="font-semibold text-slate-700 mb-2">📋 Información General</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
               <div><span className="text-muted-foreground">Empresa:</span> {item.empresa || item.empresa_nombre}</div>
-              <div><span className="text-muted-foreground">Empleado:</span> {item.empleado_nombre || item.nombreEmpleado}</div>
+              <div><span className="text-muted-foreground">Empleado:</span> {item.nombre_empleado || item.empleado_nombre || item.nombreEmpleado}</div>
               <div><span className="text-muted-foreground">Puesto:</span> {item.puesto || "-"}</div>
               <div><span className="text-muted-foreground">Tipo:</span> {item.tipo_contrato || item.tipoContrato}</div>
               <div><span className="text-muted-foreground">Estatus:</span> {item.estatus || "-"}</div>

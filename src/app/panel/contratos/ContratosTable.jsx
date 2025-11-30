@@ -110,7 +110,7 @@ export default function ContratosTable({ items = [], loading, onEdit, onDelete, 
               <tr key={`ctr-${c.id || c.folio}`} className="border-b hover:bg-slate-50">
                 <td className="px-3 py-2 font-semibold">{c.folio || c.id}</td>
                 <td className="px-3 py-2">
-                  <div>{c.empleado_nombre || c.nombreEmpleado}</div>
+                  <div>{c.nombre_empleado || c.empleado_nombre || c.nombreEmpleado}</div>
                   <div className="text-xs text-muted-foreground">{c.empresa || c.empresa_nombre}</div>
                 </td>
                 <td className="px-3 py-2">{c.puesto}</td>
