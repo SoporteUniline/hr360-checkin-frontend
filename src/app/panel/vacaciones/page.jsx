@@ -75,6 +75,15 @@ export default function VacacionesPage() {
   const [detalleLoading, setDetalleLoading] = useState(false);
   const [detalleData, setDetalleData] = useState(null); // Respuesta del backend para cargados/tomados
 
+  // Desplegable por fila (nuevo estilo)
+  // - Controla qué empleado está expandido y qué pestaña se muestra (cargados|tomados)
+  // - Cachea las respuestas por empleado para evitar refetch innecesario
+  const [expandedRow, setExpandedRow] = useState(null);
+  const [expandedTab, setExpandedTab] = useState("cargados");
+  const [rowLoading, setRowLoading] = useState(false);
+  const [cacheCargados, setCacheCargados] = useState({});
+  const [cacheTomados, setCacheTomados] = useState({});
+
   // Cargar reporte principal
   useEffect(() => {
     const fetchData = async () => {
@@ -167,6 +176,11 @@ export default function VacacionesPage() {
     setCurrentPage(1);
   };
 
+  // Cerrar el desplegable al cambiar filtros/paginación para evitar estados inconsistentes
+  useEffect(() => {
+    setExpandedRow(null);
+  }, [filterEmpleado, filterDepartamento, filterEstado, currentPage, rowsPerPage]);
+
   // KPIs
   const kpis = useMemo(() => {
     const total = datosFiltrados.length;
@@ -178,6 +192,120 @@ export default function VacacionesPage() {
     );
     return { total, conV, sinV, totalDias };
   }, [datosFiltrados]);
+
+  // Helpers para nuevo panel desplegable
+  const toggleExpand = async (idEmpleado, tab = "cargados") => {
+    // Si ya está abierto y clickean la misma pestaña, colapsa
+    if (expandedRow === idEmpleado && expandedTab === tab) {
+      setExpandedRow(null);
+      return;
+    }
+    setExpandedRow(idEmpleado);
+    setExpandedTab(tab);
+    // Carga perezosa
+    await ensureRowDetalle(tab, idEmpleado);
+  };
+
+  const ensureRowDetalle = async (tipo, idEmpleado) => {
+    const cache =
+      tipo === "cargados" ? cacheCargados?.[idEmpleado] : cacheTomados?.[idEmpleado];
+    if (cache || !idEmpresa) return;
+    setRowLoading(true);
+    try {
+      const url = `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/vacaciones/${tipo}/${idEmpleado}`;
+      const res = await axios.get(url, {
+        params: { empresa: idEmpresa, id_empresa: idEmpresa },
+      });
+      if (tipo === "cargados") {
+        setCacheCargados((prev) => ({ ...prev, [idEmpleado]: res.data }));
+      } else {
+        setCacheTomados((prev) => ({ ...prev, [idEmpleado]: res.data }));
+      }
+    } catch {
+      if (tipo === "cargados") {
+        setCacheCargados((prev) => ({ ...prev, [idEmpleado]: null }));
+      } else {
+        setCacheTomados((prev) => ({ ...prev, [idEmpleado]: null }));
+      }
+    } finally {
+      setRowLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (expandedRow && idEmpresa) {
+      // Asegura que al cambiar de pestaña se carguen datos si faltan
+      ensureRowDetalle(expandedTab, expandedRow);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [expandedTab, expandedRow, idEmpresa]);
+
+  // Click sobre la fila: si está abierta, plegar SIEMPRE; si está cerrada, abrir con "cargados"
+  const handleRowClick = async (idEmpleado) => {
+    if (expandedRow === idEmpleado) {
+      setExpandedRow(null);
+      return;
+    }
+    setExpandedRow(idEmpleado);
+    setExpandedTab("cargados");
+    await ensureRowDetalle("cargados", idEmpleado);
+  };
+
+  const mesesCortos = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+  const rangoVacaciones = (vacaciones = []) => {
+    if (!vacaciones.length) return "-";
+    const fechas = vacaciones
+      .map((v) => new Date(`${v.fecha}T00:00:00`))
+      .sort((a, b) => a - b);
+    const a = fechas[0];
+    const b = fechas[fechas.length - 1];
+    if (a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth()) {
+      return `${mesesCortos[a.getMonth()]} ${a.getFullYear()}`;
+    }
+    return `${mesesCortos[a.getMonth()]} - ${mesesCortos[b.getMonth()]} ${b.getFullYear()}`;
+  };
+  const mesesLargos = [
+    "Enero",
+    "Febrero",
+    "Marzo",
+    "Abril",
+    "Mayo",
+    "Junio",
+    "Julio",
+    "Agosto",
+    "Septiembre",
+    "Octubre",
+    "Noviembre",
+    "Diciembre",
+  ];
+  const diasSemana = [
+    "Domingo",
+    "Lunes",
+    "Martes",
+    "Miércoles",
+    "Jueves",
+    "Viernes",
+    "Sábado",
+  ];
+  const formatSpanishDate = (iso) => {
+    const d = new Date(`${iso}T00:00:00`);
+    return { day: d.getDate(), weekday: diasSemana[d.getDay()] };
+  };
+  const groupVacacionesByYearMonth = (vacaciones = []) => {
+    const map = {};
+    vacaciones.forEach((v) => {
+      const date = new Date(`${v.fecha}T00:00:00`);
+      const year = date.getFullYear();
+      const month = date.getMonth();
+      const key = `${year}-${month}`;
+      if (!map[key]) map[key] = { year, month, vacaciones: [] };
+      map[key].vacaciones.push({ ...v, _date: date });
+    });
+    const groups = Object.values(map);
+    groups.forEach((g) => g.vacaciones.sort((a, b) => b._date - a._date));
+    groups.sort((a, b) => (b.year - a.year) || (b.month - a.month));
+    return groups;
+  };
 
   // Acciones de detalle (cargados/tomados)
   const abrirDetalleCargados = async (idEmpleado) => {
@@ -373,7 +501,6 @@ export default function VacacionesPage() {
                   <TableHead className="text-center">Días Cargados</TableHead>
                   <TableHead className="text-center">Días Tomados</TableHead>
                   <TableHead className="text-center">Días Disponibles</TableHead>
-                  <TableHead className="text-center">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -386,8 +513,20 @@ export default function VacacionesPage() {
                       ? "secondary"
                       : "default";
                   return (
-                    <TableRow key={emp.id_empleado}>
+                    <>
+                      <TableRow
+                        key={emp.id_empleado}
+                        className="cursor-pointer hover:bg-slate-50"
+                        onClick={() => handleRowClick(emp.id_empleado)}
+                      >
                       <TableCell className="font-semibold">
+                          <span
+                            className={`mr-2 inline-block transition-transform ${
+                              expandedRow === emp.id_empleado ? "rotate-90" : ""
+                            }`}
+                          >
+                            ▶
+                          </span>
                         {emp.nombre_completo}
                       </TableCell>
                       <TableCell>{emp.departamento}</TableCell>
@@ -402,24 +541,158 @@ export default function VacacionesPage() {
                       <TableCell className="text-center">
                         <Badge variant={badgeVariant}>{numberFormat(dDisp)}</Badge>
                       </TableCell>
+                      </TableRow>
+                      {expandedRow === emp.id_empleado ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="p-0 bg-slate-50">
+                            <div className="border-t p-3">
+                              {/* Tabs tipo botones */}
+                              <div className="inline-flex rounded-md bg-slate-100 p-1 mb-3">
+                                <button
+                                  className={`px-3 py-1.5 text-sm font-semibold rounded ${expandedTab === "cargados" ? "bg-white shadow" : "text-slate-600"}`}
+                                  onClick={() => setExpandedTab("cargados")}
+                                >
+                                  📅 Días Cargados
+                                </button>
+                                <button
+                                  className={`px-3 py-1.5 text-sm font-semibold rounded ${expandedTab === "tomados" ? "bg-white shadow" : "text-slate-600"}`}
+                                  onClick={() => setExpandedTab("tomados")}
+                                >
+                                  🏖️ Días Tomados
+                                </button>
+                              </div>
+
+                              {/* Resumen del empleado */}
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
+                                <Card className="p-3">
+                                  <div className="text-[11px] uppercase text-slate-500">Días Cargados</div>
+                                  <div className="text-xl font-extrabold">{numberFormat(emp.dias_cargados)}</div>
+                                </Card>
+                                <Card className="p-3">
+                                  <div className="text-[11px] uppercase text-slate-500">Días Tomados</div>
+                                  <div className="text-xl font-extrabold">{numberFormat(emp.dias_tomados)}</div>
+                                </Card>
+                                <Card className="p-3">
+                                  <div className="text-[11px] uppercase text-slate-500">Disponibles</div>
+                                  <div className={`text-xl font-extrabold ${dDisp === 0 ? "text-red-600" : dDisp < 5 ? "text-amber-600" : "text-emerald-600"}`}>
+                                    {numberFormat(dDisp)}
+                                  </div>
+                                </Card>
+                              </div>
+
+                              {/* Contenido */}
+                              <div className="bg-white rounded-md border">
+                                {rowLoading ? (
+                                  <div className="text-center text-slate-400 py-10">Cargando...</div>
+                                ) : expandedTab === "cargados" ? (
+                                  <div className="overflow-auto">
+                                    {(cacheCargados[emp.id_empleado]?.periodos ?? []).length === 0 ? (
+                                      <div className="text-center text-slate-400 py-8">No tiene periodos registrados</div>
+                                    ) : (
+                                      <Table>
+                                        <TableHeader>
+                                          <TableRow>
+                                            <TableHead>Año</TableHead>
+                                            <TableHead className="text-center">Días</TableHead>
+                                            <TableHead>Inicio</TableHead>
+                                            <TableHead>Fin</TableHead>
+                                            <TableHead className="text-center">Estado</TableHead>
+                                          </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                          {(cacheCargados[emp.id_empleado]?.periodos ?? []).map((p) => {
+                                            const activa = p?.estado === "Activa";
+                                            return (
+                                              <TableRow key={`${p.id}-${p.anios}`}>
+                                                <TableCell className="font-semibold">Año {p?.anios}</TableCell>
+                                                <TableCell className="text-center">
+                                                  <Badge variant="outline">{numberFormat(p?.dias)} días</Badge>
+                                                </TableCell>
+                                                <TableCell>📆 {p?.fecha_inicio}</TableCell>
+                                                <TableCell>📆 {p?.fecha_fin}</TableCell>
                       <TableCell className="text-center">
-                        <div className="flex gap-2 justify-center">
-                          <Button
-                            size="sm"
-                            onClick={() => abrirDetalleCargados(emp.id_empleado)}
-                          >
-                            📅 Cargados
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            onClick={() => abrirDetalleTomados(emp.id_empleado)}
-                          >
-                            🏖️ Tomados
-                          </Button>
+                                                  <Badge variant={activa ? "default" : "secondary"}>{p?.estado}</Badge>
+                                                </TableCell>
+                                              </TableRow>
+                                            );
+                                          })}
+                                        </TableBody>
+                                      </Table>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="p-3">
+                                    {/* Métricas simples */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+                                      <Card className="p-3">
+                                        <div className="text-[11px] uppercase text-slate-500">Total Días</div>
+                                        <div className="text-2xl font-extrabold">{numberFormat(cacheTomados[emp.id_empleado]?.total ?? (cacheTomados[emp.id_empleado]?.vacaciones?.length ?? 0))}</div>
+                                      </Card>
+                                      <Card className="p-3">
+                                        <div className="text-[11px] uppercase text-slate-500">Período</div>
+                                        <div className="text-base font-semibold">
+                                          {rangoVacaciones(cacheTomados[emp.id_empleado]?.vacaciones ?? [])}
+                                        </div>
+                                      </Card>
+                                    </div>
+
+                                    {/* Grid de días tomados (estilo ejemplo HTML) */}
+                                    {(() => {
+                                      const vacaciones = cacheTomados[emp.id_empleado]?.vacaciones ?? [];
+                                      if (vacaciones.length === 0) {
+                                        return (
+                                          <div className="text-center text-slate-400 py-8">
+                                            No ha tomado vacaciones
+                                          </div>
+                                        );
+                                      }
+                                      const grupos = groupVacacionesByYearMonth(vacaciones);
+                                      return (
+                                        <div className="flex flex-col gap-5">
+                                          {grupos.map((g) => (
+                                            <div key={`${g.year}-${g.month}`} className="pl-4 border-l-4 border-slate-300">
+                                              <div className="mb-3">
+                                                <div className="text-lg font-extrabold text-slate-700">{g.year}</div>
+                                                <div className="text-sm font-semibold text-slate-500">{mesesLargos[g.month]}</div>
+                                              </div>
+                                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                {g.vacaciones.map((v) => {
+                                                  const f = formatSpanishDate(v.fecha);
+                                                  return (
+                                                    <div
+                                                      key={v.id}
+                                                      className="flex items-center gap-3 rounded-md border bg-white p-3 shadow-sm transition hover:shadow-md"
+                                                    >
+                                                      <div className="w-12 h-12 rounded-md bg-slate-800 text-white flex items-center justify-center font-extrabold text-xl">
+                                                        {f.day}
+                                                      </div>
+                                                      <div className="min-w-0">
+                                                        <div className="mb-1">
+                                                          <span className="inline-block text-[11px] font-bold text-white bg-emerald-600 rounded-full px-2 py-0.5">
+                                                            {f.weekday.toUpperCase()}
+                                                          </span>
+                                                        </div>
+                                                        <div className="text-xs text-slate-600 truncate">
+                                                          {v.notas || "Sin notas"}
+                                                        </div>
+                                                      </div>
+                                                    </div>
+                                                  );
+                                                })}
+                                              </div>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      );
+                                    })()}
+                                  </div>
+                                )}
+                              </div>
                         </div>
                       </TableCell>
                     </TableRow>
+                      ) : null}
+                    </>
                   );
                 })}
               </TableBody>

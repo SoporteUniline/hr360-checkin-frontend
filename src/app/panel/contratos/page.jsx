@@ -124,7 +124,7 @@ export default function ContratosPage() {
       .map((c) => {
         const cols = [
           c.folio || c.id || "",
-          c.empleado_nombre || c.nombreEmpleado || "",
+          c.nombre_empleado || c.empleado_nombre || c.nombreEmpleado || "",
           c.puesto || "",
           c.tipo_contrato || c.tipoContrato || "",
           fmt(c.fecha_inicio || c.fechaInicio),
