@@ -412,8 +412,15 @@ export default function FormularioEmpleado({
         `/checador/empleados?empresa=${data.id_empresa}&page=${page}&limit=${limit}`
       );
     } catch (error) {
-      console.error(error);
-      enqueueSnackbar("Error al guardar empleado", { variant: "error" });
+      console.log(error);
+      // console.error(error);
+      // enqueueSnackbar("Error al guardar empleado", { variant: "error" });
+      const mensaje =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        "Error desconocido";
+
+      enqueueSnackbar(mensaje, { variant: "error" });
     }
   };
 
