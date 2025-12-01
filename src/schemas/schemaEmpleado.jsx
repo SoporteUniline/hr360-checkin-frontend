@@ -94,7 +94,7 @@ export const schemaEmpleado = z
       }),
 
     // Nómina - OPCIONALES
-    sueldo_por_hora: z.coerce.number().nullable().optional(),
+    sueldo: z.coerce.number().nullable().optional(),
     porcentaje: z.coerce.number().nullable().optional(),
 
     // Otros campos opcionales
@@ -211,15 +211,15 @@ export const schemaEmpleado = z
     if (data.forma_calculo !== "sin-seleccion") {
       if (data.forma_calculo === "$" || data.forma_calculo === "Ambos") {
         if (
-          data.sueldo_por_hora === null ||
-          data.sueldo_por_hora === undefined ||
-          data.sueldo_por_hora <= 0
+          data.sueldo === null ||
+          data.sueldo === undefined ||
+          data.sueldo <= 0
         ) {
           ctx.addIssue({
-            path: ["sueldo_por_hora"],
+            path: ["sueldo"],
             code: z.ZodIssueCode.custom,
             message:
-              "El sueldo por hora es requerido cuando la forma de cálculo es $ o Ambos",
+              "El sueldo es requerido cuando la forma de cálculo es $ o Ambos",
           });
         }
       }

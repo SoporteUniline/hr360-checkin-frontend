@@ -129,11 +129,11 @@ export default function TabNomina({ form, soloLectura }) {
 
       {["$", "Ambos"].includes(form.watch("forma_calculo")) && (
         <FormField
-          name="sueldo_por_hora"
+          name="sueldo"
           control={form.control}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Sueldo por hora ($)</FormLabel>
+              <FormLabel>Sueldo ($)</FormLabel>
               <FormControl>
                 <Input
                   type="number"
@@ -174,7 +174,7 @@ export default function TabNomina({ form, soloLectura }) {
                     const value = e.target.value;
                     field.onChange(value ? parseFloat(value) : null);
                     if (form.getValues("forma_calculo") === "%") {
-                      form.setValue("sueldo_por_hora", null);
+                      form.setValue("sueldo", null);
                     }
                   }}
                 />

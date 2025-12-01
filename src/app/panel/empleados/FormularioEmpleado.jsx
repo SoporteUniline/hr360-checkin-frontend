@@ -187,7 +187,7 @@ export default function FormularioEmpleado({
         otro_banco,
         tipo_cuenta: cuenta_bancaria?.tipo_cuenta || "Cuenta",
         // Asegurar valores numéricos válidos
-        sueldo_por_hora: restoEmpleado.sueldo_por_hora || null,
+        sueldo: restoEmpleado.sueldo || null,
         porcentaje: restoEmpleado.porcentaje || null,
         descriptor_facial: restoEmpleado.descriptor_facial || [],
         solicitar_gps:
@@ -223,7 +223,7 @@ export default function FormularioEmpleado({
     if (forma === "$") {
       form.setValue("porcentaje", null);
     } else if (forma === "%") {
-      form.setValue("sueldo_por_hora", null);
+      form.setValue("sueldo", null);
     }
   }, [form.watch("forma_calculo")]);
 
@@ -253,7 +253,7 @@ export default function FormularioEmpleado({
         "periodo_pago",
         "forma_pago",
         "forma_calculo",
-        "sueldo_por_hora",
+        "sueldo",
         "porcentaje",
       ],
       cuentas: ["banco", "numero_cuenta", "tipo_cuenta"],
