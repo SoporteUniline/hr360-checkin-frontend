@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import dayjs from "dayjs";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +14,42 @@ import {
  * - Relación: se invoca desde `src/app/panel/contratos/page.jsx`
  */
 export default function ContratoViewDialog({ open, setOpen, item }) {
+  function formatDMY(value) {
+    if (!value) return "";
+    const d = dayjs(value, ["YYYY-MM-DD", "DD/MM/YYYY", "YYYY/MM/DD"], true);
+    return d.isValid() ? d.format("DD/MM/YYYY") : String(value);
+  }
+
+  function BadgeTipo({ tipo }) {
+    const base = "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold";
+    switch (tipo) {
+      case "indefinido":
+        return <span className={base} style={{ backgroundColor: "#dbeafe", color: "#1e40af" }}>Indefinido</span>;
+      case "temporal":
+        return <span className={base} style={{ backgroundColor: "#fef3c7", color: "#92400e" }}>Temporal</span>;
+      case "obra_determinada":
+        return <span className={base} style={{ backgroundColor: "#fef3c7", color: "#92400e" }}>Obra Determinada</span>;
+      case "capacitacion":
+        return <span className={base} style={{ backgroundColor: "#fef3c7", color: "#92400e" }}>Capacitación</span>;
+      case "prueba":
+        return <span className={base} style={{ backgroundColor: "#fef3c7", color: "#92400e" }}>Prueba</span>;
+      case "prestacion_servicios":
+        return <span className={base} style={{ backgroundColor: "#e9d5ff", color: "#6b21a8" }}>Prestación Servicios</span>;
+      default:
+        return <span className={base} style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}>{tipo || "-"}</span>;
+    }
+  }
+
+  function BadgeEstatus({ estatus }) {
+    const base = "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold";
+    const val = (estatus || "").toLowerCase();
+    if (val === "activo") return <span className={base} style={{ backgroundColor: "#d1fae5", color: "#065f46" }}>Activo</span>;
+    if (val === "suspendido") return <span className={base} style={{ backgroundColor: "#fef3c7", color: "#92400e" }}>Suspendido</span>;
+    if (val === "terminado") return <span className={base} style={{ backgroundColor: "#fee2e2", color: "#991b1b" }}>Terminado</span>;
+    if (val === "cancelado") return <span className={base} style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}>Cancelado</span>;
+    return <span className={base} style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}>{estatus}</span>;
+  }
+
   if (!item) {
     return (
       <Dialog open={open} onOpenChange={setOpen}>
@@ -29,7 +66,7 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
   const vigencia =
     item.tipo_contrato === "indefinido" || !item.fecha_fin
       ? "Sin fecha de término"
-      : item.fecha_fin;
+      : formatDMY(item.fecha_fin || item.fechaFin);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -39,27 +76,31 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="rounded-md border p-3 bg-slate-50">
-            <div className="font-semibold text-slate-700 mb-2">📋 Información General</div>
+          <div className="rounded-md border p-3" style={{ backgroundColor: "#f9fafb" }}>
+            <div className="font-semibold mb-2" style={{ color: "#2c3e50" }}>📋 Información General</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
               <div><span className="text-muted-foreground">Empresa:</span> {item.empresa || item.empresa_nombre}</div>
               <div><span className="text-muted-foreground">Empleado:</span> {item.nombre_empleado || item.empleado_nombre || item.nombreEmpleado}</div>
               <div><span className="text-muted-foreground">Puesto:</span> {item.puesto || "-"}</div>
-              <div><span className="text-muted-foreground">Tipo:</span> {item.tipo_contrato || item.tipoContrato}</div>
-              <div><span className="text-muted-foreground">Estatus:</span> {item.estatus || "-"}</div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">Tipo:</span> <BadgeTipo tipo={item.tipo_contrato || item.tipoContrato} />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-muted-foreground">Estatus:</span> <BadgeEstatus estatus={item.estatus || "-"} />
+              </div>
             </div>
           </div>
 
-          <div className="rounded-md border p-3 bg-slate-50">
-            <div className="font-semibold text-slate-700 mb-2">📅 Vigencia</div>
+          <div className="rounded-md border p-3" style={{ backgroundColor: "#f9fafb" }}>
+            <div className="font-semibold mb-2" style={{ color: "#2c3e50" }}>📅 Vigencia</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-              <div><span className="text-muted-foreground">Inicio:</span> {item.fecha_inicio || item.fechaInicio}</div>
+              <div><span className="text-muted-foreground">Inicio:</span> {formatDMY(item.fecha_inicio || item.fechaInicio)}</div>
               <div><span className="text-muted-foreground">Fin:</span> {vigencia}</div>
             </div>
           </div>
 
-          <div className="rounded-md border p-3 bg-slate-50">
-            <div className="font-semibold text-slate-700 mb-2">💰 Compensación</div>
+          <div className="rounded-md border p-3" style={{ backgroundColor: "#f9fafb" }}>
+            <div className="font-semibold mb-2" style={{ color: "#2c3e50" }}>💰 Compensación</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
               <div><span className="text-muted-foreground">Salario:</span> {item.salario_base ?? item.salarioBase}</div>
               <div><span className="text-muted-foreground">Periodicidad:</span> {item.periodicidad_pago || item.periodicidadPago}</div>
@@ -67,8 +108,8 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
             </div>
           </div>
 
-          <div className="rounded-md border p-3 bg-slate-50">
-            <div className="font-semibold text-slate-700 mb-2">⏰ Jornada</div>
+          <div className="rounded-md border p-3" style={{ backgroundColor: "#f9fafb" }}>
+            <div className="font-semibold mb-2" style={{ color: "#2c3e50" }}>⏰ Jornada</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
               <div><span className="text-muted-foreground">Tipo:</span> {item.tipo_jornada || item.tipoJornada}</div>
               <div><span className="text-muted-foreground">Horas semanales:</span> {item.horas_semanales ?? item.horasSemanales}</div>
@@ -79,8 +120,8 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
           </div>
 
           {item.tipo_contrato !== "prestacion_servicios" ? (
-            <div className="rounded-md border p-3 bg-slate-50">
-              <div className="font-semibold text-slate-700 mb-2">🎁 Prestaciones</div>
+            <div className="rounded-md border p-3" style={{ backgroundColor: "#f9fafb" }}>
+              <div className="font-semibold mb-2" style={{ color: "#2c3e50" }}>🎁 Prestaciones</div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
                 <div><span className="text-muted-foreground">Vacaciones:</span> {item.dias_vacaciones ?? item.diasVacaciones} días</div>
                 <div><span className="text-muted-foreground">Aguinaldo:</span> {item.aguinaldo_dias ?? item.aguinaldoDias} días</div>
@@ -93,8 +134,8 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
           ) : null}
 
           {item.notas ? (
-            <div className="rounded-md border p-3 bg-slate-50">
-              <div className="font-semibold text-slate-700 mb-2">📝 Notas</div>
+            <div className="rounded-md border p-3" style={{ backgroundColor: "#f9fafb" }}>
+              <div className="font-semibold mb-2" style={{ color: "#2c3e50" }}>📝 Notas</div>
               <div className="text-sm">{item.notas}</div>
             </div>
           ) : null}

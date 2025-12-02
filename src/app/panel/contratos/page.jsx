@@ -17,6 +17,7 @@ import useContratosData from "@/hooks/useContratosData";
 import { contratosApi } from "@/lib/contratosApi";
 import { useSnackbar } from "notistack";
 import useEmpleadosData from "@/hooks/useEmpleadosData";
+import styles from "./contratos-theme.module.css";
 
 /**
  * Página de gestión de Contratos
@@ -166,7 +167,7 @@ export default function ContratosPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className={`${styles.contratosTheme} space-y-6`}>
       {/* Filtros (barra superior) */}
       <Card>
         <CardHeader>
@@ -274,8 +275,19 @@ export default function ContratosPage() {
             </div>
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={limpiarFiltros}>🔄 Limpiar</Button>
-            <Button onClick={() => mutate()}>🔍 Buscar</Button>
+            <Button
+              variant="secondary"
+              onClick={limpiarFiltros}
+              className="bg-[#e74c3c] hover:bg-[#c0392b] text-white shadow-[0_2px_8px_rgba(231,76,60,0.3)]"
+            >
+              🔄 Limpiar
+            </Button>
+            <Button
+              onClick={() => mutate()}
+              className="shadow-[0_4px_12px_rgba(55,73,94,0.3)] transition-all hover:-translate-y-0.5"
+            >
+              🔍 Buscar
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -377,7 +389,10 @@ export default function ContratosPage() {
           <Button variant="secondary" onClick={exportarExcel} className="hidden">
             <Download className="h-4 w-4 mr-2" /> Exportar Excel
           </Button>
-          <Button onClick={() => { setSeedItem(null); setEditItem(null); setOpenDialog(true); }}>
+          <Button
+            onClick={() => { setSeedItem(null); setEditItem(null); setOpenDialog(true); }}
+            className="shadow-[0_4px_12px_rgba(55,73,94,0.3)] transition-all hover:-translate-y-0.5"
+          >
             <Plus className="h-4 w-4 mr-2" /> Nuevo Contrato
           </Button>
         </div>
@@ -392,6 +407,7 @@ export default function ContratosPage() {
         onEdit={(row) => { setEditItem(row); setSeedItem(null); setOpenDialog(true); }}
         onDuplicate={handleDuplicate}
         onDelete={handleDelete}
+        onView={(row) => { setViewItem(row); setOpenView(true); }}
       />
 
       {/* Paginación */}

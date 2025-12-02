@@ -4,6 +4,8 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import dayjs from "dayjs";
+import { Eye } from "lucide-react";
+import styles from "./contratos-theme.module.css";
 
 function formatDMY(value) {
   if (!value) return "";
@@ -22,11 +24,11 @@ function diasRestantes(fechaFin) {
 function alertaVigencia(fechaFin) {
   const d = diasRestantes(fechaFin);
   if (d === null) return <span className="text-xs text-muted-foreground">Sin fecha de término</span>;
-  if (d < 0) return <span className="px-2 py-0.5 rounded bg-red-100 text-red-700 text-xs font-semibold">VENCIDO</span>;
-  if (d === 0) return <span className="px-2 py-0.5 rounded bg-red-100 text-red-700 text-xs font-semibold">VENCE HOY</span>;
-  if (d <= 7) return <span className="px-2 py-0.5 rounded bg-red-100 text-red-700 text-xs font-semibold">{d} días</span>;
-  if (d <= 15) return <span className="px-2 py-0.5 rounded bg-orange-100 text-orange-700 text-xs font-semibold">{d} días</span>;
-  if (d <= 30) return <span className="px-2 py-0.5 rounded bg-yellow-100 text-yellow-700 text-xs font-semibold">{d} días</span>;
+  if (d < 0) return <span className={`px-2 py-0.5 rounded text-xs font-semibold ${styles.hrPulse2s}`} style={{ backgroundColor: "#fee2e2", color: "#991b1b" }}>VENCIDO</span>;
+  if (d === 0) return <span className={`px-2 py-0.5 rounded text-xs font-semibold ${styles.hrPulse2s}`} style={{ backgroundColor: "#fee2e2", color: "#991b1b" }}>VENCE HOY</span>;
+  if (d <= 7) return <span className={`px-2 py-0.5 rounded text-xs font-semibold ${styles.hrPulse2s}`} style={{ backgroundColor: "#fee2e2", color: "#991b1b" }}>{d} días</span>;
+  if (d <= 15) return <span className="px-2 py-0.5 rounded text-xs font-semibold" style={{ backgroundColor: "#fed7aa", color: "#9a3412" }}>{d} días</span>;
+  if (d <= 30) return <span className="px-2 py-0.5 rounded text-xs font-semibold" style={{ backgroundColor: "#fef3c7", color: "#78350f" }}>{d} días</span>;
   return <span className="text-xs text-muted-foreground">{d} días</span>;
 }
 
@@ -34,37 +36,37 @@ function badgeTipo(tipo) {
   const base = "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold";
   switch (tipo) {
     case "indefinido":
-      return <span className={`${base} bg-blue-100 text-blue-800`}>Indefinido</span>;
+      return <span className={base} style={{ backgroundColor: "#dbeafe", color: "#1e40af" }}>Indefinido</span>;
     case "temporal":
-      return <span className={`${base} bg-yellow-100 text-yellow-800`}>Temporal</span>;
+      return <span className={base} style={{ backgroundColor: "#fef3c7", color: "#92400e" }}>Temporal</span>;
     case "obra_determinada":
-      return <span className={`${base} bg-yellow-100 text-yellow-800`}>Obra Determinada</span>;
+      return <span className={base} style={{ backgroundColor: "#fef3c7", color: "#92400e" }}>Obra Determinada</span>;
     case "capacitacion":
-      return <span className={`${base} bg-yellow-100 text-yellow-800`}>Capacitación</span>;
+      return <span className={base} style={{ backgroundColor: "#fef3c7", color: "#92400e" }}>Capacitación</span>;
     case "prueba":
-      return <span className={`${base} bg-yellow-100 text-yellow-800`}>Prueba</span>;
+      return <span className={base} style={{ backgroundColor: "#fef3c7", color: "#92400e" }}>Prueba</span>;
     case "prestacion_servicios":
-      return <span className={`${base} bg-purple-100 text-purple-800`}>Prestación Servicios</span>;
+      return <span className={base} style={{ backgroundColor: "#e9d5ff", color: "#6b21a8" }}>Prestación Servicios</span>;
     default:
-      return <span className={`${base} bg-slate-100 text-slate-800`}>{tipo || "-"}</span>;
+      return <span className={base} style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}>{tipo || "-"}</span>;
   }
 }
 
 function badgeEstatus(estatus) {
   const base = "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold";
   const val = (estatus || "").toLowerCase();
-  if (val === "activo") return <span className={`${base} bg-green-100 text-green-800`}>Activo</span>;
-  if (val === "suspendido") return <span className={`${base} bg-yellow-100 text-yellow-800`}>Suspendido</span>;
-  if (val === "terminado") return <span className={`${base} bg-red-100 text-red-800`}>Terminado</span>;
-  if (val === "cancelado") return <span className={`${base} bg-slate-100 text-slate-800`}>Cancelado</span>;
-  return <span className={`${base} bg-slate-100 text-slate-800`}>{estatus}</span>;
+  if (val === "activo") return <span className={base} style={{ backgroundColor: "#d1fae5", color: "#065f46" }}>Activo</span>;
+  if (val === "suspendido") return <span className={base} style={{ backgroundColor: "#fef3c7", color: "#92400e" }}>Suspendido</span>;
+  if (val === "terminado") return <span className={base} style={{ backgroundColor: "#fee2e2", color: "#991b1b" }}>Terminado</span>;
+  if (val === "cancelado") return <span className={base} style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}>Cancelado</span>;
+  return <span className={base} style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}>{estatus}</span>;
 }
 
 /**
  * Tabla de Contratos.
  * - Con badges de tipo/estatus y alerta de vigencia (similar a Vacaciones.html)
  */
-export default function ContratosTable({ items = [], loading, onEdit, onDelete, onDuplicate }) {
+export default function ContratosTable({ items = [], loading, onEdit, onDelete, onDuplicate, onView }) {
   if (loading) {
     return (
       <Card>
@@ -120,9 +122,18 @@ export default function ContratosTable({ items = [], loading, onEdit, onDelete, 
                 <td className="px-3 py-2">{badgeEstatus(c.estatus)}</td>
                 <td className="px-3 py-2">
                   <div className="flex flex-wrap gap-2">
-                    <Button size="sm" onClick={() => onEdit?.(c)}>Editar</Button>
-                    <Button size="sm" variant="outline" onClick={() => onDuplicate?.(c)}>📋 Duplicar</Button>
-                    <Button size="sm" variant="destructive" onClick={() => onDelete?.(c)}>Eliminar</Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-[#e5e7eb] text-[#374151] hover:bg-[#f9fafb]"
+                      onClick={() => onView?.(c)}
+                      title="Ver"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button size="sm" variant="outline" className="border-[#93c5fd] text-[#2563eb] hover:bg-[#dbeafe] hover:text-[#1e40af]" onClick={() => onEdit?.(c)}>Editar</Button>
+                    <Button size="sm" variant="outline" className="border-[#86efac] text-[#10b981] hover:bg-[#d1fae5]" onClick={() => onDuplicate?.(c)}>📋 Duplicar</Button>
+                    <Button size="sm" variant="outline" className="border-[#fca5a5] text-[#dc2626] hover:bg-[#fee2e2]" onClick={() => onDelete?.(c)}>Eliminar</Button>
                   </div>
                 </td>
               </tr>
