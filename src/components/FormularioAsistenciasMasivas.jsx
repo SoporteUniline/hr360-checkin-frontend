@@ -8,6 +8,7 @@ import useEmpleadosData from "@/hooks/useEmpleadosData";
 import useTiposPermisoData from "@/hooks/useTiposPermisoData";
 import { Combobox } from "@/components/Combobox";
 import { useSnackbar } from "notistack";
+import useEmpleadosActivosData from "@/hooks/useEmpleadosActivos";
 
 export default function FormularioAsistenciasMasivas({
   values,
@@ -29,7 +30,7 @@ export default function FormularioAsistenciasMasivas({
   const { enqueueSnackbar } = useSnackbar();
 
   const { data: empleados, loading: loadingEmpleados } =
-    useEmpleadosData(idEmpresa);
+    useEmpleadosActivosData(idEmpresa);
   const { data: tiposPermiso, loading: loadingPermisos } =
     useTiposPermisoData();
 

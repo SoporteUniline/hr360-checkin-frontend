@@ -8,7 +8,7 @@ import TablePagination from "@/components/TablePagination";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { useAdministrativeMinutes } from "@/hooks/useAdministrativeMinutes";
-import useEmpleadosData from "@/hooks/useEmpleadosData";
+import useEmpleadosActivosData from "@/hooks/useEmpleadosActivos";
 import useTiposActa from "@/hooks/useTiposActa";
 import { PlusIcon } from "lucide-react";
 import React, { useState } from "react";
@@ -52,7 +52,7 @@ const page = () => {
     error,
     isLoading: loadingEmpleados,
     mutate: mutateEmpleados,
-  } = useEmpleadosData(dataUser?.id_empresa);
+  } = useEmpleadosActivosData(dataUser?.id_empresa);
 
   const {
     data: tiposActa,
