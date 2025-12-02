@@ -6,6 +6,7 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { formatDateDMY, formatDateDMYTime } from "@/lib/formatDate";
+import styles from "./permisos-theme.module.css";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
@@ -34,6 +35,15 @@ export default function PermisoViewDialog({ open, setOpen, item }) {
       ? Math.max(endDate.diff(startDate, "day") + 1, 1) // inclusivo
       : 0;
 
+  function EstadoBadge({ estado }) {
+    const base = "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold";
+    if (estado === "Pendiente") return <span className={base} style={{ backgroundColor: "#fef3c7", color: "#92400e" }}>Pendiente</span>;
+    if (estado === "Aprobado") return <span className={base} style={{ backgroundColor: "#d1fae5", color: "#065f46" }}>Aprobado</span>;
+    if (estado === "Rechazado") return <span className={base} style={{ backgroundColor: "#fee2e2", color: "#991b1b" }}>Rechazado</span>;
+    if (estado === "Cancelado") return <span className={base} style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}>Cancelado</span>;
+    return <span className={base} style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}>{estado || "—"}</span>;
+  }
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {/* Ajuste responsivo:
@@ -50,7 +60,7 @@ export default function PermisoViewDialog({ open, setOpen, item }) {
         </DialogHeader>
 
         <div className="space-y-4">
-          <section className="rounded-md border bg-slate-50 p-4">
+          <section className="rounded-md border p-4" style={{ backgroundColor: "#f9fafb" }}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <div className="text-xs text-muted-foreground">Empleado</div>
@@ -70,11 +80,11 @@ export default function PermisoViewDialog({ open, setOpen, item }) {
               </div>
               <div>
                 <div className="text-xs text-muted-foreground">Total de días</div>
-                <div className="font-semibold text-emerald-600">{totalDias}</div>
+                <div className="font-semibold" style={{ color: "#065f46" }}>{totalDias}</div>
               </div>
               <div>
                 <div className="text-xs text-muted-foreground">Estado</div>
-                <div className="font-medium">{item.estado}</div>
+                <div className="mt-0.5"><EstadoBadge estado={item.estado} /></div>
               </div>
               <div>
                 <div className="text-xs text-muted-foreground">Solicitado</div>

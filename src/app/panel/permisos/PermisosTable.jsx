@@ -15,6 +15,7 @@ import LoadingTable from "@/components/LoadingTable";
 import { Eye, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDateDMY } from "@/lib/formatDate";
+import styles from "./permisos-theme.module.css";
 
 /**
  * Tabla de solicitudes de permiso.
@@ -123,20 +124,21 @@ export default function PermisosTable({
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
                     <Button
-                      size="icon"
-                      variant="secondary"
-                      onClick={() => onEdit(row)}
-                      title="Editar"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="secondary"
+                      size="sm"
+                      variant="outline"
+                      className="border-[#e5e7eb] text-[#374151] hover:bg-[#f9fafb]"
                       title="Ver"
                       onClick={() => onView?.(row)}
                     >
                       <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-[#93c5fd] text-[#2563eb] hover:bg-[#dbeafe] hover:text-[#1e40af]"
+                      onClick={() => onEdit(row)}
+                    >
+                      Editar
                     </Button>
                     {/* Botón eliminar removido por política para evitar errores */}
                   </div>

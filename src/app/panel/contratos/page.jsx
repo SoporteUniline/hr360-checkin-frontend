@@ -13,6 +13,16 @@ import TablePagination from "@/components/TablePagination";
 import ContratosTable from "./ContratosTable";
 import ContratoDialog from "./ContratoDialog";
 import ContratoViewDialog from "./ContratoViewDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import useContratosData from "@/hooks/useContratosData";
 import { contratosApi } from "@/lib/contratosApi";
 import { useSnackbar } from "notistack";
@@ -49,6 +59,7 @@ export default function ContratosPage() {
   const [seedItem, setSeedItem] = useState(null); // para duplicación
   const [openView, setOpenView] = useState(false);
   const [viewItem, setViewItem] = useState(null);
+  const [deleteRow, setDeleteRow] = useState(null);
 
   // Sugerencias tipo módulo Permisos
   const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
@@ -154,12 +165,16 @@ export default function ContratosPage() {
     setOpenDialog(true);
   };
 
-  const handleDelete = async (row) => {
-    const ok = window.confirm(`¿Eliminar contrato ${row.folio || row.id}? Esta acción no se puede deshacer.`);
-    if (!ok) return;
+  const handleDelete = (row) => {
+    setDeleteRow(row);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteRow) return;
     try {
-      await contratosApi.eliminar(row.id || row.id_contrato);
+      await contratosApi.eliminar(deleteRow.id || deleteRow.id_contrato);
       enqueueSnackbar("Contrato eliminado", { variant: "success" });
+      setDeleteRow(null);
       mutate();
     } catch (e) {
       enqueueSnackbar(e?.response?.data?.error || "No se pudo eliminar", { variant: "error" });
@@ -425,6 +440,30 @@ export default function ContratosPage() {
 
       {/* Ver detalles (no usado actualmente) */}
       <ContratoViewDialog open={openView} setOpen={setOpenView} item={viewItem} />
+
+      {/* Confirmación de eliminación */}
+      <AlertDialog open={!!deleteRow} onOpenChange={(open) => !open && setDeleteRow(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar contrato?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminará el contrato
+              {deleteRow?.folio ? ` ${deleteRow.folio}` : deleteRow?.id ? ` #${deleteRow.id}` : ""}.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(239,68,68,0.3)]"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

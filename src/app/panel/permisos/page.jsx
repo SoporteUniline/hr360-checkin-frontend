@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Download, Plus, Search } from "lucide-react";
+import { Plus, Search, CalendarDays, Table as TableIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import usePermisosData from "@/hooks/usePermisosData";
 import useEmpleadosData from "@/hooks/useEmpleadosData";
 import useTiposPermisoData from "@/hooks/useTiposPermisoData";
@@ -17,6 +17,7 @@ import PermisosTable from "./PermisosTable";
 import PermisoDialog from "./PermisoDialog";
 import PermisoDeleteDialog from "./PermisoDeleteDialog";
 import PermisoViewDialog from "./PermisoViewDialog";
+import styles from "./permisos-theme.module.css";
 
 /**
  * Página de gestión de Permisos (solicitudes_permiso)
@@ -49,6 +50,14 @@ export default function PermisosPage() {
   const [viewItem, setViewItem] = useState(null);
   const [openDelete, setOpenDelete] = useState(false);
   const [deleteId, setDeleteId] = useState(null);
+
+  // Vista principal: 'tabla' | 'calendario'
+  // - Inspirado en Vacaciones.html (dos pestañas para alternar vista)
+  // - Se conserva la tabla existente; se agrega la vista de calendario mensual.
+  const [vista, setVista] = useState("tabla");
+
+  // Estado de mes actual para calendario (relación directa con el hook de datos del calendario)
+  const [mesActual, setMesActual] = useState(dayjs()); // mes visible en calendario
 
   const { data: tiposPermisoResp } = useTiposPermisoData();
   // Adaptar a la respuesta real del endpoint: { total, tiposPermiso: [...] }
@@ -231,8 +240,89 @@ export default function PermisosPage() {
     URL.revokeObjectURL(url);
   };
 
+  // ---------------------------
+  // Datos para Calendario mensual
+  // ---------------------------
+  // NOTA: Para el calendario necesitamos un conjunto más amplio del mes.
+  // Se reusa `usePermisosData` con un límite alto y fechas del mes visible.
+  const desdeMes = useMemo(() => mesActual.startOf("month").format("YYYY-MM-DD"), [mesActual]);
+  const hastaMes = useMemo(() => mesActual.endOf("month").format("YYYY-MM-DD"), [mesActual]);
+  // Rango efectivo del calendario: si el usuario puso fechas en filtros, se respetan;
+  // si no, se usa el mes visible.
+  const rangoDesde = useMemo(
+    () => (desde ? dayjs(desde).format("YYYY-MM-DD") : desdeMes),
+    [desde, desdeMes]
+  );
+  const rangoHasta = useMemo(
+    () => (hasta ? dayjs(hasta).format("YYYY-MM-DD") : hastaMes),
+    [hasta, hastaMes]
+  );
+  const { data: calendarioResp, isLoading: calendarioLoading, mutate: mutateCalendario } = usePermisosData({
+    idEmpresa,
+    page: 1,
+    limit: 1000,
+    // Usar los mismos filtros que la tabla para mostrar exactamente lo mismo
+    empleado: empleado || "",
+    idEmpleado: "",
+    idTipoPermiso: idTipoPermiso || "",
+    estado: estado || "",
+    desde: rangoDesde,
+    hasta: rangoHasta,
+  });
+  const registrosCalendario = calendarioResp?.data || [];
+
+  // Construcción del grid del calendario a partir de `registrosCalendario`
+  // Estructura:
+  // - empleados: lista única de empleados
+  // - mapaPermisos[employeeKey][day] = permiso
+  const diasEnMes = useMemo(() => mesActual.daysInMonth(), [mesActual]);
+  const nombreMes = useMemo(() => mesActual.format("MMMM YYYY"), [mesActual]);
+  const diasSemana = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+  const { empleadosCalendario, mapaPermisosCalendario } = useMemo(() => {
+    // Clave de empleado: se intenta usar id_empleado; si no viene, se usa el nombre (mantener consistencia)
+    const empKey = (r) => String(r.id_empleado ?? r.empleado_nombre ?? r.empleado ?? "NA");
+    const empName = (r) => String(r.empleado_nombre ?? r.empleado ?? "Empleado");
+
+    const empleadosMap = new Map();
+    const mapa = {};
+
+    registrosCalendario.forEach((p) => {
+      const key = empKey(p);
+      if (!empleadosMap.has(key)) empleadosMap.set(key, empName(p));
+      if (!mapa[key]) mapa[key] = {};
+
+      // Intersección de rango de permiso con el mes visible
+      const inicio = dayjs(p.fecha_inicio);
+      const fin = p.fecha_fin ? dayjs(p.fecha_fin) : inicio;
+      for (
+        let d = inicio.startOf("day");
+        d.isBefore(fin.endOf("day")) || d.isSame(fin, "day");
+        d = d.add(1, "day")
+      ) {
+        if (d.month() === mesActual.month() && d.year() === mesActual.year()) {
+          const dia = d.date();
+          // Guardamos el permiso (último gana si se solapa)
+          mapa[key][dia] = p;
+        }
+      }
+    });
+
+    const empleados = Array.from(empleadosMap.entries()); // [ [key, nombre], ... ]
+    return { empleadosCalendario: empleados, mapaPermisosCalendario: mapa };
+  }, [registrosCalendario, mesActual]);
+
+  // Utilidad de color por tipo
+  const colorDeTipo = (tipoNombre) => {
+    const t = String(tipoNombre || "").toLowerCase();
+    if (t.includes("vacacion")) return { bg: "bg-emerald-100", text: "text-emerald-800", ring: "ring-emerald-400" };
+    if (t.includes("médic") || t.includes("medic") || t.includes("enfermed")) return { bg: "bg-blue-100", text: "text-blue-800", ring: "ring-blue-400" };
+    if (t.includes("personal")) return { bg: "bg-amber-100", text: "text-amber-800", ring: "ring-amber-400" };
+    return { bg: "bg-rose-100", text: "text-rose-800", ring: "ring-rose-400" };
+  };
+
   return (
-    <div className="space-y-6">
+    <div className={`${styles.permisosTheme} space-y-6`}>
       {/* Filtros */}
       <Card>
         <CardHeader>
@@ -352,10 +442,17 @@ export default function PermisosPage() {
             {/* Filtro de texto libre eliminado por requerimiento */}
           </div>
           <div className="flex justify-end gap-2">
-            <Button variant="secondary" onClick={limpiarFiltros}>
+            <Button
+              variant="secondary"
+              onClick={limpiarFiltros}
+              className="bg-[#e74c3c] hover:bg-[#c0392b] text-white shadow-[0_2px_8px_rgba(231,76,60,0.3)]"
+            >
               🔄 Limpiar
             </Button>
-            <Button onClick={() => mutate()}>
+            <Button
+              onClick={() => mutate()}
+              className="shadow-[0_4px_12px_rgba(55,73,94,0.3)] transition-all hover:-translate-y-0.5"
+            >
               🔍 Buscar
             </Button>
           </div>
@@ -469,14 +566,12 @@ export default function PermisosPage() {
           ) : null}
         </div>
         <div className="flex gap-2">
-          <Button variant="secondary" onClick={exportarExcel}>
-            <Download className="h-4 w-4 mr-2" /> Exportar Excel
-          </Button>
           <Button
             onClick={() => {
               setEditItem(null);
               setOpenDialog(true);
             }}
+            className="shadow-[0_4px_12px_rgba(55,73,94,0.3)] transition-all hover:-translate-y-0.5"
           >
             <Plus className="h-4 w-4 mr-2" /> Nuevo Permiso
           </Button>
@@ -485,29 +580,208 @@ export default function PermisosPage() {
 
       <Separator />
 
-      {/* Tabla */}
-      <PermisosTable
-        items={registros}
-        loading={isLoading}
-        onEdit={(row) => {
-          setEditItem(row);
-          setOpenDialog(true);
-        }}
-        onChanged={() => mutate()}
-        onView={(row) => {
-          setViewItem(row);
-          setOpenView(true);
-        }}
-      />
+      {/* Selector de vista encima de la tabla/calendario */}
+      <div className="flex items-center justify-start">
+        <div className="inline-flex rounded-md border p-1 bg-white">
+          <Button
+            variant={vista === "tabla" ? "default" : "ghost"}
+            className={`gap-2 ${vista === "tabla" ? "" : "text-muted-foreground"}`}
+            onClick={() => setVista("tabla")}
+          >
+            <TableIcon className="h-4 w-4" /> Tabla
+          </Button>
+          <Button
+            variant={vista === "calendario" ? "default" : "ghost"}
+            className={`gap-2 ${vista === "calendario" ? "" : "text-muted-foreground"}`}
+            onClick={() => setVista("calendario")}
+          >
+            <CalendarDays className="h-4 w-4" /> Calendario
+          </Button>
+        </div>
+      </div>
 
-      {/* Paginación */}
-      <TablePagination
-        page={page}
-        limit={limit}
-        total={total}
-        onPageChange={setPage}
-        onLimitChange={setLimit}
-      />
+      {/* Vista: Tabla */}
+      {vista === "tabla" ? (
+        <>
+          {/* Tabla */}
+          <PermisosTable
+            items={registros}
+            loading={isLoading}
+            onEdit={(row) => {
+              setEditItem(row);
+              setOpenDialog(true);
+            }}
+            onChanged={() => {
+              mutate();
+              mutateCalendario && mutateCalendario();
+            }}
+            onView={(row) => {
+              setViewItem(row);
+              setOpenView(true);
+            }}
+          />
+          {/* Paginación */}
+          <TablePagination
+            page={page}
+            limit={limit}
+            total={total}
+            onPageChange={setPage}
+            onLimitChange={setLimit}
+          />
+        </>
+      ) : null}
+
+      {/* Vista: Calendario mensual (inspirado en Vacaciones.html) */}
+      {vista === "calendario" ? (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <CalendarDays className="h-5 w-5" />
+                Calendario
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setMesActual((m) => m.subtract(1, "month"))}
+                  className="gap-1"
+                >
+                  <ChevronLeft className="h-4 w-4" /> Anterior
+                </Button>
+                <div className="min-w-[180px] text-center font-bold capitalize">
+                  {nombreMes}
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setMesActual((m) => m.add(1, "month"))}
+                  className="gap-1"
+                >
+                  Siguiente <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {/* Encabezado de días */}
+            <div className="w-full overflow-x-auto">
+              <table className="min-w-full border-collapse">
+                <thead>
+                  <tr>
+                    <th className="sticky left-0 z-20 text-white text-left px-3 py-2 min-w-[200px] border-r border-white/20" style={{ backgroundColor: "#2c3e50" }}>
+                      Empleado
+                    </th>
+                    {Array.from({ length: diasEnMes }, (_, i) => i + 1).map((dia) => {
+                      const fecha = mesActual.date(dia);
+                      const esHoy = fecha.isSame(dayjs(), "day");
+                      const esFinde = [0, 6].includes(fecha.day());
+                      return (
+                        <th
+                          key={`h-${dia}`}
+                          className={`px-2 py-2 text-center text-white border-r border-white/10 ${
+                            esHoy ? "ring-2 ring-emerald-400" : ""
+                          }`}
+                          style={{ backgroundColor: "#2c3e50" }}
+                        >
+                          <div className={`text-xs font-bold ${esHoy ? "text-emerald-300" : ""}`}>{dia}</div>
+                          <div className={`text-[10px] opacity-85 ${esFinde ? "text-amber-300" : "text-white/80"}`}>
+                            {diasSemana[fecha.day()]}
+                          </div>
+                        </th>
+                      );
+                    })}
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* Filas por empleado */}
+                  {calendarioLoading && (
+                    <tr>
+                      <td colSpan={1 + diasEnMes} className="text-center py-6 text-muted-foreground">
+                        Cargando calendario...
+                      </td>
+                    </tr>
+                  )}
+                  {!calendarioLoading && empleadosCalendario.length === 0 && (
+                    <tr>
+                      <td colSpan={1 + diasEnMes} className="text-center py-10 text-muted-foreground">
+                        No hay permisos aprobados en este mes
+                      </td>
+                    </tr>
+                  )}
+                  {!calendarioLoading &&
+                    empleadosCalendario.map(([empKey, empNombre], idx) => {
+                      const bg = idx % 2 === 0 ? "bg-white" : "bg-slate-50";
+                      return (
+                        <tr key={`row-${empKey}`} className={bg}>
+                          <td className="sticky left-0 z-10 font-semibold px-3 py-2 border-r border-slate-200 bg-inherit">
+                            {empNombre}
+                          </td>
+                          {Array.from({ length: diasEnMes }, (_, i) => i + 1).map((dia) => {
+                            const permiso = mapaPermisosCalendario?.[empKey]?.[dia];
+                            const fecha = mesActual.date(dia);
+                            const esHoy = fecha.isSame(dayjs(), "day");
+                            const esFinde = [0, 6].includes(fecha.day());
+                            if (permiso) {
+                              const c = colorDeTipo(permiso.tipo_permiso_nombre || permiso.tipo || "");
+                              const text = String(permiso.tipo_permiso_nombre || "").slice(0, 8);
+                              return (
+                                <td
+                                  key={`c-${empKey}-${dia}`}
+                                  className={`px-1 py-1 min-w-[44px] max-w-[44px] text-center border-b border-slate-200 border-r ${esHoy ? "ring-inset ring-2 ring-emerald-400" : ""}`}
+                                >
+                                  <button
+                                    type="button"
+                                    className={`w-full ${c.bg} ${c.text} text-[10px] font-bold rounded-sm px-1 py-1 hover:ring-2 ${c.ring} transition`}
+                                    title={`${permiso.tipo_permiso_nombre || ""}${permiso.motivo ? ": " + permiso.motivo : ""}`}
+                                    onClick={() => {
+                                      setViewItem(permiso);
+                                      setOpenView(true);
+                                    }}
+                                  >
+                                    {text}
+                                  </button>
+                                </td>
+                              );
+                            }
+                            return (
+                              <td
+                                key={`e-${empKey}-${dia}`}
+                                className={`px-1 py-3 min-w-[44px] max-w-[44px] border-b border-slate-200 border-r ${
+                                  esHoy ? "bg-emerald-50" : esFinde ? "bg-slate-50" : ""
+                                }`}
+                              />
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Leyenda de colores */}
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-xs">
+              <div className="flex items-center gap-2">
+                <span className="w-4 h-4 rounded-sm bg-emerald-100 ring-1 ring-emerald-400" />
+                <span>Vacaciones</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-4 h-4 rounded-sm bg-blue-100 ring-1 ring-blue-400" />
+                <span>Baja médica</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-4 h-4 rounded-sm bg-amber-100 ring-1 ring-amber-400" />
+                <span>Permiso personal</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-4 h-4 rounded-sm bg-rose-100 ring-1 ring-rose-400" />
+                <span>Otros</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* Modal crear/editar */}
       <PermisoDialog
@@ -519,6 +793,7 @@ export default function PermisosPage() {
         onSaved={() => {
           setEditItem(null);
           mutate();
+          mutateCalendario && mutateCalendario();
         }}
       />
 

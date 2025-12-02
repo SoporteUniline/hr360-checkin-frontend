@@ -26,6 +26,7 @@ import axios from "@/lib/axios";
 import Cookies from "js-cookie";
 import { useSnackbar } from "notistack";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import styles from "./permisos-theme.module.css";
 
 // Dialog para crear/editar una solicitud de permiso.
 // - Se relaciona con: src/lib/permisosApi.js y src/app/panel/permisos/page.jsx
@@ -250,7 +251,7 @@ export default function PermisoDialog({
          - sm:max-w-xl: mantiene el ancho previsto en pantallas >= sm.
          - max-h-[85vh] overflow-y-auto: permite scroll interno si el contenido crece.
          Relación: este modal se invoca desde `src/app/panel/permisos/page.jsx`. */}
-      <DialogContent className="max-w-[95vw] sm:max-w-xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className={`${styles.permisosTheme} max-w-[95vw] sm:max-w-xl max-h-[85vh] overflow-y-auto`}>
         <DialogHeader>
           <DialogTitle>
             ➕ {isEdit ? "Editar Permiso" : "Nuevo Permiso"}
@@ -477,13 +478,18 @@ export default function PermisoDialog({
 
         <DialogFooter>
           <Button
-            variant="secondary"
+            variant="outline"
             onClick={() => setOpen(false)}
             disabled={loading}
+            className="bg-white border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
           >
             Cancelar
           </Button>
-          <Button onClick={guardar} disabled={loading || isExpired}>
+          <Button
+            onClick={guardar}
+            disabled={loading || isExpired}
+            className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)] transition-all hover:-translate-y-0.5"
+          >
             💾 Guardar
           </Button>
         </DialogFooter>
