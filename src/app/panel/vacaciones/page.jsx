@@ -180,12 +180,20 @@ export default function VacacionesPage() {
   // Cerrar el desplegable al cambiar filtros/paginación para evitar estados inconsistentes
   useEffect(() => {
     setExpandedRow(null);
-  }, [filterEmpleado, filterDepartamento, filterEstado, currentPage, rowsPerPage]);
+  }, [
+    filterEmpleado,
+    filterDepartamento,
+    filterEstado,
+    currentPage,
+    rowsPerPage,
+  ]);
 
   // KPIs
   const kpis = useMemo(() => {
     const total = datosFiltrados.length;
-    const conV = datosFiltrados.filter((d) => (d?.dias_cargados ?? 0) > 0).length;
+    const conV = datosFiltrados.filter(
+      (d) => (d?.dias_cargados ?? 0) > 0
+    ).length;
     const sinV = total - conV;
     const totalDias = datosFiltrados.reduce(
       (acc, d) => acc + (d?.dias_disponibles ?? 0),
@@ -209,7 +217,9 @@ export default function VacacionesPage() {
 
   const ensureRowDetalle = async (tipo, idEmpleado) => {
     const cache =
-      tipo === "cargados" ? cacheCargados?.[idEmpleado] : cacheTomados?.[idEmpleado];
+      tipo === "cargados"
+        ? cacheCargados?.[idEmpleado]
+        : cacheTomados?.[idEmpleado];
     if (cache || !idEmpresa) return;
     setRowLoading(true);
     try {
@@ -252,7 +262,20 @@ export default function VacacionesPage() {
     await ensureRowDetalle("cargados", idEmpleado);
   };
 
-  const mesesCortos = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+  const mesesCortos = [
+    "Ene",
+    "Feb",
+    "Mar",
+    "Abr",
+    "May",
+    "Jun",
+    "Jul",
+    "Ago",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dic",
+  ];
   const rangoVacaciones = (vacaciones = []) => {
     if (!vacaciones.length) return "-";
     const fechas = vacaciones
@@ -263,7 +286,9 @@ export default function VacacionesPage() {
     if (a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth()) {
       return `${mesesCortos[a.getMonth()]} ${a.getFullYear()}`;
     }
-    return `${mesesCortos[a.getMonth()]} - ${mesesCortos[b.getMonth()]} ${b.getFullYear()}`;
+    return `${mesesCortos[a.getMonth()]} - ${
+      mesesCortos[b.getMonth()]
+    } ${b.getFullYear()}`;
   };
   const mesesLargos = [
     "Enero",
@@ -304,7 +329,7 @@ export default function VacacionesPage() {
     });
     const groups = Object.values(map);
     groups.forEach((g) => g.vacaciones.sort((a, b) => b._date - a._date));
-    groups.sort((a, b) => (b.year - a.year) || (b.month - a.month));
+    groups.sort((a, b) => b.year - a.year || b.month - a.month);
     return groups;
   };
 
@@ -444,7 +469,9 @@ export default function VacacionesPage() {
                   );
                 } else if (e.key === "Enter") {
                   e.preventDefault();
-                  handleSelectEmpleado(sugerencias[hoveredSuggestionIndex] || sugerencias[0]);
+                  handleSelectEmpleado(
+                    sugerencias[hoveredSuggestionIndex] || sugerencias[0]
+                  );
                 } else if (e.key === "Escape") {
                   setIsSuggestionsOpen(false);
                 }
@@ -506,7 +533,9 @@ export default function VacacionesPage() {
       {/* Contenido */}
       <Card className="p-0">
         {loading ? (
-          <div className="text-center text-slate-400 py-16">Cargando datos...</div>
+          <div className="text-center text-slate-400 py-16">
+            Cargando datos...
+          </div>
         ) : error ? (
           <div className="text-center text-red-500 py-16">{error}</div>
         ) : datosFiltrados.length === 0 ? (
@@ -643,20 +672,37 @@ export default function VacacionesPage() {
                                     {/* Métricas simples */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
                                       <Card className="p-3">
-                                        <div className="text-[11px] uppercase text-slate-500">Total Días</div>
-                                        <div className="text-2xl font-extrabold">{numberFormat(cacheTomados[emp.id_empleado]?.total ?? (cacheTomados[emp.id_empleado]?.vacaciones?.length ?? 0))}</div>
+                                        <div className="text-[11px] uppercase text-slate-500">
+                                          Total Días
+                                        </div>
+                                        <div className="text-2xl font-extrabold">
+                                          {numberFormat(
+                                            cacheTomados[emp.id_empleado]
+                                              ?.total ??
+                                              cacheTomados[emp.id_empleado]
+                                                ?.vacaciones?.length ??
+                                            0
+                                          )}
+                                        </div>
                                       </Card>
                                       <Card className="p-3">
-                                        <div className="text-[11px] uppercase text-slate-500">Período</div>
+                                        <div className="text-[11px] uppercase text-slate-500">
+                                          Período
+                                        </div>
                                         <div className="text-base font-semibold">
-                                          {rangoVacaciones(cacheTomados[emp.id_empleado]?.vacaciones ?? [])}
+                                          {rangoVacaciones(
+                                            cacheTomados[emp.id_empleado]
+                                              ?.vacaciones ?? []
+                                          )}
                                         </div>
                                       </Card>
                                     </div>
 
                                     {/* Grid de días tomados (estilo ejemplo HTML) */}
                                     {(() => {
-                                      const vacaciones = cacheTomados[emp.id_empleado]?.vacaciones ?? [];
+                                      const vacaciones =
+                                        cacheTomados[emp.id_empleado]
+                                          ?.vacaciones ?? [];
                                       if (vacaciones.length === 0) {
                                         return (
                                           <div className="text-center text-slate-400 py-8">
@@ -664,18 +710,30 @@ export default function VacacionesPage() {
                                           </div>
                                         );
                                       }
-                                      const grupos = groupVacacionesByYearMonth(vacaciones);
+                                      const grupos =
+                                        groupVacacionesByYearMonth(
+                                          vacaciones
+                                        );
                                       return (
                                         <div className="flex flex-col gap-5">
                                           {grupos.map((g) => (
-                                            <div key={`${g.year}-${g.month}`} className="pl-4 border-l-4 border-slate-300">
+                                            <div
+                                              key={`${g.year}-${g.month}`}
+                                              className="pl-4 border-l-4 border-slate-300"
+                                            >
                                               <div className="mb-3">
-                                                <div className="text-lg font-extrabold text-slate-700">{g.year}</div>
-                                                <div className="text-sm font-semibold text-slate-500">{mesesLargos[g.month]}</div>
+                                                <div className="text-lg font-extrabold text-slate-700">
+                                                  {g.year}
+                                                </div>
+                                                <div className="text-sm font-semibold text-slate-500">
+                                                  {mesesLargos[g.month]}
+                                                </div>
                                               </div>
                                               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                                                 {g.vacaciones.map((v) => {
-                                                  const f = formatSpanishDate(v.fecha);
+                                                  const f = formatSpanishDate(
+                                                    v.fecha
+                                                  );
                                                   return (
                                                     <div
                                                       key={v.id}
@@ -912,5 +970,3 @@ export default function VacacionesPage() {
     </div>
   );
 }
-
-

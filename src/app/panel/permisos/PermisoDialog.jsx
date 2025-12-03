@@ -68,7 +68,7 @@ export default function PermisoDialog({
       try {
         const token = Cookies.get("token");
         const res = await axios.get(
-          `/checador/empleados?empresa=${idEmpresa}&page=1&limit=1000`,
+          `/checador/empleados/activos?empresa=${idEmpresa}&page=1&limit=1000`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
