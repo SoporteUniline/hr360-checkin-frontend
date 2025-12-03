@@ -16,6 +16,7 @@ import { useSnackbar } from "notistack";
 import { useAuth } from "@/context/AuthContext";
 import axios from "@/lib/axios";
 import Cookies from "js-cookie";
+import styles from "../vacaciones/vacaciones-theme.module.css";
 
 function fmtDate(d) {
   const dd = new Date(d);
@@ -41,19 +42,20 @@ function fileDate(isoDate) {
 
 function EstadoPill({ value }) {
   const v = String(value || "").toLowerCase();
-  let cls = "bg-blue-100 text-blue-900 border-blue-300";
-  if (v === "presente") cls = "bg-green-100 text-green-900 border-green-300";
-  else if (v === "ausente") cls = "bg-red-100 text-red-900 border-red-300";
-  else if (v === "tarde") cls = "bg-yellow-100 text-yellow-900 border-yellow-300";
+  // Paleta HR360
+  let style = { backgroundColor: "#dbeafe", color: "#1e40af", borderColor: "#93c5fd" }; // info
+  if (v === "presente" || v === "completo" || v === "cerrado") style = { backgroundColor: "#d1fae5", color: "#065f46", borderColor: "#86efac" };
+  else if (v === "ausente") style = { backgroundColor: "#fee2e2", color: "#991b1b", borderColor: "#fca5a5" };
+  else if (v === "tarde") style = { backgroundColor: "#fef3c7", color: "#92400e", borderColor: "#fde68a" };
   const label = v === "cerrado" ? "Completo" : (value || "—");
-  return (
-    <span className={`inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-semibold ${cls}`}>{label}</span>
-  );
+  return <span className="inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-semibold" style={style}>{label}</span>;
 }
 
 function MotivoPill({ value }) {
   if (!value) return <span className="text-zinc-500">—</span>;
-  return <span className="inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-semibold bg-blue-50 text-blue-900 border-blue-200">{value}</span>;
+  // Info azul HR360
+  const style = { backgroundColor: "#dbeafe", color: "#1e40af", borderColor: "#93c5fd" };
+  return <span className="inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-semibold" style={style}>{value}</span>;
 }
 
 export default function ReporteHorasPage() {
@@ -554,7 +556,7 @@ export default function ReporteHorasPage() {
   }
 
   return (
-    <div className="min-h-dvh bg-zinc-50 py-10">
+    <div className={`${styles.vacacionesTheme} min-h-dvh bg-zinc-50 py-10`}>
       <div className="mx-auto w-full max-w-6xl px-4">
         <Card>
           <CardHeader className="flex flex-col gap-1">
@@ -639,7 +641,7 @@ export default function ReporteHorasPage() {
 
                 {multi ? (
                   <Dialog open={openSelector} onOpenChange={setOpenSelector}>
-                    <DialogContent className="sm:max-w-2xl">
+                    <DialogContent className={`${styles.vacacionesTheme} sm:max-w-2xl`}>
                       <DialogHeader>
                         <DialogTitle>Seleccionar empleados</DialogTitle>
                         <DialogDescription>Busca por nombre o empresa, marca múltiples empleados y aplica la selección.</DialogDescription>
@@ -677,8 +679,8 @@ export default function ReporteHorasPage() {
                         )}
                       </div>
                       <DialogFooter>
-                        <Button type="button" variant="secondary" onClick={() => setOpenSelector(false)}>Cancelar</Button>
-                        <Button type="button" onClick={() => { setEmpleadoIds(tempEmpleadoIds); setOpenSelector(false); }}>Aplicar selección</Button>
+                        <Button type="button" variant="outline" onClick={() => setOpenSelector(false)} className="bg-white border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]">Cancelar</Button>
+                        <Button type="button" onClick={() => { setEmpleadoIds(tempEmpleadoIds); setOpenSelector(false); }} className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]">Aplicar selección</Button>
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
@@ -693,20 +695,25 @@ export default function ReporteHorasPage() {
                 <Input type="date" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} />
               </div>
               <div className="flex items-end md:col-span-2">
-                <Button onClick={handleGenerar} disabled={loading || (!multi && !empleadoId)} className="w-full">
+                <Button onClick={handleGenerar} disabled={loading || (!multi && !empleadoId)} className="w-full bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]">
                   {loading ? "Generando…" : "Generar Reporte"}
                 </Button>
               </div>
             </div>
 
             <div className="flex flex-wrap gap-3 pt-2">
-              <Button variant="outline" onClick={handleImprimir} className="gap-2">
+              <Button variant="outline" onClick={handleImprimir} className="gap-2 border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]">
                 <Icon icon="lucide:printer" className="size-4" /> Imprimir
               </Button>
-              <Button variant="default" onClick={handleExcel} className="gap-2" disabled={!reportes || reportes.length === 0 || exporting !== null}>
+              <Button
+                variant="default"
+                onClick={handleExcel}
+                className="gap-2 bg-[#27ae60] hover:bg-[#229954] text-white shadow-[0_2px_8px_rgba(39,174,96,0.3)]"
+                disabled={!reportes || reportes.length === 0 || exporting !== null}
+              >
                 <Icon icon="lucide:file-spreadsheet" className="size-4" /> Exportar Excel
               </Button>
-              <Button variant="destructive" onClick={handleGuardarPDF} className="gap-2" disabled={!reportes || reportes.length === 0 || exporting !== null}>
+              <Button variant="destructive" onClick={handleGuardarPDF} className="gap-2 bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(239,68,68,0.3)]" disabled={!reportes || reportes.length === 0 || exporting !== null}>
                 <Icon icon="lucide:file-down" className="size-4" /> Guardar PDF
               </Button>
             </div>
@@ -728,7 +735,7 @@ export default function ReporteHorasPage() {
                           <div className="text-xs text-muted-foreground">Generado el {new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}</div>
                         </div>
                       </div>
-                      <div className="h-0.5 bg-slate-800 my-2" />
+                      <div className="h-0.5 my-2" style={{ backgroundColor: "#2c3e50" }} />
                       {/* Información del Empleado */}
                       <div className="rounded-md border bg-slate-50">
                         
@@ -754,7 +761,7 @@ export default function ReporteHorasPage() {
                       <section className="overflow-x-auto">
                         <table className="w-full text-sm border-collapse">
                           <thead className="sticky top-0 z-10">
-                            <tr className="bg-slate-800 text-white">
+                            <tr className="text-white" style={{ backgroundColor: "#2c3e50" }}>
                               <th className="p-2 border">Fecha</th>
                               <th className="p-2 border">Entrada</th>
                               <th className="p-2 border">Salida</th>

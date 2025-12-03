@@ -26,6 +26,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/Combobox";
 import { useCallback } from "react";
+import styles from "../vacaciones-theme.module.css";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -145,7 +146,7 @@ export default function RegistroVacacionesPage() {
   });
 
   return (
-    <div className="space-y-4">
+    <div className={`${styles.vacacionesTheme} space-y-4`}>
       {/* Encabezado */}
       <div className="px-4 pt-2">
         <h1 className="text-xl md:text-2xl font-semibold">📒 Registro de vacaciones</h1>

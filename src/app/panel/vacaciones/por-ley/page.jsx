@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/table";
 import TablePagination from "@/components/TablePagination";
 import { useSnackbar } from "notistack";
+import styles from "../vacaciones-theme.module.css";
 
 function num(n, d = 0) {
   const v = Number(n ?? 0);
@@ -191,7 +192,7 @@ export default function VacacionesPorLeyPage() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-4">
+    <div className={`${styles.vacacionesTheme} p-4 md:p-6 space-y-4`}>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl md:text-2xl font-semibold">📘 Vacaciones por ley</h1>
@@ -200,7 +201,12 @@ export default function VacacionesPorLeyPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={openCreate}>➕ Nuevo</Button>
+          <Button
+            onClick={openCreate}
+            className="shadow-[0_4px_12px_rgba(55,73,94,0.3)] transition-all hover:-translate-y-0.5"
+          >
+            ➕ Nuevo
+          </Button>
         </div>
       </div>
 
@@ -239,10 +245,20 @@ export default function VacacionesPorLeyPage() {
                       <TableCell>{num(r.total_prima, 2)}</TableCell>
                       <TableCell className="text-center">
                         <div className="flex gap-2 justify-center">
-                          <Button size="sm" onClick={() => openEdit(r)}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-[#93c5fd] text-[#2563eb] hover:bg-[#dbeafe] hover:text-[#1e40af]"
+                            onClick={() => openEdit(r)}
+                          >
                             ✏️ Editar
                           </Button>
-                          <Button size="sm" variant="destructive" onClick={() => setDeleteRow(r)}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-[#fca5a5] text-[#dc2626] hover:bg-[#fee2e2]"
+                            onClick={() => setDeleteRow(r)}
+                          >
                             🗑️ Eliminar
                           </Button>
                         </div>
@@ -265,7 +281,7 @@ export default function VacacionesPorLeyPage() {
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className={`${styles.vacacionesTheme} max-w-lg`}>
           <DialogHeader>
             <DialogTitle>
               {editRow ? "Editar vacaciones por ley" : "Nueva vacaciones por ley"}
@@ -337,10 +353,19 @@ export default function VacacionesPorLeyPage() {
           </div>
 
           <div className="flex justify-end gap-2 pt-1">
-            <Button variant="secondary" onClick={() => setDialogOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setDialogOpen(false)}
+              className="bg-white border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
+            >
               Cancelar
             </Button>
-            <Button onClick={handleSave}>Guardar</Button>
+            <Button
+              onClick={handleSave}
+              className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)] transition-all hover:-translate-y-0.5"
+            >
+              Guardar
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -357,8 +382,10 @@ export default function VacacionesPorLeyPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogCancel className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-[#ef4444] hover:bg-[#dc2626]">
               Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
