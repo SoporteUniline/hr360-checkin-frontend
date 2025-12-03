@@ -48,6 +48,7 @@ import TablePagination from "@/components/TablePagination";
 import { useSnackbar } from "notistack";
 import axiosWithBase from "@/lib/axios";
 import Cookies from "js-cookie";
+import styles from "../vacaciones-theme.module.css";
 
 export default function VacacionesPorPeriodoPage() {
   const { dataUser } = useAuth();
@@ -182,18 +183,27 @@ export default function VacacionesPorPeriodoPage() {
     const { fecha_inicio, fecha_fin } = form;
     setWarningLey("");
     if (!fecha_inicio || !fecha_fin) return;
-    const start = dayjs(fecha_inicio);
-    const end = dayjs(fecha_fin);
+    // Aceptar tanto YYYY-MM-DD (inputs) como DD/MM/YYYY (posible entrada)
+    const parse = (v) => {
+      const d = dayjs(v, ["YYYY-MM-DD", "DD/MM/YYYY"], true);
+      return d.isValid() ? d : dayjs(v);
+    };
+    const start = parse(fecha_inicio).startOf("day");
+    const end = parse(fecha_fin).startOf("day");
     if (!start.isValid() || !end.isValid() || end.isBefore(start)) return;
-    // Diferencia en años (redondeo al entero más cercano)
-    const diffYears = Math.max(0, Math.round(end.diff(start, "year", true)));
-    // Buscar en Vacaciones por ley
+    // Años completos transcurridos dentro del periodo (floor)
+    const diffYears = Math.max(0, Math.floor(end.diff(start, "year", true)));
+    // Buscar en Vacaciones por ley (coincidencia exacta de años)
     const regla = (vacLey || []).find((r) => Number(r.anios) === diffYears);
-    setForm((f) => ({
-      ...f,
-      anios: String(diffYears),
-      dias: regla ? String(regla.dias) : "",
-    }));
+    // Evitar writes innecesarios
+    setForm((f) => {
+      const next = {
+        ...f,
+        anios: String(diffYears),
+        dias: regla ? String(regla.dias) : "",
+      };
+      return (f.anios === next.anios && f.dias === next.dias) ? f : next;
+    });
     if (!regla) {
       setWarningLey(
         `No existe una regla en "Vacaciones por ley" para ${diffYears} año(s).`
@@ -259,15 +269,29 @@ export default function VacacionesPorPeriodoPage() {
     }
   };
 
+  // Badge por estado del periodo
+  const EstadoBadge = ({ estado }) => {
+    const base = "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold";
+    if (estado === "Activa") return <span className={base} style={{ backgroundColor: "#d1fae5", color: "#065f46" }}>Activa</span>;
+    if (estado === "Vencida") return <span className={base} style={{ backgroundColor: "#fee2e2", color: "#991b1b" }}>Vencida</span>;
+    if (estado === "Usada") return <span className={base} style={{ backgroundColor: "#fef3c7", color: "#92400e" }}>Usada</span>;
+    return <span className={base} style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}>{estado || "—"}</span>;
+  };
+
   return (
-    <div className="p-4 md:p-6 space-y-4">
+    <div className={`${styles.vacacionesTheme} p-4 md:p-6 space-y-4`}>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl md:text-2xl font-semibold">📗 Vacaciones por periodo</h1>
           <p className="text-sm text-muted-foreground">Gestiona periodos de vacaciones por empleado</p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={openCreate}>➕ Nuevo</Button>
+          <Button
+            onClick={openCreate}
+            className="shadow-[0_4px_12px_rgba(55,73,94,0.3)] transition-all hover:-translate-y-0.5"
+          >
+            ➕ Nuevo
+          </Button>
         </div>
       </div>
 
@@ -303,11 +327,25 @@ export default function VacacionesPorPeriodoPage() {
                       <TableCell>{`${formatDMY(r.fecha_inicio)} → ${formatDMY(r.fecha_fin)}`}</TableCell>
                       <TableCell>{r.anios}</TableCell>
                       <TableCell>{r.dias}</TableCell>
-                      <TableCell>{r.estado}</TableCell>
+                      <TableCell><EstadoBadge estado={r.estado} /></TableCell>
                       <TableCell className="text-center">
                         <div className="flex gap-2 justify-center">
-                          <Button size="sm" onClick={() => openEdit(r)}>✏️ Editar</Button>
-                          <Button size="sm" variant="destructive" onClick={() => setDeleteRow(r)}>🗑️ Eliminar</Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-[#93c5fd] text-[#2563eb] hover:bg-[#dbeafe] hover:text-[#1e40af]"
+                            onClick={() => openEdit(r)}
+                          >
+                            ✏️ Editar
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-[#fca5a5] text-[#dc2626] hover:bg-[#fee2e2]"
+                            onClick={() => setDeleteRow(r)}
+                          >
+                            🗑️ Eliminar
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -328,7 +366,7 @@ export default function VacacionesPorPeriodoPage() {
 
       {/* Modal de alta/edición */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className={`${styles.vacacionesTheme} max-w-lg`}>
           <DialogHeader>
             <DialogTitle>{editRow ? "Editar periodo" : "Nuevo periodo"}</DialogTitle>
           </DialogHeader>
@@ -444,8 +482,19 @@ export default function VacacionesPorPeriodoPage() {
           </div>
 
           <div className="flex justify-end gap-2 pt-1">
-            <Button variant="secondary" onClick={() => setDialogOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave}>Guardar</Button>
+            <Button
+              variant="outline"
+              onClick={() => setDialogOpen(false)}
+              className="bg-white border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSave}
+              className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)] transition-all hover:-translate-y-0.5"
+            >
+              Guardar
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -460,8 +509,15 @@ export default function VacacionesPorPeriodoPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={proceedSave}>Confirmar</AlertDialogAction>
+            <AlertDialogCancel className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={proceedSave}
+              className="bg-[#37495E] hover:bg-[#2c3a4a]"
+            >
+              Confirmar
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -478,8 +534,10 @@ export default function VacacionesPorPeriodoPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction className="bg-red-600 hover:bg-red-700" onClick={confirmDelete}>
+            <AlertDialogCancel className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction className="bg-[#ef4444] hover:bg-[#dc2626]" onClick={confirmDelete}>
               Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>

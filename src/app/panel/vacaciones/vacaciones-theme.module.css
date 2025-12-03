@@ -1,9 +1,7 @@
-/* Estilos de marca solo para el panel de Contratos
-   - Se aplican mediante la clase raíz .contratosTheme en page.jsx
-   - No afectan otros módulos */
+/* Tema local para Panel de Vacaciones
+   - Aísla variables de marca para no afectar otros módulos */
 
-.contratosTheme {
-  /* Tokens relevantes para el panel (scoped) */
+.vacacionesTheme {
   --primary: #37495E;
   --primary-foreground: #ffffff;
   --border: #e5e7eb;
@@ -12,7 +10,7 @@
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
-/* Utilidad de animación (2s infinite) para alertas críticas de vigencia */
+/* Utilidad de animación opcional */
 @keyframes hr-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: .55; }

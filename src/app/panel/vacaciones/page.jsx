@@ -13,7 +13,7 @@
  *            redlab_back/modules/attendance/routes/vacacionesRoutes.js
  */
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
 import { Card } from "@/components/ui/card";
@@ -34,6 +34,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import TablePagination from "@/components/TablePagination";
+import styles from "./vacaciones-theme.module.css";
 
 function numberFormat(n) {
   try {
@@ -307,6 +308,24 @@ export default function VacacionesPage() {
     return groups;
   };
 
+  // Badges de colores según guía (días cargados/tomados/disponibles)
+  const BadgeNum = ({ bg, text, children }) => (
+    <span className="inline-block px-2 py-1 rounded-md font-bold text-sm" style={{ backgroundColor: bg, color: text }}>
+      {children}
+    </span>
+  );
+  const badgeCargados = (n) => (
+    <BadgeNum bg="#dbeafe" text="#1e40af">{numberFormat(n)}</BadgeNum>
+  );
+  const badgeTomados = (n) => (
+    <BadgeNum bg="#fef3c7" text="#92400e">{numberFormat(n)}</BadgeNum>
+  );
+  const badgeDisponibles = (n) => {
+    if ((n ?? 0) === 0) return <BadgeNum bg="#fee2e2" text="#991b1b">{numberFormat(n)}</BadgeNum>;
+    if ((n ?? 0) < 5) return <BadgeNum bg="#fef3c7" text="#92400e">{numberFormat(n)}</BadgeNum>;
+    return <BadgeNum bg="#d1fae5" text="#065f46">{numberFormat(n)}</BadgeNum>;
+  };
+
   // Acciones de detalle (cargados/tomados)
   const abrirDetalleCargados = async (idEmpleado) => {
     setDialogOpen(true);
@@ -344,7 +363,7 @@ export default function VacacionesPage() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-4">
+    <div className={`${styles.vacacionesTheme} p-4 md:p-6 space-y-4`}>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl md:text-2xl font-semibold">
@@ -366,7 +385,7 @@ export default function VacacionesPage() {
             {numberFormat(kpis.total)}
           </div>
         </Card>
-        <Card className="p-4 border-l-4" style={{ borderLeftColor: "#27ae60" }}>
+        <Card className="p-4 border-l-4" style={{ borderLeftColor: "#10b981" }}>
           <div className="text-[11px] uppercase font-semibold text-slate-500">
             Con Vacaciones
           </div>
@@ -374,7 +393,7 @@ export default function VacacionesPage() {
             {numberFormat(kpis.conV)}
           </div>
         </Card>
-        <Card className="p-4 border-l-4" style={{ borderLeftColor: "#e74c3c" }}>
+        <Card className="p-4 border-l-4" style={{ borderLeftColor: "#ef4444" }}>
           <div className="text-[11px] uppercase font-semibold text-slate-500">
             Sin Vacaciones
           </div>
@@ -473,7 +492,11 @@ export default function VacacionesPage() {
             <option value="sin">❌ Sin vacaciones</option>
           </select>
           <div className="flex md:justify-end">
-            <Button variant="destructive" onClick={limpiarFiltros}>
+            <Button
+              variant="outline"
+              onClick={limpiarFiltros}
+              className="bg-[#e74c3c] hover:bg-[#c0392b] text-white shadow-[0_2px_8px_rgba(231,76,60,0.3)]"
+            >
               🗑️ Limpiar filtros
             </Button>
           </div>
@@ -513,9 +536,8 @@ export default function VacacionesPage() {
                       ? "secondary"
                       : "default";
                   return (
-                    <>
+                    <React.Fragment key={`emp-${emp.id_empleado}`}>
                       <TableRow
-                        key={emp.id_empleado}
                         className="cursor-pointer hover:bg-slate-50"
                         onClick={() => handleRowClick(emp.id_empleado)}
                       >
@@ -531,15 +553,13 @@ export default function VacacionesPage() {
                       </TableCell>
                       <TableCell>{emp.departamento}</TableCell>
                       <TableCell className="text-center">
-                        <Badge variant="outline">{numberFormat(emp.dias_cargados)}</Badge>
+                        {badgeCargados(emp.dias_cargados)}
                       </TableCell>
                       <TableCell className="text-center">
-                        <Badge variant="secondary">
-                          {numberFormat(emp.dias_tomados)}
-                        </Badge>
+                        {badgeTomados(emp.dias_tomados)}
                       </TableCell>
                       <TableCell className="text-center">
-                        <Badge variant={badgeVariant}>{numberFormat(dDisp)}</Badge>
+                        {badgeDisponibles(dDisp)}
                       </TableCell>
                       </TableRow>
                       {expandedRow === emp.id_empleado ? (
@@ -574,9 +594,7 @@ export default function VacacionesPage() {
                                 </Card>
                                 <Card className="p-3">
                                   <div className="text-[11px] uppercase text-slate-500">Disponibles</div>
-                                  <div className={`text-xl font-extrabold ${dDisp === 0 ? "text-red-600" : dDisp < 5 ? "text-amber-600" : "text-emerald-600"}`}>
-                                    {numberFormat(dDisp)}
-                                  </div>
+                                  <div className="text-xl font-extrabold" style={{ color: dDisp === 0 ? "#991b1b" : dDisp < 5 ? "#92400e" : "#065f46" }}>{numberFormat(dDisp)}</div>
                                 </Card>
                               </div>
 
@@ -663,12 +681,12 @@ export default function VacacionesPage() {
                                                       key={v.id}
                                                       className="flex items-center gap-3 rounded-md border bg-white p-3 shadow-sm transition hover:shadow-md"
                                                     >
-                                                      <div className="w-12 h-12 rounded-md bg-slate-800 text-white flex items-center justify-center font-extrabold text-xl">
+                                                      <div className="w-12 h-12 rounded-md text-white flex items-center justify-center font-extrabold text-xl" style={{ backgroundColor: "#2c3e50" }}>
                                                         {f.day}
                                                       </div>
                                                       <div className="min-w-0">
                                                         <div className="mb-1">
-                                                          <span className="inline-block text-[11px] font-bold text-white bg-emerald-600 rounded-full px-2 py-0.5">
+                                                          <span className="inline-block text-[11px] font-bold text-white rounded-full px-2 py-0.5" style={{ backgroundColor: "#10b981" }}>
                                                             {f.weekday.toUpperCase()}
                                                           </span>
                                                         </div>
@@ -692,7 +710,7 @@ export default function VacacionesPage() {
                       </TableCell>
                     </TableRow>
                       ) : null}
-                    </>
+                    </React.Fragment>
                   );
                 })}
               </TableBody>

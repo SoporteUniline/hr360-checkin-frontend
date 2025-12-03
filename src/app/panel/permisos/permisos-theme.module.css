@@ -7,6 +7,8 @@
   --primary-foreground: #ffffff;
   --border: #e5e7eb;
   --ring: rgba(55, 73, 94, 0.35);
+  /* Tipografía Sistema San Francisco (guía) */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
 /* Utilidad de animación (2s infinite) para alertas, si se requiere */
