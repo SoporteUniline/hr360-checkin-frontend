@@ -40,16 +40,18 @@ export default function EstadoEmpleadoDialog({ item, limit, page, className }) {
         { variant: "success" }
       );
 
-      // ✅ Cierra el modal de inmediato
       setOpen(false);
       setMotivo("");
 
-      // ✅ Refresca los datos en segundo plano
       mutate(
         `/checador/empleados?empresa=${item.id_empresa}&page=${page}&limit=${limit}`
       );
     } catch (err) {
-      enqueueSnackbar("Error al cambiar estado", { variant: "error" });
+      const msg =
+        err?.response?.data?.error ||
+        "Ocurrió un error al cambiar el estado del empleado.";
+
+      enqueueSnackbar(msg, { variant: "error" });
     }
   };
 
