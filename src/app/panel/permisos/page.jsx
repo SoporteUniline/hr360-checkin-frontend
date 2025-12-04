@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import dayjs from "dayjs";
+import useSWR from "swr";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +19,7 @@ import PermisoDialog from "./PermisoDialog";
 import PermisoDeleteDialog from "./PermisoDeleteDialog";
 import PermisoViewDialog from "./PermisoViewDialog";
 import styles from "./permisos-theme.module.css";
+import { fetcherWithToken } from "@/lib/fetcher";
 
 /**
  * Página de gestión de Permisos (solicitudes_permiso)
@@ -90,6 +92,37 @@ export default function PermisosPage() {
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / limit)), [total, limit]);
 
+  // Cargar festivos de la empresa para conteo de días laborables (domingos y festivos no cuentan)
+  // - Endpoint reutilizado del módulo de Festivos: /checador/holidays/:id_empresa
+  const { data: festivosResp } = useSWR(
+    idEmpresa ? `/checador/holidays/${idEmpresa}?page=1&limit=5000&filter=` : null,
+    fetcherWithToken
+  );
+  const festivosSet = useMemo(() => {
+    const list = festivosResp?.festivos || [];
+    const set = new Set();
+    list.forEach((f) => {
+      if (f?.fecha) {
+        try {
+          set.add(dayjs(f.fecha).format("YYYY-MM-DD"));
+        } catch {}
+      }
+    });
+    return set;
+  }, [festivosResp]);
+  // Mapa fecha -> nombre festivo para rotular celdas
+  const festivosMap = useMemo(() => {
+    const list = festivosResp?.festivos || [];
+    const map = new Map();
+    list.forEach((f) => {
+      if (f?.fecha) {
+        const key = dayjs(f.fecha).format("YYYY-MM-DD");
+        map.set(key, f.descripcion || "Festivo");
+      }
+    });
+    return map;
+  }, [festivosResp]);
+
   // Buscador con sugerencias (como en Vacaciones)
   const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
   const [hoveredSuggestionIndex, setHoveredSuggestionIndex] = useState(-1);
@@ -125,6 +158,20 @@ export default function PermisosPage() {
     if (!registros || registros.length === 0) return;
     const fmt = (d) => (d ? dayjs(d).format("YYYY-MM-DD") : "");
     const fileDate = (d) => (d ? dayjs(d).format("YYYYMMDD") : dayjs().format("YYYYMMDD"));
+    const isVacaciones = (nombre) => String(nombre || "").toLowerCase().includes("vacacion");
+    const countDiasLaborales = (desdeIso, hastaIso) => {
+      // Cuenta días hábiles: excluye domingos (0) y fechas contenidas en festivosSet
+      if (!desdeIso) return 0;
+      const start = dayjs(desdeIso);
+      const end = hastaIso ? dayjs(hastaIso) : start;
+      let c = 0;
+      for (let d = start.startOf("day"); d.isBefore(end.endOf("day")) || d.isSame(end, "day"); d = d.add(1, "day")) {
+        const esDomingo = d.day() === 0;
+        const esFestivo = festivosSet?.has(d.format("YYYY-MM-DD"));
+        if (!esDomingo && !esFestivo) c++;
+      }
+      return Math.max(1, c);
+    };
 
     const baseCSS = `
       *{box-sizing:border-box}
@@ -192,7 +239,10 @@ export default function PermisosPage() {
       .map((r) => {
         const di = dayjs(r.fecha_inicio);
         const df = r.fecha_fin ? dayjs(r.fecha_fin) : di;
-        const dias = Math.max(1, df.diff(di, "day") + 1);
+        const diasNaturales = Math.max(1, df.diff(di, "day") + 1);
+        const dias = isVacaciones(r.tipo_permiso_nombre)
+          ? countDiasLaborales(r.fecha_inicio, r.fecha_fin)
+          : diasNaturales;
         const cols = [
           String(r.id).padStart(3, "0"),
           r.empleado_nombre || "",
@@ -279,6 +329,9 @@ export default function PermisosPage() {
   const nombreMes = useMemo(() => mesActual.format("MMMM YYYY"), [mesActual]);
   const diasSemana = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
 
+  // Ref del contenedor horizontal del calendario para resetear scroll
+  const scrollCalendarioRef = useRef(null);
+
   const { empleadosCalendario, mapaPermisosCalendario } = useMemo(() => {
     // Clave de empleado: se intenta usar id_empleado; si no viene, se usa el nombre (mantener consistencia)
     const empKey = (r) => String(r.id_empleado ?? r.empleado_nombre ?? r.empleado ?? "NA");
@@ -295,6 +348,9 @@ export default function PermisosPage() {
       // Intersección de rango de permiso con el mes visible
       const inicio = dayjs(p.fecha_inicio);
       const fin = p.fecha_fin ? dayjs(p.fecha_fin) : inicio;
+      const isVacaciones = String(p.tipo_permiso_nombre || p.tipo || "")
+        .toLowerCase()
+        .includes("vacacion");
       for (
         let d = inicio.startOf("day");
         d.isBefore(fin.endOf("day")) || d.isSame(fin, "day");
@@ -302,6 +358,14 @@ export default function PermisosPage() {
       ) {
         if (d.month() === mesActual.month() && d.year() === mesActual.year()) {
           const dia = d.date();
+          // Para Vacaciones: solo marcar días laborables (excluir domingo y festivos)
+          const esDomingo = d.day() === 0;
+          const esFestivo = festivosSet?.has(d.format("YYYY-MM-DD"));
+          if (isVacaciones) {
+            if (esDomingo || esFestivo) {
+              continue; // no marcar como vacaciones este día
+            }
+          }
           // Guardamos el permiso (último gana si se solapa)
           mapa[key][dia] = p;
         }
@@ -310,7 +374,7 @@ export default function PermisosPage() {
 
     const empleados = Array.from(empleadosMap.entries()); // [ [key, nombre], ... ]
     return { empleadosCalendario: empleados, mapaPermisosCalendario: mapa };
-  }, [registrosCalendario, mesActual]);
+  }, [registrosCalendario, mesActual, festivosSet]);
 
   // Utilidad de color por tipo
   const colorDeTipo = (tipoNombre) => {
@@ -607,6 +671,7 @@ export default function PermisosPage() {
           <PermisosTable
             items={registros}
             loading={isLoading}
+            festivosSet={festivosSet}
             onEdit={(row) => {
               setEditItem(row);
               setOpenDialog(true);
@@ -655,7 +720,12 @@ export default function PermisosPage() {
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={() => setMesActual((m) => m.add(1, "month"))}
+                  onClick={() => {
+                    setMesActual((m) => m.add(1, "month"));
+                    if (scrollCalendarioRef.current) {
+                      scrollCalendarioRef.current.scrollLeft = 0;
+                    }
+                  }}
                   className="gap-1"
                 >
                   Siguiente <ChevronRight className="h-4 w-4" />
@@ -665,7 +735,7 @@ export default function PermisosPage() {
           </CardHeader>
           <CardContent>
             {/* Encabezado de días */}
-            <div className="w-full overflow-x-auto">
+            <div className="w-full overflow-x-auto" ref={scrollCalendarioRef}>
               <table className="min-w-full border-collapse">
                 <thead>
                   <tr>
@@ -722,6 +792,10 @@ export default function PermisosPage() {
                             const fecha = mesActual.date(dia);
                             const esHoy = fecha.isSame(dayjs(), "day");
                             const esFinde = [0, 6].includes(fecha.day());
+                            const esDomingo = fecha.day() === 0;
+                            const fechaStr = fecha.format("YYYY-MM-DD");
+                            const esFestivo = festivosSet?.has(fechaStr);
+                            const nombreFestivo = esFestivo ? festivosMap.get(fechaStr) : null;
                             if (permiso) {
                               const c = colorDeTipo(permiso.tipo_permiso_nombre || permiso.tipo || "");
                               const text = String(permiso.tipo_permiso_nombre || "").slice(0, 8);
@@ -748,9 +822,32 @@ export default function PermisosPage() {
                               <td
                                 key={`e-${empKey}-${dia}`}
                                 className={`px-1 py-3 min-w-[44px] max-w-[44px] border-b border-slate-200 border-r ${
-                                  esHoy ? "bg-emerald-50" : esFinde ? "bg-slate-50" : ""
+                                  esHoy
+                                    ? "bg-emerald-50"
+                                    : esFestivo
+                                    ? "bg-rose-50"
+                                    : esFinde
+                                    ? "bg-slate-50"
+                                    : ""
                                 }`}
-                              />
+                              >
+                                {/* Etiquetas informativas para domingos/festivos */}
+                                {esFestivo ? (
+                                  <div
+                                    className="text-[9px] leading-3 font-semibold text-rose-700 truncate"
+                                    title={nombreFestivo || "Festivo"}
+                                  >
+                                    {nombreFestivo || "Festivo"}
+                                  </div>
+                                ) : esDomingo ? (
+                                  <div
+                                    className="text-[9px] leading-3 font-medium text-slate-600 truncate"
+                                    title="Domingo"
+                                  >
+                                    Domingo
+                                  </div>
+                                ) : null}
+                              </td>
                             );
                           })}
                         </tr>
@@ -804,6 +901,7 @@ export default function PermisosPage() {
         open={openView}
         setOpen={setOpenView}
         item={viewItem}
+        festivosSet={festivosSet}
       />
     </div>
   );

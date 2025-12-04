@@ -29,6 +29,7 @@ export default function PermisosTable({
   onEdit,
   onChanged,
   onView,
+  festivosSet = new Set(),
 }) {
   if (loading) return <LoadingTable />;
   if (!Array.isArray(items) || items.length === 0) {
@@ -65,7 +66,24 @@ export default function PermisosTable({
           {items.map((row) => {
             const di = dayjs(row.fecha_inicio);
             const df = row.fecha_fin ? dayjs(row.fecha_fin) : di;
-            const dias = Math.max(1, df.diff(di, "day") + 1);
+            const diasNaturales = Math.max(1, df.diff(di, "day") + 1);
+            const isVacaciones = String(row.tipo_permiso_nombre || "")
+              .toLowerCase()
+              .includes("vacacion");
+            const countDiasLaborales = (start, end) => {
+              let c = 0;
+              for (
+                let d = start.startOf("day");
+                d.isBefore(end.endOf("day")) || d.isSame(end, "day");
+                d = d.add(1, "day")
+              ) {
+                const esDomingo = d.day() === 0;
+                const esFestivo = festivosSet?.has(d.format("YYYY-MM-DD"));
+                if (!esDomingo && !esFestivo) c++;
+              }
+              return Math.max(1, c);
+            };
+            const dias = isVacaciones ? countDiasLaborales(di, df) : diasNaturales;
             return (
               <TableRow key={row.id} className="hover:bg-accent/40">
                 <TableCell className="text-muted-foreground font-semibold">
