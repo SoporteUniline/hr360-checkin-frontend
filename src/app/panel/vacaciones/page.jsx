@@ -35,6 +35,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import TablePagination from "@/components/TablePagination";
 import styles from "./vacaciones-theme.module.css";
+import { formatDateDMY } from "@/lib/formatDate";
 
 function numberFormat(n) {
   try {
@@ -655,8 +656,8 @@ export default function VacacionesPage() {
                                                 <TableCell className="text-center">
                                                   <Badge variant="outline">{numberFormat(p?.dias)} días</Badge>
                                                 </TableCell>
-                                                <TableCell>📆 {p?.fecha_inicio}</TableCell>
-                                                <TableCell>📆 {p?.fecha_fin}</TableCell>
+                                                <TableCell>📆 {p?.fecha_inicio ? formatDateDMY(p.fecha_inicio) : "-"}</TableCell>
+                                                <TableCell>📆 {p?.fecha_fin ? formatDateDMY(p.fecha_fin) : "-"}</TableCell>
                       <TableCell className="text-center">
                                                   <Badge variant={activa ? "default" : "secondary"}>{p?.estado}</Badge>
                                                 </TableCell>
