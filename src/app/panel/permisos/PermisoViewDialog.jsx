@@ -14,7 +14,7 @@ dayjs.extend(timezone);
  * Dialogo de vista de detalles para una solicitud de permiso.
  * Muestra todos los campos relevantes, incluyendo notas internas y quién aprobó/rechazó.
  */
-export default function PermisoViewDialog({ open, setOpen, item }) {
+export default function PermisoViewDialog({ open, setOpen, item, festivosSet = new Set() }) {
   if (!item) return null;
   const di = item.fecha_inicio ? formatDateDMY(item.fecha_inicio) : "-";
   const df = item.fecha_fin ? formatDateDMY(item.fecha_fin) : "-";
@@ -30,9 +30,28 @@ export default function PermisoViewDialog({ open, setOpen, item }) {
   const startDate = item.fecha_inicio ? dayjs(item.fecha_inicio) : null;
   // Si no hay fecha_fin, se considera un solo día (inicio == fin)
   const endDate = item.fecha_fin ? dayjs(item.fecha_fin) : startDate;
+  const isVacaciones = String(item.tipo_permiso_nombre || "")
+    .toLowerCase()
+    .includes("vacacion");
+  const countDiasLaborales = (start, end) => {
+    if (!start || !end) return 0;
+    let c = 0;
+    for (
+      let d = start.startOf("day");
+      d.isBefore(end.endOf("day")) || d.isSame(end, "day");
+      d = d.add(1, "day")
+    ) {
+      const esDomingo = d.day() === 0;
+      const esFestivo = festivosSet?.has(d.format("YYYY-MM-DD"));
+      if (!esDomingo && !esFestivo) c++;
+    }
+    return Math.max(1, c);
+  };
   const totalDias =
     startDate && endDate
-      ? Math.max(endDate.diff(startDate, "day") + 1, 1) // inclusivo
+      ? isVacaciones
+        ? countDiasLaborales(startDate, endDate)
+        : Math.max(endDate.diff(startDate, "day") + 1, 1)
       : 0;
 
   function EstadoBadge({ estado }) {
