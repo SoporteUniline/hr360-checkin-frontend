@@ -198,6 +198,17 @@ const menuGroups = [
       },
     ],
   },
+  {
+    group: "🔧 AJUSTES",
+    items: [
+      {
+        title: "Reglas de aviso",
+        url: "/panel/reglas-aviso",
+        rol: "Recruiter",
+        icon: CalendarDays,
+      },
+    ],
+  },
 ];
 
 export function NavMain() {
