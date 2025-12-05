@@ -100,6 +100,12 @@ const menuGroups = [
         rol: "Recruiter",
         icon: FolderClosed,
       },
+      {
+        title: "Finiquitos y liquidaciones",
+        url: "/panel/finiquitos-y-liquidaciones",
+        rol: "Recruiter",
+        icon: FileText,
+      },
     ],
   },
   {
