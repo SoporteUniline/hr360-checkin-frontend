@@ -4,6 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Plus, RotateCcw } from "lucide-react"; // Icono para resetear
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import AgruparOpciones from "@/components/AgruparOpciones";
 
 export default function AsistenciaFilters({
   filtroEmpleado,
@@ -107,32 +109,32 @@ export default function AsistenciaFilters({
       placeholder: "Elige un departamento...",
       emptyText: "No se encontraron departamentos.",
     },
-    // {
-    //   id: "tipo_registro",
-    //   label: "Tipo de Registro",
-    //   component: "combobox",
-    //   options: tipoRegistroOptions,
-    //   value: filtroTipoRegistro,
-    //   onChange: (value) => {
-    //     setFiltroTipoRegistro(value);
-    //     setPage(1);
-    //   },
-    //   placeholder: "Elige un tipo...",
-    //   emptyText: "No se encontraron tipos de registro.",
-    // },
-    // {
-    //   id: "estado_asistencia",
-    //   label: "Estado de Asistencia",
-    //   component: "combobox",
-    //   options: estadoAsistenciaOptions,
-    //   value: filtroEstadoAsistencia,
-    //   onChange: (value) => {
-    //     setFiltroEstadoAsistencia(value);
-    //     setPage(1);
-    //   },
-    //   placeholder: "Elige un estado...",
-    //   emptyText: "No se encontraron estados.",
-    // },
+    {
+      id: "tipo_registro",
+      label: "Tipo de Registro",
+      component: "combobox",
+      options: tipoRegistroOptions,
+      value: filtroTipoRegistro,
+      onChange: (value) => {
+        setFiltroTipoRegistro(value);
+        setPage(1);
+      },
+      placeholder: "Elige un tipo...",
+      emptyText: "No se encontraron tipos de registro.",
+    },
+    {
+      id: "estado_asistencia",
+      label: "Estado de Asistencia",
+      component: "combobox",
+      options: estadoAsistenciaOptions,
+      value: filtroEstadoAsistencia,
+      onChange: (value) => {
+        setFiltroEstadoAsistencia(value);
+        setPage(1);
+      },
+      placeholder: "Elige un estado...",
+      emptyText: "No se encontraron estados.",
+    },
   ];
 
   return (
@@ -155,7 +157,7 @@ export default function AsistenciaFilters({
         </Button>
       </div> */}
       <div className="p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtros.map((filtro) => (
             <div key={filtro.id} className="flex flex-col gap-2 w-full">
               <Label htmlFor={filtro.id}>{filtro.label}</Label>
@@ -181,7 +183,7 @@ export default function AsistenciaFilters({
             </div>
           ))}
         </div>
-        <div>
+        <div className="mb-6">
           <hr className="mt-4 mb-2" />
           <p className="mb-2 font-semibold">Filtros rápidos:</p>
           <div className="grid gap-3 mt-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
@@ -273,6 +275,7 @@ export default function AsistenciaFilters({
             </div>
           </div>
         </div>
+        <AgruparOpciones />
       </div>
     </div>
   );
