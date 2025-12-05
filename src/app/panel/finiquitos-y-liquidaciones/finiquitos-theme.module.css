@@ -1,0 +1,261 @@
+/* Tema local para Panel de Finiquitos y Liquidaciones
+   - Aísla variables de marca para no afectar otros módulos
+   - Usado por: src/app/panel/finiquitos-y-liquidaciones/page.jsx */
+.finTheme {
+	/* Variables de tema locales al contenedor finTheme */
+	--fin-primary: #37495E;
+	--fin-primary-dark: #2c3a4a;
+	--fin-success: #10b981;
+	--fin-success-light: #d1fae5;
+	--fin-error: #ef4444;
+	--fin-warning: #f59e0b;
+	--fin-info: #3b82f6;
+	--fin-danger: #dc2626;
+	--fin-bg: #f8f9fa;
+	--fin-border: #e5e7eb;
+
+	/* Tokens de marca alineados con Contratos/Vacaciones (scoped) */
+	--primary: #37495E;
+	--primary-foreground: #ffffff;
+	--border: #e5e7eb;
+	--ring: rgba(55, 73, 94, 0.35);
+
+	/* Tipografía (según manual, mismo stack que otros módulos) */
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+	/* Fondo base suave del panel */
+	background-color: var(--fin-bg);
+}
+
+.finTheme :global(.fin-card) {
+	box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+}
+
+.metricCard {
+	background: #ffffff;
+	border: 1px solid var(--fin-border);
+	border-radius: 10px;
+	padding: 12px;
+	box-shadow: 0 2px 10px rgba(17,24,39,0.04);
+}
+.metricLabel {
+	font-size: 12px;
+	color: #6b7280; /* text-muted */
+	font-weight: 600;
+	letter-spacing: 0.2px;
+	text-transform: uppercase;
+}
+.metricValue {
+	font-size: 14px;
+	color: var(--fin-primary);
+	font-weight: 600;
+}
+
+.conceptCard {
+	background: #ffffff;
+	border: 1px solid var(--fin-border);
+	border-radius: 10px;
+	padding: 12px;
+	box-shadow: 0 2px 10px rgba(17,24,39,0.04);
+}
+.conceptTitle {
+	font-size: 12px;
+	color: #6b7280;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.2px;
+}
+.conceptAmount {
+	font-size: 15px;
+	font-weight: 600;
+	color: #111827;
+	margin-bottom: 6px;
+}
+.conceptBox {
+	background: #f8fafc;
+	border: 1px solid var(--fin-border);
+	border-radius: 8px;
+	padding: 8px;
+}
+.row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 6px 4px;
+	border-bottom: 1px dashed var(--fin-border);
+}
+.row:last-child {
+	border-bottom: none;
+}
+.rowLabel {
+	font-size: 12px;
+	color: #6b7280;
+}
+.rowValue {
+	font-size: 12px;
+	font-weight: 500;
+	color: #111827;
+}
+.softBadgeBlue {
+	background: #e8f0fe;
+	border-radius: 6px;
+	padding: 4px 8px;
+	font-weight: 600;
+}
+.softBadgeGreen {
+	background: #dcfce7;
+	border-radius: 6px;
+	padding: 4px 8px;
+	font-weight: 600;
+}
+
+.subtotalBar {
+	background: #f8fafc;
+	border: 1px solid var(--fin-border);
+	border-radius: 10px;
+	padding: 12px;
+	box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+}
+.subtotalLabel {
+	font-weight: 600;
+	color: #374151;
+	font-size: 13px;
+	letter-spacing: 0.2px;
+}
+.subtotalValue {
+	font-weight: 800;
+	color: #111827;
+}
+
+.totalBar {
+	background: linear-gradient(135deg, #3a4b61 0%, #2f3f52 100%);
+	color: #ffffff;
+	border-radius: 12px;
+	padding: 14px;
+	box-shadow: 0 4px 12px rgba(55,73,94,0.25);
+}
+.totalLabel {
+	font-size: 13px;
+	font-weight: 700;
+	letter-spacing: 0.3px;
+}
+.totalAmount {
+	font-size: 18px;
+	font-weight: 800;
+}
+
+.resultsPanel {
+	background: #f3f6ff;
+	border: 1px solid var(--fin-border);
+	border-radius: 14px;
+	padding: 14px;
+}
+.sectionTitle {
+	font-size: 12px;
+	color: var(--fin-primary);
+	font-weight: 800;
+	text-transform: uppercase;
+	letter-spacing: 0.4px;
+	margin-top: 6px;
+}
+
+.finTheme .tag {
+	display: inline-block;
+	padding: 2px 8px;
+	font-size: 11px;
+	border-radius: 999px;
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+.finTheme .tag-finiquito { background: #dbeafe; color: #1e40af; }
+.finTheme .tag-liquidacion { background: #fee2e2; color: #991b1b; }
+.finTheme .tag-pendiente { background: #fef3c7; color: #92400e; }
+.finTheme .tag-pagado { background: #d1fae5; color: #065f46; }
+
+/* Utilidad de animación consistente con otros módulos */
+@keyframes hr-pulse {
+	0%, 100% { opacity: 1; }
+	50% { opacity: .55; }
+}
+.hrPulse2s { animation: hr-pulse 2s ease-in-out infinite; }
+
+/* Cajas informativas y fórmulas (mensajería de ayuda) */
+.infoSuccess {
+	background: #f0fdf4;
+	border-left: 4px solid var(--fin-success);
+	color: #166534;
+	border-radius: 8px;
+	padding: 12px 14px;
+	font-size: 13px;
+}
+.infoWarning {
+	background: #fffbeb;
+	border-left: 4px solid var(--fin-warning);
+	color: #92400e;
+	border-radius: 8px;
+	padding: 12px 14px;
+	font-size: 13px;
+}
+.infoDanger {
+	background: #fef2f2;
+	border-left: 4px solid var(--fin-danger);
+	color: #991b1b;
+	border-radius: 8px;
+	padding: 12px 14px;
+	font-size: 13px;
+}
+.formulaBox {
+	background: #fef3c7;
+	border-left: 4px solid var(--fin-warning);
+	border-radius: 8px;
+	padding: 10px 12px;
+	font-size: 12px;
+	color: #92400e;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+/* Botones de acción en tabla (según guía de Colores.txt) */
+.finTheme .actionView {
+	color: #1e40af;
+	border: 1px solid #93c5fd;
+	background: #ffffff;
+	transition: all 0.2s ease;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+.finTheme .actionView:hover {
+	background: #e0f2fe;
+}
+.finTheme .actionView:focus-visible {
+	box-shadow: 0 0 0 3px rgba(55, 73, 94, 0.1);
+}
+
+.finTheme .actionEdit {
+	color: #2563eb; /* Azul acción editar */
+	border: 1px solid #93c5fd;
+	background: #ffffff;
+	transition: all 0.2s ease;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+.finTheme .actionEdit:hover {
+	background: #dbeafe;
+}
+.finTheme .actionEdit:focus-visible {
+	box-shadow: 0 0 0 3px rgba(55, 73, 94, 0.1);
+}
+
+.finTheme .actionDelete {
+	color: #dc2626; /* Rojo acción eliminar */
+	border: 1px solid #fca5a5;
+	background: #ffffff;
+	transition: all 0.2s ease;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+.finTheme .actionDelete:hover {
+	background: #fee2e2;
+}
+.finTheme .actionDelete:focus-visible {
+	box-shadow: 0 0 0 3px rgba(55, 73, 94, 0.1);
+}
+
+
