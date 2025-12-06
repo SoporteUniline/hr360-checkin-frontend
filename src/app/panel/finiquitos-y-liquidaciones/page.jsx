@@ -580,7 +580,6 @@ export default function PageFiniquitosLiquidaciones() {
                 <tr>
                   <th className="text-left p-2">ID</th>
                   <th className="text-left p-2">Empleado</th>
-                  <th className="text-left p-2">Puesto</th>
                   <th className="text-left p-2">Fecha Baja</th>
                   <th className="text-left p-2">Tipo</th>
                   <th className="text-left p-2">Total</th>
@@ -597,7 +596,6 @@ export default function PageFiniquitosLiquidaciones() {
                     <tr key={f.id_finiquito} className="border-t">
                       <td className="p-2 font-semibold">#{f.id_finiquito}</td>
                       <td className="p-2">{f.nombre_completo}</td>
-                      <td className="p-2">{f.puesto || ""}</td>
                       <td className="p-2">{f.fecha_baja ? dayjs(f.fecha_baja).format("DD/MM/YYYY") : ""}</td>
                       <td className="p-2">
                         <span className={`${styles.tag} ${tipoClass}`}>{tipoBadge}</span>
@@ -626,7 +624,7 @@ export default function PageFiniquitosLiquidaciones() {
                 })}
                 {(!finiquitos || finiquitos.length === 0) && (
                   <tr>
-                    <td className="p-6 text-center text-muted-foreground" colSpan={8}>
+                    <td className="p-6 text-center text-muted-foreground" colSpan={7}>
                       No hay finiquitos guardados
                     </td>
                   </tr>
@@ -745,6 +743,30 @@ export default function PageFiniquitosLiquidaciones() {
             </CardContent>
           </Card>
 
+        {/* Resumen limpio de reglas */}
+        <Card className="fin-card">
+          <CardHeader>
+            <CardTitle>🧾 Resumen de reglas</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className={styles.infoWarning}>
+              <div className="font-semibold mb-1">AGUINALDO</div>
+              <ul className="list-disc pl-5 space-y-0.5">
+                <li>Si el trabajador tiene ≥ 1 año: el periodo es del 1 de enero al 31 de diciembre.</li>
+                <li>Si tiene &lt; 1 año: proporcional desde su fecha de ingreso hasta el 31 de diciembre.</li>
+              </ul>
+            </div>
+            <div className={styles.infoSuccess}>
+              <div className="font-semibold mb-1">VACACIONES</div>
+              <ul className="list-disc pl-5 space-y-0.5">
+                <li>Siempre se calculan con base en la fecha de ingreso individual.</li>
+                <li>Cada aniversario genera un nuevo periodo vacacional (según año cumplido).</li>
+                <li>No dependen del año calendario.</li>
+              </ul>
+            </div>
+          </CardContent>
+        </Card>
+
           {/* Información del empleado */}
           {panelEmpleadoVisible && empleadoInfo && (
             <Card className="fin-card">
@@ -753,13 +775,13 @@ export default function PageFiniquitosLiquidaciones() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                  <div className="md:col-span-1 col-span-2">
+                    <div className="text-xs text-muted-foreground">Empleado</div>
+                    <div className="font-semibold break-words">{empleadoInfo.nombre_completo || "--"}</div>
+                  </div>
                   <div>
                     <div className="text-xs text-muted-foreground">Fecha de ingreso</div>
                     <div className="font-semibold">{empleadoInfo.fecha_ingreso ? dayjs(empleadoInfo.fecha_ingreso).format("DD/MM/YYYY") : "--"}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-muted-foreground">Puesto</div>
-                    <div className="font-semibold">{empleadoInfo.puesto || "--"}</div>
                   </div>
                   <div>
                     <div className="text-xs text-muted-foreground">Departamento</div>
