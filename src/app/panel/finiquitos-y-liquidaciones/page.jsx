@@ -144,7 +144,8 @@ export default function PageFiniquitosLiquidaciones() {
     setPanelEmpleadoVisible(true);
     setPanelConfigVisible(true);
 
-    // Obtener datos de vacaciones (pendientes + ley año actual)
+    // Obtener datos de vacaciones (pendientes + ley año actual) y días no trabajados
+    // - Relación: tabla `asistencias` campo `asistencia` donde = 0 o NULL
     try {
       const fechaIngreso = new Date(emp.fecha_ingreso);
       const fechaBajaDate = new Date(fechaBaja);
@@ -152,16 +153,39 @@ export default function PageFiniquitosLiquidaciones() {
       const añosTrabajados = diasTrabajados / 365.25;
       const añosCompletos = Math.floor(añosTrabajados);
 
+      // Obtener días no trabajados desde la tabla asistencias
+      // - Relación: endpoint `/api/checador/finiquitos/empleado/:idEmpleado/dias-no-trabajados`
+      // - Cuenta registros donde asistencia = 0 o NULL en el rango de fechas
+      try {
+        const datosDiasNoTrab = await finiquitosApi.obtenerDiasNoTrabajados({
+          idEmpleado: emp.id_empleado,
+          fechaIngreso: emp.fecha_ingreso,
+          fechaBaja: fechaBaja,
+        });
+        setDiasNoTrabajados(String(datosDiasNoTrab?.dias_no_trabajados ?? 0));
+      } catch (e) {
+        console.error("Error al obtener días no trabajados:", e);
+        setDiasNoTrabajados("0");
+      }
+
+      // Obtener datos de vacaciones
+      // - Relación: endpoint `/api/checador/finiquitos/empleado/:idEmpleado/vacaciones-datos`
+      // - El cálculo proporcional de días ley se hace en el backend al calcular el finiquito
+      // - Considera los días adicionales si se pasa del año (función calcularDiasDesdeUltimoAniversario)
       const datosVac = await finiquitosApi.obtenerVacacionesDatos({
         idEmpleado: emp.id_empleado,
         empresa: emp.id_empresa,
         aniosCompletos: añosCompletos,
       });
       setDiasVacAnteriores(String(datosVac?.diasPendientes ?? 0));
+      // Guardar el valor base de días ley según la ley (12, 14, etc.)
+      // El cálculo proporcional se hace en el backend considerando días transcurridos desde último aniversario
       setDiasVacLeyActual(String(datosVac?.diasLeyAñoActual ?? 12));
     } catch (e) {
+      console.error("Error al cargar datos del empleado:", e);
       setDiasVacAnteriores("0");
       setDiasVacLeyActual("12");
+      setDiasNoTrabajados("0");
     }
   };
 
@@ -450,7 +474,7 @@ export default function PageFiniquitosLiquidaciones() {
       {/* Encabezado */}
       <div>
         <h1 className="text-2xl font-bold">📄 Finiquitos y liquidaciones</h1>
-        <p className="text-xs text-gray-500 mt-1">Calcula y gestiona finiquitos/liquidaciones con el mismo diseño y colores.</p>
+        <p className="text-xs text-gray-500 mt-1">Calcula y gestiona finiquitos/liquidaciones.</p>
       </div>
 
       {/* Filtros superiores (estilo Contratos) */}

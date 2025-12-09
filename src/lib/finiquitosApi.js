@@ -60,6 +60,16 @@ export const finiquitosApi = {
     });
     return res.data;
   },
+  // Obtener días no trabajados desde la tabla asistencias
+  // - Relación: endpoint `/api/checador/finiquitos/empleado/:idEmpleado/dias-no-trabajados`
+  // - Cuenta registros donde asistencia = 0 o NULL en el rango de fechas
+  async obtenerDiasNoTrabajados({ idEmpleado, fechaIngreso, fechaBaja }) {
+    const res = await axios.get(`/checador/finiquitos/empleado/${idEmpleado}/dias-no-trabajados`, {
+      params: { fechaIngreso, fechaBaja },
+      headers: authHeaders(),
+    });
+    return res.data;
+  },
 };
 
 
