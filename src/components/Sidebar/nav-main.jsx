@@ -106,6 +106,12 @@ const menuGroups = [
         rol: "Recruiter",
         icon: FileText,
       },
+      {
+        title: "Aguinaldos",
+        url: "/panel/aguinaldos",
+        rol: "Recruiter",
+        icon: FileText,
+      },
     ],
   },
   {
