@@ -78,7 +78,6 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
       setOpen(false);
       mutate?.();
     } catch (error) {
-      console.error(error);
       enqueueSnackbar(
         error?.response?.data?.error || "No se pudo crear la solicitud",
         { variant: "error" }
