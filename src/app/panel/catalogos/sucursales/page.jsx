@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import SucursalesTable from "./SucursalesTable";
 import SucursalFormDialog from "./SucursalFormDialog";
 import SucursalDeleteDialog from "./SucursalDeleteDialog";
+import AccesosRapidos from "@/components/AccesosRapidos";
 
 export default function Sucursales() {
   const [filter, setFilter] = useState("");
@@ -77,6 +78,9 @@ export default function Sucursales() {
         deleteId={deleteId}
         mutateKey={key}
       />
+      
+      {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
+      <AccesosRapidos />
     </div>
   );
 }

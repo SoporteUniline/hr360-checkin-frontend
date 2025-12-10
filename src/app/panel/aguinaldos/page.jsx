@@ -36,6 +36,7 @@ import { jsPDF } from "jspdf";
 import AguinaldoViewDialog from "./AguinaldoViewDialog";
 import CambiarEstadoDialog from "./CambiarEstadoDialog";
 import styles from "./aguinaldos-theme.module.css";
+import AccesosRapidos from "@/components/AccesosRapidos";
 
 export default function PageAguinaldos() {
   const { dataUser } = useAuth();
@@ -1015,6 +1016,9 @@ export default function PageAguinaldos() {
         estadoActual={calculoParaCambiarEstado?.estado || "Pendiente"}
         onConfirm={cambiarEstado}
       />
+      
+      {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
+      <AccesosRapidos />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { Plus } from "lucide-react";
 import TiposRegistroTable from "./TiposRegistroTable";
 import TipoRegistroFormDialog from "./TipoRegistroFormDialog";
 import TipoRegistroDeleteDialog from "./TipoRegistroDeleteDialog";
+import AccesosRapidos from "@/components/AccesosRapidos";
 
 export default function TiposRegistro() {
   const [filter, setFilter] = useState("");
@@ -74,6 +75,9 @@ export default function TiposRegistro() {
         deleteId={deleteId}
         mutateKey={key}
       />
+      
+      {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
+      <AccesosRapidos />
     </div>
   );
 }

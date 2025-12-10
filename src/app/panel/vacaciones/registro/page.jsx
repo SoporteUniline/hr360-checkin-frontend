@@ -27,6 +27,7 @@ import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/Combobox";
 import { useCallback } from "react";
 import styles from "../vacaciones-theme.module.css";
+import AccesosRapidos from "@/components/AccesosRapidos";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -262,6 +263,9 @@ export default function RegistroVacacionesPage() {
       <div className="px-4">
         {ui}
       </div>
+      
+      {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
+      <AccesosRapidos />
     </div>
   );
 }

@@ -13,6 +13,7 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import FormularioAsistenciasMasivas from "@/components/FormularioAsistenciasMasivas";
+import AccesosRapidos from "@/components/AccesosRapidos";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -187,6 +188,9 @@ export default function ControlAsistencia() {
         setRequiereAutorizacion={setRequiereAutorizacion}
       />
       {ui}
+      
+      {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
+      <AccesosRapidos />
     </div>
   );
 }

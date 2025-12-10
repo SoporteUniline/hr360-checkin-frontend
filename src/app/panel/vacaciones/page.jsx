@@ -36,6 +36,7 @@ import { Badge } from "@/components/ui/badge";
 import TablePagination from "@/components/TablePagination";
 import styles from "./vacaciones-theme.module.css";
 import { formatDateDMY } from "@/lib/formatDate";
+import AccesosRapidos from "@/components/AccesosRapidos";
 
 function numberFormat(n) {
   try {
@@ -968,6 +969,9 @@ export default function VacacionesPage() {
           )}
         </DialogContent>
       </Dialog>
+      
+      {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
+      <AccesosRapidos />
     </div>
   );
 }

@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import EstadoCivilTable from "./EstadoCivilTable";
 import EstadoCivilFormDialog from "./EstadoCivilFormDialog";
 import EstadoCivilDeleteDialog from "./EstadoCivilDeleteDialog";
+import AccesosRapidos from "@/components/AccesosRapidos";
 
 export default function EstadoCivil() {
   const [filter, setFilter] = useState("");
@@ -77,6 +78,9 @@ export default function EstadoCivil() {
         deleteId={deleteId}
         mutateKey={key}
       />
+      
+      {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
+      <AccesosRapidos />
     </div>
   );
 }

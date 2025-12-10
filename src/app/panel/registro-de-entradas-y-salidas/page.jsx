@@ -9,6 +9,7 @@ import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import useDebounce from "@/hooks/useDebounce";
 import EntradasSalidasDataContainer from "./EntradasSalidasDataContainer";
+import AccesosRapidos from "@/components/AccesosRapidos";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -63,6 +64,9 @@ export default function RegistroEntradasSalidas() {
       />
 
       {ui}
+      
+      {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
+      <AccesosRapidos />
     </div>
   );
 }

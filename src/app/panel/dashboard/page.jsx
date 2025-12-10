@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import PermisosTable from "./PermisosTable";
 import WeeklyTrend from "./WeeklyTrend";
+import AccesosRapidos from "@/components/AccesosRapidos";
 
 function monthShortUpperWithDot(dateStr) {
   const d = new Date(dateStr + "T00:00:00Z");
@@ -778,75 +779,8 @@ export default async function PanelDashboardPage() {
         </div>
       </div>
 
-      {/* Accesos Rápidos */}
-      <div className="mt-10">
-        <div className="mb-3 flex items-center gap-2">
-          <span className="text-lg font-semibold">Accesos Rápidos</span>
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-          <Link
-            href="/"
-            className="group rounded-xl border bg-white p-4 sm:p-6 text-center hover:shadow-sm transition"
-          >
-            <div className="mx-auto mb-2 sm:mb-3 grid size-10 sm:size-12 place-content-center rounded-full border border-sky-200 bg-sky-50">
-              <Clock className="size-5 sm:size-6 text-sky-600" />
-            </div>
-            <div className="font-medium text-sm sm:text-base">Reloj Checador</div>
-            <div className="text-[11px] sm:text-xs text-zinc-500 mt-1">
-              Registros de entrada y salida
-            </div>
-          </Link>
-          <Link
-            href="/panel/empleados"
-            className="group rounded-xl border bg-white p-4 sm:p-6 text-center hover:shadow-sm transition"
-          >
-            <div className="mx-auto mb-2 sm:mb-3 grid size-10 sm:size-12 place-content-center rounded-full border border-violet-200 bg-violet-50">
-              <Users className="size-5 sm:size-6 text-violet-600" />
-            </div>
-            <div className="font-medium text-sm sm:text-base">Empleados</div>
-            <div className="text-[11px] sm:text-xs text-zinc-500 mt-1">
-              Gestión de personal
-            </div>
-          </Link>
-          <Link
-            href="/panel/reporte-horas"
-            className="group rounded-xl border bg-white p-4 sm:p-6 text-center hover:shadow-sm transition"
-          >
-            <div className="mx-auto mb-2 sm:mb-3 grid size-10 sm:size-12 place-content-center rounded-full border border-indigo-200 bg-indigo-50">
-              <BarChart3 className="size-5 sm:size-6 text-indigo-600" />
-            </div>
-            <div className="font-medium text-sm sm:text-base">Reportes</div>
-            <div className="text-[11px] sm:text-xs text-zinc-500 mt-1">
-              Análisis y estadísticas
-            </div>
-          </Link>
-          <Link
-            href="/panel/permisos"
-            className="group rounded-xl border bg-white p-4 sm:p-6 text-center hover:shadow-sm transition"
-            title="Ir a Permisos"
-          >
-            <div className="mx-auto mb-2 sm:mb-3 grid size-10 sm:size-12 place-content-center rounded-full border border-rose-200 bg-rose-50">
-              <FileCheck className="size-5 sm:size-6 text-rose-600" />
-            </div>
-            <div className="font-medium text-sm sm:text-base">Permisos</div>
-            <div className="text-[11px] sm:text-xs text-zinc-500 mt-1">
-              Solicitudes y ausencias
-            </div>
-          </Link>
-          <Link
-            href="/panel/cuenta"
-            className="group rounded-xl border bg-white p-4 sm:p-6 text-center hover:shadow-sm transition"
-          >
-            <div className="mx-auto mb-2 sm:mb-3 grid size-10 sm:size-12 place-content-center rounded-full border border-zinc-200 bg-zinc-50">
-              <Settings className="size-5 sm:size-6 text-zinc-700" />
-            </div>
-            <div className="font-medium text-sm sm:text-base">Configuración</div>
-            <div className="text-[11px] sm:text-xs text-zinc-500 mt-1">
-              Ajustes del sistema
-            </div>
-          </Link>
-        </div>
-      </div>
+      {/* Accesos Rápidos - Componente reutilizable */}
+      <AccesosRapidos />
     </div>
   );
 }

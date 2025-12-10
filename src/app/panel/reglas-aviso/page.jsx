@@ -39,6 +39,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 // Iconos
 import { Copy, Settings2 } from "lucide-react";
+import AccesosRapidos from "@/components/AccesosRapidos";
 
 // Utilidades locales
 const diasSemanaMap = {
@@ -424,6 +425,9 @@ export default function ReglasAvisoPage() {
           ) : null}
         </DialogContent>
       </Dialog>
+      
+      {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
+      <AccesosRapidos />
     </div>
   );
 }

@@ -17,6 +17,7 @@ import { useAuth } from "@/context/AuthContext";
 import axios from "@/lib/axios";
 import Cookies from "js-cookie";
 import styles from "../vacaciones/vacaciones-theme.module.css";
+import AccesosRapidos from "@/components/AccesosRapidos";
 
 function fmtDate(d) {
   const dd = new Date(d);
@@ -844,6 +845,9 @@ export default function ReporteHorasPage() {
           </div>
         </div>
       )}
+      
+      {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
+      <AccesosRapidos />
     </div>
   );
 }

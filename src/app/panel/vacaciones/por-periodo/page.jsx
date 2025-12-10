@@ -47,6 +47,7 @@ import {
 import TablePagination from "@/components/TablePagination";
 import { useSnackbar } from "notistack";
 import axiosWithBase from "@/lib/axios";
+import AccesosRapidos from "@/components/AccesosRapidos";
 import Cookies from "js-cookie";
 import styles from "../vacaciones-theme.module.css";
 
@@ -612,6 +613,9 @@ export default function VacacionesPorPeriodoPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
+      <AccesosRapidos />
     </div>
   );
 }

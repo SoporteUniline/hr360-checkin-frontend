@@ -20,6 +20,7 @@ import PermisoDeleteDialog from "./PermisoDeleteDialog";
 import PermisoViewDialog from "./PermisoViewDialog";
 import styles from "./permisos-theme.module.css";
 import { fetcherWithToken } from "@/lib/fetcher";
+import AccesosRapidos from "@/components/AccesosRapidos";
 
 /**
  * Página de gestión de Permisos (solicitudes_permiso)
@@ -903,6 +904,9 @@ export default function PermisosPage() {
         item={viewItem}
         festivosSet={festivosSet}
       />
+      
+      {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
+      <AccesosRapidos />
     </div>
   );
 }

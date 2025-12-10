@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import FestivosTable from "./FestivosTable";
 import FestivoFormDialog from "./FestivoFormDialog";
 import FestivoDeleteDialog from "./FestivoDeleteDialog";
+import AccesosRapidos from "@/components/AccesosRapidos";
 
 export default function Festivos() {
   const [filter, setFilter] = useState("");
@@ -90,6 +91,9 @@ export default function Festivos() {
         deleteId={deleteId}
         mutateKey={key}
       />
+      
+      {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
+      <AccesosRapidos />
     </div>
   );
 }

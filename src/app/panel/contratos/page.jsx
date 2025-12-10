@@ -28,6 +28,7 @@ import { contratosApi } from "@/lib/contratosApi";
 import { useSnackbar } from "notistack";
 import useEmpleadosData from "@/hooks/useEmpleadosData";
 import styles from "./contratos-theme.module.css";
+import AccesosRapidos from "@/components/AccesosRapidos";
 
 /**
  * Página de gestión de Contratos
@@ -464,6 +465,9 @@ export default function ContratosPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
+      <AccesosRapidos />
     </div>
   );
 }
