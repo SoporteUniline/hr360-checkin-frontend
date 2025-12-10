@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import DepartamentosTable from "./DepartamentosTable";
 import DepartamentoFormDialog from "./DepartamentoFormDialog";
 import DepartamentoDeleteDialog from "./DepartamentoDeleteDialog";
+import AccesosRapidos from "@/components/AccesosRapidos";
 
 export default function Departamentos() {
   const [filter, setFilter] = useState("");
@@ -77,6 +78,9 @@ export default function Departamentos() {
         deleteId={deleteId}
         mutateKey={key}
       />
+      
+      {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
+      <AccesosRapidos />
     </div>
   );
 }

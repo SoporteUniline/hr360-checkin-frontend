@@ -26,6 +26,7 @@ import { Download, Plus, Search, Trash2, Edit3, Calculator, Eye } from "lucide-r
 import FiniquitoViewDialog from "./FiniquitoViewDialog";
 import dayjs from "dayjs";
 import { jsPDF } from "jspdf";
+import AccesosRapidos from "@/components/AccesosRapidos";
 
 // Página de Panel para "Finiquitos y liquidaciones"
 // - Relación:
@@ -1257,6 +1258,9 @@ export default function PageFiniquitosLiquidaciones() {
         setOpen={(o) => { if (!o) setViewRow(null); }}
         id={viewRow?.id_finiquito || viewRow?.id}
       />
+      
+      {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
+      <AccesosRapidos />
     </div>
   );
 }

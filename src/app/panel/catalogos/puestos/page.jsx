@@ -8,6 +8,7 @@ import { useAuth } from "@/context/AuthContext";
 import PositionFormDialog from "./PositionFormDialog";
 import PositionDeleteDialog from "./PositionDeleteDialog";
 import PositionsTable from "./PositionsTable";
+import AccesosRapidos from "@/components/AccesosRapidos";
 
 export default function Positions() {
   const [filter, setFilter] = useState("");
@@ -76,6 +77,9 @@ export default function Positions() {
         deletePosition={deletePosition}
         mutateKey={key}
       />
+      
+      {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
+      <AccesosRapidos />
     </div>
   );
 }

@@ -46,6 +46,7 @@ import {
 import TablePagination from "@/components/TablePagination";
 import { useSnackbar } from "notistack";
 import styles from "../vacaciones-theme.module.css";
+import AccesosRapidos from "@/components/AccesosRapidos";
 
 function num(n, d = 0) {
   const v = Number(n ?? 0);
@@ -391,6 +392,9 @@ export default function VacacionesPorLeyPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
+      <AccesosRapidos />
     </div>
   );
 }

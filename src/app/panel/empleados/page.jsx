@@ -10,6 +10,7 @@ import { StatCard } from "@/components/Cards";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
 import ModalCapacidadAgotada from "@/components/ModalCapacidadAgotada";
+import AccesosRapidos from "@/components/AccesosRapidos";
 
 export default function RegistroEmpleados() {
   const [modalCapacidadAbierto, setModalCapacidadAbierto] = useState(false);
@@ -148,6 +149,9 @@ export default function RegistroEmpleados() {
 
             {/* Tabla de empleados */}
             {ui}
+            
+            {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
+            <AccesosRapidos />
           </>
         )}
       </div>

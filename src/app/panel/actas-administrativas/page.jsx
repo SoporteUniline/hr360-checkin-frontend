@@ -12,6 +12,7 @@ import useEmpleadosActivosData from "@/hooks/useEmpleadosActivos";
 import useTiposActa from "@/hooks/useTiposActa";
 import { PlusIcon } from "lucide-react";
 import React, { useState } from "react";
+import AccesosRapidos from "@/components/AccesosRapidos";
 
 const page = () => {
   const [page, setPage] = useState(1);
@@ -140,6 +141,9 @@ const page = () => {
         dataUser={dataUser}
         mutateTiposActa={mutateTiposActa}
       />
+      
+      {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
+      <AccesosRapidos />
     </>
   );
 };

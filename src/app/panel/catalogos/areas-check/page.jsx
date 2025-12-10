@@ -25,6 +25,7 @@ import { useAuth } from "@/context/AuthContext";
 import TablePagination from "@/components/TablePagination";
 import debounce from "lodash.debounce";
 import ModalArea from "@/components/ModalArea";
+import AccesosRapidos from "@/components/AccesosRapidos";
 
 function AreaCard({ area, onEdit, onDelete }) {
   return (
@@ -346,6 +347,9 @@ export default function AreasCheckPage() {
             : ""
         }
       />
+      
+      {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
+      <AccesosRapidos />
     </div>
   );
 }
