@@ -135,13 +135,8 @@ export default function PermisoDialog({
     if (!form.fecha_inicio) errs.push("La fecha de inicio es obligatoria.");
     if (!form.fecha_fin) errs.push("La fecha fin es obligatoria.");
 
-    const hoy = dayjs().format("YYYY-MM-DD");
-    // Regla: solo en creación exigimos que inicio sea hoy o futuro.
-    // En edición permitimos fechas pasadas para no forzar cambios y evitar
-    // efectos secundarios en asistencias al cancelar parcialmente.
-    if (!isEdit && form.fecha_inicio && form.fecha_inicio < hoy) {
-      errs.push("La fecha de inicio no puede ser anterior a hoy.");
-    }
+    // Validación: la fecha fin no puede ser anterior a la fecha inicio
+    // Nota: Se permite seleccionar fechas anteriores a la fecha actual según requerimiento del cliente
     if (form.fecha_fin && form.fecha_fin < form.fecha_inicio) {
       errs.push("La fecha fin no puede ser anterior a la fecha inicio.");
     }
@@ -375,7 +370,6 @@ export default function PermisoDialog({
               <Input
                 type="date"
                 value={form.fecha_inicio}
-                min={dayjs().format("YYYY-MM-DD")}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, fecha_inicio: e.target.value }))
                 }
@@ -387,7 +381,7 @@ export default function PermisoDialog({
               <Input
                 type="date"
                 value={form.fecha_fin}
-                min={form.fecha_inicio || dayjs().format("YYYY-MM-DD")}
+                min={form.fecha_inicio || undefined}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, fecha_fin: e.target.value }))
                 }
