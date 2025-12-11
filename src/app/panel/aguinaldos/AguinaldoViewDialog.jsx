@@ -16,13 +16,15 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { aguinaldosApi } from "@/lib/aguinaldosApi";
 import dayjs from "dayjs";
 import { jsPDF } from "jspdf";
 
-export default function AguinaldoViewDialog({ open, setOpen, id }) {
+export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActualizado }) {
   const [detalle, setDetalle] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [actualizandoEstados, setActualizandoEstados] = useState({}); // { id_aguinaldo: true }
 
   useEffect(() => {
     let active = true;
@@ -179,6 +181,151 @@ export default function AguinaldoViewDialog({ open, setOpen, id }) {
     doc.save(nombreArchivo);
   };
 
+  // Función para generar PDF individual de un empleado
+  // - Relación: genera un PDF solo con la información del empleado específico
+  // - Importante: cada empleado recibe solo su información, no la de otros
+  const generarPDFIndividual = (ag) => {
+    if (!ag || !detalle) return;
+
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
+    const margenIzq = 15;
+    const margenDer = 195;
+    let y = 10;
+
+    // Header
+    doc.setFillColor(55, 73, 94);
+    doc.rect(0, 0, 220, 35, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(28);
+    doc.setFont("helvetica", "bold");
+    doc.text("HR360", margenIzq, 20);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text("Sistema de Gestión de Capital Humano", margenIzq, 26);
+    doc.setFontSize(9);
+    doc.text("Fecha: " + new Date().toLocaleDateString("es-MX"), margenDer, 20, { align: "right" });
+
+    y = 45;
+    doc.setTextColor(55, 73, 94);
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("RECIBO DE AGUINALDO " + maestro.año_fiscal, 105, y, { align: "center" });
+
+    y += 10;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(60, 60, 60);
+    doc.text("Fecha de Corte: " + dayjs(maestro.fecha_corte).format("DD/MM/YYYY"), margenIzq, y);
+
+    y += 10;
+    // Sección: INFORMACIÓN DEL EMPLEADO
+    // Dibujar rectángulo con fondo para el título de la sección
+    doc.setFillColor(55, 73, 94);
+    doc.rect(margenIzq, y, margenDer - margenIzq, 7, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("INFORMACIÓN DEL EMPLEADO", margenIzq + 2, y + 5);
+    y += 12; // Espacio después del rectángulo (aumentado para mejor separación)
+
+    // Información del empleado
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(60, 60, 60);
+    doc.text("Nombre: " + ag.nombre_completo, margenIzq, y);
+    y += 6;
+    doc.text("Puesto: " + (ag.puesto || "N/A"), margenIzq, y);
+    y += 6;
+    doc.text("Departamento: " + (ag.departamento || "N/A"), margenIzq, y);
+    y += 6;
+    doc.text("Fecha de Ingreso: " + dayjs(ag.fecha_ingreso).format("DD/MM/YYYY"), margenIzq, y);
+    y += 6;
+    doc.text("Años Trabajados: " + parseFloat(ag.años_trabajados).toFixed(2) + " años", margenIzq, y);
+    y += 10; // Espacio antes de la siguiente sección
+
+    // Sección: DETALLE DEL CÁLCULO
+    // Dibujar rectángulo con fondo para el título de la sección
+    doc.setFillColor(55, 73, 94);
+    doc.rect(margenIzq, y, margenDer - margenIzq, 7, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("DETALLE DEL CÁLCULO", margenIzq + 2, y + 5);
+    y += 12; // Espacio después del rectángulo (aumentado para mejor separación)
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(60, 60, 60);
+    doc.text("Salario Diario: $" + parseFloat(ag.salario_diario).toLocaleString("es-MX", { minimumFractionDigits: 2 }), margenIzq, y);
+    y += 6;
+    doc.text("Días Aguinaldo (Ley): " + parseFloat(ag.dias_aguinaldo_ley).toFixed(2) + " días", margenIzq, y);
+    y += 6;
+    doc.text("Días Aguinaldo Calculado: " + parseFloat(ag.dias_aguinaldo_calculado).toFixed(2) + " días", margenIzq, y);
+    y += 6;
+    doc.text("Tipo: " + (ag.es_proporcional ? "Proporcional" : "Completo"), margenIzq, y);
+    y += 6;
+    if (parseFloat(ag.dias_no_trabajados) > 0) {
+      doc.text("Días No Trabajados: " + parseFloat(ag.dias_no_trabajados).toFixed(2) + " días", margenIzq, y);
+      y += 6;
+    }
+    doc.text("Días Trabajados: " + parseFloat(ag.dias_trabajados).toFixed(2) + " días", margenIzq, y);
+    y += 10; // Espacio antes del total
+
+    // Total
+    doc.setFillColor(55, 73, 94);
+    doc.rect(margenIzq, y, margenDer - margenIzq, 12, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("TOTAL A PAGAR", margenIzq + 2, y + 7);
+    doc.setFontSize(16);
+    doc.text(
+      "$" + parseFloat(ag.monto_aguinaldo).toLocaleString("es-MX", { minimumFractionDigits: 2 }) + " MXN",
+      margenDer - 2,
+      y + 7,
+      { align: "right" }
+    );
+
+    const nombreArchivo = "Aguinaldo_" + maestro.año_fiscal + "_" + (ag.nombre_completo || "Empleado").replace(/\s+/g, "_") + ".pdf";
+    doc.save(nombreArchivo);
+  };
+
+  // Función para actualizar el estado individual de un aguinaldo
+  // - Relación: actualiza el estado de un empleado específico sin afectar a los demás
+  const actualizarEstadoIndividual = async (idAguinaldo, nuevoEstado) => {
+    if (!idAguinaldo || !nuevoEstado) return;
+
+    setActualizandoEstados((prev) => ({ ...prev, [idAguinaldo]: true }));
+    try {
+      await aguinaldosApi.actualizarEstadoIndividual(idAguinaldo, nuevoEstado);
+      
+      // Actualizar el estado en el detalle local
+      setDetalle((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          aguinaldos: prev.aguinaldos.map((ag) =>
+            ag.id_aguinaldo === idAguinaldo ? { ...ag, estado: nuevoEstado } : ag
+          ),
+        };
+      });
+
+      // Notificar al componente padre si hay callback
+      if (onEstadoActualizado) {
+        onEstadoActualizado();
+      }
+    } catch (error) {
+      console.error("Error al actualizar estado individual:", error);
+      alert("Error al actualizar el estado. Por favor, intenta de nuevo.");
+    } finally {
+      setActualizandoEstados((prev) => {
+        const nuevo = { ...prev };
+        delete nuevo[idAguinaldo];
+        return nuevo;
+      });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {/* Modal responsivo:
@@ -280,6 +427,7 @@ export default function AguinaldoViewDialog({ open, setOpen, id }) {
                           <th className="text-left p-1.5 sm:p-2 whitespace-nowrap">Tipo</th>
                           <th className="text-left p-1.5 sm:p-2 whitespace-nowrap">Monto</th>
                           <th className="text-left p-1.5 sm:p-2 whitespace-nowrap">Estado</th>
+                          <th className="text-left p-1.5 sm:p-2 whitespace-nowrap">Acciones</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -308,17 +456,33 @@ export default function AguinaldoViewDialog({ open, setOpen, id }) {
                               ${parseFloat(ag.monto_aguinaldo).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
                             </td>
                             <td className="p-1.5 sm:p-2 whitespace-nowrap">
-                              <span
-                                className={`px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-xs font-bold uppercase ${
-                                  ag.estado === "Pagado"
-                                    ? "bg-[#d1fae5] text-[#065f46]"
-                                    : ag.estado === "Cancelado"
-                                    ? "bg-[#fee2e2] text-[#991b1b]"
-                                    : "bg-[#fef3c7] text-[#92400e]"
-                                }`}
+                              <Select
+                                value={ag.estado || "Pendiente"}
+                                onValueChange={(nuevoEstado) => {
+                                  actualizarEstadoIndividual(ag.id_aguinaldo, nuevoEstado);
+                                }}
+                                disabled={actualizandoEstados[ag.id_aguinaldo]}
                               >
-                                {ag.estado || "Pendiente"}
-                              </span>
+                                <SelectTrigger className="h-7 sm:h-8 text-[9px] sm:text-xs w-20 sm:w-24">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Pendiente">Pendiente</SelectItem>
+                                  <SelectItem value="Pagado">Pagado</SelectItem>
+                                  <SelectItem value="Cancelado">Cancelado</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </td>
+                            <td className="p-1.5 sm:p-2 whitespace-nowrap">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => generarPDFIndividual(ag)}
+                                className="text-[9px] sm:text-xs h-7 sm:h-8 px-2"
+                                title="Generar PDF individual para este empleado"
+                              >
+                                📄 PDF
+                              </Button>
                             </td>
                           </tr>
                         ))}
