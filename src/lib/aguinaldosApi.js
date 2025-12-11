@@ -73,6 +73,21 @@ export const aguinaldosApi = {
   },
 
   /**
+   * Actualiza el estado individual de un aguinaldo específico
+   * - Relación: permite cambiar el estado de un empleado individual sin afectar a los demás
+   * @param {number} idAguinaldo - ID del aguinaldo individual
+   * @param {string} estado - Nuevo estado (Pendiente, Pagado, Cancelado)
+   */
+  async actualizarEstadoIndividual(idAguinaldo, estado) {
+    const res = await axios.patch(
+      `/checador/aguinaldos/individual/${idAguinaldo}/estado`,
+      { estado },
+      { headers: authHeaders() }
+    );
+    return res.data;
+  },
+
+  /**
    * Elimina un cálculo de aguinaldo
    * @param {number} id - ID del cálculo a eliminar
    */
@@ -90,6 +105,21 @@ export const aguinaldosApi = {
   async empleadosActivos({ empresa, q, limit = 8 }) {
     const res = await axios.get(`/checador/aguinaldos/empleados-activos`, {
       params: { empresa, q, limit },
+      headers: authHeaders(),
+    });
+    return res.data;
+  },
+
+  /**
+   * Obtiene días no trabajados desde la tabla asistencias
+   * - Relación: endpoint `/api/checador/aguinaldos/empleado/:idEmpleado/dias-no-trabajados`
+   * - Cuenta registros donde asistencia = 0 o NULL en el rango de fechas del año fiscal
+   * - Similar a finiquitos pero adaptado para aguinaldos (usa año fiscal y fecha de corte)
+   * @param {Object} params - Parámetros (idEmpleado, fechaIngreso, fechaCorte, añoFiscal)
+   */
+  async obtenerDiasNoTrabajados({ idEmpleado, fechaIngreso, fechaCorte, añoFiscal }) {
+    const res = await axios.get(`/checador/aguinaldos/empleado/${idEmpleado}/dias-no-trabajados`, {
+      params: { fechaIngreso, fechaCorte, añoFiscal },
       headers: authHeaders(),
     });
     return res.data;
