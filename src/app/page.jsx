@@ -4,45 +4,47 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import axiosInstance from "@/lib/axios";
 import Navbar from "@/components/Navbar";
+import { useRef } from "react";
 
 export default function Home() {
   const { dataUser, isLoggedIn } = useAuth();
   const router = useRouter();
   const [status, setStatus] = useState("idle"); // "idle" | "loading" | "notfound" | "error" | "forbidden"
+  const hasFetched = useRef(false);
 
   useEffect(() => {
     if (!isLoggedIn) return;
+    if (!dataUser) return;
+    if (hasFetched.current) return;
 
-    // Si el tipo de usuario NO es Recruiter, no puede acceder
-    if (dataUser?.tipo_usuario !== "Recruiter") {
+    hasFetched.current = true;
+
+    if (dataUser.tipo_usuario !== "Recruiter") {
       setStatus("forbidden");
       return;
     }
 
-    const redirectToSlug = async () => {
-      if (!dataUser?.id_empresa) return;
+    const idEmpresa = dataUser.id_empresa || dataUser.empresas?.[0];
+    if (!idEmpresa) {
+      setStatus("notfound");
+      return;
+    }
 
+    const fetchSlug = async () => {
       setStatus("loading");
-
       try {
-        const res = await axiosInstance.get(
-          `/empresas/id/${dataUser.id_empresa}/slug`
-        );
+        const res = await axiosInstance.get(`/empresas/id/${idEmpresa}/slug`);
         const slug = res.data.slug;
 
-        if (slug) {
-          router.push(`/${slug}`);
-        } else {
-          setStatus("notfound");
-        }
-      } catch (error) {
-        console.error("Error obteniendo slug:", error.message);
+        if (slug) router.push(`/${slug}`);
+        else setStatus("notfound");
+      } catch {
         setStatus("error");
       }
     };
 
-    redirectToSlug();
-  }, [dataUser, isLoggedIn, router]);
+    fetchSlug();
+  }, [dataUser, isLoggedIn]);
 
   // Usuario loggeado pero no Recruiter
   if (status === "forbidden") {
