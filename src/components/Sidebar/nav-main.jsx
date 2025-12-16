@@ -35,6 +35,18 @@ import { useState } from "react";
 
 const dashboardItems = [
   {
+    title: "Empresas",
+    url: "/dashboard/empresas",
+    rol: "Admin",
+    icon: Building,
+  },
+  {
+    title: "Usuarios",
+    url: "/dashboard/usuarios",
+    rol: "Admin",
+    icon: UsersIcon,
+  },
+  {
     title: "Dashboard",
     url: "/panel/dashboard",
     rol: "Recruiter",
