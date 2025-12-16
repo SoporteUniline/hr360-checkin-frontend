@@ -65,6 +65,12 @@ const menuGroups = [
         icon: UsersIcon,
       },
       {
+        title: "Panel empleado",
+        url: "/panel/panel-empleado",
+        rol: "Recruiter",
+        icon: UserRound,
+      },
+      {
         title: "Perfil",
         url: "/panel/cuenta",
         rol: "Recruiter",
