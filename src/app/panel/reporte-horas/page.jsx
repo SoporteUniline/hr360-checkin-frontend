@@ -325,6 +325,63 @@ export default function ReporteHorasPage() {
 
   async function handleGuardarPDF() {
     if (!reportRef.current || !reportes || reportes.length === 0) return;
+
+    // Función local: calcula puntos de corte verticales "seguros" dentro de un bloque de reporte
+    // para que cada página del PDF termine al final de una fila completa (y su fila de detalle),
+    // evitando que la información se parta en dos hojas. Se relaciona directamente con la tabla
+    // renderizada en este mismo archivo `page.jsx` dentro del panel de reporte de horas.
+    const computeSafeBreaks = (blockEl) => {
+      const rect = blockEl.getBoundingClientRect();
+      const containerTop = rect.top;
+      const totalHeight = rect.height || 1;
+
+      // Siempre arrancamos en 0 (parte superior del bloque)
+      const domBreaks = [0];
+
+      // Localizamos el cuerpo de la tabla principal del reporte
+      const tbody = blockEl.querySelector("table tbody");
+      if (tbody) {
+        const rows = Array.from(tbody.querySelectorAll("tr"));
+
+        // Recorremos las filas agrupando:
+        // - Fila principal del día
+        // - Fila de detalle (colspan) si existe
+        // Así garantizamos que ambas queden en la misma página del PDF.
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          if (!row) continue;
+
+          let rowRect = row.getBoundingClientRect();
+          let bottom = rowRect.bottom - containerTop;
+
+          // Si la siguiente fila es de detalle (colspan), la unimos al mismo bloque
+          if (i + 1 < rows.length) {
+            const next = rows[i + 1];
+            const spanCell = next && next.querySelector && next.querySelector("td[colspan]");
+            if (spanCell) {
+              const nextRect = next.getBoundingClientRect();
+              bottom = nextRect.bottom - containerTop;
+              i += 1; // ya incluimos la fila de detalle
+            }
+          }
+
+          const last = domBreaks[domBreaks.length - 1];
+          // Evitamos puntos demasiado cercanos por pequeños redondeos de layout
+          if (bottom > last + 4) {
+            domBreaks.push(bottom);
+          }
+        }
+      }
+
+      // Aseguramos que el último punto de corte llegue hasta el final del bloque
+      const last = domBreaks[domBreaks.length - 1];
+      if (last < totalHeight) {
+        domBreaks.push(totalHeight);
+      }
+
+      return { domBreaks, totalHeight };
+    };
+
     try {
       setExporting("pdf");
       const html2canvas = (await import("html2canvas")).default;
@@ -334,7 +391,27 @@ export default function ReporteHorasPage() {
       const pageHeight = pdf.internal.pageSize.getHeight();
       const margin = 12;
       const imgWidth = pageWidth - margin * 2;
+
+      // Altura reservada en la parte inferior de cada página para el pie de página
+      // (línea separadora + leyenda + numeración). También se usa para que el
+      // contenido de la imagen no "pegue" contra el pie ni lo tape.
+      const footerReserved = 42; // pt
+      const usablePageHeight = pageHeight - margin * 2 - footerReserved;
       const blocks = Array.from(reportRef.current.querySelectorAll('[data-report-block="true"]'));
+
+      // Mapa compartido entre `onclone` y el bucle principal para
+      // guardar los puntos de corte seguros de cada bloque clonado.
+      const safeBreakMap = {};
+
+      // A cada bloque (o al contenedor general, en su defecto) le
+      // asignamos un identificador estable que se copia al DOM clonado.
+      const allBlocks = blocks.length ? blocks : [reportRef.current];
+      allBlocks.forEach((el, index) => {
+        if (!el.getAttribute("data-pdf-block-id")) {
+          el.setAttribute("data-pdf-block-id", String(index + 1));
+        }
+      });
+
       const captureOptions = {
         scale: 3,
         backgroundColor: "#ffffff",
@@ -409,8 +486,8 @@ export default function ReporteHorasPage() {
           const hasModern = (v) => v && (v.includes('oklch(') || v.includes('lab(') || v.startsWith('color(') || v.includes('color-mix('));
           const win = doc.defaultView || window;
 
-          const blocks = Array.from(doc.querySelectorAll('[data-report-block="true"]'));
-          for (const block of blocks) {
+          const clonedBlocks = Array.from(doc.querySelectorAll('[data-report-block="true"]'));
+          for (const block of clonedBlocks) {
             // asegurar ancho A4 (~794px @96dpi) para texto a escala 1:1
             block.style.width = '794px';
             block.style.margin = '0 auto';
@@ -488,6 +565,17 @@ export default function ReporteHorasPage() {
               <div class="slot"><div class="line"></div><div class="label">FIRMA DE AUTORIZACIÓN</div></div>
             `;
             block.appendChild(signatures);
+
+            // 4.3) Calcular y guardar puntos de corte seguros para este bloque
+            // en el DOM CLONADO (el mismo que usa html2canvas). Esto elimina
+            // pequeñas diferencias de altura entre el DOM original y el clonado.
+            const pdfId = block.getAttribute('data-pdf-block-id');
+            if (pdfId) {
+              const { domBreaks, totalHeight } = computeSafeBreaks(block);
+              if (domBreaks && domBreaks.length > 1) {
+                safeBreakMap[pdfId] = { domBreaks, totalHeight };
+              }
+            }
           }
 
           // 5) Reemplazar colores modernos en estilos computados
@@ -514,21 +602,136 @@ export default function ReporteHorasPage() {
       };
 
       let isFirst = true;
-      for (const el of blocks.length ? blocks : [reportRef.current]) {
+      const iterableBlocks = blocks.length ? blocks : [reportRef.current];
+      for (const el of iterableBlocks) {
+        // Renderizamos el bloque a canvas; `onclone` ya calculó los cortes seguros
+        // y los dejó guardados en `safeBreakMap` para el id correspondiente.
         const canvas = await html2canvas(el, captureOptions);
-        const sliceHeight = (canvas.width * (pageHeight - margin * 2)) / imgWidth;
-        let position = 0;
-        while (position < canvas.height) {
+
+        const canvasHeight = canvas.height;
+        const sliceHeight = (canvas.width * usablePageHeight) / imgWidth;
+
+        const pdfId = el.getAttribute("data-pdf-block-id") || "";
+        const info = pdfId ? safeBreakMap[pdfId] : null;
+
+        // Si por cualquier motivo no tenemos puntos de corte calculados,
+        // hacemos un fallback al comportamiento clásico de cortes uniformes.
+        if (!info || !info.domBreaks || info.domBreaks.length < 2) {
+          let position = 0;
+          while (position < canvasHeight) {
+            const currentHeight = Math.min(sliceHeight, canvasHeight - position);
+            const slice = document.createElement("canvas");
+            slice.width = canvas.width;
+            slice.height = currentHeight;
+            const ctx = slice.getContext("2d");
+            if (!ctx) break;
+
+            ctx.drawImage(
+              canvas,
+              0,
+              position,
+              canvas.width,
+              currentHeight,
+              0,
+              0,
+              canvas.width,
+              currentHeight
+            );
+
+            const part = slice.toDataURL("image/png");
+            if (!isFirst) pdf.addPage();
+            pdf.addImage(part, "PNG", margin, margin, imgWidth, (currentHeight * imgWidth) / canvas.width);
+
+            isFirst = false;
+            position += currentHeight;
+          }
+          continue;
+        }
+
+        const { domBreaks, totalHeight } = info;
+        const scaleY = canvasHeight / (totalHeight || 1);
+        const safeBreaks = domBreaks.map((v) => Math.round(v * scaleY));
+
+        let pageTop = 0;
+        let breakIndex = 1; // domBreaks[0] === 0 representa el inicio
+
+        // Rebanamos el canvas respetando los puntos seguros de corte
+        while (pageTop < canvasHeight) {
+          const maxBottom = pageTop + sliceHeight;
+          let pageBottom = canvasHeight;
+
+          // Elegimos el último punto seguro que entre en la página actual
+          while (breakIndex < safeBreaks.length && safeBreaks[breakIndex] <= maxBottom) {
+            pageBottom = safeBreaks[breakIndex];
+            breakIndex++;
+          }
+
+          // Si por alguna razón no hay punto seguro, cortamos en el límite de página
+          if (pageBottom <= pageTop) {
+            pageBottom = Math.min(maxBottom, canvasHeight);
+            if (pageBottom <= pageTop) break;
+          }
+
+          const currentHeight = pageBottom - pageTop;
           const slice = document.createElement("canvas");
           slice.width = canvas.width;
-          slice.height = Math.min(sliceHeight, canvas.height - position);
+          slice.height = currentHeight;
           const ctx = slice.getContext("2d");
-          ctx.drawImage(canvas, 0, position, canvas.width, slice.height, 0, 0, canvas.width, slice.height);
+          if (!ctx) break;
+
+          ctx.drawImage(
+            canvas,
+            0,
+            pageTop,
+            canvas.width,
+            currentHeight,
+            0,
+            0,
+            canvas.width,
+            currentHeight
+          );
+
           const part = slice.toDataURL("image/png");
           if (!isFirst) pdf.addPage();
-          pdf.addImage(part, "PNG", margin, margin, imgWidth, (slice.height * imgWidth) / canvas.width);
-          position += slice.height;
+          pdf.addImage(part, "PNG", margin, margin, imgWidth, (currentHeight * imgWidth) / canvas.width);
+
           isFirst = false;
+          pageTop = pageBottom;
+        }
+      }
+
+      // Pie de página: numeración de páginas con un diseño limpio.
+      // Se dibuja una línea sutil y el texto:
+      // "HR360 · Reporte de Horas" a la izquierda y "Página X de N" a la derecha.
+      const totalPages = pdf.getNumberOfPages();
+      if (totalPages > 0) {
+        // Área reservada para el pie de página; usamos la misma altura que
+        // `footerReserved` para garantizar que haya un colchón visual entre
+        // la tabla y la línea/leyenda.
+        const footerAreaTop = pageHeight - footerReserved;
+
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(9);
+        pdf.setTextColor(107, 114, 128); // gris medio
+        pdf.setDrawColor(209, 213, 219); // gris claro para la línea
+        pdf.setLineWidth(0.5);
+
+        for (let page = 1; page <= totalPages; page++) {
+          pdf.setPage(page);
+          const lineY = footerAreaTop + 8; // un poco por encima del texto
+          const textY = footerAreaTop + 22; // centrado verticalmente en el área reservada
+
+          // Línea horizontal de separación
+          pdf.line(margin, lineY, pageWidth - margin, lineY);
+
+          // Texto izquierdo
+          const leftText = "HR360 · Reporte de Horas";
+          pdf.text(leftText, margin, textY);
+
+          // Texto derecho con numeración X de N
+          const rightText = `Página ${page} de ${totalPages}`;
+          const textWidth = pdf.getTextWidth(rightText);
+          pdf.text(rightText, pageWidth - margin - textWidth, textY);
         }
       }
       const r0 = reportes[0];
