@@ -3,7 +3,6 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { faceapi, loadFaceApiModels, isFaceApiReady } from "@/lib/faceapi";
 import { useSnackbar } from "notistack";
-import { Camera as CapacitorCamera } from "@capacitor/camera";
 
 export default function TabReconocimiento({
   setDescriptor,
@@ -15,6 +14,7 @@ export default function TabReconocimiento({
   const canvasRef = useRef(null);
   const intervalRef = useRef(null);
   const streamRef = useRef(null); // 🔹 Ref para guardar el stream
+  const userStoppedRef = useRef(false);
 
   const [loadingModels, setLoadingModels] = useState(true);
   const [cameraActive, setCameraActive] = useState(false);
@@ -43,6 +43,7 @@ export default function TabReconocimiento({
 
   // 🔹 Detener cámara mejorado
   const stopCamera = useCallback(() => {
+    userStoppedRef.current = true;
     // Detener el intervalo de detección
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
@@ -79,18 +80,21 @@ export default function TabReconocimiento({
     setGuidance({ level: "info", text: "Cámara detenida" });
   }, []);
 
-  // 🔹 Iniciar cámara
   const startCamera = useCallback(async () => {
     if (!isFaceApiReady() || !videoRef.current || !canvasRef.current) return;
 
-    // Primero detener cualquier cámara previa
     stopCamera();
 
     try {
-      const statusCamera = await CapacitorCamera.checkPermissions();
+      const permission = await navigator.permissions.query({ name: "camera" });
 
-      if (statusCamera.camera !== "granted") {
-        await CapacitorCamera.requestPermissions();
+      if (permission.state === "denied") {
+        setGuidance({
+          level: "error",
+          text: "Permiso de cámara bloqueado. Actívalo en el navegador.",
+        });
+        enqueueSnackbar("Permiso de cámara bloqueado", { variant: "error" });
+        return;
       }
 
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -100,7 +104,7 @@ export default function TabReconocimiento({
         },
       });
 
-      streamRef.current = stream; // 🔹 Guardar referencia del stream
+      streamRef.current = stream;
       videoRef.current.srcObject = stream;
 
       await new Promise((resolve) => {
@@ -179,8 +183,28 @@ export default function TabReconocimiento({
       }, 200);
     } catch (error) {
       console.error("Error al acceder a la cámara:", error);
+
+      if (
+        error.name === "NotAllowedError" ||
+        error.name === "PermissionDeniedError"
+      ) {
+        setGuidance({
+          level: "error",
+          text: "Permiso de cámara denegado. Debes permitir el acceso.",
+        });
+      } else if (error.name === "NotFoundError") {
+        setGuidance({
+          level: "error",
+          text: "No se encontró ninguna cámara disponible.",
+        });
+      } else {
+        setGuidance({
+          level: "error",
+          text: "Error inesperado al acceder a la cámara.",
+        });
+      }
+
       setCameraActive(false);
-      setGuidance({ level: "error", text: "Error al acceder a la cámara" });
     }
   }, [active, stopCamera, syncCanvasSize]);
 
@@ -240,28 +264,34 @@ export default function TabReconocimiento({
     };
   }, []);
 
-  // 🔹 Effect principal para manejar el cambio de tab
   useEffect(() => {
-    if (active && !loadingModels) {
-      startCamera();
-    } else {
+    if (!active) {
       stopCamera();
     }
+  }, [active, stopCamera]);
 
-    // Cleanup cuando el componente se desmonte o cambie active
-    return () => {
-      if (!active) {
-        stopCamera();
-      }
-    };
-  }, [active, loadingModels, startCamera, stopCamera]);
-
-  // 🔹 Cleanup final cuando se desmonte el componente
   useEffect(() => {
     return () => {
       stopCamera();
     };
   }, [stopCamera]);
+
+  useEffect(() => {
+    if (
+      active &&
+      !loadingModels &&
+      !cameraActive &&
+      !userStoppedRef.current // 👈 AQUÍ
+    ) {
+      startCamera();
+    }
+  }, [active, loadingModels, cameraActive, startCamera]);
+
+  useEffect(() => {
+    if (active) {
+      userStoppedRef.current = false;
+    }
+  }, [active]);
 
   // 🔹 Si no está activo, no renderizar el contenido de la cámara
   if (!active) {
