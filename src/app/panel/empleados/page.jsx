@@ -149,7 +149,7 @@ export default function RegistroEmpleados() {
 
             {/* Tabla de empleados */}
             {ui}
-            
+
             {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
             <AccesosRapidos />
           </>
@@ -160,7 +160,6 @@ export default function RegistroEmpleados() {
         onClose={() => setModalCapacidadAbierto(false)}
         mensaje={mensajeCapacidad}
       />
-      ;
     </>
   );
 }
