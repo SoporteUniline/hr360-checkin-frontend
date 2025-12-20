@@ -217,8 +217,47 @@ export default function ReporteHorasPage() {
       `;
       const renderReport = (r) => {
         const rows = r.dias.map((d) => {
-          const e = d.entrada ? new Date(d.entrada).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "-";
-          const s = d.salida ? new Date(d.salida).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "-";
+          // Calcular primera entrada y última salida cuando hay múltiples movimientos
+          let primeraEntrada = d.entrada;
+          let ultimaSalida = d.salida;
+          let totalHorasTrabajadas = d.horasHM;
+          
+          if (Array.isArray(d.movimientos) && d.movimientos.length > 0) {
+            // Obtener primera entrada de todos los movimientos
+            const entradasValidas = d.movimientos
+              .map(m => m.entrada)
+              .filter(Boolean)
+              .map(e => new Date(e))
+              .sort((a, b) => a - b);
+            if (entradasValidas.length > 0) {
+              primeraEntrada = entradasValidas[0].toISOString();
+            }
+            
+            // Obtener última salida de todos los movimientos
+            const salidasValidas = d.movimientos
+              .map(m => m.salida)
+              .filter(Boolean)
+              .map(s => new Date(s))
+              .sort((a, b) => b - a);
+            if (salidasValidas.length > 0) {
+              ultimaSalida = salidasValidas[0].toISOString();
+            }
+            
+            // Sumar todas las horas trabajadas de cada movimiento
+            const totalMinutos = d.movimientos.reduce((acc, m) => {
+              if (m.horasHM) {
+                const [horas, minutos] = m.horasHM.split(':').map(Number);
+                return acc + (horas * 60) + minutos;
+              }
+              return acc;
+            }, 0);
+            const horas = Math.floor(totalMinutos / 60);
+            const minutos = totalMinutos % 60;
+            totalHorasTrabajadas = `${horas}:${String(minutos).padStart(2, '0')}`;
+          }
+          
+          const e = primeraEntrada ? new Date(primeraEntrada).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "-";
+          const s = ultimaSalida ? new Date(ultimaSalida).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "-";
           const estado = (d.estado || '').toLowerCase();
           let badge = 'badge-info';
           if (estado === 'presente') badge = 'badge-success';
@@ -229,7 +268,7 @@ export default function ReporteHorasPage() {
               <td>${humanDate(d.fecha)}</td>
               <td style="text-align:center">${e}</td>
               <td style="text-align:center">${s}</td>
-              <td style="text-align:center">${d.horasHM}</td>
+              <td style="text-align:center">${totalHorasTrabajadas}</td>
               <td style="text-align:center"><span class="badge ${badge}">${d.estado || ''}</span></td>
               <td>${d.motivo || ''}</td>
               <td>${d.notas || ''}</td>
@@ -237,11 +276,14 @@ export default function ReporteHorasPage() {
             ${Array.isArray(d.movimientos) && d.movimientos.length > 1 ? `
               <tr>
                 <td colspan="7" class="details">
-                  ${d.movimientos.map((m, idx) => {
-                    const ee = m.entrada ? new Date(m.entrada).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : '-';
-                    const ss = m.salida ? new Date(m.salida).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : '-';
-                    return `Registro ${idx+1}:  Entrada: ${ee} | Salida: ${ss} | Horas: ${m.horasHM}`;
-                  }).join('\n')}
+                  ${d.movimientos
+                    .filter(m => m.entrada && m.salida)
+                    .map((m) => {
+                      const ee = m.entrada ? new Date(m.entrada).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : '-';
+                      const ss = m.salida ? new Date(m.salida).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : '-';
+                      const horas = m.horasHM || '0:00';
+                      return `Entrada: ${ee}  |  Salida: ${ss}  |  Horas: ${horas}`;
+                    }).join('\n')}
                 </td>
               </tr>
             ` : ''}
@@ -470,7 +512,7 @@ export default function ReporteHorasPage() {
             .pdf-meta-card{border:none;border-radius:0;background:transparent;padding:0;flex:1;min-width:0}
             .pdf-meta-card .head{display:none}
             .pdf-meta-card .body{padding:0}
-            .pdf-details{font-family:ui-monospace,Menlo,Consolas,monospace;color:#475569;font-size:8.5pt;white-space:pre-wrap}
+            .pdf-details{font-family:ui-monospace,Menlo,Consolas,monospace;color:#475569;font-size:8.5pt;white-space:pre-wrap !important;line-height:1.6}
             .pdf-signatures{display:flex;justify-content:space-between;gap:40px;padding:24px 0;margin-top:20px;border-top:1px solid #e5e7eb}
             .pdf-signatures .slot{display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;max-width:45%}
             .pdf-signatures .line{height:1px;background:#111827;width:100%;max-width:200px}
@@ -706,8 +748,39 @@ export default function ReporteHorasPage() {
               // Fila de detalle (colSpan), forzar salto de línea conservado
               const t = tds[0];
               const content = (t.textContent || '').trim();
-              if (content.startsWith('Registro') || content.startsWith('ENTRADAS')) {
+              const parentRow = tr;
+              // Detectar si es una fila de detalle (contiene "Entrada:" o tiene atributo data-detail-row)
+              if (content.includes('Entrada:') || parentRow.hasAttribute('data-detail-row') || content.startsWith('Registro') || content.startsWith('ENTRADAS')) {
                 t.classList.add('pdf-details');
+                // Asegurar que los saltos de línea se preserven con estilos inline
+                t.style.whiteSpace = 'pre-wrap';
+                t.style.lineHeight = '1.6';
+                t.style.fontFamily = 'ui-monospace, Menlo, Consolas, monospace';
+                t.style.color = '#475569';
+                t.style.fontSize = '8.5pt';
+                // Si hay un div interno con el contenido, asegurar que también preserve los saltos
+                const innerDiv = t.querySelector('div');
+                if (innerDiv) {
+                  innerDiv.style.whiteSpace = 'pre-wrap';
+                  innerDiv.style.lineHeight = '1.6';
+                  // Asegurar que los <br> se preserven
+                  const brs = innerDiv.querySelectorAll('br');
+                  brs.forEach(br => {
+                    br.style.display = 'block';
+                    br.style.content = '';
+                    br.style.marginBottom = '2px';
+                  });
+                }
+                // Si el contenido tiene <br> tags, asegurarse de que se rendericen correctamente
+                if (t.innerHTML && t.innerHTML.includes('<br')) {
+                  // Los <br> ya están presentes, solo asegurar estilos
+                  t.style.whiteSpace = 'normal';
+                  const allBr = t.querySelectorAll('br');
+                  allBr.forEach(br => {
+                    br.style.display = 'block';
+                    br.style.height = '1em';
+                  });
+                }
               }
             }
           }
@@ -1164,49 +1237,86 @@ export default function ReporteHorasPage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {reporte.dias.map((d) => (
-                              <Fragment key={`day-${d.fecha}`}>
-                                <tr className="odd:bg-zinc-50/40 hover:bg-zinc-50">
-                                  <td className="p-2 border whitespace-nowrap align-top">{humanDate(d.fecha)}</td>
-                                  <td className="p-2 border text-center align-top">{d.entrada ? new Date(d.entrada).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "-"}</td>
-                                  <td className="p-2 border text-center align-top">{d.salida ? new Date(d.salida).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "-"}</td>
-                                  <td className="p-2 border text-center align-top">{d.horasHM}</td>
-                                  <td className="p-2 border text-center align-top"><EstadoPill value={d.estado} /></td>
-                                  <td className="p-2 border align-top"><MotivoPill value={d.motivo} /></td>
-                                  <td className="p-2 border align-top">{d.notas ? (<span className="inline-flex items-center gap-1 text-zinc-700"><Icon icon="lucide:sticky-note" className="size-3.5 text-amber-600" /> {d.notas}</span>) : (<span className="text-zinc-500">—</span>)}</td>
-                                </tr>
+                            {reporte.dias.map((d) => {
+                              // Calcular primera entrada y última salida cuando hay múltiples movimientos
+                              let primeraEntrada = d.entrada;
+                              let ultimaSalida = d.salida;
+                              let totalHorasTrabajadas = d.horasHM;
+                              
+                              if (Array.isArray(d.movimientos) && d.movimientos.length > 0) {
+                                // Obtener primera entrada de todos los movimientos
+                                const entradasValidas = d.movimientos
+                                  .map(m => m.entrada)
+                                  .filter(Boolean)
+                                  .map(e => new Date(e))
+                                  .sort((a, b) => a - b);
+                                if (entradasValidas.length > 0) {
+                                  primeraEntrada = entradasValidas[0].toISOString();
+                                }
+                                
+                                // Obtener última salida de todos los movimientos
+                                const salidasValidas = d.movimientos
+                                  .map(m => m.salida)
+                                  .filter(Boolean)
+                                  .map(s => new Date(s))
+                                  .sort((a, b) => b - a);
+                                if (salidasValidas.length > 0) {
+                                  ultimaSalida = salidasValidas[0].toISOString();
+                                }
+                                
+                                // Sumar todas las horas trabajadas de cada movimiento
+                                // Convertir cada horasHM a minutos, sumar y convertir de vuelta a formato HH:MM
+                                const totalMinutos = d.movimientos.reduce((acc, m) => {
+                                  if (m.horasHM) {
+                                    const [horas, minutos] = m.horasHM.split(':').map(Number);
+                                    return acc + (horas * 60) + minutos;
+                                  }
+                                  return acc;
+                                }, 0);
+                                const horas = Math.floor(totalMinutos / 60);
+                                const minutos = totalMinutos % 60;
+                                totalHorasTrabajadas = `${horas}:${String(minutos).padStart(2, '0')}`;
+                              }
+                              
+                              return (
+                                <Fragment key={`day-${d.fecha}`}>
+                                  <tr className="odd:bg-zinc-50/40 hover:bg-zinc-50">
+                                    <td className="p-2 border whitespace-nowrap align-top">{humanDate(d.fecha)}</td>
+                                    <td className="p-2 border text-center align-top">{primeraEntrada ? new Date(primeraEntrada).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "-"}</td>
+                                    <td className="p-2 border text-center align-top">{ultimaSalida ? new Date(ultimaSalida).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "-"}</td>
+                                    <td className="p-2 border text-center align-top">{totalHorasTrabajadas}</td>
+                                    <td className="p-2 border text-center align-top"><EstadoPill value={d.estado} /></td>
+                                    <td className="p-2 border align-top"><MotivoPill value={d.motivo} /></td>
+                                    <td className="p-2 border align-top">{d.notas ? (<span className="inline-flex items-center gap-1 text-zinc-700"><Icon icon="lucide:sticky-note" className="size-3.5 text-amber-600" /> {d.notas}</span>) : (<span className="text-zinc-500">—</span>)}</td>
+                                  </tr>
                                 {Array.isArray(d.movimientos) && d.movimientos.length > 1 ? (
-                                  <tr className="bg-white/50">
-                                    <td colSpan={7} className="p-2 pl-6 border-t text-xs text-zinc-600 font-mono whitespace-pre-wrap">
-                                      {
-                                        // NUEVO formato agrupado tipo "ENTRADAS: ...  SALIDAS: ..."
-                                        (() => {
-                                          const entradas = d.movimientos
-                                            .map((m) => m.entrada ? new Date(m.entrada).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "")
-                                            .filter(Boolean)
-                                            .join(", ");
-                                          const salidas = d.movimientos
-                                            .map((m) => m.salida ? new Date(m.salida).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "")
-                                            .filter(Boolean)
-                                            .join(", ");
-                                          const entradasTxt = entradas || "—";
-                                          const salidasTxt = salidas || "—";
-                                          return `ENTRADAS: ${entradasTxt}    SALIDAS: ${salidasTxt}`;
-                                        })()
-                                      }
-                                      {
-                                        // Mantener el esquema anterior como referencia (no se renderiza):
-                                        /* d.movimientos.map((m, idx) => {
-                                          const e = m.entrada ? new Date(m.entrada).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "-";
-                                          const s = m.salida ? new Date(m.salida).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "-";
-                                          return `Registro ${idx + 1}:  Entrada: ${e}  |  Salida: ${s}  |  Horas: ${m.horasHM}`;
-                                        }).join("\\n") */
-                                      }
+                                  <tr className="bg-white/50" data-detail-row="true">
+                                    <td colSpan={7} className="p-2 pl-6 border-t text-xs text-zinc-600 font-mono">
+                                      <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
+                                        {
+                                          // Formato detallado: cada par entrada-salida con sus horas trabajadas
+                                          // Cada segmento en una línea separada usando <br> para mejor compatibilidad con PDF
+                                          d.movimientos
+                                            .filter(m => m.entrada && m.salida) // Solo movimientos completos
+                                            .map((m, idx) => {
+                                              const entrada = m.entrada ? new Date(m.entrada).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "-";
+                                              const salida = m.salida ? new Date(m.salida).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "-";
+                                              const horas = m.horasHM || "0:00";
+                                              return (
+                                                <Fragment key={`mov-${idx}`}>
+                                                  {idx > 0 && <br />}
+                                                  {`Entrada: ${entrada}  |  Salida: ${salida}  |  Horas: ${horas}`}
+                                                </Fragment>
+                                              );
+                                            })
+                                        }
+                                      </div>
                                     </td>
                                   </tr>
                                 ) : null}
-                              </Fragment>
-                            ))}
+                                </Fragment>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </section>
