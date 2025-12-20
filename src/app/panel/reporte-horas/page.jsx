@@ -43,20 +43,17 @@ function fileDate(isoDate) {
 
 function EstadoPill({ value }) {
   const v = String(value || "").toLowerCase();
-  // Paleta HR360
-  let style = { backgroundColor: "#dbeafe", color: "#1e40af", borderColor: "#93c5fd" }; // info
-  if (v === "presente" || v === "completo" || v === "cerrado") style = { backgroundColor: "#d1fae5", color: "#065f46", borderColor: "#86efac" };
-  else if (v === "ausente") style = { backgroundColor: "#fee2e2", color: "#991b1b", borderColor: "#fca5a5" };
-  else if (v === "tarde") style = { backgroundColor: "#fef3c7", color: "#92400e", borderColor: "#fde68a" };
+  // Sin colores: solo texto en escala de grises (diseño limpio para PDF y preview)
   const label = v === "cerrado" ? "Completo" : (value || "—");
-  return <span className="inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-semibold" style={style}>{label}</span>;
+  return <span className="inline-flex items-center justify-center rounded-full border border-gray-300 bg-gray-50 px-2 py-0.5 text-xs font-semibold text-gray-700">{label}</span>;
 }
 
 function MotivoPill({ value }) {
   if (!value) return <span className="text-zinc-500">—</span>;
-  // Info azul HR360
-  const style = { backgroundColor: "#dbeafe", color: "#1e40af", borderColor: "#93c5fd" };
-  return <span className="inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-xs font-semibold" style={style}>{value}</span>;
+  // Sin colores ni emojis: solo texto limpio (diseño para PDF y preview)
+  // Eliminar emojis si existen en el valor
+  const cleanValue = String(value).replace(/[\u{1F300}-\u{1F9FF}]/gu, '').replace(/[\u{2600}-\u{26FF}]/gu, '').replace(/[\u{2700}-\u{27BF}]/gu, '').trim();
+  return <span className="inline-flex items-center justify-center rounded-full border border-gray-300 bg-gray-50 px-2 py-0.5 text-xs font-semibold text-gray-700">{cleanValue || "—"}</span>;
 }
 
 export default function ReporteHorasPage() {
@@ -437,46 +434,47 @@ export default function ReporteHorasPage() {
           safeStyle.textContent = `
             *{box-sizing:border-box}
             @page { size: A4; margin: 0 }
-            body{font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue";font-size:14pt;color:#111827;background:#ffffff;margin:0;padding:0}
-            .pdf-card{border:1px solid #e5e7eb;border-radius:8px;margin:18px 0;overflow:hidden}
-            .pdf-header{background:#f3f4f6;padding:16px 20px}
-            .pdf-header h2{margin:0;font-size:18pt;font-weight:700}
-            .pdf-header .date{font-size:10pt;color:#6b7280;float:right}
-            .pdf-divider{height:1px;background:#e5e7eb}
-            .pdf-meta{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:14px;padding:16px 20px;border-bottom:1px solid #e5e7eb}
-            .pdf-meta > div > .label{font-size:10pt;color:#6b7280}
-            .pdf-meta > div > .value{font-size:12pt;font-weight:600}
+            body{font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue";font-size:10.5pt;color:#111827;background:#ffffff;margin:0;padding:0}
+            .pdf-header-grid{display:grid;grid-template-columns:2fr 1fr;gap:24px;margin:0 0 16px 0;align-items:start}
+            .pdf-card{border:none;border-radius:0;margin:14px 0;overflow:visible;background:transparent}
+            .pdf-header{background:transparent;padding:0}
+            .pdf-header h2{margin:0;font-size:13pt;font-weight:700}
+            .pdf-header .date{font-size:8.5pt;color:#6b7280;float:right}
+            .pdf-divider{height:1px;background:#d1d5db}
+            .pdf-meta{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0;padding:0;border-left:1px solid #d1d5db;border-bottom:none;background:transparent}
+            .pdf-meta > div{border-right:1px solid #d1d5db;padding:0 12px}
+            .pdf-meta > div:last-child{border-right:none}
+            .pdf-meta > div > .label{font-size:7.5pt;color:#6b7280;text-transform:uppercase;font-weight:600;margin-bottom:4px;letter-spacing:0.5px}
+            .pdf-meta > div > .value{font-size:10pt;font-weight:700;color:#111827;line-height:1.4}
             table{width:100%;border-collapse:collapse}
-            thead th{background:#1f2937;color:#ffffff;font-weight:700;border:1px solid #1f2937;padding:10px 12px;text-align:center;font-size:11pt}
-            tbody td{border:1px solid #e5e7eb;padding:12px;font-size:11pt;line-height:1.45}
+            thead th{background:#1f2937;color:#ffffff;font-weight:700;border:1px solid #1f2937;padding:8px 10px;text-align:center;font-size:9pt}
+            tbody td{border:1px solid #e5e7eb;padding:8px 10px;font-size:9pt;line-height:1.35}
             tbody tr:nth-child(odd){background:#fafafa}
-            .pdf-summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;padding:16px 20px;border-top:1px solid #e5e7eb;background:#f9fafb}
-            .pdf-summary-card{border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;margin-top:10px}
-            .pdf-summary > div{text-align:center}
-            .pdf-summary > div > div:first-child{font-size:10pt;color:#6b7280}
-            .pdf-summary > div > div:nth-child(2){font-size:22pt;font-weight:700;color:#0f172a}
-            .pdf-summary > div > div:last-child{font-size:10pt;color:#6b7280}
-            .pdf-badge{display:inline-block;padding:4px 12px;border-radius:9999px;font-weight:700;font-size:10pt;border:1px solid transparent}
-            .pdf-badge--success{background:#DCFCE7;color:#166534;border-color:#86EFAC}
-            .pdf-badge--danger{background:#FEE2E2;color:#991B1B;border-color:#FCA5A5}
-            .pdf-badge--warning{background:#FEF9C3;color:#92400E;border-color:#FDE68A}
-            .pdf-badge--info{background:#DBEAFE;color:#1E3A8A;border-color:#93C5FD}
-            .pdf-topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 4px}
-            .pdf-topbar .brand{font-weight:800;font-size:16pt;color:#1f2937;letter-spacing:.5px}
-            .pdf-topbar .right{line-height:1.2;text-align:right}
-            .pdf-topbar .title{font-weight:700;font-size:16pt;color:#0f172a}
-            .pdf-topbar .subtitle{font-size:10pt;color:#64748b}
-            .pdf-topbar img{height:26px;width:auto}
-            .pdf-topbar > div:first-child{display:flex;align-items:center;gap:8px}
-            .pdf-hr{height:2px;background:#1f2937;margin:8px 0 14px 0}
-            .pdf-meta-card{border:1px solid #e5e7eb;border-radius:8px;background:#f8fafc;margin:0 14px 14px 14px;overflow:hidden}
-            .pdf-meta-card .head{background:#eef2f7;color:#111827;font-weight:700;font-size:10pt;padding:10px 12px;border-bottom:1px solid #e5e7eb}
+            .pdf-summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;padding:0;border:1px solid #d1d5db;border-radius:2px;background:#f3f4f6;width:100%;overflow:hidden}
+            .pdf-summary-card{border:none;border-radius:0;background:transparent;padding:0;min-width:280px;max-width:100%}
+            .pdf-summary > div{text-align:center;padding:12px 8px;border-right:1px solid #d1d5db;background:#f3f4f6}
+            .pdf-summary > div:last-child{border-right:none}
+            .pdf-summary > div > div:first-child{font-size:7pt;color:#6b7280;text-transform:uppercase;font-weight:600;margin-bottom:6px;letter-spacing:0.5px;display:block !important;visibility:visible !important;opacity:1 !important}
+            .pdf-summary > div > div:nth-child(2){font-size:16pt;font-weight:700;color:#111827;line-height:1.2;margin-bottom:0;display:block !important;visibility:visible !important;opacity:1 !important}
+            .pdf-summary > div > div:last-child{display:none}
+            .pdf-summary > div > div{display:block !important;visibility:visible !important}
+            .pdf-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-weight:600;font-size:8.5pt;border:1px solid #e5e7eb;background:#f9fafb;color:#111827}
+            .pdf-topbar{display:flex;align-items:flex-start;justify-content:space-between;padding:0 0 12px 0;margin-bottom:12px}
+            .pdf-topbar .brand{font-weight:800;font-size:20pt;color:#111827;letter-spacing:0;line-height:1}
+            .pdf-topbar .right{line-height:1.3;text-align:right}
+            .pdf-topbar .title{font-weight:600;font-size:11pt;color:#111827;margin-bottom:2px}
+            .pdf-topbar .subtitle{font-size:9pt;color:#6b7280}
+            .pdf-topbar img{display:none}
+            .pdf-topbar > div:first-child{display:block}
+            .pdf-hr{height:1px;background:#d1d5db;margin:0 0 16px 0;width:100%}
+            .pdf-meta-card{border:none;border-radius:0;background:transparent;padding:0;flex:1;min-width:0}
+            .pdf-meta-card .head{display:none}
             .pdf-meta-card .body{padding:0}
-            .pdf-details{font-family:ui-monospace,Menlo,Consolas,monospace;color:#475569;font-size:9pt;white-space:pre-wrap}
-            .pdf-signatures{display:grid;grid-template-columns:1fr 1fr;gap:40px;padding:20px;margin-top:10px}
-            .pdf-signatures .slot{display:flex;flex-direction:column;align-items:center;gap:10px}
-            .pdf-signatures .line{height:2px;background:#0f172a;width:65%}
-            .pdf-signatures .label{font-size:9pt;color:#6b7280}
+            .pdf-details{font-family:ui-monospace,Menlo,Consolas,monospace;color:#475569;font-size:8.5pt;white-space:pre-wrap}
+            .pdf-signatures{display:flex;justify-content:space-between;gap:40px;padding:24px 0;margin-top:20px;border-top:1px solid #e5e7eb}
+            .pdf-signatures .slot{display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;max-width:45%}
+            .pdf-signatures .line{height:1px;background:#111827;width:100%;max-width:200px}
+            .pdf-signatures .label{font-size:8pt;color:#6b7280;text-transform:uppercase;font-weight:600;letter-spacing:0.5px}
           `;
           doc.head.appendChild(safeStyle);
 
@@ -496,68 +494,239 @@ export default function ReporteHorasPage() {
             const previewTopbar = block.querySelector('[data-pdf-topbar="true"]');
             if (previewTopbar) {
               previewTopbar.className = 'pdf-topbar';
+              // Asegurar que HR360 tenga el estilo correcto (grande, negrita, sin texto adicional)
+              const brandDiv = previewTopbar.querySelector('div:first-child');
+              if (brandDiv) {
+                brandDiv.className = 'brand';
+                const brandText = brandDiv.querySelector('div:first-child');
+                if (brandText && brandText.textContent.includes('HR360')) {
+                  brandText.style.fontWeight = '800';
+                  brandText.style.fontSize = '20pt';
+                  brandText.style.color = '#111827';
+                  brandText.style.lineHeight = '1';
+                  // Eliminar "Recursos Humanos" si existe
+                  const subText = brandDiv.querySelector('div:last-child');
+                  if (subText && subText.textContent.includes('Recursos')) {
+                    subText.parentNode.removeChild(subText);
+                  }
+                }
+              }
+              // Asegurar que el título y fecha tengan el estilo correcto
+              const rightDiv = previewTopbar.querySelector('div:last-child');
+              if (rightDiv) {
+                rightDiv.className = 'right';
+                const titleDiv = rightDiv.querySelector('div:first-child');
+                const dateDiv = rightDiv.querySelector('div:last-child');
+                if (titleDiv) {
+                  titleDiv.style.fontWeight = '600';
+                  titleDiv.style.fontSize = '11pt';
+                  titleDiv.style.color = '#111827';
+                  titleDiv.style.marginBottom = '2px';
+                }
+                if (dateDiv) {
+                  dateDiv.style.fontSize = '9pt';
+                  dateDiv.style.color = '#6b7280';
+                }
+              }
+              // Eliminar línea separadora antigua si existe
               const hrPreview = previewTopbar.nextElementSibling;
-              if (hrPreview && String(hrPreview.className || '').includes('bg-slate-800')) {
+              if (hrPreview && (String(hrPreview.className || '').includes('bg-') || String(hrPreview.className || '').includes('h-px'))) {
                 hrPreview.parentNode.removeChild(hrPreview);
               }
-              // añadir línea separadora como en la previsualización
-              const hr = doc.createElement('div'); hr.className='pdf-hr';
+              // Añadir línea separadora limpia y delgada
+              const hr = doc.createElement('div');
+              hr.className = 'pdf-hr';
               previewTopbar.parentNode.insertBefore(hr, previewTopbar.nextSibling);
             }
             // 4.2) Ajustar la sección de metadatos existente y quitar el encabezado interior si existe
-            const sections = block.querySelectorAll('section');
-  if (sections[0]) {
-    // envolver en tarjeta con encabezado azulado igual a preview
-    const metaCard = doc.createElement('div');
-    metaCard.className = 'pdf-meta-card';
-    const head = doc.createElement('div'); head.className = 'head'; head.textContent = 'Información del Empleado';
-    const body = doc.createElement('div'); body.className = 'body';
-    const insertAfter = block.querySelector('.pdf-hr')?.nextSibling || block.firstChild;
-    block.insertBefore(metaCard, insertAfter);
-    sections[0].classList.add('pdf-meta');
-    body.appendChild(sections[0]);
-    metaCard.appendChild(head); metaCard.appendChild(body);
-
-    const items = sections[0].querySelectorAll(':scope > div');
-    for (const it of items) {
-      const label = it.firstElementChild; const value = it.lastElementChild;
-      if (label) label.className = 'label';
-      if (value) value.className = 'value';
-    }
-  }
-  if (sections[2]) {
-    const summaryCard = doc.createElement('div');
-    summaryCard.className = 'pdf-summary-card';
-    block.insertBefore(summaryCard, sections[2]);
-    sections[2].classList.add('pdf-summary');
-    summaryCard.appendChild(sections[2]);
-  }
+            const metaAttr = block.querySelector('[data-meta-section="true"]');
+            const summaryAttr = block.querySelector('[data-summary-section="true"]');
+            if (metaAttr && summaryAttr) {
+              // Nuevo layout: grid de encabezado (meta izquierda, resumen derecha)
+              const grid = doc.createElement('div');
+              grid.className = 'pdf-header-grid';
+              // meta
+              const metaCard = doc.createElement('div');
+              metaCard.className = 'pdf-meta-card';
+              const body = doc.createElement('div'); body.className = 'body';
+              metaAttr.classList.add('pdf-meta');
+              // Aplicar bordes y padding a cada columna
+              const items = metaAttr.querySelectorAll(':scope > div');
+              items.forEach((it, index) => {
+                it.style.borderRight = index < items.length - 1 ? '1px solid #d1d5db' : 'none';
+                it.style.padding = '0 12px';
+                const label = it.firstElementChild;
+                const value = it.lastElementChild;
+                if (label) {
+                  label.className = 'label';
+                  label.style.fontSize = '7.5pt';
+                  label.style.color = '#6b7280';
+                  label.style.textTransform = 'uppercase';
+                  label.style.fontWeight = '600';
+                  label.style.marginBottom = '4px';
+                  label.style.letterSpacing = '0.5px';
+                }
+                if (value) {
+                  value.className = 'value';
+                  value.style.fontSize = '10pt';
+                  value.style.fontWeight = '700';
+                  value.style.color = '#111827';
+                  value.style.lineHeight = '1.4';
+                }
+              });
+              // Aplicar borde izquierdo al contenedor
+              metaAttr.style.borderLeft = '1px solid #d1d5db';
+              metaAttr.style.padding = '0';
+              metaAttr.style.background = 'transparent';
+              body.appendChild(metaAttr);
+              metaCard.appendChild(body);
+              // summary
+              const summaryCard = doc.createElement('div');
+              summaryCard.className = 'pdf-summary-card';
+              summaryAttr.classList.add('pdf-summary');
+              // Asegurar que los elementos del summary tengan los estilos correctos (fondo gris claro)
+              summaryAttr.style.border = '1px solid #d1d5db';
+              summaryAttr.style.borderRadius = '2px';
+              summaryAttr.style.background = '#f3f4f6';
+              summaryAttr.style.overflow = 'hidden';
+              const summaryDivs = summaryAttr.querySelectorAll(':scope > div');
+              summaryDivs.forEach((div, index) => {
+                div.style.textAlign = 'center';
+                div.style.padding = '12px 8px';
+                div.style.borderRight = index < summaryDivs.length - 1 ? '1px solid #d1d5db' : 'none';
+                div.style.background = '#f3f4f6';
+                // Buscar elementos por atributo data para mayor precisión
+                const label = div.querySelector('[data-summary-label="true"]');
+                const value = div.querySelector('[data-summary-value="true"]');
+                // Si no se encuentran por atributo, buscar por contenido
+                const children = Array.from(div.children);
+                const labelFallback = label || children.find(el => {
+                  const text = (el.textContent || '').trim();
+                  return text === 'Total Horas' || text === 'Días' || text === 'Promedio';
+                });
+                const valueFallback = value || children.find(el => {
+                  const text = (el.textContent || '').trim();
+                  return text && (text.match(/^\d+$/) || text.match(/^\d+:\d+$/)) && !text.includes('Total') && !text.includes('Días') && !text.includes('Promedio');
+                });
+                if (labelFallback) {
+                  labelFallback.style.fontSize = '7pt';
+                  labelFallback.style.color = '#6b7280';
+                  labelFallback.style.textTransform = 'uppercase';
+                  labelFallback.style.fontWeight = '600';
+                  labelFallback.style.marginBottom = '6px';
+                  labelFallback.style.letterSpacing = '0.5px';
+                  labelFallback.style.display = 'block';
+                  labelFallback.style.visibility = 'visible';
+                  labelFallback.style.opacity = '1';
+                }
+                if (valueFallback) {
+                  valueFallback.style.fontSize = '16pt';
+                  valueFallback.style.fontWeight = '700';
+                  valueFallback.style.color = '#111827';
+                  valueFallback.style.lineHeight = '1.2';
+                  valueFallback.style.marginBottom = '0';
+                  valueFallback.style.display = 'block';
+                  valueFallback.style.visibility = 'visible';
+                  valueFallback.style.opacity = '1';
+                  // Asegurar que el contenido de texto esté presente
+                  if (!valueFallback.textContent || valueFallback.textContent.trim() === '') {
+                    // Intentar obtener el valor del atributo o del texto original
+                    const originalText = valueFallback.getAttribute('data-original-value') || '';
+                    if (originalText) {
+                      valueFallback.textContent = originalText;
+                    }
+                  }
+                }
+                // Ocultar cualquier subtítulo adicional
+                children.forEach(child => {
+                  const text = (child.textContent || '').trim();
+                  if (text.includes('en el periodo') || text.includes('días trabajados') || text.includes('horas/día')) {
+                    child.style.display = 'none';
+                  }
+                });
+              });
+              summaryCard.appendChild(summaryAttr);
+              // insertar debajo de la barra superior
+              const insertAfter = block.querySelector('.pdf-hr')?.nextSibling || block.firstChild;
+              block.insertBefore(grid, insertAfter);
+              grid.appendChild(metaCard);
+              grid.appendChild(summaryCard);
+            } else {
+              // Compatibilidad con estructura anterior por índices
+              const sections = block.querySelectorAll('section');
+              if (sections[0]) {
+                const metaCard = doc.createElement('div');
+                metaCard.className = 'pdf-meta-card';
+                const head = doc.createElement('div'); head.className = 'head'; head.textContent = 'Información del Empleado';
+                const body = doc.createElement('div'); body.className = 'body';
+                const insertAfter = block.querySelector('.pdf-hr')?.nextSibling || block.firstChild;
+                block.insertBefore(metaCard, insertAfter);
+                sections[0].classList.add('pdf-meta');
+                body.appendChild(sections[0]);
+                metaCard.appendChild(head); metaCard.appendChild(body);
+                const items = sections[0].querySelectorAll(':scope > div');
+                for (const it of items) {
+                  const label = it.firstElementChild; const value = it.lastElementChild;
+                  if (label) label.className = 'label';
+                  if (value) value.className = 'value';
+                }
+              }
+              // Resumen inferior eliminado: el totalizado ya está arriba
+            }
 
           const bodyRows = block.querySelectorAll('table tbody tr');
           for (const tr of bodyRows) {
             const tds = tr.children; if (!tds || tds.length === 0) continue;
-            if (tds.length >= 5) {
+            if (tds.length >= 6) {
+              // Columna ESTADO (índice 4): sin color, solo texto
               const tdEstado = tds[4];
-              const text = (tdEstado.textContent || '').trim();
-              const low = text.toLowerCase();
-              let cls = 'pdf-badge--info';
-              if (low === 'presente' || low === 'cerrado' || low === 'completo') cls = 'pdf-badge--success';
-              else if (low === 'ausente') cls = 'pdf-badge--danger';
-              else if (low === 'tarde') cls = 'pdf-badge--warning';
-              else if (low === 'permiso' || low === 'vacaciones') cls = 'pdf-badge--info';
+              const textEstado = (tdEstado.textContent || '').trim();
+              const lowEstado = textEstado.toLowerCase();
+              const shownEstado = (lowEstado === 'cerrado') ? 'Completo' : (textEstado || '');
               tdEstado.style.textAlign = 'center';
-              const shown = (low === 'cerrado') ? 'Completo' : (text || '');
-              tdEstado.innerHTML = `<span class="pdf-badge ${cls}">${shown}</span>`;
+              tdEstado.style.backgroundColor = '#f9fafb';
+              tdEstado.style.color = '#111827';
+              tdEstado.style.border = '1px solid #e5e7eb';
+              tdEstado.style.padding = '4px 8px';
+              tdEstado.style.borderRadius = '4px';
+              tdEstado.innerHTML = shownEstado;
+              
+              // Columna MOTIVO (índice 5): sin color ni emojis, solo texto limpio
+              const tdMotivo = tds[5];
+              const textMotivo = (tdMotivo.textContent || '').trim();
+              // Eliminar emojis del motivo
+              const cleanMotivo = textMotivo.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').replace(/[\u{2600}-\u{26FF}]/gu, '').replace(/[\u{2700}-\u{27BF}]/gu, '').trim();
+              tdMotivo.style.backgroundColor = '#f9fafb';
+              tdMotivo.style.color = '#111827';
+              tdMotivo.style.border = '1px solid #e5e7eb';
+              tdMotivo.style.padding = '4px 8px';
+              tdMotivo.style.borderRadius = '4px';
+              tdMotivo.innerHTML = cleanMotivo || '—';
             } else {
               // Fila de detalle (colSpan), forzar salto de línea conservado
               const t = tds[0];
               const content = (t.textContent || '').trim();
-              if (content.startsWith('Registro')) {
+              if (content.startsWith('Registro') || content.startsWith('ENTRADAS')) {
                 t.classList.add('pdf-details');
               }
             }
           }
-            // Firmas
+            // Eliminar firmas del preview si existen (para evitar duplicación)
+            const existingSignatures = Array.from(block.querySelectorAll('div')).find(el => {
+              const text = el.textContent || '';
+              return text.includes('FIRMA DEL EMPLEADO') || text.includes('FIRMA DE AUTORIZACIÓN');
+            });
+            if (existingSignatures) {
+              // Buscar el contenedor padre que tiene las firmas
+              let signatureContainer = existingSignatures.closest('.grid');
+              if (!signatureContainer) {
+                signatureContainer = existingSignatures.parentElement;
+              }
+              if (signatureContainer && signatureContainer.textContent.includes('FIRMA')) {
+                signatureContainer.parentNode?.removeChild(signatureContainer);
+              }
+            }
+            // Agregar firmas solo una vez al final del bloque
             const signatures = doc.createElement('div');
             signatures.className = 'pdf-signatures';
             signatures.innerHTML = `
@@ -906,9 +1075,6 @@ export default function ReporteHorasPage() {
             </div>
 
             <div className="flex flex-wrap gap-3 pt-2">
-              <Button variant="outline" onClick={handleImprimir} className="gap-2 border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]">
-                <Icon icon="lucide:printer" className="size-4" /> Imprimir
-              </Button>
               <Button
                 variant="default"
                 onClick={handleExcel}
@@ -929,38 +1095,60 @@ export default function ReporteHorasPage() {
                 <div className="space-y-10">
                   {reportes.map((reporte, idx) => (
                     <div key={idx} className="space-y-6" data-report-block="true">
-                      {/* Top bar */}
-                      <div className="flex items-center justify-between px-1" data-pdf-topbar="true">
-                        <div className="flex items-center gap-2">
-                          <img src="/assets/logo.png" alt="HR360" className="h-6 w-auto select-none" />
-                        </div>
+                      {/* Top bar - Diseño limpio como imagen de referencia */}
+                      <div className="flex items-start justify-between mb-3" data-pdf-topbar="true">
+                        <div className="text-2xl font-bold text-gray-900 leading-none">HR360</div>
                         <div className="text-right leading-tight">
-                          <div className="font-semibold">Reporte de Horas Trabajadas</div>
-                          <div className="text-xs text-muted-foreground">Generado el {new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}</div>
+                          <div className="font-semibold text-sm text-gray-900">Reporte de Horas Trabajadas</div>
+                          <div className="text-xs text-gray-600 mt-0.5">{new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}</div>
                         </div>
                       </div>
-                      <div className="h-0.5 my-2" style={{ backgroundColor: "#2c3e50" }} />
-                      {/* Información del Empleado */}
-                      <div className="rounded-md border bg-slate-50">
-                        
-                        <section className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4">
-                        <div>
-                          <div className="text-xs text-muted-foreground">Empleado</div>
-                          <div className="font-medium">{reporte.empleado?.nombre_empleado}</div>
+                      {/* Línea separadora delgada */}
+                      <div className="h-px bg-gray-300 mb-4" />
+                      {/* Encabezado con meta a la izquierda y resumen a la derecha - SIN tarjetas, diseño limpio */}
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-4">
+                        {/* Meta del empleado: diseño limpio sin tarjeta, con separadores verticales */}
+                        <div className="lg:col-span-8">
+                          <section data-meta-section="true" className="grid grid-cols-4 gap-0 border-l border-gray-300">
+                            <div className="px-3 border-r border-gray-300">
+                              <div className="text-[9px] text-gray-500 uppercase font-semibold mb-1 tracking-wide">Empleado</div>
+                              <div className="text-sm font-bold text-gray-900 leading-tight">{reporte.empleado?.nombre_empleado}</div>
+                            </div>
+                            <div className="px-3 border-r border-gray-300">
+                              <div className="text-[9px] text-gray-500 uppercase font-semibold mb-1 tracking-wide">Empresa</div>
+                              <div className="text-sm font-bold text-gray-900 leading-tight">{reporte.empleado?.nombre_empresa}</div>
+                            </div>
+                            <div className="px-3 border-r border-gray-300">
+                              <div className="text-[9px] text-gray-500 uppercase font-semibold mb-1 tracking-wide">Periodo</div>
+                              <div className="text-sm font-bold text-gray-900 leading-tight">{humanDate(reporte.periodo.inicio)} — {humanDate(reporte.periodo.fin)}</div>
+                            </div>
+                            <div className="px-3">
+                              <div className="text-[9px] text-gray-500 uppercase font-semibold mb-1 tracking-wide">Días Laborados</div>
+                              <div className="text-sm font-bold text-gray-900 leading-tight">{reporte.resumen.diasTrabajados}</div>
+                            </div>
+                          </section>
                         </div>
-                        <div>
-                          <div className="text-xs text-muted-foreground">Empresa</div>
-                          <div className="font-medium">{reporte.empleado?.nombre_empresa}</div>
+                        {/* Resumen superior: 3 cajas con fondo gris claro como en imagen de referencia */}
+                        <div className="lg:col-span-4">
+                          <section
+                            data-summary-section="true"
+                            className="grid grid-cols-3 gap-0 border border-gray-300 rounded-sm overflow-hidden bg-gray-50"
+                            aria-label="Resumen del periodo"
+                          >
+                            <div className="text-center px-2 py-3 border-r border-gray-300 bg-gray-50">
+                              <div className="text-[8px] text-gray-600 uppercase font-semibold mb-1.5 tracking-wide" data-summary-label="true">Total Horas</div>
+                              <div className="text-xl font-bold leading-none text-gray-900 mb-1" data-summary-value="true">{reporte.resumen?.totalHoras || '0:00'}</div>
+                            </div>
+                            <div className="text-center px-2 py-3 border-r border-gray-300 bg-gray-50">
+                              <div className="text-[8px] text-gray-600 uppercase font-semibold mb-1.5 tracking-wide" data-summary-label="true">Días</div>
+                              <div className="text-xl font-bold leading-none text-gray-900 mb-1" data-summary-value="true">{reporte.resumen?.diasTrabajados || '0'}</div>
+                            </div>
+                            <div className="text-center px-2 py-3 bg-gray-50">
+                              <div className="text-[8px] text-gray-600 uppercase font-semibold mb-1.5 tracking-wide" data-summary-label="true">Promedio</div>
+                              <div className="text-xl font-bold leading-none text-gray-900 mb-1" data-summary-value="true">{reporte.resumen?.promedioHoras || '0:00'}</div>
+                            </div>
+                          </section>
                         </div>
-                        <div>
-                          <div className="text-xs text-muted-foreground">Periodo</div>
-                          <div className="font-medium">{humanDate(reporte.periodo.inicio)} al {humanDate(reporte.periodo.fin)}</div>
-                        </div>
-                        <div>
-                          <div className="text-xs text-muted-foreground">Días trabajados</div>
-                          <div className="font-medium">{reporte.resumen.diasTrabajados}</div>
-                        </div>
-                        </section>
                       </div>
                       <section className="overflow-x-auto">
                         <table className="w-full text-sm border-collapse">
@@ -990,11 +1178,30 @@ export default function ReporteHorasPage() {
                                 {Array.isArray(d.movimientos) && d.movimientos.length > 1 ? (
                                   <tr className="bg-white/50">
                                     <td colSpan={7} className="p-2 pl-6 border-t text-xs text-zinc-600 font-mono whitespace-pre-wrap">
-                                      {d.movimientos.map((m, idx) => {
-                                        const e = m.entrada ? new Date(m.entrada).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "-";
-                                        const s = m.salida ? new Date(m.salida).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "-";
-                                        return `Registro ${idx + 1}:  Entrada: ${e}  |  Salida: ${s}  |  Horas: ${m.horasHM}`;
-                                      }).join("\n")}
+                                      {
+                                        // NUEVO formato agrupado tipo "ENTRADAS: ...  SALIDAS: ..."
+                                        (() => {
+                                          const entradas = d.movimientos
+                                            .map((m) => m.entrada ? new Date(m.entrada).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "")
+                                            .filter(Boolean)
+                                            .join(", ");
+                                          const salidas = d.movimientos
+                                            .map((m) => m.salida ? new Date(m.salida).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "")
+                                            .filter(Boolean)
+                                            .join(", ");
+                                          const entradasTxt = entradas || "—";
+                                          const salidasTxt = salidas || "—";
+                                          return `ENTRADAS: ${entradasTxt}    SALIDAS: ${salidasTxt}`;
+                                        })()
+                                      }
+                                      {
+                                        // Mantener el esquema anterior como referencia (no se renderiza):
+                                        /* d.movimientos.map((m, idx) => {
+                                          const e = m.entrada ? new Date(m.entrada).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "-";
+                                          const s = m.salida ? new Date(m.salida).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "-";
+                                          return `Registro ${idx + 1}:  Entrada: ${e}  |  Salida: ${s}  |  Horas: ${m.horasHM}`;
+                                        }).join("\\n") */
+                                      }
                                     </td>
                                   </tr>
                                 ) : null}
@@ -1003,32 +1210,15 @@ export default function ReporteHorasPage() {
                           </tbody>
                         </table>
                       </section>
-                      <section className="grid grid-cols-1 md:grid-cols-3 gap-4 rounded-md border p-4 bg-zinc-50/60">
-                        <div className="text-center">
-                          <div className="text-xs text-muted-foreground">Total Horas</div>
-                          <div className="text-3xl font-semibold">{reporte.resumen.totalHoras}</div>
-                          <div className="text-xs text-muted-foreground">en el periodo</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-xs text-muted-foreground">Días Trabajados</div>
-                          <div className="text-3xl font-semibold">{reporte.resumen.diasTrabajados}</div>
-                          <div className="text-xs text-muted-foreground">días únicos</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-xs text-muted-foreground">Promedio Diario</div>
-                          <div className="text-3xl font-semibold">{reporte.resumen.promedioHoras}</div>
-                          <div className="text-xs text-muted-foreground">horas/día</div>
-                        </div>
-                      </section>
-                      {/* Firmas */}
+                      {/* Firmas (con etiquetas visibles en preview) */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 px-10 mt-4">
                         <div className="flex flex-col items-center gap-2">
-                          <div className="h-0.5 bg-slate-900 w-2/3" />
-                          
+                          <div className="h-0.5 bg-slate-900 w-1/2" />
+                          <div className="text-[10px] text-zinc-500">FIRMA DEL EMPLEADO</div>
                         </div>
                         <div className="flex flex-col items-center gap-2">
-                          <div className="h-0.5 bg-slate-900 w-2/3" />
-                          
+                          <div className="h-0.5 bg-slate-900 w-1/2" />
+                          <div className="text-[10px] text-zinc-500">FIRMA DE AUTORIZACIÓN</div>
                         </div>
                       </div>
                     </div>
