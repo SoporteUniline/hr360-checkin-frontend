@@ -1,4 +1,3 @@
-import dayjs from "dayjs";
 import {
   Table,
   TableBody,
@@ -11,6 +10,13 @@ import EntradasSalidasRow from "./EntradasSalidasRow";
 import { exportToExcel } from "@/utils/exportExcelJS";
 import { Button } from "@/components/ui/button";
 import { FileSpreadsheet } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 export default function EntradasSalidasTable({
   registros,
@@ -23,6 +29,9 @@ export default function EntradasSalidasTable({
   handleMovimientoFieldChange,
   handleSaveMovimientoClick,
 }) {
+  const { dataUser } = useAuth();
+  const userTimezone = dataUser?.zona_horaria || "America/Mexico_City";
+
   if (registros.length === 0) {
     return (
       <div className="text-center text-muted-foreground py-10">
@@ -53,13 +62,29 @@ export default function EntradasSalidasTable({
       puesto: r.puesto,
       departamento: r.departamento,
       sucursal: r.sucursal,
-      entrada: r.entrada ? dayjs(r.entrada).format("DD/MM/YYYY HH:mm:ss") : "-",
-      entrada_corregida: r.entrada_corregida
-        ? dayjs(r.entrada_corregida).format("DD/MM/YYYY HH:mm:ss")
+      entrada: r.entrada
+        ? dayjs
+            .tz(r.entrada, "America/Mexico_City")
+            .tz(userTimezone)
+            .format("DD/MM/YYYY HH:mm:ss")
         : "-",
-      salida: r.salida ? dayjs(r.salida).format("DD/MM/YYYY HH:mm:ss") : "-",
+      entrada_corregida: r.entrada_corregida
+        ? dayjs
+            .tz(r.entrada_corregida, "America/Mexico_City")
+            .tz(userTimezone)
+            .format("DD/MM/YYYY HH:mm:ss")
+        : "-",
+      salida: r.salida
+        ? dayjs
+            .tz(r.salida, "America/Mexico_City")
+            .tz(userTimezone)
+            .format("DD/MM/YYYY HH:mm:ss")
+        : "-",
       salida_corregida: r.salida_corregida
-        ? dayjs(r.salida_corregida).format("DD/MM/YYYY HH:mm:ss")
+        ? dayjs
+            .tz(r.salida_corregida, "America/Mexico_City")
+            .tz(userTimezone)
+            .format("DD/MM/YYYY HH:mm:ss")
         : "-",
       estado: r.estado,
     }));

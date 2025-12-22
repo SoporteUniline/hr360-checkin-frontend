@@ -26,6 +26,8 @@ export default function RegistroEntradasSalidas() {
   const [estado, setEstado] = useState("");
 
   const { dataUser } = useAuth();
+
+  console.log(dataUser);
   const idEmpresa = dataUser?.id_empresa;
 
   const { ui, data } = EntradasSalidasDataContainer({
@@ -64,7 +66,7 @@ export default function RegistroEntradasSalidas() {
       />
 
       {ui}
-      
+
       {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
       <AccesosRapidos />
     </div>

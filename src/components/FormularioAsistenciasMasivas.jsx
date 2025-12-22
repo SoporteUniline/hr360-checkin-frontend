@@ -9,6 +9,8 @@ import useTiposPermisoData from "@/hooks/useTiposPermisoData";
 import { Combobox } from "@/components/Combobox";
 import { useSnackbar } from "notistack";
 import useEmpleadosActivosData from "@/hooks/useEmpleadosActivos";
+import dayjs from "dayjs";
+import { useAuth } from "@/context/AuthContext";
 
 export default function FormularioAsistenciasMasivas({
   values,
@@ -16,7 +18,10 @@ export default function FormularioAsistenciasMasivas({
   mutate,
   idEmpresa,
 }) {
-  const hoy = new Date().toISOString().split("T")[0];
+  const { dataUser } = useAuth();
+  const userTimezone = dataUser?.zona_horaria || "America/Mexico_City";
+
+  const hoy = dayjs().tz(userTimezone).format("YYYY-MM-DD");
 
   const [form, setForm] = useState({
     id_empleado: values?.id_empleado || "",

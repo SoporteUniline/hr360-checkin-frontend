@@ -11,6 +11,12 @@ import { Button } from "@/components/ui/button";
 import { Plus, RotateCcw, FileSpreadsheet } from "lucide-react";
 import { exportToExcel } from "@/utils/exportExcelJS";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+import { useAuth } from "@/context/AuthContext";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 export default function AsistenciaTable({
   filtrados,
@@ -30,6 +36,10 @@ export default function AsistenciaTable({
   abrirFormulario,
   onResetFilters,
 }) {
+  const { dataUser } = useAuth();
+  const userTimezone = dataUser?.zona_horaria || "America/Mexico_City";
+  const DB_TIMEZONE = "America/Mexico_City";
+
   const columns = [
     { header: "Nombre", key: "nombre" },
     { header: "Apellido Paterno", key: "apellido_paterno" },
@@ -66,10 +76,25 @@ export default function AsistenciaTable({
     nip: r.nip,
     departamento: r.departamento,
     tipo_registro_nombre: r.tipo_registro_nombre,
-    fecha: r.fecha ? dayjs(r.fecha).format("DD/MM/YYYY") : "-",
+    fecha: r.fecha
+      ? dayjs.tz(r.fecha, DB_TIMEZONE).tz(userTimezone).format("DD/MM/YYYY")
+      : "-",
+
     correccion: r.correcion ? "Sí" : "No",
-    entrada: r.entrada ? dayjs(r.entrada).format("DD/MM/YYYY HH:mm:ss") : "-",
-    salida: r.salida ? dayjs(r.salida).format("DD/MM/YYYY HH:mm:ss") : "-",
+    entrada: r.entrada
+      ? dayjs
+          .tz(r.entrada, DB_TIMEZONE)
+          .tz(userTimezone)
+          .format("DD/MM/YYYY HH:mm:ss")
+      : "-",
+
+    salida: r.salida
+      ? dayjs
+          .tz(r.salida, DB_TIMEZONE)
+          .tz(userTimezone)
+          .format("DD/MM/YYYY HH:mm:ss")
+      : "-",
+
     autorizado_por: r.autorizado_por ?? "-",
     asistencia: r.asistencia ? "Sí" : "No",
     goce_sueldo: r.goce_sueldo ? "Sí" : "No",

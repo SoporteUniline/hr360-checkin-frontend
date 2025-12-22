@@ -1,6 +1,3 @@
-import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
-import timezone from "dayjs/plugin/timezone";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -16,6 +13,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Save, X } from "lucide-react";
 import { useState } from "react";
 import HistorialEmpleadoDialog from "./HistorialEmpleadoDialog";
+import { useAuth } from "@/context/AuthContext";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 export default function AsistenciaRow({
   registro,
@@ -33,8 +36,9 @@ export default function AsistenciaRow({
   mutateAsistencia,
   mostrarCamposExtras,
 }) {
-  dayjs.extend(utc);
-  dayjs.extend(timezone);
+  const { dataUser } = useAuth();
+  const userTimezone = dataUser?.zona_horaria || "America/Mexico_City";
+  const DB_TIMEZONE = "America/Mexico_City";
   const currentData = isEditing ? editingRowData : registro;
   const areTimeInputsDisabled = !currentData.correccion;
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -96,7 +100,10 @@ export default function AsistenciaRow({
               </Select>
             </TableCell>
             <TableCell className="text-center">
-              {dayjs(currentData.fecha).format("DD/MM/YYYY")}
+              {dayjs
+                .tz(currentData.fecha, DB_TIMEZONE)
+                .tz(userTimezone)
+                .format("DD/MM/YYYY")}
             </TableCell>
 
             {mostrarCamposExtras && (
@@ -117,16 +124,29 @@ export default function AsistenciaRow({
             <TableCell className="text-center">
               <Input
                 type="time"
-                value={currentData.entrada?.slice(11, 16) || ""}
+                value={
+                  currentData.entrada
+                    ? dayjs
+                        .tz(currentData.entrada, DB_TIMEZONE)
+                        .tz(userTimezone)
+                        .format("HH:mm")
+                    : ""
+                }
                 max={
                   currentData.salida
-                    ? currentData.salida.slice(11, 16)
+                    ? dayjs
+                        .tz(currentData.salida, DB_TIMEZONE)
+                        .tz(userTimezone)
+                        .format("HH:mm")
                     : undefined
                 }
                 onChange={(e) => {
                   const hora = e.target.value;
                   const nuevaEntrada = hora
-                    ? `${currentData.fecha.slice(0, 10)} ${hora}:00`
+                    ? dayjs
+                        .tz(`${currentData.fecha} ${hora}`, userTimezone)
+                        .tz(DB_TIMEZONE)
+                        .format("YYYY-MM-DD HH:mm:ss")
                     : null;
                   handleFieldChange("entrada", nuevaEntrada);
                 }}
@@ -136,16 +156,29 @@ export default function AsistenciaRow({
             <TableCell className="text-center">
               <Input
                 type="time"
-                value={currentData.salida?.slice(11, 16) || ""}
+                value={
+                  currentData.salida
+                    ? dayjs
+                        .tz(currentData.salida, DB_TIMEZONE)
+                        .tz(userTimezone)
+                        .format("HH:mm")
+                    : ""
+                }
                 min={
                   currentData.entrada
-                    ? currentData.entrada.slice(11, 16)
+                    ? dayjs
+                        .tz(currentData.entrada, DB_TIMEZONE)
+                        .tz(userTimezone)
+                        .format("HH:mm")
                     : undefined
                 }
                 onChange={(e) => {
                   const hora = e.target.value;
                   const nuevaSalida = hora
-                    ? `${currentData.fecha.slice(0, 10)} ${hora}:00`
+                    ? dayjs
+                        .tz(`${currentData.fecha} ${hora}`, userTimezone)
+                        .tz(DB_TIMEZONE)
+                        .format("YYYY-MM-DD HH:mm:ss")
                     : null;
                   handleFieldChange("salida", nuevaSalida);
                 }}
@@ -428,8 +461,7 @@ export default function AsistenciaRow({
                     onClick={handleCancelEdit}
                     disabled={isSaving}
                   >
-                    <X className="w-16 h-16 text-slate-700 "
-                    />
+                    <X className="w-16 h-16 text-slate-700 " />
                   </Button>
                 </div>
               </TableCell>
@@ -454,10 +486,20 @@ export default function AsistenciaRow({
               </TableCell>
             )}
             <TableCell className="text-center">
-              {registro.entrada ? registro.entrada.slice(11, 19) : "-"}
+              {registro.entrada
+                ? dayjs
+                    .tz(registro.entrada, "America/Mexico_City")
+                    .tz(userTimezone)
+                    .format("HH:mm:ss")
+                : "-"}
             </TableCell>
             <TableCell className="text-center">
-              {registro.salida ? registro.salida.slice(11, 19) : "-"}
+              {registro.salida
+                ? dayjs
+                    .tz(registro.salida, "America/Mexico_City")
+                    .tz(userTimezone)
+                    .format("HH:mm:ss")
+                : "-"}
             </TableCell>
             {mostrarCamposExtras && (
               <TableCell className="text-center">

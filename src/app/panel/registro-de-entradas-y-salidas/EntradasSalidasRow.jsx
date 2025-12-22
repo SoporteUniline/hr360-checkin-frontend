@@ -1,8 +1,15 @@
-import dayjs from "dayjs";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Pencil, Save, X } from "lucide-react";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+import { useAuth } from "@/context/AuthContext";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
 export default function EntradasSalidasRow({
   registro,
   fecha,
@@ -14,18 +21,33 @@ export default function EntradasSalidasRow({
   handleMovimientoFieldChange,
   handleSaveMovimientoClick,
 }) {
+  const { dataUser } = useAuth();
+  const userTimezone = dataUser?.zona_horaria || "America/Mexico_City";
+
   const currentData = isEditing ? editingRowData : registro;
+
+  const DB_TIMEZONE = "America/Mexico_City";
 
   const formatDate = (dateTimeString) => {
     if (!dateTimeString) return "-";
-    return dayjs(dateTimeString).format("DD-MM-YYYY");
-  };
-  const formatTime = (dateTimeString) => {
-    if (!dateTimeString) return "-";
-    return dayjs(dateTimeString).format("HH:mm");
+    return dayjs
+      .tz(dateTimeString, DB_TIMEZONE)
+      .tz(userTimezone)
+      .format("DD-MM-YYYY");
   };
 
-  const baseDateForCorrection = dayjs(registro.entrada).format("YYYY-MM-DD");
+  const formatTime = (dateTimeString) => {
+    if (!dateTimeString) return "-";
+    return dayjs
+      .tz(dateTimeString, DB_TIMEZONE)
+      .tz(userTimezone)
+      .format("HH:mm");
+  };
+
+  const baseDateForCorrection = dayjs
+    .tz(registro.entrada, DB_TIMEZONE)
+    .tz(userTimezone)
+    .format("YYYY-MM-DD");
 
   return (
     <TableRow key={registro.id}>
@@ -126,20 +148,27 @@ export default function EntradasSalidasRow({
               type="time"
               value={
                 currentData.entrada_corregida
-                  ? dayjs(currentData.entrada_corregida).format("HH:mm")
+                  ? dayjs
+                      .tz(currentData.entrada_corregida, DB_TIMEZONE)
+                      .tz(userTimezone)
+                      .format("HH:mm")
                   : ""
               }
               max={
                 currentData.salida_corregida
-                  ? dayjs(currentData.salida_corregida).format("HH:mm")
+                  ? dayjs
+                      .tz(currentData.salida_corregida, DB_TIMEZONE)
+                      .tz(userTimezone)
+                      .format("HH:mm")
                   : undefined
               }
               onChange={(e) => {
                 const hora = e.target.value;
                 const nuevaEntradaCorregida = hora
-                  ? dayjs(`${baseDateForCorrection} ${hora}`).format(
-                      "YYYY-MM-DD HH:mm:ss"
-                    )
+                  ? dayjs
+                      .tz(`${baseDateForCorrection} ${hora}`, userTimezone)
+                      .tz(DB_TIMEZONE)
+                      .format("YYYY-MM-DD HH:mm:ss")
                   : null;
                 handleMovimientoFieldChange(
                   "entrada_corregida",
@@ -153,21 +182,29 @@ export default function EntradasSalidasRow({
               type="time"
               value={
                 currentData.salida_corregida
-                  ? dayjs(currentData.salida_corregida).format("HH:mm")
+                  ? dayjs
+                      .tz(currentData.salida_corregida, DB_TIMEZONE)
+                      .tz(userTimezone)
+                      .format("HH:mm")
                   : ""
               }
               min={
                 currentData.entrada_corregida
-                  ? dayjs(currentData.entrada_corregida).format("HH:mm")
+                  ? dayjs
+                      .tz(currentData.entrada_corregida, DB_TIMEZONE)
+                      .tz(userTimezone)
+                      .format("HH:mm")
                   : undefined
               }
               onChange={(e) => {
                 const hora = e.target.value;
                 const nuevaSalidaCorregida = hora
-                  ? dayjs(`${baseDateForCorrection} ${hora}`).format(
-                      "YYYY-MM-DD HH:mm:ss"
-                    )
+                  ? dayjs
+                      .tz(`${baseDateForCorrection} ${hora}`, userTimezone)
+                      .tz(DB_TIMEZONE)
+                      .format("YYYY-MM-DD HH:mm:ss")
                   : null;
+
                 handleMovimientoFieldChange(
                   "salida_corregida",
                   nuevaSalidaCorregida
