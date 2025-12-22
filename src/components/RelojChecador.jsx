@@ -12,12 +12,24 @@ import EmployeeInput from "./Clock/EmployeeInput";
 import StatsCards from "./Clock/StatsCards";
 import RecordsTable from "./Clock/RecordsTable";
 import { useGPS } from "@/hooks/Capacitor/useGPS";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+import { useAuth } from "@/context/AuthContext";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 export default function RelojChecador({
   idEmpresa,
   modoEmpleado = false,
   idEmpleado = null,
 }) {
+  const { dataUser } = useAuth();
+
+  const DB_TIMEZONE = "America/Mexico_City";
+  const USER_TIMEZONE = dataUser?.zona_horaria || "America/Mexico_City";
+
   const [horaActual, setHoraActual] = useState("");
   const [fechaActual, setFechaActual] = useState("");
   const [codigoEmpleado, setCodigoEmpleado] = useState("");
@@ -29,12 +41,10 @@ export default function RelojChecador({
 
   const formatearHora = (fechaString) => {
     if (!fechaString) return "-";
-    return new Date(fechaString).toLocaleTimeString("es-MX", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: false,
-    });
+    return dayjs
+      .tz(fechaString, DB_TIMEZONE)
+      .tz(USER_TIMEZONE)
+      .format("HH:mm:ss");
   };
 
   const endpoint = modoEmpleado
@@ -60,23 +70,23 @@ export default function RelojChecador({
 
   useEffect(() => {
     const actualizarHora = () => {
-      const ahora = new Date();
-      setHoraActual(ahora.toLocaleTimeString("es-MX", { hour12: false }));
-      const fechaCompleta = ahora.toLocaleDateString("es-MX", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      });
-      const [dia, ...resto] = fechaCompleta.split(", ");
+      const ahora = dayjs().tz(USER_TIMEZONE);
+
+      setHoraActual(ahora.format("HH:mm:ss"));
+
+      const fechaFormateada = ahora.format("dddd, D [de] MMMM [de] YYYY");
+
+      const [dia, ...resto] = fechaFormateada.split(", ");
       const diaCapitalizado = dia.charAt(0).toUpperCase() + dia.slice(1);
+
       setFechaActual([diaCapitalizado, ...resto].join(", "));
     };
 
     actualizarHora();
     const intervalo = setInterval(actualizarHora, 1000);
+
     return () => clearInterval(intervalo);
-  }, []);
+  }, [USER_TIMEZONE]);
 
   const registrarMovimiento = async () => {
     if (gpsError) {
