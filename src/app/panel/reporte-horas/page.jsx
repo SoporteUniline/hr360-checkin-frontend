@@ -428,14 +428,18 @@ export default function ReporteHorasPage() {
       const pdf = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 12;
-      const imgWidth = pageWidth - margin * 2;
+      // Márgenes de 2.5cm para impresión perfecta (2.5cm * 28.35 pt/cm = 70.875 pt ≈ 71 pt)
+      const marginTop = 71; // 2.5cm margen superior
+      const marginBottom = 71; // 2.5cm margen inferior
+      const marginLeft = 71; // 2.5cm margen izquierdo
+      const marginRight = 71; // 2.5cm margen derecho (simétrico)
+      const imgWidth = pageWidth - marginLeft - marginRight;
 
       // Altura reservada en la parte inferior de cada página para el pie de página
       // (línea separadora + leyenda + numeración). También se usa para que el
       // contenido de la imagen no "pegue" contra el pie ni lo tape.
       const footerReserved = 42; // pt
-      const usablePageHeight = pageHeight - margin * 2 - footerReserved;
+      const usablePageHeight = pageHeight - marginTop - marginBottom - footerReserved;
       const blocks = Array.from(reportRef.current.querySelectorAll('[data-report-block="true"]'));
 
       // Mapa compartido entre `onclone` y el bucle principal para
@@ -882,7 +886,7 @@ export default function ReporteHorasPage() {
 
             const part = slice.toDataURL("image/png");
             if (!isFirst) pdf.addPage();
-            pdf.addImage(part, "PNG", margin, margin, imgWidth, (currentHeight * imgWidth) / canvas.width);
+            pdf.addImage(part, "PNG", marginLeft, marginTop, imgWidth, (currentHeight * imgWidth) / canvas.width);
 
             isFirst = false;
             position += currentHeight;
@@ -935,7 +939,7 @@ export default function ReporteHorasPage() {
 
           const part = slice.toDataURL("image/png");
           if (!isFirst) pdf.addPage();
-          pdf.addImage(part, "PNG", margin, margin, imgWidth, (currentHeight * imgWidth) / canvas.width);
+          pdf.addImage(part, "PNG", marginLeft, marginTop, imgWidth, (currentHeight * imgWidth) / canvas.width);
 
           isFirst = false;
           pageTop = pageBottom;
@@ -947,10 +951,8 @@ export default function ReporteHorasPage() {
       // "HR360 · Reporte de Horas" a la izquierda y "Página X de N" a la derecha.
       const totalPages = pdf.getNumberOfPages();
       if (totalPages > 0) {
-        // Área reservada para el pie de página; usamos la misma altura que
-        // `footerReserved` para garantizar que haya un colchón visual entre
-        // la tabla y la línea/leyenda.
-        const footerAreaTop = pageHeight - footerReserved;
+        // Área reservada para el pie de página; respetando el margen inferior de 2.5cm
+        const footerAreaTop = pageHeight - marginBottom - footerReserved;
 
         pdf.setFont("helvetica", "normal");
         pdf.setFontSize(9);
@@ -963,17 +965,17 @@ export default function ReporteHorasPage() {
           const lineY = footerAreaTop + 8; // un poco por encima del texto
           const textY = footerAreaTop + 22; // centrado verticalmente en el área reservada
 
-          // Línea horizontal de separación
-          pdf.line(margin, lineY, pageWidth - margin, lineY);
+          // Línea horizontal de separación (respetando márgenes izquierdo y derecho)
+          pdf.line(marginLeft, lineY, pageWidth - marginRight, lineY);
 
-          // Texto izquierdo
+          // Texto izquierdo (respetando margen izquierdo)
           const leftText = "HR360 · Reporte de Horas";
-          pdf.text(leftText, margin, textY);
+          pdf.text(leftText, marginLeft, textY);
 
-          // Texto derecho con numeración X de N
+          // Texto derecho con numeración X de N (respetando margen derecho)
           const rightText = `Página ${page} de ${totalPages}`;
           const textWidth = pdf.getTextWidth(rightText);
-          pdf.text(rightText, pageWidth - margin - textWidth, textY);
+          pdf.text(rightText, pageWidth - marginRight - textWidth, textY);
         }
       }
       const r0 = reportes[0];
