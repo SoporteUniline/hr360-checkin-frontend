@@ -130,6 +130,12 @@ const menuGroups = [
         rol: "Recruiter",
         icon: FileText,
       },
+      {
+        title: "Mapa de rutas",
+        url: "/panel/mapa-de-rutas",
+        rol: "Recruiter",
+        icon: MapPin,
+      },
     ],
   },
   {

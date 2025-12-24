@@ -1,0 +1,157 @@
+/**
+ * Tema del módulo: "Mapa de rutas"
+ * - Relación:
+ *   - Página: `src/app/panel/mapa-de-rutas/page.jsx`
+ *   - Guía de colores: `Colores.txt` (raíz del repo)
+ *
+ * Nota:
+ * - No cambiamos el theme global del proyecto para no romper otros módulos.
+ * - Definimos variables CSS locales y las usamos dentro del contenedor del módulo.
+ */
+
+.mrTheme {
+  /* ==========================================================================
+     Paleta + tokens del manual (Colores.txt)
+     - Importante: estos tokens se aplican SOLO dentro del contenedor `.mrTheme`
+       para no alterar el tema global del sistema.
+     - Relación: shadcn/ui usa tokens como `--primary`, `--secondary`, `--muted`,
+       `--border`, etc. Al definirlos aquí, Botones/Cards/Inputs dentro del módulo
+       heredan el look del manual sin “hardcodes” por componente.
+     ========================================================================== */
+
+  /* Tipografía (Sistema San Francisco, según manual) */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+  /* Colores principales (manual) */
+  --mr-primary: #37495e;       /* AZUL CORPORATIVO */
+  --mr-primary-dark: #2c3a4a;  /* Hover */
+  --mr-primary-darker: #2c3e50;/* Sidebar / header (manual) */
+
+  /* Backgrounds (manual) */
+  --mr-bg-main: #f8f9fa;
+  --mr-bg-card: #ffffff;
+  --mr-bg-hover: #f9fafb;
+  --mr-bg-active: #f0f4f7;
+
+  /* Bordes (manual) */
+  --mr-border: #e5e7eb;
+  --mr-border-light: #e8ecef;
+  --mr-border-input: #d1d5db;
+
+  /* Textos (manual) */
+  --mr-text: #374151;
+  --mr-text-muted: #6b7280;
+  --mr-text-tertiary: #9ca3af;
+  --mr-text-heading: #2c3e50;
+
+  /* Estados (manual) */
+  --mr-success: #10b981;
+  --mr-success-light: #d1fae5;
+  --mr-success-dark: #065f46;
+
+  --mr-error: #ef4444;
+  --mr-error-light: #fee2e2;
+  --mr-error-dark: #991b1b;
+
+  --mr-warning: #f59e0b;
+  --mr-warning-bg: #fef3c7;
+  --mr-warning-text: #92400e;
+  --mr-warning-surface: #fff3cd; /* Warning background suave (manual) */
+  --mr-warning-border: #fed7aa;  /* Warning background/border naranja claro (manual) */
+
+  --mr-info: #3498db;
+  --mr-info-light: #dbeafe;
+  --mr-info-dark: #1e40af;
+
+  /* Sombras (manual) */
+  --mr-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
+  --mr-shadow-md: 0 2px 15px rgba(0, 0, 0, 0.08);
+  --mr-shadow-lg: 0 4px 15px rgba(0, 0, 0, 0.15);
+  --mr-shadow-focus: 0 0 0 3px rgba(55, 73, 94, 0.1);
+
+  /* Botones específicos (manual) */
+  --mr-btn-clear: #e74c3c;
+  --mr-btn-clear-hover: #c0392b;
+  --mr-btn-export: #27ae60;
+  --mr-btn-export-hover: #229954;
+  --mr-btn-export-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+
+  /* ==========================================================================
+     Bridge tokens para shadcn/ui (scoped)
+     - Estos nombres (`--primary`, `--border`, etc.) son consumidos por clases
+       tipo `bg-primary`, `text-muted-foreground`, `border-border`, etc.
+     ========================================================================== */
+  --background: var(--mr-bg-main);
+  --foreground: var(--mr-text);
+
+  --card: var(--mr-bg-card);
+  --card-foreground: var(--mr-text);
+
+  --popover: var(--mr-bg-card);
+  --popover-foreground: var(--mr-text);
+
+  --primary: var(--mr-primary);
+  --primary-foreground: #ffffff;
+
+  --secondary: #ffffff; /* Botón secundario (manual) */
+  --secondary-foreground: var(--mr-text);
+
+  --muted: #f3f4f6; /* BG hover suave (manual) */
+  --muted-foreground: var(--mr-text-muted);
+
+  --accent: var(--mr-bg-hover);
+  --accent-foreground: var(--mr-text);
+
+  --destructive: var(--mr-error);
+  --destructive-foreground: #ffffff;
+
+  --border: var(--mr-border);
+  --input: var(--mr-border-input);
+  --ring: rgba(55, 73, 94, 0.35);
+
+  /* Fondo base del módulo (manual) */
+  background-color: var(--mr-bg-main);
+  color: var(--mr-text);
+}
+
+.headerGradient {
+  /* Header principal (manual) */
+  background: linear-gradient(135deg, var(--mr-primary-darker) 0%, #34495e 100%);
+}
+
+.cardShadow {
+  box-shadow: var(--mr-shadow-md);
+}
+
+.badgeEntrada {
+  /* Badge Activo (Verde, manual) */
+  background: var(--mr-success-light);
+  color: var(--mr-success-dark);
+}
+
+.badgeSalida {
+  /* Badge Terminado (Rojo, manual) */
+  background: var(--mr-error-light);
+  color: var(--mr-error-dark);
+}
+
+.markerPulse {
+  animation: markerPulse 1s ease-in-out;
+}
+
+@keyframes markerPulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+
