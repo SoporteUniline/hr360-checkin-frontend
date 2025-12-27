@@ -16,6 +16,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import dayjs from "dayjs";
 import { jsPDF } from "jspdf";
 import dynamic from "next/dynamic";
+import useSWR from "swr";
 
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { mapaRutasApi } from "@/lib/mapaRutasApi";
+import { fetcherWithToken, swr_config } from "@/lib/fetcher";
+import { fetchImageAsDataUrl, tryAddCompanyMarkToPdf } from "@/lib/pdfCompanyLogo";
 import AccesosRapidos from "@/components/AccesosRapidos";
 
 import styles from "./mapa-rutas-theme.module.css";
@@ -195,6 +198,39 @@ function calcularPuntosTotales(movimientos) {
 export default function PageMapaDeRutas() {
   const { dataUser } = useAuth();
   const idEmpresa = dataUser?.id_empresa;
+
+  /**
+   * Datos de empresa para logo en PDF (nombre + url_imagen).
+   * - Relación: el logo se administra en `src/app/panel/cuenta/Empresa/ImagenEmpresa.jsx`.
+   */
+  const { data: empresaData } = useSWR(
+    idEmpresa ? `/empresas/${idEmpresa}` : null,
+    fetcherWithToken,
+    swr_config
+  );
+
+  /**
+   * Logo precargado como DataURL para usar en `jsPDF.addImage`.
+   * - Si no existe imagen o falla, `tryAddCompanyMarkToPdf` hará fallback tipográfico.
+   */
+  const [logoDataUrl, setLogoDataUrl] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    const run = async () => {
+      // 1) Intentar logo de la empresa (si existe)
+      const companyUrl = empresaData?.url_imagen;
+      const companyDataUrl = companyUrl ? await fetchImageAsDataUrl(companyUrl) : null;
+
+      // 2) Fallback garantizado al logo del sistema (mismo origen, existe en `public/assets/logo.png`)
+      const fallbackDataUrl = companyDataUrl ? null : await fetchImageAsDataUrl("/assets/logo.png");
+
+      if (alive) setLogoDataUrl(companyDataUrl || fallbackDataUrl || null);
+    };
+    run();
+    return () => {
+      alive = false;
+    };
+  }, [empresaData?.url_imagen]);
 
   // Filtros
   const [empleados, setEmpleados] = useState([]);
@@ -939,12 +975,18 @@ export default function PageMapaDeRutas() {
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
-    doc.text("REPORTE DE ASISTENCIA", margin + 5, yPos + 10);
+    // Logo/marca de empresa (imagen o iniciales) en el encabezado.
+    const companyName = empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
+    const logoBox = { x: margin + 5, y: yPos + 6, boxW: 26, boxH: 14 };
+    const hasMark = tryAddCompanyMarkToPdf(doc, { logoDataUrl, companyName }, logoBox);
+    const textX = hasMark ? logoBox.x + logoBox.boxW + 4 : margin + 5;
+
+    doc.text("REPORTE DE ASISTENCIA", textX, yPos + 10);
 
     doc.setFontSize(11);
     doc.setFont("helvetica", "normal");
-    doc.text(`Empleado: ${diaPdf.empleado}`, margin + 5, yPos + 18);
-    doc.text(`Fecha: ${formatearFechaLarga(diaPdf.fecha)}`, margin + 5, yPos + 25);
+    doc.text(`Empleado: ${diaPdf.empleado}`, textX, yPos + 18);
+    doc.text(`Fecha: ${formatearFechaLarga(diaPdf.fecha)}`, textX, yPos + 25);
 
     // Jornada total - derecha
     doc.setFont("helvetica", "bold");
