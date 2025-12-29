@@ -20,8 +20,54 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { aguinaldosApi } from "@/lib/aguinaldosApi";
 import dayjs from "dayjs";
 import { jsPDF } from "jspdf";
+import { useAuth } from "@/context/AuthContext";
+import useSWR from "swr";
+import { fetcherWithToken, swr_config } from "@/lib/fetcher";
+import { fetchImageAsDataUrl } from "@/lib/pdfCompanyLogo";
+import {
+  createPdfContext,
+  drawHeaderBox,
+  drawKeyValueBox,
+  drawMultilineBox,
+  drawSignaturesAndFooter,
+  drawRightValueRowsBox,
+  ensureSpace,
+  fmtMoneyMXN,
+} from "@/lib/pdfUnifiedLayout";
 
 export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActualizado }) {
+  const { dataUser } = useAuth();
+  const idEmpresa = dataUser?.id_empresa;
+
+  /**
+   * Datos de empresa para logo/marca en el PDF (misma ruta usada en otros módulos).
+   * - Relación: el logo se gestiona en `src/app/panel/cuenta/Empresa/ImagenEmpresa.jsx`.
+   */
+  const { data: empresaData } = useSWR(
+    idEmpresa ? `/empresas/${idEmpresa}` : null,
+    fetcherWithToken,
+    swr_config
+  );
+
+  /**
+   * Logo precargado como DataURL para `jsPDF.addImage` dentro del layout unificado.
+   * - Fallback garantizado al logo local `/assets/logo.png`.
+   */
+  const [logoDataUrl, setLogoDataUrl] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    const run = async () => {
+      const companyUrl = empresaData?.url_imagen;
+      const companyDataUrl = companyUrl ? await fetchImageAsDataUrl(companyUrl) : null;
+      const fallbackDataUrl = companyDataUrl ? null : await fetchImageAsDataUrl("/assets/logo.png");
+      if (alive) setLogoDataUrl(companyDataUrl || fallbackDataUrl || null);
+    };
+    run();
+    return () => {
+      alive = false;
+    };
+  }, [empresaData?.url_imagen]);
+
   const [detalle, setDetalle] = useState(null);
   const [loading, setLoading] = useState(false);
   const [actualizandoEstados, setActualizandoEstados] = useState({}); // { id_aguinaldo: true }
@@ -61,6 +107,201 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
       completos++;
     }
   });
+
+  /**
+   * PDF unificado (formato nuevo) - Nómina de Aguinaldos (masivo).
+   * - Relación:
+   *   - Reemplaza visualmente el estilo anterior con el mismo formato de Permisos/Mapa de Rutas.
+   *   - Se dispara desde el botón del footer de este diálogo ("Descargar PDF").
+   * - Nota: NO se elimina `generarPDF` anterior; se mantiene como referencia.
+   */
+  const generarPDFFormatoNuevo = () => {
+    if (!detalle) return;
+
+    const doc = new jsPDF("p", "mm", "a4");
+    const ctx = createPdfContext({ doc });
+
+    const companyName = empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
+    const totalGeneral = fmtMoneyMXN(maestro.total_general);
+
+    drawHeaderBox(ctx, {
+      title: "Nómina de Aguinaldos",
+      linesLeft: [
+        `Cálculo: #${String(maestro.id_calculo || "").padStart(3, "0")}`,
+        `Año fiscal: ${maestro.año_fiscal || "—"}`,
+        `Fecha corte: ${dayjs(maestro.fecha_corte).format("DD/MM/YYYY")}`,
+      ],
+      kpiLabel: "Total general",
+      kpiValue: String(totalGeneral).replace(" MXN", ""),
+      companyName,
+      logoDataUrl,
+    });
+
+    drawKeyValueBox(ctx, {
+      title: "Resumen",
+      rows: [
+        ["Total empleados", maestro.total_empleados ?? "—"],
+        ["Completos", completos],
+        ["Proporcionales", proporcionales],
+        ["Generado", new Date().toLocaleString("es-MX", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })],
+      ],
+    });
+
+    // Tabla (multi-página) con estilo simple y claro
+    const { margin, contentWidth, pageHeight, pageWidth } = ctx;
+    const cols = [
+      { key: "nombre", title: "Empleado", w: 62 },
+      { key: "puesto", title: "Puesto", w: 36 },
+      { key: "ingreso", title: "Ingreso", w: 22 },
+      { key: "dias", title: "Días", w: 16 },
+      { key: "tipo", title: "Tipo", w: 18 },
+      { key: "monto", title: "Monto", w: 28 },
+    ];
+    // Ajuste por si cambia el margen: asegurar que suma exacta
+    const sumW = cols.reduce((a, c) => a + c.w, 0);
+    if (sumW !== contentWidth) {
+      // Distribuir diferencia al primer campo (Empleado) para evitar desbordes
+      cols[0].w += contentWidth - sumW;
+    }
+
+    const headerH = 8;
+    const rowH = 7;
+    const drawTableHeader = () => {
+      doc.setLineWidth(0.8);
+      doc.rect(margin, ctx.y, contentWidth, headerH, "S");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      let x = margin;
+      cols.forEach((c) => {
+        doc.text(c.title, x + 2, ctx.y + 5.5);
+        x += c.w;
+        doc.line(x, ctx.y, x, ctx.y + headerH);
+      });
+      ctx.y += headerH;
+    };
+
+    const drawRow = (r, idx) => {
+      doc.setLineWidth(0.3);
+      doc.rect(margin, ctx.y, contentWidth, rowH, "S");
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8.5);
+      let x = margin;
+      const v = {
+        nombre: String(r.nombre_completo || "").slice(0, 40),
+        puesto: String(r.puesto || "N/A").slice(0, 22),
+        ingreso: r.fecha_ingreso ? dayjs(r.fecha_ingreso).format("DD/MM/YYYY") : "—",
+        dias: Number(r.dias_aguinaldo_calculado || 0).toFixed(2),
+        tipo: r.es_proporcional ? "Prop." : "Comp.",
+        monto: `$${Number(r.monto_aguinaldo || 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`,
+      };
+      cols.forEach((c, ci) => {
+        const text = v[c.key];
+        if (c.key === "monto") {
+          doc.setFont("helvetica", "bold");
+          doc.text(text, x + c.w - 2, ctx.y + 5, { align: "right" });
+          doc.setFont("helvetica", "normal");
+        } else {
+          doc.text(text, x + 2, ctx.y + 5);
+        }
+        x += c.w;
+        if (ci < cols.length - 1) doc.line(x, ctx.y, x, ctx.y + rowH);
+      });
+      ctx.y += rowH;
+    };
+
+    // Título sección + header tabla
+    drawKeyValueBox(ctx, {
+      title: "Detalle por empleado",
+      rows: [
+        ["Nota", "El monto mostrado corresponde al aguinaldo calculado para cada empleado."],
+      ],
+    });
+    drawTableHeader();
+
+    (aguinaldos || []).forEach((r, idx) => {
+      // Reservar firmas/footer
+      ensureSpace(ctx, rowH + 4);
+      drawRow(r, idx);
+      // Saltar encabezado si se crea nueva página
+      if (ctx.y > pageHeight - ctx.margin - 70) {
+        doc.addPage();
+        ctx.y = ctx.margin;
+        drawTableHeader();
+      }
+    });
+
+    drawSignaturesAndFooter(doc, {
+      empleadoName: "", // nómina: no es de un solo empleado
+      empresaLabel: companyName || "Uniline Innovacion en la Nube",
+      footerLeft: "Sistema HR360",
+    });
+
+    const nombreArchivo = `Nomina_Aguinaldos_${maestro.año_fiscal || "NA"}_${String(maestro.id_calculo || "").padStart(3, "0")}.pdf`;
+    doc.save(nombreArchivo.replace(/\s+/g, "_"));
+  };
+
+  /**
+   * PDF unificado (formato nuevo) - Recibo individual.
+   * - Relación: se usa desde la tabla (botón por empleado) dentro de este diálogo.
+   */
+  const generarPDFIndividualFormatoNuevo = (ag) => {
+    if (!ag || !detalle) return;
+
+    const doc = new jsPDF("p", "mm", "a4");
+    const ctx = createPdfContext({ doc });
+
+    const companyName = empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
+    const empleado = ag.nombre_completo || "Empleado";
+    const total = fmtMoneyMXN(ag.monto_aguinaldo);
+
+    drawHeaderBox(ctx, {
+      title: "Recibo de Aguinaldo",
+      linesLeft: [
+        `Empleado: ${empleado}`,
+        `Año fiscal: ${maestro.año_fiscal || "—"}`,
+        `Fecha corte: ${dayjs(maestro.fecha_corte).format("DD/MM/YYYY")}`,
+      ],
+      kpiLabel: "Total a pagar",
+      kpiValue: String(total).replace(" MXN", ""),
+      companyName,
+      logoDataUrl,
+    });
+
+    drawKeyValueBox(ctx, {
+      title: "Información del empleado",
+      rows: [
+        ["Puesto", ag.puesto || "N/A"],
+        ["Departamento", ag.departamento || "N/A"],
+        ["Fecha ingreso", ag.fecha_ingreso ? dayjs(ag.fecha_ingreso).format("DD/MM/YYYY") : "—"],
+        ["Años trabajados", Number(ag.años_trabajados || 0).toFixed(2)],
+      ],
+    });
+
+    // Detalle del cálculo: valores alineados a la derecha para evitar que labels largos se encimen.
+    drawRightValueRowsBox(ctx, {
+      title: "Detalle del cálculo",
+      rows: [
+        ["Salario diario", `$${Number(ag.salario_diario || 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`],
+        ["Días aguinaldo (Ley)", Number(ag.dias_aguinaldo_ley || 0).toFixed(2)],
+        ["Días aguinaldo calculado", Number(ag.dias_aguinaldo_calculado || 0).toFixed(2)],
+        ["Tipo", ag.es_proporcional ? "Proporcional" : "Completo"],
+      ],
+    });
+
+    drawMultilineBox(ctx, {
+      title: "Observaciones",
+      text: maestro.observaciones || "—",
+    });
+
+    drawSignaturesAndFooter(doc, {
+      empleadoName: empleado,
+      empresaLabel: companyName || "Uniline Innovacion en la Nube",
+      footerLeft: "Sistema HR360",
+    });
+
+    const nombreArchivo = `Aguinaldo_${maestro.año_fiscal || "NA"}_${String(empleado).replace(/\s+/g, "_")}.pdf`;
+    doc.save(nombreArchivo);
+  };
 
   const generarPDF = () => {
     if (!detalle) return;
@@ -477,7 +718,7 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => generarPDFIndividual(ag)}
+                                onClick={() => generarPDFIndividualFormatoNuevo(ag)}
                                 className="text-[9px] sm:text-xs h-7 sm:h-8 px-2"
                                 title="Generar PDF individual para este empleado"
                               >
@@ -507,11 +748,11 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
             Cerrar
           </Button>
           <Button
-            onClick={generarPDF}
+            onClick={generarPDFFormatoNuevo}
             disabled={!detalle}
             className="w-full sm:w-auto bg-[#f59e0b] hover:bg-[#d97706] text-white shadow-[0_4px_12px_rgba(245,158,11,0.3)] transition-all hover:-translate-y-0.5 text-sm sm:text-base"
           >
-            📄 Generar PDF
+            📄 Descargar PDF
           </Button>
         </DialogFooter>
       </DialogContent>

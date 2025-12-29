@@ -27,6 +27,18 @@ import FiniquitoViewDialog from "./FiniquitoViewDialog";
 import dayjs from "dayjs";
 import { jsPDF } from "jspdf";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import useSWR from "swr";
+import { fetcherWithToken, swr_config } from "@/lib/fetcher";
+import { fetchImageAsDataUrl } from "@/lib/pdfCompanyLogo";
+import {
+  createPdfContext,
+  drawHeaderBox,
+  drawKeyValueBox,
+  drawMultilineBox,
+  drawSignaturesAndFooter,
+  drawRightValueRowsBox,
+  fmtMoneyMXN,
+} from "@/lib/pdfUnifiedLayout";
 
 // Página de Panel para "Finiquitos y liquidaciones"
 // - Relación:
@@ -36,6 +48,35 @@ import AccesosRapidos from "@/components/AccesosRapidos";
 export default function PageFiniquitosLiquidaciones() {
   const { dataUser } = useAuth();
   const idEmpresa = dataUser?.id_empresa;
+
+  /**
+   * Datos de empresa para logo/marca del PDF (formato unificado).
+   * - Relación: `src/app/panel/cuenta/Empresa/ImagenEmpresa.jsx`.
+   */
+  const { data: empresaData } = useSWR(
+    idEmpresa ? `/empresas/${idEmpresa}` : null,
+    fetcherWithToken,
+    swr_config
+  );
+
+  /**
+   * Logo precargado como DataURL.
+   * - Fallback a `/assets/logo.png` para que siempre se vea una marca en el header.
+   */
+  const [logoDataUrl, setLogoDataUrl] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    const run = async () => {
+      const companyUrl = empresaData?.url_imagen;
+      const companyDataUrl = companyUrl ? await fetchImageAsDataUrl(companyUrl) : null;
+      const fallbackDataUrl = companyDataUrl ? null : await fetchImageAsDataUrl("/assets/logo.png");
+      if (alive) setLogoDataUrl(companyDataUrl || fallbackDataUrl || null);
+    };
+    run();
+    return () => {
+      alive = false;
+    };
+  }, [empresaData?.url_imagen]);
 
   // Estado tabs
   const [tab, setTab] = useState("tabla");
@@ -417,6 +458,86 @@ export default function PageFiniquitosLiquidaciones() {
       ".pdf";
 
     doc.save(nombreArchivo.replace(/\s+/g, "_"));
+  };
+
+  /**
+   * PDF unificado (formato nuevo) para Finiquito/Liquidación (Calculadora).
+   * - Relación:
+   *   - Botón "📄 Generar PDF" en el formulario de cálculo.
+   *   - Mantiene el PDF anterior como referencia (no se elimina).
+   */
+  const generarPDFFormatoNuevo = () => {
+    if (!resultado) return;
+
+    const doc = new jsPDF("p", "mm", "a4");
+    const ctx = createPdfContext({ doc });
+    const companyName = empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
+    const tipoDocumento = resultado.es_liquidacion ? "Liquidación" : "Finiquito";
+    const total = fmtMoneyMXN(resultado.total_pagar);
+
+    drawHeaderBox(ctx, {
+      title: tipoDocumento,
+      linesLeft: [
+        `Empleado: ${resultado.nombre_completo || "—"}`,
+        `Fecha baja: ${resultado.fecha_baja ? dayjs(resultado.fecha_baja).format("DD/MM/YYYY") : "—"}`,
+        `Tipo terminación: ${resultado.tipo_terminacion || "—"}`,
+      ],
+      kpiLabel: "Total a pagar",
+      kpiValue: String(total).replace(" MXN", ""),
+      companyName,
+      logoDataUrl,
+    });
+
+    drawKeyValueBox(ctx, {
+      title: "Datos del empleado",
+      rows: [
+        ["Puesto", resultado.puesto || "—"],
+        ["Departamento", resultado.departamento || "—"],
+        ["Fecha ingreso", resultado.fecha_ingreso ? dayjs(resultado.fecha_ingreso).format("DD/MM/YYYY") : "—"],
+        ["Años trabajados", `${resultado.años_trabajados || 0}`],
+        ["Salario diario", `$${Number(resultado.salario_diario || 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`],
+      ],
+    });
+
+    // Conceptos: valor alineado a la derecha para evitar encimados.
+    drawRightValueRowsBox(ctx, {
+      title: "Conceptos de finiquito",
+      rows: [
+        ["Salario pendiente", fmtMoneyMXN(resultado.monto_salario_pendiente)],
+        ["Aguinaldo proporcional", fmtMoneyMXN(resultado.monto_aguinaldo_proporcional)],
+        ["Vacaciones no gozadas", fmtMoneyMXN(resultado.monto_vacaciones_no_gozadas)],
+        ["Prima vacacional", fmtMoneyMXN(resultado.monto_prima_vacacional)],
+        ["Subtotal finiquito", fmtMoneyMXN(resultado.subtotal_finiquito)],
+      ],
+    });
+
+    if (resultado.es_liquidacion) {
+      drawRightValueRowsBox(ctx, {
+        title: "Conceptos de liquidación",
+        rows: [
+          ["Prima antigüedad", fmtMoneyMXN(resultado.monto_prima_antiguedad)],
+          ["Indemnización constitucional", fmtMoneyMXN(resultado.monto_indemnizacion_constitucional)],
+          ["Salarios vencidos", fmtMoneyMXN(resultado.monto_salarios_vencidos)],
+          ["Subtotal liquidación", fmtMoneyMXN(resultado.subtotal_liquidacion)],
+        ],
+      });
+    }
+
+    drawMultilineBox(ctx, {
+      title: "Motivo de baja",
+      text: motivoBaja || resultado.motivo_baja || "—",
+    });
+
+    drawSignaturesAndFooter(doc, {
+      empleadoName: resultado.nombre_completo || "",
+      empresaLabel: companyName || "Uniline Innovacion en la Nube",
+      footerLeft: "Sistema HR360",
+      // En finiquitos: firmas solo en la última página (evita duplicarlas si el PDF es de 2+ hojas)
+      signaturesOn: "last",
+    });
+
+    const nombreArchivo = `${(resultado.es_liquidacion ? "LIQUIDACION" : "FINIQUITO")}_${String(resultado.nombre_completo || "Empleado").replace(/\s+/g, "_")}.pdf`;
+    doc.save(nombreArchivo);
   };
 
   const editarFiniquito = async (row) => {
@@ -930,8 +1051,8 @@ export default function PageFiniquitosLiquidaciones() {
                       <Button onClick={calcular} className="bg-[var(--fin-primary)] hover:bg-[var(--fin-primary-dark)] text-white">
                         🧮 Calcular
                       </Button>
-                      <Button onClick={generarPDF} disabled={!guardable} className="bg-[var(--fin-warning)] hover:bg-[#d97706] text-white">
-                        📄 Generar PDF
+                      <Button onClick={generarPDFFormatoNuevo} disabled={!guardable} className="bg-[var(--fin-warning)] hover:bg-[#d97706] text-white">
+                        📄 Descargar PDF
                       </Button>
                       <Button onClick={guardar} disabled={!guardable} className="bg-[var(--fin-success)] hover:bg-[#059669] text-white">
                         💾 Guardar
