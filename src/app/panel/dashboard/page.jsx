@@ -136,6 +136,39 @@ export default async function PanelDashboardPage() {
       empresaId = vJson?.user?.id_empresa || null;
     }
   } catch (_) {}
+
+  /**
+   * Festivos (empresa) para calcular días hábiles en Permisos del Dashboard.
+   * Importante:
+   * - Este archivo es Server Component, por lo que NO podemos pasar un `Set` al cliente.
+   *   Pasamos un array `festivosYmd` y el cliente construye el `Set`.
+   * Relación:
+   * - Se usa en `src/app/panel/dashboard/PermisosTable.jsx` (Client Component).
+   * - Endpoint compartido con Permisos: `GET /checador/holidays/:id_empresa`.
+   */
+  let festivosYmd = [];
+  try {
+    if (empresaId && token) {
+      const hUrl = new URL(`${base}/checador/holidays/${empresaId}`);
+      hUrl.searchParams.set("page", "1");
+      hUrl.searchParams.set("limit", "5000");
+      hUrl.searchParams.set("filter", "");
+      const hRes = await fetch(hUrl.toString(), {
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const hJson = await hRes.json().catch(() => null);
+      const list = hJson?.festivos || [];
+      // Normalizar a YYYY-MM-DD (solo parte de fecha).
+      festivosYmd = Array.isArray(list)
+        ? list
+            .map((f) => String(f?.fecha || "").slice(0, 10))
+            .filter((s) => /^\d{4}-\d{2}-\d{2}$/.test(s))
+        : [];
+    }
+  } catch (_) {
+    festivosYmd = [];
+  }
   try {
     const url = new URL(`${base}/checador/dashboard`);
     if (empresaId) url.searchParams.set("id_empresa", String(empresaId));
@@ -522,7 +555,7 @@ export default async function PanelDashboardPage() {
             </span>
           </CardHeader>
           <CardContent>
-            <PermisosTable rows={data.permisosRangos || []} />
+            <PermisosTable rows={data.permisosRangos || []} festivosYmd={festivosYmd} />
           </CardContent>
         </Card>
       </div>

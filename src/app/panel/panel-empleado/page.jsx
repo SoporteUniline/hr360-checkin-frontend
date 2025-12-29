@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import usePanelEmpleadoData from "@/hooks/usePanelEmpleadoData";
 import { Input } from "@/components/ui/input";
@@ -30,6 +30,9 @@ import PanelEmpleadoAsistencias from "./components/PanelEmpleadoAsistencias";
 import PanelEmpleadoEntradasSalidas from "./components/PanelEmpleadoEntradasSalidas";
 import PanelEmpleadoContratos from "./components/PanelEmpleadoContratos";
 import PanelEmpleadoVacaciones from "./components/PanelEmpleadoVacaciones";
+import useSWR from "swr";
+import dayjs from "dayjs";
+import { fetcherWithToken } from "@/lib/fetcher";
 
 /**
  * Página principal del Panel de Empleados
@@ -43,6 +46,29 @@ export default function PanelEmpleadoPage() {
   const idEmpresa = dataUser?.id_empresa;
   
   const { data, error, isLoading } = usePanelEmpleadoData(idEmpresa);
+
+  /**
+   * Festivos (empresa) para cálculo consistente de días hábiles en Permisos del Panel de Empleados.
+   * Relación:
+   * - Se pasa a `PanelEmpleadoPermisos` (misma regla que módulo Permisos y PDF).
+   * - Endpoint compartido: `/checador/holidays/:id_empresa` (ver módulo Permisos).
+   */
+  const { data: festivosResp } = useSWR(
+    idEmpresa ? `/checador/holidays/${idEmpresa}?page=1&limit=5000&filter=` : null,
+    fetcherWithToken
+  );
+  const festivosSet = useMemo(() => {
+    const list = festivosResp?.festivos || [];
+    const set = new Set();
+    list.forEach((f) => {
+      if (f?.fecha) {
+        try {
+          set.add(dayjs(f.fecha).format("YYYY-MM-DD"));
+        } catch {}
+      }
+    });
+    return set;
+  }, [festivosResp]);
   
   const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState(null);
   const [busqueda, setBusqueda] = useState("");
@@ -372,7 +398,7 @@ export default function PanelEmpleadoPage() {
                       <PanelEmpleadoGeneral datosEmpleado={datosEmpleado} />
                     </TabsContent>
                     <TabsContent value="permisos" className="mt-0">
-                      <PanelEmpleadoPermisos datosEmpleado={datosEmpleado} />
+                      <PanelEmpleadoPermisos datosEmpleado={datosEmpleado} festivosSet={festivosSet} />
                     </TabsContent>
                     <TabsContent value="asistencias" className="mt-0">
                       <PanelEmpleadoAsistencias datosEmpleado={datosEmpleado} />

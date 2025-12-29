@@ -15,6 +15,7 @@ import LoadingTable from "@/components/LoadingTable";
 import { Eye, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDateDMY } from "@/lib/formatDate";
+import { calcDiasTotalesYHabiles } from "@/lib/permisosDias";
 import styles from "./permisos-theme.module.css";
 
 /**
@@ -55,6 +56,8 @@ export default function PermisosTable({
             <TableHead className="whitespace-nowrap">Fecha Inicio</TableHead>
             <TableHead className="whitespace-nowrap">Fecha Fin</TableHead>
             <TableHead className="whitespace-nowrap">Días</TableHead>
+            <TableHead className="whitespace-nowrap">Días totales</TableHead>
+            <TableHead className="whitespace-nowrap">Días hábiles</TableHead>
             <TableHead className="whitespace-nowrap">Estado</TableHead>
             <TableHead className="whitespace-nowrap">Solicitado</TableHead>
             <TableHead className="whitespace-nowrap text-right">
@@ -70,20 +73,22 @@ export default function PermisosTable({
             const isVacaciones = String(row.tipo_permiso_nombre || "")
               .toLowerCase()
               .includes("vacacion");
-            const countDiasLaborales = (start, end) => {
-              let c = 0;
-              for (
-                let d = start.startOf("day");
-                d.isBefore(end.endOf("day")) || d.isSame(end, "day");
-                d = d.add(1, "day")
-              ) {
-                const esDomingo = d.day() === 0;
-                const esFestivo = festivosSet?.has(d.format("YYYY-MM-DD"));
-                if (!esDomingo && !esFestivo) c++;
-              }
-              return Math.max(1, c);
-            };
-            const dias = isVacaciones ? countDiasLaborales(di, df) : diasNaturales;
+
+            /**
+             * Totales/Hábiles (nueva columna):
+             * - Relación: `src/lib/permisosDias.js` centraliza el cálculo para que coincida con PDF y otras vistas.
+             * - Nota: el conteo "hábil" en el proyecto excluye domingos + festivos (no sábados).
+             */
+            const { diasTotales, diasHabiles } = calcDiasTotalesYHabiles({
+              fechaInicio: row.fecha_inicio,
+              fechaFin: row.fecha_fin,
+              festivosSet,
+            });
+
+            // Columna existente "Días":
+            // - Se respeta el comportamiento actual: para Vacaciones se muestra el conteo "hábil",
+            //   para otros permisos se muestran días naturales.
+            const dias = isVacaciones ? diasHabiles : diasNaturales;
             return (
               <TableRow key={row.id} className="hover:bg-accent/40">
                 <TableCell className="text-muted-foreground font-semibold">
@@ -129,6 +134,16 @@ export default function PermisosTable({
                 <TableCell>
                   <span className="inline-block px-2 py-1 rounded-md bg-muted font-bold text-sm">
                     {dias}
+                  </span>
+                </TableCell>
+                <TableCell className="font-mono text-sm">
+                  <span className="inline-block px-2 py-1 rounded-md bg-muted font-bold text-sm whitespace-nowrap">
+                    {diasTotales}
+                  </span>
+                </TableCell>
+                <TableCell className="font-mono text-sm">
+                  <span className="inline-block px-2 py-1 rounded-md bg-muted font-bold text-sm whitespace-nowrap">
+                    {diasHabiles}
                   </span>
                 </TableCell>
                 <TableCell>

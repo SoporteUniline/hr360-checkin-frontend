@@ -12,7 +12,15 @@ export default function usePanelEmpleadoData(idEmpresa) {
   let url = null;
 
   if (idEmpresa) {
-    url = `/checador/empleados/panel-empleado/todos?empresa=${idEmpresa}`;
+    /**
+     * includeInactivos=1:
+     * - Para que el Panel de Empleados muestre el mismo universo que el módulo "Empleados"
+     *   (que por defecto no restringe a solo 'Activo' si el filtro de estado está vacío).
+     *
+     * Relación:
+     * - Backend: `modules/attendance/controllers/empleadoController.js` (cargarTodosDatosCompletos)
+     */
+    url = `/checador/empleados/panel-empleado/todos?empresa=${idEmpresa}&includeInactivos=1`;
   }
 
   const { data, error, isLoading, mutate } = useSWR(url, fetcherWithToken);

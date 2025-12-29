@@ -8,6 +8,7 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { formatDateDMY } from "@/lib/formatDate";
+import { calcDiasTotalesYHabiles } from "@/lib/permisosDias";
 
 function Pill({ color = "zinc", children }) {
   const map = {
@@ -27,8 +28,20 @@ function Pill({ color = "zinc", children }) {
   );
 }
 
-export default function PermisosTable({ rows = [] }) {
+/**
+ * Tabla de permisos del Dashboard.
+ *
+ * Relación:
+ * - Se usa en `src/app/panel/dashboard/page.jsx` (Server Component) y por eso
+ *   recibe los festivos como arreglo serializable (`festivosYmd`), no como Set.
+ * - El cálculo de días se centraliza en `src/lib/permisosDias.js` (misma regla que Permisos).
+ */
+export default function PermisosTable({ rows = [], festivosYmd = [] }) {
   const [filter, setFilter] = useState("activos"); // activos | terminados | todos
+
+  // Convertir a Set en el cliente para consulta O(1).
+  // - Importante: un `Set` no cruza el límite Server→Client, por eso llega como array.
+  const festivosSet = useMemo(() => new Set(festivosYmd || []), [festivosYmd]);
 
   function classify(row) {
     const label = String(row?.status?.label || "").toLowerCase();
@@ -94,10 +107,25 @@ export default function PermisosTable({ rows = [] }) {
                 <th className="p-3 text-left">Inicio</th>
                 <th className="p-3 text-left">Regresa</th>
                 <th className="p-3 text-center">Días</th>
+                <th className="p-3 text-center">Días totales</th>
+                <th className="p-3 text-center">Días hábiles</th>
               </tr>
             </thead>
             <tbody className="divide-y">
-              {filtered.map((p, idx) => (
+              {filtered.map((p, idx) => {
+                /**
+                 * Cálculo de días del permiso en Dashboard:
+                 * - `inicio` y `fin` vienen del backend (rango inclusivo real del permiso).
+                 * - `regresa` es `fin + 1` (solo informativo en UI).
+                 * Relación: ver `dashboardController.js` donde se construye `permisosRangos`.
+                 */
+                const { diasTotales, diasHabiles } = calcDiasTotalesYHabiles({
+                  fechaInicio: p.inicio,
+                  fechaFin: p.fin,
+                  festivosSet,
+                });
+
+                return (
                 <tr key={`perm-${idx}`} className="bg-white">
                   <td className="p-3 whitespace-pre-line font-medium text-zinc-800">
                     {p.nombre_empleado}
@@ -116,8 +144,10 @@ export default function PermisosTable({ rows = [] }) {
                     {formatDateDMY(p.regresa)}
                   </td>
                   <td className="p-3 text-center font-semibold">{p.dias}</td>
+                  <td className="p-3 text-center font-semibold">{diasTotales}</td>
+                  <td className="p-3 text-center font-semibold">{diasHabiles}</td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>
