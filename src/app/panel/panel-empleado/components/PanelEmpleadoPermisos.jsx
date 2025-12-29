@@ -13,12 +13,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { calcDiasTotalesYHabiles } from "@/lib/permisosDias";
 
 /**
  * Componente para mostrar los permisos del empleado
  * Relacionado con: src/app/panel/panel-empleado/page.jsx
  */
-export default function PanelEmpleadoPermisos({ datosEmpleado }) {
+export default function PanelEmpleadoPermisos({ datosEmpleado, festivosSet = new Set() }) {
   if (!datosEmpleado) return null;
 
   const resumen = datosEmpleado.permisos?.resumen || {};
@@ -144,6 +145,8 @@ export default function PanelEmpleadoPermisos({ datosEmpleado }) {
                     <TableHead className="text-[10px] sm:text-xs font-bold uppercase">Fecha Inicio</TableHead>
                     <TableHead className="text-[10px] sm:text-xs font-bold uppercase">Fecha Fin</TableHead>
                     <TableHead className="text-[10px] sm:text-xs font-bold uppercase">Días</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs font-bold uppercase">Días totales</TableHead>
+                    <TableHead className="text-[10px] sm:text-xs font-bold uppercase">Días hábiles</TableHead>
                     <TableHead className="text-[10px] sm:text-xs font-bold uppercase">Motivo</TableHead>
                     <TableHead className="text-[10px] sm:text-xs font-bold uppercase">Estado</TableHead>
                   </TableRow>
@@ -151,12 +154,26 @@ export default function PanelEmpleadoPermisos({ datosEmpleado }) {
             <TableBody>
               {permisosFiltrados.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                  <TableCell colSpan={8} className="text-center py-8 text-gray-500">
                     No hay permisos registrados
                   </TableCell>
                 </TableRow>
               ) : (
                 permisosFiltrados.map((p) => {
+                  /**
+                   * Días totales/hábiles:
+                   * - Totales: naturales (rango inclusivo).
+                   * - Hábiles: excluye domingos + festivos (empresa).
+                   * Relación:
+                   * - Festivos vienen desde `src/app/panel/panel-empleado/page.jsx`.
+                   * - Regla compartida en `src/lib/permisosDias.js` (igual que Permisos y PDF).
+                   */
+                  const { diasTotales, diasHabiles } = calcDiasTotalesYHabiles({
+                    fechaInicio: p.fecha_inicio,
+                    fechaFin: p.fecha_fin,
+                    festivosSet,
+                  });
+
                   const badgeClass =
                     p.estado === "Aprobado"
                       ? "bg-green-100 text-green-800"
@@ -176,6 +193,8 @@ export default function PanelEmpleadoPermisos({ datosEmpleado }) {
                       <TableCell className="text-xs sm:text-sm">{formatearFecha(p.fecha_inicio)}</TableCell>
                       <TableCell className="text-xs sm:text-sm">{formatearFecha(p.fecha_fin)}</TableCell>
                       <TableCell className="text-xs sm:text-sm">{p.dias} días</TableCell>
+                      <TableCell className="text-xs sm:text-sm font-semibold">{diasTotales}</TableCell>
+                      <TableCell className="text-xs sm:text-sm font-semibold">{diasHabiles}</TableCell>
                       <TableCell className="text-xs sm:text-sm break-words max-w-[150px] sm:max-w-none">{p.motivo}</TableCell>
                       <TableCell>
                         <Badge className={`${badgeClass} text-[10px] sm:text-xs`}>

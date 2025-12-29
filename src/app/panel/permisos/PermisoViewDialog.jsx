@@ -13,6 +13,7 @@ import { formatDateDMY, formatDateDMYTime } from "@/lib/formatDate";
 import { jsPDF } from "jspdf";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { fetchImageAsDataUrl, tryAddCompanyMarkToPdf } from "@/lib/pdfCompanyLogo";
+import { calcDiasTotalesYHabiles } from "@/lib/permisosDias";
 import styles from "./permisos-theme.module.css";
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -87,26 +88,24 @@ export default function PermisoViewDialog({ open, setOpen, item, festivosSet = n
   const isVacaciones = String(item.tipo_permiso_nombre || "")
     .toLowerCase()
     .includes("vacacion");
-  const countDiasLaborales = (start, end) => {
-    if (!start || !end) return 0;
-    let c = 0;
-    for (
-      let d = start.startOf("day");
-      d.isBefore(end.endOf("day")) || d.isSame(end, "day");
-      d = d.add(1, "day")
-    ) {
-      const esDomingo = d.day() === 0;
-      const esFestivo = festivosSet?.has(d.format("YYYY-MM-DD"));
-      if (!esDomingo && !esFestivo) c++;
-    }
-    return Math.max(1, c);
-  };
-  const totalDias =
-    startDate && endDate
-      ? isVacaciones
-        ? countDiasLaborales(startDate, endDate)
-        : Math.max(endDate.diff(startDate, "day") + 1, 1)
-      : 0;
+
+  /**
+   * Días del permiso:
+   * - Totales: naturales (rango inclusivo).
+   * - Hábiles: excluye domingos + festivos (consistencia del módulo).
+   * Relación:
+   * - Tabla: `src/app/panel/permisos/PermisosTable.jsx` (mismas reglas).
+   * - Util: `src/lib/permisosDias.js` (fuente única de verdad).
+   */
+  const { diasTotales, diasHabiles } = calcDiasTotalesYHabiles({
+    fechaInicio: item.fecha_inicio,
+    fechaFin: item.fecha_fin,
+    festivosSet,
+  });
+
+  // Valor histórico mostrado como "Total de días" en la UI actual:
+  // - Para Vacaciones se muestra "hábiles", para el resto se muestra "totales" (naturales).
+  const totalDias = isVacaciones ? diasHabiles : diasTotales;
 
   /**
    * Formatea fecha ISO (YYYY-MM-DD) para títulos/impresión (estilo humano).
@@ -284,6 +283,11 @@ export default function PermisoViewDialog({ open, setOpen, item, festivosSet = n
     doc.text(`Fecha inicio: ${fechaInicioLarga}`, margin + 6, y + 23);
     doc.text(`Fecha fin: ${fechaFinLarga}`, margin + 6, y + 30);
 
+    // Días (separados para mayor claridad, como en la vista de Permisos)
+    // - Relación: usa el mismo cálculo de `calcDiasTotalesYHabiles` que la tabla.
+    doc.text(`Días totales: ${String(diasTotales || 0)}`, margin + 110, y + 23);
+    doc.text(`Días hábiles: ${String(diasHabiles || 0)}`, margin + 110, y + 30);
+
     y += 46;
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -425,8 +429,15 @@ export default function PermisoViewDialog({ open, setOpen, item, festivosSet = n
                 <div className="font-medium">{df}</div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">Total de días</div>
-                <div className="font-semibold" style={{ color: "#065f46" }}>{totalDias}</div>
+                {/* Nueva información pedida (separada en campos):
+                    Relación: coincide con la tabla `src/app/panel/permisos/PermisosTable.jsx`
+                    y con el documento PDF de este mismo componente. */}
+                <div className="text-xs text-muted-foreground">Días totales</div>
+                <div className="font-semibold">{diasTotales}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Días hábiles</div>
+                <div className="font-semibold">{diasHabiles}</div>
               </div>
               <div>
                 <div className="text-xs text-muted-foreground">Estado</div>

@@ -226,6 +226,8 @@ export default function PermisosPage() {
       "Fecha inicio",
       "Fecha fin",
       "Días",
+      "Días totales",
+      "Días hábiles",
       "Estado",
       "Solicitado",
       "Actualizado por",
@@ -241,9 +243,11 @@ export default function PermisosPage() {
         const di = dayjs(r.fecha_inicio);
         const df = r.fecha_fin ? dayjs(r.fecha_fin) : di;
         const diasNaturales = Math.max(1, df.diff(di, "day") + 1);
-        const dias = isVacaciones(r.tipo_permiso_nombre)
+        const diasHabiles = isVacaciones(r.tipo_permiso_nombre)
           ? countDiasLaborales(r.fecha_inicio, r.fecha_fin)
-          : diasNaturales;
+          : diasNaturales; // para permisos no-vacaciones, se conserva el valor histórico en "Días"
+        const diasTotales = diasNaturales;
+        const dias = diasHabiles;
         const cols = [
           String(r.id).padStart(3, "0"),
           r.empleado_nombre || "",
@@ -251,6 +255,8 @@ export default function PermisosPage() {
           fmt(r.fecha_inicio),
           fmt(r.fecha_fin),
           String(dias),
+          String(diasTotales),
+          String(diasHabiles),
           r.estado || "",
           fmt(r.marca_tiempo),
           r.actualizado_por_nombre || (r.actualizado_por ? `ID ${r.actualizado_por}` : ""),
