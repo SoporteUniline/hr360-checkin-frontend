@@ -37,10 +37,53 @@ import AguinaldoViewDialog from "./AguinaldoViewDialog";
 import CambiarEstadoDialog from "./CambiarEstadoDialog";
 import styles from "./aguinaldos-theme.module.css";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import useSWR from "swr";
+import { fetcherWithToken, swr_config } from "@/lib/fetcher";
+import { fetchImageAsDataUrl } from "@/lib/pdfCompanyLogo";
+import {
+  createPdfContext,
+  drawHeaderBox,
+  drawKeyValueBox,
+  drawMultilineBox,
+  drawSignaturesAndFooter,
+  drawRightValueRowsBox,
+  ensureSpace,
+  fmtMoneyMXN,
+} from "@/lib/pdfUnifiedLayout";
 
 export default function PageAguinaldos() {
   const { dataUser } = useAuth();
   const idEmpresa = dataUser?.id_empresa;
+
+  /**
+   * Datos de empresa para marca/imagen en PDFs.
+   * - Relación: el logo se administra en `src/app/panel/cuenta/Empresa/ImagenEmpresa.jsx`.
+   */
+  const { data: empresaData } = useSWR(
+    idEmpresa ? `/empresas/${idEmpresa}` : null,
+    fetcherWithToken,
+    swr_config
+  );
+
+  /**
+   * Logo precargado para PDFs (DataURL).
+   * - Se usa en el header del formato unificado (Permisos/Mapa de Rutas).
+   * - Fallback garantizado a `/assets/logo.png`.
+   */
+  const [logoDataUrl, setLogoDataUrl] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    const run = async () => {
+      const companyUrl = empresaData?.url_imagen;
+      const companyDataUrl = companyUrl ? await fetchImageAsDataUrl(companyUrl) : null;
+      const fallbackDataUrl = companyDataUrl ? null : await fetchImageAsDataUrl("/assets/logo.png");
+      if (alive) setLogoDataUrl(companyDataUrl || fallbackDataUrl || null);
+    };
+    run();
+    return () => {
+      alive = false;
+    };
+  }, [empresaData?.url_imagen]);
 
   // Estado tabs
   const [tab, setTab] = useState("tabla");
@@ -559,6 +602,72 @@ export default function PageAguinaldos() {
     doc.save(nombreArchivo);
   };
 
+  /**
+   * PDF unificado (formato nuevo) - Recibo individual (Calculadora).
+   * - Relación:
+   *   - Botón "📄 PDF" por empleado en la tabla del cálculo (tab calculadora).
+   *   - Formato consistente con Permisos/Mapa de Rutas (A4 + cajas + footer).
+   * - Nota: NO se elimina `generarPDFIndividual` anterior.
+   */
+  const generarPDFIndividualFormatoNuevo = (emp) => {
+    if (!emp || !resultadoCalculo) return;
+
+    const doc = new jsPDF("p", "mm", "a4");
+    const ctx = createPdfContext({ doc });
+    const companyName = empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
+    const empleado = emp.nombre_completo || "Empleado";
+    const total = fmtMoneyMXN(emp.monto_aguinaldo);
+
+    drawHeaderBox(ctx, {
+      title: "Recibo de Aguinaldo",
+      linesLeft: [
+        `Empleado: ${empleado}`,
+        `Año fiscal: ${resultadoCalculo.año_fiscal || "—"}`,
+        `Fecha corte: ${dayjs(resultadoCalculo.fecha_corte).format("DD/MM/YYYY")}`,
+      ],
+      kpiLabel: "Total a pagar",
+      kpiValue: String(total).replace(" MXN", ""),
+      companyName,
+      logoDataUrl,
+    });
+
+    drawKeyValueBox(ctx, {
+      title: "Información del empleado",
+      rows: [
+        ["Puesto", emp.puesto || "N/A"],
+        ["Departamento", emp.departamento || "N/A"],
+        ["Fecha ingreso", emp.fecha_ingreso ? dayjs(emp.fecha_ingreso).format("DD/MM/YYYY") : "—"],
+        ["Años trabajados", Number(emp.años_trabajados || 0).toFixed(2)],
+      ],
+    });
+
+    // Detalle del cálculo: valores alineados a la derecha para evitar encimados en labels largos.
+    drawRightValueRowsBox(ctx, {
+      title: "Detalle del cálculo",
+      rows: [
+        ["Salario diario", `$${Number(emp.salario_diario || 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`],
+        ["Días aguinaldo (Ley)", Number(emp.dias_aguinaldo_ley || 0).toFixed(2)],
+        ["Días aguinaldo calculado", Number(emp.dias_aguinaldo_calculado || 0).toFixed(2)],
+        ["Tipo", emp.es_proporcional ? "Proporcional" : "Completo"],
+        ["Días trabajados", Number(emp.dias_trabajados || 0).toFixed(2)],
+      ],
+    });
+
+    drawMultilineBox(ctx, {
+      title: "Observaciones",
+      text: resultadoCalculo.observaciones || "—",
+    });
+
+    drawSignaturesAndFooter(doc, {
+      empleadoName: empleado,
+      empresaLabel: companyName || "Uniline Innovacion en la Nube",
+      footerLeft: "Sistema HR360",
+    });
+
+    const nombreArchivo = `Aguinaldo_${resultadoCalculo.año_fiscal || "NA"}_${String(empleado).replace(/\s+/g, "_")}.pdf`;
+    doc.save(nombreArchivo);
+  };
+
   const generarPDFMasivo = () => {
     if (!resultadoCalculo) return;
 
@@ -676,6 +785,124 @@ export default function PageAguinaldos() {
 
     const nombreArchivo = "Nomina_Aguinaldos_" + resultadoCalculo.año_fiscal + ".pdf";
     doc.save(nombreArchivo);
+  };
+
+  /**
+   * PDF unificado (formato nuevo) - Nómina masiva (Calculadora).
+   * - Relación:
+   *   - Botón "📄 Generar PDF Completo" en tab calculadora.
+   * - Nota: NO se elimina `generarPDFMasivo` anterior.
+   */
+  const generarPDFMasivoFormatoNuevo = () => {
+    if (!resultadoCalculo) return;
+
+    const doc = new jsPDF("p", "mm", "a4");
+    const ctx = createPdfContext({ doc });
+
+    const companyName = empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
+    const totalGeneral = fmtMoneyMXN(resultadoCalculo.total_general);
+    const resultados = resultadoCalculo.resultados || [];
+    const completos = resultados.filter((x) => !x.es_proporcional).length;
+    const proporcionales = resultados.filter((x) => !!x.es_proporcional).length;
+
+    drawHeaderBox(ctx, {
+      title: "Nómina de Aguinaldos",
+      linesLeft: [
+        `Año fiscal: ${resultadoCalculo.año_fiscal || "—"}`,
+        `Fecha corte: ${dayjs(resultadoCalculo.fecha_corte).format("DD/MM/YYYY")}`,
+        `Total empleados: ${resultadoCalculo.total_empleados ?? resultados.length}`,
+      ],
+      kpiLabel: "Total general",
+      kpiValue: String(totalGeneral).replace(" MXN", ""),
+      companyName,
+      logoDataUrl,
+    });
+
+    drawKeyValueBox(ctx, {
+      title: "Resumen",
+      rows: [
+        ["Completos", completos],
+        ["Proporcionales", proporcionales],
+        ["Generado", new Date().toLocaleString("es-MX", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })],
+      ],
+    });
+
+    // Tabla multi-página
+    const { doc: d, margin, contentWidth, pageHeight } = ctx;
+    const cols = [
+      { key: "nombre", title: "Empleado", w: 62 },
+      { key: "puesto", title: "Puesto", w: 36 },
+      { key: "ingreso", title: "Ingreso", w: 22 },
+      { key: "dias", title: "Días", w: 16 },
+      { key: "tipo", title: "Tipo", w: 18 },
+      { key: "monto", title: "Monto", w: 28 },
+    ];
+    const sumW = cols.reduce((a, c) => a + c.w, 0);
+    if (sumW !== contentWidth) cols[0].w += contentWidth - sumW;
+
+    const headerH = 8;
+    const rowH = 7;
+    const drawTableHeader = () => {
+      d.setLineWidth(0.8);
+      d.rect(margin, ctx.y, contentWidth, headerH, "S");
+      d.setFont("helvetica", "bold");
+      d.setFontSize(9);
+      let x = margin;
+      cols.forEach((c) => {
+        d.text(c.title, x + 2, ctx.y + 5.5);
+        x += c.w;
+        d.line(x, ctx.y, x, ctx.y + headerH);
+      });
+      ctx.y += headerH;
+    };
+    const drawRow = (r) => {
+      d.setLineWidth(0.3);
+      d.rect(margin, ctx.y, contentWidth, rowH, "S");
+      d.setFont("helvetica", "normal");
+      d.setFontSize(8.5);
+      let x = margin;
+      const v = {
+        nombre: String(r.nombre_completo || "").slice(0, 40),
+        puesto: String(r.puesto || "N/A").slice(0, 22),
+        ingreso: r.fecha_ingreso ? dayjs(r.fecha_ingreso).format("DD/MM/YYYY") : "—",
+        dias: Number(r.dias_aguinaldo_calculado || 0).toFixed(2),
+        tipo: r.es_proporcional ? "Prop." : "Comp.",
+        monto: `$${Number(r.monto_aguinaldo || 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`,
+      };
+      cols.forEach((c, ci) => {
+        const text = v[c.key];
+        if (c.key === "monto") {
+          d.setFont("helvetica", "bold");
+          d.text(text, x + c.w - 2, ctx.y + 5, { align: "right" });
+          d.setFont("helvetica", "normal");
+        } else {
+          d.text(text, x + 2, ctx.y + 5);
+        }
+        x += c.w;
+        if (ci < cols.length - 1) d.line(x, ctx.y, x, ctx.y + rowH);
+      });
+      ctx.y += rowH;
+    };
+
+    drawTableHeader();
+    resultados.forEach((r) => {
+      ensureSpace(ctx, rowH + 4);
+      drawRow(r);
+      if (ctx.y > pageHeight - ctx.margin - 70) {
+        d.addPage();
+        ctx.y = ctx.margin;
+        drawTableHeader();
+      }
+    });
+
+    drawSignaturesAndFooter(d, {
+      empleadoName: "",
+      empresaLabel: companyName || "Uniline Innovacion en la Nube",
+      footerLeft: "Sistema HR360",
+    });
+
+    const nombreArchivo = `Nomina_Aguinaldos_${resultadoCalculo.año_fiscal || "NA"}.pdf`;
+    d.save(nombreArchivo.replace(/\s+/g, "_"));
   };
 
   const eliminarCalculo = (row) => {
@@ -1261,7 +1488,7 @@ export default function PageAguinaldos() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => generarPDFIndividual(emp)}
+                                onClick={() => generarPDFIndividualFormatoNuevo(emp)}
                                 className="text-xs"
                               >
                                 📄 PDF
@@ -1277,7 +1504,7 @@ export default function PageAguinaldos() {
                 {/* Botones de acción */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <Button
-                    onClick={generarPDFMasivo}
+                    onClick={generarPDFMasivoFormatoNuevo}
                     disabled={!guardable}
                     className="bg-[var(--agu-warning)] hover:bg-[#d97706] text-white shadow-[0_4px_12px_rgba(245,158,11,0.3)] transition-all hover:-translate-y-0.5"
                   >

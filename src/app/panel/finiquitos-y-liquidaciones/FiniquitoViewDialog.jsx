@@ -7,11 +7,59 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { finiquitosApi } from "@/lib/finiquitosApi";
 import styles from "./finiquitos-theme.module.css";
+import { jsPDF } from "jspdf";
+import dayjs from "dayjs";
+import { useAuth } from "@/context/AuthContext";
+import useSWR from "swr";
+import { fetcherWithToken, swr_config } from "@/lib/fetcher";
+import { fetchImageAsDataUrl } from "@/lib/pdfCompanyLogo";
+import {
+  createPdfContext,
+  drawHeaderBox,
+  drawKeyValueBox,
+  drawMultilineBox,
+  drawSignaturesAndFooter,
+  drawRightValueRowsBox,
+  fmtMoneyMXN,
+} from "@/lib/pdfUnifiedLayout";
 
 export default function FiniquitoViewDialog({ open, setOpen, id }) {
+  const { dataUser } = useAuth();
+  const idEmpresa = dataUser?.id_empresa;
+
+  /**
+   * Datos de empresa para marca/imagen en el PDF (formato unificado).
+   * - Relación: `src/app/panel/cuenta/Empresa/ImagenEmpresa.jsx`.
+   */
+  const { data: empresaData } = useSWR(
+    idEmpresa ? `/empresas/${idEmpresa}` : null,
+    fetcherWithToken,
+    swr_config
+  );
+
+  /**
+   * Logo precargado como DataURL (con fallback a `/assets/logo.png`).
+   */
+  const [logoDataUrl, setLogoDataUrl] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    const run = async () => {
+      const companyUrl = empresaData?.url_imagen;
+      const companyDataUrl = companyUrl ? await fetchImageAsDataUrl(companyUrl) : null;
+      const fallbackDataUrl = companyDataUrl ? null : await fetchImageAsDataUrl("/assets/logo.png");
+      if (alive) setLogoDataUrl(companyDataUrl || fallbackDataUrl || null);
+    };
+    run();
+    return () => {
+      alive = false;
+    };
+  }, [empresaData?.url_imagen]);
+
   const [det, setDet] = useState(null);
   const [loading, setLoading] = useState(false);
 
@@ -32,6 +80,89 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
       active = false;
     };
   }, [open, id]);
+
+  /**
+   * PDF unificado (formato nuevo) - Detalle de Finiquito/Liquidación (desde modal Ver).
+   * - Relación:
+   *   - Botón "📄 Descargar PDF" en el footer de este diálogo.
+   *   - El contenido proviene de `det` (endpoint `finiquitosApi.detalle`).
+   */
+  const descargarPDFFormatoNuevo = () => {
+    if (!det) return;
+
+    const doc = new jsPDF("p", "mm", "a4");
+    const ctx = createPdfContext({ doc });
+
+    const companyName = empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
+    const tipoDocumento = det.es_liquidacion ? "Liquidación" : "Finiquito";
+    const total = fmtMoneyMXN(det.total_pagar);
+    const folio = det.id_finiquito || det.id || id || "";
+
+    drawHeaderBox(ctx, {
+      title: tipoDocumento,
+      linesLeft: [
+        `Folio: #${String(folio).toString().padStart(3, "0")}`,
+        `Empleado: ${det.nombre_completo || "—"}`,
+        `Fecha baja: ${det.fecha_baja ? dayjs(det.fecha_baja).format("DD/MM/YYYY") : "—"}`,
+      ],
+      kpiLabel: "Total a pagar",
+      kpiValue: String(total).replace(" MXN", ""),
+      companyName,
+      logoDataUrl,
+    });
+
+    drawKeyValueBox(ctx, {
+      title: "Datos del empleado",
+      rows: [
+        ["Puesto", det.puesto || "—"],
+        ["Departamento", det.departamento || "—"],
+        ["Fecha ingreso", det.fecha_ingreso ? dayjs(det.fecha_ingreso).format("DD/MM/YYYY") : "—"],
+        ["Años trabajados", `${det.años_trabajados || 0}`],
+        ["Salario diario", `$${Number(det.salario_diario || 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`],
+        ["Días trabajados", `${det.dias_trabajados || 0}`],
+      ],
+    });
+
+    // Conceptos: valor a la derecha para evitar encimados en labels largos.
+    drawRightValueRowsBox(ctx, {
+      title: "Conceptos de finiquito",
+      rows: [
+        ["Salario pendiente", fmtMoneyMXN(det.monto_salario_pendiente)],
+        ["Aguinaldo proporcional", fmtMoneyMXN(det.monto_aguinaldo_proporcional)],
+        ["Vacaciones no gozadas", fmtMoneyMXN(det.monto_vacaciones_no_gozadas)],
+        ["Prima vacacional", fmtMoneyMXN(det.monto_prima_vacacional)],
+        ["Subtotal finiquito", fmtMoneyMXN(det.subtotal_finiquito)],
+      ],
+    });
+
+    if (det.es_liquidacion) {
+      drawRightValueRowsBox(ctx, {
+        title: "Conceptos de liquidación",
+        rows: [
+          ["Prima antigüedad", fmtMoneyMXN(det.monto_prima_antiguedad)],
+          ["Indemnización constitucional", fmtMoneyMXN(det.monto_indemnizacion_constitucional)],
+          ["Salarios vencidos", fmtMoneyMXN(det.monto_salarios_vencidos)],
+          ["Subtotal liquidación", fmtMoneyMXN(det.subtotal_liquidacion)],
+        ],
+      });
+    }
+
+    drawMultilineBox(ctx, {
+      title: "Motivo de baja",
+      text: det.motivo_baja || "—",
+    });
+
+    drawSignaturesAndFooter(doc, {
+      empleadoName: det.nombre_completo || "",
+      empresaLabel: companyName || "Uniline Innovacion en la Nube",
+      footerLeft: "Sistema HR360",
+      // En finiquitos: firmas solo en la última página.
+      signaturesOn: "last",
+    });
+
+    const nombreArchivo = `${(det.es_liquidacion ? "LIQUIDACION" : "FINIQUITO")}_${String(det.nombre_completo || "Empleado").replace(/\s+/g, "_")}.pdf`;
+    doc.save(nombreArchivo);
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -188,6 +319,16 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
             <div className="py-6 text-sm text-muted-foreground">Sin información.</div>
           )}
         </div>
+
+        {/* Footer con acciones (similar al patrón de Aguinaldos/Permisos): cerrar + descargar PDF */}
+        <DialogFooter className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-4 border-t">
+          <Button variant="outline" onClick={() => setOpen(false)} className="w-full sm:w-auto">
+            Cerrar
+          </Button>
+          <Button onClick={descargarPDFFormatoNuevo} disabled={!det} className="w-full sm:w-auto bg-[#f59e0b] hover:bg-[#d97706] text-white">
+            📄 Descargar PDF
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
