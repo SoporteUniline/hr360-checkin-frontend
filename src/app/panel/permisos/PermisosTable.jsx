@@ -55,7 +55,6 @@ export default function PermisosTable({
             <TableHead className="whitespace-nowrap">Tipo</TableHead>
             <TableHead className="whitespace-nowrap">Fecha Inicio</TableHead>
             <TableHead className="whitespace-nowrap">Fecha Fin</TableHead>
-            <TableHead className="whitespace-nowrap">Días</TableHead>
             <TableHead className="whitespace-nowrap">Días totales</TableHead>
             <TableHead className="whitespace-nowrap">Días hábiles</TableHead>
             <TableHead className="whitespace-nowrap">Estado</TableHead>
@@ -86,8 +85,9 @@ export default function PermisosTable({
             });
 
             // Columna existente "Días":
-            // - Se respeta el comportamiento actual: para Vacaciones se muestra el conteo "hábil",
-            //   para otros permisos se muestran días naturales.
+            // - Se conserva el cálculo para compatibilidad interna, pero en UI se dejó
+            //   únicamente "Días totales" y "Días hábiles" para evitar duplicidad.
+            // eslint-disable-next-line no-unused-vars
             const dias = isVacaciones ? diasHabiles : diasNaturales;
             return (
               <TableRow key={row.id} className="hover:bg-accent/40">
@@ -130,11 +130,6 @@ export default function PermisosTable({
                 </TableCell>
                 <TableCell className="font-mono text-sm">
                   {row.fecha_fin ? formatDateDMY(df) : "-"}
-                </TableCell>
-                <TableCell>
-                  <span className="inline-block px-2 py-1 rounded-md bg-muted font-bold text-sm">
-                    {dias}
-                  </span>
                 </TableCell>
                 <TableCell className="font-mono text-sm">
                   <span className="inline-block px-2 py-1 rounded-md bg-muted font-bold text-sm whitespace-nowrap">

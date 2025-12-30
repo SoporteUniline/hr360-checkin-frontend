@@ -60,14 +60,43 @@ function createNumberedIcon({ n, tipo, size = 36, pulse = false }) {
 }
 
 /**
- * Hace pan/zoom automático hacia el punto activo durante la animación.
+ * Hace pan automático hacia el punto activo durante la animación, SIN alterar el zoom.
+ * - Relación: se usa en `RutaMap` cuando `animacionActiva` está encendida (playback).
+ * - Motivo: el usuario solicitó “quitar el zoom” al reproducir; es decir, que el mapa
+ *   no haga zoom-in/zoom-out por cada punto, solo siga el marcador.
  */
-function MapAutoPan({ activePoint, zoom = 16 }) {
+function MapAutoPan({
+  activePoint,
+  /**
+   * Si `changeZoom=true`, se comporta como el legacy (setView con zoom).
+   * Por default se deja en `false` para que la reproducción sea “plana”.
+   */
+  changeZoom = false,
+  /**
+   * Zoom objetivo solo cuando `changeZoom=true`.
+   * Nota: se mantiene para compatibilidad y futuras necesidades.
+   */
+  zoom = 16,
+  /**
+   * Duración de la animación (segundos) usada por Leaflet en pan/setView.
+   */
+  duration = 0.5,
+}) {
   const map = useMap();
   useEffect(() => {
     if (!activePoint?.lat || !activePoint?.lng) return;
-    map.setView([activePoint.lat, activePoint.lng], zoom, { animate: true, duration: 0.5 });
-  }, [activePoint, map, zoom]);
+    const target = [activePoint.lat, activePoint.lng];
+
+    // Legacy/opt-in: mueve el mapa y también cambia el zoom.
+    if (changeZoom) {
+      map.setView(target, zoom, { animate: true, duration });
+      return;
+    }
+
+    // Nuevo default: “reproducción plana”
+    // - Solo seguimos el punto con pan (sin tocar zoom).
+    map.panTo(target, { animate: true, duration });
+  }, [activePoint, changeZoom, duration, map, zoom]);
   return null;
 }
 
@@ -75,16 +104,19 @@ function MapAutoPan({ activePoint, zoom = 16 }) {
  * Ajusta automáticamente el viewport para encuadrar todos los puntos del día.
  * - Relación: `map.fitBounds(...)` del HTML legacy.
  */
-function MapFitBounds({ bounds, padding = [80, 80] }) {
+function MapFitBounds({ bounds, padding = [80, 80], enabled = true }) {
   const map = useMap();
   useEffect(() => {
+    // Importante: durante reproducción queremos que el zoom NO cambie (reproducción “plana”).
+    // - Relación: `RutaMap` pasa `enabled={!animacionActiva}`.
+    if (!enabled) return;
     if (!bounds || bounds.length === 0) return;
     try {
       map.fitBounds(bounds, { padding });
     } catch {
       // Evitar romper el render si Leaflet recibe bounds inválidos.
     }
-  }, [bounds, map, padding]);
+  }, [bounds, enabled, map, padding]);
   return null;
 }
 
@@ -270,7 +302,8 @@ export function RutaMap({
         {/* Al reproducir: ocultar control +/- y bloquear gestos de zoom */}
         <MapZoomControlToggle show={!animacionActiva} />
         <MapZoomInteractionLock lockZoom={animacionActiva} />
-        <MapFitBounds bounds={bounds} />
+        {/* Al reproducir, NO re-encuadrar (fitBounds cambia zoom). */}
+        <MapFitBounds bounds={bounds} enabled={!animacionActiva} />
 
         {puntos.map((p) => (
           <Marker
@@ -333,7 +366,8 @@ export function RutaMap({
                 </div>
               </Popup>
             </Marker>
-            <MapAutoPan activePoint={activePoint} />
+            {/* Playback “plano”: seguir el punto sin alterar el zoom del usuario */}
+            <MapAutoPan activePoint={activePoint} changeZoom={false} />
           </>
         ) : null}
       </MapContainer>
