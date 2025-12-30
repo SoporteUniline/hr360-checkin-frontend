@@ -144,7 +144,6 @@ export default function PanelEmpleadoPermisos({ datosEmpleado, festivosSet = new
                     <TableHead className="text-[10px] sm:text-xs font-bold uppercase">Tipo de Permiso</TableHead>
                     <TableHead className="text-[10px] sm:text-xs font-bold uppercase">Fecha Inicio</TableHead>
                     <TableHead className="text-[10px] sm:text-xs font-bold uppercase">Fecha Fin</TableHead>
-                    <TableHead className="text-[10px] sm:text-xs font-bold uppercase">Días</TableHead>
                     <TableHead className="text-[10px] sm:text-xs font-bold uppercase">Días totales</TableHead>
                     <TableHead className="text-[10px] sm:text-xs font-bold uppercase">Días hábiles</TableHead>
                     <TableHead className="text-[10px] sm:text-xs font-bold uppercase">Motivo</TableHead>
@@ -154,7 +153,7 @@ export default function PanelEmpleadoPermisos({ datosEmpleado, festivosSet = new
             <TableBody>
               {permisosFiltrados.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-gray-500">
+                  <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                     No hay permisos registrados
                   </TableCell>
                 </TableRow>
@@ -192,7 +191,6 @@ export default function PanelEmpleadoPermisos({ datosEmpleado, festivosSet = new
                       <TableCell className="font-semibold text-xs sm:text-sm">{p.tipo_permiso}</TableCell>
                       <TableCell className="text-xs sm:text-sm">{formatearFecha(p.fecha_inicio)}</TableCell>
                       <TableCell className="text-xs sm:text-sm">{formatearFecha(p.fecha_fin)}</TableCell>
-                      <TableCell className="text-xs sm:text-sm">{p.dias} días</TableCell>
                       <TableCell className="text-xs sm:text-sm font-semibold">{diasTotales}</TableCell>
                       <TableCell className="text-xs sm:text-sm font-semibold">{diasHabiles}</TableCell>
                       <TableCell className="text-xs sm:text-sm break-words max-w-[150px] sm:max-w-none">{p.motivo}</TableCell>

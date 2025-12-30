@@ -106,7 +106,6 @@ export default function PermisosTable({ rows = [], festivosYmd = [] }) {
                 <th className="p-3 text-left">Estado</th>
                 <th className="p-3 text-left">Inicio</th>
                 <th className="p-3 text-left">Regresa</th>
-                <th className="p-3 text-center">Días</th>
                 <th className="p-3 text-center">Días totales</th>
                 <th className="p-3 text-center">Días hábiles</th>
               </tr>
@@ -143,7 +142,6 @@ export default function PermisosTable({ rows = [], festivosYmd = [] }) {
                   <td className="p-3 text-emerald-700 font-medium">
                     {formatDateDMY(p.regresa)}
                   </td>
-                  <td className="p-3 text-center font-semibold">{p.dias}</td>
                   <td className="p-3 text-center font-semibold">{diasTotales}</td>
                   <td className="p-3 text-center font-semibold">{diasHabiles}</td>
                 </tr>
