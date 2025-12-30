@@ -14,7 +14,16 @@ import useSWR from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { useEffect, useState } from "react";
 import TablePagination from "@/components/TablePagination";
-import { formatDateDMY } from "@/lib/formatDate";
+
+function formatDateDMYLocal(dateStr) {
+  if (!dateStr) return "-";
+
+  const [year, month, day] = dateStr.split("T")[0].split("-");
+
+  if (!year || !month || !day) return "-";
+
+  return `${day}/${month}/${year}`;
+}
 
 export default function FestivosTable({
   id_empresa,
@@ -64,7 +73,7 @@ export default function FestivosTable({
           {festivos.map((festivo) => (
             <TableRow key={festivo.id}>
               <TableCell>
-                {festivo.fecha ? formatDateDMY(festivo.fecha) : "-"}
+                {festivo.fecha ? formatDateDMYLocal(festivo.fecha) : "-"}
               </TableCell>
               <TableCell>{festivo.descripcion}</TableCell>
               <TableCell className="text-right flex justify-end gap-2">
