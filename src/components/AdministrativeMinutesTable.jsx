@@ -11,21 +11,26 @@ import {
 import dayjs from "dayjs";
 import "dayjs/locale/es";
 import React, { useState } from "react";
-import { AdministrativeDetailsModal } from "./AdministrativeDetailsModal";
 import { RotateCcw } from "lucide-react";
 import { Button } from "./ui/button";
+import { Eye, Edit3, Trash2 } from "lucide-react";
 
 dayjs.locale("es");
 
-export const AdministrativeTable = ({ actas, limpiarFiltros }) => {
-  const [selectedActa, setSelectedActa] = useState(null);
-  const [open, setOpen] = useState(false);
-
-  const handleRowClick = (acta) => {
-    setSelectedActa(acta);
-    setOpen(true);
-  };
-
+/**
+ * Tabla de Actas Administrativas.
+ *
+ * Relación:
+ * - Usada por `src/app/panel/actas-administrativas/page.jsx`.
+ * - Los botones "Ver/Editar/Eliminar" se manejan en el padre para centralizar modales y refetch.
+ */
+export const AdministrativeTable = ({
+  actas,
+  limpiarFiltros,
+  onView,
+  onEdit,
+  onDelete,
+}) => {
   return (
     <>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between bg-slate-700 shadow-md px-4 py-3 rounded-tl-md rounded-tr-md gap-3">
@@ -59,6 +64,9 @@ export const AdministrativeTable = ({ actas, limpiarFiltros }) => {
             <TableHead className="text-center bg-slate-700 text-white">
               Estatus
             </TableHead>
+            <TableHead className="text-right bg-slate-700 text-white">
+              Acciones
+            </TableHead>
           </TableRow>
         </TableHeader>
 
@@ -67,7 +75,7 @@ export const AdministrativeTable = ({ actas, limpiarFiltros }) => {
             (actas.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="text-center text-muted-foreground py-10"
                 >
                   No hay registros de actas administrativas.
@@ -77,8 +85,7 @@ export const AdministrativeTable = ({ actas, limpiarFiltros }) => {
           {actas.map((acta) => (
             <TableRow
               key={acta.id_acta}
-              className="cursor-pointer hover:bg-gray-100"
-              onClick={() => handleRowClick(acta)}
+              className="hover:bg-gray-100"
             >
               <TableCell className="font-bold">{acta.folio}</TableCell>
               <TableCell>
@@ -115,16 +122,50 @@ export const AdministrativeTable = ({ actas, limpiarFiltros }) => {
                   {acta.estatus}
                 </span>
               </TableCell>
+              <TableCell className="text-right">
+                {/*
+                  Botones estilo "Finiquitos y liquidaciones":
+                  - Ver (Eye)
+                  - Editar (Edit3)
+                  - Eliminar (Trash2)
+
+                  Relación:
+                  - UX equivalente a `src/app/panel/finiquitos-y-liquidaciones/page.jsx`
+                */}
+                <div className="flex justify-end gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-[#e5e7eb] text-[#374151] hover:bg-[#f9fafb]"
+                    title="Ver"
+                    onClick={() => onView?.(acta)}
+                  >
+                    <Eye className="h-4 w-4" />
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-[#93c5fd] text-[#2563eb] hover:bg-[#dbeafe] hover:text-[#1e40af]"
+                    onClick={() => onEdit?.(acta)}
+                  >
+                    <Edit3 className="h-4 w-4 mr-1" /> Editar
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-[#fecaca] text-[#b91c1c] hover:bg-[#fee2e2]"
+                    onClick={() => onDelete?.(acta)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-1" /> Eliminar
+                  </Button>
+                </div>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-
-      <AdministrativeDetailsModal
-        open={open}
-        onClose={() => setOpen(false)}
-        acta={selectedActa}
-      />
     </>
   );
 };

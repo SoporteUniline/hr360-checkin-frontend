@@ -13,6 +13,18 @@ import useTiposActa from "@/hooks/useTiposActa";
 import { PlusIcon } from "lucide-react";
 import React, { useState } from "react";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import { AdministrativeDetailsModal } from "@/components/AdministrativeDetailsModal";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { administrativeMinutesApi } from "@/lib/administrativeMinutesApi";
 
 const page = () => {
   const [page, setPage] = useState(1);
@@ -23,6 +35,11 @@ const page = () => {
     estatus: "",
   });
   const [openNewActa, setOpenNewActa] = useState(false);
+  const [openEditActa, setOpenEditActa] = useState(false);
+  const [actaToEdit, setActaToEdit] = useState(null);
+  const [actaToView, setActaToView] = useState(null);
+  const [openView, setOpenView] = useState(false);
+  const [deleteRow, setDeleteRow] = useState(null);
   const [empleado, setEmpleado] = useState("");
   const [folio, setFolio] = useState("");
   const [estatus, setEstatus] = useState("");
@@ -60,6 +77,33 @@ const page = () => {
     isLoading: loadingTipos,
     mutate: mutateTiposActa,
   } = useTiposActa(dataUser?.id_empresa, 1, 100, "");
+
+  /**
+   * Acciones por fila (Ver/Editar/Eliminar).
+   * Relación:
+   * - UI: `src/components/AdministrativeMinutesTable.jsx`
+   * - PDF: `src/components/AdministrativeDetailsModal.jsx` (botón Descargar PDF)
+   */
+  const onViewActa = (acta) => {
+    setActaToView(acta);
+    setOpenView(true);
+  };
+
+  const onEditActa = (acta) => {
+    setActaToEdit(acta);
+    setOpenEditActa(true);
+  };
+
+  const onDeleteActa = (acta) => {
+    setDeleteRow(acta);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteRow) return;
+    await administrativeMinutesApi.eliminar(deleteRow.id_acta, dataUser?.id_empresa);
+    setDeleteRow(null);
+    await mutateActas?.();
+  };
 
   return (
     <>
@@ -121,6 +165,9 @@ const page = () => {
           page={page}
           limit={limit}
           limpiarFiltros={limpiarFiltros}
+          onView={onViewActa}
+          onEdit={onEditActa}
+          onDelete={onDeleteActa}
         />
       </div>
 
@@ -141,6 +188,59 @@ const page = () => {
         dataUser={dataUser}
         mutateTiposActa={mutateTiposActa}
       />
+
+      {/* Modal de edición (reutiliza el mismo formulario) */}
+      <NewActaModal
+        open={openEditActa}
+        onClose={() => {
+          setOpenEditActa(false);
+          setActaToEdit(null);
+        }}
+        empleados={empleados}
+        tiposActa={tiposActa}
+        refetch={mutateActas}
+        dataUser={dataUser}
+        mutateTiposActa={mutateTiposActa}
+        mode="edit"
+        actaToEdit={actaToEdit}
+      />
+
+      {/* Ver (detalle + Descargar PDF) */}
+      <AdministrativeDetailsModal
+        open={openView}
+        onClose={() => setOpenView(false)}
+        acta={actaToView}
+        // Refresca el listado (SWR) cuando se cambia estatus desde el modal.
+        // Relación: `src/components/AdministrativeDetailsModal.jsx` -> `onEstatusUpdated`
+        onEstatusUpdated={mutateActas}
+      />
+
+      {/* Confirmación de eliminación (shadcn/ui) */}
+      <AlertDialog open={!!deleteRow} onOpenChange={(open) => !open && setDeleteRow(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar acta administrativa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteRow
+                ? `Esta acción no se puede deshacer. Se eliminará el acta ${deleteRow?.folio || ""} del empleado ${
+                    deleteRow?.nombre_empleado || ""
+                  }.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(239,68,68,0.3)]"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       
       {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
       <AccesosRapidos />
