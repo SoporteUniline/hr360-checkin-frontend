@@ -511,12 +511,6 @@ const NewActaModal = ({
                   control={form.control}
                   name="tipoActa"
                   render={({ field }) => {
-                    const options =
-                      tiposActa?.map((tipo) => ({
-                        value: tipo.id_tipo_acta.toString(),
-                        label: `${tipo.nombre_tipo} (ID ${tipo.id_tipo_acta})`,
-                      })) ?? [];
-
                     return (
                       <FormItem>
                         <FormLabelWithAsterisk
@@ -529,14 +523,33 @@ const NewActaModal = ({
                         <FormControl>
                           <div className="flex items-center gap-2">
                             <div className="flex-1">
-                              <Combobox
-                                options={options}
+                              {/*
+                               * FIX (2026-01):
+                               * El `Combobox` (Popover + Command) dentro de `Dialog` estaba causando que algunos usuarios
+                               * NO pudieran seleccionar correctamente el tipo de acta (click no aplicaba el valor).
+                               *
+                               * Para estabilizar UX, usamos `Select` (Radix) que es consistente dentro de Dialog/scroll.
+                               * Relación:
+                               * - Tipos se administran en `src/components/NewTipoActaModal.jsx`
+                               */}
+                              <Select
                                 value={field.value}
-                                onChange={field.onChange}
-                                placeholder="Selecciona un tipo de acta"
-                                emptyText="No se encontraron tipos"
-                                name="tipoActa"
-                              />
+                                onValueChange={field.onChange}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecciona un tipo de acta" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {(tiposActa || []).map((tipo) => (
+                                    <SelectItem
+                                      key={tipo.id_tipo_acta}
+                                      value={String(tipo.id_tipo_acta)}
+                                    >
+                                      {tipo.nombre_tipo} (ID {tipo.id_tipo_acta})
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             </div>
 
                             <Button
