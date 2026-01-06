@@ -219,10 +219,19 @@ export default function TipoRegistroFormDialog({
         </div>
 
         <DialogFooter className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => setOpen(false)}>
+          {/* Secundario según `Colores.txt` */}
+          <Button
+            variant="outline"
+            onClick={() => setOpen(false)}
+            className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
+          >
             Cancelar
           </Button>
-          <Button onClick={handleSubmit}>
+          {/* Primario según `Colores.txt` */}
+          <Button
+            onClick={handleSubmit}
+            className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]"
+          >
             {editRegistro ? "Actualizar" : "Agregar"}
           </Button>
         </DialogFooter>

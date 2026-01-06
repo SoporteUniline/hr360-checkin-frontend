@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -8,9 +9,10 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import axios from "axios";
+import axios from "@/lib/axios";
 import { useSnackbar } from "notistack";
 import { mutate } from "swr";
+import Cookies from "js-cookie";
 
 export default function TipoRegistroDeleteDialog({
   open,
@@ -19,12 +21,16 @@ export default function TipoRegistroDeleteDialog({
   mutateKey,
 }) {
   const { enqueueSnackbar } = useSnackbar();
+  const [deleting, setDeleting] = useState(false);
 
   const confirmDelete = async () => {
     try {
-      await axios.delete(
-        `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/tiposPermiso/${deleteId}`
-      );
+      if (!deleteId) return;
+      setDeleting(true);
+      const token = Cookies.get("token");
+      await axios.delete(`/checador/tiposPermiso/${deleteId}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       enqueueSnackbar("Tipo de registro eliminado correctamente", {
         variant: "success",
       });
@@ -37,6 +43,7 @@ export default function TipoRegistroDeleteDialog({
         variant: "error",
       });
     } finally {
+      setDeleting(false);
       setOpen(false);
     }
   };
@@ -52,11 +59,23 @@ export default function TipoRegistroDeleteDialog({
           </p>
         </DialogHeader>
         <DialogFooter className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => setOpen(false)}>
+          {/* Secundario según `Colores.txt` */}
+          <Button
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={deleting}
+            className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
+          >
             Cancelar
           </Button>
-          <Button variant="destructive" onClick={confirmDelete}>
-            Eliminar
+          {/* Danger según `Colores.txt` */}
+          <Button
+            variant="destructive"
+            onClick={confirmDelete}
+            disabled={deleting}
+            className="bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(239,68,68,0.3)]"
+          >
+            {deleting ? "Eliminando..." : "Eliminar"}
           </Button>
         </DialogFooter>
       </DialogContent>

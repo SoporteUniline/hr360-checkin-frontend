@@ -47,10 +47,20 @@ export default function SucursalDeleteDialog({
           </p>
         </DialogHeader>
         <DialogFooter className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => setOpen(false)}>
+          {/* Secundario según `Colores.txt` */}
+          <Button
+            variant="outline"
+            onClick={() => setOpen(false)}
+            className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
+          >
             Cancelar
           </Button>
-          <Button variant="destructive" onClick={confirmDelete}>
+          {/* Danger según `Colores.txt` */}
+          <Button
+            variant="destructive"
+            onClick={confirmDelete}
+            className="bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(239,68,68,0.3)]"
+          >
             Eliminar
           </Button>
         </DialogFooter>

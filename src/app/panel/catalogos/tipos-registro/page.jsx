@@ -22,8 +22,16 @@ export default function TiposRegistro() {
   const key = `/checador/tiposPermiso?clave=${filter}`;
 
   return (
-    <div>
-      <div className="mb-4 flex gap-3 items-center">
+    <div className="space-y-4">
+      {/* Encabezado (colores del sistema) */}
+      <div>
+        <h1 className="text-2xl font-bold text-[#2c3e50]">Tipos de registro</h1>
+        <p className="text-sm text-[#6b7280]">
+          Catálogo para asistencias/permisos (crear, editar y eliminar)
+        </p>
+      </div>
+
+      <div className="mb-2 flex flex-col md:flex-row gap-3 items-center">
         <Input
           className="flex-1"
           placeholder="Buscar tipo de registro..."
@@ -31,6 +39,7 @@ export default function TiposRegistro() {
           onChange={(e) => setFilter(e.target.value)}
         />
         <Button
+          className="w-full md:w-auto bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]"
           onClick={() => {
             setEditPerm(null);
             setOpenForm(true); // abrir modal para "nuevo"

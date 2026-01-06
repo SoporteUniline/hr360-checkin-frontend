@@ -54,11 +54,12 @@ export default function TiposRegistroTable({
     <>
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead>Clave</TableHead>
-            <TableHead>Nombre</TableHead>
-            <TableHead>Descripción</TableHead>
-            <TableHead className="text-right">Acciones</TableHead>
+          {/* Header con colores del sistema (ver `Colores.txt`) */}
+          <TableRow className="bg-[#37495E] hover:bg-[#37495E]">
+            <TableHead className="text-white">Clave</TableHead>
+            <TableHead className="text-white">Nombre</TableHead>
+            <TableHead className="text-white">Descripción</TableHead>
+            <TableHead className="text-right text-white">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -70,18 +71,20 @@ export default function TiposRegistroTable({
               <TableCell className="text-right flex justify-end gap-2">
                 <Button
                   size="icon"
-                  variant="secondary"
+                  variant="outline"
+                  className="border-[#93c5fd] text-[#2563eb] hover:bg-[#dbeafe] hover:text-[#1e40af]"
                   onClick={() => onEdit(regi, registros)}
                 >
                   <Edit className="h-4 w-4" />
                 </Button>
-                {/* <Button
+                <Button
                   size="icon"
-                  variant="destructive"
+                  variant="outline"
+                  className="border-[#fca5a5] text-[#dc2626] hover:bg-[#fee2e2]"
                   onClick={() => onDelete(regi.id)}
                 >
                   <Trash2 className="h-4 w-4" />
-                </Button> */}
+                </Button>
               </TableCell>
             </TableRow>
           ))}

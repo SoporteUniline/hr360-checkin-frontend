@@ -72,10 +72,30 @@ export default function ModalArea({
           <AreaCheckMap area={formData} onChange={setFormData} />
 
           <div className="flex justify-end gap-2 border-t pt-4">
-            <Button variant="outline" onClick={onClose} disabled={loading}>
+            {/* Botón secundario según `Colores.txt`:
+                - Background: #ffffff
+                - Border: #d1d5db
+                - Text: #374151
+                - Hover: #f9fafb
+                Relación: mismo patrón usado en `src/app/panel/reglas-aviso/page.jsx` y catálogos. */}
+            <Button
+              variant="outline"
+              onClick={onClose}
+              disabled={loading}
+              className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
+            >
               <X className="h-4 w-4 mr-2" /> Cancelar
             </Button>
-            <Button onClick={() => onSave(formData)} disabled={loading}>
+            {/* Botón primario según `Colores.txt`:
+                - Background: #37495E
+                - Hover: #2c3a4a
+                - Shadow: 0 4px 12px rgba(55, 73, 94, 0.3)
+                Relación: coincide con "Nuevo" en catálogos y botones principales del panel. */}
+            <Button
+              onClick={() => onSave(formData)}
+              disabled={loading}
+              className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]"
+            >
               {loading ? (
                 <div className="h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (

@@ -33,7 +33,8 @@ function AreaCard({ area, onEdit, onDelete }) {
       <CardContent className="p-4 flex justify-between items-start gap-4">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
-            <MapPin className="h-5 w-5 text-blue-600" />
+            {/* Icono informativo según `Colores.txt` (INFO primary: #3498db) */}
+            <MapPin className="h-5 w-5 text-[#3498db]" />
             <h3 className="font-semibold text-lg">{area.nombre_area}</h3>
           </div>
           {area.latitud && area.longitud && (
@@ -48,7 +49,8 @@ function AreaCard({ area, onEdit, onDelete }) {
             variant="outline"
             size="sm"
             onClick={() => onEdit(area)}
-            className="h-9 w-9 p-0"
+            // Acción "Editar" estilo sistema (ver `Colores.txt`)
+            className="h-9 w-9 p-0 border-[#93c5fd] text-[#2563eb] hover:bg-[#dbeafe] hover:text-[#1e40af]"
           >
             <Edit className="h-4 w-4" />
           </Button>
@@ -56,7 +58,8 @@ function AreaCard({ area, onEdit, onDelete }) {
             variant="outline"
             size="sm"
             onClick={() => onDelete(area)}
-            className="h-9 w-9 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+            // Acción "Eliminar" estilo sistema (ver `Colores.txt`)
+            className="h-9 w-9 p-0 border-[#fca5a5] text-[#dc2626] hover:bg-[#fee2e2]"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -112,12 +115,18 @@ function AlertDialog({ isOpen, onClose, onConfirm, title, description }) {
         <h3 className="text-lg font-semibold mb-2">{title}</h3>
         <p className="text-gray-600 mb-6">{description}</p>
         <div className="flex gap-3 justify-end">
-          <Button variant="outline" onClick={onClose}>
+          {/* Secundario según `Colores.txt` */}
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
+          >
             Cancelar
           </Button>
           <Button
             onClick={onConfirm}
-            className="bg-red-600 hover:bg-red-700 text-white"
+            // Danger según `Colores.txt`
+            className="bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(239,68,68,0.3)]"
           >
             Eliminar Área
           </Button>
@@ -253,8 +262,9 @@ export default function AreasCheckPage() {
   return (
     <div className="container mx-auto p-4 space-y-6">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <MapPin className="h-6 w-6 text-blue-600" />
+        {/* Encabezado con colores del sistema (ver `Colores.txt`) */}
+        <h1 className="text-2xl font-bold flex items-center gap-2 text-[#2c3e50]">
+          <MapPin className="h-6 w-6 text-[#3498db]" />
           Áreas de Check
         </h1>
       </div>
@@ -266,7 +276,11 @@ export default function AreasCheckPage() {
           placeholder="Buscar área..."
           onChange={(e) => handleSearchChange(e.target.value)}
         />
-        <Button onClick={abrirModalNuevaArea}>
+        <Button
+          onClick={abrirModalNuevaArea}
+          // Botón principal según `Colores.txt`
+          className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]"
+        >
           <Plus className="h-4 w-4 mr-2" />
           Nueva Área
         </Button>
@@ -274,7 +288,8 @@ export default function AreasCheckPage() {
 
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600 mr-4"></div>
+          {/* Spinner con color INFO (ver `Colores.txt`) */}
+          <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-[#3498db] mr-4"></div>
           <p className="mt-4 text-gray-600">Cargando áreas...</p>
         </div>
       ) : areas.length > 0 ? (
@@ -302,8 +317,9 @@ export default function AreasCheckPage() {
       ) : (
         // Cuando no hay áreas o no hay resultados de búsqueda
         <div className="flex flex-col items-center justify-center py-16 px-4">
-          <div className="bg-blue-50 rounded-full p-6 mb-4">
-            <MapPin className="h-12 w-12 text-blue-600" />
+          {/* Empty state con INFO light (ver `Colores.txt`) */}
+          <div className="bg-[#dbeafe] rounded-full p-6 mb-4">
+            <MapPin className="h-12 w-12 text-[#3498db]" />
           </div>
           <h3 className="text-xl font-semibold mb-2">
             {search ? "No se encontraron áreas" : "No hay áreas registradas"}
@@ -314,12 +330,19 @@ export default function AreasCheckPage() {
               : "Comienza creando tu primera área de check para que los empleados puedan registrar su asistencia."}
           </p>
           {search ? (
-            <Button variant="outline" onClick={() => setSearch("")}>
+            <Button
+              variant="outline"
+              onClick={() => setSearch("")}
+              className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
+            >
               <X className="h-4 w-4 mr-2" />
               Limpiar búsqueda
             </Button>
           ) : (
-            <Button onClick={abrirModalNuevaArea}>
+            <Button
+              onClick={abrirModalNuevaArea}
+              className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]"
+            >
               <Plus className="h-4 w-4 mr-2" />
               Crear primera área
             </Button>

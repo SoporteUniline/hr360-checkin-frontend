@@ -36,9 +36,19 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Iconos
-import { Copy, Settings2 } from "lucide-react";
+import { Copy, Settings2, Trash2 } from "lucide-react";
 import AccesosRapidos from "@/components/AccesosRapidos";
 
 // Utilidades locales
@@ -160,6 +170,15 @@ export default function ReglasAvisoPage() {
   const [reglaDetalle, setReglaDetalle] = useState(null); // incluye empleadosSeleccionados
   const [empleados, setEmpleados] = useState([]); // empleados de la empresa
 
+  /**
+   * Eliminación (confirmación).
+   * Relación:
+   * - Backend: `DELETE /api/checador/reglas-aviso/:id?empresa=...`
+   *   (ver `hr360-checkin-backend/modules/attendance/controllers/reglasAvisoController.js`)
+   */
+  const [deleteRow, setDeleteRow] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
   // Helpers para cargar detalle + empleados
   const cargarDetalleYEmpleados = async (regla) => {
     setLoadingModal(true);
@@ -212,41 +231,65 @@ export default function ReglasAvisoPage() {
     }
   };
 
+  const onDeleteRegla = (regla) => {
+    setDeleteRow(regla);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteRow?.id) return;
+    if (!id_empresa) return;
+    try {
+      setDeleting(true);
+      const token = Cookies.get("token");
+      await axios.delete(`/checador/reglas-aviso/${deleteRow.id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        // Mandamos empresa para validar pertenencia en backend.
+        params: { empresa: id_empresa },
+      });
+      setDeleteRow(null);
+      await mutate?.();
+    } catch (e) {
+      // Mantener UX silenciosa como en toggleEstado, pero cerramos loading.
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Encabezado */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-800">Gestión de Reglas de Aviso</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-2xl font-bold text-[#2c3e50]">Gestión de Reglas de Aviso</h1>
+        <p className="text-sm text-[#6b7280]">
           Edita configuración | Duplica reglas | Activa/Desactiva
         </p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="border rounded-md p-4">
-          <div className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
+        <div className="border border-[#e5e7eb] rounded-md p-4 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
+          <div className="text-xs uppercase tracking-wide text-[#6b7280] font-semibold">
             Total Reglas
           </div>
-          <div className="text-2xl font-bold">{stats.total}</div>
+          <div className="text-2xl font-bold text-[#2c3e50]">{stats.total}</div>
         </div>
-        <div className="border rounded-md p-4">
-          <div className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
+        <div className="border border-[#e5e7eb] rounded-md p-4 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
+          <div className="text-xs uppercase tracking-wide text-[#6b7280] font-semibold">
             Reglas Activas
           </div>
-          <div className="text-2xl font-bold">{stats.activas}</div>
+          <div className="text-2xl font-bold text-[#2c3e50]">{stats.activas}</div>
         </div>
-        <div className="border rounded-md p-4">
-          <div className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
+        <div className="border border-[#e5e7eb] rounded-md p-4 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
+          <div className="text-xs uppercase tracking-wide text-[#6b7280] font-semibold">
             Reglas Inactivas
           </div>
-          <div className="text-2xl font-bold">{stats.inactivas}</div>
+          <div className="text-2xl font-bold text-[#2c3e50]">{stats.inactivas}</div>
         </div>
-        <div className="border rounded-md p-4">
-          <div className="text-xs uppercase tracking-wide text-slate-500 font-semibold">
+        <div className="border border-[#e5e7eb] rounded-md p-4 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
+          <div className="text-xs uppercase tracking-wide text-[#6b7280] font-semibold">
             Total Empleados
           </div>
-          <div className="text-2xl font-bold">{stats.totalEmp}</div>
+          <div className="text-2xl font-bold text-[#2c3e50]">{stats.totalEmp}</div>
         </div>
       </div>
 
@@ -274,13 +317,19 @@ export default function ReglasAvisoPage() {
       <div className="border rounded-md overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Tipo de Regla</TableHead>
-              <TableHead>Empresa</TableHead>
-              <TableHead>Configuración Actual</TableHead>
-              <TableHead>Empleados</TableHead>
-              <TableHead>Acciones</TableHead>
-              <TableHead className="text-right">Estado</TableHead>
+            {/*
+              FIX hover:
+              `TableRow` (shadcn) trae `hover:bg-muted/50` por defecto (ver `src/components/ui/table.jsx`),
+              lo que "lava" el header al pasar el cursor.
+              Forzamos el mismo color en hover para que NO cambie.
+            */}
+            <TableRow className="bg-[#37495E] hover:bg-[#37495E]">
+              <TableHead className="text-white">Tipo de Regla</TableHead>
+              <TableHead className="text-white">Empresa</TableHead>
+              <TableHead className="text-white">Configuración Actual</TableHead>
+              <TableHead className="text-white">Empleados</TableHead>
+              <TableHead className="text-white">Acciones</TableHead>
+              <TableHead className="text-right text-white">Estado</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -320,24 +369,39 @@ export default function ReglasAvisoPage() {
                       </span>
                     </TableCell>
                     <TableCell className="space-x-2">
-                      {!esFelicitar && (
+                      {/*
+                        Acciones por regla:
+                        - Editar/Duplicar se mantienen solo para reglas que no son "felicitar"
+                        - Eliminar se permite para cualquier regla (según solicitud)
+                      */}
+                      {!esFelicitar ? (
                         <>
                           <Button
-                            variant="secondary"
                             size="sm"
+                            variant="outline"
+                            className="border-[#93c5fd] text-[#2563eb] hover:bg-[#dbeafe] hover:text-[#1e40af]"
                             onClick={() => abrirEditar(regla)}
                           >
                             <Settings2 className="w-4 h-4 mr-1" /> Editar
                           </Button>
                           <Button
-                            variant="outline"
                             size="sm"
+                            variant="outline"
+                            className="border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
                             onClick={() => abrirDuplicar(regla)}
                           >
                             <Copy className="w-4 h-4 mr-1" /> Duplicar
                           </Button>
                         </>
-                      )}
+                      ) : null}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-[#fca5a5] text-[#dc2626] hover:bg-[#fee2e2]"
+                        onClick={() => onDeleteRegla(regla)}
+                      >
+                        <Trash2 className="w-4 h-4 mr-1" /> Eliminar
+                      </Button>
                     </TableCell>
                     <TableCell className="text-right">
                       <Switch
@@ -428,6 +492,32 @@ export default function ReglasAvisoPage() {
       
       {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
       <AccesosRapidos />
+
+      {/* Confirmación de eliminación */}
+      <AlertDialog open={!!deleteRow} onOpenChange={(open) => !open && setDeleteRow(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar regla de aviso?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteRow
+                ? `Esta acción no se puede deshacer. Se eliminará la regla “${deleteRow.nombre || "Regla"}”.`
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]" disabled={deleting}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(239,68,68,0.3)]"
+              disabled={deleting}
+            >
+              {deleting ? "Eliminando..." : "Eliminar"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -754,12 +844,26 @@ function FormularioRegla({ modo, detalle, empleados, onClose, onSaved }) {
       </div>
 
       <DialogFooter>
-        <Button variant="secondary" onClick={onClose} disabled={saving}>
+        {/*
+          Botones con paleta del sistema (ver `Colores.txt`):
+          - Secundario: fondo blanco + borde gris (#d1d5db) + hover #f9fafb
+          - Primario: #37495E + hover #2c3a4a + sombra
+
+          Relación:
+          - Otros módulos usan este patrón, por ejemplo Actas (botón principal slate) y confirmaciones.
+        */}
+        <Button
+          variant="outline"
+          onClick={onClose}
+          disabled={saving}
+          className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
+        >
           Cancelar
         </Button>
         <Button
           onClick={guardar}
           disabled={saving || checking || form.empleadosSeleccionados.length === 0}
+          className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]"
         >
           {modo === "editar"
             ? saving
