@@ -27,6 +27,7 @@ import Cookies from "js-cookie";
 import { useSnackbar } from "notistack";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import styles from "./permisos-theme.module.css";
+import PermisoCancelacionDiasPasadosDialog from "./PermisoCancelacionDiasPasadosDialog";
 
 // Dialog para crear/editar una solicitud de permiso.
 // - Se relaciona con: src/lib/permisosApi.js y src/app/panel/permisos/page.jsx
@@ -36,11 +37,12 @@ export default function PermisoDialog({
   editItem,
   idEmpresa,
   tiposPermiso,
+  festivosSet = new Set(),
   onSaved,
 }) {
   const isEdit = Boolean(editItem);
   const { dataUser } = useAuth();
-  const usuarioId = dataUser?.id_empleado || null; // reservado para auditoría futura
+  // Nota: `dataUser` se usa en otras pantallas para auditoría; aquí no es necesario por ahora.
 
   // Estado del formulario (sin id_empleado aquí porque puede ser uno/muchos/todos)
   const [form, setForm] = useState({
@@ -60,6 +62,20 @@ export default function PermisoDialog({
   const [loading, setLoading] = useState(false);
   const { enqueueSnackbar } = useSnackbar();
   const [errors, setErrors] = useState([]);
+
+  /**
+   * Cancelación con días pasados:
+   * - Si al cancelar existen días < hoy dentro del rango, pedimos al admin definir
+   *   el tipo de registro (tipos_permiso) para esos días.
+   *
+   * Relación:
+   * - Modal: `PermisoCancelacionDiasPasadosDialog.jsx`
+   * - API: `src/lib/permisosApi.js` (manda `dias_pasados`)
+   * - Backend: `solicitudPermisoController.actualizarEstado` aplica en asistencias.
+   */
+  const [openCancelDiasPasados, setOpenCancelDiasPasados] = useState(false);
+  const [fechasPasadasPendientes, setFechasPasadasPendientes] = useState([]); // ['YYYY-MM-DD']
+  const [diasPasadosPayload, setDiasPasadosPayload] = useState(null); // [{fecha, id_tipo_permiso}]
 
   // Cargar empleados al abrir
   useEffect(() => {
@@ -107,28 +123,16 @@ export default function PermisoDialog({
       estado: editItem?.estado || "Pendiente",
     });
     setErrors([]);
+    // Evitar fugas de estado entre ediciones (cancelación con días pasados).
+    setDiasPasadosPayload(null);
+    setFechasPasadasPendientes([]);
+    setOpenCancelDiasPasados(false);
   }, [editItem, open]);
 
-  // Deshabilitar edición si el permiso ya finalizó
-  const isExpired = isEdit
-    ? (() => {
-        const today = dayjs().format("YYYY-MM-DD");
-        const fin = editItem?.fecha_fin
-          ? dayjs(editItem.fecha_fin).format("YYYY-MM-DD")
-          : editItem?.fecha_inicio
-          ? dayjs(editItem.fecha_inicio).format("YYYY-MM-DD")
-          : null;
-        return fin ? today > fin : false;
-      })()
-    : false;
+  // Nota: antes se bloqueaba la edición cuando el periodo ya había finalizado.
+  // Requerimiento nuevo: SIEMPRE permitir edición/cancelación, pero con validaciones.
 
   async function guardar() {
-    if (isExpired) {
-      enqueueSnackbar("Este permiso ya finalizó y no puede editarse.", {
-        variant: "warning",
-      });
-      return;
-    }
     // Validaciones de formulario con mensajes amigables
     const errs = [];
     if (!form.id_tipo_permiso) errs.push("Selecciona el tipo de permiso.");
@@ -184,7 +188,12 @@ export default function PermisoDialog({
         }
         // Si el estado cambió respecto al original, actualizar estado
         if (form.estado && form.estado !== editItem?.estado) {
-          await permisosApi.actualizarEstado(editItem.id, form.estado);
+          // Si se cancela y hay días pasados, mandamos el payload `dias_pasados` (si existe).
+          const extra =
+            form.estado === "Cancelado" && Array.isArray(diasPasadosPayload)
+              ? { dias_pasados: diasPasadosPayload }
+              : null;
+          await permisosApi.actualizarEstado(editItem.id, form.estado, null, extra);
         }
         enqueueSnackbar("Permiso actualizado correctamente.", {
           variant: "success",
@@ -239,8 +248,70 @@ export default function PermisoDialog({
     (permiso) => permiso.es_permiso === 1
   );
 
+  // Tipos de registro para reclasificación (se usa el mismo catálogo `tiposPermiso`).
+  // Importante: aquí NO filtramos por `es_permiso`, porque el admin necesita escoger
+  // cualquier tipo de registro aplicable en asistencias (ej. Falta, Sin Checar, etc.).
+  const tiposRegistro = Array.isArray(tiposPermiso) ? tiposPermiso : [];
+
+  /**
+   * Interceptor: al seleccionar "Cancelado" calculamos días pasados y abrimos modal si aplica.
+   * - Días pasados: fechas estrictamente menores a hoy dentro del rango [inicio, fin].
+   * - Días futuros (hoy en adelante) el backend los pone automáticamente como "Sin Checar"
+   *   (respetando descanso/festivo según reglas existentes).
+   */
+  function handleEstadoChange(v) {
+    // Si el admin vuelve a otro estado, limpiamos payload de cancelación.
+    if (v !== "Cancelado") {
+      setDiasPasadosPayload(null);
+      setForm((f) => ({ ...f, estado: v }));
+      return;
+    }
+
+    // Solo aplica en edición (cambiar estado de una solicitud existente).
+    if (!isEdit) {
+      setForm((f) => ({ ...f, estado: v }));
+      return;
+    }
+
+    const hoy = dayjs().format("YYYY-MM-DD");
+    const inicio = editItem?.fecha_inicio
+      ? dayjs(editItem.fecha_inicio).format("YYYY-MM-DD")
+      : null;
+    const fin = editItem?.fecha_fin
+      ? dayjs(editItem.fecha_fin).format("YYYY-MM-DD")
+      : inicio;
+    if (!inicio || !fin) {
+      // Sin rango, simplemente dejamos cancelar.
+      setForm((f) => ({ ...f, estado: v }));
+      return;
+    }
+
+    // Construir lista de fechas pasadas.
+    const pasadas = [];
+    for (
+      let d = dayjs(inicio);
+      d.isBefore(dayjs(fin)) || d.isSame(dayjs(fin), "day");
+      d = d.add(1, "day")
+    ) {
+      const iso = d.format("YYYY-MM-DD");
+      if (iso < hoy) pasadas.push(iso);
+    }
+
+    if (pasadas.length === 0) {
+      // No hay días pasados: cancelación normal.
+      setDiasPasadosPayload(null);
+      setForm((f) => ({ ...f, estado: v }));
+      return;
+    }
+
+    // Hay días pasados: requerimos decisión del admin vía modal.
+    setFechasPasadasPendientes(pasadas);
+    setOpenCancelDiasPasados(true);
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <>
+      <Dialog open={open} onOpenChange={setOpen}>
       {/* Ajuste responsivo:
          - max-w-[95vw]: asegura que en móviles el modal no desborde el viewport.
          - sm:max-w-xl: mantiene el ancho previsto en pantallas >= sm.
@@ -263,7 +334,6 @@ export default function PermisoDialog({
                 onValueChange={(v) =>
                   setForm((f) => ({ ...f, id_tipo_permiso: v }))
                 }
-                disabled={isExpired}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Seleccionar tipo..." />
@@ -373,7 +443,6 @@ export default function PermisoDialog({
                 onChange={(e) =>
                   setForm((f) => ({ ...f, fecha_inicio: e.target.value }))
                 }
-                disabled={isExpired}
               />
             </div>
             <div className="space-y-2">
@@ -385,7 +454,6 @@ export default function PermisoDialog({
                 onChange={(e) =>
                   setForm((f) => ({ ...f, fecha_fin: e.target.value }))
                 }
-                disabled={isExpired}
               />
             </div>
           </div>
@@ -404,8 +472,7 @@ export default function PermisoDialog({
                 return (
                   <Select
                     value={form.estado}
-                    onValueChange={(v) => setForm((f) => ({ ...f, estado: v }))}
-                    disabled={isExpired}
+                    onValueChange={handleEstadoChange}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -445,15 +512,8 @@ export default function PermisoDialog({
           ) : null}
 
           {/* Aviso de permiso vencido */}
-          {isExpired ? (
-            <Alert>
-              <AlertTitle>Permiso finalizado</AlertTitle>
-              <AlertDescription>
-                Este permiso ya terminó. La edición está deshabilitada para
-                evitar inconsistencias.
-              </AlertDescription>
-            </Alert>
-          ) : null}
+          {/* Antes se mostraba un aviso/bloqueo por permiso finalizado.
+              Nuevo requerimiento: siempre permitir editar/cancelar, por eso se elimina. */}
 
           {/* Motivo y notas */}
           <div className="space-y-2">
@@ -465,7 +525,6 @@ export default function PermisoDialog({
               onChange={(e) =>
                 setForm((f) => ({ ...f, motivo: e.target.value }))
               }
-              disabled={isExpired}
             />
           </div>
         </div>
@@ -481,13 +540,40 @@ export default function PermisoDialog({
           </Button>
           <Button
             onClick={guardar}
-            disabled={loading || isExpired}
+            disabled={loading}
             className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)] transition-all hover:-translate-y-0.5"
           >
             💾 Guardar
           </Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+      </Dialog>
+
+      {/* Modal requerido si se intenta cancelar con días ya pasados */}
+      <PermisoCancelacionDiasPasadosDialog
+        open={openCancelDiasPasados}
+        setOpen={(v) => {
+          setOpenCancelDiasPasados(v);
+          // Si el usuario cierra sin confirmar, NO cambiamos el estado a Cancelado.
+          if (!v) {
+            setFechasPasadasPendientes([]);
+          }
+        }}
+        fechasPasadas={fechasPasadasPendientes}
+        tiposRegistro={tiposRegistro}
+        festivosSet={festivosSet}
+        onConfirm={(payload) => {
+          // Guardar payload para enviarlo en `actualizarEstado` y aplicar el estado.
+          setDiasPasadosPayload(payload);
+          setForm((f) => ({ ...f, estado: "Cancelado" }));
+          enqueueSnackbar(
+            "Días pasados configurados. Ahora guarda para cancelar.",
+            {
+              variant: "info",
+            }
+          );
+        }}
+      />
+    </>
   );
 }

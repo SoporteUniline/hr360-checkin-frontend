@@ -20,6 +20,9 @@ export default function usePermisosData({
   desde,
   hasta,
   search,
+  // Si es true, el backend excluirá el estado "Cancelado" del listado (pero NO afecta si estado="Cancelado").
+  // Relación: `src/app/panel/permisos/page.jsx` (por defecto oculta cancelados).
+  excludeCancelados = false,
 }) {
   let url = null;
   if (idEmpresa) {
@@ -34,6 +37,7 @@ export default function usePermisosData({
     if (desde) params.set("desde", desde);
     if (hasta) params.set("hasta", hasta);
     if (search) params.set("search", search);
+    if (excludeCancelados) params.set("exclude_cancelados", "1");
     url = `/checador/solicitudes-permiso?${params.toString()}`;
   }
 

@@ -79,6 +79,9 @@ export default function PermisosPage() {
     desde,
     hasta,
     // search eliminado
+    // Por defecto NO mostramos cancelados en "Todos".
+    // Si el usuario elige estado="Cancelado", se muestran (y este flag se ignora en backend).
+    excludeCancelados: !estado,
   });
 
   const registros = data?.data || [];
@@ -491,10 +494,10 @@ export default function PermisosPage() {
                 onValueChange={(v) => setEstado(v === "__all__" ? "" : v)}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Todos los estados" />
+                  <SelectValue placeholder="Todos (sin cancelados)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__all__">Todos</SelectItem>
+                  <SelectItem value="__all__">Todos (sin cancelados)</SelectItem>
                   <SelectItem value="Pendiente">Pendiente</SelectItem>
                   <SelectItem value="Aprobado">Aprobado</SelectItem>
                   <SelectItem value="Rechazado">Rechazado</SelectItem>
@@ -894,6 +897,7 @@ export default function PermisosPage() {
         editItem={editItem}
         idEmpresa={idEmpresa}
         tiposPermiso={tiposPermiso}
+        festivosSet={festivosSet}
         onSaved={() => {
           setEditItem(null);
           mutate();

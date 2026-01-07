@@ -22,11 +22,23 @@ export const permisosApi = {
     return res.data;
   },
 
-  async actualizarEstado(id, estado, actualizado_por = null) {
+  /**
+   * Actualiza el estado de una solicitud de permiso.
+   *
+   * Relación:
+   * - UI admin: `src/app/panel/permisos/PermisoDialog.jsx` (cambia estado y puede mandar `dias_pasados` al cancelar)
+   * - Backend: `hr360-checkin-backend/modules/attendance/controllers/solicitudPermisoController.js` -> `actualizarEstado`
+   *
+   * @param {number|string} id
+   * @param {string} estado
+   * @param {number|null} actualizado_por
+   * @param {object|null} extra - Payload adicional opcional (ej. `{ dias_pasados: [{ fecha:'YYYY-MM-DD', id_tipo_permiso: 1 }] }`)
+   */
+  async actualizarEstado(id, estado, actualizado_por = null, extra = null) {
     const token = Cookies.get("token");
     const res = await axios.patch(
       `/checador/solicitudes-permiso/${id}/estado`,
-      { estado, actualizado_por },
+      { estado, actualizado_por, ...(extra || {}) },
       { headers: { Authorization: `Bearer ${token}` } }
     );
     return res.data;
