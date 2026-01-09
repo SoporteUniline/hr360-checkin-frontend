@@ -15,9 +15,19 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 export default function RegistroEntradasSalidas() {
-  const [fecha, setFecha] = useState(
-    dayjs().tz("America/Mexico_City").format("YYYY-MM-DD")
-  );
+  // =========================
+  // Filtro por fechas (desde/hasta)
+  // - Retrocompatibilidad:
+  //   - Si el rango es un solo día (desde === hasta) derivamos `fecha` para mantener
+  //     el comportamiento anterior (tabla muestra solo horas y el título "del día").
+  //   - Si es un rango real, `fecha` queda vacío y el backend filtra por `desde/hasta`.
+  // =========================
+  const today = dayjs().tz("America/Mexico_City").format("YYYY-MM-DD");
+  const [desde, setDesde] = useState(today);
+  const [hasta, setHasta] = useState(today);
+
+  // `fecha` se conserva porque otros componentes lo usan como "modo single-day".
+  const fecha = desde && hasta && desde === hasta ? desde : "";
   const [page, setPage] = useState(1);
   const limit = 10;
   const [filtroEmpleado, setFiltroEmpleado] = useState("");
@@ -33,6 +43,8 @@ export default function RegistroEntradasSalidas() {
   const { ui, data } = EntradasSalidasDataContainer({
     idEmpresa,
     fecha,
+    desde,
+    hasta,
     page,
     limit,
     filtroNombre,
@@ -57,7 +69,13 @@ export default function RegistroEntradasSalidas() {
         filtroEmpleado={filtroEmpleado}
         setFiltroEmpleado={setFiltroEmpleado}
         fecha={fecha}
-        setFecha={setFecha}
+        // `setFecha` ya no se usa en este panel (ahora es desde/hasta),
+        // pero lo dejamos por compatibilidad con la firma del componente.
+        setFecha={() => {}}
+        desde={desde}
+        setDesde={setDesde}
+        hasta={hasta}
+        setHasta={setHasta}
         departamento={departamento}
         setDepartamento={setDepartamento}
         estado={estado}

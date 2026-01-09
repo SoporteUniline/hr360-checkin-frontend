@@ -99,7 +99,8 @@ export default function EntradasSalidasTable({
     <>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between bg-slate-700 shadow-md px-4 py-3 rounded-tl-md rounded-tr-md gap-3">
         <div className="flex items-center text-lg font-bold text-white">
-          <h1>Registros del día</h1>
+          {/* Si viene `fecha` estamos en modo single-day (desde === hasta). Si no, es rango. */}
+          <h1>{fecha ? "Registros del día" : "Registros del período"}</h1>
         </div>
         <div className="flex flex-col md:flex-row flex-wrap justify-end gap-3 w-full md:w-auto">
           <Button
@@ -118,19 +119,14 @@ export default function EntradasSalidasTable({
             <TableHead className="text-white bg-slate-700 ">
               Departamento / Sucursal
             </TableHead>
-            {!fecha ? (
-              <TableHead className="text-white bg-slate-700 text-center">
-                Fecha de entrada
-              </TableHead>
-            ) : null}
+            {/* IMPORTANTE (UX): aunque filtremos 1 solo día (desde===hasta), siempre mostramos la fecha
+                para que el usuario pueda validar día exacto cuando el backend trae registros con timezone. */}
+            <TableHead className="text-white bg-slate-700 text-center">
+              Fecha de entrada
+            </TableHead>
             <TableHead className="text-white bg-slate-700 text-center">
               Hora de entrada
             </TableHead>
-            {!fecha ? (
-              <TableHead className="text-white bg-slate-700 text-center">
-                Fecha de salida
-              </TableHead>
-            ) : null}
             <TableHead className="text-white bg-slate-700 text-center">
               Hora de salida
             </TableHead>

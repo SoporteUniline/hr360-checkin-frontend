@@ -61,19 +61,11 @@ export default function EntradasSalidasRow({
             <p className="font-bold text-gray-500">{registro.departamento}</p>
             <p className="text-xs text-gray-500">{registro.sucursal}</p>
           </TableCell>
-          {!fecha && (
-            <TableCell className="text-center">
-              {formatDate(registro.entrada)}
-            </TableCell>
-          )}
+          {/* Mostrar siempre fecha de entrada (aunque sea un solo día) */}
+          <TableCell className="text-center">{formatDate(registro.entrada)}</TableCell>
           <TableCell className="text-center text-green-500 font-bold">
             {formatTime(registro.entrada)}
           </TableCell>
-          {!fecha && (
-            <TableCell className="text-center ">
-              {formatDate(registro.salida)}
-            </TableCell>
-          )}
           <TableCell className="text-center text-red-500 font-bold">
             {formatTime(registro.salida)}
           </TableCell>
@@ -119,25 +111,16 @@ export default function EntradasSalidasRow({
             <p className="text-xs text-gray-500">{registro.sucursal}</p>
           </TableCell>
 
-          {!fecha && (
-            <TableCell className="text-center">
-              {currentData.entrada_corregida
-                ? formatDate(currentData.entrada_corregida)
-                : formatDate(currentData.entrada)}
-            </TableCell>
-          )}
+          {/* Mostrar siempre fecha de entrada (si hay corregida, reflejarla) */}
+          <TableCell className="text-center">
+            {currentData.entrada_corregida
+              ? formatDate(currentData.entrada_corregida)
+              : formatDate(currentData.entrada)}
+          </TableCell>
 
           <TableCell className="text-center">
             {formatTime(registro.entrada)}
           </TableCell>
-
-          {!fecha && (
-            <TableCell className="text-center">
-              {currentData.salida_corregida
-                ? formatDate(currentData.salida_corregida)
-                : formatDate(currentData.salida)}
-            </TableCell>
-          )}
 
           <TableCell className="text-center">
             {formatTime(registro.salida)}

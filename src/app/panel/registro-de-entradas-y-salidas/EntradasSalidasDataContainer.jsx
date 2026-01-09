@@ -10,6 +10,12 @@ import ErrorPage from "@/components/ErrorPage";
 export default function EntradasSalidasDataContainer({
   idEmpresa,
   fecha,
+  // Nuevo filtro por rango (desde/hasta). Si vienen definidos, el hook construirá el query string.
+  // Se relaciona con:
+  // - `src/hooks/useRelojChecador.js` (construcción del URL)
+  // - backend `checadorController.obtenerAsistenciaPorFecha` (query params `desde/hasta`)
+  desde,
+  hasta,
   page,
   limit,
   filtroNombre,
@@ -25,7 +31,9 @@ export default function EntradasSalidasDataContainer({
     page,
     limit,
     departamento,
-    estado
+    estado,
+    desde,
+    hasta
   );
 
   const registros = Array.isArray(data?.registros) ? data.registros : [];
@@ -64,7 +72,10 @@ export default function EntradasSalidasDataContainer({
           handleMovimientoFieldChange={handleMovimientoFieldChange}
           handleSaveMovimientoClick={handleSaveMovimientoClick}
         />
-        {registros.length > 0 && (
+        {/* IMPORTANTE (UX):
+            Aunque una página venga vacía por cambios de filtros o desajustes temporales,
+            dejamos la paginación visible si el backend reporta total > 0, para poder regresar. */}
+        {(data?.total || 0) > 0 && (
           <TablePagination
             page={page}
             limit={limit}
