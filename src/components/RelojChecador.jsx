@@ -16,6 +16,7 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { useAuth } from "@/context/AuthContext";
+import QRScanner from "./QRScanner";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -29,7 +30,7 @@ export default function RelojChecador({
 
   const DB_TIMEZONE = "America/Mexico_City";
   const USER_TIMEZONE = dataUser?.zona_horaria || "America/Mexico_City";
-
+  const [mostrarQR, setMostrarQR] = useState(false);
   const [horaActual, setHoraActual] = useState("");
   const [fechaActual, setFechaActual] = useState("");
   const [codigoEmpleado, setCodigoEmpleado] = useState("");
@@ -88,7 +89,7 @@ export default function RelojChecador({
     return () => clearInterval(intervalo);
   }, [USER_TIMEZONE]);
 
-  const registrarMovimiento = async () => {
+  const registrarMovimiento = async (codigoManual) => {
     if (gpsError) {
       enqueueSnackbar(gpsError, { variant: "error" });
       return;
@@ -96,8 +97,12 @@ export default function RelojChecador({
 
     if (registrando) return;
     setRegistrando(true);
-    const codigo = codigoEmpleado.trim();
-    if (!codigo) return;
+
+    const codigo = (codigoManual ?? codigoEmpleado).trim();
+    if (!codigo) {
+      setRegistrando(false);
+      return;
+    }
 
     try {
       if (!idEmpresa) {
@@ -172,12 +177,17 @@ export default function RelojChecador({
   const abrirCamara = () => setMostrarCamara(true);
   const cerrarCamara = () => setMostrarCamara(false);
 
+  const handleQRScan = (codigoEscaneado) => {
+    setMostrarQR(false);
+    registrarMovimiento(codigoEscaneado);
+  };
+
   if (error)
     return <ErrorPage message="No se pudieron cargar los registros." />;
 
   return (
     <>
-      <main className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 p-4">
+      <main className="min-h-screen bg-linear-to-br from-slate-50 via-gray-50 to-slate-100 p-4">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-6">
           <div className="hidden md:block lg:col-span-4 md:col-span-5 space-y-6">
             <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-slate-200/50 p-6 text-center">
@@ -186,6 +196,7 @@ export default function RelojChecador({
                 codigo={codigoEmpleado}
                 setCodigo={setCodigoEmpleado}
                 handleRegistrar={registrarMovimiento}
+                handleOpenQR={() => setMostrarQR(true)}
                 handleOpenFacialModal={() => setMostrarCamara((prev) => !prev)}
                 registrando={registrando || loadingGPS}
                 enqueueSnackbar={enqueueSnackbar}
@@ -220,6 +231,7 @@ export default function RelojChecador({
                 codigo={codigoEmpleado}
                 setCodigo={setCodigoEmpleado}
                 handleRegistrar={registrarMovimiento}
+                handleOpenQR={() => setMostrarQR(true)}
                 handleOpenFacialModal={() => setMostrarCamara((prev) => !prev)}
                 registrando={registrando}
                 enqueueSnackbar={enqueueSnackbar}
@@ -235,6 +247,12 @@ export default function RelojChecador({
             </div>
           </div>
         </div>
+        {mostrarQR && (
+          <QRScanner
+            onScan={handleQRScan}
+            onClose={() => setMostrarQR(false)}
+          />
+        )}
       </main>
 
       {popupInfo && (

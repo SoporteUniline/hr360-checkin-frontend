@@ -6,6 +6,7 @@ export default function EmployeeInput({
   codigo,
   setCodigo,
   handleRegistrar,
+  handleOpenQR,
   handleOpenFacialModal,
   registrando,
   enqueueSnackbar,
@@ -67,7 +68,6 @@ export default function EmployeeInput({
           onClick={handleClear}
           className="py-6 text-md font-bold rounded-2xl bg-slate-700 text-white hover:bg-slate-800 shadow-md hover:scale-105 transition-transform flex justify-center items-center space-x-2"
         >
-          {/* <Eraser className="w-6 h-6" /> */}
           <span>Limpiar</span>
         </Button>
 
@@ -89,7 +89,7 @@ export default function EmployeeInput({
       <Button
         onClick={handleRegistrar}
         disabled={registrando || !codigo.trim()}
-        className="w-full py-4 bg-gradient-to-r from-slate-700 to-slate-800 text-white font-bold text-lg rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:transform-none"
+        className="w-full py-4 bg-linear-to-r from-slate-700 to-slate-800 text-white font-bold text-lg rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:transform-none"
       >
         {registrando ? (
           <div className="flex items-center justify-center space-x-2">
@@ -100,13 +100,12 @@ export default function EmployeeInput({
           "Registrar Entrada / Salida"
         )}
       </Button>
-      {/* <Button
-        onClick={handleOpenFacialModal}
-        className="w-full py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-bold text-lg rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex items-center justify-center space-x-2"
+      <Button
+        onClick={handleOpenQR}
+        className="w-full py-4 bg-slate-700 text-white hover:bg-slate-800 rounded-2xl font-bold"
       >
-        <Camera className="w-5 h-5" />
-        <span>Mostrar u ocultar cámara</span>
-      </Button> */}
+        Escanear QR
+      </Button>
     </div>
   );
 }
