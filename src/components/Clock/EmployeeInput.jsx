@@ -47,8 +47,19 @@ export default function EmployeeInput({
           type="text"
           placeholder="Ingresa tu código"
           value={codigo}
-          onKeyDown={handleKeyDown}
-          onChange={() => {}}
+          onChange={(e) => {
+            const val = e.target.value.replace(/\D/g, "");
+            if (val.length <= 10) setCodigo(val);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              if (codigo.trim() !== "") handleRegistrar();
+              else
+                enqueueSnackbar("Ingresa un código antes de registrar", {
+                  variant: "warning",
+                });
+            }
+          }}
           className="w-full pl-12 pr-4 py-4 text-center text-lg font-bold border-2 border-slate-200 rounded-2xl focus:border-slate-600 bg-slate-50/50"
         />
       </div>
@@ -87,7 +98,7 @@ export default function EmployeeInput({
       </div>
 
       <Button
-        onClick={handleRegistrar}
+        onClick={() => handleRegistrar()}
         disabled={registrando || !codigo.trim()}
         className="w-full py-4 bg-linear-to-r from-slate-700 to-slate-800 text-white font-bold text-lg rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:transform-none"
       >

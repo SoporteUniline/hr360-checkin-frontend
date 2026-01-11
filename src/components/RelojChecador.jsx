@@ -98,7 +98,15 @@ export default function RelojChecador({
     if (registrando) return;
     setRegistrando(true);
 
-    const codigo = (codigoManual ?? codigoEmpleado).trim();
+    const rawCodigo =
+      typeof codigoManual === "string" || typeof codigoManual === "number"
+        ? codigoManual
+        : codigoEmpleado;
+
+    const codigo = String(rawCodigo || "")
+      .trim()
+      .replace(/\D/g, "");
+
     if (!codigo) {
       setRegistrando(false);
       return;
@@ -106,9 +114,8 @@ export default function RelojChecador({
 
     try {
       if (!idEmpresa) {
-        enqueueSnackbar("Empresa no definida para este usuario", {
-          variant: "error",
-        });
+        enqueueSnackbar("Empresa no definida...", { variant: "error" });
+        setRegistrando(false);
         return;
       }
 
