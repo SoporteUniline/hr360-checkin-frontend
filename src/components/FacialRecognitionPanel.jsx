@@ -269,6 +269,7 @@ const FacialRecognitionPanel = ({
       onSuccess(data);
       shutdownCamera();
       handleClose();
+
       setTimeout(() => {
         setShowSuccessMessage(false);
         setIsLoading(false);
@@ -277,6 +278,7 @@ const FacialRecognitionPanel = ({
         isProcessingRef.current = false;
       }, 500);
     } catch (err) {
+      console.log(err);
       const message =
         err.response?.data?.error || "Error en reconocimiento facial";
 

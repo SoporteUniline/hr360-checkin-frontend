@@ -266,6 +266,42 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
 
         <div className="col-span-1 sm:col-span-2">
           <FormField
+            control={form.control}
+            name="cierre_turno"
+            render={({ field }) => (
+              <FormItem className="flex flex-col gap-1 rounded-lg border p-4">
+                <FormLabel className="text-base">Cierre de turno</FormLabel>
+
+                <div className="text-sm text-muted-foreground mb-2">
+                  Define si el sistema cierra el turno automáticamente o si el
+                  empleado debe hacerlo manualmente
+                </div>
+
+                <Select
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  disabled={soloLectura}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona un modo" />
+                    </SelectTrigger>
+                  </FormControl>
+
+                  <SelectContent>
+                    <SelectItem value="Automático">Automático</SelectItem>
+                    <SelectItem value="Manual">Manual</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="col-span-1 sm:col-span-2">
+          <FormField
             name="new_pass"
             control={form.control}
             render={({ field }) => (

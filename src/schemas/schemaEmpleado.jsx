@@ -16,15 +16,17 @@ export const schemaEmpleado = z
     puesto: z
       .string()
       .min(1, "El nombre del empleado y el puesto son campos obligatorios"),
-
-    //Campos opcionales
     fecha_nacimiento: z.string().optional(),
     telefono: z.string().optional(),
     correo: z
       .string()
       .min(1, "El correo electrónico es obligatorio")
       .email("Correo electrónico no válido"),
-
+    correo_notificaciones: z
+      .string()
+      .email("Correo de notificaciones no válido")
+      .optional()
+      .or(z.literal("")),
     curp: z.string().optional().or(z.literal("")),
     rfc: z.string().optional().or(z.literal("")),
     nss: z
@@ -57,6 +59,8 @@ export const schemaEmpleado = z
       .enum(["codigo", "facial", "ambos"])
       .default("ambos")
       .optional(),
+
+    cierre_turno: z.string().optional().default("Automático"),
 
     // Jornada - OBLIGATORIOS
     hrs_por_dia: z
@@ -145,7 +149,6 @@ export const schemaEmpleado = z
       .union([z.array(z.number()), z.null(), z.undefined()])
       .optional()
       .transform((val) => {
-        // Si es null o undefined, convertir a array vacío
         if (val === null || val === undefined) {
           return [];
         }
@@ -153,7 +156,6 @@ export const schemaEmpleado = z
       }),
   })
   .superRefine((data, ctx) => {
-    // Validación condicional para banco "Otro"
     if (
       data.banco === "Otro" &&
       (!data.otro_banco || data.otro_banco.trim() === "")
@@ -165,9 +167,7 @@ export const schemaEmpleado = z
       });
     }
 
-    // Validación condicional para GPS - SOLO si solicitar_gps es "Sí"
     if (data.solicitar_gps === "Sí") {
-      // Solo validar si realmente se seleccionó "Sí" para GPS
       if (
         !data.lugar_checkin ||
         Object.keys(data.lugar_checkin || {}).length === 0
@@ -190,13 +190,12 @@ export const schemaEmpleado = z
       }
     }
 
-    // ✅ NUEVA VALIDACIÓN: Al menos un día completo con horarios
     const diasCompletos = data.horarios.filter(
       (horario) =>
         horario.entrada &&
         horario.salida_comida &&
         horario.regreso_comida &&
-        horario.salida
+        horario.salida,
     );
 
     if (diasCompletos.length === 0) {

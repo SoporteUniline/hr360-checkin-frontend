@@ -17,6 +17,7 @@ import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { useAuth } from "@/context/AuthContext";
 import QRScanner from "./QRScanner";
+import { Button } from "./ui/button";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -26,8 +27,10 @@ export default function RelojChecador({
   modoEmpleado = false,
   idEmpleado = null,
 }) {
-  const { dataUser } = useAuth();
+  const [mostrarModalTurno, setMostrarModalTurno] = useState(false);
+  const [pendiente, setPendiente] = useState(null);
 
+  const { dataUser } = useAuth();
   const DB_TIMEZONE = "America/Mexico_City";
   const USER_TIMEZONE = dataUser?.zona_horaria || "America/Mexico_City";
   const [mostrarQR, setMostrarQR] = useState(false);
@@ -61,7 +64,7 @@ export default function RelojChecador({
     (modoEmpleado && idEmpleado) || (!modoEmpleado && idEmpresa)
       ? endpoint
       : null,
-    fetcher
+    fetcher,
   );
 
   const movimientos = registrosData?.registrosHoy || [];
@@ -141,12 +144,19 @@ export default function RelojChecador({
         longitud_actual,
       });
 
-      const { movimiento, empleado } = data;
+      if (data.requiereDecision) {
+        setPendiente({ tipo: "codigo", codigo });
+        setMostrarModalTurno(true);
+        setRegistrando(false);
+        return;
+      }
+
+      const { message, empleado, movimiento } = data;
 
       setPopupInfo({
         nombre: `${empleado.nombre} ${empleado.apellido_paterno}`,
         foto_perfil: empleado.foto_perfil || "/assets/user.png",
-        movimiento,
+        movimiento: movimiento || message,
         success: true,
       });
 
@@ -166,19 +176,101 @@ export default function RelojChecador({
     }
   };
 
+  const registrarConAccion = async (accion) => {
+    if (!pendiente) return;
+
+    try {
+      setRegistrando(true);
+
+      const pos = await getCurrentLocation();
+      if (!pos) {
+        enqueueSnackbar("No se pudo obtener la ubicación.", {
+          variant: "error",
+        });
+        return;
+      }
+
+      let dataResponse;
+
+      if (pendiente.tipo === "facial") {
+        const { data } = await axiosInstance.post(
+          "/checador/reloj/registrar-facial",
+          {
+            descriptor_facial: pendiente.descriptor_facial,
+            id_empresa: idEmpresa,
+            accion,
+            latitud_actual: pos.lat,
+            longitud_actual: pos.lng,
+          },
+        );
+        dataResponse = data;
+      }
+
+      if (pendiente.tipo === "codigo") {
+        const { data } = await axiosInstance.post("/checador/reloj/registrar", {
+          codigo: pendiente.codigo,
+          id_empresa: idEmpresa,
+          accion,
+          latitud_actual: pos.lat,
+          longitud_actual: pos.lng,
+        });
+        dataResponse = data;
+      }
+
+      const { message, empleado, movimiento } = dataResponse;
+
+      setPopupInfo({
+        nombre: `${empleado.nombre} ${empleado.apellido_paterno}`,
+        foto_perfil: empleado.foto_perfil || "/assets/user.png",
+        movimiento: movimiento || message,
+        success: true,
+      });
+
+      setTimeout(() => setPopupInfo(null), 3000);
+
+      enqueueSnackbar("Registro realizado", { variant: "success" });
+
+      setMostrarModalTurno(false);
+      setPendiente(null);
+      mutate();
+      setCodigoEmpleado("");
+    } catch (error) {
+      setCodigoEmpleado("");
+      enqueueSnackbar(error.response?.data?.error || "Error al registrar", {
+        variant: "error",
+      });
+    } finally {
+      setRegistrando(false);
+    }
+  };
+
   const handleFacialRecognitionSuccess = (data) => {
-    const { message, empleado } = data;
+    const { message, empleado, movimiento } = data;
 
     setPopupInfo({
       nombre: `${empleado.nombre} ${empleado.apellido_paterno}`,
       foto_perfil: empleado.foto_perfil || "/assets/user.png",
-      movimiento: message,
+      movimiento: movimiento || message,
       success: true,
     });
 
     setTimeout(() => setPopupInfo(null), 3000);
     enqueueSnackbar("Registro facial realizado", { variant: "success" });
     mutate();
+  };
+
+  const handleFacialResponse = (data) => {
+    if (data.requiereDecision) {
+      setPendiente({
+        tipo: "facial",
+        descriptor_facial: data.descriptor_facial,
+      });
+
+      setMostrarModalTurno(true);
+      return;
+    }
+
+    handleFacialRecognitionSuccess(data);
   };
 
   const abrirCamara = () => setMostrarCamara(true);
@@ -229,7 +321,7 @@ export default function RelojChecador({
               isOpen={mostrarCamara}
               onOpen={abrirCamara}
               onClose={cerrarCamara}
-              onSuccess={handleFacialRecognitionSuccess}
+              onSuccess={handleFacialResponse}
               idEmpresa={idEmpresa}
               handleOpenFacialModal={() => setMostrarCamara((prev) => !prev)}
             />
@@ -324,6 +416,66 @@ export default function RelojChecador({
           animation: bounce-in 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         }
       `}</style>
+
+      {mostrarModalTurno && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 relative">
+            {/* Overlay interno mientras registra */}
+
+            <h2 className="text-xl font-bold text-slate-800 mb-2">
+              Turno abierto
+            </h2>
+            <p className="text-slate-600 mb-6">
+              Ya existe un turno abierto. ¿Qué deseas hacer?
+            </p>
+
+            {registrando ? (
+              <div className="flex flex-col items-center justify-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-blue-600 mb-3"></div>
+                <p className="text-slate-700 font-medium">Registrando...</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex flex-col gap-3">
+                  <Button
+                    onClick={() => registrarConAccion("salida_temporal")}
+                    className="w-full py-2 rounded-lg bg-slate-200 hover:bg-slate-300 text-black"
+                    disabled={registrando}
+                  >
+                    Salida temporal
+                  </Button>
+
+                  <Button
+                    onClick={() => registrarConAccion("cerrar_turno")}
+                    className="w-full py-2 rounded-lg bg-red-500 text-white hover:bg-red-600"
+                    disabled={registrando}
+                  >
+                    Cerrar turno
+                  </Button>
+
+                  <Button
+                    onClick={() => {
+                      setMostrarModalTurno(false);
+                      setPendiente(null);
+                    }}
+                    className="w-full py-2 rounded-lg border"
+                    disabled={registrando}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* {registrando && (
+        <div className="fixed inset-0 h-screen w-screen bg-white flex flex-col items-center justify-center z-50">
+          <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-blue-600 mb-3"></div>
+          <p className="text-slate-700 font-medium">Registrando...</p>
+        </div>
+      )} */}
     </>
   );
 }

@@ -39,6 +39,12 @@ export default function TabPersonales({ form, soloLectura }) {
           },
           { name: "telefono", label: "Teléfono", required: false },
           { name: "correo", label: "Correo", type: "email", required: true },
+          {
+            name: "correo_notificaciones",
+            label: "Correo Notificaciones",
+            type: "email",
+            required: false,
+          },
         ].map(({ name, label, type = "text", required = false }) => (
           <FormField
             key={name}
@@ -163,7 +169,7 @@ export default function TabPersonales({ form, soloLectura }) {
           name="direccion"
           control={form.control}
           render={({ field }) => (
-            <FormItem className="col-span-full">
+            <FormItem>
               <FormLabel>Dirección</FormLabel>
               <FormControl>
                 <Input {...field} disabled={soloLectura} />

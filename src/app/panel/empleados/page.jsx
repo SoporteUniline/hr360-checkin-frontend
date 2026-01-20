@@ -34,12 +34,12 @@ export default function RegistroEmpleados() {
   const abrirFormulario = async (
     empleado = null,
     modoEditar = false,
-    lectura = false
+    lectura = false,
   ) => {
     if (!empleado) {
       try {
         const { data } = await axios.get(
-          `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados-capacidad/check-capacidad?empresa_id=${idEmpresa}`
+          `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados-capacidad/check-capacidad?empresa_id=${idEmpresa}`,
         );
 
         console.log(data);
@@ -57,9 +57,9 @@ export default function RegistroEmpleados() {
     if (empleado) {
       try {
         const { data } = await axios.get(
-          `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados/${empleado.id_empleado}`
+          `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados/${empleado.id_empleado}`,
         );
-        empleado = data; // ahora incluye horarios y cuenta_bancaria
+        empleado = data;
       } catch (error) {
         console.error("Error al obtener empleado:", error);
         return;
@@ -81,14 +81,13 @@ export default function RegistroEmpleados() {
     estado,
     fechaDesde,
     setPage,
-    abrirFormulario, // 🔑 Pasamos la función a DataContainer
+    abrirFormulario,
   });
 
   return (
     <>
       <div>
         {modoFormulario ? (
-          // 👉 Formulario
           <FormularioEmpleado
             key={`formulario-${values?.id_empleado || "nuevo"}`}
             editar={editar}
@@ -100,10 +99,9 @@ export default function RegistroEmpleados() {
             soloLectura={soloLectura}
             setEditar={setEditar}
             setSoloLectura={setSoloLectura}
-            mutate={mutate} // 🔑 refresca la tabla al guardar
+            mutate={mutate}
           />
         ) : (
-          // 👉 Vista general
           <>
             <div className="flex gap-2 mb-5 justify-end">
               <Button

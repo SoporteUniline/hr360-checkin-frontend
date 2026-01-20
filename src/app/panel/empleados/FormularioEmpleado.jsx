@@ -61,23 +61,20 @@ export default function FormularioEmpleado({
   const construirHorariosDesdeDatos = (data) => {
     const dias = data.dias_trabajo?.split(",") || [];
 
-    // Si el objeto data ya tiene horarios, úsalos para cada día
     if (
       data.horarios &&
       Array.isArray(data.horarios) &&
       data.horarios.length > 0
     ) {
-      // Aquí mapeamos los días para asegurarnos de que cada día de dias_trabajo tenga horario, o vacío si no está
       return dias.map((dia) => {
         const horarioExistente = data.horarios.find((h) => h.dia === dia);
         return horarioExistente || { dia, entrada: "", salida: "" };
       });
     }
 
-    // Si no hay horarios, inicializa vacíos o con defaults
     return dias.map((dia) => ({
       dia,
-      entrada: "", // o null o lo que prefieras
+      entrada: "",
       salida: "",
     }));
   };
@@ -102,6 +99,7 @@ export default function FormularioEmpleado({
             apellido_materno: "",
             apellido_paterno: "",
             correo: "",
+            correo_notificaciones: "",
             curp: "",
             departamento: "",
             direccion: "",
@@ -124,13 +122,14 @@ export default function FormularioEmpleado({
             forma_calculo: "sin-seleccion",
             banco: "",
             otro_banco: "",
-            tipo_cuenta: "Cuenta", // o "CLABE"
+            tipo_cuenta: "Cuenta",
             numero_cuenta: "",
-            solicitar_gps: "", // antes era gps_requerido
-            lugar_checkin: null, // o {} si esperas objeto
+            solicitar_gps: "",
+            lugar_checkin: null,
             lugar_checkout: null,
             checar_gps: false,
             usar_reloj_checador: true,
+            cierre_turno: "Automático",
             areasAsignadas: [],
             new_pass: "",
           },
@@ -144,7 +143,6 @@ export default function FormularioEmpleado({
 
   useEffect(() => {
     if ((editar || soloLectura) && values) {
-      // Asegúrate que values.horarios siempre esté definido
       const {
         cuenta_bancaria = {},
         horarios,
@@ -171,7 +169,6 @@ export default function FormularioEmpleado({
         "Banco Azteca",
       ];
 
-      // Si el banco guardado no está en la lista, se debe tratar como "Otro"
       if (banco && !bancosComunes.includes(banco)) {
         otro_banco = banco;
         banco = "Otro";
@@ -186,7 +183,11 @@ export default function FormularioEmpleado({
         banco,
         otro_banco,
         tipo_cuenta: cuenta_bancaria?.tipo_cuenta || "Cuenta",
-        // Asegurar valores numéricos válidos
+        cierre_turno:
+          restoEmpleado.cierre_turno &&
+          restoEmpleado.cierre_turno !== "undefined"
+            ? restoEmpleado.cierre_turno
+            : "Automático",
         sueldo: restoEmpleado.sueldo || null,
         porcentaje: restoEmpleado.porcentaje || null,
         descriptor_facial: restoEmpleado.descriptor_facial || [],
@@ -232,7 +233,7 @@ export default function FormularioEmpleado({
     console.log("VALORES ACTUALES DEL FORM:", form.getValues());
     enqueueSnackbar(
       "Tienes campos obligatorios vacíos, por favor llena los campos requeridos",
-      { variant: "warning" }
+      { variant: "warning" },
     );
 
     const errorKeys = Object.keys(errors);
@@ -243,6 +244,7 @@ export default function FormularioEmpleado({
         "apellido_materno",
         "nombre",
         "correo",
+        "correo_notificaciones",
         "curp",
         "telefono",
         "rfc",
@@ -260,7 +262,7 @@ export default function FormularioEmpleado({
     };
 
     const tabConError = Object.entries(tabsConErrores).find(([tab, campos]) =>
-      errorKeys.some((errorKey) => campos.includes(errorKey))
+      errorKeys.some((errorKey) => campos.includes(errorKey)),
     );
 
     if (tabConError) {
@@ -269,6 +271,7 @@ export default function FormularioEmpleado({
   };
 
   const onValidSubmit = async (data) => {
+    console.log("🔍 DATA antes de convertir a FormData:", data.cierre_turno);
     data.id_empresa = dataUser?.id_empresa;
 
     if (data.banco === "Otro" && data.otro_banco?.trim()) {
@@ -276,19 +279,15 @@ export default function FormularioEmpleado({
     }
     delete data.otro_banco;
 
-    // 🔁 CONSTRUIR horarios si no existen
     if (!data.horarios || data.horarios.length === 0) {
       data.horarios = construirHorariosDesdeDatos(data);
     }
-
-    // ✅ GENERAR `dias_trabajo` solo con días que tengan entrada y salida
     const diasTrabajo = data.horarios
       .filter((h) => h.entrada && h.salida)
       .map((h) => h.dia);
     data.dias_trabajo = diasTrabajo.join(",");
 
     try {
-      // Validar CURP y correo solo si NO estás editando
       const response = await axios.get(
         `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados/validar`,
         {
@@ -300,7 +299,7 @@ export default function FormularioEmpleado({
             id_empresa: data.id_empresa,
             id_empleado: editar ? values.id_empleado : null,
           },
-        }
+        },
       );
 
       const { existeCorreo, existeCurp, existeRfc, existeNss, existeNip } =
@@ -357,7 +356,6 @@ export default function FormularioEmpleado({
         }
       });
 
-      // 👇 Solo incluir la contraseña si el input no está vacío
       if (!data.new_pass || data.new_pass.trim() === "") {
         delete data.new_pass;
       }
@@ -374,7 +372,6 @@ export default function FormularioEmpleado({
         }
       });
 
-      // Adjuntar imagen si existe
       if (selectedFile) {
         formData.append("file", selectedFile);
       }
@@ -387,7 +384,7 @@ export default function FormularioEmpleado({
             headers: {
               "Content-Type": "multipart/form-data",
             },
-          }
+          },
         );
         enqueueSnackbar("Empleado actualizado", { variant: "success" });
         setTab("personales");
@@ -395,12 +392,12 @@ export default function FormularioEmpleado({
       } else {
         await axios.post(
           `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados`,
-          formData, // <- aquí también
+          formData,
           {
             headers: {
               "Content-Type": "multipart/form-data",
             },
-          }
+          },
         );
         enqueueSnackbar("Empleado registrado", { variant: "success" });
         setTab("personales");
@@ -409,7 +406,7 @@ export default function FormularioEmpleado({
       }
 
       mutate(
-        `/checador/empleados?empresa=${data.id_empresa}&page=${page}&limit=${limit}`
+        `/checador/empleados?empresa=${data.id_empresa}&page=${page}&limit=${limit}`,
       );
     } catch (error) {
       console.log(error);
@@ -437,7 +434,7 @@ export default function FormularioEmpleado({
   const { data, isLoading, error } = useSWR(
     dataUser?.id_usuario ? `/users/${dataUser.id_usuario}` : null,
     fetcherWithToken,
-    swr_config
+    swr_config,
   );
 
   if (isLoading) {
