@@ -41,6 +41,7 @@ import TabNomina from "./tabs/TabNomina";
 import TabCuentasBancarias from "./tabs/TabCuentasBancarias";
 import TabReconocimiento from "./tabs/TabReconocimiento";
 import TabGPS from "./tabs/TabGPS";
+import BotonCredencial from "@/components/BotonCredencial";
 
 export default function FormularioEmpleado({
   modoFormulario,
@@ -540,6 +541,10 @@ export default function FormularioEmpleado({
             </article>
           </section>
         </div>
+
+        {(soloLectura || editar) && values && (
+          <BotonCredencial empleado={values} imagePreview={imagePreview} />
+        )}
 
         <Tabs value={tab} onValueChange={setTab} className="w-full">
           <div className="overflow-x-auto">
