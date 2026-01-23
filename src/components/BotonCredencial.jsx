@@ -50,7 +50,6 @@ const BotonCredencial = ({ empleado, imagePreview }) => {
         ctx.lineWidth = 4;
         ctx.strokeRect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 20);
 
-        // Etiqueta "ID" debajo del QR
         ctx.fillStyle = "#1f2937";
         ctx.font = "bold 18px Arial";
         ctx.textAlign = "center";
@@ -67,31 +66,46 @@ const BotonCredencial = ({ empleado, imagePreview }) => {
       let infoY = 250;
       const lineHeight = 50;
 
-      // Nombre completo
       const nombreCompleto = `${empleado.nombre || ""} ${
         empleado.apellido_paterno || ""
       } ${empleado.apellido_materno || ""}`.trim();
 
-      // Dividir nombre si es muy largo
-      const maxWidth = 650;
-      const palabras = nombreCompleto.split(" ");
-      let linea = "";
-      let lineas = [];
+      const maxWidth = 500;
+      const maxLineas = 2;
 
-      palabras.forEach((palabra) => {
-        const testLinea = linea + palabra + " ";
-        const metrics = ctx.measureText(testLinea);
-        if (metrics.width > maxWidth && linea !== "") {
-          lineas.push(linea.trim());
-          linea = palabra + " ";
-        } else {
-          linea = testLinea;
-        }
-      });
-      lineas.push(linea.trim());
+      const partirTexto = (texto) => {
+        const palabras = texto.split(" ");
+        let linea = "";
+        const lineas = [];
 
-      // Dibujar nombre
-      lineas.forEach((linea) => {
+        palabras.forEach((palabra) => {
+          const testLinea = linea + palabra + " ";
+          const metrics = ctx.measureText(testLinea);
+
+          if (metrics.width > maxWidth && linea !== "") {
+            lineas.push(linea.trim());
+            linea = palabra + " ";
+          } else {
+            linea = testLinea;
+          }
+        });
+
+        if (linea) lineas.push(linea.trim());
+        return lineas;
+      };
+
+      let lineasNombre = partirTexto(nombreCompleto);
+
+      if (lineasNombre.length > maxLineas) {
+        lineasNombre = partirTexto(empleado.nombre || "");
+      }
+
+      if (lineasNombre.length > maxLineas) {
+        ctx.font = "bold 30px Arial";
+        lineasNombre = partirTexto(empleado.nombre || "");
+      }
+
+      lineasNombre.slice(0, 2).forEach((linea) => {
         ctx.fillText(linea, infoX, infoY);
         infoY += lineHeight;
       });
