@@ -29,6 +29,7 @@ import {
   FileText,
   CalendarDays,
   FolderClosed,
+  UserCog,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -242,6 +243,12 @@ const menuGroups = [
         url: "/panel/reglas-aviso",
         rol: "Recruiter",
         icon: CalendarDays,
+      },
+      {
+        title: "Usuarios con acceso",
+        url: "/panel/usuarios-con-acceso",
+        rol: "Recruiter",
+        icon: UserCog,
       },
     ],
   },

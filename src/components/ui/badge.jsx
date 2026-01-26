@@ -17,14 +17,14 @@ const badgeVariants = cva(
         secondary:
           "bg-secondary text-secondary-foreground border-transparent hover:bg-secondary/80",
         destructive:
-          "bg-destructive text-destructive-foreground border-transparent shadow hover:bg-destructive/80",
+          "bg-destructive text-destructive-foreground border-transparent shadow hover:bg-destructive/80 text-white",
         outline: "text-foreground",
       },
     },
     defaultVariants: {
       variant: "default",
     },
-  }
+  },
 );
 
 function Badge({ className, variant, ...props }) {
@@ -38,5 +38,3 @@ function Badge({ className, variant, ...props }) {
 }
 
 export { Badge, badgeVariants };
-
-

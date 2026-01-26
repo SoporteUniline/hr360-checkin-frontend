@@ -30,7 +30,7 @@ export function NavUser() {
   const { data, isLoading, error } = useSWR(
     dataUser?.id_usuario ? `/users/imagen/${dataUser.id_usuario}` : null,
     fetcherWithToken,
-    swr_config
+    swr_config,
   );
 
   const { isMobile } = useSidebar();
@@ -50,7 +50,7 @@ export function NavUser() {
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
               <Avatar className="h-8 w-8 rounded-lg">
-                {dataUser?.esEmpleado ? (
+                {dataUser?.esEmpleado || dataUser?.esAcceso ? (
                   <AvatarFallback>
                     {obtenerIniciales(dataUser?.nombre)}
                   </AvatarFallback>
@@ -81,7 +81,7 @@ export function NavUser() {
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
-                  {dataUser?.esEmpleado ? (
+                  {dataUser?.esEmpleado || dataUser?.esAcceso ? (
                     <AvatarFallback>
                       {obtenerIniciales(dataUser?.nombre)}
                     </AvatarFallback>
@@ -105,7 +105,7 @@ export function NavUser() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {dataUser?.esEmpleado ? null : (
+            {dataUser?.esEmpleado || dataUser?.esAcceso ? null : (
               <>
                 <DropdownMenuGroup>
                   <DropdownMenuItem
