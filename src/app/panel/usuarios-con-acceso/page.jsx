@@ -6,7 +6,7 @@ import useSWR from "swr";
 import { useSnackbar } from "notistack";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
-
+import useDebounce from "@/hooks/useDebounce";
 import {
   Table,
   TableHeader,
@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import TablePagination from "@/components/TablePagination";
 
 export default function UserAccessPage() {
   const { enqueueSnackbar } = useSnackbar();
@@ -43,6 +44,12 @@ export default function UserAccessPage() {
   const [openForm, setOpenForm] = useState(false);
   const [accesoSeleccionado, setAccesoSeleccionado] = useState(null);
 
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const debouncedSearch = useDebounce(searchInput, 500);
+
   const [form, setForm] = useState({
     nombre: "",
     correo: "",
@@ -50,7 +57,6 @@ export default function UserAccessPage() {
     estado: "Activo",
   });
 
-  /* ---------------- FETCHER ---------------- */
   const fetcherWithToken = (url) =>
     axios
       .get(url, {
@@ -58,13 +64,14 @@ export default function UserAccessPage() {
       })
       .then((res) => res.data);
 
-  const {
-    data: accesos = [],
-    isLoading,
-    mutate,
-  } = useSWR("/checador/users/access", fetcherWithToken);
+  const { data, isLoading, mutate } = useSWR(
+    `/checador/users/access?page=${page}&limit=${limit}&search=${debouncedSearch}`,
+    fetcherWithToken,
+  );
 
-  /* ---------------- FORM ---------------- */
+  const accesos = data?.data || [];
+  const total = data?.total || 0;
+
   const abrirCrear = () => {
     setAccesoSeleccionado(null);
     setForm({
@@ -111,7 +118,6 @@ export default function UserAccessPage() {
       return false;
     }
 
-    // 👉 SOLO obligatoria al CREAR
     if (!accesoSeleccionado) {
       if (!form.contrasenia.trim()) {
         enqueueSnackbar("La contraseña es obligatoria", {
@@ -128,7 +134,6 @@ export default function UserAccessPage() {
       }
     }
 
-    // 👉 Al EDITAR, solo validar si escribió algo
     if (accesoSeleccionado && form.contrasenia.trim()) {
       if (form.contrasenia.length < 6) {
         enqueueSnackbar("La contraseña debe tener al menos 6 caracteres", {
@@ -161,7 +166,6 @@ export default function UserAccessPage() {
           variant: "success",
         });
       } else {
-        // CREAR
         await axios.post(
           "/checador/users/access",
           {
@@ -188,7 +192,6 @@ export default function UserAccessPage() {
     }
   };
 
-  /* ---------------- ELIMINAR ---------------- */
   const confirmarEliminar = (acceso) => {
     setAccesoSeleccionado(acceso);
     setOpenConfirm(true);
@@ -215,7 +218,9 @@ export default function UserAccessPage() {
     }
   };
 
-  if (isLoading) return <p className="p-6">Cargando...</p>;
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
 
   return (
     <div className="p-6 space-y-4">
@@ -223,6 +228,15 @@ export default function UserAccessPage() {
         <h1 className="text-xl font-semibold">Usuarios con acceso</h1>
 
         <Button onClick={abrirCrear}>+ Nuevo acceso</Button>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <Input
+          placeholder="Buscar por nombre o correo"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          className="max-w-sm"
+        />
       </div>
 
       <Table>
@@ -236,50 +250,68 @@ export default function UserAccessPage() {
         </TableHeader>
 
         <TableBody>
-          {accesos.map((acceso) => {
-            const esMiAcceso = acceso.correo === dataUser?.correo;
+          {isLoading ? (
+            <TableRow>
+              <TableCell colSpan={4} className="text-center py-6">
+                Cargando...
+              </TableCell>
+            </TableRow>
+          ) : accesos.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={4} className="text-center py-6">
+                No se encontraron resultados
+              </TableCell>
+            </TableRow>
+          ) : (
+            accesos.map((acceso) => {
+              const esMiAcceso = acceso.correo === dataUser?.correo;
 
-            return (
-              <TableRow key={acceso.id_acceso}>
-                <TableCell>{acceso.nombre}</TableCell>
-                <TableCell>{acceso.correo}</TableCell>
-
-                <TableCell>
-                  <Badge
-                    variant={
-                      acceso.estado === "Activo" ? "success" : "destructive"
-                    }
-                  >
-                    {acceso.estado}
-                  </Badge>
-                </TableCell>
-
-                <TableCell className="text-right space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={esMiAcceso}
-                    onClick={() => abrirEditar(acceso)}
-                  >
-                    Editar
-                  </Button>
-
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    disabled={esMiAcceso}
-                    onClick={() => confirmarEliminar(acceso)}
-                  >
-                    Eliminar
-                  </Button>
-                </TableCell>
-              </TableRow>
-            );
-          })}
+              return (
+                <TableRow key={acceso.id_acceso}>
+                  <TableCell>{acceso.nombre}</TableCell>
+                  <TableCell>{acceso.correo}</TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={
+                        acceso.estado === "Activo" ? "success" : "destructive"
+                      }
+                    >
+                      {acceso.estado}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right space-x-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={esMiAcceso}
+                      onClick={() => abrirEditar(acceso)}
+                    >
+                      Editar
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      disabled={esMiAcceso}
+                      onClick={() => confirmarEliminar(acceso)}
+                    >
+                      Eliminar
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              );
+            })
+          )}
         </TableBody>
       </Table>
 
-      {/* ---------- MODAL CREAR / EDITAR ---------- */}
+      <TablePagination
+        page={page}
+        limit={limit}
+        total={total}
+        onPageChange={setPage}
+        onLimitChange={setLimit}
+      />
+
       <Dialog open={openForm} onOpenChange={setOpenForm}>
         <DialogContent>
           <DialogHeader>
@@ -357,7 +389,6 @@ export default function UserAccessPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ---------- MODAL CONFIRMAR ---------- */}
       <Dialog open={openConfirm} onOpenChange={setOpenConfirm}>
         <DialogContent>
           <DialogHeader>
