@@ -70,7 +70,7 @@ export const schemaEmpleado = z
     hrs_de_comida: z
       .number({ invalid_type_error: "Las horas de comida deben ser un número" })
       .min(0, "Las horas de comida son obligatorias"),
-    horarios: z.array(horarioSchema),
+    horarios: z.array(horarioSchema).min(7),
 
     // Jornada - OPCIONALES
     areasAsignadas: z.array(z.number()).optional(),

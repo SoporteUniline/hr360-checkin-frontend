@@ -55,40 +55,34 @@ export default function FormularioEmpleado({
   setSoloLectura,
   onClose,
 }) {
-  const DIAS_SEMANA = [
-    "Lunes",
-    "Martes",
-    "Miércoles",
-    "Jueves",
-    "Viernes",
-    "Sábado",
-    "Domingo",
-  ];
+  const DIAS_SEMANA = React.useMemo(
+    () => [
+      "Lunes",
+      "Martes",
+      "Miércoles",
+      "Jueves",
+      "Viernes",
+      "Sábado",
+      "Domingo",
+    ],
+    [],
+  );
+
+  const defaultHorarios = React.useMemo(
+    () =>
+      DIAS_SEMANA.map((dia) => ({
+        dia,
+        entrada: "",
+        salida_comida: "",
+        regreso_comida: "",
+        salida: "",
+      })),
+    [DIAS_SEMANA],
+  );
 
   const [tab, setTab] = useState("personales");
   const fueDesdeLectura = useRef(false);
   const nombreInputRef = useRef(null);
-
-  const construirHorariosDesdeDatos = (data) => {
-    const dias = data.dias_trabajo?.split(",") || [];
-
-    if (
-      data.horarios &&
-      Array.isArray(data.horarios) &&
-      data.horarios.length > 0
-    ) {
-      return dias.map((dia) => {
-        const horarioExistente = data.horarios.find((h) => h.dia === dia);
-        return horarioExistente || { dia, entrada: "", salida: "" };
-      });
-    }
-
-    return dias.map((dia) => ({
-      dia,
-      entrada: "",
-      salida: "",
-    }));
-  };
 
   const { enqueueSnackbar } = useSnackbar();
   const { dataUser } = useAuth();
@@ -103,69 +97,69 @@ export default function FormularioEmpleado({
 
   const form = useForm({
     resolver: zodResolver(schemaEmpleado),
-    defaultValues:
-      editar || soloLectura
-        ? values
-        : {
-            apellido_materno: "",
-            apellido_paterno: "",
-            correo: "",
-            correo_notificaciones: "",
-            curp: "",
-            departamento: "",
-            direccion: "",
-            estado_civil: "sin-seleccion",
-            fecha_ingreso: "",
-            fecha_nacimiento: "",
-            hrs_de_comida: "",
-            hrs_por_dia: "",
-            id_empresa: "",
-            nip: "",
-            nombre: "",
-            nss: "",
-            puesto: "",
-            rfc: "",
-            sexo: "sin-seleccion",
-            sucursal: "",
-            telefono: "",
-            periodo_pago: "sin-seleccion",
-            forma_pago: "sin-seleccion",
-            forma_calculo: "sin-seleccion",
-            banco: "",
-            otro_banco: "",
-            tipo_cuenta: "Cuenta",
-            numero_cuenta: "",
-            solicitar_gps: "",
-            lugar_checkin: null,
-            lugar_checkout: null,
-            checar_gps: false,
-            usar_reloj_checador: true,
-            cierre_turno: "Automático",
-            areasAsignadas: [],
-            new_pass: "",
-          },
+    defaultValues: {
+      apellido_materno: "",
+      apellido_paterno: "",
+      correo: "",
+      correo_notificaciones: "",
+      curp: "",
+      departamento: "",
+      direccion: "",
+      estado_civil: "sin-seleccion",
+      fecha_ingreso: "",
+      fecha_nacimiento: "",
+      hrs_de_comida: "",
+      hrs_por_dia: "",
+      id_empresa: "",
+      nip: "",
+      nombre: "",
+      nss: "",
+      puesto: "",
+      rfc: "",
+      sexo: "sin-seleccion",
+      sucursal: "",
+      telefono: "",
+      periodo_pago: "sin-seleccion",
+      forma_pago: "sin-seleccion",
+      forma_calculo: "sin-seleccion",
+      banco: "",
+      otro_banco: "",
+      tipo_cuenta: "Cuenta",
+      numero_cuenta: "",
+      solicitar_gps: "",
+      lugar_checkin: null,
+      lugar_checkout: null,
+      checar_gps: false,
+      usar_reloj_checador: true,
+      cierre_turno: "Automático",
+      areasAsignadas: [],
+      new_pass: "",
+      horarios: defaultHorarios,
+    },
   });
 
-  const valores = form.watch();
+  const normalizarHorarios = React.useCallback(
+    (horarios = []) =>
+      DIAS_SEMANA.map((dia) => {
+        const existente = horarios.find((h) => h.dia === dia);
+        return (
+          existente || {
+            dia,
+            entrada: "",
+            salida_comida: "",
+            regreso_comida: "",
+            salida: "",
+          }
+        );
+      }),
+    [DIAS_SEMANA],
+  );
 
-  const normalizarHorarios = (horarios = []) => {
-    return DIAS_SEMANA.map((dia) => {
-      const existente = horarios.find((h) => h.dia === dia);
-      return (
-        existente || {
-          dia,
-          entrada: "",
-          salida_comida: "",
-          regreso_comida: "",
-          salida: "",
-        }
-      );
-    });
-  };
+  // const valores = form.watch();
 
-  useEffect(() => {
-    console.log(valores);
-  }, [valores]);
+  // useEffect(() => {
+  //   console.log(valores);
+  // }, [valores]);
 
   useEffect(() => {
     if ((editar || soloLectura) && values) {
@@ -242,14 +236,15 @@ export default function FormularioEmpleado({
     }
   }, [editar, values, soloLectura]);
 
+  const formaCalculo = form.watch("forma_calculo");
+
   useEffect(() => {
-    const forma = form.watch("forma_calculo");
-    if (forma === "$") {
-      form.setValue("porcentaje", null);
-    } else if (forma === "%") {
-      form.setValue("sueldo", null);
+    if (formaCalculo === "$") {
+      form.setValue("porcentaje", null, { shouldValidate: false });
+    } else if (formaCalculo === "%") {
+      form.setValue("sueldo", null, { shouldValidate: false });
     }
-  }, [form.watch("forma_calculo")]);
+  }, [formaCalculo]);
 
   // const onInvalidSubmit = (errors) => {
   //   console.log("ERRORES DE VALIDACIÓN:", errors);
