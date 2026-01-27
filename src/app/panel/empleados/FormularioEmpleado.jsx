@@ -229,21 +229,65 @@ export default function FormularioEmpleado({
     }
   }, [form.watch("forma_calculo")]);
 
+  // const onInvalidSubmit = (errors) => {
+  //   console.log("ERRORES DE VALIDACIÓN:", errors);
+  //   console.log("VALORES ACTUALES DEL FORM:", form.getValues());
+  //   enqueueSnackbar(
+  //     "Tienes campos obligatorios vacíos, por favor llena los campos requeridos",
+  //     { variant: "warning" },
+  //   );
+
+  //   const errorKeys = Object.keys(errors);
+
+  //   const tabsConErrores = {
+  //     personales: [
+  //       "apellido_paterno",
+  //       "apellido_materno",
+  //       "nombre",
+  //       "correo",
+  //       "correo_notificaciones",
+  //       "curp",
+  //       "telefono",
+  //       "rfc",
+  //     ],
+  //     laborales: ["puesto", "sucursal"],
+  //     jornada: ["hrs_por_dia", "hrs_de_comida", "horarios"],
+  //     nomina: [
+  //       "periodo_pago",
+  //       "forma_pago",
+  //       "forma_calculo",
+  //       "sueldo",
+  //       "porcentaje",
+  //     ],
+  //     cuentas: ["banco", "numero_cuenta", "tipo_cuenta"],
+  //   };
+
+  //   const tabConError = Object.entries(tabsConErrores).find(([tab, campos]) =>
+  //     errorKeys.some((errorKey) => campos.includes(errorKey)),
+  //   );
+
+  //   if (tabConError) {
+  //     setTab(tabConError[0]);
+  //   }
+  // };
+
   const onInvalidSubmit = (errors) => {
     console.log("ERRORES DE VALIDACIÓN:", errors);
     console.log("VALORES ACTUALES DEL FORM:", form.getValues());
-    enqueueSnackbar(
-      "Tienes campos obligatorios vacíos, por favor llena los campos requeridos",
-      { variant: "warning" },
-    );
+    const firstErrorKey = Object.keys(errors)[0];
+    const firstError = errors[firstErrorKey];
+    const mensaje =
+      firstError?.message ||
+      firstError?.root?.message ||
+      "Faltan campos obligatorios por llenar";
 
-    const errorKeys = Object.keys(errors);
+    enqueueSnackbar(`⚠️ ${mensaje}`, { variant: "warning" });
 
     const tabsConErrores = {
       personales: [
+        "nombre",
         "apellido_paterno",
         "apellido_materno",
-        "nombre",
         "correo",
         "correo_notificaciones",
         "curp",
@@ -259,16 +303,18 @@ export default function FormularioEmpleado({
         "sueldo",
         "porcentaje",
       ],
-      cuentas: ["banco", "numero_cuenta", "tipo_cuenta"],
+      cuentas: ["banco", "otro_banco", "numero_cuenta", "tipo_cuenta"],
     };
 
-    const tabConError = Object.entries(tabsConErrores).find(([tab, campos]) =>
-      errorKeys.some((errorKey) => campos.includes(errorKey)),
+    const tabConError = Object.entries(tabsConErrores).find(([_, campos]) =>
+      campos.includes(firstErrorKey),
     );
 
     if (tabConError) {
       setTab(tabConError[0]);
     }
+
+    form.setFocus(firstErrorKey);
   };
 
   const onValidSubmit = async (data) => {
