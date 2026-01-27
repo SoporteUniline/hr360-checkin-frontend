@@ -497,47 +497,57 @@ export default function FormularioEmpleado({
 
   return (
     <Form {...form}>
-      <div className="flex justify-between items-center mb-4">
-        <div
-          className="flex items-center gap-2 cursor-pointer"
-          onClick={() => {
-            setModoFormulario(false);
-            setTab("personales");
-          }}
-        >
-          <Icon icon="material-symbols:arrow-back" width={24} height={24} />
-          <span className="text-sm sm:text-base text-blue-600">
-            Regresar a la tabla
-          </span>
-        </div>
-
-        {soloLectura && (
-          <Button
-            variant="outline"
+      {/* Header del formulario - Estilo ADAMIA */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
+        <div className="flex justify-between items-center">
+          <button
+            type="button"
+            className="flex items-center gap-2 text-[#2563EB] hover:text-[#1d4ed8] transition-colors font-medium"
             onClick={() => {
-              fueDesdeLectura.current = true;
-              setEditar(true);
-              setSoloLectura(false);
+              setModoFormulario(false);
+              setTab("personales");
             }}
           >
-            Editar
-          </Button>
-        )}
+            <Icon icon="material-symbols:arrow-back" width={20} height={20} />
+            <span className="text-sm">Regresar a la tabla</span>
+          </button>
 
-        {soloLectura ? null : (
-          <Button type="submit" form="formulario-empleado" variant="outline">
-            {editar ? "Actualizar" : "Registrar"}
-          </Button>
-        )}
+          <div className="flex items-center gap-3">
+            {soloLectura && (
+              <Button
+                variant="outline"
+                className="border-[#2563EB] text-[#2563EB] hover:bg-blue-50"
+                onClick={() => {
+                  fueDesdeLectura.current = true;
+                  setEditar(true);
+                  setSoloLectura(false);
+                }}
+              >
+                Editar
+              </Button>
+            )}
+
+            {soloLectura ? null : (
+              <Button
+                type="submit"
+                form="formulario-empleado"
+                className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
+              >
+                {editar ? "Actualizar" : "Registrar"}
+              </Button>
+            )}
+          </div>
+        </div>
       </div>
 
       <form
         id="formulario-empleado"
         onSubmit={form.handleSubmit(onValidSubmit, onInvalidSubmit)}
-        className="space-y-4"
+        className="space-y-6"
       >
-        <div className="flex flex-col gap-4">
-          <section className="w-full flex flex-row gap-4">
+        {/* Sección de información principal - Estilo ADAMIA */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="flex flex-col sm:flex-row gap-6">
             <ImageUpload
               imagePreview={imagePreview}
               setImagePreview={setImagePreview}
@@ -545,7 +555,7 @@ export default function FormularioEmpleado({
               soloLectura={soloLectura}
             />
 
-            <article className="w-full">
+            <div className="flex-1 space-y-4">
               <FormField
                 name="nombre"
                 control={form.control}
@@ -557,10 +567,11 @@ export default function FormularioEmpleado({
                         ref={nombreInputRef}
                         disabled={soloLectura}
                         placeholder="Ingrese el nombre del empleado"
-                        className="w-full text-lg sm:text-xl md:text-2xl lg:text-3xl h-12 border-0 border-white focus:border-b-blue-600 focus:ring-0 rounded-none"
+                        className="text-2xl font-semibold text-gray-900 border-0 border-b-2 border-gray-200 focus:border-[#2563EB] focus:ring-0 rounded-none px-0 h-auto py-2"
                         autoFocus
                       />
                     </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
@@ -570,119 +581,137 @@ export default function FormularioEmpleado({
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
-                      <section className="flex mt-3 items-center">
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500 "></span>
-                        <Input
-                          {...field}
-                          disabled={soloLectura}
-                          placeholder="Nombre del puesto"
-                          className="w-full text-xs sm:text-sm md:text-md lg:text-xl border-0 border-white focus:border-b-blue-600 focus:ring-0 rounded-none"
-                        />
-                      </section>
+                      <Input
+                        {...field}
+                        disabled={soloLectura}
+                        placeholder="Nombre del puesto"
+                        className="text-lg text-gray-600 border-0 border-b-2 border-gray-200 focus:border-[#2563EB] focus:ring-0 rounded-none px-0 h-auto py-2"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-            </article>
-          </section>
-        </div>
-
-        {(soloLectura || editar) && values && (
-          <BotonCredencial empleado={values} imagePreview={imagePreview} />
-        )}
-
-        <Tabs value={tab} onValueChange={setTab} className="w-full">
-          <div className="overflow-x-auto">
-            <TabsList className="flex-nowrap w-max min-w-full">
-              <TabsTrigger value="personales">
-                <User className="mr-2 h-4 w-4" />
-                Datos personales
-              </TabsTrigger>
-              <TabsTrigger value="laborales">
-                <BriefcaseBusiness className="mr-2 h-4 w-4" />
-                Datos laborales
-              </TabsTrigger>
-              <TabsTrigger value="jornada">
-                <Hammer className="mr-2 h-4 w-4" /> Jornada laboral
-              </TabsTrigger>
-              <TabsTrigger value="nomina">
-                <Icon icon="mdi:cash" className="mr-2 h-4 w-4" />
-                Datos de nómina
-              </TabsTrigger>
-              <TabsTrigger value="cuentas">
-                {/* <Icon icon="mdi:cash" className="mr-2 h-4 w-4" /> */}
-                <Icon icon="rivet-icons:money" className="mr-2 h-4 w-4" />
-                Cuentas bancarias
-              </TabsTrigger>
-              <TabsTrigger value="reconocimiento">
-                <Icon icon="mdi:face-recognition" className="mr-2 h-4 w-4" />
-                Escanear rostro
-              </TabsTrigger>
-              {/* <TabsTrigger value="gps">
-                <Icon icon="mdi:map-marker" className="mr-2 h-4 w-4" />
-                GPS
-              </TabsTrigger> */}
-            </TabsList>
+            </div>
           </div>
 
-          <motion.div layout className="w-full">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={tab}
-                layout
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-                className="relative w-full overflow-hidden"
-              >
-                {tab === "personales" && (
-                  <TabPersonales form={form} soloLectura={soloLectura} />
-                )}
+          {(soloLectura || editar) && values && (
+            <div className="mt-6 pt-6 border-t border-gray-100">
+              <BotonCredencial empleado={values} imagePreview={imagePreview} />
+            </div>
+          )}
+        </div>
 
-                {tab === "laborales" && (
-                  <TabLaborales
-                    form={form}
-                    soloLectura={soloLectura}
-                    dataUser={dataUser}
-                  />
-                )}
+        {/* Tabs - Estilo ADAMIA */}
+        <Tabs value={tab} onValueChange={setTab} className="w-full">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+            <div className="overflow-x-auto">
+              <TabsList className="flex-nowrap w-max min-w-full bg-gray-50 rounded-none border-b border-gray-200 p-0 h-auto">
+                <TabsTrigger
+                  value="personales"
+                  className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-4 px-6 font-medium"
+                >
+                  <User className="mr-2 h-4 w-4" />
+                  Datos personales
+                </TabsTrigger>
+                <TabsTrigger
+                  value="laborales"
+                  className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-4 px-6 font-medium"
+                >
+                  <BriefcaseBusiness className="mr-2 h-4 w-4" />
+                  Datos laborales
+                </TabsTrigger>
+                <TabsTrigger
+                  value="jornada"
+                  className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-4 px-6 font-medium"
+                >
+                  <Hammer className="mr-2 h-4 w-4" />
+                  Jornada laboral
+                </TabsTrigger>
+                <TabsTrigger
+                  value="nomina"
+                  className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-4 px-6 font-medium"
+                >
+                  <Icon icon="mdi:cash" className="mr-2 h-4 w-4" />
+                  Datos de nómina
+                </TabsTrigger>
+                <TabsTrigger
+                  value="cuentas"
+                  className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-4 px-6 font-medium"
+                >
+                  <Icon icon="rivet-icons:money" className="mr-2 h-4 w-4" />
+                  Cuentas bancarias
+                </TabsTrigger>
+                <TabsTrigger
+                  value="reconocimiento"
+                  className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-4 px-6 font-medium"
+                >
+                  <Icon icon="mdi:face-recognition" className="mr-2 h-4 w-4" />
+                  Escanear rostro
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
-                {tab === "jornada" && (
-                  <TabJornada
-                    form={form}
-                    soloLectura={soloLectura}
-                    empleadoId={values?.id_empleado}
-                  />
-                )}
+            {/* Contenido de las pestañas */}
 
-                {tab === "nomina" && (
-                  <TabNomina form={form} soloLectura={soloLectura} />
-                )}
+            <motion.div layout className="w-full p-6">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={tab}
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.3 }}
+                  className="relative w-full overflow-hidden"
+                >
+                  {tab === "personales" && (
+                    <TabPersonales form={form} soloLectura={soloLectura} />
+                  )}
 
-                {tab === "cuentas" && (
-                  <TabCuentasBancarias form={form} soloLectura={soloLectura} />
-                )}
+                  {tab === "laborales" && (
+                    <TabLaborales
+                      form={form}
+                      soloLectura={soloLectura}
+                      dataUser={dataUser}
+                    />
+                  )}
 
-                {/* 🔹 CAMBIO: Solo renderizar TabReconocimiento cuando esté activo */}
-                {tab === "reconocimiento" && (
-                  <TabReconocimiento
-                    form={form}
-                    soloLectura={soloLectura}
-                    active={tab === "reconocimiento"}
-                    setDescriptor={(descriptor) =>
-                      form.setValue("descriptor_facial", descriptor)
-                    }
-                  />
-                )}
+                  {tab === "jornada" && (
+                    <TabJornada
+                      form={form}
+                      soloLectura={soloLectura}
+                      empleadoId={values?.id_empleado}
+                    />
+                  )}
 
-                {/* {tab === "gps" && (
-                  <TabGPS form={form} soloLectura={soloLectura} />
-                )} */}
-              </motion.div>
-            </AnimatePresence>
-          </motion.div>
+                  {tab === "nomina" && (
+                    <TabNomina form={form} soloLectura={soloLectura} />
+                  )}
+
+                  {tab === "cuentas" && (
+                    <TabCuentasBancarias form={form} soloLectura={soloLectura} />
+                  )}
+
+                  {/* 🔹 CAMBIO: Solo renderizar TabReconocimiento cuando esté activo */}
+                  {tab === "reconocimiento" && (
+                    <TabReconocimiento
+                      form={form}
+                      soloLectura={soloLectura}
+                      active={tab === "reconocimiento"}
+                      setDescriptor={(descriptor) =>
+                        form.setValue("descriptor_facial", descriptor)
+                      }
+                    />
+                  )}
+
+                  {/* {tab === "gps" && (
+                    <TabGPS form={form} soloLectura={soloLectura} />
+                  )} */}
+                </motion.div>
+              </AnimatePresence>
+            </motion.div>
+          </div>
         </Tabs>
       </form>
     </Form>

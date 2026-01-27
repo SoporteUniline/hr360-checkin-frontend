@@ -58,65 +58,78 @@ export default function EmpleadosFilters({
   ];
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">
-      {/* Buscar empleado */}
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="buscarEmpleado">Buscar empleado</Label>
-        <Input
-          id="buscarEmpleado"
-          placeholder="Nombre, puesto, email..."
-          value={filtroEmpleado}
-          onChange={(e) => {
-            setFiltroEmpleado(e.target.value);
-            setPage(1);
-          }}
-        />
-      </div>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        {/* Buscar empleado */}
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="buscarEmpleado" className="text-sm font-medium text-gray-700">
+            Buscar
+          </Label>
+          <div className="relative">
+            <Input
+              id="buscarEmpleado"
+              placeholder="Nombre, puesto, email..."
+              value={filtroEmpleado}
+              onChange={(e) => {
+                setFiltroEmpleado(e.target.value);
+                setPage(1);
+              }}
+              className="pl-3"
+            />
+          </div>
+        </div>
 
-      {/* Departamento */}
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="departamento">Departamento</Label>
-        <Combobox
-          options={departamentos}
-          value={departamento}
-          onChange={(val) => {
-            setDepartamento(val);
-            setPage(1);
-          }}
-          placeholder={"Todos los departamentos"}
-          emptyText="No hay departamentos"
-          name="departamento"
-        />
-      </div>
+        {/* Departamento */}
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="departamento" className="text-sm font-medium text-gray-700">
+            Depto.
+          </Label>
+          <Combobox
+            options={departamentos}
+            value={departamento}
+            onChange={(val) => {
+              setDepartamento(val);
+              setPage(1);
+            }}
+            placeholder="Todos"
+            emptyText="No hay departamentos"
+            name="departamento"
+          />
+        </div>
 
-      {/* Estado */}
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="estado">Estado</Label>
-        <Combobox
-          options={estadoOptions}
-          value={estado}
-          onChange={(val) => {
-            setEstado(val);
-            setPage(1);
-          }}
-          placeholder="Todos los estados"
-          emptyText="No hay estados"
-          name="estado"
-        />
-      </div>
+        {/* Estado */}
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="estado" className="text-sm font-medium text-gray-700">
+            Estado
+          </Label>
+          <Combobox
+            options={estadoOptions}
+            value={estado}
+            onChange={(val) => {
+              setEstado(val);
+              setPage(1);
+            }}
+            placeholder="Todos"
+            emptyText="No hay estados"
+            name="estado"
+          />
+        </div>
 
-      {/* Fecha desde */}
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="fechaDesde">Desde fecha de ingreso</Label>
-        <Input
-          id="fechaDesde"
-          type="date"
-          value={fechaDesde}
-          onChange={(e) => {
-            setFechaDesde(e.target.value);
-            setPage(1);
-          }}
-        />
+        {/* Fecha desde */}
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="fechaDesde" className="text-sm font-medium text-gray-700">
+            Desde
+          </Label>
+          <Input
+            id="fechaDesde"
+            type="date"
+            value={fechaDesde}
+            onChange={(e) => {
+              setFechaDesde(e.target.value);
+              setPage(1);
+            }}
+          />
+        </div>
       </div>
     </div>
   );

@@ -6,11 +6,31 @@ import useDebounce from "@/hooks/useDebounce";
 import EmpleadosFilters from "./EmpleadosFilters";
 import EmpleadosDataContainer from "./EmpleadosDataContainer";
 import FormularioEmpleado from "./FormularioEmpleado";
-import { StatCard } from "@/components/Cards";
 import { Button } from "@/components/ui/button";
+import { Users, UsersRound, UserPlus, Building2 } from "lucide-react";
 import axios from "axios";
 import ModalCapacidadAgotada from "@/components/ModalCapacidadAgotada";
 import AccesosRapidos from "@/components/AccesosRapidos";
+
+// Componente de tarjeta de estadística estilo ADAMIA
+const StatCard = ({ title, count, icon: Icon, trend }) => {
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
+      <div className="flex items-center justify-between">
+        <div className="flex-1">
+          <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
+          <p className="text-3xl font-bold text-gray-900">{count || 0}</p>
+          {trend && (
+            <p className="text-xs text-green-600 font-medium mt-1">{trend}</p>
+          )}
+        </div>
+        <div className="bg-blue-50 p-3 rounded-lg">
+          <Icon className="w-6 h-6 text-[#2563EB]" />
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function RegistroEmpleados() {
   const [modalCapacidadAbierto, setModalCapacidadAbierto] = useState(false);
@@ -86,7 +106,7 @@ export default function RegistroEmpleados() {
 
   return (
     <>
-      <div>
+      <div className="min-h-screen bg-[#F9FAFB] p-6">
         {modoFormulario ? (
           <FormularioEmpleado
             key={`formulario-${values?.id_empleado || "nuevo"}`}
@@ -103,32 +123,51 @@ export default function RegistroEmpleados() {
           />
         ) : (
           <>
-            <div className="flex gap-2 mb-5 justify-end">
+            {/* Header del módulo - Estilo ADAMIA */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <div className="flex items-center gap-3">
+                <div className="bg-blue-50 p-3 rounded-lg">
+                  <Users className="w-7 h-7 text-[#2563EB]" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-semibold text-gray-900">
+                    Empleados
+                  </h1>
+                  <p className="text-sm text-gray-600">
+                    Gestiona la información de tu equipo de trabajo
+                  </p>
+                </div>
+              </div>
               <Button
-                className="w-full sm:w-fit"
+                className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
                 onClick={() => abrirFormulario(null, false, false)}
               >
-                <div>+</div>
-                <div>Nuevo empleado</div>
+                <UserPlus className="w-4 h-4 mr-2" />
+                Nuevo empleado
               </Button>
             </div>
-            {/* Estadísticas */}
+
+            {/* Estadísticas - Estilo ADAMIA */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <StatCard
                 title="Total empleados"
                 count={data?.estadisticas?.total_empleados || 0}
+                icon={Users}
               />
               <StatCard
                 title="Activos"
                 count={data?.estadisticas?.empleados_activos || 0}
+                icon={UsersRound}
               />
               <StatCard
                 title="Nuevos este mes"
                 count={data?.estadisticas?.empleados_nuevos_mes || 0}
+                icon={UserPlus}
               />
               <StatCard
                 title="Departamentos"
                 count={data?.estadisticas?.total_departamentos || 0}
+                icon={Building2}
               />
             </div>
 

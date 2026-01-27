@@ -18,8 +18,20 @@ import {
 
 export default function TabPersonales({ form, soloLectura }) {
   return (
-    <section className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mx-1 my-3">
+    <section className="space-y-6">
+      {/* Información personal */}
+      <div className="bg-gradient-to-br from-blue-50 via-white to-blue-50 border-2 border-blue-100 rounded-xl p-6">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="bg-gradient-to-br from-[#2563EB] to-[#1d4ed8] p-3 rounded-lg shadow-md">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-bold text-gray-900">
+            Información personal
+          </h3>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {[
           {
             name: "apellido_paterno",
@@ -65,64 +77,13 @@ export default function TabPersonales({ form, soloLectura }) {
         ))}
 
         <FormField
-          name="curp"
-          control={form.control}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>CURP</FormLabel>
-              <FormControl>
-                <Input
-                  {...field}
-                  disabled={soloLectura}
-                  maxLength={18}
-                  className="uppercase"
-                  placeholder="Ej. GOLA850705HDFRRN09"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          name="rfc"
-          control={form.control}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>RFC</FormLabel>
-              <FormControl>
-                <Input
-                  {...field}
-                  disabled={soloLectura}
-                  maxLength={13}
-                  className="uppercase"
-                  placeholder="Ej. GOLA8507052A1"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          name="nss"
-          control={form.control}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>NSS</FormLabel>
-              <FormControl>
-                <Input {...field} disabled={soloLectura} maxLength={11} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
           name="sexo"
           control={form.control}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Sexo</FormLabel>
+              <FormLabel className="text-sm font-medium text-gray-700">
+                Sexo
+              </FormLabel>
               <Select
                 onValueChange={field.onChange}
                 value={field.value !== "" ? field.value : "sin-seleccion"}
@@ -152,7 +113,9 @@ export default function TabPersonales({ form, soloLectura }) {
           control={form.control}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Estado civil</FormLabel>
+              <FormLabel className="text-sm font-medium text-gray-700">
+                Estado civil
+              </FormLabel>
               <ComboboxEstadoCivil
                 value={field.value !== "" ? field.value : "sin-seleccion"}
                 onChange={(val) =>
@@ -169,8 +132,10 @@ export default function TabPersonales({ form, soloLectura }) {
           name="direccion"
           control={form.control}
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Dirección</FormLabel>
+            <FormItem className="sm:col-span-2">
+              <FormLabel className="text-sm font-medium text-gray-700">
+                Dirección
+              </FormLabel>
               <FormControl>
                 <Input {...field} disabled={soloLectura} />
               </FormControl>
@@ -178,6 +143,81 @@ export default function TabPersonales({ form, soloLectura }) {
             </FormItem>
           )}
         />
+        </div>
+      </div>
+
+      {/* Documentos oficiales */}
+      <div className="bg-gradient-to-br from-purple-50 via-white to-purple-50 border-2 border-purple-100 rounded-xl p-6">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="bg-gradient-to-br from-[#7C3AED] to-[#6d28d9] p-3 rounded-lg shadow-md">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-bold text-gray-900">
+            Documentos oficiales
+          </h3>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FormField
+            name="curp"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm font-medium text-gray-700">
+                  CURP
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    disabled={soloLectura}
+                    maxLength={18}
+                    className="uppercase"
+                    placeholder="Ej. GOLA850705HDFRRN09"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            name="rfc"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm font-medium text-gray-700">
+                  RFC
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    {...field}
+                    disabled={soloLectura}
+                    maxLength={13}
+                    className="uppercase"
+                    placeholder="Ej. GOLA8507052A1"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            name="nss"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm font-medium text-gray-700">
+                  NSS
+                </FormLabel>
+                <FormControl>
+                  <Input {...field} disabled={soloLectura} maxLength={11} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
       </div>
     </section>
   );
