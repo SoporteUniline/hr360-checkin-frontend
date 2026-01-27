@@ -55,6 +55,16 @@ export default function FormularioEmpleado({
   setSoloLectura,
   onClose,
 }) {
+  const DIAS_SEMANA = [
+    "Lunes",
+    "Martes",
+    "Miércoles",
+    "Jueves",
+    "Viernes",
+    "Sábado",
+    "Domingo",
+  ];
+
   const [tab, setTab] = useState("personales");
   const fueDesdeLectura = useRef(false);
   const nombreInputRef = useRef(null);
@@ -138,6 +148,21 @@ export default function FormularioEmpleado({
 
   const valores = form.watch();
 
+  const normalizarHorarios = (horarios = []) => {
+    return DIAS_SEMANA.map((dia) => {
+      const existente = horarios.find((h) => h.dia === dia);
+      return (
+        existente || {
+          dia,
+          entrada: "",
+          salida_comida: "",
+          regreso_comida: "",
+          salida: "",
+        }
+      );
+    });
+  };
+
   useEffect(() => {
     console.log(valores);
   }, [valores]);
@@ -152,10 +177,7 @@ export default function FormularioEmpleado({
         ...restoEmpleado
       } = values;
 
-      const horariosIniciales =
-        horarios && horarios.length > 0
-          ? horarios
-          : construirHorariosDesdeDatos(values);
+      const horariosIniciales = normalizarHorarios(values.horarios || []);
 
       let banco = cuenta_bancaria?.banco || "";
       let otro_banco = cuenta_bancaria?.otro_banco || "";
@@ -326,9 +348,6 @@ export default function FormularioEmpleado({
     }
     delete data.otro_banco;
 
-    if (!data.horarios || data.horarios.length === 0) {
-      data.horarios = construirHorariosDesdeDatos(data);
-    }
     const diasTrabajo = data.horarios
       .filter((h) => h.entrada && h.salida)
       .map((h) => h.dia);

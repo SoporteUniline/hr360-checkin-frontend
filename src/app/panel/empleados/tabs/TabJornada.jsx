@@ -45,25 +45,6 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
     return diff > 0 ? +(diff / 60).toFixed(2) : 0;
   }
 
-  // Rellenar los días que falten
-  useEffect(() => {
-    if (horarios.length < 7) {
-      const nuevos = DIAS_SEMANA.map((dia) => {
-        const existente = horarios.find((h) => h.dia === dia);
-        return (
-          existente || {
-            dia,
-            entrada: "",
-            salida_comida: "",
-            regreso_comida: "",
-            salida: "",
-          }
-        );
-      });
-      form.setValue("horarios", nuevos, { shouldValidate: true });
-    }
-  }, []);
-
   useEffect(() => {
     let totalHoras = 0;
     let totalComidas = 0;
@@ -96,7 +77,7 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
 
   const toggleDiaSeleccionado = (dia) => {
     setDiasSeleccionados((prev) =>
-      prev.includes(dia) ? prev.filter((d) => d !== dia) : [...prev, dia]
+      prev.includes(dia) ? prev.filter((d) => d !== dia) : [...prev, dia],
     );
   };
 
@@ -129,7 +110,7 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
 
   const actualizarHorario = (dia, campo, valor) => {
     const actualizados = horarios.map((h) =>
-      h.dia === dia ? { ...h, [campo]: valor } : h
+      h.dia === dia ? { ...h, [campo]: valor } : h,
     );
     form.setValue("horarios", actualizados, { shouldValidate: true });
   };
@@ -246,8 +227,8 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
             </tr>
           </thead>
           <tbody>
-            {horarios.map((h) => (
-              <tr key={h.dia} className="border-t">
+            {horarios.map((h, index) => (
+              <tr key={`${h.dia}-${index}`} className="border-t">
                 <td className="p-2 font-medium">{h.dia}</td>
                 <td className="p-2">
                   <Input
