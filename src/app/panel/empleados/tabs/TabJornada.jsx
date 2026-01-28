@@ -32,17 +32,34 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
   const horarios = form.watch("horarios") || [];
   const { errors, isSubmitted } = form.formState;
 
+  // function calcularHoras(inicio, fin) {
+  //   if (!inicio || !fin) return 0;
+
+  //   const [hi, mi] = inicio.split(":").map(Number);
+  //   const [hf, mf] = fin.split(":").map(Number);
+
+  //   const start = hi * 60 + mi;
+  //   const end = hf * 60 + mf;
+
+  //   const diff = end - start;
+  //   return diff > 0 ? +(diff / 60).toFixed(2) : 0;
+  // }
+
   function calcularHoras(inicio, fin) {
     if (!inicio || !fin) return 0;
 
     const [hi, mi] = inicio.split(":").map(Number);
     const [hf, mf] = fin.split(":").map(Number);
 
-    const start = hi * 60 + mi;
-    const end = hf * 60 + mf;
+    let start = hi * 60 + mi;
+    let end = hf * 60 + mf;
+
+    if (end < start) {
+      end += 24 * 60;
+    }
 
     const diff = end - start;
-    return diff > 0 ? +(diff / 60).toFixed(2) : 0;
+    return +(diff / 60).toFixed(2);
   }
 
   useEffect(() => {
