@@ -138,6 +138,8 @@ export default function FormularioEmpleado({
     },
   });
 
+  const nipActual = form.watch("nip");
+
   const normalizarHorarios = React.useCallback(
     (horarios = []) =>
       DIAS_SEMANA.map((dia) => {
@@ -550,16 +552,17 @@ export default function FormularioEmpleado({
         onSubmit={form.handleSubmit(onValidSubmit, onInvalidSubmit)}
         className="space-y-4"
       >
-        <div className="flex flex-col gap-4">
-          <section className="w-full flex flex-row gap-4">
-            <ImageUpload
-              imagePreview={imagePreview}
-              setImagePreview={setImagePreview}
-              setSelectedFile={setSelectedFile}
-              soloLectura={soloLectura}
-            />
-
-            <article className="w-full">
+        <div className="flex flex-col">
+          <section className="w-full flex flex-col md:flex-row gap-6 items-center">
+            <div className="">
+              <ImageUpload
+                imagePreview={imagePreview}
+                setImagePreview={setImagePreview}
+                setSelectedFile={setSelectedFile}
+                soloLectura={soloLectura}
+              />
+            </div>
+            <article className="flex flex-col w-full gap-4">
               <FormField
                 name="nombre"
                 control={form.control}
@@ -571,7 +574,7 @@ export default function FormularioEmpleado({
                         ref={nombreInputRef}
                         disabled={soloLectura}
                         placeholder="Ingrese el nombre del empleado"
-                        className="w-full text-lg sm:text-xl md:text-2xl lg:text-3xl h-12 border-0 border-white focus:border-b-blue-600 focus:ring-0 rounded-none"
+                        className="w-full text-lg sm:text-xl md:text-2xl lg:text-3xl font-semibold h-auto py-2 border-0 border-b border-transparent focus:border-b-blue-600 focus:ring-0 rounded-none bg-transparent"
                         autoFocus
                       />
                     </FormControl>
@@ -584,27 +587,54 @@ export default function FormularioEmpleado({
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
-                      <section className="flex mt-3 items-center">
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500 "></span>
-                        <Input
-                          {...field}
-                          disabled={soloLectura}
-                          placeholder="Nombre del puesto"
-                          className="w-full text-xs sm:text-sm md:text-md lg:text-xl border-0 border-white focus:border-b-blue-600 focus:ring-0 rounded-none"
-                        />
-                      </section>
+                      <Input
+                        {...field}
+                        disabled={soloLectura}
+                        placeholder="Nombre del puesto"
+                        className="w-full text-sm md:text-md lg:text-xl text-gray-500 border-0 border-b border-transparent focus:border-b-blue-600 focus:ring-0 rounded-none bg-transparent"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              {(soloLectura || editar) && values && (
+                <div className="pt-2">
+                  <BotonCredencial
+                    empleado={values}
+                    imagePreview={imagePreview}
+                  />
+                </div>
+              )}
             </article>
+
+            {(editar || soloLectura) && nipActual && (
+              <div className="flex flex-col items-center justify-center p-3 bg-white border rounded-xl shadow-sm min-w-[140px]">
+                <span className="text-[10px] font-bold text-gray-400 uppercase mb-2">
+                  Acceso QR
+                </span>
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?data=${nipActual}&size=150x150`}
+                  alt="QR Empleado"
+                  className="w-24 h-24 lg:w-32 lg:h-32 object-contain transition-opacity duration-300"
+                  key={nipActual}
+                />
+                <div className="mt-2 text-center">
+                  <p className="text-[10px] text-gray-400 uppercase leading-none">
+                    Código del empleado
+                  </p>
+                  <span className="text-sm font-mono font-bold text-blue-600">
+                    {nipActual}
+                  </span>
+                </div>
+              </div>
+            )}
           </section>
         </div>
 
-        {(soloLectura || editar) && values && (
+        {/* {(soloLectura || editar) && values && (
           <BotonCredencial empleado={values} imagePreview={imagePreview} />
-        )}
+        )} */}
 
         <Tabs value={tab} onValueChange={setTab} className="w-full">
           <div className="overflow-x-auto">
