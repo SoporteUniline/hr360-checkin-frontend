@@ -614,7 +614,7 @@ export default function FormularioEmpleado({
                   Acceso QR
                 </span>
                 <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?data=${nipActual}&size=150x150`}
+                  src={`https://api.qrserver.com/v1/create-qr-code/?data=${nipActual}&size=1000x1000`}
                   alt="QR Empleado"
                   className="w-24 h-24 lg:w-32 lg:h-32 object-contain transition-opacity duration-300"
                   key={nipActual}
