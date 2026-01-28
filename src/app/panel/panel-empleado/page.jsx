@@ -129,11 +129,13 @@ export default function PanelEmpleadoPage() {
   // Componente del sidebar (reutilizable)
   const SidebarContent = ({ onSelectEmpleado, closeSidebar }) => (
     <>
-      {/* Header del sidebar */}
-      <div className="p-2 sm:p-3 md:p-4 border-b border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Header del sidebar - ADAMIA */}
+      <div className="p-2 sm:p-3 md:p-4 border-b-2 border-blue-200 bg-gradient-to-br from-blue-50 to-white">
         <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
-          <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
-          <h3 className="font-bold text-xs sm:text-sm">
+          <div className="bg-[#2563EB] p-1.5 rounded-lg">
+            <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 text-white" />
+          </div>
+          <h3 className="font-bold text-xs sm:text-sm text-gray-900">
             Empleados ({empleados.length})
           </h3>
         </div>
@@ -170,8 +172,8 @@ export default function PanelEmpleadoPage() {
                     flex items-center gap-2 sm:gap-3
                     ${
                       esSeleccionado
-                        ? "bg-gradient-to-r from-slate-600 to-slate-700 text-white shadow-md"
-                        : "hover:bg-gray-50 border border-transparent hover:border-gray-200"
+                        ? "bg-gradient-to-r from-[#2563EB] to-[#1d4ed8] text-white shadow-md"
+                        : "hover:bg-blue-50 border border-transparent hover:border-blue-200"
                     }
                   `}
                 >
@@ -183,7 +185,7 @@ export default function PanelEmpleadoPage() {
                       ${
                         esSeleccionado
                           ? "bg-white/20 text-white"
-                          : "bg-gradient-to-br from-slate-600 to-blue-500 text-white"
+                          : "bg-gradient-to-br from-[#2563EB] to-[#7C3AED] text-white"
                       }
                     `}
                   >
@@ -216,9 +218,9 @@ export default function PanelEmpleadoPage() {
   );
 
   return (
-    <div className="flex flex-col h-[calc(100vh-4rem)]">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-slate-800 to-slate-700 text-white p-2 sm:p-3 md:p-4 shadow-md border-b-2 border-blue-500">
+    <div className="flex flex-col h-[calc(100vh-4rem)] bg-[#F9FAFB]">
+      {/* Header - Estilo ADAMIA */}
+      <div className="bg-gradient-to-r from-[#2563EB] to-[#1d4ed8] text-white p-2 sm:p-3 md:p-4 shadow-lg border-b-2 border-[#7C3AED]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5 sm:gap-2 md:gap-4 min-w-0 flex-1">
             {/* Botón para abrir sidebar en móvil */}
@@ -280,8 +282,8 @@ export default function PanelEmpleadoPage() {
               <Card className="mb-3 sm:mb-4 md:mb-6">
                 <CardContent className="p-3 sm:p-4 md:p-6">
                   <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 md:gap-6 items-center sm:items-start">
-                    {/* Avatar grande */}
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-full bg-gradient-to-br from-slate-600 to-blue-500 flex items-center justify-center text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white shadow-lg flex-shrink-0">
+                    {/* Avatar grande - ADAMIA */}
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 lg:w-28 lg:h-28 rounded-full bg-gradient-to-br from-[#2563EB] to-[#7C3AED] flex items-center justify-center text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white shadow-lg flex-shrink-0">
                       {obtenerIniciales(
                         datosEmpleado.informacion_general?.nombre_completo
                       )}
@@ -341,14 +343,14 @@ export default function PanelEmpleadoPage() {
                 </CardContent>
               </Card>
 
-              {/* Tabs */}
+              {/* Tabs - ADAMIA */}
               <Card>
                 <Tabs value={tabActivo} onValueChange={setTabActivo}>
-                  <div className="border-b border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 overflow-x-auto">
+                  <div className="border-b-2 border-blue-200 bg-gradient-to-br from-blue-50 to-white overflow-x-auto">
                     <TabsList className="bg-transparent h-auto p-0 min-w-max">
                       <TabsTrigger
                         value="general"
-                        className="data-[state=active]:bg-white/80 data-[state=active]:border-b-2 data-[state=active]:border-slate-600 text-[11px] sm:text-xs md:text-sm px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3"
+                        className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] data-[state=active]:text-[#2563EB] text-[11px] sm:text-xs md:text-sm px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3 font-medium"
                       >
                         <FileText className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 mr-1 sm:mr-1.5 md:mr-2 flex-shrink-0" />
                         <span className="hidden md:inline">Información General</span>
@@ -356,21 +358,21 @@ export default function PanelEmpleadoPage() {
                       </TabsTrigger>
                       <TabsTrigger
                         value="permisos"
-                        className="data-[state=active]:bg-white/80 data-[state=active]:border-b-2 data-[state=active]:border-slate-600 text-[11px] sm:text-xs md:text-sm px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3"
+                        className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] data-[state=active]:text-[#2563EB] text-[11px] sm:text-xs md:text-sm px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3 font-medium"
                       >
                         <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 mr-1 sm:mr-1.5 md:mr-2 flex-shrink-0" />
                         Permisos
                       </TabsTrigger>
                       <TabsTrigger
                         value="asistencias"
-                        className="data-[state=active]:bg-white/80 data-[state=active]:border-b-2 data-[state=active]:border-slate-600 text-[11px] sm:text-xs md:text-sm px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3"
+                        className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] data-[state=active]:text-[#2563EB] text-[11px] sm:text-xs md:text-sm px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3 font-medium"
                       >
                         <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 mr-1 sm:mr-1.5 md:mr-2 flex-shrink-0" />
                         Asistencias
                       </TabsTrigger>
                       <TabsTrigger
                         value="entradas"
-                        className="data-[state=active]:bg-white/80 data-[state=active]:border-b-2 data-[state=active]:border-slate-600 text-[11px] sm:text-xs md:text-sm px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3"
+                        className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] data-[state=active]:text-[#2563EB] text-[11px] sm:text-xs md:text-sm px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3 font-medium"
                       >
                         <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 mr-1 sm:mr-1.5 md:mr-2 flex-shrink-0" />
                         <span className="hidden sm:inline">Entradas/Salidas</span>
@@ -378,14 +380,14 @@ export default function PanelEmpleadoPage() {
                       </TabsTrigger>
                       <TabsTrigger
                         value="contratos"
-                        className="data-[state=active]:bg-white/80 data-[state=active]:border-b-2 data-[state=active]:border-slate-600 text-[11px] sm:text-xs md:text-sm px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3"
+                        className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] data-[state=active]:text-[#2563EB] text-[11px] sm:text-xs md:text-sm px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3 font-medium"
                       >
                         <Briefcase className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 mr-1 sm:mr-1.5 md:mr-2 flex-shrink-0" />
                         Contratos
                       </TabsTrigger>
                       <TabsTrigger
                         value="vacaciones"
-                        className="data-[state=active]:bg-white/80 data-[state=active]:border-b-2 data-[state=active]:border-slate-600 text-[11px] sm:text-xs md:text-sm px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3"
+                        className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] data-[state=active]:text-[#2563EB] text-[11px] sm:text-xs md:text-sm px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3 font-medium"
                       >
                         <Plane className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 mr-1 sm:mr-1.5 md:mr-2 flex-shrink-0" />
                         Vacaciones

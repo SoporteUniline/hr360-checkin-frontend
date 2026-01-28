@@ -23,12 +23,22 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
 
   return (
     <div>
-      <h3 className="text-sm sm:text-base font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
-        📑 Contratos y Documentos
-      </h3>
+      {/* Header con diseño ADAMIA */}
+      <div className="bg-gradient-to-br from-purple-50 via-white to-purple-50 border-2 border-purple-100 rounded-xl p-4 sm:p-6 mb-4 sm:mb-6">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="bg-gradient-to-br from-[#7C3AED] to-[#6d28d9] p-3 rounded-lg shadow-md">
+            <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900">Contratos y Documentos</h3>
+            <p className="text-xs sm:text-sm text-gray-600">Gestión de contratos del empleado</p>
+          </div>
+        </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6">
+        {/* KPIs */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
         <Card className="overflow-hidden">
           <CardContent className="p-3 sm:p-4 md:p-5 text-center min-w-0">
             <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-1 break-words overflow-hidden">
@@ -79,6 +89,7 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
           </span>
         </div>
       )}
+      </div>
 
       <h4 className="text-xs sm:text-sm font-bold text-gray-900 mb-3 sm:mb-4 mt-4 sm:mt-6">
         📄 Lista de Contratos

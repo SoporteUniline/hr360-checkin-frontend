@@ -43,12 +43,22 @@ export default function PanelEmpleadoPermisos({ datosEmpleado, festivosSet = new
 
   return (
     <div>
-      <h3 className="text-sm sm:text-base font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
-        🎫 Historial de Permisos
-      </h3>
+      {/* Header con diseño ADAMIA */}
+      <div className="bg-gradient-to-br from-green-50 via-white to-green-50 border-2 border-green-100 rounded-xl p-4 sm:p-6 mb-4 sm:mb-6">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="bg-gradient-to-br from-green-500 to-green-600 p-3 rounded-lg shadow-md">
+            <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900">Historial de Permisos</h3>
+            <p className="text-xs sm:text-sm text-gray-600">Gestión de ausencias y permisos</p>
+          </div>
+        </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6">
+        {/* KPIs */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-4">
         <Card className="overflow-hidden">
           <CardContent className="p-3 sm:p-4 md:p-5 text-center min-w-0">
             <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-1 break-words overflow-hidden">
@@ -91,14 +101,15 @@ export default function PanelEmpleadoPermisos({ datosEmpleado, festivosSet = new
         </Card>
       </div>
 
-      {resumen.pendientes > 0 && (
-        <div className="mb-4 p-4 bg-blue-50 border-l-4 border-blue-500 rounded flex items-center gap-3">
-          <span>ℹ️</span>
-          <span className="text-sm">
-            El empleado tiene <strong>{resumen.pendientes} permiso(s) pendiente(s)</strong> de aprobación.
-          </span>
-        </div>
-      )}
+        {resumen.pendientes > 0 && (
+          <div className="mb-4 p-4 bg-blue-50 border-l-4 border-blue-500 rounded flex items-center gap-3">
+            <span>ℹ️</span>
+            <span className="text-sm">
+              El empleado tiene <strong>{resumen.pendientes} permiso(s) pendiente(s)</strong> de aprobación.
+            </span>
+          </div>
+        )}
+      </div>
 
       {/* Filtros */}
       <Card className="mb-3 sm:mb-4">
