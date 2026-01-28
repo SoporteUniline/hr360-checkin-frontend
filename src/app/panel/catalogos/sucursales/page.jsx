@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, MapPin, Search } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import SucursalesTable from "./SucursalesTable";
 import SucursalFormDialog from "./SucursalFormDialog";
@@ -23,32 +23,41 @@ export default function Sucursales() {
   const key = `/checador/sucursales?id_empresa=${id_empresa}`;
 
   return (
-    <div className="space-y-4">
-      {/* Encabezado (colores del sistema) - Relación: guía `Colores.txt` */}
-      <div>
-        <h1 className="text-2xl font-bold text-[#2c3e50]">Sucursales</h1>
-        <p className="text-sm text-[#6b7280]">
-          Catálogo de sucursales para la empresa (crear, editar y eliminar)
-        </p>
-      </div>
-
-      <div className="mb-2 flex flex-col md:flex-row gap-3 items-center">
-        <Input
-          className="flex-1"
-          placeholder="Buscar sucursal..."
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        />
+    <div className="min-h-screen bg-[#F9FAFB] p-6">
+      {/* Header del módulo - Estilo ADAMIA */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="bg-emerald-50 p-3 rounded-lg">
+            <MapPin className="w-7 h-7 text-emerald-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">Sucursales</h1>
+            <p className="text-sm text-gray-600">Gestiona las sucursales de tu empresa</p>
+          </div>
+        </div>
         <Button
-          // Botón principal según `Colores.txt`
-          className="w-full md:w-auto bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]"
+          className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
           onClick={() => {
             setEditSuc(null);
             setOpenFormModal(true);
           }}
         >
-          <Plus className="h-4 w-4 mr-1" /> Nuevo
+          <Plus className="w-4 h-4 mr-2" />
+          Nueva sucursal
         </Button>
+      </div>
+
+      {/* Filtro de búsqueda - Estilo ADAMIA */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
+        <div className="flex items-center gap-2">
+          <Search className="w-5 h-5 text-gray-400" />
+          <Input
+            className="flex-1 border-gray-200"
+            placeholder="Buscar sucursal..."
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          />
+        </div>
       </div>
 
       <SucursalesTable

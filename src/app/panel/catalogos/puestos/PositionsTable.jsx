@@ -9,7 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import useSWR, { mutate } from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { useEffect, useState } from "react";
@@ -42,49 +42,76 @@ export default function PositionsTable({
     }
   }, [positions]);
 
-  if (positions.length === 0)
+  if (isLoading) {
     return (
-      <div className="text-center py-10 text-muted-foreground">
-        No se encontraron puestos.
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-10">
+        <div className="text-center text-gray-500">Cargando puestos...</div>
       </div>
     );
+  }
 
-  if (isLoading) return <p>Cargando...</p>;
-  if (error) return <p>Error al cargar puestos</p>;
+  if (error) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-10">
+        <div className="text-center text-red-500">Error al cargar puestos</div>
+      </div>
+    );
+  }
+
+  if (positions.length === 0) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-10">
+        <div className="text-center text-gray-500">No se encontraron puestos.</div>
+      </div>
+    );
+  }
 
   return (
     <>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Nombre</TableHead>
-            <TableHead className="text-right">Acciones</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {positions.map((puesto) => (
-            <TableRow key={puesto.id_puesto}>
-              <TableCell>{puesto.nombre_puesto}</TableCell>
-              <TableCell className="text-right flex justify-end gap-2">
-                <Button
-                  size="icon"
-                  variant="secondary"
-                  onClick={() => onEdit(puesto, positions)}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="destructive"
-                  onClick={() => onDelete(puesto.id_puesto, key)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h2 className="text-lg font-semibold text-gray-900">Lista de puestos</h2>
+        </div>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-gray-50 hover:bg-gray-50">
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs">
+                  Nombre
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-right">
+                  Acciones
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {positions.map((puesto) => (
+                <TableRow key={puesto.id_puesto} className="hover:bg-gray-50 border-b border-gray-100">
+                  <TableCell className="font-medium text-gray-900">{puesto.nombre_puesto}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end items-center gap-2">
+                      <button
+                        onClick={() => onEdit(puesto, positions)}
+                        className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                        title="Editar"
+                      >
+                        <Pencil className="h-4 w-4 text-[#2563EB]" />
+                      </button>
+                      <button
+                        onClick={() => onDelete(puesto.id_puesto, key)}
+                        className="p-2 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                        title="Eliminar"
+                      >
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                      </button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
       <TablePagination
         page={page}
         limit={limit}
