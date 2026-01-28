@@ -4,7 +4,7 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import dayjs from "dayjs";
-import { Eye } from "lucide-react";
+import { Eye, Pencil, Trash2, Copy } from "lucide-react";
 import styles from "./contratos-theme.module.css";
 
 function formatDMY(value) {
@@ -69,25 +69,29 @@ function badgeEstatus(estatus) {
 export default function ContratosTable({ items = [], loading, onEdit, onDelete, onDuplicate, onView }) {
   if (loading) {
     return (
-      <Card>
-        <CardContent className="py-8 text-center text-sm text-muted-foreground">Cargando contratos…</CardContent>
-      </Card>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-10">
+        <div className="text-center text-gray-500">Cargando contratos…</div>
+      </div>
     );
   }
 
   if (!items || items.length === 0) {
     return (
-      <Card>
-        <CardContent className="py-12 text-center text-muted-foreground">No hay contratos registrados</CardContent>
-      </Card>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-10">
+        <div className="text-center text-gray-500">No hay contratos registrados</div>
+      </div>
     );
   }
 
   return (
-    <div className="overflow-x-auto rounded-md border">
-      <table className="w-full border-collapse">
-        <thead className="bg-slate-50 border-b">
-          <tr className="text-left text-xs uppercase text-muted-foreground">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+      <div className="px-6 py-4 border-b border-gray-100">
+        <h2 className="text-lg font-semibold text-gray-900">Lista de contratos</h2>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse">
+          <thead className="bg-gray-50 border-b">
+            <tr className="text-left text-xs uppercase font-semibold text-gray-700">
             <th className="px-3 py-2">Folio</th>
             <th className="px-3 py-2">Empleado</th>
             <th className="px-3 py-2">Puesto</th>
@@ -121,19 +125,35 @@ export default function ContratosTable({ items = [], loading, onEdit, onDelete, 
                 <td className="px-3 py-2">{vigenciaNodo}</td>
                 <td className="px-3 py-2">{badgeEstatus(c.estatus)}</td>
                 <td className="px-3 py-2">
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-[#e5e7eb] text-[#374151] hover:bg-[#f9fafb]"
-                      onClick={() => onView?.(c)}
-                      title="Ver"
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => onEdit?.(c)}
+                      className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                      title="Editar"
                     >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button size="sm" variant="outline" className="border-[#93c5fd] text-[#2563eb] hover:bg-[#dbeafe] hover:text-[#1e40af]" onClick={() => onEdit?.(c)}>Editar</Button>
-                    <Button size="sm" variant="outline" className="border-[#86efac] text-[#10b981] hover:bg-[#d1fae5]" onClick={() => onDuplicate?.(c)}>📋 Duplicar</Button>
-                    <Button size="sm" variant="outline" className="border-[#fca5a5] text-[#dc2626] hover:bg-[#fee2e2]" onClick={() => onDelete?.(c)}>Eliminar</Button>
+                      <Pencil className="h-4 w-4 text-[#2563EB]" />
+                    </button>
+                    <button
+                      onClick={() => onView?.(c)}
+                      className="p-2 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+                      title="Ver detalles"
+                    >
+                      <Eye className="h-4 w-4 text-green-600" />
+                    </button>
+                    <button
+                      onClick={() => onDuplicate?.(c)}
+                      className="p-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+                      title="Duplicar"
+                    >
+                      <Copy className="h-4 w-4 text-purple-600" />
+                    </button>
+                    <button
+                      onClick={() => onDelete?.(c)}
+                      className="p-2 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                      title="Eliminar"
+                    >
+                      <Trash2 className="h-4 w-4 text-red-600" />
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -141,6 +161,7 @@ export default function ContratosTable({ items = [], loading, onEdit, onDelete, 
           })}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
