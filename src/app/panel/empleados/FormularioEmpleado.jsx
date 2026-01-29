@@ -561,22 +561,11 @@ export default function FormularioEmpleado({
         onSubmit={form.handleSubmit(onValidSubmit, onInvalidSubmit)}
         className="space-y-6"
       >
-<<<<<<< HEAD
-        {/* Sección de información principal - Estilo ADAMIA */}
+        {/* SECCIÓN UNIFICADA: Foto + Info + QR */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex flex-col sm:flex-row gap-6">
-            <ImageUpload
-              imagePreview={imagePreview}
-              setImagePreview={setImagePreview}
-              setSelectedFile={setSelectedFile}
-              soloLectura={soloLectura}
-            />
-
-            <div className="flex-1 space-y-4">
-=======
-        <div className="flex flex-col">
-          <section className="w-full flex flex-col md:flex-row gap-6 items-center">
-            <div className="">
+          <div className="flex flex-col md:flex-row gap-6 items-start">
+            {/* 1. Foto de Perfil */}
+            <div className="flex-shrink-0">
               <ImageUpload
                 imagePreview={imagePreview}
                 setImagePreview={setImagePreview}
@@ -584,8 +573,9 @@ export default function FormularioEmpleado({
                 soloLectura={soloLectura}
               />
             </div>
-            <article className="flex flex-col w-full gap-4">
->>>>>>> d8694528a09d42889ee380480da3e3ccc5e27d05
+
+            {/* 2. Información Principal (Nombre y Puesto) */}
+            <div className="flex-1 space-y-4 w-full">
               <FormField
                 name="nombre"
                 control={form.control}
@@ -597,12 +587,7 @@ export default function FormularioEmpleado({
                         ref={nombreInputRef}
                         disabled={soloLectura}
                         placeholder="Ingrese el nombre del empleado"
-<<<<<<< HEAD
-                        className="text-2xl font-semibold text-gray-900 border-0 border-b-2 border-gray-200 focus:border-[#2563EB] focus:ring-0 rounded-none px-0 h-auto py-2"
-=======
-                        className="w-full text-lg sm:text-xl md:text-2xl lg:text-3xl font-semibold h-auto py-2 border-0 border-b border-transparent focus:border-b-blue-600 focus:ring-0 rounded-none bg-transparent"
->>>>>>> d8694528a09d42889ee380480da3e3ccc5e27d05
-                        autoFocus
+                        className="text-2xl font-semibold text-gray-900 border-0 border-b-2 border-gray-200 focus:border-[#2563EB] focus:ring-0 rounded-none px-0 h-auto py-2 bg-transparent"
                       />
                     </FormControl>
                     <FormMessage />
@@ -619,20 +604,15 @@ export default function FormularioEmpleado({
                         {...field}
                         disabled={soloLectura}
                         placeholder="Nombre del puesto"
-<<<<<<< HEAD
-                        className="text-lg text-gray-600 border-0 border-b-2 border-gray-200 focus:border-[#2563EB] focus:ring-0 rounded-none px-0 h-auto py-2"
-=======
-                        className="w-full text-sm md:text-md lg:text-xl text-gray-500 border-0 border-b border-transparent focus:border-b-blue-600 focus:ring-0 rounded-none bg-transparent"
->>>>>>> d8694528a09d42889ee380480da3e3ccc5e27d05
+                        className="text-lg text-gray-600 border-0 border-b-2 border-gray-200 focus:border-[#2563EB] focus:ring-0 rounded-none px-0 h-auto py-2 bg-transparent"
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-<<<<<<< HEAD
-            </div>
-=======
+
+              {/* Botón de Credencial (Solo si ya existe el empleado) */}
               {(soloLectura || editar) && values && (
                 <div className="pt-2">
                   <BotonCredencial
@@ -641,22 +621,23 @@ export default function FormularioEmpleado({
                   />
                 </div>
               )}
-            </article>
+            </div>
 
+            {/* 3. Tu QR de Acceso (Lado derecho) */}
             {(editar || soloLectura) && nipActual && (
-              <div className="flex flex-col items-center justify-center p-3 bg-white border rounded-xl shadow-sm min-w-[140px]">
+              <div className="flex flex-col items-center justify-center p-3 bg-gray-50 border rounded-xl shadow-inner min-w-[140px]">
                 <span className="text-[10px] font-bold text-gray-400 uppercase mb-2">
                   Acceso QR
                 </span>
                 <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?data=${nipActual}&size=1000x1000`}
+                  src={`https://api.qrserver.com/v1/create-qr-code/?data=${nipActual}&size=150x150`}
                   alt="QR Empleado"
-                  className="w-24 h-24 lg:w-32 lg:h-32 object-contain transition-opacity duration-300"
+                  className="w-24 h-24 lg:w-32 lg:h-32 object-contain"
                   key={nipActual}
                 />
                 <div className="mt-2 text-center">
                   <p className="text-[10px] text-gray-400 uppercase leading-none">
-                    Código del empleado
+                    Código
                   </p>
                   <span className="text-sm font-mono font-bold text-blue-600">
                     {nipActual}
@@ -664,56 +645,10 @@ export default function FormularioEmpleado({
                 </div>
               </div>
             )}
-          </section>
-        </div>
-
-        {/* {(soloLectura || editar) && values && (
-          <BotonCredencial empleado={values} imagePreview={imagePreview} />
-        )} */}
-
-        <Tabs value={tab} onValueChange={setTab} className="w-full">
-          <div className="overflow-x-auto">
-            <TabsList className="flex-nowrap w-max min-w-full">
-              <TabsTrigger value="personales">
-                <User className="mr-2 h-4 w-4" />
-                Datos personales
-              </TabsTrigger>
-              <TabsTrigger value="laborales">
-                <BriefcaseBusiness className="mr-2 h-4 w-4" />
-                Datos laborales
-              </TabsTrigger>
-              <TabsTrigger value="jornada">
-                <Hammer className="mr-2 h-4 w-4" /> Jornada laboral
-              </TabsTrigger>
-              <TabsTrigger value="nomina">
-                <Icon icon="mdi:cash" className="mr-2 h-4 w-4" />
-                Datos de nómina
-              </TabsTrigger>
-              <TabsTrigger value="cuentas">
-                {/* <Icon icon="mdi:cash" className="mr-2 h-4 w-4" /> */}
-                <Icon icon="rivet-icons:money" className="mr-2 h-4 w-4" />
-                Cuentas bancarias
-              </TabsTrigger>
-              <TabsTrigger value="reconocimiento">
-                <Icon icon="mdi:face-recognition" className="mr-2 h-4 w-4" />
-                Escanear rostro
-              </TabsTrigger>
-              {/* <TabsTrigger value="gps">
-                <Icon icon="mdi:map-marker" className="mr-2 h-4 w-4" />
-                GPS
-              </TabsTrigger> */}
-            </TabsList>
->>>>>>> d8694528a09d42889ee380480da3e3ccc5e27d05
           </div>
-
-          {(soloLectura || editar) && values && (
-            <div className="mt-6 pt-6 border-t border-gray-100">
-              <BotonCredencial empleado={values} imagePreview={imagePreview} />
-            </div>
-          )}
         </div>
 
-        {/* Tabs - Estilo ADAMIA */}
+        {/* TABS (Asegúrate de borrar la lista duplicada que estaba abajo) */}
         <Tabs value={tab} onValueChange={setTab} className="w-full">
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
             <div className="overflow-x-auto">
@@ -763,8 +698,7 @@ export default function FormularioEmpleado({
               </TabsList>
             </div>
 
-            {/* Contenido de las pestañas */}
-
+            {/* Contenido de Tabs con Framer Motion */}
             <motion.div layout className="w-full p-6">
               <AnimatePresence mode="wait">
                 <motion.div
@@ -801,7 +735,10 @@ export default function FormularioEmpleado({
                   )}
 
                   {tab === "cuentas" && (
-                    <TabCuentasBancarias form={form} soloLectura={soloLectura} />
+                    <TabCuentasBancarias
+                      form={form}
+                      soloLectura={soloLectura}
+                    />
                   )}
 
                   {/* 🔹 CAMBIO: Solo renderizar TabReconocimiento cuando esté activo */}
