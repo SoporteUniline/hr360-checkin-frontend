@@ -52,7 +52,7 @@ export default function EmpleadosTable({
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-10">
         <div className="text-center text-gray-500">
-          No hay empleados o búsqueda sin resultados.
+        No hay empleados o búsqueda sin resultados.
         </div>
       </div>
     );
@@ -69,78 +69,78 @@ export default function EmpleadosTable({
 
       {/* Tabla */}
       <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
+      <Table>
+        <TableHeader>
             <TableRow className="bg-gray-50 hover:bg-gray-50">
               <TableHead className="font-semibold text-gray-700 uppercase text-xs">
                 Nombre
               </TableHead>
               <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                Puesto
-              </TableHead>
+              Puesto
+            </TableHead>
               <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
                 Depto.
               </TableHead>
               <TableHead className="font-semibold text-gray-700 uppercase text-xs">
                 Contacto
-              </TableHead>
+            </TableHead>
               <TableHead className="font-semibold text-gray-700 uppercase text-xs">
                 Ingreso
-              </TableHead>
+            </TableHead>
               <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                Estado
-              </TableHead>
+              Estado
+            </TableHead>
               <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center sticky right-0 bg-gray-50 z-10">
-                Acciones
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {empleados.map((emp) => {
-              const nombreCompleto = `${emp.nombre} ${
-                emp.apellido_paterno ?? ""
-              } ${emp.apellido_materno ?? ""}`.trim();
+              Acciones
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {empleados.map((emp) => {
+            const nombreCompleto = `${emp.nombre} ${
+              emp.apellido_paterno ?? ""
+            } ${emp.apellido_materno ?? ""}`.trim();
 
-              return (
-                <TableRow
+            return (
+              <TableRow
                   className="cursor-pointer hover:bg-gray-50 border-b border-gray-100"
-                  key={emp.id_empleado}
-                  onClick={() => abrirFormulario(emp, false, true)}
-                >
+                key={emp.id_empleado}
+                onClick={() => abrirFormulario(emp, false, true)}
+              >
                   <TableCell className="py-4">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10 ring-2 ring-gray-100">
-                        {emp.foto_perfil ? (
-                          <AvatarImage
-                            src={emp.foto_perfil}
-                            alt={nombreCompleto}
-                          />
-                        ) : null}
+                      {emp.foto_perfil ? (
+                        <AvatarImage
+                          src={emp.foto_perfil}
+                          alt={nombreCompleto}
+                        />
+                      ) : null}
                         <AvatarFallback
                           className={`${getAvatarColor(nombreCompleto)} text-white font-semibold text-sm`}
                         >
-                          {getInitials(nombreCompleto)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex flex-col">
+                        {getInitials(nombreCompleto)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col">
                         <span className="font-medium text-gray-900">
                           {nombreCompleto}
                         </span>
-                        {emp?.nip ? (
+                      {emp?.nip ? (
                           <span className="text-xs text-gray-500">
                             Código: {emp.nip}
                           </span>
-                        ) : null}
-                      </div>
+                      ) : null}
                     </div>
-                  </TableCell>
+                  </div>
+                </TableCell>
                   <TableCell className="text-gray-700 font-medium">
                     {emp.puesto}
                   </TableCell>
                   <TableCell className="text-center">
-                    {emp.departamento ? (
+                  {emp.departamento ? (
                       <span className="text-sm text-gray-700">
-                        {emp.departamento}
+                      {emp.departamento}
                       </span>
                     ) : (
                       <span className="text-gray-400 text-sm">-</span>
@@ -164,28 +164,28 @@ export default function EmpleadosTable({
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <Phone className="w-4 h-4 text-gray-500 flex-shrink-0" />
                           <span>{emp.telefono}</span>
-                        </div>
-                      ) : null}
                     </div>
-                  </TableCell>
+                  ) : null}
+                  </div>
+                </TableCell>
                   <TableCell className="text-gray-700">
-                    {emp.fecha_ingreso
-                      ? formatDateDMY(dayjs(emp.fecha_ingreso))
-                      : "-"}
-                  </TableCell>
-                  <TableCell>
+                  {emp.fecha_ingreso
+                    ? formatDateDMY(dayjs(emp.fecha_ingreso))
+                    : "-"}
+                </TableCell>
+                <TableCell>
                     <div className="flex justify-center">
-                      <span
+                  <span
                         className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
                           emp.estado === "Activo"
                             ? "bg-[#2563EB] text-white"
                             : "bg-gray-200 text-gray-600"
-                        }`}
-                      >
-                        {emp.estado}
-                      </span>
+                    }`}
+                  >
+                    {emp.estado}
+                  </span>
                     </div>
-                  </TableCell>
+                </TableCell>
                   <TableCell className="sticky right-0 bg-white z-10">
                     <div className="flex justify-center items-center gap-2">
                       <button
@@ -209,19 +209,19 @@ export default function EmpleadosTable({
                         <Eye className="h-4 w-4 text-green-600" />
                       </button>
                       <div onClick={(e) => e.stopPropagation()}>
-                        <EstadoEmpleadoDialog
-                          item={emp}
-                          limit={limit}
-                          page={page}
-                        />
-                      </div>
+                      <EstadoEmpleadoDialog
+                        item={emp}
+                        limit={limit}
+                        page={page}
+                      />
                     </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
       </div>
     </div>
   );

@@ -76,8 +76,8 @@ export default function DepartamentosTable({
 
         {/* Tabla */}
         <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
+      <Table>
+        <TableHeader>
               <TableRow className="bg-gray-50 hover:bg-gray-50">
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs">
                   Nombre
@@ -85,34 +85,34 @@ export default function DepartamentosTable({
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs text-right">
                   Acciones
                 </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {departamentos.map((dep) => (
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {departamentos.map((dep) => (
                 <TableRow key={dep.id_departamento} className="hover:bg-gray-50 border-b border-gray-100">
                   <TableCell className="font-medium text-gray-900">{dep.nombre}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end items-center gap-2">
                        <button
-                         onClick={() => onEdit(dep, departamentos)}
+                  onClick={() => onEdit(dep, departamentos)}
                          className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
                          title="Editar"
                        >
                          <Pencil className="h-4 w-4 text-[#2563EB]" />
                        </button>
                       <button
-                        onClick={() => onDelete(dep.id_departamento, key)}
+                  onClick={() => onDelete(dep.id_departamento, key)}
                         className="p-2 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
                         title="Eliminar"
-                      >
+                >
                         <Trash2 className="h-4 w-4 text-red-600" />
                       </button>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
         </div>
       </div>
       <TablePagination

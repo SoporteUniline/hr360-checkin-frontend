@@ -8,8 +8,9 @@
   --primary-foreground: #ffffff;
   --border: #e5e7eb;
   --ring: rgba(55, 73, 94, 0.35);
-  /* Tipografía Sistema San Francisco (guía) */
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* NOTA:
+     La tipografía del proyecto está estandarizada globalmente (Inter en `src/app/layout.jsx` + `globals.css`).
+     No sobreescribimos `font-family` aquí para mantener consistencia visual con módulos como Empleados. */
 }
 
 /* Utilidad de animación (2s infinite) para alertas críticas de vigencia */

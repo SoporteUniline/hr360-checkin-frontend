@@ -1,8 +1,6 @@
 "use client";
 
 import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import dayjs from "dayjs";
 import { Eye, Pencil, Trash2, Copy } from "lucide-react";
 import styles from "./contratos-theme.module.css";

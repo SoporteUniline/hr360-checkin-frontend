@@ -8,7 +8,14 @@ export default function LayoutPanel({ children }) {
       <AppSidebar variant="inset" />
       <SidebarInset>
         <SiteHeader />
-        <div className="flex flex-1 flex-col p-5">{children}</div>
+        {/*
+          Diseño ADAMIA (estandarización global del Panel):
+          - Base typography: 14px (Tailwind `text-sm`) para que todos los módulos del Panel se vean consistentes.
+          - Los títulos/jerarquía visual se manejan localmente con `text-base`, `text-xl`, etc.
+        */}
+        <div className="flex flex-1 flex-col p-5 text-sm text-gray-900">
+          {children}
+        </div>
       </SidebarInset>
     </SidebarProvider>
   );

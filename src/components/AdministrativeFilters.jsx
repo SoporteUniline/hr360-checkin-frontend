@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectTrigger,
@@ -38,44 +39,59 @@ export const AdministrativeFilters = ({
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
-      <Combobox
-        options={empleadosUnicos}
-        value={empleado}
-        onChange={(value) => {
-          setEmpleado(value);
-          updateFilters({ empleado: value });
-        }}
-        placeholder="Buscar empleado..."
-        emptyText="No se encontró empleado"
-      />
-      <Input
-        placeholder="Buscar folio..."
-        value={folio}
-        onChange={(e) => {
-          const value = e.target.value;
-          setFolio(value);
-          updateFilters({ folio: value });
-        }}
-      />
-      <Select
-        value={estatus}
-        onValueChange={(value) => {
-          setEstatus(value);
-          updateFilters({ estatus: value });
-        }}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Estatus" />
-        </SelectTrigger>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="space-y-2">
+          <Label className="text-sm font-medium text-gray-700">Empleado</Label>
+          <Combobox
+            options={empleadosUnicos}
+            value={empleado}
+            onChange={(value) => {
+              setEmpleado(value);
+              updateFilters({ empleado: value });
+            }}
+            placeholder="Buscar empleado..."
+            emptyText="No se encontró empleado"
+          />
+        </div>
 
-        <SelectContent>
-          <SelectItem value="elaborada">Elaborada</SelectItem>
-          <SelectItem value="notificada">Notificada</SelectItem>
-          <SelectItem value="cerrada">Cerrada</SelectItem>
-          <SelectItem value="anulada">Anulada</SelectItem>
-        </SelectContent>
-      </Select>
+        <div className="space-y-2">
+          <Label className="text-sm font-medium text-gray-700">Folio</Label>
+          <Input
+            placeholder="Buscar folio..."
+            value={folio}
+            onChange={(e) => {
+              const value = e.target.value;
+              setFolio(value);
+              updateFilters({ folio: value });
+            }}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-sm font-medium text-gray-700">Estado</Label>
+          <Select
+            value={estatus === "" ? "__all__" : estatus}
+            onValueChange={(value) => {
+              const next = value === "__all__" ? "" : value;
+              setEstatus(next);
+              updateFilters({ estatus: next });
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Todos" />
+            </SelectTrigger>
+
+            <SelectContent>
+              <SelectItem value="__all__">Todos</SelectItem>
+              <SelectItem value="elaborada">Elaborada</SelectItem>
+              <SelectItem value="notificada">Notificada</SelectItem>
+              <SelectItem value="cerrada">Cerrada</SelectItem>
+              <SelectItem value="anulada">Anulada</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
     </div>
   );
 };

@@ -27,7 +27,6 @@ import useContratosData from "@/hooks/useContratosData";
 import { contratosApi } from "@/lib/contratosApi";
 import { useSnackbar } from "notistack";
 import useEmpleadosData from "@/hooks/useEmpleadosData";
-import styles from "./contratos-theme.module.css";
 import AccesosRapidos from "@/components/AccesosRapidos";
 
 /**
@@ -212,9 +211,9 @@ export default function ContratosPage() {
         <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">Buscar</label>
+              <label className="text-sm font-medium text-gray-700">Buscar</label>
               <div className="relative">
-                <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <Input
                   className="pl-9"
                   placeholder="Folio o empleado..."
@@ -270,7 +269,7 @@ export default function ContratosPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">Tipo</label>
+              <label className="text-sm font-medium text-gray-700">Tipo</label>
               <Select value={tipoContrato === "" ? "__all__" : tipoContrato} onValueChange={(v) => setTipoContrato(v === "__all__" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos" />
@@ -287,7 +286,7 @@ export default function ContratosPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">Estatus</label>
+              <label className="text-sm font-medium text-gray-700">Estado</label>
               <Select value={estatus === "" ? "__all__" : estatus} onValueChange={(v) => setEstatus(v === "__all__" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos" />
@@ -302,11 +301,11 @@ export default function ContratosPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">Desde</label>
+              <label className="text-sm font-medium text-gray-700">Desde</label>
               <Input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">Hasta</label>
+              <label className="text-sm font-medium text-gray-700">Hasta</label>
               <Input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
             </div>
           </div>
@@ -387,7 +386,7 @@ export default function ContratosPage() {
       {/* Barra de búsqueda rápida */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
         <div className="relative w-full">
-          <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+          <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <Input
             className="pl-9"
             placeholder="Buscar por folio o empleado..."

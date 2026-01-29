@@ -36,7 +36,16 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "@/lib/axios";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PlusIcon, Search } from "lucide-react";
+import {
+  CalendarDays,
+  FileText,
+  Save,
+  ShieldAlert,
+  User,
+  FileSignature,
+  PlusIcon,
+  Search,
+} from "lucide-react";
 import NewTipoActaModal from "./NewTipoActaModal";
 import { administrativeMinutesApi } from "@/lib/administrativeMinutesApi";
 import useEmpleadosData from "@/hooks/useEmpleadosData";
@@ -399,20 +408,40 @@ const NewActaModal = ({
     <>
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent
-          className={twMerge("sm:max-w-xl md:max-w-2xl lg:max-w-3xl")}
+          className={twMerge(
+            "sm:max-w-xl md:max-w-2xl lg:max-w-3xl p-0 overflow-hidden"
+          )}
         >
-          <DialogHeader className="border-b-2 pb-2">
-            <DialogTitle className="text-md text-gray-700">
-              {mode === "edit" ? "✏️ Editar Acta Administrativa" : "📋 Nueva Acta Administrativa"}
-            </DialogTitle>
+          {/* Header - Diseño ADAMIA (patrón Contratos) */}
+          <DialogHeader className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white p-6 rounded-t-lg">
+            <div className="flex items-center gap-3">
+              <FileText className="h-6 w-6" />
+              <DialogTitle className="text-white text-lg font-semibold">
+                {mode === "edit" ? "✏️ Editar Acta Administrativa" : "➕ Nueva Acta Administrativa"}
+              </DialogTitle>
+            </div>
           </DialogHeader>
 
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onSubmit)}
-              className="text-sm space-y-2 pt-2 max-h-[60vh] overflow-y-auto px-1"
+              className="text-sm space-y-4 max-h-[70vh] overflow-y-auto px-6 py-6"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+              {/* ======================
+                  Secciones por color (Diseño ADAMIA)
+                  - Patrón tomado de `src/app/panel/contratos/ContratoDialog.jsx`
+                  ====================== */}
+
+              {/* Información básica */}
+              <div className="bg-gradient-to-br from-blue-50 via-white to-blue-50 border border-blue-100 rounded-xl p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="bg-[#2563EB] p-2 rounded-lg">
+                    <User className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="font-semibold text-gray-900">Información básica</div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
                 <FormField
                   control={form.control}
                   name="empleado"
@@ -433,7 +462,7 @@ const NewActaModal = ({
                             - El input visible es `empSearch` (nombre completo)
                           */}
                           <div className="relative">
-                            <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                            <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                             <Input
                               className="pl-9"
                               placeholder="Buscar empleado..."
@@ -486,7 +515,7 @@ const NewActaModal = ({
                                       onMouseDown={() => handleSelectEmpleadoSugerencia(emp)}
                                       onMouseEnter={() => setHoveredEmpSuggestionIndex(idx)}
                                       className={`px-3 py-2 cursor-pointer text-sm ${
-                                        idx === hoveredEmpSuggestionIndex ? "bg-slate-100" : ""
+                                        idx === hoveredEmpSuggestionIndex ? "bg-blue-50" : ""
                                       }`}
                                     >
                                       {emp.nombre_completo}
@@ -554,10 +583,11 @@ const NewActaModal = ({
 
                             <Button
                               type="button"
-                              className="bg-slate-700 hover:bg-slate-800 p-2"
+                              className="p-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
                               onClick={() => setOpenNewTipoActa(true)}
+                              title="Crear tipo de acta"
                             >
-                              <PlusIcon className="w-4 h-4" />
+                              <PlusIcon className="w-4 h-4 text-[#7C3AED]" />
                             </Button>
                           </div>
                         </FormControl>
@@ -567,8 +597,20 @@ const NewActaModal = ({
                     );
                   }}
                 />
+                </div>
+              </div>
 
-                <FormField
+              {/* Incidente */}
+              <div className="bg-gradient-to-br from-green-50 via-white to-emerald-50 border border-green-100 rounded-xl p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="bg-emerald-600 p-2 rounded-lg">
+                    <CalendarDays className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="font-semibold text-gray-900">Detalles del incidente</div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+                  <FormField
                   control={form.control}
                   name="fechaIncidente"
                   render={({ field }) => (
@@ -612,8 +654,20 @@ const NewActaModal = ({
                     </FormItem>
                   )}
                 />
+                </div>
+              </div>
 
-                <FormField
+              {/* Hechos y testigos */}
+              <div className="bg-gradient-to-br from-yellow-50 via-white to-amber-50 border border-yellow-100 rounded-xl p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="bg-yellow-500 p-2 rounded-lg">
+                    <FileText className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="font-semibold text-gray-900">Hechos y testigos</div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+                  <FormField
                   control={form.control}
                   name="descripcion"
                   render={({ field }) => (
@@ -648,8 +702,20 @@ const NewActaModal = ({
                     </FormItem>
                   )}
                 />
+                </div>
+              </div>
 
-                <FormField
+              {/* Sanción */}
+              <div className="bg-gradient-to-br from-purple-50 via-white to-fuchsia-50 border border-purple-100 rounded-xl p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="bg-[#7C3AED] p-2 rounded-lg">
+                    <ShieldAlert className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="font-semibold text-gray-900">Sanción</div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+                  <FormField
                   control={form.control}
                   name="sancion"
                   render={({ field }) => {
@@ -693,8 +759,20 @@ const NewActaModal = ({
                     );
                   }}
                 />
+                </div>
+              </div>
 
-                <FormField
+              {/* Elaboración */}
+              <div className="bg-gradient-to-br from-teal-50 via-white to-cyan-50 border border-teal-100 rounded-xl p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="bg-teal-600 p-2 rounded-lg">
+                    <FileSignature className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="font-semibold text-gray-900">Elaboración</div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+                  <FormField
                   control={form.control}
                   name="elabora"
                   render={({ field }) => {
@@ -781,8 +859,20 @@ const NewActaModal = ({
                     </FormItem>
                   )}
                 />
+                </div>
+              </div>
 
-                <FormField
+              {/* Declaraciones */}
+              <div className="bg-gradient-to-br from-slate-50 via-white to-slate-50 border border-slate-200 rounded-xl p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="bg-slate-700 p-2 rounded-lg">
+                    <FileText className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="font-semibold text-gray-900">Declaraciones</div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+                  <FormField
                   control={form.control}
                   name="descargo"
                   render={({ field }) => (
@@ -848,25 +938,27 @@ const NewActaModal = ({
                     </FormItem>
                   )}
                 />
+                </div>
               </div>
 
-              <div className="flex justify-end gap-3 mt-6">
-                <Button variant="outline" type="button" onClick={handleClose}>
+              <div className="bg-gray-50 -mx-6 px-6 py-4 flex flex-col-reverse sm:flex-row justify-end gap-2 mt-6 border-t">
+                <Button variant="outline" type="button" onClick={handleClose} className="border-gray-300">
                   Cancelar
                 </Button>
 
                 <Button
-                  className="bg-slate-700 hover:bg-slate-800"
+                  className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm"
                   type="submit"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting
-                    ? mode === "edit"
-                      ? "Actualizando..."
-                      : "Creando..."
-                    : mode === "edit"
-                    ? "💾 Guardar Cambios"
-                    : "💾 Crear Acta"}
+                  {isSubmitting ? (
+                    "Guardando..."
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Guardar
+                    </>
+                  )}
                 </Button>
               </div>
             </form>

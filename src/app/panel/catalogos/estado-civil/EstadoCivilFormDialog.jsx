@@ -11,6 +11,7 @@ import {
 import axios from "axios";
 import { mutate } from "swr";
 import { useSnackbar } from "notistack";
+import { FileText, Save } from "lucide-react";
 
 export default function EstadoCivilFormDialog({
   open,
@@ -84,15 +85,46 @@ export default function EstadoCivilFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
+      <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden">
+        {/* Header - Diseño ADAMIA */}
+        <DialogHeader className="p-0">
+          <div className="bg-gradient-to-r from-[#2563EB] to-[#1d4ed8] p-6">
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 p-3 rounded-lg backdrop-blur-sm">
+                <FileText className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <DialogTitle className="text-white text-xl font-bold">
             {editCiv ? "Editar estado civil" : "Nuevo estado civil"}
           </DialogTitle>
+                <p className="text-sm text-blue-100">
+                  {editCiv
+                    ? "Actualiza el nombre del estado civil"
+                    : "Agrega un nuevo estado civil al catálogo"}
+                </p>
+              </div>
+            </div>
+          </div>
         </DialogHeader>
-        <div className="my-4 space-y-2">
+
+        <div className="p-6 space-y-6">
+          {/* Sección por color (patrón Contratos) */}
+          <div className="bg-gradient-to-br from-blue-50 via-white to-blue-50 border border-blue-100 rounded-xl p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <div className="bg-[#2563EB] p-2 rounded-lg">
+                <FileText className="h-4 w-4 text-white" />
+              </div>
+              <div className="font-semibold text-gray-900">
+                Información
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-gray-700">
+                Nombre del estado civil
+              </p>
           <Input
-            placeholder="Nombre del estado civil"
+                placeholder="Ej. Soltero(a)"
             value={nombre}
             onChange={(e) => {
               setNombre(e.target.value);
@@ -100,14 +132,23 @@ export default function EstadoCivilFormDialog({
             }}
             className="w-full"
           />
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+              {error ? (
+                <p className="text-red-600 text-sm">{error}</p>
+              ) : null}
+            </div>
+          </div>
         </div>
-        <DialogFooter className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => setOpen(false)}>
+
+        <DialogFooter className="bg-gray-50 p-4 flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setOpen(false)} className="border-gray-300">
             Cancelar
           </Button>
-          <Button onClick={handleSubmit}>
-            {editCiv ? "Actualizar" : "Agregar"}
+          <Button
+            onClick={handleSubmit}
+            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
+          >
+            <Save className="h-4 w-4 mr-2" />
+            Guardar
           </Button>
         </DialogFooter>
       </DialogContent>

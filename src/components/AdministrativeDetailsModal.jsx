@@ -43,6 +43,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { FileText, AlertTriangle } from "lucide-react";
 
 dayjs.locale("es");
 
@@ -257,14 +258,25 @@ export const AdministrativeDetailsModal = ({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
-        className={twMerge("sm:max-w-xl md:max-w-2xl lg:max-w-3xl")}
+        className={twMerge(
+          "max-w-[95vw] sm:max-w-2xl md:max-w-3xl max-h-[85vh] overflow-y-auto p-0"
+        )}
       >
-        <DialogHeader className="border-b-2 pb-2">
-          <DialogTitle className="text-md">📋 Acta {acta.folio}</DialogTitle>
+        {/* Header - Diseño ADAMIA (patrón Contratos) */}
+        <DialogHeader className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white p-6 rounded-t-lg">
+          <div className="flex items-center gap-3">
+            <FileText className="h-6 w-6" />
+            <DialogTitle className="text-white">
+              📄 Acta {acta.folio || acta.id_acta}
+            </DialogTitle>
+          </div>
         </DialogHeader>
 
-        <div className="text-sm space-y-2 pt-2 max-h-[60vh] overflow-y-auto">
-          <CardCompact title="📄 Información General">
+        <div className="p-6 space-y-4">
+          <CardCompact
+            title="📄 Información General"
+            className="bg-blue-50 border-l-blue-500"
+          >
             <div className="flex justify-between pb-1 border-b-1">
               <p className="text-gray-500">Folio:</p>
               <p className="font-semibold">{acta.folio}</p>
@@ -298,7 +310,10 @@ export const AdministrativeDetailsModal = ({
             </div>
           </CardCompact>
 
-          <CardCompact title="📅 Detalles del Incidente">
+          <CardCompact
+            title="📅 Detalles del Incidente"
+            className="bg-green-50 border-l-green-500"
+          >
             <div className="flex justify-between pb-1 border-b-1">
               <p className="text-gray-500">Fecha:</p>
               <p className="font-semibold">
@@ -323,7 +338,10 @@ export const AdministrativeDetailsModal = ({
             </div>
           </CardCompact>
 
-          <CardCompact title="⚠️ Sanción">
+          <CardCompact
+            title="⚠️ Sanción"
+            className="bg-yellow-50 border-l-yellow-500"
+          >
             <div className="flex justify-between pb-1 border-b-1">
               <p className="text-gray-500">Tipo:</p>
               <p className="font-semibold">
@@ -336,7 +354,10 @@ export const AdministrativeDetailsModal = ({
             </div>
           </CardCompact>
 
-          <CardCompact title="💬 Descargo del Trabajador">
+          <CardCompact
+            title="💬 Descargo del Trabajador"
+            className="bg-purple-50 border-l-purple-500"
+          >
             {acta.descargo_trabajador && (
               <div className="pb-3">{acta.descargo_trabajador}</div>
             )}
@@ -347,7 +368,10 @@ export const AdministrativeDetailsModal = ({
               </p>
             </div>
           </CardCompact>
-          <CardCompact title="👤 Información Administrativa">
+          <CardCompact
+            title="👤 Información Administrativa"
+            className="bg-teal-50 border-l-teal-500"
+          >
             <div className="flex justify-between pt-1 pb-2 border-b-1">
               <p className="text-gray-500">Elabora:</p>
               <p className="font-semibold">{acta.nombre_quien_elabora}</p>
@@ -362,7 +386,7 @@ export const AdministrativeDetailsModal = ({
                   type="button"
                   size="sm"
                   variant="outline"
-                  className="h-8"
+                  className="h-8 border-blue-200 text-[#2563EB] hover:bg-blue-50"
                   onClick={() => {
                     setEstatusNuevo(String(estatusLocal || "").toLowerCase());
                     setOpenEstatusDialog(true);
@@ -390,13 +414,17 @@ export const AdministrativeDetailsModal = ({
 
         {/* Footer de acciones: cerrar + descargar PDF.
             Relación: patrón igual a `PermisoViewDialog` y `FiniquitoViewDialog`. */}
-        <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-4 border-t">
-          <Button variant="outline" onClick={() => onClose(false)} className="w-full sm:w-auto">
+        <div className="bg-gray-50 p-4 flex flex-col-reverse sm:flex-row justify-end gap-2 rounded-b-lg">
+          <Button
+            variant="outline"
+            onClick={() => onClose(false)}
+            className="w-full sm:w-auto border-gray-300"
+          >
             Cerrar
           </Button>
           <Button
             onClick={descargarPDFActaFormatoPermisos}
-            className="w-full sm:w-auto bg-[#f59e0b] hover:bg-[#d97706] text-white"
+            className="w-full sm:w-auto bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm"
           >
             📄 Descargar PDF
           </Button>
@@ -404,41 +432,51 @@ export const AdministrativeDetailsModal = ({
 
         {/* Diálogo de cambio de estatus (confirmación) */}
         <AlertDialog open={openEstatusDialog} onOpenChange={setOpenEstatusDialog}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Cambiar estatus del acta</AlertDialogTitle>
-              <AlertDialogDescription>
-                Selecciona el nuevo estatus para el acta <span className="font-semibold">{acta.folio}</span>.
-              </AlertDialogDescription>
+          <AlertDialogContent className="sm:max-w-[425px] p-0">
+            <AlertDialogHeader className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white p-6 rounded-t-lg">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-6 w-6" />
+                <AlertDialogTitle className="text-white">
+                  Cambiar estatus
+                </AlertDialogTitle>
+              </div>
             </AlertDialogHeader>
 
-            <div className="space-y-2">
-              <p className="text-sm text-gray-500">Nuevo estatus</p>
-              <Select value={estatusNuevo} onValueChange={setEstatusNuevo}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un estatus" />
-                </SelectTrigger>
-                <SelectContent>
-                  {estatusOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="p-6 space-y-4">
+              <div className="bg-blue-50 border-l-4 border-blue-500 text-blue-800 p-4 rounded-md">
+                <AlertDialogDescription className="text-sm">
+                  Selecciona el nuevo estatus para el acta{" "}
+                  <span className="font-semibold">{acta.folio}</span>.
+                </AlertDialogDescription>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-700">
+                  Nuevo estatus
+                </p>
+                <Select value={estatusNuevo} onValueChange={setEstatusNuevo}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un estatus" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {estatusOptions.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            <AlertDialogFooter>
-              <AlertDialogCancel
-                className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
-                disabled={savingEstatus}
-              >
+            <AlertDialogFooter className="bg-gray-50 p-4 flex justify-end gap-2 rounded-b-lg">
+              <AlertDialogCancel className="border-gray-300" disabled={savingEstatus}>
                 Cancelar
               </AlertDialogCancel>
               <AlertDialogAction
                 onClick={onGuardarEstatus}
                 disabled={savingEstatus || !estatusNuevo}
-                className="bg-slate-700 hover:bg-slate-800 text-white"
+                className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm"
               >
                 {savingEstatus ? "Guardando..." : "Guardar"}
               </AlertDialogAction>

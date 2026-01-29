@@ -10,7 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useAdministrativeMinutes } from "@/hooks/useAdministrativeMinutes";
 import useEmpleadosActivosData from "@/hooks/useEmpleadosActivos";
 import useTiposActa from "@/hooks/useTiposActa";
-import { PlusIcon } from "lucide-react";
+import { FileText, PlusIcon } from "lucide-react";
 import React, { useState } from "react";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import { AdministrativeDetailsModal } from "@/components/AdministrativeDetailsModal";
@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { administrativeMinutesApi } from "@/lib/administrativeMinutesApi";
+import { AlertTriangle } from "lucide-react";
 
 const page = () => {
   const [page, setPage] = useState(1);
@@ -107,42 +108,53 @@ const page = () => {
 
   return (
     <>
-      <div className="flex justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">📋 Actas administrativas</h1>{" "}
-          <p className="text-xs text-gray-500 mt-1">
-            Gestión de actas según Ley Federal del Trabajo
-          </p>
+      <div className="min-h-screen bg-[#F9FAFB] p-6 space-y-6">
+        {/* Header del módulo - Diseño ADAMIA */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <FileText className="w-7 h-7 text-[#2563EB]" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-semibold text-gray-900">
+                Actas administrativas
+              </h1>
+              <p className="text-sm text-gray-600">
+                Gestión de actas según Ley Federal del Trabajo
+              </p>
+            </div>
+          </div>
+          <Button
+            onClick={() => setOpenNewActa(true)}
+            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
+          >
+            <PlusIcon className="w-4 h-4 mr-2" />
+            Nueva acta
+          </Button>
         </div>
-        <Button
-          onClick={() => setOpenNewActa(true)}
-          className="bg-slate-700 hover:bg-slate-800"
-        >
-          <PlusIcon />
-          Nueva acta
-        </Button>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+
+        {/* Estadísticas - Diseño ADAMIA */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          title="TOTAL ACTAS"
+          title="Total actas"
           value={stats?.totalActas ?? 0}
           borderColor="border-l-gray-800"
         />
 
         <StatCard
-          title="ELABORADAS"
+          title="Elaboradas"
           value={stats?.totalElaboradas ?? 0}
           borderColor="border-l-amber-500"
         />
 
         <StatCard
-          title="CERRADAS"
+          title="Cerradas"
           value={stats?.totalCerradas ?? 0}
           borderColor="border-l-emerald-500"
         />
 
         <StatCard
-          title="GRAVES"
+          title="Graves"
           value={stats?.totalGraves ?? 0}
           borderColor="border-l-red-500"
         />
@@ -159,17 +171,15 @@ const page = () => {
         empleados={empleados}
       />
 
-      <div className="mt-5">
-        <AdministrativeTable
-          actas={data}
-          page={page}
-          limit={limit}
-          limpiarFiltros={limpiarFiltros}
-          onView={onViewActa}
-          onEdit={onEditActa}
-          onDelete={onDeleteActa}
-        />
-      </div>
+      <AdministrativeTable
+        actas={data}
+        page={page}
+        limit={limit}
+        limpiarFiltros={limpiarFiltros}
+        onView={onViewActa}
+        onEdit={onEditActa}
+        onDelete={onDeleteActa}
+      />
 
       <TablePagination
         page={page}
@@ -217,24 +227,29 @@ const page = () => {
 
       {/* Confirmación de eliminación (shadcn/ui) */}
       <AlertDialog open={!!deleteRow} onOpenChange={(open) => !open && setDeleteRow(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar acta administrativa?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteRow
-                ? `Esta acción no se puede deshacer. Se eliminará el acta ${deleteRow?.folio || ""} del empleado ${
-                    deleteRow?.nombre_empleado || ""
-                  }.`
-                : ""}
-            </AlertDialogDescription>
+        <AlertDialogContent className="sm:max-w-[425px] p-0">
+          <AlertDialogHeader className="bg-gradient-to-r from-red-500 to-red-600 text-white p-6 rounded-t-lg">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-6 w-6" />
+              <AlertDialogTitle className="text-white">¿Eliminar acta administrativa?</AlertDialogTitle>
+            </div>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]">
-              Cancelar
-            </AlertDialogCancel>
+          <div className="p-6 space-y-4">
+            <div className="bg-red-50 border-l-4 border-red-500 text-red-800 p-4 rounded-md">
+              <AlertDialogDescription className="text-sm">
+                {deleteRow
+                  ? `Esta acción no se puede deshacer. Se eliminará el acta ${deleteRow?.folio || ""} del empleado ${
+                      deleteRow?.nombre_empleado || ""
+                    }.`
+                  : ""}
+              </AlertDialogDescription>
+            </div>
+          </div>
+          <AlertDialogFooter className="bg-gray-50 p-4 flex justify-end gap-2 rounded-b-lg">
+            <AlertDialogCancel className="border-gray-300">Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
-              className="bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(239,68,68,0.3)]"
+              className="bg-red-600 hover:bg-red-700 text-white shadow-sm"
             >
               Eliminar
             </AlertDialogAction>
@@ -244,6 +259,7 @@ const page = () => {
       
       {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
       <AccesosRapidos />
+      </div>
     </>
   );
 };
