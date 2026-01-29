@@ -22,7 +22,7 @@ import useFiniquitosData from "@/hooks/useFiniquitosData";
 import useEmpleadosActivosFiniquito from "@/hooks/useEmpleadosActivosFiniquito";
 import { finiquitosApi } from "@/lib/finiquitosApi";
 import styles from "./finiquitos-theme.module.css";
-import { Download, Plus, Search, Trash2, Edit3, Calculator, Eye } from "lucide-react";
+import { Download, Plus, Search, Trash2, Calculator, Eye } from "lucide-react";
 import FiniquitoViewDialog from "./FiniquitoViewDialog";
 import dayjs from "dayjs";
 import { jsPDF } from "jspdf";
@@ -39,6 +39,7 @@ import {
   drawRightValueRowsBox,
   fmtMoneyMXN,
 } from "@/lib/pdfUnifiedLayout";
+import { AlertTriangle, Filter, HandCoins, Pencil, RotateCcw, Save } from "lucide-react";
 
 // Página de Panel para "Finiquitos y liquidaciones"
 // - Relación:
@@ -592,24 +593,33 @@ export default function PageFiniquitosLiquidaciones() {
   };
 
   return (
-    <div className={`${styles.finTheme} space-y-4`}>
-      {/* Encabezado */}
-      <div>
-        <h1 className="text-2xl font-bold">📄 Finiquitos y liquidaciones</h1>
-        <p className="text-xs text-gray-500 mt-1">Calcula y gestiona finiquitos/liquidaciones.</p>
+    <div className={`${styles.finTheme} space-y-6`}>
+      {/* Header - Diseño ADAMIA */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-6">
+        <div className="flex items-center gap-3">
+          <div className="bg-[#2563EB] p-2.5 rounded-lg">
+            <HandCoins className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Finiquitos y liquidaciones</h1>
+            <p className="text-sm text-gray-600">Calcula y gestiona finiquitos/liquidaciones.</p>
+          </div>
+        </div>
       </div>
 
       {/* Filtros superiores (estilo Contratos) */}
-      <Card className="fin-card">
+      <Card className="fin-card border-indigo-100 bg-indigo-50">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">Finiquitos Guardados</CardTitle>
+          <CardTitle className="text-base font-bold text-indigo-700 flex items-center gap-2">
+            <Filter className="h-4 w-4" /> Filtros de búsqueda
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">Buscar</label>
+              <label className="text-sm font-medium text-gray-700">Buscar</label>
               <div className="relative">
-                <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <Input
                   className="pl-9"
                   placeholder="Empleado, puesto o ID..."
@@ -654,7 +664,7 @@ export default function PageFiniquitosLiquidaciones() {
                           key={emp.id_empleado}
                           onMouseDown={() => handleSelectEmpleadoSugerencia(emp)}
                           onMouseEnter={() => setHoveredSuggestionIndex(idx)}
-                          className={`px-3 py-2 cursor-pointer text-sm ${idx === hoveredSuggestionIndex ? "bg-slate-100" : ""}`}
+                          className={`px-3 py-2 cursor-pointer text-sm ${idx === hoveredSuggestionIndex ? "bg-blue-50" : ""}`}
                         >
                           {emp.nombre_completo}
                         </li>
@@ -665,7 +675,7 @@ export default function PageFiniquitosLiquidaciones() {
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">Estatus</label>
+              <label className="text-sm font-medium text-gray-700">Estado</label>
               <Select value={estatus === "" ? "__all__" : estatus} onValueChange={(v) => setEstatus(v === "__all__" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos" />
@@ -678,7 +688,7 @@ export default function PageFiniquitosLiquidaciones() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">Tipo</label>
+              <label className="text-sm font-medium text-gray-700">Tipo</label>
               <Select value={tipo === "" ? "__all__" : tipo} onValueChange={(v) => setTipo(v === "__all__" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Todos" />
@@ -693,14 +703,14 @@ export default function PageFiniquitosLiquidaciones() {
           </div>
           <div className="flex justify-end gap-2">
             <Button
-              variant="secondary"
               onClick={limpiarFiltros}
-              className="bg-[#e74c3c] hover:bg-[#c0392b] text-white shadow-[0_2px_8px_rgba(231,76,60,0.3)]"
+              variant="outline"
+              className="border-gray-300 text-gray-700 hover:bg-gray-100"
             >
-              🔄 Limpiar
+              <RotateCcw className="h-4 w-4 mr-2" /> Limpiar
             </Button>
-            <Button onClick={() => mutate()} className="shadow-[0_4px_12px_rgba(55,73,94,0.3)] transition-all hover:-translate-y-0.5">
-              🔍 Buscar
+            <Button onClick={() => mutate()} className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm">
+              <Search className="h-4 w-4 mr-2" /> Buscar
             </Button>
           </div>
         </CardContent>
@@ -708,29 +718,43 @@ export default function PageFiniquitosLiquidaciones() {
 
       {/* Tabs */}
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="tabla">📊 Finiquitos Guardados</TabsTrigger>
-          <TabsTrigger value="calculadora">🧮 Calculadora</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 bg-gray-100 rounded-lg p-1">
+          <TabsTrigger
+            value="tabla"
+            className="flex items-center gap-2 px-4 py-2 data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:shadow-sm data-[state=active]:font-semibold rounded-md transition-all"
+          >
+            <Eye className="h-4 w-4" /> Guardados
+          </TabsTrigger>
+          <TabsTrigger
+            value="calculadora"
+            className="flex items-center gap-2 px-4 py-2 data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:shadow-sm data-[state=active]:font-semibold rounded-md transition-all"
+          >
+            <Calculator className="h-4 w-4" /> Calculadora
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="tabla" className="space-y-3 mt-3">
           <div className="flex items-center justify-between">
             <div className="text-sm text-muted-foreground">Resultados: {total}</div>
-            <Button onClick={() => { resetFormulario(); setTab("calculadora"); }}>
+            <Button onClick={() => { resetFormulario(); setTab("calculadora"); }} className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm">
               <Plus className="h-4 w-4 mr-2" /> Nuevo Finiquito
             </Button>
           </div>
 
-          <div className="overflow-x-auto rounded-md border">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900">Lista de finiquitos y liquidaciones</h2>
+            </div>
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50">
+              <thead className="bg-gray-50 border-b">
                 <tr>
-                  <th className="text-left p-2">ID</th>
-                  <th className="text-left p-2">Empleado</th>
-                  <th className="text-left p-2">Fecha Baja</th>
-                  <th className="text-left p-2">Tipo</th>
-                  <th className="text-left p-2">Total</th>
-                  <th className="text-left p-2">Estado</th>
-                  <th className="text-left p-2">Acciones</th>
+                  <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">ID</th>
+                  <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">Empleado</th>
+                  <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">Fecha baja</th>
+                  <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">Tipo</th>
+                  <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">Total</th>
+                  <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">Estado</th>
+                  <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -739,30 +763,42 @@ export default function PageFiniquitosLiquidaciones() {
                   const tipoClass = f.es_liquidacion ? styles["tag-liquidacion"] : styles["tag-finiquito"];
                   const estClass = (f.estado || "") === "Pagado" ? styles["tag-pagado"] : styles["tag-pendiente"];
                   return (
-                    <tr key={f.id_finiquito} className="border-t">
-                      <td className="p-2 font-semibold">#{f.id_finiquito}</td>
-                      <td className="p-2">{f.nombre_completo}</td>
-                      <td className="p-2">{f.fecha_baja ? dayjs(f.fecha_baja).format("DD/MM/YYYY") : ""}</td>
-                      <td className="p-2">
+                    <tr key={f.id_finiquito} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="px-3 py-2 font-semibold">#{f.id_finiquito}</td>
+                      <td className="px-3 py-2">{f.nombre_completo}</td>
+                      <td className="px-3 py-2">{f.fecha_baja ? dayjs(f.fecha_baja).format("DD/MM/YYYY") : ""}</td>
+                      <td className="px-3 py-2">
                         <span className={`${styles.tag} ${tipoClass}`}>{tipoBadge}</span>
                       </td>
-                      <td className="p-2 font-bold">
+                      <td className="px-3 py-2 font-bold">
                         ${Number(f.total_pagar || 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
                       </td>
-                      <td className="p-2">
+                      <td className="px-3 py-2">
                         <span className={`${styles.tag} ${estClass}`}>{f.estado || "Pendiente"}</span>
                       </td>
-                      <td className="p-2">
-                        <div className="flex gap-1">
-                          <Button variant="outline" size="sm" className={styles.actionView} onClick={() => setViewRow(f)}>
-                            <Eye className="h-4 w-4 mr-1" /> Ver
-                          </Button>
-                          <Button variant="outline" size="sm" className={styles.actionEdit} onClick={() => editarFiniquito(f)}>
-                            <Edit3 className="h-4 w-4 mr-1" /> Editar
-                          </Button>
-                          <Button variant="outline" size="sm" className={styles.actionDelete} onClick={() => eliminarFiniquito(f)}>
-                            <Trash2 className="h-4 w-4 mr-1" /> Eliminar
-                          </Button>
+                      <td className="px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => editarFiniquito(f)}
+                            className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                            title="Editar"
+                          >
+                            <Pencil className="h-4 w-4 text-[#2563EB]" />
+                          </button>
+                          <button
+                            onClick={() => setViewRow(f)}
+                            className="p-2 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+                            title="Ver"
+                          >
+                            <Eye className="h-4 w-4 text-green-600" />
+                          </button>
+                          <button
+                            onClick={() => eliminarFiniquito(f)}
+                            className="p-2 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                            title="Eliminar"
+                          >
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -770,13 +806,14 @@ export default function PageFiniquitosLiquidaciones() {
                 })}
                 {(!finiquitos || finiquitos.length === 0) && (
                   <tr>
-                    <td className="p-6 text-center text-muted-foreground" colSpan={7}>
+                    <td className="p-6 text-center text-gray-500" colSpan={7}>
                       No hay finiquitos guardados
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
+            </div>
           </div>
 
           <TablePagination page={page} limit={limit} total={total} onPageChange={setPage} onLimitChange={setLimit} />
@@ -808,9 +845,9 @@ export default function PageFiniquitosLiquidaciones() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">Empleado</label>
+              <label className="text-sm font-medium text-gray-700">Empleado</label>
                   <div className="relative">
                     <Input
                       placeholder="Buscar empleado..."
@@ -834,7 +871,7 @@ export default function PageFiniquitosLiquidaciones() {
                           .map((emp) => (
                             <div
                               key={`emp-sel-${emp.id_empleado || emp.id}`}
-                              className="px-3 py-2 cursor-pointer text-sm hover:bg-slate-100"
+                              className="px-3 py-2 cursor-pointer text-sm hover:bg-blue-50"
                               onMouseDown={() => onPickEmpleado(emp)}
                             >
                               {emp.nombre_completo}
@@ -845,14 +882,14 @@ export default function PageFiniquitosLiquidaciones() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">Fecha de baja</label>
+              <label className="text-sm font-medium text-gray-700">Fecha de baja</label>
                   <Input type="date" value={fechaBaja} onChange={(e) => setFechaBaja(e.target.value)} />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">Tipo de cálculo</label>
+                  <label className="text-sm font-medium text-gray-700">Tipo de cálculo</label>
                   <Select value={tipoCalculo} onValueChange={setTipoCalculo}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecciona" />
@@ -864,7 +901,7 @@ export default function PageFiniquitosLiquidaciones() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">Tipo de terminación</label>
+                  <label className="text-sm font-medium text-gray-700">Tipo de terminación</label>
                   <Select value={tipoTerminacion} onValueChange={setTipoTerminacion}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecciona" />
@@ -951,16 +988,16 @@ export default function PageFiniquitosLiquidaciones() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold uppercase text-muted-foreground">Salario Diario</label>
+                    <label className="text-sm font-medium text-gray-700">Salario diario</label>
                     <Input type="number" step="0.01" value={salarioDiario} onChange={(e) => setSalarioDiario(e.target.value)} />
                     <small className="text-muted-foreground">Salario diario integrado</small>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold uppercase text-muted-foreground">Días salario pendientes</label>
+                    <label className="text-sm font-medium text-gray-700">Días salario pendientes</label>
                     <Input type="number" step="0.5" value={diasSalarioPendiente} onChange={(e) => setDiasSalarioPendiente(e.target.value)} />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold uppercase text-muted-foreground">Días NO trabajados</label>
+                    <label className="text-sm font-medium text-gray-700">Días no trabajados</label>
                     <Input type="number" step="0.5" value={diasNoTrabajados} onChange={(e) => setDiasNoTrabajados(e.target.value)} />
                     <small className="text-red-700">Estos días reducen proporcionales</small>
                   </div>
@@ -971,19 +1008,19 @@ export default function PageFiniquitosLiquidaciones() {
                   <div className="font-semibold text-sm mb-2" style={{ color: "#166534" }}>🏖️ Vacaciones</div>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold uppercase text-muted-foreground">Años anteriores (no gozadas)</label>
+                      <label className="text-sm font-medium text-gray-700">Años anteriores (no gozadas)</label>
                       <Input type="number" step="0.5" value={diasVacAnteriores} onChange={(e) => setDiasVacAnteriores(e.target.value)} />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold uppercase text-muted-foreground">Días ley (año actual)</label>
+                      <label className="text-sm font-medium text-gray-700">Días ley (año actual)</label>
                       <Input type="number" step="1" value={diasVacLeyActual} onChange={(e) => setDiasVacLeyActual(e.target.value)} />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold uppercase text-muted-foreground">Ya gozadas (año actual)</label>
+                      <label className="text-sm font-medium text-gray-700">Ya gozadas (año actual)</label>
                       <Input type="number" step="0.5" value={diasVacYaGozadas} onChange={(e) => setDiasVacYaGozadas(e.target.value)} />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold uppercase text-muted-foreground">Prima vacacional (%)</label>
+                      <label className="text-sm font-medium text-gray-700">Prima vacacional (%)</label>
                       <Input type="number" step="0.5" value={primaVacacional} onChange={(e) => setPrimaVacacional(e.target.value)} />
                     </div>
                   </div>
@@ -1003,11 +1040,11 @@ export default function PageFiniquitosLiquidaciones() {
                 </div>
 
                 {/* Aguinaldo */}
-                <div className="rounded-md border-l-4 p-3" style={{ borderLeftColor: "#f59e0b", background: "#fffbeb" }}>
-                  <div className="font-semibold text-sm mb-2" style={{ color: "#92400e" }}>🎁 Aguinaldo</div>
+                <div className="rounded-md border-l-4 border-yellow-500 bg-yellow-50 p-3">
+                  <div className="font-semibold text-sm mb-2 text-yellow-800">Aguinaldo</div>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold uppercase text-muted-foreground">Días aguinaldo completo</label>
+                      <label className="text-sm font-medium text-gray-700">Días aguinaldo completo</label>
                       <Input type="number" step="0.5" value={diasAguinaldo} onChange={(e) => setDiasAguinaldo(e.target.value)} />
                     </div>
                   </div>
@@ -1021,11 +1058,11 @@ export default function PageFiniquitosLiquidaciones() {
 
                 {/* Liquidación extra */}
                 {tipoCalculo === "liquidacion" && (
-                  <div className="rounded-md border-l-4 p-3" style={{ borderLeftColor: "#dc2626", background: "#fef2f2" }}>
-                    <div className="font-semibold text-sm mb-2" style={{ color: "#991b1b" }}>⚖️ Conceptos de Liquidación</div>
+                  <div className="rounded-md border-l-4 border-red-500 bg-red-50 p-3">
+                    <div className="font-semibold text-sm mb-2 text-red-800">Conceptos de liquidación</div>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                       <div className="space-y-1">
-                        <label className="text-xs font-semibold uppercase text-muted-foreground">Días salarios vencidos</label>
+                        <label className="text-sm font-medium text-gray-700">Días salarios vencidos</label>
                         <Input type="number" step="0.5" value={diasSalariosVencidos} onChange={(e) => setDiasSalariosVencidos(e.target.value)} />
                       </div>
                     </div>
@@ -1042,20 +1079,20 @@ export default function PageFiniquitosLiquidaciones() {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="space-y-1 md:col-span-2">
-                    <label className="text-xs font-semibold uppercase text-muted-foreground">Motivo de baja</label>
-                    <textarea className="border rounded-md w-full p-2 text-sm" rows={3} value={motivoBaja} onChange={(e) => setMotivoBaja(e.target.value)} />
+                    <label className="text-sm font-medium text-gray-700">Motivo de baja</label>
+                    <textarea className="w-full rounded-md border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30 focus:border-[#2563EB]" rows={3} value={motivoBaja} onChange={(e) => setMotivoBaja(e.target.value)} />
                   </div>
                   <div className="space-y-2">
                     <label className="invisible">Acciones</label>
                     <div className="grid grid-cols-1 gap-2">
-                      <Button onClick={calcular} className="bg-[var(--fin-primary)] hover:bg-[var(--fin-primary-dark)] text-white">
-                        🧮 Calcular
+                      <Button onClick={calcular} className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm">
+                        <Calculator className="h-4 w-4 mr-2" /> Calcular
                       </Button>
-                      <Button onClick={generarPDFFormatoNuevo} disabled={!guardable} className="bg-[var(--fin-warning)] hover:bg-[#d97706] text-white">
-                        📄 Descargar PDF
+                      <Button onClick={generarPDFFormatoNuevo} disabled={!guardable} variant="outline" className="border-gray-300 disabled:opacity-50">
+                        <Download className="h-4 w-4 mr-2" /> Descargar PDF
                       </Button>
-                      <Button onClick={guardar} disabled={!guardable} className="bg-[var(--fin-success)] hover:bg-[#059669] text-white">
-                        💾 Guardar
+                      <Button onClick={guardar} disabled={!guardable} className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm disabled:opacity-50">
+                        <Save className="h-4 w-4 mr-2" /> Guardar
                       </Button>
                     </div>
                   </div>
@@ -1350,22 +1387,27 @@ export default function PageFiniquitosLiquidaciones() {
 
       {/* Confirmación de eliminación estilizada (shadcn/ui) */}
       <AlertDialog open={!!deleteRow} onOpenChange={(open) => !open && setDeleteRow(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar finiquito?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteRow
-                ? `Esta acción no se puede deshacer. Se eliminará el finiquito de ${deleteRow?.nombre_completo || ""}.`
-                : ""}
-            </AlertDialogDescription>
+        <AlertDialogContent className="sm:max-w-[425px] p-0">
+          <AlertDialogHeader className="bg-gradient-to-r from-red-500 to-red-600 text-white p-6 rounded-t-lg">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-6 w-6" />
+              <AlertDialogTitle className="text-white">¿Eliminar finiquito?</AlertDialogTitle>
+            </div>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]">
-              Cancelar
-            </AlertDialogCancel>
+          <div className="p-6 space-y-4">
+            <div className="bg-red-50 border-l-4 border-red-500 text-red-800 p-4 rounded-md">
+              <AlertDialogDescription className="text-sm">
+                {deleteRow
+                  ? `Esta acción no se puede deshacer. Se eliminará el finiquito de ${deleteRow?.nombre_completo || ""}.`
+                  : ""}
+              </AlertDialogDescription>
+            </div>
+          </div>
+          <AlertDialogFooter className="bg-gray-50 p-4 flex justify-end gap-2 rounded-b-lg">
+            <AlertDialogCancel className="border-gray-300">Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
-              className="bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(239,68,68,0.3)]"
+              className="bg-red-600 hover:bg-red-700 text-white shadow-sm"
             >
               Eliminar
             </AlertDialogAction>

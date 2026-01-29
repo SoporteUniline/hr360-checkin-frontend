@@ -3,25 +3,27 @@
    - Usado por: src/app/panel/finiquitos-y-liquidaciones/page.jsx */
 .finTheme {
 	/* Variables de tema locales al contenedor finTheme */
-	--fin-primary: #37495E;
-	--fin-primary-dark: #2c3a4a;
+	/* Diseño ADAMIA (estandarizado) */
+	--fin-primary: #2563EB;
+	--fin-primary-dark: #1d4ed8;
 	--fin-success: #10b981;
 	--fin-success-light: #d1fae5;
 	--fin-error: #ef4444;
 	--fin-warning: #f59e0b;
 	--fin-info: #3b82f6;
 	--fin-danger: #dc2626;
-	--fin-bg: #f8f9fa;
+	--fin-bg: #F9FAFB;
 	--fin-border: #e5e7eb;
 
 	/* Tokens de marca alineados con Contratos/Vacaciones (scoped) */
-	--primary: #37495E;
+	--primary: #2563EB;
 	--primary-foreground: #ffffff;
 	--border: #e5e7eb;
-	--ring: rgba(55, 73, 94, 0.35);
+	--ring: rgba(37, 99, 235, 0.35);
 
-	/* Tipografía (según manual, mismo stack que otros módulos) */
-	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+	/* NOTA:
+	   La tipografía del proyecto se estandariza globalmente (Inter en `src/app/layout.jsx` + `globals.css`).
+	   No sobreescribimos `font-family` para mantener consistencia con Empleados/Contratos. */
 
 	/* Fondo base suave del panel */
 	background-color: var(--fin-bg);
