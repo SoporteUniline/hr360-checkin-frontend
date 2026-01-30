@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Textarea } from "@/components/ui/textarea";
-import { Pencil, Save, X } from "lucide-react";
+import { Pencil, Save, X, Check, X as XIcon } from "lucide-react";
 import { useState } from "react";
 import HistorialEmpleadoDialog from "./HistorialEmpleadoDialog";
 import { useAuth } from "@/context/AuthContext";
@@ -54,7 +54,7 @@ export default function AsistenciaRow({
       <TableRow
         key={registro.id}
         onClick={handleRowClick}
-        className={!isEditing ? "cursor-pointer" : ""}
+        className={!isEditing ? "cursor-pointer hover:bg-gray-50 border-b border-gray-100" : "border-b border-gray-100"}
       >
         {isEditing && !readOnly ? (
           <>
@@ -115,8 +115,12 @@ export default function AsistenciaRow({
                     handleFieldChange("correccion", val === "1")
                   }
                 >
-                  <ToggleGroupItem value="0">❌</ToggleGroupItem>
-                  <ToggleGroupItem value="1">✅</ToggleGroupItem>
+                  <ToggleGroupItem value="0" aria-label="No">
+                    <XIcon className="h-4 w-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="1" aria-label="Sí">
+                    <Check className="h-4 w-4" />
+                  </ToggleGroupItem>
                 </ToggleGroup>
               </TableCell>
             )}
@@ -229,8 +233,12 @@ export default function AsistenciaRow({
                   handleFieldChange("asistencia", val === "1")
                 }
               >
-                <ToggleGroupItem value="0">❌</ToggleGroupItem>
-                <ToggleGroupItem value="1">✅</ToggleGroupItem>
+                <ToggleGroupItem value="0" aria-label="No">
+                  <XIcon className="h-4 w-4" />
+                </ToggleGroupItem>
+                <ToggleGroupItem value="1" aria-label="Sí">
+                  <Check className="h-4 w-4" />
+                </ToggleGroupItem>
               </ToggleGroup>
             </TableCell>
             <TableCell className="text-center">
@@ -241,8 +249,12 @@ export default function AsistenciaRow({
                   handleFieldChange("goce_sueldo", val === "1")
                 }
               >
-                <ToggleGroupItem value="0">❌</ToggleGroupItem>
-                <ToggleGroupItem value="1">✅</ToggleGroupItem>
+                <ToggleGroupItem value="0" aria-label="No">
+                  <XIcon className="h-4 w-4" />
+                </ToggleGroupItem>
+                <ToggleGroupItem value="1" aria-label="Sí">
+                  <Check className="h-4 w-4" />
+                </ToggleGroupItem>
               </ToggleGroup>
             </TableCell>
 
@@ -256,8 +268,12 @@ export default function AsistenciaRow({
                       handleFieldChange("pago_triple", val === "1")
                     }
                   >
-                    <ToggleGroupItem value="0">❌</ToggleGroupItem>
-                    <ToggleGroupItem value="1">✅</ToggleGroupItem>
+                    <ToggleGroupItem value="0" aria-label="No">
+                      <XIcon className="h-4 w-4" />
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="1" aria-label="Sí">
+                      <Check className="h-4 w-4" />
+                    </ToggleGroupItem>
                   </ToggleGroup>
                 </TableCell>
 
@@ -269,8 +285,12 @@ export default function AsistenciaRow({
                       handleFieldChange("es_domingo", val === "1")
                     }
                   >
-                    <ToggleGroupItem value="0">❌</ToggleGroupItem>
-                    <ToggleGroupItem value="1">✅</ToggleGroupItem>
+                    <ToggleGroupItem value="0" aria-label="No">
+                      <XIcon className="h-4 w-4" />
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="1" aria-label="Sí">
+                      <Check className="h-4 w-4" />
+                    </ToggleGroupItem>
                   </ToggleGroup>
                 </TableCell>
                 <TableCell className="text-center">
@@ -292,8 +312,12 @@ export default function AsistenciaRow({
                       handleFieldChange("es_festivo", val === "1")
                     }
                   >
-                    <ToggleGroupItem value="0">❌</ToggleGroupItem>
-                    <ToggleGroupItem value="1">✅</ToggleGroupItem>
+                    <ToggleGroupItem value="0" aria-label="No">
+                      <XIcon className="h-4 w-4" />
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="1" aria-label="Sí">
+                      <Check className="h-4 w-4" />
+                    </ToggleGroupItem>
                   </ToggleGroup>
                 </TableCell>
                 <TableCell className="text-center">
@@ -321,8 +345,12 @@ export default function AsistenciaRow({
                   handleFieldChange("hrs_extra", val === "1")
                 }
               >
-                <ToggleGroupItem value="0">❌</ToggleGroupItem>
-                <ToggleGroupItem value="1">✅</ToggleGroupItem>
+                <ToggleGroupItem value="0" aria-label="No">
+                  <XIcon className="h-4 w-4" />
+                </ToggleGroupItem>
+                <ToggleGroupItem value="1" aria-label="Sí">
+                  <Check className="h-4 w-4" />
+                </ToggleGroupItem>
               </ToggleGroup>
             </TableCell>
 
@@ -339,18 +367,10 @@ export default function AsistenciaRow({
                       <SelectValue placeholder="Forma de pago" />
                     </SelectTrigger>
                     <SelectContent className="max-h-60 overflow-y-auto">
-                      <SelectItem value="Tiempo por tiempo">
-                        ⌛ Tiempo por tiempo
-                      </SelectItem>
-                      <SelectItem value="Descuento sobre nómina">
-                        💸 Descuento sobre nómina
-                      </SelectItem>
-                      <SelectItem value="Pago de horas extras">
-                        💰 Pago de horas extras
-                      </SelectItem>
-                      <SelectItem value="Reposición de tiempo por tiempo">
-                        🔁 Reposición de tiempo por tiempo
-                      </SelectItem>
+                      <SelectItem value="Tiempo por tiempo">Tiempo por tiempo</SelectItem>
+                      <SelectItem value="Descuento sobre nómina">Descuento sobre nómina</SelectItem>
+                      <SelectItem value="Pago de horas extras">Pago de horas extras</SelectItem>
+                      <SelectItem value="Reposición de tiempo por tiempo">Reposición de tiempo por tiempo</SelectItem>
                     </SelectContent>
                   </Select>
                 </TableCell>
@@ -447,22 +467,22 @@ export default function AsistenciaRow({
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-center gap-2 h-full px-2">
-                  <Button
-                    size="sm"
+                  <button
                     onClick={() => handleSaveClick(registro.id)}
                     disabled={isSaving}
-                    className="bg-slate-700 hover:bg-slate-700"
+                    className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
+                    title="Guardar"
                   >
-                    <Save className="w-16 h-16 text-white bg-slate-700" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
+                    <Save className="h-4 w-4 text-[#2563EB]" />
+                  </button>
+                  <button
                     onClick={handleCancelEdit}
                     disabled={isSaving}
+                    className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+                    title="Cancelar"
                   >
-                    <X className="w-16 h-16 text-slate-700 " />
-                  </Button>
+                    <X className="h-4 w-4 text-gray-700" />
+                  </button>
                 </div>
               </TableCell>
             )}
@@ -482,7 +502,11 @@ export default function AsistenciaRow({
             </TableCell>
             {mostrarCamposExtras && (
               <TableCell className="text-center">
-                {registro.correccion === 1 ? "✅" : "✖️"}
+                {registro.correccion === 1 ? (
+                  <Check className="h-4 w-4 text-green-600 inline" />
+                ) : (
+                  <XIcon className="h-4 w-4 text-red-600 inline" />
+                )}
               </TableCell>
             )}
             <TableCell className="text-center">
@@ -510,20 +534,36 @@ export default function AsistenciaRow({
             )}
 
             <TableCell className="text-center">
-              {registro.asistencia === 1 ? "✅" : "✖️"}
+              {registro.asistencia === 1 ? (
+                <Check className="h-4 w-4 text-green-600 inline" />
+              ) : (
+                <XIcon className="h-4 w-4 text-red-600 inline" />
+              )}
             </TableCell>
             <TableCell className="text-center">
-              {registro.goce_sueldo === 1 ? "✅" : "✖️"}
+              {registro.goce_sueldo === 1 ? (
+                <Check className="h-4 w-4 text-green-600 inline" />
+              ) : (
+                <XIcon className="h-4 w-4 text-red-600 inline" />
+              )}
             </TableCell>
 
             {mostrarCamposExtras && (
               <>
                 <TableCell className="text-center">
-                  {registro.pago_triple === 1 ? "✅" : "✖️"}
+                  {registro.pago_triple === 1 ? (
+                    <Check className="h-4 w-4 text-green-600 inline" />
+                  ) : (
+                    <XIcon className="h-4 w-4 text-red-600 inline" />
+                  )}
                 </TableCell>
 
                 <TableCell className="text-center">
-                  {registro.es_domingo === 1 ? "✅" : "✖️"}
+                  {registro.es_domingo === 1 ? (
+                    <Check className="h-4 w-4 text-green-600 inline" />
+                  ) : (
+                    <XIcon className="h-4 w-4 text-red-600 inline" />
+                  )}
                 </TableCell>
                 <TableCell className="text-center">
                   {registro.prima_dominical
@@ -531,7 +571,11 @@ export default function AsistenciaRow({
                     : "-"}
                 </TableCell>
                 <TableCell className="text-center">
-                  {registro.es_festivo === 1 ? "✅" : "✖️"}
+                  {registro.es_festivo === 1 ? (
+                    <Check className="h-4 w-4 text-green-600 inline" />
+                  ) : (
+                    <XIcon className="h-4 w-4 text-red-600 inline" />
+                  )}
                 </TableCell>
                 <TableCell className="text-center">
                   {registro.porcentaje_dia_festivo
@@ -542,7 +586,11 @@ export default function AsistenciaRow({
             )}
 
             <TableCell className="text-center">
-              {registro.hrs_extra === 1 ? "✅" : "✖️"}
+              {registro.hrs_extra === 1 ? (
+                <Check className="h-4 w-4 text-green-600 inline" />
+              ) : (
+                <XIcon className="h-4 w-4 text-red-600 inline" />
+              )}
             </TableCell>
             {mostrarCamposExtras && (
               <>
@@ -602,13 +650,13 @@ export default function AsistenciaRow({
                 className="sticky right-0 bg-background z-10 text-center"
                 onClick={(e) => e.stopPropagation()}
               >
-                <Button
-                  size="sm"
+                <button
                   onClick={() => handleEditClick(registro)}
-                  className="bg-slate-700 hover:bg-slate-700"
+                  className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                  title="Editar"
                 >
-                  <Pencil className="w-16 h-16 text-white bg-slate-700" />
-                </Button>
+                  <Pencil className="h-4 w-4 text-[#2563EB]" />
+                </button>
               </TableCell>
             )}
           </>

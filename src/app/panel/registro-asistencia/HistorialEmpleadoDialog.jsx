@@ -22,7 +22,7 @@ import useClockCheckData from "@/hooks/useRelojChecador";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PencilIcon, SaveIcon, XIcon } from "lucide-react";
+import { Pencil, Save, X, Clock } from "lucide-react";
 import useEntradaSalida from "@/hooks/useEntradaSalida";
 
 dayjs.extend(utc);
@@ -69,43 +69,46 @@ export default function HistorialEmpleadoDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl md:max-w-5xl lg:max-w-6xl w-full">
-        <DialogHeader>
-          <DialogTitle>
-            Historial de Entradas y Salidas de {empleado.nombre}{" "}
-            {empleado.apellido_paterno}
-          </DialogTitle>
-          <DialogDescription>
-            Registros para el día {dayjs(empleado?.fecha).format("DD/MM/YYYY")}
-          </DialogDescription>
+      <DialogContent className="sm:max-w-4xl md:max-w-5xl lg:max-w-6xl w-full p-0 overflow-hidden">
+        <DialogHeader className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white p-6">
+          <div className="flex items-center gap-3">
+            <Clock className="h-6 w-6" />
+            <div>
+              <DialogTitle className="text-white text-lg font-semibold">
+                Historial de entradas y salidas
+              </DialogTitle>
+              <DialogDescription className="text-white/90 text-sm">
+                {empleado?.nombre} {empleado?.apellido_paterno} —{" "}
+                {dayjs(empleado?.fecha).format("DD/MM/YYYY")}
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
-        {isLoading && <p className="text-center p-4">Cargando datos...</p>}
-        {error && (
-          <p className="text-center text-red-500 p-4">
-            Error al cargar los datos: {error.message}
-          </p>
-        )}
-        {data?.registros?.length > 0 && (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-center">Entrada</TableHead>
-                  <TableHead className="text-center">
-                    Entrada Corregida
-                  </TableHead>
-                  <TableHead className="text-center">Salida</TableHead>
-                  <TableHead className="text-center">
-                    Salida Corregida
-                  </TableHead>
-                  <TableHead className="text-center">Estado</TableHead>
-                  <TableHead className="text-center">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {data.registros.map((checador, index) => (
-                  <TableRow key={index}>
+        <div className="p-6 space-y-4 text-sm">
+          {isLoading && <p className="text-center py-6 text-gray-600">Cargando datos...</p>}
+          {error && (
+            <p className="text-center text-red-600 py-6">
+              Error al cargar los datos: {error.message}
+            </p>
+          )}
+          {data?.registros?.length > 0 && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50 hover:bg-gray-50">
+                      <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">Entrada</TableHead>
+                      <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">Entrada corregida</TableHead>
+                      <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">Salida</TableHead>
+                      <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">Salida corregida</TableHead>
+                      <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">Estado</TableHead>
+                      <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {data.registros.map((checador, index) => (
+                      <TableRow key={index} className="border-b border-gray-100 hover:bg-gray-50">
                     <TableCell className="text-center">
                       {checador.entrada
                         ? dayjs(checador.entrada).format("HH:mm:ss")
@@ -215,9 +218,7 @@ export default function HistorialEmpleadoDialog({
                     <TableCell className="text-center">
                       {editingMovimientoId === checador.id ? (
                         <div className="flex gap-2 justify-center">
-                          <Button
-                            size="icon"
-                            variant="ghost"
+                          <button
                             onClick={async () => {
                               await handleSaveMovimientoClick();
                               if (mutateAsistencia) {
@@ -225,38 +226,42 @@ export default function HistorialEmpleadoDialog({
                               }
                             }}
                             disabled={isSavingMovimiento}
+                            className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
+                            title="Guardar"
                           >
-                            <SaveIcon className="h-4 w-4 text-green-600" />
-                          </Button>
-                          <Button
-                            size="icon"
-                            variant="ghost"
+                            <Save className="h-4 w-4 text-[#2563EB]" />
+                          </button>
+                          <button
                             onClick={() => handleCancelMovimientoEdit()}
+                            className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                            title="Cancelar"
                           >
-                            <XIcon className="h-4 w-4 text-red-600" />
-                          </Button>
+                            <X className="h-4 w-4 text-gray-700" />
+                          </button>
                         </div>
                       ) : (
-                        <Button
-                          size="icon"
-                          variant="ghost"
+                        <button
                           onClick={() => handleEditMovimientoClick(checador)}
+                          className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                          title="Editar"
                         >
-                          <PencilIcon className="h-4 w-4" />
-                        </Button>
+                          <Pencil className="h-4 w-4 text-[#2563EB]" />
+                        </button>
                       )}
                     </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-        {!isLoading && !error && data?.registros?.length === 0 && (
-          <p className="text-center p-4">
-            No hay registros de entradas y salidas para este empleado.
-          </p>
-        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
+          {!isLoading && !error && data?.registros?.length === 0 && (
+            <p className="text-center py-6 text-gray-500">
+              No hay registros de entradas y salidas para este empleado.
+            </p>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );
