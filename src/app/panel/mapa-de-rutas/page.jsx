@@ -30,6 +30,21 @@ import { mapaRutasApi } from "@/lib/mapaRutasApi";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { fetchImageAsDataUrl, tryAddCompanyMarkToPdf } from "@/lib/pdfCompanyLogo";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import {
+  Route,
+  Filter,
+  Search,
+  RotateCcw,
+  Play,
+  Pause,
+  SkipBack,
+  MapPin,
+  Download,
+  BarChart3,
+  List,
+  Map as MapIcon,
+  CalendarDays,
+} from "lucide-react";
 
 import styles from "./mapa-rutas-theme.module.css";
 
@@ -465,7 +480,10 @@ export default function PageMapaDeRutas() {
       <div className="space-y-4">
         <Card className={cn(styles.cardShadow, "border")} style={{ borderColor: "var(--mr-border)" }}>
           <CardHeader>
-            <CardTitle className="text-lg">📊 Resumen del Día</CardTitle>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-[#2563EB]" />
+            Resumen del día
+          </CardTitle>
             <div className="text-xs text-muted-foreground">
               {dia.empleado} - {formatearFechaLarga(dia.fecha)}
             </div>
@@ -694,16 +712,12 @@ export default function PageMapaDeRutas() {
             </div>
 
             <div className="mt-6 flex justify-end">
-              {/* Botón exportar según manual - ver `Colores.txt` y tokens en `mapa-rutas-theme.module.css` */}
               <Button
                 onClick={() => exportarAPDF(dia)}
-                className="text-sm font-semibold"
-                style={{
-                  background: "linear-gradient(135deg, var(--mr-btn-export) 0%, var(--mr-btn-export-hover) 100%)",
-                  boxShadow: "0 2px 8px rgba(39, 174, 96, 0.2)",
-                }}
+                className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-md text-sm font-semibold"
               >
-                📥 Exportar Reporte a PDF
+                <Download className="h-4 w-4 mr-2" />
+                Exportar reporte a PDF
               </Button>
             </div>
           </CardContent>
@@ -735,7 +749,7 @@ export default function PageMapaDeRutas() {
         <div className={cn(styles.cardShadow, "rounded-xl overflow-hidden border bg-white")} style={{ borderColor: "var(--mr-border)" }}>
           <div className={cn(styles.headerGradient, "px-6 py-5 text-white flex items-center justify-between gap-4")}>
             <div>
-              <div className="font-bold text-lg">📋 Reporte de Asistencia</div>
+              <div className="font-bold text-lg">Reporte de asistencia</div>
               <div className="text-sm opacity-90">
                 {dia.empleado} - {formatearFechaLarga(dia.fecha)}
               </div>
@@ -919,16 +933,12 @@ export default function PageMapaDeRutas() {
         </div>
 
         <div className="flex justify-end">
-          {/* Botón exportar según manual - ver `Colores.txt` y tokens en `mapa-rutas-theme.module.css` */}
           <Button
             onClick={() => exportarAPDF(dia)}
-            className="text-sm font-semibold"
-            style={{
-              background: "linear-gradient(135deg, var(--mr-btn-export) 0%, var(--mr-btn-export-hover) 100%)",
-              boxShadow: "0 2px 8px rgba(39, 174, 96, 0.2)",
-            }}
+            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-md text-sm font-semibold"
           >
-            📥 Exportar Reporte a PDF
+            <Download className="h-4 w-4 mr-2" />
+            Exportar reporte a PDF
           </Button>
         </div>
       </div>
@@ -1188,9 +1198,16 @@ export default function PageMapaDeRutas() {
   return (
     <div className={cn(styles.mrTheme, "space-y-4")}>
       {/* Header del módulo */}
-      <div className={cn(styles.headerGradient, "rounded-xl p-5 text-white")}>
-        <div className="text-xl font-bold">🗺️ Mapa de Rutas</div>
-        <div className="text-sm opacity-90">Auditoría de ubicaciones y recorridos</div>
+      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+        <div className="flex items-center gap-3">
+          <div className="bg-[#2563EB] p-2.5 rounded-lg">
+            <Route className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <div className="text-lg font-bold text-gray-900">Mapa de rutas</div>
+            <div className="text-sm text-gray-600">Auditoría de ubicaciones y recorridos</div>
+          </div>
+        </div>
       </div>
 
       {/* Layout principal (Días a la izquierda / Mapa a la derecha como el legacy) */}
@@ -1200,14 +1217,18 @@ export default function PageMapaDeRutas() {
         <div className="space-y-4">
           <Card className={cn(styles.cardShadow, "border")} style={{ borderColor: "var(--mr-border)" }}>
             <CardHeader>
-              <CardTitle className="text-base">Filtros</CardTitle>
+              <CardTitle className="text-base font-bold text-[#2563EB] flex items-center gap-2">
+                <Filter className="h-4 w-4" /> Filtros de búsqueda
+              </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase text-muted-foreground">👤 Empleado</label>
+                <label className="text-sm font-medium text-gray-700">Empleado</label>
                 {/* Buscador tipo "Nuevo Contrato" (Contratos) */}
                 <div className="relative">
+                  <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <Input
+                    className="pl-9"
                     placeholder="Buscar empleado..."
                     value={empSearch}
                     onChange={(e) => {
@@ -1225,7 +1246,7 @@ export default function PageMapaDeRutas() {
                     <div className="absolute left-0 right-0 mt-1 z-20 rounded-md border bg-white shadow max-h-64 overflow-auto">
                       {/* Opción para limpiar selección (útil para volver a "sin empleado") */}
                       <div
-                        className="px-3 py-2 cursor-pointer text-sm hover:bg-slate-100 font-semibold text-slate-700"
+                        className="px-3 py-2 cursor-pointer text-sm hover:bg-blue-50 font-semibold text-slate-700"
                         onMouseDown={() => {
                           setEmpleadoId("");
                           setEmpSearch("");
@@ -1247,7 +1268,7 @@ export default function PageMapaDeRutas() {
                         .map((emp) => (
                           <div
                             key={`emp-sel-mr-${emp.id_empleado}`}
-                            className="px-3 py-2 cursor-pointer text-sm hover:bg-slate-100"
+                            className="px-3 py-2 cursor-pointer text-sm hover:bg-blue-50"
                             onMouseDown={() => {
                               setEmpleadoId(String(emp.id_empleado));
                               setEmpSearch(emp.nombre_completo || "");
@@ -1283,25 +1304,30 @@ export default function PageMapaDeRutas() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">📅 Fecha inicio</label>
+                  <label className="text-sm font-medium text-gray-700">Fecha inicio</label>
                   <Input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">📅 Fecha fin</label>
+                  <label className="text-sm font-medium text-gray-700">Fecha fin</label>
                   <Input type="date" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
-                <Button onClick={buscarMovimientos} className="font-semibold shadow-[0_4px_12px_rgba(55,73,94,0.3)]">
-                  🔍 Buscar
+                <Button
+                  onClick={buscarMovimientos}
+                  className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-md font-semibold"
+                >
+                  <Search className="h-4 w-4 mr-2" />
+                  Buscar
                 </Button>
                 <Button
                   variant="secondary"
                   onClick={limpiarTodo}
-                  className="bg-[#e74c3c] hover:bg-[#c0392b] text-white shadow-[0_2px_8px_rgba(231,76,60,0.3)] font-semibold"
+                  className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 shadow-sm font-semibold"
                 >
-                  🗑️ Limpiar
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Limpiar
                 </Button>
               </div>
 
@@ -1353,7 +1379,9 @@ export default function PageMapaDeRutas() {
             <CardContent>
               {diasAgrupados.length === 0 ? (
                 <div className="text-center py-10 text-muted-foreground">
-                  <div className="text-3xl mb-2">🗺️</div>
+                  <div className="text-3xl mb-2">
+                    <Route className="h-8 w-8 mx-auto text-[#2563EB]" />
+                  </div>
                   <div className="font-semibold">Sin resultados</div>
                   <div className="text-sm">Selecciona un empleado y busca</div>
                 </div>
@@ -1378,7 +1406,7 @@ export default function PageMapaDeRutas() {
                             className="h-12 w-12 rounded-lg flex items-center justify-center text-white text-lg"
                             style={{ background: "linear-gradient(135deg, var(--mr-primary) 0%, var(--mr-primary-dark) 100%)" }}
                           >
-                            📅
+                            <CalendarDays className="h-6 w-6" />
                           </div>
                           <div className="min-w-0">
                             <div className="font-semibold text-sm truncate">{formatearFechaLarga(d.fecha)}</div>
@@ -1411,25 +1439,47 @@ export default function PageMapaDeRutas() {
         {/* Main content */}
         <div className="space-y-4">
           <Tabs value={vista} onValueChange={(v) => setVista(v)}>
-            <TabsList className="w-full justify-start">
-              <TabsTrigger value="mapa">🗺️ Mapa</TabsTrigger>
-              <TabsTrigger value="reporte">📊 Reporte</TabsTrigger>
-              <TabsTrigger value="detallado">📋 Detallado</TabsTrigger>
-            </TabsList>
+            <div className="border-b border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 overflow-x-auto rounded-xl">
+              <TabsList className="bg-transparent h-auto p-0 min-w-max w-full justify-start">
+                <TabsTrigger
+                  value="mapa"
+                  className="data-[state=active]:bg-white/80 data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] text-sm px-4 py-2.5 font-medium"
+                >
+                  <MapIcon className="h-4 w-4 mr-2 flex-shrink-0" /> Mapa
+                </TabsTrigger>
+                <TabsTrigger
+                  value="reporte"
+                  className="data-[state=active]:bg-white/80 data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] text-sm px-4 py-2.5 font-medium"
+                >
+                  <BarChart3 className="h-4 w-4 mr-2 flex-shrink-0" /> Reporte
+                </TabsTrigger>
+                <TabsTrigger
+                  value="detallado"
+                  className="data-[state=active]:bg-white/80 data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] text-sm px-4 py-2.5 font-medium"
+                >
+                  <List className="h-4 w-4 mr-2 flex-shrink-0" /> Detallado
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
             <TabsContent value="mapa" className="space-y-3">
               {/* Controles de animación (solo si hay puntos) */}
               <div className={cn(styles.cardShadow, "rounded-xl border bg-white p-4 flex flex-wrap items-center gap-3")}
                 style={{ borderColor: "var(--mr-border)" }}
               >
-                <Button onClick={reproducirRuta} disabled={puntos.length === 0} className="font-bold">
-                  {animacionActiva ? "⏸" : "▶"}
+                <Button
+                  onClick={reproducirRuta}
+                  disabled={puntos.length === 0}
+                  className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm font-semibold"
+                  title={animacionActiva ? "Pausar" : "Reproducir"}
+                >
+                  {animacionActiva ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                 </Button>
                 <Button onClick={pausarRuta} disabled={puntos.length === 0} variant="outline">
-                  ⏸
+                  <Pause className="h-4 w-4" />
                 </Button>
                 <Button onClick={resetearRuta} disabled={puntos.length === 0} variant="outline">
-                  ⏮
+                  <SkipBack className="h-4 w-4" />
                 </Button>
 
                 <div className="hidden md:flex items-center gap-2 ml-2 pl-3 border-l" style={{ borderColor: "var(--mr-border)" }}>
@@ -1497,12 +1547,17 @@ export default function PageMapaDeRutas() {
       {/* Modal para ver punto en mapa */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-5xl p-0 overflow-hidden">
-          <DialogHeader className={cn(styles.headerGradient, "px-5 py-4 text-white")}>
-            <DialogTitle className="text-base">
-              📍 {modalPoint ? `Punto ${modalPoint.secuencia} - ${modalPoint.tipo === "entrada" ? "Entrada" : "Salida"} - ${modalPoint.hora || ""}` : "Ubicación"}
-            </DialogTitle>
+          <DialogHeader className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white p-6">
+            <div className="flex items-center gap-3">
+              <MapPin className="h-6 w-6" />
+              <DialogTitle className="text-white text-lg font-semibold">
+                {modalPoint
+                  ? `Punto ${modalPoint.secuencia} - ${modalPoint.tipo === "entrada" ? "Entrada" : "Salida"}${modalPoint.hora ? ` - ${modalPoint.hora}` : ""}`
+                  : "Ubicación"}
+              </DialogTitle>
+            </div>
           </DialogHeader>
-          <div className="p-4">
+          <div className="p-6">
             {modalPoint ? (
               <ModalPointMap point={modalPoint} />
             ) : (

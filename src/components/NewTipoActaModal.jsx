@@ -227,8 +227,8 @@ const NewTipoActaModal = ({
           <div className="flex items-center gap-3">
             <FileText className="h-6 w-6" />
             <DialogTitle className="text-white text-lg font-semibold">
-              {editingTipo ? "✏️ Editar Tipo de Acta" : "➕ Nuevo Tipo de Acta"}
-            </DialogTitle>
+            {editingTipo ? "✏️ Editar Tipo de Acta" : "➕ Nuevo Tipo de Acta"}
+          </DialogTitle>
           </div>
         </DialogHeader>
 
@@ -248,38 +248,38 @@ const NewTipoActaModal = ({
                 <div className="font-semibold text-gray-900">Información del tipo</div>
               </div>
 
-              <FormField
-                control={form.control}
-                name="nombre_tipo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabelWithAsterisk required className="text-gray-600">
+            <FormField
+              control={form.control}
+              name="nombre_tipo"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabelWithAsterisk required className="text-gray-600">
                       Nombre del tipo
-                    </FormLabelWithAsterisk>
-                    <FormControl>
-                      <Input placeholder="Ej: Falta injustificada" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                  </FormLabelWithAsterisk>
+                  <FormControl>
+                    <Input placeholder="Ej: Falta injustificada" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              <FormField
-                control={form.control}
-                name="descripcion"
-                render={({ field }) => (
-                  <FormItem>
-                    <Label className="text-gray-600">Descripción</Label>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Describe brevemente este tipo de acta..."
-                        rows={3}
-                        {...field}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
+            <FormField
+              control={form.control}
+              name="descripcion"
+              render={({ field }) => (
+                <FormItem>
+                  <Label className="text-gray-600">Descripción</Label>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Describe brevemente este tipo de acta..."
+                      rows={3}
+                      {...field}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
             </div>
 
             {/* Clasificación y gravedad */}
@@ -292,73 +292,73 @@ const NewTipoActaModal = ({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="clasificacion"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabelWithAsterisk required className="text-gray-600">
-                        Clasificación
-                      </FormLabelWithAsterisk>
-                      <FormControl>
-                        <div className="flex gap-4">
-                          <label>
-                            <input
-                              type="radio"
-                              value="falta"
-                              checked={field.value === "falta"}
-                              onChange={field.onChange}
-                            />{" "}
-                            Falta
-                          </label>
-                          <label>
-                            <input
-                              type="radio"
-                              value="sancion"
-                              checked={field.value === "sancion"}
-                              onChange={field.onChange}
-                            />{" "}
-                            Sanción
-                          </label>
-                        </div>
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+              <FormField
+                control={form.control}
+                name="clasificacion"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabelWithAsterisk required className="text-gray-600">
+                      Clasificación
+                    </FormLabelWithAsterisk>
+                    <FormControl>
+                      <div className="flex gap-4">
+                        <label>
+                          <input
+                            type="radio"
+                            value="falta"
+                            checked={field.value === "falta"}
+                            onChange={field.onChange}
+                          />{" "}
+                          Falta
+                        </label>
+                        <label>
+                          <input
+                            type="radio"
+                            value="sancion"
+                            checked={field.value === "sancion"}
+                            onChange={field.onChange}
+                          />{" "}
+                          Sanción
+                        </label>
+                      </div>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
 
-                <FormField
-                  control={form.control}
-                  name="gravedad"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabelWithAsterisk required className="text-gray-600">
-                        Gravedad
-                      </FormLabelWithAsterisk>
-                      <FormControl>
-                        <div className="flex gap-4">
-                          <label>
-                            <input
-                              type="radio"
-                              value="leve"
-                              checked={field.value === "leve"}
-                              onChange={field.onChange}
-                            />{" "}
-                            Leve
-                          </label>
-                          <label>
-                            <input
-                              type="radio"
-                              value="grave"
-                              checked={field.value === "grave"}
-                              onChange={field.onChange}
-                            />{" "}
-                            Grave
-                          </label>
-                        </div>
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+              <FormField
+                control={form.control}
+                name="gravedad"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabelWithAsterisk required className="text-gray-600">
+                      Gravedad
+                    </FormLabelWithAsterisk>
+                    <FormControl>
+                      <div className="flex gap-4">
+                        <label>
+                          <input
+                            type="radio"
+                            value="leve"
+                            checked={field.value === "leve"}
+                            onChange={field.onChange}
+                          />{" "}
+                          Leve
+                        </label>
+                        <label>
+                          <input
+                            type="radio"
+                            value="grave"
+                            checked={field.value === "grave"}
+                            onChange={field.onChange}
+                          />{" "}
+                          Grave
+                        </label>
+                      </div>
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
               </div>
             </div>
 
@@ -489,13 +489,13 @@ const NewTipoActaModal = ({
           <div className="p-6 space-y-4">
             <div className="bg-red-50 border-l-4 border-red-500 text-red-800 p-4 rounded-md">
               <AlertDialogDescription className="text-sm">
-                {deletingTipo ? (
-                  <>
+              {deletingTipo ? (
+                <>
                     Se eliminará <span className="font-semibold">{deletingTipo.nombre_tipo}</span>. Si ya está asignado
                     a actas, el sistema no permitirá eliminarlo.
-                  </>
-                ) : null}
-              </AlertDialogDescription>
+                </>
+              ) : null}
+            </AlertDialogDescription>
             </div>
           </div>
           <AlertDialogFooter className="bg-gray-50 p-4 flex justify-end gap-2 rounded-b-lg">

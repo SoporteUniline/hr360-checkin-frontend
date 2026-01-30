@@ -130,11 +130,12 @@
 }
 
 .totalBar {
-	background: linear-gradient(135deg, #3a4b61 0%, #2f3f52 100%);
+	/* Diseño ADAMIA: gradiente azul consistente con headers/botones */
+	background: linear-gradient(135deg, #2563EB 0%, #1d4ed8 100%);
 	color: #ffffff;
 	border-radius: 12px;
 	padding: 14px;
-	box-shadow: 0 4px 12px rgba(55,73,94,0.25);
+	box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
 }
 .totalLabel {
 	font-size: 13px;

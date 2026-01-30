@@ -19,16 +19,18 @@
        heredan el look del manual sin “hardcodes” por componente.
      ========================================================================== */
 
-  /* Tipografía (Sistema San Francisco, según manual) */
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* NOTA:
+     La tipografía se estandariza globalmente a Inter (Diseño ADAMIA).
+     No sobreescribimos `font-family` aquí para mantener consistencia con el resto del panel. */
 
   /* Colores principales (manual) */
-  --mr-primary: #37495e;       /* AZUL CORPORATIVO */
-  --mr-primary-dark: #2c3a4a;  /* Hover */
-  --mr-primary-darker: #2c3e50;/* Sidebar / header (manual) */
+  /* Diseño ADAMIA */
+  --mr-primary: #2563EB;        /* Azul ADAMIA */
+  --mr-primary-dark: #1d4ed8;   /* Hover */
+  --mr-primary-darker: #1e40af; /* Header/énfasis */
 
   /* Backgrounds (manual) */
-  --mr-bg-main: #f8f9fa;
+  --mr-bg-main: #F9FAFB;
   --mr-bg-card: #ffffff;
   --mr-bg-hover: #f9fafb;
   --mr-bg-active: #f0f4f7;
@@ -59,7 +61,7 @@
   --mr-warning-surface: #fff3cd; /* Warning background suave (manual) */
   --mr-warning-border: #fed7aa;  /* Warning background/border naranja claro (manual) */
 
-  --mr-info: #3498db;
+  --mr-info: #3b82f6;
   --mr-info-light: #dbeafe;
   --mr-info-dark: #1e40af;
 
@@ -67,14 +69,19 @@
   --mr-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05);
   --mr-shadow-md: 0 2px 15px rgba(0, 0, 0, 0.08);
   --mr-shadow-lg: 0 4px 15px rgba(0, 0, 0, 0.15);
-  --mr-shadow-focus: 0 0 0 3px rgba(55, 73, 94, 0.1);
+  --mr-shadow-focus: 0 0 0 3px rgba(37, 99, 235, 0.12);
 
-  /* Botones específicos (manual) */
-  --mr-btn-clear: #e74c3c;
-  --mr-btn-clear-hover: #c0392b;
-  --mr-btn-export: #27ae60;
-  --mr-btn-export-hover: #229954;
-  --mr-btn-export-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+  /* Botones específicos
+     - En Diseño ADAMIA preferimos:
+       - Primario: Azul (#2563EB)
+       - Secundario: Outline gris
+       - Destructivo: Rojo
+     - Se mantienen variables por compatibilidad con estilos legacy, aunque el UI principal usa Tailwind. */
+  --mr-btn-clear: #dc2626;
+  --mr-btn-clear-hover: #b91c1c;
+  --mr-btn-export: #2563EB;
+  --mr-btn-export-hover: #1d4ed8;
+  --mr-btn-export-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
 
   /* ==========================================================================
      Bridge tokens para shadcn/ui (scoped)
@@ -107,7 +114,7 @@
 
   --border: var(--mr-border);
   --input: var(--mr-border-input);
-  --ring: rgba(55, 73, 94, 0.35);
+  --ring: rgba(37, 99, 235, 0.35);
 
   /* Fondo base del módulo (manual) */
   background-color: var(--mr-bg-main);
@@ -115,8 +122,8 @@
 }
 
 .headerGradient {
-  /* Header principal (manual) */
-  background: linear-gradient(135deg, var(--mr-primary-darker) 0%, #34495e 100%);
+  /* Header principal (Diseño ADAMIA) */
+  background: linear-gradient(135deg, #2563EB 0%, #1d4ed8 100%);
 }
 
 .cardShadow {

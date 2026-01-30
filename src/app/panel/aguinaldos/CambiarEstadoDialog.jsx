@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertTriangle, Pencil } from "lucide-react";
 
 export default function CambiarEstadoDialog({ open, setOpen, estadoActual, onConfirm }) {
   const [nuevoEstado, setNuevoEstado] = useState(estadoActual || "Pendiente");
@@ -37,15 +38,31 @@ export default function CambiarEstadoDialog({ open, setOpen, estadoActual, onCon
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>✏️ Cambiar Estado del Cálculo</DialogTitle>
-          <DialogDescription>
-            Selecciona el nuevo estado para este cálculo de aguinaldo.
-          </DialogDescription>
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden">
+        <DialogHeader className="p-0">
+          <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white p-6">
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 p-3 rounded-lg backdrop-blur-sm">
+                <Pencil className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <DialogTitle className="text-white text-xl font-bold">
+                  Cambiar estado
+                </DialogTitle>
+                <DialogDescription className="text-sm text-indigo-100">
+                  Actualiza el estado del cálculo de aguinaldo.
+                </DialogDescription>
+              </div>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="p-6 space-y-4">
+          <div className="bg-blue-50 border-l-4 border-blue-500 text-blue-800 p-4 rounded-md">
+            <p className="text-sm">
+              Selecciona el nuevo estado para este cálculo de aguinaldo.
+            </p>
+          </div>
           <div className="space-y-2">
             <label className="text-sm font-semibold text-slate-700">Estado Actual</label>
             <div className="p-3 bg-slate-50 rounded-md border border-slate-200">
@@ -93,18 +110,18 @@ export default function CambiarEstadoDialog({ open, setOpen, estadoActual, onCon
           </div>
         </div>
 
-        <DialogFooter className="flex justify-end gap-2">
+        <DialogFooter className="bg-gray-50 p-4 flex justify-end gap-2">
           <Button
             variant="outline"
             onClick={() => handleOpenChange(false)}
-            className="bg-white border border-slate-300 text-slate-700 hover:bg-slate-50"
+            className="border-gray-300"
           >
             Cancelar
           </Button>
           <Button
             onClick={handleConfirm}
             disabled={!nuevoEstado || nuevoEstado === estadoActual}
-            className="bg-[#f59e0b] hover:bg-[#d97706] text-white shadow-[0_4px_12px_rgba(245,158,11,0.3)] transition-all hover:-translate-y-0.5"
+            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm disabled:opacity-50"
           >
             Confirmar Cambio
           </Button>

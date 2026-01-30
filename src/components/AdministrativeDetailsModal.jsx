@@ -450,22 +450,22 @@ export const AdministrativeDetailsModal = ({
                 </AlertDialogDescription>
               </div>
 
-              <div className="space-y-2">
+            <div className="space-y-2">
                 <p className="text-sm font-medium text-gray-700">
                   Nuevo estatus
                 </p>
-                <Select value={estatusNuevo} onValueChange={setEstatusNuevo}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un estatus" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {estatusOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <Select value={estatusNuevo} onValueChange={setEstatusNuevo}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un estatus" />
+                </SelectTrigger>
+                <SelectContent>
+                  {estatusOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               </div>
             </div>
 

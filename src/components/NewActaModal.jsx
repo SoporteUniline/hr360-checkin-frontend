@@ -418,7 +418,7 @@ const NewActaModal = ({
               <FileText className="h-6 w-6" />
               <DialogTitle className="text-white text-lg font-semibold">
                 {mode === "edit" ? "✏️ Editar Acta Administrativa" : "➕ Nueva Acta Administrativa"}
-              </DialogTitle>
+            </DialogTitle>
             </div>
           </DialogHeader>
 
@@ -441,7 +441,7 @@ const NewActaModal = ({
                   <div className="font-semibold text-gray-900">Información básica</div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
                 <FormField
                   control={form.control}
                   name="empleado"
@@ -610,7 +610,7 @@ const NewActaModal = ({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
-                  <FormField
+                <FormField
                   control={form.control}
                   name="fechaIncidente"
                   render={({ field }) => (
@@ -667,7 +667,7 @@ const NewActaModal = ({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
-                  <FormField
+                <FormField
                   control={form.control}
                   name="descripcion"
                   render={({ field }) => (
@@ -715,7 +715,7 @@ const NewActaModal = ({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
-                  <FormField
+                <FormField
                   control={form.control}
                   name="sancion"
                   render={({ field }) => {
@@ -772,7 +772,7 @@ const NewActaModal = ({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
-                  <FormField
+                <FormField
                   control={form.control}
                   name="elabora"
                   render={({ field }) => {
@@ -872,7 +872,7 @@ const NewActaModal = ({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
-                  <FormField
+                <FormField
                   control={form.control}
                   name="descargo"
                   render={({ field }) => (
