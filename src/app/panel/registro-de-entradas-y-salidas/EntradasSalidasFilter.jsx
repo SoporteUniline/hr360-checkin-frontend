@@ -10,9 +10,10 @@ import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, Filter, Search, RotateCcw } from "lucide-react";
 import dayjs from "dayjs";
 import useEmpleadosData from "@/hooks/useEmpleadosData";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function EntradasSalidasFilter({
   filtroEmpleado,
@@ -146,7 +147,9 @@ export default function EntradasSalidasFilter({
 
     return (
       <div className="flex flex-col gap-2">
-        <Label htmlFor={id}>{label}</Label>
+        <Label htmlFor={id} className="text-sm font-medium text-gray-700">
+          {label}
+        </Label>
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -196,132 +199,163 @@ export default function EntradasSalidasFilter({
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-4">
-      {/* Layout:
-          - 5 filtros (Buscar, Desde, Hasta, Departamento, Estado)
-          - En XL los alineamos en 5 columnas para que no “baje” visualmente el bloque de fechas */}
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="buscarEmpleado">Empleado</Label>
-        <div className="relative">
-          <Input
-            id="buscarEmpleado"
-            placeholder="Nombre del empleado"
-            value={filtroEmpleado}
-            onChange={(e) => {
-              setFiltroEmpleado(e.target.value);
-              setIsSuggestionsOpen(true);
-              setHoveredSuggestionIndex(0);
-              setPage(1);
+    <Card className="border-blue-100 bg-blue-50 mb-6">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base font-bold text-blue-700 flex items-center gap-2">
+          <Filter className="h-4 w-4" /> Filtros de búsqueda
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+          {/* Empleado */}
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="buscarEmpleado" className="text-sm font-medium text-gray-700">
+              Empleado
+            </Label>
+            <div className="relative">
+              <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Input
+                id="buscarEmpleado"
+                className="pl-9"
+                placeholder="Nombre del empleado"
+                value={filtroEmpleado}
+                onChange={(e) => {
+                  setFiltroEmpleado(e.target.value);
+                  setIsSuggestionsOpen(true);
+                  setHoveredSuggestionIndex(0);
+                  setPage(1);
+                }}
+                onFocus={() => {
+                  setIsSuggestionsOpen(Boolean(filtroEmpleado));
+                  if (hoveredSuggestionIndex < 0) setHoveredSuggestionIndex(0);
+                }}
+                onBlur={() => {
+                  // Importante: delay para permitir click en sugerencia (onMouseDown)
+                  setTimeout(() => {
+                    setIsSuggestionsOpen(false);
+                    setHoveredSuggestionIndex(-1);
+                  }, 120);
+                }}
+                onKeyDown={(e) => {
+                  if (!isSuggestionsOpen || sugerencias.length === 0) return;
+                  if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    setHoveredSuggestionIndex((prev) => (prev + 1 >= sugerencias.length ? 0 : prev + 1));
+                  } else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setHoveredSuggestionIndex((prev) => (prev - 1 < 0 ? sugerencias.length - 1 : prev - 1));
+                  } else if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleSelectEmpleado(sugerencias[hoveredSuggestionIndex] || sugerencias[0]);
+                  } else if (e.key === "Escape") {
+                    setIsSuggestionsOpen(false);
+                  }
+                }}
+              />
+
+              {isSuggestionsOpen && sugerencias.length > 0 ? (
+                <div className="absolute left-0 right-0 mt-1 z-30 rounded-md border bg-white shadow">
+                  <ul className="max-h-64 overflow-auto">
+                    {sugerencias.map((emp, idx) => (
+                      <li
+                        key={emp.id_empleado}
+                        onMouseDown={() => handleSelectEmpleado(emp)}
+                        onMouseEnter={() => setHoveredSuggestionIndex(idx)}
+                        className={`px-3 py-2 cursor-pointer text-sm ${idx === hoveredSuggestionIndex ? "bg-blue-50" : ""}`}
+                      >
+                        {emp.nombre_completo}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Desde */}
+          <DatePickerFilter
+            id="desde"
+            label="Desde"
+            value={desde ?? ""}
+            onChange={(val) => {
+              setDesde?.(val);
+              // Mantener `fecha` por compatibilidad, aunque la tabla ya no depende de esto.
+              if (setFecha && val && hasta && val === hasta) setFecha(val);
+              if (setFecha && val && hasta && val !== hasta) setFecha("");
             }}
-            onFocus={() => {
-              setIsSuggestionsOpen(Boolean(filtroEmpleado));
-              if (hoveredSuggestionIndex < 0) setHoveredSuggestionIndex(0);
-            }}
-            onBlur={() => {
-              // Importante: delay para permitir click en sugerencia (onMouseDown)
-              setTimeout(() => {
-                setIsSuggestionsOpen(false);
-                setHoveredSuggestionIndex(-1);
-              }, 120);
-            }}
-            onKeyDown={(e) => {
-              if (!isSuggestionsOpen || sugerencias.length === 0) return;
-              if (e.key === "ArrowDown") {
-                e.preventDefault();
-                setHoveredSuggestionIndex((prev) =>
-                  prev + 1 >= sugerencias.length ? 0 : prev + 1
-                );
-              } else if (e.key === "ArrowUp") {
-                e.preventDefault();
-                setHoveredSuggestionIndex((prev) =>
-                  prev - 1 < 0 ? sugerencias.length - 1 : prev - 1
-                );
-              } else if (e.key === "Enter") {
-                e.preventDefault();
-                handleSelectEmpleado(
-                  sugerencias[hoveredSuggestionIndex] || sugerencias[0]
-                );
-              } else if (e.key === "Escape") {
-                setIsSuggestionsOpen(false);
-              }
-            }}
+            maxISO={hasta || null}
           />
 
-          {isSuggestionsOpen && sugerencias.length > 0 ? (
-            <div className="absolute left-0 right-0 mt-1 z-30 rounded-md border bg-background shadow">
-              <ul className="max-h-64 overflow-auto">
-                {sugerencias.map((emp, idx) => (
-                  <li
-                    key={emp.id_empleado}
-                    onMouseDown={() => handleSelectEmpleado(emp)}
-                    onMouseEnter={() => setHoveredSuggestionIndex(idx)}
-                    className={`px-3 py-2 cursor-pointer text-sm ${
-                      idx === hoveredSuggestionIndex ? "bg-accent" : ""
-                    }`}
-                  >
-                    {emp.nombre_completo}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
+          {/* Hasta */}
+          <DatePickerFilter
+            id="hasta"
+            label="Hasta"
+            value={hasta ?? ""}
+            onChange={(val) => {
+              setHasta?.(val);
+              if (setFecha && desde && val && desde === val) setFecha(val);
+              if (setFecha && desde && val && desde !== val) setFecha("");
+            }}
+            minISO={desde || null}
+          />
+
+          {/* Departamento */}
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="departamento" className="text-sm font-medium text-gray-700">
+              Departamento
+            </Label>
+            <Combobox
+              options={departamentos}
+              value={departamento}
+              onChange={(val) => {
+                setDepartamento(val);
+                setPage(1);
+              }}
+              placeholder={"Todos los departamentos"}
+              emptyText="No hay departamentos"
+              name="departamento"
+            />
+          </div>
+
+          {/* Estado */}
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="estado" className="text-sm font-medium text-gray-700">
+              Estado
+            </Label>
+            <Combobox
+              options={estadoOptions}
+              value={estado}
+              onChange={(val) => {
+                setEstado(val);
+                setPage(1);
+              }}
+              placeholder="Todos los estados"
+              emptyText="No hay estados"
+              name="estado"
+            />
+          </div>
         </div>
-      </div>
 
-      <DatePickerFilter
-        id="desde"
-        label="Desde"
-        value={desde ?? ""}
-        onChange={(val) => {
-          setDesde?.(val);
-          // Mantener `fecha` por compatibilidad, aunque la tabla ya no depende de esto.
-          if (setFecha && val && hasta && val === hasta) setFecha(val);
-          if (setFecha && val && hasta && val !== hasta) setFecha("");
-        }}
-        maxISO={hasta || null}
-      />
-
-      <DatePickerFilter
-        id="hasta"
-        label="Hasta"
-        value={hasta ?? ""}
-        onChange={(val) => {
-          setHasta?.(val);
-          if (setFecha && desde && val && desde === val) setFecha(val);
-          if (setFecha && desde && val && desde !== val) setFecha("");
-        }}
-        minISO={desde || null}
-      />
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="departamento">Departamento</Label>
-        <Combobox
-          options={departamentos}
-          value={departamento}
-          onChange={(val) => {
-            setDepartamento(val);
-            setPage(1);
-          }}
-          placeholder={"Todos los departamentos"}
-          emptyText="No hay departamentos"
-          name="departamento"
-        />
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="estado">Estado</Label>
-        <Combobox
-          options={estadoOptions}
-          value={estado}
-          onChange={(val) => {
-            setEstado(val);
-            setPage(1);
-          }}
-          placeholder="Todos los estados"
-          emptyText="No hay estados"
-          name="estado"
-        />
-      </div>
-    </div>
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setFiltroEmpleado("");
+              setDepartamento("");
+              setEstado("");
+              const hoy = dayjs().tz("America/Mexico_City").format("YYYY-MM-DD");
+              setDesde(hoy);
+              setHasta(hoy);
+              setPage(1);
+            }}
+            className="border-gray-300 text-gray-700 hover:bg-gray-100"
+          >
+            <RotateCcw className="h-4 w-4 mr-2" />
+            Limpiar
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

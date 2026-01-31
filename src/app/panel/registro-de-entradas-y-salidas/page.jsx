@@ -3,13 +3,14 @@
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import EntradasSalidasFilters from "./EntradasSalidasFilter";
-import { StatCard } from "@/components/Cards";
+import StatCard from "@/components/StatCard";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import useDebounce from "@/hooks/useDebounce";
 import EntradasSalidasDataContainer from "./EntradasSalidasDataContainer";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import { ClockArrowUp } from "lucide-react";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -37,7 +38,6 @@ export default function RegistroEntradasSalidas() {
 
   const { dataUser } = useAuth();
 
-  console.log(dataUser);
   const idEmpresa = dataUser?.id_empresa;
 
   const { ui, data } = EntradasSalidasDataContainer({
@@ -54,15 +54,31 @@ export default function RegistroEntradasSalidas() {
   });
 
   return (
-    <div>
+    <div className="space-y-6">
+      {/* Header ADAMIA */}
+      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+        <div className="flex items-center gap-3">
+          <div className="bg-[#2563EB] p-2.5 rounded-lg">
+            <ClockArrowUp className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">Entradas y salidas</h1>
+            <p className="text-sm text-gray-600">
+              Consulta y corrige registros de reloj checador por rango de fechas.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard title="Registros hoy" count={data?.totalHoy || 0} />
-        <StatCard title="Empleados únicos" count={data?.empleados || 0} />
+        <StatCard title="Registros hoy" value={data?.totalHoy || 0} borderColor="border-[#2563EB]" />
+        <StatCard title="Empleados únicos" value={data?.empleados || 0} borderColor="border-emerald-500" />
         <StatCard
           title="Jornadas completas"
-          count={data?.jornadas_completas || 0}
+          value={data?.jornadas_completas || 0}
+          borderColor="border-amber-500"
         />
-        <StatCard title="Pendientes" count={data?.pendientes || 0} />
+        <StatCard title="Pendientes" value={data?.pendientes || 0} borderColor="border-red-500" />
       </div>
 
       <EntradasSalidasFilters

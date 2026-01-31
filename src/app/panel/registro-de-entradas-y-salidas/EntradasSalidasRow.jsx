@@ -50,7 +50,7 @@ export default function EntradasSalidasRow({
     .format("YYYY-MM-DD");
 
   return (
-    <TableRow key={registro.id}>
+    <TableRow key={registro.id} className="border-b border-gray-100 hover:bg-gray-50">
       {!isEditing && (
         <>
           <TableCell>
@@ -58,44 +58,46 @@ export default function EntradasSalidasRow({
             <p className="text-xs text-gray-500">Puesto: {registro.puesto}</p>
           </TableCell>
           <TableCell>
-            <p className="font-bold text-gray-500">{registro.departamento}</p>
+            <p className="font-semibold text-gray-700">{registro.departamento}</p>
             <p className="text-xs text-gray-500">{registro.sucursal}</p>
           </TableCell>
           {/* Mostrar siempre fecha de entrada (aunque sea un solo día) */}
           <TableCell className="text-center">{formatDate(registro.entrada)}</TableCell>
-          <TableCell className="text-center text-green-500 font-bold">
+          <TableCell className="text-center text-green-600 font-semibold">
             {formatTime(registro.entrada)}
           </TableCell>
-          <TableCell className="text-center text-red-500 font-bold">
+          <TableCell className="text-center text-red-600 font-semibold">
             {formatTime(registro.salida)}
           </TableCell>
-          <TableCell className="text-center text-green-500 font-bold">
+          <TableCell className="text-center text-green-600 font-semibold">
             {registro.entrada_corregida
               ? formatTime(registro.entrada_corregida)
               : "-"}
           </TableCell>
-          <TableCell className="text-center text-red-500 font-bold">
+          <TableCell className="text-center text-red-600 font-semibold">
             {registro.salida_corregida
               ? formatTime(registro.salida_corregida)
               : "-"}
           </TableCell>
           <TableCell className="text-center">
             <span
-              className={`px-2 py-1 rounded-full text-sm text-white ${
-                registro.estado === "Abierto" ? "bg-green-600" : "bg-gray-500"
+              className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                registro.estado === "Abierto"
+                  ? "bg-green-100 text-green-800"
+                  : "bg-gray-100 text-gray-700"
               }`}
             >
               {registro.estado}
             </span>
           </TableCell>
           <TableCell className="sticky right-0 bg-background z-10 text-center">
-            <Button
-              size="sm"
+            <button
               onClick={() => handleEditMovimientoClick(registro)}
-              className="bg-slate-700 hover:bg-slate-700"
+              className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+              title="Editar"
             >
-              <Pencil className="w-16 h-16 text-white bg-slate-700" />
-            </Button>
+              <Pencil className="h-4 w-4 text-[#2563EB]" />
+            </button>
           </TableCell>
         </>
       )}
@@ -198,10 +200,10 @@ export default function EntradasSalidasRow({
 
           <TableCell className="text-center">
             <span
-              className={`px-2 py-1 rounded-full text-sm text-white ${
+              className={`px-2 py-1 rounded-full text-xs font-semibold ${
                 currentData.estado === "Abierto"
-                  ? "bg-green-600"
-                  : "bg-gray-500"
+                  ? "bg-green-100 text-green-800"
+                  : "bg-gray-100 text-gray-700"
               }`}
             >
               {currentData.estado}
@@ -209,22 +211,22 @@ export default function EntradasSalidasRow({
           </TableCell>
           <TableCell className="sticky right-0 bg-background z-10 text-center p-0">
             <div className="flex items-center justify-center gap-2 h-full px-2">
-              <Button
-                size="sm"
+              <button
                 onClick={handleSaveMovimientoClick}
                 disabled={isSaving}
-                className="bg-slate-700 hover:bg-slate-700"
+                className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
+                title="Guardar"
               >
-                <Save className="w-16 h-16 text-white bg-slate-700" />
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
+                <Save className="h-4 w-4 text-[#2563EB]" />
+              </button>
+              <button
                 onClick={handleCancelMovimientoEdit}
                 disabled={isSaving}
+                className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+                title="Cancelar"
               >
-                <X className="w-16 h-16 text-slate-700 " />
-              </Button>
+                <X className="h-4 w-4 text-gray-700" />
+              </button>
             </div>
           </TableCell>
         </>
