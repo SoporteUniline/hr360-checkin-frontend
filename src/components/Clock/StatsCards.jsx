@@ -1,27 +1,40 @@
 import { CheckCircle, Calendar } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function StatsCards({ empleadosActivos, totalRegistros }) {
   return (
     <div className="grid grid-cols-2 gap-4">
-      <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200/50 p-6 text-center">
-        <div className="w-12 h-12 mx-auto bg-green-100 rounded-xl flex items-center justify-center mb-3">
-          <CheckCircle className="w-6 h-6 text-green-600" />
-        </div>
-        <div className="text-2xl font-bold text-slate-800">
-          {empleadosActivos}
-        </div>
-        <div className="text-sm text-slate-600">Empleados Activos</div>
-      </div>
+      <Card className="bg-white rounded-xl shadow-sm border border-gray-100">
+        <CardContent className="p-4 flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <div className="text-xs font-semibold uppercase text-gray-500">
+              Empleados activos
+            </div>
+            <div className="text-2xl font-bold text-gray-900">
+              {empleadosActivos ?? 0}
+            </div>
+          </div>
+          <div className="p-2.5 rounded-lg bg-green-50">
+            <CheckCircle className="w-5 h-5 text-green-600" />
+          </div>
+        </CardContent>
+      </Card>
 
-      <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200/50 p-6 text-center">
-        <div className="w-12 h-12 mx-auto bg-slate-100 rounded-xl flex items-center justify-center mb-3">
-          <Calendar className="w-6 h-6 text-slate-600" />
-        </div>
-        <div className="text-2xl font-bold text-slate-800">
-          {totalRegistros}
-        </div>
-        <div className="text-sm text-slate-600">Registros Hoy</div>
-      </div>
+      <Card className="bg-white rounded-xl shadow-sm border border-gray-100">
+        <CardContent className="p-4 flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <div className="text-xs font-semibold uppercase text-gray-500">
+              Registros hoy
+            </div>
+            <div className="text-2xl font-bold text-gray-900">
+              {totalRegistros ?? 0}
+            </div>
+          </div>
+          <div className="p-2.5 rounded-lg bg-blue-50">
+            <Calendar className="w-5 h-5 text-[#2563EB]" />
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

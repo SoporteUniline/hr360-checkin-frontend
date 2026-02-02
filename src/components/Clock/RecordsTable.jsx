@@ -16,37 +16,37 @@ export default function RecordsTable({
   const movimientosParaTabla = movimientos?.slice(0, 10) || [];
 
   return (
-    <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-slate-200/50 overflow-hidden">
-      <div className="px-6 py-5 border-b border-slate-200">
-        <h3 className="text-2xl font-bold text-slate-800 flex items-center space-x-3">
-          <Users className="w-6 h-6" />
-          <span>Últimos registros</span>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-100">
+        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <Users className="w-5 h-5 text-[#2563EB]" />
+          Últimos registros
         </h3>
       </div>
 
       <div className="overflow-x-auto">
         <Table>
-          <TableHeader className="bg-slate-50">
-            <TableRow>
-              <TableCell className="px-6 py-2 text-left text-sm font-semibold text-slate-700">
+          <TableHeader>
+            <TableRow className="bg-gray-50 hover:bg-gray-50">
+              <TableCell className="px-6 py-2 text-left text-xs font-semibold uppercase text-gray-700">
                 Código
               </TableCell>
-              <TableCell className="px-6 py-2 text-left text-sm font-semibold text-slate-700">
+              <TableCell className="px-6 py-2 text-left text-xs font-semibold uppercase text-gray-700">
                 Empleado
               </TableCell>
-              <TableCell className="px-6 py-2 text-center text-sm font-semibold text-slate-700">
+              <TableCell className="px-6 py-2 text-center text-xs font-semibold uppercase text-gray-700">
                 Entrada
               </TableCell>
-              <TableCell className="px-6 py-2 text-center text-sm font-semibold text-slate-700">
+              <TableCell className="px-6 py-2 text-center text-xs font-semibold uppercase text-gray-700">
                 Salida
               </TableCell>
-              <TableCell className="px-6 py-2 text-center text-sm font-semibold text-slate-700">
+              <TableCell className="px-6 py-2 text-center text-xs font-semibold uppercase text-gray-700">
                 Estado
               </TableCell>
             </TableRow>
           </TableHeader>
 
-          <TableBody className="divide-y divide-slate-100">
+          <TableBody className="divide-y divide-gray-100">
             {isLoading ? (
               [...Array(5)].map((_, i) => (
                 <TableRow key={i}>
@@ -63,26 +63,26 @@ export default function RecordsTable({
               movimientosParaTabla.map((mov, i) => (
                 <TableRow
                   key={i}
-                  className="hover:bg-slate-50/50 transition-colors duration-200"
+                  className="hover:bg-gray-50 transition-colors"
                 >
                   <TableCell className="px-6">
-                    <span className="text-sm font-bold text-slate-700">
+                    <span className="text-sm font-semibold text-gray-700">
                       {mov.nip}
                     </span>
                   </TableCell>
                   <TableCell className="px-6">
-                    <div className="font-medium text-slate-800">
+                    <div className="font-medium text-gray-900">
                       {mov.nombre}
                     </div>
                   </TableCell>
                   <TableCell className="px-6 text-center">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800">
                       {formatearHora(mov.entrada_corregida || mov.entrada)}
                     </span>
                   </TableCell>
                   <TableCell className="px-6 text-center">
                     {mov.salida_corregida || mov.salida ? (
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-red-100 text-red-800">
                         {formatearHora(mov.salida_corregida || mov.salida)}
                       </span>
                     ) : (

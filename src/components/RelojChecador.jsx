@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { CheckCircle, XCircle } from "lucide-react";
+import { CheckCircle, XCircle, Clock4, AlertTriangle } from "lucide-react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import ErrorPage from "@/components/ErrorPage";
@@ -286,10 +286,26 @@ export default function RelojChecador({
 
   return (
     <>
-      <main className="min-h-screen bg-linear-to-br from-slate-50 via-gray-50 to-slate-100 p-4">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-6">
+      <main className="min-h-screen bg-[#F9FAFB] p-4">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Header ADAMIA */}
+          <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+            <div className="flex items-center gap-3">
+              <div className="bg-[#2563EB] p-2.5 rounded-lg">
+                <Clock4 className="w-5 h-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-lg font-bold text-gray-900">Reloj checador</h1>
+                <p className="text-sm text-gray-600">
+                  Registro de entradas y salidas con validación por código, QR y reconocimiento facial.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
           <div className="hidden md:block lg:col-span-4 md:col-span-5 space-y-6">
-            <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-slate-200/50 p-6 text-center">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
               <ClockDisplay horaActual={horaActual} fechaActual={fechaActual} />
               <EmployeeInput
                 codigo={codigoEmpleado}
@@ -310,11 +326,9 @@ export default function RelojChecador({
 
           <div className="lg:col-span-8 md:col-span-7 md:space-y-6">
             <div className="block md:hidden mb-2 text-center">
-              <h1 className="text-md font-bold text-slate-800">
-                HR360 - Control de Asistencia
-              </h1>
-              <p className="text-lg text-slate-600 font-bold">{horaActual}</p>
-              <p className="text-xs text-slate-500">{fechaActual}</p>
+              <h2 className="text-sm font-semibold text-gray-700">Reloj checador</h2>
+              <p className="text-xl text-gray-900 font-bold">{horaActual}</p>
+              <p className="text-sm text-gray-600">{fechaActual}</p>
             </div>
 
             <FacialRecognitionPanel
@@ -325,7 +339,7 @@ export default function RelojChecador({
               idEmpresa={idEmpresa}
               handleOpenFacialModal={() => setMostrarCamara((prev) => !prev)}
             />
-            <div className="block md:hidden bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200/50 p-4">
+            <div className="block md:hidden bg-white rounded-xl shadow-sm border border-gray-100 p-4">
               <EmployeeInput
                 codigo={codigoEmpleado}
                 setCodigo={setCodigoEmpleado}
@@ -352,11 +366,13 @@ export default function RelojChecador({
             onClose={() => setMostrarQR(false)}
           />
         )}
+        {/* Cierre del contenedor `max-w-7xl` */}
+      </div>
       </main>
 
       {popupInfo && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl p-8 text-center max-w-sm w-full mx-4 transform animate-bounce-in">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 text-center max-w-sm w-full mx-4 transform animate-bounce-in">
             <div className="relative mb-6">
               <img
                 src={popupInfo.foto_perfil}
@@ -364,9 +380,7 @@ export default function RelojChecador({
                 className="w-24 h-24 object-cover rounded-full mx-auto border-4 border-slate-200 shadow-lg"
               />
               <div
-                className={`absolute -bottom-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center shadow-lg ${
-                  popupInfo.success ? "bg-green-500" : "bg-red-500"
-                }`}
+                className={`absolute -bottom-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center shadow-lg ${popupInfo.success ? "bg-green-500" : "bg-red-500"}`}
               >
                 {popupInfo.success ? (
                   <CheckCircle className="w-5 h-5 text-white" />
@@ -376,10 +390,10 @@ export default function RelojChecador({
               </div>
             </div>
 
-            <h3 className="text-2xl font-bold text-slate-800 mb-2">
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
               {popupInfo.nombre}
             </h3>
-            <p className="text-slate-600 mb-4 text-lg">
+            <p className="text-gray-600 mb-4 text-base">
               {popupInfo.movimiento}
             </p>
 
@@ -418,53 +432,57 @@ export default function RelojChecador({
       `}</style>
 
       {mostrarModalTurno && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden">
             {/* Overlay interno mientras registra */}
 
-            <h2 className="text-xl font-bold text-slate-800 mb-2">
-              Turno abierto
-            </h2>
-            <p className="text-slate-600 mb-6">
-              Ya existe un turno abierto. ¿Qué deseas hacer?
-            </p>
+            <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white p-6">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="h-6 w-6" />
+                <div>
+                  <h2 className="text-white text-lg font-semibold">Turno abierto</h2>
+                  <p className="text-white/90 text-sm">
+                    Ya existe un turno abierto. ¿Qué deseas hacer?
+                  </p>
+                </div>
+              </div>
+            </div>
 
             {registrando ? (
-              <div className="flex flex-col items-center justify-center">
-                <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-blue-600 mb-3"></div>
-                <p className="text-slate-700 font-medium">Registrando...</p>
+              <div className="p-6 flex flex-col items-center justify-center">
+                <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-300 border-t-[#2563EB] mb-3"></div>
+                <p className="text-gray-700 font-medium">Registrando...</p>
               </div>
             ) : (
-              <>
-                <div className="flex flex-col gap-3">
-                  <Button
-                    onClick={() => registrarConAccion("salida_temporal")}
-                    className="w-full py-2 rounded-lg bg-slate-200 hover:bg-slate-300 text-black"
-                    disabled={registrando}
-                  >
-                    Salida temporal
-                  </Button>
+              <div className="p-6 space-y-3">
+                <Button
+                  onClick={() => registrarConAccion("salida_temporal")}
+                  className="w-full bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm"
+                  disabled={registrando}
+                >
+                  Salida temporal
+                </Button>
 
-                  <Button
-                    onClick={() => registrarConAccion("cerrar_turno")}
-                    className="w-full py-2 rounded-lg bg-red-500 text-white hover:bg-red-600"
-                    disabled={registrando}
-                  >
-                    Cerrar turno
-                  </Button>
+                <Button
+                  onClick={() => registrarConAccion("cerrar_turno")}
+                  className="w-full bg-red-600 hover:bg-red-700 text-white shadow-sm"
+                  disabled={registrando}
+                >
+                  Cerrar turno
+                </Button>
 
-                  <Button
-                    onClick={() => {
-                      setMostrarModalTurno(false);
-                      setPendiente(null);
-                    }}
-                    className="w-full py-2 rounded-lg border"
-                    disabled={registrando}
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              </>
+                <Button
+                  onClick={() => {
+                    setMostrarModalTurno(false);
+                    setPendiente(null);
+                  }}
+                  variant="outline"
+                  className="w-full border-gray-300 text-gray-700 hover:bg-gray-100"
+                  disabled={registrando}
+                >
+                  Cancelar
+                </Button>
+              </div>
             )}
           </div>
         </div>

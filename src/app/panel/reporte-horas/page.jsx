@@ -16,8 +16,8 @@ import { useSnackbar } from "notistack";
 import { useAuth } from "@/context/AuthContext";
 import axios from "@/lib/axios";
 import Cookies from "js-cookie";
-import styles from "../vacaciones/vacaciones-theme.module.css";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import { BarChart3, Filter, FileDown, FileSpreadsheet } from "lucide-react";
 
 function fmtDate(d) {
   const dd = new Date(d);
@@ -1004,16 +1004,30 @@ export default function ReporteHorasPage() {
   }
 
   return (
-    <div className={`${styles.vacacionesTheme} min-h-dvh bg-zinc-50 py-10`}>
-      <div className="mx-auto w-full max-w-6xl px-4">
-        <Card>
-          <CardHeader className="flex flex-col gap-1">
-            <div className="text-sm text-muted-foreground">Genera reportes por empleado y periodo</div>
-          </CardHeader>
-          <CardContent className="space-y-6">
+    <div className="space-y-6">
+      {/* Header ADAMIA */}
+      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+        <div className="flex items-center gap-3">
+          <div className="bg-[#2563EB] p-2.5 rounded-lg">
+            <BarChart3 className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">Reporte de horas</h1>
+            <p className="text-sm text-gray-600">Genera reportes por empleado y periodo.</p>
+          </div>
+        </div>
+      </div>
+
+      <Card className="border-blue-100 bg-blue-50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-bold text-blue-700 flex items-center gap-2">
+            <Filter className="h-4 w-4" /> Filtros de búsqueda
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex flex-col gap-2">
-                <label className="text-sm text-muted-foreground">Cargo</label>
+                <label className="text-sm font-medium text-gray-700">Cargo</label>
                 <select
                   className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm shadow-xs focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                   value={cargo}
@@ -1026,7 +1040,7 @@ export default function ReporteHorasPage() {
                 </select>
               </div>
               <div className={`flex flex-col gap-2`}>
-                <label className="text-sm text-muted-foreground">Empleado{multi ? "(s)" : ""}</label>
+                <label className="text-sm font-medium text-gray-700">Empleado{multi ? "(s)" : ""}</label>
                 {!multi ? (
                   <select
                     className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm shadow-xs focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
@@ -1041,7 +1055,12 @@ export default function ReporteHorasPage() {
                   </select>
                 ) : (
                   <div className="flex flex-col gap-2">
-                    <Button type="button" variant="secondary" onClick={openSelectorWithBuffer} className="w-full justify-between">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={openSelectorWithBuffer}
+                      className="w-full justify-between border-gray-300 text-gray-700 hover:bg-gray-100"
+                    >
                       <span className="truncate pr-2" title={empleadoIds.length > 0 ? `Seleccionar empleados (${empleadoIds.length} seleccionados)` : "Seleccionar empleados"}>
                         {empleadoIds.length > 0
                           ? `Seleccionar empleados (${empleadoIds.length} seleccionados)`
@@ -1082,88 +1101,149 @@ export default function ReporteHorasPage() {
                     </button>
                   </div>
                 ) : null}
-                <label className="inline-flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                <label className="inline-flex items-center gap-2 text-xs text-gray-600 mt-1">
                   <input type="checkbox" checked={multi} onChange={(e) => setMulti(e.target.checked)} />
                   Seleccionar múltiples (si no eliges ninguno, se tomarán todos del cargo)
                 </label>
 
                 {multi ? (
                   <Dialog open={openSelector} onOpenChange={setOpenSelector}>
-                    <DialogContent className={`${styles.vacacionesTheme} sm:max-w-2xl`}>
-                      <DialogHeader>
-                        <DialogTitle>Seleccionar empleados</DialogTitle>
-                        <DialogDescription>Busca por nombre o empresa, marca múltiples empleados y aplica la selección.</DialogDescription>
+                    <DialogContent className="sm:max-w-2xl p-0 overflow-hidden">
+                      <DialogHeader className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white p-6">
+                        <DialogTitle className="text-white text-lg font-semibold">Seleccionar empleados</DialogTitle>
+                        <DialogDescription className="text-white/90 text-sm">
+                          Busca por nombre o empresa, marca múltiples empleados y aplica la selección.
+                        </DialogDescription>
                       </DialogHeader>
-                      <div className="space-y-2">
-                        <label className="text-xs text-muted-foreground">Buscar</label>
-                        <Input placeholder="Escribe para filtrar por nombre o empresa..." value={searchEmpleado} onChange={(e) => setSearchEmpleado(e.target.value)} />
-                      </div>
-                      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                        <div className="text-muted-foreground">{tempEmpleadoIds.length} seleccionados de {dialogResultados.length} resultados</div>
-                        <div className="flex items-center gap-2">
-                          <Button type="button" variant="ghost" onClick={selectAllDialog} disabled={dialogResultados.length === 0}>Seleccionar todos</Button>
-                          <Button type="button" variant="ghost" onClick={clearDialogSelection} disabled={tempEmpleadoIds.length === 0}>Limpiar</Button>
+
+                      <div className="p-6 space-y-4 text-sm">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-700">Buscar</label>
+                          <div className="relative">
+                            <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                            <Input
+                              className="pl-9"
+                              placeholder="Escribe para filtrar por nombre o empresa..."
+                              value={searchEmpleado}
+                              onChange={(e) => setSearchEmpleado(e.target.value)}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="text-sm text-gray-600">
+                            {tempEmpleadoIds.length} seleccionados de {dialogResultados.length} resultados
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={selectAllDialog}
+                              disabled={dialogResultados.length === 0}
+                              className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                            >
+                              Seleccionar todos
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={clearDialogSelection}
+                              disabled={tempEmpleadoIds.length === 0}
+                              className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                            >
+                              Limpiar
+                            </Button>
+                          </div>
+                        </div>
+
+                        <div className="max-h-[380px] overflow-auto rounded-md border border-gray-200 bg-white">
+                          {dialogResultados.length === 0 ? (
+                            <div className="p-4 text-sm text-gray-500">No hay resultados.</div>
+                          ) : (
+                            <ul className="divide-y divide-gray-100">
+                              {dialogResultados.map((e) => {
+                                const id = String(e.id_empleado);
+                                const checked = tempEmpleadoIds.includes(id);
+                                return (
+                                  <li key={`dlg-${id}`} className="flex items-center gap-3 p-3">
+                                    <input
+                                      type="checkbox"
+                                      className="size-4 accent-[#2563EB]"
+                                      checked={checked}
+                                      onChange={() => toggleTemp(id)}
+                                      aria-label={`Seleccionar ${e.nombre_empleado}`}
+                                    />
+                                    <div className="min-w-0">
+                                      <div className="truncate font-medium text-gray-900">{e.nombre_empleado}</div>
+                                      <div className="truncate text-xs text-gray-500">{e.nombre_empresa}</div>
+                                    </div>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
                         </div>
                       </div>
-                      <div className="max-h-[380px] overflow-auto rounded-md border">
-                        {dialogResultados.length === 0 ? (
-                          <div className="p-4 text-sm text-muted-foreground">No hay resultados.</div>
-                        ) : (
-                          <ul className="divide-y">
-                            {dialogResultados.map((e) => {
-                              const id = String(e.id_empleado);
-                              const checked = tempEmpleadoIds.includes(id);
-                              return (
-                                <li key={`dlg-${id}`} className="flex items-center gap-3 p-3">
-                                  <input type="checkbox" className="size-4" checked={checked} onChange={() => toggleTemp(id)} aria-label={`Seleccionar ${e.nombre_empleado}`} />
-                                  <div className="min-w-0">
-                                    <div className="truncate font-medium">{e.nombre_empleado}</div>
-                                    <div className="truncate text-xs text-muted-foreground">{e.nombre_empresa}</div>
-                                  </div>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        )}
-                      </div>
-                      <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => setOpenSelector(false)} className="bg-white border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]">Cancelar</Button>
-                        <Button type="button" onClick={() => { setEmpleadoIds(tempEmpleadoIds); setOpenSelector(false); }} className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]">Aplicar selección</Button>
+
+                      <DialogFooter className="bg-gray-50 p-4 flex justify-end gap-2 border-t">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setOpenSelector(false)}
+                          className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                        >
+                          Cancelar
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => { setEmpleadoIds(tempEmpleadoIds); setOpenSelector(false); }}
+                          className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm"
+                        >
+                          Aplicar selección
+                        </Button>
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
                 ) : null}
               </div>
               <div className="flex flex-col gap-2">
-                <label className="text-sm text-muted-foreground">Fecha inicio</label>
+                <label className="text-sm font-medium text-gray-700">Fecha inicio</label>
                 <Input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
               </div>
               <div className="flex flex-col gap-2">
-                <label className="text-sm text-muted-foreground">Fecha fin</label>
+                <label className="text-sm font-medium text-gray-700">Fecha fin</label>
                 <Input type="date" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} />
               </div>
               <div className="flex items-end md:col-span-2">
-                <Button onClick={handleGenerar} disabled={loading || (!multi && !empleadoId)} className="w-full bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]">
-                  {loading ? "Generando…" : "Generar Reporte"}
+                <Button
+                  onClick={handleGenerar}
+                  disabled={loading || (!multi && !empleadoId)}
+                  className="w-full bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-md"
+                >
+                  {loading ? "Generando…" : "Generar reporte"}
                 </Button>
               </div>
             </div>
 
             <div className="flex flex-wrap gap-3 pt-2">
               <Button
-                variant="default"
                 onClick={handleExcel}
-                className="gap-2 bg-[#27ae60] hover:bg-[#229954] text-white shadow-[0_2px_8px_rgba(39,174,96,0.3)]"
+                variant="outline"
+                className="gap-2 border-gray-300 text-gray-700 hover:bg-gray-100"
                 disabled={!reportes || reportes.length === 0 || exporting !== null}
               >
-                <Icon icon="lucide:file-spreadsheet" className="size-4" /> Exportar Excel
+                <FileSpreadsheet className="h-4 w-4" /> Exportar Excel
               </Button>
-              <Button variant="destructive" onClick={handleGuardarPDF} className="gap-2 bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(239,68,68,0.3)]" disabled={!reportes || reportes.length === 0 || exporting !== null}>
-                <Icon icon="lucide:file-down" className="size-4" /> Guardar PDF
+              <Button
+                onClick={handleGuardarPDF}
+                className="gap-2 bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-md"
+                disabled={!reportes || reportes.length === 0 || exporting !== null}
+              >
+                <FileDown className="h-4 w-4" /> Guardar PDF
               </Button>
             </div>
 
-            <div ref={reportRef} className="bg-white rounded-lg border shadow-sm p-6 print:p-0">
+            <div ref={reportRef} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 print:p-0">
               {!reportes || reportes.length === 0 ? (
                 <div className="text-center text-muted-foreground py-16">Genera un reporte para visualizar aquí.</div>
               ) : (
@@ -1228,14 +1308,14 @@ export default function ReporteHorasPage() {
                       <section className="overflow-x-auto">
                         <table className="w-full text-sm border-collapse">
                           <thead className="sticky top-0 z-10">
-                            <tr className="text-white" style={{ backgroundColor: "#2c3e50" }}>
-                              <th className="p-2 border">Fecha</th>
-                              <th className="p-2 border">Entrada</th>
-                              <th className="p-2 border">Salida</th>
-                              <th className="p-2 border">Horas</th>
-                              <th className="p-2 border">Estado</th>
-                              <th className="p-2 border">Motivo</th>
-                              <th className="p-2 border">Notas</th>
+                            <tr className="bg-gray-50">
+                              <th className="p-2 border text-xs uppercase font-semibold text-gray-700">Fecha</th>
+                              <th className="p-2 border text-xs uppercase font-semibold text-gray-700">Entrada</th>
+                              <th className="p-2 border text-xs uppercase font-semibold text-gray-700">Salida</th>
+                              <th className="p-2 border text-xs uppercase font-semibold text-gray-700">Horas</th>
+                              <th className="p-2 border text-xs uppercase font-semibold text-gray-700">Estado</th>
+                              <th className="p-2 border text-xs uppercase font-semibold text-gray-700">Motivo</th>
+                              <th className="p-2 border text-xs uppercase font-semibold text-gray-700">Notas</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -1340,13 +1420,12 @@ export default function ReporteHorasPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
       {exporting && (
         <div className="fixed inset-0 z-[100] grid place-items-center bg-black/40 backdrop-blur-sm">
           <div className="rounded-xl bg-white shadow-xl p-6 w-[340px] text-center space-y-3 border">
-            <div className="mx-auto size-10 rounded-full border-4 border-zinc-200 border-t-zinc-800 animate-spin" />
-            <div className="text-sm font-medium text-zinc-700">{exporting === 'pdf' ? 'Generando PDF…' : 'Generando Excel…'}</div>
-            <div className="text-xs text-zinc-500">Esto puede tardar unos segundos. No cierres esta ventana.</div>
+            <div className="mx-auto size-10 rounded-full border-4 border-gray-200 border-t-[#2563EB] animate-spin" />
+            <div className="text-sm font-medium text-gray-700">{exporting === 'pdf' ? 'Generando PDF…' : 'Generando Excel…'}</div>
+            <div className="text-xs text-gray-500">Esto puede tardar unos segundos. No cierres esta ventana.</div>
           </div>
         </div>
       )}
