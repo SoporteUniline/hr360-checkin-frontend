@@ -28,6 +28,7 @@ import { useSnackbar } from "notistack";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import styles from "./permisos-theme.module.css";
 import PermisoCancelacionDiasPasadosDialog from "./PermisoCancelacionDiasPasadosDialog";
+import { CalendarCheck2, Save } from "lucide-react";
 
 // Dialog para crear/editar una solicitud de permiso.
 // - Se relaciona con: src/lib/permisosApi.js y src/app/panel/permisos/page.jsx
@@ -317,25 +318,31 @@ export default function PermisoDialog({
          - sm:max-w-xl: mantiene el ancho previsto en pantallas >= sm.
          - max-h-[85vh] overflow-y-auto: permite scroll interno si el contenido crece.
          Relación: este modal se invoca desde `src/app/panel/permisos/page.jsx`. */}
-      <DialogContent className={`${styles.permisosTheme} max-w-[95vw] sm:max-w-xl max-h-[85vh] overflow-y-auto`}>
-        <DialogHeader>
-          <DialogTitle>
-            ➕ {isEdit ? "Editar Permiso" : "Nuevo Permiso"}
+      <DialogContent className="p-0 overflow-hidden max-w-[95vw] sm:max-w-xl">
+        <DialogHeader className="p-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white">
+          <DialogTitle className="flex items-center gap-2 text-base font-bold">
+            <span className="grid size-9 place-items-center rounded-lg bg-white/15">
+              <CalendarCheck2 className="size-5 text-white" />
+            </span>
+            {isEdit ? "Editar permiso" : "Nuevo permiso"}
           </DialogTitle>
+          <p className="text-sm text-white/80">
+            {isEdit ? "Actualiza la solicitud y su estado." : "Crea una solicitud de permiso para uno o varios empleados."}
+          </p>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className={`${styles.permisosTheme} max-h-[70vh] overflow-y-auto p-5 space-y-4`}>
           {/* Tipo de permiso */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Tipo de Permiso</Label>
+              <Label className="text-sm font-medium text-gray-700">Tipo de permiso</Label>
               <Select
                 value={form.id_tipo_permiso}
                 onValueChange={(v) =>
                   setForm((f) => ({ ...f, id_tipo_permiso: v }))
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger className="bg-white">
                   <SelectValue placeholder="Seleccionar tipo..." />
                 </SelectTrigger>
                 <SelectContent
@@ -357,7 +364,7 @@ export default function PermisoDialog({
           {/* Selección de empleado en edición (simple) */}
           {isEdit ? (
             <div className="space-y-2">
-              <Label>Empleado</Label>
+              <Label className="text-sm font-medium text-gray-700">Empleado</Label>
               <select
                 className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm shadow-xs focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                 value={empleadoId}
@@ -375,11 +382,12 @@ export default function PermisoDialog({
           {/* Selección múltiple de empleados (creación) */}
           {!isEdit ? (
             <div className="space-y-2">
-              <Label>Empleados (selección múltiple)</Label>
+              <Label className="text-sm font-medium text-gray-700">Empleados (selección múltiple)</Label>
               <Input
                 placeholder="Buscar por nombre…"
                 value={empleadosBusqueda}
                 onChange={(e) => setEmpleadosBusqueda(e.target.value)}
+                className="bg-white"
               />
               {/* Limitar a 3 elementos visibles antes de hacer scroll */}
               <div className="max-h-36 overflow-auto rounded-md border">
@@ -436,17 +444,18 @@ export default function PermisoDialog({
           {/* Fechas */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Fecha Inicio</Label>
+              <Label className="text-sm font-medium text-gray-700">Fecha inicio</Label>
               <Input
                 type="date"
                 value={form.fecha_inicio}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, fecha_inicio: e.target.value }))
                 }
+                className="bg-white"
               />
             </div>
             <div className="space-y-2">
-              <Label>Fecha Fin</Label>
+              <Label className="text-sm font-medium text-gray-700">Fecha fin</Label>
               <Input
                 type="date"
                 value={form.fecha_fin}
@@ -454,6 +463,7 @@ export default function PermisoDialog({
                 onChange={(e) =>
                   setForm((f) => ({ ...f, fecha_fin: e.target.value }))
                 }
+                className="bg-white"
               />
             </div>
           </div>
@@ -461,7 +471,7 @@ export default function PermisoDialog({
           {/* Estado (solo en modo edición) */}
           {isEdit ? (
             <div className="space-y-2">
-              <Label>Estado</Label>
+              <Label className="text-sm font-medium text-gray-700">Estado</Label>
               {/*
                * Si el permiso está Aprobado, solo permitir transición a Cancelado.
                * Relación: `solicitudPermisoController.actualizarEstado` maneja la sincronización de asistencias.
@@ -474,7 +484,7 @@ export default function PermisoDialog({
                     value={form.estado}
                     onValueChange={handleEstadoChange}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-white">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -517,7 +527,7 @@ export default function PermisoDialog({
 
           {/* Motivo y notas */}
           <div className="space-y-2">
-            <Label>Motivo / Observaciones</Label>
+            <Label className="text-sm font-medium text-gray-700">Motivo / Observaciones</Label>
             <Textarea
               rows={4}
               placeholder="Describe el motivo del permiso..."
@@ -525,25 +535,27 @@ export default function PermisoDialog({
               onChange={(e) =>
                 setForm((f) => ({ ...f, motivo: e.target.value }))
               }
+              className="bg-white"
             />
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="bg-gray-50 border-t border-gray-100 p-4 flex gap-2 sm:justify-end">
           <Button
             variant="outline"
             onClick={() => setOpen(false)}
             disabled={loading}
-            className="bg-white border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
+            className="border-gray-300 text-gray-700 hover:bg-gray-100"
           >
             Cancelar
           </Button>
           <Button
             onClick={guardar}
             disabled={loading}
-            className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)] transition-all hover:-translate-y-0.5"
+            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-2"
           >
-            💾 Guardar
+            <Save className="h-4 w-4" />
+            Guardar
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -15,6 +15,7 @@ import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { fetchImageAsDataUrl, tryAddCompanyMarkToPdf } from "@/lib/pdfCompanyLogo";
 import { calcDiasTotalesYHabiles } from "@/lib/permisosDias";
 import styles from "./permisos-theme.module.css";
+import { CalendarDays, Download, Printer } from "lucide-react";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
@@ -386,12 +387,12 @@ export default function PermisoViewDialog({ open, setOpen, item, festivosSet = n
   }
 
   function EstadoBadge({ estado }) {
-    const base = "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold";
-    if (estado === "Pendiente") return <span className={base} style={{ backgroundColor: "#fef3c7", color: "#92400e" }}>Pendiente</span>;
-    if (estado === "Aprobado") return <span className={base} style={{ backgroundColor: "#d1fae5", color: "#065f46" }}>Aprobado</span>;
-    if (estado === "Rechazado") return <span className={base} style={{ backgroundColor: "#fee2e2", color: "#991b1b" }}>Rechazado</span>;
-    if (estado === "Cancelado") return <span className={base} style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}>Cancelado</span>;
-    return <span className={base} style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}>{estado || "—"}</span>;
+    const base = "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold";
+    if (estado === "Pendiente") return <span className={`${base} bg-amber-100 text-amber-900`}>Pendiente</span>;
+    if (estado === "Aprobado") return <span className={`${base} bg-emerald-100 text-emerald-900`}>Aprobado</span>;
+    if (estado === "Rechazado") return <span className={`${base} bg-red-100 text-red-900`}>Rechazado</span>;
+    if (estado === "Cancelado") return <span className={`${base} bg-zinc-200 text-zinc-700`}>Cancelado</span>;
+    return <span className={`${base} bg-zinc-200 text-zinc-700`}>{estado || "—"}</span>;
   }
 
   return (
@@ -401,103 +402,107 @@ export default function PermisoViewDialog({ open, setOpen, item, festivosSet = n
          - sm:max-w-2xl: respeta el ancho grande en pantallas mayores.
          - max-h-[85vh] overflow-y-auto: evita desbordes verticales y permite scroll.
          Relación: abierto desde `src/app/panel/permisos/page.jsx`. */}
-      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center justify-between">
-            <span>Detalles del permiso</span>
-            <span className="text-sm text-muted-foreground">Folio #{String(item.id).padStart(3, "0")}</span>
+      <DialogContent className="p-0 overflow-hidden max-w-[95vw] sm:max-w-2xl">
+        <DialogHeader className="p-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white">
+          <DialogTitle className="flex items-center justify-between gap-3 text-base font-bold">
+            <span className="flex items-center gap-2">
+              <span className="grid size-9 place-items-center rounded-lg bg-white/15">
+                <CalendarDays className="size-5 text-white" />
+              </span>
+              Detalles del permiso
+            </span>
+            <span className="text-sm text-white/80">Folio #{String(item.id).padStart(3, "0")}</span>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <section className="rounded-md border p-4" style={{ backgroundColor: "#f9fafb" }}>
+        <div className={`${styles.permisosTheme} max-h-[70vh] overflow-y-auto p-5 space-y-4`}>
+          <section className="rounded-lg border border-gray-100 bg-gray-50 p-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <div className="text-xs text-muted-foreground">Empleado</div>
-                <div className="font-medium">{item.empleado_nombre || `ID ${item.id_empleado}`}</div>
+                <div className="text-sm text-gray-600">Empleado</div>
+                <div className="text-sm font-semibold text-gray-900">{item.empleado_nombre || `ID ${item.id_empleado}`}</div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">Tipo de permiso</div>
-                <div className="font-medium">{item.tipo_permiso_nombre}</div>
+                <div className="text-sm text-gray-600">Tipo de permiso</div>
+                <div className="text-sm font-semibold text-gray-900">{item.tipo_permiso_nombre}</div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">Fecha inicio</div>
-                <div className="font-medium">{di}</div>
+                <div className="text-sm text-gray-600">Fecha inicio</div>
+                <div className="text-sm font-semibold text-gray-900">{di}</div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">Fecha fin</div>
-                <div className="font-medium">{df}</div>
+                <div className="text-sm text-gray-600">Fecha fin</div>
+                <div className="text-sm font-semibold text-gray-900">{df}</div>
               </div>
               <div>
                 {/* Nueva información pedida (separada en campos):
                     Relación: coincide con la tabla `src/app/panel/permisos/PermisosTable.jsx`
                     y con el documento PDF de este mismo componente. */}
-                <div className="text-xs text-muted-foreground">Días totales</div>
-                <div className="font-semibold">{diasTotales}</div>
+                <div className="text-sm text-gray-600">Días totales</div>
+                <div className="text-sm font-bold text-gray-900">{diasTotales}</div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">Días hábiles</div>
-                <div className="font-semibold">{diasHabiles}</div>
+                <div className="text-sm text-gray-600">Días hábiles</div>
+                <div className="text-sm font-bold text-gray-900">{diasHabiles}</div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">Estado</div>
+                <div className="text-sm text-gray-600">Estado</div>
                 <div className="mt-0.5"><EstadoBadge estado={item.estado} /></div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">Solicitado</div>
-                <div className="font-medium">{created}</div>
+                <div className="text-sm text-gray-600">Solicitado</div>
+                <div className="text-sm font-semibold text-gray-900">{created}</div>
               </div>
             </div>
           </section>
 
-          <section className="rounded-md border p-4 bg-white">
-            <div className="text-xs text-muted-foreground mb-1">Motivo / Observaciones</div>
-            <div className="whitespace-pre-wrap">{item.motivo || "—"}</div>
+          <section className="rounded-lg border border-gray-100 p-4 bg-white">
+            <div className="text-sm text-gray-600 mb-1">Motivo / Observaciones</div>
+            <div className="text-sm whitespace-pre-wrap text-gray-900">{item.motivo || "—"}</div>
           </section>
 
-          <section className="rounded-md border p-4 bg-white">
-            <div className="text-xs text-muted-foreground mb-1">Nota interna</div>
-            <div className="whitespace-pre-wrap">{item.notas || "—"}</div>
+          <section className="rounded-lg border border-gray-100 p-4 bg-white">
+            <div className="text-sm text-gray-600 mb-1">Nota interna</div>
+            <div className="text-sm whitespace-pre-wrap text-gray-900">{item.notas || "—"}</div>
             <Separator className="my-3" />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <div className="text-xs text-muted-foreground">Actualizado por</div>
-                <div className="font-medium">
+                <div className="text-sm text-gray-600">Actualizado por</div>
+                <div className="text-sm font-semibold text-gray-900">
                   {item.actualizado_por_nombre || (item.actualizado_por ? `ID ${item.actualizado_por}` : "—")}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">Fecha actualización</div>
-                <div className="font-medium">{updated}</div>
+                <div className="text-sm text-gray-600">Fecha actualización</div>
+                <div className="text-sm font-semibold text-gray-900">{updated}</div>
               </div>
             </div>
           </section>
+        </div>
 
-          {/* Acciones PDF:
-              - "Imprimir": genera PDF y dispara print (ideal para entregar el documento en físico).
-              - "Descargar PDF": guarda el archivo para adjuntarlo o imprimir después.
-              Relación: ambos usan `buildPermisoPDF()` (arriba) y replican el patrón del módulo Mapa de Rutas. */}
-          <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
-            <Button
-              variant="outline"
-              onClick={() => {
-                const { doc, nombreArchivo } = buildPermisoPDF();
-                doc.save(nombreArchivo);
-              }}
-              className="font-semibold"
-            >
-              📄 Descargar PDF
-            </Button>
-            <Button
-              onClick={() => {
-                const { doc, nombreArchivo } = buildPermisoPDF();
-                imprimirPDF(doc, nombreArchivo);
-              }}
-              className="font-semibold shadow-[0_4px_12px_rgba(55,73,94,0.3)]"
-            >
-              🖨️ Imprimir permiso
-            </Button>
-          </div>
+        {/* Acciones PDF */}
+        <div className="bg-gray-50 border-t border-gray-100 p-4 flex flex-col sm:flex-row gap-2 sm:justify-end">
+          <Button
+            variant="outline"
+            onClick={() => {
+              const { doc, nombreArchivo } = buildPermisoPDF();
+              doc.save(nombreArchivo);
+            }}
+            className="border-gray-300 text-gray-700 hover:bg-gray-100 gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Descargar PDF
+          </Button>
+          <Button
+            onClick={() => {
+              const { doc, nombreArchivo } = buildPermisoPDF();
+              imprimirPDF(doc, nombreArchivo);
+            }}
+            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-2"
+          >
+            <Printer className="h-4 w-4" />
+            Imprimir permiso
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
