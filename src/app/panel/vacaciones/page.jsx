@@ -16,7 +16,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -33,10 +33,22 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import TablePagination from "@/components/TablePagination";
 import styles from "./vacaciones-theme.module.css";
 import { formatDateDMY } from "@/lib/formatDate";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import StatCard from "@/components/StatCard";
+import {
+  CalendarDays,
+  CheckCircle2,
+  ChevronRight,
+  ClipboardList,
+  Filter,
+  Search,
+  Users,
+  XCircle,
+} from "lucide-react";
 
 function numberFormat(n) {
   try {
@@ -390,62 +402,43 @@ export default function VacacionesPage() {
   };
 
   return (
-    <div className={`${styles.vacacionesTheme} p-4 md:p-6 space-y-4`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl md:text-2xl font-semibold">
-            📊 Reporte de Vacaciones
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Control de días de vacaciones por empleado
-          </p>
+    <div className={`${styles.vacacionesTheme} space-y-6`}>
+      {/* Header ADAMIA */}
+      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+        <div className="flex items-center gap-3">
+          <div className="bg-[#2563EB] p-2.5 rounded-lg">
+            <CalendarDays className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">Panel de vacaciones</h1>
+            <p className="text-sm text-gray-600">Control de días cargados, tomados y disponibles por empleado.</p>
+          </div>
         </div>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="p-4 border-l-4" style={{ borderLeftColor: "#3498db" }}>
-          <div className="text-[11px] uppercase font-semibold text-slate-500">
-            Total Empleados
-          </div>
-          <div className="text-2xl font-extrabold">
-            {numberFormat(kpis.total)}
-          </div>
-        </Card>
-        <Card className="p-4 border-l-4" style={{ borderLeftColor: "#10b981" }}>
-          <div className="text-[11px] uppercase font-semibold text-slate-500">
-            Con Vacaciones
-          </div>
-          <div className="text-2xl font-extrabold">
-            {numberFormat(kpis.conV)}
-          </div>
-        </Card>
-        <Card className="p-4 border-l-4" style={{ borderLeftColor: "#ef4444" }}>
-          <div className="text-[11px] uppercase font-semibold text-slate-500">
-            Sin Vacaciones
-          </div>
-          <div className="text-2xl font-extrabold">
-            {numberFormat(kpis.sinV)}
-          </div>
-        </Card>
-        <Card className="p-4 border-l-4" style={{ borderLeftColor: "#9b59b6" }}>
-          <div className="text-[11px] uppercase font-semibold text-slate-500">
-            Total Días Disponibles
-          </div>
-          <div className="text-2xl font-extrabold">
-            {numberFormat(kpis.totalDias)}
-          </div>
-        </Card>
+        <StatCard title="Total empleados" value={numberFormat(kpis.total)} icon={Users} />
+        <StatCard title="Con vacaciones" value={numberFormat(kpis.conV)} icon={CheckCircle2} />
+        <StatCard title="Sin vacaciones" value={numberFormat(kpis.sinV)} icon={XCircle} />
+        <StatCard title="Total días disponibles" value={numberFormat(kpis.totalDias)} icon={ClipboardList} />
       </div>
 
       {/* Filtros */}
-      <Card className="p-4 space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <div className="relative">
-            {/* Campo de búsqueda con sugerencias (typeahead) */}
-            <input
-              className="w-full border rounded-md px-3 py-2 text-sm"
-              placeholder="🔍 Buscar empleado..."
+      <Card className="border-blue-100 bg-blue-50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-bold text-blue-700 flex items-center gap-2">
+            <Filter className="h-4 w-4" /> Filtros de búsqueda
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div className="relative">
+              {/* Campo de búsqueda con sugerencias (typeahead) */}
+              <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Input
+                className="pl-9 bg-white"
+                placeholder="Buscar empleado..."
               value={filterEmpleado}
               onChange={(e) => {
                 setFilterEmpleado(e.target.value);
@@ -478,7 +471,7 @@ export default function VacacionesPage() {
                   setIsSuggestionsOpen(false);
                 }
               }}
-            />
+              />
             {/* Lista de sugerencias */}
             {isSuggestionsOpen && sugerencias.length > 0 ? (
               <div className="absolute left-0 right-0 mt-1 z-20 rounded-md border bg-white shadow">
@@ -500,11 +493,11 @@ export default function VacacionesPage() {
             ) : null}
           </div>
           <select
-            className="w-full border rounded-md px-3 py-2 text-sm"
+            className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm shadow-xs focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
             value={filterDepartamento}
             onChange={(e) => setFilterDepartamento(e.target.value)}
           >
-            <option value="">📁 Todos los departamentos</option>
+            <option value="">Todos los departamentos</option>
             {departamentos.map((d) => (
               <option key={d} value={d}>
                 {d}
@@ -512,28 +505,32 @@ export default function VacacionesPage() {
             ))}
           </select>
           <select
-            className="w-full border rounded-md px-3 py-2 text-sm"
+            className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm shadow-xs focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
             value={filterEstado}
             onChange={(e) => setFilterEstado(e.target.value)}
           >
-            <option value="">📊 Todos los estados</option>
-            <option value="con">✅ Con vacaciones</option>
-            <option value="sin">❌ Sin vacaciones</option>
+            <option value="">Todos los estados</option>
+            <option value="con">Con vacaciones</option>
+            <option value="sin">Sin vacaciones</option>
           </select>
           <div className="flex md:justify-end">
             <Button
               variant="outline"
               onClick={limpiarFiltros}
-              className="bg-[#e74c3c] hover:bg-[#c0392b] text-white shadow-[0_2px_8px_rgba(231,76,60,0.3)]"
+              className="border-gray-300 text-gray-700 hover:bg-gray-100"
             >
-              🗑️ Limpiar filtros
+              Limpiar
             </Button>
           </div>
         </div>
+        </CardContent>
       </Card>
 
       {/* Contenido */}
-      <Card className="p-0">
+      <Card className="p-0 overflow-hidden border-gray-100">
+        <CardHeader className="border-b border-gray-100 bg-white pb-4">
+          <CardTitle className="text-sm font-bold text-gray-900">Lista de vacaciones</CardTitle>
+        </CardHeader>
         {loading ? (
           <div className="text-center text-slate-400 py-16">
             Cargando datos...
@@ -549,12 +546,12 @@ export default function VacacionesPage() {
           <div className="overflow-auto">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Empleado</TableHead>
-                  <TableHead>Departamento</TableHead>
-                  <TableHead className="text-center">Días Cargados</TableHead>
-                  <TableHead className="text-center">Días Tomados</TableHead>
-                  <TableHead className="text-center">Días Disponibles</TableHead>
+                <TableRow className="bg-gray-50">
+                  <TableHead className="text-xs font-semibold uppercase text-gray-600">Empleado</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-600">Departamento</TableHead>
+                  <TableHead className="text-center text-xs font-semibold uppercase text-gray-600">Días cargados</TableHead>
+                  <TableHead className="text-center text-xs font-semibold uppercase text-gray-600">Días tomados</TableHead>
+                  <TableHead className="text-center text-xs font-semibold uppercase text-gray-600">Días disponibles</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -574,11 +571,9 @@ export default function VacacionesPage() {
                       >
                       <TableCell className="font-semibold">
                           <span
-                            className={`mr-2 inline-block transition-transform ${
-                              expandedRow === emp.id_empleado ? "rotate-90" : ""
-                            }`}
+                            className={`mr-2 inline-flex transition-transform ${expandedRow === emp.id_empleado ? "rotate-90" : ""}`}
                           >
-                            ▶
+                            <ChevronRight className="h-4 w-4 text-gray-500" />
                           </span>
                         {emp.nombre_completo}
                       </TableCell>
@@ -598,18 +593,18 @@ export default function VacacionesPage() {
                           <TableCell colSpan={5} className="p-0 bg-slate-50">
                             <div className="border-t p-3">
                               {/* Tabs tipo botones */}
-                              <div className="inline-flex rounded-md bg-slate-100 p-1 mb-3">
+                              <div className="inline-flex rounded-lg border border-blue-100 bg-blue-50 p-1 mb-3">
                                 <button
-                                  className={`px-3 py-1.5 text-sm font-semibold rounded ${expandedTab === "cargados" ? "bg-white shadow" : "text-slate-600"}`}
+                                  className={`px-3 py-1.5 text-sm font-semibold rounded ${expandedTab === "cargados" ? "bg-white text-[#2563EB] shadow-sm" : "text-gray-600 hover:bg-white/60"}`}
                                   onClick={() => setExpandedTab("cargados")}
                                 >
-                                  📅 Días Cargados
+                                  Días cargados
                                 </button>
                                 <button
-                                  className={`px-3 py-1.5 text-sm font-semibold rounded ${expandedTab === "tomados" ? "bg-white shadow" : "text-slate-600"}`}
+                                  className={`px-3 py-1.5 text-sm font-semibold rounded ${expandedTab === "tomados" ? "bg-white text-[#2563EB] shadow-sm" : "text-gray-600 hover:bg-white/60"}`}
                                   onClick={() => setExpandedTab("tomados")}
                                 >
-                                  🏖️ Días Tomados
+                                  Días tomados
                                 </button>
                               </div>
 
@@ -640,12 +635,12 @@ export default function VacacionesPage() {
                                     ) : (
                                       <Table>
                                         <TableHeader>
-                                          <TableRow>
-                                            <TableHead>Año</TableHead>
-                                            <TableHead className="text-center">Días</TableHead>
-                                            <TableHead>Inicio</TableHead>
-                                            <TableHead>Fin</TableHead>
-                                            <TableHead className="text-center">Estado</TableHead>
+                                          <TableRow className="bg-gray-50">
+                                            <TableHead className="text-xs font-semibold uppercase text-gray-600">Año</TableHead>
+                                            <TableHead className="text-center text-xs font-semibold uppercase text-gray-600">Días</TableHead>
+                                            <TableHead className="text-xs font-semibold uppercase text-gray-600">Inicio</TableHead>
+                                            <TableHead className="text-xs font-semibold uppercase text-gray-600">Fin</TableHead>
+                                            <TableHead className="text-center text-xs font-semibold uppercase text-gray-600">Estado</TableHead>
                                           </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -657,8 +652,8 @@ export default function VacacionesPage() {
                                                 <TableCell className="text-center">
                                                   <Badge variant="outline">{numberFormat(p?.dias)} días</Badge>
                                                 </TableCell>
-                                                <TableCell>📆 {p?.fecha_inicio ? formatDateDMY(p.fecha_inicio) : "-"}</TableCell>
-                                                <TableCell>📆 {p?.fecha_fin ? formatDateDMY(p.fecha_fin) : "-"}</TableCell>
+                                                <TableCell>{p?.fecha_inicio ? formatDateDMY(p.fecha_inicio) : "-"}</TableCell>
+                                                <TableCell>{p?.fecha_fin ? formatDateDMY(p.fecha_fin) : "-"}</TableCell>
                       <TableCell className="text-center">
                                                   <Badge variant={activa ? "default" : "secondary"}>{p?.estado}</Badge>
                                                 </TableCell>
@@ -741,12 +736,12 @@ export default function VacacionesPage() {
                                                       key={v.id}
                                                       className="flex items-center gap-3 rounded-md border bg-white p-3 shadow-sm transition hover:shadow-md"
                                                     >
-                                                      <div className="w-12 h-12 rounded-md text-white flex items-center justify-center font-extrabold text-xl" style={{ backgroundColor: "#2c3e50" }}>
+                                                      <div className="w-12 h-12 rounded-md text-white flex items-center justify-center font-extrabold text-xl bg-gradient-to-br from-[#2563EB] to-[#1d4ed8]">
                                                         {f.day}
                                                       </div>
                                                       <div className="min-w-0">
                                                         <div className="mb-1">
-                                                          <span className="inline-block text-[11px] font-bold text-white rounded-full px-2 py-0.5" style={{ backgroundColor: "#10b981" }}>
+                                                          <span className="inline-block text-[11px] font-bold text-white rounded-full px-2 py-0.5 bg-[#2563EB]">
                                                             {f.weekday.toUpperCase()}
                                                           </span>
                                                         </div>
@@ -837,10 +832,16 @@ export default function VacacionesPage() {
 
       {/* Diálogo de detalles */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{dialogTitle}</DialogTitle>
+        <DialogContent className="p-0 overflow-hidden max-w-[95vw] sm:max-w-2xl">
+          <DialogHeader className="p-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white">
+            <DialogTitle className="flex items-center gap-2 text-base font-bold">
+              <span className="grid size-9 place-items-center rounded-lg bg-white/15">
+                <CalendarDays className="size-5 text-white" />
+              </span>
+              {dialogTitle}
+            </DialogTitle>
           </DialogHeader>
+          <div className="max-h-[70vh] overflow-y-auto p-5">
           {detalleLoading ? (
             <div className="text-center text-slate-400 py-10">Cargando...</div>
           ) : !detalleData ? (
@@ -892,7 +893,7 @@ export default function VacacionesPage() {
                           </div>
                         </div>
                         <div className="text-sm text-slate-500 mb-2">
-                          📆 {p?.fecha_inicio} → {p?.fecha_fin}
+                          {p?.fecha_inicio ? formatDateDMY(p?.fecha_inicio) : "-"} → {p?.fecha_fin ? formatDateDMY(p?.fecha_fin) : "-"}
                         </div>
                         <Badge variant={activa ? "default" : "secondary"}>
                           {p?.estado}
@@ -937,9 +938,9 @@ export default function VacacionesPage() {
                 <div className="max-h-[400px] overflow-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead>Fecha</TableHead>
-                        <TableHead>Notas</TableHead>
+                      <TableRow className="bg-gray-50">
+                        <TableHead className="text-xs font-semibold uppercase text-gray-600">Fecha</TableHead>
+                        <TableHead className="text-xs font-semibold uppercase text-gray-600">Notas</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -967,6 +968,7 @@ export default function VacacionesPage() {
               </Card>
             </div>
           )}
+          </div>
         </DialogContent>
       </Dialog>
       

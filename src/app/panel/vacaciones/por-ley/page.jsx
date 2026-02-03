@@ -17,8 +17,9 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,6 +48,7 @@ import TablePagination from "@/components/TablePagination";
 import { useSnackbar } from "notistack";
 import styles from "../vacaciones-theme.module.css";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import { BookOpen, Pencil, Plus, Save, Trash2, AlertTriangle } from "lucide-react";
 
 function num(n, d = 0) {
   const v = Number(n ?? 0);
@@ -193,25 +195,30 @@ export default function VacacionesPorLeyPage() {
   };
 
   return (
-    <div className={`${styles.vacacionesTheme} p-4 md:p-6 space-y-4`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl md:text-2xl font-semibold">📘 Vacaciones por ley</h1>
-          <p className="text-sm text-muted-foreground">
-            Configura los días y primas por año de antigüedad
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            onClick={openCreate}
-            className="shadow-[0_4px_12px_rgba(55,73,94,0.3)] transition-all hover:-translate-y-0.5"
-          >
-            ➕ Nuevo
+    <div className={`${styles.vacacionesTheme} space-y-6`}>
+      {/* Header ADAMIA */}
+      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+        <div className="flex items-center justify-between gap-4 flex-col sm:flex-row">
+          <div className="flex items-center gap-3">
+            <div className="bg-[#2563EB] p-2.5 rounded-lg">
+              <BookOpen className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900">Vacaciones por ley</h1>
+              <p className="text-sm text-gray-600">Configura días y primas por año de antigüedad.</p>
+            </div>
+          </div>
+          <Button onClick={openCreate} className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white w-full sm:w-auto gap-2">
+            <Plus className="h-4 w-4" />
+            Nuevo
           </Button>
         </div>
       </div>
 
-      <Card className="p-0">
+      <Card className="p-0 overflow-hidden border-gray-100">
+        <CardHeader className="border-b border-gray-100 bg-white pb-4">
+          <CardTitle className="text-sm font-bold text-gray-900">Lista de reglas</CardTitle>
+        </CardHeader>
         {loading ? (
           <div className="text-center text-slate-400 py-16">Cargando...</div>
         ) : error ? (
@@ -223,15 +230,15 @@ export default function VacacionesPorLeyPage() {
             <div className="overflow-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Años</TableHead>
-                    <TableHead>Días</TableHead>
-                    <TableHead>Prima vac. (%)</TableHead>
-                    <TableHead>Días extra</TableHead>
-                    <TableHead>Prima extra (%)</TableHead>
-                    <TableHead>Total días</TableHead>
-                    <TableHead>Total prima (%)</TableHead>
-                    <TableHead className="text-center">Acciones</TableHead>
+                  <TableRow className="bg-gray-50">
+                    <TableHead className="text-xs font-semibold uppercase text-gray-600">Años</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase text-gray-600">Días</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase text-gray-600">Prima vac. (%)</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase text-gray-600">Días extra</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase text-gray-600">Prima extra (%)</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase text-gray-600">Total días</TableHead>
+                    <TableHead className="text-xs font-semibold uppercase text-gray-600">Total prima (%)</TableHead>
+                    <TableHead className="text-right text-xs font-semibold uppercase text-gray-600">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -244,24 +251,22 @@ export default function VacacionesPorLeyPage() {
                       <TableCell>{num(r.prima_extra, 2)}</TableCell>
                       <TableCell>{num(r.total_dias, 0)}</TableCell>
                       <TableCell>{num(r.total_prima, 2)}</TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex gap-2 justify-center">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-[#93c5fd] text-[#2563eb] hover:bg-[#dbeafe] hover:text-[#1e40af]"
+                      <TableCell className="text-right">
+                        <div className="flex justify-end items-center gap-2">
+                          <button
                             onClick={() => openEdit(r)}
+                            className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                            title="Editar"
                           >
-                            ✏️ Editar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-[#fca5a5] text-[#dc2626] hover:bg-[#fee2e2]"
+                            <Pencil className="h-4 w-4 text-[#2563EB]" />
+                          </button>
+                          <button
                             onClick={() => setDeleteRow(r)}
+                            className="p-2 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                            title="Eliminar"
                           >
-                            🗑️ Eliminar
-                          </Button>
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                          </button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -282,89 +287,89 @@ export default function VacacionesPorLeyPage() {
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className={`${styles.vacacionesTheme} max-w-lg`}>
-          <DialogHeader>
-            <DialogTitle>
-              {editRow ? "Editar vacaciones por ley" : "Nueva vacaciones por ley"}
+        <DialogContent className="p-0 overflow-hidden max-w-[95vw] sm:max-w-lg">
+          <DialogHeader className="p-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white">
+            <DialogTitle className="flex items-center gap-2 text-base font-bold">
+              <span className="grid size-9 place-items-center rounded-lg bg-white/15">
+                <BookOpen className="size-5 text-white" />
+              </span>
+              {editRow ? "Editar regla" : "Nueva regla"}
             </DialogTitle>
+            <p className="text-sm text-white/80">Define días y primas por año de antigüedad.</p>
           </DialogHeader>
 
+          <div className={`${styles.vacacionesTheme} max-h-[70vh] overflow-y-auto p-5`}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <div className="text-[11px] uppercase text-slate-500">Años</div>
-              <input
-                className="w-full border rounded-md px-3 py-2 text-sm"
+              <div className="text-sm font-medium text-gray-700">Años</div>
+              <Input
                 type="number"
                 value={form.anios}
                 onChange={(e) => setForm((f) => ({ ...f, anios: e.target.value }))}
+                className="bg-white mt-2"
               />
             </div>
             <div>
-              <div className="text-[11px] uppercase text-slate-500">Días</div>
-              <input
-                className="w-full border rounded-md px-3 py-2 text-sm"
+              <div className="text-sm font-medium text-gray-700">Días</div>
+              <Input
                 type="number"
                 value={form.dias}
                 onChange={(e) => setForm((f) => ({ ...f, dias: e.target.value }))}
+                className="bg-white mt-2"
               />
             </div>
             <div>
-              <div className="text-[11px] uppercase text-slate-500">Prima vac. (%)</div>
-              <input
-                className="w-full border rounded-md px-3 py-2 text-sm"
+              <div className="text-sm font-medium text-gray-700">Prima vacacional (%)</div>
+              <Input
                 type="number"
                 step="0.01"
                 value={form.prima_vacacional}
                 onChange={(e) => setForm((f) => ({ ...f, prima_vacacional: e.target.value }))}
+                className="bg-white mt-2"
               />
             </div>
             <div>
-              <div className="text-[11px] uppercase text-slate-500">Días extra</div>
-              <input
-                className="w-full border rounded-md px-3 py-2 text-sm"
+              <div className="text-sm font-medium text-gray-700">Días extra</div>
+              <Input
                 type="number"
                 value={form.dias_extras}
                 onChange={(e) => setForm((f) => ({ ...f, dias_extras: e.target.value }))}
+                className="bg-white mt-2"
               />
             </div>
             <div>
-              <div className="text-[11px] uppercase text-slate-500">Prima extra (%)</div>
-              <input
-                className="w-full border rounded-md px-3 py-2 text-sm"
+              <div className="text-sm font-medium text-gray-700">Prima extra (%)</div>
+              <Input
                 type="number"
                 step="0.01"
                 value={form.prima_extra}
                 onChange={(e) => setForm((f) => ({ ...f, prima_extra: e.target.value }))}
+                className="bg-white mt-2"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <div className="text-[11px] uppercase text-slate-500">Total días</div>
-                <div className="h-9 px-3 py-2 text-sm border rounded-md bg-slate-50">
+                <div className="text-sm font-medium text-gray-700">Total días</div>
+                <div className="mt-2 h-9 px-3 py-2 text-sm border rounded-md bg-gray-50">
                   {total_dias}
                 </div>
               </div>
               <div>
-                <div className="text-[11px] uppercase text-slate-500">Total prima (%)</div>
-                <div className="h-9 px-3 py-2 text-sm border rounded-md bg-slate-50">
+                <div className="text-sm font-medium text-gray-700">Total prima (%)</div>
+                <div className="mt-2 h-9 px-3 py-2 text-sm border rounded-md bg-gray-50">
                   {total_prima.toFixed(2)}
                 </div>
               </div>
             </div>
           </div>
+          </div>
 
-          <div className="flex justify-end gap-2 pt-1">
-            <Button
-              variant="outline"
-              onClick={() => setDialogOpen(false)}
-              className="bg-white border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
-            >
+          <div className="bg-gray-50 border-t border-gray-100 p-4 flex gap-2 sm:justify-end">
+            <Button variant="outline" onClick={() => setDialogOpen(false)} className="border-gray-300 text-gray-700 hover:bg-gray-100">
               Cancelar
             </Button>
-            <Button
-              onClick={handleSave}
-              className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)] transition-all hover:-translate-y-0.5"
-            >
+            <Button onClick={handleSave} className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-2">
+              <Save className="h-4 w-4" />
               Guardar
             </Button>
           </div>
@@ -373,17 +378,23 @@ export default function VacacionesPorLeyPage() {
 
       {/* Confirmación de eliminación (estilo consistente con UI) */}
       <AlertDialog open={!!deleteRow} onOpenChange={(open) => !open && setDeleteRow(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar registro?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteRow
-                ? `Esta acción eliminará la regla de "${deleteRow.anios}" años. No podrás deshacerla.`
-                : ""}
+        <AlertDialogContent className="p-0 overflow-hidden sm:max-w-lg">
+          <div className="p-5 bg-gradient-to-r from-red-600 to-red-700 text-white">
+            <div className="flex items-center gap-2 text-base font-bold">
+              <span className="grid size-9 place-items-center rounded-lg bg-white/15">
+                <AlertTriangle className="size-5 text-white" />
+              </span>
+              ¿Eliminar regla?
+            </div>
+            <div className="text-sm text-red-100 mt-1">Esta acción no se puede deshacer.</div>
+          </div>
+          <div className="p-5">
+            <AlertDialogDescription className="text-sm text-gray-700">
+              {deleteRow ? `Eliminarás la regla de "${deleteRow.anios}" años.` : ""}
             </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]">
+          </div>
+          <AlertDialogFooter className="bg-gray-50 border-t border-gray-100 p-4 flex gap-2 sm:justify-end">
+            <AlertDialogCancel className="border-gray-300 text-gray-700 hover:bg-gray-100">
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} className="bg-[#ef4444] hover:bg-[#dc2626]">

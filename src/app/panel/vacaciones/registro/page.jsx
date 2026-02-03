@@ -22,12 +22,14 @@ import useDebounce from "@/hooks/useDebounce";
 import useEmpleadosData from "@/hooks/useEmpleadosData";
 import useTiposPermisoData from "@/hooks/useTiposPermisoData";
 import AsistenciaDataContainer from "@/app/panel/registro-asistencia/AsistenciaDataContainer";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/Combobox";
 import { useCallback } from "react";
 import styles from "../vacaciones-theme.module.css";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import { CalendarDays, Filter, Search } from "lucide-react";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -147,18 +149,31 @@ export default function RegistroVacacionesPage() {
   });
 
   return (
-    <div className={`${styles.vacacionesTheme} space-y-4`}>
-      {/* Encabezado */}
-      <div className="px-4 pt-2">
-        <h1 className="text-xl md:text-2xl font-semibold">📒 Registro de vacaciones</h1>
-        
+    <div className={`${styles.vacacionesTheme} space-y-6`}>
+      {/* Header ADAMIA */}
+      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+        <div className="flex items-center gap-3">
+          <div className="bg-[#2563EB] p-2.5 rounded-lg">
+            <CalendarDays className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">Registro de vacaciones</h1>
+            <p className="text-sm text-gray-600">Consulta informativa de registros (solo lectura) por periodo.</p>
+          </div>
+        </div>
       </div>
 
       {/* Filtros esenciales (sin filtros rápidos) */}
-      <div className="p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="flex flex-col gap-2 w-full">
-            <Label htmlFor="fecha_inicio">Fecha Inicio</Label>
+      <Card className="border-blue-100 bg-blue-50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-bold text-blue-700 flex items-center gap-2">
+            <Filter className="h-4 w-4" /> Filtros de búsqueda
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="flex flex-col gap-2 w-full">
+            <Label className="text-sm font-medium text-gray-700" htmlFor="fecha_inicio">Fecha inicio</Label>
             <Input
               id="fecha_inicio"
               type="date"
@@ -167,11 +182,12 @@ export default function RegistroVacacionesPage() {
                 setFechaInicio(e.target.value);
                 setPage(1);
               }}
+              className="bg-white"
             />
           </div>
 
           <div className="flex flex-col gap-2 w-full">
-            <Label htmlFor="fecha_fin">Fecha Fin</Label>
+            <Label className="text-sm font-medium text-gray-700" htmlFor="fecha_fin">Fecha fin</Label>
             <Input
               id="fecha_fin"
               type="date"
@@ -180,12 +196,14 @@ export default function RegistroVacacionesPage() {
                 setFechaFin(e.target.value);
                 setPage(1);
               }}
+              className="bg-white"
             />
           </div>
 
           <div className="flex flex-col gap-2 w-full">
-            <Label htmlFor="empleado">Empleado</Label>
+            <Label className="text-sm font-medium text-gray-700" htmlFor="empleado">Empleado</Label>
             <div className="relative">
+              <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <Input
                 id="empleado"
                 placeholder="Buscar por nombre..."
@@ -220,6 +238,7 @@ export default function RegistroVacacionesPage() {
                     setIsSuggestionsOpen(false);
                   }
                 }}
+                className="bg-white pl-9"
               />
               {isSuggestionsOpen && sugerencias.length > 0 ? (
                 <div className="absolute left-0 right-0 mt-1 z-20 rounded-md border bg-white shadow">
@@ -241,7 +260,7 @@ export default function RegistroVacacionesPage() {
           </div>
 
           <div className="flex flex-col gap-2 w-full">
-            <Label htmlFor="departamento">Departamento</Label>
+            <Label className="text-sm font-medium text-gray-700" htmlFor="departamento">Departamento</Label>
             <Combobox
               name="departamento"
               options={departamentoOptions}
@@ -257,12 +276,11 @@ export default function RegistroVacacionesPage() {
 
           {/* Estado de asistencia no aplica en vista informativa de Vacaciones */}
         </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Tabla de Asistencias (reutilizada) */}
-      <div className="px-4">
-        {ui}
-      </div>
+      <div>{ui}</div>
       
       {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
       <AccesosRapidos />

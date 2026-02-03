@@ -2,12 +2,11 @@
    - Aísla variables de marca para no afectar otros módulos */
 
 .vacacionesTheme {
-  --primary: #37495E;
+  /* Tokens ADAMIA (alineado a resto del panel) */
+  --primary: #2563EB;
   --primary-foreground: #ffffff;
   --border: #e5e7eb;
-  --ring: rgba(55, 73, 94, 0.35);
-  /* Tipografía Sistema San Francisco (guía) */
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --ring: rgba(37, 99, 235, 0.35);
 }
 
 /* Utilidad de animación opcional */
