@@ -344,8 +344,11 @@ export default function RelojChecador({
                 codigo={codigoEmpleado}
                 setCodigo={setCodigoEmpleado}
                 handleRegistrar={registrarMovimiento}
-                handleOpenQR={() => setMostrarQR(true)}
-                handleOpenFacialModal={() => setMostrarCamara((prev) => !prev)}
+                handleOpenQR={handleOpenQR}
+                handleOpenFacialModal={() => {
+                  if (mostrarCamara) cerrarCamara();
+                  else abrirCamara();
+                }}
                 registrando={registrando}
                 enqueueSnackbar={enqueueSnackbar}
               />
