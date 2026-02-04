@@ -64,14 +64,10 @@ export default function QRScanner({ onScan, onClose }) {
         scannerInstanceRef.current = html5QrCode;
 
         await html5QrCode.start(
-          { facingMode: { ideal: cameraFacing } },
+          { facingMode: cameraFacing },
           {
             fps: 10,
             qrbox: { width: 250, height: 250 },
-            videoConstraints: {
-              width: { ideal: 640 },
-              height: { ideal: 480 },
-            },
           },
           (decodedText) => {
             if (scannedRef.current) return;
@@ -102,10 +98,14 @@ export default function QRScanner({ onScan, onClose }) {
   }, [cameraFacing]);
 
   const handleSwitchCamera = async () => {
+    if (isInitializingRef.current) return;
+    setScanning(false);
     await shutdownScanner();
     setTimeout(() => {
-      setCameraFacing((prev) => (prev === "user" ? "environment" : "user"));
-    }, 100);
+      if (isMounted.current) {
+        setCameraFacing((prev) => (prev === "user" ? "environment" : "user"));
+      }
+    }, 400);
   };
 
   const handleManualClose = async () => {
