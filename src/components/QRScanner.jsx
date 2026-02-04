@@ -101,11 +101,14 @@ export default function QRScanner({ onScan, onClose }) {
     if (isInitializingRef.current) return;
     setScanning(false);
     await shutdownScanner();
+    const container = document.getElementById("qr-reader-container");
+    if (container) container.innerHTML = "";
+
     setTimeout(() => {
       if (isMounted.current) {
         setCameraFacing((prev) => (prev === "user" ? "environment" : "user"));
       }
-    }, 400);
+    }, 500);
   };
 
   const handleManualClose = async () => {
