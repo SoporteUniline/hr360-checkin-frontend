@@ -14,7 +14,7 @@ import {
   Save,
   X,
   Trash2,
-  Edit,
+  Pencil,
   Search,
   ChevronRight,
   ChevronLeft,
@@ -33,12 +33,13 @@ function AreaCard({ area, onEdit, onDelete }) {
       <CardContent className="p-4 flex justify-between items-start gap-4">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-2">
-            {/* Icono informativo según `Colores.txt` (INFO primary: #3498db) */}
-            <MapPin className="h-5 w-5 text-[#3498db]" />
-            <h3 className="font-semibold text-lg">{area.nombre_area}</h3>
+            <MapPin className="h-5 w-5 text-[#2563EB]" />
+            <h3 className="font-semibold text-base text-gray-900">
+              {area.nombre_area}
+            </h3>
           </div>
           {area.latitud && area.longitud && (
-            <p className="text-sm font-mono">
+            <p className="text-sm font-mono text-gray-600">
               {Number(area.latitud).toFixed(6)},{" "}
               {Number(area.longitud).toFixed(6)}
             </p>
@@ -49,17 +50,15 @@ function AreaCard({ area, onEdit, onDelete }) {
             variant="outline"
             size="sm"
             onClick={() => onEdit(area)}
-            // Acción "Editar" estilo sistema (ver `Colores.txt`)
-            className="h-9 w-9 p-0 border-[#93c5fd] text-[#2563eb] hover:bg-[#dbeafe] hover:text-[#1e40af]"
+            className="h-9 w-9 p-0 border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
           >
-            <Edit className="h-4 w-4" />
+            <Pencil className="h-4 w-4" />
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => onDelete(area)}
-            // Acción "Eliminar" estilo sistema (ver `Colores.txt`)
-            className="h-9 w-9 p-0 border-[#fca5a5] text-[#dc2626] hover:bg-[#fee2e2]"
+            className="h-9 w-9 p-0 border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -109,26 +108,27 @@ function AlertDialog({ isOpen, onClose, onConfirm, title, description }) {
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-lg p-6 max-w-md w-full"
+        className="bg-white rounded-xl overflow-hidden max-w-md w-full border border-gray-100 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h3 className="text-lg font-semibold mb-2">{title}</h3>
-        <p className="text-gray-600 mb-6">{description}</p>
-        <div className="flex gap-3 justify-end">
-          {/* Secundario según `Colores.txt` */}
+        <div className="p-5 bg-gradient-to-r from-red-600 to-red-700 text-white">
+          <h3 className="text-base font-bold">{title}</h3>
+          <p className="text-sm text-red-100 mt-1">Esta acción no se puede deshacer.</p>
+        </div>
+        <div className="p-5">
+          <p className="text-sm text-gray-700">{description}</p>
+        </div>
+        <div className="bg-gray-50 border-t border-gray-100 p-4 flex gap-2 sm:justify-end">
           <Button
             variant="outline"
             onClick={onClose}
-            className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
+            className="border-gray-300 text-gray-700 hover:bg-gray-100"
           >
             Cancelar
           </Button>
-          <Button
-            onClick={onConfirm}
-            // Danger según `Colores.txt`
-            className="bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(239,68,68,0.3)]"
-          >
-            Eliminar Área
+          <Button onClick={onConfirm} variant="destructive" className="gap-2">
+            <Trash2 className="h-4 w-4" />
+            Eliminar
           </Button>
         </div>
       </div>
@@ -260,36 +260,55 @@ export default function AreasCheckPage() {
   };
 
   return (
-    <div className="container mx-auto p-4 space-y-6">
-      <div className="flex justify-between items-center mb-4">
-        {/* Encabezado con colores del sistema (ver `Colores.txt`) */}
-        <h1 className="text-2xl font-bold flex items-center gap-2 text-[#2c3e50]">
-          <MapPin className="h-6 w-6 text-[#3498db]" />
-          Áreas de Check
-        </h1>
+    <div className="space-y-6">
+      {/* Header ADAMIA */}
+      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+        <div className="flex items-center justify-between gap-4 flex-col sm:flex-row">
+          <div className="flex items-center gap-3">
+            <div className="bg-[#2563EB] p-2.5 rounded-lg">
+              <MapPin className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900">Áreas de Check</h1>
+              <p className="text-sm text-gray-600">Administra áreas y radio permitido para registro.</p>
+            </div>
+          </div>
+          <Button
+            onClick={abrirModalNuevaArea}
+            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white w-full sm:w-auto gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Nueva área
+          </Button>
+        </div>
       </div>
 
-      {/* Búsqueda con contador */}
-      <div className="mb-4 flex gap-3 items-center">
-        <Input
-          className="flex-1"
-          placeholder="Buscar área..."
-          onChange={(e) => handleSearchChange(e.target.value)}
-        />
-        <Button
-          onClick={abrirModalNuevaArea}
-          // Botón principal según `Colores.txt`
-          className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Nueva Área
-        </Button>
-      </div>
+      {/* Búsqueda */}
+      <Card className="border-blue-100 bg-blue-50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-bold text-blue-700 flex items-center gap-2">
+            <Search className="h-4 w-4" /> Búsqueda
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="relative max-w-xl">
+            <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Input
+              className="pl-9 bg-white"
+              placeholder="Buscar área..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                handleSearchChange(e.target.value);
+              }}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-12">
-          {/* Spinner con color INFO (ver `Colores.txt`) */}
-          <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-[#3498db] mr-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-[#2563EB]"></div>
           <p className="mt-4 text-gray-600">Cargando áreas...</p>
         </div>
       ) : areas.length > 0 ? (
@@ -317,11 +336,10 @@ export default function AreasCheckPage() {
       ) : (
         // Cuando no hay áreas o no hay resultados de búsqueda
         <div className="flex flex-col items-center justify-center py-16 px-4">
-          {/* Empty state con INFO light (ver `Colores.txt`) */}
-          <div className="bg-[#dbeafe] rounded-full p-6 mb-4">
-            <MapPin className="h-12 w-12 text-[#3498db]" />
+          <div className="bg-blue-50 rounded-full p-6 mb-4">
+            <MapPin className="h-12 w-12 text-[#2563EB]" />
           </div>
-          <h3 className="text-xl font-semibold mb-2">
+          <h3 className="text-base font-semibold text-gray-900 mb-2">
             {search ? "No se encontraron áreas" : "No hay áreas registradas"}
           </h3>
           <p className="text-gray-600 text-center mb-6 max-w-md">
@@ -332,8 +350,11 @@ export default function AreasCheckPage() {
           {search ? (
             <Button
               variant="outline"
-              onClick={() => setSearch("")}
-              className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
+              onClick={() => {
+                setSearch("");
+                handleSearchChange("");
+              }}
+              className="border-gray-300 text-gray-700 hover:bg-gray-100"
             >
               <X className="h-4 w-4 mr-2" />
               Limpiar búsqueda
@@ -341,7 +362,7 @@ export default function AreasCheckPage() {
           ) : (
             <Button
               onClick={abrirModalNuevaArea}
-              className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]"
+              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white"
             >
               <Plus className="h-4 w-4 mr-2" />
               Crear primera área

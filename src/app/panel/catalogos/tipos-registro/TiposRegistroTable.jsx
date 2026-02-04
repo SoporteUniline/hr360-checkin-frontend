@@ -9,7 +9,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Pencil, Trash2 } from "lucide-react";
 import useSWR from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { useEffect, useState } from "react";
@@ -45,51 +46,59 @@ export default function TiposRegistroTable({
   if (error) return <p>Error al cargar registros</p>;
   if (registros.length === 0)
     return (
-      <div className="text-center py-10 text-muted-foreground">
+      <div className="rounded-xl border border-gray-100 bg-white p-10 text-center text-sm text-gray-600">
         No se encontraron registros.
       </div>
     );
 
   return (
     <>
-      <Table>
-        <TableHeader>
-          {/* Header con colores del sistema (ver `Colores.txt`) */}
-          <TableRow className="bg-[#37495E] hover:bg-[#37495E]">
-            <TableHead className="text-white">Clave</TableHead>
-            <TableHead className="text-white">Nombre</TableHead>
-            <TableHead className="text-white">Descripción</TableHead>
-            <TableHead className="text-right text-white">Acciones</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {registros.map((regi) => (
-            <TableRow key={regi.id}>
-              <TableCell>{regi.clave}</TableCell>
-              <TableCell>{regi.nombre}</TableCell>
-              <TableCell>{regi.descripcion}</TableCell>
-              <TableCell className="text-right flex justify-end gap-2">
-                <Button
-                  size="icon"
-                  variant="outline"
-                  className="border-[#93c5fd] text-[#2563eb] hover:bg-[#dbeafe] hover:text-[#1e40af]"
-                  onClick={() => onEdit(regi, registros)}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="outline"
-                  className="border-[#fca5a5] text-[#dc2626] hover:bg-[#fee2e2]"
-                  onClick={() => onDelete(regi.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <Card className="p-0 overflow-hidden border-gray-100">
+        <CardHeader className="border-b border-gray-100 bg-white pb-4">
+          <CardTitle className="text-sm font-bold text-gray-900">Lista de tipos de registro</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50">
+                  <TableHead className="text-xs font-semibold uppercase text-gray-600">Clave</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-600">Nombre</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-600">Descripción</TableHead>
+                  <TableHead className="text-right text-xs font-semibold uppercase text-gray-600">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {registros.map((regi) => (
+                  <TableRow key={regi.id} className="hover:bg-zinc-50">
+                    <TableCell>{regi.clave}</TableCell>
+                    <TableCell className="font-medium text-gray-900">{regi.nombre}</TableCell>
+                    <TableCell className="text-gray-600">{regi.descripcion}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end items-center gap-2">
+                        <button
+                          onClick={() => onEdit(regi, registros)}
+                          className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                          title="Editar"
+                        >
+                          <Pencil className="h-4 w-4 text-[#2563EB]" />
+                        </button>
+                        <button
+                          onClick={() => onDelete(regi.id)}
+                          className="p-2 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
       <TablePagination
         page={page}
         limit={limit}

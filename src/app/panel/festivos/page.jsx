@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CalendarDays, Filter, Plus, Search } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import FestivosTable from "./FestivosTable";
 import FestivoFormDialog from "./FestivoFormDialog";
@@ -36,33 +37,50 @@ export default function Festivos() {
   }, [filter]);
 
   return (
-    <div className="space-y-4">
-      {/* Encabezado (colores del sistema) - Relación: guía `Colores.txt` */}
-      <div>
-        <h1 className="text-2xl font-bold text-[#2c3e50]">Días festivos</h1>
-        <p className="text-sm text-[#6b7280]">
-          Catálogo de días festivos por empresa (crear, editar y eliminar)
-        </p>
+    <div className="space-y-6">
+      {/* Header ADAMIA */}
+      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+        <div className="flex items-center justify-between gap-4 flex-col sm:flex-row">
+          <div className="flex items-center gap-3">
+            <div className="bg-[#2563EB] p-2.5 rounded-lg">
+              <CalendarDays className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900">Días festivos</h1>
+              <p className="text-sm text-gray-600">Catálogo por empresa (crear, editar y eliminar).</p>
+            </div>
+          </div>
+          <Button
+            className="w-full sm:w-auto bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-2"
+            onClick={() => {
+              setEditFestivo(null);
+              setOpenFormModal(true);
+            }}
+          >
+            <Plus className="h-4 w-4" /> Nuevo
+          </Button>
+        </div>
       </div>
 
-      <div className="mb-2 flex flex-col md:flex-row gap-3 items-center">
-        <Input
-          className="flex-1"
-          placeholder="Buscar por descripción..."
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        />
-        <Button
-          // Botón principal según `Colores.txt`
-          className="w-full md:w-auto bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]"
-          onClick={() => {
-            setEditFestivo(null);
-            setOpenFormModal(true);
-          }}
-        >
-          <Plus className="h-4 w-4 mr-1" /> Nuevo
-        </Button>
-      </div>
+      {/* Filtros */}
+      <Card className="border-blue-100 bg-blue-50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-bold text-blue-700 flex items-center gap-2">
+            <Filter className="h-4 w-4" /> Filtros de búsqueda
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="relative max-w-xl">
+            <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <Input
+              className="pl-9 bg-white"
+              placeholder="Buscar por descripción..."
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       <FestivosTable
         id_empresa={id_empresa}

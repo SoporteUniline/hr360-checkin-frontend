@@ -13,6 +13,7 @@ import {
 import axios from "axios";
 import { mutate } from "swr";
 import { useSnackbar } from "notistack";
+import { CalendarDays, Info, Save } from "lucide-react";
 
 export default function FestivoFormDialog({
   open,
@@ -74,41 +75,57 @@ export default function FestivoFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
+      <DialogContent className="p-0 overflow-hidden sm:max-w-lg">
+        <DialogHeader className="p-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white">
+          <DialogTitle className="flex items-center gap-2 text-base font-bold">
+            <span className="grid size-9 place-items-center rounded-lg bg-white/15">
+              <CalendarDays className="size-5 text-white" />
+            </span>
             {editFestivo ? "Editar día festivo" : "Nuevo día festivo"}
           </DialogTitle>
+          <p className="text-sm text-white/80">
+            {editFestivo ? "Actualiza la fecha o descripción del festivo." : "Agrega un día festivo para la empresa."}
+          </p>
         </DialogHeader>
-        <div className="my-4 space-y-2">
-          <Input
-            type="date"
-            value={fecha}
-            onChange={(e) => setFecha(e.target.value)}
-            className="w-full"
-          />
-          <Input
-            placeholder="Descripción"
-            value={descripcion}
-            onChange={(e) => setDescripcion(e.target.value)}
-            className="w-full"
-          />
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+
+        <div className="p-5 space-y-3">
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900 flex gap-2">
+            <Info className="h-4 w-4 mt-0.5 text-blue-700" />
+            <div>
+              Estos días se usan para el cálculo de días hábiles en módulos como <b>Permisos</b> y <b>Panel de empleados</b>.
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Fecha</label>
+              <Input
+                type="date"
+                value={fecha}
+                onChange={(e) => setFecha(e.target.value)}
+                className="w-full bg-white"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Descripción</label>
+              <Input
+                placeholder="Ej. Natalicio Benito Juárez"
+                value={descripcion}
+                onChange={(e) => setDescripcion(e.target.value)}
+                className="w-full bg-white"
+              />
+            </div>
+          </div>
+
+          {error && <p className="text-red-600 text-sm">{error}</p>}
         </div>
-        <DialogFooter className="flex justify-end gap-2">
-          {/* Secundario según `Colores.txt` */}
-          <Button
-            variant="outline"
-            onClick={() => setOpen(false)}
-            className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
-          >
+
+        <DialogFooter className="bg-gray-50 border-t border-gray-100 p-4 flex gap-2 sm:justify-end">
+          <Button variant="outline" onClick={() => setOpen(false)} className="border-gray-300 text-gray-700 hover:bg-gray-100">
             Cancelar
           </Button>
-          {/* Primario según `Colores.txt` */}
-          <Button
-            onClick={handleSubmit}
-            className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]"
-          >
+          <Button onClick={handleSubmit} className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-2">
+            <Save className="h-4 w-4" />
             {editFestivo ? "Actualizar" : "Agregar"}
           </Button>
         </DialogFooter>
