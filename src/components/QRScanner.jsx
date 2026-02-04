@@ -64,10 +64,14 @@ export default function QRScanner({ onScan, onClose }) {
         scannerInstanceRef.current = html5QrCode;
 
         await html5QrCode.start(
-          { facingMode: cameraFacing },
+          { facingMode: { ideal: cameraFacing } },
           {
             fps: 10,
             qrbox: { width: 250, height: 250 },
+            videoConstraints: {
+              width: { ideal: 640 },
+              height: { ideal: 480 },
+            },
           },
           (decodedText) => {
             if (scannedRef.current) return;
@@ -77,7 +81,7 @@ export default function QRScanner({ onScan, onClose }) {
             shutdownScanner().then(() => {
               if (isMounted.current) onScan(decodedText);
             });
-          }
+          },
         );
 
         if (isMounted.current) setScanning(true);

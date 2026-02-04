@@ -43,7 +43,10 @@ const FacialRecognitionPanel = ({
       }
 
       if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current.getTracks().forEach((track) => {
+          track.stop();
+          track.enabled = false;
+        });
         streamRef.current = null;
       }
 
@@ -51,8 +54,8 @@ const FacialRecognitionPanel = ({
         const vid = videoRef.current;
         vid.pause();
         vid.srcObject = null;
-        vid.currentTime = 0;
         vid.removeAttribute("src");
+        vid.load();
       }
 
       if (canvasRef.current) {
@@ -62,7 +65,7 @@ const FacialRecognitionPanel = ({
             0,
             0,
             canvasRef.current.width,
-            canvasRef.current.height
+            canvasRef.current.height,
           );
       }
 
@@ -136,7 +139,7 @@ const FacialRecognitionPanel = ({
           (err) => {
             console.warn("No se pudo obtener ubicación al inicio:", err);
           },
-          { enableHighAccuracy: true, timeout: 5000 }
+          { enableHighAccuracy: true, timeout: 5000 },
         );
 
         if (videoRef.current && isOpen) {
@@ -240,7 +243,7 @@ const FacialRecognitionPanel = ({
             enableHighAccuracy: true,
             timeout: 10000,
             maximumAge: 0,
-          })
+          }),
         );
         latitud_actual = position.coords.latitude;
         longitud_actual = position.coords.longitude;
@@ -261,7 +264,7 @@ const FacialRecognitionPanel = ({
           id_empresa: idEmpresa,
           latitud_actual,
           longitud_actual,
-        }
+        },
       );
 
       lastCheckTimeRef.current = Date.now();
@@ -366,7 +369,7 @@ const FacialRecognitionPanel = ({
               <Button
                 onClick={() =>
                   setCameraFacing((prev) =>
-                    prev === "user" ? "environment" : "user"
+                    prev === "user" ? "environment" : "user",
                   )
                 }
                 className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition"
@@ -418,7 +421,7 @@ const FacialRecognitionPanel = ({
                     <Button
                       onClick={() =>
                         setCameraFacing((prev) =>
-                          prev === "user" ? "environment" : "user"
+                          prev === "user" ? "environment" : "user",
                         )
                       }
                       className="px-3 py-2 bg-gray-800 text-white rounded-lg opacity-90 hover:bg-white hover:text-slate-700"

@@ -273,12 +273,23 @@ export default function RelojChecador({
     handleFacialRecognitionSuccess(data);
   };
 
-  const abrirCamara = () => setMostrarCamara(true);
+  const abrirCamara = () => {
+    setMostrarQR(false); // Apagamos QR si estaba abierto
+    setMostrarCamara(true);
+  };
   const cerrarCamara = () => setMostrarCamara(false);
 
   const handleQRScan = (codigoEscaneado) => {
     setMostrarQR(false);
     registrarMovimiento(codigoEscaneado);
+  };
+
+  const handleOpenQR = () => {
+    setMostrarCamara(false); // Apagamos facial DE INMEDIATO
+    // Damos un pequeño respiro al hardware antes de encender el QR
+    setTimeout(() => {
+      setMostrarQR(true);
+    }, 300);
   };
 
   if (error)
@@ -295,8 +306,11 @@ export default function RelojChecador({
                 codigo={codigoEmpleado}
                 setCodigo={setCodigoEmpleado}
                 handleRegistrar={registrarMovimiento}
-                handleOpenQR={() => setMostrarQR(true)}
-                handleOpenFacialModal={() => setMostrarCamara((prev) => !prev)}
+                handleOpenQR={handleOpenQR}
+                handleOpenFacialModal={() => {
+                  if (mostrarCamara) cerrarCamara();
+                  else abrirCamara();
+                }}
                 registrando={registrando || loadingGPS}
                 enqueueSnackbar={enqueueSnackbar}
               />
