@@ -77,6 +77,12 @@ const FacialRecognitionPanel = ({
     }
   };
 
+  useEffect(() => {
+    if (!isOpen) {
+      shutdownCamera();
+    }
+  }, [isOpen]);
+
   const resetState = () => {
     setError("");
     setIsLoading(false);
@@ -317,8 +323,6 @@ const FacialRecognitionPanel = ({
     return { text: "Esperando detección de rostro...", color: "bg-gray-600" };
   };
 
-  // if (!isOpen) return null;
-
   return (
     <div
       className="
@@ -390,24 +394,6 @@ const FacialRecognitionPanel = ({
 
           <div className="overflow-y-auto">
             <>
-              {/* <p className="hidden md:block text-gray-600 text-sm text-center ">
-                {isLoading
-                  ? "Procesando reconocimiento facial..."
-                  : showSuccessMessage
-                  ? "¡Listo! Esperando próximo empleado..."
-                  : countdown > 0
-                  ? "Preparando captura..."
-                  : faceDetected
-                  ? "Rostro detectado - iniciando en un momento..."
-                  : "Esperando detección de rostro..."}
-              </p>
-
-              {isLoading && (
-                <div className="hidden md:flex items-center justify-center py-4 text-center">
-                  <Loader className="w-8 h-8 animate-spin text-blue-600 mr-3" />
-                  <span className="text-gray-600">Procesando...</span>
-                </div>
-              )} */}
               <div className="relative mb-4">
                 <>
                   <video
@@ -460,23 +446,7 @@ const FacialRecognitionPanel = ({
                     </div>
                   </div>
                 )}
-
-                {/* {faceDetected &&
-                  countdown === 0 &&
-                  !isLoading &&
-                  !showSuccessMessage && (
-                    <div className="hidden md:flex absolute top-2 right-2 bg-green-500 text-white px-3 py-1 rounded-lg text-sm font-semibold items-center gap-1">
-                      <CheckCircle className="w-4 h-4" />
-                      Rostro detectado
-                    </div>
-                  )} */}
               </div>
-
-              {/* {error && (
-                <div className="hidden md:block bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-center">
-                  <p className="text-red-600 text-sm">{error}</p>
-                </div>
-              )} */}
 
               <div className="space-y-3 hidden md:block">
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">

@@ -146,7 +146,7 @@ export default function QRScanner({ onScan, onClose }) {
           </div>
         </div>
 
-        <div className="relative bg-slate-900 aspect-square md:aspect-auto md:min-h-[400px]">
+        <div className="relative bg-slate-900 aspect-square md:aspect-auto md:min-h-100">
           <div id="qr-reader-container" className="w-full h-full" />
           <div className="md:hidden absolute top-4 right-3 flex gap-3 z-20">
             <Button

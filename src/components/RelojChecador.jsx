@@ -1,6 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
-import { CheckCircle, XCircle } from "lucide-react";
+import {
+  CheckCircle,
+  Keyboard,
+  QrCode,
+  ScanEye,
+  XCircle,
+  User,
+} from "lucide-react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import ErrorPage from "@/components/ErrorPage";
@@ -27,6 +34,8 @@ export default function RelojChecador({
   modoEmpleado = false,
   idEmpleado = null,
 }) {
+  const [metodo, setMetodo] = useState("facial");
+  const [isMobile, setIsMobile] = useState(false);
   const [mostrarModalTurno, setMostrarModalTurno] = useState(false);
   const [pendiente, setPendiente] = useState(null);
 
@@ -68,36 +77,45 @@ export default function RelojChecador({
   );
 
   const movimientos = registrosData?.registrosHoy || [];
-  const movimientosParaTabla = movimientos.slice(0, 10);
   const empleadosActivos = registrosData?.activosHoy || 0;
   const totalRegistros = registrosData?.totalRegistrosHoy || 0;
 
   useEffect(() => {
     const actualizarHora = () => {
       const ahora = dayjs().tz(USER_TIMEZONE);
-
       setHoraActual(ahora.format("HH:mm:ss"));
-
       const fechaFormateada = ahora.format("dddd, D [de] MMMM [de] YYYY");
-
       const [dia, ...resto] = fechaFormateada.split(", ");
       const diaCapitalizado = dia.charAt(0).toUpperCase() + dia.slice(1);
-
       setFechaActual([diaCapitalizado, ...resto].join(", "));
     };
 
     actualizarHora();
     const intervalo = setInterval(actualizarHora, 1000);
-
     return () => clearInterval(intervalo);
   }, [USER_TIMEZONE]);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  useEffect(() => {
+    if (metodo !== "facial") setMostrarCamara(false);
+    else setMostrarCamara(true);
+  }, [metodo]);
+
+  useEffect(() => {
+    setCodigoEmpleado("");
+  }, [metodo]);
 
   const registrarMovimiento = async (codigoManual) => {
     if (gpsError) {
       enqueueSnackbar(gpsError, { variant: "error" });
       return;
     }
-
     if (registrando) return;
     setRegistrando(true);
 
@@ -105,7 +123,6 @@ export default function RelojChecador({
       typeof codigoManual === "string" || typeof codigoManual === "number"
         ? codigoManual
         : codigoEmpleado;
-
     const codigo = String(rawCodigo || "")
       .trim()
       .replace(/\D/g, "");
@@ -116,21 +133,14 @@ export default function RelojChecador({
     }
 
     try {
-      if (!idEmpresa) {
-        enqueueSnackbar("Empresa no definida...", { variant: "error" });
-        setRegistrando(false);
-        return;
-      }
-
       let latitud_actual = null;
       let longitud_actual = null;
-
       const pos = await getCurrentLocation();
       if (pos) {
         latitud_actual = pos.lat;
         longitud_actual = pos.lng;
       } else {
-        enqueueSnackbar("No se pudo obtener la ubicación. Activa el GPS.", {
+        enqueueSnackbar("No se pudo obtener la ubicación.", {
           variant: "error",
         });
         setRegistrando(false);
@@ -151,26 +161,22 @@ export default function RelojChecador({
         return;
       }
 
-      const { message, empleado, movimiento } = data;
-
       setPopupInfo({
-        nombre: `${empleado.nombre} ${empleado.apellido_paterno}`,
-        foto_perfil: empleado.foto_perfil || "/assets/user.png",
-        movimiento: movimiento || message,
+        nombre: `${data.empleado.nombre} ${data.empleado.apellido_paterno}`,
+        foto_perfil: data.empleado.foto_perfil || "/assets/user.png",
+        movimiento: data.movimiento || data.message,
         success: true,
       });
 
       setTimeout(() => setPopupInfo(null), 3000);
-      enqueueSnackbar("Registro realizado", { variant: "success" });
+      // enqueueSnackbar("Registro realizado", { variant: "success" });
       setCodigoEmpleado("");
       mutate();
     } catch (err) {
       setCodigoEmpleado("");
-      if (err.response?.data?.error) {
-        enqueueSnackbar(err.response.data.error, { variant: "error" });
-      } else {
-        enqueueSnackbar("Error desconocido al registrar", { variant: "error" });
-      }
+      enqueueSnackbar(err.response?.data?.error || "Error al registrar", {
+        variant: "error",
+      });
     } finally {
       setRegistrando(false);
     }
@@ -178,64 +184,43 @@ export default function RelojChecador({
 
   const registrarConAccion = async (accion) => {
     if (!pendiente) return;
-
     try {
       setRegistrando(true);
-
       const pos = await getCurrentLocation();
-      if (!pos) {
-        enqueueSnackbar("No se pudo obtener la ubicación.", {
-          variant: "error",
-        });
-        return;
-      }
-
       let dataResponse;
+      const payload = {
+        id_empresa: idEmpresa,
+        accion,
+        latitud_actual: pos?.lat,
+        longitud_actual: pos?.lng,
+      };
 
       if (pendiente.tipo === "facial") {
         const { data } = await axiosInstance.post(
           "/checador/reloj/registrar-facial",
-          {
-            descriptor_facial: pendiente.descriptor_facial,
-            id_empresa: idEmpresa,
-            accion,
-            latitud_actual: pos.lat,
-            longitud_actual: pos.lng,
-          },
+          { ...payload, descriptor_facial: pendiente.descriptor_facial },
         );
         dataResponse = data;
-      }
-
-      if (pendiente.tipo === "codigo") {
+      } else {
         const { data } = await axiosInstance.post("/checador/reloj/registrar", {
+          ...payload,
           codigo: pendiente.codigo,
-          id_empresa: idEmpresa,
-          accion,
-          latitud_actual: pos.lat,
-          longitud_actual: pos.lng,
         });
         dataResponse = data;
       }
 
-      const { message, empleado, movimiento } = dataResponse;
-
       setPopupInfo({
-        nombre: `${empleado.nombre} ${empleado.apellido_paterno}`,
-        foto_perfil: empleado.foto_perfil || "/assets/user.png",
-        movimiento: movimiento || message,
+        nombre: `${dataResponse.empleado.nombre} ${dataResponse.empleado.apellido_paterno}`,
+        foto_perfil: dataResponse.empleado.foto_perfil || "/assets/user.png",
+        movimiento: dataResponse.movimiento || dataResponse.message,
         success: true,
       });
-
       setTimeout(() => setPopupInfo(null), 3000);
-
-      enqueueSnackbar("Registro realizado", { variant: "success" });
-
       setMostrarModalTurno(false);
       setPendiente(null);
       mutate();
       setCodigoEmpleado("");
     } catch (error) {
-      setCodigoEmpleado("");
       enqueueSnackbar(error.response?.data?.error || "Error al registrar", {
         variant: "error",
       });
@@ -244,52 +229,36 @@ export default function RelojChecador({
     }
   };
 
-  const handleFacialRecognitionSuccess = (data) => {
-    const { message, empleado, movimiento } = data;
-
-    setPopupInfo({
-      nombre: `${empleado.nombre} ${empleado.apellido_paterno}`,
-      foto_perfil: empleado.foto_perfil || "/assets/user.png",
-      movimiento: movimiento || message,
-      success: true,
-    });
-
-    setTimeout(() => setPopupInfo(null), 3000);
-    enqueueSnackbar("Registro facial realizado", { variant: "success" });
-    mutate();
-  };
-
   const handleFacialResponse = (data) => {
     if (data.requiereDecision) {
       setPendiente({
         tipo: "facial",
         descriptor_facial: data.descriptor_facial,
       });
-
       setMostrarModalTurno(true);
-      return;
+    } else {
+      setPopupInfo({
+        nombre: `${data.empleado.nombre} ${data.empleado.apellido_paterno}`,
+        foto_perfil: data.empleado.foto_perfil || "/assets/user.png",
+        movimiento: data.movimiento || data.message,
+        success: true,
+      });
+      setTimeout(() => setPopupInfo(null), 3000);
+      mutate();
     }
-
-    handleFacialRecognitionSuccess(data);
   };
 
   const abrirCamara = () => {
-    setMostrarQR(false); // Apagamos QR si estaba abierto
+    setMostrarQR(false);
     setMostrarCamara(true);
   };
-  const cerrarCamara = () => setMostrarCamara(false);
-
   const handleQRScan = (codigoEscaneado) => {
     setMostrarQR(false);
     registrarMovimiento(codigoEscaneado);
   };
-
   const handleOpenQR = () => {
-    setMostrarCamara(false); // Apagamos facial DE INMEDIATO
-    // Damos un pequeño respiro al hardware antes de encender el QR
-    setTimeout(() => {
-      setMostrarQR(true);
-    }, 300);
+    setMostrarCamara(false);
+    setTimeout(() => setMostrarQR(true), 300);
   };
 
   if (error)
@@ -307,15 +276,10 @@ export default function RelojChecador({
                 setCodigo={setCodigoEmpleado}
                 handleRegistrar={registrarMovimiento}
                 handleOpenQR={handleOpenQR}
-                handleOpenFacialModal={() => {
-                  if (mostrarCamara) cerrarCamara();
-                  else abrirCamara();
-                }}
                 registrando={registrando || loadingGPS}
                 enqueueSnackbar={enqueueSnackbar}
               />
             </div>
-
             <StatsCards
               empleadosActivos={empleadosActivos}
               totalRegistros={totalRegistros}
@@ -323,38 +287,103 @@ export default function RelojChecador({
           </div>
 
           <div className="lg:col-span-8 md:col-span-7 md:space-y-6">
-            <div className="block md:hidden mb-2 text-center">
-              <h1 className="text-md font-bold text-slate-800">
-                HR360 - Control de Asistencia
+            <div className="block md:hidden mb-6 text-center space-y-1">
+              <h1 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                HR360 - Sistema de Asistencia
               </h1>
-              <p className="text-lg text-slate-600 font-bold">{horaActual}</p>
-              <p className="text-xs text-slate-500">{fechaActual}</p>
+              <div className="py-2">
+                <p className="text-6xl font-black text-slate-900 tracking-tighter antialiased">
+                  {horaActual.split(":")[0]}:{horaActual.split(":")[1]}
+                  <span className="text-2xl text-blue-500 font-medium ml-1">
+                    {horaActual.split(":")[2]}
+                  </span>
+                </p>
+                <p className="text-xs font-bold text-slate-500 uppercase mt-1 tracking-wider">
+                  {fechaActual}
+                </p>
+              </div>
             </div>
 
-            <FacialRecognitionPanel
-              isOpen={mostrarCamara}
-              onOpen={abrirCamara}
-              onClose={cerrarCamara}
-              onSuccess={handleFacialResponse}
-              idEmpresa={idEmpresa}
-              handleOpenFacialModal={() => setMostrarCamara((prev) => !prev)}
-            />
-            <div className="block md:hidden bg-white/90 backdrop-blur-sm rounded-2xl shadow-lg border border-slate-200/50 p-4">
-              <EmployeeInput
-                codigo={codigoEmpleado}
-                setCodigo={setCodigoEmpleado}
-                handleRegistrar={registrarMovimiento}
-                handleOpenQR={handleOpenQR}
-                handleOpenFacialModal={() => {
-                  if (mostrarCamara) cerrarCamara();
-                  else abrirCamara();
-                }}
-                registrando={registrando}
-                enqueueSnackbar={enqueueSnackbar}
-              />
+            <div className="flex md:hidden mb-8 bg-slate-200/60 p-1.5 rounded-2xl border border-slate-200 shadow-inner">
+              {[
+                { id: "qr", icon: QrCode, label: "QR" },
+                { id: "codigo", icon: Keyboard, label: "Código" },
+                { id: "facial", icon: ScanEye, label: "Rostro" },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setMetodo(tab.id);
+                    if (tab.id === "qr") handleOpenQR();
+                    if (tab.id === "facial") abrirCamara();
+                    if (tab.id === "codigo") {
+                      setMostrarCamara(false);
+                      setMostrarQR(false);
+                    }
+                  }}
+                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all duration-300 ${
+                    metodo === tab.id
+                      ? "bg-white text-slate-900 shadow-md scale-[1.02]"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  <tab.icon
+                    className={`w-5 h-5 ${
+                      metodo === tab.id ? "text-blue-600" : ""
+                    }`}
+                  />
+                  <span className="text-[10px] font-black uppercase tracking-tight">
+                    {tab.label}
+                  </span>
+                </button>
+              ))}
             </div>
 
-            <div className="hidden md:block">
+            <div className="relative min-h-75">
+              {(metodo === "facial" || !isMobile) && (
+                <div
+                  className={
+                    metodo === "facial"
+                      ? "block animate-in fade-in duration-500"
+                      : "hidden md:block"
+                  }
+                >
+                  <FacialRecognitionPanel
+                    isOpen={mostrarCamara}
+                    onOpen={() => setMostrarCamara(true)}
+                    onClose={() => setMostrarCamara(false)}
+                    onSuccess={handleFacialResponse}
+                    idEmpresa={idEmpresa}
+                    handleOpenFacialModal={() => setMostrarCamara(false)}
+                  />
+                </div>
+              )}
+
+              {metodo === "codigo" && (
+                <div className="block md:hidden bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 p-8 animate-in zoom-in-95 fade-in duration-300">
+                  <div className="text-center mb-8">
+                    <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-blue-100">
+                      <Keyboard className="w-10 h-10 text-blue-600" />
+                    </div>
+                    <h2 className="font-black text-2xl text-slate-800">
+                      Check por código
+                    </h2>
+                    <p className="text-slate-500 text-sm font-medium mt-1">
+                      Registra tu entrada o salida
+                    </p>
+                  </div>
+                  <EmployeeInput
+                    codigo={codigoEmpleado}
+                    setCodigo={setCodigoEmpleado}
+                    handleRegistrar={registrarMovimiento}
+                    registrando={registrando}
+                    enqueueSnackbar={enqueueSnackbar}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="hidden md:block mt-6">
               <RecordsTable
                 movimientos={movimientos}
                 isLoading={isLoading}
@@ -366,63 +395,99 @@ export default function RelojChecador({
         {mostrarQR && (
           <QRScanner
             onScan={handleQRScan}
-            onClose={() => setMostrarQR(false)}
+            onClose={() => {
+              setMostrarQR(false);
+              setMetodo("codigo");
+            }}
           />
         )}
-      </main>
 
-      {popupInfo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl shadow-2xl p-8 text-center max-w-sm w-full mx-4 transform animate-bounce-in">
-            <div className="relative mb-6">
-              <img
-                src={popupInfo.foto_perfil}
-                alt="Foto del empleado"
-                className="w-24 h-24 object-cover rounded-full mx-auto border-4 border-slate-200 shadow-lg"
-              />
+        {popupInfo && (
+          <div className="fixed inset-0 z-100 flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
+            <div className="bg-white rounded-[3rem] shadow-2xl p-10 text-center max-w-sm w-full transform animate-bounce-in border border-slate-100">
+              <div className="relative mb-6">
+                <img
+                  src={popupInfo.foto_perfil}
+                  className="w-32 h-32 object-cover rounded-full mx-auto border-8 border-slate-50 shadow-xl"
+                  alt="perfil"
+                />
+                <div
+                  className={`absolute bottom-0 right-1/4 w-10 h-10 rounded-full flex items-center justify-center shadow-lg border-4 border-white ${
+                    popupInfo.success ? "bg-green-500" : "bg-red-500"
+                  }`}
+                >
+                  {popupInfo.success ? (
+                    <CheckCircle className="w-5 h-5 text-white" />
+                  ) : (
+                    <XCircle className="w-5 h-5 text-white" />
+                  )}
+                </div>
+              </div>
+              <h3 className="text-3xl font-black text-slate-800 mb-2 tracking-tighter">
+                {popupInfo.nombre}
+              </h3>
+              <p className="text-slate-500 font-bold uppercase text-xs tracking-widest mb-6">
+                {popupInfo.movimiento}
+              </p>
               <div
-                className={`absolute -bottom-2 -right-2 w-8 h-8 rounded-full flex items-center justify-center shadow-lg ${
-                  popupInfo.success ? "bg-green-500" : "bg-red-500"
+                className={`py-3 px-6 rounded-2xl inline-flex items-center gap-2 ${
+                  popupInfo.success
+                    ? "bg-green-50 text-green-600"
+                    : "bg-red-50 text-red-600"
                 }`}
               >
-                {popupInfo.success ? (
-                  <CheckCircle className="w-5 h-5 text-white" />
-                ) : (
-                  <XCircle className="w-5 h-5 text-white" />
-                )}
+                <CheckCircle className="w-5 h-5" />
+                <span className="font-black text-sm uppercase">¡Éxito!</span>
               </div>
             </div>
+          </div>
+        )}
 
-            <h3 className="text-2xl font-bold text-slate-800 mb-2">
-              {popupInfo.nombre}
-            </h3>
-            <p className="text-slate-600 mb-4 text-lg">
-              {popupInfo.movimiento}
-            </p>
-
-            <div
-              className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center ${
-                popupInfo.success ? "bg-green-100" : "bg-red-100"
-              }`}
-            >
-              {popupInfo.success ? (
-                <CheckCircle className="w-8 h-8 text-green-500" />
-              ) : (
-                <XCircle className="w-8 h-8 text-red-500" />
-              )}
+        {mostrarModalTurno && (
+          <div className="fixed inset-0 z-110 flex items-end md:items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+            <div className="bg-white rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl p-8 w-full max-w-sm animate-in slide-in-from-bottom-10 duration-300">
+              <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6 md:hidden" />
+              <h2 className="text-2xl font-black text-slate-800 mb-2 tracking-tight">
+                Turno abierto
+              </h2>
+              <p className="text-slate-500 text-sm font-medium mb-8 leading-relaxed">
+                Detectamos que ya tienes un turno en proceso. ¿Cuál es el
+                siguiente paso?
+              </p>
+              <div className="flex flex-col gap-3">
+                <Button
+                  onClick={() => registrarConAccion("salida_temporal")}
+                  className="w-full py-7 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold border-none transition-all"
+                >
+                  Salida temporal
+                </Button>
+                <Button
+                  onClick={() => registrarConAccion("cerrar_turno")}
+                  className="w-full py-7 rounded-2xl bg-red-500 text-white hover:bg-red-600 font-bold shadow-lg shadow-red-200 transition-all border-none"
+                >
+                  Cerrar turno
+                </Button>
+                <Button
+                  onClick={() => {
+                    setMostrarModalTurno(false);
+                    setPendiente(null);
+                  }}
+                  variant="ghost"
+                  className="w-full py-4 text-slate-400 font-bold hover:text-slate-600"
+                >
+                  Cancelar
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </main>
 
       <style jsx>{`
         @keyframes bounce-in {
           0% {
-            transform: scale(0.3) translateY(-50px);
+            transform: scale(0.8) translateY(20px);
             opacity: 0;
-          }
-          50% {
-            transform: scale(1.05);
           }
           100% {
             transform: scale(1) translateY(0);
@@ -430,69 +495,9 @@ export default function RelojChecador({
           }
         }
         .animate-bounce-in {
-          animation: bounce-in 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+          animation: bounce-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
       `}</style>
-
-      {mostrarModalTurno && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 relative">
-            {/* Overlay interno mientras registra */}
-
-            <h2 className="text-xl font-bold text-slate-800 mb-2">
-              Turno abierto
-            </h2>
-            <p className="text-slate-600 mb-6">
-              Ya existe un turno abierto. ¿Qué deseas hacer?
-            </p>
-
-            {registrando ? (
-              <div className="flex flex-col items-center justify-center">
-                <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-blue-600 mb-3"></div>
-                <p className="text-slate-700 font-medium">Registrando...</p>
-              </div>
-            ) : (
-              <>
-                <div className="flex flex-col gap-3">
-                  <Button
-                    onClick={() => registrarConAccion("salida_temporal")}
-                    className="w-full py-2 rounded-lg bg-slate-200 hover:bg-slate-300 text-black"
-                    disabled={registrando}
-                  >
-                    Salida temporal
-                  </Button>
-
-                  <Button
-                    onClick={() => registrarConAccion("cerrar_turno")}
-                    className="w-full py-2 rounded-lg bg-red-500 text-white hover:bg-red-600"
-                    disabled={registrando}
-                  >
-                    Cerrar turno
-                  </Button>
-
-                  <Button
-                    onClick={() => {
-                      setMostrarModalTurno(false);
-                      setPendiente(null);
-                    }}
-                    className="w-full py-2 rounded-lg border"
-                    disabled={registrando}
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* {registrando && (
-        <div className="fixed inset-0 h-screen w-screen bg-white flex flex-col items-center justify-center z-50">
-          <div className="animate-spin rounded-full h-10 w-10 border-t-4 border-blue-600 mb-3"></div>
-          <p className="text-slate-700 font-medium">Registrando...</p>
-        </div>
-      )} */}
     </>
   );
 }

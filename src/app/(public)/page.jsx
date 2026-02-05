@@ -58,7 +58,7 @@ export default function Home() {
     dataUser?.id_empresa
       ? `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/reloj/registros-del-dia?id_empresa=${dataUser.id_empresa}`
       : null,
-    fetcherWithToken
+    fetcherWithToken,
   );
 
   const movimientos = registrosData?.registrosHoy || [];
@@ -126,7 +126,7 @@ export default function Home() {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       const { movimiento, empleado } = data;
@@ -187,12 +187,12 @@ export default function Home() {
 
   return (
     <>
-      <main className="min-h-screen bg-gradient-to-br from-slate-50 via-gray-50 to-slate-100 p-4">
+      <main className="min-h-screen bg-linear-to-br from-slate-50 via-gray-50 to-slate-100 p-4">
         {!isLoggedIn ? (
           <div className="max-w-md mx-auto">
             <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl border border-slate-200/50 p-8 text-center">
               <div className="relative mb-6">
-                <div className="w-26 h-26 mx-auto bg-gradient-to-br from-slate-600 to-slate-800 rounded-full flex items-center justify-center shadow-xl">
+                <div className="w-26 h-26 mx-auto bg-linear-to-br from-slate-600 to-slate-800 rounded-full flex items-center justify-center shadow-xl">
                   <Clock className="w-16 h-16 text-white" />
                 </div>
               </div>
@@ -207,7 +207,7 @@ export default function Home() {
             <div className="lg:col-span-2 space-y-6">
               <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-slate-200/50 p-6 text-center">
                 <div className="relative mb-6">
-                  <div className="w-28 h-28 mx-auto bg-gradient-to-br from-slate-600 to-slate-800 rounded-full flex items-center justify-center shadow-xl transform hover:scale-105 transition-transform duration-300">
+                  <div className="w-28 h-28 mx-auto bg-linear-to-br from-slate-600 to-slate-800 rounded-full flex items-center justify-center shadow-xl transform hover:scale-105 transition-transform duration-300">
                     <Clock className="w-16 h-16 text-white animate-pulse" />
                   </div>
                   <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full animate-ping"></div>
@@ -237,7 +237,7 @@ export default function Home() {
                   <Button
                     onClick={registrarMovimiento}
                     disabled={registrando}
-                    className="w-full py-4 bg-gradient-to-r from-slate-700 to-slate-800 text-white font-bold text-lg rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:transform-none"
+                    className="w-full py-4 bg-linear-to-r from-slate-700 to-slate-800 text-white font-bold text-lg rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:transform-none"
                   >
                     {registrando ? (
                       <div className="flex items-center justify-center space-x-2">
@@ -348,7 +348,7 @@ export default function Home() {
                             <TableCell className="px-6 text-center">
                               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
                                 {formatearHora(
-                                  mov.entrada_corregida || mov.entrada
+                                  mov.entrada_corregida || mov.entrada,
                                 )}
                               </span>
                             </TableCell>
@@ -356,7 +356,7 @@ export default function Home() {
                               {mov.salida_corregida || mov.salida ? (
                                 <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
                                   {formatearHora(
-                                    mov.salida_corregida || mov.salida
+                                    mov.salida_corregida || mov.salida,
                                   )}
                                 </span>
                               ) : (
@@ -369,7 +369,7 @@ export default function Home() {
                                   "inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold",
                                   mov.estado === "Abierto"
                                     ? "bg-green-100 text-green-800 border border-green-200"
-                                    : "bg-slate-100 text-slate-700 border border-slate-200"
+                                    : "bg-slate-100 text-slate-700 border border-slate-200",
                                 )}
                               >
                                 {mov.estado === "Abierto" ? (
