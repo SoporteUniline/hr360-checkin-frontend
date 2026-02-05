@@ -457,23 +457,28 @@ export default function RelojChecador({
               <div className="flex flex-col gap-3">
                 <Button
                   onClick={() => registrarConAccion("salida_temporal")}
-                  className="w-full py-7 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold border-none transition-all"
+                  disabled={registrando} // Bloquea el botón si está cargando
+                  className="w-full py-7 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold border-none transition-all disabled:opacity-50"
                 >
-                  Salida temporal
+                  {registrando ? "Procesando..." : "Salida temporal"}
                 </Button>
+
                 <Button
                   onClick={() => registrarConAccion("cerrar_turno")}
-                  className="w-full py-7 rounded-2xl bg-red-500 text-white hover:bg-red-600 font-bold shadow-lg shadow-red-200 transition-all border-none"
+                  disabled={registrando} // Bloquea el botón si está cargando
+                  className="w-full py-7 rounded-2xl bg-red-500 text-white hover:bg-red-600 font-bold shadow-lg shadow-red-200 transition-all border-none disabled:bg-red-300"
                 >
-                  Cerrar turno
+                  {registrando ? "Cerrando..." : "Cerrar turno"}
                 </Button>
+
                 <Button
                   onClick={() => {
                     setMostrarModalTurno(false);
                     setPendiente(null);
                   }}
+                  disabled={registrando} // Evita cancelar mientras se guarda en el servidor
                   variant="ghost"
-                  className="w-full py-4 text-slate-400 font-bold hover:text-slate-600"
+                  className="w-full py-4 text-slate-400 font-bold hover:text-slate-600 disabled:opacity-30"
                 >
                   Cancelar
                 </Button>
