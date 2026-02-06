@@ -379,10 +379,11 @@ export default function RelojChecador({
 
                   <Button
                     onClick={handleOpenQR}
+                    disabled={registrando}
                     className="w-full py-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-lg shadow-xl shadow-blue-100 border-none transition-all flex items-center justify-center gap-3"
                   >
                     <ScanEye className="w-6 h-6" />
-                    ABRIR ESCÁNER
+                    {registrando ? "ESPERE..." : "ABRIR ESCÁNER"}
                   </Button>
                 </div>
               )}
@@ -530,6 +531,23 @@ export default function RelojChecador({
           animation: bounce-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
       `}</style>
+
+      {/* Overlay de carga global para procesos asíncronos */}
+      {registrando && !mostrarQR && (
+        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl flex flex-col items-center gap-4">
+            <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <div className="text-center">
+              <p className="font-black text-slate-800 text-lg uppercase tracking-tighter">
+                Procesando Registro
+              </p>
+              <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">
+                Obteniendo ubicación y validando...
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

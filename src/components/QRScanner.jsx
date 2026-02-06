@@ -74,9 +74,13 @@ export default function QRScanner({ onScan, onClose }) {
             scannedRef.current = true;
 
             setScanSuccess(true);
-            shutdownScanner().then(() => {
-              if (isMounted.current) onScan(decodedText);
-            });
+
+            setTimeout(async () => {
+              await shutdownScanner();
+              if (isMounted.current) {
+                onScan(decodedText);
+              }
+            }, 600);
           },
         );
 
