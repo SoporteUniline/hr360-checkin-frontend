@@ -26,6 +26,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import ModalArea from "@/components/ModalArea";
 import { Button } from "@/components/ui/button";
 import { useSnackbar } from "notistack";
+import { Combobox } from "@/components/Combobox";
 
 export default function TabLaborales({ form, soloLectura, dataUser }) {
   const { enqueueSnackbar } = useSnackbar();
@@ -58,7 +59,7 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
 
       await axios.post(
         `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/area_check2`,
-        datos
+        datos,
       );
 
       // 🔁 Actualiza la lista local de áreas
@@ -80,7 +81,7 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
     setAreasAsignadas((prev) =>
       prev.includes(id_area)
         ? prev.filter((id) => id !== id_area)
-        : [...prev, id_area]
+        : [...prev, id_area],
     );
   };
 
@@ -97,7 +98,7 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
               limit: 9999,
               page: 1,
             },
-          }
+          },
         );
         setAreas(data.data);
       } catch (error) {
@@ -114,7 +115,7 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
     const fetchAsignadas = async () => {
       try {
         const { data } = await axios.get(
-          `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados/area_check/${empleadoId}/areas`
+          `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados/area_check/${empleadoId}/areas`,
         );
         setAreasAsignadas(data.map((a) => a.id_area));
       } catch (error) {
@@ -132,7 +133,7 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
   const { data: empleados } = useSWR(
     `/checador/empleados?empresa=${dataUser?.id_empresa}&page=1&limit=500`,
     fetcherWithToken,
-    swr_config
+    swr_config,
   );
 
   const responsables = [
@@ -149,6 +150,13 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
       label: "Responsable de permisos",
     },
   ];
+
+  const opcionesEmpleados =
+    empleados?.data?.map((emp) => ({
+      value: emp.id_empleado,
+      label: `${emp.nombre} ${emp.apellido_paterno} ${emp.apellido_materno} (${emp.puesto})`,
+    })) || [];
+
   return (
     <section className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mx-1 my-3">
@@ -346,7 +354,7 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
                 )}
               />{" "}
             </div>
-          )
+          ),
         )}
 
         {responsables.map(({ name, label }) => (
@@ -355,33 +363,19 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
             name={name}
             control={form.control}
             render={({ field }) => (
-              <FormItem>
+              <FormItem className="flex flex-col">
                 <FormLabel>{label}</FormLabel>
-                <Select
-                  value={field.value ? String(field.value) : ""}
-                  onValueChange={(value) => field.onChange(Number(value))}
-                  disabled={soloLectura}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue
-                        placeholder="Selecciona un empleado"
-                        className="text-xs"
-                      />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {empleados?.data?.map((emp) => (
-                      <SelectItem
-                        key={emp.id_empleado}
-                        value={String(emp.id_empleado)}
-                      >
-                        {emp.nombre} {emp.apellido_paterno}{" "}
-                        {emp.apellido_materno} ({emp.puesto})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <FormControl>
+                  <Combobox
+                    name={name}
+                    options={opcionesEmpleados}
+                    value={field.value}
+                    onChange={(val) => field.onChange(val)}
+                    placeholder="Buscar empleado..."
+                    emptyText="No se encontraron empleados"
+                    disabled={soloLectura}
+                  />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
