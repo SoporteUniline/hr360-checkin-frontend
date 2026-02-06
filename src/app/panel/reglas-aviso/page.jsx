@@ -7,11 +7,13 @@ import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import axios from "@/lib/axios";
 import Cookies from "js-cookie";
 import TablePagination from "@/components/TablePagination";
+import StatCard from "@/components/StatCard";
 
 // UI (shadcn)
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableHeader,
@@ -23,9 +25,7 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -46,9 +46,24 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Iconos
-import { Copy, Settings2, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  BellRing,
+  Copy,
+  Filter,
+  Info,
+  Pencil,
+  RotateCcw,
+  Save,
+  Search,
+  Settings2,
+  Trash2,
+  Users,
+  X,
+} from "lucide-react";
 import AccesosRapidos from "@/components/AccesosRapidos";
 
 // Utilidades locales
@@ -64,7 +79,8 @@ const diasSemanaMap = {
 
 function descripcionConfig(regla) {
   const tipoRegla = (regla.nombre || "").toLowerCase();
-  if (tipoRegla.includes("felicitar")) return "🎉 Felicitación automática (solo ON/OFF)";
+  if (tipoRegla.includes("felicitar"))
+    return "Felicitación automática (solo ON/OFF)";
 
   if (
     (tipoRegla.includes("cumpleaños") ||
@@ -256,172 +272,195 @@ export default function ReglasAvisoPage() {
   };
 
   return (
-    <div className="space-y-4">
-      {/* Encabezado */}
-      <div>
-        <h1 className="text-2xl font-bold text-[#2c3e50]">Gestión de Reglas de Aviso</h1>
-        <p className="text-sm text-[#6b7280]">
-          Edita configuración | Duplica reglas | Activa/Desactiva
-        </p>
+    <div className="space-y-6">
+      {/* Header ADAMIA */}
+      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+        <div className="flex items-center justify-between gap-4 flex-col sm:flex-row">
+          <div className="flex items-center gap-3">
+            <div className="bg-[#2563EB] p-2.5 rounded-lg">
+              <BellRing className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900">Reglas de aviso</h1>
+              <p className="text-sm text-gray-600">
+                Edita configuración, duplica reglas y activa/desactiva notificaciones.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Stats */}
+      {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="border border-[#e5e7eb] rounded-md p-4 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
-          <div className="text-xs uppercase tracking-wide text-[#6b7280] font-semibold">
-            Total Reglas
-          </div>
-          <div className="text-2xl font-bold text-[#2c3e50]">{stats.total}</div>
-        </div>
-        <div className="border border-[#e5e7eb] rounded-md p-4 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
-          <div className="text-xs uppercase tracking-wide text-[#6b7280] font-semibold">
-            Reglas Activas
-          </div>
-          <div className="text-2xl font-bold text-[#2c3e50]">{stats.activas}</div>
-        </div>
-        <div className="border border-[#e5e7eb] rounded-md p-4 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
-          <div className="text-xs uppercase tracking-wide text-[#6b7280] font-semibold">
-            Reglas Inactivas
-          </div>
-          <div className="text-2xl font-bold text-[#2c3e50]">{stats.inactivas}</div>
-        </div>
-        <div className="border border-[#e5e7eb] rounded-md p-4 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
-          <div className="text-xs uppercase tracking-wide text-[#6b7280] font-semibold">
-            Total Empleados
-          </div>
-          <div className="text-2xl font-bold text-[#2c3e50]">{stats.totalEmp}</div>
-        </div>
+        <StatCard title="Total reglas" value={stats.total} borderColor="border-blue-500" />
+        <StatCard title="Reglas activas" value={stats.activas} borderColor="border-emerald-500" />
+        <StatCard title="Reglas inactivas" value={stats.inactivas} borderColor="border-gray-400" />
+        <StatCard title="Total empleados" value={stats.totalEmp} borderColor="border-amber-500" />
       </div>
 
       {/* Filtros */}
-      <div className="flex flex-col md:flex-row gap-2 items-center">
-        <Input
-          placeholder="Buscar por nombre de regla..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="md:w-80"
-        />
-        <Select value={estado} onValueChange={setEstado}>
-          <SelectTrigger className="md:w-56">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos los estados</SelectItem>
-            <SelectItem value="activa">Activas</SelectItem>
-            <SelectItem value="inactiva">Inactivas</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <Card className="border-blue-100 bg-blue-50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-bold text-blue-700 flex items-center gap-2">
+            <Filter className="h-4 w-4" /> Filtros de búsqueda
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col md:flex-row gap-2 md:items-end">
+            <div className="w-full md:w-80">
+              <Label className="text-sm text-gray-700">Nombre</Label>
+              <div className="relative mt-1">
+                <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Input
+                  placeholder="Buscar por nombre de regla..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 bg-white"
+                />
+              </div>
+            </div>
+            <div className="w-full md:w-56">
+              <Label className="text-sm text-gray-700">Estado</Label>
+              <Select value={estado} onValueChange={setEstado}>
+                <SelectTrigger className="mt-1 bg-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los estados</SelectItem>
+                  <SelectItem value="activa">Activas</SelectItem>
+                  <SelectItem value="inactiva">Inactivas</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-full md:w-auto md:ml-auto">
+              <Button
+                variant="outline"
+                className="w-full md:w-auto border-gray-300 text-gray-700 hover:bg-gray-100"
+                onClick={() => {
+                  setSearch("");
+                  setEstado("all");
+                }}
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Limpiar filtros
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Tabla */}
-      <div className="border rounded-md overflow-hidden">
-        <Table>
-          <TableHeader>
-            {/*
-              FIX hover:
-              `TableRow` (shadcn) trae `hover:bg-muted/50` por defecto (ver `src/components/ui/table.jsx`),
-              lo que "lava" el header al pasar el cursor.
-              Forzamos el mismo color en hover para que NO cambie.
-            */}
-            <TableRow className="bg-[#37495E] hover:bg-[#37495E]">
-              <TableHead className="text-white">Tipo de Regla</TableHead>
-              <TableHead className="text-white">Empresa</TableHead>
-              <TableHead className="text-white">Configuración Actual</TableHead>
-              <TableHead className="text-white">Empleados</TableHead>
-              <TableHead className="text-white">Acciones</TableHead>
-              <TableHead className="text-right text-white">Estado</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {isLoading && (
-              <TableRow>
-                <TableCell colSpan={6}>Cargando...</TableCell>
-              </TableRow>
-            )}
-            {error && !isLoading && (
-              <TableRow>
-                <TableCell colSpan={6} className="text-red-600">
-                  Error al cargar reglas
-                </TableCell>
-              </TableRow>
-            )}
-            {!isLoading &&
-              !error &&
-              filas.map((regla) => {
-                const esFelicitar = (regla.nombre || "")
-                  .toLowerCase()
-                  .includes("felicitar");
-                return (
-                  <TableRow key={regla.id}>
-                    <TableCell className="font-semibold">
-                      {regla.nombre}{" "}
-                      {esFelicitar && (
-                        <span className="ml-1 text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-700">
-                          Solo ON/OFF
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell>{regla.empresa}</TableCell>
-                    <TableCell>{descripcionConfig(regla)}</TableCell>
-                    <TableCell>
-                      <span className="text-xs px-2 py-0.5 rounded bg-slate-800 text-white">
-                        {esFelicitar ? "Todos" : `${regla.totalEmpleados} 👥`}
-                      </span>
-                    </TableCell>
-                    <TableCell className="space-x-2">
-                      {/*
-                        Acciones por regla:
-                        - Editar/Duplicar se mantienen solo para reglas que no son "felicitar"
-                        - Eliminar se permite para cualquier regla (según solicitud)
-                      */}
-                      {!esFelicitar ? (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-[#93c5fd] text-[#2563eb] hover:bg-[#dbeafe] hover:text-[#1e40af]"
-                            onClick={() => abrirEditar(regla)}
-                          >
-                            <Settings2 className="w-4 h-4 mr-1" /> Editar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
-                            onClick={() => abrirDuplicar(regla)}
-                          >
-                            <Copy className="w-4 h-4 mr-1" /> Duplicar
-                          </Button>
-                        </>
-                      ) : null}
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-[#fca5a5] text-[#dc2626] hover:bg-[#fee2e2]"
-                        onClick={() => onDeleteRegla(regla)}
-                      >
-                        <Trash2 className="w-4 h-4 mr-1" /> Eliminar
-                      </Button>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Switch
-                        checked={!!regla.activa}
-                        onCheckedChange={(v) => toggleEstado(regla, v)}
-                      />
+      <Card className="p-0 overflow-hidden border-gray-100">
+        <CardHeader className="border-b border-gray-100 bg-white pb-4">
+          <CardTitle className="text-sm font-bold text-gray-900">Listado de reglas</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50">
+                  <TableHead className="text-xs font-semibold uppercase text-gray-600">Tipo de regla</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-600">Empresa</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-600">Configuración actual</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-600">Empleados</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-600">Acciones</TableHead>
+                  <TableHead className="text-right text-xs font-semibold uppercase text-gray-600">Estado</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-8 text-center text-sm text-gray-600">
+                      Cargando...
                     </TableCell>
                   </TableRow>
-                );
-              })}
-            {!isLoading && !error && reglasFiltradas.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={6} className="text-center py-10">
-                  No hay reglas que coincidan con los filtros
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                )}
+                {error && !isLoading && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="py-8 text-center text-sm text-red-600">
+                      Error al cargar reglas
+                    </TableCell>
+                  </TableRow>
+                )}
+                {!isLoading &&
+                  !error &&
+                  filas.map((regla) => {
+                    const esFelicitar = (regla.nombre || "")
+                      .toLowerCase()
+                      .includes("felicitar");
+                    return (
+                      <TableRow key={regla.id} className="hover:bg-zinc-50">
+                        <TableCell className="font-semibold text-gray-900">
+                          {regla.nombre}{" "}
+                          {esFelicitar && (
+                            <span className="ml-1 text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-700">
+                              Solo ON/OFF
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-gray-700">{regla.empresa}</TableCell>
+                        <TableCell className="text-gray-700">{descripcionConfig(regla)}</TableCell>
+                        <TableCell>
+                          <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-700">
+                            <Users className="h-3.5 w-3.5" />
+                            {esFelicitar ? "Todos" : `${regla.totalEmpleados || 0}`}
+                          </span>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            {/*
+                              Acciones por regla:
+                              - Editar/Duplicar solo para reglas que no son "felicitar"
+                              - Eliminar para cualquier regla (según solicitud)
+                            */}
+                            {!esFelicitar ? (
+                              <>
+                                <button
+                                  onClick={() => abrirEditar(regla)}
+                                  className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                                  title="Editar"
+                                >
+                                  <Pencil className="h-4 w-4 text-[#2563EB]" />
+                                </button>
+                                <button
+                                  onClick={() => abrirDuplicar(regla)}
+                                  className="p-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+                                  title="Duplicar"
+                                >
+                                  <Copy className="h-4 w-4 text-purple-600" />
+                                </button>
+                              </>
+                            ) : null}
+                            <button
+                              onClick={() => onDeleteRegla(regla)}
+                              className="p-2 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                              title="Eliminar"
+                            >
+                              <Trash2 className="h-4 w-4 text-red-600" />
+                            </button>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Switch
+                            checked={!!regla.activa}
+                            onCheckedChange={(v) => toggleEstado(regla, v)}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                {!isLoading && !error && reglasFiltradas.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-10 text-sm text-gray-600">
+                      No hay reglas que coincidan con los filtros.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Pie de tabla reutilizado del panel de permisos */}
       {!isLoading && !error && (
@@ -436,57 +475,67 @@ export default function ReglasAvisoPage() {
 
       {/* Dialogo Editar */}
       <Dialog open={openEdit} onOpenChange={setOpenEdit}>
-        <DialogContent className="w-[95vw] md:max-w-6xl max-h-[90vh] md:max-h-[85vh] overflow-y-auto overscroll-contain">
-          <DialogHeader>
-            <DialogTitle>
-              Configurar Regla
-              {reglaDetalle?.nombre ? ` - ${reglaDetalle.nombre}` : ""}
+        <DialogContent className="p-0 overflow-hidden w-[95vw] md:max-w-6xl max-h-[90vh] md:max-h-[85vh]">
+          <div className="p-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white">
+            <DialogTitle className="flex items-center gap-2 text-base font-bold">
+              <span className="grid size-9 place-items-center rounded-lg bg-white/15">
+                <Settings2 className="size-5 text-white" />
+              </span>
+              Configurar regla{reglaDetalle?.nombre ? ` - ${reglaDetalle.nombre}` : ""}
             </DialogTitle>
-          </DialogHeader>
-          {loadingModal ? (
-            <div className="py-10 text-center text-muted-foreground">
-              Cargando...
-            </div>
-          ) : reglaDetalle ? (
-            <FormularioRegla
-              modo="editar"
-              detalle={reglaDetalle}
-              empleados={empleados}
-              onClose={() => setOpenEdit(false)}
-              onSaved={() => {
-                setOpenEdit(false);
-                mutate();
-              }}
-            />
-          ) : null}
+            <p className="text-sm text-white/80">Define la frecuencia, alcance y destinatarios del aviso.</p>
+          </div>
+          <div className="max-h-[calc(90vh-92px)] md:max-h-[calc(85vh-92px)] overflow-y-auto overscroll-contain p-5">
+            {loadingModal ? (
+              <div className="py-10 text-center text-sm text-gray-600">
+                Cargando...
+              </div>
+            ) : reglaDetalle ? (
+              <FormularioRegla
+                modo="editar"
+                detalle={reglaDetalle}
+                empleados={empleados}
+                onClose={() => setOpenEdit(false)}
+                onSaved={() => {
+                  setOpenEdit(false);
+                  mutate();
+                }}
+              />
+            ) : null}
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Dialogo Duplicar */}
       <Dialog open={openDup} onOpenChange={setOpenDup}>
-        <DialogContent className="w-[95vw] md:max-w-6xl max-h-[90vh] md:max-h-[85vh] overflow-y-auto overscroll-contain">
-          <DialogHeader>
-            <DialogTitle>
-              Duplicar Regla
-              {reglaDetalle?.nombre ? ` - ${reglaDetalle.nombre}` : ""}
+        <DialogContent className="p-0 overflow-hidden w-[95vw] md:max-w-6xl max-h-[90vh] md:max-h-[85vh]">
+          <div className="p-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white">
+            <DialogTitle className="flex items-center gap-2 text-base font-bold">
+              <span className="grid size-9 place-items-center rounded-lg bg-white/15">
+                <Copy className="size-5 text-white" />
+              </span>
+              Duplicar regla{reglaDetalle?.nombre ? ` - ${reglaDetalle.nombre}` : ""}
             </DialogTitle>
-          </DialogHeader>
-          {loadingModal ? (
-            <div className="py-10 text-center text-muted-foreground">
-              Cargando...
-            </div>
-          ) : reglaDetalle ? (
-            <FormularioRegla
-              modo="duplicar"
-              detalle={reglaDetalle}
-              empleados={empleados}
-              onClose={() => setOpenDup(false)}
-              onSaved={() => {
-                setOpenDup(false);
-                mutate();
-              }}
-            />
-          ) : null}
+            <p className="text-sm text-white/80">Crea una copia con una configuración diferente para evitar duplicados.</p>
+          </div>
+          <div className="max-h-[calc(90vh-92px)] md:max-h-[calc(85vh-92px)] overflow-y-auto overscroll-contain p-5">
+            {loadingModal ? (
+              <div className="py-10 text-center text-sm text-gray-600">
+                Cargando...
+              </div>
+            ) : reglaDetalle ? (
+              <FormularioRegla
+                modo="duplicar"
+                detalle={reglaDetalle}
+                empleados={empleados}
+                onClose={() => setOpenDup(false)}
+                onSaved={() => {
+                  setOpenDup(false);
+                  mutate();
+                }}
+              />
+            ) : null}
+          </div>
         </DialogContent>
       </Dialog>
       
@@ -495,25 +544,45 @@ export default function ReglasAvisoPage() {
 
       {/* Confirmación de eliminación */}
       <AlertDialog open={!!deleteRow} onOpenChange={(open) => !open && setDeleteRow(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar regla de aviso?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteRow
-                ? `Esta acción no se puede deshacer. Se eliminará la regla “${deleteRow.nombre || "Regla"}”.`
-                : ""}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]" disabled={deleting}>
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className="bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(239,68,68,0.3)]"
+        <AlertDialogContent className="p-0 overflow-hidden sm:max-w-lg">
+          <div className="p-5 bg-gradient-to-r from-red-600 to-red-700 text-white">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2 text-base font-bold text-white">
+                <span className="grid size-9 place-items-center rounded-lg bg-white/15">
+                  <AlertTriangle className="size-5 text-white" />
+                </span>
+                Eliminar regla de aviso
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-sm text-red-100">
+                Esta acción no se puede deshacer.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+          </div>
+
+          <div className="p-5">
+            <Alert className="border-red-200 bg-red-50">
+              <AlertDescription className="text-sm text-red-800">
+                {deleteRow
+                  ? `Se eliminará la regla “${deleteRow.nombre || "Regla"}”.`
+                  : "Se eliminará la regla seleccionada."}
+              </AlertDescription>
+            </Alert>
+          </div>
+
+          <AlertDialogFooter className="bg-gray-50 border-t border-gray-100 p-4 flex gap-2 sm:justify-end">
+            <AlertDialogCancel
+              className="border border-gray-300 text-gray-700 hover:bg-gray-100"
               disabled={deleting}
             >
-              {deleting ? "Eliminando..." : "Eliminar"}
+              <span className="inline-flex items-center">
+                <X className="h-4 w-4 mr-2" /> Cancelar
+              </span>
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={deleting} className="bg-red-600 hover:bg-red-700 text-white">
+              <span className="inline-flex items-center">
+                <Trash2 className="h-4 w-4 mr-2" />
+                {deleting ? "Eliminando..." : "Eliminar"}
+              </span>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -567,7 +636,7 @@ function FormularioRegla({ modo, detalle, empleados, onClose, onSaved }) {
     try {
       // Validación simple
       if (form.empleadosSeleccionados.length === 0) {
-        setErrorMsg("⚠️ Debes seleccionar al menos un empleado");
+        setErrorMsg("Debes seleccionar al menos un empleado.");
         return;
       }
       const token = Cookies.get("token");
@@ -581,7 +650,7 @@ function FormularioRegla({ modo, detalle, empleados, onClose, onSaved }) {
         setChecking(true);
         const ver = await axios.post(`/checador/reglas-aviso/verificar-duplicado`, form, auth);
         if (ver.data?.existeDuplicado) {
-          setErrorMsg("⚠️ Ya existe una regla con esta configuración exacta. Por favor cambia la frecuencia, día o ventana de días.");
+          setErrorMsg("Ya existe una regla con esta configuración exacta. Cambia la frecuencia, día o ventana de días.");
           setChecking(false);
           return;
         }
@@ -611,26 +680,26 @@ function FormularioRegla({ modo, detalle, empleados, onClose, onSaved }) {
   return (
     <div className="space-y-4">
       {modo === "duplicar" && (
-        <div className="border border-amber-500/50 bg-amber-50 text-amber-900 rounded-md p-3 text-sm">
-          <span className="mr-1">⚠️</span>
+        <div className="border border-amber-500/50 bg-amber-50 text-amber-900 rounded-md p-3 text-sm flex gap-2">
+          <AlertTriangle className="h-4 w-4 mt-0.5 text-amber-700" />
           <strong>Importante:</strong> Debes cambiar la configuración para evitar duplicados. No se permite crear reglas con la misma configuración exacta.
         </div>
       )}
 
       {errorMsg && (
-        <div className="border border-red-500/50 bg-red-50 text-red-700 rounded-md p-3 text-sm">
-          {errorMsg}
-        </div>
+        <Alert className="border-red-200 bg-red-50">
+          <AlertDescription className="text-sm text-red-800">{errorMsg}</AlertDescription>
+        </Alert>
       )}
 
       {/* Configuración */}
       <div className="grid md:grid-cols-2 gap-4">
-        <div className="border rounded-md p-4">
+        <div className="border border-gray-100 rounded-xl p-4 bg-white shadow-sm">
           <div className="font-semibold mb-3">
             {isContratos
-              ? "📅 ¿Cuándo recibir el reporte?"
+              ? "¿Cuándo recibir el reporte?"
               : isCumpleAvisar
-              ? "📅 ¿Cuándo avisar?"
+              ? "¿Cuándo avisar?"
               : "Configuración"}
           </div>
 
@@ -734,8 +803,11 @@ function FormularioRegla({ modo, detalle, empleados, onClose, onSaved }) {
                   : "¿En cuántos días?"}
               </Label>
               {isContratos && (
-                <div className="border border-amber-400/60 bg-amber-50 text-amber-900 rounded p-2 text-xs">
-                  💡 <strong>Ejemplo:</strong> Si ingresas "30", recibirás los contratos que vencen en los próximos 30 días desde hoy.
+                <div className="border border-amber-400/60 bg-amber-50 text-amber-900 rounded p-2 text-xs flex gap-2">
+                  <Info className="h-4 w-4 mt-0.5 text-amber-700" />
+                  <div>
+                    <strong>Ejemplo:</strong> Si ingresas "30", recibirás los contratos que vencen en los próximos 30 días desde hoy.
+                  </div>
                 </div>
               )}
               <Input
@@ -786,7 +858,7 @@ function FormularioRegla({ modo, detalle, empleados, onClose, onSaved }) {
         </div>
 
         {/* Empleados */}
-        <div className="border rounded-md p-4">
+        <div className="border border-gray-100 rounded-xl p-4 bg-white shadow-sm">
           <div className="font-semibold mb-3">¿A quién enviar el reporte?</div>
           <div className="mb-2 flex items-center gap-2">
             <Checkbox
@@ -799,13 +871,13 @@ function FormularioRegla({ modo, detalle, empleados, onClose, onSaved }) {
             />
             <Label htmlFor="todos">Seleccionar todos</Label>
           </div>
-          <div className="max-h-72 overflow-auto border rounded-md p-2 space-y-2 bg-muted/30">
+          <div className="max-h-72 overflow-auto border border-gray-200 rounded-lg p-2 space-y-2 bg-gray-50">
             {empleados.map((emp) => {
               const checked = form.empleadosSeleccionados.includes(emp.id);
               return (
                 <label
                   key={emp.id}
-                  className="flex items-center gap-2 border bg-background rounded px-2 py-2"
+                  className="flex items-center gap-2 border border-gray-200 bg-white rounded-lg px-2 py-2"
                 >
                   <Checkbox
                     checked={checked}
@@ -843,7 +915,8 @@ function FormularioRegla({ modo, detalle, empleados, onClose, onSaved }) {
         </div>
       </div>
 
-      <DialogFooter>
+      <div className="sticky bottom-0 bg-gray-50 border-t border-gray-100 p-4 -mx-5 mt-4">
+        <div className="flex flex-col-reverse sm:flex-row gap-2 sm:justify-end px-5">
         {/*
           Botones con paleta del sistema (ver `Colores.txt`):
           - Secundario: fondo blanco + borde gris (#d1d5db) + hover #f9fafb
@@ -856,26 +929,33 @@ function FormularioRegla({ modo, detalle, empleados, onClose, onSaved }) {
           variant="outline"
           onClick={onClose}
           disabled={saving}
-          className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
+          className="border-gray-300 text-gray-700 hover:bg-gray-100"
         >
-          Cancelar
+          <X className="h-4 w-4 mr-2" /> Cancelar
         </Button>
         <Button
           onClick={guardar}
           disabled={saving || checking || form.empleadosSeleccionados.length === 0}
-          className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]"
+          className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white"
         >
-          {modo === "editar"
-            ? saving
-              ? "Guardando..."
-              : "Guardar cambios"
-            : checking
-            ? "Verificando..."
-            : saving
-            ? "Guardando..."
-            : "Crear regla duplicada"}
+          {modo === "editar" ? (
+            <>
+              <Save className="h-4 w-4 mr-2" />
+              {saving ? "Guardando..." : "Guardar cambios"}
+            </>
+          ) : (
+            <>
+              <Copy className="h-4 w-4 mr-2" />
+              {checking
+                ? "Verificando..."
+                : saving
+                ? "Guardando..."
+                : "Crear regla duplicada"}
+            </>
+          )}
         </Button>
-      </DialogFooter>
+        </div>
+      </div>
     </div>
   );
 }
