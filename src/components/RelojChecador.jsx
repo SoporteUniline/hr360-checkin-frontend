@@ -314,11 +314,11 @@ export default function RelojChecador({
                   key={tab.id}
                   onClick={() => {
                     setMetodo(tab.id);
-                    if (tab.id === "qr") handleOpenQR();
+                    // Quitamos la ejecución automática de handleOpenQR() aquí
                     if (tab.id === "facial") abrirCamara();
-                    if (tab.id === "codigo") {
+                    if (tab.id === "codigo" || tab.id === "qr") {
                       setMostrarCamara(false);
-                      setMostrarQR(false);
+                      setMostrarQR(false); // Aseguramos que el modal no esté abierto de inicio
                     }
                   }}
                   className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all duration-300 ${
@@ -356,6 +356,31 @@ export default function RelojChecador({
                     idEmpresa={idEmpresa}
                     handleOpenFacialModal={() => setMostrarCamara(false)}
                   />
+                </div>
+              )}
+
+              {/* Interfaz para el Tab de QR */}
+              {metodo === "qr" && (
+                <div className="block md:hidden bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 p-8 animate-in zoom-in-95 fade-in duration-300">
+                  <div className="text-center mb-8">
+                    <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-blue-100">
+                      <QrCode className="w-10 h-10 text-blue-600" />
+                    </div>
+                    <h2 className="font-black text-2xl text-slate-800">
+                      Escaneo de QR
+                    </h2>
+                    <p className="text-slate-500 text-sm font-medium mt-1">
+                      Presiona el botón para activar la cámara
+                    </p>
+                  </div>
+
+                  <Button
+                    onClick={handleOpenQR}
+                    className="w-full py-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-lg shadow-xl shadow-blue-100 border-none transition-all flex items-center justify-center gap-3"
+                  >
+                    <ScanEye className="w-6 h-6" />
+                    ABRIR ESCÁNER
+                  </Button>
                 </div>
               )}
 
@@ -397,7 +422,6 @@ export default function RelojChecador({
             onScan={handleQRScan}
             onClose={() => {
               setMostrarQR(false);
-              setMetodo("codigo");
             }}
           />
         )}
