@@ -314,11 +314,14 @@ export default function RelojChecador({
                   key={tab.id}
                   onClick={() => {
                     setMetodo(tab.id);
-                    // Quitamos la ejecución automática de handleOpenQR() aquí
                     if (tab.id === "facial") abrirCamara();
-                    if (tab.id === "codigo" || tab.id === "qr") {
+                    if (tab.id === "qr") {
                       setMostrarCamara(false);
-                      setMostrarQR(false); // Aseguramos que el modal no esté abierto de inicio
+                      setMostrarQR(false);
+                    }
+                    if (tab.id === "codigo") {
+                      setMostrarCamara(false);
+                      setMostrarQR(false);
                     }
                   }}
                   className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all duration-300 ${
