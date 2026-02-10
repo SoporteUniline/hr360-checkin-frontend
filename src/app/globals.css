@@ -273,3 +273,83 @@ body {
     opacity: 1;
   }
 }
+
+/* ==========================================================================
+   Landing ADAMIA (Marketing) - Animaciones utilitarias
+   - Relación: `src/app/(landing)/page.jsx` y `src/components/landing/*`
+   - Nota: se mantienen namespaced (prefijo `adamia-`) para no afectar otras vistas.
+   ========================================================================== */
+
+@keyframes adamiaFloat {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-20px) scale(1.05);
+  }
+}
+
+@keyframes adamiaPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+@keyframes adamiaDotPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes adamiaTyping {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-6px);
+  }
+}
+
+.adamia-float-8 {
+  animation: adamiaFloat 8s ease-in-out infinite;
+}
+
+.adamia-float-10 {
+  animation: adamiaFloat 10s ease-in-out infinite reverse;
+}
+
+.adamia-pulse {
+  animation: adamiaPulse 2s ease-in-out infinite;
+}
+
+.adamia-dot-pulse {
+  animation: adamiaDotPulse 2s infinite;
+}
+
+.adamia-typing-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: #94a3b8;
+  display: inline-block;
+  animation: adamiaTyping 1.4s infinite;
+}
+
+.adamia-typing-dot-2 {
+  animation-delay: 0.2s;
+}
+
+.adamia-typing-dot-3 {
+  animation-delay: 0.4s;
+}
