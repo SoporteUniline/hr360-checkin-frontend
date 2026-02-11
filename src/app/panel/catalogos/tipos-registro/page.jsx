@@ -8,18 +8,35 @@ import TiposRegistroTable from "./TiposRegistroTable";
 import TipoRegistroFormDialog from "./TipoRegistroFormDialog";
 import TipoRegistroDeleteDialog from "./TipoRegistroDeleteDialog";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import { useAuth } from "@/context/AuthContext";
+import useDebounce from "@/hooks/useDebounce";
+import { Label } from "@/components/ui/label";
+import { Combobox } from "@/components/Combobox";
 
 export default function TiposRegistro() {
+  const { dataUser } = useAuth();
   const [filter, setFilter] = useState("");
+  const [empresaActiva, setEmpresaActiva] = useState("all");
+  const debouncedFilter = useDebounce(filter, 500);
   const [registros, setRegistros] = useState([]);
   const [editPerm, setEditPerm] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
-
-  // controlar abrir/cerrar los dialogs
   const [openForm, setOpenForm] = useState(false);
   const [openDelete, setOpenDelete] = useState(false);
 
-  const key = `/checador/tiposPermiso?clave=${filter}`;
+  const [page, setPage] = useState(1);
+
+  const handleEmpresaChange = (val) => {
+    setEmpresaActiva(val === "all" ? "all" : Number(val));
+    setPage(1);
+  };
+
+  const handleFilterChange = (e) => {
+    setFilter(e.target.value);
+    setPage(1);
+  };
+
+  const key = `/checador/tiposPermiso?id_empresa=${empresaActiva}&clave=${debouncedFilter}`;
 
   return (
     <div className="space-y-4">
@@ -31,18 +48,37 @@ export default function TiposRegistro() {
         </p>
       </div>
 
-      <div className="mb-2 flex flex-col md:flex-row gap-3 items-center">
-        <Input
-          className="flex-1"
-          placeholder="Buscar tipo de registro..."
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        />
+      {/* 4. Grid de filtros con Selector de Empresa y Buscador */}
+      <div className="grid grid-cols-1 md:grid-cols-[250px_1fr_auto] gap-4 items-end mb-2">
+        <div className="space-y-1">
+          <Label className="text-xs text-gray-500">Filtrar por Empresa</Label>
+          <Combobox
+            options={[
+              { value: "all", label: "Todas las empresas" },
+              ...(dataUser?.empresas_detalle?.map((e) => ({
+                value: e.id_empresa,
+                label: e.nombre,
+              })) || []),
+            ]}
+            value={empresaActiva}
+            onChange={handleEmpresaChange}
+          />
+        </div>
+
+        <div className="space-y-1">
+          <Label className="text-xs text-gray-500">Buscar</Label>
+          <Input
+            placeholder="Buscar por clave o nombre..."
+            value={filter}
+            onChange={handleFilterChange}
+          />
+        </div>
+
         <Button
-          className="w-full md:w-auto bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]"
+          className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]"
           onClick={() => {
             setEditPerm(null);
-            setOpenForm(true); // abrir modal para "nuevo"
+            setOpenForm(true);
           }}
         >
           <Plus className="h-4 w-4 mr-1" /> Nuevo
@@ -50,7 +86,10 @@ export default function TiposRegistro() {
       </div>
 
       <TiposRegistroTable
-        filter={filter}
+        page={page}
+        setPage={setPage}
+        id_empresa={empresaActiva}
+        filter={debouncedFilter}
         swrKey={key}
         onEdit={(perm, lista) => {
           setEditPerm(perm);
@@ -74,6 +113,8 @@ export default function TiposRegistro() {
         open={openForm}
         setOpen={setOpenForm}
         editRegistro={editPerm}
+        id_empresa_defecto={empresaActiva}
+        empresas={dataUser?.empresas_detalle}
         registros={registros}
         mutateKey={key}
       />
@@ -84,7 +125,7 @@ export default function TiposRegistro() {
         deleteId={deleteId}
         mutateKey={key}
       />
-      
+
       {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
       <AccesosRapidos />
     </div>

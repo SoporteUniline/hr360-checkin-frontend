@@ -1,20 +1,31 @@
 import useSWR from "swr";
 import { fetcherWithToken } from "@/lib/fetcher";
+import { useAuth } from "@/context/AuthContext";
 
 export default function useEmpleadosActivosData(
   idEmpresa,
-  page,
-  limit,
-  filtroNombre,
-  departamento,
-  estado,
-  fechaDesde
+  page = 1,
+  limit = 10,
+  filtroNombre = "",
+  departamento = "",
+  estado = "",
+  fechaDesde = ""
 ) {
-  let url = null;
+  const { dataUser } = useAuth();
+
+  let empresa = null;
 
   if (idEmpresa) {
+    empresa = idEmpresa;
+  } else if (dataUser?.empresas?.length) {
+    empresa = "all";
+  }
+
+  let url = null;
+
+  if (empresa) {
     url =
-      `/checador/empleados/activos?empresa=${idEmpresa}` +
+      `/checador/empleados/activos?empresa=${empresa}` +
       (filtroNombre ? `&nombre=${encodeURIComponent(filtroNombre)}` : "") +
       (departamento ? `&departamento=${departamento}` : "") +
       (estado ? `&estado=${estado}` : "") +

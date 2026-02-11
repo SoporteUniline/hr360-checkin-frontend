@@ -8,6 +8,10 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import AgruparOpciones from "@/components/AgruparOpciones";
 
 export default function AsistenciaFilters({
+  empresaActiva,
+  setEmpresaActiva,
+  empresas = [],
+  empleadosOptions = [],
   filtroEmpleado,
   setFiltroEmpleado,
   fechaInicio,
@@ -91,11 +95,20 @@ export default function AsistenciaFilters({
     {
       id: "empleado",
       label: "Empleado",
-      component: "input",
-      placeholder: "Buscar por nombre...",
+      component: "combobox",
+      options: [
+        { value: "", label: "Todos los empleados" },
+        ...empleadosOptions,
+      ],
       value: filtroEmpleado,
-      onChange: (e) => setFiltroEmpleado(e.target.value),
+      onChange: (value) => {
+        setFiltroEmpleado(value);
+        setPage(1);
+      },
+      placeholder: "Selecciona un empleado...",
+      emptyText: "No hay empleados disponibles.",
     },
+
     {
       id: "departamento",
       label: "Departamento",
@@ -157,6 +170,26 @@ export default function AsistenciaFilters({
         </Button>
       </div> */}
       <div className="p-4">
+        <div className="flex flex-col gap-2 mb-4">
+          <Label>Empresa</Label>
+          <Combobox
+            options={[
+              { value: "all", label: "Todas las empresas" },
+              ...empresas.map((e) => ({
+                value: e.id_empresa,
+                label: e.nombre,
+              })),
+            ]}
+            value={empresaActiva}
+            onChange={(val) => {
+              setEmpresaActiva(val === "all" ? "all" : Number(val));
+              setFiltroEmpleado("");
+              setPage(1);
+            }}
+            placeholder="Seleccionar empresa"
+          />
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtros.map((filtro) => (
             <div key={filtro.id} className="flex flex-col gap-2 w-full">

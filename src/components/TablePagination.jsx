@@ -20,11 +20,11 @@ import {
 export default function TablePagination({
   page,
   limit,
-  total,
+  total = 0,
   onPageChange,
   onLimitChange, // Opcional
 }) {
-  const totalPages = Math.ceil(total / limit);
+  const totalPages = Math.ceil(total / limit) || 1;
 
   // Detectar automáticamente si debe mostrar el selector
   const showLimitSelector = Boolean(onLimitChange);

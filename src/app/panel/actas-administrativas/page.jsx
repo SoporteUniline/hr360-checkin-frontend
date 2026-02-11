@@ -11,7 +11,7 @@ import { useAdministrativeMinutes } from "@/hooks/useAdministrativeMinutes";
 import useEmpleadosActivosData from "@/hooks/useEmpleadosActivos";
 import useTiposActa from "@/hooks/useTiposActa";
 import { PlusIcon } from "lucide-react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import { AdministrativeDetailsModal } from "@/components/AdministrativeDetailsModal";
 import {
@@ -25,8 +25,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { administrativeMinutesApi } from "@/lib/administrativeMinutesApi";
+import { useSnackbar } from "notistack";
 
 const page = () => {
+  const { enqueueSnackbar } = useSnackbar();
+  const [empresaSeleccionada, setEmpresaSeleccionada] = useState("all");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [filters, setFilters] = useState({
@@ -51,9 +54,10 @@ const page = () => {
     total,
     stats,
     isLoading,
-  } = useAdministrativeMinutes(dataUser?.id_empresa, page, limit, filters);
+  } = useAdministrativeMinutes(empresaSeleccionada, page, limit, filters);
 
   const limpiarFiltros = () => {
+    setEmpresaSeleccionada("all");
     setEmpleado("");
     setFolio("");
     setEstatus("");
@@ -100,10 +104,34 @@ const page = () => {
 
   const confirmDelete = async () => {
     if (!deleteRow) return;
-    await administrativeMinutesApi.eliminar(deleteRow.id_acta, dataUser?.id_empresa);
-    setDeleteRow(null);
-    await mutateActas?.();
+
+    try {
+      await administrativeMinutesApi.eliminar(
+        deleteRow.id_acta,
+        deleteRow.id_empresa
+      );
+
+      enqueueSnackbar("Acta eliminada correctamente", {
+        variant: "success",
+      });
+
+      setDeleteRow(null);
+      await mutateActas?.();
+    } catch (error) {
+      console.error("Error al eliminar acta:", error);
+
+      enqueueSnackbar(
+        error?.response?.data?.error || "Hubo un error al eliminar el acta",
+        {
+          variant: "error",
+        }
+      );
+    }
   };
+
+  useEffect(() => {
+    setPage(1);
+  }, [empresaSeleccionada]);
 
   return (
     <>
@@ -149,6 +177,9 @@ const page = () => {
       </div>
 
       <AdministrativeFilters
+        empresaSeleccionada={empresaSeleccionada}
+        setEmpresaSeleccionada={setEmpresaSeleccionada}
+        dataUser={dataUser}
         onChange={setFilters}
         empleado={empleado}
         setEmpleado={setEmpleado}
@@ -168,6 +199,7 @@ const page = () => {
           onView={onViewActa}
           onEdit={onEditActa}
           onDelete={onDeleteActa}
+          empresaSeleccionada={empresaSeleccionada}
         />
       </div>
 
@@ -216,15 +248,18 @@ const page = () => {
       />
 
       {/* Confirmación de eliminación (shadcn/ui) */}
-      <AlertDialog open={!!deleteRow} onOpenChange={(open) => !open && setDeleteRow(null)}>
+      <AlertDialog
+        open={!!deleteRow}
+        onOpenChange={(open) => !open && setDeleteRow(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar acta administrativa?</AlertDialogTitle>
             <AlertDialogDescription>
               {deleteRow
-                ? `Esta acción no se puede deshacer. Se eliminará el acta ${deleteRow?.folio || ""} del empleado ${
-                    deleteRow?.nombre_empleado || ""
-                  }.`
+                ? `Esta acción no se puede deshacer. Se eliminará el acta ${
+                    deleteRow?.folio || ""
+                  } del empleado ${deleteRow?.nombre_empleado || ""}.`
                 : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -241,7 +276,7 @@ const page = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      
+
       {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
       <AccesosRapidos />
     </>

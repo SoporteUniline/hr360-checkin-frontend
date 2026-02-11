@@ -20,6 +20,7 @@ export default function FormularioAsistenciasMasivas({
 }) {
   const { dataUser } = useAuth();
   const userTimezone = dataUser?.zona_horaria || "America/Mexico_City";
+  const [empresaSeleccionada, setEmpresaSeleccionada] = useState("all");
 
   const hoy = dayjs().tz(userTimezone).format("YYYY-MM-DD");
 
@@ -35,7 +36,7 @@ export default function FormularioAsistenciasMasivas({
   const { enqueueSnackbar } = useSnackbar();
 
   const { data: empleados, loading: loadingEmpleados } =
-    useEmpleadosActivosData(idEmpresa);
+    useEmpleadosActivosData(empresaSeleccionada);
   const { data: tiposPermiso, loading: loadingPermisos } =
     useTiposPermisoData();
 
@@ -65,17 +66,18 @@ export default function FormularioAsistenciasMasivas({
     setLoading(true);
 
     try {
-      const { data } = await axios.post(
+      await axios.post(
         `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/bulk-incident/register`,
-        form
+        {
+          ...form,
+          id_empresa: empresaSeleccionada,
+        }
       );
-
-      mutate(); // actualiza la lista si usas SWR
-
+      mutate();
       enqueueSnackbar("Asistencias registradas correctamente", {
         variant: "success",
       });
-      cerrarModal(); // cerrar modal al terminar
+      cerrarModal();
     } catch (error) {
       console.error(error);
       enqueueSnackbar("❌ Error al registrar asistencias", {
@@ -124,6 +126,27 @@ export default function FormularioAsistenciasMasivas({
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6">
           <div className="space-y-6">
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Empresa
+              </label>
+              <Combobox
+                options={[
+                  { value: "all", label: "Todas las empresas" },
+                  ...(dataUser?.empresas_detalle || []).map((e) => ({
+                    value: e.id_empresa,
+                    label: e.nombre,
+                  })),
+                ]}
+                value={empresaSeleccionada}
+                onChange={(val) => {
+                  setEmpresaSeleccionada(val === "all" ? "all" : Number(val));
+                  setForm({ ...form, id_empleado: "" }); // reset empleado al cambiar empresa
+                }}
+                placeholder="Seleccionar empresa"
+              />
+            </div>
+
             {/* Empleado */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">

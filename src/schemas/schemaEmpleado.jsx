@@ -105,8 +105,8 @@ export const schemaEmpleado = z
     id_empresa: z
       .union([z.string(), z.number()])
       .transform((val) => Number(val))
-      .refine((val) => !isNaN(val), {
-        message: "id_empresa debe ser un número válido",
+      .refine((val) => Number.isInteger(val) && val > 0, {
+        message: "Selecciona una empresa válida",
       }),
 
     id_jefe_inmediato: z.union([z.string(), z.number()]).nullable().optional(),

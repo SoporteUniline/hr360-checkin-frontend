@@ -1,20 +1,25 @@
-"use client";
-
-import * as React from "react";
-import axios from "axios";
+import axios from "@/lib/axios";
 import { Input } from "@/components/ui/input";
 import { Combobox } from "@/components/Combobox";
 import { useAuth } from "@/context/AuthContext";
 import { useSnackbar } from "notistack";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarDays } from "lucide-react";
 import dayjs from "dayjs";
 import useEmpleadosData from "@/hooks/useEmpleadosData";
+import { useEffect, useMemo, useState } from "react";
 
 export default function EntradasSalidasFilter({
+  empresaActiva,
+  setEmpresaActiva,
+  empresas = [],
   filtroEmpleado,
   setFiltroEmpleado,
   fecha,
@@ -33,8 +38,9 @@ export default function EntradasSalidasFilter({
   setEstado,
   setPage,
 }) {
-  const [departamentos, setDepartamentos] = React.useState([]);
-  const [loading, setLoading] = React.useState(false);
+  console.log(empresaActiva);
+  const [departamentos, setDepartamentos] = useState([]);
+  const [loading, setLoading] = useState(false);
   const { dataUser } = useAuth();
   const { enqueueSnackbar } = useSnackbar();
 
@@ -43,21 +49,21 @@ export default function EntradasSalidasFilter({
   // - Relación: `src/app/panel/permisos/page.jsx` (Input + dropdown de sugerencias)
   // - En este panel el texto seleccionado alimenta `nombre` (LIKE) en el backend.
   // =========================
-  const [isSuggestionsOpen, setIsSuggestionsOpen] = React.useState(false);
-  const [hoveredSuggestionIndex, setHoveredSuggestionIndex] = React.useState(-1);
+  const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
+  const [hoveredSuggestionIndex, setHoveredSuggestionIndex] = useState(-1);
 
   // Sugerencias: consultamos catálogo de empleados con el mismo hook que Permisos.
   // Nota: pedimos pocas filas para UI (8) y lo filtramos por el texto tecleado.
   const empleadosSugResp = useEmpleadosData(
-    dataUser?.id_empresa,
+    empresaActiva,
     1,
     8,
     filtroEmpleado,
     "",
     "",
-    ""
+    "",
   );
-  const sugerencias = React.useMemo(() => {
+  const sugerencias = useMemo(() => {
     const list = empleadosSugResp?.data?.data || [];
     return list.map((e) => ({
       id_empleado: e.id_empleado,
@@ -76,15 +82,18 @@ export default function EntradasSalidasFilter({
   };
 
   const fetchDepartamentos = async () => {
-    if (!dataUser?.id_empresa) return;
+    if (!empresaActiva || empresaActiva === "all") {
+      setDepartamentos([]);
+      return;
+    }
 
     try {
       setLoading(true);
       const res = await axios.get(
         `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/departamentos`,
         {
-          params: { id_empresa: dataUser.id_empresa },
-        }
+          params: { id_empresa: empresaActiva },
+        },
       );
 
       setDepartamentos([
@@ -102,9 +111,11 @@ export default function EntradasSalidasFilter({
     }
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
+    setDepartamento("");
+    setPage(1);
     fetchDepartamentos();
-  }, [dataUser?.id_empresa]);
+  }, [empresaActiva]);
 
   const estadoOptions = [
     { value: "", label: "Todos los estados" },
@@ -118,25 +129,18 @@ export default function EntradasSalidasFilter({
    *   - `page.jsx` guarda el estado `desde/hasta`
    *   - `useRelojChecador.js` manda `&desde=&hasta=` al backend
    */
-  const DatePickerFilter = ({
-    id,
-    label,
-    value,
-    onChange,
-    minISO,
-    maxISO,
-  }) => {
-    const [open, setOpen] = React.useState(false);
+  const DatePickerFilter = ({ id, label, value, onChange, minISO, maxISO }) => {
+    const [open, setOpen] = useState(false);
     // Controlar el mes visible del calendario:
     // - UX: cuando ya hay una fecha seleccionada, al abrir debe mostrar ese mes (no el mes actual).
     // - Se resetea al abrir el popover para reflejar el valor vigente.
-    const [calendarMonth, setCalendarMonth] = React.useState(new Date());
+    const [calendarMonth, setCalendarMonth] = useState(new Date());
 
     const selectedDate = value ? dayjs(value).toDate() : undefined;
     const minDate = minISO ? dayjs(minISO).toDate() : null;
     const maxDate = maxISO ? dayjs(maxISO).toDate() : null;
 
-    React.useEffect(() => {
+    useEffect(() => {
       if (!open) return;
       // Al abrir, “anclar” el calendario al mes de la fecha seleccionada (si existe).
       // Nota: `selected` NO controla el mes en react-day-picker v9, por eso esto es necesario.
@@ -156,7 +160,9 @@ export default function EntradasSalidasFilter({
               className="w-full justify-start text-left font-normal h-9"
             >
               <CalendarDays className="mr-2 h-4 w-4 opacity-70" />
-              {value ? dayjs(value).format("DD/MM/YYYY") : "Selecciona una fecha"}
+              {value
+                ? dayjs(value).format("DD/MM/YYYY")
+                : "Selecciona una fecha"}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
@@ -196,10 +202,28 @@ export default function EntradasSalidasFilter({
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-4">
       {/* Layout:
           - 5 filtros (Buscar, Desde, Hasta, Departamento, Estado)
           - En XL los alineamos en 5 columnas para que no “baje” visualmente el bloque de fechas */}
+      <div className="flex flex-col gap-2">
+        <Label>Empresa</Label>
+        <Combobox
+          options={[
+            { value: "all", label: "Todas las empresas" },
+            ...empresas.map((e) => ({
+              value: String(e.id_empresa),
+              label: e.nombre,
+            })),
+          ]}
+          value={empresaActiva}
+          onChange={(val) => {
+            setEmpresaActiva(val);
+            setPage(1);
+          }}
+          placeholder="Empresa"
+        />
+      </div>
       <div className="flex flex-col gap-2">
         <Label htmlFor="buscarEmpleado">Empleado</Label>
         <div className="relative">
@@ -229,17 +253,17 @@ export default function EntradasSalidasFilter({
               if (e.key === "ArrowDown") {
                 e.preventDefault();
                 setHoveredSuggestionIndex((prev) =>
-                  prev + 1 >= sugerencias.length ? 0 : prev + 1
+                  prev + 1 >= sugerencias.length ? 0 : prev + 1,
                 );
               } else if (e.key === "ArrowUp") {
                 e.preventDefault();
                 setHoveredSuggestionIndex((prev) =>
-                  prev - 1 < 0 ? sugerencias.length - 1 : prev - 1
+                  prev - 1 < 0 ? sugerencias.length - 1 : prev - 1,
                 );
               } else if (e.key === "Enter") {
                 e.preventDefault();
                 handleSelectEmpleado(
-                  sugerencias[hoveredSuggestionIndex] || sugerencias[0]
+                  sugerencias[hoveredSuggestionIndex] || sugerencias[0],
                 );
               } else if (e.key === "Escape") {
                 setIsSuggestionsOpen(false);
@@ -302,8 +326,17 @@ export default function EntradasSalidasFilter({
             setDepartamento(val);
             setPage(1);
           }}
-          placeholder={"Todos los departamentos"}
-          emptyText="No hay departamentos"
+          placeholder={
+            !empresaActiva || empresaActiva === "all"
+              ? "Selecciona una empresa primero"
+              : "Todos los departamentos"
+          }
+          emptyText={
+            !empresaActiva || empresaActiva === "all"
+              ? "Selecciona una empresa"
+              : "No hay departamentos"
+          }
+          disabled={!empresaActiva || empresaActiva === "all"}
           name="departamento"
         />
       </div>

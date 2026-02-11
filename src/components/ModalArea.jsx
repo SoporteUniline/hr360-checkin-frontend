@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Save, X } from "lucide-react";
 import AreaCheckMap from "@/components/AreaCheckMap";
+import { Combobox } from "./Combobox";
 
 export default function ModalArea({
   isOpen,
@@ -13,6 +14,8 @@ export default function ModalArea({
   onSave,
   initialData,
   loading,
+  empresas = [],
+  id_empresa_defecto,
 }) {
   const [formData, setFormData] = useState({
     nombre_area: "",
@@ -20,20 +23,24 @@ export default function ModalArea({
     longitud: null,
   });
 
+  // Unificamos la lógica de inicialización
   useEffect(() => {
-    if (!isOpen) {
-      setFormData({ nombre_area: "", latitud: null, longitud: null });
+    if (isOpen) {
+      if (initialData) {
+        // Si estamos editando, cargamos los datos existentes
+        setFormData(initialData);
+      } else {
+        // Si es nueva, reseteamos pero PRESERVAMOS la empresa por defecto
+        setFormData({
+          nombre_area: "",
+          latitud: null,
+          longitud: null,
+          // Si empresaActiva es "all" ponemos vacío, si no, ponemos el ID seleccionado
+          id_empresa: id_empresa_defecto === "all" ? "" : id_empresa_defecto,
+        });
+      }
     }
-  }, [isOpen]);
-
-  // 🧠 Esto es lo importante:
-  useEffect(() => {
-    if (initialData) {
-      setFormData(initialData);
-    } else {
-      setFormData({ nombre_area: "", latitud: null, longitud: null });
-    }
-  }, [initialData]);
+  }, [isOpen, initialData, id_empresa_defecto]);
 
   if (!isOpen) return null;
 
@@ -59,8 +66,24 @@ export default function ModalArea({
         </div>
 
         <div className="space-y-4">
+          {!formData.id_area && id_empresa_defecto === "all" && (
+            <div>
+              <Label className="mb-2">Seleccionar Empresa</Label>
+              <Combobox
+                options={empresas.map((e) => ({
+                  value: e.id_empresa,
+                  label: e.nombre,
+                }))}
+                value={formData.id_empresa}
+                onChange={(val) =>
+                  setFormData({ ...formData, id_empresa: val })
+                }
+              />
+            </div>
+          )}
+
           <div>
-            <Label>Nombre del Área</Label>
+            <Label className="mb-2">Nombre del Área</Label>
             <Input
               value={formData.nombre_area}
               onChange={(e) =>

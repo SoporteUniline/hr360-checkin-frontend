@@ -9,10 +9,12 @@ import FestivosTable from "./FestivosTable";
 import FestivoFormDialog from "./FestivoFormDialog";
 import FestivoDeleteDialog from "./FestivoDeleteDialog";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import { Label } from "@/components/ui/label";
+import { Combobox } from "@/components/Combobox";
 
 export default function Festivos() {
   const [filter, setFilter] = useState("");
-  const [debouncedFilter, setDebouncedFilter] = useState(""); // filtro con debounce
+  const [debouncedFilter, setDebouncedFilter] = useState("");
   const [festivos, setFestivos] = useState([]);
   const [editFestivo, setEditFestivo] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
@@ -20,20 +22,23 @@ export default function Festivos() {
   const [openFormModal, setOpenFormModal] = useState(false);
 
   const { dataUser } = useAuth();
-  const id_empresa = dataUser?.id_empresa;
+  const [empresaActiva, setEmpresaActiva] = useState(null);
+  const id_empresa = empresaActiva;
 
-  const key = `/checador/holidays/${id_empresa}`;
+  useEffect(() => {
+    if (dataUser?.empresas?.length > 0 && !empresaActiva) {
+      setEmpresaActiva("all");
+    }
+  }, [dataUser, empresaActiva]);
 
-  // Hook para aplicar debounce de 500ms
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedFilter(filter);
-    }, 500); // <-- aquí decides el tiempo de espera
-
-    return () => {
-      clearTimeout(handler);
-    };
+    }, 400);
+    return () => clearTimeout(handler);
   }, [filter]);
+
+  const key = id_empresa ? `/checador/holidays/${id_empresa}` : null;
 
   return (
     <div className="space-y-4">
@@ -45,23 +50,44 @@ export default function Festivos() {
         </p>
       </div>
 
-      <div className="mb-2 flex flex-col md:flex-row gap-3 items-center">
-        <Input
-          className="flex-1"
-          placeholder="Buscar por descripción..."
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        />
-        <Button
-          // Botón principal según `Colores.txt`
-          className="w-full md:w-auto bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]"
-          onClick={() => {
-            setEditFestivo(null);
-            setOpenFormModal(true);
-          }}
-        >
-          <Plus className="h-4 w-4 mr-1" /> Nuevo
-        </Button>
+      <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-[260px_1fr_auto] items-end">
+        <div className="flex flex-col gap-1">
+          <Label>Empresa</Label>
+          <Combobox
+            options={[
+              { value: "all", label: "Todas las empresas" },
+              ...(dataUser?.empresas_detalle?.map((e) => ({
+                value: e.id_empresa,
+                label: e.nombre,
+              })) || []),
+            ]}
+            value={empresaActiva}
+            onChange={(val) =>
+              setEmpresaActiva(val === "all" ? "all" : Number(val))
+            }
+            placeholder="Seleccionar empresa"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="festivo-search">Descripción</Label>
+          <Input
+            id="festivo-search"
+            placeholder="Buscar por descripción..."
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          />
+        </div>
+        <div className="flex sm:col-span-2 lg:col-span-1">
+          <Button
+            className="w-full lg:w-auto bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]"
+            onClick={() => {
+              setEditFestivo(null);
+              setOpenFormModal(true);
+            }}
+          >
+            <Plus className="h-4 w-4 mr-1" /> Nuevo
+          </Button>
+        </div>
       </div>
 
       <FestivosTable
@@ -93,6 +119,7 @@ export default function Festivos() {
         id_empresa={id_empresa}
         festivos={festivos}
         mutateKey={key}
+        empresas={dataUser?.empresas_detalle || []}
       />
 
       <FestivoDeleteDialog
@@ -101,7 +128,7 @@ export default function Festivos() {
         deleteId={deleteId}
         mutateKey={key}
       />
-      
+
       {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
       <AccesosRapidos />
     </div>

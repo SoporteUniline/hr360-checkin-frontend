@@ -44,6 +44,8 @@ export default function PermisoDialog({
   const { dataUser } = useAuth();
   // Nota: `dataUser` se usa en otras pantallas para auditoría; aquí no es necesario por ahora.
 
+  const [idEmpresaSeleccionada, setIdEmpresaSeleccionada] = useState("");
+
   // Estado del formulario (sin id_empleado aquí porque puede ser uno/muchos/todos)
   const [form, setForm] = useState({
     id_tipo_permiso: "",
@@ -79,15 +81,17 @@ export default function PermisoDialog({
 
   // Cargar empleados al abrir
   useEffect(() => {
-    if (!open || !idEmpresa) return;
+    if (!open || !idEmpresaSeleccionada) {
+      setEmpleados([]);
+      return;
+    }
+
     (async () => {
       try {
         const token = Cookies.get("token");
         const res = await axios.get(
-          `/checador/empleados/activos?empresa=${idEmpresa}&page=1&limit=1000`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          `/checador/empleados/activos?empresa=${idEmpresaSeleccionada}&page=1&limit=1000`,
+          { headers: { Authorization: `Bearer ${token}` } },
         );
         const list = Array.isArray(res.data?.data) ? res.data.data : [];
         const mapped = list.map((e) => ({
@@ -106,11 +110,23 @@ export default function PermisoDialog({
         setEmpleados([]);
       }
     })();
-  }, [open, idEmpresa, isEdit, editItem]);
+  }, [open, idEmpresaSeleccionada, isEdit, editItem]);
 
   // Rellenar datos del form al abrir/editar
   useEffect(() => {
     if (!open) return;
+    let inicial = "";
+    if (isEdit) {
+      inicial = String(editItem?.id_empresa || "");
+    } else if (idEmpresa && idEmpresa !== "all") {
+      inicial = String(idEmpresa);
+    }
+    // else if (dataUser?.empresas_detalle?.length > 0) {
+    //   inicial = String(dataUser.empresas_detalle[0].id_empresa);
+    // }
+    if (inicial) {
+      setIdEmpresaSeleccionada(inicial);
+    }
     setForm({
       id_tipo_permiso: String(editItem?.id_tipo_permiso || ""),
       fecha_inicio: editItem?.fecha_inicio
@@ -127,7 +143,7 @@ export default function PermisoDialog({
     setDiasPasadosPayload(null);
     setFechasPasadasPendientes([]);
     setOpenCancelDiasPasados(false);
-  }, [editItem, open]);
+  }, [editItem, open, idEmpresa, isEdit]);
 
   // Nota: antes se bloqueaba la edición cuando el periodo ya había finalizado.
   // Requerimiento nuevo: SIEMPRE permitir edición/cancelación, pero con validaciones.
@@ -183,7 +199,7 @@ export default function PermisoDialog({
             fecha_inicio: form.fecha_inicio,
             fecha_fin: form.fecha_fin || null,
             motivo: form.motivo || null,
-            id_empresa: idEmpresa,
+            id_empresa: Number(idEmpresaSeleccionada),
           });
         }
         // Si el estado cambió respecto al original, actualizar estado
@@ -193,7 +209,12 @@ export default function PermisoDialog({
             form.estado === "Cancelado" && Array.isArray(diasPasadosPayload)
               ? { dias_pasados: diasPasadosPayload }
               : null;
-          await permisosApi.actualizarEstado(editItem.id, form.estado, null, extra);
+          await permisosApi.actualizarEstado(
+            editItem.id,
+            form.estado,
+            null,
+            extra,
+          );
         }
         enqueueSnackbar("Permiso actualizado correctamente.", {
           variant: "success",
@@ -205,10 +226,10 @@ export default function PermisoDialog({
           fecha_inicio: form.fecha_inicio,
           fecha_fin: form.fecha_fin || null,
           motivo: form.motivo || null,
-          id_empresa: idEmpresa,
+          id_empresa: Number(idEmpresaSeleccionada || idEmpresa),
         }));
         const created = await Promise.all(
-          payloads.map((p) => permisosApi.crear(p))
+          payloads.map((p) => permisosApi.crear(p)),
         );
         // Aprobar automáticamente todos los creados
         const createdIds = created
@@ -217,8 +238,8 @@ export default function PermisoDialog({
         if (createdIds.length > 0) {
           await Promise.all(
             createdIds.map((permId) =>
-              permisosApi.actualizarEstado(permId, "Aprobado")
-            )
+              permisosApi.actualizarEstado(permId, "Aprobado"),
+            ),
           );
           enqueueSnackbar("Permiso(s) creado(s) correctamente.", {
             variant: "success",
@@ -241,11 +262,11 @@ export default function PermisoDialog({
   }
 
   const filteredEmpleados = empleados.filter((e) =>
-    e.nombre.toLowerCase().includes(empleadosBusqueda.trim().toLowerCase())
+    e.nombre.toLowerCase().includes(empleadosBusqueda.trim().toLowerCase()),
   );
 
   const arrayFiltered = tiposPermiso.filter(
-    (permiso) => permiso.es_permiso === 1
+    (permiso) => permiso.es_permiso === 1,
   );
 
   // Tipos de registro para reclasificación (se usa el mismo catálogo `tiposPermiso`).
@@ -311,242 +332,290 @@ export default function PermisoDialog({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={setOpen}>
-      {/* Ajuste responsivo:
+      <Dialog
+        open={open}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setIdEmpresaSeleccionada("");
+            setEmpleadosBusqueda("");
+            setErrors([]);
+          }
+          setOpen(isOpen);
+        }}
+      >
+        {/* Ajuste responsivo:
          - max-w-[95vw]: asegura que en móviles el modal no desborde el viewport.
          - sm:max-w-xl: mantiene el ancho previsto en pantallas >= sm.
          - max-h-[85vh] overflow-y-auto: permite scroll interno si el contenido crece.
          Relación: este modal se invoca desde `src/app/panel/permisos/page.jsx`. */}
-      <DialogContent className={`${styles.permisosTheme} max-w-[95vw] sm:max-w-xl max-h-[85vh] overflow-y-auto`}>
-        <DialogHeader>
-          <DialogTitle>
-            ➕ {isEdit ? "Editar Permiso" : "Nuevo Permiso"}
-          </DialogTitle>
-        </DialogHeader>
+        <DialogContent
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          className={`${styles.permisosTheme} max-w-[95vw] sm:max-w-xl max-h-[85vh] overflow-y-auto`}
+        >
+          <DialogHeader>
+            <DialogTitle>
+              ➕ {isEdit ? "Editar Permiso" : "Nuevo Permiso"}
+            </DialogTitle>
+          </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Tipo de permiso */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-4">
+            {/* En el JSX, quita el !isEdit para que siempre sea informativo */}
             <div className="space-y-2">
-              <Label>Tipo de Permiso</Label>
+              <Label>Empresa</Label>
               <Select
-                value={form.id_tipo_permiso}
-                onValueChange={(v) =>
-                  setForm((f) => ({ ...f, id_tipo_permiso: v }))
-                }
+                key={`select-empresa-${idEmpresaSeleccionada}`}
+                value={idEmpresaSeleccionada}
+                onValueChange={(v) => {
+                  setIdEmpresaSeleccionada(v);
+                  setEmpleadoIds([]);
+                  setEmpleadoId(""); // Limpiar también el ID simple
+                }}
+                disabled={isEdit} // No permitimos cambiar de empresa en un permiso ya creado
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar tipo..." />
-                </SelectTrigger>
-                <SelectContent
-                  className="max-h-64 overflow-y-auto"
-                  position="popper"
-                  align="start"
+                <SelectTrigger
+                  className={isEdit ? "bg-slate-100" : "border-orange-200"}
                 >
-                  {Array.isArray(arrayFiltered) &&
-                    arrayFiltered.map((t) => (
-                      <SelectItem key={t.id} value={String(t.id)}>
-                        {t.nombre}
+                  <SelectValue placeholder="Selecciona empresa..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {dataUser?.empresas_detalle?.length > 0 ? (
+                    dataUser.empresas_detalle.map((emp) => (
+                      <SelectItem
+                        key={emp.id_empresa}
+                        value={String(emp.id_empresa)}
+                      >
+                        {emp.nombre}
                       </SelectItem>
-                    ))}
+                    ))
+                  ) : (
+                    <SelectItem value="none" disabled>
+                      No hay empresas disponibles
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          {/* Selección de empleado en edición (simple) */}
-          {isEdit ? (
-            <div className="space-y-2">
-              <Label>Empleado</Label>
-              <select
-                className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm shadow-xs focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                value={empleadoId}
-                onChange={(e) => setEmpleadoId(e.target.value)}
-              >
-                {empleados.map((e) => (
-                  <option key={e.id} value={e.id}>
-                    {e.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
-          ) : null}
-
-          {/* Selección múltiple de empleados (creación) */}
-          {!isEdit ? (
-            <div className="space-y-2">
-              <Label>Empleados (selección múltiple)</Label>
-              <Input
-                placeholder="Buscar por nombre…"
-                value={empleadosBusqueda}
-                onChange={(e) => setEmpleadosBusqueda(e.target.value)}
-              />
-              {/* Limitar a 3 elementos visibles antes de hacer scroll */}
-              <div className="max-h-36 overflow-auto rounded-md border">
-                <ul className="divide-y">
-                  {filteredEmpleados.map((e) => {
-                    const checked = empleadoIds.includes(e.id);
-                    return (
-                      <li
-                        key={`emp-${e.id}`}
-                        className="flex items-center gap-3 p-2"
-                      >
-                        <input
-                          type="checkbox"
-                          className="size-4"
-                          checked={checked}
-                          onChange={() =>
-                            setEmpleadoIds((prev) =>
-                              prev.includes(e.id)
-                                ? prev.filter((x) => x !== e.id)
-                                : [...prev, e.id]
-                            )
-                          }
-                        />
-                        <div className="min-w-0">
-                          <div className="truncate">{e.nombre}</div>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
+            {/* Tipo de permiso */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Tipo de Permiso</Label>
+                <Select
+                  value={form.id_tipo_permiso}
+                  onValueChange={(v) =>
+                    setForm((f) => ({ ...f, id_tipo_permiso: v }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar tipo..." />
+                  </SelectTrigger>
+                  <SelectContent
+                    className="max-h-64 overflow-y-auto"
+                    position="popper"
+                    align="start"
+                  >
+                    {Array.isArray(arrayFiltered) &&
+                      arrayFiltered.map((t) => (
+                        <SelectItem key={t.id} value={String(t.id)}>
+                          {t.nombre}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <div>{empleadoIds.length} seleccionados</div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setEmpleadoIds(empleados.map((e) => e.id))}
-                  >
-                    Seleccionar todos
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setEmpleadoIds([])}
-                  >
-                    Limpiar
-                  </Button>
+            </div>
+
+            {isEdit ? (
+              <div className="space-y-2">
+                <Label>Empleado</Label>
+                <select
+                  className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm shadow-xs focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  value={empleadoId}
+                  onChange={(e) => setEmpleadoId(e.target.value)}
+                >
+                  {empleados.map((e) => (
+                    <option key={e.id} value={e.id}>
+                      {e.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
+
+            {/* Selección múltiple de empleados (creación) */}
+            {!isEdit ? (
+              <div className="space-y-2">
+                <Label>Empleados (selección múltiple)</Label>
+                <Input
+                  placeholder="Buscar por nombre…"
+                  value={empleadosBusqueda}
+                  onChange={(e) => setEmpleadosBusqueda(e.target.value)}
+                />
+                {/* Limitar a 3 elementos visibles antes de hacer scroll */}
+                <div className="max-h-36 overflow-auto rounded-md border">
+                  <ul className="divide-y">
+                    {filteredEmpleados.map((e) => {
+                      const checked = empleadoIds.includes(e.id);
+                      return (
+                        <li
+                          key={`emp-${e.id}`}
+                          className="flex items-center gap-3 p-2"
+                        >
+                          <input
+                            type="checkbox"
+                            className="size-4"
+                            checked={checked}
+                            onChange={() =>
+                              setEmpleadoIds((prev) =>
+                                prev.includes(e.id)
+                                  ? prev.filter((x) => x !== e.id)
+                                  : [...prev, e.id],
+                              )
+                            }
+                          />
+                          <div className="min-w-0">
+                            <div className="truncate">{e.nombre}</div>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <div>{empleadoIds.length} seleccionados</div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setEmpleadoIds(empleados.map((e) => e.id))}
+                    >
+                      Seleccionar todos
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setEmpleadoIds([])}
+                    >
+                      Limpiar
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ) : null}
+            ) : null}
 
-          {/* Fechas */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Fecha Inicio</Label>
-              <Input
-                type="date"
-                value={form.fecha_inicio}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, fecha_inicio: e.target.value }))
-                }
-              />
+            {/* Fechas */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Fecha Inicio</Label>
+                <Input
+                  type="date"
+                  value={form.fecha_inicio}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, fecha_inicio: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Fecha Fin</Label>
+                <Input
+                  type="date"
+                  value={form.fecha_fin}
+                  min={form.fecha_inicio || undefined}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, fecha_fin: e.target.value }))
+                  }
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Fecha Fin</Label>
-              <Input
-                type="date"
-                value={form.fecha_fin}
-                min={form.fecha_inicio || undefined}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, fecha_fin: e.target.value }))
-                }
-              />
-            </div>
-          </div>
 
-          {/* Estado (solo en modo edición) */}
-          {isEdit ? (
-            <div className="space-y-2">
-              <Label>Estado</Label>
-              {/*
-               * Si el permiso está Aprobado, solo permitir transición a Cancelado.
-               * Relación: `solicitudPermisoController.actualizarEstado` maneja la sincronización de asistencias.
-               */}
-              {(() => {
-                const estadoOriginal = editItem?.estado || form.estado;
-                const isApproved = estadoOriginal === "Aprobado";
-                return (
-                  <Select
-                    value={form.estado}
-                    onValueChange={handleEstadoChange}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {isApproved ? (
-                        <>
-                          <SelectItem value="Cancelado">Cancelado</SelectItem>
-                        </>
-                      ) : (
-                        <>
-                          <SelectItem value="Pendiente">Pendiente</SelectItem>
-                          <SelectItem value="Aprobado">Aprobado</SelectItem>
-                          <SelectItem value="Rechazado">Rechazado</SelectItem>
-                          <SelectItem value="Cancelado">Cancelado</SelectItem>
-                        </>
-                      )}
-                    </SelectContent>
-                  </Select>
-                );
-              })()}
-            </div>
-          ) : null}
+            {/* Estado (solo en modo edición) */}
+            {isEdit ? (
+              <div className="space-y-2">
+                <Label>Estado</Label>
+                {/*
+                 * Si el permiso está Aprobado, solo permitir transición a Cancelado.
+                 * Relación: `solicitudPermisoController.actualizarEstado` maneja la sincronización de asistencias.
+                 */}
+                {(() => {
+                  const estadoOriginal = editItem?.estado || form.estado;
+                  const isApproved = estadoOriginal === "Aprobado";
+                  return (
+                    <Select
+                      value={form.estado}
+                      onValueChange={handleEstadoChange}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {isApproved ? (
+                          <>
+                            <SelectItem value="Cancelado">Cancelado</SelectItem>
+                          </>
+                        ) : (
+                          <>
+                            <SelectItem value="Pendiente">Pendiente</SelectItem>
+                            <SelectItem value="Aprobado">Aprobado</SelectItem>
+                            <SelectItem value="Rechazado">Rechazado</SelectItem>
+                            <SelectItem value="Cancelado">Cancelado</SelectItem>
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  );
+                })()}
+              </div>
+            ) : null}
 
-          {/* Errores de validación */}
-          {errors.length > 0 ? (
-            <Alert variant="destructive">
-              <AlertTitle>Corrige los siguientes puntos</AlertTitle>
-              <AlertDescription>
-                <ul className="list-disc pl-5 space-y-1">
-                  {errors.map((er, i) => (
-                    <li key={`err-${i}`}>{er}</li>
-                  ))}
-                </ul>
-              </AlertDescription>
-            </Alert>
-          ) : null}
+            {/* Errores de validación */}
+            {errors.length > 0 ? (
+              <Alert variant="destructive">
+                <AlertTitle>Corrige los siguientes puntos</AlertTitle>
+                <AlertDescription>
+                  <ul className="list-disc pl-5 space-y-1">
+                    {errors.map((er, i) => (
+                      <li key={`err-${i}`}>{er}</li>
+                    ))}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            ) : null}
 
-          {/* Aviso de permiso vencido */}
-          {/* Antes se mostraba un aviso/bloqueo por permiso finalizado.
+            {/* Aviso de permiso vencido */}
+            {/* Antes se mostraba un aviso/bloqueo por permiso finalizado.
               Nuevo requerimiento: siempre permitir editar/cancelar, por eso se elimina. */}
 
-          {/* Motivo y notas */}
-          <div className="space-y-2">
-            <Label>Motivo / Observaciones</Label>
-            <Textarea
-              rows={4}
-              placeholder="Describe el motivo del permiso..."
-              value={form.motivo}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, motivo: e.target.value }))
-              }
-            />
+            {/* Motivo y notas */}
+            <div className="space-y-2">
+              <Label>Motivo / Observaciones</Label>
+              <Textarea
+                rows={4}
+                placeholder="Describe el motivo del permiso..."
+                value={form.motivo}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, motivo: e.target.value }))
+                }
+              />
+            </div>
           </div>
-        </div>
 
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => setOpen(false)}
-            disabled={loading}
-            className="bg-white border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={guardar}
-            disabled={loading}
-            className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)] transition-all hover:-translate-y-0.5"
-          >
-            💾 Guardar
-          </Button>
-        </DialogFooter>
-      </DialogContent>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={loading}
+              className="bg-white border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={guardar}
+              disabled={loading}
+              className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)] transition-all hover:-translate-y-0.5"
+            >
+              💾 Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </Dialog>
 
       {/* Modal requerido si se intenta cancelar con días ya pasados */}
@@ -570,7 +639,7 @@ export default function PermisoDialog({
             "Días pasados configurados. Ahora guarda para cancelar.",
             {
               variant: "info",
-            }
+            },
           );
         }}
       />

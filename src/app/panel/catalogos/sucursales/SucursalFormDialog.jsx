@@ -10,27 +10,45 @@ import {
 } from "@/components/ui/dialog";
 import axios from "axios";
 import { mutate } from "swr";
-import { useSnackbar } from "notistack";
+import { enqueueSnackbar, useSnackbar } from "notistack";
+import { Label } from "@/components/ui/label";
+import { Combobox } from "@/components/Combobox";
 
 export default function SucursalFormDialog({
   open,
   setOpen,
   editSuc,
-  id_empresa,
+  id_empresa_defecto,
+  empresas = [],
   sucursales = [],
   mutateKey,
 }) {
   const [nombre, setNombre] = useState("");
+  const [idEmpresaSeleccionada, setIdEmpresaSeleccionada] = useState(""); // Nuevo
   const [error, setError] = useState("");
-  const { enqueueSnackbar } = useSnackbar();
 
   useEffect(() => {
-    if (editSuc) setNombre(editSuc.nombre);
-    else setNombre("");
-    setError("");
-  }, [editSuc, open]);
+    if (open) {
+      if (editSuc) {
+        setNombre(editSuc.nombre);
+        setIdEmpresaSeleccionada(editSuc.id_empresa);
+      } else {
+        setNombre("");
+        // Si hay una empresa seleccionada en el filtro, la usamos, si no, vacío
+        setIdEmpresaSeleccionada(
+          id_empresa_defecto === "all" ? "" : id_empresa_defecto,
+        );
+      }
+      setError("");
+    }
+  }, [editSuc, open, id_empresa_defecto]);
 
   const handleSubmit = async () => {
+    if (!idEmpresaSeleccionada) {
+      setError("Debe seleccionar una empresa.");
+      return;
+    }
+
     if (!nombre.trim()) {
       setError("El nombre no puede estar vacío.");
       return;
@@ -39,7 +57,7 @@ export default function SucursalFormDialog({
     const existe = sucursales.some(
       (suc) =>
         suc.nombre.toLowerCase() === nombre.toLowerCase() &&
-        suc.id_sucursal !== editSuc?.id_sucursal
+        suc.id_sucursal !== editSuc?.id_sucursal,
     );
     if (existe) {
       setError("Ya existe una sucursal con este nombre.");
@@ -50,7 +68,7 @@ export default function SucursalFormDialog({
       if (editSuc) {
         await axios.put(
           `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/sucursales/${editSuc.id_sucursal}`,
-          { nombre }
+          { nombre },
         );
         enqueueSnackbar("Sucursal actualizada correctamente", {
           variant: "success",
@@ -58,14 +76,14 @@ export default function SucursalFormDialog({
       } else {
         await axios.post(
           `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/sucursales`,
-          { nombre, id_empresa }
+          { nombre, id_empresa: idEmpresaSeleccionada },
         );
         enqueueSnackbar("Sucursal agregada correctamente", {
           variant: "success",
         });
       }
       await mutate(
-        (key) => typeof key === "string" && key.startsWith(mutateKey)
+        (key) => typeof key === "string" && key.startsWith(mutateKey),
       );
 
       setOpen(false);
@@ -90,16 +108,33 @@ export default function SucursalFormDialog({
             {editSuc ? "Editar sucursal" : "Nueva sucursal"}
           </DialogTitle>
         </DialogHeader>
-        <div className="my-4 space-y-2">
-          <Input
-            placeholder="Nombre de la sucursal"
-            value={nombre}
-            onChange={(e) => {
-              setNombre(e.target.value);
-              setError("");
-            }}
-            className="w-full"
-          />
+        <div className="my-4 space-y-4">
+          {!editSuc && id_empresa_defecto === "all" && (
+            <div className="space-y-1">
+              <Label>Empresa</Label>
+              <Combobox
+                options={empresas.map((e) => ({
+                  value: e.id_empresa,
+                  label: e.nombre,
+                }))}
+                value={idEmpresaSeleccionada}
+                onChange={setIdEmpresaSeleccionada}
+              />
+            </div>
+          )}
+
+          <div className="space-y-1">
+            <Label>Nombre de la sucursal</Label>
+            <Input
+              placeholder="Nombre de la sucursal"
+              value={nombre}
+              onChange={(e) => {
+                setNombre(e.target.value);
+                setError("");
+              }}
+              className="w-full"
+            />
+          </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
         </div>
         <DialogFooter className="flex justify-end gap-2">

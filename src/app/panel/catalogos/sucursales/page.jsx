@@ -9,18 +9,22 @@ import SucursalesTable from "./SucursalesTable";
 import SucursalFormDialog from "./SucursalFormDialog";
 import SucursalDeleteDialog from "./SucursalDeleteDialog";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import { Label } from "@/components/ui/label";
+import { Combobox } from "@/components/Combobox";
+import useDebounce from "@/hooks/useDebounce";
 
 export default function Sucursales() {
   const [filter, setFilter] = useState("");
+  const debouncedFilter = useDebounce(filter, 500);
   const [sucursales, setSucursales] = useState([]);
   const [editSuc, setEditSuc] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [openFormModal, setOpenFormModal] = useState(false);
 
+  const [empresaActiva, setEmpresaActiva] = useState("all");
   const { dataUser } = useAuth();
-  const id_empresa = dataUser?.id_empresa;
-  const key = `/checador/sucursales?id_empresa=${id_empresa}`;
+  const key = `/checador/sucursales?id_empresa=${empresaActiva}&nombre=${debouncedFilter}`;
 
   return (
     <div className="space-y-4">
@@ -32,16 +36,33 @@ export default function Sucursales() {
         </p>
       </div>
 
-      <div className="mb-2 flex flex-col md:flex-row gap-3 items-center">
-        <Input
-          className="flex-1"
-          placeholder="Buscar sucursal..."
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        />
+      <div className="grid grid-cols-1 md:grid-cols-[250px_1fr_auto] gap-4 items-end mb-4">
+        <div className="flex flex-col gap-1">
+          <Label>Empresa</Label>
+          <Combobox
+            options={[
+              { value: "all", label: "Todas las empresas" },
+              ...(dataUser?.empresas_detalle?.map((e) => ({
+                value: e.id_empresa,
+                label: e.nombre,
+              })) || []),
+            ]}
+            value={empresaActiva}
+            onChange={(val) =>
+              setEmpresaActiva(val === "all" ? "all" : Number(val))
+            }
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label>Buscar</Label>
+          <Input
+            placeholder="Buscar por nombre de sucursal..."
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          />
+        </div>
         <Button
-          // Botón principal según `Colores.txt`
-          className="w-full md:w-auto bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]"
+          className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]"
           onClick={() => {
             setEditSuc(null);
             setOpenFormModal(true);
@@ -52,8 +73,8 @@ export default function Sucursales() {
       </div>
 
       <SucursalesTable
-        id_empresa={id_empresa}
-        filter={filter}
+        id_empresa={empresaActiva}
+        filter={debouncedFilter}
         swrKey={key}
         onEdit={(suc, lista) => {
           setEditSuc(suc);
@@ -77,7 +98,8 @@ export default function Sucursales() {
         open={openFormModal}
         setOpen={setOpenFormModal}
         editSuc={editSuc}
-        id_empresa={id_empresa}
+        empresas={dataUser?.empresas_detalle}
+        id_empresa_defecto={empresaActiva}
         sucursales={sucursales}
         mutateKey={key}
       />
@@ -88,7 +110,7 @@ export default function Sucursales() {
         deleteId={deleteId}
         mutateKey={key}
       />
-      
+
       {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
       <AccesosRapidos />
     </div>

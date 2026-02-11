@@ -10,7 +10,14 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Icon } from "@iconify/react";
 import { useSnackbar } from "notistack";
 import { useAuth } from "@/context/AuthContext";
@@ -29,7 +36,12 @@ function fmtDate(d) {
 
 function humanDate(isoDate) {
   const d = new Date(isoDate + "T00:00:00Z");
-  return d.toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" });
+  return d.toLocaleDateString("es-MX", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: "UTC",
+  });
 }
 
 function fileDate(isoDate) {
@@ -44,16 +56,28 @@ function fileDate(isoDate) {
 function EstadoPill({ value }) {
   const v = String(value || "").toLowerCase();
   // Sin colores: solo texto en escala de grises (diseño limpio para PDF y preview)
-  const label = v === "cerrado" ? "Completo" : (value || "—");
-  return <span className="inline-flex items-center justify-center rounded-full border border-gray-300 bg-gray-50 px-2 py-0.5 text-xs font-semibold text-gray-700">{label}</span>;
+  const label = v === "cerrado" ? "Completo" : value || "—";
+  return (
+    <span className="inline-flex items-center justify-center rounded-full border border-gray-300 bg-gray-50 px-2 py-0.5 text-xs font-semibold text-gray-700">
+      {label}
+    </span>
+  );
 }
 
 function MotivoPill({ value }) {
   if (!value) return <span className="text-zinc-500">—</span>;
   // Sin colores ni emojis: solo texto limpio (diseño para PDF y preview)
   // Eliminar emojis si existen en el valor
-  const cleanValue = String(value).replace(/[\u{1F300}-\u{1F9FF}]/gu, '').replace(/[\u{2600}-\u{26FF}]/gu, '').replace(/[\u{2700}-\u{27BF}]/gu, '').trim();
-  return <span className="inline-flex items-center justify-center rounded-full border border-gray-300 bg-gray-50 px-2 py-0.5 text-xs font-semibold text-gray-700">{cleanValue || "—"}</span>;
+  const cleanValue = String(value)
+    .replace(/[\u{1F300}-\u{1F9FF}]/gu, "")
+    .replace(/[\u{2600}-\u{26FF}]/gu, "")
+    .replace(/[\u{2700}-\u{27BF}]/gu, "")
+    .trim();
+  return (
+    <span className="inline-flex items-center justify-center rounded-full border border-gray-300 bg-gray-50 px-2 py-0.5 text-xs font-semibold text-gray-700">
+      {cleanValue || "—"}
+    </span>
+  );
 }
 
 export default function ReporteHorasPage() {
@@ -65,7 +89,7 @@ export default function ReporteHorasPage() {
   }, []);
 
   const { dataUser } = useAuth();
-  const empresaId = dataUser?.id_empresa || null;
+  const [empresaActiva, setEmpresaActiva] = useState("all");
   const { enqueueSnackbar } = useSnackbar();
 
   const [empleados, setEmpleados] = useState([]);
@@ -88,37 +112,64 @@ export default function ReporteHorasPage() {
 
   // Cargar empleados y puestos por empresa
   useEffect(() => {
-    if (!empresaId) return;
+    if (!dataUser) return;
     (async () => {
       try {
-        const auth = { headers: { Authorization: `Bearer ${Cookies.get("token") || ""}` } };
+        setLoading(true);
+        const auth = {
+          headers: { Authorization: `Bearer ${Cookies.get("token") || ""}` },
+        };
+
         const [eRes, pRes] = await Promise.all([
-          axios.get(`/checador/empleados?empresa=${empresaId}&page=1&limit=1000`, auth),
-          axios.get(`/checador/empleados/puestos?empresa=${empresaId}`, auth),
+          axios.get(
+            `/checador/empleados?empresa=${empresaActiva}&page=1&limit=1000`,
+            auth,
+          ),
+          axios.get(
+            `/checador/empleados/puestos?empresa=${empresaActiva}`,
+            auth,
+          ),
         ]);
 
         const emps = Array.isArray(eRes.data?.data) ? eRes.data.data : [];
         const empleadosMapped = emps.map((e) => ({
           id_empleado: e.id_empleado,
-          nombre_empleado: [e.nombre, e.apellido_paterno, e.apellido_materno].filter(Boolean).join(" "),
-          nombre_empresa: dataUser?.empresa?.nombre_empresa || "",
+          nombre_empleado: [e.nombre, e.apellido_paterno, e.apellido_materno]
+            .filter(Boolean)
+            .join(" "),
+          nombre_empresa: e.nombre_empresa || "N/A",
           puesto: e.puesto || null,
         }));
+
         setEmpleados(empleadosMapped);
-        if (empleadosMapped.length && !empleadoId) setEmpleadoId(String(empleadosMapped[0].id_empleado));
+
+        if (empleadosMapped.length > 0) {
+          setEmpleadoId(String(empleadosMapped[0].id_empleado));
+        } else {
+          setEmpleadoId("");
+        }
 
         const puestos = Array.isArray(pRes.data) ? pRes.data : [];
-        const nombres = [...new Set(puestos.map((p) => p.nombre_puesto).filter(Boolean))];
+        const nombres = [
+          ...new Set(puestos.map((p) => p.nombre_puesto).filter(Boolean)),
+        ];
         setCargos(nombres);
       } catch (err) {
-        enqueueSnackbar("No se pudieron cargar empleados o puestos", { variant: "error" });
+        console.error("Error cargando datos:", err);
+        enqueueSnackbar("No se pudieron cargar empleados o puestos", {
+          variant: "error",
+        });
+      } finally {
+        setLoading(false);
       }
     })();
-  }, [empresaId]);
+  }, [empresaActiva, dataUser]);
 
   const empleadosFiltrados = useMemo(() => {
     if (!cargo) return empleados;
-    return empleados.filter((e) => (e.puesto || "").toLowerCase() === cargo.toLowerCase());
+    return empleados.filter(
+      (e) => (e.puesto || "").toLowerCase() === cargo.toLowerCase(),
+    );
   }, [empleados, cargo]);
 
   const dialogResultados = useMemo(() => {
@@ -138,7 +189,9 @@ export default function ReporteHorasPage() {
   }
   function toggleTemp(id) {
     const sid = String(id);
-    setTempEmpleadoIds((prev) => (prev.includes(sid) ? prev.filter((x) => x !== sid) : [...prev, sid]));
+    setTempEmpleadoIds((prev) =>
+      prev.includes(sid) ? prev.filter((x) => x !== sid) : [...prev, sid],
+    );
   }
   function selectAllDialog() {
     const all = dialogResultados.map((e) => String(e.id_empleado));
@@ -150,24 +203,34 @@ export default function ReporteHorasPage() {
 
   async function handleGenerar() {
     if (!fechaInicio || !fechaFin) return;
-    if (!empresaId) {
-      enqueueSnackbar("Empresa no identificada", { variant: "warning" });
-      return;
-    }
     setLoading(true);
     try {
       let ids = [];
       if (multi) {
-        ids = empleadoIds.length ? empleadoIds : empleadosFiltrados.map((e) => String(e.id_empleado));
+        ids = empleadoIds.length
+          ? empleadoIds
+          : empleadosFiltrados.map((e) => String(e.id_empleado));
       } else {
-        if (!empleadoId) return; ids = [String(empleadoId)];
+        if (!empleadoId) return;
+        ids = [String(empleadoId)];
       }
-      const auth = { headers: { Authorization: `Bearer ${Cookies.get("token") || ""}` } };
-      const requests = ids.map((id) => axios.get(`/checador/reportes/horas`, { params: { empleadoId: id, fechaInicio, fechaFin }, ...auth }));
+      const auth = {
+        headers: { Authorization: `Bearer ${Cookies.get("token") || ""}` },
+      };
+      const requests = ids.map((id) =>
+        axios.get(`/checador/reportes/horas`, {
+          params: { empleadoId: id, fechaInicio, fechaFin },
+          ...auth,
+        }),
+      );
       const results = await Promise.all(requests);
-      const okReports = results.map((r) => r.data).filter((d) => d?.ok).map((d) => d.data);
+      const okReports = results
+        .map((r) => r.data)
+        .filter((d) => d?.ok)
+        .map((d) => d.data);
       setReportes(okReports);
-      if (okReports.length === 0) enqueueSnackbar("Sin datos en el periodo", { variant: "info" });
+      if (okReports.length === 0)
+        enqueueSnackbar("Sin datos en el periodo", { variant: "info" });
     } catch (err) {
       enqueueSnackbar("No se pudo generar el reporte", { variant: "error" });
     } finally {
@@ -216,94 +279,137 @@ export default function ReporteHorasPage() {
         .pb{page-break-after:always}
       `;
       const renderReport = (r) => {
-        const rows = r.dias.map((d) => {
-          // Calcular primera entrada y última salida cuando hay múltiples movimientos
-          let primeraEntrada = d.entrada;
-          let ultimaSalida = d.salida;
-          let totalHorasTrabajadas = d.horasHM;
-          
-          if (Array.isArray(d.movimientos) && d.movimientos.length > 0) {
-            // Obtener primera entrada de todos los movimientos
-            const entradasValidas = d.movimientos
-              .map(m => m.entrada)
-              .filter(Boolean)
-              .map(e => new Date(e))
-              .sort((a, b) => a - b);
-            if (entradasValidas.length > 0) {
-              primeraEntrada = entradasValidas[0].toISOString();
-            }
-            
-            // Obtener última salida de todos los movimientos
-            const salidasValidas = d.movimientos
-              .map(m => m.salida)
-              .filter(Boolean)
-              .map(s => new Date(s))
-              .sort((a, b) => b - a);
-            if (salidasValidas.length > 0) {
-              ultimaSalida = salidasValidas[0].toISOString();
-            }
-            
-            // Sumar todas las horas trabajadas de cada movimiento
-            const totalMinutos = d.movimientos.reduce((acc, m) => {
-              if (m.horasHM) {
-                const [horas, minutos] = m.horasHM.split(':').map(Number);
-                return acc + (horas * 60) + minutos;
+        const rows = r.dias
+          .map((d) => {
+            // Calcular primera entrada y última salida cuando hay múltiples movimientos
+            let primeraEntrada = d.entrada;
+            let ultimaSalida = d.salida;
+            let totalHorasTrabajadas = d.horasHM;
+
+            if (Array.isArray(d.movimientos) && d.movimientos.length > 0) {
+              // Obtener primera entrada de todos los movimientos
+              const entradasValidas = d.movimientos
+                .map((m) => m.entrada)
+                .filter(Boolean)
+                .map((e) => new Date(e))
+                .sort((a, b) => a - b);
+              if (entradasValidas.length > 0) {
+                primeraEntrada = entradasValidas[0].toISOString();
               }
-              return acc;
-            }, 0);
-            const horas = Math.floor(totalMinutos / 60);
-            const minutos = totalMinutos % 60;
-            totalHorasTrabajadas = `${horas}:${String(minutos).padStart(2, '0')}`;
-          }
-          
-          const e = primeraEntrada ? new Date(primeraEntrada).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "-";
-          const s = ultimaSalida ? new Date(ultimaSalida).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "-";
-          const estado = (d.estado || '').toLowerCase();
-          let badge = 'badge-info';
-          if (estado === 'presente') badge = 'badge-success';
-          else if (estado === 'ausente') badge = 'badge-danger';
-          else if (estado === 'tarde') badge = 'badge-warning';
-          return `
+
+              // Obtener última salida de todos los movimientos
+              const salidasValidas = d.movimientos
+                .map((m) => m.salida)
+                .filter(Boolean)
+                .map((s) => new Date(s))
+                .sort((a, b) => b - a);
+              if (salidasValidas.length > 0) {
+                ultimaSalida = salidasValidas[0].toISOString();
+              }
+
+              // Sumar todas las horas trabajadas de cada movimiento
+              const totalMinutos = d.movimientos.reduce((acc, m) => {
+                if (m.horasHM) {
+                  const [horas, minutos] = m.horasHM.split(":").map(Number);
+                  return acc + horas * 60 + minutos;
+                }
+                return acc;
+              }, 0);
+              const horas = Math.floor(totalMinutos / 60);
+              const minutos = totalMinutos % 60;
+              totalHorasTrabajadas = `${horas}:${String(minutos).padStart(
+                2,
+                "0",
+              )}`;
+            }
+
+            const e = primeraEntrada
+              ? new Date(primeraEntrada).toLocaleTimeString("es-MX", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "-";
+            const s = ultimaSalida
+              ? new Date(ultimaSalida).toLocaleTimeString("es-MX", {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : "-";
+            const estado = (d.estado || "").toLowerCase();
+            let badge = "badge-info";
+            if (estado === "presente") badge = "badge-success";
+            else if (estado === "ausente") badge = "badge-danger";
+            else if (estado === "tarde") badge = "badge-warning";
+            return `
             <tr>
               <td>${humanDate(d.fecha)}</td>
               <td style="text-align:center">${e}</td>
               <td style="text-align:center">${s}</td>
               <td style="text-align:center">${totalHorasTrabajadas}</td>
-              <td style="text-align:center"><span class="badge ${badge}">${d.estado || ''}</span></td>
-              <td>${d.motivo || ''}</td>
-              <td>${d.notas || ''}</td>
+              <td style="text-align:center"><span class="badge ${badge}">${
+              d.estado || ""
+            }</span></td>
+              <td>${d.motivo || ""}</td>
+              <td>${d.notas || ""}</td>
             </tr>
-            ${Array.isArray(d.movimientos) && d.movimientos.length > 1 ? `
+            ${
+              Array.isArray(d.movimientos) && d.movimientos.length > 1
+                ? `
               <tr>
                 <td colspan="7" class="details">
                   ${d.movimientos
-                    .filter(m => m.entrada && m.salida)
+                    .filter((m) => m.entrada && m.salida)
                     .map((m) => {
-                      const ee = m.entrada ? new Date(m.entrada).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : '-';
-                      const ss = m.salida ? new Date(m.salida).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' }) : '-';
-                      const horas = m.horasHM || '0:00';
+                      const ee = m.entrada
+                        ? new Date(m.entrada).toLocaleTimeString("es-MX", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "-";
+                      const ss = m.salida
+                        ? new Date(m.salida).toLocaleTimeString("es-MX", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "-";
+                      const horas = m.horasHM || "0:00";
                       return `Entrada: ${ee}  |  Salida: ${ss}  |  Horas: ${horas}`;
-                    }).join('\n')}
+                    })
+                    .join("\n")}
                 </td>
               </tr>
-            ` : ''}
+            `
+                : ""
+            }
           `;
-        }).join('');
+          })
+          .join("");
         return `
           <div class="card">
             <div class="topbar">
               <div class="title">Reporte de Horas Trabajadas</div>
-              <div class="subtitle">Generado el ${new Date().toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'})}</div>
+              <div class="subtitle">Generado el ${new Date().toLocaleDateString(
+                "es-MX",
+                { day: "numeric", month: "long", year: "numeric" },
+              )}</div>
             </div>
             <div class="sep"></div>
             <div class="meta-card">
               <div class="head">Información del Empleado</div>
               <table class="meta-table">
                 <tr>
-                  <td><span class="k">Empleado:</span> <span class="v">${r.empleado?.nombre_empleado || ''}</span></td>
-                  <td><span class="k">Empresa:</span> <span class="v">${r.empleado?.nombre_empresa || ''}</span></td>
-                  <td><span class="k">Periodo:</span> <span class="v">${humanDate(r.periodo.inicio)} al ${humanDate(r.periodo.fin)}</span></td>
-                  <td><span class="k">Días trabajados:</span> <span class="v">${r.resumen.diasTrabajados}</span></td>
+                  <td><span class="k">Empleado:</span> <span class="v">${
+                    r.empleado?.nombre_empleado || ""
+                  }</span></td>
+                  <td><span class="k">Empresa:</span> <span class="v">${
+                    r.empleado?.nombre_empresa || ""
+                  }</span></td>
+                  <td><span class="k">Periodo:</span> <span class="v">${humanDate(
+                    r.periodo.inicio,
+                  )} al ${humanDate(r.periodo.fin)}</span></td>
+                  <td><span class="k">Días trabajados:</span> <span class="v">${
+                    r.resumen.diasTrabajados
+                  }</span></td>
                 </tr>
               </table>
             </div>
@@ -324,23 +430,41 @@ export default function ReporteHorasPage() {
             <div class="summary-card">
               <table class="summary-table">
                 <tr>
-                  <td><div class="h">Total Horas</div><div class="v">${r.resumen.totalHoras}</div><div class="s">en el periodo</div></td>
-                  <td><div class="h">Días Trabajados</div><div class="v">${r.resumen.diasTrabajados}</div><div class="s">días únicos</div></td>
-                  <td><div class="h">Promedio Diario</div><div class="v">${r.resumen.promedioHoras}</div><div class="s">horas/día</div></td>
+                  <td><div class="h">Total Horas</div><div class="v">${
+                    r.resumen.totalHoras
+                  }</div><div class="s">en el periodo</div></td>
+                  <td><div class="h">Días Trabajados</div><div class="v">${
+                    r.resumen.diasTrabajados
+                  }</div><div class="s">días únicos</div></td>
+                  <td><div class="h">Promedio Diario</div><div class="v">${
+                    r.resumen.promedioHoras
+                  }</div><div class="s">horas/día</div></td>
                 </tr>
               </table>
             </div>
           </div>`;
       };
-      const body = reportes.map((r, i) => `${renderReport(r)}${i < reportes.length - 1 ? '<div class="pb"></div>' : ''}`).join("");
+      const body = reportes
+        .map(
+          (r, i) =>
+            `${renderReport(r)}${
+              i < reportes.length - 1 ? '<div class="pb"></div>' : ""
+            }`,
+        )
+        .join("");
       const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${baseCSS}</style></head><body>${body}</body></html>`;
-      const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8" });
+      const blob = new Blob([html], {
+        type: "application/vnd.ms-excel;charset=utf-8",
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       let xlsName = "reporte_horas_multiples.xls";
       if (reportes.length === 1) {
-        const emp = (reportes[0]?.empleado?.nombre_empleado || "empleado").replace(/[\\/:*?"<>|]/g, "").replace(/\s+/g, " ").trim();
+        const emp = (reportes[0]?.empleado?.nombre_empleado || "empleado")
+          .replace(/[\\/:*?"<>|]/g, "")
+          .replace(/\s+/g, " ")
+          .trim();
         const fi = fileDate(fechaInicio);
         const ff = fileDate(fechaFin);
         xlsName = `${emp}_${fi}_al_${ff}.xls`;
@@ -396,7 +520,8 @@ export default function ReporteHorasPage() {
           // Si la siguiente fila es de detalle (colspan), la unimos al mismo bloque
           if (i + 1 < rows.length) {
             const next = rows[i + 1];
-            const spanCell = next && next.querySelector && next.querySelector("td[colspan]");
+            const spanCell =
+              next && next.querySelector && next.querySelector("td[colspan]");
             if (spanCell) {
               const nextRect = next.getBoundingClientRect();
               bottom = nextRect.bottom - containerTop;
@@ -439,8 +564,11 @@ export default function ReporteHorasPage() {
       // (línea separadora + leyenda + numeración). También se usa para que el
       // contenido de la imagen no "pegue" contra el pie ni lo tape.
       const footerReserved = 42; // pt
-      const usablePageHeight = pageHeight - marginTop - marginBottom - footerReserved;
-      const blocks = Array.from(reportRef.current.querySelectorAll('[data-report-block="true"]'));
+      const usablePageHeight =
+        pageHeight - marginTop - marginBottom - footerReserved;
+      const blocks = Array.from(
+        reportRef.current.querySelectorAll('[data-report-block="true"]'),
+      );
 
       // Mapa compartido entre `onclone` y el bucle principal para
       // guardar los puntos de corte seguros de cada bloque clonado.
@@ -472,11 +600,13 @@ export default function ReporteHorasPage() {
           doc.head.appendChild(style);
 
           // 2) Eliminar hojas de estilo externas y embebidas con colores modernos
-          const links = Array.from(doc.querySelectorAll('link[rel="stylesheet"], style'));
+          const links = Array.from(
+            doc.querySelectorAll('link[rel="stylesheet"], style'),
+          );
           links.forEach((l) => l.parentNode && l.parentNode.removeChild(l));
 
           // 3) Reinyectar CSS mínimo seguro para PDF
-          const safeStyle = doc.createElement('style');
+          const safeStyle = doc.createElement("style");
           safeStyle.textContent = `
             *{box-sizing:border-box}
             @page { size: A4; margin: 0 }
@@ -525,287 +655,376 @@ export default function ReporteHorasPage() {
           doc.head.appendChild(safeStyle);
 
           // 4) Mapear estructura de reporte a clases PDF y forzar badges
-          const props = ['color','backgroundColor','borderColor','borderTopColor','borderRightColor','borderBottomColor','borderLeftColor','outlineColor','fill','stroke'];
-          const SAFE = { color:'#111827', backgroundColor:'#ffffff', borderColor:'#e5e7eb', outlineColor:'#e5e7eb', fill:'#111827', stroke:'#111827' };
-          const hasModern = (v) => v && (v.includes('oklch(') || v.includes('lab(') || v.startsWith('color(') || v.includes('color-mix('));
+          const props = [
+            "color",
+            "backgroundColor",
+            "borderColor",
+            "borderTopColor",
+            "borderRightColor",
+            "borderBottomColor",
+            "borderLeftColor",
+            "outlineColor",
+            "fill",
+            "stroke",
+          ];
+          const SAFE = {
+            color: "#111827",
+            backgroundColor: "#ffffff",
+            borderColor: "#e5e7eb",
+            outlineColor: "#e5e7eb",
+            fill: "#111827",
+            stroke: "#111827",
+          };
+          const hasModern = (v) =>
+            v &&
+            (v.includes("oklch(") ||
+              v.includes("lab(") ||
+              v.startsWith("color(") ||
+              v.includes("color-mix("));
           const win = doc.defaultView || window;
 
-          const clonedBlocks = Array.from(doc.querySelectorAll('[data-report-block="true"]'));
+          const clonedBlocks = Array.from(
+            doc.querySelectorAll('[data-report-block="true"]'),
+          );
           for (const block of clonedBlocks) {
             // asegurar ancho A4 (~794px @96dpi) para texto a escala 1:1
-            block.style.width = '794px';
-            block.style.margin = '0 auto';
-            block.classList.add('pdf-card');
+            block.style.width = "794px";
+            block.style.margin = "0 auto";
+            block.classList.add("pdf-card");
             // 4.1) Tomar el topbar de PREVIEW y transformarlo a PDF (sin duplicados)
-            const previewTopbar = block.querySelector('[data-pdf-topbar="true"]');
+            const previewTopbar = block.querySelector(
+              '[data-pdf-topbar="true"]',
+            );
             if (previewTopbar) {
-              previewTopbar.className = 'pdf-topbar';
+              previewTopbar.className = "pdf-topbar";
               // Asegurar que HR360 tenga el estilo correcto (grande, negrita, sin texto adicional)
-              const brandDiv = previewTopbar.querySelector('div:first-child');
+              const brandDiv = previewTopbar.querySelector("div:first-child");
               if (brandDiv) {
-                brandDiv.className = 'brand';
-                const brandText = brandDiv.querySelector('div:first-child');
-                if (brandText && brandText.textContent.includes('HR360')) {
-                  brandText.style.fontWeight = '800';
-                  brandText.style.fontSize = '20pt';
-                  brandText.style.color = '#111827';
-                  brandText.style.lineHeight = '1';
+                brandDiv.className = "brand";
+                const brandText = brandDiv.querySelector("div:first-child");
+                if (brandText && brandText.textContent.includes("HR360")) {
+                  brandText.style.fontWeight = "800";
+                  brandText.style.fontSize = "20pt";
+                  brandText.style.color = "#111827";
+                  brandText.style.lineHeight = "1";
                   // Eliminar "Recursos Humanos" si existe
-                  const subText = brandDiv.querySelector('div:last-child');
-                  if (subText && subText.textContent.includes('Recursos')) {
+                  const subText = brandDiv.querySelector("div:last-child");
+                  if (subText && subText.textContent.includes("Recursos")) {
                     subText.parentNode.removeChild(subText);
                   }
                 }
               }
               // Asegurar que el título y fecha tengan el estilo correcto
-              const rightDiv = previewTopbar.querySelector('div:last-child');
+              const rightDiv = previewTopbar.querySelector("div:last-child");
               if (rightDiv) {
-                rightDiv.className = 'right';
-                const titleDiv = rightDiv.querySelector('div:first-child');
-                const dateDiv = rightDiv.querySelector('div:last-child');
+                rightDiv.className = "right";
+                const titleDiv = rightDiv.querySelector("div:first-child");
+                const dateDiv = rightDiv.querySelector("div:last-child");
                 if (titleDiv) {
-                  titleDiv.style.fontWeight = '600';
-                  titleDiv.style.fontSize = '11pt';
-                  titleDiv.style.color = '#111827';
-                  titleDiv.style.marginBottom = '2px';
+                  titleDiv.style.fontWeight = "600";
+                  titleDiv.style.fontSize = "11pt";
+                  titleDiv.style.color = "#111827";
+                  titleDiv.style.marginBottom = "2px";
                 }
                 if (dateDiv) {
-                  dateDiv.style.fontSize = '9pt';
-                  dateDiv.style.color = '#6b7280';
+                  dateDiv.style.fontSize = "9pt";
+                  dateDiv.style.color = "#6b7280";
                 }
               }
               // Eliminar línea separadora antigua si existe
               const hrPreview = previewTopbar.nextElementSibling;
-              if (hrPreview && (String(hrPreview.className || '').includes('bg-') || String(hrPreview.className || '').includes('h-px'))) {
+              if (
+                hrPreview &&
+                (String(hrPreview.className || "").includes("bg-") ||
+                  String(hrPreview.className || "").includes("h-px"))
+              ) {
                 hrPreview.parentNode.removeChild(hrPreview);
               }
               // Añadir línea separadora limpia y delgada
-              const hr = doc.createElement('div');
-              hr.className = 'pdf-hr';
-              previewTopbar.parentNode.insertBefore(hr, previewTopbar.nextSibling);
+              const hr = doc.createElement("div");
+              hr.className = "pdf-hr";
+              previewTopbar.parentNode.insertBefore(
+                hr,
+                previewTopbar.nextSibling,
+              );
             }
             // 4.2) Ajustar la sección de metadatos existente y quitar el encabezado interior si existe
             const metaAttr = block.querySelector('[data-meta-section="true"]');
-            const summaryAttr = block.querySelector('[data-summary-section="true"]');
+            const summaryAttr = block.querySelector(
+              '[data-summary-section="true"]',
+            );
             if (metaAttr && summaryAttr) {
               // Nuevo layout: grid de encabezado (meta izquierda, resumen derecha)
-              const grid = doc.createElement('div');
-              grid.className = 'pdf-header-grid';
+              const grid = doc.createElement("div");
+              grid.className = "pdf-header-grid";
               // meta
-              const metaCard = doc.createElement('div');
-              metaCard.className = 'pdf-meta-card';
-              const body = doc.createElement('div'); body.className = 'body';
-              metaAttr.classList.add('pdf-meta');
+              const metaCard = doc.createElement("div");
+              metaCard.className = "pdf-meta-card";
+              const body = doc.createElement("div");
+              body.className = "body";
+              metaAttr.classList.add("pdf-meta");
               // Aplicar bordes y padding a cada columna
-              const items = metaAttr.querySelectorAll(':scope > div');
+              const items = metaAttr.querySelectorAll(":scope > div");
               items.forEach((it, index) => {
-                it.style.borderRight = index < items.length - 1 ? '1px solid #d1d5db' : 'none';
-                it.style.padding = '0 12px';
+                it.style.borderRight =
+                  index < items.length - 1 ? "1px solid #d1d5db" : "none";
+                it.style.padding = "0 12px";
                 const label = it.firstElementChild;
                 const value = it.lastElementChild;
                 if (label) {
-                  label.className = 'label';
-                  label.style.fontSize = '7.5pt';
-                  label.style.color = '#6b7280';
-                  label.style.textTransform = 'uppercase';
-                  label.style.fontWeight = '600';
-                  label.style.marginBottom = '4px';
-                  label.style.letterSpacing = '0.5px';
+                  label.className = "label";
+                  label.style.fontSize = "7.5pt";
+                  label.style.color = "#6b7280";
+                  label.style.textTransform = "uppercase";
+                  label.style.fontWeight = "600";
+                  label.style.marginBottom = "4px";
+                  label.style.letterSpacing = "0.5px";
                 }
                 if (value) {
-                  value.className = 'value';
-                  value.style.fontSize = '10pt';
-                  value.style.fontWeight = '700';
-                  value.style.color = '#111827';
-                  value.style.lineHeight = '1.4';
+                  value.className = "value";
+                  value.style.fontSize = "10pt";
+                  value.style.fontWeight = "700";
+                  value.style.color = "#111827";
+                  value.style.lineHeight = "1.4";
                 }
               });
               // Aplicar borde izquierdo al contenedor
-              metaAttr.style.borderLeft = '1px solid #d1d5db';
-              metaAttr.style.padding = '0';
-              metaAttr.style.background = 'transparent';
+              metaAttr.style.borderLeft = "1px solid #d1d5db";
+              metaAttr.style.padding = "0";
+              metaAttr.style.background = "transparent";
               body.appendChild(metaAttr);
               metaCard.appendChild(body);
               // summary
-              const summaryCard = doc.createElement('div');
-              summaryCard.className = 'pdf-summary-card';
-              summaryAttr.classList.add('pdf-summary');
+              const summaryCard = doc.createElement("div");
+              summaryCard.className = "pdf-summary-card";
+              summaryAttr.classList.add("pdf-summary");
               // Asegurar que los elementos del summary tengan los estilos correctos (fondo gris claro)
-              summaryAttr.style.border = '1px solid #d1d5db';
-              summaryAttr.style.borderRadius = '2px';
-              summaryAttr.style.background = '#f3f4f6';
-              summaryAttr.style.overflow = 'hidden';
-              const summaryDivs = summaryAttr.querySelectorAll(':scope > div');
+              summaryAttr.style.border = "1px solid #d1d5db";
+              summaryAttr.style.borderRadius = "2px";
+              summaryAttr.style.background = "#f3f4f6";
+              summaryAttr.style.overflow = "hidden";
+              const summaryDivs = summaryAttr.querySelectorAll(":scope > div");
               summaryDivs.forEach((div, index) => {
-                div.style.textAlign = 'center';
-                div.style.padding = '12px 8px';
-                div.style.borderRight = index < summaryDivs.length - 1 ? '1px solid #d1d5db' : 'none';
-                div.style.background = '#f3f4f6';
+                div.style.textAlign = "center";
+                div.style.padding = "12px 8px";
+                div.style.borderRight =
+                  index < summaryDivs.length - 1 ? "1px solid #d1d5db" : "none";
+                div.style.background = "#f3f4f6";
                 // Buscar elementos por atributo data para mayor precisión
                 const label = div.querySelector('[data-summary-label="true"]');
                 const value = div.querySelector('[data-summary-value="true"]');
                 // Si no se encuentran por atributo, buscar por contenido
                 const children = Array.from(div.children);
-                const labelFallback = label || children.find(el => {
-                  const text = (el.textContent || '').trim();
-                  return text === 'Total Horas' || text === 'Días' || text === 'Promedio';
-                });
-                const valueFallback = value || children.find(el => {
-                  const text = (el.textContent || '').trim();
-                  return text && (text.match(/^\d+$/) || text.match(/^\d+:\d+$/)) && !text.includes('Total') && !text.includes('Días') && !text.includes('Promedio');
-                });
+                const labelFallback =
+                  label ||
+                  children.find((el) => {
+                    const text = (el.textContent || "").trim();
+                    return (
+                      text === "Total Horas" ||
+                      text === "Días" ||
+                      text === "Promedio"
+                    );
+                  });
+                const valueFallback =
+                  value ||
+                  children.find((el) => {
+                    const text = (el.textContent || "").trim();
+                    return (
+                      text &&
+                      (text.match(/^\d+$/) || text.match(/^\d+:\d+$/)) &&
+                      !text.includes("Total") &&
+                      !text.includes("Días") &&
+                      !text.includes("Promedio")
+                    );
+                  });
                 if (labelFallback) {
-                  labelFallback.style.fontSize = '7pt';
-                  labelFallback.style.color = '#6b7280';
-                  labelFallback.style.textTransform = 'uppercase';
-                  labelFallback.style.fontWeight = '600';
-                  labelFallback.style.marginBottom = '6px';
-                  labelFallback.style.letterSpacing = '0.5px';
-                  labelFallback.style.display = 'block';
-                  labelFallback.style.visibility = 'visible';
-                  labelFallback.style.opacity = '1';
+                  labelFallback.style.fontSize = "7pt";
+                  labelFallback.style.color = "#6b7280";
+                  labelFallback.style.textTransform = "uppercase";
+                  labelFallback.style.fontWeight = "600";
+                  labelFallback.style.marginBottom = "6px";
+                  labelFallback.style.letterSpacing = "0.5px";
+                  labelFallback.style.display = "block";
+                  labelFallback.style.visibility = "visible";
+                  labelFallback.style.opacity = "1";
                 }
                 if (valueFallback) {
-                  valueFallback.style.fontSize = '16pt';
-                  valueFallback.style.fontWeight = '700';
-                  valueFallback.style.color = '#111827';
-                  valueFallback.style.lineHeight = '1.2';
-                  valueFallback.style.marginBottom = '0';
-                  valueFallback.style.display = 'block';
-                  valueFallback.style.visibility = 'visible';
-                  valueFallback.style.opacity = '1';
+                  valueFallback.style.fontSize = "16pt";
+                  valueFallback.style.fontWeight = "700";
+                  valueFallback.style.color = "#111827";
+                  valueFallback.style.lineHeight = "1.2";
+                  valueFallback.style.marginBottom = "0";
+                  valueFallback.style.display = "block";
+                  valueFallback.style.visibility = "visible";
+                  valueFallback.style.opacity = "1";
                   // Asegurar que el contenido de texto esté presente
-                  if (!valueFallback.textContent || valueFallback.textContent.trim() === '') {
+                  if (
+                    !valueFallback.textContent ||
+                    valueFallback.textContent.trim() === ""
+                  ) {
                     // Intentar obtener el valor del atributo o del texto original
-                    const originalText = valueFallback.getAttribute('data-original-value') || '';
+                    const originalText =
+                      valueFallback.getAttribute("data-original-value") || "";
                     if (originalText) {
                       valueFallback.textContent = originalText;
                     }
                   }
                 }
                 // Ocultar cualquier subtítulo adicional
-                children.forEach(child => {
-                  const text = (child.textContent || '').trim();
-                  if (text.includes('en el periodo') || text.includes('días trabajados') || text.includes('horas/día')) {
-                    child.style.display = 'none';
+                children.forEach((child) => {
+                  const text = (child.textContent || "").trim();
+                  if (
+                    text.includes("en el periodo") ||
+                    text.includes("días trabajados") ||
+                    text.includes("horas/día")
+                  ) {
+                    child.style.display = "none";
                   }
                 });
               });
               summaryCard.appendChild(summaryAttr);
               // insertar debajo de la barra superior
-              const insertAfter = block.querySelector('.pdf-hr')?.nextSibling || block.firstChild;
+              const insertAfter =
+                block.querySelector(".pdf-hr")?.nextSibling || block.firstChild;
               block.insertBefore(grid, insertAfter);
               grid.appendChild(metaCard);
               grid.appendChild(summaryCard);
             } else {
               // Compatibilidad con estructura anterior por índices
-              const sections = block.querySelectorAll('section');
+              const sections = block.querySelectorAll("section");
               if (sections[0]) {
-                const metaCard = doc.createElement('div');
-                metaCard.className = 'pdf-meta-card';
-                const head = doc.createElement('div'); head.className = 'head'; head.textContent = 'Información del Empleado';
-                const body = doc.createElement('div'); body.className = 'body';
-                const insertAfter = block.querySelector('.pdf-hr')?.nextSibling || block.firstChild;
+                const metaCard = doc.createElement("div");
+                metaCard.className = "pdf-meta-card";
+                const head = doc.createElement("div");
+                head.className = "head";
+                head.textContent = "Información del Empleado";
+                const body = doc.createElement("div");
+                body.className = "body";
+                const insertAfter =
+                  block.querySelector(".pdf-hr")?.nextSibling ||
+                  block.firstChild;
                 block.insertBefore(metaCard, insertAfter);
-                sections[0].classList.add('pdf-meta');
+                sections[0].classList.add("pdf-meta");
                 body.appendChild(sections[0]);
-                metaCard.appendChild(head); metaCard.appendChild(body);
-                const items = sections[0].querySelectorAll(':scope > div');
+                metaCard.appendChild(head);
+                metaCard.appendChild(body);
+                const items = sections[0].querySelectorAll(":scope > div");
                 for (const it of items) {
-                  const label = it.firstElementChild; const value = it.lastElementChild;
-                  if (label) label.className = 'label';
-                  if (value) value.className = 'value';
+                  const label = it.firstElementChild;
+                  const value = it.lastElementChild;
+                  if (label) label.className = "label";
+                  if (value) value.className = "value";
                 }
               }
               // Resumen inferior eliminado: el totalizado ya está arriba
             }
 
-          const bodyRows = block.querySelectorAll('table tbody tr');
-          for (const tr of bodyRows) {
-            const tds = tr.children; if (!tds || tds.length === 0) continue;
-            if (tds.length >= 6) {
-              // Columna ESTADO (índice 4): sin color, solo texto
-              const tdEstado = tds[4];
-              const textEstado = (tdEstado.textContent || '').trim();
-              const lowEstado = textEstado.toLowerCase();
-              const shownEstado = (lowEstado === 'cerrado') ? 'Completo' : (textEstado || '');
-              tdEstado.style.textAlign = 'center';
-              tdEstado.style.backgroundColor = '#f9fafb';
-              tdEstado.style.color = '#111827';
-              tdEstado.style.border = '1px solid #e5e7eb';
-              tdEstado.style.padding = '4px 8px';
-              tdEstado.style.borderRadius = '4px';
-              tdEstado.innerHTML = shownEstado;
-              
-              // Columna MOTIVO (índice 5): sin color ni emojis, solo texto limpio
-              const tdMotivo = tds[5];
-              const textMotivo = (tdMotivo.textContent || '').trim();
-              // Eliminar emojis del motivo
-              const cleanMotivo = textMotivo.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').replace(/[\u{2600}-\u{26FF}]/gu, '').replace(/[\u{2700}-\u{27BF}]/gu, '').trim();
-              tdMotivo.style.backgroundColor = '#f9fafb';
-              tdMotivo.style.color = '#111827';
-              tdMotivo.style.border = '1px solid #e5e7eb';
-              tdMotivo.style.padding = '4px 8px';
-              tdMotivo.style.borderRadius = '4px';
-              tdMotivo.innerHTML = cleanMotivo || '—';
-            } else {
-              // Fila de detalle (colSpan), forzar salto de línea conservado
-              const t = tds[0];
-              const content = (t.textContent || '').trim();
-              const parentRow = tr;
-              // Detectar si es una fila de detalle (contiene "Entrada:" o tiene atributo data-detail-row)
-              if (content.includes('Entrada:') || parentRow.hasAttribute('data-detail-row') || content.startsWith('Registro') || content.startsWith('ENTRADAS')) {
-                t.classList.add('pdf-details');
-                // Asegurar que los saltos de línea se preserven con estilos inline
-                t.style.whiteSpace = 'pre-wrap';
-                t.style.lineHeight = '1.6';
-                t.style.fontFamily = 'ui-monospace, Menlo, Consolas, monospace';
-                t.style.color = '#475569';
-                t.style.fontSize = '8.5pt';
-                // Si hay un div interno con el contenido, asegurar que también preserve los saltos
-                const innerDiv = t.querySelector('div');
-                if (innerDiv) {
-                  innerDiv.style.whiteSpace = 'pre-wrap';
-                  innerDiv.style.lineHeight = '1.6';
-                  // Asegurar que los <br> se preserven
-                  const brs = innerDiv.querySelectorAll('br');
-                  brs.forEach(br => {
-                    br.style.display = 'block';
-                    br.style.content = '';
-                    br.style.marginBottom = '2px';
-                  });
-                }
-                // Si el contenido tiene <br> tags, asegurarse de que se rendericen correctamente
-                if (t.innerHTML && t.innerHTML.includes('<br')) {
-                  // Los <br> ya están presentes, solo asegurar estilos
-                  t.style.whiteSpace = 'normal';
-                  const allBr = t.querySelectorAll('br');
-                  allBr.forEach(br => {
-                    br.style.display = 'block';
-                    br.style.height = '1em';
-                  });
+            const bodyRows = block.querySelectorAll("table tbody tr");
+            for (const tr of bodyRows) {
+              const tds = tr.children;
+              if (!tds || tds.length === 0) continue;
+              if (tds.length >= 6) {
+                // Columna ESTADO (índice 4): sin color, solo texto
+                const tdEstado = tds[4];
+                const textEstado = (tdEstado.textContent || "").trim();
+                const lowEstado = textEstado.toLowerCase();
+                const shownEstado =
+                  lowEstado === "cerrado" ? "Completo" : textEstado || "";
+                tdEstado.style.textAlign = "center";
+                tdEstado.style.backgroundColor = "#f9fafb";
+                tdEstado.style.color = "#111827";
+                tdEstado.style.border = "1px solid #e5e7eb";
+                tdEstado.style.padding = "4px 8px";
+                tdEstado.style.borderRadius = "4px";
+                tdEstado.innerHTML = shownEstado;
+
+                // Columna MOTIVO (índice 5): sin color ni emojis, solo texto limpio
+                const tdMotivo = tds[5];
+                const textMotivo = (tdMotivo.textContent || "").trim();
+                // Eliminar emojis del motivo
+                const cleanMotivo = textMotivo
+                  .replace(/[\u{1F300}-\u{1F9FF}]/gu, "")
+                  .replace(/[\u{2600}-\u{26FF}]/gu, "")
+                  .replace(/[\u{2700}-\u{27BF}]/gu, "")
+                  .trim();
+                tdMotivo.style.backgroundColor = "#f9fafb";
+                tdMotivo.style.color = "#111827";
+                tdMotivo.style.border = "1px solid #e5e7eb";
+                tdMotivo.style.padding = "4px 8px";
+                tdMotivo.style.borderRadius = "4px";
+                tdMotivo.innerHTML = cleanMotivo || "—";
+              } else {
+                // Fila de detalle (colSpan), forzar salto de línea conservado
+                const t = tds[0];
+                const content = (t.textContent || "").trim();
+                const parentRow = tr;
+                // Detectar si es una fila de detalle (contiene "Entrada:" o tiene atributo data-detail-row)
+                if (
+                  content.includes("Entrada:") ||
+                  parentRow.hasAttribute("data-detail-row") ||
+                  content.startsWith("Registro") ||
+                  content.startsWith("ENTRADAS")
+                ) {
+                  t.classList.add("pdf-details");
+                  // Asegurar que los saltos de línea se preserven con estilos inline
+                  t.style.whiteSpace = "pre-wrap";
+                  t.style.lineHeight = "1.6";
+                  t.style.fontFamily =
+                    "ui-monospace, Menlo, Consolas, monospace";
+                  t.style.color = "#475569";
+                  t.style.fontSize = "8.5pt";
+                  // Si hay un div interno con el contenido, asegurar que también preserve los saltos
+                  const innerDiv = t.querySelector("div");
+                  if (innerDiv) {
+                    innerDiv.style.whiteSpace = "pre-wrap";
+                    innerDiv.style.lineHeight = "1.6";
+                    // Asegurar que los <br> se preserven
+                    const brs = innerDiv.querySelectorAll("br");
+                    brs.forEach((br) => {
+                      br.style.display = "block";
+                      br.style.content = "";
+                      br.style.marginBottom = "2px";
+                    });
+                  }
+                  // Si el contenido tiene <br> tags, asegurarse de que se rendericen correctamente
+                  if (t.innerHTML && t.innerHTML.includes("<br")) {
+                    // Los <br> ya están presentes, solo asegurar estilos
+                    t.style.whiteSpace = "normal";
+                    const allBr = t.querySelectorAll("br");
+                    allBr.forEach((br) => {
+                      br.style.display = "block";
+                      br.style.height = "1em";
+                    });
+                  }
                 }
               }
             }
-          }
             // Eliminar firmas del preview si existen (para evitar duplicación)
-            const existingSignatures = Array.from(block.querySelectorAll('div')).find(el => {
-              const text = el.textContent || '';
-              return text.includes('FIRMA DEL EMPLEADO') || text.includes('FIRMA DE AUTORIZACIÓN');
+            const existingSignatures = Array.from(
+              block.querySelectorAll("div"),
+            ).find((el) => {
+              const text = el.textContent || "";
+              return (
+                text.includes("FIRMA DEL EMPLEADO") ||
+                text.includes("FIRMA DE AUTORIZACIÓN")
+              );
             });
             if (existingSignatures) {
               // Buscar el contenedor padre que tiene las firmas
-              let signatureContainer = existingSignatures.closest('.grid');
+              let signatureContainer = existingSignatures.closest(".grid");
               if (!signatureContainer) {
                 signatureContainer = existingSignatures.parentElement;
               }
-              if (signatureContainer && signatureContainer.textContent.includes('FIRMA')) {
+              if (
+                signatureContainer &&
+                signatureContainer.textContent.includes("FIRMA")
+              ) {
                 signatureContainer.parentNode?.removeChild(signatureContainer);
               }
             }
             // Agregar firmas solo una vez al final del bloque
-            const signatures = doc.createElement('div');
-            signatures.className = 'pdf-signatures';
+            const signatures = doc.createElement("div");
+            signatures.className = "pdf-signatures";
             signatures.innerHTML = `
               <div class="slot"><div class="line"></div><div class="label">FIRMA DEL EMPLEADO</div></div>
               <div class="slot"><div class="line"></div><div class="label">FIRMA DE AUTORIZACIÓN</div></div>
@@ -815,7 +1034,7 @@ export default function ReporteHorasPage() {
             // 4.3) Calcular y guardar puntos de corte seguros para este bloque
             // en el DOM CLONADO (el mismo que usa html2canvas). Esto elimina
             // pequeñas diferencias de altura entre el DOM original y el clonado.
-            const pdfId = block.getAttribute('data-pdf-block-id');
+            const pdfId = block.getAttribute("data-pdf-block-id");
             if (pdfId) {
               const { domBreaks, totalHeight } = computeSafeBreaks(block);
               if (domBreaks && domBreaks.length > 1) {
@@ -825,25 +1044,25 @@ export default function ReporteHorasPage() {
           }
 
           // 5) Reemplazar colores modernos en estilos computados
-          for (const el of Array.from(doc.body.querySelectorAll('*'))) {
+          for (const el of Array.from(doc.body.querySelectorAll("*"))) {
             try {
               const cs = win.getComputedStyle(el);
               for (const p of props) {
                 const v = cs[p];
                 if (hasModern(v)) {
-                  const fallback = SAFE[p] || '#111827';
+                  const fallback = SAFE[p] || "#111827";
                   el.style[p] = fallback;
                 }
               }
-              for (const attr of ['fill','stroke','color']) {
+              for (const attr of ["fill", "stroke", "color"]) {
                 const av = el.getAttribute && el.getAttribute(attr);
                 if (hasModern(av)) {
-                  el.setAttribute(attr, SAFE[attr] || '#111827');
+                  el.setAttribute(attr, SAFE[attr] || "#111827");
                 }
               }
             } catch (_) {}
           }
-          doc.body.style.backgroundColor = '#ffffff';
+          doc.body.style.backgroundColor = "#ffffff";
         },
       };
 
@@ -865,7 +1084,10 @@ export default function ReporteHorasPage() {
         if (!info || !info.domBreaks || info.domBreaks.length < 2) {
           let position = 0;
           while (position < canvasHeight) {
-            const currentHeight = Math.min(sliceHeight, canvasHeight - position);
+            const currentHeight = Math.min(
+              sliceHeight,
+              canvasHeight - position,
+            );
             const slice = document.createElement("canvas");
             slice.width = canvas.width;
             slice.height = currentHeight;
@@ -881,12 +1103,19 @@ export default function ReporteHorasPage() {
               0,
               0,
               canvas.width,
-              currentHeight
+              currentHeight,
             );
 
             const part = slice.toDataURL("image/png");
             if (!isFirst) pdf.addPage();
-            pdf.addImage(part, "PNG", marginLeft, marginTop, imgWidth, (currentHeight * imgWidth) / canvas.width);
+            pdf.addImage(
+              part,
+              "PNG",
+              marginLeft,
+              marginTop,
+              imgWidth,
+              (currentHeight * imgWidth) / canvas.width,
+            );
 
             isFirst = false;
             position += currentHeight;
@@ -907,7 +1136,10 @@ export default function ReporteHorasPage() {
           let pageBottom = canvasHeight;
 
           // Elegimos el último punto seguro que entre en la página actual
-          while (breakIndex < safeBreaks.length && safeBreaks[breakIndex] <= maxBottom) {
+          while (
+            breakIndex < safeBreaks.length &&
+            safeBreaks[breakIndex] <= maxBottom
+          ) {
             pageBottom = safeBreaks[breakIndex];
             breakIndex++;
           }
@@ -934,12 +1166,19 @@ export default function ReporteHorasPage() {
             0,
             0,
             canvas.width,
-            currentHeight
+            currentHeight,
           );
 
           const part = slice.toDataURL("image/png");
           if (!isFirst) pdf.addPage();
-          pdf.addImage(part, "PNG", marginLeft, marginTop, imgWidth, (currentHeight * imgWidth) / canvas.width);
+          pdf.addImage(
+            part,
+            "PNG",
+            marginLeft,
+            marginTop,
+            imgWidth,
+            (currentHeight * imgWidth) / canvas.width,
+          );
 
           isFirst = false;
           pageTop = pageBottom;
@@ -1003,30 +1242,74 @@ export default function ReporteHorasPage() {
     }
   }
 
+  useEffect(() => {
+    if (!multi && empleadosFiltrados.length > 0) {
+      const esValido = empleadosFiltrados.some(
+        (e) => String(e.id_empleado) === empleadoId,
+      );
+
+      if (!esValido) {
+        setEmpleadoId(String(empleadosFiltrados[0].id_empleado));
+      }
+    } else if (!multi && empleadosFiltrados.length === 0) {
+      setEmpleadoId("");
+    }
+  }, [cargo, empleadosFiltrados, multi]);
+
   return (
     <div className={`${styles.vacacionesTheme} min-h-dvh bg-zinc-50 py-10`}>
       <div className="mx-auto w-full max-w-6xl px-4">
         <Card>
           <CardHeader className="flex flex-col gap-1">
-            <div className="text-sm text-muted-foreground">Genera reportes por empleado y periodo</div>
+            <div className="text-sm text-muted-foreground">
+              Genera reportes por empleado y periodo
+            </div>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-2 md:col-span-2">
+                <label className="text-sm text-muted-foreground">Empresa</label>
+                <select
+                  className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm shadow-xs focus:border-ring focus:ring-ring/50"
+                  value={empresaActiva}
+                  onChange={(e) => {
+                    setEmpresaActiva(e.target.value);
+                    setCargo("");
+                    setEmpleadoId("");
+                    setEmpleadoIds([]);
+                  }}
+                >
+                  <option value="all">Todas las empresas</option>
+                  {dataUser?.empresas_detalle?.map((emp) => (
+                    <option key={emp.id_empresa} value={emp.id_empresa}>
+                      {emp.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="flex flex-col gap-2">
                 <label className="text-sm text-muted-foreground">Cargo</label>
                 <select
                   className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm shadow-xs focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                   value={cargo}
-                  onChange={(e) => setCargo(e.target.value)}
+                  onChange={(e) => {
+                    setCargo(e.target.value);
+                    setEmpleadoId(""); // Limpiamos para forzar la actualización
+                  }}
                 >
                   <option value="">Todos los cargos</option>
                   {cargos.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
                   ))}
                 </select>
               </div>
               <div className={`flex flex-col gap-2`}>
-                <label className="text-sm text-muted-foreground">Empleado{multi ? "(s)" : ""}</label>
+                <label className="text-sm text-muted-foreground">
+                  Empleado{multi ? "(s)" : ""}
+                </label>
                 {!multi ? (
                   <select
                     className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm shadow-xs focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
@@ -1041,20 +1324,40 @@ export default function ReporteHorasPage() {
                   </select>
                 ) : (
                   <div className="flex flex-col gap-2">
-                    <Button type="button" variant="secondary" onClick={openSelectorWithBuffer} className="w-full justify-between">
-                      <span className="truncate pr-2" title={empleadoIds.length > 0 ? `Seleccionar empleados (${empleadoIds.length} seleccionados)` : "Seleccionar empleados"}>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={openSelectorWithBuffer}
+                      className="w-full justify-between"
+                    >
+                      <span
+                        className="truncate pr-2"
+                        title={
+                          empleadoIds.length > 0
+                            ? `Seleccionar empleados (${empleadoIds.length} seleccionados)`
+                            : "Seleccionar empleados"
+                        }
+                      >
                         {empleadoIds.length > 0
                           ? `Seleccionar empleados (${empleadoIds.length} seleccionados)`
                           : "Seleccionar empleados"}
                       </span>
-                      <span className="text-xs text-muted-foreground">Abrir</span>
+                      <span className="text-xs text-muted-foreground">
+                        Abrir
+                      </span>
                     </Button>
                     <div className="hidden">
                       <select
                         multiple
                         className="min-h-9 h-24 w-full rounded-md border border-input bg-white px-3 text-sm shadow-xs focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                         value={empleadoIds}
-                        onChange={(e) => setEmpleadoIds(Array.from(e.target.selectedOptions).map((o) => o.value))}
+                        onChange={(e) =>
+                          setEmpleadoIds(
+                            Array.from(e.target.selectedOptions).map(
+                              (o) => o.value,
+                            ),
+                          )
+                        }
                       >
                         {empleadosFiltrados.map((e) => (
                           <option key={e.id_empleado} value={e.id_empleado}>
@@ -1068,57 +1371,126 @@ export default function ReporteHorasPage() {
                 {multi && empleadoIds.length > 0 ? (
                   <div className="mt-2 flex flex-wrap gap-2">
                     {empleados
-                      .filter((e) => empleadoIds.includes(String(e.id_empleado)))
+                      .filter((e) =>
+                        empleadoIds.includes(String(e.id_empleado)),
+                      )
                       .map((e) => (
-                        <span key={`sel-${e.id_empleado}`} className="inline-flex items-center gap-1 rounded-full bg-zinc-100 border border-zinc-200 px-2 py-0.5 text-xs" title={`${e.nombre_empleado} - ${e.nombre_empresa}`}>
+                        <span
+                          key={`sel-${e.id_empleado}`}
+                          className="inline-flex items-center gap-1 rounded-full bg-zinc-100 border border-zinc-200 px-2 py-0.5 text-xs"
+                          title={`${e.nombre_empleado} - ${e.nombre_empresa}`}
+                        >
                           {e.nombre_empleado}
-                          <button type="button" className="ml-1 text-zinc-500 hover:text-zinc-700" onClick={() => setEmpleadoIds((ids) => ids.filter((id) => id !== String(e.id_empleado)))} aria-label={`Quitar ${e.nombre_empleado}`}>
+                          <button
+                            type="button"
+                            className="ml-1 text-zinc-500 hover:text-zinc-700"
+                            onClick={() =>
+                              setEmpleadoIds((ids) =>
+                                ids.filter(
+                                  (id) => id !== String(e.id_empleado),
+                                ),
+                              )
+                            }
+                            aria-label={`Quitar ${e.nombre_empleado}`}
+                          >
                             <Icon icon="lucide:x" className="size-3.5" />
                           </button>
                         </span>
                       ))}
-                    <button type="button" className="text-xs text-zinc-600 underline decoration-dotted underline-offset-2" onClick={() => setEmpleadoIds([])}>
+                    <button
+                      type="button"
+                      className="text-xs text-zinc-600 underline decoration-dotted underline-offset-2"
+                      onClick={() => setEmpleadoIds([])}
+                    >
                       Quitar todos
                     </button>
                   </div>
                 ) : null}
                 <label className="inline-flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                  <input type="checkbox" checked={multi} onChange={(e) => setMulti(e.target.checked)} />
-                  Seleccionar múltiples (si no eliges ninguno, se tomarán todos del cargo)
+                  <input
+                    type="checkbox"
+                    checked={multi}
+                    onChange={(e) => setMulti(e.target.checked)}
+                  />
+                  Seleccionar múltiples (si no eliges ninguno, se tomarán todos
+                  del cargo)
                 </label>
 
                 {multi ? (
                   <Dialog open={openSelector} onOpenChange={setOpenSelector}>
-                    <DialogContent className={`${styles.vacacionesTheme} sm:max-w-2xl`}>
+                    <DialogContent
+                      className={`${styles.vacacionesTheme} sm:max-w-2xl`}
+                    >
                       <DialogHeader>
                         <DialogTitle>Seleccionar empleados</DialogTitle>
-                        <DialogDescription>Busca por nombre o empresa, marca múltiples empleados y aplica la selección.</DialogDescription>
+                        <DialogDescription>
+                          Busca por nombre o empresa, marca múltiples empleados
+                          y aplica la selección.
+                        </DialogDescription>
                       </DialogHeader>
                       <div className="space-y-2">
-                        <label className="text-xs text-muted-foreground">Buscar</label>
-                        <Input placeholder="Escribe para filtrar por nombre o empresa..." value={searchEmpleado} onChange={(e) => setSearchEmpleado(e.target.value)} />
+                        <label className="text-xs text-muted-foreground">
+                          Buscar
+                        </label>
+                        <Input
+                          placeholder="Escribe para filtrar por nombre o empresa..."
+                          value={searchEmpleado}
+                          onChange={(e) => setSearchEmpleado(e.target.value)}
+                        />
                       </div>
                       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                        <div className="text-muted-foreground">{tempEmpleadoIds.length} seleccionados de {dialogResultados.length} resultados</div>
+                        <div className="text-muted-foreground">
+                          {tempEmpleadoIds.length} seleccionados de{" "}
+                          {dialogResultados.length} resultados
+                        </div>
                         <div className="flex items-center gap-2">
-                          <Button type="button" variant="ghost" onClick={selectAllDialog} disabled={dialogResultados.length === 0}>Seleccionar todos</Button>
-                          <Button type="button" variant="ghost" onClick={clearDialogSelection} disabled={tempEmpleadoIds.length === 0}>Limpiar</Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={selectAllDialog}
+                            disabled={dialogResultados.length === 0}
+                          >
+                            Seleccionar todos
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={clearDialogSelection}
+                            disabled={tempEmpleadoIds.length === 0}
+                          >
+                            Limpiar
+                          </Button>
                         </div>
                       </div>
-                      <div className="max-h-[380px] overflow-auto rounded-md border">
+                      <div className="max-h-95 overflow-auto rounded-md border">
                         {dialogResultados.length === 0 ? (
-                          <div className="p-4 text-sm text-muted-foreground">No hay resultados.</div>
+                          <div className="p-4 text-sm text-muted-foreground">
+                            No hay resultados.
+                          </div>
                         ) : (
                           <ul className="divide-y">
                             {dialogResultados.map((e) => {
                               const id = String(e.id_empleado);
                               const checked = tempEmpleadoIds.includes(id);
                               return (
-                                <li key={`dlg-${id}`} className="flex items-center gap-3 p-3">
-                                  <input type="checkbox" className="size-4" checked={checked} onChange={() => toggleTemp(id)} aria-label={`Seleccionar ${e.nombre_empleado}`} />
+                                <li
+                                  key={`dlg-${id}`}
+                                  className="flex items-center gap-3 p-3"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    className="size-4"
+                                    checked={checked}
+                                    onChange={() => toggleTemp(id)}
+                                    aria-label={`Seleccionar ${e.nombre_empleado}`}
+                                  />
                                   <div className="min-w-0">
-                                    <div className="truncate font-medium">{e.nombre_empleado}</div>
-                                    <div className="truncate text-xs text-muted-foreground">{e.nombre_empresa}</div>
+                                    <div className="truncate font-medium">
+                                      {e.nombre_empleado}
+                                    </div>
+                                    <div className="truncate text-xs text-muted-foreground">
+                                      {e.nombre_empresa}
+                                    </div>
                                   </div>
                                 </li>
                               );
@@ -1127,23 +1499,55 @@ export default function ReporteHorasPage() {
                         )}
                       </div>
                       <DialogFooter>
-                        <Button type="button" variant="outline" onClick={() => setOpenSelector(false)} className="bg-white border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]">Cancelar</Button>
-                        <Button type="button" onClick={() => { setEmpleadoIds(tempEmpleadoIds); setOpenSelector(false); }} className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]">Aplicar selección</Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setOpenSelector(false)}
+                          className="bg-white border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
+                        >
+                          Cancelar
+                        </Button>
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            setEmpleadoIds(tempEmpleadoIds);
+                            setOpenSelector(false);
+                          }}
+                          className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]"
+                        >
+                          Aplicar selección
+                        </Button>
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
                 ) : null}
               </div>
               <div className="flex flex-col gap-2">
-                <label className="text-sm text-muted-foreground">Fecha inicio</label>
-                <Input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
+                <label className="text-sm text-muted-foreground">
+                  Fecha inicio
+                </label>
+                <Input
+                  type="date"
+                  value={fechaInicio}
+                  onChange={(e) => setFechaInicio(e.target.value)}
+                />
               </div>
               <div className="flex flex-col gap-2">
-                <label className="text-sm text-muted-foreground">Fecha fin</label>
-                <Input type="date" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} />
+                <label className="text-sm text-muted-foreground">
+                  Fecha fin
+                </label>
+                <Input
+                  type="date"
+                  value={fechaFin}
+                  onChange={(e) => setFechaFin(e.target.value)}
+                />
               </div>
               <div className="flex items-end md:col-span-2">
-                <Button onClick={handleGenerar} disabled={loading || (!multi && !empleadoId)} className="w-full bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]">
+                <Button
+                  onClick={handleGenerar}
+                  disabled={loading || (!multi && !empleadoId)}
+                  className="w-full bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]"
+                >
                   {loading ? "Generando…" : "Generar Reporte"}
                 </Button>
               </div>
@@ -1154,28 +1558,60 @@ export default function ReporteHorasPage() {
                 variant="default"
                 onClick={handleExcel}
                 className="gap-2 bg-[#27ae60] hover:bg-[#229954] text-white shadow-[0_2px_8px_rgba(39,174,96,0.3)]"
-                disabled={!reportes || reportes.length === 0 || exporting !== null}
+                disabled={
+                  !reportes || reportes.length === 0 || exporting !== null
+                }
               >
-                <Icon icon="lucide:file-spreadsheet" className="size-4" /> Exportar Excel
+                <Icon icon="lucide:file-spreadsheet" className="size-4" />{" "}
+                Exportar Excel
               </Button>
-              <Button variant="destructive" onClick={handleGuardarPDF} className="gap-2 bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(239,68,68,0.3)]" disabled={!reportes || reportes.length === 0 || exporting !== null}>
+              <Button
+                variant="destructive"
+                onClick={handleGuardarPDF}
+                className="gap-2 bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(239,68,68,0.3)]"
+                disabled={
+                  !reportes || reportes.length === 0 || exporting !== null
+                }
+              >
                 <Icon icon="lucide:file-down" className="size-4" /> Guardar PDF
               </Button>
             </div>
 
-            <div ref={reportRef} className="bg-white rounded-lg border shadow-sm p-6 print:p-0">
+            <div
+              ref={reportRef}
+              className="bg-white rounded-lg border shadow-sm p-6 print:p-0"
+            >
               {!reportes || reportes.length === 0 ? (
-                <div className="text-center text-muted-foreground py-16">Genera un reporte para visualizar aquí.</div>
+                <div className="text-center text-muted-foreground py-16">
+                  Genera un reporte para visualizar aquí.
+                </div>
               ) : (
                 <div className="space-y-10">
                   {reportes.map((reporte, idx) => (
-                    <div key={idx} className="space-y-6" data-report-block="true">
+                    <div
+                      key={idx}
+                      className="space-y-6"
+                      data-report-block="true"
+                    >
                       {/* Top bar - Diseño limpio como imagen de referencia */}
-                      <div className="flex items-start justify-between mb-3" data-pdf-topbar="true">
-                        <div className="text-2xl font-bold text-gray-900 leading-none">HR360</div>
+                      <div
+                        className="flex items-start justify-between mb-3"
+                        data-pdf-topbar="true"
+                      >
+                        <div className="text-2xl font-bold text-gray-900 leading-none">
+                          HR360
+                        </div>
                         <div className="text-right leading-tight">
-                          <div className="font-semibold text-sm text-gray-900">Reporte de Horas Trabajadas</div>
-                          <div className="text-xs text-gray-600 mt-0.5">{new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}</div>
+                          <div className="font-semibold text-sm text-gray-900">
+                            Reporte de Horas Trabajadas
+                          </div>
+                          <div className="text-xs text-gray-600 mt-0.5">
+                            {new Date().toLocaleDateString("es-MX", {
+                              day: "numeric",
+                              month: "long",
+                              year: "numeric",
+                            })}
+                          </div>
                         </div>
                       </div>
                       {/* Línea separadora delgada */}
@@ -1184,22 +1620,42 @@ export default function ReporteHorasPage() {
                       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-4">
                         {/* Meta del empleado: diseño limpio sin tarjeta, con separadores verticales */}
                         <div className="lg:col-span-8">
-                          <section data-meta-section="true" className="grid grid-cols-4 gap-0 border-l border-gray-300">
+                          <section
+                            data-meta-section="true"
+                            className="grid grid-cols-4 gap-0 border-l border-gray-300"
+                          >
                             <div className="px-3 border-r border-gray-300">
-                              <div className="text-[9px] text-gray-500 uppercase font-semibold mb-1 tracking-wide">Empleado</div>
-                              <div className="text-sm font-bold text-gray-900 leading-tight">{reporte.empleado?.nombre_empleado}</div>
+                              <div className="text-[9px] text-gray-500 uppercase font-semibold mb-1 tracking-wide">
+                                Empleado
+                              </div>
+                              <div className="text-sm font-bold text-gray-900 leading-tight">
+                                {reporte.empleado?.nombre_empleado}
+                              </div>
                             </div>
                             <div className="px-3 border-r border-gray-300">
-                              <div className="text-[9px] text-gray-500 uppercase font-semibold mb-1 tracking-wide">Empresa</div>
-                              <div className="text-sm font-bold text-gray-900 leading-tight">{reporte.empleado?.nombre_empresa}</div>
+                              <div className="text-[9px] text-gray-500 uppercase font-semibold mb-1 tracking-wide">
+                                Empresa
+                              </div>
+                              <div className="text-sm font-bold text-gray-900 leading-tight">
+                                {reporte.empleado?.nombre_empresa}
+                              </div>
                             </div>
                             <div className="px-3 border-r border-gray-300">
-                              <div className="text-[9px] text-gray-500 uppercase font-semibold mb-1 tracking-wide">Periodo</div>
-                              <div className="text-sm font-bold text-gray-900 leading-tight">{humanDate(reporte.periodo.inicio)} — {humanDate(reporte.periodo.fin)}</div>
+                              <div className="text-[9px] text-gray-500 uppercase font-semibold mb-1 tracking-wide">
+                                Periodo
+                              </div>
+                              <div className="text-sm font-bold text-gray-900 leading-tight">
+                                {humanDate(reporte.periodo.inicio)} —{" "}
+                                {humanDate(reporte.periodo.fin)}
+                              </div>
                             </div>
                             <div className="px-3">
-                              <div className="text-[9px] text-gray-500 uppercase font-semibold mb-1 tracking-wide">Días Laborados</div>
-                              <div className="text-sm font-bold text-gray-900 leading-tight">{reporte.resumen.diasTrabajados}</div>
+                              <div className="text-[9px] text-gray-500 uppercase font-semibold mb-1 tracking-wide">
+                                Días Laborados
+                              </div>
+                              <div className="text-sm font-bold text-gray-900 leading-tight">
+                                {reporte.resumen.diasTrabajados}
+                              </div>
                             </div>
                           </section>
                         </div>
@@ -1211,16 +1667,46 @@ export default function ReporteHorasPage() {
                             aria-label="Resumen del periodo"
                           >
                             <div className="text-center px-2 py-3 border-r border-gray-300 bg-gray-50">
-                              <div className="text-[8px] text-gray-600 uppercase font-semibold mb-1.5 tracking-wide" data-summary-label="true">Total Horas</div>
-                              <div className="text-xl font-bold leading-none text-gray-900 mb-1" data-summary-value="true">{reporte.resumen?.totalHoras || '0:00'}</div>
+                              <div
+                                className="text-[8px] text-gray-600 uppercase font-semibold mb-1.5 tracking-wide"
+                                data-summary-label="true"
+                              >
+                                Total Horas
+                              </div>
+                              <div
+                                className="text-xl font-bold leading-none text-gray-900 mb-1"
+                                data-summary-value="true"
+                              >
+                                {reporte.resumen?.totalHoras || "0:00"}
+                              </div>
                             </div>
                             <div className="text-center px-2 py-3 border-r border-gray-300 bg-gray-50">
-                              <div className="text-[8px] text-gray-600 uppercase font-semibold mb-1.5 tracking-wide" data-summary-label="true">Días</div>
-                              <div className="text-xl font-bold leading-none text-gray-900 mb-1" data-summary-value="true">{reporte.resumen?.diasTrabajados || '0'}</div>
+                              <div
+                                className="text-[8px] text-gray-600 uppercase font-semibold mb-1.5 tracking-wide"
+                                data-summary-label="true"
+                              >
+                                Días
+                              </div>
+                              <div
+                                className="text-xl font-bold leading-none text-gray-900 mb-1"
+                                data-summary-value="true"
+                              >
+                                {reporte.resumen?.diasTrabajados || "0"}
+                              </div>
                             </div>
                             <div className="text-center px-2 py-3 bg-gray-50">
-                              <div className="text-[8px] text-gray-600 uppercase font-semibold mb-1.5 tracking-wide" data-summary-label="true">Promedio</div>
-                              <div className="text-xl font-bold leading-none text-gray-900 mb-1" data-summary-value="true">{reporte.resumen?.promedioHoras || '0:00'}</div>
+                              <div
+                                className="text-[8px] text-gray-600 uppercase font-semibold mb-1.5 tracking-wide"
+                                data-summary-label="true"
+                              >
+                                Promedio
+                              </div>
+                              <div
+                                className="text-xl font-bold leading-none text-gray-900 mb-1"
+                                data-summary-value="true"
+                              >
+                                {reporte.resumen?.promedioHoras || "0:00"}
+                              </div>
                             </div>
                           </section>
                         </div>
@@ -1228,7 +1714,10 @@ export default function ReporteHorasPage() {
                       <section className="overflow-x-auto">
                         <table className="w-full text-sm border-collapse">
                           <thead className="sticky top-0 z-10">
-                            <tr className="text-white" style={{ backgroundColor: "#2c3e50" }}>
+                            <tr
+                              className="text-white"
+                              style={{ backgroundColor: "#2c3e50" }}
+                            >
                               <th className="p-2 border">Fecha</th>
                               <th className="p-2 border">Entrada</th>
                               <th className="p-2 border">Salida</th>
@@ -1244,78 +1733,163 @@ export default function ReporteHorasPage() {
                               let primeraEntrada = d.entrada;
                               let ultimaSalida = d.salida;
                               let totalHorasTrabajadas = d.horasHM;
-                              
-                              if (Array.isArray(d.movimientos) && d.movimientos.length > 0) {
+
+                              if (
+                                Array.isArray(d.movimientos) &&
+                                d.movimientos.length > 0
+                              ) {
                                 // Obtener primera entrada de todos los movimientos
                                 const entradasValidas = d.movimientos
-                                  .map(m => m.entrada)
+                                  .map((m) => m.entrada)
                                   .filter(Boolean)
-                                  .map(e => new Date(e))
+                                  .map((e) => new Date(e))
                                   .sort((a, b) => a - b);
                                 if (entradasValidas.length > 0) {
-                                  primeraEntrada = entradasValidas[0].toISOString();
+                                  primeraEntrada =
+                                    entradasValidas[0].toISOString();
                                 }
-                                
+
                                 // Obtener última salida de todos los movimientos
                                 const salidasValidas = d.movimientos
-                                  .map(m => m.salida)
+                                  .map((m) => m.salida)
                                   .filter(Boolean)
-                                  .map(s => new Date(s))
+                                  .map((s) => new Date(s))
                                   .sort((a, b) => b - a);
                                 if (salidasValidas.length > 0) {
-                                  ultimaSalida = salidasValidas[0].toISOString();
+                                  ultimaSalida =
+                                    salidasValidas[0].toISOString();
                                 }
-                                
+
                                 // Sumar todas las horas trabajadas de cada movimiento
                                 // Convertir cada horasHM a minutos, sumar y convertir de vuelta a formato HH:MM
-                                const totalMinutos = d.movimientos.reduce((acc, m) => {
-                                  if (m.horasHM) {
-                                    const [horas, minutos] = m.horasHM.split(':').map(Number);
-                                    return acc + (horas * 60) + minutos;
-                                  }
-                                  return acc;
-                                }, 0);
+                                const totalMinutos = d.movimientos.reduce(
+                                  (acc, m) => {
+                                    if (m.horasHM) {
+                                      const [horas, minutos] = m.horasHM
+                                        .split(":")
+                                        .map(Number);
+                                      return acc + horas * 60 + minutos;
+                                    }
+                                    return acc;
+                                  },
+                                  0,
+                                );
                                 const horas = Math.floor(totalMinutos / 60);
                                 const minutos = totalMinutos % 60;
-                                totalHorasTrabajadas = `${horas}:${String(minutos).padStart(2, '0')}`;
+                                totalHorasTrabajadas = `${horas}:${String(
+                                  minutos,
+                                ).padStart(2, "0")}`;
                               }
-                              
+
                               return (
                                 <Fragment key={`day-${d.fecha}`}>
                                   <tr className="odd:bg-zinc-50/40 hover:bg-zinc-50">
-                                    <td className="p-2 border whitespace-nowrap align-top">{humanDate(d.fecha)}</td>
-                                    <td className="p-2 border text-center align-top">{primeraEntrada ? new Date(primeraEntrada).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "-"}</td>
-                                    <td className="p-2 border text-center align-top">{ultimaSalida ? new Date(ultimaSalida).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "-"}</td>
-                                    <td className="p-2 border text-center align-top">{totalHorasTrabajadas}</td>
-                                    <td className="p-2 border text-center align-top"><EstadoPill value={d.estado} /></td>
-                                    <td className="p-2 border align-top"><MotivoPill value={d.motivo} /></td>
-                                    <td className="p-2 border align-top">{d.notas ? (<span className="inline-flex items-center gap-1 text-zinc-700"><Icon icon="lucide:sticky-note" className="size-3.5 text-amber-600" /> {d.notas}</span>) : (<span className="text-zinc-500">—</span>)}</td>
-                                  </tr>
-                                {Array.isArray(d.movimientos) && d.movimientos.length > 1 ? (
-                                  <tr className="bg-white/50" data-detail-row="true">
-                                    <td colSpan={7} className="p-2 pl-6 border-t text-xs text-zinc-600 font-mono">
-                                      <div style={{ whiteSpace: 'pre-wrap', lineHeight: '1.6' }}>
-                                        {
-                                          // Formato detallado: cada par entrada-salida con sus horas trabajadas
-                                          // Cada segmento en una línea separada usando <br> para mejor compatibilidad con PDF
-                                          d.movimientos
-                                            .filter(m => m.entrada && m.salida) // Solo movimientos completos
-                                            .map((m, idx) => {
-                                              const entrada = m.entrada ? new Date(m.entrada).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "-";
-                                              const salida = m.salida ? new Date(m.salida).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" }) : "-";
-                                              const horas = m.horasHM || "0:00";
-                                              return (
-                                                <Fragment key={`mov-${idx}`}>
-                                                  {idx > 0 && <br />}
-                                                  {`Entrada: ${entrada}  |  Salida: ${salida}  |  Horas: ${horas}`}
-                                                </Fragment>
-                                              );
-                                            })
-                                        }
-                                      </div>
+                                    <td className="p-2 border whitespace-nowrap align-top">
+                                      {humanDate(d.fecha)}
+                                    </td>
+                                    <td className="p-2 border text-center align-top">
+                                      {primeraEntrada
+                                        ? new Date(
+                                            primeraEntrada,
+                                          ).toLocaleTimeString("es-MX", {
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                          })
+                                        : "-"}
+                                    </td>
+                                    <td className="p-2 border text-center align-top">
+                                      {ultimaSalida
+                                        ? new Date(
+                                            ultimaSalida,
+                                          ).toLocaleTimeString("es-MX", {
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                          })
+                                        : "-"}
+                                    </td>
+                                    <td className="p-2 border text-center align-top">
+                                      {totalHorasTrabajadas}
+                                    </td>
+                                    <td className="p-2 border text-center align-top">
+                                      <EstadoPill value={d.estado} />
+                                    </td>
+                                    <td className="p-2 border align-top">
+                                      <MotivoPill value={d.motivo} />
+                                    </td>
+                                    <td className="p-2 border align-top">
+                                      {d.notas ? (
+                                        <span className="inline-flex items-center gap-1 text-zinc-700">
+                                          <Icon
+                                            icon="lucide:sticky-note"
+                                            className="size-3.5 text-amber-600"
+                                          />{" "}
+                                          {d.notas}
+                                        </span>
+                                      ) : (
+                                        <span className="text-zinc-500">—</span>
+                                      )}
                                     </td>
                                   </tr>
-                                ) : null}
+                                  {Array.isArray(d.movimientos) &&
+                                  d.movimientos.length > 1 ? (
+                                    <tr
+                                      className="bg-white/50"
+                                      data-detail-row="true"
+                                    >
+                                      <td
+                                        colSpan={7}
+                                        className="p-2 pl-6 border-t text-xs text-zinc-600 font-mono"
+                                      >
+                                        <div
+                                          style={{
+                                            whiteSpace: "pre-wrap",
+                                            lineHeight: "1.6",
+                                          }}
+                                        >
+                                          {
+                                            // Formato detallado: cada par entrada-salida con sus horas trabajadas
+                                            // Cada segmento en una línea separada usando <br> para mejor compatibilidad con PDF
+                                            d.movimientos
+                                              .filter(
+                                                (m) => m.entrada && m.salida,
+                                              ) // Solo movimientos completos
+                                              .map((m, idx) => {
+                                                const entrada = m.entrada
+                                                  ? new Date(
+                                                      m.entrada,
+                                                    ).toLocaleTimeString(
+                                                      "es-MX",
+                                                      {
+                                                        hour: "2-digit",
+                                                        minute: "2-digit",
+                                                      },
+                                                    )
+                                                  : "-";
+                                                const salida = m.salida
+                                                  ? new Date(
+                                                      m.salida,
+                                                    ).toLocaleTimeString(
+                                                      "es-MX",
+                                                      {
+                                                        hour: "2-digit",
+                                                        minute: "2-digit",
+                                                      },
+                                                    )
+                                                  : "-";
+                                                const horas =
+                                                  m.horasHM || "0:00";
+                                                return (
+                                                  <Fragment key={`mov-${idx}`}>
+                                                    {idx > 0 && <br />}
+                                                    {`Entrada: ${entrada}  |  Salida: ${salida}  |  Horas: ${horas}`}
+                                                  </Fragment>
+                                                );
+                                              })
+                                          }
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  ) : null}
                                 </Fragment>
                               );
                             })}
@@ -1326,11 +1900,15 @@ export default function ReporteHorasPage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-10 px-10 mt-4">
                         <div className="flex flex-col items-center gap-2">
                           <div className="h-0.5 bg-slate-900 w-1/2" />
-                          <div className="text-[10px] text-zinc-500">FIRMA DEL EMPLEADO</div>
+                          <div className="text-[10px] text-zinc-500">
+                            FIRMA DEL EMPLEADO
+                          </div>
                         </div>
                         <div className="flex flex-col items-center gap-2">
                           <div className="h-0.5 bg-slate-900 w-1/2" />
-                          <div className="text-[10px] text-zinc-500">FIRMA DE AUTORIZACIÓN</div>
+                          <div className="text-[10px] text-zinc-500">
+                            FIRMA DE AUTORIZACIÓN
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1342,19 +1920,21 @@ export default function ReporteHorasPage() {
         </Card>
       </div>
       {exporting && (
-        <div className="fixed inset-0 z-[100] grid place-items-center bg-black/40 backdrop-blur-sm">
-          <div className="rounded-xl bg-white shadow-xl p-6 w-[340px] text-center space-y-3 border">
+        <div className="fixed inset-0 z-100 grid place-items-center bg-black/40 backdrop-blur-sm">
+          <div className="rounded-xl bg-white shadow-xl p-6 w-85 text-center space-y-3 border">
             <div className="mx-auto size-10 rounded-full border-4 border-zinc-200 border-t-zinc-800 animate-spin" />
-            <div className="text-sm font-medium text-zinc-700">{exporting === 'pdf' ? 'Generando PDF…' : 'Generando Excel…'}</div>
-            <div className="text-xs text-zinc-500">Esto puede tardar unos segundos. No cierres esta ventana.</div>
+            <div className="text-sm font-medium text-zinc-700">
+              {exporting === "pdf" ? "Generando PDF…" : "Generando Excel…"}
+            </div>
+            <div className="text-xs text-zinc-500">
+              Esto puede tardar unos segundos. No cierres esta ventana.
+            </div>
           </div>
         </div>
       )}
-      
+
       {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
       <AccesosRapidos />
     </div>
   );
 }
-
-

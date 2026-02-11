@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
@@ -12,7 +17,10 @@ import timezone from "dayjs/plugin/timezone";
 import { formatDateDMY, formatDateDMYTime } from "@/lib/formatDate";
 import { jsPDF } from "jspdf";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
-import { fetchImageAsDataUrl, tryAddCompanyMarkToPdf } from "@/lib/pdfCompanyLogo";
+import {
+  fetchImageAsDataUrl,
+  tryAddCompanyMarkToPdf,
+} from "@/lib/pdfCompanyLogo";
 import { calcDiasTotalesYHabiles } from "@/lib/permisosDias";
 import styles from "./permisos-theme.module.css";
 dayjs.extend(utc);
@@ -26,7 +34,12 @@ dayjs.extend(timezone);
  * - Se agrega generación de PDF con `jsPDF` para poder imprimir el documento del permiso.
  * - Relación directa (patrón ya usado en el proyecto): `src/app/panel/mapa-de-rutas/page.jsx` -> función `exportarAPDF`.
  */
-export default function PermisoViewDialog({ open, setOpen, item, festivosSet = new Set() }) {
+export default function PermisoViewDialog({
+  open,
+  setOpen,
+  item,
+  festivosSet = new Set(),
+}) {
   const { dataUser } = useAuth();
   const idEmpresa = dataUser?.id_empresa;
 
@@ -38,7 +51,7 @@ export default function PermisoViewDialog({ open, setOpen, item, festivosSet = n
   const { data: empresaData } = useSWR(
     idEmpresa ? `/empresas/${idEmpresa}` : null,
     fetcherWithToken,
-    swr_config
+    swr_config,
   );
 
   /**
@@ -49,12 +62,25 @@ export default function PermisoViewDialog({ open, setOpen, item, festivosSet = n
   useEffect(() => {
     let alive = true;
     const run = async () => {
-      // 1) Intentar logo de la empresa (si existe)
-      const companyUrl = empresaData?.url_imagen;
-      const companyDataUrl = companyUrl ? await fetchImageAsDataUrl(companyUrl) : null;
+      let companyDataUrl = null;
 
-      // 2) Fallback garantizado al logo del sistema (mismo origen, existe en `public/assets/logo.png`)
-      const fallbackDataUrl = companyDataUrl ? null : await fetchImageAsDataUrl("/assets/logo.png");
+      const companyUrl = empresaData?.url_imagen;
+      if (companyUrl) {
+        try {
+          // Añadimos ?t=timestamp para evitar el caché del navegador
+          const urlConCacheBuster = `${companyUrl}${
+            companyUrl.includes("?") ? "&" : "?"
+          }t=${Date.now()}`;
+          companyDataUrl = await fetchImageAsDataUrl(urlConCacheBuster);
+        } catch (error) {
+          console.warn("Error cargando logo:", error);
+          companyDataUrl = null;
+        }
+      }
+
+      const fallbackDataUrl = companyDataUrl
+        ? null
+        : await fetchImageAsDataUrl("/assets/logo.png");
 
       if (alive) setLogoDataUrl(companyDataUrl || fallbackDataUrl || null);
     };
@@ -77,7 +103,9 @@ export default function PermisoViewDialog({ open, setOpen, item, festivosSet = n
     ? formatDateDMYTime(dayjs.tz(item.marca_tiempo, "America/Mexico_City"))
     : "-";
   const updated = item.fecha_actualizacion
-    ? formatDateDMYTime(dayjs.tz(item.fecha_actualizacion, "America/Mexico_City"))
+    ? formatDateDMYTime(
+        dayjs.tz(item.fecha_actualizacion, "America/Mexico_City"),
+      )
     : "-";
   // Cálculo del total de días del permiso.
   // Relación: este valor se muestra en este mismo modal; las fechas provienen
@@ -115,7 +143,9 @@ export default function PermisoViewDialog({ open, setOpen, item, festivosSet = n
     if (!fechaISO) return "-";
     try {
       const opciones = { year: "numeric", month: "long", day: "numeric" };
-      return new Date(`${dayjs(fechaISO).format("YYYY-MM-DD")}T00:00:00`).toLocaleDateString("es-MX", opciones);
+      return new Date(
+        `${dayjs(fechaISO).format("YYYY-MM-DD")}T00:00:00`,
+      ).toLocaleDateString("es-MX", opciones);
     } catch {
       return String(fechaISO);
     }
@@ -187,23 +217,33 @@ export default function PermisoViewDialog({ open, setOpen, item, festivosSet = n
      */
     const stripEmojis = (value) => {
       try {
-        return String(value || "")
-          // Emojis/pictogramas (Unicode) + variación + joiners
-          .replace(/\p{Extended_Pictographic}|\uFE0F|\u200D/gu, "")
-          .replace(/\s+/g, " ")
-          .trim();
+        return (
+          String(value || "")
+            // Emojis/pictogramas (Unicode) + variación + joiners
+            .replace(/\p{Extended_Pictographic}|\uFE0F|\u200D/gu, "")
+            .replace(/\s+/g, " ")
+            .trim()
+        );
       } catch {
         // Fallback defensivo si el runtime no soporta Unicode property escapes (muy raro en Next moderno).
-        return String(value || "").replace(/\s+/g, " ").trim();
+        return String(value || "")
+          .replace(/\s+/g, " ")
+          .trim();
       }
     };
 
     const folio = `#${String(item.id).padStart(3, "0")}`;
-    const empleado = item.empleado_nombre || (item.id_empleado ? `ID ${item.id_empleado}` : "—");
+    const empleado =
+      item.empleado_nombre ||
+      (item.id_empleado ? `ID ${item.id_empleado}` : "—");
     const tipo = stripEmojis(item.tipo_permiso_nombre) || "—";
     const estado = item.estado || "—";
-    const fechaInicioISO = item.fecha_inicio ? dayjs(item.fecha_inicio).format("YYYY-MM-DD") : "";
-    const fechaFinISO = item.fecha_fin ? dayjs(item.fecha_fin).format("YYYY-MM-DD") : "";
+    const fechaInicioISO = item.fecha_inicio
+      ? dayjs(item.fecha_inicio).format("YYYY-MM-DD")
+      : "";
+    const fechaFinISO = item.fecha_fin
+      ? dayjs(item.fecha_fin).format("YYYY-MM-DD")
+      : "";
     const fechaInicioLarga = formatearFechaLarga(fechaInicioISO);
     const fechaFinLarga = formatearFechaLarga(fechaFinISO || fechaInicioISO);
 
@@ -211,10 +251,14 @@ export default function PermisoViewDialog({ open, setOpen, item, festivosSet = n
       ? formatDateDMYTime(dayjs.tz(item.marca_tiempo, "America/Mexico_City"))
       : "—";
     const actualizadoLarga = item.fecha_actualizacion
-      ? formatDateDMYTime(dayjs.tz(item.fecha_actualizacion, "America/Mexico_City"))
+      ? formatDateDMYTime(
+          dayjs.tz(item.fecha_actualizacion, "America/Mexico_City"),
+        )
       : "—";
 
-    const actualizadoPor = item.actualizado_por_nombre || (item.actualizado_por ? `ID ${item.actualizado_por}` : "—");
+    const actualizadoPor =
+      item.actualizado_por_nombre ||
+      (item.actualizado_por ? `ID ${item.actualizado_por}` : "—");
     const motivo = item.motivo ? String(item.motivo) : "";
     const notas = item.notas ? String(item.notas) : "";
 
@@ -242,9 +286,14 @@ export default function PermisoViewDialog({ open, setOpen, item, festivosSet = n
     // Logo/marca de la empresa en esquina superior izquierda.
     // - Si hay imagen: se dibuja en el recuadro.
     // - Si no hay imagen: se dibujan iniciales (estilo tipográfico tipo "HR360" en Reporte de Horas).
-    const companyName = empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
+    const companyName =
+      empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
     const logoBox = { x: margin + 6, y: y + 6, boxW: 26, boxH: 14 };
-    const hasMark = tryAddCompanyMarkToPdf(doc, { logoDataUrl, companyName }, logoBox);
+    const hasMark = tryAddCompanyMarkToPdf(
+      doc,
+      { logoDataUrl, companyName },
+      logoBox,
+    );
     const textX = hasMark ? logoBox.x + logoBox.boxW + 4 : margin + 6;
 
     doc.setFont("helvetica", "bold");
@@ -262,7 +311,9 @@ export default function PermisoViewDialog({ open, setOpen, item, festivosSet = n
     doc.setFontSize(10);
     doc.text("TOTAL DÍAS", pageWidth - margin - 6, y + 10, { align: "right" });
     doc.setFontSize(22);
-    doc.text(String(totalDias || 0), pageWidth - margin - 6, y + 23, { align: "right" });
+    doc.text(String(totalDias || 0), pageWidth - margin - 6, y + 23, {
+      align: "right",
+    });
 
     y += 42;
 
@@ -340,8 +391,15 @@ export default function PermisoViewDialog({ open, setOpen, item, festivosSet = n
     // FIRMAS (al final de cada página) + FOOTER con paginación
     // ─────────────────────────────────────────────────────────────────────────
     const totalPages = doc.internal.getNumberOfPages();
-    const fechaGenerado = new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" });
-    const horaGenerado = new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
+    const fechaGenerado = new Date().toLocaleDateString("es-MX", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+    const horaGenerado = new Date().toLocaleTimeString("es-MX", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
     for (let p = 1; p <= totalPages; p++) {
       doc.setPage(p);
@@ -354,19 +412,38 @@ export default function PermisoViewDialog({ open, setOpen, item, festivosSet = n
       doc.line(margin + 10, yFirmas, margin + 70, yFirmas);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
-      doc.text("FIRMA DEL TRABAJADOR", margin + 40, yFirmas + 6, { align: "center" });
+      doc.text("FIRMA DEL TRABAJADOR", margin + 40, yFirmas + 6, {
+        align: "center",
+      });
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
-      doc.text(String(empleado).slice(0, 45), margin + 40, yFirmas + 11, { align: "center" });
+      doc.text(String(empleado).slice(0, 45), margin + 40, yFirmas + 11, {
+        align: "center",
+      });
 
-      doc.line(pageWidth - margin - 70, yFirmas, pageWidth - margin - 10, yFirmas);
+      doc.line(
+        pageWidth - margin - 70,
+        yFirmas,
+        pageWidth - margin - 10,
+        yFirmas,
+      );
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
-      doc.text("REPRESENTANTE DE LA EMPRESA", pageWidth - margin - 40, yFirmas + 6, { align: "center" });
+      doc.text(
+        "REPRESENTANTE DE LA EMPRESA",
+        pageWidth - margin - 40,
+        yFirmas + 6,
+        { align: "center" },
+      );
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
       // Se conserva el mismo nombre usado en Mapa de Rutas para consistencia visual del sistema.
-      doc.text("Uniline Innovacion en la Nube", pageWidth - margin - 40, yFirmas + 11, { align: "center" });
+      doc.text(
+        "Uniline Innovacion en la Nube",
+        pageWidth - margin - 40,
+        yFirmas + 11,
+        { align: "center" },
+      );
 
       // Footer
       doc.setLineWidth(0.3);
@@ -377,21 +454,67 @@ export default function PermisoViewDialog({ open, setOpen, item, festivosSet = n
         `Generado el ${fechaGenerado} a las ${horaGenerado} | Sistema HR360 | Página ${p} de ${totalPages}`,
         pageWidth / 2,
         pageHeight - 10,
-        { align: "center" }
+        { align: "center" },
       );
     }
 
-    const nombreArchivo = `Permiso_${String(empleado || "Empleado").replace(/ /g, "_")}_${dayjs().format("YYYY-MM-DD")}_${String(item.id || "").padStart(3, "0")}.pdf`;
+    const nombreArchivo = `Permiso_${String(empleado || "Empleado").replace(
+      / /g,
+      "_",
+    )}_${dayjs().format("YYYY-MM-DD")}_${String(item.id || "").padStart(
+      3,
+      "0",
+    )}.pdf`;
     return { doc, nombreArchivo };
   }
 
   function EstadoBadge({ estado }) {
-    const base = "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold";
-    if (estado === "Pendiente") return <span className={base} style={{ backgroundColor: "#fef3c7", color: "#92400e" }}>Pendiente</span>;
-    if (estado === "Aprobado") return <span className={base} style={{ backgroundColor: "#d1fae5", color: "#065f46" }}>Aprobado</span>;
-    if (estado === "Rechazado") return <span className={base} style={{ backgroundColor: "#fee2e2", color: "#991b1b" }}>Rechazado</span>;
-    if (estado === "Cancelado") return <span className={base} style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}>Cancelado</span>;
-    return <span className={base} style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}>{estado || "—"}</span>;
+    const base =
+      "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold";
+    if (estado === "Pendiente")
+      return (
+        <span
+          className={base}
+          style={{ backgroundColor: "#fef3c7", color: "#92400e" }}
+        >
+          Pendiente
+        </span>
+      );
+    if (estado === "Aprobado")
+      return (
+        <span
+          className={base}
+          style={{ backgroundColor: "#d1fae5", color: "#065f46" }}
+        >
+          Aprobado
+        </span>
+      );
+    if (estado === "Rechazado")
+      return (
+        <span
+          className={base}
+          style={{ backgroundColor: "#fee2e2", color: "#991b1b" }}
+        >
+          Rechazado
+        </span>
+      );
+    if (estado === "Cancelado")
+      return (
+        <span
+          className={base}
+          style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}
+        >
+          Cancelado
+        </span>
+      );
+    return (
+      <span
+        className={base}
+        style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}
+      >
+        {estado || "—"}
+      </span>
+    );
   }
 
   return (
@@ -405,23 +528,34 @@ export default function PermisoViewDialog({ open, setOpen, item, festivosSet = n
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
             <span>Detalles del permiso</span>
-            <span className="text-sm text-muted-foreground">Folio #{String(item.id).padStart(3, "0")}</span>
+            <span className="text-sm text-muted-foreground">
+              Folio #{String(item.id).padStart(3, "0")}
+            </span>
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          <section className="rounded-md border p-4" style={{ backgroundColor: "#f9fafb" }}>
+          <section
+            className="rounded-md border p-4"
+            style={{ backgroundColor: "#f9fafb" }}
+          >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <div className="text-xs text-muted-foreground">Empleado</div>
-                <div className="font-medium">{item.empleado_nombre || `ID ${item.id_empleado}`}</div>
+                <div className="font-medium">
+                  {item.empleado_nombre || `ID ${item.id_empleado}`}
+                </div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">Tipo de permiso</div>
+                <div className="text-xs text-muted-foreground">
+                  Tipo de permiso
+                </div>
                 <div className="font-medium">{item.tipo_permiso_nombre}</div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">Fecha inicio</div>
+                <div className="text-xs text-muted-foreground">
+                  Fecha inicio
+                </div>
                 <div className="font-medium">{di}</div>
               </div>
               <div>
@@ -432,16 +566,22 @@ export default function PermisoViewDialog({ open, setOpen, item, festivosSet = n
                 {/* Nueva información pedida (separada en campos):
                     Relación: coincide con la tabla `src/app/panel/permisos/PermisosTable.jsx`
                     y con el documento PDF de este mismo componente. */}
-                <div className="text-xs text-muted-foreground">Días totales</div>
+                <div className="text-xs text-muted-foreground">
+                  Días totales
+                </div>
                 <div className="font-semibold">{diasTotales}</div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">Días hábiles</div>
+                <div className="text-xs text-muted-foreground">
+                  Días hábiles
+                </div>
                 <div className="font-semibold">{diasHabiles}</div>
               </div>
               <div>
                 <div className="text-xs text-muted-foreground">Estado</div>
-                <div className="mt-0.5"><EstadoBadge estado={item.estado} /></div>
+                <div className="mt-0.5">
+                  <EstadoBadge estado={item.estado} />
+                </div>
               </div>
               <div>
                 <div className="text-xs text-muted-foreground">Solicitado</div>
@@ -451,23 +591,32 @@ export default function PermisoViewDialog({ open, setOpen, item, festivosSet = n
           </section>
 
           <section className="rounded-md border p-4 bg-white">
-            <div className="text-xs text-muted-foreground mb-1">Motivo / Observaciones</div>
+            <div className="text-xs text-muted-foreground mb-1">
+              Motivo / Observaciones
+            </div>
             <div className="whitespace-pre-wrap">{item.motivo || "—"}</div>
           </section>
 
           <section className="rounded-md border p-4 bg-white">
-            <div className="text-xs text-muted-foreground mb-1">Nota interna</div>
+            <div className="text-xs text-muted-foreground mb-1">
+              Nota interna
+            </div>
             <div className="whitespace-pre-wrap">{item.notas || "—"}</div>
             <Separator className="my-3" />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <div className="text-xs text-muted-foreground">Actualizado por</div>
+                <div className="text-xs text-muted-foreground">
+                  Actualizado por
+                </div>
                 <div className="font-medium">
-                  {item.actualizado_por_nombre || (item.actualizado_por ? `ID ${item.actualizado_por}` : "—")}
+                  {item.actualizado_por_nombre ||
+                    (item.actualizado_por ? `ID ${item.actualizado_por}` : "—")}
                 </div>
               </div>
               <div>
-                <div className="text-xs text-muted-foreground">Fecha actualización</div>
+                <div className="text-xs text-muted-foreground">
+                  Fecha actualización
+                </div>
                 <div className="font-medium">{updated}</div>
               </div>
             </div>
@@ -503,5 +652,3 @@ export default function PermisoViewDialog({ open, setOpen, item, festivosSet = n
     </Dialog>
   );
 }
-
-

@@ -7,8 +7,11 @@ import { usePermisosEmpleado } from "@/hooks/usePermisoPorEmpleado";
 import { Plus } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { exportToExcel } from "@/utils/exportExcelJS";
+import { useAuth } from "@/context/AuthContext";
 
 const SolicitudesPage = () => {
+  const { dataUser } = useAuth();
+  console.log(dataUser);
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState("crear");
   const [selected, setSelected] = useState(null);
@@ -17,7 +20,7 @@ const SolicitudesPage = () => {
 
   const { data, total, error, isLoading, mutate } = usePermisosEmpleado(
     page,
-    limit
+    limit,
   );
 
   return (

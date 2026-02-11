@@ -35,6 +35,7 @@ export default function AsistenciaRow({
   handleSaveClick,
   mutateAsistencia,
   mostrarCamposExtras,
+  empresaActiva,
 }) {
   const { dataUser } = useAuth();
   const userTimezone = dataUser?.zona_horaria || "America/Mexico_City";
@@ -49,6 +50,8 @@ export default function AsistenciaRow({
     }
   };
 
+  console.log(registro);
+
   return (
     <>
       <TableRow
@@ -59,6 +62,11 @@ export default function AsistenciaRow({
         {isEditing && !readOnly ? (
           <>
             <TableCell className="font-bold">{`${registro.nombre} ${registro.apellido_paterno}`}</TableCell>
+            {empresaActiva === "all" && (
+              <TableCell className="font-bold">
+                {registro.empresa_nombre}
+              </TableCell>
+            )}
             {mostrarCamposExtras && <TableCell>{registro.nip}</TableCell>}
             <TableCell>{registro.departamento}</TableCell>
             <TableCell>
@@ -105,7 +113,6 @@ export default function AsistenciaRow({
                 .tz(userTimezone)
                 .format("DD/MM/YYYY")}
             </TableCell>
-
             {mostrarCamposExtras && (
               <TableCell className="text-center">
                 <ToggleGroup
@@ -120,7 +127,6 @@ export default function AsistenciaRow({
                 </ToggleGroup>
               </TableCell>
             )}
-
             <TableCell className="text-center">
               <Input
                 type="time"
@@ -185,7 +191,6 @@ export default function AsistenciaRow({
                 disabled={areTimeInputsDisabled}
               />
             </TableCell>
-
             {mostrarCamposExtras && (
               <>
                 <TableCell className="text-center">
@@ -220,7 +225,6 @@ export default function AsistenciaRow({
                 </TableCell>
               </>
             )}
-
             <TableCell className="text-center">
               <ToggleGroup
                 type="single"
@@ -245,7 +249,6 @@ export default function AsistenciaRow({
                 <ToggleGroupItem value="1">✅</ToggleGroupItem>
               </ToggleGroup>
             </TableCell>
-
             {mostrarCamposExtras && (
               <>
                 <TableCell className="text-center">
@@ -312,7 +315,6 @@ export default function AsistenciaRow({
                 </TableCell>
               </>
             )}
-
             <TableCell className="text-center">
               <ToggleGroup
                 type="single"
@@ -325,7 +327,6 @@ export default function AsistenciaRow({
                 <ToggleGroupItem value="1">✅</ToggleGroupItem>
               </ToggleGroup>
             </TableCell>
-
             {mostrarCamposExtras && (
               <>
                 <TableCell className="text-center">
@@ -470,6 +471,11 @@ export default function AsistenciaRow({
         ) : (
           <>
             <TableCell className="font-bold">{`${registro.nombre} ${registro.apellido_paterno}`}</TableCell>
+            {empresaActiva === "all" && (
+              <TableCell className="font-bold">
+                {registro.empresa_nombre}
+              </TableCell>
+            )}
             {mostrarCamposExtras && <TableCell>{registro.nip}</TableCell>}
             <TableCell>{registro.departamento}</TableCell>
             <TableCell>{registro.tipo_registro_nombre}</TableCell>

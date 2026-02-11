@@ -12,9 +12,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import axios from "axios";
+import axios from "@/lib/axios";
 import { useSnackbar } from "notistack";
-import useSWR, { mutate } from "swr";
+import useSWR from "swr";
 import { useAuth } from "@/context/AuthContext";
 import { twMerge } from "tailwind-merge";
 import ImageUpload from "./ImageUpload";
@@ -42,6 +42,7 @@ import TabCuentasBancarias from "./tabs/TabCuentasBancarias";
 import TabReconocimiento from "./tabs/TabReconocimiento";
 import TabGPS from "./tabs/TabGPS";
 import BotonCredencial from "@/components/BotonCredencial";
+import { toPng } from "html-to-image";
 
 export default function FormularioEmpleado({
   modoFormulario,
@@ -54,6 +55,7 @@ export default function FormularioEmpleado({
   setEditar,
   setSoloLectura,
   onClose,
+  mutate,
 }) {
   const DIAS_SEMANA = React.useMemo(
     () => [
@@ -162,6 +164,11 @@ export default function FormularioEmpleado({
   // useEffect(() => {
   //   console.log(valores);
   // }, [valores]);
+  useEffect(() => {
+    if (!editar && dataUser?.empresas?.length === 1) {
+      form.setValue("id_empresa", dataUser.empresas[0]);
+    }
+  }, [dataUser, editar]);
 
   useEffect(() => {
     if ((editar || soloLectura) && values) {
@@ -337,9 +344,6 @@ export default function FormularioEmpleado({
   };
 
   const onValidSubmit = async (data) => {
-    console.log("🔍 DATA antes de convertir a FormData:", data.cierre_turno);
-    data.id_empresa = dataUser?.id_empresa;
-
     if (data.banco === "Otro" && data.otro_banco?.trim()) {
       data.banco = data.otro_banco.trim();
     }
@@ -349,6 +353,14 @@ export default function FormularioEmpleado({
       .filter((h) => h.entrada && h.salida)
       .map((h) => h.dia);
     data.dias_trabajo = diasTrabajo.join(",");
+
+    if (!data.id_empresa || Number(data.id_empresa) <= 0) {
+      enqueueSnackbar("Debes seleccionar una empresa", {
+        variant: "warning",
+      });
+      setTab("laborales");
+      return;
+    }
 
     try {
       const response = await axios.get(
@@ -400,10 +412,6 @@ export default function FormularioEmpleado({
         });
         return;
       }
-
-      data.id_empresa = dataUser?.id_empresa;
-
-      console.log("Áreas asignadas que se van a enviar:", data.areasAsignadas);
 
       const formData = new FormData();
 
@@ -468,9 +476,7 @@ export default function FormularioEmpleado({
         setModoFormulario(false);
       }
 
-      mutate(
-        `/checador/empleados?empresa=${data.id_empresa}&page=${page}&limit=${limit}`,
-      );
+      mutate();
     } catch (error) {
       console.log(error);
       // console.error(error);
@@ -546,7 +552,6 @@ export default function FormularioEmpleado({
           </Button>
         )}
       </div>
-
       <form
         id="formulario-empleado"
         onSubmit={form.handleSubmit(onValidSubmit, onInvalidSubmit)}
@@ -576,6 +581,7 @@ export default function FormularioEmpleado({
                         placeholder="Ingrese el nombre del empleado"
                         className="w-full text-lg sm:text-xl md:text-2xl lg:text-3xl font-semibold h-auto py-2 border-0 border-b border-transparent focus:border-b-blue-600 focus:ring-0 rounded-none bg-transparent"
                         autoFocus
+                        value={field.value ?? ""}
                       />
                     </FormControl>
                   </FormItem>
@@ -587,12 +593,20 @@ export default function FormularioEmpleado({
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
-                      <Input
-                        {...field}
-                        disabled={soloLectura}
-                        placeholder="Nombre del puesto"
-                        className="w-full text-sm md:text-md lg:text-xl text-gray-500 border-0 border-b border-transparent focus:border-b-blue-600 focus:ring-0 rounded-none bg-transparent"
-                      />
+                      <section className="flex mt-3 items-center">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500 "></span>
+                        <Input
+                          {...field}
+                          autoComplete="organization-title"
+                          autoCorrect="off"
+                          autoCapitalize="off"
+                          disabled={soloLectura}
+                          spellCheck={false}
+                          value={field.value ?? ""}
+                          placeholder="Nombre del puesto"
+                          className="w-full text-xs sm:text-sm md:text-md lg:text-xl border-0 border-white focus:border-b-blue-600 focus:ring-0 rounded-none"
+                        />
+                      </section>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -690,6 +704,7 @@ export default function FormularioEmpleado({
                     form={form}
                     soloLectura={soloLectura}
                     dataUser={dataUser}
+                    editar={editar}
                   />
                 )}
 

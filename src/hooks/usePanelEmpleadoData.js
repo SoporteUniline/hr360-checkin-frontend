@@ -4,14 +4,14 @@ import { fetcherWithToken } from "@/lib/fetcher";
 /**
  * Hook para obtener todos los datos completos de todos los empleados
  * para el Panel de Empleados
- * Relacionado con: 
+ * Relacionado con:
  * - Backend: modules/attendance/controllers/empleadoController.js (cargarTodosDatosCompletos)
  * - Frontend: src/app/panel/panel-empleado/page.jsx
  */
-export default function usePanelEmpleadoData(idEmpresa) {
+export default function usePanelEmpleadoData(idEmpresa, empresasUsuario = []) {
   let url = null;
 
-  if (idEmpresa) {
+  if (idEmpresa === "all") {
     /**
      * includeInactivos=1:
      * - Para que el Panel de Empleados muestre el mismo universo que el módulo "Empleados"
@@ -20,6 +20,9 @@ export default function usePanelEmpleadoData(idEmpresa) {
      * Relación:
      * - Backend: `modules/attendance/controllers/empleadoController.js` (cargarTodosDatosCompletos)
      */
+    const empresas = empresasUsuario.join(",");
+    url = `/checador/empleados/panel-empleado/todos?empresas=${empresas}&includeInactivos=1`;
+  } else if (idEmpresa) {
     url = `/checador/empleados/panel-empleado/todos?empresa=${idEmpresa}&includeInactivos=1`;
   }
 
@@ -27,4 +30,3 @@ export default function usePanelEmpleadoData(idEmpresa) {
 
   return { data, error, isLoading, mutate };
 }
-

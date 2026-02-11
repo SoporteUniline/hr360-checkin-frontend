@@ -39,10 +39,10 @@ export default function MyAccountReclutador() {
         <TabsTrigger value="contrasenia">
           <KeyRound /> Seguridad
         </TabsTrigger>
-        <TabsTrigger value="empresa">
+        {/* <TabsTrigger value="empresa">
           <Building />
           Mi empresa
-        </TabsTrigger>
+        </TabsTrigger> */}
       </TabsList>
       <TabsContent value="cuenta">
         <BasicInfoForm user={data} />

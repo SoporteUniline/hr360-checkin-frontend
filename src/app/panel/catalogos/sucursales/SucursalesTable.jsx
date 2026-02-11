@@ -28,7 +28,7 @@ export default function SucursalesTable({
   const router = useRouter();
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const key = `${swrKey}&page=${page}&limit=${limit}&nombre=${filter}`;
+  const key = `${swrKey}&page=${page}&limit=${limit}`;
   const { data, error, isLoading } = useSWR(key, fetcherWithToken, swr_config);
 
   useEffect(() => {
@@ -61,6 +61,9 @@ export default function SucursalesTable({
           {/* Header con colores del sistema (ver `Colores.txt`) */}
           <TableRow className="bg-[#37495E] hover:bg-[#37495E]">
             <TableHead className="text-white">Nombre</TableHead>
+            {id_empresa === "all" && (
+              <TableHead className="text-white">Empresa</TableHead>
+            )}
             <TableHead className="text-right text-white">Acciones</TableHead>
           </TableRow>
         </TableHeader>
@@ -68,6 +71,11 @@ export default function SucursalesTable({
           {sucursales.map((suc) => (
             <TableRow key={suc.id_sucursal}>
               <TableCell>{suc.nombre}</TableCell>
+              {id_empresa === "all" && (
+                <TableCell className="text-muted-foreground">
+                  {suc.empresa_nombre || "N/A"}
+                </TableCell>
+              )}
               <TableCell className="text-right flex justify-end gap-2">
                 <Button
                   size="icon"

@@ -16,25 +16,22 @@ export default function useClockCheckData(
   // Importante: se mantiene `fecha` para compatibilidad con pantallas que filtran por un solo día.
   // =========================
   desde,
-  hasta
+  hasta,
 ) {
   let url = null;
 
   if (idEmpresa) {
-    if (idEmpresa) {
-      if (empleado) {
-        url = `/checador/reloj/asistencia-por-empleado?empresa=${idEmpresa}&fecha=${fecha}&empleado=${empleado}&page=${page}&limit=${limit}`;
-      } else {
-        // Si viene rango (desde/hasta), NO mandamos `fecha` para evitar ambigüedad.
-        const hasRange = Boolean(desde || hasta);
-        url = `/checador/reloj/asistencia?empresa=${idEmpresa}${
-          !hasRange && fecha ? `&fecha=${fecha}` : ""
-        }${desde ? `&desde=${desde}` : ""}${hasta ? `&hasta=${hasta}` : ""}${
-          filtroNombre ? `&nombre=${encodeURIComponent(filtroNombre)}` : ""
-        }${
-          departamento ? `&departamento=${departamento}` : ""
-        }${estado ? `&estado=${estado}` : ""}&page=${page}&limit=${limit}`;
-      }
+    if (empleado) {
+      url = `/checador/reloj/asistencia-por-empleado?empresa=${idEmpresa}&fecha=${fecha}&empleado=${empleado}&page=${page}&limit=${limit}`;
+    } else {
+      const hasRange = Boolean(desde || hasta);
+      url = `/checador/reloj/asistencia?empresa=${idEmpresa}${
+        !hasRange && fecha ? `&fecha=${fecha}` : ""
+      }${desde ? `&desde=${desde}` : ""}${hasta ? `&hasta=${hasta}` : ""}${
+        filtroNombre ? `&nombre=${encodeURIComponent(filtroNombre)}` : ""
+      }${departamento ? `&departamento=${departamento}` : ""}${
+        estado ? `&estado=${estado}` : ""
+      }&page=${page}&limit=${limit}`;
     }
   }
 

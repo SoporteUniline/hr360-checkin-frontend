@@ -24,6 +24,7 @@ export default function EstadoCivilTable({
   onTotalChange,
   onLoad,
 }) {
+  const showEmpresa = id_empresa === "all";
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const key = `${swrKey}&page=${page}&limit=${limit}&nombre=${filter}`;
@@ -58,6 +59,7 @@ export default function EstadoCivilTable({
         <TableHeader>
           <TableRow>
             <TableHead>Nombre</TableHead>
+            {showEmpresa && <TableHead>Empresa</TableHead>}
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
@@ -65,6 +67,7 @@ export default function EstadoCivilTable({
           {estadoCivil.map((civ) => (
             <TableRow key={civ.id_estado_civil}>
               <TableCell>{civ.nombre}</TableCell>
+              {showEmpresa && <TableCell>{civ?.empresa_nombre}</TableCell>}
               <TableCell className="text-right flex justify-end gap-2">
                 <Button
                   size="icon"

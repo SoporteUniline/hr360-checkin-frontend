@@ -24,6 +24,8 @@ export default function PositionsTable({
   onTotalChange,
   onLoad,
 }) {
+  const showEmpresa = id_empresa === "all";
+
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const key = `${swrKey}&page=${page}&limit=${limit}&nombre=${filter}`;
@@ -42,6 +44,9 @@ export default function PositionsTable({
     }
   }, [positions]);
 
+  if (isLoading) return <p>Cargando...</p>;
+  if (error) return <p>Error al cargar puestos</p>;
+
   if (positions.length === 0)
     return (
       <div className="text-center py-10 text-muted-foreground">
@@ -49,15 +54,13 @@ export default function PositionsTable({
       </div>
     );
 
-  if (isLoading) return <p>Cargando...</p>;
-  if (error) return <p>Error al cargar puestos</p>;
-
   return (
     <>
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead>Nombre</TableHead>
+            {showEmpresa && <TableHead>Empresa</TableHead>}
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
@@ -65,6 +68,7 @@ export default function PositionsTable({
           {positions.map((puesto) => (
             <TableRow key={puesto.id_puesto}>
               <TableCell>{puesto.nombre_puesto}</TableCell>
+              {showEmpresa && <TableCell>{puesto.empresa_nombre}</TableCell>}
               <TableCell className="text-right flex justify-end gap-2">
                 <Button
                   size="icon"

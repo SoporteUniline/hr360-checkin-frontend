@@ -15,7 +15,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
-import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -53,7 +52,8 @@ import styles from "../vacaciones-theme.module.css";
 
 export default function VacacionesPorPeriodoPage() {
   const { dataUser } = useAuth();
-  const idEmpresa = dataUser?.id_empresa;
+  const [empresaActiva, setEmpresaActiva] = useState("all");
+  const [empresaEnModal, setEmpresaEnModal] = useState("");
   const { enqueueSnackbar } = useSnackbar();
 
   const [loading, setLoading] = useState(true);
@@ -90,15 +90,16 @@ export default function VacacionesPorPeriodoPage() {
   const [warningLey, setWarningLey] = useState(""); // mensaje si no existe la regla
 
   const fetchRows = async () => {
-    if (!idEmpresa) return;
     setLoading(true);
-    setError(null);
     try {
-      const url = `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/vacaciones-periodo`;
-      const res = await axios.get(url, { params: { id_empresa: idEmpresa } });
+      const token = Cookies.get("token");
+      const res = await axiosWithBase.get("/checador/vacaciones-periodo", {
+        params: { empresaActiva },
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setRows(res.data || []);
     } catch (e) {
-      setError("Error al cargar vacaciones por periodo");
+      setError(e.response?.data?.error || "Error al cargar datos");
     } finally {
       setLoading(false);
     }
@@ -106,7 +107,7 @@ export default function VacacionesPorPeriodoPage() {
 
   useEffect(() => {
     fetchRows();
-  }, [idEmpresa]);
+  }, [empresaActiva]);
 
   // Formatear fecha a dd/mm/yyyy
   const formatDMY = (iso) => {
@@ -119,15 +120,15 @@ export default function VacacionesPorPeriodoPage() {
 
   // Cargar empleados cuando se abre el modal de nuevo/editar
   useEffect(() => {
-    if (!dialogOpen || !idEmpresa) return;
+    if (!dialogOpen || !empresaEnModal) return;
     (async () => {
       try {
         const token = Cookies.get("token");
         const res = await axiosWithBase.get(
-          `/checador/empleados/activos?empresa=${idEmpresa}&page=1&limit=1000`,
+          `/checador/empleados/activos?empresa=${empresaEnModal}&page=1&limit=1000`,
           {
             headers: token ? { Authorization: `Bearer ${token}` } : {},
-          }
+          },
         );
         const list = Array.isArray(res.data?.data) ? res.data.data : [];
         const mapped = list.map((e) => ({
@@ -141,25 +142,29 @@ export default function VacacionesPorPeriodoPage() {
         setEmpleados([]);
       }
     })();
-  }, [dialogOpen, idEmpresa]);
+  }, [dialogOpen, empresaEnModal]);
 
   // Cargar reglas de Vacaciones por ley al abrir el modal
   useEffect(() => {
-    if (!dialogOpen || !idEmpresa) return;
+    if (!dialogOpen || !empresaEnModal) return;
     (async () => {
       try {
         const res = await axiosWithBase.get(`/checador/vacaciones-ley`, {
-          params: { id_empresa: idEmpresa },
+          params: { id_empresa: empresaEnModal },
         });
         setVacLey(Array.isArray(res.data) ? res.data : []);
       } catch {
         setVacLey([]);
       }
     })();
-  }, [dialogOpen, idEmpresa]);
+  }, [dialogOpen, empresaEnModal]);
 
   const openCreate = () => {
     setEditRow(null);
+    const inicial = empresaActiva === "all" ? "" : empresaActiva;
+    setEmpresaEnModal(inicial);
+    setEmpleados([]);
+    setBusquedaEmp("");
     setForm({
       id_empleado: "",
       fecha_inicio: "",
@@ -173,53 +178,80 @@ export default function VacacionesPorPeriodoPage() {
 
   const openEdit = (r) => {
     setEditRow(r);
+    setEmpresaEnModal(r.id_empresa);
+
+    // Buscamos el nombre del empleado para que aparezca en el buscador del modal
+    const nombreCompleto = `${r.nombre} ${r.apellido_paterno || ""} ${
+      r.apellido_materno || ""
+    }`.trim();
+    setBusquedaEmp(nombreCompleto);
+
     setForm({
-      id_empleado: r.id_empleado,
+      id_empleado: String(r.id_empleado),
       fecha_inicio: r.fecha_inicio?.slice(0, 10) || "",
       fecha_fin: r.fecha_fin?.slice(0, 10) || "",
-      anios: r.anios,
-      dias: r.dias,
+      anios: String(r.anios),
+      dias: String(r.dias),
       estado: r.estado || "Activa",
     });
     setDialogOpen(true);
   };
 
-  // Calcular automáticamente 'anios' y 'dias' según fechas y tabla de ley
+  // Calcular automáticamente 'anios' y 'dias'
   useEffect(() => {
-    const { fecha_inicio, fecha_fin } = form;
-    setWarningLey("");
-    if (!fecha_inicio || !fecha_fin) return;
-    // Aceptar tanto YYYY-MM-DD (inputs) como DD/MM/YYYY (posible entrada)
+    // 1. Solo calcular si hay fechas Y si tenemos las reglas de la ley
+    if (!form.fecha_inicio || !form.fecha_fin || vacLey.length === 0) return;
+
+    // 2. EVITAR el cálculo automático si acabamos de abrir el modo edición
+    // Si los valores actuales del form coinciden exactamente con los de la fila a editar,
+    // no permitas que el cálculo automático los pise.
+    if (
+      editRow &&
+      form.fecha_inicio === editRow.fecha_inicio?.slice(0, 10) &&
+      form.fecha_fin === editRow.fecha_fin?.slice(0, 10)
+    ) {
+      return;
+    }
+
     const parse = (v) => {
       const d = dayjs(v, ["YYYY-MM-DD", "DD/MM/YYYY"], true);
       return d.isValid() ? d : dayjs(v);
     };
-    const start = parse(fecha_inicio).startOf("day");
-    const end = parse(fecha_fin).startOf("day");
-    if (!start.isValid() || !end.isValid() || end.isBefore(start)) return;
-    // Años completos transcurridos dentro del periodo (floor)
-    const diffYears = Math.max(0, Math.floor(end.diff(start, "year", true)));
-    // Buscar en Vacaciones por ley (coincidencia exacta de años)
-    const regla = (vacLey || []).find((r) => Number(r.anios) === diffYears);
-    // Evitar writes innecesarios
-    setForm((f) => {
-      const next = {
-        ...f,
-        anios: String(diffYears),
-        dias: regla ? String(regla.dias) : "",
-      };
-      return (f.anios === next.anios && f.dias === next.dias) ? f : next;
-    });
-    if (!regla) {
-      setWarningLey(
-        `No existe una regla en "Vacaciones por ley" para ${diffYears} año(s).`
-      );
+
+    const start = parse(form.fecha_inicio).startOf("day");
+    const end = parse(form.fecha_fin).startOf("day");
+
+    if (!start.isValid() || !end.isValid() || end.isBefore(start)) {
+      setWarningLey("");
+      return;
     }
-  }, [form.fecha_inicio, form.fecha_fin, vacLey]);
+
+    // Calculamos la diferencia
+    const diffYears = Math.max(0, Math.floor(end.diff(start, "year", true)));
+    const regla = vacLey.find((r) => Number(r.anios) === Number(diffYears));
+
+    const calculatedAnios = String(diffYears);
+    const calculatedDias = regla ? String(regla.dias) : "";
+
+    // Solo actualizamos si el cálculo es distinto a lo que ya hay
+    if (
+      form.anios !== calculatedAnios ||
+      (regla && form.dias !== calculatedDias)
+    ) {
+      setForm((f) => ({
+        ...f,
+        anios: calculatedAnios,
+        dias: calculatedDias || f.dias,
+      }));
+    }
+
+    setWarningLey(regla ? "" : `No existe una regla para ${diffYears} año(s).`);
+  }, [form.fecha_inicio, form.fecha_fin, vacLey, editRow]); // Añadimos editRow a las dependencias
 
   const proceedSave = async () => {
     const payload = {
       ...form,
+      id_empresa: Number(empresaEnModal),
       id_empleado: Number(form.id_empleado),
       anios: Number(form.anios),
       dias: Number(form.dias),
@@ -227,14 +259,14 @@ export default function VacacionesPorPeriodoPage() {
     try {
       const base = `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/vacaciones-periodo`;
       if (editRow) {
-        await axios.put(`${base}/${editRow.id}`, payload, {
-          params: { id_empresa: idEmpresa },
+        await axiosWithBase.put(`${base}/${editRow.id}`, payload, {
+          params: { id_empresa: empresaEnModal },
         });
         enqueueSnackbar("Periodo actualizado correctamente", {
           variant: "success",
         });
       } else {
-        await axios.post(base, payload);
+        await axiosWithBase.post(base, payload);
         enqueueSnackbar("Periodo creado correctamente", { variant: "success" });
       }
       setDialogOpen(false);
@@ -278,8 +310,8 @@ export default function VacacionesPorPeriodoPage() {
     if (!deleteRow) return;
     try {
       const base = `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/vacaciones-periodo`;
-      await axios.delete(`${base}/${deleteRow.id}`, {
-        params: { id_empresa: idEmpresa },
+      await axiosWithBase.delete(`${base}/${deleteRow.id}`, {
+        params: { id_empresa: deleteRow.id_empresa },
       });
       enqueueSnackbar("Periodo eliminado correctamente", {
         variant: "success",
@@ -295,11 +327,43 @@ export default function VacacionesPorPeriodoPage() {
 
   // Badge por estado del periodo
   const EstadoBadge = ({ estado }) => {
-    const base = "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold";
-    if (estado === "Activa") return <span className={base} style={{ backgroundColor: "#d1fae5", color: "#065f46" }}>Activa</span>;
-    if (estado === "Vencida") return <span className={base} style={{ backgroundColor: "#fee2e2", color: "#991b1b" }}>Vencida</span>;
-    if (estado === "Usada") return <span className={base} style={{ backgroundColor: "#fef3c7", color: "#92400e" }}>Usada</span>;
-    return <span className={base} style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}>{estado || "—"}</span>;
+    const base =
+      "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold";
+    if (estado === "Activa")
+      return (
+        <span
+          className={base}
+          style={{ backgroundColor: "#d1fae5", color: "#065f46" }}
+        >
+          Activa
+        </span>
+      );
+    if (estado === "Vencida")
+      return (
+        <span
+          className={base}
+          style={{ backgroundColor: "#fee2e2", color: "#991b1b" }}
+        >
+          Vencida
+        </span>
+      );
+    if (estado === "Usada")
+      return (
+        <span
+          className={base}
+          style={{ backgroundColor: "#fef3c7", color: "#92400e" }}
+        >
+          Usada
+        </span>
+      );
+    return (
+      <span
+        className={base}
+        style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}
+      >
+        {estado || "—"}
+      </span>
+    );
   };
 
   return (
@@ -320,6 +384,39 @@ export default function VacacionesPorPeriodoPage() {
           >
             ➕ Nuevo
           </Button>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-4 mb-6 bg-white p-4 rounded-xl border shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-slate-100 rounded-lg">🏢</div>
+          <div>
+            <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+              Empresa Actual
+            </p>
+            <select
+              value={empresaActiva}
+              onChange={(e) => {
+                const val = e.target.value;
+                setEmpresaActiva(val === "all" ? "all" : Number(val));
+                setPage(1); // Resetear página al filtrar
+              }}
+              className="block w-full mt-1 font-medium text-slate-700 bg-transparent focus:outline-none cursor-pointer"
+            >
+              <option value="all">🌍 Todas las empresas</option>
+              {dataUser?.empresas_detalle?.map((emp) => (
+                <option key={emp.id_empresa} value={emp.id_empresa}>
+                  {emp.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] uppercase font-bold text-slate-500">
+            Total Periodos
+          </p>
+          <p className="text-xl font-semibold text-[#37495E]">{rows.length}</p>
         </div>
       </div>
 
@@ -355,11 +452,13 @@ export default function VacacionesPorPeriodoPage() {
                       </TableCell>
                       <TableCell>{r.departamento || "-"}</TableCell>
                       <TableCell>{`${formatDMY(r.fecha_inicio)} → ${formatDMY(
-                        r.fecha_fin
+                        r.fecha_fin,
                       )}`}</TableCell>
                       <TableCell>{r.anios}</TableCell>
                       <TableCell>{r.dias}</TableCell>
-                      <TableCell><EstadoBadge estado={r.estado} /></TableCell>
+                      <TableCell>
+                        <EstadoBadge estado={r.estado} />
+                      </TableCell>
                       <TableCell className="text-center">
                         <div className="flex gap-2 justify-center">
                           <Button
@@ -397,7 +496,18 @@ export default function VacacionesPorPeriodoPage() {
       </Card>
 
       {/* Modal de alta/edición */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog
+        open={dialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) {
+            setEmpresaEnModal("");
+            setEmpleados([]);
+            setBusquedaEmp("");
+            setEditRow(null);
+          }
+        }}
+      >
         <DialogContent className={`${styles.vacacionesTheme} max-w-lg`}>
           <DialogHeader>
             <DialogTitle>
@@ -406,13 +516,41 @@ export default function VacacionesPorPeriodoPage() {
           </DialogHeader>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* Selector de Empresa dentro del Modal */}
+            <div className="md:col-span-2 space-y-2">
+              <div className="text-[11px] uppercase text-slate-500 font-bold">
+                Empresa del Periodo
+              </div>
+              <select
+                className="w-full border rounded-md px-3 py-2 text-sm bg-white"
+                value={empresaEnModal}
+                onChange={(e) => {
+                  setEmpresaEnModal(e.target.value);
+                  setForm((f) => ({ ...f, id_empleado: "" }));
+                  setBusquedaEmp("");
+                  setEmpleados([]);
+                }}
+              >
+                <option value="">-- Selecciona una empresa --</option>
+                {dataUser?.empresas_detalle?.map((emp) => (
+                  <option key={emp.id_empresa} value={emp.id_empresa}>
+                    {emp.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
             {/* Buscador de empleado (mismo formato que 'Nuevo permiso') */}
             <div className="md:col-span-2 space-y-2">
               <div className="text-[11px] uppercase text-slate-500">
                 Empleado
               </div>
               <Input
-                placeholder="Buscar por nombre…"
+                placeholder={
+                  empresaEnModal
+                    ? "Buscar por nombre…"
+                    : "Selecciona empresa primero"
+                }
+                disabled={!empresaEnModal}
                 value={busquedaEmp}
                 onChange={(e) => setBusquedaEmp(e.target.value)}
               />
@@ -423,7 +561,7 @@ export default function VacacionesPorPeriodoPage() {
                     .filter((e) =>
                       e.nombre
                         .toLowerCase()
-                        .includes(busquedaEmp.trim().toLowerCase())
+                        .includes(busquedaEmp.trim().toLowerCase()),
                     )
                     .map((e) => {
                       const checked = String(form.id_empleado || "") === e.id;
@@ -490,8 +628,9 @@ export default function VacacionesPorPeriodoPage() {
                 onChange={(e) => {
                   const nextAnios = e.target.value;
                   // Si el usuario cambia manualmente, intenta mapear días por ley
+                  // Busca esta parte en tu JSX y asegúrate que esté así:
                   const regla = (vacLey || []).find(
-                    (r) => String(r.anios) === String(nextAnios)
+                    (r) => Number(r.anios) === Number(nextAnios), // Forzar comparación numérica
                   );
                   setForm((f) => ({
                     ...f,
@@ -503,7 +642,7 @@ export default function VacacionesPorPeriodoPage() {
                       ? ""
                       : nextAnios
                       ? `No existe una regla en "Vacaciones por ley" para ${nextAnios} año(s).`
-                      : ""
+                      : "",
                   );
                 }}
               />
@@ -598,7 +737,7 @@ export default function VacacionesPorPeriodoPage() {
             <AlertDialogDescription>
               {deleteRow
                 ? `Eliminarás el periodo ${formatDMY(
-                    deleteRow.fecha_inicio
+                    deleteRow.fecha_inicio,
                   )} → ${formatDMY(deleteRow.fecha_fin)}.`
                 : ""}
             </AlertDialogDescription>
@@ -607,13 +746,16 @@ export default function VacacionesPorPeriodoPage() {
             <AlertDialogCancel className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]">
               Cancelar
             </AlertDialogCancel>
-            <AlertDialogAction className="bg-[#ef4444] hover:bg-[#dc2626]" onClick={confirmDelete}>
+            <AlertDialogAction
+              className="bg-[#ef4444] hover:bg-[#dc2626]"
+              onClick={confirmDelete}
+            >
               Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      
+
       {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
       <AccesosRapidos />
     </div>

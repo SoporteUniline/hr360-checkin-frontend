@@ -11,12 +11,18 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
-import axios from "axios";
+import axios from "@/lib/axios";
 import { mutate } from "swr";
 import { useSnackbar } from "notistack";
 import { ShieldCheck, Trash2 } from "lucide-react";
 
-export default function EstadoEmpleadoDialog({ item, limit, page, className }) {
+export default function EstadoEmpleadoDialog({
+  item,
+  limit,
+  page,
+  className,
+  mutate,
+}) {
   const { enqueueSnackbar } = useSnackbar();
   const [open, setOpen] = useState(false);
   const [motivo, setMotivo] = useState("");
@@ -43,9 +49,7 @@ export default function EstadoEmpleadoDialog({ item, limit, page, className }) {
       setOpen(false);
       setMotivo("");
 
-      mutate(
-        `/checador/empleados?empresa=${item.id_empresa}&page=${page}&limit=${limit}`
-      );
+      mutate();
     } catch (err) {
       const msg =
         err?.response?.data?.error ||

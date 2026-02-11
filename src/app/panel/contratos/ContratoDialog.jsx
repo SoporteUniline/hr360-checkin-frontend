@@ -27,6 +27,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useAuth } from "@/context/AuthContext";
 import { contratosApi } from "@/lib/contratosApi";
 import styles from "./contratos-theme.module.css";
+import { Combobox } from "@/components/Combobox";
 
 /**
  * Dialog para crear/editar/duplicar Contratos.
@@ -39,7 +40,9 @@ export default function ContratoDialog({
   seedItem,
   idEmpresa,
   onSaved,
+  empresas = [],
 }) {
+  const [empresaSeleccionada, setEmpresaSeleccionada] = useState("");
   const isEdit = Boolean(editItem);
   const isDuplicate = !isEdit && !!seedItem;
   const { enqueueSnackbar } = useSnackbar();
@@ -86,14 +89,20 @@ export default function ContratoDialog({
   const [errors, setErrors] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (open && empresas.length === 1) {
+      setEmpresaSeleccionada(String(empresas[0].id_empresa));
+    }
+  }, [open, empresas]);
+
   // Cargar empleados al abrir
   useEffect(() => {
-    if (!open || !idEmpresa) return;
+    if (!open || !empresaSeleccionada) return;
     (async () => {
       try {
         const token = Cookies.get("token");
         const res = await axios.get(
-          `/checador/empleados/activos?empresa=${idEmpresa}&page=1&limit=1000`,
+          `/checador/empleados/activos?empresa=${empresaSeleccionada}&page=1&limit=1000`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -115,7 +124,7 @@ export default function ContratoDialog({
       try {
         const token = Cookies.get("token");
         const r2 = await axios.get(
-          `/checador/empleados/puestos?empresa=${idEmpresa}`,
+          `/checador/empleados/puestos?empresa=${empresaSeleccionada}`,
           {
             headers: { Authorization: `Bearer ${token}` },
           }
@@ -129,7 +138,7 @@ export default function ContratoDialog({
         );
       } catch {}
     })();
-  }, [open, idEmpresa]);
+  }, [open, empresaSeleccionada]);
 
   function nombrePuestoPorId(idP) {
     if (!idP) return null;
@@ -169,6 +178,13 @@ export default function ContratoDialog({
     // Cerrar sugerencias al abrir
     setOpenEmpSug(false);
     setOpenJefeSug(false);
+    if (isEdit) {
+      setEmpresaSeleccionada(String(editItem?.id_empresa || ""));
+    }
+    if (isDuplicate) {
+      setEmpresaSeleccionada(String(seedItem?.id_empresa || ""));
+    }
+
     if (isEdit) {
       setEmpleadoId(String(editItem?.id_empleado || ""));
       setForm({
@@ -325,6 +341,7 @@ export default function ContratoDialog({
 
   async function guardar() {
     const errs = [];
+    if (!empresaSeleccionada) errs.push("Selecciona una empresa.");
     if (!empleadoId) errs.push("Selecciona un empleado.");
     if (!form.tipo_contrato) errs.push("Selecciona el tipo de contrato.");
     if (!form.fecha_inicio) errs.push("La fecha de inicio es obligatoria.");
@@ -344,7 +361,7 @@ export default function ContratoDialog({
 
     const payload = {
       id_empleado: Number(empleadoId),
-      id_empresa: idEmpresa,
+      id_empresa: Number(empresaSeleccionada),
       tipo_contrato: form.tipo_contrato,
       fecha_inicio: form.fecha_inicio,
       fecha_fin: form.fecha_fin || null,
@@ -441,6 +458,22 @@ export default function ContratoDialog({
               👤 Información Básica
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {!isEdit && (
+                <div className="space-y-2">
+                  <Label>Empresa</Label>
+                  <Combobox
+                    name="empresa-combobox"
+                    options={empresas.map((e) => ({
+                      value: String(e.id_empresa),
+                      label: e.nombre,
+                    }))}
+                    value={empresaSeleccionada}
+                    onChange={setEmpresaSeleccionada}
+                    placeholder="Selecciona la empresa"
+                  />
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label>Empleado</Label>
                 <div className="relative">

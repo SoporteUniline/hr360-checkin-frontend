@@ -1,4 +1,5 @@
-import { ComboboxSucursal } from "@/components/ComboboxSucursal";
+import useSWR from "swr";
+import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import {
   FormField,
   FormItem,
@@ -14,21 +15,20 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import axios from "@/lib/axios";
 import { Input } from "@/components/ui/input";
-import useSWR from "swr";
-import { fetcherWithToken, swr_config } from "@/lib/fetcher";
-import { ComboboxDepartamento } from "@/components/ComboboxDepartamento";
 import { FormLabelWithAsterisk } from "@/components/FormLabelWithAsterisk";
 import { Switch } from "@/components/ui/switch";
-import axios from "axios";
 import { useEffect, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import ModalArea from "@/components/ModalArea";
 import { Button } from "@/components/ui/button";
 import { useSnackbar } from "notistack";
 import { Combobox } from "@/components/Combobox";
+import { useEmpresaDependencias } from "@/hooks/useEmpresaDependencias";
+import { CreatableCombobox } from "@/components/CreatableCombobox";
 
-export default function TabLaborales({ form, soloLectura, dataUser }) {
+export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
   const { enqueueSnackbar } = useSnackbar();
   const [areas, setAreas] = useState([]);
   const [areasAsignadas, setAreasAsignadas] = useState([]);
@@ -36,6 +36,11 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
   const [guardandoArea, setGuardandoArea] = useState(false);
   const checarGPS = form.watch("checar_gps");
   const empleadoId = form.watch("id_empleado");
+  const idEmpresa = form.watch("id_empresa");
+  const idSucursal = form.watch("sucursal");
+
+  const { sucursales, departamentos, loadingSucursales, loadingDepartamentos } =
+    useEmpresaDependencias(form, idEmpresa, idSucursal);
 
   const crearArea = async (formData) => {
     if (!formData?.nombre_area?.trim()) {
@@ -52,7 +57,7 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
     try {
       const datos = {
         ...formData,
-        id_empresa: dataUser?.id_empresa,
+        id_empresa: idEmpresa,
         latitud: Number(formData.latitud),
         longitud: Number(formData.longitud),
       };
@@ -70,7 +75,7 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
       console.log("Error creando área:", error);
 
       enqueueSnackbar(error?.response?.data?.error, {
-        variant: "error", // 🔴 color rojo de error
+        variant: "error",
       });
     } finally {
       setGuardandoArea(false);
@@ -86,7 +91,7 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
   };
 
   useEffect(() => {
-    if (!checarGPS) return;
+    if (!checarGPS || !idEmpresa) return;
 
     const fetchAreas = async () => {
       try {
@@ -94,7 +99,7 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
           `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/area_check2`,
           {
             params: {
-              id_empresa: dataUser?.id_empresa,
+              id_empresa: idEmpresa,
               limit: 9999,
               page: 1,
             },
@@ -107,7 +112,7 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
     };
 
     fetchAreas();
-  }, [checarGPS, dataUser?.id_empresa]);
+  }, [checarGPS, idEmpresa]);
 
   useEffect(() => {
     if (!checarGPS || !empleadoId) return;
@@ -131,7 +136,9 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
   }, [areasAsignadas]);
 
   const { data: empleados } = useSWR(
-    `/checador/empleados?empresa=${dataUser?.id_empresa}&page=1&limit=500`,
+    idEmpresa
+      ? `/checador/empleados?empresa=${idEmpresa}&page=1&limit=500`
+      : null,
     fetcherWithToken,
     swr_config,
   );
@@ -151,6 +158,12 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
     },
   ];
 
+  const empresasOptions =
+    dataUser?.empresas_detalle?.map((empresa) => ({
+      value: String(empresa.id_empresa),
+      label: empresa.nombre,
+    })) || [];
+
   const opcionesEmpleados =
     empleados?.data?.map((emp) => ({
       value: emp.id_empleado,
@@ -161,35 +174,77 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
     <section className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mx-1 my-3">
         <FormField
-          name="nombre_empresa"
+          name="id_empresa"
           control={form.control}
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Empresa</FormLabel>
+              <FormLabelWithAsterisk required>Empresa</FormLabelWithAsterisk>
               <FormControl>
-                <Input
-                  {...field}
-                  value={dataUser?.nombre_empresa || ""}
-                  disabled
-                  readOnly
+                <Combobox
+                  options={empresasOptions}
+                  value={field.value ? String(field.value) : ""}
+                  placeholder="Seleccionar empresa"
+                  emptyText="No hay empresas"
+                  disabled={soloLectura || editar}
+                  onChange={(val) => {
+                    if (soloLectura || editar) return;
+
+                    const parsed = val ? Number(val) : "";
+                    field.onChange(parsed);
+
+                    form.setValue("sucursal", "");
+                    form.setValue("departamento", "");
+                    form.setValue("id_jefe_inmediato", null);
+                    form.setValue("id_autoriza_vacaciones", null);
+                    form.setValue("id_autoriza_permisos", null);
+                  }}
                 />
               </FormControl>
+              <FormMessage />
             </FormItem>
           )}
         />
+
         <FormField
           name="sucursal"
           control={form.control}
           render={({ field }) => (
             <FormItem>
-              <FormLabelWithAsterisk required={true}>
+              <FormLabelWithAsterisk required>
                 Unidad de negocio o sucursal
               </FormLabelWithAsterisk>
-              <ComboboxSucursal
-                value={field.value}
-                onChange={(val) => field.onChange(val)}
-                disabled={soloLectura}
+
+              <CreatableCombobox
+                disabled={soloLectura || !idEmpresa}
+                value={field.value ?? ""} // 🔥 STRING
+                compareBy="label" // 🔥 LABEL
+                placeholder="Seleccionar o crear sucursal"
+                searchPlaceholder="Buscar sucursal..."
+                fetchOptions={async (q) => {
+                  const { data } = await axios.get(
+                    `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/sucursales`,
+                    { params: { id_empresa: idEmpresa, nombre: q } },
+                  );
+                  return data.sucursales;
+                }}
+                createOption={async (nombre) => {
+                  const { data } = await axios.post(
+                    `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/sucursales`,
+                    { nombre, id_empresa: idEmpresa },
+                  );
+                  return data;
+                }}
+                getOptionLabel={(o) => o.nombre}
+                getOptionValue={(o) => o.nombre} // 🔥 CLAVE
+                onChange={(nombre) => {
+                  field.onChange(nombre);
+                  form.setValue("departamento", "");
+                }}
+                onCreated={(nuevo) => {
+                  field.onChange(nuevo.nombre);
+                }}
               />
+
               <FormMessage />
             </FormItem>
           )}
@@ -201,11 +256,45 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Departamento</FormLabel>
-              <ComboboxDepartamento
-                value={field.value}
-                onChange={(val) => field.onChange(val)}
-                disabled={soloLectura}
+
+              <CreatableCombobox
+                disabled={soloLectura || !idSucursal}
+                value={field.value ?? ""}
+                compareBy="label"
+                placeholder="Seleccionar o crear departamento"
+                searchPlaceholder="Buscar departamento..."
+                fetchOptions={async (q) => {
+                  if (!idSucursal) return [];
+
+                  const { data } = await axios.get(
+                    `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/departamentos`,
+                    {
+                      params: {
+                        id_sucursal: idSucursal,
+                        id_empresa: idEmpresa,
+                        nombre: q,
+                      },
+                    },
+                  );
+                  return data.departamentos;
+                }}
+                createOption={async (nombre) => {
+                  const { data } = await axios.post(
+                    `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/departamentos`,
+                    {
+                      nombre,
+                      id_empresa: idEmpresa,
+                      id_sucursal: idSucursal,
+                    },
+                  );
+                  return data;
+                }}
+                getOptionLabel={(o) => o.nombre}
+                getOptionValue={(o) => o.nombre} // 🔥 CLAVE
+                onChange={(nombre) => field.onChange(nombre)}
+                onCreated={(nuevo) => field.onChange(nuevo.nombre)}
               />
+
               <FormMessage />
             </FormItem>
           )}
@@ -321,6 +410,8 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
                   <Input
                     type="password"
                     placeholder="Nueva contraseña"
+                    name="new_pass_laboral"
+                    autoComplete="new-password"
                     {...field}
                     disabled={soloLectura}
                     value={field.value ?? ""}
@@ -426,7 +517,7 @@ export default function TabLaborales({ form, soloLectura, dataUser }) {
           )}
         />
 
-        {form.watch("checar_gps") && (
+        {form.watch("checar_gps") && idEmpresa && (
           <Button
             size="sm"
             onClick={() => setMostrarModalArea(true)}

@@ -57,8 +57,9 @@ export const AdministrativeDetailsModal = ({
   onEstatusUpdated,
 }) => {
   const { dataUser } = useAuth();
+  console.log(dataUser);
   const { enqueueSnackbar } = useSnackbar();
-  const idEmpresa = dataUser?.id_empresa;
+  const idEmpresa = acta?.id_empresa;
 
   /**
    * Datos de empresa para marca/imagen en el PDF (formato unificado).
@@ -81,8 +82,12 @@ export const AdministrativeDetailsModal = ({
     let alive = true;
     const run = async () => {
       const companyUrl = empresaData?.url_imagen;
-      const companyDataUrl = companyUrl ? await fetchImageAsDataUrl(companyUrl) : null;
-      const fallbackDataUrl = companyDataUrl ? null : await fetchImageAsDataUrl("/assets/logo.png");
+      const companyDataUrl = companyUrl
+        ? await fetchImageAsDataUrl(companyUrl)
+        : null;
+      const fallbackDataUrl = companyDataUrl
+        ? null
+        : await fetchImageAsDataUrl("/assets/logo.png");
       if (alive) setLogoDataUrl(companyDataUrl || fallbackDataUrl || null);
     };
     run();
@@ -105,7 +110,9 @@ export const AdministrativeDetailsModal = ({
    */
   const [estatusLocal, setEstatusLocal] = useState(acta?.estatus);
   const [openEstatusDialog, setOpenEstatusDialog] = useState(false);
-  const [estatusNuevo, setEstatusNuevo] = useState(String(acta?.estatus || "").toLowerCase());
+  const [estatusNuevo, setEstatusNuevo] = useState(
+    String(acta?.estatus || "").toLowerCase()
+  );
   const [savingEstatus, setSavingEstatus] = useState(false);
 
   useEffect(() => {
@@ -139,7 +146,9 @@ export const AdministrativeDetailsModal = ({
   const onGuardarEstatus = async () => {
     try {
       if (!idEmpresa) {
-        enqueueSnackbar("No se encontró la empresa en sesión (id_empresa).", { variant: "error" });
+        enqueueSnackbar("No se encontró la empresa en sesión (id_empresa).", {
+          variant: "error",
+        });
         return;
       }
       if (!acta?.id_acta) {
@@ -148,13 +157,18 @@ export const AdministrativeDetailsModal = ({
       }
 
       setSavingEstatus(true);
-      const resp = await administrativeMinutesApi.actualizarEstatus(acta.id_acta, {
-        id_empresa: idEmpresa,
-        estatus: estatusNuevo,
-      });
+      const resp = await administrativeMinutesApi.actualizarEstatus(
+        acta.id_acta,
+        {
+          id_empresa: idEmpresa,
+          estatus: estatusNuevo,
+        }
+      );
 
       setEstatusLocal(resp?.estatus || estatusNuevo);
-      enqueueSnackbar("Estatus actualizado correctamente", { variant: "success" });
+      enqueueSnackbar("Estatus actualizado correctamente", {
+        variant: "success",
+      });
       setOpenEstatusDialog(false);
 
       // Refrescar listado (si el padre lo manda), para que el cambio se vea en la tabla también.
@@ -162,7 +176,8 @@ export const AdministrativeDetailsModal = ({
     } catch (error) {
       console.error("Error al actualizar estatus del acta:", error);
       enqueueSnackbar(
-        error?.response?.data?.error || "Hubo un error al actualizar el estatus del acta",
+        error?.response?.data?.error ||
+          "Hubo un error al actualizar el estatus del acta",
         { variant: "error" }
       );
     } finally {
@@ -185,8 +200,11 @@ export const AdministrativeDetailsModal = ({
     const doc = new jsPDF("p", "mm", "a4");
     const ctx = createPdfContext({ doc });
 
-    const companyName = empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
-    const empleadoName = `${acta.nombre_empleado || ""} ${acta.apellido_paterno_empleado || ""} ${acta.apellido_materno_empleado || ""}`
+    const companyName =
+      empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
+    const empleadoName = `${acta.nombre_empleado || ""} ${
+      acta.apellido_paterno_empleado || ""
+    } ${acta.apellido_materno_empleado || ""}`
       .replace(/\s+/g, " ")
       .trim();
 
@@ -195,7 +213,11 @@ export const AdministrativeDetailsModal = ({
       linesLeft: [
         `Folio: ${acta.folio || "—"}`,
         `Empleado: ${empleadoName || "—"}`,
-        `Fecha incidente: ${acta.fecha_incidente ? dayjs(acta.fecha_incidente).format("DD/MM/YYYY") : "—"}`,
+        `Fecha incidente: ${
+          acta.fecha_incidente
+            ? dayjs(acta.fecha_incidente).format("DD/MM/YYYY")
+            : "—"
+        }`,
       ],
       kpiLabel: "Estatus",
       kpiValue: String(acta.estatus || "—").toUpperCase(),
@@ -236,7 +258,12 @@ export const AdministrativeDetailsModal = ({
       rows: [
         ["Elabora", acta.nombre_quien_elabora || "—"],
         ["Cargo elabora", acta.nombre_cargo_elabora || "—"],
-        ["Fecha creación", acta.fecha_creacion ? dayjs(acta.fecha_creacion).format("DD/MM/YYYY HH:mm") : "—"],
+        [
+          "Fecha creación",
+          acta.fecha_creacion
+            ? dayjs(acta.fecha_creacion).format("DD/MM/YYYY HH:mm")
+            : "—",
+        ],
       ],
     });
 
@@ -248,9 +275,12 @@ export const AdministrativeDetailsModal = ({
       signaturesOn: "last",
     });
 
-    const nombreArchivo = `ACTA_ADMINISTRATIVA_${String(acta.folio || "FOLIO").replace(/\s+/g, "_")}_${String(
-      empleadoName || "Empleado"
-    ).replace(/\s+/g, "_")}.pdf`;
+    const nombreArchivo = `ACTA_ADMINISTRATIVA_${String(
+      acta.folio || "FOLIO"
+    ).replace(/\s+/g, "_")}_${String(empleadoName || "Empleado").replace(
+      /\s+/g,
+      "_"
+    )}.pdf`;
     doc.save(nombreArchivo);
   };
 
@@ -266,6 +296,11 @@ export const AdministrativeDetailsModal = ({
         <div className="text-sm space-y-2 pt-2 max-h-[60vh] overflow-y-auto">
           <CardCompact title="📄 Información General">
             <div className="flex justify-between pb-1 border-b-1">
+              <p className="text-gray-500">Empresa:</p>
+              <p className="font-semibold">{acta?.nombre_empresa || "—"}</p>
+            </div>
+
+            <div className="flex justify-between pt-1 pb-2 border-b-1">
               <p className="text-gray-500">Folio:</p>
               <p className="font-semibold">{acta.folio}</p>
             </div>
@@ -355,7 +390,9 @@ export const AdministrativeDetailsModal = ({
             <div className="flex justify-between pt-1 pb-2 border-b-1">
               <p className="text-gray-500">Estatus:</p>
               <div className="flex items-center gap-2">
-                <span className={badgeClassByEstatus(estatusLocal)}>{estatusLocal}</span>
+                <span className={badgeClassByEstatus(estatusLocal)}>
+                  {estatusLocal}
+                </span>
 
                 {/* Botón rápido: cambiar estatus sin entrar a "Editar". */}
                 <Button
@@ -391,7 +428,11 @@ export const AdministrativeDetailsModal = ({
         {/* Footer de acciones: cerrar + descargar PDF.
             Relación: patrón igual a `PermisoViewDialog` y `FiniquitoViewDialog`. */}
         <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-4 border-t">
-          <Button variant="outline" onClick={() => onClose(false)} className="w-full sm:w-auto">
+          <Button
+            variant="outline"
+            onClick={() => onClose(false)}
+            className="w-full sm:w-auto"
+          >
             Cerrar
           </Button>
           <Button
@@ -403,12 +444,16 @@ export const AdministrativeDetailsModal = ({
         </div>
 
         {/* Diálogo de cambio de estatus (confirmación) */}
-        <AlertDialog open={openEstatusDialog} onOpenChange={setOpenEstatusDialog}>
+        <AlertDialog
+          open={openEstatusDialog}
+          onOpenChange={setOpenEstatusDialog}
+        >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Cambiar estatus del acta</AlertDialogTitle>
               <AlertDialogDescription>
-                Selecciona el nuevo estatus para el acta <span className="font-semibold">{acta.folio}</span>.
+                Selecciona el nuevo estatus para el acta{" "}
+                <span className="font-semibold">{acta.folio}</span>.
               </AlertDialogDescription>
             </AlertDialogHeader>
 

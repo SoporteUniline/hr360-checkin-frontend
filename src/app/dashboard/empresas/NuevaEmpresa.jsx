@@ -17,18 +17,23 @@ import {
 } from "@/components/ui/form";
 import { Button } from "@/components/ui/button";
 import { useSnackbar } from "notistack";
-import axios from "axios";
+import axios from "@/lib/axios";
 import { Edit, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { mutate } from "swr";
 import Cookies from "js-cookie";
-//import { fetcher } from "@/lib/fetcher";
 import ImageForm from "@/app/(public)/alta-empresas/ImageForm";
 import ImageEmpresa from "@/app/panel/cuenta/Empresa/ImagenEmpresa";
 import AutocompleteInput from "@/components/Inputs/FormCreatebleAutocomplete";
 import { loadOptionsGiros } from "@/app/(public)/alta-empresas/dataMappings";
 
-export default function NuevaEmpresa({ editar = false, values, limit, page }) {
+export default function NuevaEmpresa({
+  editar = false,
+  values,
+  limit,
+  page,
+  setFilter,
+}) {
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [imagePreview, setImagePreview] = React.useState(null);
@@ -50,49 +55,49 @@ export default function NuevaEmpresa({ editar = false, values, limit, page }) {
     },
   });
 
-  const { handleSubmit, register, formState, setError } = form;
+  const { handleSubmit, register, formState, setError, clearErrors } = form;
+  const { errors } = formState;
 
   const onSubmit = async (data) => {
-    if (!selectedFile && !imagePreview) {
-      setError("image", {
-        type: "required",
-        message: "La imagen es obligatoria",
+    // 1. Validación manual de la Imagen (Solo en creación)
+    if (!editar && !selectedFile) {
+      setError("imagen_logo", {
+        type: "manual",
+        message: "El logo de la empresa es obligatorio",
       });
       return;
     }
 
+    // 2. Validación manual del Giro
     if (!data?.giro?.value) {
       setError("giro", {
-        type: "required",
-        message: "Giro es obligatorio",
+        type: "manual",
+        message: "Debes seleccionar un giro",
       });
       return;
     }
 
+    if (setFilter) setFilter({ search: "", status: "Todos" });
     setLoading(true);
+
     const headers = {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
+      headers: { Authorization: `Bearer ${token}` },
     };
+
     try {
       if (editar) {
         const { createdAt, updatedAt, giro, ...input } = data;
-
         await axios.put(
           `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/empresas/${data.id_empresa}`,
           { ...input, giro: giro.value },
-          headers
+          headers,
         );
       } else {
         const formData = new FormData();
-
-        if (selectedFile) {
-          formData.append("imagen", selectedFile);
-        }
+        if (selectedFile) formData.append("imagen", selectedFile);
 
         Object.entries(data).forEach(([key, value]) => {
-          if (key !== "imagen" && key !== "giro") {
+          if (key !== "imagen" && key !== "giro" && value) {
             formData.append(key, value);
           }
         });
@@ -101,34 +106,36 @@ export default function NuevaEmpresa({ editar = false, values, limit, page }) {
         await axios.post(
           `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/empresas/createEmpresaByAdmin`,
           formData,
-          headers
+          headers,
         );
       }
-      enqueueSnackbar("Se guardó empresa exitosamente!", {
+
+      enqueueSnackbar("Empresa registrada exitosamente!", {
         variant: "success",
       });
       form.reset();
+      setImagePreview(null);
+      setSelectedFile(null);
       setLoading(false);
       await mutate(`/empresas?page=${page}&limit=${limit}`);
       setOpen(false);
     } catch (error) {
       setLoading(false);
       const errorMessage =
-        error.response?.data?.error ||
-        error?.message ||
-        "Error al guardar empresa";
+        error.response?.data?.error || "Error al guardar empresa";
       enqueueSnackbar(errorMessage, { variant: "error" });
     }
   };
 
-  const getOptionGiros = async (value) => {
-    const options = await loadOptionsGiros(value);
-    return options.find((opt) => opt.label === value);
+  const onImageChange = (file) => {
+    setSelectedFile(file);
+    if (file) clearErrors("imagen_logo");
   };
 
   const handleEditAction = async (e) => {
     e.stopPropagation();
-    const giro = await getOptionGiros(values.giro);
+    const options = await loadOptionsGiros(values.giro);
+    const giro = options.find((opt) => opt.label === values.giro);
     form.reset({ ...values, giro });
     setOpen(true);
     setImagePreview(values.url_imagen || null);
@@ -141,10 +148,6 @@ export default function NuevaEmpresa({ editar = false, values, limit, page }) {
     setOpen(true);
     setImagePreview(null);
     setSelectedFile(null);
-  };
-
-  const handleOnSelect = (selectedOption) => {
-    form.setValue("giro", selectedOption);
   };
 
   return (
@@ -176,10 +179,12 @@ export default function NuevaEmpresa({ editar = false, values, limit, page }) {
             {editar ? "Editar empresa" : "Crear nueva empresa"}
           </SheetTitle>
         </SheetHeader>
-        <div className="mt-3 h-[85vh] overflow-y-auto">
+
+        <div className="mt-3 h-[85vh] overflow-y-auto pr-2">
           <Form {...form}>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div>
+              {/* LOGO */}
+              <div className="flex flex-col gap-2">
                 {editar ? (
                   <ImageEmpresa empresa={values} keepData />
                 ) : (
@@ -187,152 +192,144 @@ export default function NuevaEmpresa({ editar = false, values, limit, page }) {
                     form={form}
                     imagePreview={imagePreview}
                     setImagePreview={setImagePreview}
-                    setSelectedFile={setSelectedFile}
+                    setSelectedFile={onImageChange}
                   />
                 )}
+                {errors.imagen_logo && (
+                  <p className="text-sm font-medium text-destructive text-center">
+                    {errors.imagen_logo.message}
+                  </p>
+                )}
               </div>
+
+              {/* DATOS PRINCIPALES */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
                 <div className="flex flex-col gap-3">
                   <FormItem>
-                    <FormLabel>Empresa</FormLabel>
+                    <FormLabel>
+                      Empresa <span className="text-red-500">*</span>
+                    </FormLabel>
                     <FormControl>
                       <Input
                         disabled={loading}
                         {...register("nombre_empresa", {
-                          required: "Empresa obligatorio",
+                          required: "Obligatorio",
                         })}
                       />
                     </FormControl>
-                    <FormMessage>
-                      {formState.errors.empresa?.message}
-                    </FormMessage>
+                    <FormMessage>{errors.nombre_empresa?.message}</FormMessage>
                   </FormItem>
 
                   <FormItem>
-                    <FormLabel>Correo</FormLabel>
+                    <FormLabel>
+                      Correo <span className="text-red-500">*</span>
+                    </FormLabel>
                     <FormControl>
                       <Input
                         disabled={loading}
                         type="email"
                         {...register("correo_empresa", {
-                          required: "Correo obligatorio",
+                          required: "Obligatorio",
                         })}
                       />
                     </FormControl>
-                    <FormMessage>
-                      {formState.errors.correo_empresa?.message}
-                    </FormMessage>
+                    <FormMessage>{errors.correo_empresa?.message}</FormMessage>
                   </FormItem>
                 </div>
+
                 <div className="flex flex-col gap-3">
                   <FormItem>
-                    <FormLabel>Nombre del dueño</FormLabel>
+                    <FormLabel>
+                      Nombre del dueño <span className="text-red-500">*</span>
+                    </FormLabel>
                     <FormControl>
                       <Input
                         disabled={loading}
                         {...register("nombre_duenio", {
-                          required: "Nombre del dueño obligatorio",
+                          required: "Obligatorio",
                         })}
                       />
                     </FormControl>
-                    <FormMessage>
-                      {formState.errors.nombre_duenio?.message}
-                    </FormMessage>
+                    <FormMessage>{errors.nombre_duenio?.message}</FormMessage>
                   </FormItem>
 
                   <FormItem>
-                    <FormLabel>Teléfono</FormLabel>
+                    <FormLabel>
+                      Teléfono <span className="text-red-500">*</span>
+                    </FormLabel>
                     <FormControl>
                       <Input
                         disabled={loading}
                         type="tel"
-                        {...register("celular", {
-                          required: "Teléfono obligatorio",
-                          pattern: {
-                            value: /^(52\d{10}|\d{10})$/,
-                            message: "Teléfono no válido",
-                          },
-                        })}
+                        {...register("celular", { required: "Obligatorio" })}
                       />
                     </FormControl>
-                    <FormMessage>
-                      {formState.errors.celular?.message}
-                    </FormMessage>
+                    <FormMessage>{errors.celular?.message}</FormMessage>
                   </FormItem>
                 </div>
               </div>
-              {/* <FormItem>
-                <FormLabel>Giro</FormLabel>
-                <FormControl>
-                  <Input
-                    type="text"
-                    disabled={loading}
-                    {...register("giro", {
-                      required: "Giro obligatorio",
-                    })}
-                  />
-                </FormControl>
-                <FormMessage>{formState.errors.giro?.message}</FormMessage>
-              </FormItem> */}
+
+              {/* GIRO */}
               <FormItem>
-                <FormLabel>Giro</FormLabel>
+                <FormLabel>
+                  Giro <span className="text-red-500">*</span>
+                </FormLabel>
                 <AutocompleteInput
                   form={form}
                   name="giro"
                   loadOptions={loadOptionsGiros}
-                  handleChange={handleOnSelect}
-                  id="giro_autocomplete"
+                  handleChange={(val) => {
+                    form.setValue("giro", val);
+                    clearErrors("giro");
+                  }}
                 />
-                <FormMessage>{formState.errors.giro?.message}</FormMessage>
+                <FormMessage>{errors.giro?.message}</FormMessage>
               </FormItem>
+
+              {/* DIRECCIÓN */}
               <FormItem>
-                <FormLabel>Dirección</FormLabel>
+                <FormLabel>
+                  Dirección <span className="text-red-500">*</span>
+                </FormLabel>
                 <FormControl>
                   <Input
-                    type="tel"
                     disabled={loading}
-                    {...register("direccion", {
-                      required: "Dirección obligatorio",
-                    })}
+                    {...register("direccion", { required: "Obligatoria" })}
                   />
                 </FormControl>
-                <FormMessage>{formState.errors.direccion?.message}</FormMessage>
+                <FormMessage>{errors.direccion?.message}</FormMessage>
               </FormItem>
+
+              {/* REDES SOCIALES Y WEB */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-5">
                 <FormItem>
                   <FormLabel>Facebook</FormLabel>
                   <FormControl>
                     <Input disabled={loading} {...register("facebook")} />
                   </FormControl>
-                  <FormMessage>
-                    {formState.errors.facebook?.message}
-                  </FormMessage>
                 </FormItem>
+
                 <FormItem>
                   <FormLabel>Instagram</FormLabel>
                   <FormControl>
                     <Input disabled={loading} {...register("instagram")} />
                   </FormControl>
-                  <FormMessage>
-                    {formState.errors.instagram?.message}
-                  </FormMessage>
                 </FormItem>
+
                 <FormItem>
                   <FormLabel>Página web</FormLabel>
                   <FormControl>
                     <Input disabled={loading} {...register("pagina_web")} />
                   </FormControl>
-                  <FormMessage>
-                    {formState.errors.pagina_web?.message}
-                  </FormMessage>
                 </FormItem>
               </div>
-              <div className="flex justify-center my-5">
+
+              <div className="flex justify-center my-8">
                 <Button
                   type="submit"
-                  className="bg-slate-700"
+                  className="bg-slate-700 w-full md:w-64"
                   loading={loading}
-                  disabled={loading || (!selectedFile && !imagePreview)}
+                  disabled={loading}
                 >
                   {editar ? "Guardar cambios" : "Registrar empresa"}
                 </Button>

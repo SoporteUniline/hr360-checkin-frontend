@@ -10,8 +10,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Combobox } from "./Combobox";
+import { useAuth } from "@/context/AuthContext";
 
 export const AdministrativeFilters = ({
+  empresaSeleccionada,
+  setEmpresaSeleccionada,
   onChange,
   empleado,
   setEmpleado,
@@ -21,11 +24,17 @@ export const AdministrativeFilters = ({
   setEstatus,
   empleados,
 }) => {
-  const empleadosUnicos =
-    empleados?.data?.map((e) => ({
-      value: e.id_empleado,
-      label: `${e.nombre} ${e.apellido_paterno} ${e.apellido_materno}`,
-    })) ?? [];
+  const { dataUser } = useAuth();
+  const empleadosFiltrados =
+    empleados?.data
+      ?.filter((e) => {
+        if (empresaSeleccionada === "all") return true;
+        return String(e.id_empresa) === String(empresaSeleccionada);
+      })
+      .map((e) => ({
+        value: String(e.id_empleado),
+        label: `${e.nombre} ${e.apellido_paterno} ${e.apellido_materno}`,
+      })) ?? [];
 
   const updateFilters = (newValues) => {
     const updated = {
@@ -38,15 +47,46 @@ export const AdministrativeFilters = ({
   };
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+    <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mt-4">
       <Combobox
-        options={empleadosUnicos}
+        options={[
+          { value: "all", label: "Todas las empresas" },
+          ...(dataUser?.empresas_detalle || [])
+            .filter((e) => e?.id_empresa != null)
+            .map((e) => ({
+              value: String(e.id_empresa),
+              label: e.nombre,
+            })),
+        ]}
+        value={empresaSeleccionada}
+        onChange={(value) => {
+          setEmpresaSeleccionada(value);
+
+          setEmpleado("");
+          setFolio("");
+          setEstatus("");
+
+          onChange({
+            empleado: "",
+            folio: "",
+            estatus: "",
+          });
+        }}
+        placeholder="Empresa"
+      />
+
+      <Combobox
+        options={empleadosFiltrados}
         value={empleado}
         onChange={(value) => {
           setEmpleado(value);
           updateFilters({ empleado: value });
         }}
-        placeholder="Buscar empleado..."
+        placeholder={
+          empresaSeleccionada === "all"
+            ? "Buscar empleado..."
+            : "Buscar empleado de la empresa..."
+        }
         emptyText="No se encontró empleado"
       />
       <Input

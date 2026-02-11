@@ -6,7 +6,7 @@ import { Combobox } from "@/components/Combobox";
 import { useAuth } from "@/context/AuthContext";
 import { useSnackbar } from "notistack";
 import { useEffect, useState } from "react";
-import axios from "axios";
+import axios from "@/lib/axios";
 
 export default function EmpleadosFilters({
   filtroEmpleado,
@@ -18,6 +18,8 @@ export default function EmpleadosFilters({
   setPage,
   fechaDesde,
   setFechaDesde,
+  empresaActiva,
+  setEmpresaActiva,
 }) {
   const [departamentos, setDepartamentos] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -25,18 +27,28 @@ export default function EmpleadosFilters({
   const { enqueueSnackbar } = useSnackbar();
 
   const fetchDepartamentos = async () => {
-    if (!dataUser?.id_empresa) return;
     try {
       setLoading(true);
+
+      let empresasEnviar =
+        empresaActiva === "all" ? dataUser?.empresas?.join(",") : empresaActiva;
+
       const res = await axios.get(
         `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/departamentos`,
-        { params: { id_empresa: dataUser.id_empresa } }
+        { params: { id_empresa: empresasEnviar } }
       );
+
+      const deps = Array.isArray(res.data.departamentos)
+        ? res.data.departamentos
+        : [];
+
+      const nombresUnicos = [...new Set(deps.map((d) => d.nombre))];
+
       setDepartamentos([
         { value: "", label: "Todos los departamentos" },
-        ...(res.data.departamentos || []).map((d) => ({
-          value: d.nombre,
-          label: d.nombre,
+        ...nombresUnicos.map((nombre) => ({
+          value: nombre,
+          label: nombre,
         })),
       ]);
     } catch (error) {
@@ -48,8 +60,15 @@ export default function EmpleadosFilters({
   };
 
   useEffect(() => {
+    if (!dataUser) return;
     fetchDepartamentos();
-  }, [dataUser?.id_empresa]);
+  }, [empresaActiva, dataUser]);
+
+  useEffect(() => {
+    if (!empresaActiva) {
+      setEmpresaActiva("all");
+    }
+  }, []);
 
   const estadoOptions = [
     { value: "", label: "Todos" },
@@ -57,8 +76,35 @@ export default function EmpleadosFilters({
     { value: "Inactivo", label: "Inactivo" },
   ];
 
+  const empresasOptions = [
+    { value: "all", label: "Todas las empresas" },
+    ...(dataUser?.empresas_detalle?.map((empresa) => ({
+      value: empresa.id_empresa,
+      label: empresa.nombre,
+    })) || []),
+  ];
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">
+    <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-4">
+      {/* Empresa */}
+      <div className="flex flex-col gap-2">
+        <Label>Empresa</Label>
+        <Combobox
+          options={empresasOptions}
+          value={empresaActiva}
+          onChange={(val) => {
+            if (val === "all") {
+              setEmpresaActiva("all");
+            } else {
+              setEmpresaActiva(Number(val));
+            }
+            setPage(1);
+          }}
+          placeholder="Seleccionar empresa"
+          emptyText="Sin empresas"
+        />
+      </div>
+
       {/* Buscar empleado */}
       <div className="flex flex-col gap-2">
         <Label htmlFor="buscarEmpleado">Buscar empleado</Label>

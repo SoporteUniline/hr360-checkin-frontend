@@ -11,6 +11,7 @@ import ErrorPage from "@/components/ErrorPage";
 
 export default function AsistenciaDataContainer({
   idEmpresa,
+  empresaActiva,
   fechaInicio,
   fechaFin,
   page,
@@ -47,7 +48,7 @@ export default function AsistenciaDataContainer({
     horasExtra,
     sinGoceDeSueldo,
     diasFestivos,
-    requiereAutorizacion
+    requiereAutorizacion,
   );
 
   const { data: empleados } = useEmpleadosData(idEmpresa);
@@ -102,6 +103,7 @@ export default function AsistenciaDataContainer({
           mostrarCamposExtras={mostrarCamposExtras}
           abrirFormulario={abrirFormulario}
           onResetFilters={onResetFilters}
+          empresaActiva={empresaActiva}
         />
 
         {mostrarPaginacion && registros.length > 0 && (

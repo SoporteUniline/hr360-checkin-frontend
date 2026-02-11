@@ -50,6 +50,7 @@ import {
 // Iconos
 import { Copy, Settings2, Trash2 } from "lucide-react";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import { Combobox } from "@/components/Combobox";
 
 // Utilidades locales
 const diasSemanaMap = {
@@ -64,7 +65,8 @@ const diasSemanaMap = {
 
 function descripcionConfig(regla) {
   const tipoRegla = (regla.nombre || "").toLowerCase();
-  if (tipoRegla.includes("felicitar")) return "🎉 Felicitación automática (solo ON/OFF)";
+  if (tipoRegla.includes("felicitar"))
+    return "🎉 Felicitación automática (solo ON/OFF)";
 
   if (
     (tipoRegla.includes("cumpleaños") ||
@@ -73,7 +75,9 @@ function descripcionConfig(regla) {
     tipoRegla.includes("avisar")
   ) {
     if (regla.periodicidad === "semanal") {
-      return `Cada ${diasSemanaMap[regla.diaSemana] || "Lunes"}: próxima semana`;
+      return `Cada ${
+        diasSemanaMap[regla.diaSemana] || "Lunes"
+      }: próxima semana`;
     }
     if (regla.periodicidad === "mensual") {
       const diaTexto = regla.esUltimoDiaMes
@@ -88,7 +92,9 @@ function descripcionConfig(regla) {
 
   if (tipoRegla.includes("contratos") || tipoRegla.includes("vencer")) {
     if (regla.periodicidad === "semanal") {
-      return `Cada ${diasSemanaMap[regla.diaSemana] || "Lunes"}: próximos ${regla.diasAnticipacion} días`;
+      return `Cada ${diasSemanaMap[regla.diaSemana] || "Lunes"}: próximos ${
+        regla.diasAnticipacion
+      } días`;
     }
     if (regla.periodicidad === "mensual") {
       const diaTexto = regla.esUltimoDiaMes
@@ -112,21 +118,29 @@ function descripcionConfig(regla) {
 
 export default function ReglasAvisoPage() {
   const { dataUser } = useAuth();
-  const id_empresa = dataUser?.id_empresa;
+  const [empresaFiltro, setEmpresaFiltro] = useState("all");
 
   const [search, setSearch] = useState("");
   const [estado, setEstado] = useState("all");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
 
-  const swrKey = id_empresa
-    ? `/checador/reglas-aviso?empresa=${id_empresa}`
-    : null;
+  const swrKey = `/checador/reglas-aviso?empresa=${empresaFiltro}`;
   const { data, isLoading, error, mutate } = useSWR(
     swrKey,
     fetcherWithToken,
-    swr_config
+    swr_config,
   );
+
+  const opcionesEmpresas = React.useMemo(() => {
+    const empresas = dataUser?.empresas_detalle || [];
+    const lista = empresas.map((e) => ({
+      label: e.nombre,
+      value: String(e.id_empresa),
+    }));
+
+    return [{ label: "Todas las empresas", value: "all" }, ...lista];
+  }, [dataUser]);
 
   const reglas = data || [];
 
@@ -135,7 +149,10 @@ export default function ReglasAvisoPage() {
     const total = reglas.length;
     const activas = reglas.filter((r) => r.activa).length;
     const inactivas = total - activas;
-    const totalEmp = reglas.reduce((sum, r) => sum + (r.totalEmpleados || 0), 0);
+    const totalEmp = reglas.reduce(
+      (sum, r) => sum + (r.totalEmpleados || 0),
+      0,
+    );
     return { total, activas, inactivas, totalEmp };
   }, [reglas]);
 
@@ -143,8 +160,7 @@ export default function ReglasAvisoPage() {
   const reglasFiltradas = useMemo(() => {
     return reglas.filter((r) => {
       const q = search.trim().toLowerCase();
-      const mSearch =
-        !q || r.nombre?.toLowerCase().includes(q);
+      const mSearch = !q || r.nombre?.toLowerCase().includes(q);
       const mEstado =
         estado === "all" ||
         (estado === "activa" && r.activa) ||
@@ -161,7 +177,8 @@ export default function ReglasAvisoPage() {
   const total = reglasFiltradas.length;
   const start = (page - 1) * limit;
   const end = start + limit;
-  const filas = limit === 1000000 ? reglasFiltradas : reglasFiltradas.slice(start, end);
+  const filas =
+    limit === 1000000 ? reglasFiltradas : reglasFiltradas.slice(start, end);
 
   // Modales (editar / duplicar)
   const [openEdit, setOpenEdit] = useState(false);
@@ -189,7 +206,7 @@ export default function ReglasAvisoPage() {
         axios.get(`/checador/reglas-aviso/${regla.id}`, auth),
         axios.get(
           `/checador/empleados?empresa=${regla.idEmpresa}&page=1&limit=1000`,
-          auth
+          auth,
         ),
       ]);
       setReglaDetalle({ ...regla, ...resDetalle.data });
@@ -223,7 +240,7 @@ export default function ReglasAvisoPage() {
       await axios.patch(
         `/checador/reglas-aviso/${regla.id}/estado`,
         { activa: nuevo },
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       mutate();
     } catch (e) {
@@ -237,19 +254,17 @@ export default function ReglasAvisoPage() {
 
   const confirmDelete = async () => {
     if (!deleteRow?.id) return;
-    if (!id_empresa) return;
     try {
       setDeleting(true);
       const token = Cookies.get("token");
       await axios.delete(`/checador/reglas-aviso/${deleteRow.id}`, {
         headers: { Authorization: `Bearer ${token}` },
-        // Mandamos empresa para validar pertenencia en backend.
-        params: { empresa: id_empresa },
+        params: { empresa: deleteRow.id_empresa },
       });
       setDeleteRow(null);
       await mutate?.();
     } catch (e) {
-      // Mantener UX silenciosa como en toggleEstado, pero cerramos loading.
+      console.log("Error al eliminar:", e);
     } finally {
       setDeleting(false);
     }
@@ -259,7 +274,9 @@ export default function ReglasAvisoPage() {
     <div className="space-y-4">
       {/* Encabezado */}
       <div>
-        <h1 className="text-2xl font-bold text-[#2c3e50]">Gestión de Reglas de Aviso</h1>
+        <h1 className="text-2xl font-bold text-[#2c3e50]">
+          Gestión de Reglas de Aviso
+        </h1>
         <p className="text-sm text-[#6b7280]">
           Edita configuración | Duplica reglas | Activa/Desactiva
         </p>
@@ -277,24 +294,42 @@ export default function ReglasAvisoPage() {
           <div className="text-xs uppercase tracking-wide text-[#6b7280] font-semibold">
             Reglas Activas
           </div>
-          <div className="text-2xl font-bold text-[#2c3e50]">{stats.activas}</div>
+          <div className="text-2xl font-bold text-[#2c3e50]">
+            {stats.activas}
+          </div>
         </div>
         <div className="border border-[#e5e7eb] rounded-md p-4 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
           <div className="text-xs uppercase tracking-wide text-[#6b7280] font-semibold">
             Reglas Inactivas
           </div>
-          <div className="text-2xl font-bold text-[#2c3e50]">{stats.inactivas}</div>
+          <div className="text-2xl font-bold text-[#2c3e50]">
+            {stats.inactivas}
+          </div>
         </div>
         <div className="border border-[#e5e7eb] rounded-md p-4 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.05)]">
           <div className="text-xs uppercase tracking-wide text-[#6b7280] font-semibold">
             Total Empleados
           </div>
-          <div className="text-2xl font-bold text-[#2c3e50]">{stats.totalEmp}</div>
+          <div className="text-2xl font-bold text-[#2c3e50]">
+            {stats.totalEmp}
+          </div>
         </div>
       </div>
 
       {/* Filtros */}
       <div className="flex flex-col md:flex-row gap-2 items-center">
+        <div className="w-full md:w-72">
+          <Combobox
+            options={opcionesEmpresas}
+            value={String(empresaFiltro)}
+            onChange={(val) => {
+              setEmpresaFiltro(val || "all");
+              setPage(1);
+            }}
+            placeholder="Filtrar por empresa..."
+            emptyText="Empresa no encontrada"
+          />
+        </div>
         <Input
           placeholder="Buscar por nombre de regla..."
           value={search}
@@ -489,23 +524,31 @@ export default function ReglasAvisoPage() {
           ) : null}
         </DialogContent>
       </Dialog>
-      
+
       {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
       <AccesosRapidos />
 
       {/* Confirmación de eliminación */}
-      <AlertDialog open={!!deleteRow} onOpenChange={(open) => !open && setDeleteRow(null)}>
+      <AlertDialog
+        open={!!deleteRow}
+        onOpenChange={(open) => !open && setDeleteRow(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar regla de aviso?</AlertDialogTitle>
             <AlertDialogDescription>
               {deleteRow
-                ? `Esta acción no se puede deshacer. Se eliminará la regla “${deleteRow.nombre || "Regla"}”.`
+                ? `Esta acción no se puede deshacer. Se eliminará la regla “${
+                    deleteRow.nombre || "Regla"
+                  }”.`
                 : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]" disabled={deleting}>
+            <AlertDialogCancel
+              className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
+              disabled={deleting}
+            >
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction
@@ -579,9 +622,15 @@ function FormularioRegla({ modo, detalle, empleados, onClose, onSaved }) {
       } else {
         // Primero verificar duplicado
         setChecking(true);
-        const ver = await axios.post(`/checador/reglas-aviso/verificar-duplicado`, form, auth);
+        const ver = await axios.post(
+          `/checador/reglas-aviso/verificar-duplicado`,
+          form,
+          auth,
+        );
         if (ver.data?.existeDuplicado) {
-          setErrorMsg("⚠️ Ya existe una regla con esta configuración exacta. Por favor cambia la frecuencia, día o ventana de días.");
+          setErrorMsg(
+            "⚠️ Ya existe una regla con esta configuración exacta. Por favor cambia la frecuencia, día o ventana de días.",
+          );
           setChecking(false);
           return;
         }
@@ -590,6 +639,8 @@ function FormularioRegla({ modo, detalle, empleados, onClose, onSaved }) {
         setChecking(false);
         onSaved?.();
       }
+    } catch (e) {
+      setErrorMsg(e.response?.data?.message || "Ocurrió un error al guardar");
     } finally {
       setSaving(false);
     }
@@ -613,7 +664,9 @@ function FormularioRegla({ modo, detalle, empleados, onClose, onSaved }) {
       {modo === "duplicar" && (
         <div className="border border-amber-500/50 bg-amber-50 text-amber-900 rounded-md p-3 text-sm">
           <span className="mr-1">⚠️</span>
-          <strong>Importante:</strong> Debes cambiar la configuración para evitar duplicados. No se permite crear reglas con la misma configuración exacta.
+          <strong>Importante:</strong> Debes cambiar la configuración para
+          evitar duplicados. No se permite crear reglas con la misma
+          configuración exacta.
         </div>
       )}
 
@@ -636,7 +689,9 @@ function FormularioRegla({ modo, detalle, empleados, onClose, onSaved }) {
 
           {/* Frecuencia */}
           <div className="space-y-2 mb-3">
-            <Label>{isCumpleAvisar ? "Frecuencia del reporte" : "Frecuencia"}</Label>
+            <Label>
+              {isCumpleAvisar ? "Frecuencia del reporte" : "Frecuencia"}
+            </Label>
             <Select
               value={form.periodicidad}
               onValueChange={(v) => update({ periodicidad: v })}
@@ -646,13 +701,33 @@ function FormularioRegla({ modo, detalle, empleados, onClose, onSaved }) {
               </SelectTrigger>
               <SelectContent>
                 {/* Etiquetas según tipo para coincidir con el HTML original */}
-                {isContratos && <SelectItem value="diario">Todos los días</SelectItem>}
-                {isReporte && <SelectItem value="diario">Todos los días</SelectItem>}
-                {isReporte && <SelectItem value="semanal">Semanalmente (resumen)</SelectItem>}
-                {isContratos && <SelectItem value="semanal">Día específico de la semana</SelectItem>}
-                {isContratos && <SelectItem value="mensual">Día específico del mes</SelectItem>}
-                {isCumpleAvisar && <SelectItem value="semanal">Semanalmente</SelectItem>}
-                {isCumpleAvisar && <SelectItem value="mensual">Mensualmente</SelectItem>}
+                {isContratos && (
+                  <SelectItem value="diario">Todos los días</SelectItem>
+                )}
+                {isReporte && (
+                  <SelectItem value="diario">Todos los días</SelectItem>
+                )}
+                {isReporte && (
+                  <SelectItem value="semanal">
+                    Semanalmente (resumen)
+                  </SelectItem>
+                )}
+                {isContratos && (
+                  <SelectItem value="semanal">
+                    Día específico de la semana
+                  </SelectItem>
+                )}
+                {isContratos && (
+                  <SelectItem value="mensual">
+                    Día específico del mes
+                  </SelectItem>
+                )}
+                {isCumpleAvisar && (
+                  <SelectItem value="semanal">Semanalmente</SelectItem>
+                )}
+                {isCumpleAvisar && (
+                  <SelectItem value="mensual">Mensualmente</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -685,7 +760,11 @@ function FormularioRegla({ modo, detalle, empleados, onClose, onSaved }) {
               <Label>¿Qué día del mes?</Label>
               <Select
                 value={
-                  form.esUltimoDiaMes ? "31" : form.esPrimerDiaMes ? "1" : `${form.diaMes || 1}`
+                  form.esUltimoDiaMes
+                    ? "31"
+                    : form.esPrimerDiaMes
+                    ? "1"
+                    : `${form.diaMes || 1}`
                 }
                 onValueChange={(v) => {
                   if (v === "31") {
@@ -735,7 +814,8 @@ function FormularioRegla({ modo, detalle, empleados, onClose, onSaved }) {
               </Label>
               {isContratos && (
                 <div className="border border-amber-400/60 bg-amber-50 text-amber-900 rounded p-2 text-xs">
-                  💡 <strong>Ejemplo:</strong> Si ingresas "30", recibirás los contratos que vencen en los próximos 30 días desde hoy.
+                  💡 <strong>Ejemplo:</strong> Si ingresas "30", recibirás los
+                  contratos que vencen en los próximos 30 días desde hoy.
                 </div>
               )}
               <Input
@@ -755,9 +835,7 @@ function FormularioRegla({ modo, detalle, empleados, onClose, onSaved }) {
               <Label>¿De quiénes avisar?</Label>
               <Select
                 value={`${form.diasAnticipacion || 30}`}
-                onValueChange={(v) =>
-                  update({ diasAnticipacion: parseInt(v) })
-                }
+                onValueChange={(v) => update({ diasAnticipacion: parseInt(v) })}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -820,7 +898,9 @@ function FormularioRegla({ modo, detalle, empleados, onClose, onSaved }) {
                       } else {
                         update({
                           empleadosSeleccionados:
-                            form.empleadosSeleccionados.filter((x) => x !== emp.id),
+                            form.empleadosSeleccionados.filter(
+                              (x) => x !== emp.id,
+                            ),
                         });
                       }
                     }}
@@ -862,7 +942,9 @@ function FormularioRegla({ modo, detalle, empleados, onClose, onSaved }) {
         </Button>
         <Button
           onClick={guardar}
-          disabled={saving || checking || form.empleadosSeleccionados.length === 0}
+          disabled={
+            saving || checking || form.empleadosSeleccionados.length === 0
+          }
           className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]"
         >
           {modo === "editar"
@@ -879,5 +961,3 @@ function FormularioRegla({ modo, detalle, empleados, onClose, onSaved }) {
     </div>
   );
 }
-
-

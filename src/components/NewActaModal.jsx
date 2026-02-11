@@ -42,8 +42,10 @@ import { administrativeMinutesApi } from "@/lib/administrativeMinutesApi";
 import useEmpleadosData from "@/hooks/useEmpleadosData";
 import useSWR from "swr";
 import { fetcherWithToken } from "@/lib/fetcher";
+import useTiposActa from "@/hooks/useTiposActa";
 
 const schema = z.object({
+  empresa: z.string().min(1, "Selecciona una empresa"),
   empleado: z.string().min(1, "Selecciona un empleado"),
   tipoActa: z.string().min(1, "Selecciona un tipo de acta"),
   fechaIncidente: z.string().min(1, "La fecha es obligatoria"),
@@ -64,10 +66,8 @@ const NewActaModal = ({
   open,
   onClose,
   empleados,
-  tiposActa,
   refetch,
   dataUser,
-  mutateTiposActa,
   /**
    * Modo del modal:
    * - "create" (default): crea una nueva acta.
@@ -99,9 +99,38 @@ const NewActaModal = ({
    */
   const [empSearch, setEmpSearch] = useState("");
   const [isEmpSuggestionsOpen, setIsEmpSuggestionsOpen] = useState(false);
-  const [hoveredEmpSuggestionIndex, setHoveredEmpSuggestionIndex] = useState(-1);
+  const [hoveredEmpSuggestionIndex, setHoveredEmpSuggestionIndex] =
+    useState(-1);
+  const form = useForm({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      empresa: "",
+      empleado: "",
+      tipoActa: "",
+      fechaIncidente: "",
+      horaIncidente: "",
+      lugar: "",
+      descripcion: "",
+      testigos: "",
+      sancion: "",
+      elabora: "",
+      cargoElabora: "",
+      descargo: "",
+      aceptaHechos: false,
+      esReincidencia: false,
+    },
+  });
+
+  const empresaSeleccionada = form.watch("empresa");
+
+  const {
+    data: tiposActa = [],
+    isLoading: loadingTipos,
+    mutate: mutateTiposActa,
+  } = useTiposActa(empresaSeleccionada || null, 1, 100, "");
+
   const empleadosSugResp = useEmpleadosData(
-    dataUser?.id_empresa,
+    empresaSeleccionada,
     1,
     8,
     empSearch,
@@ -109,6 +138,17 @@ const NewActaModal = ({
     "",
     ""
   );
+
+  const empleadosElaboraResp = useEmpleadosData(
+    empresaSeleccionada,
+    1,
+    100,
+    "",
+    "",
+    "",
+    ""
+  );
+
   const sugerenciasEmpleados = useMemo(() => {
     const list = empleadosSugResp?.data?.data || [];
     return list.map((e) => ({
@@ -162,9 +202,9 @@ const NewActaModal = ({
     isLoading: empleadoPorCorreoLoading,
   } = useSWR(
     open && !idEmpleadoSesion && correoSesion && dataUser?.id_empresa
-      ? `/checador/empleados/por-correo?empresa=${dataUser.id_empresa}&correo=${encodeURIComponent(
-          correoSesion
-        )}`
+      ? `/checador/empleados/por-correo?empresa=${
+          dataUser.id_empresa
+        }&correo=${encodeURIComponent(correoSesion)}`
       : null,
     fetcherWithToken
   );
@@ -227,7 +267,9 @@ const NewActaModal = ({
     // `empleados` list usa nombre_completo; detalle usa nombre/apellidos. Soportamos ambos.
     return (
       e.nombre_completo ||
-      [e.nombre, e.apellido_paterno, e.apellido_materno].filter(Boolean).join(" ")
+      [e.nombre, e.apellido_paterno, e.apellido_materno]
+        .filter(Boolean)
+        .join(" ")
     );
   }, [empleadoElaboraAuto]);
 
@@ -236,41 +278,20 @@ const NewActaModal = ({
     // En ambos casos el backend entrega `puesto` ya resuelto (JOIN puestos).
     return e?.puesto ? String(e.puesto) : "";
   }, [empleadoElaboraAuto]);
-  const form = useForm({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      empleado: "",
-      tipoActa: "",
-      fechaIncidente: "",
-      horaIncidente: "",
-      lugar: "",
-      descripcion: "",
-      testigos: "",
-      sancion: "",
-      elabora: "",
-      cargoElabora: "",
-      descargo: "",
-      aceptaHechos: false,
-      esReincidencia: false,
-    },
-  });
 
   /**
    * Precarga valores cuando el modal se usa en modo edición.
    * Importante: se hace cuando `open` cambia para no pisar cambios del usuario mientras escribe.
    */
   useEffect(() => {
-    if (!open) return;
-    if (mode !== "edit") return;
-    if (!actaToEdit) return;
+    if (!open || mode !== "edit" || !actaToEdit) return;
 
-    // Mapeo de campos API -> campos de formulario.
-    // Relación: backend guarda los campos en `actas_administrativas` (ver controller).
     form.reset({
+      empresa: String(actaToEdit.id_empresa), // 🔥 CLAVE
       empleado: String(actaToEdit.id_empleado ?? ""),
       tipoActa: String(actaToEdit.id_tipo_acta ?? ""),
       fechaIncidente: actaToEdit.fecha_incidente
-        ? String(actaToEdit.fecha_incidente).slice(0, 10) // ISO date
+        ? String(actaToEdit.fecha_incidente).slice(0, 10)
         : "",
       horaIncidente: actaToEdit.hora_incidente || "",
       lugar: actaToEdit.lugar_incidente || "",
@@ -284,14 +305,13 @@ const NewActaModal = ({
       esReincidencia: Boolean(actaToEdit.es_reincidencia),
     });
 
-    // Mostrar el nombre en el input del buscador (UX tipo Contratos).
-    const nombreCompletoActa = `${actaToEdit.nombre_empleado || ""} ${actaToEdit.apellido_paterno_empleado || ""} ${
-      actaToEdit.apellido_materno_empleado || ""
-    }`
-      .replace(/\s+/g, " ")
-      .trim();
-    setEmpSearch(nombreCompletoActa);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setEmpSearch(
+      `${actaToEdit.nombre_empleado || ""} ${
+        actaToEdit.apellido_paterno_empleado || ""
+      } ${actaToEdit.apellido_materno_empleado || ""}`
+        .replace(/\s+/g, " ")
+        .trim()
+    );
   }, [open, mode, actaToEdit]);
 
   /**
@@ -329,11 +349,9 @@ const NewActaModal = ({
       setIsSubmitting(true);
 
       const body = {
-        id_empresa: dataUser?.id_empresa,
-
+        id_empresa: mode === "edit" ? actaToEdit.id_empresa : values.empresa,
         id_empleado: values.empleado,
         id_tipo_acta: values.tipoActa,
-
         fecha_incidente: values.fechaIncidente,
         hora_incidente: values.horaIncidente || null,
         lugar_incidente: values.lugar || null,
@@ -360,7 +378,9 @@ const NewActaModal = ({
         const idActa = actaToEdit?.id_acta;
         if (!idActa) throw new Error("No se encontró el ID del acta a editar.");
         await administrativeMinutesApi.actualizar(idActa, body);
-        enqueueSnackbar("Acta actualizada correctamente", { variant: "success" });
+        enqueueSnackbar("Acta actualizada correctamente", {
+          variant: "success",
+        });
       } else {
         await administrativeMinutesApi.crear(body);
         enqueueSnackbar("Acta creada correctamente", { variant: "success" });
@@ -374,7 +394,9 @@ const NewActaModal = ({
 
       enqueueSnackbar(
         error?.response?.data?.message ||
-          (mode === "edit" ? "Hubo un error al actualizar el acta" : "Hubo un error al crear el acta"),
+          (mode === "edit"
+            ? "Hubo un error al actualizar el acta"
+            : "Hubo un error al crear el acta"),
         { variant: "error" }
       );
     } finally {
@@ -395,6 +417,18 @@ const NewActaModal = ({
       .join(" ");
   };
 
+  const empleadosElabora = useMemo(() => {
+    if (!empresaSeleccionada) return [];
+    return (
+      empleadosElaboraResp?.data?.data?.map((e) => ({
+        value: String(e.id_empleado),
+        label: [e.nombre, e.apellido_paterno, e.apellido_materno]
+          .filter(Boolean)
+          .join(" "),
+      })) || []
+    );
+  }, [empresaSeleccionada, empleadosElaboraResp?.data]);
+
   return (
     <>
       <Dialog open={open} onOpenChange={handleClose}>
@@ -403,7 +437,9 @@ const NewActaModal = ({
         >
           <DialogHeader className="border-b-2 pb-2">
             <DialogTitle className="text-md text-gray-700">
-              {mode === "edit" ? "✏️ Editar Acta Administrativa" : "📋 Nueva Acta Administrativa"}
+              {mode === "edit"
+                ? "✏️ Editar Acta Administrativa"
+                : "📋 Nueva Acta Administrativa"}
             </DialogTitle>
           </DialogHeader>
 
@@ -413,6 +449,48 @@ const NewActaModal = ({
               className="text-sm space-y-2 pt-2 max-h-[60vh] overflow-y-auto px-1"
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+                {mode === "create" && (
+                  <FormField
+                    control={form.control}
+                    name="empresa"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabelWithAsterisk
+                          required
+                          className="text-gray-600"
+                        >
+                          Empresa
+                        </FormLabelWithAsterisk>
+
+                        <FormControl>
+                          <Combobox
+                            options={[
+                              ...(dataUser?.empresas_detalle || []).map(
+                                (e) => ({
+                                  value: String(e.id_empresa),
+                                  label: e.nombre,
+                                })
+                              ),
+                            ]}
+                            value={field.value}
+                            onChange={(value) => {
+                              field.onChange(value);
+                              form.setValue("empleado", "");
+                              form.setValue("elabora", "");
+                              form.setValue("tipoActa", "");
+                              setEmpSearch("");
+                            }}
+                            placeholder="Selecciona una empresa"
+                            emptyText="No se encontraron empresas"
+                          />
+                        </FormControl>
+
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
                 <FormField
                   control={form.control}
                   name="empleado"
@@ -438,6 +516,7 @@ const NewActaModal = ({
                               className="pl-9"
                               placeholder="Buscar empleado..."
                               value={empSearch}
+                              disabled={!empresaSeleccionada}
                               onChange={(e) => {
                                 setEmpSearch(e.target.value);
                                 setIsEmpSuggestionsOpen(true);
@@ -454,22 +533,31 @@ const NewActaModal = ({
                                 }, 120);
                               }}
                               onKeyDown={(e) => {
-                                if (!isEmpSuggestionsOpen || sugerenciasEmpleados.length === 0) return;
+                                if (
+                                  !isEmpSuggestionsOpen ||
+                                  sugerenciasEmpleados.length === 0
+                                )
+                                  return;
                                 if (e.key === "ArrowDown") {
                                   e.preventDefault();
                                   setHoveredEmpSuggestionIndex((prev) =>
-                                    prev + 1 >= sugerenciasEmpleados.length ? 0 : prev + 1
+                                    prev + 1 >= sugerenciasEmpleados.length
+                                      ? 0
+                                      : prev + 1
                                   );
                                 } else if (e.key === "ArrowUp") {
                                   e.preventDefault();
                                   setHoveredEmpSuggestionIndex((prev) =>
-                                    prev - 1 < 0 ? sugerenciasEmpleados.length - 1 : prev - 1
+                                    prev - 1 < 0
+                                      ? sugerenciasEmpleados.length - 1
+                                      : prev - 1
                                   );
                                 } else if (e.key === "Enter") {
                                   e.preventDefault();
                                   handleSelectEmpleadoSugerencia(
-                                    sugerenciasEmpleados[hoveredEmpSuggestionIndex] ||
-                                      sugerenciasEmpleados[0]
+                                    sugerenciasEmpleados[
+                                      hoveredEmpSuggestionIndex
+                                    ] || sugerenciasEmpleados[0]
                                   );
                                 } else if (e.key === "Escape") {
                                   setIsEmpSuggestionsOpen(false);
@@ -477,16 +565,23 @@ const NewActaModal = ({
                               }}
                             />
 
-                            {isEmpSuggestionsOpen && sugerenciasEmpleados.length > 0 ? (
+                            {isEmpSuggestionsOpen &&
+                            sugerenciasEmpleados.length > 0 ? (
                               <div className="absolute left-0 right-0 mt-1 z-20 rounded-md border bg-white shadow">
                                 <ul className="max-h-64 overflow-auto">
                                   {sugerenciasEmpleados.map((emp, idx) => (
                                     <li
                                       key={emp.id_empleado}
-                                      onMouseDown={() => handleSelectEmpleadoSugerencia(emp)}
-                                      onMouseEnter={() => setHoveredEmpSuggestionIndex(idx)}
+                                      onMouseDown={() =>
+                                        handleSelectEmpleadoSugerencia(emp)
+                                      }
+                                      onMouseEnter={() =>
+                                        setHoveredEmpSuggestionIndex(idx)
+                                      }
                                       className={`px-3 py-2 cursor-pointer text-sm ${
-                                        idx === hoveredEmpSuggestionIndex ? "bg-slate-100" : ""
+                                        idx === hoveredEmpSuggestionIndex
+                                          ? "bg-slate-100"
+                                          : ""
                                       }`}
                                     >
                                       {emp.nombre_completo}
@@ -497,7 +592,11 @@ const NewActaModal = ({
                             ) : null}
 
                             {/* Campo "real" que viaja al submit: ID del empleado */}
-                            <input type="hidden" value={field.value || ""} readOnly />
+                            <input
+                              type="hidden"
+                              value={field.value || ""}
+                              readOnly
+                            />
                           </div>
                         </FormControl>
 
@@ -533,11 +632,20 @@ const NewActaModal = ({
                                * - Tipos se administran en `src/components/NewTipoActaModal.jsx`
                                */}
                               <Select
+                                disabled={!empresaSeleccionada || loadingTipos}
                                 value={field.value}
                                 onValueChange={field.onChange}
                               >
                                 <SelectTrigger>
-                                  <SelectValue placeholder="Selecciona un tipo de acta" />
+                                  <SelectValue
+                                    placeholder={
+                                      !empresaSeleccionada
+                                        ? "Selecciona primero una empresa"
+                                        : loadingTipos
+                                        ? "Cargando tipos..."
+                                        : "Selecciona un tipo de acta"
+                                    }
+                                  />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {(tiposActa || []).map((tipo) => (
@@ -545,7 +653,8 @@ const NewActaModal = ({
                                       key={tipo.id_tipo_acta}
                                       value={String(tipo.id_tipo_acta)}
                                     >
-                                      {tipo.nombre_tipo} (ID {tipo.id_tipo_acta})
+                                      {tipo.nombre_tipo} (ID {tipo.id_tipo_acta}
+                                      )
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -602,7 +711,7 @@ const NewActaModal = ({
                   control={form.control}
                   name="lugar"
                   render={({ field }) => (
-                    <FormItem className="md:col-span-2">
+                    <FormItem>
                       <Label className="text-gray-600">
                         Lugar del incidente
                       </Label>
@@ -714,42 +823,42 @@ const NewActaModal = ({
                               se bloquea el campo y se muestra el nombre.
                           */}
                           {mode === "create" && elaboraAutoEnProceso ? (
-                            // Estado de carga (evita la sensación de que "no pasó nada" mientras se resuelve por correo).
-                            <Input value="Cargando usuario logeado..." disabled className="bg-muted" />
-                          ) : mode === "create" && empleadoElaboraAuto?.id_empleado ? (
-                            /*
-                             * IMPORTANTE (shadcn/Radix):
-                             * `FormControl` usa un Slot que inyecta props (ej. `data-slot`) al hijo.
-                             * Un React.Fragment (`<>...</>`) NO acepta props y rompe con:
-                             * "Invalid prop `data-slot` supplied to `React.Fragment`..."
-                             * Por eso envolvemos en un contenedor real.
-                             */
+                            <Input
+                              value="Cargando usuario logeado..."
+                              disabled
+                              className="bg-muted"
+                            />
+                          ) : mode === "create" &&
+                            empleadoElaboraAuto?.id_empleado ? (
                             <div className="space-y-2">
-                              {/*
-                                Autollenado (solo lectura):
-                                - `field.value` se setea desde el effect al abrir (modo create).
-                                - Visible: nombre completo del empleado resuelto por sesión.
-                              */}
                               <Input
                                 value={empleadoElaboraAutoNombre || "—"}
                                 disabled
                                 className="bg-muted"
                               />
-                              <input type="hidden" value={field.value || ""} readOnly />
+                              <input
+                                type="hidden"
+                                value={field.value || ""}
+                                readOnly
+                              />
                             </div>
                           ) : (
-                            // Fallback defensivo (si el usuario no tiene id_empleado en sesión)
+                            // 👉 AQUÍ YA NO METEMOS {} EXTRA
                             <Combobox
-                              options={
-                                empleados?.data?.map((emp) => ({
-                                  value: emp.id_empleado.toString(),
-                                  label: `${emp.nombre} ${emp.apellido_paterno} ${emp.apellido_materno}`,
-                                })) || []
-                              }
+                              options={empleadosElabora}
                               value={field.value}
                               onChange={field.onChange}
-                              placeholder="Selecciona quien elabora"
-                              emptyText="No se encontraron empleados"
+                              placeholder={
+                                !empresaSeleccionada
+                                  ? "Selecciona primero una empresa"
+                                  : "Selecciona quién elabora"
+                              }
+                              emptyText={
+                                empresaSeleccionada
+                                  ? "No se encontraron empleados"
+                                  : "Selecciona una empresa"
+                              }
+                              disabled={!empresaSeleccionada}
                               name="elabora"
                             />
                           )}
@@ -774,8 +883,16 @@ const NewActaModal = ({
                           placeholder="Ej: Jefe de RH"
                           {...field}
                           // Si elabora viene de sesión, este campo se autollenará y será solo lectura.
-                          disabled={mode === "create" && Boolean(empleadoElaboraAuto?.id_empleado)}
-                          className={mode === "create" && Boolean(empleadoElaboraAuto?.id_empleado) ? "bg-muted" : ""}
+                          disabled={
+                            mode === "create" &&
+                            Boolean(empleadoElaboraAuto?.id_empleado)
+                          }
+                          className={
+                            mode === "create" &&
+                            Boolean(empleadoElaboraAuto?.id_empleado)
+                              ? "bg-muted"
+                              : ""
+                          }
                         />
                       </FormControl>
                     </FormItem>
@@ -878,7 +995,7 @@ const NewActaModal = ({
         open={openNewTipoActa}
         onClose={setOpenNewTipoActa}
         refetch={mutateTiposActa}
-        idEmpresa={dataUser?.id_empresa}
+        idEmpresa={empresaSeleccionada}
         mutateTiposActa={mutateTiposActa}
       />
     </>

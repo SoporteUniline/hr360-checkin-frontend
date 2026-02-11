@@ -20,6 +20,7 @@ export default function EntradasSalidasRow({
   handleCancelMovimientoEdit,
   handleMovimientoFieldChange,
   handleSaveMovimientoClick,
+  empresaActiva,
 }) {
   const { dataUser } = useAuth();
   const userTimezone = dataUser?.zona_horaria || "America/Mexico_City";
@@ -57,12 +58,19 @@ export default function EntradasSalidasRow({
             <p className="font-bold">{`${registro.nombre} ${registro.apellido_paterno}`}</p>
             <p className="text-xs text-gray-500">Puesto: {registro.puesto}</p>
           </TableCell>
+          {empresaActiva === "all" && (
+            <TableCell className="font-bold text-gray-500">
+              {registro.nombre_empresa}
+            </TableCell>
+          )}
           <TableCell>
             <p className="font-bold text-gray-500">{registro.departamento}</p>
             <p className="text-xs text-gray-500">{registro.sucursal}</p>
           </TableCell>
           {/* Mostrar siempre fecha de entrada (aunque sea un solo día) */}
-          <TableCell className="text-center">{formatDate(registro.entrada)}</TableCell>
+          <TableCell className="text-center">
+            {formatDate(registro.entrada)}
+          </TableCell>
           <TableCell className="text-center text-green-500 font-bold">
             {formatTime(registro.entrada)}
           </TableCell>
@@ -155,7 +163,7 @@ export default function EntradasSalidasRow({
                   : null;
                 handleMovimientoFieldChange(
                   "entrada_corregida",
-                  nuevaEntradaCorregida
+                  nuevaEntradaCorregida,
                 );
               }}
             />
@@ -190,7 +198,7 @@ export default function EntradasSalidasRow({
 
                 handleMovimientoFieldChange(
                   "salida_corregida",
-                  nuevaSalidaCorregida
+                  nuevaSalidaCorregida,
                 );
               }}
             />

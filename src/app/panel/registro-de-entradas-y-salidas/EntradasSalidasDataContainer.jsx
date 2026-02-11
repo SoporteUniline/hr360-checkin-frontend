@@ -22,6 +22,8 @@ export default function EntradasSalidasDataContainer({
   departamento,
   estado,
   setPage,
+  empresaActiva,
+  onResetFilters,
 }) {
   const { data, error, isLoading, mutate } = useRelojChecadorData(
     idEmpresa,
@@ -33,7 +35,7 @@ export default function EntradasSalidasDataContainer({
     departamento,
     estado,
     desde,
-    hasta
+    hasta,
   );
 
   const registros = Array.isArray(data?.registros) ? data.registros : [];
@@ -71,6 +73,8 @@ export default function EntradasSalidasDataContainer({
           handleCancelMovimientoEdit={handleCancelMovimientoEdit}
           handleMovimientoFieldChange={handleMovimientoFieldChange}
           handleSaveMovimientoClick={handleSaveMovimientoClick}
+          empresaActiva={empresaActiva}
+          onResetFilters={onResetFilters}
         />
         {/* IMPORTANTE (UX):
             Aunque una página venga vacía por cambios de filtros o desajustes temporales,

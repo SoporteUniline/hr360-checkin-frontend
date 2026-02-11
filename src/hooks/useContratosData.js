@@ -7,21 +7,31 @@ import { contratosApi } from "@/lib/contratosApi";
  * - Devuelve: { data, isLoading, error, mutate }
  */
 export default function useContratosData(filters) {
-  const { idEmpresa, page, limit, search, tipoContrato, estatus, desde, hasta } = filters || {};
+  const {
+    idEmpresa,
+    page,
+    limit,
+    search,
+    tipoContrato,
+    estatus,
+    desde,
+    hasta,
+  } = filters || {};
 
-  const key = idEmpresa
-    ? [
-        "contratos",
-        idEmpresa,
-        page,
-        limit,
-        search || "",
-        tipoContrato || "",
-        estatus || "",
-        desde || "",
-        hasta || "",
-      ]
-    : null;
+  const key =
+    idEmpresa !== undefined && idEmpresa !== null
+      ? [
+          "contratos",
+          idEmpresa,
+          page,
+          limit,
+          search || "",
+          tipoContrato || "",
+          estatus || "",
+          desde || "",
+          hasta || "",
+        ]
+      : null;
 
   const fetcher = async () => {
     const resp = await contratosApi.listar({
@@ -53,5 +63,3 @@ export default function useContratosData(filters) {
 
   return { data, isLoading, error, mutate };
 }
-
-

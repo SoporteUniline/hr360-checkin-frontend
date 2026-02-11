@@ -11,6 +11,8 @@ import {
 import axios from "axios";
 import { mutate } from "swr";
 import { useSnackbar } from "notistack";
+import { Label } from "@/components/ui/label";
+import { Combobox } from "@/components/Combobox";
 
 export default function EstadoCivilFormDialog({
   open,
@@ -19,10 +21,16 @@ export default function EstadoCivilFormDialog({
   id_empresa,
   estadoCivil = [],
   mutateKey,
+  empresas = [],
 }) {
   const { enqueueSnackbar } = useSnackbar();
   const [nombre, setNombre] = useState("");
   const [error, setError] = useState("");
+  const [empresaSeleccionada, setEmpresaSeleccionada] = useState(
+    id_empresa ? String(id_empresa) : ""
+  );
+
+  const formInvalido = !nombre.trim() || (!editCiv && !empresaSeleccionada);
 
   useEffect(() => {
     if (editCiv) setNombre(editCiv.nombre);
@@ -31,14 +39,20 @@ export default function EstadoCivilFormDialog({
   }, [editCiv, open]);
 
   const handleSubmit = async () => {
+    if (!editCiv && !empresaSeleccionada) {
+      setError("Debes seleccionar una empresa.");
+      return;
+    }
+
     if (!nombre.trim()) {
-      setError("El nombre no puede estar vacío.");
+      setError("El nombre es obligatorio.");
       return;
     }
 
     const existe = estadoCivil.some(
       (civ) =>
         civ.nombre.toLowerCase() === nombre.toLowerCase() &&
+        Number(civ.id_empresa) === Number(empresaSeleccionada) &&
         civ.id_estado_civil !== editCiv?.id_estado_civil
     );
     if (existe) {
@@ -58,7 +72,10 @@ export default function EstadoCivilFormDialog({
       } else {
         await axios.post(
           `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/estados-civiles`,
-          { nombre, id_empresa }
+          {
+            nombre: nombre.trim(),
+            id_empresa: Number(empresaSeleccionada),
+          }
         );
         enqueueSnackbar("Estado civil agregado correctamente", {
           variant: "success",
@@ -91,6 +108,21 @@ export default function EstadoCivilFormDialog({
           </DialogTitle>
         </DialogHeader>
         <div className="my-4 space-y-2">
+          {!editCiv && (
+            <div>
+              <Label className="mb-2">Empresa</Label>
+              <Combobox
+                options={empresas.map((e) => ({
+                  value: String(e.id_empresa),
+                  label: e.nombre,
+                }))}
+                value={empresaSeleccionada}
+                onChange={setEmpresaSeleccionada}
+                placeholder="Selecciona la empresa"
+              />
+            </div>
+          )}
+
           <Input
             placeholder="Nombre del estado civil"
             value={nombre}
@@ -106,7 +138,7 @@ export default function EstadoCivilFormDialog({
           <Button variant="secondary" onClick={() => setOpen(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit}>
+          <Button onClick={handleSubmit} disabled={formInvalido}>
             {editCiv ? "Actualizar" : "Agregar"}
           </Button>
         </DialogFooter>

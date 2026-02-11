@@ -4,7 +4,14 @@
 // - Relacionado con: redlab_back/modules/attendance/controllers/dashboardController.js
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import Link from "next/link";
 import {
   CalendarDays,
@@ -127,14 +134,6 @@ export default async function PanelDashboardPage() {
       cookieStore = await cookieStore; // Next 15+ (API asíncrona)
     }
     token = cookieStore?.get("token")?.value || null;
-    if (token) {
-      const vRes = await fetch(`${base}/users/verify/token`, {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: "no-store",
-      });
-      const vJson = await vRes.json().catch(() => null);
-      empresaId = vJson?.user?.id_empresa || null;
-    }
   } catch (_) {}
 
   /**
@@ -172,7 +171,11 @@ export default async function PanelDashboardPage() {
   try {
     const url = new URL(`${base}/checador/dashboard`);
     if (empresaId) url.searchParams.set("id_empresa", String(empresaId));
-    const res = await fetch(url.toString(), { cache: "no-store" });
+    const res = await fetch(url.toString(), {
+      cache: "no-store",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+
     const json = await res.json().catch(() => null);
     if (json?.ok) data = json.data;
     else data = null;
@@ -214,12 +217,14 @@ export default async function PanelDashboardPage() {
       ? Math.round((data.presentesHoy / data.totalEmpleados) * 100)
       : 0;
   // Preferir distribución detallada si viene del backend; fallback a la clásica
-  const distribData = (data.distribucionAsistenciaDetallada && Array.isArray(data.distribucionAsistenciaDetallada))
-    ? data.distribucionAsistenciaDetallada
-    : (data.distribucionAsistencia || []);
+  const distribData =
+    data.distribucionAsistenciaDetallada &&
+    Array.isArray(data.distribucionAsistenciaDetallada)
+      ? data.distribucionAsistenciaDetallada
+      : data.distribucionAsistencia || [];
   const distribTotal = distribData.reduce(
     (acc, it) => acc + (it.count || 0),
-    0
+    0,
   );
 
   function formatDateDMY(ymd) {
@@ -251,7 +256,9 @@ export default async function PanelDashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl sm:text-4xl font-semibold">{data.totalEmpleados}</div>
+            <div className="text-3xl sm:text-4xl font-semibold">
+              {data.totalEmpleados}
+            </div>
             <div className="text-xs text-zinc-500 mt-1">
               Personal activo en el sistema
             </div>
@@ -267,7 +274,9 @@ export default async function PanelDashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl sm:text-4xl font-semibold">{data.presentesHoy}</div>
+            <div className="text-3xl sm:text-4xl font-semibold">
+              {data.presentesHoy}
+            </div>
             <div className="text-xs text-zinc-500 mt-1">
               {asistenciaPct}% de asistencia
             </div>
@@ -283,7 +292,9 @@ export default async function PanelDashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl sm:text-4xl font-semibold">{data.tardanzasHoy}</div>
+            <div className="text-3xl sm:text-4xl font-semibold">
+              {data.tardanzasHoy}
+            </div>
             <div className="text-xs text-zinc-500 mt-1">
               Llegadas después de las 9:00 AM
             </div>
@@ -299,7 +310,9 @@ export default async function PanelDashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl sm:text-4xl font-semibold">{data.eventosMes}</div>
+            <div className="text-3xl sm:text-4xl font-semibold">
+              {data.eventosMes}
+            </div>
             <div className="text-xs text-zinc-500 mt-1">
               Cumpleaños y aniversarios
             </div>
@@ -376,8 +389,8 @@ export default async function PanelDashboardPage() {
                           <div className="text-2xl font-bold leading-none">
                             {String(
                               new Date(
-                                c.fecha_nacimiento + "T00:00:00Z"
-                              ).getUTCDate()
+                                c.fecha_nacimiento + "T00:00:00Z",
+                              ).getUTCDate(),
                             ).padStart(2, "0")}
                           </div>
                           <div className="text-[10px] uppercase leading-none mt-1 tracking-wide">
@@ -427,7 +440,7 @@ export default async function PanelDashboardPage() {
                       const years =
                         new Date().getUTCFullYear() -
                         new Date(
-                          a.fecha_ingreso + "T00:00:00Z"
+                          a.fecha_ingreso + "T00:00:00Z",
                         ).getUTCFullYear();
                       return (
                         <li
@@ -438,8 +451,8 @@ export default async function PanelDashboardPage() {
                             <div className="text-2xl">
                               {String(
                                 new Date(
-                                  a.fecha_ingreso + "T00:00:00Z"
-                                ).getUTCDate()
+                                  a.fecha_ingreso + "T00:00:00Z",
+                                ).getUTCDate(),
                               ).padStart(2, "0")}
                             </div>
                           </div>
@@ -475,40 +488,75 @@ export default async function PanelDashboardPage() {
         <Card className="bg-white">
           <CardHeader className="flex items-center justify-between">
             <CardTitle className="text-base flex items-center gap-2">
-              <CheckCircle2 className="size-4 text-emerald-600" /> Asistencias de Hoy · Detalle
+              <CheckCircle2 className="size-4 text-emerald-600" /> Asistencias
+              de Hoy · Detalle
             </CardTitle>
           </CardHeader>
           <CardContent>
             {asistenciasHoy.length === 0 ? (
-              <div className="text-sm text-zinc-500">No hay registros de asistencia para hoy.</div>
+              <div className="text-sm text-zinc-500">
+                No hay registros de asistencia para hoy.
+              </div>
             ) : (
               <div className="overflow-x-auto max-h-[420px] overflow-y-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-zinc-50 text-zinc-600">
-                      <TableHead className="text-left px-3 py-2">Empleado</TableHead>
-                      <TableHead className="text-left px-3 py-2">Departamento</TableHead>
-                      <TableHead className="text-left px-3 py-2">Tipo de registro</TableHead>
-                      <TableHead className="text-center px-3 py-2">Fecha</TableHead>
-                      <TableHead className="text-center px-3 py-2">Entrada</TableHead>
-                      <TableHead className="text-center px-3 py-2">Salida</TableHead>
-                      <TableHead className="text-center px-3 py-2">¿Asistió?</TableHead>
-                      <TableHead className="text-center px-3 py-2">¿Goce de sueldo?</TableHead>
-                      <TableHead className="text-center px-3 py-2">¿Horas extra?</TableHead>
-                      <TableHead className="text-left px-3 py-2">Observaciones</TableHead>
-                      <TableHead className="text-center px-3 py-2">Estado</TableHead>
-                      <TableHead className="text-left px-3 py-2">Estado asistencia</TableHead>
+                      <TableHead className="text-left px-3 py-2">
+                        Empleado
+                      </TableHead>
+                      <TableHead className="text-left px-3 py-2">
+                        Departamento
+                      </TableHead>
+                      <TableHead className="text-left px-3 py-2">
+                        Tipo de registro
+                      </TableHead>
+                      <TableHead className="text-center px-3 py-2">
+                        Fecha
+                      </TableHead>
+                      <TableHead className="text-center px-3 py-2">
+                        Entrada
+                      </TableHead>
+                      <TableHead className="text-center px-3 py-2">
+                        Salida
+                      </TableHead>
+                      <TableHead className="text-center px-3 py-2">
+                        ¿Asistió?
+                      </TableHead>
+                      <TableHead className="text-center px-3 py-2">
+                        ¿Goce de sueldo?
+                      </TableHead>
+                      <TableHead className="text-center px-3 py-2">
+                        ¿Horas extra?
+                      </TableHead>
+                      <TableHead className="text-left px-3 py-2">
+                        Observaciones
+                      </TableHead>
+                      <TableHead className="text-center px-3 py-2">
+                        Estado
+                      </TableHead>
+                      <TableHead className="text-left px-3 py-2">
+                        Estado asistencia
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {asistenciasHoy.map((r) => (
                       <TableRow key={r.id} className="hover:bg-zinc-50">
                         <TableCell className="px-3 py-2">
-                          {[r.nombre, r.apellido_paterno, r.apellido_materno].filter(Boolean).join(" ")}
+                          {[r.nombre, r.apellido_paterno, r.apellido_materno]
+                            .filter(Boolean)
+                            .join(" ")}
                         </TableCell>
-                        <TableCell className="px-3 py-2">{r.departamento || "-"}</TableCell>
-                        <TableCell className="px-3 py-2">{r.tipo_registro_nombre || "-"}</TableCell>
-                        <TableCell className="px-3 py-2 text-center">{formatDateDMY(r.fecha)}</TableCell>
+                        <TableCell className="px-3 py-2">
+                          {r.departamento || "-"}
+                        </TableCell>
+                        <TableCell className="px-3 py-2">
+                          {r.tipo_registro_nombre || "-"}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-center">
+                          {formatDateDMY(r.fecha)}
+                        </TableCell>
                         <TableCell className="px-3 py-2 text-center">
                           {r.entrada ? formatTimeMexico(r.entrada) : "-"}
                         </TableCell>
@@ -524,9 +572,15 @@ export default async function PanelDashboardPage() {
                         <TableCell className="px-3 py-2 text-center">
                           {r.hrs_extra ? "Sí" : "No"}
                         </TableCell>
-                        <TableCell className="px-3 py-2">{r.notas || "-"}</TableCell>
-                        <TableCell className="px-3 py-2 text-center">{r.estado || "-"}</TableCell>
-                        <TableCell className="px-3 py-2">{r.estadoAsistencia || "-"}</TableCell>
+                        <TableCell className="px-3 py-2">
+                          {r.notas || "-"}
+                        </TableCell>
+                        <TableCell className="px-3 py-2 text-center">
+                          {r.estado || "-"}
+                        </TableCell>
+                        <TableCell className="px-3 py-2">
+                          {r.estadoAsistencia || "-"}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -548,14 +602,17 @@ export default async function PanelDashboardPage() {
                   (p) =>
                     !String(p?.status?.label || "")
                       .toLowerCase()
-                      .startsWith("terminado")
+                      .startsWith("terminado"),
                 ).length
               }{" "}
               activos
             </span>
           </CardHeader>
           <CardContent>
-            <PermisosTable rows={data.permisosRangos || []} festivosYmd={festivosYmd} />
+            <PermisosTable
+              rows={data.permisosRangos || []}
+              festivosYmd={festivosYmd}
+            />
           </CardContent>
         </Card>
       </div>
@@ -710,7 +767,7 @@ export default async function PanelDashboardPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y">
-                        {data.tardanzasDetalle.map((t, idx) => (
+                        {data?.tardanzasDetalle?.map((t, idx) => (
                           <tr
                             key={`t-${t.id_asistencia}`}
                             className="hover:bg-zinc-50"
@@ -721,7 +778,9 @@ export default async function PanelDashboardPage() {
                             <td className="px-3 py-2">{t.nombre_empleado}</td>
                             <td className="px-3 py-2">{t.nombre_empresa}</td>
                             <td className="px-3 py-2 text-amber-700">
-                              {t.hora_entrada ? formatTimeMexico(t.hora_entrada) : "-"}
+                              {t.hora_entrada
+                                ? formatTimeMexico(t.hora_entrada)
+                                : "-"}
                             </td>
                           </tr>
                         ))}
@@ -784,7 +843,7 @@ export default async function PanelDashboardPage() {
                           </td>
                         </tr>
                       ) : (
-                        data.sinChecar.map((r, idx) => (
+                        data?.sinChecar?.map((r, idx) => (
                           <tr
                             key={`sc-${r.id_empleado}`}
                             className="hover:bg-zinc-50"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import useDebounce from "@/hooks/useDebounce";
 import EmpleadosFilters from "./EmpleadosFilters";
@@ -8,9 +8,9 @@ import EmpleadosDataContainer from "./EmpleadosDataContainer";
 import FormularioEmpleado from "./FormularioEmpleado";
 import { StatCard } from "@/components/Cards";
 import { Button } from "@/components/ui/button";
-import axios from "axios";
 import ModalCapacidadAgotada from "@/components/ModalCapacidadAgotada";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import axios from "@/lib/axios";
 
 export default function RegistroEmpleados() {
   const [modalCapacidadAbierto, setModalCapacidadAbierto] = useState(false);
@@ -29,7 +29,11 @@ export default function RegistroEmpleados() {
   const [fechaDesde, setFechaDesde] = useState("");
 
   const { dataUser } = useAuth();
-  const idEmpresa = dataUser?.id_empresa;
+  const [empresaActiva, setEmpresaActiva] = useState("all");
+
+  const idEmpresa = empresaActiva;
+
+  // console.log(dataUser);
 
   const abrirFormulario = async (
     empleado = null,
@@ -42,7 +46,7 @@ export default function RegistroEmpleados() {
           `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados-capacidad/check-capacidad?empresa_id=${idEmpresa}`,
         );
 
-        console.log(data);
+        // console.log(data);
 
         if (!data.permitido) {
           setMensajeCapacidad(data.message);
@@ -66,10 +70,21 @@ export default function RegistroEmpleados() {
       }
     }
 
+    console.log(empleado);
+
     setValues(empleado);
     setEditar(modoEditar);
     setModoFormulario(true);
     setSoloLectura(lectura);
+  };
+
+  const resetFilters = () => {
+    setFiltroEmpleado("");
+    setDepartamento("");
+    setEstado("");
+    setFechaDesde("");
+    setEmpresaActiva("all");
+    setPage(1);
   };
 
   const { ui, data, mutate } = EmpleadosDataContainer({
@@ -82,6 +97,7 @@ export default function RegistroEmpleados() {
     fechaDesde,
     setPage,
     abrirFormulario,
+    resetFilters,
   });
 
   return (
@@ -112,7 +128,6 @@ export default function RegistroEmpleados() {
                 <div>Nuevo empleado</div>
               </Button>
             </div>
-            {/* Estadísticas */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <StatCard
                 title="Total empleados"
@@ -143,9 +158,9 @@ export default function RegistroEmpleados() {
               setPage={setPage}
               fechaDesde={fechaDesde}
               setFechaDesde={setFechaDesde}
+              empresaActiva={empresaActiva}
+              setEmpresaActiva={setEmpresaActiva}
             />
-
-            {/* Tabla de empleados */}
             {ui}
 
             {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}

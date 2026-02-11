@@ -33,8 +33,9 @@ export async function fetchImageAsDataUrl(url) {
      */
     const tryFetch = async (withAuth = false) => {
       const token = Cookies.get("token");
-      const headers = withAuth && token ? { Authorization: `Bearer ${token}` } : {};
-      const res = await fetch(url, { method: "GET", headers });
+      const headers =
+        withAuth && token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await fetch(url, { method: "GET", headers, mode: "cors" });
       return res;
     };
 
@@ -75,11 +76,11 @@ export async function fetchImageAsDataUrl(url) {
 export function getCompanyInitials(nombreEmpresa, maxChars = 3) {
   const s = String(nombreEmpresa || "").trim();
   if (!s) return "HR";
-  const words = s
-    .replace(/\s+/g, " ")
-    .split(" ")
-    .filter(Boolean);
-  const initials = words.slice(0, maxChars).map((w) => w[0]?.toUpperCase()).join("");
+  const words = s.replace(/\s+/g, " ").split(" ").filter(Boolean);
+  const initials = words
+    .slice(0, maxChars)
+    .map((w) => w[0]?.toUpperCase())
+    .join("");
   return initials || s.slice(0, maxChars).toUpperCase();
 }
 
@@ -116,7 +117,9 @@ export function tryAddCompanyMarkToPdf(doc, { logoDataUrl, companyName }, box) {
   const dataUrl = typeof logoDataUrl === "string" ? logoDataUrl : null;
   if (dataUrl && dataUrl.startsWith("data:image/")) {
     try {
-      const isJpg = dataUrl.startsWith("data:image/jpeg") || dataUrl.startsWith("data:image/jpg");
+      const isJpg =
+        dataUrl.startsWith("data:image/jpeg") ||
+        dataUrl.startsWith("data:image/jpg");
       const fmt = isJpg ? "JPEG" : "PNG";
 
       // Fit: respetar proporción y centrar en la caja.
@@ -133,5 +136,3 @@ export function tryAddCompanyMarkToPdf(doc, { logoDataUrl, companyName }, box) {
   const initials = getCompanyInitials(companyName, 3);
   return drawTextLogo(doc, initials, box);
 }
-
-

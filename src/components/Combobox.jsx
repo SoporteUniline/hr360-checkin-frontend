@@ -10,7 +10,7 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
-  CommandList, // Importa el nuevo componente
+  CommandList,
 } from "@/components/ui/command";
 import {
   Popover,
@@ -19,46 +19,90 @@ import {
 } from "@/components/ui/popover";
 
 export function Combobox({
-  options,
+  options = [],
   value,
   onChange,
-  placeholder,
-  emptyText,
+  placeholder = "Seleccionar...",
+  emptyText = "No se encontraron resultados",
   name,
+  disabled = false,
 }) {
   const [open, setOpen] = React.useState(false);
+  const [searchValue, setSearchValue] = React.useState("");
+
+  // Filtrar opciones basado en búsqueda
+  const filteredOptions = React.useMemo(() => {
+    if (!searchValue) return options;
+    return options.filter((option) =>
+      option.label.toLowerCase().includes(searchValue.toLowerCase())
+    );
+  }, [options, searchValue]);
+
+  const selectedOption = options.find((option) => option.value === value);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={disabled ? false : open} onOpenChange={setOpen} modal={true}>
       <PopoverTrigger asChild>
         <Button
           id={name}
+          type="button"
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between"
+          disabled={disabled}
+          className={cn(
+            "w-full justify-between",
+            disabled && "opacity-50 cursor-not-allowed"
+          )}
         >
-          {value
-            ? options.find((option) => option.value === value)?.label
-            : placeholder}
+          <span className="truncate">
+            {selectedOption ? selectedOption.label : placeholder}
+          </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0">
-        <Command>
-          <CommandInput placeholder={placeholder} />
-          <CommandEmpty>{emptyText}</CommandEmpty>
-          {/* Envuelve el CommandGroup en CommandList para habilitar el scroll */}
+      <PopoverContent
+        align="start"
+        className="w-full p-0 z-99999"
+        onOpenAutoFocus={(e) => e.preventDefault()} // Evita que robe el foco bruscamente
+        onCloseAutoFocus={(e) => e.preventDefault()}
+        style={{ pointerEvents: "auto" }} // <--- ESTO es la clave
+        onPointerDownOutside={(e) => {
+          if (
+            e.target instanceof Element &&
+            e.target.closest("[data-radix-combobox-input]")
+          ) {
+            e.preventDefault();
+          }
+        }}
+      >
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder={placeholder}
+            value={searchValue}
+            onValueChange={setSearchValue}
+            disabled={disabled}
+            autoFocus={false}
+            data-radix-combobox-input=""
+          />
           <CommandList>
+            <CommandEmpty>{emptyText}</CommandEmpty>
             <CommandGroup>
-              {options.map((option) => (
+              {filteredOptions.map((option) => (
                 <CommandItem
                   key={option.value}
-                  value={option.label}
+                  value={option.value}
+                  disabled={disabled}
                   onSelect={() => {
-                    onChange(option.value);
+                    if (disabled) return;
+                    onChange(option.value === value ? "" : option.value);
                     setOpen(false);
+                    setSearchValue("");
                   }}
+                  className={cn(
+                    "cursor-pointer",
+                    disabled && "pointer-events-none opacity-50"
+                  )}
                 >
                   <Check
                     className={cn(
@@ -66,7 +110,7 @@ export function Combobox({
                       value === option.value ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  {option.label}
+                  <span className="truncate">{option.label}</span>
                 </CommandItem>
               ))}
             </CommandGroup>

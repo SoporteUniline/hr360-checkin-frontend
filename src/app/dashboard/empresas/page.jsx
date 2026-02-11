@@ -14,10 +14,15 @@ import TablePagination from "@/components/TablePagination";
 export default function Empresas() {
   const limit = 10;
   const [page, setPage] = useState(1);
-  const { data, error, isLoading } = useSWR(
+  const {
+    data,
+    error,
+    isLoading,
+    mutate: revalidate,
+  } = useSWR(
     `/empresas?page=${page}&limit=${limit}`,
     fetcherWithToken,
-    swr_config
+    swr_config,
   );
   const [filter, setFilter] = React.useState({ search: "", status: "Todos" });
   const [selected, setSelected] = React.useState(null);
@@ -36,7 +41,7 @@ export default function Empresas() {
 
   const onPageChange = async (value) => {
     setPage(value);
-    await mutate(`/postulaciones?page=${value}&limit=${limit}`);
+    await mutate(`/empresas?page=${value}&limit=${limit}`);
   };
 
   return (
@@ -47,7 +52,12 @@ export default function Empresas() {
         <>
           <div className="flex gap-3">
             <Filters setFilter={setFilter} />
-            <NuevaEmpresa />
+            <NuevaEmpresa
+              limit={limit}
+              page={page}
+              revalidate={revalidate}
+              setFilter={setFilter}
+            />
           </div>
           <TableContainer
             error={error}

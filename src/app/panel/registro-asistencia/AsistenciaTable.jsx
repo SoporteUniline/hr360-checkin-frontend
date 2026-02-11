@@ -14,6 +14,7 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { useAuth } from "@/context/AuthContext";
+import { useEffect } from "react";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -35,6 +36,7 @@ export default function AsistenciaTable({
   mostrarCamposExtras,
   abrirFormulario,
   onResetFilters,
+  empresaActiva,
 }) {
   const { dataUser } = useAuth();
   const userTimezone = dataUser?.zona_horaria || "America/Mexico_City";
@@ -44,6 +46,7 @@ export default function AsistenciaTable({
     { header: "Nombre", key: "nombre" },
     { header: "Apellido Paterno", key: "apellido_paterno" },
     { header: "Apellido Materno", key: "apellido_materno" },
+    { header: "Empresa", key: "empresa" },
     { header: "Código", key: "nip" },
     { header: "Departamento", key: "departamento" },
     { header: "Tipo de Registro", key: "tipo_registro_nombre" },
@@ -73,6 +76,7 @@ export default function AsistenciaTable({
     nombre: r.nombre,
     apellido_paterno: r.apellido_paterno,
     apellido_materno: r.apellido_materno,
+    empresa: r.empresa_nombre,
     nip: r.nip,
     departamento: r.departamento,
     tipo_registro_nombre: r.tipo_registro_nombre,
@@ -112,6 +116,10 @@ export default function AsistenciaTable({
     estado: r.estado ?? "-",
     estadoAsistencia: r.estadoAsistencia,
   }));
+
+  useEffect(() => {
+    console.log(exportData);
+  }, [exportData]);
 
   return (
     <>
@@ -158,6 +166,9 @@ export default function AsistenciaTable({
         <TableHeader>
           <TableRow>
             <TableHead className="text-white bg-slate-700 ">Empleado</TableHead>
+            {empresaActiva === "all" && (
+              <TableHead className="text-white bg-slate-700">Empresa</TableHead>
+            )}
             {mostrarCamposExtras && (
               <TableHead className="text-white bg-slate-700 ">Código</TableHead>
             )}
@@ -287,6 +298,7 @@ export default function AsistenciaTable({
                 handleSaveClick={handleSaveClick}
                 mutateAsistencia={mutateAsistencia}
                 mostrarCamposExtras={mostrarCamposExtras}
+                empresaActiva={empresaActiva}
               />
             ))
           )}

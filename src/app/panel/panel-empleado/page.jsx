@@ -11,19 +11,25 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import LoadingTable from "@/components/LoadingTable";
 import ErrorPage from "@/components/ErrorPage";
-import { 
-  Users, 
-  FileText, 
-  Calendar, 
-  Clock, 
-  Briefcase, 
+import {
+  Users,
+  FileText,
+  Calendar,
+  Clock,
+  Briefcase,
   Plane,
   Search,
   Loader2,
   Menu,
-  X
+  X,
 } from "lucide-react";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import PanelEmpleadoGeneral from "./components/PanelEmpleadoGeneral";
 import PanelEmpleadoPermisos from "./components/PanelEmpleadoPermisos";
 import PanelEmpleadoAsistencias from "./components/PanelEmpleadoAsistencias";
@@ -33,6 +39,9 @@ import PanelEmpleadoVacaciones from "./components/PanelEmpleadoVacaciones";
 import useSWR from "swr";
 import dayjs from "dayjs";
 import { fetcherWithToken } from "@/lib/fetcher";
+import { Label } from "@/components/ui/label";
+import { Combobox } from "@/components/Combobox";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 /**
  * Página principal del Panel de Empleados
@@ -43,9 +52,35 @@ import { fetcherWithToken } from "@/lib/fetcher";
  */
 export default function PanelEmpleadoPage() {
   const { dataUser } = useAuth();
-  const idEmpresa = dataUser?.id_empresa;
-  
-  const { data, error, isLoading } = usePanelEmpleadoData(idEmpresa);
+  console.log(dataUser);
+  const [empresaActiva, setEmpresaActiva] = useState(null);
+  const idEmpresa = empresaActiva;
+
+  useEffect(() => {
+    if (dataUser?.empresas?.length > 0 && !empresaActiva) {
+      setEmpresaActiva("all");
+    }
+  }, [dataUser, empresaActiva]);
+
+  useEffect(() => {
+    if (empresaActiva) {
+      setBusqueda("");
+      setEmpleadoSeleccionado(null);
+    }
+  }, [empresaActiva]);
+
+  const empresasOptions = [
+    { value: "all", label: "Todas las empresas" },
+    ...(dataUser?.empresas_detalle?.map((empresa) => ({
+      value: empresa.id_empresa,
+      label: empresa.nombre,
+    })) || []),
+  ];
+
+  const { data, error, isLoading } = usePanelEmpleadoData(
+    empresaActiva,
+    dataUser?.empresas || []
+  );
 
   /**
    * Festivos (empresa) para cálculo consistente de días hábiles en Permisos del Panel de Empleados.
@@ -54,7 +89,9 @@ export default function PanelEmpleadoPage() {
    * - Endpoint compartido: `/checador/holidays/:id_empresa` (ver módulo Permisos).
    */
   const { data: festivosResp } = useSWR(
-    idEmpresa ? `/checador/holidays/${idEmpresa}?page=1&limit=5000&filter=` : null,
+    idEmpresa
+      ? `/checador/holidays/${idEmpresa}?page=1&limit=5000&filter=`
+      : null,
     fetcherWithToken
   );
   const festivosSet = useMemo(() => {
@@ -69,7 +106,7 @@ export default function PanelEmpleadoPage() {
     });
     return set;
   }, [festivosResp]);
-  
+
   const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState(null);
   const [busqueda, setBusqueda] = useState("");
   const [tabActivo, setTabActivo] = useState("general");
@@ -97,8 +134,8 @@ export default function PanelEmpleadoPage() {
   }, [empleados, empleadoSeleccionado]);
 
   // Obtener datos del empleado seleccionado
-  const datosEmpleado = empleadoSeleccionado 
-    ? datosCompletos[empleadoSeleccionado] 
+  const datosEmpleado = empleadoSeleccionado
+    ? datosCompletos[empleadoSeleccionado]
     : null;
 
   // Función para obtener iniciales
@@ -123,97 +160,10 @@ export default function PanelEmpleadoPage() {
   }
 
   if (error) {
-    return <ErrorPage message={error?.message || "Error al cargar los datos"} />;
+    return (
+      <ErrorPage message={error?.message || "Error al cargar los datos"} />
+    );
   }
-
-  // Componente del sidebar (reutilizable)
-  const SidebarContent = ({ onSelectEmpleado, closeSidebar }) => (
-    <>
-      {/* Header del sidebar */}
-      <div className="p-2 sm:p-3 md:p-4 border-b border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
-          <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
-          <h3 className="font-bold text-xs sm:text-sm">
-            Empleados ({empleados.length})
-          </h3>
-        </div>
-        <div className="relative">
-          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-400" />
-          <Input
-            placeholder="Buscar empleado..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            className="pl-7 sm:pl-8 h-8 sm:h-10 text-xs sm:text-sm"
-          />
-        </div>
-      </div>
-
-      {/* Lista de empleados */}
-      <ScrollArea className="flex-1">
-        <div className="p-1.5 sm:p-2">
-          {empleadosFiltrados.length === 0 ? (
-            <div className="text-center py-6 sm:py-8 text-xs sm:text-sm text-gray-500">
-              No se encontraron empleados
-            </div>
-          ) : (
-            empleadosFiltrados.map((emp) => {
-              const esSeleccionado = empleadoSeleccionado === emp.id_empleado;
-              return (
-                <div
-                  key={emp.id_empleado}
-                  onClick={() => {
-                    onSelectEmpleado(emp.id_empleado);
-                    if (closeSidebar) closeSidebar();
-                  }}
-                  className={`
-                    p-2 sm:p-3 mb-1 sm:mb-1.5 rounded-lg cursor-pointer transition-all
-                    flex items-center gap-2 sm:gap-3
-                    ${
-                      esSeleccionado
-                        ? "bg-gradient-to-r from-slate-600 to-slate-700 text-white shadow-md"
-                        : "hover:bg-gray-50 border border-transparent hover:border-gray-200"
-                    }
-                  `}
-                >
-                  {/* Avatar */}
-                  <div
-                    className={`
-                      w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center
-                      text-xs sm:text-sm font-bold flex-shrink-0
-                      ${
-                        esSeleccionado
-                          ? "bg-white/20 text-white"
-                          : "bg-gradient-to-br from-slate-600 to-blue-500 text-white"
-                      }
-                    `}
-                  >
-                    {obtenerIniciales(emp.nombre_completo)}
-                  </div>
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div
-                      className={`font-semibold text-xs sm:text-sm truncate ${
-                        esSeleccionado ? "text-white" : "text-gray-900"
-                      }`}
-                    >
-                      {emp.nombre_completo}
-                    </div>
-                    <div
-                      className={`text-[10px] sm:text-xs truncate ${
-                        esSeleccionado ? "text-white/80" : "text-gray-500"
-                      }`}
-                    >
-                      {emp.puesto || "Sin asignar"}
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </ScrollArea>
-    </>
-  );
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
@@ -222,14 +172,40 @@ export default function PanelEmpleadoPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5 sm:gap-2 md:gap-4 min-w-0 flex-1">
             {/* Botón para abrir sidebar en móvil */}
-            <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+            <Sheet
+              modal={false}
+              open={sidebarOpen}
+              onOpenChange={setSidebarOpen}
+            >
               <SheetTrigger asChild className="lg:hidden">
-                <Button variant="ghost" size="icon" className="text-white hover:bg-white/10 h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-white hover:bg-white/10 h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0"
+                >
                   <Menu className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-[280px] sm:w-[320px] p-0 flex flex-col">
-                <SidebarContent 
+              <SheetContent
+                side="left"
+                className="w-[280px] sm:w-[320px] p-0 flex flex-col"
+              >
+                <VisuallyHidden>
+                  <SheetHeader>
+                    <SheetTitle>Lista de empleados</SheetTitle>
+                  </SheetHeader>
+                </VisuallyHidden>
+
+                <SidebarContent
+                  empleados={empleados}
+                  empleadosFiltrados={empleadosFiltrados}
+                  empleadoSeleccionado={empleadoSeleccionado}
+                  busqueda={busqueda}
+                  setBusqueda={setBusqueda}
+                  empresasOptions={empresasOptions}
+                  empresaActiva={empresaActiva}
+                  setEmpresaActiva={setEmpresaActiva}
+                  obtenerIniciales={obtenerIniciales}
                   onSelectEmpleado={(id) => {
                     setEmpleadoSeleccionado(id);
                     setTabActivo("general");
@@ -238,13 +214,21 @@ export default function PanelEmpleadoPage() {
                 />
               </SheetContent>
             </Sheet>
-            <h1 className="text-base sm:text-xl md:text-2xl font-bold flex-shrink-0">HR360</h1>
+            <h1 className="text-base sm:text-xl md:text-2xl font-bold flex-shrink-0">
+              HR360
+            </h1>
             <div className="hidden md:block min-w-0">
-              <h2 className="text-sm md:text-base lg:text-lg font-bold truncate">Panel de Empleados</h2>
-              <p className="text-xs opacity-85">Sistema de Gestión de Capital Humano</p>
+              <h2 className="text-sm md:text-base lg:text-lg font-bold truncate">
+                Panel de Empleados
+              </h2>
+              <p className="text-xs opacity-85">
+                Sistema de Gestión de Capital Humano
+              </p>
             </div>
             <div className="md:hidden min-w-0">
-              <h2 className="text-xs sm:text-sm font-bold truncate">Panel Empleados</h2>
+              <h2 className="text-xs sm:text-sm font-bold truncate">
+                Panel Empleados
+              </h2>
             </div>
           </div>
         </div>
@@ -254,7 +238,16 @@ export default function PanelEmpleadoPage() {
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar Desktop - Oculto en móvil */}
         <div className="hidden lg:flex w-80 bg-white border-r border-gray-200 flex-col">
-          <SidebarContent 
+          <SidebarContent
+            empleados={empleados}
+            empleadosFiltrados={empleadosFiltrados}
+            empleadoSeleccionado={empleadoSeleccionado}
+            busqueda={busqueda}
+            setBusqueda={setBusqueda}
+            empresasOptions={empresasOptions}
+            empresaActiva={empresaActiva}
+            setEmpresaActiva={setEmpresaActiva}
+            obtenerIniciales={obtenerIniciales}
             onSelectEmpleado={(id) => {
               setEmpleadoSeleccionado(id);
               setTabActivo("general");
@@ -271,7 +264,8 @@ export default function PanelEmpleadoPage() {
                 Selecciona un empleado
               </h3>
               <p className="text-sm text-gray-500">
-                Elige un empleado del panel izquierdo para ver su información completa
+                Elige un empleado del panel izquierdo para ver su información
+                completa
               </p>
             </div>
           ) : (
@@ -292,8 +286,11 @@ export default function PanelEmpleadoPage() {
                         {datosEmpleado.informacion_general?.nombre_completo}
                       </h2>
                       <p className="text-xs sm:text-sm md:text-base text-gray-600 mb-3 sm:mb-4 break-words">
-                        {datosEmpleado.informacion_general?.puesto || "Sin asignar"} •{" "}
-                        {datosEmpleado.informacion_general?.empresa || "Sin empresa"}
+                        {datosEmpleado.informacion_general?.puesto ||
+                          "Sin asignar"}{" "}
+                        •{" "}
+                        {datosEmpleado.informacion_general?.empresa ||
+                          "Sin empresa"}
                       </p>
                       {/* Detalles rápidos */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
@@ -304,7 +301,8 @@ export default function PanelEmpleadoPage() {
                           <div className="text-xs sm:text-sm font-semibold text-gray-900 break-all">
                             EMP-
                             {String(
-                              datosEmpleado.informacion_general?.id_empleado || 0
+                              datosEmpleado.informacion_general?.id_empleado ||
+                                0
                             ).padStart(3, "0")}
                           </div>
                         </div>
@@ -313,8 +311,8 @@ export default function PanelEmpleadoPage() {
                             Correo
                           </div>
                           <div className="text-xs sm:text-sm font-semibold text-gray-900 break-all">
-                            {datosEmpleado.informacion_general?.email_corporativo ||
-                              "N/A"}
+                            {datosEmpleado.informacion_general
+                              ?.email_corporativo || "N/A"}
                           </div>
                         </div>
                         <div className="min-w-0">
@@ -322,7 +320,8 @@ export default function PanelEmpleadoPage() {
                             Teléfono
                           </div>
                           <div className="text-xs sm:text-sm font-semibold text-gray-900 break-all">
-                            {datosEmpleado.informacion_general?.telefono || "N/A"}
+                            {datosEmpleado.informacion_general?.telefono ||
+                              "N/A"}
                           </div>
                         </div>
                         <div className="min-w-0">
@@ -351,7 +350,9 @@ export default function PanelEmpleadoPage() {
                         className="data-[state=active]:bg-white/80 data-[state=active]:border-b-2 data-[state=active]:border-slate-600 text-[11px] sm:text-xs md:text-sm px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3"
                       >
                         <FileText className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 mr-1 sm:mr-1.5 md:mr-2 flex-shrink-0" />
-                        <span className="hidden md:inline">Información General</span>
+                        <span className="hidden md:inline">
+                          Información General
+                        </span>
                         <span className="md:hidden">General</span>
                       </TabsTrigger>
                       <TabsTrigger
@@ -373,7 +374,9 @@ export default function PanelEmpleadoPage() {
                         className="data-[state=active]:bg-white/80 data-[state=active]:border-b-2 data-[state=active]:border-slate-600 text-[11px] sm:text-xs md:text-sm px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3"
                       >
                         <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 mr-1 sm:mr-1.5 md:mr-2 flex-shrink-0" />
-                        <span className="hidden sm:inline">Entradas/Salidas</span>
+                        <span className="hidden sm:inline">
+                          Entradas/Salidas
+                        </span>
                         <span className="sm:hidden">E/S</span>
                       </TabsTrigger>
                       <TabsTrigger
@@ -398,13 +401,18 @@ export default function PanelEmpleadoPage() {
                       <PanelEmpleadoGeneral datosEmpleado={datosEmpleado} />
                     </TabsContent>
                     <TabsContent value="permisos" className="mt-0">
-                      <PanelEmpleadoPermisos datosEmpleado={datosEmpleado} festivosSet={festivosSet} />
+                      <PanelEmpleadoPermisos
+                        datosEmpleado={datosEmpleado}
+                        festivosSet={festivosSet}
+                      />
                     </TabsContent>
                     <TabsContent value="asistencias" className="mt-0">
                       <PanelEmpleadoAsistencias datosEmpleado={datosEmpleado} />
                     </TabsContent>
                     <TabsContent value="entradas" className="mt-0">
-                      <PanelEmpleadoEntradasSalidas datosEmpleado={datosEmpleado} />
+                      <PanelEmpleadoEntradasSalidas
+                        datosEmpleado={datosEmpleado}
+                      />
                     </TabsContent>
                     <TabsContent value="contratos" className="mt-0">
                       <PanelEmpleadoContratos datosEmpleado={datosEmpleado} />
@@ -429,7 +437,7 @@ export default function PanelEmpleadoPage() {
  */
 function formatearFecha(fechaISO) {
   if (!fechaISO || fechaISO === "N/A") return "N/A";
-  
+
   try {
     const fecha = new Date(fechaISO + "T00:00:00");
     const dia = String(fecha.getDate()).padStart(2, "0");
@@ -441,3 +449,95 @@ function formatearFecha(fechaISO) {
   }
 }
 
+// Componente del sidebar (reutilizable)
+const SidebarContent = ({
+  empleados,
+  empleadosFiltrados,
+  empleadoSeleccionado,
+  busqueda,
+  setBusqueda,
+  empresasOptions,
+  empresaActiva,
+  setEmpresaActiva,
+  obtenerIniciales,
+  onSelectEmpleado,
+  closeSidebar,
+}) => (
+  <>
+    {/* Header */}
+    <div className="p-2 sm:p-3 md:p-4 border-b border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="flex items-center gap-2 mb-3">
+        <Users className="h-4 w-4" />
+        <h3 className="font-bold text-sm">Empleados ({empleados.length})</h3>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <Label>Empresa</Label>
+        <Combobox
+          options={empresasOptions}
+          value={empresaActiva}
+          onChange={(val) =>
+            setEmpresaActiva(val === "all" ? "all" : Number(val))
+          }
+          placeholder="Seleccionar empresa"
+        />
+
+        <div className="relative">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Buscar empleado..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            className="pl-8"
+          />
+        </div>
+      </div>
+    </div>
+
+    {/* Lista */}
+    <ScrollArea className="flex-1 overflow-y-auto">
+      <div className="p-2">
+        {empleadosFiltrados.map((emp) => {
+          const activo = empleadoSeleccionado === emp.id_empleado;
+
+          return (
+            <div
+              key={emp.id_empleado}
+              onClick={() => {
+                onSelectEmpleado(emp.id_empleado);
+                closeSidebar?.();
+              }}
+              className={`p-3 mb-1 rounded-lg cursor-pointer ${
+                activo ? "bg-slate-700 text-white" : "hover:bg-gray-50"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className={`
+                      w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center
+                      text-xs sm:text-sm font-bold flex-shrink-0
+                      ${
+                        activo
+                          ? "bg-white/20 text-white"
+                          : "bg-gradient-to-br from-slate-600 to-blue-500 text-white"
+                      }
+                    `}
+                >
+                  {obtenerIniciales(emp.nombre_completo)}
+                </div>
+                <div className="min-w-0">
+                  <div className="font-semibold truncate">
+                    {emp.nombre_completo}
+                  </div>
+                  <div className="text-xs opacity-70 truncate">
+                    {emp.puesto || "Sin asignar"}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </ScrollArea>
+  </>
+);

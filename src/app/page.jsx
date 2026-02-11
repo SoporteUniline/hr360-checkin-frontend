@@ -1,146 +1,138 @@
 "use client";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import axiosInstance from "@/lib/axios";
 import Navbar from "@/components/Navbar";
-import { useRef } from "react";
+import { Building2 } from "lucide-react"; // Icono de respaldo
 
 export default function Home() {
   const { dataUser, isLoggedIn } = useAuth();
   const router = useRouter();
-  const [status, setStatus] = useState("idle"); // "idle" | "loading" | "notfound" | "error" | "forbidden"
-  const hasFetched = useRef(false);
+  const [status, setStatus] = useState("idle");
+  const [loadingSelection, setLoadingSelection] = useState(false);
+  const hasRedirected = useRef(false);
+
+  const handleSelectEmpresa = async (idEmpresa) => {
+    setLoadingSelection(true);
+    try {
+      const res = await axiosInstance.get(`/empresas/id/${idEmpresa}/slug`);
+      const slug = res.data.slug;
+      if (slug) router.push(`/${slug}`);
+      else alert("No se encontró la ruta para esta empresa");
+    } catch (error) {
+      console.error("Error obteniendo slug:", error);
+      alert("Error al conectar con la empresa");
+    } finally {
+      setLoadingSelection(false);
+    }
+  };
 
   useEffect(() => {
-    if (!isLoggedIn) return;
-    if (!dataUser) return;
-    if (hasFetched.current) return;
+    if (!isLoggedIn || !dataUser || hasRedirected.current) return;
 
-    hasFetched.current = true;
-
-    if (dataUser.tipo_usuario !== "Recruiter") {
-      setStatus("forbidden");
+    if (dataUser.tipo_usuario === "Admin") {
+      hasRedirected.current = true;
+      router.push("/dashboard/empresas"); // O la ruta de tu panel admin
       return;
     }
 
-    const idEmpresa = dataUser.id_empresa || dataUser.empresas?.[0];
-    if (!idEmpresa) {
-      setStatus("notfound");
-      return;
-    }
-
-    const fetchSlug = async () => {
-      setStatus("loading");
-      try {
-        const res = await axiosInstance.get(`/empresas/id/${idEmpresa}/slug`);
-        const slug = res.data.slug;
-
-        if (slug) router.push(`/${slug}`);
-        else setStatus("notfound");
-      } catch {
-        setStatus("error");
+    if (dataUser.tipo_usuario === "Recruiter") {
+      const detalles = dataUser.empresas_detalle || [];
+      if (detalles.length === 1) {
+        hasRedirected.current = true;
+        handleSelectEmpresa(detalles[0].id_empresa);
+      } else if (detalles.length > 1) {
+        setStatus("selection");
+      } else {
+        setStatus("notfound");
       }
-    };
+      return;
+    }
 
-    fetchSlug();
+    if (dataUser.tipo_usuario === "Empleado") {
+      hasRedirected.current = true;
+      router.push("/empleado/panel/solicitudes");
+      return;
+    }
   }, [dataUser, isLoggedIn]);
 
-  // Usuario loggeado pero no Recruiter
-  if (status === "forbidden") {
+  if (!isLoggedIn) return <LandingLogin router={router} />;
+
+  if (status === "loading" || loadingSelection) {
+    return <LoadingState message="Cargando acceso a la empresa..." />;
+  }
+
+  if (status === "selection") {
     return (
-      <>
+      <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4 text-center">
-          {/* Logo HR360 */}
-          <img src="/assets/logo.png" alt="HR360 Logo" className="w-40 mb-6" />
+        <div className="max-w-5xl mx-auto py-12 px-4 mt-8">
+          <div className="text-center mb-10">
+            <h1 className="text-3xl font-extrabold text-gray-900">
+              Selecciona una Empresa
+            </h1>
+            <p className="text-gray-500 mt-2">
+              Gestiona el Reloj Checador de tus sucursales asignadas
+            </p>
+          </div>
 
-          {/* Mensaje de bienvenida */}
-          <h1 className="text-3xl font-bold mb-4">
-            Bienvenido a HR360 {dataUser.nombre}
-          </h1>
-
-          {/* Botones de navegación */}
-          <div className="flex gap-4">
-            <button
-              onClick={() => router.push("/dashboard")}
-              className="cursor-pointer px-6 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 shadow"
-            >
-              Ir al Panel
-            </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {dataUser.empresas_detalle.map((emp) => (
+              <div
+                key={emp.id_empresa}
+                onClick={() => handleSelectEmpresa(emp.id_empresa)}
+                className="group cursor-pointer bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all border border-gray-100 p-6 flex flex-col items-center text-center"
+              >
+                <div className="w-24 h-24 mb-4 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center border-2 border-transparent group-hover:border-blue-500 transition-colors">
+                  {emp.url_imagen ? (
+                    <img
+                      src={emp.url_imagen}
+                      alt={emp.nombre}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Building2 className="text-gray-400 w-10 h-10" />
+                  )}
+                </div>
+                <h3 className="text-xl font-bold text-gray-800">
+                  {emp.nombre}
+                </h3>
+                <p className="text-sm text-gray-400">{emp.zona_horaria}</p>
+                <div className="mt-4 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg text-sm font-semibold group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                  Entrar al Reloj
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      </>
-    );
-  }
-
-  // Usuario no loggeado → landing inicial
-  if (!isLoggedIn) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen text-center">
-        <img src="/assets/logo.png" alt="HR360 Logo" className="w-40 mb-6" />
-        <h1 className="text-3xl font-bold mb-4">
-          Bienvenido a nuestra plataforma
-        </h1>
-        <p className="text-gray-600 mb-6">
-          Por favor inicia sesión para continuar.
-        </p>
-        <div className="flex gap-4">
-          <button
-            onClick={() => router.push("/login")}
-            className="cursor-pointer px-6 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 shadow"
-          >
-            Iniciar sesión
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (status === "loading") {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600 mr-4"></div>
-        <p className="text-lg font-medium">Redirigiendo a tu empresa...</p>
-      </div>
-    );
-  }
-
-  if (status === "notfound") {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen text-center">
-        <h1 className="text-2xl font-semibold mb-2">Empresa no encontrada</h1>
-        <p className="text-gray-600 mb-4">
-          No encontramos información asociada a tu cuenta. Si crees que esto es
-          un error, contacta a soporte.
-        </p>
-        <button
-          onClick={() => router.push("/")}
-          className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 shadow"
-        >
-          Ir al inicio
-        </button>
-      </div>
-    );
-  }
-
-  if (status === "error") {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen text-center">
-        <h1 className="text-2xl font-semibold mb-2">Algo salió mal</h1>
-        <p className="text-gray-600 mb-4">
-          Hubo un problema al obtener la información. Intenta de nuevo más
-          tarde.
-        </p>
-        <button
-          onClick={() => router.push("/")}
-          className="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 shadow"
-        >
-          Volver al inicio
-        </button>
       </div>
     );
   }
 
   return null;
+}
+
+function LoadingState({ message }) {
+  return (
+    <div className="flex flex-col items-center justify-center h-screen">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600 mb-4"></div>
+      <p className="text-lg font-medium text-gray-600">{message}</p>
+    </div>
+  );
+}
+
+function LandingLogin({ router }) {
+  return (
+    <div className="flex flex-col items-center justify-center h-screen text-center">
+      <img src="/assets/logo.png" alt="Logo" className="w-40 mb-6" />
+      <h1 className="text-3xl font-bold mb-4">Bienvenido a HR360</h1>
+      <button
+        onClick={() => router.push("/login")}
+        className="px-6 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 shadow"
+      >
+        Iniciar sesión
+      </button>
+    </div>
+  );
 }

@@ -24,16 +24,23 @@ export default function DepartamentosTable({
   onTotalChange,
   onLoad,
 }) {
+  const showEmpresa = id_empresa === "all";
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const key = `${swrKey}&page=${page}&limit=${limit}&nombre=${filter}`;
   const { data, error, isLoading } = useSWR(key, fetcherWithToken, swr_config);
+
+  console.log(data);
 
   useEffect(() => {
     if (data?.total && onTotalChange) {
       onTotalChange(data.total);
     }
   }, [data?.total, onTotalChange]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filter]);
 
   const departamentos = data?.departamentos || [];
   useEffect(() => {
@@ -58,6 +65,7 @@ export default function DepartamentosTable({
         <TableHeader>
           <TableRow>
             <TableHead>Nombre</TableHead>
+            {showEmpresa && <TableHead>Empresa</TableHead>}
             <TableHead className="text-right">Acciones</TableHead>
           </TableRow>
         </TableHeader>
@@ -65,6 +73,8 @@ export default function DepartamentosTable({
           {departamentos.map((dep) => (
             <TableRow key={dep.id_departamento}>
               <TableCell>{dep.nombre}</TableCell>
+              {showEmpresa && <TableCell>{dep.empresa_nombre}</TableCell>}
+
               <TableCell className="text-right flex justify-end gap-2">
                 <Button
                   size="icon"

@@ -1,3 +1,4 @@
+import { Combobox } from "@/components/Combobox";
 import { ComboboxEstadoCivil } from "@/components/ComboboxEstadoCivil";
 import { FormLabelWithAsterisk } from "@/components/FormLabelWithAsterisk";
 import {
@@ -15,8 +16,56 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { useEffect, useState } from "react";
+import { CreatableCombobox } from "@/components/CreatableCombobox";
+import axios from "@/lib/axios";
 
 export default function TabPersonales({ form, soloLectura }) {
+  const idEmpresa = form.watch("id_empresa");
+  const [estadosCiviles, setEstadosCiviles] = useState([]);
+  const [loadingEstadosCiviles, setLoadingEstadosCiviles] = useState(false);
+
+  const fetchEstadosCiviles = async () => {
+    if (!idEmpresa) {
+      setEstadosCiviles([]);
+      return;
+    }
+
+    try {
+      setLoadingEstadosCiviles(true);
+
+      console.log("📡 Cargando estados civiles de empresa:", idEmpresa);
+
+      const res = await axios.get(
+        `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/estados-civiles`,
+        {
+          params: { id_empresa: idEmpresa },
+        }
+      );
+
+      const lista = Array.isArray(res.data.estados_civiles)
+        ? res.data.estados_civiles
+        : [];
+
+      setEstadosCiviles([
+        { value: "", label: "Selecciona un estado civil" },
+        ...lista.map((e) => ({
+          value: e.nombre,
+          label: e.nombre,
+        })),
+      ]);
+    } catch (error) {
+      console.error("❌ Error estados civiles", error);
+      setEstadosCiviles([]);
+    } finally {
+      setLoadingEstadosCiviles(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEstadosCiviles();
+  }, [idEmpresa]);
+
   return (
     <section className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mx-1 my-3">
@@ -56,7 +105,12 @@ export default function TabPersonales({ form, soloLectura }) {
                   {label}
                 </FormLabelWithAsterisk>
                 <FormControl>
-                  <Input type={type} disabled={soloLectura} {...field} />
+                  <Input
+                    type={type}
+                    disabled={soloLectura}
+                    {...field}
+                    value={field.value ?? ""}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -77,6 +131,7 @@ export default function TabPersonales({ form, soloLectura }) {
                   maxLength={18}
                   className="uppercase"
                   placeholder="Ej. GOLA850705HDFRRN09"
+                  value={field.value ?? ""}
                 />
               </FormControl>
               <FormMessage />
@@ -96,6 +151,7 @@ export default function TabPersonales({ form, soloLectura }) {
                   maxLength={13}
                   className="uppercase"
                   placeholder="Ej. GOLA8507052A1"
+                  value={field.value ?? ""}
                 />
               </FormControl>
               <FormMessage />
@@ -110,7 +166,12 @@ export default function TabPersonales({ form, soloLectura }) {
             <FormItem>
               <FormLabel>NSS</FormLabel>
               <FormControl>
-                <Input {...field} disabled={soloLectura} maxLength={11} />
+                <Input
+                  {...field}
+                  disabled={soloLectura}
+                  maxLength={11}
+                  value={field.value ?? ""}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -153,13 +214,35 @@ export default function TabPersonales({ form, soloLectura }) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Estado civil</FormLabel>
-              <ComboboxEstadoCivil
-                value={field.value !== "" ? field.value : "sin-seleccion"}
-                onChange={(val) =>
-                  field.onChange(val === "" ? "sin-seleccion" : val)
+
+              <CreatableCombobox
+                value={field.value ?? ""}
+                compareBy="label"
+                disabled={soloLectura || !idEmpresa}
+                placeholder="Selecciona o crea estado civil..."
+                searchPlaceholder="Buscar estado civil..."
+                fetchOptions={(q) =>
+                  axios
+                    .get(
+                      `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/estados-civiles`,
+                      { params: { id_empresa: idEmpresa, nombre: q } }
+                    )
+                    .then((r) => r.data.estados_civiles || [])
                 }
-                disabled={soloLectura}
+                createOption={(nombre) =>
+                  axios
+                    .post(
+                      `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/estados-civiles`,
+                      { nombre, id_empresa: idEmpresa }
+                    )
+                    .then((r) => r.data)
+                }
+                getOptionLabel={(o) => o.nombre}
+                getOptionValue={(o) => o.nombre} // 🔥 CLAVE
+                onChange={(nombre) => field.onChange(nombre)}
+                onCreated={(nuevo) => field.onChange(nuevo.nombre)}
               />
+
               <FormMessage />
             </FormItem>
           )}
@@ -172,7 +255,11 @@ export default function TabPersonales({ form, soloLectura }) {
             <FormItem>
               <FormLabel>Dirección</FormLabel>
               <FormControl>
-                <Input {...field} disabled={soloLectura} />
+                <Input
+                  {...field}
+                  disabled={soloLectura}
+                  value={field.value ?? ""}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>

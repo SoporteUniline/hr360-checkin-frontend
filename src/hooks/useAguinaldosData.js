@@ -9,9 +9,15 @@ import { aguinaldosApi } from "@/lib/aguinaldosApi";
 export default function useAguinaldosData(filters) {
   const { idEmpresa, page, limit, search, estatus, año_fiscal } = filters || {};
 
-  const key = idEmpresa
-    ? ["aguinaldos", idEmpresa, page, limit, search || "", estatus || "", año_fiscal || ""]
-    : null;
+  const key = [
+    "aguinaldos",
+    idEmpresa,
+    page,
+    limit,
+    search || "",
+    estatus || "",
+    año_fiscal || "",
+  ];
 
   const fetcher = async () => {
     const resp = await aguinaldosApi.listar({
@@ -34,4 +40,3 @@ export default function useAguinaldosData(filters) {
 
   return { data, isLoading, error, mutate };
 }
-

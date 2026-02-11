@@ -35,14 +35,14 @@ dayjs.extend(timezone);
 export default function RegistroVacacionesPage() {
   // Empresa autenticada
   const { dataUser } = useAuth();
-  const idEmpresa = dataUser?.id_empresa;
+  const [empresaActiva, setEmpresaActiva] = useState("all");
 
   // Fechas por defecto (hoy)
   const [fechaInicio, setFechaInicio] = useState(
-    dayjs().tz("America/Mexico_City").format("YYYY-MM-DD")
+    dayjs().tz("America/Mexico_City").format("YYYY-MM-DD"),
   );
   const [fechaFin, setFechaFin] = useState(
-    dayjs().tz("America/Mexico_City").format("YYYY-MM-DD")
+    dayjs().tz("America/Mexico_City").format("YYYY-MM-DD"),
   );
 
   // Paginación
@@ -58,12 +58,22 @@ export default function RegistroVacacionesPage() {
   // Sugerencias (typeahead) como en Permisos
   const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
   const [hoveredSuggestionIndex, setHoveredSuggestionIndex] = useState(0);
-  const empleadosSugResp = useEmpleadosData(idEmpresa, 1, 8, filtroEmpleado, "", "", "");
+  const empleadosSugResp = useEmpleadosData(
+    empresaActiva,
+    1,
+    8,
+    filtroEmpleado,
+    "",
+    "",
+    "",
+  );
   const sugerencias = useMemo(() => {
     const list = empleadosSugResp?.data?.data || [];
     return list.map((e) => ({
       id_empleado: e.id_empleado,
-      nombre_completo: [e.nombre, e.apellido_paterno, e.apellido_materno].filter(Boolean).join(" "),
+      nombre_completo: [e.nombre, e.apellido_paterno, e.apellido_materno]
+        .filter(Boolean)
+        .join(" "),
     }));
   }, [empleadosSugResp?.data]);
   const handleSelectEmpleado = useCallback((emp) => {
@@ -77,12 +87,13 @@ export default function RegistroVacacionesPage() {
   const [filtroTipoRegistro, setFiltroTipoRegistro] = useState("");
 
   // Catálogos
-  const { data: empleados } = useEmpleadosData(idEmpresa);
+  const { data: empleados } = useEmpleadosData(empresaActiva);
   const { data: tiposPermiso } = useTiposPermisoData();
 
   // Derivar departamentos únicos desde empleados
   const departamentosUnicos = useMemo(() => {
-    const arr = empleados?.data?.map((e) => e?.departamento).filter(Boolean) || [];
+    const arr =
+      empleados?.data?.map((e) => e?.departamento).filter(Boolean) || [];
     return Array.from(new Set(arr)).sort();
   }, [empleados]);
 
@@ -93,13 +104,15 @@ export default function RegistroVacacionesPage() {
 
     // 1) Coincidencia exacta por nombre
     let vac = lista.find(
-      (t) => String(t?.nombre || "").toLowerCase() === "vacaciones"
+      (t) => String(t?.nombre || "").toLowerCase() === "vacaciones",
     );
 
     // 2) Si no, buscar por clave que contenga 'vac'
     if (!vac) {
       vac = lista.find((t) =>
-        String(t?.clave || "").toLowerCase().includes("vac")
+        String(t?.clave || "")
+          .toLowerCase()
+          .includes("vac"),
       );
     }
 
@@ -119,7 +132,8 @@ export default function RegistroVacacionesPage() {
 
   // Usar el contenedor de datos como función (retorna { ui, data, mutate })
   const { ui } = AsistenciaDataContainer({
-    idEmpresa,
+    idEmpresa: empresaActiva,
+    empresaActiva,
     fechaInicio,
     fechaFin,
     page,
@@ -146,17 +160,46 @@ export default function RegistroVacacionesPage() {
     requiereAutorizacion: false,
   });
 
+  useEffect(() => {
+    // Opcional: Limpiar filtro de empleado al cambiar de empresa para evitar inconsistencias
+    setFiltroEmpleado("");
+    setFiltroDepartamento("");
+  }, [empresaActiva]);
+
   return (
     <div className={`${styles.vacacionesTheme} space-y-4`}>
-      {/* Encabezado */}
-      <div className="px-4 pt-2">
-        <h1 className="text-xl md:text-2xl font-semibold">📒 Registro de vacaciones</h1>
-        
+      {/* Encabezado limpio */}
+      <div className="px-4 pt-4">
+        <h1 className="text-xl md:text-2xl font-semibold">
+          📒 Registro de vacaciones
+        </h1>
       </div>
 
-      {/* Filtros esenciales (sin filtros rápidos) */}
+      {/* Filtros esenciales (5 columnas en pantallas grandes) */}
       <div className="p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          {/* 1. FILTRO DE EMPRESA (Movido aquí) */}
+          <div className="flex flex-col gap-2 w-full">
+            <Label htmlFor="empresa_select">Empresa</Label>
+            <select
+              id="empresa_select"
+              value={empresaActiva}
+              onChange={(e) => {
+                setEmpresaActiva(e.target.value);
+                setPage(1);
+              }}
+              className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+            >
+              <option value="all">Todas las empresas</option>
+              {dataUser?.empresas_detalle?.map((emp) => (
+                <option key={emp.id_empresa} value={emp.id_empresa}>
+                  {emp.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* 2. FECHA INICIO */}
           <div className="flex flex-col gap-2 w-full">
             <Label htmlFor="fecha_inicio">Fecha Inicio</Label>
             <Input
@@ -170,6 +213,7 @@ export default function RegistroVacacionesPage() {
             />
           </div>
 
+          {/* 3. FECHA FIN */}
           <div className="flex flex-col gap-2 w-full">
             <Label htmlFor="fecha_fin">Fecha Fin</Label>
             <Input
@@ -183,6 +227,7 @@ export default function RegistroVacacionesPage() {
             />
           </div>
 
+          {/* 4. EMPLEADO */}
           <div className="flex flex-col gap-2 w-full">
             <Label htmlFor="empleado">Empleado</Label>
             <div className="relative">
@@ -196,32 +241,32 @@ export default function RegistroVacacionesPage() {
                   setHoveredSuggestionIndex(0);
                 }}
                 onFocus={() => setIsSuggestionsOpen(!!filtroEmpleado)}
-                onBlur={() => {
-                  setTimeout(() => setIsSuggestionsOpen(false), 120);
-                }}
+                onBlur={() =>
+                  setTimeout(() => setIsSuggestionsOpen(false), 120)
+                }
                 onKeyDown={(e) => {
                   if (!isSuggestionsOpen || sugerencias.length === 0) return;
                   if (e.key === "ArrowDown") {
                     e.preventDefault();
                     setHoveredSuggestionIndex((prev) =>
-                      prev + 1 >= sugerencias.length ? 0 : prev + 1
+                      prev + 1 >= sugerencias.length ? 0 : prev + 1,
                     );
                   } else if (e.key === "ArrowUp") {
                     e.preventDefault();
                     setHoveredSuggestionIndex((prev) =>
-                      prev - 1 < 0 ? sugerencias.length - 1 : prev - 1
+                      prev - 1 < 0 ? sugerencias.length - 1 : prev - 1,
                     );
                   } else if (e.key === "Enter") {
                     e.preventDefault();
                     handleSelectEmpleado(
-                      sugerencias[hoveredSuggestionIndex] || sugerencias[0]
+                      sugerencias[hoveredSuggestionIndex] || sugerencias[0],
                     );
                   } else if (e.key === "Escape") {
                     setIsSuggestionsOpen(false);
                   }
                 }}
               />
-              {isSuggestionsOpen && sugerencias.length > 0 ? (
+              {isSuggestionsOpen && sugerencias.length > 0 && (
                 <div className="absolute left-0 right-0 mt-1 z-20 rounded-md border bg-white shadow">
                   <ul className="max-h-64 overflow-auto">
                     {sugerencias.map((emp, idx) => (
@@ -229,17 +274,20 @@ export default function RegistroVacacionesPage() {
                         key={emp.id_empleado}
                         onMouseDown={() => handleSelectEmpleado(emp)}
                         onMouseEnter={() => setHoveredSuggestionIndex(idx)}
-                        className={`px-3 py-2 cursor-pointer text-sm ${idx === hoveredSuggestionIndex ? "bg-slate-100" : ""}`}
+                        className={`px-3 py-2 cursor-pointer text-sm ${
+                          idx === hoveredSuggestionIndex ? "bg-slate-100" : ""
+                        }`}
                       >
                         {emp.nombre_completo}
                       </li>
                     ))}
                   </ul>
                 </div>
-              ) : null}
+              )}
             </div>
           </div>
 
+          {/* 5. DEPARTAMENTO */}
           <div className="flex flex-col gap-2 w-full">
             <Label htmlFor="departamento">Departamento</Label>
             <Combobox
@@ -250,24 +298,17 @@ export default function RegistroVacacionesPage() {
                 setFiltroDepartamento(value);
                 setPage(1);
               }}
-              placeholder="Elige un departamento..."
-              emptyText="No se encontraron departamentos."
+              placeholder="Todos..."
+              emptyText="No hay departamentos."
             />
           </div>
-
-          {/* Estado de asistencia no aplica en vista informativa de Vacaciones */}
         </div>
       </div>
 
-      {/* Tabla de Asistencias (reutilizada) */}
-      <div className="px-4">
-        {ui}
-      </div>
-      
-      {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
+      {/* Tabla de Asistencias */}
+      <div className="px-4">{ui}</div>
+
       <AccesosRapidos />
     </div>
   );
 }
-
-

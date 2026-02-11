@@ -9,7 +9,7 @@ import {
 import EntradasSalidasRow from "./EntradasSalidasRow";
 import { exportToExcel } from "@/utils/exportExcelJS";
 import { Button } from "@/components/ui/button";
-import { FileSpreadsheet } from "lucide-react";
+import { FileSpreadsheet, RotateCcw } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -28,23 +28,18 @@ export default function EntradasSalidasTable({
   handleCancelMovimientoEdit,
   handleMovimientoFieldChange,
   handleSaveMovimientoClick,
+  onResetFilters,
+  empresaActiva,
 }) {
   const { dataUser } = useAuth();
   const userTimezone = dataUser?.zona_horaria || "America/Mexico_City";
-
-  if (registros.length === 0) {
-    return (
-      <div className="text-center text-muted-foreground py-10">
-        No hay registros para hoy o búsqueda sin resultados.
-      </div>
-    );
-  }
 
   const handleExportExcel = async () => {
     const columns = [
       { header: "Nombre", key: "nombre", width: 25 },
       { header: "Apellido Paterno", key: "apellido_paterno", width: 20 },
       { header: "Apellido Materno", key: "apellido_materno", width: 20 },
+      { header: "Empresa", key: "nombre_empresa", width: 20 },
       { header: "Puesto", key: "puesto", width: 25 },
       { header: "Departamento", key: "departamento", width: 20 },
       { header: "Sucursal", key: "sucursal", width: 20 },
@@ -59,6 +54,7 @@ export default function EntradasSalidasTable({
       nombre: r.nombre,
       apellido_paterno: r.apellido_paterno,
       apellido_materno: r.apellido_materno,
+      nombre_empresa: r.nombre_empresa,
       puesto: r.puesto,
       departamento: r.departamento,
       sucursal: r.sucursal,
@@ -110,12 +106,27 @@ export default function EntradasSalidasTable({
             <FileSpreadsheet className="mr-2 h-4 w-4" />
             Exportar Excel
           </Button>
+
+          <Button
+            onClick={onResetFilters}
+            variant="outline"
+            className="flex items-center gap-2 w-full sm:w-auto"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Limpiar Filtros
+          </Button>
         </div>
       </div>
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead className="text-white bg-slate-700 ">Empleado</TableHead>
+            {empresaActiva === "all" && (
+              <TableHead className="text-white bg-slate-700 ">
+                Empresa
+              </TableHead>
+            )}
+
             <TableHead className="text-white bg-slate-700 ">
               Departamento / Sucursal
             </TableHead>
@@ -145,20 +156,32 @@ export default function EntradasSalidasTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {registros.map((reg) => (
-            <EntradasSalidasRow
-              key={reg.id}
-              registro={reg}
-              fecha={fecha}
-              isEditing={editingMovimientoId === reg.id}
-              editingRowData={editingMovimientoData}
-              isSaving={isSavingMovimiento}
-              handleEditMovimientoClick={handleEditMovimientoClick}
-              handleCancelMovimientoEdit={handleCancelMovimientoEdit}
-              handleMovimientoFieldChange={handleMovimientoFieldChange}
-              handleSaveMovimientoClick={handleSaveMovimientoClick}
-            />
-          ))}
+          {registros.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={10}
+                className="text-center py-2 text-muted-foreground"
+              >
+                No hay registros para hoy o búsqueda sin resultados.
+              </TableCell>
+            </TableRow>
+          ) : (
+            registros.map((reg) => (
+              <EntradasSalidasRow
+                key={reg.id}
+                registro={reg}
+                fecha={fecha}
+                isEditing={editingMovimientoId === reg.id}
+                editingRowData={editingMovimientoData}
+                isSaving={isSavingMovimiento}
+                handleEditMovimientoClick={handleEditMovimientoClick}
+                handleCancelMovimientoEdit={handleCancelMovimientoEdit}
+                handleMovimientoFieldChange={handleMovimientoFieldChange}
+                handleSaveMovimientoClick={handleSaveMovimientoClick}
+                empresaActiva={empresaActiva}
+              />
+            ))
+          )}
         </TableBody>
       </Table>
     </>

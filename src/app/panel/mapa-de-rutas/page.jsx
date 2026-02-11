@@ -22,28 +22,48 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { mapaRutasApi } from "@/lib/mapaRutasApi";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
-import { fetchImageAsDataUrl, tryAddCompanyMarkToPdf } from "@/lib/pdfCompanyLogo";
+import {
+  fetchImageAsDataUrl,
+  tryAddCompanyMarkToPdf,
+} from "@/lib/pdfCompanyLogo";
 import AccesosRapidos from "@/components/AccesosRapidos";
 
 import styles from "./mapa-rutas-theme.module.css";
+import { Combobox } from "@/components/Combobox";
 
 // Leaflet se carga SOLO en cliente para evitar "window is not defined" en SSR al recargar.
 // - Relación: `leaflet-maps.jsx` contiene los imports de leaflet/react-leaflet.
 const RutaMap = dynamic(() => import("./leaflet-maps").then((m) => m.RutaMap), {
   ssr: false,
-  loading: () => <LeafletSkeleton heightClass="h-[520px] md:h-[calc(100svh-12rem)] min-h-[520px]" />,
+  loading: () => (
+    <LeafletSkeleton heightClass="h-[520px] md:h-[calc(100svh-12rem)] min-h-[520px]" />
+  ),
 });
 
-const ModalPointMap = dynamic(() => import("./leaflet-maps").then((m) => m.ModalPointMap), {
-  ssr: false,
-  loading: () => <LeafletSkeleton heightClass="h-[70vh] min-h-[420px]" />,
-});
+const ModalPointMap = dynamic(
+  () => import("./leaflet-maps").then((m) => m.ModalPointMap),
+  {
+    ssr: false,
+    loading: () => <LeafletSkeleton heightClass="h-[70vh] min-h-[420px]" />,
+  }
+);
 
 // ───────────────────────────────────────────────────────────────────────────────
 // Helpers (reutilizan la lógica de `Mapas -rutas.html`, pero adaptados a React)
@@ -196,15 +216,20 @@ function calcularPuntosTotales(movimientos) {
 // ───────────────────────────────────────────────────────────────────────────────
 
 export default function PageMapaDeRutas() {
+  const [empresaFiltro, setEmpresaFiltro] = useState("all");
+
   const { dataUser } = useAuth();
-  const idEmpresa = dataUser?.id_empresa;
+  const idEmpresa = empresaFiltro === "all" ? "all" : Number(empresaFiltro);
 
   /**
    * Datos de empresa para logo en PDF (nombre + url_imagen).
    * - Relación: el logo se administra en `src/app/panel/cuenta/Empresa/ImagenEmpresa.jsx`.
    */
+  const empresaIdNumerica =
+    empresaFiltro !== "all" ? Number(empresaFiltro) : null;
+
   const { data: empresaData } = useSWR(
-    idEmpresa ? `/empresas/${idEmpresa}` : null,
+    empresaIdNumerica ? `/empresas/${empresaIdNumerica}` : null,
     fetcherWithToken,
     swr_config
   );
@@ -219,10 +244,14 @@ export default function PageMapaDeRutas() {
     const run = async () => {
       // 1) Intentar logo de la empresa (si existe)
       const companyUrl = empresaData?.url_imagen;
-      const companyDataUrl = companyUrl ? await fetchImageAsDataUrl(companyUrl) : null;
+      const companyDataUrl = companyUrl
+        ? await fetchImageAsDataUrl(companyUrl)
+        : null;
 
       // 2) Fallback garantizado al logo del sistema (mismo origen, existe en `public/assets/logo.png`)
-      const fallbackDataUrl = companyDataUrl ? null : await fetchImageAsDataUrl("/assets/logo.png");
+      const fallbackDataUrl = companyDataUrl
+        ? null
+        : await fetchImageAsDataUrl("/assets/logo.png");
 
       if (alive) setLogoDataUrl(companyDataUrl || fallbackDataUrl || null);
     };
@@ -277,9 +306,14 @@ export default function PageMapaDeRutas() {
   // Cargar empleados activos (cuando ya hay empresa)
   useEffect(() => {
     const run = async () => {
-      if (!idEmpresa) return;
+      if (!empresaFiltro) return;
       try {
-        const resp = await mapaRutasApi.empleadosActivos({ empresa: idEmpresa, q: "", limit: 1000 });
+        const resp = await mapaRutasApi.empleadosActivos({
+          empresa: empresaFiltro,
+          q: "",
+          limit: 1000,
+        });
+
         setEmpleados(resp?.data || []);
       } catch (e) {
         console.error(e);
@@ -319,7 +353,10 @@ export default function PageMapaDeRutas() {
 
     try {
       const resp = await mapaRutasApi.movimientosPorRango({
-        empresa: idEmpresa,
+        empresa:
+          empresaFiltro === "all"
+            ? dataUser?.empresas_detalle.map((e) => e.id_empresa)
+            : idEmpresa,
         idEmpleado: empleadoId,
         fechaInicio,
         fechaFin,
@@ -339,7 +376,9 @@ export default function PageMapaDeRutas() {
       setDiaSeleccionado(0);
     } catch (e) {
       console.error(e);
-      setErrorMsg(`❌ Error al buscar movimientos: ${e?.message || "Error desconocido"}`);
+      setErrorMsg(
+        `❌ Error al buscar movimientos: ${e?.message || "Error desconocido"}`
+      );
     } finally {
       setLoading(false);
     }
@@ -349,7 +388,10 @@ export default function PageMapaDeRutas() {
   const dia = diaSeleccionado !== null ? diasAgrupados[diaSeleccionado] : null;
 
   // Puntos del día (para mapa/animación)
-  const puntos = useMemo(() => (dia ? buildPuntosAnimacion(dia.movimientos) : []), [dia]);
+  const puntos = useMemo(
+    () => (dia ? buildPuntosAnimacion(dia.movimientos) : []),
+    [dia]
+  );
 
   // Polilíneas acumuladas según índice actual
   // - Solicitud: al pausar, la ruta debe quedarse marcada hasta el punto actual.
@@ -428,7 +470,9 @@ export default function PageMapaDeRutas() {
   };
 
   const empleadoLabel = useMemo(() => {
-    const e = empleados.find((x) => String(x.id_empleado) === String(empleadoId));
+    const e = empleados.find(
+      (x) => String(x.id_empleado) === String(empleadoId)
+    );
     return e ? `${e.nombre_completo} - ${e.puesto || ""}` : "";
   }, [empleados, empleadoId]);
 
@@ -437,7 +481,9 @@ export default function PageMapaDeRutas() {
    * - Relación: mismo enfoque que `ContratoDialog.jsx` (setEmpSearch al seleccionar).
    */
   useEffect(() => {
-    const e = empleados.find((x) => String(x.id_empleado) === String(empleadoId));
+    const e = empleados.find(
+      (x) => String(x.id_empleado) === String(empleadoId)
+    );
     if (!empleadoId) {
       setEmpSearch("");
       return;
@@ -450,7 +496,12 @@ export default function PageMapaDeRutas() {
   // ───────────────────────────────────────────────────────────────────────────────
 
   const renderReporteResumido = () => {
-    if (!dia) return <div className="text-sm text-muted-foreground">Selecciona un día para ver los detalles.</div>;
+    if (!dia)
+      return (
+        <div className="text-sm text-muted-foreground">
+          Selecciona un día para ver los detalles.
+        </div>
+      );
 
     // Estadísticas del día
     const totalPuntosGPS = calcularPuntosTotales(dia.movimientos);
@@ -463,7 +514,10 @@ export default function PageMapaDeRutas() {
 
     return (
       <div className="space-y-4">
-        <Card className={cn(styles.cardShadow, "border")} style={{ borderColor: "var(--mr-border)" }}>
+        <Card
+          className={cn(styles.cardShadow, "border")}
+          style={{ borderColor: "var(--mr-border)" }}
+        >
           <CardHeader>
             <CardTitle className="text-lg">📊 Resumen del Día</CardTitle>
             <div className="text-xs text-muted-foreground">
@@ -472,35 +526,70 @@ export default function PageMapaDeRutas() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="rounded-lg border bg-[#f9fafb] p-4 text-center" style={{ borderColor: "var(--mr-border)" }}>
-                <div className="text-2xl font-bold" style={{ color: "var(--mr-primary)" }}>
+              <div
+                className="rounded-lg border bg-[#f9fafb] p-4 text-center"
+                style={{ borderColor: "var(--mr-border)" }}
+              >
+                <div
+                  className="text-2xl font-bold"
+                  style={{ color: "var(--mr-primary)" }}
+                >
                   {dia.movimientos.length}
                 </div>
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Registros</div>
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  Registros
+                </div>
               </div>
-              <div className="rounded-lg border bg-[#f9fafb] p-4 text-center" style={{ borderColor: "var(--mr-border)" }}>
-                <div className="text-2xl font-bold" style={{ color: "var(--mr-primary)" }}>
+              <div
+                className="rounded-lg border bg-[#f9fafb] p-4 text-center"
+                style={{ borderColor: "var(--mr-border)" }}
+              >
+                <div
+                  className="text-2xl font-bold"
+                  style={{ color: "var(--mr-primary)" }}
+                >
                   {totalPuntosGPS}
                 </div>
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Puntos GPS</div>
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  Puntos GPS
+                </div>
               </div>
-              <div className="rounded-lg border bg-[#f9fafb] p-4 text-center" style={{ borderColor: "var(--mr-border)" }}>
-                <div className="text-2xl font-bold" style={{ color: "var(--mr-primary)" }}>
+              <div
+                className="rounded-lg border bg-[#f9fafb] p-4 text-center"
+                style={{ borderColor: "var(--mr-border)" }}
+              >
+                <div
+                  className="text-2xl font-bold"
+                  style={{ color: "var(--mr-primary)" }}
+                >
                   {totalEntradas}
                 </div>
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Entradas</div>
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  Entradas
+                </div>
               </div>
-              <div className="rounded-lg border bg-[#f9fafb] p-4 text-center" style={{ borderColor: "var(--mr-border)" }}>
-                <div className="text-2xl font-bold" style={{ color: "var(--mr-primary)" }}>
+              <div
+                className="rounded-lg border bg-[#f9fafb] p-4 text-center"
+                style={{ borderColor: "var(--mr-border)" }}
+              >
+                <div
+                  className="text-2xl font-bold"
+                  style={{ color: "var(--mr-primary)" }}
+                >
                   {totalSalidas}
                 </div>
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Salidas</div>
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  Salidas
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className={cn(styles.cardShadow, "border")} style={{ borderColor: "var(--mr-border)" }}>
+        <Card
+          className={cn(styles.cardShadow, "border")}
+          style={{ borderColor: "var(--mr-border)" }}
+        >
           <CardHeader>
             <CardTitle className="text-lg">🕐 Movimientos Detallados</CardTitle>
           </CardHeader>
@@ -514,7 +603,10 @@ export default function PageMapaDeRutas() {
             <div className="relative pl-10 max-h-[28rem] overflow-y-auto pr-2">
               <div
                 className="absolute left-[14px] top-0 bottom-0 w-[3px]"
-                style={{ background: "linear-gradient(180deg, var(--mr-success) 0%, var(--mr-error) 100%)" }}
+                style={{
+                  background:
+                    "linear-gradient(180deg, var(--mr-success) 0%, var(--mr-error) 100%)",
+                }}
               />
               <div className="space-y-4">
                 {dia.movimientos.map((mov) => {
@@ -534,8 +626,13 @@ export default function PageMapaDeRutas() {
                         mov.lat_entrada,
                         mov.lng_entrada
                       );
-                      const tiempo = calcularDuracionHM(ultimaSalidaConGPS.hora, mov.hora_entrada);
-                      traslado = `${tiempo} (${distancia.toFixed(2)} km desde punto anterior)`;
+                      const tiempo = calcularDuracionHM(
+                        ultimaSalidaConGPS.hora,
+                        mov.hora_entrada
+                      );
+                      traslado = `${tiempo} (${distancia.toFixed(
+                        2
+                      )} km desde punto anterior)`;
                     }
 
                     const seq = secuenciaLocal++;
@@ -545,31 +642,56 @@ export default function PageMapaDeRutas() {
                           className="absolute -left-[42px] top-3 h-4 w-4 rounded-full border-4 bg-white"
                           style={{ borderColor: "var(--mr-success)" }}
                         />
-                        <div className="rounded-lg border-l-4 bg-[#f9fafb] p-4" style={{ borderLeftColor: "var(--mr-success)" }}>
+                        <div
+                          className="rounded-lg border-l-4 bg-[#f9fafb] p-4"
+                          style={{ borderLeftColor: "var(--mr-success)" }}
+                        >
                           <div className="flex items-center justify-between gap-3">
-                            <div className="font-semibold text-sm" style={{ color: "var(--mr-text)" }}>
-                              {gpsEntrada ? "📍" : "❌"} Punto {seq} - Entrada (Registro #{mov.id})
+                            <div
+                              className="font-semibold text-sm"
+                              style={{ color: "var(--mr-text)" }}
+                            >
+                              {gpsEntrada ? "📍" : "❌"} Punto {seq} - Entrada
+                              (Registro #{mov.id})
                             </div>
-                            <span className={cn("text-[10px] font-bold px-3 py-1 rounded-full", styles.badgeEntrada)}>ENTRADA</span>
+                            <span
+                              className={cn(
+                                "text-[10px] font-bold px-3 py-1 rounded-full",
+                                styles.badgeEntrada
+                              )}
+                            >
+                              ENTRADA
+                            </span>
                           </div>
                           <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-muted-foreground">
                             <div>
-                              <strong className="text-foreground">Hora entrada:</strong> {mov.hora_entrada || "N/A"}
+                              <strong className="text-foreground">
+                                Hora entrada:
+                              </strong>{" "}
+                              {mov.hora_entrada || "N/A"}
                             </div>
                             <div>
-                              <strong className="text-foreground">GPS:</strong> {gpsEntrada ? "Disponible" : "Sin ubicación"}
+                              <strong className="text-foreground">GPS:</strong>{" "}
+                              {gpsEntrada ? "Disponible" : "Sin ubicación"}
                             </div>
                             {gpsEntrada ? (
                               <div className="md:col-span-2">
-                                <strong className="text-foreground">Ubicación:</strong>{" "}
-                                {Number(mov.lat_entrada).toFixed(6)}, {Number(mov.lng_entrada).toFixed(6)}
+                                <strong className="text-foreground">
+                                  Ubicación:
+                                </strong>{" "}
+                                {Number(mov.lat_entrada).toFixed(6)},{" "}
+                                {Number(mov.lng_entrada).toFixed(6)}
                               </div>
                             ) : null}
                           </div>
 
                           {traslado ? (
-                            <div className="mt-3 inline-block rounded-md px-3 py-1 text-[11px] font-semibold"
-                              style={{ background: "var(--mr-warning-bg)", color: "var(--mr-warning-text)" }}
+                            <div
+                              className="mt-3 inline-block rounded-md px-3 py-1 text-[11px] font-semibold"
+                              style={{
+                                background: "var(--mr-warning-bg)",
+                                color: "var(--mr-warning-text)",
+                              }}
                             >
                               🚗 Traslado: {traslado}
                             </div>
@@ -597,7 +719,10 @@ export default function PageMapaDeRutas() {
                             ) : (
                               <div
                                 className="rounded-md px-3 py-2 text-xs font-semibold"
-                                style={{ background: "var(--mr-error-light)", color: "var(--mr-error-dark)" }}
+                                style={{
+                                  background: "var(--mr-error-light)",
+                                  color: "var(--mr-error-dark)",
+                                }}
                               >
                                 {/* Sin GPS: colores del manual (Error light/dark) - ver `mapa-rutas-theme.module.css` */}
                                 ⚠️ Sin coordenadas GPS registradas
@@ -612,7 +737,12 @@ export default function PageMapaDeRutas() {
                   if (tieneSalida) {
                     const seq = secuenciaLocal++;
                     const permanencia =
-                      mov.hora_entrada && mov.hora_salida ? `${calcularDuracionHM(mov.hora_entrada, mov.hora_salida)} en este sitio` : null;
+                      mov.hora_entrada && mov.hora_salida
+                        ? `${calcularDuracionHM(
+                            mov.hora_entrada,
+                            mov.hora_salida
+                          )} en este sitio`
+                        : null;
 
                     bloques.push(
                       <div key={`salida-${mov.id}`} className="relative">
@@ -620,31 +750,56 @@ export default function PageMapaDeRutas() {
                           className="absolute -left-[42px] top-3 h-4 w-4 rounded-full border-4 bg-white"
                           style={{ borderColor: "var(--mr-error)" }}
                         />
-                        <div className="rounded-lg border-l-4 bg-[#f9fafb] p-4" style={{ borderLeftColor: "var(--mr-error)" }}>
+                        <div
+                          className="rounded-lg border-l-4 bg-[#f9fafb] p-4"
+                          style={{ borderLeftColor: "var(--mr-error)" }}
+                        >
                           <div className="flex items-center justify-between gap-3">
-                            <div className="font-semibold text-sm" style={{ color: "var(--mr-text)" }}>
-                              {gpsSalida ? "📍" : "❌"} Punto {seq} - Salida (Registro #{mov.id})
+                            <div
+                              className="font-semibold text-sm"
+                              style={{ color: "var(--mr-text)" }}
+                            >
+                              {gpsSalida ? "📍" : "❌"} Punto {seq} - Salida
+                              (Registro #{mov.id})
                             </div>
-                            <span className={cn("text-[10px] font-bold px-3 py-1 rounded-full", styles.badgeSalida)}>SALIDA</span>
+                            <span
+                              className={cn(
+                                "text-[10px] font-bold px-3 py-1 rounded-full",
+                                styles.badgeSalida
+                              )}
+                            >
+                              SALIDA
+                            </span>
                           </div>
                           <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2 text-xs text-muted-foreground">
                             <div>
-                              <strong className="text-foreground">Hora salida:</strong> {mov.hora_salida || "N/A"}
+                              <strong className="text-foreground">
+                                Hora salida:
+                              </strong>{" "}
+                              {mov.hora_salida || "N/A"}
                             </div>
                             <div>
-                              <strong className="text-foreground">GPS:</strong> {gpsSalida ? "Disponible" : "Sin ubicación"}
+                              <strong className="text-foreground">GPS:</strong>{" "}
+                              {gpsSalida ? "Disponible" : "Sin ubicación"}
                             </div>
                             {gpsSalida ? (
                               <div className="md:col-span-2">
-                                <strong className="text-foreground">Ubicación:</strong>{" "}
-                                {Number(mov.lat_salida).toFixed(6)}, {Number(mov.lng_salida).toFixed(6)}
+                                <strong className="text-foreground">
+                                  Ubicación:
+                                </strong>{" "}
+                                {Number(mov.lat_salida).toFixed(6)},{" "}
+                                {Number(mov.lng_salida).toFixed(6)}
                               </div>
                             ) : null}
                           </div>
 
                           {permanencia ? (
-                            <div className="mt-3 inline-block rounded-md px-3 py-1 text-[11px] font-semibold"
-                              style={{ background: "var(--mr-warning-bg)", color: "var(--mr-warning-text)" }}
+                            <div
+                              className="mt-3 inline-block rounded-md px-3 py-1 text-[11px] font-semibold"
+                              style={{
+                                background: "var(--mr-warning-bg)",
+                                color: "var(--mr-warning-text)",
+                              }}
                             >
                               ⏱️ Permanencia: {permanencia}
                             </div>
@@ -672,7 +827,10 @@ export default function PageMapaDeRutas() {
                             ) : (
                               <div
                                 className="rounded-md px-3 py-2 text-xs font-semibold"
-                                style={{ background: "var(--mr-error-light)", color: "var(--mr-error-dark)" }}
+                                style={{
+                                  background: "var(--mr-error-light)",
+                                  color: "var(--mr-error-dark)",
+                                }}
                               >
                                 {/* Sin GPS: colores del manual (Error light/dark) - ver `mapa-rutas-theme.module.css` */}
                                 ⚠️ Sin coordenadas GPS registradas
@@ -684,7 +842,11 @@ export default function PageMapaDeRutas() {
                     );
 
                     if (gpsSalida) {
-                      ultimaSalidaConGPS = { lat: mov.lat_salida, lng: mov.lng_salida, hora: mov.hora_salida };
+                      ultimaSalidaConGPS = {
+                        lat: mov.lat_salida,
+                        lng: mov.lng_salida,
+                        hora: mov.hora_salida,
+                      };
                     }
                   }
 
@@ -699,7 +861,8 @@ export default function PageMapaDeRutas() {
                 onClick={() => exportarAPDF(dia)}
                 className="text-sm font-semibold"
                 style={{
-                  background: "linear-gradient(135deg, var(--mr-btn-export) 0%, var(--mr-btn-export-hover) 100%)",
+                  background:
+                    "linear-gradient(135deg, var(--mr-btn-export) 0%, var(--mr-btn-export-hover) 100%)",
                   boxShadow: "0 2px 8px rgba(39, 174, 96, 0.2)",
                 }}
               >
@@ -713,7 +876,12 @@ export default function PageMapaDeRutas() {
   };
 
   const renderReporteDetallado = () => {
-    if (!dia) return <div className="text-sm text-muted-foreground">Selecciona un día para ver los detalles.</div>;
+    if (!dia)
+      return (
+        <div className="text-sm text-muted-foreground">
+          Selecciona un día para ver los detalles.
+        </div>
+      );
 
     let primeraEntrada = null;
     let ultimaSalida = null;
@@ -721,19 +889,34 @@ export default function PageMapaDeRutas() {
     let totalChecadas = 0;
 
     dia.movimientos.forEach((mov) => {
-      if (mov.hora_entrada && !primeraEntrada) primeraEntrada = mov.hora_entrada;
+      if (mov.hora_entrada && !primeraEntrada)
+        primeraEntrada = mov.hora_entrada;
       if (mov.hora_salida) ultimaSalida = mov.hora_salida;
       if (mov.lat_entrada && mov.lng_entrada) totalChecadasValidas += 1;
       if (mov.lat_salida && mov.lng_salida) totalChecadasValidas += 1;
       totalChecadas += 2;
     });
 
-    const jornada = primeraEntrada && ultimaSalida ? calcularDuracionDecimal(primeraEntrada, ultimaSalida) : 0;
+    const jornada =
+      primeraEntrada && ultimaSalida
+        ? calcularDuracionDecimal(primeraEntrada, ultimaSalida)
+        : 0;
 
     return (
       <div className="space-y-4">
-        <div className={cn(styles.cardShadow, "rounded-xl overflow-hidden border bg-white")} style={{ borderColor: "var(--mr-border)" }}>
-          <div className={cn(styles.headerGradient, "px-6 py-5 text-white flex items-center justify-between gap-4")}>
+        <div
+          className={cn(
+            styles.cardShadow,
+            "rounded-xl overflow-hidden border bg-white"
+          )}
+          style={{ borderColor: "var(--mr-border)" }}
+        >
+          <div
+            className={cn(
+              styles.headerGradient,
+              "px-6 py-5 text-white flex items-center justify-between gap-4"
+            )}
+          >
             <div>
               <div className="font-bold text-lg">📋 Reporte de Asistencia</div>
               <div className="text-sm opacity-90">
@@ -741,16 +924,29 @@ export default function PageMapaDeRutas() {
               </div>
             </div>
             <div className="text-right">
-              <div className="text-[11px] font-bold tracking-wide opacity-80">JORNADA TOTAL</div>
-              <div className="text-3xl font-extrabold">{jornada.toFixed(1)} hrs</div>
+              <div className="text-[11px] font-bold tracking-wide opacity-80">
+                JORNADA TOTAL
+              </div>
+              <div className="text-3xl font-extrabold">
+                {jornada.toFixed(1)} hrs
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 border-b" style={{ borderColor: "var(--mr-border)" }}>
+          <div
+            className="grid grid-cols-2 md:grid-cols-4 border-b"
+            style={{ borderColor: "var(--mr-border)" }}
+          >
             <StatItem label="Primera Entrada" value={primeraEntrada || "-"} />
             <StatItem label="Última Salida" value={ultimaSalida || "-"} />
-            <StatItem label="Ubicaciones" value={String(dia.movimientos.length)} />
-            <StatItem label="Checadas Válidas" value={`${totalChecadasValidas}/${totalChecadas}`} />
+            <StatItem
+              label="Ubicaciones"
+              value={String(dia.movimientos.length)}
+            />
+            <StatItem
+              label="Checadas Válidas"
+              value={`${totalChecadasValidas}/${totalChecadas}`}
+            />
           </div>
 
           {/* Encabezado de tabla */}
@@ -771,22 +967,35 @@ export default function PageMapaDeRutas() {
             - Pestaña "Detallado": mostrar ~5 detalles visibles y luego scroll.
             - No se ocultan registros: solo se limita el alto del contenedor.
           */}
-          <div className="divide-y max-h-[34rem] overflow-y-auto" style={{ borderColor: "var(--mr-border)" }}>
+          <div
+            className="divide-y max-h-[34rem] overflow-y-auto"
+            style={{ borderColor: "var(--mr-border)" }}
+          >
             {dia.movimientos.map((mov, idx) => {
               const gpsEntrada = !!mov.lat_entrada && !!mov.lng_entrada;
               const gpsSalida = !!mov.lat_salida && !!mov.lng_salida;
-              const permanencia = mov.hora_entrada && mov.hora_salida ? calcularDuracionHMDecimal(mov.hora_entrada, mov.hora_salida) : "-";
+              const permanencia =
+                mov.hora_entrada && mov.hora_salida
+                  ? calcularDuracionHMDecimal(mov.hora_entrada, mov.hora_salida)
+                  : "-";
 
               return (
                 <React.Fragment key={`det-${mov.id}-${idx}`}>
                   <div className="px-5 py-4 bg-white">
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-lg flex items-center justify-center text-white"
-                        style={{ background: "linear-gradient(135deg, var(--mr-primary) 0%, var(--mr-primary-dark) 100%)" }}
+                      <div
+                        className="h-10 w-10 rounded-lg flex items-center justify-center text-white"
+                        style={{
+                          background:
+                            "linear-gradient(135deg, var(--mr-primary) 0%, var(--mr-primary-dark) 100%)",
+                        }}
                       >
                         📍
                       </div>
-                      <div className="font-semibold text-sm" style={{ color: "var(--mr-text)" }}>
+                      <div
+                        className="font-semibold text-sm"
+                        style={{ color: "var(--mr-text)" }}
+                      >
                         Ubicación {mov.id}
                       </div>
                     </div>
@@ -803,7 +1012,10 @@ export default function PageMapaDeRutas() {
                       {/* Chips alineados a manual (INFO) - ver `Colores.txt` */}
                       <span
                         className="text-[9px] font-bold px-2.5 py-0.5 rounded-full shrink-0"
-                        style={{ background: "var(--mr-info-light)", color: "var(--mr-info-dark)" }}
+                        style={{
+                          background: "var(--mr-info-light)",
+                          color: "var(--mr-info-dark)",
+                        }}
                       >
                         <span className="hidden sm:inline">ENTRADA</span>
                         <span className="sm:hidden">E</span>
@@ -811,7 +1023,10 @@ export default function PageMapaDeRutas() {
                       {/* SALIDA: alineado a manual (ERROR) para consistencia semántica */}
                       <span
                         className="text-[9px] font-bold px-2.5 py-0.5 rounded-full shrink-0"
-                        style={{ background: "var(--mr-error-light)", color: "var(--mr-error-dark)" }}
+                        style={{
+                          background: "var(--mr-error-light)",
+                          color: "var(--mr-error-dark)",
+                        }}
                       >
                         <span className="hidden sm:inline">SALIDA</span>
                         <span className="sm:hidden">S</span>
@@ -820,22 +1035,40 @@ export default function PageMapaDeRutas() {
 
                     {/* <lg: layout apilado con labels */}
                     <div className="grid grid-cols-2 gap-3 lg:hidden">
-                      <div className="text-[11px] text-muted-foreground font-semibold">ENTRADA</div>
-                      <div className="text-[13px] font-semibold whitespace-nowrap">{mov.hora_entrada || "-"}</div>
+                      <div className="text-[11px] text-muted-foreground font-semibold">
+                        ENTRADA
+                      </div>
+                      <div className="text-[13px] font-semibold whitespace-nowrap">
+                        {mov.hora_entrada || "-"}
+                      </div>
 
-                      <div className="text-[11px] text-muted-foreground font-semibold">SALIDA</div>
-                      <div className="text-[13px] font-semibold whitespace-nowrap">{mov.hora_salida || "-"}</div>
+                      <div className="text-[11px] text-muted-foreground font-semibold">
+                        SALIDA
+                      </div>
+                      <div className="text-[13px] font-semibold whitespace-nowrap">
+                        {mov.hora_salida || "-"}
+                      </div>
 
-                      <div className="text-[11px] text-muted-foreground font-semibold">PERMANENCIA</div>
-                      <div className="text-[13px] font-semibold text-blue-600 whitespace-nowrap">{permanencia}</div>
+                      <div className="text-[11px] text-muted-foreground font-semibold">
+                        PERMANENCIA
+                      </div>
+                      <div className="text-[13px] font-semibold text-blue-600 whitespace-nowrap">
+                        {permanencia}
+                      </div>
 
-                      <div className="text-[11px] text-muted-foreground font-semibold">ESTADO</div>
+                      <div className="text-[11px] text-muted-foreground font-semibold">
+                        ESTADO
+                      </div>
                       <div className="flex items-center gap-2">
                         <span
                           className="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold"
                           style={{
-                            background: gpsEntrada ? "var(--mr-success-light)" : "var(--mr-error-light)",
-                            color: gpsEntrada ? "var(--mr-success-dark)" : "var(--mr-error-dark)",
+                            background: gpsEntrada
+                              ? "var(--mr-success-light)"
+                              : "var(--mr-error-light)",
+                            color: gpsEntrada
+                              ? "var(--mr-success-dark)"
+                              : "var(--mr-error-dark)",
                           }}
                           title="GPS entrada"
                         >
@@ -844,8 +1077,12 @@ export default function PageMapaDeRutas() {
                         <span
                           className="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold"
                           style={{
-                            background: gpsSalida ? "var(--mr-success-light)" : "var(--mr-error-light)",
-                            color: gpsSalida ? "var(--mr-success-dark)" : "var(--mr-error-dark)",
+                            background: gpsSalida
+                              ? "var(--mr-success-light)"
+                              : "var(--mr-error-light)",
+                            color: gpsSalida
+                              ? "var(--mr-success-dark)"
+                              : "var(--mr-error-dark)",
                           }}
                           title="GPS salida"
                         >
@@ -855,15 +1092,25 @@ export default function PageMapaDeRutas() {
                     </div>
 
                     {/* lg+: columnas separadas (no se enciman) */}
-                    <div className="hidden lg:flex items-center whitespace-nowrap font-semibold">{mov.hora_entrada || "-"}</div>
-                    <div className="hidden lg:flex items-center whitespace-nowrap font-semibold">{mov.hora_salida || "-"}</div>
-                    <div className="hidden lg:flex items-center whitespace-nowrap font-semibold text-blue-600">{permanencia}</div>
+                    <div className="hidden lg:flex items-center whitespace-nowrap font-semibold">
+                      {mov.hora_entrada || "-"}
+                    </div>
+                    <div className="hidden lg:flex items-center whitespace-nowrap font-semibold">
+                      {mov.hora_salida || "-"}
+                    </div>
+                    <div className="hidden lg:flex items-center whitespace-nowrap font-semibold text-blue-600">
+                      {permanencia}
+                    </div>
                     <div className="hidden lg:flex items-center justify-center gap-2">
                       <span
                         className="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold"
                         style={{
-                          background: gpsEntrada ? "var(--mr-success-light)" : "var(--mr-error-light)",
-                          color: gpsEntrada ? "var(--mr-success-dark)" : "var(--mr-error-dark)",
+                          background: gpsEntrada
+                            ? "var(--mr-success-light)"
+                            : "var(--mr-error-light)",
+                          color: gpsEntrada
+                            ? "var(--mr-success-dark)"
+                            : "var(--mr-error-dark)",
                         }}
                         title="GPS entrada"
                       >
@@ -872,8 +1119,12 @@ export default function PageMapaDeRutas() {
                       <span
                         className="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold"
                         style={{
-                          background: gpsSalida ? "var(--mr-success-light)" : "var(--mr-error-light)",
-                          color: gpsSalida ? "var(--mr-success-dark)" : "var(--mr-error-dark)",
+                          background: gpsSalida
+                            ? "var(--mr-success-light)"
+                            : "var(--mr-error-light)",
+                          color: gpsSalida
+                            ? "var(--mr-success-dark)"
+                            : "var(--mr-error-dark)",
                         }}
                         title="GPS salida"
                       >
@@ -883,38 +1134,52 @@ export default function PageMapaDeRutas() {
                   </div>
 
                   {/* Traslado entre ubicaciones */}
-                  {idx < dia.movimientos.length - 1 ? (
-                    (() => {
-                      const sig = dia.movimientos[idx + 1];
-                      if (mov.hora_salida && sig.hora_entrada) {
-                        const traslado = calcularDuracionHMDecimal(mov.hora_salida, sig.hora_entrada);
-                        return (
-                          <div className="px-5 py-3 text-sm flex items-center gap-2"
-                            style={{
-                              background: "var(--mr-warning-surface)",
-                              borderTop: "1px solid var(--mr-warning-border)",
-                              borderBottom: "1px solid var(--mr-warning-border)",
-                              color: "var(--mr-warning-text)",
-                            }}
-                          >
-                            <span className="text-base">🚗</span>
-                            <span className="font-semibold">Traslado:</span>
-                            <span className="font-extrabold">{traslado}</span>
-                            <span className="text-muted-foreground">→ Siguiente ubicación</span>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()
-                  ) : null}
+                  {idx < dia.movimientos.length - 1
+                    ? (() => {
+                        const sig = dia.movimientos[idx + 1];
+                        if (mov.hora_salida && sig.hora_entrada) {
+                          const traslado = calcularDuracionHMDecimal(
+                            mov.hora_salida,
+                            sig.hora_entrada
+                          );
+                          return (
+                            <div
+                              className="px-5 py-3 text-sm flex items-center gap-2"
+                              style={{
+                                background: "var(--mr-warning-surface)",
+                                borderTop: "1px solid var(--mr-warning-border)",
+                                borderBottom:
+                                  "1px solid var(--mr-warning-border)",
+                                color: "var(--mr-warning-text)",
+                              }}
+                            >
+                              <span className="text-base">🚗</span>
+                              <span className="font-semibold">Traslado:</span>
+                              <span className="font-extrabold">{traslado}</span>
+                              <span className="text-muted-foreground">
+                                → Siguiente ubicación
+                              </span>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()
+                    : null}
                 </React.Fragment>
               );
             })}
           </div>
 
-          <div className="px-5 py-4 text-center text-[11px] text-muted-foreground bg-[var(--mr-bg-hover)] border-t" style={{ borderColor: "var(--mr-border)" }}>
+          <div
+            className="px-5 py-4 text-center text-[11px] text-muted-foreground bg-[var(--mr-bg-hover)] border-t"
+            style={{ borderColor: "var(--mr-border)" }}
+          >
             Generado el {new Date().toLocaleDateString("es-MX")}{" "}
-            {new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })} - Sistema HR360
+            {new Date().toLocaleTimeString("es-MX", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}{" "}
+            - Sistema HR360
           </div>
         </div>
 
@@ -924,7 +1189,8 @@ export default function PageMapaDeRutas() {
             onClick={() => exportarAPDF(dia)}
             className="text-sm font-semibold"
             style={{
-              background: "linear-gradient(135deg, var(--mr-btn-export) 0%, var(--mr-btn-export-hover) 100%)",
+              background:
+                "linear-gradient(135deg, var(--mr-btn-export) 0%, var(--mr-btn-export-hover) 100%)",
               boxShadow: "0 2px 8px rgba(39, 174, 96, 0.2)",
             }}
           >
@@ -959,13 +1225,17 @@ export default function PageMapaDeRutas() {
     let totalChecadasValidas = 0;
 
     diaPdf.movimientos.forEach((mov) => {
-      if (mov.hora_entrada && !primeraEntrada) primeraEntrada = mov.hora_entrada;
+      if (mov.hora_entrada && !primeraEntrada)
+        primeraEntrada = mov.hora_entrada;
       if (mov.hora_salida) ultimaSalida = mov.hora_salida;
       if (mov.lat_entrada && mov.lng_entrada) totalChecadasValidas += 1;
       if (mov.lat_salida && mov.lng_salida) totalChecadasValidas += 1;
     });
 
-    const horasTrabajadas = primeraEntrada && ultimaSalida ? calcularDuracionDecimal(primeraEntrada, ultimaSalida) : 0;
+    const horasTrabajadas =
+      primeraEntrada && ultimaSalida
+        ? calcularDuracionDecimal(primeraEntrada, ultimaSalida)
+        : 0;
 
     // HEADER
     doc.setDrawColor(0, 0, 0);
@@ -976,9 +1246,14 @@ export default function PageMapaDeRutas() {
     doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
     // Logo/marca de empresa (imagen o iniciales) en el encabezado.
-    const companyName = empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
+    const companyName =
+      empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
     const logoBox = { x: margin + 5, y: yPos + 6, boxW: 26, boxH: 14 };
-    const hasMark = tryAddCompanyMarkToPdf(doc, { logoDataUrl, companyName }, logoBox);
+    const hasMark = tryAddCompanyMarkToPdf(
+      doc,
+      { logoDataUrl, companyName },
+      logoBox
+    );
     const textX = hasMark ? logoBox.x + logoBox.boxW + 4 : margin + 5;
 
     doc.text("REPORTE DE ASISTENCIA", textX, yPos + 10);
@@ -990,9 +1265,16 @@ export default function PageMapaDeRutas() {
 
     // Jornada total - derecha
     doc.setFont("helvetica", "bold");
-    doc.text("JORNADA TOTAL", pageWidth - margin - 5, yPos + 10, { align: "right" });
+    doc.text("JORNADA TOTAL", pageWidth - margin - 5, yPos + 10, {
+      align: "right",
+    });
     doc.setFontSize(24);
-    doc.text(`${horasTrabajadas.toFixed(1)} hrs`, pageWidth - margin - 5, yPos + 22, { align: "right" });
+    doc.text(
+      `${horasTrabajadas.toFixed(1)} hrs`,
+      pageWidth - margin - 5,
+      yPos + 22,
+      { align: "right" }
+    );
 
     yPos += 45;
 
@@ -1003,7 +1285,10 @@ export default function PageMapaDeRutas() {
       { label: "Primera Entrada", value: primeraEntrada || "-" },
       { label: "Ultima Salida", value: ultimaSalida || "-" },
       { label: "Ubicaciones", value: diaPdf.movimientos.length },
-      { label: "Checadas Validas", value: `${totalChecadasValidas}/${diaPdf.movimientos.length * 2}` },
+      {
+        label: "Checadas Validas",
+        value: `${totalChecadasValidas}/${diaPdf.movimientos.length * 2}`,
+      },
     ];
 
     doc.rect(margin, yPos, contentWidth, 20, "S");
@@ -1012,10 +1297,14 @@ export default function PageMapaDeRutas() {
       if (i > 0) doc.line(x, yPos, x, yPos + 20);
       doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
-      doc.text(stat.label.toUpperCase(), x + statWidth / 2, yPos + 8, { align: "center" });
+      doc.text(stat.label.toUpperCase(), x + statWidth / 2, yPos + 8, {
+        align: "center",
+      });
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      doc.text(String(stat.value), x + statWidth / 2, yPos + 16, { align: "center" });
+      doc.text(String(stat.value), x + statWidth / 2, yPos + 16, {
+        align: "center",
+      });
     });
 
     yPos += 30;
@@ -1049,8 +1338,14 @@ export default function PageMapaDeRutas() {
       tipo: margin,
       entrada: margin + colWidths.tipo,
       salida: margin + colWidths.tipo + colWidths.entrada,
-      permanencia: margin + colWidths.tipo + colWidths.entrada + colWidths.salida,
-      estado: margin + colWidths.tipo + colWidths.entrada + colWidths.salida + colWidths.permanencia,
+      permanencia:
+        margin + colWidths.tipo + colWidths.entrada + colWidths.salida,
+      estado:
+        margin +
+        colWidths.tipo +
+        colWidths.entrada +
+        colWidths.salida +
+        colWidths.permanencia,
     };
 
     // Centro de cada columna para usar align:center.
@@ -1065,7 +1360,8 @@ export default function PageMapaDeRutas() {
     // Sub-columnas internas para "ESTADO" (Entrada / Salida), así caben los dos valores.
     const estadoSubWidth = colWidths.estado / 2;
     const estadoCenterEntrada = colX.estado + estadoSubWidth / 2;
-    const estadoCenterSalida = colX.estado + estadoSubWidth + estadoSubWidth / 2;
+    const estadoCenterSalida =
+      colX.estado + estadoSubWidth + estadoSubWidth / 2;
 
     doc.setLineWidth(0.8);
     doc.rect(margin, yPos, contentWidth, 8, "S");
@@ -1075,7 +1371,9 @@ export default function PageMapaDeRutas() {
     doc.text("TIPO", colCenter.tipo, yPos + 5.5, { align: "center" });
     doc.text("ENTRADA", colCenter.entrada, yPos + 5.5, { align: "center" });
     doc.text("SALIDA", colCenter.salida, yPos + 5.5, { align: "center" });
-    doc.text("PERMANENCIA", colCenter.permanencia, yPos + 5.5, { align: "center" });
+    doc.text("PERMANENCIA", colCenter.permanencia, yPos + 5.5, {
+      align: "center",
+    });
     doc.text("ESTADO", colCenter.estado, yPos + 5.5, { align: "center" });
 
     yPos += 8;
@@ -1104,10 +1402,17 @@ export default function PageMapaDeRutas() {
 
       doc.text("E / S", colCenter.tipo, yPos + 6.5, { align: "center" });
       doc.setFont("helvetica", "bold");
-      doc.text(mov.hora_entrada || "-", colCenter.entrada, yPos + 6.5, { align: "center" });
-      doc.text(mov.hora_salida || "-", colCenter.salida, yPos + 6.5, { align: "center" });
+      doc.text(mov.hora_entrada || "-", colCenter.entrada, yPos + 6.5, {
+        align: "center",
+      });
+      doc.text(mov.hora_salida || "-", colCenter.salida, yPos + 6.5, {
+        align: "center",
+      });
 
-      const perm = mov.hora_entrada && mov.hora_salida ? calcularDuracionHMDecimal(mov.hora_entrada, mov.hora_salida) : "-";
+      const perm =
+        mov.hora_entrada && mov.hora_salida
+          ? calcularDuracionHMDecimal(mov.hora_entrada, mov.hora_salida)
+          : "-";
       doc.text(perm, colCenter.permanencia, yPos + 6.5, { align: "center" });
 
       const gpsEntrada = !!mov.lat_entrada && !!mov.lng_entrada;
@@ -1117,8 +1422,12 @@ export default function PageMapaDeRutas() {
       // (esto evita que el segundo valor se desborde fuera del cuadro)
       doc.setFontSize(8);
       doc.setFont("helvetica", "normal");
-      doc.text(gpsEntrada ? "Si" : "No", estadoCenterEntrada, yPos + 6.5, { align: "center" });
-      doc.text(gpsSalida ? "Si" : "No", estadoCenterSalida, yPos + 6.5, { align: "center" });
+      doc.text(gpsEntrada ? "Si" : "No", estadoCenterEntrada, yPos + 6.5, {
+        align: "center",
+      });
+      doc.text(gpsSalida ? "Si" : "No", estadoCenterSalida, yPos + 6.5, {
+        align: "center",
+      });
       doc.setFontSize(9);
 
       yPos += 10;
@@ -1127,7 +1436,10 @@ export default function PageMapaDeRutas() {
       if (idx < diaPdf.movimientos.length - 1) {
         const siguiente = diaPdf.movimientos[idx + 1];
         if (mov.hora_salida && siguiente.hora_entrada) {
-          const traslado = calcularDuracionHMDecimal(mov.hora_salida, siguiente.hora_entrada);
+          const traslado = calcularDuracionHMDecimal(
+            mov.hora_salida,
+            siguiente.hora_entrada
+          );
           doc.rect(margin, yPos, contentWidth, 7, "S");
           doc.setFontSize(8);
           doc.setFont("helvetica", "normal");
@@ -1148,7 +1460,9 @@ export default function PageMapaDeRutas() {
     doc.line(margin + 10, yPos, margin + 65, yPos);
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
-    doc.text("FIRMA DEL TRABAJADOR", margin + 37.5, yPos + 6, { align: "center" });
+    doc.text("FIRMA DEL TRABAJADOR", margin + 37.5, yPos + 6, {
+      align: "center",
+    });
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.text(diaPdf.empleado, margin + 37.5, yPos + 11, { align: "center" });
@@ -1156,10 +1470,20 @@ export default function PageMapaDeRutas() {
     doc.line(pageWidth - margin - 65, yPos, pageWidth - margin - 10, yPos);
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
-    doc.text("REPRESENTANTE DE LA EMPRESA", pageWidth - margin - 37.5, yPos + 6, { align: "center" });
+    doc.text(
+      "REPRESENTANTE DE LA EMPRESA",
+      pageWidth - margin - 37.5,
+      yPos + 6,
+      { align: "center" }
+    );
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
-    doc.text("Uniline Innovacion en la Nube", pageWidth - margin - 37.5, yPos + 11, { align: "center" });
+    doc.text(
+      "Uniline Innovacion en la Nube",
+      pageWidth - margin - 37.5,
+      yPos + 11,
+      { align: "center" }
+    );
 
     // FOOTER
     const totalPages = doc.internal.getNumberOfPages();
@@ -1171,8 +1495,15 @@ export default function PageMapaDeRutas() {
 
       doc.setFontSize(7);
       doc.setFont("helvetica", "normal");
-      const fechaGenerado = new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" });
-      const horaGenerado = new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
+      const fechaGenerado = new Date().toLocaleDateString("es-MX", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      });
+      const horaGenerado = new Date().toLocaleTimeString("es-MX", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
       doc.text(
         `Generado el ${fechaGenerado} a las ${horaGenerado} | Sistema HR360 by Uniline | Pagina ${i} de ${totalPages}`,
         pageWidth / 2,
@@ -1181,7 +1512,9 @@ export default function PageMapaDeRutas() {
       );
     }
 
-    const nombreArchivo = `Reporte_Asistencia_${String(diaPdf.empleado || "Empleado").replace(/ /g, "_")}_${diaPdf.fecha}.pdf`;
+    const nombreArchivo = `Reporte_Asistencia_${String(
+      diaPdf.empleado || "Empleado"
+    ).replace(/ /g, "_")}_${diaPdf.fecha}.pdf`;
     doc.save(nombreArchivo);
   };
 
@@ -1190,7 +1523,9 @@ export default function PageMapaDeRutas() {
       {/* Header del módulo */}
       <div className={cn(styles.headerGradient, "rounded-xl p-5 text-white")}>
         <div className="text-xl font-bold">🗺️ Mapa de Rutas</div>
-        <div className="text-sm opacity-90">Auditoría de ubicaciones y recorridos</div>
+        <div className="text-sm opacity-90">
+          Auditoría de ubicaciones y recorridos
+        </div>
       </div>
 
       {/* Layout principal (Días a la izquierda / Mapa a la derecha como el legacy) */}
@@ -1198,13 +1533,41 @@ export default function PageMapaDeRutas() {
       <div className="grid grid-cols-1 lg:grid-cols-[380px_1fr] gap-4">
         {/* Sidebar */}
         <div className="space-y-4">
-          <Card className={cn(styles.cardShadow, "border")} style={{ borderColor: "var(--mr-border)" }}>
+          <Card
+            className={cn(styles.cardShadow, "border")}
+            style={{ borderColor: "var(--mr-border)" }}
+          >
             <CardHeader>
               <CardTitle className="text-base">Filtros</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase text-muted-foreground">👤 Empleado</label>
+                <label className="text-xs font-semibold uppercase text-muted-foreground">
+                  🏢 Empresa
+                </label>
+                <Combobox
+                  options={[
+                    { value: "all", label: "Todas las empresas" },
+                    ...(dataUser?.empresas_detalle || []).map((e) => ({
+                      value: String(e.id_empresa),
+                      label: e.nombre,
+                    })),
+                  ]}
+                  value={empresaFiltro}
+                  onChange={(value) => {
+                    setEmpresaFiltro(value);
+                    setEmpleadoId("");
+                    setEmpSearch("");
+                    limpiarTodo();
+                  }}
+                  placeholder="Empresa"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-semibold uppercase text-muted-foreground">
+                  👤 Empleado
+                </label>
                 {/* Buscador tipo "Nuevo Contrato" (Contratos) */}
                 <div className="relative">
                   <Input
@@ -1239,7 +1602,9 @@ export default function PageMapaDeRutas() {
                         .filter((x) => {
                           const q = empSearch.trim().toLowerCase();
                           if (!q) return true;
-                          const nombre = String(x.nombre_completo || "").toLowerCase();
+                          const nombre = String(
+                            x.nombre_completo || ""
+                          ).toLowerCase();
                           const puesto = String(x.puesto || "").toLowerCase();
                           return nombre.includes(q) || puesto.includes(q);
                         })
@@ -1254,8 +1619,14 @@ export default function PageMapaDeRutas() {
                               setOpenEmpSug(false);
                             }}
                           >
-                            <div className="font-medium">{emp.nombre_completo}</div>
-                            {emp.puesto ? <div className="text-xs text-muted-foreground">{emp.puesto}</div> : null}
+                            <div className="font-medium">
+                              {emp.nombre_completo}
+                            </div>
+                            {emp.puesto ? (
+                              <div className="text-xs text-muted-foreground">
+                                {emp.puesto}
+                              </div>
+                            ) : null}
                           </div>
                         ))}
                     </div>
@@ -1278,22 +1649,41 @@ export default function PageMapaDeRutas() {
                     </SelectContent>
                   </Select>
                 */}
-                {empleadoLabel ? <div className="text-[11px] text-muted-foreground">{empleadoLabel}</div> : null}
+                {empleadoLabel ? (
+                  <div className="text-[11px] text-muted-foreground">
+                    {empleadoLabel}
+                  </div>
+                ) : null}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">📅 Fecha inicio</label>
-                  <Input type="date" value={fechaInicio} onChange={(e) => setFechaInicio(e.target.value)} />
+                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                    📅 Fecha inicio
+                  </label>
+                  <Input
+                    type="date"
+                    value={fechaInicio}
+                    onChange={(e) => setFechaInicio(e.target.value)}
+                  />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">📅 Fecha fin</label>
-                  <Input type="date" value={fechaFin} onChange={(e) => setFechaFin(e.target.value)} />
+                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                    📅 Fecha fin
+                  </label>
+                  <Input
+                    type="date"
+                    value={fechaFin}
+                    onChange={(e) => setFechaFin(e.target.value)}
+                  />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
-                <Button onClick={buscarMovimientos} className="font-semibold shadow-[0_4px_12px_rgba(55,73,94,0.3)]">
+                <Button
+                  onClick={buscarMovimientos}
+                  className="font-semibold shadow-[0_4px_12px_rgba(55,73,94,0.3)]"
+                >
                   🔍 Buscar
                 </Button>
                 <Button
@@ -1324,29 +1714,45 @@ export default function PageMapaDeRutas() {
             </CardContent>
           </Card>
 
-          <Card className={cn(styles.cardShadow, "border")} style={{ borderColor: "var(--mr-border)" }}>
+          <Card
+            className={cn(styles.cardShadow, "border")}
+            style={{ borderColor: "var(--mr-border)" }}
+          >
             <CardHeader>
               <CardTitle className="text-base">Estadísticas</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-3">
                 <div className="rounded-lg bg-[#f9fafb] p-4 text-center">
-                  <div className="text-2xl font-bold" style={{ color: "var(--mr-primary)" }}>
+                  <div
+                    className="text-2xl font-bold"
+                    style={{ color: "var(--mr-primary)" }}
+                  >
                     {diasAgrupados.length}
                   </div>
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Días</div>
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    Días
+                  </div>
                 </div>
                 <div className="rounded-lg bg-[#f9fafb] p-4 text-center">
-                  <div className="text-2xl font-bold" style={{ color: "var(--mr-primary)" }}>
+                  <div
+                    className="text-2xl font-bold"
+                    style={{ color: "var(--mr-primary)" }}
+                  >
                     {movimientos.length}
                   </div>
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Registros</div>
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    Registros
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className={cn(styles.cardShadow, "border")} style={{ borderColor: "var(--mr-border)" }}>
+          <Card
+            className={cn(styles.cardShadow, "border")}
+            style={{ borderColor: "var(--mr-border)" }}
+          >
             <CardHeader>
               <CardTitle className="text-base">Días</CardTitle>
             </CardHeader>
@@ -1370,33 +1776,55 @@ export default function PageMapaDeRutas() {
                         }}
                         className={cn(
                           "w-full text-left rounded-lg border-2 p-4 transition-all",
-                          selected ? "bg-[#f0f4f7] border-[var(--mr-primary)]" : "bg-white border-[var(--mr-border)] hover:border-[var(--mr-primary)] hover:shadow-sm"
+                          selected
+                            ? "bg-[#f0f4f7] border-[var(--mr-primary)]"
+                            : "bg-white border-[var(--mr-border)] hover:border-[var(--mr-primary)] hover:shadow-sm"
                         )}
                       >
                         <div className="flex items-center gap-3">
                           <div
                             className="h-12 w-12 rounded-lg flex items-center justify-center text-white text-lg"
-                            style={{ background: "linear-gradient(135deg, var(--mr-primary) 0%, var(--mr-primary-dark) 100%)" }}
+                            style={{
+                              background:
+                                "linear-gradient(135deg, var(--mr-primary) 0%, var(--mr-primary-dark) 100%)",
+                            }}
                           >
                             📅
                           </div>
                           <div className="min-w-0">
-                            <div className="font-semibold text-sm truncate">{formatearFechaLarga(d.fecha)}</div>
-                            <div className="text-xs text-muted-foreground truncate">{d.empleado}</div>
+                            <div className="font-semibold text-sm truncate">
+                              {formatearFechaLarga(d.fecha)}
+                            </div>
+                            <div className="text-xs text-muted-foreground truncate">
+                              {d.empleado}
+                            </div>
                           </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t" style={{ borderColor: "var(--mr-border)" }}>
+                        <div
+                          className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t"
+                          style={{ borderColor: "var(--mr-border)" }}
+                        >
                           <div className="text-center">
-                            <div className="text-lg font-bold" style={{ color: "var(--mr-primary)" }}>
+                            <div
+                              className="text-lg font-bold"
+                              style={{ color: "var(--mr-primary)" }}
+                            >
                               {d.movimientos.length}
                             </div>
-                            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Registros</div>
+                            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                              Registros
+                            </div>
                           </div>
                           <div className="text-center">
-                            <div className="text-lg font-bold" style={{ color: "var(--mr-primary)" }}>
+                            <div
+                              className="text-lg font-bold"
+                              style={{ color: "var(--mr-primary)" }}
+                            >
                               {calcularPuntosTotales(d.movimientos)}
                             </div>
-                            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Puntos GPS</div>
+                            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                              Puntos GPS
+                            </div>
                           </div>
                         </div>
                       </button>
@@ -1419,21 +1847,42 @@ export default function PageMapaDeRutas() {
 
             <TabsContent value="mapa" className="space-y-3">
               {/* Controles de animación (solo si hay puntos) */}
-              <div className={cn(styles.cardShadow, "rounded-xl border bg-white p-4 flex flex-wrap items-center gap-3")}
+              <div
+                className={cn(
+                  styles.cardShadow,
+                  "rounded-xl border bg-white p-4 flex flex-wrap items-center gap-3"
+                )}
                 style={{ borderColor: "var(--mr-border)" }}
               >
-                <Button onClick={reproducirRuta} disabled={puntos.length === 0} className="font-bold">
+                <Button
+                  onClick={reproducirRuta}
+                  disabled={puntos.length === 0}
+                  className="font-bold"
+                >
                   {animacionActiva ? "⏸" : "▶"}
                 </Button>
-                <Button onClick={pausarRuta} disabled={puntos.length === 0} variant="outline">
+                <Button
+                  onClick={pausarRuta}
+                  disabled={puntos.length === 0}
+                  variant="outline"
+                >
                   ⏸
                 </Button>
-                <Button onClick={resetearRuta} disabled={puntos.length === 0} variant="outline">
+                <Button
+                  onClick={resetearRuta}
+                  disabled={puntos.length === 0}
+                  variant="outline"
+                >
                   ⏮
                 </Button>
 
-                <div className="hidden md:flex items-center gap-2 ml-2 pl-3 border-l" style={{ borderColor: "var(--mr-border)" }}>
-                  <span className="text-xs font-semibold text-muted-foreground">Velocidad:</span>
+                <div
+                  className="hidden md:flex items-center gap-2 ml-2 pl-3 border-l"
+                  style={{ borderColor: "var(--mr-border)" }}
+                >
+                  <span className="text-xs font-semibold text-muted-foreground">
+                    Velocidad:
+                  </span>
                   <Button
                     size="sm"
                     variant={velocidad === 1500 ? "default" : "outline"}
@@ -1460,13 +1909,19 @@ export default function PageMapaDeRutas() {
                   </Button>
                 </div>
 
-                <div className="ml-auto text-sm font-semibold" style={{ color: "var(--mr-text)" }}>
+                <div
+                  className="ml-auto text-sm font-semibold"
+                  style={{ color: "var(--mr-text)" }}
+                >
                   {Math.min(indicePunto, puntos.length)} / {puntos.length}
                 </div>
               </div>
 
               {loading ? (
-                <div className="rounded-xl border bg-white p-6 text-center" style={{ borderColor: "var(--mr-border)" }}>
+                <div
+                  className="rounded-xl border bg-white p-6 text-center"
+                  style={{ borderColor: "var(--mr-border)" }}
+                >
                   <div className="mx-auto mb-3 h-10 w-10 rounded-full border-4 border-slate-200 border-t-[var(--mr-primary)] animate-spin" />
                   <div className="font-semibold">Cargando movimientos...</div>
                 </div>
@@ -1497,16 +1952,25 @@ export default function PageMapaDeRutas() {
       {/* Modal para ver punto en mapa */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-5xl p-0 overflow-hidden">
-          <DialogHeader className={cn(styles.headerGradient, "px-5 py-4 text-white")}>
+          <DialogHeader
+            className={cn(styles.headerGradient, "px-5 py-4 text-white")}
+          >
             <DialogTitle className="text-base">
-              📍 {modalPoint ? `Punto ${modalPoint.secuencia} - ${modalPoint.tipo === "entrada" ? "Entrada" : "Salida"} - ${modalPoint.hora || ""}` : "Ubicación"}
+              📍{" "}
+              {modalPoint
+                ? `Punto ${modalPoint.secuencia} - ${
+                    modalPoint.tipo === "entrada" ? "Entrada" : "Salida"
+                  } - ${modalPoint.hora || ""}`
+                : "Ubicación"}
             </DialogTitle>
           </DialogHeader>
           <div className="p-4">
             {modalPoint ? (
               <ModalPointMap point={modalPoint} />
             ) : (
-              <div className="text-sm text-muted-foreground">Sin punto seleccionado.</div>
+              <div className="text-sm text-muted-foreground">
+                Sin punto seleccionado.
+              </div>
             )}
           </div>
         </DialogContent>
@@ -1523,9 +1987,17 @@ export default function PageMapaDeRutas() {
  */
 function StatItem({ label, value }) {
   return (
-    <div className="p-4 text-center border-r last:border-r-0" style={{ borderColor: "var(--mr-border)" }}>
-      <div className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">{label}</div>
-      <div className="mt-2 text-lg font-extrabold" style={{ color: "var(--mr-primary)" }}>
+    <div
+      className="p-4 text-center border-r last:border-r-0"
+      style={{ borderColor: "var(--mr-border)" }}
+    >
+      <div className="text-[11px] font-bold tracking-wide text-muted-foreground uppercase">
+        {label}
+      </div>
+      <div
+        className="mt-2 text-lg font-extrabold"
+        style={{ color: "var(--mr-primary)" }}
+      >
         {value}
       </div>
     </div>
@@ -1547,4 +2019,3 @@ function LeafletSkeleton({ heightClass = "h-[520px] min-h-[520px]" }) {
     </div>
   );
 }
-

@@ -103,7 +103,7 @@ export default function AltaEmpresasForm() {
 
   useEffect(() => {
     if (isLoggedIn) router.push("/");
-  }, []);
+  }, [isLoggedIn, router]);
 
   if (isLoggedIn) return null;
 

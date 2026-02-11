@@ -15,7 +15,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import axios from "@/lib/axios";
 import { useAuth } from "@/context/AuthContext";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,8 +56,8 @@ function num(n, d = 0) {
 
 export default function VacacionesPorLeyPage() {
   const { dataUser } = useAuth();
-  const idEmpresa = dataUser?.id_empresa;
   const { enqueueSnackbar } = useSnackbar();
+  const [empresaActiva, setEmpresaActiva] = useState("all");
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -72,6 +72,7 @@ export default function VacacionesPorLeyPage() {
     prima_vacacional: 0,
     dias_extras: 0,
     prima_extra: 0,
+    id_empresa: "",
   });
 
   // Paginación simple en cliente
@@ -98,12 +99,14 @@ export default function VacacionesPorLeyPage() {
   };
 
   const fetchRows = async () => {
-    if (!idEmpresa) return;
+    if (!dataUser?.empresas) return;
     setLoading(true);
     setError(null);
     try {
       const url = `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/vacaciones-ley`;
-      const res = await axios.get(url, { params: { id_empresa: idEmpresa } });
+      const res = await axios.get(url, {
+        params: { id_empresa: empresaActiva },
+      });
       setRows(res.data || []);
     } catch (e) {
       setError("Error al cargar vacaciones por ley");
@@ -114,10 +117,16 @@ export default function VacacionesPorLeyPage() {
 
   useEffect(() => {
     fetchRows();
-  }, [idEmpresa]);
+  }, [empresaActiva, dataUser]);
 
   const openCreate = () => {
     resetForm();
+    setForm((f) => ({
+      ...f,
+      // Si hay una empresa seleccionada en el filtro, la usamos, si no, la primera del usuario
+      id_empresa:
+        empresaActiva !== "all" ? empresaActiva : dataUser?.id_empresa || "",
+    }));
     setDialogOpen(true);
   };
 
@@ -129,28 +138,44 @@ export default function VacacionesPorLeyPage() {
       prima_vacacional: row.prima_vacacional ?? 0,
       dias_extras: row.dias_extras ?? 0,
       prima_extra: row.prima_extra ?? 0,
+      id_empresa: row.id_empresa, // <--- Cargar la empresa del registro
     });
     setDialogOpen(true);
   };
 
   const handleSave = async () => {
     // Validaciones básicas en cliente
-    if (form.anios === "" || form.dias === "") {
-      enqueueSnackbar("Años y Días son obligatorios", { variant: "error" });
+    if (form.anios === "" || form.dias === "" || !form.id_empresa) {
+      enqueueSnackbar("Empresa, Años y Días son obligatorios", {
+        variant: "error",
+      });
       return;
     }
     if (Number(form.anios) < 0 || Number(form.dias) < 0) {
-      enqueueSnackbar("Años y Días deben ser valores positivos", { variant: "error" });
+      enqueueSnackbar("Años y Días deben ser valores positivos", {
+        variant: "error",
+      });
       return;
     }
-    // No duplicar 'anios' dentro de la empresa (cliente)
+    // No duplicar 'anios' dentro de la MISMA empresa
     const targetAnios = Number(form.anios);
-    const dup = rows.some((r) => Number(r.anios) === targetAnios && (!editRow || r.id !== editRow.id));
+    const targetEmpresa = Number(form.id_empresa); // Obtenemos la empresa del form
+
+    const dup = rows.some(
+      (r) =>
+        Number(r.anios) === targetAnios &&
+        Number(r.id_empresa) === targetEmpresa && // <--- Clave: Validar que sea la misma empresa
+        (!editRow || r.id !== editRow.id),
+    );
+
     if (dup) {
-      enqueueSnackbar("Ya existe una regla con esos años", { variant: "warning" });
+      enqueueSnackbar("Ya existe una regla con esos años para esta empresa", {
+        variant: "warning",
+      });
       return;
     }
     const payload = {
+      ...form,
       anios: Number(form.anios),
       dias: Number(form.dias),
       prima_vacacional: num(form.prima_vacacional, 2),
@@ -158,16 +183,20 @@ export default function VacacionesPorLeyPage() {
       prima_extra: num(form.prima_extra, 2),
       total_dias,
       total_prima,
-      id_empresa: idEmpresa,
+      id_empresa: Number(form.id_empresa),
     };
     try {
       const base = `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/vacaciones-ley`;
       if (editRow) {
         await axios.put(`${base}/${editRow.id}`, payload);
-        enqueueSnackbar("Registro actualizado correctamente", { variant: "success" });
+        enqueueSnackbar("Registro actualizado correctamente", {
+          variant: "success",
+        });
       } else {
         await axios.post(base, payload);
-        enqueueSnackbar("Registro creado correctamente", { variant: "success" });
+        enqueueSnackbar("Registro creado correctamente", {
+          variant: "success",
+        });
       }
       setDialogOpen(false);
       await fetchRows();
@@ -181,8 +210,12 @@ export default function VacacionesPorLeyPage() {
     if (!deleteRow) return;
     try {
       const base = `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/vacaciones-ley`;
-      await axios.delete(`${base}/${deleteRow.id}`, { params: { id_empresa: idEmpresa } });
-      enqueueSnackbar("Registro eliminado correctamente", { variant: "success" });
+      await axios.delete(`${base}/${deleteRow.id}`, {
+        params: { id_empresa: deleteRow.id_empresa },
+      });
+      enqueueSnackbar("Registro eliminado correctamente", {
+        variant: "success",
+      });
       await fetchRows();
     } catch (e) {
       const msg = e?.response?.data?.error || "Error al eliminar";
@@ -196,7 +229,9 @@ export default function VacacionesPorLeyPage() {
     <div className={`${styles.vacacionesTheme} p-4 md:p-6 space-y-4`}>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl md:text-2xl font-semibold">📘 Vacaciones por ley</h1>
+          <h1 className="text-xl md:text-2xl font-semibold">
+            📘 Vacaciones por ley
+          </h1>
           <p className="text-sm text-muted-foreground">
             Configura los días y primas por año de antigüedad
           </p>
@@ -211,6 +246,23 @@ export default function VacacionesPorLeyPage() {
         </div>
       </div>
 
+      <select
+        value={empresaActiva}
+        onChange={(e) =>
+          setEmpresaActiva(
+            e.target.value === "all" ? "all" : Number(e.target.value),
+          )
+        }
+        className="text-sm border rounded-md px-2 py-1 bg-white"
+      >
+        <option value="all">🌍 Todas las empresas</option>
+        {dataUser?.empresas_detalle?.map((emp) => (
+          <option key={emp.id_empresa} value={emp.id_empresa}>
+            {emp.nombre}
+          </option>
+        ))}
+      </select>
+
       <Card className="p-0">
         {loading ? (
           <div className="text-center text-slate-400 py-16">Cargando...</div>
@@ -224,6 +276,7 @@ export default function VacacionesPorLeyPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Empresa</TableHead>
                     <TableHead>Años</TableHead>
                     <TableHead>Días</TableHead>
                     <TableHead>Prima vac. (%)</TableHead>
@@ -237,6 +290,11 @@ export default function VacacionesPorLeyPage() {
                 <TableBody>
                   {pageRows.map((r) => (
                     <TableRow key={r.id}>
+                      <TableCell className="text-[10px] text-muted-foreground uppercase">
+                        {dataUser?.empresas_detalle?.find(
+                          (e) => e.id_empresa === r.id_empresa,
+                        )?.nombre || "N/A"}
+                      </TableCell>
                       <TableCell className="font-semibold">{r.anios}</TableCell>
                       <TableCell>{r.dias}</TableCell>
                       <TableCell>{num(r.prima_vacacional, 2)}</TableCell>
@@ -280,15 +338,38 @@ export default function VacacionesPorLeyPage() {
           </>
         )}
       </Card>
-
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className={`${styles.vacacionesTheme} max-w-lg`}>
           <DialogHeader>
             <DialogTitle>
-              {editRow ? "Editar vacaciones por ley" : "Nueva vacaciones por ley"}
+              {editRow
+                ? "Editar vacaciones por ley"
+                : "Nueva vacaciones por ley"}
             </DialogTitle>
           </DialogHeader>
 
+          <div className="mb-4">
+            <div className="text-[11px] uppercase text-slate-500 font-bold mb-1">
+              Empresa destino
+            </div>
+            <select
+              disabled={!!editRow} // Bloqueado al editar para evitar inconsistencias
+              className="w-full border rounded-md px-3 py-2 text-sm bg-white"
+              value={form.id_empresa}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, id_empresa: Number(e.target.value) }))
+              }
+            >
+              <option value="" disabled>
+                Selecciona una empresa
+              </option>
+              {dataUser?.empresas_detalle?.map((emp) => (
+                <option key={emp.id_empresa} value={emp.id_empresa}>
+                  {emp.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <div className="text-[11px] uppercase text-slate-500">Años</div>
@@ -296,7 +377,9 @@ export default function VacacionesPorLeyPage() {
                 className="w-full border rounded-md px-3 py-2 text-sm"
                 type="number"
                 value={form.anios}
-                onChange={(e) => setForm((f) => ({ ...f, anios: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, anios: e.target.value }))
+                }
               />
             </div>
             <div>
@@ -305,47 +388,65 @@ export default function VacacionesPorLeyPage() {
                 className="w-full border rounded-md px-3 py-2 text-sm"
                 type="number"
                 value={form.dias}
-                onChange={(e) => setForm((f) => ({ ...f, dias: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, dias: e.target.value }))
+                }
               />
             </div>
             <div>
-              <div className="text-[11px] uppercase text-slate-500">Prima vac. (%)</div>
+              <div className="text-[11px] uppercase text-slate-500">
+                Prima vac. (%)
+              </div>
               <input
                 className="w-full border rounded-md px-3 py-2 text-sm"
                 type="number"
                 step="0.01"
                 value={form.prima_vacacional}
-                onChange={(e) => setForm((f) => ({ ...f, prima_vacacional: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, prima_vacacional: e.target.value }))
+                }
               />
             </div>
             <div>
-              <div className="text-[11px] uppercase text-slate-500">Días extra</div>
+              <div className="text-[11px] uppercase text-slate-500">
+                Días extra
+              </div>
               <input
                 className="w-full border rounded-md px-3 py-2 text-sm"
                 type="number"
                 value={form.dias_extras}
-                onChange={(e) => setForm((f) => ({ ...f, dias_extras: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, dias_extras: e.target.value }))
+                }
               />
             </div>
             <div>
-              <div className="text-[11px] uppercase text-slate-500">Prima extra (%)</div>
+              <div className="text-[11px] uppercase text-slate-500">
+                Prima extra (%)
+              </div>
               <input
                 className="w-full border rounded-md px-3 py-2 text-sm"
                 type="number"
                 step="0.01"
                 value={form.prima_extra}
-                onChange={(e) => setForm((f) => ({ ...f, prima_extra: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, prima_extra: e.target.value }))
+                }
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <div className="text-[11px] uppercase text-slate-500">Total días</div>
+                <div className="text-[11px] uppercase text-slate-500">
+                  Total días
+                </div>
                 <div className="h-9 px-3 py-2 text-sm border rounded-md bg-slate-50">
                   {total_dias}
                 </div>
               </div>
               <div>
-                <div className="text-[11px] uppercase text-slate-500">Total prima (%)</div>
+                <div className="text-[11px] uppercase text-slate-500">
+                  Total prima (%)
+                </div>
                 <div className="h-9 px-3 py-2 text-sm border rounded-md bg-slate-50">
                   {total_prima.toFixed(2)}
                 </div>
@@ -370,9 +471,11 @@ export default function VacacionesPorLeyPage() {
           </div>
         </DialogContent>
       </Dialog>
-
       {/* Confirmación de eliminación (estilo consistente con UI) */}
-      <AlertDialog open={!!deleteRow} onOpenChange={(open) => !open && setDeleteRow(null)}>
+      <AlertDialog
+        open={!!deleteRow}
+        onOpenChange={(open) => !open && setDeleteRow(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar registro?</AlertDialogTitle>
@@ -386,17 +489,17 @@ export default function VacacionesPorLeyPage() {
             <AlertDialogCancel className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]">
               Cancelar
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-[#ef4444] hover:bg-[#dc2626]">
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-[#ef4444] hover:bg-[#dc2626]"
+            >
               Eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      
       {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
       <AccesosRapidos />
     </div>
   );
 }
-
-

@@ -30,7 +30,10 @@ export const AdministrativeTable = ({
   onView,
   onEdit,
   onDelete,
+  empresaSeleccionada,
 }) => {
+  const mostrarEmpresa = empresaSeleccionada !== "all";
+
   return (
     <>
       <div className="flex flex-col md:flex-row md:items-center md:justify-between bg-slate-700 shadow-md px-4 py-3 rounded-tl-md rounded-tr-md gap-3">
@@ -53,6 +56,9 @@ export const AdministrativeTable = ({
         <TableHeader>
           <TableRow className="bg-slate-700 text-white">
             <TableHead className="bg-slate-700 text-white">Folio</TableHead>
+            {!mostrarEmpresa && (
+              <TableHead className="bg-slate-700 text-white">Empresa</TableHead>
+            )}
             <TableHead className="bg-slate-700 text-white">Empleado</TableHead>
             <TableHead className="bg-slate-700 text-white">
               Tipo de acta
@@ -83,11 +89,9 @@ export const AdministrativeTable = ({
               </TableRow>
             ))}
           {actas.map((acta) => (
-            <TableRow
-              key={acta.id_acta}
-              className="hover:bg-gray-100"
-            >
+            <TableRow key={acta.id_acta} className="hover:bg-gray-100">
               <TableCell className="font-bold">{acta.folio}</TableCell>
+              {!mostrarEmpresa && <TableCell>{acta.nombre_empresa}</TableCell>}
               <TableCell>
                 {acta.nombre_empleado} {acta.apellido_paterno_empleado}{" "}
                 {acta.apellido_materno_empleado}

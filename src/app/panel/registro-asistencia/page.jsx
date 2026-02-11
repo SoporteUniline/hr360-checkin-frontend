@@ -19,6 +19,8 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 export default function ControlAsistencia() {
+  const [empresaActiva, setEmpresaActiva] = useState(null);
+  const idEmpresa = empresaActiva;
   const getInitialFilters = () => ({
     fechaInicio: dayjs().tz("America/Mexico_City").format("YYYY-MM-DD"),
     fechaFin: dayjs().tz("America/Mexico_City").format("YYYY-MM-DD"),
@@ -35,10 +37,10 @@ export default function ControlAsistencia() {
     filtroRequiereAutorizacion: false,
   });
   const [fechaInicio, setFechaInicio] = useState(
-    dayjs().tz("America/Mexico_City").format("YYYY-MM-DD")
+    dayjs().tz("America/Mexico_City").format("YYYY-MM-DD"),
   );
   const [fechaFin, setFechaFin] = useState(
-    dayjs().tz("America/Mexico_City").format("YYYY-MM-DD")
+    dayjs().tz("America/Mexico_City").format("YYYY-MM-DD"),
   );
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
@@ -58,10 +60,23 @@ export default function ControlAsistencia() {
   const [requiereAutorizacion, setRequiereAutorizacion] = useState(false);
 
   const { dataUser } = useAuth();
-  const idEmpresa = dataUser?.id_empresa;
+
+  useEffect(() => {
+    if (dataUser?.empresas?.length > 0 && !empresaActiva) {
+      setEmpresaActiva("all");
+    }
+  }, [dataUser, empresaActiva]);
 
   const { data: empleados } = useEmpleadosData(idEmpresa);
   const { data: tiposPermiso } = useTiposPermisoData();
+
+  const empleadosOptions =
+    empleados?.data?.map((emp) => ({
+      value: emp.id_empleado,
+      label: `${emp.nombre} ${emp.apellido_paterno ?? ""} ${
+        emp.apellido_materno ?? ""
+      }`,
+    })) || [];
 
   const [modoFormulario, setModoFormulario] = useState(false);
   const [values, setValues] = useState(null);
@@ -77,6 +92,7 @@ export default function ControlAsistencia() {
 
   const handleResetFilters = () => {
     const initial = getInitialFilters();
+    setEmpresaActiva("all");
     setFechaInicio(initial.fechaInicio);
     setFechaFin(initial.fechaFin);
     setFiltroEmpleado(initial.filtroEmpleado);
@@ -111,16 +127,17 @@ export default function ControlAsistencia() {
       }));
       console.log(uniqueTipos);
       const distinctTipos = Array.from(
-        new Map(uniqueTipos.map((item) => [item.clave, item])).values()
+        new Map(uniqueTipos.map((item) => [item.clave, item])).values(),
       );
       setTiposRegistroUnicos(
-        distinctTipos.sort((a, b) => a.nombre.localeCompare(b.nombre))
+        distinctTipos.sort((a, b) => a.nombre.localeCompare(b.nombre)),
       );
     }
   }, [tiposPermiso]);
 
   const { ui, data, mutate } = AsistenciaDataContainer({
     idEmpresa,
+    empresaActiva,
     fechaInicio,
     fechaFin,
     page,
@@ -155,6 +172,10 @@ export default function ControlAsistencia() {
 
       <AsistenciaCards totals={data} />
       <AsistenciaFilters
+        empresaActiva={empresaActiva}
+        setEmpresaActiva={setEmpresaActiva}
+        empresas={dataUser?.empresas_detalle || []}
+        empleadosOptions={empleadosOptions}
         filtroEmpleado={filtroEmpleado}
         setFiltroEmpleado={setFiltroEmpleado}
         fechaInicio={fechaInicio}
@@ -188,7 +209,7 @@ export default function ControlAsistencia() {
         setRequiereAutorizacion={setRequiereAutorizacion}
       />
       {ui}
-      
+
       {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
       <AccesosRapidos />
     </div>

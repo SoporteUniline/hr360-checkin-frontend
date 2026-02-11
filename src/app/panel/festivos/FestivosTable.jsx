@@ -36,10 +36,11 @@ export default function FestivosTable({
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(15);
 
-  // Construimos la URL con query params
-  const url = `${swrKey}?page=${page}&limit=${limit}&filter=${encodeURIComponent(
-    filter || ""
-  )}`;
+  const url = swrKey
+    ? `${swrKey}${
+        swrKey.includes("?") ? "&" : "?"
+      }page=${page}&limit=${limit}&filter=${encodeURIComponent(filter || "")}`
+    : null;
 
   const { data, error, isLoading } = useSWR(url, fetcherWithToken, swr_config);
 
@@ -65,6 +66,9 @@ export default function FestivosTable({
         <TableHeader>
           {/* Header con colores del sistema (ver `Colores.txt`) y sin "lavado" al hover */}
           <TableRow className="bg-[#37495E] hover:bg-[#37495E]">
+            {id_empresa === "all" && (
+              <TableHead className="text-white">Empresa</TableHead>
+            )}
             <TableHead className="text-white">Fecha</TableHead>
             <TableHead className="text-white">Descripción</TableHead>
             <TableHead className="text-right text-white">Acciones</TableHead>
@@ -73,6 +77,11 @@ export default function FestivosTable({
         <TableBody>
           {festivos.map((festivo) => (
             <TableRow key={festivo.id}>
+              {id_empresa === "all" && (
+                <TableCell className="font-medium text-[#2c3e50]">
+                  {festivo.empresa_nombre}
+                </TableCell>
+              )}
               <TableCell>
                 {festivo.fecha ? formatDateDMYLocal(festivo.fecha) : "-"}
               </TableCell>

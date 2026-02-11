@@ -36,7 +36,7 @@ export default function TablaEmpresas({ data, setSelected, limit, page }) {
             <TableHead>Correo</TableHead>
             <TableHead>Telefono</TableHead>
             <TableHead>Giro</TableHead>
-            <TableHead className="text-center w-[100px]">Estátus</TableHead>
+            <TableHead className="text-center w-[100px]">Estatus</TableHead>
             <TableHead className="text-center w-[100px]" />
           </TableRow>
         </TableHeader>
@@ -105,10 +105,10 @@ const EstatusSwitch = ({ item, limit, page }) => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
       await mutate(`/empresas?page=${page}&limit=${limit}`, () =>
-        fetcherWithToken(`/empresas?page=${page}&limit=${limit}`)
+        fetcherWithToken(`/empresas?page=${page}&limit=${limit}`),
       );
       setLoading(false);
       enqueueSnackbar("Se cambió el estado correctamente", {
@@ -150,10 +150,10 @@ const EstatusAceptar = ({ item, limit, page }) => {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
       await mutate(`/empresas?page=${page}&limit=${limit}`, () =>
-        fetcherWithToken(`/empresas?page=${page}&limit=${limit}`)
+        fetcherWithToken(`/empresas?page=${page}&limit=${limit}`),
       );
       setLoading(false);
       enqueueSnackbar("Se activó correctamente", {

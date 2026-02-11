@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import EntradasSalidasFilters from "./EntradasSalidasFilter";
 import { StatCard } from "@/components/Cards";
@@ -15,6 +15,8 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 export default function RegistroEntradasSalidas() {
+  const [empresaActiva, setEmpresaActiva] = useState(null);
+  const idEmpresa = empresaActiva;
   // =========================
   // Filtro por fechas (desde/hasta)
   // - Retrocompatibilidad:
@@ -37,8 +39,24 @@ export default function RegistroEntradasSalidas() {
 
   const { dataUser } = useAuth();
 
+  useEffect(() => {
+    if (dataUser?.empresas?.length > 0 && !empresaActiva) {
+      setEmpresaActiva("all");
+    }
+  }, [dataUser, empresaActiva]);
+
   console.log(dataUser);
-  const idEmpresa = dataUser?.id_empresa;
+
+  const handleResetFilters = () => {
+    const today = dayjs().tz("America/Mexico_City").format("YYYY-MM-DD");
+    setEmpresaActiva("all");
+    setDesde(today);
+    setHasta(today);
+    setFiltroEmpleado("");
+    setDepartamento("");
+    setEstado("");
+    setPage(1);
+  };
 
   const { ui, data } = EntradasSalidasDataContainer({
     idEmpresa,
@@ -51,6 +69,8 @@ export default function RegistroEntradasSalidas() {
     departamento,
     estado,
     setPage,
+    empresaActiva,
+    onResetFilters: handleResetFilters,
   });
 
   return (
@@ -66,6 +86,9 @@ export default function RegistroEntradasSalidas() {
       </div>
 
       <EntradasSalidasFilters
+        empresaActiva={empresaActiva}
+        setEmpresaActiva={setEmpresaActiva}
+        empresas={dataUser?.empresas_detalle || []}
         filtroEmpleado={filtroEmpleado}
         setFiltroEmpleado={setFiltroEmpleado}
         fecha={fecha}
@@ -81,6 +104,7 @@ export default function RegistroEntradasSalidas() {
         estado={estado}
         setEstado={setEstado}
         setPage={setPage}
+        onResetFilters={handleResetFilters}
       />
 
       {ui}

@@ -44,13 +44,19 @@ import { FormLabelWithAsterisk } from "./FormLabelWithAsterisk";
 import useTiposActa from "@/hooks/useTiposActa";
 import { useMemo, useState } from "react";
 import { twMerge } from "tailwind-merge";
+import { useAuth } from "@/context/AuthContext";
+import { Combobox } from "./Combobox";
 
-const schema = z.object({
-  nombre_tipo: z.string().min(1, "El nombre es obligatorio"),
-  descripcion: z.string().optional(),
-  clasificacion: z.enum(["falta", "sancion"]),
-  gravedad: z.enum(["leve", "grave"]),
-});
+const getSchema = (isEdit) =>
+  z.object({
+    empresa: isEdit
+      ? z.string().optional()
+      : z.string().min(1, "Selecciona una empresa"),
+    nombre_tipo: z.string().min(1, "El nombre es obligatorio"),
+    descripcion: z.string().optional(),
+    clasificacion: z.enum(["falta", "sancion"]),
+    gravedad: z.enum(["leve", "grave"]),
+  });
 
 const NewTipoActaModal = ({
   open,
@@ -59,6 +65,30 @@ const NewTipoActaModal = ({
   idEmpresa,
   mutateTiposActa,
 }) => {
+  /**
+   * Estado de edición:
+   * - Si `editingTipo` es distinto de null, el formulario entra en modo "Editar".
+   * - Esto evita crear un segundo modal y mantiene el flujo simple.
+   */
+  const [editingTipo, setEditingTipo] = useState(null);
+  const [deletingTipo, setDeletingTipo] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const form = useForm({
+    resolver: zodResolver(getSchema(!!editingTipo)),
+    defaultValues: {
+      empresa: "",
+      nombre_tipo: "",
+      descripcion: "",
+      clasificacion: "falta",
+      gravedad: "leve",
+    },
+  });
+
+  const { dataUser } = useAuth();
+
+  const empresaSeleccionada = form.watch("empresa");
+
   const { enqueueSnackbar } = useSnackbar();
 
   /**
@@ -71,26 +101,7 @@ const NewTipoActaModal = ({
     data: tiposActaList,
     isLoading: loadingTiposActaList,
     mutate: mutateTiposActaList,
-  } = useTiposActa(idEmpresa, 1, 200, "");
-
-  /**
-   * Estado de edición:
-   * - Si `editingTipo` es distinto de null, el formulario entra en modo "Editar".
-   * - Esto evita crear un segundo modal y mantiene el flujo simple.
-   */
-  const [editingTipo, setEditingTipo] = useState(null);
-  const [deletingTipo, setDeletingTipo] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const form = useForm({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      nombre_tipo: "",
-      descripcion: "",
-      clasificacion: "falta",
-      gravedad: "leve",
-    },
-  });
+  } = useTiposActa(empresaSeleccionada, 1, 200, "");
 
   const handleClose = () => {
     // Al cerrar, limpiamos el modo edición para que al reabrir siempre esté en "Crear".
@@ -103,8 +114,8 @@ const NewTipoActaModal = ({
 
   const onSubmit = async (values) => {
     try {
-      if (!idEmpresa) {
-        enqueueSnackbar("No se encontró la empresa en sesión (id_empresa).", { variant: "error" });
+      if (!editingTipo && !empresaSeleccionada) {
+        enqueueSnackbar("Selecciona una empresa", { variant: "warning" });
         return;
       }
 
@@ -113,20 +124,36 @@ const NewTipoActaModal = ({
       if (editingTipo?.id_tipo_acta) {
         // Editar (PUT)
         await axios.put(`/checador/tipos-actas/${editingTipo.id_tipo_acta}`, {
-          id_empresa: idEmpresa,
-          ...values,
+          id_empresa: editingTipo.id_empresa,
+          nombre_tipo: values.nombre_tipo,
+          descripcion: values.descripcion,
+          clasificacion: values.clasificacion,
+          gravedad: values.gravedad,
         });
-        enqueueSnackbar("Tipo de acta actualizado correctamente", { variant: "success" });
+
+        enqueueSnackbar("Tipo de acta actualizado correctamente", {
+          variant: "success",
+        });
       } else {
         // Crear (POST)
         await axios.post("/checador/tipos-actas/create", {
-          id_empresa: idEmpresa,
+          id_empresa: values.empresa,
           ...values,
         });
-        enqueueSnackbar("Tipo de acta creado correctamente", { variant: "success" });
+
+        enqueueSnackbar("Tipo de acta creado correctamente", {
+          variant: "success",
+        });
       }
 
-      form.reset();
+      form.reset({
+        empresa: values.empresa,
+        nombre_tipo: "",
+        descripcion: "",
+        clasificacion: "falta",
+        gravedad: "leve",
+      });
+
       setEditingTipo(null);
 
       // Refrescamos listas (local y padre) para que el nuevo tipo aparezca al instante en "Nueva Acta".
@@ -135,9 +162,12 @@ const NewTipoActaModal = ({
       await refetch?.();
     } catch (err) {
       console.error("Error al guardar tipo de acta:", err);
-      enqueueSnackbar(err?.response?.data?.message || "Error al guardar el tipo de acta", {
-        variant: "error",
-      });
+      enqueueSnackbar(
+        err?.response?.data?.message || "Error al guardar el tipo de acta",
+        {
+          variant: "error",
+        }
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -171,18 +201,23 @@ const NewTipoActaModal = ({
 
   const confirmDelete = async () => {
     try {
-      if (!idEmpresa) {
-        enqueueSnackbar("No se encontró la empresa en sesión (id_empresa).", { variant: "error" });
+      if (!deletingTipo?.id_empresa) {
+        enqueueSnackbar("No se encontró la empresa del tipo de acta.", {
+          variant: "error",
+        });
         return;
       }
+
       if (!deletingTipo?.id_tipo_acta) return;
 
       setIsSubmitting(true);
       await axios.delete(`/checador/tipos-actas/${deletingTipo.id_tipo_acta}`, {
-        params: { id_empresa: idEmpresa },
+        params: { id_empresa: deletingTipo.id_empresa },
       });
 
-      enqueueSnackbar("Tipo de acta eliminado correctamente", { variant: "success" });
+      enqueueSnackbar("Tipo de acta eliminado correctamente", {
+        variant: "success",
+      });
       setDeletingTipo(null);
       if (editingTipo?.id_tipo_acta === deletingTipo.id_tipo_acta) {
         cancelEdit();
@@ -203,7 +238,9 @@ const NewTipoActaModal = ({
   };
 
   const tiposOrdenados = useMemo(() => {
-    return [...(tiposActaList || [])].sort((a, b) => (b.id_tipo_acta || 0) - (a.id_tipo_acta || 0));
+    return [...(tiposActaList || [])].sort(
+      (a, b) => (b.id_tipo_acta || 0) - (a.id_tipo_acta || 0)
+    );
   }, [tiposActaList]);
 
   return (
@@ -234,233 +271,288 @@ const NewTipoActaModal = ({
         <div className="max-h-[75vh] overflow-y-auto pr-1">
           <Form {...form}>
             <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
-            <FormField
-              control={form.control}
-              name="nombre_tipo"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabelWithAsterisk required className="text-gray-600">
-                    Nombre del Tipo
-                  </FormLabelWithAsterisk>
-                  <FormControl>
-                    <Input placeholder="Ej: Falta injustificada" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+              {!editingTipo && (
+                <FormField
+                  control={form.control}
+                  name="empresa"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabelWithAsterisk required>
+                        Empresa
+                      </FormLabelWithAsterisk>
 
-            <FormField
-              control={form.control}
-              name="descripcion"
-              render={({ field }) => (
-                <FormItem>
-                  <Label className="text-gray-600">Descripción</Label>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Describe brevemente este tipo de acta..."
-                      rows={3}
-                      {...field}
-                    />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+                      <FormControl>
+                        <Combobox
+                          options={(dataUser?.empresas_detalle || []).map(
+                            (e) => ({
+                              value: String(e.id_empresa),
+                              label: e.nombre,
+                            })
+                          )}
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="Selecciona una empresa"
+                        />
+                      </FormControl>
 
-            <div className="grid grid-cols-2 gap-4">
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
               <FormField
                 control={form.control}
-                name="clasificacion"
+                name="nombre_tipo"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabelWithAsterisk required className="text-gray-600">
-                      Clasificación
+                      Nombre del Tipo
                     </FormLabelWithAsterisk>
                     <FormControl>
-                      <div className="flex gap-4">
-                        <label>
-                          <input
-                            type="radio"
-                            value="falta"
-                            checked={field.value === "falta"}
-                            onChange={field.onChange}
-                          />{" "}
-                          Falta
-                        </label>
-                        <label>
-                          <input
-                            type="radio"
-                            value="sancion"
-                            checked={field.value === "sancion"}
-                            onChange={field.onChange}
-                          />{" "}
-                          Sanción
-                        </label>
-                      </div>
+                      <Input placeholder="Ej: Falta injustificada" {...field} />
                     </FormControl>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
 
               <FormField
                 control={form.control}
-                name="gravedad"
+                name="descripcion"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabelWithAsterisk required className="text-gray-600">
-                      Gravedad
-                    </FormLabelWithAsterisk>
+                    <Label className="text-gray-600">Descripción</Label>
                     <FormControl>
-                      <div className="flex gap-4">
-                        <label>
-                          <input
-                            type="radio"
-                            value="leve"
-                            checked={field.value === "leve"}
-                            onChange={field.onChange}
-                          />{" "}
-                          Leve
-                        </label>
-                        <label>
-                          <input
-                            type="radio"
-                            value="grave"
-                            checked={field.value === "grave"}
-                            onChange={field.onChange}
-                          />{" "}
-                          Grave
-                        </label>
-                      </div>
+                      <Textarea
+                        placeholder="Describe brevemente este tipo de acta..."
+                        rows={3}
+                        {...field}
+                      />
                     </FormControl>
                   </FormItem>
                 )}
               />
-            </div>
 
-            <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4">
-              {editingTipo ? (
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="clasificacion"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabelWithAsterisk required className="text-gray-600">
+                        Clasificación
+                      </FormLabelWithAsterisk>
+                      <FormControl>
+                        <div className="flex gap-4">
+                          <label>
+                            <input
+                              type="radio"
+                              value="falta"
+                              checked={field.value === "falta"}
+                              onChange={field.onChange}
+                            />{" "}
+                            Falta
+                          </label>
+                          <label>
+                            <input
+                              type="radio"
+                              value="sancion"
+                              checked={field.value === "sancion"}
+                              onChange={field.onChange}
+                            />{" "}
+                            Sanción
+                          </label>
+                        </div>
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="gravedad"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabelWithAsterisk required className="text-gray-600">
+                        Gravedad
+                      </FormLabelWithAsterisk>
+                      <FormControl>
+                        <div className="flex gap-4">
+                          <label>
+                            <input
+                              type="radio"
+                              value="leve"
+                              checked={field.value === "leve"}
+                              onChange={field.onChange}
+                            />{" "}
+                            Leve
+                          </label>
+                          <label>
+                            <input
+                              type="radio"
+                              value="grave"
+                              checked={field.value === "grave"}
+                              onChange={field.onChange}
+                            />{" "}
+                            Grave
+                          </label>
+                        </div>
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4">
+                {editingTipo ? (
+                  <Button
+                    variant="outline"
+                    type="button"
+                    onClick={cancelEdit}
+                    disabled={isSubmitting}
+                    className="w-full sm:w-auto"
+                  >
+                    Cancelar edición
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    type="button"
+                    onClick={handleClose}
+                    disabled={isSubmitting}
+                    className="w-full sm:w-auto"
+                  >
+                    Cancelar
+                  </Button>
+                )}
+
                 <Button
-                  variant="outline"
-                  type="button"
-                  onClick={cancelEdit}
-                  disabled={isSubmitting}
-                  className="w-full sm:w-auto"
+                  type="submit"
+                  className="bg-slate-700 hover:bg-slate-800 w-full sm:w-auto"
+                  disabled={
+                    isSubmitting || (!editingTipo && !empresaSeleccionada)
+                  }
                 >
-                  Cancelar edición
+                  {isSubmitting ? "Guardando..." : "💾 Guardar Tipo"}
                 </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  type="button"
-                  onClick={handleClose}
-                  disabled={isSubmitting}
-                  className="w-full sm:w-auto"
-                >
-                  Cancelar
-                </Button>
-              )}
+              </div>
+            </form>
+          </Form>
 
-              <Button
-                type="submit"
-                className="bg-slate-700 hover:bg-slate-800 w-full sm:w-auto"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? "Guardando..." : "💾 Guardar Tipo"}
-              </Button>
-            </div>
-          </form>
-        </Form>
-
-        {/* Administración: listado + acciones.
+          {/* Administración: listado + acciones.
             Relación:
             - Se usa desde `src/components/NewActaModal.jsx` (botón + al lado de Tipo de Acta).
             - Cualquier cambio aquí debe reflejarse en el Select de Tipo de Acta al crear acta. */}
-        <div className="pt-4 border-t">
-          <div className="flex items-center justify-between gap-2 pb-2">
-            <p className="font-semibold text-sm text-gray-700">📚 Tipos existentes</p>
-            {loadingTiposActaList ? (
-              <span className="text-xs text-gray-500">Cargando...</span>
-            ) : (
-              <span className="text-xs text-gray-500">{tiposOrdenados.length} registros</span>
-            )}
-          </div>
+          <div className="pt-4 border-t">
+            <div className="flex items-center justify-between gap-2 pb-2">
+              <p className="font-semibold text-sm text-gray-700">
+                📚 Tipos existentes
+              </p>
+              {loadingTiposActaList ? (
+                <span className="text-xs text-gray-500">Cargando...</span>
+              ) : (
+                <span className="text-xs text-gray-500">
+                  {tiposOrdenados.length} registros
+                </span>
+              )}
+            </div>
 
-          {/*
+            {/*
             Responsivo:
             - En móvil, la tabla puede necesitar scroll horizontal.
             - En desktop, se mantiene dentro del borde con scroll vertical.
           */}
-          <div className="max-h-[260px] overflow-y-auto overflow-x-auto rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Clasificación</TableHead>
-                  <TableHead>Gravedad</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tiposOrdenados.length === 0 ? (
+            <div className="max-h-[260px] overflow-y-auto overflow-x-auto rounded-md border">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                      No hay tipos de acta.
-                    </TableCell>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead>Clasificación</TableHead>
+                    <TableHead>Gravedad</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
-                ) : (
-                  tiposOrdenados.map((tipo) => (
-                    <TableRow key={tipo.id_tipo_acta}>
-                      <TableCell className="font-medium">{tipo.nombre_tipo}</TableCell>
-                      <TableCell className="capitalize">{tipo.clasificacion}</TableCell>
-                      <TableCell className="capitalize">{tipo.gravedad}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex flex-col sm:flex-row justify-end gap-2 min-w-[160px]">
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="border-[#93c5fd] text-[#2563eb] hover:bg-[#dbeafe] hover:text-[#1e40af]"
-                            onClick={() => startEdit(tipo)}
-                            disabled={isSubmitting}
-                            title="Editar tipo"
-                          >
-                            Editar
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="outline"
-                            className="border-[#fecaca] text-[#b91c1c] hover:bg-[#fee2e2]"
-                            onClick={() => setDeletingTipo(tipo)}
-                            disabled={isSubmitting}
-                            title="Eliminar tipo"
-                          >
-                            Eliminar
-                          </Button>
-                        </div>
+                </TableHeader>
+                <TableBody>
+                  {tiposOrdenados.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={4}
+                        className="text-center text-muted-foreground py-8"
+                      >
+                        No hay tipos de acta.
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    tiposOrdenados.map((tipo) => (
+                      <TableRow key={tipo.id_tipo_acta}>
+                        <TableCell className="font-medium">
+                          {tipo.nombre_tipo}
+                        </TableCell>
+                        <TableCell className="capitalize">
+                          {tipo.clasificacion}
+                        </TableCell>
+                        <TableCell className="capitalize">
+                          {tipo.gravedad}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex flex-col sm:flex-row justify-end gap-2 min-w-[160px]">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="border-[#93c5fd] text-[#2563eb] hover:bg-[#dbeafe] hover:text-[#1e40af]"
+                              onClick={() => startEdit(tipo)}
+                              disabled={isSubmitting}
+                              title="Editar tipo"
+                            >
+                              Editar
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="border-[#fecaca] text-[#b91c1c] hover:bg-[#fee2e2]"
+                              onClick={() => setDeletingTipo(tipo)}
+                              disabled={isSubmitting}
+                            >
+                              Eliminar
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
           </div>
-        </div>
         </div>
       </DialogContent>
 
       {/* Confirmación de eliminación */}
-      <AlertDialog open={!!deletingTipo} onOpenChange={(o) => !o && setDeletingTipo(null)}>
+      <AlertDialog
+        open={!!deletingTipo}
+        onOpenChange={(o) => !o && setDeletingTipo(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar tipo de acta?</AlertDialogTitle>
             <AlertDialogDescription>
-              {deletingTipo ? (
+              {deletingTipo?.usadas > 0 ? (
+                <span className="text-red-600 font-medium">
+                  ⚠️ Este tipo de acta ya está asignado a {deletingTipo.usadas}{" "}
+                  actas y no puede eliminarse.
+                </span>
+              ) : (
                 <>
-                  Se eliminará <span className="font-semibold">{deletingTipo.nombre_tipo}</span>.{" "}
-                  Si ya está asignado a actas, el sistema no permitirá eliminarlo.
+                  Se eliminará{" "}
+                  <span className="font-semibold">
+                    {deletingTipo?.nombre_tipo}
+                  </span>
+                  . Esta acción no se puede deshacer.
                 </>
-              ) : null}
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -472,8 +564,8 @@ const NewTipoActaModal = ({
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
-              className="bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(239,68,68,0.3)]"
-              disabled={isSubmitting}
+              disabled={isSubmitting || deletingTipo?.usadas > 0}
+              className="bg-[#ef4444] hover:bg-[#dc2626] text-white"
             >
               {isSubmitting ? "Eliminando..." : "Eliminar"}
             </AlertDialogAction>

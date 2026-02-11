@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Pencil } from "lucide-react";
+import { Pencil, RotateCcw } from "lucide-react";
 import EstadoEmpleadoDialog from "./EstadoEmpleadoDialog";
 import dayjs from "dayjs";
 import "dayjs/locale/es";
@@ -33,21 +33,35 @@ export default function EmpleadosTable({
   mutate,
   page,
   limit,
+  resetFilters,
 }) {
-  if (!empleados || empleados.length === 0) {
-    return (
-      <div className="text-center text-muted-foreground py-10">
-        No hay empleados o búsqueda sin resultados.
-      </div>
-    );
-  }
+  // if (!empleados || empleados.length === 0) {
+  //   return (
+  //     <div className="text-center text-muted-foreground py-10">
+  //       No hay empleados o búsqueda sin resultados.
+  //     </div>
+  //   );
+  // }
 
   return (
     <>
-      <div className="bg-slate-700 shadow-md px-4 py-3 rounded-tl-md rounded-tr-md">
-        <h2 className="text-lg font-bold bg-slate-700 text-white">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between bg-slate-700 shadow-md px-4 py-3 rounded-tl-md rounded-tr-md gap-3">
+        <div className="flex items-center text-lg font-bold text-white">
+          <h1>Lista de empleados</h1>
+        </div>
+        <div className="flex flex-col md:flex-row flex-wrap justify-end gap-3 w-full md:w-auto">
+          <Button
+            onClick={resetFilters}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Limpiar filtros
+          </Button>
+        </div>
+        {/* <h2 className="text-lg font-bold bg-slate-700 text-white">
           Lista de empleados
-        </h2>
+        </h2> */}
       </div>
       <Table>
         <TableHeader>
@@ -72,100 +86,116 @@ export default function EmpleadosTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {empleados.map((emp) => {
-            const nombreCompleto = `${emp.nombre} ${
-              emp.apellido_paterno ?? ""
-            } ${emp.apellido_materno ?? ""}`.trim();
-
-            return (
-              <TableRow
-                className="cursor-pointer"
-                key={emp.id_empleado}
-                onClick={() => abrirFormulario(emp, false, true)}
+          {empleados.length === 0 ? (
+            <TableRow>
+              <TableCell
+                colSpan={7}
+                className="text-center py-2 text-muted-foreground"
               >
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-10 w-10">
-                      {emp.foto_perfil ? (
-                        <AvatarImage
-                          src={emp.foto_perfil}
-                          alt={nombreCompleto}
-                        />
-                      ) : null}
-                      <AvatarFallback className="bg-slate-700 text-white font-bold">
-                        {getInitials(nombreCompleto)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex flex-col">
-                      <section className="font-bold">{nombreCompleto}</section>
-                      {emp?.nip ? (
-                        <section className="text-gray-500">
-                          <span className="font-bold">Código:</span> {emp.nip}
+                No hay empleados o búsqueda sin resultados.
+              </TableCell>
+            </TableRow>
+          ) : (
+            empleados.map((emp) => {
+              const nombreCompleto = `${emp.nombre} ${
+                emp.apellido_paterno ?? ""
+              } ${emp.apellido_materno ?? ""}`.trim();
+
+              return (
+                <TableRow
+                  className="cursor-pointer"
+                  key={emp.id_empleado}
+                  onClick={() => abrirFormulario(emp, false, true)}
+                >
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-10 w-10">
+                        {emp.foto_perfil ? (
+                          <AvatarImage
+                            src={emp.foto_perfil}
+                            alt={nombreCompleto}
+                          />
+                        ) : null}
+                        <AvatarFallback className="bg-slate-700 text-white font-bold">
+                          {getInitials(nombreCompleto)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex flex-col">
+                        <section className="font-bold">
+                          {nombreCompleto}
                         </section>
-                      ) : null}
+                        {emp?.nip ? (
+                          <section className="text-gray-500">
+                            <span className="font-bold">Código:</span> {emp.nip}
+                          </section>
+                        ) : null}
+                      </div>
                     </div>
-                  </div>
-                </TableCell>
-                <TableCell className="font-bold w-auto">{emp.puesto}</TableCell>
-                <TableCell className="flex justify-center">
-                  {emp.departamento ? (
-                    <div className="rounded-xl border px-4 py-1 my-2">
-                      {emp.departamento}
+                  </TableCell>
+                  <TableCell className="font-bold w-auto">
+                    {emp.puesto}
+                  </TableCell>
+                  <TableCell className="flex justify-center">
+                    {emp.departamento ? (
+                      <div className="rounded-xl border px-4 py-1 my-2">
+                        {emp.departamento}
+                      </div>
+                    ) : null}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-col text-gray-600">
+                      {emp?.correo ? <div>📧 {emp.correo}</div> : null}
+                      {emp?.telefono ? <div>📱 {emp.telefono}</div> : null}
                     </div>
-                  ) : null}
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-col text-gray-600">
-                    {emp?.correo ? <div>📧 {emp.correo}</div> : null}
-                    {emp?.telefono ? <div>📱 {emp.telefono}</div> : null}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {emp.fecha_ingreso
-                    ? formatDateDMY(dayjs(emp.fecha_ingreso))
-                    : "-"}
-                </TableCell>
-                <TableCell>
-                  <span
-                    className={`px-2 py-1 rounded-full text-sm text-white ${
-                      emp.estado === "Activo" ? "bg-green-600" : "bg-gray-500"
-                    }`}
-                  >
-                    {emp.estado}
-                  </span>
-                </TableCell>
-                <TableCell className="sticky right-0 bg-background z-10 text-center">
-                  <div className="flex justify-center gap-2">
-                    <div>
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          abrirFormulario(emp, true, false);
-                        }}
-                        className="bg-slate-700 hover:bg-slate-700"
-                      >
-                        <Pencil className="text-white bg-slate-700" />
-                      </Button>
-                    </div>
-                    <div
-                      onClick={(e) => e.stopPropagation()} // 👈 Esto evita que se dispare el click de la fila
+                  </TableCell>
+                  <TableCell>
+                    {emp.fecha_ingreso
+                      ? formatDateDMY(dayjs(emp.fecha_ingreso))
+                      : "-"}
+                  </TableCell>
+                  <TableCell>
+                    <span
+                      className={`px-2 py-1 rounded-full text-sm text-white ${
+                        emp.estado === "Activo" ? "bg-green-600" : "bg-gray-500"
+                      }`}
                     >
-                      <EstadoEmpleadoDialog
-                        item={emp}
-                        limit={limit}
-                        page={page}
-                        className={
-                          emp.estado === "Inactivo"
-                            ? "text-green-600 border-green-600"
-                            : "text-green-600 border-green-600"
-                        }
-                      />
+                      {emp.estado}
+                    </span>
+                  </TableCell>
+                  <TableCell className="sticky right-0 bg-background z-10 text-center">
+                    <div className="flex justify-center gap-2">
+                      <div>
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            abrirFormulario(emp, true, false);
+                          }}
+                          className="bg-slate-700 hover:bg-slate-700"
+                        >
+                          <Pencil className="text-white bg-slate-700" />
+                        </Button>
+                      </div>
+                      <div
+                        onClick={(e) => e.stopPropagation()} // 👈 Esto evita que se dispare el click de la fila
+                      >
+                        <EstadoEmpleadoDialog
+                          mutate={mutate}
+                          item={emp}
+                          limit={limit}
+                          page={page}
+                          className={
+                            emp.estado === "Inactivo"
+                              ? "text-green-600 border-green-600"
+                              : "text-green-600 border-green-600"
+                          }
+                        />
+                      </div>
                     </div>
-                  </div>
-                </TableCell>
-              </TableRow>
-            );
-          })}
+                  </TableCell>
+                </TableRow>
+              );
+            })
+          )}
         </TableBody>
       </Table>
     </>

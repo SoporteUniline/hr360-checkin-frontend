@@ -9,19 +9,26 @@ import { finiquitosApi } from "@/lib/finiquitosApi";
 export default function useFiniquitosData(filters) {
   const { idEmpresa, page, limit, search, estatus, tipo } = filters || {};
 
-  const key = idEmpresa
-    ? ["finiquitos", idEmpresa, page, limit, search || "", estatus || "", tipo || ""]
-    : null;
+  const key = [
+    "finiquitos",
+    idEmpresa ?? "all",
+    page,
+    limit,
+    search || "",
+    estatus || "",
+    tipo || "",
+  ];
 
   const fetcher = async () => {
     const resp = await finiquitosApi.listar({
-      empresa: idEmpresa,
+      empresa: idEmpresa ?? "all",
       page,
       limit,
       search,
       estatus,
       tipo,
     });
+
     return {
       data: Array.isArray(resp?.data) ? resp.data : [],
       total: resp?.total ?? 0,
@@ -32,7 +39,7 @@ export default function useFiniquitosData(filters) {
     revalidateOnFocus: false,
   });
 
+  console.log("idEmpresa:", idEmpresa); // <-- Si esto es undefined, SWR no corre
+
   return { data, isLoading, error, mutate };
 }
-
-

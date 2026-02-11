@@ -1,7 +1,8 @@
 "use client";
+
 import React, { createContext, useContext, useEffect, useState } from "react";
 import Cookies from "js-cookie";
-import axios from "axios";
+import axios, { setAuthToken } from "@/lib/axios"; // ← USAR TU INSTANCE
 import { SnackbarProvider } from "notistack";
 import { useRouter } from "next/navigation";
 
@@ -23,6 +24,7 @@ export function AuthProvider({ children }) {
     const token = Cookies.get("token");
 
     if (!token) {
+      setAuthToken(null); // ← limpia el axios
       setIsLoggedIn(false);
       setDataUser(null);
       setIsAuthChecked(true);
@@ -30,12 +32,9 @@ export function AuthProvider({ children }) {
     }
 
     try {
-      const res = await axios.get(
-        `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/users/verify/token`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      setAuthToken(token); // ← **PONE EL TOKEN EN AXIOS**
+
+      const res = await axios.get("/users/verify/token");
 
       if (res.status === 200) {
         setDataUser(res.data.user);
@@ -44,6 +43,7 @@ export function AuthProvider({ children }) {
     } catch (err) {
       if (err.response?.status === 401) {
         Cookies.remove("token");
+        setAuthToken(null);
         setIsLoggedIn(false);
         setDataUser(null);
       }
@@ -58,12 +58,14 @@ export function AuthProvider({ children }) {
 
   const login = async (token) => {
     Cookies.set("token", token);
+    setAuthToken(token); // ← token para todo axios instance
     setIsLoggedIn(true);
     await verifyToken();
   };
 
   const logout = () => {
     Cookies.remove("token");
+    setAuthToken(null);
     setIsLoggedIn(false);
     router.push("/login");
   };

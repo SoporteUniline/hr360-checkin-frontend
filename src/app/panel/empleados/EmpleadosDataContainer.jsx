@@ -17,6 +17,7 @@ export default function EmpleadosDataContainer({
   setPage,
   abrirFormulario,
   fechaDesde,
+  resetFilters,
 }) {
   const { data, error, isLoading, mutate } = useEmpleadosData(
     idEmpresa,
@@ -45,6 +46,7 @@ export default function EmpleadosDataContainer({
           mutate={mutate}
           page={page}
           limit={limit}
+          resetFilters={resetFilters}
         />
         <TablePagination
           page={page}

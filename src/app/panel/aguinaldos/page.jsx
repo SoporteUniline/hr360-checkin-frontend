@@ -14,7 +14,13 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -50,17 +56,29 @@ import {
   ensureSpace,
   fmtMoneyMXN,
 } from "@/lib/pdfUnifiedLayout";
+import { Combobox } from "@/components/Combobox";
 
 export default function PageAguinaldos() {
   const { dataUser } = useAuth();
-  const idEmpresa = dataUser?.id_empresa;
+
+  const [empresaFiltro, setEmpresaFiltro] = useState("all");
+  const [empresaCalculo, setEmpresaCalculo] = useState("");
+
+  const mostrarEmpresa = empresaFiltro !== "all";
+
+  // Para la tabla
+  const idEmpresaFiltro =
+    empresaFiltro === "all" ? "all" : Number(empresaFiltro);
+
+  // Para el cálculo
+  const idEmpresaCalculo = empresaCalculo ? Number(empresaCalculo) : null;
 
   /**
    * Datos de empresa para marca/imagen en PDFs.
    * - Relación: el logo se administra en `src/app/panel/cuenta/Empresa/ImagenEmpresa.jsx`.
    */
   const { data: empresaData } = useSWR(
-    idEmpresa ? `/empresas/${idEmpresa}` : null,
+    idEmpresaCalculo ? `/empresas/${idEmpresaCalculo}` : null,
     fetcherWithToken,
     swr_config
   );
@@ -75,8 +93,12 @@ export default function PageAguinaldos() {
     let alive = true;
     const run = async () => {
       const companyUrl = empresaData?.url_imagen;
-      const companyDataUrl = companyUrl ? await fetchImageAsDataUrl(companyUrl) : null;
-      const fallbackDataUrl = companyDataUrl ? null : await fetchImageAsDataUrl("/assets/logo.png");
+      const companyDataUrl = companyUrl
+        ? await fetchImageAsDataUrl(companyUrl)
+        : null;
+      const fallbackDataUrl = companyDataUrl
+        ? null
+        : await fetchImageAsDataUrl("/assets/logo.png");
       if (alive) setLogoDataUrl(companyDataUrl || fallbackDataUrl || null);
     };
     run();
@@ -106,7 +128,7 @@ export default function PageAguinaldos() {
 
   // Datos listados
   const { data, isLoading, mutate } = useAguinaldosData({
-    idEmpresa,
+    idEmpresa: idEmpresaFiltro,
     page,
     limit,
     search,
@@ -116,10 +138,6 @@ export default function PageAguinaldos() {
   const calculos = data?.data || [];
   const total = data?.total || 0;
 
-  // Sugerencias de empleados
-  const empleadosSugResp = useEmpleadosActivosAguinaldo({ empresa: idEmpresa, q: search, limit: 8 });
-  const sugerencias = useMemo(() => empleadosSugResp?.data || [], [empleadosSugResp?.data]);
-
   const handleSelectEmpleadoSugerencia = (emp) => {
     if (!emp) return;
     setSearch(emp.nombre_completo || "");
@@ -128,6 +146,7 @@ export default function PageAguinaldos() {
   };
 
   const limpiarFiltros = () => {
+    setEmpresaFiltro("all");
     setSearch("");
     setEstatus("");
     setAñoFiscal("");
@@ -136,7 +155,9 @@ export default function PageAguinaldos() {
 
   // ---------------- Calculadora Masiva ----------------
   const [fechaCorte, setFechaCorte] = useState(dayjs().format("YYYY-MM-DD"));
-  const [añoFiscalCalculo, setAñoFiscalCalculo] = useState(dayjs().year().toString());
+  const [añoFiscalCalculo, setAñoFiscalCalculo] = useState(
+    dayjs().year().toString()
+  );
   const [observaciones, setObservaciones] = useState("");
   const [empleadosSeleccionados, setEmpleadosSeleccionados] = useState([]);
   const [empleadosCargados, setEmpleadosCargados] = useState([]);
@@ -148,7 +169,20 @@ export default function PageAguinaldos() {
   const [deleteRow, setDeleteRow] = useState(null);
   const [viewRow, setViewRow] = useState(null);
   const [estadoDialogOpen, setEstadoDialogOpen] = useState(false);
-  const [calculoParaCambiarEstado, setCalculoParaCambiarEstado] = useState(null);
+  const [calculoParaCambiarEstado, setCalculoParaCambiarEstado] =
+    useState(null);
+
+  // Sugerencias de empleados
+  const empleadosSugResp = useEmpleadosActivosAguinaldo({
+    empresa: empresaFiltro === "all" ? "all" : Number(empresaFiltro),
+    q: search,
+    limit: 8,
+  });
+
+  const sugerencias = useMemo(
+    () => empleadosSugResp?.data || [],
+    [empleadosSugResp?.data]
+  );
 
   const resetFormulario = () => {
     setFechaCorte(dayjs().format("YYYY-MM-DD"));
@@ -164,10 +198,10 @@ export default function PageAguinaldos() {
 
   // Cargar empleados cuando se abre el tab de calculadora
   useEffect(() => {
-    if (tab === "calculadora" && idEmpresa) {
+    if (tab === "calculadora" && idEmpresaCalculo) {
       cargarEmpleados();
     }
-  }, [tab, idEmpresa]);
+  }, [tab, idEmpresaCalculo]);
 
   // Actualizar automáticamente el año fiscal cuando cambia la fecha de corte
   // - Relación: si se selecciona una fecha de otro año, el año fiscal debe cambiar automáticamente
@@ -176,7 +210,7 @@ export default function PageAguinaldos() {
     if (fechaCorte) {
       const añoFechaCorte = dayjs(fechaCorte).year();
       const añoFiscalActual = parseInt(añoFiscalCalculo) || añoFechaCorte;
-      
+
       // Siempre actualizar el año fiscal para que coincida con el año de la fecha de corte
       // Esto asegura que si seleccionas una fecha de 2024, el año fiscal cambie a 2024 automáticamente
       if (añoFechaCorte !== añoFiscalActual) {
@@ -191,7 +225,12 @@ export default function PageAguinaldos() {
   // - Se ejecuta automáticamente sin necesidad de botón manual
   // - Se ejecuta con un delay para asegurar que el estado se haya actualizado completamente
   useEffect(() => {
-    if (fechaCorte && añoFiscalCalculo && empleadosSeleccionados.length > 0 && tab === "calculadora") {
+    if (
+      fechaCorte &&
+      añoFiscalCalculo &&
+      empleadosSeleccionados.length > 0 &&
+      tab === "calculadora"
+    ) {
       // Cargar automáticamente después de un delay para asegurar que el estado se haya actualizado
       const timer = setTimeout(() => {
         cargarDiasNoTrabajadosAutomaticamente();
@@ -203,7 +242,11 @@ export default function PageAguinaldos() {
 
   const cargarEmpleados = async () => {
     try {
-      const resp = await aguinaldosApi.empleadosActivos({ empresa: idEmpresa, q: "", limit: 1000 });
+      const resp = await aguinaldosApi.empleadosActivos({
+        empresa: idEmpresaCalculo,
+        q: "",
+        limit: 1000,
+      });
       setEmpleadosCargados(resp?.data || []);
     } catch (error) {
       console.error("Error al cargar empleados:", error);
@@ -241,8 +284,10 @@ export default function PageAguinaldos() {
     if (nuevoEstado) {
       // Seleccionar solo los empleados filtrados (visibles) y cargar automáticamente sus días no trabajados
       const idsFiltrados = new Set(empleadosFiltrados.map((e) => e.id));
-      const empleadosExistentes = empleadosSeleccionados.filter((e) => !idsFiltrados.has(e.id));
-      
+      const empleadosExistentes = empleadosSeleccionados.filter(
+        (e) => !idsFiltrados.has(e.id)
+      );
+
       // Cargar días no trabajados para los nuevos empleados seleccionados
       const nuevosEmpleados = await Promise.all(
         empleadosFiltrados.map(async (emp) => {
@@ -250,20 +295,26 @@ export default function PageAguinaldos() {
           if (existente) {
             return existente;
           }
-          
+
           // Cargar automáticamente días no trabajados si hay fecha de corte y año fiscal
           const nuevoEmpleado = { ...emp };
           if (fechaCorte && añoFiscalCalculo) {
             try {
-              const datosDiasNoTrab = await aguinaldosApi.obtenerDiasNoTrabajados({
-                idEmpleado: emp.id,
-                fechaIngreso: emp.fecha_ingreso,
-                fechaCorte: fechaCorte,
-                añoFiscal: añoFiscalCalculo,
-              });
-              nuevoEmpleado.dias_no_trabajados = parseFloat(datosDiasNoTrab?.dias_no_trabajados || 0);
+              const datosDiasNoTrab =
+                await aguinaldosApi.obtenerDiasNoTrabajados({
+                  idEmpleado: emp.id,
+                  fechaIngreso: emp.fecha_ingreso,
+                  fechaCorte: fechaCorte,
+                  añoFiscal: añoFiscalCalculo,
+                });
+              nuevoEmpleado.dias_no_trabajados = parseFloat(
+                datosDiasNoTrab?.dias_no_trabajados || 0
+              );
             } catch (error) {
-              console.error(`Error al obtener días no trabajados para empleado ${emp.id}:`, error);
+              console.error(
+                `Error al obtener días no trabajados para empleado ${emp.id}:`,
+                error
+              );
               nuevoEmpleado.dias_no_trabajados = 0;
             }
           } else {
@@ -272,19 +323,23 @@ export default function PageAguinaldos() {
           return nuevoEmpleado;
         })
       );
-      
+
       setEmpleadosSeleccionados([...empleadosExistentes, ...nuevosEmpleados]);
     } else {
       // Deseleccionar solo los empleados filtrados (visibles)
       const idsFiltrados = new Set(empleadosFiltrados.map((e) => e.id));
-      setEmpleadosSeleccionados(empleadosSeleccionados.filter((e) => !idsFiltrados.has(e.id)));
+      setEmpleadosSeleccionados(
+        empleadosSeleccionados.filter((e) => !idsFiltrados.has(e.id))
+      );
     }
   };
 
   const toggleEmpleado = async (emp) => {
     const existe = empleadosSeleccionados.find((e) => e.id === emp.id);
     if (existe) {
-      setEmpleadosSeleccionados(empleadosSeleccionados.filter((e) => e.id !== emp.id));
+      setEmpleadosSeleccionados(
+        empleadosSeleccionados.filter((e) => e.id !== emp.id)
+      );
     } else {
       // Al agregar un empleado, cargar automáticamente sus días no trabajados
       const nuevoEmpleado = { ...emp };
@@ -296,9 +351,14 @@ export default function PageAguinaldos() {
             fechaCorte: fechaCorte,
             añoFiscal: añoFiscalCalculo,
           });
-          nuevoEmpleado.dias_no_trabajados = parseFloat(datosDiasNoTrab?.dias_no_trabajados || 0);
+          nuevoEmpleado.dias_no_trabajados = parseFloat(
+            datosDiasNoTrab?.dias_no_trabajados || 0
+          );
         } catch (error) {
-          console.error(`Error al obtener días no trabajados para empleado ${emp.id}:`, error);
+          console.error(
+            `Error al obtener días no trabajados para empleado ${emp.id}:`,
+            error
+          );
           nuevoEmpleado.dias_no_trabajados = 0;
         }
       } else {
@@ -310,19 +370,25 @@ export default function PageAguinaldos() {
 
   const actualizarSalario = (id, valor) => {
     setEmpleadosSeleccionados(
-      empleadosSeleccionados.map((e) => (e.id === id ? { ...e, salario_diario: parseFloat(valor) || 0 } : e))
+      empleadosSeleccionados.map((e) =>
+        e.id === id ? { ...e, salario_diario: parseFloat(valor) || 0 } : e
+      )
     );
   };
 
   const actualizarDiasAguinaldo = (id, valor) => {
     setEmpleadosSeleccionados(
-      empleadosSeleccionados.map((e) => (e.id === id ? { ...e, dias_aguinaldo: parseFloat(valor) || 15 } : e))
+      empleadosSeleccionados.map((e) =>
+        e.id === id ? { ...e, dias_aguinaldo: parseFloat(valor) || 15 } : e
+      )
     );
   };
 
   const actualizarDiasNoTrabajados = (id, valor) => {
     setEmpleadosSeleccionados(
-      empleadosSeleccionados.map((e) => (e.id === id ? { ...e, dias_no_trabajados: parseFloat(valor) || 0 } : e))
+      empleadosSeleccionados.map((e) =>
+        e.id === id ? { ...e, dias_no_trabajados: parseFloat(valor) || 0 } : e
+      )
     );
   };
 
@@ -335,8 +401,12 @@ export default function PageAguinaldos() {
     const fechaCorteActual = fechaCorte;
     const añoFiscalActual = añoFiscalCalculo;
     const empleadosActuales = empleadosSeleccionados;
-    
-    if (!fechaCorteActual || !añoFiscalActual || empleadosActuales.length === 0) {
+
+    if (
+      !fechaCorteActual ||
+      !añoFiscalActual ||
+      empleadosActuales.length === 0
+    ) {
       return;
     }
 
@@ -345,19 +415,27 @@ export default function PageAguinaldos() {
         empleadosActuales.map(async (emp) => {
           try {
             // Buscar el empleado en la lista cargada para obtener fecha_ingreso
-            const empleadoCompleto = empleadosCargados.find((e) => e.id === emp.id) || emp;
-            const datosDiasNoTrab = await aguinaldosApi.obtenerDiasNoTrabajados({
-              idEmpleado: emp.id,
-              fechaIngreso: empleadoCompleto.fecha_ingreso,
-              fechaCorte: fechaCorteActual,
-              añoFiscal: añoFiscalActual,
-            });
+            const empleadoCompleto =
+              empleadosCargados.find((e) => e.id === emp.id) || emp;
+            const datosDiasNoTrab = await aguinaldosApi.obtenerDiasNoTrabajados(
+              {
+                idEmpleado: emp.id,
+                fechaIngreso: empleadoCompleto.fecha_ingreso,
+                fechaCorte: fechaCorteActual,
+                añoFiscal: añoFiscalActual,
+              }
+            );
             return {
               ...emp,
-              dias_no_trabajados: parseFloat(datosDiasNoTrab?.dias_no_trabajados || 0),
+              dias_no_trabajados: parseFloat(
+                datosDiasNoTrab?.dias_no_trabajados || 0
+              ),
             };
           } catch (error) {
-            console.error(`Error al obtener días no trabajados para empleado ${emp.id}:`, error);
+            console.error(
+              `Error al obtener días no trabajados para empleado ${emp.id}:`,
+              error
+            );
             // Si hay error, mantener el valor actual
             return emp;
           }
@@ -400,8 +478,13 @@ export default function PageAguinaldos() {
       empleadosSeleccionados.forEach((e) => {
         const fechaIngreso = dayjs(e.fecha_ingreso);
         // Si ingresó después del final del año fiscal o después de la fecha de corte, no aplica
-        if (fechaIngreso.isAfter(fechaFinAñoFiscal) || fechaIngreso.isAfter(fechaCorteDate)) {
-          empleadosExcluidos.push(e.nombre_completo || e.nombre || `Empleado ${e.id}`);
+        if (
+          fechaIngreso.isAfter(fechaFinAñoFiscal) ||
+          fechaIngreso.isAfter(fechaCorteDate)
+        ) {
+          empleadosExcluidos.push(
+            e.nombre_completo || e.nombre || `Empleado ${e.id}`
+          );
         } else {
           empleadosValidos.push(e);
         }
@@ -417,7 +500,11 @@ export default function PageAguinaldos() {
 
       if (empleadosExcluidos.length > 0) {
         setAlertMsg(
-          `ℹ️ ${empleadosExcluidos.length} empleado(s) fueron excluidos porque no trabajaron durante el año fiscal ${añoFiscalNum}: ${empleadosExcluidos.join(", ")}`
+          `ℹ️ ${
+            empleadosExcluidos.length
+          } empleado(s) fueron excluidos porque no trabajaron durante el año fiscal ${añoFiscalNum}: ${empleadosExcluidos.join(
+            ", "
+          )}`
         );
       }
 
@@ -443,14 +530,18 @@ export default function PageAguinaldos() {
       });
       setEstadosIndividuales(estadosIniciales);
       if (empleadosExcluidos.length === 0) {
-        setAlertMsg("✅ Cálculo realizado correctamente. Revisa el detalle y genera el PDF si lo requieres.");
+        setAlertMsg(
+          "✅ Cálculo realizado correctamente. Revisa el detalle y genera el PDF si lo requieres."
+        );
       } else {
         setAlertMsg(
           `✅ Cálculo realizado para ${res.total_empleados} empleado(s). ${empleadosExcluidos.length} empleado(s) fueron excluidos por no trabajar durante el año fiscal ${añoFiscalNum}.`
         );
       }
     } catch (error) {
-      setAlertMsg("❌ Error al calcular: " + (error?.message || "Error desconocido"));
+      setAlertMsg(
+        "❌ Error al calcular: " + (error?.message || "Error desconocido")
+      );
     } finally {
       setLoading(false);
     }
@@ -463,7 +554,7 @@ export default function PageAguinaldos() {
     try {
       // Obtener el correo del usuario logueado para guardarlo como calculado_por
       const calculadoPor = dataUser?.correo || dataUser?.email || "Sistema";
-      
+
       // Agregar estados individuales a los resultados antes de guardar
       const resultadosConEstados = resultadoCalculo.resultados.map((emp) => ({
         ...emp,
@@ -477,18 +568,22 @@ export default function PageAguinaldos() {
       };
 
       const res = await aguinaldosApi.guardar(payloadConCalculadoPor);
-      
+
       // Si se guardó correctamente y hay id_aguinaldo en la respuesta, actualizar estados individuales
       // Nota: El backend guarda los estados individuales, pero si necesitamos actualizarlos después,
       // podemos hacerlo aquí. Por ahora, el backend ya los guarda con el estado correcto.
-      
+
       setGuardable(false);
       await mutate();
-      setAlertMsg("✅ Cálculo guardado exitosamente. Puedes verlo en la pestaña de 'Cálculos Guardados'.");
+      setAlertMsg(
+        "✅ Cálculo guardado exitosamente. Puedes verlo en la pestaña de 'Cálculos Guardados'."
+      );
       setTab("tabla");
       resetFormulario();
     } catch (error) {
-      setAlertMsg("❌ Error al guardar: " + (error?.message || "Error desconocido"));
+      setAlertMsg(
+        "❌ Error al guardar: " + (error?.message || "Error desconocido")
+      );
     } finally {
       setLoading(false);
     }
@@ -500,7 +595,11 @@ export default function PageAguinaldos() {
   const generarPDFIndividual = (emp) => {
     if (!emp || !resultadoCalculo) return;
 
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "letter",
+    });
     const margenIzq = 15;
     const margenDer = 195;
     let y = 10;
@@ -516,18 +615,30 @@ export default function PageAguinaldos() {
     doc.setFont("helvetica", "normal");
     doc.text("Sistema de Gestión de Capital Humano", margenIzq, 26);
     doc.setFontSize(9);
-    doc.text("Fecha: " + new Date().toLocaleDateString("es-MX"), margenDer, 20, { align: "right" });
+    doc.text(
+      "Fecha: " + new Date().toLocaleDateString("es-MX"),
+      margenDer,
+      20,
+      { align: "right" }
+    );
 
     y = 45;
     doc.setTextColor(55, 73, 94);
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.text("RECIBO DE AGUINALDO " + resultadoCalculo.año_fiscal, 105, y, { align: "center" });
+    doc.text("RECIBO DE AGUINALDO " + resultadoCalculo.año_fiscal, 105, y, {
+      align: "center",
+    });
 
     y += 10;
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    doc.text("Fecha de Corte: " + dayjs(resultadoCalculo.fecha_corte).format("DD/MM/YYYY"), margenIzq, y);
+    doc.text(
+      "Fecha de Corte: " +
+        dayjs(resultadoCalculo.fecha_corte).format("DD/MM/YYYY"),
+      margenIzq,
+      y
+    );
 
     y += 10;
     // Sección: INFORMACIÓN DEL EMPLEADO
@@ -550,9 +661,19 @@ export default function PageAguinaldos() {
     y += 6;
     doc.text("Departamento: " + (emp.departamento || "N/A"), margenIzq, y);
     y += 6;
-    doc.text("Fecha de Ingreso: " + dayjs(emp.fecha_ingreso).format("DD/MM/YYYY"), margenIzq, y);
+    doc.text(
+      "Fecha de Ingreso: " + dayjs(emp.fecha_ingreso).format("DD/MM/YYYY"),
+      margenIzq,
+      y
+    );
     y += 6;
-    doc.text("Años Trabajados: " + parseFloat(emp.años_trabajados).toFixed(2) + " años", margenIzq, y);
+    doc.text(
+      "Años Trabajados: " +
+        parseFloat(emp.años_trabajados).toFixed(2) +
+        " años",
+      margenIzq,
+      y
+    );
     y += 10; // Espacio antes de la siguiente sección
 
     // Sección: DETALLE DEL CÁLCULO
@@ -568,19 +689,54 @@ export default function PageAguinaldos() {
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(60, 60, 60);
-    doc.text("Salario Diario: $" + parseFloat(emp.salario_diario).toLocaleString("es-MX", { minimumFractionDigits: 2 }), margenIzq, y);
+    doc.text(
+      "Salario Diario: $" +
+        parseFloat(emp.salario_diario).toLocaleString("es-MX", {
+          minimumFractionDigits: 2,
+        }),
+      margenIzq,
+      y
+    );
     y += 6;
-    doc.text("Días Aguinaldo (Ley): " + parseFloat(emp.dias_aguinaldo_ley).toFixed(2) + " días", margenIzq, y);
+    doc.text(
+      "Días Aguinaldo (Ley): " +
+        parseFloat(emp.dias_aguinaldo_ley).toFixed(2) +
+        " días",
+      margenIzq,
+      y
+    );
     y += 6;
-    doc.text("Días Aguinaldo Calculado: " + parseFloat(emp.dias_aguinaldo_calculado).toFixed(2) + " días", margenIzq, y);
+    doc.text(
+      "Días Aguinaldo Calculado: " +
+        parseFloat(emp.dias_aguinaldo_calculado).toFixed(2) +
+        " días",
+      margenIzq,
+      y
+    );
     y += 6;
-    doc.text("Tipo: " + (emp.es_proporcional ? "Proporcional" : "Completo"), margenIzq, y);
+    doc.text(
+      "Tipo: " + (emp.es_proporcional ? "Proporcional" : "Completo"),
+      margenIzq,
+      y
+    );
     y += 6;
     if (parseFloat(emp.dias_no_trabajados) > 0) {
-      doc.text("Días No Trabajados: " + parseFloat(emp.dias_no_trabajados).toFixed(2) + " días", margenIzq, y);
+      doc.text(
+        "Días No Trabajados: " +
+          parseFloat(emp.dias_no_trabajados).toFixed(2) +
+          " días",
+        margenIzq,
+        y
+      );
       y += 6;
     }
-    doc.text("Días Trabajados: " + parseFloat(emp.dias_trabajados).toFixed(2) + " días", margenIzq, y);
+    doc.text(
+      "Días Trabajados: " +
+        parseFloat(emp.dias_trabajados).toFixed(2) +
+        " días",
+      margenIzq,
+      y
+    );
     y += 10; // Espacio antes del total
 
     // Total
@@ -592,13 +748,22 @@ export default function PageAguinaldos() {
     doc.text("TOTAL A PAGAR", margenIzq + 2, y + 7);
     doc.setFontSize(16);
     doc.text(
-      "$" + parseFloat(emp.monto_aguinaldo).toLocaleString("es-MX", { minimumFractionDigits: 2 }) + " MXN",
+      "$" +
+        parseFloat(emp.monto_aguinaldo).toLocaleString("es-MX", {
+          minimumFractionDigits: 2,
+        }) +
+        " MXN",
       margenDer - 2,
       y + 7,
       { align: "right" }
     );
 
-    const nombreArchivo = "Aguinaldo_" + resultadoCalculo.año_fiscal + "_" + (emp.nombre_completo || "Empleado").replace(/\s+/g, "_") + ".pdf";
+    const nombreArchivo =
+      "Aguinaldo_" +
+      resultadoCalculo.año_fiscal +
+      "_" +
+      (emp.nombre_completo || "Empleado").replace(/\s+/g, "_") +
+      ".pdf";
     doc.save(nombreArchivo);
   };
 
@@ -614,7 +779,8 @@ export default function PageAguinaldos() {
 
     const doc = new jsPDF("p", "mm", "a4");
     const ctx = createPdfContext({ doc });
-    const companyName = empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
+    const companyName =
+      empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
     const empleado = emp.nombre_completo || "Empleado";
     const total = fmtMoneyMXN(emp.monto_aguinaldo);
 
@@ -623,7 +789,9 @@ export default function PageAguinaldos() {
       linesLeft: [
         `Empleado: ${empleado}`,
         `Año fiscal: ${resultadoCalculo.año_fiscal || "—"}`,
-        `Fecha corte: ${dayjs(resultadoCalculo.fecha_corte).format("DD/MM/YYYY")}`,
+        `Fecha corte: ${dayjs(resultadoCalculo.fecha_corte).format(
+          "DD/MM/YYYY"
+        )}`,
       ],
       kpiLabel: "Total a pagar",
       kpiValue: String(total).replace(" MXN", ""),
@@ -636,7 +804,12 @@ export default function PageAguinaldos() {
       rows: [
         ["Puesto", emp.puesto || "N/A"],
         ["Departamento", emp.departamento || "N/A"],
-        ["Fecha ingreso", emp.fecha_ingreso ? dayjs(emp.fecha_ingreso).format("DD/MM/YYYY") : "—"],
+        [
+          "Fecha ingreso",
+          emp.fecha_ingreso
+            ? dayjs(emp.fecha_ingreso).format("DD/MM/YYYY")
+            : "—",
+        ],
         ["Años trabajados", Number(emp.años_trabajados || 0).toFixed(2)],
       ],
     });
@@ -645,9 +818,20 @@ export default function PageAguinaldos() {
     drawRightValueRowsBox(ctx, {
       title: "Detalle del cálculo",
       rows: [
-        ["Salario diario", `$${Number(emp.salario_diario || 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`],
-        ["Días aguinaldo (Ley)", Number(emp.dias_aguinaldo_ley || 0).toFixed(2)],
-        ["Días aguinaldo calculado", Number(emp.dias_aguinaldo_calculado || 0).toFixed(2)],
+        [
+          "Salario diario",
+          `$${Number(emp.salario_diario || 0).toLocaleString("es-MX", {
+            minimumFractionDigits: 2,
+          })}`,
+        ],
+        [
+          "Días aguinaldo (Ley)",
+          Number(emp.dias_aguinaldo_ley || 0).toFixed(2),
+        ],
+        [
+          "Días aguinaldo calculado",
+          Number(emp.dias_aguinaldo_calculado || 0).toFixed(2),
+        ],
         ["Tipo", emp.es_proporcional ? "Proporcional" : "Completo"],
         ["Días trabajados", Number(emp.dias_trabajados || 0).toFixed(2)],
       ],
@@ -664,14 +848,20 @@ export default function PageAguinaldos() {
       footerLeft: "Sistema HR360",
     });
 
-    const nombreArchivo = `Aguinaldo_${resultadoCalculo.año_fiscal || "NA"}_${String(empleado).replace(/\s+/g, "_")}.pdf`;
+    const nombreArchivo = `Aguinaldo_${
+      resultadoCalculo.año_fiscal || "NA"
+    }_${String(empleado).replace(/\s+/g, "_")}.pdf`;
     doc.save(nombreArchivo);
   };
 
   const generarPDFMasivo = () => {
     if (!resultadoCalculo) return;
 
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "letter",
+    });
     const margenIzq = 15;
     const margenDer = 195;
     let y = 10;
@@ -687,19 +877,36 @@ export default function PageAguinaldos() {
     doc.setFont("helvetica", "normal");
     doc.text("Sistema de Gestión de Capital Humano", margenIzq, 26);
     doc.setFontSize(9);
-    doc.text("Fecha: " + new Date().toLocaleDateString("es-MX"), margenDer, 20, { align: "right" });
+    doc.text(
+      "Fecha: " + new Date().toLocaleDateString("es-MX"),
+      margenDer,
+      20,
+      { align: "right" }
+    );
 
     y = 45;
     doc.setTextColor(55, 73, 94);
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.text("NÓMINA DE AGUINALDOS " + resultadoCalculo.año_fiscal, 105, y, { align: "center" });
+    doc.text("NÓMINA DE AGUINALDOS " + resultadoCalculo.año_fiscal, 105, y, {
+      align: "center",
+    });
 
     y += 10;
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    doc.text("Fecha de Corte: " + dayjs(resultadoCalculo.fecha_corte).format("DD/MM/YYYY"), margenIzq, y);
-    doc.text("Total Empleados: " + resultadoCalculo.total_empleados, margenDer, y, { align: "right" });
+    doc.text(
+      "Fecha de Corte: " +
+        dayjs(resultadoCalculo.fecha_corte).format("DD/MM/YYYY"),
+      margenIzq,
+      y
+    );
+    doc.text(
+      "Total Empleados: " + resultadoCalculo.total_empleados,
+      margenDer,
+      y,
+      { align: "right" }
+    );
 
     y += 8;
     doc.setDrawColor(0, 0, 0);
@@ -710,7 +917,11 @@ export default function PageAguinaldos() {
     doc.text("TOTAL GENERAL A PAGAR:", margenIzq + 2, y + 6.5);
     doc.setFontSize(14);
     doc.text(
-      "$" + parseFloat(resultadoCalculo.total_general).toLocaleString("es-MX", { minimumFractionDigits: 2 }) + " MXN",
+      "$" +
+        parseFloat(resultadoCalculo.total_general).toLocaleString("es-MX", {
+          minimumFractionDigits: 2,
+        }) +
+        " MXN",
       margenDer - 2,
       y + 6.5,
       { align: "right" }
@@ -732,7 +943,7 @@ export default function PageAguinaldos() {
     doc.setTextColor(255, 255, 255);
     doc.setFillColor(55, 73, 94);
     doc.rect(margenIzq, y - 4, margenDer - margenIzq, 6, "F");
-    
+
     // Encabezados de tabla
     doc.text("#", margenIzq + 2, y);
     doc.text("Empleado", margenIzq + 8, y);
@@ -764,13 +975,36 @@ export default function PageAguinaldos() {
       doc.text((idx + 1).toString(), margenIzq + 2, y);
       doc.text(emp.nombre_completo.substring(0, 25), margenIzq + 8, y);
       doc.text((emp.puesto || "N/A").substring(0, 15), margenIzq + 50, y);
-      doc.text(dayjs(emp.fecha_ingreso).format("DD/MM/YYYY"), margenIzq + 75, y);
+      doc.text(
+        dayjs(emp.fecha_ingreso).format("DD/MM/YYYY"),
+        margenIzq + 75,
+        y
+      );
       doc.text(parseFloat(emp.años_trabajados).toFixed(2), margenIzq + 95, y);
-      doc.text("$" + parseFloat(emp.salario_diario).toLocaleString("es-MX", { minimumFractionDigits: 2 }), margenIzq + 105, y);
-      doc.text(parseFloat(emp.dias_aguinaldo_calculado).toFixed(2), margenIzq + 125, y);
+      doc.text(
+        "$" +
+          parseFloat(emp.salario_diario).toLocaleString("es-MX", {
+            minimumFractionDigits: 2,
+          }),
+        margenIzq + 105,
+        y
+      );
+      doc.text(
+        parseFloat(emp.dias_aguinaldo_calculado).toFixed(2),
+        margenIzq + 125,
+        y
+      );
       doc.text(emp.es_proporcional ? "Prop." : "Comp.", margenIzq + 135, y);
       doc.setFont("helvetica", "bold");
-      doc.text("$" + parseFloat(emp.monto_aguinaldo).toLocaleString("es-MX", { minimumFractionDigits: 2 }), margenDer - 2, y, { align: "right" });
+      doc.text(
+        "$" +
+          parseFloat(emp.monto_aguinaldo).toLocaleString("es-MX", {
+            minimumFractionDigits: 2,
+          }),
+        margenDer - 2,
+        y,
+        { align: "right" }
+      );
       doc.setFont("helvetica", "normal");
 
       y += 5;
@@ -783,7 +1017,8 @@ export default function PageAguinaldos() {
       }
     });
 
-    const nombreArchivo = "Nomina_Aguinaldos_" + resultadoCalculo.año_fiscal + ".pdf";
+    const nombreArchivo =
+      "Nomina_Aguinaldos_" + resultadoCalculo.año_fiscal + ".pdf";
     doc.save(nombreArchivo);
   };
 
@@ -799,7 +1034,8 @@ export default function PageAguinaldos() {
     const doc = new jsPDF("p", "mm", "a4");
     const ctx = createPdfContext({ doc });
 
-    const companyName = empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
+    const companyName =
+      empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
     const totalGeneral = fmtMoneyMXN(resultadoCalculo.total_general);
     const resultados = resultadoCalculo.resultados || [];
     const completos = resultados.filter((x) => !x.es_proporcional).length;
@@ -809,8 +1045,12 @@ export default function PageAguinaldos() {
       title: "Nómina de Aguinaldos",
       linesLeft: [
         `Año fiscal: ${resultadoCalculo.año_fiscal || "—"}`,
-        `Fecha corte: ${dayjs(resultadoCalculo.fecha_corte).format("DD/MM/YYYY")}`,
-        `Total empleados: ${resultadoCalculo.total_empleados ?? resultados.length}`,
+        `Fecha corte: ${dayjs(resultadoCalculo.fecha_corte).format(
+          "DD/MM/YYYY"
+        )}`,
+        `Total empleados: ${
+          resultadoCalculo.total_empleados ?? resultados.length
+        }`,
       ],
       kpiLabel: "Total general",
       kpiValue: String(totalGeneral).replace(" MXN", ""),
@@ -823,7 +1063,16 @@ export default function PageAguinaldos() {
       rows: [
         ["Completos", completos],
         ["Proporcionales", proporcionales],
-        ["Generado", new Date().toLocaleString("es-MX", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })],
+        [
+          "Generado",
+          new Date().toLocaleString("es-MX", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        ],
       ],
     });
 
@@ -864,10 +1113,14 @@ export default function PageAguinaldos() {
       const v = {
         nombre: String(r.nombre_completo || "").slice(0, 40),
         puesto: String(r.puesto || "N/A").slice(0, 22),
-        ingreso: r.fecha_ingreso ? dayjs(r.fecha_ingreso).format("DD/MM/YYYY") : "—",
+        ingreso: r.fecha_ingreso
+          ? dayjs(r.fecha_ingreso).format("DD/MM/YYYY")
+          : "—",
         dias: Number(r.dias_aguinaldo_calculado || 0).toFixed(2),
         tipo: r.es_proporcional ? "Prop." : "Comp.",
-        monto: `$${Number(r.monto_aguinaldo || 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`,
+        monto: `$${Number(r.monto_aguinaldo || 0).toLocaleString("es-MX", {
+          minimumFractionDigits: 2,
+        })}`,
       };
       cols.forEach((c, ci) => {
         const text = v[c.key];
@@ -901,7 +1154,9 @@ export default function PageAguinaldos() {
       footerLeft: "Sistema HR360",
     });
 
-    const nombreArchivo = `Nomina_Aguinaldos_${resultadoCalculo.año_fiscal || "NA"}.pdf`;
+    const nombreArchivo = `Nomina_Aguinaldos_${
+      resultadoCalculo.año_fiscal || "NA"
+    }.pdf`;
     d.save(nombreArchivo.replace(/\s+/g, "_"));
   };
 
@@ -925,13 +1180,19 @@ export default function PageAguinaldos() {
     if (!calculoParaCambiarEstado) return;
 
     try {
-      await aguinaldosApi.actualizarEstado(calculoParaCambiarEstado.id_calculo, nuevoEstado);
+      await aguinaldosApi.actualizarEstado(
+        calculoParaCambiarEstado.id_calculo,
+        nuevoEstado
+      );
       await mutate();
       setAlertMsg("✅ Estado actualizado exitosamente");
       setEstadoDialogOpen(false);
       setCalculoParaCambiarEstado(null);
     } catch (error) {
-      setAlertMsg("❌ Error al actualizar estado: " + (error?.message || "Error desconocido"));
+      setAlertMsg(
+        "❌ Error al actualizar estado: " +
+          (error?.message || "Error desconocido")
+      );
     }
   };
 
@@ -940,18 +1201,49 @@ export default function PageAguinaldos() {
       {/* Encabezado */}
       <div>
         <h1 className="text-2xl font-bold">🎁 Aguinaldos</h1>
-        <p className="text-xs text-gray-500 mt-1">Calcula y gestiona aguinaldos según la Ley Federal del Trabajo</p>
+        <p className="text-xs text-gray-500 mt-1">
+          Calcula y gestiona aguinaldos según la Ley Federal del Trabajo
+        </p>
       </div>
 
       {/* Filtros superiores */}
       <Card className="agu-card">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">Cálculos de Aguinaldos Guardados</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            Cálculos de Aguinaldos Guardados
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">Buscar</label>
+              <label className="text-xs font-semibold uppercase text-muted-foreground">
+                Empresa
+              </label>
+              <div className="relative">
+                <Combobox
+                  options={[
+                    { value: "all", label: "Todas las empresas" },
+                    ...(dataUser?.empresas_detalle || []).map((e) => ({
+                      value: String(e.id_empresa),
+                      label: e.nombre,
+                    })),
+                  ]}
+                  value={empresaFiltro}
+                  onChange={(value) => {
+                    setEmpresaFiltro(value);
+                    setSearch("");
+                    setEstatus("");
+                    setAñoFiscal("");
+                    setPage(1);
+                  }}
+                  placeholder="Empresa"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase text-muted-foreground">
+                Buscar
+              </label>
               <div className="relative">
                 <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
                 <Input
@@ -959,8 +1251,9 @@ export default function PageAguinaldos() {
                   placeholder="Empleado, puesto o ID..."
                   value={search}
                   onChange={(e) => {
-                    setSearch(e.target.value);
-                    setIsSuggestionsOpen(true);
+                    const value = e.target.value;
+                    setSearch(value);
+                    setIsSuggestionsOpen(value.length > 0);
                     setHoveredSuggestionIndex(0);
                     setActiveSearchBox("filters");
                   }}
@@ -975,27 +1268,41 @@ export default function PageAguinaldos() {
                     }, 120);
                   }}
                 />
-                {isSuggestionsOpen && activeSearchBox === "filters" && sugerencias.length > 0 ? (
-                  <div className="absolute left-0 right-0 mt-1 z-20 rounded-md border bg-white shadow">
-                    <ul className="max-h-64 overflow-auto">
-                      {sugerencias.map((emp, idx) => (
-                        <li
-                          key={emp.id_empleado}
-                          onMouseDown={() => handleSelectEmpleadoSugerencia(emp)}
-                          onMouseEnter={() => setHoveredSuggestionIndex(idx)}
-                          className={`px-3 py-2 cursor-pointer text-sm ${idx === hoveredSuggestionIndex ? "bg-slate-100" : ""}`}
-                        >
-                          {emp.nombre_completo}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
+                {isSuggestionsOpen &&
+                  activeSearchBox === "filters" &&
+                  search.length > 0 &&
+                  sugerencias.length > 0 && (
+                    <div className="absolute left-0 right-0 mt-1 z-20 rounded-md border bg-white shadow">
+                      <ul className="max-h-64 overflow-auto">
+                        {sugerencias.map((emp, idx) => (
+                          <li
+                            key={emp.id_empleado}
+                            onMouseDown={() =>
+                              handleSelectEmpleadoSugerencia(emp)
+                            }
+                            onMouseEnter={() => setHoveredSuggestionIndex(idx)}
+                            className={`px-3 py-2 cursor-pointer text-sm ${
+                              idx === hoveredSuggestionIndex
+                                ? "bg-slate-100"
+                                : ""
+                            }`}
+                          >
+                            {emp.nombre_completo}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">Estatus</label>
-              <Select value={estatus === "" ? "__all__" : estatus} onValueChange={(v) => setEstatus(v === "__all__" ? "" : v)}>
+              <label className="text-xs font-semibold uppercase text-muted-foreground">
+                Estatus
+              </label>
+              <Select
+                value={estatus === "" ? "__all__" : estatus}
+                onValueChange={(v) => setEstatus(v === "__all__" ? "" : v)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
@@ -1008,7 +1315,9 @@ export default function PageAguinaldos() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">Año Fiscal</label>
+              <label className="text-xs font-semibold uppercase text-muted-foreground">
+                Año Fiscal
+              </label>
               <Input
                 type="number"
                 placeholder="Ej: 2025"
@@ -1027,7 +1336,10 @@ export default function PageAguinaldos() {
             >
               🔄 Limpiar
             </Button>
-            <Button onClick={() => mutate()} className="shadow-[0_4px_12px_rgba(55,73,94,0.3)] transition-all hover:-translate-y-0.5">
+            <Button
+              onClick={() => mutate()}
+              className="shadow-[0_4px_12px_rgba(55,73,94,0.3)] transition-all hover:-translate-y-0.5"
+            >
               🔍 Buscar
             </Button>
           </div>
@@ -1042,7 +1354,9 @@ export default function PageAguinaldos() {
         </TabsList>
         <TabsContent value="tabla" className="space-y-3 mt-3">
           <div className="flex items-center justify-between">
-            <div className="text-sm text-muted-foreground">Resultados: {total}</div>
+            <div className="text-sm text-muted-foreground">
+              Resultados: {total}
+            </div>
             <Button
               onClick={() => {
                 resetFormulario();
@@ -1058,6 +1372,9 @@ export default function PageAguinaldos() {
               <thead className="bg-slate-50">
                 <tr>
                   <th className="text-left p-2">ID</th>
+                  {!mostrarEmpresa && (
+                    <th className="text-left p-2">Empresa</th>
+                  )}
                   <th className="text-left p-2">Año Fiscal</th>
                   <th className="text-left p-2">Fecha Cálculo</th>
                   <th className="text-left p-2">Fecha Corte</th>
@@ -1078,15 +1395,35 @@ export default function PageAguinaldos() {
                   return (
                     <tr key={calc.id_calculo} className="border-t">
                       <td className="p-2 font-semibold">#{calc.id_calculo}</td>
+                      {!mostrarEmpresa && (
+                        <td className="p-2 font-semibold">
+                          {calc?.nombre_empresa}
+                        </td>
+                      )}
                       <td className="p-2">{calc.año_fiscal}</td>
-                      <td className="p-2">{dayjs(calc.fecha_calculo).format("DD/MM/YYYY")}</td>
-                      <td className="p-2">{dayjs(calc.fecha_corte).format("DD/MM/YYYY")}</td>
-                      <td className="p-2">{calc.total_empleados} empleados</td>
-                      <td className="p-2 font-bold">
-                        ${Number(calc.total_general || 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                      <td className="p-2">
+                        {dayjs(calc.fecha_calculo).format("DD/MM/YYYY")}
                       </td>
                       <td className="p-2">
-                        <span className={`${styles.tag} ${styles["tag-" + (calc.estado?.toLowerCase() || "pendiente")]}`}>
+                        {dayjs(calc.fecha_corte).format("DD/MM/YYYY")}
+                      </td>
+                      <td className="p-2">{calc.total_empleados} empleados</td>
+                      <td className="p-2 font-bold">
+                        $
+                        {Number(calc.total_general || 0).toLocaleString(
+                          "es-MX",
+                          { minimumFractionDigits: 2 }
+                        )}
+                      </td>
+                      <td className="p-2">
+                        <span
+                          className={`${styles.tag} ${
+                            styles[
+                              "tag-" +
+                                (calc.estado?.toLowerCase() || "pendiente")
+                            ]
+                          }`}
+                        >
                           {calc.estado || "Pendiente"}
                         </span>
                       </td>
@@ -1123,7 +1460,10 @@ export default function PageAguinaldos() {
                 })}
                 {(!calculos || calculos.length === 0) && (
                   <tr>
-                    <td className="p-6 text-center text-muted-foreground" colSpan={8}>
+                    <td
+                      className="p-6 text-center text-muted-foreground"
+                      colSpan={8}
+                    >
                       No hay cálculos de aguinaldos guardados
                     </td>
                   </tr>
@@ -1132,7 +1472,13 @@ export default function PageAguinaldos() {
             </table>
           </div>
 
-          <TablePagination page={page} limit={limit} total={total} onPageChange={setPage} onLimitChange={setLimit} />
+          <TablePagination
+            page={page}
+            limit={limit}
+            total={total}
+            onPageChange={setPage}
+            onLimitChange={setLimit}
+          />
         </TabsContent>
 
         <TabsContent value="calculadora" className="space-y-4 mt-3">
@@ -1141,7 +1487,12 @@ export default function PageAguinaldos() {
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
               <div className="bg-white rounded-xl p-6 text-center">
                 <div className="animate-spin h-8 w-8 rounded-full border-2 border-slate-300 border-t-[var(--agu-primary)] mx-auto mb-3" />
-                <div className="font-semibold text-sm" style={{ color: "var(--agu-primary)" }}>Procesando...</div>
+                <div
+                  className="font-semibold text-sm"
+                  style={{ color: "var(--agu-primary)" }}
+                >
+                  Procesando...
+                </div>
               </div>
             </div>
           )}
@@ -1169,12 +1520,34 @@ export default function PageAguinaldos() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">Fecha de Corte *</label>
-                  <Input 
-                    type="date" 
-                    value={fechaCorte} 
+                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                    Empresa
+                  </label>
+
+                  <Combobox
+                    options={(dataUser?.empresas_detalle || []).map((e) => ({
+                      value: String(e.id_empresa),
+                      label: e.nombre,
+                    }))}
+                    value={empresaCalculo}
+                    onChange={(value) => {
+                      setEmpresaCalculo(value);
+                      setFechaCorte(dayjs().format("YYYY-MM-DD"));
+                      setAñoFiscalCalculo(dayjs().year().toString());
+                      setObservaciones("");
+                    }}
+                    placeholder="Selecciona empresa para cálculo"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                    Fecha de Corte *
+                  </label>
+                  <Input
+                    type="date"
+                    value={fechaCorte}
                     onChange={async (e) => {
                       const nuevaFecha = e.target.value;
                       setFechaCorte(nuevaFecha);
@@ -1182,7 +1555,7 @@ export default function PageAguinaldos() {
                       if (nuevaFecha) {
                         const añoNuevaFecha = dayjs(nuevaFecha).year();
                         setAñoFiscalCalculo(añoNuevaFecha.toString());
-                        
+
                         // Cargar automáticamente los días no trabajados después de actualizar la fecha y año fiscal
                         // Esperar un momento para que el estado se actualice
                         setTimeout(() => {
@@ -1191,12 +1564,17 @@ export default function PageAguinaldos() {
                           }
                         }, 100);
                       }
-                    }} 
+                    }}
                   />
-                  <small className="text-muted-foreground">Fecha hasta la cual se calculará el aguinaldo (el año fiscal se actualiza automáticamente)</small>
+                  <small className="text-muted-foreground">
+                    Fecha hasta la cual se calculará el aguinaldo (el año fiscal
+                    se actualiza automáticamente)
+                  </small>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">Año Fiscal *</label>
+                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                    Año Fiscal *
+                  </label>
                   <Input
                     type="number"
                     min="2020"
@@ -1207,10 +1585,15 @@ export default function PageAguinaldos() {
                     readOnly
                     className="bg-gray-50 cursor-not-allowed"
                   />
-                  <small className="text-muted-foreground">Año fiscal del aguinaldo (se actualiza automáticamente según la fecha de corte)</small>
+                  <small className="text-muted-foreground">
+                    Año fiscal del aguinaldo (se actualiza automáticamente según
+                    la fecha de corte)
+                  </small>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">Observaciones</label>
+                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                    Observaciones
+                  </label>
                   <Input
                     value={observaciones}
                     onChange={(e) => setObservaciones(e.target.value)}
@@ -1220,20 +1603,35 @@ export default function PageAguinaldos() {
               </div>
 
               <div className={styles.infoInfo}>
-                <strong>📋 INFORMACIÓN LEGAL:</strong> Según el Artículo 87 de la LFT, el aguinaldo mínimo es de 15 días de salario por año
-                trabajado. Si el empleado laboró menos de un año, se calcula proporcional.
+                <strong>📋 INFORMACIÓN LEGAL:</strong> Según el Artículo 87 de
+                la LFT, el aguinaldo mínimo es de 15 días de salario por año
+                trabajado. Si el empleado laboró menos de un año, se calcula
+                proporcional.
               </div>
-              <div className="rounded-md border-l-4 p-3" style={{ borderLeftColor: "#ef4444", background: "#fef2f2" }}>
-                <div className="text-sm font-semibold mb-1" style={{ color: "#991b1b" }}>
+              <div
+                className="rounded-md border-l-4 p-3"
+                style={{ borderLeftColor: "#ef4444", background: "#fef2f2" }}
+              >
+                <div
+                  className="text-sm font-semibold mb-1"
+                  style={{ color: "#991b1b" }}
+                >
                   ⚠️ Días No Trabajados
                 </div>
                 <div className="text-xs" style={{ color: "#991b1b" }}>
-                  Los días no trabajados se consultan <strong>automáticamente</strong> desde la tabla <code>asistencias</code> (donde <code>asistencia = 0</code> o <code>NULL</code>)
-                  en el rango del año fiscal hasta la fecha de corte seleccionada. Estos días <strong>reducen el cálculo proporcional</strong> de aguinaldo.
+                  Los días no trabajados se consultan{" "}
+                  <strong>automáticamente</strong> desde la tabla{" "}
+                  <code>asistencias</code> (donde <code>asistencia = 0</code> o{" "}
+                  <code>NULL</code>) en el rango del año fiscal hasta la fecha
+                  de corte seleccionada. Estos días{" "}
+                  <strong>reducen el cálculo proporcional</strong> de aguinaldo.
                   <br />
-                  <strong>Fórmula:</strong> Días trabajados netos = Días trabajados brutos - Días no trabajados
+                  <strong>Fórmula:</strong> Días trabajados netos = Días
+                  trabajados brutos - Días no trabajados
                   <br />
-                  <strong>Nota:</strong> Los valores se actualizan automáticamente al cambiar la fecha de corte, el año fiscal o al seleccionar empleados.
+                  <strong>Nota:</strong> Los valores se actualizan
+                  automáticamente al cambiar la fecha de corte, el año fiscal o
+                  al seleccionar empleados.
                 </div>
               </div>
             </CardContent>
@@ -1248,7 +1646,9 @@ export default function PageAguinaldos() {
               <CardContent className="space-y-4">
                 {/* Buscador de empleados */}
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">🔍 Buscar Empleado</label>
+                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                    🔍 Buscar Empleado
+                  </label>
                   <div className="relative">
                     <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
                     <Input
@@ -1260,17 +1660,25 @@ export default function PageAguinaldos() {
                   </div>
                   {busquedaEmpleados && (
                     <div className="text-xs text-muted-foreground">
-                      Mostrando {empleadosFiltrados.length} de {empleadosCargados.length} empleados
+                      Mostrando {empleadosFiltrados.length} de{" "}
+                      {empleadosCargados.length} empleados
                     </div>
                   )}
                 </div>
 
                 <div className="flex items-center justify-between p-3 bg-slate-50 rounded-md border-2 border-dashed">
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={selectAll} onChange={toggleSelectAll} className="w-4 h-4" />
+                    <input
+                      type="checkbox"
+                      checked={selectAll}
+                      onChange={toggleSelectAll}
+                      className="w-4 h-4"
+                    />
                     <strong>Seleccionar / Deseleccionar Todos</strong>
                   </label>
-                  <span className="font-semibold text-blue-600">{empleadosSeleccionados.length} empleados seleccionados</span>
+                  <span className="font-semibold text-blue-600">
+                    {empleadosSeleccionados.length} empleados seleccionados
+                  </span>
                 </div>
 
                 <div className="overflow-x-auto rounded-md border max-h-96 overflow-y-auto">
@@ -1278,7 +1686,12 @@ export default function PageAguinaldos() {
                     <thead className="bg-slate-50 sticky top-0">
                       <tr>
                         <th className="text-left p-2 w-12">
-                          <input type="checkbox" checked={selectAll} onChange={toggleSelectAll} className="w-4 h-4" />
+                          <input
+                            type="checkbox"
+                            checked={selectAll}
+                            onChange={toggleSelectAll}
+                            className="w-4 h-4"
+                          />
                         </th>
                         <th className="text-left p-2">Empleado</th>
                         <th className="text-left p-2">Puesto</th>
@@ -1295,7 +1708,9 @@ export default function PageAguinaldos() {
                     </thead>
                     <tbody>
                       {empleadosFiltrados.map((emp) => {
-                        const seleccionado = empleadosSeleccionados.find((e) => e.id === emp.id);
+                        const seleccionado = empleadosSeleccionados.find(
+                          (e) => e.id === emp.id
+                        );
                         const empData = seleccionado || emp;
                         return (
                           <tr key={emp.id} className="border-t">
@@ -1310,19 +1725,31 @@ export default function PageAguinaldos() {
                             <td className="p-2">
                               <strong>{emp.nombre_completo}</strong>
                             </td>
-                            <td className="p-2">{emp.puesto || "Sin puesto"}</td>
-                            <td className="p-2">{dayjs(emp.fecha_ingreso).format("DD/MM/YYYY")}</td>
+                            <td className="p-2">
+                              {emp.puesto || "Sin puesto"}
+                            </td>
+                            <td className="p-2">
+                              {dayjs(emp.fecha_ingreso).format("DD/MM/YYYY")}
+                            </td>
                             <td className="p-2">
                               <Input
                                 type="number"
                                 step="0.01"
                                 className="w-24 h-8 text-xs"
-                                value={empData.salario_diario || emp.salario_diario || 0}
+                                value={
+                                  empData.salario_diario ||
+                                  emp.salario_diario ||
+                                  0
+                                }
                                 onChange={(e) => {
                                   if (seleccionado) {
                                     actualizarSalario(emp.id, e.target.value);
                                   } else {
-                                    toggleEmpleado({ ...emp, salario_diario: parseFloat(e.target.value) || 0 });
+                                    toggleEmpleado({
+                                      ...emp,
+                                      salario_diario:
+                                        parseFloat(e.target.value) || 0,
+                                    });
                                   }
                                 }}
                               />
@@ -1333,12 +1760,23 @@ export default function PageAguinaldos() {
                                 step="1"
                                 min="15"
                                 className="w-20 h-8 text-xs"
-                                value={empData.dias_aguinaldo || emp.aguinaldo_dias || 15}
+                                value={
+                                  empData.dias_aguinaldo ||
+                                  emp.aguinaldo_dias ||
+                                  15
+                                }
                                 onChange={(e) => {
                                   if (seleccionado) {
-                                    actualizarDiasAguinaldo(emp.id, e.target.value);
+                                    actualizarDiasAguinaldo(
+                                      emp.id,
+                                      e.target.value
+                                    );
                                   } else {
-                                    toggleEmpleado({ ...emp, dias_aguinaldo: parseFloat(e.target.value) || 15 });
+                                    toggleEmpleado({
+                                      ...emp,
+                                      dias_aguinaldo:
+                                        parseFloat(e.target.value) || 15,
+                                    });
                                   }
                                 }}
                               />
@@ -1352,9 +1790,16 @@ export default function PageAguinaldos() {
                                 value={empData.dias_no_trabajados || 0}
                                 onChange={(e) => {
                                   if (seleccionado) {
-                                    actualizarDiasNoTrabajados(emp.id, e.target.value);
+                                    actualizarDiasNoTrabajados(
+                                      emp.id,
+                                      e.target.value
+                                    );
                                   } else {
-                                    toggleEmpleado({ ...emp, dias_no_trabajados: parseFloat(e.target.value) || 0 });
+                                    toggleEmpleado({
+                                      ...emp,
+                                      dias_no_trabajados:
+                                        parseFloat(e.target.value) || 0,
+                                    });
                                   }
                                 }}
                                 title="Días donde asistencia = 0 o NULL en el rango del año fiscal. Estos días reducen el cálculo proporcional de aguinaldo."
@@ -1390,27 +1835,57 @@ export default function PageAguinaldos() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className={styles.metricCard}>
                     <div className={styles.metricLabel}>Total Empleados</div>
-                    <div className={styles.metricValue}>{resultadoCalculo.total_empleados}</div>
-                  </div>
-                  <div className={styles.metricCard}>
-                    <div className={styles.metricLabel}>Aguinaldos Completos</div>
-                    <div className={styles.metricValue} style={{ color: "var(--agu-success-dark)" }}>
-                      {resultadoCalculo.resultados.filter((r) => !r.es_proporcional).length}
+                    <div className={styles.metricValue}>
+                      {resultadoCalculo.total_empleados}
                     </div>
                   </div>
                   <div className={styles.metricCard}>
-                    <div className={styles.metricLabel}>Aguinaldos Proporcionales</div>
-                    <div className={styles.metricValue} style={{ color: "var(--agu-warning-dark)" }}>
-                      {resultadoCalculo.resultados.filter((r) => r.es_proporcional).length}
+                    <div className={styles.metricLabel}>
+                      Aguinaldos Completos
+                    </div>
+                    <div
+                      className={styles.metricValue}
+                      style={{ color: "var(--agu-success-dark)" }}
+                    >
+                      {
+                        resultadoCalculo.resultados.filter(
+                          (r) => !r.es_proporcional
+                        ).length
+                      }
+                    </div>
+                  </div>
+                  <div className={styles.metricCard}>
+                    <div className={styles.metricLabel}>
+                      Aguinaldos Proporcionales
+                    </div>
+                    <div
+                      className={styles.metricValue}
+                      style={{ color: "var(--agu-warning-dark)" }}
+                    >
+                      {
+                        resultadoCalculo.resultados.filter(
+                          (r) => r.es_proporcional
+                        ).length
+                      }
                     </div>
                   </div>
                 </div>
 
                 {/* Total General */}
                 <div className={styles.totalBar + " text-center"}>
-                  <div className={styles.totalLabel}>💰 Total General a Pagar</div>
-                  <div className={styles.totalAmount} style={{ fontSize: "32px" }}>
-                    ${parseFloat(resultadoCalculo.total_general).toLocaleString("es-MX", { minimumFractionDigits: 2 })} MXN
+                  <div className={styles.totalLabel}>
+                    💰 Total General a Pagar
+                  </div>
+                  <div
+                    className={styles.totalAmount}
+                    style={{ fontSize: "32px" }}
+                  >
+                    $
+                    {parseFloat(resultadoCalculo.total_general).toLocaleString(
+                      "es-MX",
+                      { minimumFractionDigits: 2 }
+                    )}{" "}
+                    MXN
                   </div>
                 </div>
 
@@ -1434,35 +1909,73 @@ export default function PageAguinaldos() {
                     </thead>
                     <tbody>
                       {resultadoCalculo.resultados.map((emp, idx) => {
-                        const estadoActual = estadosIndividuales[emp.id_empleado] || "Pendiente";
+                        const estadoActual =
+                          estadosIndividuales[emp.id_empleado] || "Pendiente";
                         return (
                           <tr key={idx} className="border-t">
                             <td className="p-2">
                               <strong>{emp.nombre_completo}</strong>
                             </td>
-                            <td className="p-2">{emp.puesto || "Sin puesto"}</td>
-                            <td className="p-2">{dayjs(emp.fecha_ingreso).format("DD/MM/YYYY")}</td>
-                            <td className="p-2">{parseFloat(emp.años_trabajados).toFixed(2)} años</td>
+                            <td className="p-2">
+                              {emp.puesto || "Sin puesto"}
+                            </td>
+                            <td className="p-2">
+                              {dayjs(emp.fecha_ingreso).format("DD/MM/YYYY")}
+                            </td>
+                            <td className="p-2">
+                              {parseFloat(emp.años_trabajados).toFixed(2)} años
+                            </td>
                             <td className="p-2 text-center">
                               {parseFloat(emp.dias_no_trabajados) > 0 ? (
-                                <span className={`${styles.tag} ${styles["tag-pendiente"]}`}>
-                                  {parseFloat(emp.dias_no_trabajados).toFixed(1)}
+                                <span
+                                  className={`${styles.tag} ${styles["tag-pendiente"]}`}
+                                >
+                                  {parseFloat(emp.dias_no_trabajados).toFixed(
+                                    1
+                                  )}
                                 </span>
                               ) : (
-                                <span className={`${styles.tag} ${styles["tag-pagado"]}`}>0</span>
+                                <span
+                                  className={`${styles.tag} ${styles["tag-pagado"]}`}
+                                >
+                                  0
+                                </span>
                               )}
                             </td>
-                            <td className="p-2">${parseFloat(emp.salario_diario).toLocaleString("es-MX", { minimumFractionDigits: 2 })}</td>
-                            <td className="p-2">{parseFloat(emp.dias_aguinaldo_calculado).toFixed(2)} días</td>
+                            <td className="p-2">
+                              $
+                              {parseFloat(emp.salario_diario).toLocaleString(
+                                "es-MX",
+                                { minimumFractionDigits: 2 }
+                              )}
+                            </td>
+                            <td className="p-2">
+                              {parseFloat(emp.dias_aguinaldo_calculado).toFixed(
+                                2
+                              )}{" "}
+                              días
+                            </td>
                             <td className="p-2">
                               {emp.es_proporcional ? (
-                                <span className={`${styles.tag} ${styles["tag-pendiente"]}`}>Proporcional</span>
+                                <span
+                                  className={`${styles.tag} ${styles["tag-pendiente"]}`}
+                                >
+                                  Proporcional
+                                </span>
                               ) : (
-                                <span className={`${styles.tag} ${styles["tag-pagado"]}`}>Completo</span>
+                                <span
+                                  className={`${styles.tag} ${styles["tag-pagado"]}`}
+                                >
+                                  Completo
+                                </span>
                               )}
                             </td>
                             <td className="p-2 font-bold">
-                              ${parseFloat(emp.monto_aguinaldo).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                              $
+                              {parseFloat(emp.monto_aguinaldo).toLocaleString(
+                                "es-MX",
+                                { minimumFractionDigits: 2 }
+                              )}
                             </td>
                             <td className="p-2">
                               <Select
@@ -1478,9 +1991,13 @@ export default function PageAguinaldos() {
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="Pendiente">Pendiente</SelectItem>
+                                  <SelectItem value="Pendiente">
+                                    Pendiente
+                                  </SelectItem>
                                   <SelectItem value="Pagado">Pagado</SelectItem>
-                                  <SelectItem value="Cancelado">Cancelado</SelectItem>
+                                  <SelectItem value="Cancelado">
+                                    Cancelado
+                                  </SelectItem>
                                 </SelectContent>
                               </Select>
                             </td>
@@ -1488,7 +2005,9 @@ export default function PageAguinaldos() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => generarPDFIndividualFormatoNuevo(emp)}
+                                onClick={() =>
+                                  generarPDFIndividualFormatoNuevo(emp)
+                                }
                                 className="text-xs"
                               >
                                 📄 PDF
@@ -1525,13 +2044,18 @@ export default function PageAguinaldos() {
       </Tabs>
 
       {/* Confirmación de eliminación */}
-      <AlertDialog open={!!deleteRow} onOpenChange={(open) => !open && setDeleteRow(null)}>
+      <AlertDialog
+        open={!!deleteRow}
+        onOpenChange={(open) => !open && setDeleteRow(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar cálculo?</AlertDialogTitle>
             <AlertDialogDescription>
               {deleteRow
-                ? `Esta acción no se puede deshacer. Se eliminará el cálculo #${deleteRow?.id_calculo || ""}.`
+                ? `Esta acción no se puede deshacer. Se eliminará el cálculo #${
+                    deleteRow?.id_calculo || ""
+                  }.`
                 : ""}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1569,10 +2093,9 @@ export default function PageAguinaldos() {
         estadoActual={calculoParaCambiarEstado?.estado || "Pendiente"}
         onConfirm={cambiarEstado}
       />
-      
+
       {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
       <AccesosRapidos />
     </div>
   );
 }
-

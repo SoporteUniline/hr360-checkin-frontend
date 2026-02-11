@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -9,9 +9,12 @@ import DepartamentosTable from "./DepartamentosTable";
 import DepartamentoFormDialog from "./DepartamentoFormDialog";
 import DepartamentoDeleteDialog from "./DepartamentoDeleteDialog";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import { Label } from "@/components/ui/label";
+import { Combobox } from "@/components/Combobox";
 
 export default function Departamentos() {
   const [filter, setFilter] = useState("");
+  const [debouncedFilter, setDebouncedFilter] = useState("");
   const [departamentos, setDepartamentos] = useState([]);
   const [editDep, setEditDep] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
@@ -19,31 +22,78 @@ export default function Departamentos() {
   const [openFormModal, setOpenFormModal] = useState(false);
 
   const { dataUser } = useAuth();
-  const id_empresa = dataUser?.id_empresa;
-  const key = `/checador/departamentos?id_empresa=${id_empresa}`;
+
+  const [empresaActiva, setEmpresaActiva] = useState(null);
+  const id_empresa = empresaActiva;
+
+  useEffect(() => {
+    if (dataUser?.empresas?.length > 0 && !empresaActiva) {
+      setEmpresaActiva("all");
+    }
+  }, [dataUser, empresaActiva]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedFilter(filter);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [filter]);
+
+  const key = id_empresa
+    ? `/checador/departamentos?id_empresa=${id_empresa}`
+    : null;
 
   return (
     <div>
-      <div className="mb-4 flex gap-3 items-center">
-        <Input
-          className="flex-1"
-          placeholder="Buscar departamento..."
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        />
-        <Button
-          onClick={() => {
-            setEditDep(null);
-            setOpenFormModal(true);
-          }}
-        >
-          <Plus className="h-4 w-4 mr-1" /> Nuevo
-        </Button>
+      <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-[260px_1fr_auto] items-end">
+        {/* Empresa */}
+        <div className="flex flex-col gap-1">
+          <Label>Empresa</Label>
+          <Combobox
+            options={[
+              { value: "all", label: "Todas las empresas" },
+              ...(dataUser?.empresas_detalle?.map((e) => ({
+                value: e.id_empresa,
+                label: e.nombre,
+              })) || []),
+            ]}
+            value={empresaActiva}
+            onChange={(val) =>
+              setEmpresaActiva(val === "all" ? "all" : Number(val))
+            }
+            placeholder="Seleccionar empresa"
+          />
+        </div>
+
+        {/* Buscador */}
+        <div className="flex flex-col gap-1">
+          <Label htmlFor="departamento-search">Departamento</Label>
+          <Input
+            id="departamento-search"
+            placeholder="Buscar departamento..."
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          />
+        </div>
+
+        {/* Botón */}
+        <div className="flex sm:col-span-2 lg:col-span-1">
+          <Button
+            className="w-full lg:w-auto"
+            onClick={() => {
+              setEditDep(null);
+              setOpenFormModal(true);
+            }}
+          >
+            <Plus className="h-4 w-4 mr-1" />
+            Nuevo
+          </Button>
+        </div>
       </div>
 
       <DepartamentosTable
         id_empresa={id_empresa}
-        filter={filter}
+        filter={debouncedFilter}
         swrKey={key}
         onEdit={(dep, lista) => {
           setEditDep(dep);
@@ -70,6 +120,7 @@ export default function Departamentos() {
         id_empresa={id_empresa}
         departamentos={departamentos}
         mutateKey={key}
+        empresas={dataUser?.empresas_detalle || []}
       />
 
       <DepartamentoDeleteDialog
@@ -78,7 +129,7 @@ export default function Departamentos() {
         deleteId={deleteId}
         mutateKey={key}
       />
-      
+
       {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
       <AccesosRapidos />
     </div>

@@ -55,7 +55,7 @@ export default function DetalleEmpresa({ item, setSelected }) {
           {item.celular}
         </p>
         <p className="my-2">
-          <span className="font-semibold text-slate-700">Estátus: </span>
+          <span className="font-semibold text-slate-700">Estatus: </span>
           {item.estado}
         </p>
 

@@ -26,19 +26,29 @@ import TablePagination from "@/components/TablePagination";
 import debounce from "lodash.debounce";
 import ModalArea from "@/components/ModalArea";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import { Combobox } from "@/components/Combobox";
 
 function AreaCard({ area, onEdit, onDelete }) {
   return (
     <Card className="w-full h-full transition-all hover:shadow-md">
       <CardContent className="p-4 flex justify-between items-start gap-4">
         <div className="flex-1">
-          <div className="flex items-center gap-2 mb-2">
-            {/* Icono informativo según `Colores.txt` (INFO primary: #3498db) */}
+          <div className="flex items-center gap-2 mb-1">
             <MapPin className="h-5 w-5 text-[#3498db]" />
-            <h3 className="font-semibold text-lg">{area.nombre_area}</h3>
+            <h3 className="font-semibold text-lg leading-tight">
+              {area.nombre_area}
+            </h3>
           </div>
+
+          {/* 🏢 Muestra la empresa si existe (útil cuando el filtro es "all") */}
+          {area.empresa_nombre && (
+            <p className="text-xs text-gray-500 mb-2 italic">
+              Empresa: {area.empresa_nombre}
+            </p>
+          )}
+
           {area.latitud && area.longitud && (
-            <p className="text-sm font-mono">
+            <p className="text-sm font-mono text-gray-600">
               {Number(area.latitud).toFixed(6)},{" "}
               {Number(area.longitud).toFixed(6)}
             </p>
@@ -49,7 +59,6 @@ function AreaCard({ area, onEdit, onDelete }) {
             variant="outline"
             size="sm"
             onClick={() => onEdit(area)}
-            // Acción "Editar" estilo sistema (ver `Colores.txt`)
             className="h-9 w-9 p-0 border-[#93c5fd] text-[#2563eb] hover:bg-[#dbeafe] hover:text-[#1e40af]"
           >
             <Edit className="h-4 w-4" />
@@ -58,7 +67,6 @@ function AreaCard({ area, onEdit, onDelete }) {
             variant="outline"
             size="sm"
             onClick={() => onDelete(area)}
-            // Acción "Eliminar" estilo sistema (ver `Colores.txt`)
             className="h-9 w-9 p-0 border-[#fca5a5] text-[#dc2626] hover:bg-[#fee2e2]"
           >
             <Trash2 className="h-4 w-4" />
@@ -146,6 +154,8 @@ export default function AreasCheckPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
+  const [empresaActiva, setEmpresaActiva] = useState("all");
+
   // 🕒 Debounce (para no spamear el servidor)
   const handleSearchChange = debounce((value) => {
     setDebouncedSearch(value);
@@ -153,10 +163,10 @@ export default function AreasCheckPage() {
   }, 600);
 
   const { data, isLoading, mutate } = useSWR(
-    dataUser?.id_empresa
-      ? `${API_URL}/checador/area_check2?id_empresa=${dataUser.id_empresa}&search=${debouncedSearch}&page=${page}&limit=${limit}`
+    dataUser
+      ? `${API_URL}/checador/area_check2?id_empresa=${empresaActiva}&search=${debouncedSearch}&page=${page}&limit=${limit}`
       : null,
-    fetcherWithToken
+    fetcherWithToken,
   );
 
   const areas = data?.data || [];
@@ -173,11 +183,7 @@ export default function AreasCheckPage() {
   });
 
   const abrirModalNuevaArea = () => {
-    setEditandoArea({
-      nombre_area: "",
-      latitud: null,
-      longitud: null,
-    });
+    setEditandoArea(null);
     setMostrarModal(true);
   };
 
@@ -193,6 +199,13 @@ export default function AreasCheckPage() {
   };
 
   const guardarArea = async (formData) => {
+    if (!formData.id_empresa && empresaActiva === "all") {
+      enqueueSnackbar("Debes seleccionar una empresa para el área", {
+        variant: "warning",
+      });
+      return;
+    }
+
     if (!formData?.nombre_area?.trim()) {
       enqueueSnackbar("El nombre del área es requerido", { variant: "error" });
       return;
@@ -209,7 +222,7 @@ export default function AreasCheckPage() {
     try {
       const datos = {
         ...formData,
-        id_empresa: dataUser.id_empresa,
+        id_empresa: formData.id_empresa || empresaActiva,
         latitud: Number(formData.latitud),
         longitud: Number(formData.longitud),
       };
@@ -217,7 +230,7 @@ export default function AreasCheckPage() {
       if (formData.id_area) {
         await axios.put(
           `${API_URL}/checador/area_check2/${formData.id_area}`,
-          datos
+          datos,
         );
         enqueueSnackbar("Área actualizada exitosamente", {
           variant: "success",
@@ -244,7 +257,7 @@ export default function AreasCheckPage() {
 
     try {
       await axios.delete(
-        `${API_URL}/checador/area_check2/${areaAEliminar.id_area}`
+        `${API_URL}/checador/area_check2/${areaAEliminar.id_area}`,
       );
       enqueueSnackbar("Área eliminada exitosamente", { variant: "success" });
       await mutate();
@@ -252,7 +265,7 @@ export default function AreasCheckPage() {
       // console.error("Error eliminando área:", error);
       enqueueSnackbar(
         error.response?.data?.message || "Error al eliminar el área",
-        { variant: "error" }
+        { variant: "error" },
       );
     } finally {
       setAreaAEliminar(null);
@@ -270,7 +283,7 @@ export default function AreasCheckPage() {
       </div>
 
       {/* Búsqueda con contador */}
-      <div className="mb-4 flex gap-3 items-center">
+      {/* <div className="mb-4 flex gap-3 items-center">
         <Input
           className="flex-1"
           placeholder="Buscar área..."
@@ -283,6 +296,35 @@ export default function AreasCheckPage() {
         >
           <Plus className="h-4 w-4 mr-2" />
           Nueva Área
+        </Button>
+      </div> */}
+
+      <div className="grid grid-cols-1 md:grid-cols-[250px_1fr_auto] gap-4 items-end">
+        <div className="flex flex-col gap-1">
+          <Label>Empresa</Label>
+          <Combobox
+            options={[
+              { value: "all", label: "Todas las empresas" },
+              ...(dataUser?.empresas_detalle?.map((e) => ({
+                value: e.id_empresa,
+                label: e.nombre,
+              })) || []),
+            ]}
+            value={empresaActiva}
+            onChange={(val) =>
+              setEmpresaActiva(val === "all" ? "all" : Number(val))
+            }
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <Label>Buscar</Label>
+          <Input
+            placeholder="Buscar por nombre de área..."
+            onChange={(e) => handleSearchChange(e.target.value)}
+          />
+        </div>
+        <Button onClick={abrirModalNuevaArea} className="bg-[#37495E] ...">
+          <Plus className="h-4 w-4 mr-2" /> Nueva Área
         </Button>
       </div>
 
@@ -351,6 +393,8 @@ export default function AreasCheckPage() {
       )}
 
       <ModalArea
+        empresas={dataUser?.empresas_detalle}
+        id_empresa_defecto={empresaActiva}
         isOpen={mostrarModal}
         onClose={cerrarModal}
         onSave={guardarArea}
@@ -370,7 +414,7 @@ export default function AreasCheckPage() {
             : ""
         }
       />
-      
+
       {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
       <AccesosRapidos />
     </div>

@@ -11,6 +11,8 @@ import {
 import axios from "axios";
 import { mutate } from "swr";
 import { useSnackbar } from "notistack";
+import { Label } from "@/components/ui/label";
+import { Combobox } from "@/components/Combobox";
 
 export default function DepartamentoFormDialog({
   open,
@@ -19,10 +21,16 @@ export default function DepartamentoFormDialog({
   id_empresa,
   departamentos = [],
   mutateKey,
+  empresas = [],
 }) {
   const { enqueueSnackbar } = useSnackbar();
   const [nombre, setNombre] = useState("");
   const [error, setError] = useState("");
+  const [empresaSeleccionada, setEmpresaSeleccionada] = useState(
+    id_empresa ? String(id_empresa) : ""
+  );
+
+  const formInvalido = !nombre.trim() || (!editDep && !empresaSeleccionada);
 
   useEffect(() => {
     if (editDep) setNombre(editDep.nombre);
@@ -31,16 +39,23 @@ export default function DepartamentoFormDialog({
   }, [editDep, open]);
 
   const handleSubmit = async () => {
+    if (!editDep && !empresaSeleccionada) {
+      setError("Debes seleccionar una empresa.");
+      return;
+    }
+
     if (!nombre.trim()) {
-      setError("El nombre no puede estar vacío.");
+      setError("El nombre del departamento es obligatorio.");
       return;
     }
 
     const existe = departamentos.some(
       (dep) =>
         dep.nombre.toLowerCase() === nombre.toLowerCase() &&
+        Number(dep.id_empresa) === Number(empresaSeleccionada) &&
         dep.id_departamento !== editDep?.id_departamento
     );
+
     if (existe) {
       setError("Ya existe un departamento con este nombre.");
       return;
@@ -58,8 +73,12 @@ export default function DepartamentoFormDialog({
       } else {
         await axios.post(
           `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/departamentos`,
-          { nombre, id_empresa }
+          {
+            nombre: nombre.trim(),
+            id_empresa: Number(empresaSeleccionada),
+          }
         );
+
         enqueueSnackbar("Departamento agregado correctamente", {
           variant: "success",
         });
@@ -83,14 +102,45 @@ export default function DepartamentoFormDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent>
+    <Dialog open={open} onOpenChange={setOpen} modal={false}>
+      {open && <div className="fixed inset-0 bg-black/50 z-40" />}
+      <DialogContent
+        className="z-50"
+        onInteractOutside={(e) => {
+          // Si el clic viene de algo con el atributo de "popover", no cierres ni bloquees
+          if (e.target.closest("[data-radix-popper-content-wrapper]")) {
+            e.preventDefault();
+          }
+        }}
+        onOpenAutoFocus={(e) => {
+          // Si tenemos un combobox, a veces es mejor dejar que el sistema maneje el foco inicial
+          // o simplemente prevenir que el Dialog fuerce el foco al primer botón si no queremos.
+        }}
+      >
         <DialogHeader>
           <DialogTitle>
             {editDep ? "Editar departamento" : "Nuevo departamento"}
           </DialogTitle>
         </DialogHeader>
         <div className="my-4 space-y-2">
+          {!editDep && (
+            <div>
+              <Label htmlFor="empresa-combobox" className="mb-2">
+                Empresa
+              </Label>
+              <Combobox
+                name="empresa-combobox"
+                options={empresas.map((e) => ({
+                  value: String(e.id_empresa),
+                  label: e.nombre,
+                }))}
+                value={empresaSeleccionada}
+                onChange={setEmpresaSeleccionada}
+                placeholder="Selecciona la empresa"
+              />
+            </div>
+          )}
+
           <Input
             placeholder="Nombre del departamento"
             value={nombre}
@@ -100,13 +150,14 @@ export default function DepartamentoFormDialog({
             }}
             className="w-full"
           />
+
           {error && <p className="text-red-500 text-sm">{error}</p>}
         </div>
         <DialogFooter className="flex justify-end gap-2">
           <Button variant="secondary" onClick={() => setOpen(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit}>
+          <Button onClick={handleSubmit} disabled={formInvalido}>
             {editDep ? "Actualizar" : "Agregar"}
           </Button>
         </DialogFooter>
