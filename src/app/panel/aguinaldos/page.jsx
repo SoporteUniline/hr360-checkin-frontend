@@ -1267,7 +1267,7 @@ export default function PageAguinaldos() {
               <div className="relative">
                 <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <Input
-                  className="pl-9"
+                  className="bg-white pl-9"
                   placeholder="Empleado, puesto o ID..."
                   value={search}
                   onChange={(e) => {
@@ -1320,7 +1320,7 @@ export default function PageAguinaldos() {
                 value={estatus === "" ? "__all__" : estatus}
                 onValueChange={(v) => setEstatus(v === "__all__" ? "" : v)}
               >
-                <SelectTrigger>
+                <SelectTrigger className="bg-white">
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1342,6 +1342,7 @@ export default function PageAguinaldos() {
                 onChange={(e) => setAñoFiscal(e.target.value)}
                 min="2020"
                 max="2030"
+                className="bg-white"
               />
             </div>
           </div>

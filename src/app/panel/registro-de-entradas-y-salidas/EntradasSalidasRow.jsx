@@ -121,8 +121,15 @@ export default function EntradasSalidasRow({
             <p className="font-bold">{`${registro.nombre} ${registro.apellido_paterno}`}</p>
             <p className="text-xs">Puesto: {registro.puesto}</p>
           </TableCell>
+          {empresaActiva === "all" && (
+            <TableCell className="font-bold text-gray-500">
+              {registro.nombre_empresa}
+            </TableCell>
+          )}
           <TableCell>
-            <p className="font-bold text-gray-500">{registro.departamento}</p>
+            <p className="font-semibold text-gray-700">
+              {registro.departamento}
+            </p>
             <p className="text-xs text-gray-500">{registro.sucursal}</p>
           </TableCell>
 
@@ -133,11 +140,10 @@ export default function EntradasSalidasRow({
               : formatDate(currentData.entrada)}
           </TableCell>
 
-          <TableCell className="text-center">
+          <TableCell className="text-center text-green-600 font-semibold">
             {formatTime(registro.entrada)}
           </TableCell>
-
-          <TableCell className="text-center">
+          <TableCell className="text-center text-red-600 font-semibold">
             {formatTime(registro.salida)}
           </TableCell>
 

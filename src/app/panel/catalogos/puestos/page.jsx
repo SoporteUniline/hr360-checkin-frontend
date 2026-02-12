@@ -93,7 +93,6 @@ export default function Positions() {
             placeholder="Buscar puesto..."
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="flex-1 border-gray-200"
           />
         </div>
       </div>

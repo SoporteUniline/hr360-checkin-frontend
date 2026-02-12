@@ -71,7 +71,7 @@ export default function FormularioAsistenciasMasivas({
         {
           ...form,
           id_empresa: empresaSeleccionada,
-        }
+        },
       );
       mutate();
       enqueueSnackbar("Asistencias registradas correctamente", {
@@ -79,7 +79,7 @@ export default function FormularioAsistenciasMasivas({
       });
       cerrarModal();
     } catch (error) {
-      console.error(error);
+      // console.error(error);
       enqueueSnackbar("❌ Error al registrar asistencias", {
         variant: "error",
       });
@@ -107,8 +107,12 @@ export default function FormularioAsistenciasMasivas({
               <Calendar className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-white">Registrar asistencia masiva</h2>
-              <p className="text-sm text-white/90">Completa los datos para registrar incidencias.</p>
+              <h2 className="text-lg font-semibold text-white">
+                Registrar asistencia masiva
+              </h2>
+              <p className="text-sm text-white/90">
+                Completa los datos para registrar incidencias.
+              </p>
             </div>
           </div>
           <button

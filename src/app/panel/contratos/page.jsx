@@ -276,7 +276,7 @@ export default function ContratosPage() {
           Filtros de búsqueda
         </h3>
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase text-muted-foreground">
                 EMPRESA
@@ -559,7 +559,7 @@ export default function ContratosPage() {
       </div>
 
       {/* Barra de búsqueda rápida */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
+      {/* <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
         <div className="relative w-full">
           <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <Input
@@ -630,7 +630,7 @@ export default function ContratosPage() {
             </div>
           ) : null}
         </div>
-      </div>
+      </div> */}
 
       {/* Tabla */}
       <ContratosTable

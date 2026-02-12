@@ -133,7 +133,7 @@ export default function QRScanner({ onScan, onClose }) {
               onClick={handleSwitchCamera}
               variant="outline"
               size="sm"
-              className="hidden md:flex items-center gap-2 border-white/30 text-white hover:bg-white/10"
+              className="hidden md:flex items-center gap-2 border-white/30 text-black hover:bg-gray-200"
             >
               <RotateCcw className="w-4 h-4" />
               Girar

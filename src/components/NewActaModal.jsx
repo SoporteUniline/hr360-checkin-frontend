@@ -245,10 +245,10 @@ const NewActaModal = ({
     if (yaNotificoErrorElaboraRef.current) return;
 
     yaNotificoErrorElaboraRef.current = true;
-    enqueueSnackbar(
-      `No se pudo autollenar “Elabora el acta”. No se encontró un empleado con el correo “${correoSesion}” en esta empresa.`,
-      { variant: "warning" },
-    );
+    // enqueueSnackbar(
+    //   `No se pudo autollenar “Elabora el acta”. No se encontró un empleado con el correo “${correoSesion}” en esta empresa.`,
+    //   { variant: "warning" },
+    // );
   }, [open, mode, empleadoPorCorreoError, correoSesion, enqueueSnackbar]);
 
   const elaboraAutoEnProceso =

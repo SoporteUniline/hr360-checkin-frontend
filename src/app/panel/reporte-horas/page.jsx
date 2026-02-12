@@ -24,7 +24,13 @@ import { useAuth } from "@/context/AuthContext";
 import axios from "@/lib/axios";
 import Cookies from "js-cookie";
 import AccesosRapidos from "@/components/AccesosRapidos";
-import { BarChart3, Filter, FileDown, FileSpreadsheet } from "lucide-react";
+import {
+  BarChart3,
+  Filter,
+  FileDown,
+  FileSpreadsheet,
+  Search,
+} from "lucide-react";
 
 function fmtDate(d) {
   const dd = new Date(d);

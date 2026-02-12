@@ -46,7 +46,18 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Mail, Pencil, Plus, RotateCcw, Save, Search, ShieldCheck, Trash2, User, X } from "lucide-react";
+import {
+  Mail,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Save,
+  Search,
+  ShieldCheck,
+  Trash2,
+  User,
+  X,
+} from "lucide-react";
 
 export default function UserAccessPage() {
   const { enqueueSnackbar } = useSnackbar();
@@ -244,8 +255,12 @@ export default function UserAccessPage() {
               <ShieldCheck className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900">Usuarios con acceso</h1>
-              <p className="text-sm text-gray-600">Administra usuarios que pueden acceder al sistema.</p>
+              <h1 className="text-lg font-bold text-gray-900">
+                Usuarios con acceso
+              </h1>
+              <p className="text-sm text-gray-600">
+                Administra usuarios que pueden acceder al sistema.
+              </p>
             </div>
           </div>
           <Button
@@ -259,7 +274,7 @@ export default function UserAccessPage() {
 
       {/* Filtros */}
       <Card className="border-blue-100 bg-blue-50">
-        <CardHeader className="pb-3">
+        <CardHeader>
           <CardTitle className="text-base font-bold text-blue-700 flex items-center gap-2">
             <Search className="h-4 w-4" /> Búsqueda
           </CardTitle>
@@ -294,42 +309,68 @@ export default function UserAccessPage() {
       {/* Tabla */}
       <Card className="p-0 overflow-hidden border-gray-100">
         <CardHeader className="border-b border-gray-100 bg-white pb-4">
-          <CardTitle className="text-sm font-bold text-gray-900">Lista de usuarios</CardTitle>
+          <CardTitle className="text-sm font-bold text-gray-900">
+            Lista de usuarios
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50">
-                  <TableHead className="text-xs font-semibold uppercase text-gray-600">Nombre</TableHead>
-                  <TableHead className="text-xs font-semibold uppercase text-gray-600">Correo</TableHead>
-                  <TableHead className="text-xs font-semibold uppercase text-gray-600">Estado</TableHead>
-                  <TableHead className="text-right text-xs font-semibold uppercase text-gray-600">Acciones</TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                    Nombre
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                    Correo
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                    Estado
+                  </TableHead>
+                  <TableHead className="text-right text-xs font-semibold uppercase text-gray-600">
+                    Acciones
+                  </TableHead>
                 </TableRow>
               </TableHeader>
 
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-8 text-sm text-gray-600">
+                    <TableCell
+                      colSpan={4}
+                      className="text-center py-8 text-sm text-gray-600"
+                    >
                       Cargando...
                     </TableCell>
                   </TableRow>
                 ) : accesos.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-10 text-sm text-gray-600">
-                      {debouncedSearch ? "No se encontraron resultados para tu búsqueda." : "No hay usuarios registrados."}
+                    <TableCell
+                      colSpan={4}
+                      className="text-center py-10 text-sm text-gray-600"
+                    >
+                      {debouncedSearch
+                        ? "No se encontraron resultados para tu búsqueda."
+                        : "No hay usuarios registrados."}
                     </TableCell>
                   </TableRow>
                 ) : (
                   accesos.map((acceso) => {
                     const esMiAcceso = acceso.correo === dataUser?.correo;
-                    const activo = String(acceso.estado || "").toLowerCase() === "activo";
+                    const activo =
+                      String(acceso.estado || "").toLowerCase() === "activo";
 
                     return (
-                      <TableRow key={acceso.id_acceso} className="hover:bg-zinc-50">
-                        <TableCell className="font-medium text-gray-900">{acceso.nombre}</TableCell>
-                        <TableCell className="text-gray-700">{acceso.correo}</TableCell>
+                      <TableRow
+                        key={acceso.id_acceso}
+                        className="hover:bg-zinc-50"
+                      >
+                        <TableCell className="font-medium text-gray-900">
+                          {acceso.nombre}
+                        </TableCell>
+                        <TableCell className="text-gray-700">
+                          {acceso.correo}
+                        </TableCell>
                         <TableCell>
                           <span
                             className={
@@ -345,7 +386,11 @@ export default function UserAccessPage() {
                           <div className="flex items-center justify-end gap-2">
                             <button
                               className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:pointer-events-none"
-                              title={esMiAcceso ? "No puedes editar tu propio acceso" : "Editar"}
+                              title={
+                                esMiAcceso
+                                  ? "No puedes editar tu propio acceso"
+                                  : "Editar"
+                              }
                               disabled={esMiAcceso}
                               onClick={() => abrirEditar(acceso)}
                             >
@@ -353,7 +398,11 @@ export default function UserAccessPage() {
                             </button>
                             <button
                               className="p-2 bg-red-50 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 disabled:pointer-events-none"
-                              title={esMiAcceso ? "No puedes eliminar tu propio acceso" : "Eliminar"}
+                              title={
+                                esMiAcceso
+                                  ? "No puedes eliminar tu propio acceso"
+                                  : "Eliminar"
+                              }
                               disabled={esMiAcceso}
                               onClick={() => confirmarEliminar(acceso)}
                             >
@@ -388,14 +437,17 @@ export default function UserAccessPage() {
               </span>
               {accesoSeleccionado ? "Editar acceso" : "Nuevo acceso"}
             </DialogTitle>
-            <p className="text-sm text-white/80">Crea o actualiza usuarios con acceso al sistema.</p>
+            <p className="text-sm text-white/80">
+              Crea o actualiza usuarios con acceso al sistema.
+            </p>
           </DialogHeader>
 
           <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
             <Alert className="border-blue-200 bg-blue-50">
               <AlertDescription className="text-sm text-blue-900 flex items-start gap-2">
                 <Mail className="h-4 w-4 mt-0.5 text-blue-700" />
-                Usa un correo válido; se utiliza para iniciar sesión y notificaciones.
+                Usa un correo válido; se utiliza para iniciar sesión y
+                notificaciones.
               </AlertDescription>
             </Alert>
 
@@ -447,7 +499,9 @@ export default function UserAccessPage() {
 
                   <Select
                     value={form.estado}
-                    onValueChange={(value) => setForm({ ...form, estado: value })}
+                    onValueChange={(value) =>
+                      setForm({ ...form, estado: value })
+                    }
                   >
                     <SelectTrigger className="bg-white">
                       <SelectValue placeholder="Selecciona estado" />
@@ -464,10 +518,17 @@ export default function UserAccessPage() {
           </div>
 
           <DialogFooter className="bg-gray-50 border-t border-gray-100 p-4 flex gap-2 sm:justify-end">
-            <Button variant="outline" onClick={() => setOpenForm(false)} className="border-gray-300 text-gray-700 hover:bg-gray-100">
+            <Button
+              variant="outline"
+              onClick={() => setOpenForm(false)}
+              className="border-gray-300 text-gray-700 hover:bg-gray-100"
+            >
               <X className="h-4 w-4 mr-2" /> Cancelar
             </Button>
-            <Button onClick={guardarAcceso} className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white">
+            <Button
+              onClick={guardarAcceso}
+              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white"
+            >
               <Save className="h-4 w-4 mr-2" /> Guardar
             </Button>
           </DialogFooter>
@@ -493,7 +554,8 @@ export default function UserAccessPage() {
           <div className="p-5">
             <Alert className="border-red-200 bg-red-50">
               <AlertDescription className="text-sm text-red-800">
-                ¿Seguro que deseas eliminar el acceso de <strong>{accesoSeleccionado?.correo}</strong>?
+                ¿Seguro que deseas eliminar el acceso de{" "}
+                <strong>{accesoSeleccionado?.correo}</strong>?
               </AlertDescription>
             </Alert>
           </div>
@@ -502,7 +564,10 @@ export default function UserAccessPage() {
             <AlertDialogCancel className="border border-gray-300 text-gray-700 hover:bg-gray-100">
               <X className="h-4 w-4 mr-2" /> Cancelar
             </AlertDialogCancel>
-            <AlertDialogAction onClick={eliminarAcceso} className="bg-red-600 hover:bg-red-700 text-white">
+            <AlertDialogAction
+              onClick={eliminarAcceso}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
               <Trash2 className="h-4 w-4 mr-2" /> Sí, eliminar
             </AlertDialogAction>
           </AlertDialogFooter>
