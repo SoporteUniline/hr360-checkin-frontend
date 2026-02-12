@@ -17,6 +17,13 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-
 
 import { Button } from "@/components/ui/button";
 
+// NOTA (dev):
+// Leaflet + Next.js Fast Refresh (y React StrictMode en dev) pueden dejar el contenedor “ensuciado”
+// entre re-mounts. Para evitar:
+// - "Map container is being reused by another instance"
+// - "Cannot read properties of undefined (reading 'appendChild')"
+// hacemos el cleanup EN EL PADRE del MapContainer (para que corra después de que TileLayer/Markers limpien).
+
 /**
  * Crea un icono numerado (divIcon) para Leaflet.
  * - Relación: emula el marcador numerado de `Mapas -rutas.html`
@@ -285,13 +292,54 @@ export function RutaMap({
   const initialCenter = bounds.length ? bounds[0] : defaultCenter;
 
   const activePoint = animacionActiva ? puntos[indicePunto] : null;
+  const mapRef = useRef(null);
+  const mapKey = useMemo(() => {
+    const first = puntos?.[0];
+    // Cambia al cambiar de día/selección para evitar reuso del contenedor durante refresh.
+    return `mr-main-${first?.id_registro || "none"}-${puntos?.length || 0}`;
+  }, [puntos]);
+
+  useEffect(() => {
+    // Cleanup al desmontar RutaMap.
+    // Importante: se ejecuta DESPUÉS del cleanup de hijos (TileLayer/Markers), evitando carreras.
+    return () => {
+      const map = mapRef.current;
+      if (!map) return;
+      // Dejamos que los hijos desmonten primero y luego removemos el mapa.
+      setTimeout(() => {
+        try {
+          const container = map?.getContainer?.();
+          map?.remove?.();
+          if (container && container._leaflet_id) {
+            try {
+              delete container._leaflet_id;
+            } catch {
+              // no-op
+            }
+          }
+        } catch {
+          // no-op
+        }
+        mapRef.current = null;
+      }, 0);
+    };
+  }, []);
 
   return (
     <div
       className="h-[520px] md:h-[calc(100svh-12rem)] min-h-[520px] w-full rounded-xl overflow-hidden border"
       style={{ borderColor: "var(--mr-border)" }}
     >
-      <MapContainer center={initialCenter} zoom={12} zoomControl={false} style={{ height: "100%", width: "100%" }}>
+      <MapContainer
+        key={mapKey}
+        center={initialCenter}
+        zoom={12}
+        zoomControl={false}
+        style={{ height: "100%", width: "100%" }}
+        whenCreated={(map) => {
+          mapRef.current = map;
+        }}
+      >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -338,7 +386,7 @@ export function RutaMap({
           <Polyline
             key={`poly-${idx}`}
             positions={line}
-            pathOptions={{ color: "#37495E", weight: 4, opacity: 0.8, dashArray: "10, 5" }}
+            pathOptions={{ color: "#2563EB", weight: 4, opacity: 0.8, dashArray: "10, 5" }}
           />
         ))}
 
@@ -382,9 +430,44 @@ export function RutaMap({
 export function ModalPointMap({ point }) {
   if (!point) return null;
 
+  const modalKey = `mr-modal-${point?.id_registro || point?.secuencia || "none"}`;
+  const mapRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      const map = mapRef.current;
+      if (!map) return;
+      setTimeout(() => {
+        try {
+          const container = map?.getContainer?.();
+          map?.remove?.();
+          if (container && container._leaflet_id) {
+            try {
+              delete container._leaflet_id;
+            } catch {
+              // no-op
+            }
+          }
+        } catch {
+          // no-op
+        }
+        mapRef.current = null;
+      }, 0);
+    };
+  }, []);
+
   return (
     <div className="h-[70vh] min-h-[420px] rounded-xl overflow-hidden border" style={{ borderColor: "var(--mr-border)" }}>
-      <MapContainer center={[point.lat, point.lng]} zoom={17} zoomControl={false} style={{ height: "100%", width: "100%" }}>
+      <MapContainer
+        key={modalKey}
+        center={[point.lat, point.lng]}
+        zoom={17}
+        zoomControl={false}
+        style={{ height: "100%", width: "100%" }}
+        whenCreated={(map) => {
+          mapRef.current = map;
+        }}
+      >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

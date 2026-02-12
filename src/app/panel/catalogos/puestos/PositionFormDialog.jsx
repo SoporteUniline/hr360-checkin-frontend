@@ -27,7 +27,7 @@ export default function PositionFormDialog({
   const [nombre, setNombre] = useState("");
   const [error, setError] = useState("");
   const [empresaSeleccionada, setEmpresaSeleccionada] = useState(
-    id_empresa ? String(id_empresa) : ""
+    id_empresa ? String(id_empresa) : "",
   );
 
   const formInvalido =
@@ -49,7 +49,7 @@ export default function PositionFormDialog({
       (position) =>
         position.nombre_puesto.toLowerCase() === nombre.toLowerCase() &&
         Number(position.id_empresa) === Number(empresaSeleccionada) &&
-        position.id_puesto !== editPosition?.id_puesto
+        position.id_puesto !== editPosition?.id_puesto,
     );
 
     if (existe) {
@@ -61,7 +61,7 @@ export default function PositionFormDialog({
       if (editPosition) {
         await axios.put(
           `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/puestos/${editPosition.id_puesto}`,
-          { nombre }
+          { nombre },
         );
         enqueueSnackbar("Puesto actualizado correctamente", {
           variant: "success",
@@ -72,7 +72,7 @@ export default function PositionFormDialog({
           {
             nombre: nombre.trim(),
             id_empresa: Number(empresaSeleccionada),
-          }
+          },
         );
 
         enqueueSnackbar("Puesto agregado correctamente", {
@@ -80,7 +80,7 @@ export default function PositionFormDialog({
         });
       }
       await mutate(
-        (key) => typeof key === "string" && key.startsWith(mutateKey)
+        (key) => typeof key === "string" && key.startsWith(mutateKey),
       );
 
       setOpen(false);
@@ -98,27 +98,58 @@ export default function PositionFormDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen} modal={false}>
-      {open && <div className="fixed inset-0 bg-black/50 z-40" />}
-      <DialogContent
-        className="z-50"
-        onInteractOutside={(e) => {
-          // Si el clic viene de algo con el atributo de "popover", no cierres ni bloquees
-          if (e.target.closest("[data-radix-popper-content-wrapper]")) {
-            e.preventDefault();
-          }
-        }}
-        onOpenAutoFocus={(e) => {
-          // Si tenemos un combobox, a veces es mejor dejar que el sistema maneje el foco inicial
-          // o simplemente prevenir que el Dialog fuerce el foco al primer botón si no queremos.
-        }}
-      >
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            {editPosition ? "Editar puesto" : "Nuevo puesto"}
-          </DialogTitle>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="bg-gradient-to-br from-[#7C3AED] to-[#6d28d9] p-3 rounded-lg shadow-md">
+              <svg
+                className="w-6 h-6 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                />
+              </svg>
+            </div>
+            <DialogTitle className="text-xl font-bold text-gray-900">
+              {editPosition ? "Editar puesto" : "Nuevo puesto"}
+            </DialogTitle>
+          </div>
         </DialogHeader>
-        <div className="my-4 space-y-2">
+
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
+          <div className="flex items-start gap-3">
+            <div className="bg-[#7C3AED] p-2 rounded-lg flex-shrink-0">
+              <svg
+                className="w-4 h-4 text-white"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <p className="text-xs text-gray-700">
+                Los puestos definen las responsabilidades y roles dentro de tu
+                organización.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
           {!editPosition && (
             <div>
               <Label htmlFor="empresa-combobox" className="mb-2">
@@ -137,23 +168,41 @@ export default function PositionFormDialog({
             </div>
           )}
 
-          <Input
-            placeholder="Nombre del puesto"
-            value={nombre}
-            onChange={(e) => {
-              setNombre(e.target.value);
-              setError("");
-            }}
-            className="w-full"
-          />
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-gray-700">
+              Nombre del puesto
+            </label>
+            <Input
+              placeholder="Ej. Gerente, Desarrollador, Contador..."
+              value={nombre}
+              onChange={(e) => {
+                setNombre(e.target.value);
+                setError("");
+              }}
+              className="w-full"
+              autoFocus
+            />
+          </div>
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-sm text-red-700 font-medium">⚠️ {error}</p>
+            </div>
+          )}
         </div>
 
-        <DialogFooter className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => setOpen(false)}>
+        <DialogFooter className="flex justify-end gap-3 mt-6">
+          <Button
+            variant="outline"
+            onClick={() => setOpen(false)}
+            className="border-gray-300"
+          >
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={formInvalido}>
+          <Button
+            onClick={handleSubmit}
+            disabled={formInvalido}
+            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
+          >
             {editPosition ? "Actualizar" : "Agregar"}
           </Button>
         </DialogFooter>

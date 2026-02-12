@@ -376,7 +376,8 @@ const FacialRecognitionPanel = ({
                     prev === "user" ? "environment" : "user",
                   )
                 }
-                className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition"
+                variant="outline"
+                className="border-gray-300 text-gray-700 hover:bg-gray-100"
               >
                 Cambiar cámara
               </Button>
@@ -385,7 +386,7 @@ const FacialRecognitionPanel = ({
                 onClick={() => {
                   handleOpenFacialModal();
                 }}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-500 transition"
+                className="bg-red-600 hover:bg-red-700 text-white shadow-sm"
               >
                 Apagar cámara
               </Button>
@@ -410,7 +411,7 @@ const FacialRecognitionPanel = ({
                           prev === "user" ? "environment" : "user",
                         )
                       }
-                      className="px-3 py-2 bg-gray-800 text-white rounded-lg opacity-90 hover:bg-white hover:text-slate-700"
+                      className="px-3 py-2 bg-[#2563EB] text-white rounded-lg opacity-90 hover:bg-[#1d4ed8] shadow-sm"
                     >
                       <RotateCcw />
                       Cambiar
@@ -418,7 +419,7 @@ const FacialRecognitionPanel = ({
 
                     <Button
                       onClick={handleOpenFacialModal}
-                      className="px-3 py-2 bg-red-600 text-white rounded-lg opacity-90 hover:bg-white hover:text-red-600"
+                      className="px-3 py-2 bg-red-600 text-white rounded-lg opacity-90 hover:bg-red-700 shadow-sm"
                     >
                       <Power />
                       Apagar

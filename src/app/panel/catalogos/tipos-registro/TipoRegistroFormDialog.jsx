@@ -16,6 +16,7 @@ import { mutate } from "swr";
 import { useSnackbar } from "notistack";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Combobox } from "@/components/Combobox";
+import { BookOpen, Info, Save } from "lucide-react";
 
 export default function TipoRegistroFormDialog({
   open,
@@ -126,16 +127,29 @@ export default function TipoRegistroFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-2xl overflow-y-auto max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-[#2c3e50]">
+      <DialogContent className="p-0 overflow-hidden sm:max-w-lg">
+        <DialogHeader className="p-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white">
+          <DialogTitle className="flex items-center gap-2 text-base font-bold">
+            <span className="grid size-9 place-items-center rounded-lg bg-white/15">
+              <BookOpen className="size-5 text-white" />
+            </span>
             {editRegistro
-              ? "Editar Tipo de Registro"
-              : "Nuevo Tipo de Registro"}
+              ? "Editar tipo de registro"
+              : "Nuevo tipo de registro"}
           </DialogTitle>
+          <p className="text-sm text-white/80">
+            Configura cómo se comporta este registro en asistencias/permisos.
+          </p>
         </DialogHeader>
 
-        <div className="space-y-6 py-2">
+        <div className="max-h-[70vh] overflow-y-auto p-5 space-y-4">
+          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900 flex gap-2">
+            <Info className="h-4 w-4 mt-0.5 text-blue-700" />
+            <div>
+              Cambios en este catálogo impactan filtros y cálculos en módulos
+              como <b>Asistencias</b>, <b>Permisos</b> y <b>Vacaciones</b>.
+            </div>
+          </div>
           {/* SECCIÓN 1: IDENTIFICACIÓN */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">

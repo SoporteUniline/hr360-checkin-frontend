@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, MapPin, Search } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import SucursalesTable from "./SucursalesTable";
 import SucursalFormDialog from "./SucursalFormDialog";
@@ -27,16 +27,33 @@ export default function Sucursales() {
   const key = `/checador/sucursales?id_empresa=${empresaActiva}&nombre=${debouncedFilter}`;
 
   return (
-    <div className="space-y-4">
-      {/* Encabezado (colores del sistema) - Relación: guía `Colores.txt` */}
-      <div>
-        <h1 className="text-2xl font-bold text-[#2c3e50]">Sucursales</h1>
-        <p className="text-sm text-[#6b7280]">
-          Catálogo de sucursales para la empresa (crear, editar y eliminar)
-        </p>
+    <div className="min-h-screen bg-[#F9FAFB] p-6">
+      {/* Header del módulo - Estilo ADAMIA */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="bg-emerald-50 p-3 rounded-lg">
+            <MapPin className="w-7 h-7 text-emerald-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">Sucursales</h1>
+            <p className="text-sm text-gray-600">
+              Gestiona las sucursales de tu empresa
+            </p>
+          </div>
+        </div>
+        <Button
+          className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
+          onClick={() => {
+            setEditSuc(null);
+            setOpenFormModal(true);
+          }}
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Nueva sucursal
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-[250px_1fr_auto] gap-4 items-end mb-4">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6 grid grid-cols-1 md:grid-cols-[250px_1fr_auto] gap-4 items-end">
         <div className="flex flex-col gap-1">
           <Label>Empresa</Label>
           <Combobox
@@ -61,15 +78,6 @@ export default function Sucursales() {
             onChange={(e) => setFilter(e.target.value)}
           />
         </div>
-        <Button
-          className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]"
-          onClick={() => {
-            setEditSuc(null);
-            setOpenFormModal(true);
-          }}
-        >
-          <Plus className="h-4 w-4 mr-1" /> Nuevo
-        </Button>
       </div>
 
       <SucursalesTable

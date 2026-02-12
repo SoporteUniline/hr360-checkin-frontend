@@ -1,17 +1,14 @@
 // app/layout.jsx
-import { Geist, Geist_Mono } from "next/font/google";
+// Tipografía oficial ADAMIA: Inter
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import Script from "next/script";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata = {
@@ -32,7 +29,8 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${inter.variable} antialiased`}
+        style={{ fontFamily: "var(--font-inter)" }}
       >
         <AuthProvider>{children}</AuthProvider>
       </body>

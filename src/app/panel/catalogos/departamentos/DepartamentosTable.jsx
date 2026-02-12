@@ -9,7 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import useSWR, { mutate } from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { useEffect, useState } from "react";
@@ -49,52 +49,102 @@ export default function DepartamentosTable({
     }
   }, [departamentos]);
 
-  if (departamentos.length === 0)
+  if (isLoading) {
     return (
-      <div className="text-center py-10 text-muted-foreground">
-        No se encontraron departamentos.
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-10">
+        <div className="text-center text-gray-500">
+          Cargando departamentos...
+        </div>
       </div>
     );
+  }
 
-  if (isLoading) return <p>Cargando...</p>;
-  if (error) return <p>Error al cargar departamentos</p>;
+  if (error) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-10">
+        <div className="text-center text-red-500">
+          Error al cargar departamentos
+        </div>
+      </div>
+    );
+  }
+
+  if (departamentos.length === 0) {
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-10">
+        <div className="text-center text-gray-500">
+          No se encontraron departamentos.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Nombre</TableHead>
-            {showEmpresa && <TableHead>Empresa</TableHead>}
-            <TableHead className="text-right">Acciones</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {departamentos.map((dep) => (
-            <TableRow key={dep.id_departamento}>
-              <TableCell>{dep.nombre}</TableCell>
-              {showEmpresa && <TableCell>{dep.empresa_nombre}</TableCell>}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+        {/* Header de la tabla */}
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Lista de departamentos
+          </h2>
+        </div>
 
-              <TableCell className="text-right flex justify-end gap-2">
-                <Button
-                  size="icon"
-                  variant="secondary"
-                  onClick={() => onEdit(dep, departamentos)}
+        {/* Tabla */}
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-gray-50 hover:bg-gray-50">
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs">
+                  Nombre
+                </TableHead>
+                {showEmpresa && (
+                  <TableHead className="font-semibold text-gray-700 uppercase text-xs">
+                    Empresa
+                  </TableHead>
+                )}
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-right">
+                  Acciones
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {departamentos.map((dep) => (
+                <TableRow
+                  key={dep.id_departamento}
+                  className="hover:bg-gray-50 border-b border-gray-100"
                 >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="destructive"
-                  onClick={() => onDelete(dep.id_departamento, key)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+                  <TableCell className="font-medium text-gray-900">
+                    {dep.nombre}
+                  </TableCell>
+                  {showEmpresa && (
+                    <TableCell className="font-medium text-gray-900">
+                      {dep.empresa_nombre}
+                    </TableCell>
+                  )}
+                  <TableCell className="text-right">
+                    <div className="flex justify-end items-center gap-2">
+                      <button
+                        onClick={() => onEdit(dep, departamentos)}
+                        className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                        title="Editar"
+                      >
+                        <Pencil className="h-4 w-4 text-[#2563EB]" />
+                      </button>
+                      <button
+                        onClick={() => onDelete(dep.id_departamento, key)}
+                        className="p-2 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                        title="Eliminar"
+                      >
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                      </button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
       <TablePagination
         page={page}
         limit={limit}

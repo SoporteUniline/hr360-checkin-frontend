@@ -6,7 +6,8 @@ import {
   QrCode,
   ScanEye,
   XCircle,
-  User,
+  Clock4,
+  AlertTriangle,
 } from "lucide-react";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
@@ -266,158 +267,181 @@ export default function RelojChecador({
 
   return (
     <>
-      <main className="min-h-screen bg-linear-to-br from-slate-50 via-gray-50 to-slate-100 p-4">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-6">
-          <div className="hidden md:block lg:col-span-4 md:col-span-5 space-y-6">
-            <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-slate-200/50 p-6 text-center">
-              <ClockDisplay horaActual={horaActual} fechaActual={fechaActual} />
-              <EmployeeInput
-                codigo={codigoEmpleado}
-                setCodigo={setCodigoEmpleado}
-                handleRegistrar={registrarMovimiento}
-                handleOpenQR={handleOpenQR}
-                registrando={registrando || loadingGPS}
-                enqueueSnackbar={enqueueSnackbar}
-              />
-            </div>
-            <StatsCards
-              empleadosActivos={empleadosActivos}
-              totalRegistros={totalRegistros}
-            />
-          </div>
-
-          <div className="lg:col-span-8 md:col-span-7 md:space-y-6">
-            <div className="block md:hidden mb-6 text-center space-y-1">
-              <h1 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                HR360 - Sistema de Asistencia
-              </h1>
-              <div className="py-2">
-                <p className="text-6xl font-black text-slate-900 tracking-tighter antialiased">
-                  {horaActual.split(":")[0]}:{horaActual.split(":")[1]}
-                  <span className="text-2xl text-blue-500 font-medium ml-1">
-                    {horaActual.split(":")[2]}
-                  </span>
-                </p>
-                <p className="text-xs font-bold text-slate-500 uppercase mt-1 tracking-wider">
-                  {fechaActual}
+      <main className="min-h-screen bg-[#F9FAFB] p-4">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Header ADAMIA */}
+          <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+            <div className="flex items-center gap-3">
+              <div className="bg-[#2563EB] p-2.5 rounded-lg">
+                <Clock4 className="w-5 h-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <h1 className="text-lg font-bold text-gray-900">
+                  Reloj checador
+                </h1>
+                <p className="text-sm text-gray-600">
+                  Registro de entradas y salidas con validación por código, QR y
+                  reconocimiento facial.
                 </p>
               </div>
             </div>
+          </div>
 
-            <div className="flex md:hidden mb-8 bg-slate-200/60 p-1.5 rounded-2xl border border-slate-200 shadow-inner">
-              {[
-                { id: "qr", icon: QrCode, label: "QR" },
-                { id: "codigo", icon: Keyboard, label: "Código" },
-                { id: "facial", icon: ScanEye, label: "Rostro" },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => {
-                    setMetodo(tab.id);
-                    if (tab.id === "facial") abrirCamara();
-                    if (tab.id === "qr") {
-                      setMostrarCamara(false);
-                      setMostrarQR(false);
-                    }
-                    if (tab.id === "codigo") {
-                      setMostrarCamara(false);
-                      setMostrarQR(false);
-                    }
-                  }}
-                  className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all duration-300 ${
-                    metodo === tab.id
-                      ? "bg-white text-slate-900 shadow-md scale-[1.02]"
-                      : "text-slate-500 hover:text-slate-700"
-                  }`}
-                >
-                  <tab.icon
-                    className={`w-5 h-5 ${
-                      metodo === tab.id ? "text-blue-600" : ""
-                    }`}
-                  />
-                  <span className="text-[10px] font-black uppercase tracking-tight">
-                    {tab.label}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            <div className="relative min-h-75">
-              {(metodo === "facial" || !isMobile) && (
-                <div
-                  className={
-                    metodo === "facial"
-                      ? "block animate-in fade-in duration-500"
-                      : "hidden md:block"
-                  }
-                >
-                  <FacialRecognitionPanel
-                    isOpen={mostrarCamara}
-                    onOpen={() => setMostrarCamara(true)}
-                    onClose={() => setMostrarCamara(false)}
-                    onSuccess={handleFacialResponse}
-                    idEmpresa={idEmpresa}
-                    handleOpenFacialModal={() => setMostrarCamara(false)}
-                  />
-                </div>
-              )}
-
-              {/* Interfaz para el Tab de QR */}
-              {metodo === "qr" && (
-                <div className="block md:hidden bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 p-8 animate-in zoom-in-95 fade-in duration-300">
-                  <div className="text-center mb-8">
-                    <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-blue-100">
-                      <QrCode className="w-10 h-10 text-blue-600" />
-                    </div>
-                    <h2 className="font-black text-2xl text-slate-800">
-                      Escaneo de QR
-                    </h2>
-                    <p className="text-slate-500 text-sm font-medium mt-1">
-                      Presiona el botón para activar la cámara
-                    </p>
-                  </div>
-
-                  <Button
-                    onClick={handleOpenQR}
-                    disabled={registrando}
-                    className="w-full py-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-lg shadow-xl shadow-blue-100 border-none transition-all flex items-center justify-center gap-3"
-                  >
-                    <ScanEye className="w-6 h-6" />
-                    {registrando ? "ESPERE..." : "ABRIR ESCÁNER"}
-                  </Button>
-                </div>
-              )}
-
-              {metodo === "codigo" && (
-                <div className="block md:hidden bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 p-8 animate-in zoom-in-95 fade-in duration-300">
-                  <div className="text-center mb-8">
-                    <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-blue-100">
-                      <Keyboard className="w-10 h-10 text-blue-600" />
-                    </div>
-                    <h2 className="font-black text-2xl text-slate-800">
-                      Check por código
-                    </h2>
-                    <p className="text-slate-500 text-sm font-medium mt-1">
-                      Registra tu entrada o salida
-                    </p>
-                  </div>
-                  <EmployeeInput
-                    codigo={codigoEmpleado}
-                    setCodigo={setCodigoEmpleado}
-                    handleRegistrar={registrarMovimiento}
-                    registrando={registrando}
-                    enqueueSnackbar={enqueueSnackbar}
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="hidden md:block mt-6">
-              <RecordsTable
-                movimientos={movimientos}
-                isLoading={isLoading}
-                formatearHora={formatearHora}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+            <div className="hidden md:block lg:col-span-4 md:col-span-5 space-y-6">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
+                <ClockDisplay
+                  horaActual={horaActual}
+                  fechaActual={fechaActual}
+                />
+                <EmployeeInput
+                  codigo={codigoEmpleado}
+                  setCodigo={setCodigoEmpleado}
+                  handleRegistrar={registrarMovimiento}
+                  handleOpenQR={handleOpenQR}
+                  registrando={registrando || loadingGPS}
+                  enqueueSnackbar={enqueueSnackbar}
+                />
+              </div>
+              <StatsCards
+                empleadosActivos={empleadosActivos}
+                totalRegistros={totalRegistros}
               />
+            </div>
+
+            <div className="lg:col-span-8 md:col-span-7 md:space-y-6">
+              <div className="block md:hidden mb-6 text-center space-y-1">
+                <h1 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
+                  HR360 - Sistema de Asistencia
+                </h1>
+                <div className="py-2">
+                  <p className="text-6xl font-black text-slate-900 tracking-tighter antialiased">
+                    {horaActual.split(":")[0]}:{horaActual.split(":")[1]}
+                    <span className="text-2xl text-blue-500 font-medium ml-1">
+                      {horaActual.split(":")[2]}
+                    </span>
+                  </p>
+                  <p className="text-xs font-bold text-slate-500 uppercase mt-1 tracking-wider">
+                    {fechaActual}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex md:hidden mb-8 bg-slate-200/60 p-1.5 rounded-2xl border border-slate-200 shadow-inner">
+                {[
+                  { id: "qr", icon: QrCode, label: "QR" },
+                  { id: "codigo", icon: Keyboard, label: "Código" },
+                  { id: "facial", icon: ScanEye, label: "Rostro" },
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      setMetodo(tab.id);
+                      if (tab.id === "facial") abrirCamara();
+                      if (tab.id === "qr") {
+                        setMostrarCamara(false);
+                        setMostrarQR(false);
+                      }
+                      if (tab.id === "codigo") {
+                        setMostrarCamara(false);
+                        setMostrarQR(false);
+                      }
+                    }}
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all duration-300 ${
+                      metodo === tab.id
+                        ? "bg-white text-slate-900 shadow-md scale-[1.02]"
+                        : "text-slate-500 hover:text-slate-700"
+                    }`}
+                  >
+                    <tab.icon
+                      className={`w-5 h-5 ${
+                        metodo === tab.id ? "text-blue-600" : ""
+                      }`}
+                    />
+                    <span className="text-[10px] font-black uppercase tracking-tight">
+                      {tab.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
+              <div className="relative min-h-75">
+                {(metodo === "facial" || !isMobile) && (
+                  <div
+                    className={
+                      metodo === "facial"
+                        ? "block animate-in fade-in duration-500"
+                        : "hidden md:block"
+                    }
+                  >
+                    <FacialRecognitionPanel
+                      isOpen={mostrarCamara}
+                      onOpen={() => setMostrarCamara(true)}
+                      onClose={() => setMostrarCamara(false)}
+                      onSuccess={handleFacialResponse}
+                      idEmpresa={idEmpresa}
+                      handleOpenFacialModal={() => setMostrarCamara(false)}
+                    />
+                  </div>
+                )}
+
+                {/* Interfaz para el Tab de QR */}
+                {metodo === "qr" && (
+                  <div className="block md:hidden bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 p-8 animate-in zoom-in-95 fade-in duration-300">
+                    <div className="text-center mb-8">
+                      <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-blue-100">
+                        <QrCode className="w-10 h-10 text-blue-600" />
+                      </div>
+                      <h2 className="font-black text-2xl text-slate-800">
+                        Escaneo de QR
+                      </h2>
+                      <p className="text-slate-500 text-sm font-medium mt-1">
+                        Presiona el botón para activar la cámara
+                      </p>
+                    </div>
+
+                    <Button
+                      onClick={handleOpenQR}
+                      disabled={registrando}
+                      className="w-full py-8 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-black text-lg shadow-xl shadow-blue-100 border-none transition-all flex items-center justify-center gap-3"
+                    >
+                      <ScanEye className="w-6 h-6" />
+                      {registrando ? "ESPERE..." : "ABRIR ESCÁNER"}
+                    </Button>
+                  </div>
+                )}
+
+                {metodo === "codigo" && (
+                  <div className="block md:hidden bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 p-8 animate-in zoom-in-95 fade-in duration-300">
+                    <div className="text-center mb-8">
+                      <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-blue-100">
+                        <Keyboard className="w-10 h-10 text-blue-600" />
+                      </div>
+                      <h2 className="font-black text-2xl text-slate-800">
+                        Check por código
+                      </h2>
+                      <p className="text-slate-500 text-sm font-medium mt-1">
+                        Registra tu entrada o salida
+                      </p>
+                    </div>
+                    <EmployeeInput
+                      codigo={codigoEmpleado}
+                      setCodigo={setCodigoEmpleado}
+                      handleRegistrar={registrarMovimiento}
+                      registrando={registrando}
+                      enqueueSnackbar={enqueueSnackbar}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="hidden md:block mt-6">
+                <RecordsTable
+                  movimientos={movimientos}
+                  isLoading={isLoading}
+                  formatearHora={formatearHora}
+                />
+              </div>
             </div>
           </div>
         </div>

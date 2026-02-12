@@ -299,62 +299,102 @@ export default function TabReconocimiento({
   }
 
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex flex-col items-center gap-6 py-4">
       {loadingModels ? (
-        <p>Cargando modelos...</p>
+        <div className="flex flex-col items-center gap-3 py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2563EB]"></div>
+          <p className="text-gray-600 font-medium">Cargando modelos de reconocimiento facial...</p>
+        </div>
       ) : (
         <>
-          <div className="relative w-[300px] h-[300px]">
-            <video
-              ref={videoRef}
-              width={300}
-              height={300}
-              className="border rounded"
-              muted
-              autoPlay
-              playsInline
-            />
-            <canvas
-              ref={canvasRef}
-              className="absolute top-0 left-0 w-full h-full"
-            />
+          {/* Información de ayuda */}
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 max-w-md">
+            <div className="flex items-start gap-3">
+              <div className="bg-[#2563EB] p-2 rounded-lg flex-shrink-0">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h4 className="font-semibold text-gray-900 mb-1">Reconocimiento facial</h4>
+                <p className="text-sm text-gray-600">
+                  Posiciona tu rostro en el centro del cuadro. Asegúrate de tener buena iluminación y estar en un lugar sin distracciones.
+                </p>
+              </div>
+            </div>
           </div>
 
+          {/* Video con marco mejorado */}
+          <div className="relative">
+            <div className="absolute -inset-4 bg-gradient-to-r from-blue-400 to-purple-400 rounded-2xl blur opacity-20"></div>
+            <div className="relative bg-white p-4 rounded-2xl shadow-lg">
+              <div className="relative w-[300px] h-[300px] rounded-xl overflow-hidden bg-gray-900">
+                <video
+                  ref={videoRef}
+                  width={300}
+                  height={300}
+                  className="w-full h-full object-cover"
+                  muted
+                  autoPlay
+                  playsInline
+                />
+                <canvas
+                  ref={canvasRef}
+                  className="absolute top-0 left-0 w-full h-full"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Estado de guía con colores */}
+          <div className={`px-4 py-2 rounded-lg font-medium text-sm ${
+            guidance.level === "success"
+              ? "bg-green-50 text-green-700 border border-green-200"
+              : guidance.level === "warning"
+              ? "bg-yellow-50 text-yellow-700 border border-yellow-200"
+              : guidance.level === "error"
+              ? "bg-red-50 text-red-700 border border-red-200"
+              : "bg-gray-50 text-gray-700 border border-gray-200"
+          }`}>
+            {guidance.text}
+          </div>
+
+          {/* Botones con colores ADAMIA */}
           {!soloLectura && (
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <Button
                 type="button"
                 onClick={toggleCamera}
-                variant={cameraActive ? "destructive" : "default"}
+                className={
+                  cameraActive
+                    ? "bg-red-500 hover:bg-red-600 text-white font-medium shadow-sm"
+                    : "bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
+                }
               >
                 {cameraActive ? "Detener cámara" : "Iniciar cámara"}
               </Button>
               <Button
                 type="button"
                 onClick={handleCapture}
-                disabled={!cameraActive} // Solo habilitado si la cámara está activa
+                disabled={!cameraActive}
+                className="bg-gray-800 hover:bg-gray-900 text-white font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Capturar descriptor
               </Button>
             </div>
           )}
 
+          {/* Indicador de éxito */}
           {descriptorReady && (
-            <p className="text-green-600">Descriptor listo ✅</p>
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
+              <div className="bg-green-500 p-2 rounded-full">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <p className="font-semibold text-green-700">Rostro detectado ✅</p>
+            </div>
           )}
-          <p
-            className={`text-sm ${
-              guidance.level === "success"
-                ? "text-green-600"
-                : guidance.level === "warning"
-                ? "text-yellow-600"
-                : guidance.level === "error"
-                ? "text-red-600"
-                : "text-gray-600"
-            }`}
-          >
-            {guidance.text}
-          </p>
         </>
       )}
     </div>

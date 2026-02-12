@@ -133,7 +133,22 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
   };
 
   return (
-    <section className="space-y-6 px-4 py-2">
+    <section className="space-y-6">
+      {/* Header de la sección */}
+      <div className="bg-gradient-to-br from-orange-50 via-white to-orange-50 border-2 border-orange-100 rounded-xl p-6">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-3 rounded-lg shadow-md">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-gray-900">Jornada laboral</h3>
+            <p className="text-sm text-gray-600">Define los horarios de trabajo semanales</p>
+          </div>
+        </div>
+
+        <div className="space-y-6">
       {isSubmitted && errors.horarios && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3">
           <p className="text-red-800 text-sm font-medium">
@@ -293,30 +308,38 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
         </table>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6">
-        {" "}
-        {[
-          { name: "hrs_por_dia", label: "Horas laborales por día" },
-          { name: "hrs_de_comida", label: "Horas de comida por día" },
-        ].map(({ name, label }) => (
+        {/* Resumen de horas */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
           <FormField
-            key={name}
-            name={name}
+            name="hrs_por_dia"
             control={form.control}
             render={({ field }) => (
               <FormItem>
-                {" "}
-                <FormLabel className="text-base font-medium">
-                  {label}
-                </FormLabel>{" "}
-                <div className="px-3 py-2 bg-gray-100 border rounded text-sm text-gray-700">
-                  {" "}
-                  {field.value ?? "0.00"} hrs{" "}
-                </div>{" "}
+                <FormLabel className="text-sm font-medium text-gray-700">
+                  Horas laborales por día
+                </FormLabel>
+                <div className="px-4 py-3 bg-blue-50 border-2 border-blue-200 rounded-lg text-lg font-bold text-blue-700">
+                  {field.value ?? "0.00"} hrs
+                </div>
               </FormItem>
             )}
           />
-        ))}{" "}
+          <FormField
+            name="hrs_de_comida"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-sm font-medium text-gray-700">
+                  Horas de comida por día
+                </FormLabel>
+                <div className="px-4 py-3 bg-purple-50 border-2 border-purple-200 rounded-lg text-lg font-bold text-purple-700">
+                  {field.value ?? "0.00"} hrs
+                </div>
+              </FormItem>
+            )}
+          />
+        </div>
+        </div>
       </div>
     </section>
   );

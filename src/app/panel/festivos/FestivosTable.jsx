@@ -9,7 +9,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Pencil, Trash2 } from "lucide-react";
 import useSWR from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { useEffect, useState } from "react";
@@ -55,61 +56,75 @@ export default function FestivosTable({
   if (error) return <p>Error al cargar festivos</p>;
   if (festivos.length === 0)
     return (
-      <div className="text-center py-10 text-muted-foreground">
+      <div className="rounded-xl border border-gray-100 bg-white p-10 text-center text-sm text-gray-600">
         No se encontraron días festivos.
       </div>
     );
 
   return (
     <>
-      <Table>
-        <TableHeader>
-          {/* Header con colores del sistema (ver `Colores.txt`) y sin "lavado" al hover */}
-          <TableRow className="bg-[#37495E] hover:bg-[#37495E]">
-            {id_empresa === "all" && (
-              <TableHead className="text-white">Empresa</TableHead>
-            )}
-            <TableHead className="text-white">Fecha</TableHead>
-            <TableHead className="text-white">Descripción</TableHead>
-            <TableHead className="text-right text-white">Acciones</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {festivos.map((festivo) => (
-            <TableRow key={festivo.id}>
-              {id_empresa === "all" && (
-                <TableCell className="font-medium text-[#2c3e50]">
-                  {festivo.empresa_nombre}
-                </TableCell>
-              )}
-              <TableCell>
-                {festivo.fecha ? formatDateDMYLocal(festivo.fecha) : "-"}
-              </TableCell>
-              <TableCell>{festivo.descripcion}</TableCell>
-              <TableCell className="text-right flex justify-end gap-2">
-                <Button
-                  size="icon"
-                  variant="outline"
-                  // Acción "Editar" según guía: azul + borde claro
-                  className="border-[#93c5fd] text-[#2563eb] hover:bg-[#dbeafe] hover:text-[#1e40af]"
-                  onClick={() => onEdit(festivo, festivos)}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="outline"
-                  // Acción "Eliminar" según guía: rojo + borde claro
-                  className="border-[#fca5a5] text-[#dc2626] hover:bg-[#fee2e2]"
-                  onClick={() => onDelete(festivo.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <Card className="p-0 overflow-hidden border-gray-100">
+        <CardHeader className="border-b border-gray-100 bg-white pb-4">
+          <CardTitle className="text-sm font-bold text-gray-900">
+            Lista de días festivos
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50">
+                  {id_empresa === "all" && (
+                    <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                      Empresa
+                    </TableHead>
+                  )}
+                  <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                    Fecha
+                  </TableHead>
+                  <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                    Descripción
+                  </TableHead>
+                  <TableHead className="text-right text-xs font-semibold uppercase text-gray-600">
+                    Acciones
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {festivos.map((festivo) => (
+                  <TableRow key={festivo.id} className="hover:bg-zinc-50">
+                    {id_empresa === "all" && (
+                      <TableCell>{festivo.empresa_nombre}</TableCell>
+                    )}
+                    <TableCell>
+                      {festivo.fecha ? formatDateDMYLocal(festivo.fecha) : "-"}
+                    </TableCell>
+                    <TableCell>{festivo.descripcion}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end items-center gap-2">
+                        <button
+                          onClick={() => onEdit(festivo, festivos)}
+                          className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                          title="Editar"
+                        >
+                          <Pencil className="h-4 w-4 text-[#2563EB]" />
+                        </button>
+                        <button
+                          onClick={() => onDelete(festivo.id)}
+                          className="p-2 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="h-4 w-4 text-red-600" />
+                        </button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
       <TablePagination
         page={page}
         limit={limit}

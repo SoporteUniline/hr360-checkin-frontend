@@ -16,9 +16,17 @@
 import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { useAuth } from "@/context/AuthContext";
-import { Card } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -49,6 +57,14 @@ import axiosWithBase from "@/lib/axios";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import Cookies from "js-cookie";
 import styles from "../vacaciones-theme.module.css";
+import {
+  AlertTriangle,
+  CalendarDays,
+  Pencil,
+  Plus,
+  Save,
+  Trash2,
+} from "lucide-react";
 
 export default function VacacionesPorPeriodoPage() {
   const { dataUser } = useAuth();
@@ -367,22 +383,29 @@ export default function VacacionesPorPeriodoPage() {
   };
 
   return (
-    <div className={`${styles.vacacionesTheme} p-4 md:p-6 space-y-4`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl md:text-2xl font-semibold">
-            📗 Vacaciones por periodo
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Gestiona periodos de vacaciones por empleado
-          </p>
-        </div>
-        <div className="flex gap-2">
+    <div className={`${styles.vacacionesTheme} space-y-6`}>
+      {/* Header ADAMIA */}
+      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+        <div className="flex items-center justify-between gap-4 flex-col sm:flex-row">
+          <div className="flex items-center gap-3">
+            <div className="bg-[#2563EB] p-2.5 rounded-lg">
+              <CalendarDays className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900">
+                Vacaciones por periodo
+              </h1>
+              <p className="text-sm text-gray-600">
+                Gestiona periodos de vacaciones por empleado.
+              </p>
+            </div>
+          </div>
           <Button
             onClick={openCreate}
-            className="shadow-[0_4px_12px_rgba(55,73,94,0.3)] transition-all hover:-translate-y-0.5"
+            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white w-full sm:w-auto gap-2"
           >
-            ➕ Nuevo
+            <Plus className="h-4 w-4" />
+            Nuevo
           </Button>
         </div>
       </div>
@@ -419,8 +442,12 @@ export default function VacacionesPorPeriodoPage() {
           <p className="text-xl font-semibold text-[#37495E]">{rows.length}</p>
         </div>
       </div>
-
-      <Card className="p-0">
+      <Card className="p-0 overflow-hidden border-gray-100">
+        <CardHeader className="border-b border-gray-100 bg-white pb-4">
+          <CardTitle className="text-sm font-bold text-gray-900">
+            Lista de periodos
+          </CardTitle>
+        </CardHeader>
         {loading ? (
           <div className="text-center text-slate-400 py-16">Cargando...</div>
         ) : error ? (
@@ -432,14 +459,28 @@ export default function VacacionesPorPeriodoPage() {
             <div className="overflow-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Empleado</TableHead>
-                    <TableHead>Departamento</TableHead>
-                    <TableHead>Periodo</TableHead>
-                    <TableHead>Años</TableHead>
-                    <TableHead>Días</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead className="text-center">Acciones</TableHead>
+                  <TableRow className="bg-gray-50">
+                    <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                      Empleado
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                      Departamento
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                      Periodo
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                      Años
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                      Días
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                      Estado
+                    </TableHead>
+                    <TableHead className="text-right text-xs font-semibold uppercase text-gray-600">
+                      Acciones
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -459,24 +500,22 @@ export default function VacacionesPorPeriodoPage() {
                       <TableCell>
                         <EstadoBadge estado={r.estado} />
                       </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex gap-2 justify-center">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-[#93c5fd] text-[#2563eb] hover:bg-[#dbeafe] hover:text-[#1e40af]"
+                      <TableCell className="text-right">
+                        <div className="flex justify-end items-center gap-2">
+                          <button
                             onClick={() => openEdit(r)}
+                            className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                            title="Editar"
                           >
-                            ✏️ Editar
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-[#fca5a5] text-[#dc2626] hover:bg-[#fee2e2]"
+                            <Pencil className="h-4 w-4 text-[#2563EB]" />
+                          </button>
+                          <button
                             onClick={() => setDeleteRow(r)}
+                            className="p-2 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                            title="Eliminar"
                           >
-                            🗑️ Eliminar
-                          </Button>
+                            <Trash2 className="h-4 w-4 text-red-600" />
+                          </button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -508,194 +547,214 @@ export default function VacacionesPorPeriodoPage() {
           }
         }}
       >
-        <DialogContent className={`${styles.vacacionesTheme} max-w-lg`}>
-          <DialogHeader>
-            <DialogTitle>
+        <DialogContent className="p-0 overflow-hidden max-w-[95vw] sm:max-w-lg">
+          <DialogHeader className="p-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white">
+            <DialogTitle className="flex items-center gap-2 text-base font-bold">
+              <span className="grid size-9 place-items-center rounded-lg bg-white/15">
+                <CalendarDays className="size-5 text-white" />
+              </span>
               {editRow ? "Editar periodo" : "Nuevo periodo"}
             </DialogTitle>
+            <p className="text-sm text-white/80">
+              Asigna un periodo y días de vacaciones por empleado.
+            </p>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {/* Selector de Empresa dentro del Modal */}
-            <div className="md:col-span-2 space-y-2">
-              <div className="text-[11px] uppercase text-slate-500 font-bold">
-                Empresa del Periodo
+          <div
+            className={`${styles.vacacionesTheme} max-h-[70vh] overflow-y-auto p-5`}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Selector de Empresa dentro del Modal */}
+              <div className="md:col-span-2 space-y-2">
+                <div className="text-[11px] uppercase text-slate-500 font-bold">
+                  Empresa del Periodo
+                </div>
+                <select
+                  className="w-full border rounded-md px-3 py-2 text-sm bg-white"
+                  value={empresaEnModal}
+                  onChange={(e) => {
+                    setEmpresaEnModal(e.target.value);
+                    setForm((f) => ({ ...f, id_empleado: "" }));
+                    setBusquedaEmp("");
+                    setEmpleados([]);
+                  }}
+                >
+                  <option value="">-- Selecciona una empresa --</option>
+                  {dataUser?.empresas_detalle?.map((emp) => (
+                    <option key={emp.id_empresa} value={emp.id_empresa}>
+                      {emp.nombre}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <select
-                className="w-full border rounded-md px-3 py-2 text-sm bg-white"
-                value={empresaEnModal}
-                onChange={(e) => {
-                  setEmpresaEnModal(e.target.value);
-                  setForm((f) => ({ ...f, id_empleado: "" }));
-                  setBusquedaEmp("");
-                  setEmpleados([]);
-                }}
-              >
-                <option value="">-- Selecciona una empresa --</option>
-                {dataUser?.empresas_detalle?.map((emp) => (
-                  <option key={emp.id_empresa} value={emp.id_empresa}>
-                    {emp.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {/* Buscador de empleado (mismo formato que 'Nuevo permiso') */}
-            <div className="md:col-span-2 space-y-2">
-              <div className="text-[11px] uppercase text-slate-500">
-                Empleado
+              {/* Buscador de empleado (mismo formato que 'Nuevo permiso') */}
+              <div className="md:col-span-2 space-y-2">
+                <Label className="text-sm font-medium text-gray-700">
+                  Empleado
+                </Label>
+                <Input
+                  placeholder={
+                    empresaEnModal
+                      ? "Buscar por nombre…"
+                      : "Selecciona empresa primero"
+                  }
+                  disabled={!empresaEnModal}
+                  value={busquedaEmp}
+                  onChange={(e) => setBusquedaEmp(e.target.value)}
+                  className="bg-white"
+                />
+                {/* Limitar a 3 elementos visibles antes de hacer scroll */}
+                <div className="max-h-36 overflow-auto rounded-md border">
+                  <ul className="divide-y">
+                    {empleados
+                      .filter((e) =>
+                        e.nombre
+                          .toLowerCase()
+                          .includes(busquedaEmp.trim().toLowerCase()),
+                      )
+                      .map((e) => {
+                        const checked = String(form.id_empleado || "") === e.id;
+                        return (
+                          <li
+                            key={`emp-${e.id}`}
+                            className="flex items-center gap-3 p-2"
+                          >
+                            <input
+                              type="radio"
+                              name="empleado_periodo"
+                              className="size-4"
+                              checked={checked}
+                              onChange={() =>
+                                setForm((f) => ({ ...f, id_empleado: e.id }))
+                              }
+                            />
+                            <div className="min-w-0">
+                              <div className="truncate">{e.nombre}</div>
+                            </div>
+                          </li>
+                        );
+                      })}
+                  </ul>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {form.id_empleado
+                    ? "Empleado seleccionado"
+                    : "Selecciona un empleado de la lista"}
+                </div>
               </div>
-              <Input
-                placeholder={
-                  empresaEnModal
-                    ? "Buscar por nombre…"
-                    : "Selecciona empresa primero"
-                }
-                disabled={!empresaEnModal}
-                value={busquedaEmp}
-                onChange={(e) => setBusquedaEmp(e.target.value)}
-              />
-              {/* Limitar a 3 elementos visibles antes de hacer scroll */}
-              <div className="max-h-36 overflow-auto rounded-md border">
-                <ul className="divide-y">
-                  {empleados
-                    .filter((e) =>
-                      e.nombre
-                        .toLowerCase()
-                        .includes(busquedaEmp.trim().toLowerCase()),
-                    )
-                    .map((e) => {
-                      const checked = String(form.id_empleado || "") === e.id;
-                      return (
-                        <li
-                          key={`emp-${e.id}`}
-                          className="flex items-center gap-3 p-2"
-                        >
-                          <input
-                            type="radio"
-                            name="empleado_periodo"
-                            className="size-4"
-                            checked={checked}
-                            onChange={() =>
-                              setForm((f) => ({ ...f, id_empleado: e.id }))
-                            }
-                          />
-                          <div className="min-w-0">
-                            <div className="truncate">{e.nombre}</div>
-                          </div>
-                        </li>
-                      );
-                    })}
-                </ul>
+              <div>
+                <Label className="text-sm font-medium text-gray-700">
+                  Fecha inicio
+                </Label>
+                <Input
+                  type="date"
+                  value={form.fecha_inicio}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, fecha_inicio: e.target.value }))
+                  }
+                  className="bg-white mt-2"
+                />
               </div>
-              <div className="text-xs text-muted-foreground">
-                {form.id_empleado
-                  ? "Empleado seleccionado"
-                  : "Selecciona un empleado de la lista"}
+              <div>
+                <Label className="text-sm font-medium text-gray-700">
+                  Fecha fin
+                </Label>
+                <Input
+                  type="date"
+                  value={form.fecha_fin}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, fecha_fin: e.target.value }))
+                  }
+                  className="bg-white mt-2"
+                />
               </div>
-            </div>
-            <div>
-              <div className="text-[11px] uppercase text-slate-500">
-                Fecha inicio
+              <div>
+                <Label className="text-sm font-medium text-gray-700">
+                  Años
+                </Label>
+                <Input
+                  type="number"
+                  value={form.anios}
+                  onChange={(e) => {
+                    const nextAnios = e.target.value;
+                    // Si el usuario cambia manualmente, intenta mapear días por ley
+                    // Busca esta parte en tu JSX y asegúrate que esté así:
+                    const regla = (vacLey || []).find(
+                      (r) => Number(r.anios) === Number(nextAnios), // Forzar comparación numérica
+                    );
+                    setForm((f) => ({
+                      ...f,
+                      anios: nextAnios,
+                      dias: regla ? String(regla.dias) : f.dias,
+                    }));
+                    setWarningLey(
+                      regla
+                        ? ""
+                        : nextAnios
+                        ? `No existe una regla en "Vacaciones por ley" para ${nextAnios} año(s).`
+                        : "",
+                    );
+                  }}
+                  className="bg-white mt-2"
+                />
               </div>
-              <input
-                className="w-full border rounded-md px-3 py-2 text-sm"
-                type="date"
-                value={form.fecha_inicio}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, fecha_inicio: e.target.value }))
-                }
-              />
-            </div>
-            <div>
-              <div className="text-[11px] uppercase text-slate-500">
-                Fecha fin
+              <div>
+                <Label className="text-sm font-medium text-gray-700">
+                  Días
+                </Label>
+                <Input
+                  type="number"
+                  value={form.dias}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, dias: e.target.value }))
+                  }
+                  className="bg-white mt-2"
+                />
               </div>
-              <input
-                className="w-full border rounded-md px-3 py-2 text-sm"
-                type="date"
-                value={form.fecha_fin}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, fecha_fin: e.target.value }))
-                }
-              />
-            </div>
-            <div>
-              <div className="text-[11px] uppercase text-slate-500">Años</div>
-              <input
-                className="w-full border rounded-md px-3 py-2 text-sm"
-                type="number"
-                value={form.anios}
-                onChange={(e) => {
-                  const nextAnios = e.target.value;
-                  // Si el usuario cambia manualmente, intenta mapear días por ley
-                  // Busca esta parte en tu JSX y asegúrate que esté así:
-                  const regla = (vacLey || []).find(
-                    (r) => Number(r.anios) === Number(nextAnios), // Forzar comparación numérica
-                  );
-                  setForm((f) => ({
-                    ...f,
-                    anios: nextAnios,
-                    dias: regla ? String(regla.dias) : f.dias,
-                  }));
-                  setWarningLey(
-                    regla
-                      ? ""
-                      : nextAnios
-                      ? `No existe una regla en "Vacaciones por ley" para ${nextAnios} año(s).`
-                      : "",
-                  );
-                }}
-              />
-            </div>
-            <div>
-              <div className="text-[11px] uppercase text-slate-500">Días</div>
-              <input
-                className="w-full border rounded-md px-3 py-2 text-sm"
-                type="number"
-                value={form.dias}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, dias: e.target.value }))
-                }
-              />
-            </div>
-            {warningLey ? (
-              <div className="md:col-span-2 text-xs text-red-600">
-                {warningLey}
+              {warningLey ? (
+                <div className="md:col-span-2 text-xs text-red-600">
+                  {warningLey}
+                </div>
+              ) : (
+                <div className="md:col-span-2 text-xs text-slate-500">
+                  Años y días se calculan automáticamente según el rango de
+                  fechas y la tabla de Vacaciones por ley.
+                </div>
+              )}
+              <div className="md:col-span-2">
+                <Label className="text-sm font-medium text-gray-700">
+                  Estado
+                </Label>
+                <Select
+                  value={String(form.estado || "Activa")}
+                  onValueChange={(v) => setForm((f) => ({ ...f, estado: v }))}
+                >
+                  <SelectTrigger className="mt-2 bg-white">
+                    <SelectValue placeholder="Selecciona estado..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Activa">Activa</SelectItem>
+                    <SelectItem value="Vencida">Vencida</SelectItem>
+                    <SelectItem value="Usada">Usada</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            ) : (
-              <div className="md:col-span-2 text-xs text-slate-500">
-                Años y días se calculan automáticamente según el rango de fechas
-                y la tabla de Vacaciones por ley.
-              </div>
-            )}
-            <div className="md:col-span-2">
-              <div className="text-[11px] uppercase text-slate-500">Estado</div>
-              <select
-                className="w-full border rounded-md px-3 py-2 text-sm"
-                value={form.estado}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, estado: e.target.value }))
-                }
-              >
-                <option value="Activa">Activa</option>
-                <option value="Vencida">Vencida</option>
-                <option value="Usada">Usada</option>
-              </select>
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 pt-1">
+          <div className="bg-gray-50 border-t border-gray-100 p-4 flex gap-2 sm:justify-end">
             <Button
               variant="outline"
               onClick={() => setDialogOpen(false)}
-              className="bg-white border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
+              className="border-gray-300 text-gray-700 hover:bg-gray-100"
             >
               Cancelar
             </Button>
             <Button
               onClick={handleSave}
-              className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)] transition-all hover:-translate-y-0.5"
+              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-2"
             >
+              <Save className="h-4 w-4" />
               Guardar
             </Button>
           </div>
@@ -704,21 +763,26 @@ export default function VacacionesPorPeriodoPage() {
 
       {/* Confirmación de guardar cambios */}
       <AlertDialog open={confirmSaveOpen} onOpenChange={setConfirmSaveOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar cambios</AlertDialogTitle>
-            <AlertDialogDescription>
+        <AlertDialogContent className="p-0 overflow-hidden sm:max-w-lg">
+          <div className="p-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white">
+            <div className="text-base font-bold">Confirmar cambios</div>
+            <div className="text-sm text-white/80 mt-1">
+              Revisa antes de continuar.
+            </div>
+          </div>
+          <div className="p-5">
+            <AlertDialogDescription className="text-sm text-gray-700">
               ¿Confirmas que deseas {editRow ? "actualizar" : "crear"} este
               periodo de vacaciones?
             </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]">
+          </div>
+          <AlertDialogFooter className="bg-gray-50 border-t border-gray-100 p-4 flex gap-2 sm:justify-end">
+            <AlertDialogCancel className="border-gray-300 text-gray-700 hover:bg-gray-100">
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={proceedSave}
-              className="bg-[#37495E] hover:bg-[#2c3a4a]"
+              className="bg-[#2563EB] hover:bg-[#1d4ed8]"
             >
               Confirmar
             </AlertDialogAction>
@@ -731,19 +795,29 @@ export default function VacacionesPorPeriodoPage() {
         open={!!deleteRow}
         onOpenChange={(open) => !open && setDeleteRow(null)}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar periodo?</AlertDialogTitle>
-            <AlertDialogDescription>
+        <AlertDialogContent className="p-0 overflow-hidden sm:max-w-lg">
+          <div className="p-5 bg-gradient-to-r from-red-600 to-red-700 text-white">
+            <div className="flex items-center gap-2 text-base font-bold">
+              <span className="grid size-9 place-items-center rounded-lg bg-white/15">
+                <AlertTriangle className="size-5 text-white" />
+              </span>
+              ¿Eliminar periodo?
+            </div>
+            <div className="text-sm text-red-100 mt-1">
+              Esta acción no se puede deshacer.
+            </div>
+          </div>
+          <div className="p-5">
+            <AlertDialogDescription className="text-sm text-gray-700">
               {deleteRow
                 ? `Eliminarás el periodo ${formatDMY(
                     deleteRow.fecha_inicio,
                   )} → ${formatDMY(deleteRow.fecha_fin)}.`
                 : ""}
             </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]">
+          </div>
+          <AlertDialogFooter className="bg-gray-50 border-t border-gray-100 p-4 flex gap-2 sm:justify-end">
+            <AlertDialogCancel className="border-gray-300 text-gray-700 hover:bg-gray-100">
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction

@@ -27,6 +27,7 @@ import {
   drawRightValueRowsBox,
   fmtMoneyMXN,
 } from "@/lib/pdfUnifiedLayout";
+import { Download, FileText } from "lucide-react";
 
 export default function FiniquitoViewDialog({ open, setOpen, id }) {
   const { dataUser } = useAuth();
@@ -166,17 +167,26 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-lg md:max-w-2xl lg:max-w-4xl xl:max-w-5xl">
-        <DialogHeader>
-          <DialogTitle>
-            {det?.es_liquidacion ? "Detalle de Liquidación" : "Detalle de Finiquito"}
-          </DialogTitle>
-          <DialogDescription>
-            {det?.nombre_completo ? `Empleado: ${det.nombre_completo}` : ""}
-          </DialogDescription>
+      <DialogContent className="max-w-[95vw] sm:max-w-2xl md:max-w-4xl xl:max-w-5xl max-h-[85vh] overflow-y-auto p-0">
+        <DialogHeader className="p-0">
+          <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white p-6">
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 p-3 rounded-lg backdrop-blur-sm">
+                <FileText className="h-6 w-6 text-white" />
+              </div>
+              <div className="min-w-0">
+                <DialogTitle className="text-white text-xl font-bold truncate">
+                  {det?.es_liquidacion ? "Detalle de liquidación" : "Detalle de finiquito"}
+                </DialogTitle>
+                <DialogDescription className="text-sm text-indigo-100 truncate">
+                  {det?.nombre_completo ? `Empleado: ${det.nombre_completo}` : ""}
+                </DialogDescription>
+              </div>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="max-h-[80vh] overflow-y-auto pr-1 md:pr-0">
+        <div className="p-6 space-y-4">
           {loading ? (
             <div className="py-6 text-sm text-muted-foreground">Cargando...</div>
           ) : det ? (
@@ -321,12 +331,17 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
         </div>
 
         {/* Footer con acciones (similar al patrón de Aguinaldos/Permisos): cerrar + descargar PDF */}
-        <DialogFooter className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-4 border-t">
-          <Button variant="outline" onClick={() => setOpen(false)} className="w-full sm:w-auto">
+        <DialogFooter className="bg-gray-50 p-4 flex flex-col-reverse sm:flex-row justify-end gap-2 rounded-b-lg">
+          <Button variant="outline" onClick={() => setOpen(false)} className="w-full sm:w-auto border-gray-300">
             Cerrar
           </Button>
-          <Button onClick={descargarPDFFormatoNuevo} disabled={!det} className="w-full sm:w-auto bg-[#f59e0b] hover:bg-[#d97706] text-white">
-            📄 Descargar PDF
+          <Button
+            onClick={descargarPDFFormatoNuevo}
+            disabled={!det}
+            className="w-full sm:w-auto bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm disabled:opacity-50"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Descargar PDF
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -105,16 +105,43 @@ export default function EmpresaForm() {
   };
 
   return (
-    <div>
-      <div>
+    <div className="max-w-4xl space-y-6">
+      {/* Sección de logo con diseño ADAMIA */}
+      <div className="bg-gradient-to-br from-cyan-50 via-white to-cyan-50 border-2 border-cyan-100 rounded-xl p-6">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="bg-gradient-to-br from-cyan-500 to-cyan-600 p-3 rounded-lg shadow-md">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-gray-900">Logo de empresa</h3>
+            <p className="text-sm text-gray-600">Personaliza la imagen de tu empresa</p>
+          </div>
+        </div>
         <ImageEmpresa empresa={data} />
       </div>
-      <Form {...form}>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
-            <div className="flex flex-col gap-3">
+
+      {/* Información de empresa con diseño ADAMIA */}
+      <div className="bg-gradient-to-br from-orange-50 via-white to-orange-50 border-2 border-orange-100 rounded-xl p-6">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-3 rounded-lg shadow-md">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-xl font-bold text-gray-900">Información de la empresa</h3>
+            <p className="text-sm text-gray-600">Datos generales y de contacto</p>
+          </div>
+        </div>
+
+        <Form {...form}>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="flex flex-col gap-4">
               <FormItem>
-                <FormLabel>Empresa</FormLabel>
+                <FormLabel className="text-sm font-medium text-gray-700">Empresa</FormLabel>
                 <FormControl>
                   <Input
                     disabled={loading}
@@ -127,7 +154,7 @@ export default function EmpresaForm() {
               </FormItem>
 
               <FormItem>
-                <FormLabel>Correo</FormLabel>
+                <FormLabel className="text-sm font-medium text-gray-700">Correo</FormLabel>
                 <FormControl>
                   <Input
                     disabled={loading}
@@ -142,9 +169,9 @@ export default function EmpresaForm() {
                 </FormMessage>
               </FormItem>
             </div>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-4">
               <FormItem>
-                <FormLabel>Nombre del dueño</FormLabel>
+                <FormLabel className="text-sm font-medium text-gray-700">Nombre del dueño</FormLabel>
                 <FormControl>
                   <Input
                     disabled={loading}
@@ -159,7 +186,7 @@ export default function EmpresaForm() {
               </FormItem>
 
               <FormItem>
-                <FormLabel>Teléfono</FormLabel>
+                <FormLabel className="text-sm font-medium text-gray-700">Teléfono</FormLabel>
                 <FormControl>
                   <Input
                     disabled={loading}
@@ -190,7 +217,7 @@ export default function EmpresaForm() {
             <FormMessage>{formState.errors.giro?.message}</FormMessage>
           </FormItem> */}
           <FormItem>
-            <FormLabel>Giro</FormLabel>
+            <FormLabel className="text-sm font-medium text-gray-700">Giro</FormLabel>
             <AutocompleteInput
               form={form}
               name="giro"
@@ -201,48 +228,64 @@ export default function EmpresaForm() {
             <FormMessage>{formState.errors.giro?.message}</FormMessage>
           </FormItem>
           <FormItem>
-            <FormLabel>Dirección</FormLabel>
+            <FormLabel className="text-sm font-medium text-gray-700">Dirección</FormLabel>
             <FormControl>
               <Input
-                type="tel"
+                type="text"
                 disabled={loading}
                 {...register("direccion", {
                   required: "Dirección obligatorio",
                 })}
+                placeholder="Dirección completa de la empresa"
               />
             </FormControl>
             <FormMessage>{formState.errors.direccion?.message}</FormMessage>
           </FormItem>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-5">
-            <FormItem>
-              <FormLabel>Facebook</FormLabel>
-              <FormControl>
-                <Input disabled={loading} {...register("facebook")} />
-              </FormControl>
-              <FormMessage>{formState.errors.facebook?.message}</FormMessage>
-            </FormItem>
-            <FormItem>
-              <FormLabel>Instagram</FormLabel>
-              <FormControl>
-                <Input disabled={loading} {...register("instagram")} />
-              </FormControl>
-              <FormMessage>{formState.errors.instagram?.message}</FormMessage>
-            </FormItem>
-            <FormItem>
-              <FormLabel>Página web</FormLabel>
-              <FormControl>
-                <Input disabled={loading} {...register("pagina_web")} />
-              </FormControl>
-              <FormMessage>{formState.errors.pagina_web?.message}</FormMessage>
-            </FormItem>
+
+          {/* Sección de Redes Sociales */}
+          <div className="border-t-2 border-orange-200 pt-6 mt-6">
+            <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+              </svg>
+              Redes sociales
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormItem>
+                <FormLabel className="text-sm font-medium text-gray-700">Facebook</FormLabel>
+                <FormControl>
+                  <Input disabled={loading} {...register("facebook")} placeholder="URL de Facebook" />
+                </FormControl>
+                <FormMessage>{formState.errors.facebook?.message}</FormMessage>
+              </FormItem>
+              <FormItem>
+                <FormLabel className="text-sm font-medium text-gray-700">Instagram</FormLabel>
+                <FormControl>
+                  <Input disabled={loading} {...register("instagram")} placeholder="URL de Instagram" />
+                </FormControl>
+                <FormMessage>{formState.errors.instagram?.message}</FormMessage>
+              </FormItem>
+              <FormItem>
+                <FormLabel className="text-sm font-medium text-gray-700">Página web</FormLabel>
+                <FormControl>
+                  <Input disabled={loading} {...register("pagina_web")} placeholder="URL del sitio web" />
+                </FormControl>
+                <FormMessage>{formState.errors.pagina_web?.message}</FormMessage>
+              </FormItem>
+            </div>
           </div>
-          <div className="flex justify-center my-5">
-            <Button type="submit" className="bg-slate-700" loading={loading}>
+          <div className="flex justify-end pt-4">
+            <Button 
+              type="submit" 
+              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm px-8" 
+              loading={loading}
+            >
               Guardar cambios
             </Button>
           </div>
         </form>
       </Form>
+      </div>
     </div>
   );
 }

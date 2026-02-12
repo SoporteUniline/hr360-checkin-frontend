@@ -36,6 +36,12 @@ import {
   Edit3,
   Calculator,
   Eye,
+  AlertTriangle,
+  Filter,
+  HandCoins,
+  Pencil,
+  RotateCcw,
+  Save,
 } from "lucide-react";
 import FiniquitoViewDialog from "./FiniquitoViewDialog";
 import dayjs from "dayjs";
@@ -82,7 +88,7 @@ export default function PageFiniquitosLiquidaciones() {
   const { data: empresaData } = useSWR(
     idEmpresaCalculo ? `/empresas/${idEmpresaCalculo}` : null,
     fetcherWithToken,
-    swr_config
+    swr_config,
   );
 
   /**
@@ -193,7 +199,7 @@ export default function PageFiniquitosLiquidaciones() {
 
   const sugerencias = useMemo(
     () => empleadosSugResp?.data || [],
-    [empleadosSugResp?.data]
+    [empleadosSugResp?.data],
   );
 
   const resetFormulario = () => {
@@ -232,7 +238,7 @@ export default function PageFiniquitosLiquidaciones() {
       const fechaIngreso = new Date(emp.fecha_ingreso);
       const fechaBajaDate = new Date(fechaBaja);
       const diasTrabajados = Math.floor(
-        (fechaBajaDate - fechaIngreso) / (1000 * 60 * 60 * 24)
+        (fechaBajaDate - fechaIngreso) / (1000 * 60 * 60 * 24),
       );
       const añosTrabajados = diasTrabajados / 365.25;
       const añosCompletos = Math.floor(añosTrabajados);
@@ -316,7 +322,7 @@ export default function PageFiniquitosLiquidaciones() {
       dias_vacaciones_años_anteriores: parseFloat(diasVacAnteriores || "0"),
       dias_vacaciones_ley_año_actual: parseFloat(diasVacLeyActual || "12"),
       dias_vacaciones_año_actual_ya_gozadas: parseFloat(
-        diasVacYaGozadas || "0"
+        diasVacYaGozadas || "0",
       ),
       prima_vacacional_porcentaje_manual: parseFloat(primaVacacional || "25"),
       dias_aguinaldo_manual: parseFloat(diasAguinaldo || "15"),
@@ -328,7 +334,7 @@ export default function PageFiniquitosLiquidaciones() {
       setResultado(res);
       setGuardable(true);
       setAlertMsg(
-        "✅ Cálculo realizado correctamente. Revisa el detalle y genera el PDF si lo requieres."
+        "✅ Cálculo realizado correctamente. Revisa el detalle y genera el PDF si lo requieres.",
       );
     } finally {
       setLoading(false);
@@ -360,7 +366,7 @@ export default function PageFiniquitosLiquidaciones() {
       setGuardable(false);
       await mutate();
       setAlertMsg(
-        "✅ Guardado correctamente y marcado como Pagado. Puedes ver el registro en la pestaña de 'Finiquitos Guardados'."
+        "✅ Guardado correctamente y marcado como Pagado. Puedes ver el registro en la pestaña de 'Finiquitos Guardados'.",
       );
       setTab("tabla");
       resetFormulario();
@@ -480,7 +486,7 @@ export default function PageFiniquitosLiquidaciones() {
       resultado.es_liquidacion ? "LIQUIDACION" : "FINIQUITO"
     }_${String(resultado.nombre_completo || "Empleado").replace(
       /\s+/g,
-      "_"
+      "_",
     )}.pdf`;
     doc.save(nombreArchivo);
   };
@@ -500,7 +506,7 @@ export default function PageFiniquitosLiquidaciones() {
       setDiasVacAnteriores(String(det.dias_vacaciones_años_anteriores || "0"));
       setDiasVacLeyActual(String(det.dias_vacaciones_ley_año_actual || "12"));
       setDiasVacYaGozadas(
-        String(det.dias_vacaciones_año_actual_ya_gozadas || "0")
+        String(det.dias_vacaciones_año_actual_ya_gozadas || "0"),
       );
       setPrimaVacacional(String(det.prima_vacacional_porcentaje || "25"));
       setDiasAguinaldo(String(det.dias_aguinaldo || "15"));
@@ -539,20 +545,29 @@ export default function PageFiniquitosLiquidaciones() {
   };
 
   return (
-    <div className={`${styles.finTheme} space-y-4`}>
-      {/* Encabezado */}
-      <div>
-        <h1 className="text-2xl font-bold">📄 Finiquitos y liquidaciones</h1>
-        <p className="text-xs text-gray-500 mt-1">
-          Calcula y gestiona finiquitos/liquidaciones.
-        </p>
+    <div className={`${styles.finTheme} space-y-6`}>
+      {/* Header - Diseño ADAMIA */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-6">
+        <div className="flex items-center gap-3">
+          <div className="bg-[#2563EB] p-2.5 rounded-lg">
+            <HandCoins className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Finiquitos y liquidaciones
+            </h1>
+            <p className="text-sm text-gray-600">
+              Calcula y gestiona finiquitos/liquidaciones.
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Filtros superiores (estilo Contratos) */}
-      <Card className="fin-card">
+      <Card className="fin-card border-indigo-100 bg-indigo-50">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            Finiquitos Guardados
+          <CardTitle className="text-base font-bold text-indigo-700 flex items-center gap-2">
+            <Filter className="h-4 w-4" /> Filtros de búsqueda
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -584,11 +599,11 @@ export default function PageFiniquitosLiquidaciones() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">
+              <label className="text-sm font-medium text-gray-700">
                 Buscar
               </label>
               <div className="relative">
-                <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <Input
                   className="pl-9"
                   placeholder="Empleado, puesto o ID..."
@@ -619,17 +634,17 @@ export default function PageFiniquitosLiquidaciones() {
                     if (e.key === "ArrowDown") {
                       e.preventDefault();
                       setHoveredSuggestionIndex((prev) =>
-                        prev + 1 >= sugerencias.length ? 0 : prev + 1
+                        prev + 1 >= sugerencias.length ? 0 : prev + 1,
                       );
                     } else if (e.key === "ArrowUp") {
                       e.preventDefault();
                       setHoveredSuggestionIndex((prev) =>
-                        prev - 1 < 0 ? sugerencias.length - 1 : prev - 1
+                        prev - 1 < 0 ? sugerencias.length - 1 : prev - 1,
                       );
                     } else if (e.key === "Enter") {
                       e.preventDefault();
                       handleSelectEmpleadoSugerencia(
-                        sugerencias[hoveredSuggestionIndex] || sugerencias[0]
+                        sugerencias[hoveredSuggestionIndex] || sugerencias[0],
                       );
                     } else if (e.key === "Escape") {
                       setIsSuggestionsOpen(false);
@@ -649,7 +664,7 @@ export default function PageFiniquitosLiquidaciones() {
                           }
                           onMouseEnter={() => setHoveredSuggestionIndex(idx)}
                           className={`px-3 py-2 cursor-pointer text-sm ${
-                            idx === hoveredSuggestionIndex ? "bg-slate-100" : ""
+                            idx === hoveredSuggestionIndex ? "bg-blue-50" : ""
                           }`}
                         >
                           {emp.nombre_completo}
@@ -661,8 +676,8 @@ export default function PageFiniquitosLiquidaciones() {
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">
-                Estatus
+              <label className="text-sm font-medium text-gray-700">
+                Estado
               </label>
               <Select
                 value={estatus === "" ? "__all__" : estatus}
@@ -679,9 +694,7 @@ export default function PageFiniquitosLiquidaciones() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">
-                Tipo
-              </label>
+              <label className="text-sm font-medium text-gray-700">Tipo</label>
               <Select
                 value={tipo === "" ? "__all__" : tipo}
                 onValueChange={(v) => setTipo(v === "__all__" ? "" : v)}
@@ -699,17 +712,17 @@ export default function PageFiniquitosLiquidaciones() {
           </div>
           <div className="flex justify-end gap-2">
             <Button
-              variant="secondary"
               onClick={limpiarFiltros}
-              className="bg-[#e74c3c] hover:bg-[#c0392b] text-white shadow-[0_2px_8px_rgba(231,76,60,0.3)]"
+              variant="outline"
+              className="border-gray-300 text-gray-700 hover:bg-gray-100"
             >
-              🔄 Limpiar
+              <RotateCcw className="h-4 w-4 mr-2" /> Limpiar
             </Button>
             <Button
               onClick={() => mutate()}
-              className="shadow-[0_4px_12px_rgba(55,73,94,0.3)] transition-all hover:-translate-y-0.5"
+              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm"
             >
-              🔍 Buscar
+              <Search className="h-4 w-4 mr-2" /> Buscar
             </Button>
           </div>
         </CardContent>
@@ -717,9 +730,19 @@ export default function PageFiniquitosLiquidaciones() {
 
       {/* Tabs */}
       <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="tabla">📊 Finiquitos Guardados</TabsTrigger>
-          <TabsTrigger value="calculadora">🧮 Calculadora</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 bg-gray-100 rounded-lg p-1">
+          <TabsTrigger
+            value="tabla"
+            className="flex items-center gap-2 px-4 py-2 data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:shadow-sm data-[state=active]:font-semibold rounded-md transition-all"
+          >
+            <Eye className="h-4 w-4" /> Guardados
+          </TabsTrigger>
+          <TabsTrigger
+            value="calculadora"
+            className="flex items-center gap-2 px-4 py-2 data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:shadow-sm data-[state=active]:font-semibold rounded-md transition-all"
+          >
+            <Calculator className="h-4 w-4" /> Calculadora
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="tabla" className="space-y-3 mt-3">
           <div className="flex items-center justify-between">
@@ -731,108 +754,130 @@ export default function PageFiniquitosLiquidaciones() {
                 resetFormulario();
                 setTab("calculadora");
               }}
+              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm"
             >
               <Plus className="h-4 w-4 mr-2" /> Nuevo Finiquito
             </Button>
           </div>
 
-          <div className="overflow-x-auto rounded-md border">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="text-left p-2">ID</th>
-                  {!mostrarEmpresa && (
-                    <th className="text-left p-2">Empresa</th>
-                  )}
-                  <th className="text-left p-2">Empleado</th>
-                  <th className="text-left p-2">Fecha Baja</th>
-                  <th className="text-left p-2">Tipo</th>
-                  <th className="text-left p-2">Total</th>
-                  <th className="text-left p-2">Estado</th>
-                  <th className="text-left p-2">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(finiquitos || []).map((f) => {
-                  const tipoBadge = f.es_liquidacion
-                    ? "Liquidación"
-                    : "Finiquito";
-                  const tipoClass = f.es_liquidacion
-                    ? styles["tag-liquidacion"]
-                    : styles["tag-finiquito"];
-                  const estClass =
-                    (f.estado || "") === "Pagado"
-                      ? styles["tag-pagado"]
-                      : styles["tag-pendiente"];
-                  return (
-                    <tr key={f.id_finiquito} className="border-t">
-                      <td className="p-2 font-semibold">#{f.id_finiquito}</td>
-                      {!mostrarEmpresa && <td>{f.nombre_empresa}</td>}
-                      <td className="p-2">{f.nombre_completo}</td>
-                      <td className="p-2">
-                        {f.fecha_baja
-                          ? dayjs(f.fecha_baja).format("DD/MM/YYYY")
-                          : ""}
-                      </td>
-                      <td className="p-2">
-                        <span className={`${styles.tag} ${tipoClass}`}>
-                          {tipoBadge}
-                        </span>
-                      </td>
-                      <td className="p-2 font-bold">
-                        $
-                        {Number(f.total_pagar || 0).toLocaleString("es-MX", {
-                          minimumFractionDigits: 2,
-                        })}
-                      </td>
-                      <td className="p-2">
-                        <span className={`${styles.tag} ${estClass}`}>
-                          {f.estado || "Pendiente"}
-                        </span>
-                      </td>
-                      <td className="p-2">
-                        <div className="flex gap-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className={styles.actionView}
-                            onClick={() => setViewRow(f)}
-                          >
-                            <Eye className="h-4 w-4 mr-1" /> Ver
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className={styles.actionEdit}
-                            onClick={() => editarFiniquito(f)}
-                          >
-                            <Edit3 className="h-4 w-4 mr-1" /> Editar
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className={styles.actionDelete}
-                            onClick={() => eliminarFiniquito(f)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-1" /> Eliminar
-                          </Button>
-                        </div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100">
+              <h2 className="text-lg font-semibold text-gray-900">
+                Lista de finiquitos y liquidaciones
+              </h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">
+                      ID
+                    </th>
+                    {!mostrarEmpresa && (
+                      <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">
+                        Empresa
+                      </th>
+                    )}
+                    <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">
+                      Empleado
+                    </th>
+                    <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">
+                      Fecha baja
+                    </th>
+                    <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">
+                      Tipo
+                    </th>
+                    <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">
+                      Total
+                    </th>
+                    <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">
+                      Estado
+                    </th>
+                    <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">
+                      Acciones
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(finiquitos || []).map((f) => {
+                    const tipoBadge = f.es_liquidacion
+                      ? "Liquidación"
+                      : "Finiquito";
+                    const tipoClass = f.es_liquidacion
+                      ? styles["tag-liquidacion"]
+                      : styles["tag-finiquito"];
+                    const estClass =
+                      (f.estado || "") === "Pagado"
+                        ? styles["tag-pagado"]
+                        : styles["tag-pendiente"];
+                    return (
+                      <tr
+                        key={f.id_finiquito}
+                        className="border-b border-gray-100 hover:bg-gray-50"
+                      >
+                        <td className="px-3 py-2 font-semibold">
+                          #{f.id_finiquito}
+                        </td>
+                        <td className="px-3 py-2">{f.nombre_completo}</td>
+                        <td className="px-3 py-2">
+                          {f.fecha_baja
+                            ? dayjs(f.fecha_baja).format("DD/MM/YYYY")
+                            : ""}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className={`${styles.tag} ${tipoClass}`}>
+                            {tipoBadge}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 font-bold">
+                          $
+                          {Number(f.total_pagar || 0).toLocaleString("es-MX", {
+                            minimumFractionDigits: 2,
+                          })}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className={`${styles.tag} ${estClass}`}>
+                            {f.estado || "Pendiente"}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => editarFiniquito(f)}
+                              className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                              title="Editar"
+                            >
+                              <Pencil className="h-4 w-4 text-[#2563EB]" />
+                            </button>
+                            <button
+                              onClick={() => setViewRow(f)}
+                              className="p-2 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+                              title="Ver"
+                            >
+                              <Eye className="h-4 w-4 text-green-600" />
+                            </button>
+                            <button
+                              onClick={() => eliminarFiniquito(f)}
+                              className="p-2 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                              title="Eliminar"
+                            >
+                              <Trash2 className="h-4 w-4 text-red-600" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {(!finiquitos || finiquitos.length === 0) && (
+                    <tr>
+                      <td className="p-6 text-center text-gray-500" colSpan={7}>
+                        No hay finiquitos guardados
                       </td>
                     </tr>
-                  );
-                })}
-                {(!finiquitos || finiquitos.length === 0) && (
-                  <tr>
-                    <td
-                      className="p-6 text-center text-muted-foreground"
-                      colSpan={7}
-                    >
-                      No hay finiquitos guardados
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <TablePagination
@@ -907,7 +952,7 @@ export default function PageFiniquitosLiquidaciones() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                  <label className="text-sm font-medium text-gray-700">
                     Empleado
                   </label>
                   <div className="relative">
@@ -935,13 +980,13 @@ export default function PageFiniquitosLiquidaciones() {
                           .filter((x) =>
                             (x.nombre_completo || "")
                               .toLowerCase()
-                              .includes(empSearch.trim().toLowerCase())
+                              .includes(empSearch.trim().toLowerCase()),
                           )
                           .slice(0, 50)
                           .map((emp) => (
                             <div
                               key={`emp-sel-${emp.id_empleado || emp.id}`}
-                              className="px-3 py-2 cursor-pointer text-sm hover:bg-slate-100"
+                              className="px-3 py-2 cursor-pointer text-sm hover:bg-blue-50"
                               onMouseDown={() => onPickEmpleado(emp)}
                             >
                               {emp.nombre_completo}
@@ -952,7 +997,7 @@ export default function PageFiniquitosLiquidaciones() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                  <label className="text-sm font-medium text-gray-700">
                     Fecha de baja
                   </label>
                   <Input
@@ -962,7 +1007,7 @@ export default function PageFiniquitosLiquidaciones() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                  <label className="text-sm font-medium text-gray-700">
                     Tipo de cálculo
                   </label>
                   <Select value={tipoCalculo} onValueChange={setTipoCalculo}>
@@ -976,7 +1021,7 @@ export default function PageFiniquitosLiquidaciones() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                  <label className="text-sm font-medium text-gray-700">
                     Tipo de terminación
                   </label>
                   <Select
@@ -1112,8 +1157,8 @@ export default function PageFiniquitosLiquidaciones() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold uppercase text-muted-foreground">
-                      Salario Diario
+                    <label className="text-sm font-medium text-gray-700">
+                      Salario diario
                     </label>
                     <Input
                       type="number"
@@ -1126,7 +1171,7 @@ export default function PageFiniquitosLiquidaciones() {
                     </small>
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold uppercase text-muted-foreground">
+                    <label className="text-sm font-medium text-gray-700">
                       Días salario pendientes
                     </label>
                     <Input
@@ -1137,8 +1182,8 @@ export default function PageFiniquitosLiquidaciones() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-semibold uppercase text-muted-foreground">
-                      Días NO trabajados
+                    <label className="text-sm font-medium text-gray-700">
+                      Días no trabajados
                     </label>
                     <Input
                       type="number"
@@ -1165,7 +1210,7 @@ export default function PageFiniquitosLiquidaciones() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold uppercase text-muted-foreground">
+                      <label className="text-sm font-medium text-gray-700">
                         Años anteriores (no gozadas)
                       </label>
                       <Input
@@ -1176,7 +1221,7 @@ export default function PageFiniquitosLiquidaciones() {
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold uppercase text-muted-foreground">
+                      <label className="text-sm font-medium text-gray-700">
                         Días ley (año actual)
                       </label>
                       <Input
@@ -1187,7 +1232,7 @@ export default function PageFiniquitosLiquidaciones() {
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold uppercase text-muted-foreground">
+                      <label className="text-sm font-medium text-gray-700">
                         Ya gozadas (año actual)
                       </label>
                       <Input
@@ -1198,7 +1243,7 @@ export default function PageFiniquitosLiquidaciones() {
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold uppercase text-muted-foreground">
+                      <label className="text-sm font-medium text-gray-700">
                         Prima vacacional (%)
                       </label>
                       <Input
@@ -1233,19 +1278,13 @@ export default function PageFiniquitosLiquidaciones() {
                 </div>
 
                 {/* Aguinaldo */}
-                <div
-                  className="rounded-md border-l-4 p-3"
-                  style={{ borderLeftColor: "#f59e0b", background: "#fffbeb" }}
-                >
-                  <div
-                    className="font-semibold text-sm mb-2"
-                    style={{ color: "#92400e" }}
-                  >
-                    🎁 Aguinaldo
+                <div className="rounded-md border-l-4 border-yellow-500 bg-yellow-50 p-3">
+                  <div className="font-semibold text-sm mb-2 text-yellow-800">
+                    Aguinaldo
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold uppercase text-muted-foreground">
+                      <label className="text-sm font-medium text-gray-700">
                         Días aguinaldo completo
                       </label>
                       <Input
@@ -1269,22 +1308,13 @@ export default function PageFiniquitosLiquidaciones() {
 
                 {/* Liquidación extra */}
                 {tipoCalculo === "liquidacion" && (
-                  <div
-                    className="rounded-md border-l-4 p-3"
-                    style={{
-                      borderLeftColor: "#dc2626",
-                      background: "#fef2f2",
-                    }}
-                  >
-                    <div
-                      className="font-semibold text-sm mb-2"
-                      style={{ color: "#991b1b" }}
-                    >
-                      ⚖️ Conceptos de Liquidación
+                  <div className="rounded-md border-l-4 border-red-500 bg-red-50 p-3">
+                    <div className="font-semibold text-sm mb-2 text-red-800">
+                      Conceptos de liquidación
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                       <div className="space-y-1">
-                        <label className="text-xs font-semibold uppercase text-muted-foreground">
+                        <label className="text-sm font-medium text-gray-700">
                           Días salarios vencidos
                         </label>
                         <Input
@@ -1319,11 +1349,11 @@ export default function PageFiniquitosLiquidaciones() {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <div className="space-y-1 md:col-span-2">
-                    <label className="text-xs font-semibold uppercase text-muted-foreground">
+                    <label className="text-sm font-medium text-gray-700">
                       Motivo de baja
                     </label>
                     <textarea
-                      className="border rounded-md w-full p-2 text-sm"
+                      className="w-full rounded-md border border-gray-300 p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/30 focus:border-[#2563EB]"
                       rows={3}
                       value={motivoBaja}
                       onChange={(e) => setMotivoBaja(e.target.value)}
@@ -1334,23 +1364,24 @@ export default function PageFiniquitosLiquidaciones() {
                     <div className="grid grid-cols-1 gap-2">
                       <Button
                         onClick={calcular}
-                        className="bg-[var(--fin-primary)] hover:bg-[var(--fin-primary-dark)] text-white"
+                        className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm"
                       >
-                        🧮 Calcular
+                        <Calculator className="h-4 w-4 mr-2" /> Calcular
                       </Button>
                       <Button
                         onClick={generarPDFFormatoNuevo}
                         disabled={!guardable}
-                        className="bg-[var(--fin-warning)] hover:bg-[#d97706] text-white"
+                        variant="outline"
+                        className="border-gray-300 disabled:opacity-50"
                       >
-                        📄 Descargar PDF
+                        <Download className="h-4 w-4 mr-2" /> Descargar PDF
                       </Button>
                       <Button
                         onClick={guardar}
                         disabled={!guardable}
-                        className="bg-[var(--fin-success)] hover:bg-[#059669] text-white"
+                        className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm disabled:opacity-50"
                       >
-                        💾 Guardar
+                        <Save className="h-4 w-4 mr-2" /> Guardar
                       </Button>
                     </div>
                   </div>
@@ -1393,7 +1424,7 @@ export default function PageFiniquitosLiquidaciones() {
                         $
                         {Number(resultado.salario_diario).toLocaleString(
                           "es-MX",
-                          { minimumFractionDigits: 2 }
+                          { minimumFractionDigits: 2 },
                         )}
                       </div>
                     </div>
@@ -1464,7 +1495,7 @@ export default function PageFiniquitosLiquidaciones() {
                       <div className={styles.conceptAmount}>
                         $
                         {Number(
-                          resultado.monto_salario_pendiente
+                          resultado.monto_salario_pendiente,
                         ).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
                       </div>
                       <div className={`${styles.conceptBox}`}>
@@ -1474,7 +1505,7 @@ export default function PageFiniquitosLiquidaciones() {
                           </span>
                           <span className={styles.rowValue}>
                             {Number(resultado.dias_salario_pendiente).toFixed(
-                              2
+                              2,
                             )}{" "}
                             días
                           </span>
@@ -1487,7 +1518,7 @@ export default function PageFiniquitosLiquidaciones() {
                             $
                             {Number(resultado.salario_diario).toLocaleString(
                               "es-MX",
-                              { minimumFractionDigits: 2 }
+                              { minimumFractionDigits: 2 },
                             )}
                           </span>
                         </div>
@@ -1496,7 +1527,7 @@ export default function PageFiniquitosLiquidaciones() {
                         >
                           = Total: $
                           {Number(
-                            resultado.monto_salario_pendiente
+                            resultado.monto_salario_pendiente,
                           ).toLocaleString("es-MX", {
                             minimumFractionDigits: 2,
                           })}
@@ -1512,7 +1543,7 @@ export default function PageFiniquitosLiquidaciones() {
                       <div className={styles.conceptAmount}>
                         $
                         {Number(
-                          resultado.monto_aguinaldo_proporcional
+                          resultado.monto_aguinaldo_proporcional,
                         ).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
                       </div>
                       <div className={`${styles.conceptBox}`}>
@@ -1543,7 +1574,7 @@ export default function PageFiniquitosLiquidaciones() {
                         >
                           = Total: $
                           {Number(
-                            resultado.monto_aguinaldo_proporcional
+                            resultado.monto_aguinaldo_proporcional,
                           ).toLocaleString("es-MX", {
                             minimumFractionDigits: 2,
                           })}
@@ -1563,7 +1594,7 @@ export default function PageFiniquitosLiquidaciones() {
                       <div className={styles.conceptAmount}>
                         $
                         {Number(
-                          resultado.monto_vacaciones_no_gozadas
+                          resultado.monto_vacaciones_no_gozadas,
                         ).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
                       </div>
                       <div className={`${styles.conceptBox}`}>
@@ -1573,7 +1604,7 @@ export default function PageFiniquitosLiquidaciones() {
                           </span>
                           <span className={styles.rowValue}>
                             {Number(
-                              resultado.dias_vacaciones_años_anteriores
+                              resultado.dias_vacaciones_años_anteriores,
                             ).toFixed(2)}{" "}
                             días
                           </span>
@@ -1635,7 +1666,7 @@ export default function PageFiniquitosLiquidaciones() {
                       <div className={styles.conceptAmount}>
                         $
                         {Number(
-                          resultado.monto_prima_vacacional
+                          resultado.monto_prima_vacacional,
                         ).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
                       </div>
                       <div className={`${styles.conceptBox}`}>
@@ -1651,7 +1682,7 @@ export default function PageFiniquitosLiquidaciones() {
                           <span className={styles.rowLabel}>Porcentaje</span>
                           <span className={styles.rowValue}>
                             {Number(
-                              resultado.prima_vacacional_porcentaje
+                              resultado.prima_vacacional_porcentaje,
                             ).toFixed(0)}
                             %
                           </span>
@@ -1661,7 +1692,7 @@ export default function PageFiniquitosLiquidaciones() {
                         >
                           = Total: $
                           {Number(
-                            resultado.monto_prima_vacacional
+                            resultado.monto_prima_vacacional,
                           ).toLocaleString("es-MX", {
                             minimumFractionDigits: 2,
                           })}
@@ -1680,7 +1711,7 @@ export default function PageFiniquitosLiquidaciones() {
                         $
                         {Number(resultado.subtotal_finiquito).toLocaleString(
                           "es-MX",
-                          { minimumFractionDigits: 2 }
+                          { minimumFractionDigits: 2 },
                         )}
                       </div>
                     </div>
@@ -1701,7 +1732,7 @@ export default function PageFiniquitosLiquidaciones() {
                           <div className={styles.conceptAmount}>
                             $
                             {Number(
-                              resultado.monto_prima_antiguedad
+                              resultado.monto_prima_antiguedad,
                             ).toLocaleString("es-MX", {
                               minimumFractionDigits: 2,
                             })}
@@ -1728,7 +1759,7 @@ export default function PageFiniquitosLiquidaciones() {
                               <span className={styles.rowValue}>
                                 $
                                 {Number(
-                                  resultado.salario_diario
+                                  resultado.salario_diario,
                                 ).toLocaleString("es-MX", {
                                   minimumFractionDigits: 2,
                                 })}
@@ -1741,7 +1772,7 @@ export default function PageFiniquitosLiquidaciones() {
                               <span className={styles.rowValue}>
                                 $
                                 {Number(
-                                  resultado.tope_prima_antiguedad
+                                  resultado.tope_prima_antiguedad,
                                 ).toLocaleString("es-MX", {
                                   minimumFractionDigits: 2,
                                 })}
@@ -1752,7 +1783,7 @@ export default function PageFiniquitosLiquidaciones() {
                             >
                               = Total: $
                               {Number(
-                                resultado.monto_prima_antiguedad
+                                resultado.monto_prima_antiguedad,
                               ).toLocaleString("es-MX", {
                                 minimumFractionDigits: 2,
                               })}
@@ -1772,7 +1803,7 @@ export default function PageFiniquitosLiquidaciones() {
                           <div className={styles.conceptAmount}>
                             $
                             {Number(
-                              resultado.monto_indemnizacion_constitucional
+                              resultado.monto_indemnizacion_constitucional,
                             ).toLocaleString("es-MX", {
                               minimumFractionDigits: 2,
                             })}
@@ -1800,7 +1831,7 @@ export default function PageFiniquitosLiquidaciones() {
                             >
                               = Total días:{" "}
                               {Number(
-                                resultado.dias_indemnizacion_total
+                                resultado.dias_indemnizacion_total,
                               ).toFixed(0)}{" "}
                               días
                             </div>
@@ -1809,7 +1840,7 @@ export default function PageFiniquitosLiquidaciones() {
                             >
                               = Total: $
                               {Number(
-                                resultado.monto_indemnizacion_constitucional
+                                resultado.monto_indemnizacion_constitucional,
                               ).toLocaleString("es-MX", {
                                 minimumFractionDigits: 2,
                               })}
@@ -1828,7 +1859,7 @@ export default function PageFiniquitosLiquidaciones() {
                           <div className={styles.conceptAmount}>
                             $
                             {Number(
-                              resultado.monto_salarios_vencidos
+                              resultado.monto_salarios_vencidos,
                             ).toLocaleString("es-MX", {
                               minimumFractionDigits: 2,
                             })}
@@ -1840,7 +1871,7 @@ export default function PageFiniquitosLiquidaciones() {
                               </span>
                               <span className={styles.rowValue}>
                                 {Number(
-                                  resultado.dias_salarios_vencidos
+                                  resultado.dias_salarios_vencidos,
                                 ).toFixed(2)}{" "}
                                 días
                               </span>
@@ -1852,7 +1883,7 @@ export default function PageFiniquitosLiquidaciones() {
                               <span className={styles.rowValue}>
                                 $
                                 {Number(
-                                  resultado.salario_diario
+                                  resultado.salario_diario,
                                 ).toLocaleString("es-MX", {
                                   minimumFractionDigits: 2,
                                 })}
@@ -1863,7 +1894,7 @@ export default function PageFiniquitosLiquidaciones() {
                             >
                               = Total: $
                               {Number(
-                                resultado.monto_salarios_vencidos
+                                resultado.monto_salarios_vencidos,
                               ).toLocaleString("es-MX", {
                                 minimumFractionDigits: 2,
                               })}
@@ -1882,7 +1913,7 @@ export default function PageFiniquitosLiquidaciones() {
                           <div className={styles.subtotalValue}>
                             $
                             {Number(
-                              resultado.subtotal_liquidacion
+                              resultado.subtotal_liquidacion,
                             ).toLocaleString("es-MX", {
                               minimumFractionDigits: 2,
                             })}
@@ -1917,24 +1948,33 @@ export default function PageFiniquitosLiquidaciones() {
         open={!!deleteRow}
         onOpenChange={(open) => !open && setDeleteRow(null)}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar finiquito?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deleteRow
-                ? `Esta acción no se puede deshacer. Se eliminará el finiquito de ${
-                    deleteRow?.nombre_completo || ""
-                  }.`
-                : ""}
-            </AlertDialogDescription>
+        <AlertDialogContent className="sm:max-w-[425px] p-0">
+          <AlertDialogHeader className="bg-gradient-to-r from-red-500 to-red-600 text-white p-6 rounded-t-lg">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-6 w-6" />
+              <AlertDialogTitle className="text-white">
+                ¿Eliminar finiquito?
+              </AlertDialogTitle>
+            </div>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]">
+          <div className="p-6 space-y-4">
+            <div className="bg-red-50 border-l-4 border-red-500 text-red-800 p-4 rounded-md">
+              <AlertDialogDescription className="text-sm">
+                {deleteRow
+                  ? `Esta acción no se puede deshacer. Se eliminará el finiquito de ${
+                      deleteRow?.nombre_completo || ""
+                    }.`
+                  : ""}
+              </AlertDialogDescription>
+            </div>
+          </div>
+          <AlertDialogFooter className="bg-gray-50 p-4 flex justify-end gap-2 rounded-b-lg">
+            <AlertDialogCancel className="border-gray-300">
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
-              className="bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(239,68,68,0.3)]"
+              className="bg-red-600 hover:bg-red-700 text-white shadow-sm"
             >
               Eliminar
             </AlertDialogAction>

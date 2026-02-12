@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Building2, Search } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import DepartamentosTable from "./DepartamentosTable";
 import DepartamentoFormDialog from "./DepartamentoFormDialog";
@@ -44,9 +44,36 @@ export default function Departamentos() {
     : null;
 
   return (
-    <div>
-      <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-[260px_1fr_auto] items-end">
-        {/* Empresa */}
+    <div className="min-h-screen bg-[#F9FAFB] p-6">
+      {/* Header del módulo - Estilo ADAMIA */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="bg-blue-50 p-3 rounded-lg">
+            <Building2 className="w-7 h-7 text-[#2563EB]" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">
+              Departamentos
+            </h1>
+            <p className="text-sm text-gray-600">
+              Gestiona los departamentos de tu empresa
+            </p>
+          </div>
+        </div>
+        <Button
+          className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
+          onClick={() => {
+            setEditDep(null);
+            setOpenFormModal(true);
+          }}
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Nuevo departamento
+        </Button>
+      </div>
+
+      {/* Filtro de búsqueda - Estilo ADAMIA */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-[260px_1fr_auto] items-end">
         <div className="flex flex-col gap-1">
           <Label>Empresa</Label>
           <Combobox
@@ -64,8 +91,6 @@ export default function Departamentos() {
             placeholder="Seleccionar empresa"
           />
         </div>
-
-        {/* Buscador */}
         <div className="flex flex-col gap-1">
           <Label htmlFor="departamento-search">Departamento</Label>
           <Input
@@ -74,20 +99,6 @@ export default function Departamentos() {
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
           />
-        </div>
-
-        {/* Botón */}
-        <div className="flex sm:col-span-2 lg:col-span-1">
-          <Button
-            className="w-full lg:w-auto"
-            onClick={() => {
-              setEditDep(null);
-              setOpenFormModal(true);
-            }}
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Nuevo
-          </Button>
         </div>
       </div>
 

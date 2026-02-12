@@ -14,6 +14,7 @@ import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import FormularioAsistenciasMasivas from "@/components/FormularioAsistenciasMasivas";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import { ClipboardCheck } from "lucide-react";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -160,7 +161,22 @@ export default function ControlAsistencia() {
   });
 
   return (
-    <div>
+    <div className="space-y-6">
+      {/* Header ADAMIA */}
+      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+        <div className="flex items-center gap-3">
+          <div className="bg-[#2563EB] p-2.5 rounded-lg">
+            <ClipboardCheck className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">Asistencias</h1>
+            <p className="text-sm text-gray-600">
+              Consulta y gestiona registros de entrada/salida por empleado.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {modoFormulario && (
         <FormularioAsistenciasMasivas
           values={values}

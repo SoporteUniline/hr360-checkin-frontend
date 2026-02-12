@@ -16,17 +16,24 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import {
-  Plus,
   Search,
   CalendarDays,
   Table as TableIcon,
   ChevronLeft,
   ChevronRight,
+  CalendarCheck2,
+  CheckCircle2,
+  ClipboardList,
+  Clock3,
+  Filter,
+  Plus,
+  XCircle,
 } from "lucide-react";
 import usePermisosData from "@/hooks/usePermisosData";
 import useEmpleadosData from "@/hooks/useEmpleadosData";
 import useTiposPermisoData from "@/hooks/useTiposPermisoData";
 import TablePagination from "@/components/TablePagination";
+import StatCard from "@/components/StatCard";
 import PermisosTable from "./PermisosTable";
 import PermisoDialog from "./PermisoDialog";
 import PermisoDeleteDialog from "./PermisoDeleteDialog";
@@ -492,12 +499,26 @@ export default function PermisosPage() {
 
   return (
     <div className={`${styles.permisosTheme} space-y-6`}>
+      {/* Header ADAMIA */}
+      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+        <div className="flex items-center gap-3">
+          <div className="bg-[#2563EB] p-2.5 rounded-lg">
+            <CalendarCheck2 className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">Permisos</h1>
+            <p className="text-sm text-gray-600">
+              Gestión de solicitudes, estados y calendario mensual.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Filtros */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <span>🔍</span>
-            Filtros de Búsqueda
+      <Card className="border-blue-100 bg-blue-50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-bold text-blue-700 flex items-center gap-2">
+            <Filter className="h-4 w-4" /> Filtros de búsqueda
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -526,11 +547,13 @@ export default function PermisosPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">
+              <label className="text-sm font-medium text-gray-700">
                 Empleado
               </label>
               <div className="relative">
+                <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <Input
+                  className="pl-9 bg-white"
                   placeholder="Nombre del empleado"
                   value={empleado}
                   onChange={(e) => {
@@ -599,8 +622,8 @@ export default function PermisosPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">
-                Tipo de Permiso
+              <label className="text-sm font-medium text-gray-700">
+                Tipo de permiso
               </label>
               <Select
                 value={idTipoPermiso === "" ? "__all__" : idTipoPermiso}
@@ -608,7 +631,7 @@ export default function PermisosPage() {
                   setIdTipoPermiso(v === "__all__" ? "" : v)
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger className="bg-white">
                   <SelectValue placeholder="Todos los tipos" />
                 </SelectTrigger>
                 <SelectContent
@@ -627,14 +650,14 @@ export default function PermisosPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">
+              <label className="text-sm font-medium text-gray-700">
                 Estado
               </label>
               <Select
                 value={estado === "" ? "__all__" : estado}
                 onValueChange={(v) => setEstado(v === "__all__" ? "" : v)}
               >
-                <SelectTrigger>
+                <SelectTrigger className="bg-white">
                   <SelectValue placeholder="Todos (sin cancelados)" />
                 </SelectTrigger>
                 <SelectContent>
@@ -649,20 +672,22 @@ export default function PermisosPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">
-                Fecha Desde
+              <label className="text-sm font-medium text-gray-700">
+                Fecha desde
               </label>
               <Input
+                className="bg-white"
                 type="date"
                 value={desde}
                 onChange={(e) => setDesde(e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">
-                Fecha Hasta
+              <label className="text-sm font-medium text-gray-700">
+                Fecha hasta
               </label>
               <Input
+                className="bg-white"
                 type="date"
                 value={hasta}
                 onChange={(e) => setHasta(e.target.value)}
@@ -672,17 +697,17 @@ export default function PermisosPage() {
           </div>
           <div className="flex justify-end gap-2">
             <Button
-              variant="secondary"
+              variant="outline"
               onClick={limpiarFiltros}
-              className="bg-[#e74c3c] hover:bg-[#c0392b] text-white shadow-[0_2px_8px_rgba(231,76,60,0.3)]"
+              className="border-gray-300 text-gray-700 hover:bg-gray-100"
             >
-              🔄 Limpiar
+              Limpiar
             </Button>
             <Button
               onClick={() => mutate()}
-              className="shadow-[0_4px_12px_rgba(55,73,94,0.3)] transition-all hover:-translate-y-0.5"
+              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white"
             >
-              🔍 Buscar
+              Buscar
             </Button>
           </div>
         </CardContent>
@@ -691,70 +716,26 @@ export default function PermisosPage() {
       {/* Estadísticas rápidas */}
       {/* En móvil se compacta el espacio vertical y tipografías para no ocupar demasiada altura. */}
       <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <Card
-          className="border-l-4 py-3 sm:py-6"
-          style={{ borderLeftColor: "#3498db" }}
-        >
-          <CardHeader className="pb-1 sm:pb-2">
-            <CardTitle className="text-xs text-muted-foreground uppercase">
-              Total Permisos
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <div className="text-2xl sm:text-3xl font-extrabold">
-              {estadisticas.total || 0}
-            </div>
-            <div className="text-xl sm:text-2xl">📋</div>
-          </CardContent>
-        </Card>
-        <Card
-          className="border-l-4 py-3 sm:py-6"
-          style={{ borderLeftColor: "#f59e0b" }}
-        >
-          <CardHeader className="pb-1 sm:pb-2">
-            <CardTitle className="text-xs text-muted-foreground uppercase">
-              Pendientes
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <div className="text-2xl sm:text-3xl font-extrabold">
-              {estadisticas.pendientes || 0}
-            </div>
-            <div className="text-xl sm:text-2xl">⏳</div>
-          </CardContent>
-        </Card>
-        <Card
-          className="border-l-4 py-3 sm:py-6"
-          style={{ borderLeftColor: "#27ae60" }}
-        >
-          <CardHeader className="pb-1 sm:pb-2">
-            <CardTitle className="text-xs text-muted-foreground uppercase">
-              Aprobados
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <div className="text-2xl sm:text-3xl font-extrabold">
-              {estadisticas.aprobados || 0}
-            </div>
-            <div className="text-xl sm:text-2xl">✅</div>
-          </CardContent>
-        </Card>
-        <Card
-          className="border-l-4 py-3 sm:py-6"
-          style={{ borderLeftColor: "#e74c3c" }}
-        >
-          <CardHeader className="pb-1 sm:pb-2">
-            <CardTitle className="text-xs text-muted-foreground uppercase">
-              Rechazados
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <div className="text-2xl sm:text-3xl font-extrabold">
-              {estadisticas.rechazados || 0}
-            </div>
-            <div className="text-xl sm:text-2xl">❌</div>
-          </CardContent>
-        </Card>
+        <StatCard
+          title="Total permisos"
+          value={estadisticas.total}
+          icon={ClipboardList}
+        />
+        <StatCard
+          title="Pendientes"
+          value={estadisticas.pendientes}
+          icon={Clock3}
+        />
+        <StatCard
+          title="Aprobados"
+          value={estadisticas.aprobados}
+          icon={CheckCircle2}
+        />
+        <StatCard
+          title="Rechazados"
+          value={estadisticas.rechazados}
+          icon={XCircle}
+        />
       </div>
 
       {/* Toolbar */}
@@ -762,7 +743,7 @@ export default function PermisosPage() {
         <div className="relative w-full max-w-sm">
           <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
           <Input
-            className="pl-9"
+            className="pl-9 bg-white"
             placeholder="Buscar empleado..."
             value={empleado}
             onChange={(e) => {
@@ -835,7 +816,7 @@ export default function PermisosPage() {
               setEditItem(null);
               setOpenDialog(true);
             }}
-            className="shadow-[0_4px_12px_rgba(55,73,94,0.3)] transition-all hover:-translate-y-0.5"
+            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white"
           >
             <Plus className="h-4 w-4 mr-2" /> Nuevo Permiso
           </Button>
@@ -846,11 +827,13 @@ export default function PermisosPage() {
 
       {/* Selector de vista encima de la tabla/calendario */}
       <div className="flex items-center justify-start">
-        <div className="inline-flex rounded-md border p-1 bg-white">
+        <div className="inline-flex rounded-lg border border-blue-100 p-1 bg-blue-50">
           <Button
             variant={vista === "tabla" ? "default" : "ghost"}
             className={`gap-2 ${
-              vista === "tabla" ? "" : "text-muted-foreground"
+              vista === "tabla"
+                ? "bg-white text-[#2563EB] shadow-sm"
+                : "text-gray-600 hover:bg-white/60"
             }`}
             onClick={() => setVista("tabla")}
           >
@@ -859,7 +842,9 @@ export default function PermisosPage() {
           <Button
             variant={vista === "calendario" ? "default" : "ghost"}
             className={`gap-2 ${
-              vista === "calendario" ? "" : "text-muted-foreground"
+              vista === "calendario"
+                ? "bg-white text-[#2563EB] shadow-sm"
+                : "text-gray-600 hover:bg-white/60"
             }`}
             onClick={() => setVista("calendario")}
           >
@@ -888,6 +873,10 @@ export default function PermisosPage() {
               setViewItem(row);
               setOpenView(true);
             }}
+            onDelete={(row) => {
+              setDeleteId(row?.id ?? null);
+              setOpenDelete(true);
+            }}
           />
           {/* Paginación */}
           <TablePagination
@@ -902,19 +891,19 @@ export default function PermisosPage() {
 
       {/* Vista: Calendario mensual (inspirado en Vacaciones.html) */}
       {vista === "calendario" ? (
-        <Card>
-          <CardHeader>
+        <Card className="border-gray-100 overflow-hidden">
+          <CardHeader className="border-b border-gray-100 bg-white">
             <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <CalendarDays className="h-5 w-5" />
-                Calendario
+              <CardTitle className="text-base font-bold text-gray-900 flex items-center gap-2">
+                <CalendarDays className="h-5 w-5 text-[#2563EB]" />
+                Calendario mensual
               </CardTitle>
               <div className="flex items-center gap-2">
                 <Button
-                  variant="secondary"
+                  variant="outline"
                   size="sm"
                   onClick={() => setMesActual((m) => m.subtract(1, "month"))}
-                  className="gap-1"
+                  className="gap-1 border-gray-300 text-gray-700 hover:bg-gray-100"
                 >
                   <ChevronLeft className="h-4 w-4" /> Anterior
                 </Button>
@@ -922,7 +911,7 @@ export default function PermisosPage() {
                   {nombreMes}
                 </div>
                 <Button
-                  variant="secondary"
+                  variant="outline"
                   size="sm"
                   onClick={() => {
                     setMesActual((m) => m.add(1, "month"));
@@ -930,7 +919,7 @@ export default function PermisosPage() {
                       scrollCalendarioRef.current.scrollLeft = 0;
                     }
                   }}
-                  className="gap-1"
+                  className="gap-1 border-gray-300 text-gray-700 hover:bg-gray-100"
                 >
                   Siguiente <ChevronRight className="h-4 w-4" />
                 </Button>
@@ -943,10 +932,7 @@ export default function PermisosPage() {
               <table className="min-w-full border-collapse">
                 <thead>
                   <tr>
-                    <th
-                      className="sticky left-0 z-20 text-white text-left px-3 py-2 min-w-[200px] border-r border-white/20"
-                      style={{ backgroundColor: "#2c3e50" }}
-                    >
+                    <th className="sticky left-0 z-20 bg-gray-50 text-gray-700 text-left px-3 py-2 min-w-[200px] border-r border-gray-200 text-xs font-semibold uppercase">
                       Empleado
                     </th>
                     {Array.from({ length: diasEnMes }, (_, i) => i + 1).map(
@@ -957,21 +943,20 @@ export default function PermisosPage() {
                         return (
                           <th
                             key={`h-${dia}`}
-                            className={`px-2 py-2 text-center text-white border-r border-white/10 ${
-                              esHoy ? "ring-2 ring-emerald-400" : ""
+                            className={`px-2 py-2 text-center border-r border-gray-200 bg-gray-50 ${
+                              esHoy ? "ring-2 ring-[#2563EB]" : ""
                             }`}
-                            style={{ backgroundColor: "#2c3e50" }}
                           >
                             <div
                               className={`text-xs font-bold ${
-                                esHoy ? "text-emerald-300" : ""
+                                esHoy ? "text-[#2563EB]" : "text-gray-800"
                               }`}
                             >
                               {dia}
                             </div>
                             <div
                               className={`text-[10px] opacity-85 ${
-                                esFinde ? "text-amber-300" : "text-white/80"
+                                esFinde ? "text-amber-700" : "text-gray-500"
                               }`}
                             >
                               {diasSemana[fecha.day()]}
@@ -1041,7 +1026,7 @@ export default function PermisosPage() {
                                   key={`c-${empKey}-${dia}`}
                                   className={`px-1 py-1 min-w-[44px] max-w-[44px] text-center border-b border-slate-200 border-r ${
                                     esHoy
-                                      ? "ring-inset ring-2 ring-emerald-400"
+                                      ? "ring-inset ring-2 ring-[#2563EB]"
                                       : ""
                                   }`}
                                 >
@@ -1142,7 +1127,17 @@ export default function PermisosPage() {
         }}
       />
 
-      {/* Confirmación de eliminación removida por política */}
+      {/* Confirmación de eliminación */}
+      <PermisoDeleteDialog
+        open={openDelete}
+        setOpen={setOpenDelete}
+        deleteId={deleteId}
+        onDeleted={() => {
+          setDeleteId(null);
+          mutate();
+          mutateCalendario && mutateCalendario();
+        }}
+      />
 
       {/* Ver detalles */}
       <PermisoViewDialog

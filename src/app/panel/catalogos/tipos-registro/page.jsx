@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { BookOpen, Filter, Plus, Search } from "lucide-react";
 import TiposRegistroTable from "./TiposRegistroTable";
 import TipoRegistroFormDialog from "./TipoRegistroFormDialog";
 import TipoRegistroDeleteDialog from "./TipoRegistroDeleteDialog";
@@ -39,51 +40,72 @@ export default function TiposRegistro() {
   const key = `/checador/tiposPermiso?id_empresa=${empresaActiva}&clave=${debouncedFilter}`;
 
   return (
-    <div className="space-y-4">
-      {/* Encabezado (colores del sistema) */}
-      <div>
-        <h1 className="text-2xl font-bold text-[#2c3e50]">Tipos de registro</h1>
-        <p className="text-sm text-[#6b7280]">
-          Catálogo para asistencias/permisos (crear, editar y eliminar)
-        </p>
+    <div className="space-y-6">
+      {/* Header ADAMIA */}
+      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+        <div className="flex items-center justify-between gap-4 flex-col sm:flex-row">
+          <div className="flex items-center gap-3">
+            <div className="bg-[#2563EB] p-2.5 rounded-lg">
+              <BookOpen className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900">
+                Tipos de registro
+              </h1>
+              <p className="text-sm text-gray-600">
+                Catálogo para asistencias/permisos (crear, editar y eliminar).
+              </p>
+            </div>
+          </div>
+          <Button
+            className="w-full sm:w-auto bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-2"
+            onClick={() => {
+              setEditPerm(null);
+              setOpenForm(true);
+            }}
+          >
+            <Plus className="h-4 w-4" /> Nuevo
+          </Button>
+        </div>
       </div>
 
-      {/* 4. Grid de filtros con Selector de Empresa y Buscador */}
-      <div className="grid grid-cols-1 md:grid-cols-[250px_1fr_auto] gap-4 items-end mb-2">
-        <div className="space-y-1">
-          <Label className="text-xs text-gray-500">Filtrar por Empresa</Label>
-          <Combobox
-            options={[
-              { value: "all", label: "Todas las empresas" },
-              ...(dataUser?.empresas_detalle?.map((e) => ({
-                value: e.id_empresa,
-                label: e.nombre,
-              })) || []),
-            ]}
-            value={empresaActiva}
-            onChange={handleEmpresaChange}
-          />
-        </div>
-
-        <div className="space-y-1">
-          <Label className="text-xs text-gray-500">Buscar</Label>
-          <Input
-            placeholder="Buscar por clave o nombre..."
-            value={filter}
-            onChange={handleFilterChange}
-          />
-        </div>
-
-        <Button
-          className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)]"
-          onClick={() => {
-            setEditPerm(null);
-            setOpenForm(true);
-          }}
-        >
-          <Plus className="h-4 w-4 mr-1" /> Nuevo
-        </Button>
-      </div>
+      {/* Filtros */}
+      <Card className="border-blue-100 bg-blue-50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-bold text-blue-700 flex items-center gap-2">
+            <Filter className="h-4 w-4" /> Filtros de búsqueda
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-[250px_1fr_auto] gap-4 items-end mb-2">
+            <div className="space-y-1">
+              <Label className="text-xs text-gray-500">
+                Filtrar por Empresa
+              </Label>
+              <Combobox
+                options={[
+                  { value: "all", label: "Todas las empresas" },
+                  ...(dataUser?.empresas_detalle?.map((e) => ({
+                    value: e.id_empresa,
+                    label: e.nombre,
+                  })) || []),
+                ]}
+                value={empresaActiva}
+                onChange={handleEmpresaChange}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-gray-500">Buscar</Label>
+              <Input
+                className="bg-white"
+                placeholder="Buscar tipo de registro..."
+                value={filter}
+                onChange={handleFilterChange}
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <TiposRegistroTable
         page={page}

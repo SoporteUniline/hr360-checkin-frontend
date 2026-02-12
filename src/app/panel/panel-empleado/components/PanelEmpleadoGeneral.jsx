@@ -17,12 +17,22 @@ export default function PanelEmpleadoGeneral({ datosEmpleado }) {
 
   return (
     <div>
-      <h3 className="text-sm sm:text-base font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
-        📊 Resumen General
-      </h3>
+      {/* Header con diseño ADAMIA */}
+      <div className="bg-gradient-to-br from-blue-50 via-white to-blue-50 border-2 border-blue-100 rounded-xl p-4 sm:p-6 mb-4 sm:mb-6">
+        <div className="flex items-center gap-3 mb-5">
+          <div className="bg-gradient-to-br from-[#2563EB] to-[#1d4ed8] p-3 rounded-lg shadow-md">
+            <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900">Resumen General</h3>
+            <p className="text-xs sm:text-sm text-gray-600">Vista general del empleado</p>
+          </div>
+        </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6">
+        {/* KPIs */}
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
         <Card className="overflow-hidden">
           <CardContent className="p-3 sm:p-4 md:p-5 text-center min-w-0">
             <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-1 break-words overflow-hidden">
@@ -63,6 +73,7 @@ export default function PanelEmpleadoGeneral({ datosEmpleado }) {
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
 
       {/* Información detallada */}

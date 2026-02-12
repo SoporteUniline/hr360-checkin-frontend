@@ -8,9 +8,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Edit, Trash2 } from "lucide-react";
-import useSWR, { mutate } from "swr";
+import { Pencil, Trash2 } from "lucide-react";
+import useSWR from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { useEffect, useState } from "react";
 import TablePagination from "@/components/TablePagination";
@@ -55,39 +54,64 @@ export default function EstadoCivilTable({
 
   return (
     <>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Nombre</TableHead>
-            {showEmpresa && <TableHead>Empresa</TableHead>}
-            <TableHead className="text-right">Acciones</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {estadoCivil.map((civ) => (
-            <TableRow key={civ.id_estado_civil}>
-              <TableCell>{civ.nombre}</TableCell>
-              {showEmpresa && <TableCell>{civ?.empresa_nombre}</TableCell>}
-              <TableCell className="text-right flex justify-end gap-2">
-                <Button
-                  size="icon"
-                  variant="secondary"
-                  onClick={() => onEdit(civ, estadoCivil)}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+        <div className="px-6 py-4 border-b border-gray-100">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Lista de estados civiles
+          </h2>
+        </div>
+
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-gray-50 hover:bg-gray-50">
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs">
+                  Nombre
+                </TableHead>
+                {showEmpresa && (
+                  <TableHead className="font-semibold text-gray-700 uppercase text-xs">
+                    Empresa
+                  </TableHead>
+                )}
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-right">
+                  Acciones
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {estadoCivil.map((civ) => (
+                <TableRow
+                  key={civ.id_estado_civil}
+                  className="hover:bg-gray-50 border-b border-gray-100"
                 >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant="destructive"
-                  onClick={() => onDelete(civ.id_estado_civil, key)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+                  <TableCell className="font-medium text-gray-900">
+                    {civ.nombre}
+                  </TableCell>
+                  {showEmpresa && <TableCell>{civ?.empresa_nombre}</TableCell>}
+                  <TableCell className="text-right">
+                    <div className="flex justify-end items-center gap-2">
+                      <button
+                        onClick={() => onEdit(civ, estadoCivil)}
+                        className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                        title="Editar"
+                      >
+                        <Pencil className="h-4 w-4 text-[#2563EB]" />
+                      </button>
+                      <button
+                        onClick={() => onDelete(civ.id_estado_civil, key)}
+                        className="p-2 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                        title="Eliminar"
+                      >
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                      </button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
       <TablePagination
         page={page}
         limit={limit}

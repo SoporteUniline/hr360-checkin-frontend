@@ -36,7 +36,16 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import axios from "@/lib/axios";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PlusIcon, Search } from "lucide-react";
+import {
+  CalendarDays,
+  FileText,
+  Save,
+  ShieldAlert,
+  User,
+  FileSignature,
+  PlusIcon,
+  Search,
+} from "lucide-react";
 import NewTipoActaModal from "./NewTipoActaModal";
 import { administrativeMinutesApi } from "@/lib/administrativeMinutesApi";
 import useEmpleadosData from "@/hooks/useEmpleadosData";
@@ -136,7 +145,7 @@ const NewActaModal = ({
     empSearch,
     "",
     "",
-    ""
+    "",
   );
 
   const empleadosElaboraResp = useEmpleadosData(
@@ -146,7 +155,7 @@ const NewActaModal = ({
     "",
     "",
     "",
-    ""
+    "",
   );
 
   const sugerenciasEmpleados = useMemo(() => {
@@ -206,7 +215,7 @@ const NewActaModal = ({
           dataUser.id_empresa
         }&correo=${encodeURIComponent(correoSesion)}`
       : null,
-    fetcherWithToken
+    fetcherWithToken,
   );
   const empleadoPorCorreo = useMemo(() => {
     // La ruta `/por-correo` devuelve un objeto (no array).
@@ -215,7 +224,7 @@ const NewActaModal = ({
 
   const { data: empleadoSesionData } = useSWR(
     open && idEmpleadoSesion ? `/checador/empleados/${idEmpleadoSesion}` : null,
-    fetcherWithToken
+    fetcherWithToken,
   );
 
   /**
@@ -238,7 +247,7 @@ const NewActaModal = ({
     yaNotificoErrorElaboraRef.current = true;
     enqueueSnackbar(
       `No se pudo autollenar “Elabora el acta”. No se encontró un empleado con el correo “${correoSesion}” en esta empresa.`,
-      { variant: "warning" }
+      { variant: "warning" },
     );
   }, [open, mode, empleadoPorCorreoError, correoSesion, enqueueSnackbar]);
 
@@ -310,7 +319,7 @@ const NewActaModal = ({
         actaToEdit.apellido_paterno_empleado || ""
       } ${actaToEdit.apellido_materno_empleado || ""}`
         .replace(/\s+/g, " ")
-        .trim()
+        .trim(),
     );
   }, [open, mode, actaToEdit]);
 
@@ -397,7 +406,7 @@ const NewActaModal = ({
           (mode === "edit"
             ? "Hubo un error al actualizar el acta"
             : "Hubo un error al crear el acta"),
-        { variant: "error" }
+        { variant: "error" },
       );
     } finally {
       setIsSubmitting(false);
@@ -433,497 +442,621 @@ const NewActaModal = ({
     <>
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent
-          className={twMerge("sm:max-w-xl md:max-w-2xl lg:max-w-3xl")}
+          className={twMerge(
+            "sm:max-w-xl md:max-w-2xl lg:max-w-3xl p-0 overflow-hidden",
+          )}
         >
-          <DialogHeader className="border-b-2 pb-2">
-            <DialogTitle className="text-md text-gray-700">
-              {mode === "edit"
-                ? "✏️ Editar Acta Administrativa"
-                : "📋 Nueva Acta Administrativa"}
-            </DialogTitle>
+          {/* Header - Diseño ADAMIA (patrón Contratos) */}
+          <DialogHeader className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white p-6 rounded-t-lg">
+            <div className="flex items-center gap-3">
+              <FileText className="h-6 w-6" />
+              <DialogTitle className="text-white text-lg font-semibold">
+                {mode === "edit"
+                  ? "✏️ Editar Acta Administrativa"
+                  : "➕ Nueva Acta Administrativa"}
+              </DialogTitle>
+            </div>
           </DialogHeader>
 
           <Form {...form}>
             <form
               onSubmit={form.handleSubmit(onSubmit)}
-              className="text-sm space-y-2 pt-2 max-h-[60vh] overflow-y-auto px-1"
+              className="text-sm space-y-4 max-h-[70vh] overflow-y-auto px-6 py-6"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
-                {mode === "create" && (
+              {/* ======================
+                  Secciones por color (Diseño ADAMIA)
+                  - Patrón tomado de `src/app/panel/contratos/ContratoDialog.jsx`
+                  ====================== */}
+
+              {/* Información básica */}
+              <div className="bg-gradient-to-br from-blue-50 via-white to-blue-50 border border-blue-100 rounded-xl p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="bg-[#2563EB] p-2 rounded-lg">
+                    <User className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="font-semibold text-gray-900">
+                    Información básica
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+                  {mode === "create" && (
+                    <FormField
+                      control={form.control}
+                      name="empresa"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabelWithAsterisk
+                            required
+                            className="text-gray-600"
+                          >
+                            Empresa
+                          </FormLabelWithAsterisk>
+
+                          <FormControl>
+                            <Combobox
+                              options={[
+                                ...(dataUser?.empresas_detalle || []).map(
+                                  (e) => ({
+                                    value: String(e.id_empresa),
+                                    label: e.nombre,
+                                  }),
+                                ),
+                              ]}
+                              value={field.value}
+                              onChange={(value) => {
+                                field.onChange(value);
+                                form.setValue("empleado", "");
+                                form.setValue("elabora", "");
+                                form.setValue("tipoActa", "");
+                                setEmpSearch("");
+                              }}
+                              placeholder="Selecciona una empresa"
+                              emptyText="No se encontraron empresas"
+                            />
+                          </FormControl>
+
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
                   <FormField
                     control={form.control}
-                    name="empresa"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabelWithAsterisk
-                          required
-                          className="text-gray-600"
-                        >
-                          Empresa
-                        </FormLabelWithAsterisk>
+                    name="empleado"
+                    render={({ field }) => {
+                      return (
+                        <FormItem>
+                          <FormLabelWithAsterisk
+                            required
+                            className="text-gray-600"
+                          >
+                            Empleado
+                          </FormLabelWithAsterisk>
 
-                        <FormControl>
-                          <Combobox
-                            options={[
-                              ...(dataUser?.empresas_detalle || []).map(
-                                (e) => ({
-                                  value: String(e.id_empresa),
-                                  label: e.nombre,
-                                })
-                              ),
-                            ]}
-                            value={field.value}
-                            onChange={(value) => {
-                              field.onChange(value);
-                              form.setValue("empleado", "");
-                              form.setValue("elabora", "");
-                              form.setValue("tipoActa", "");
-                              setEmpSearch("");
-                            }}
-                            placeholder="Selecciona una empresa"
-                            emptyText="No se encontraron empresas"
-                          />
-                        </FormControl>
-
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-
-                <FormField
-                  control={form.control}
-                  name="empleado"
-                  render={({ field }) => {
-                    return (
-                      <FormItem>
-                        <FormLabelWithAsterisk
-                          required
-                          className="text-gray-600"
-                        >
-                          Empleado
-                        </FormLabelWithAsterisk>
-
-                        <FormControl>
-                          {/*
+                          <FormControl>
+                            {/*
                             Buscador tipo Contratos:
                             - El valor real del form es `field.value` (id_empleado)
                             - El input visible es `empSearch` (nombre completo)
                           */}
-                          <div className="relative">
-                            <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
-                            <Input
-                              className="pl-9"
-                              placeholder="Buscar empleado..."
-                              value={empSearch}
-                              disabled={!empresaSeleccionada}
-                              onChange={(e) => {
-                                setEmpSearch(e.target.value);
-                                setIsEmpSuggestionsOpen(true);
-                                setHoveredEmpSuggestionIndex(0);
-                                // Si el usuario empieza a escribir manual, limpiamos el id para forzar selección válida.
-                                field.onChange("");
-                              }}
-                              onFocus={() => {
-                                setIsEmpSuggestionsOpen(!!empSearch);
-                              }}
-                              onBlur={() => {
-                                setTimeout(() => {
-                                  setIsEmpSuggestionsOpen(false);
-                                }, 120);
-                              }}
-                              onKeyDown={(e) => {
-                                if (
-                                  !isEmpSuggestionsOpen ||
-                                  sugerenciasEmpleados.length === 0
-                                )
-                                  return;
-                                if (e.key === "ArrowDown") {
-                                  e.preventDefault();
-                                  setHoveredEmpSuggestionIndex((prev) =>
-                                    prev + 1 >= sugerenciasEmpleados.length
-                                      ? 0
-                                      : prev + 1
-                                  );
-                                } else if (e.key === "ArrowUp") {
-                                  e.preventDefault();
-                                  setHoveredEmpSuggestionIndex((prev) =>
-                                    prev - 1 < 0
-                                      ? sugerenciasEmpleados.length - 1
-                                      : prev - 1
-                                  );
-                                } else if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  handleSelectEmpleadoSugerencia(
-                                    sugerenciasEmpleados[
-                                      hoveredEmpSuggestionIndex
-                                    ] || sugerenciasEmpleados[0]
-                                  );
-                                } else if (e.key === "Escape") {
-                                  setIsEmpSuggestionsOpen(false);
-                                }
-                              }}
-                            />
-
-                            {isEmpSuggestionsOpen &&
-                            sugerenciasEmpleados.length > 0 ? (
-                              <div className="absolute left-0 right-0 mt-1 z-20 rounded-md border bg-white shadow">
-                                <ul className="max-h-64 overflow-auto">
-                                  {sugerenciasEmpleados.map((emp, idx) => (
-                                    <li
-                                      key={emp.id_empleado}
-                                      onMouseDown={() =>
-                                        handleSelectEmpleadoSugerencia(emp)
-                                      }
-                                      onMouseEnter={() =>
-                                        setHoveredEmpSuggestionIndex(idx)
-                                      }
-                                      className={`px-3 py-2 cursor-pointer text-sm ${
-                                        idx === hoveredEmpSuggestionIndex
-                                          ? "bg-slate-100"
-                                          : ""
-                                      }`}
-                                    >
-                                      {emp.nombre_completo}
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            ) : null}
-
-                            {/* Campo "real" que viaja al submit: ID del empleado */}
-                            <input
-                              type="hidden"
-                              value={field.value || ""}
-                              readOnly
-                            />
-                          </div>
-                        </FormControl>
-
-                        <FormMessage />
-                      </FormItem>
-                    );
-                  }}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="tipoActa"
-                  render={({ field }) => {
-                    return (
-                      <FormItem>
-                        <FormLabelWithAsterisk
-                          required
-                          className="text-gray-600"
-                        >
-                          Tipo de Acta
-                        </FormLabelWithAsterisk>
-
-                        <FormControl>
-                          <div className="flex items-center gap-2">
-                            <div className="flex-1">
-                              {/*
-                               * FIX (2026-01):
-                               * El `Combobox` (Popover + Command) dentro de `Dialog` estaba causando que algunos usuarios
-                               * NO pudieran seleccionar correctamente el tipo de acta (click no aplicaba el valor).
-                               *
-                               * Para estabilizar UX, usamos `Select` (Radix) que es consistente dentro de Dialog/scroll.
-                               * Relación:
-                               * - Tipos se administran en `src/components/NewTipoActaModal.jsx`
-                               */}
-                              <Select
-                                disabled={!empresaSeleccionada || loadingTipos}
-                                value={field.value}
-                                onValueChange={field.onChange}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue
-                                    placeholder={
-                                      !empresaSeleccionada
-                                        ? "Selecciona primero una empresa"
-                                        : loadingTipos
-                                        ? "Cargando tipos..."
-                                        : "Selecciona un tipo de acta"
-                                    }
-                                  />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {(tiposActa || []).map((tipo) => (
-                                    <SelectItem
-                                      key={tipo.id_tipo_acta}
-                                      value={String(tipo.id_tipo_acta)}
-                                    >
-                                      {tipo.nombre_tipo} (ID {tipo.id_tipo_acta}
-                                      )
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <Button
-                              type="button"
-                              className="bg-slate-700 hover:bg-slate-800 p-2"
-                              onClick={() => setOpenNewTipoActa(true)}
-                            >
-                              <PlusIcon className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </FormControl>
-
-                        <FormMessage />
-                      </FormItem>
-                    );
-                  }}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="fechaIncidente"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabelWithAsterisk required className="text-gray-600">
-                        Fecha del incidente
-                      </FormLabelWithAsterisk>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="horaIncidente"
-                  render={({ field }) => (
-                    <FormItem>
-                      <Label className="text-gray-600">
-                        Hora del incidente
-                      </Label>
-                      <FormControl>
-                        <Input type="time" {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="lugar"
-                  render={({ field }) => (
-                    <FormItem>
-                      <Label className="text-gray-600">
-                        Lugar del incidente
-                      </Label>
-                      <FormControl>
-                        <Input placeholder="Ej: Oficina, Almacén" {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="descripcion"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabelWithAsterisk required className="text-gray-600">
-                        Descripción de los hechos
-                      </FormLabelWithAsterisk>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Describe detalladamente lo sucedido..."
-                          rows={4}
-                          {...field}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="testigos"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <Label className="text-gray-600">Testigos</Label>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Nombres de testigos presentes (Opcional)"
-                          rows={2}
-                          {...field}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="sancion"
-                  render={({ field }) => {
-                    const sanciones = [
-                      "amonestacion_verbal",
-                      "amonestacion_escrita",
-                      "suspension",
-                      "rescision",
-                    ];
-
-                    return (
-                      <FormItem>
-                        <FormLabelWithAsterisk
-                          required
-                          className="text-gray-600"
-                        >
-                          Tipo de sanción
-                        </FormLabelWithAsterisk>
-
-                        <FormControl>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecciona una sanción" />
-                            </SelectTrigger>
-
-                            <SelectContent>
-                              {sanciones.map((s) => (
-                                <SelectItem key={s} value={s}>
-                                  {formatearTexto(s)}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </FormControl>
-
-                        <FormMessage />
-                      </FormItem>
-                    );
-                  }}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="elabora"
-                  render={({ field }) => {
-                    return (
-                      <FormItem>
-                        <FormLabelWithAsterisk
-                          required
-                          className="text-gray-600"
-                        >
-                          Elabora el acta
-                        </FormLabelWithAsterisk>
-
-                        <FormControl>
-                          {/*
-                            Autollenado SOLO en modo "create":
-                            - Si logramos resolver el empleado logeado (por id_empleado o correo),
-                              se bloquea el campo y se muestra el nombre.
-                          */}
-                          {mode === "create" && elaboraAutoEnProceso ? (
-                            <Input
-                              value="Cargando usuario logeado..."
-                              disabled
-                              className="bg-muted"
-                            />
-                          ) : mode === "create" &&
-                            empleadoElaboraAuto?.id_empleado ? (
-                            <div className="space-y-2">
+                            <div className="relative">
+                              <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                               <Input
-                                value={empleadoElaboraAutoNombre || "—"}
-                                disabled
-                                className="bg-muted"
+                                className="pl-9"
+                                placeholder="Buscar empleado..."
+                                value={empSearch}
+                                disabled={!empresaSeleccionada}
+                                onChange={(e) => {
+                                  setEmpSearch(e.target.value);
+                                  setIsEmpSuggestionsOpen(true);
+                                  setHoveredEmpSuggestionIndex(0);
+                                  // Si el usuario empieza a escribir manual, limpiamos el id para forzar selección válida.
+                                  field.onChange("");
+                                }}
+                                onFocus={() => {
+                                  setIsEmpSuggestionsOpen(!!empSearch);
+                                }}
+                                onBlur={() => {
+                                  setTimeout(() => {
+                                    setIsEmpSuggestionsOpen(false);
+                                  }, 120);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (
+                                    !isEmpSuggestionsOpen ||
+                                    sugerenciasEmpleados.length === 0
+                                  )
+                                    return;
+                                  if (e.key === "ArrowDown") {
+                                    e.preventDefault();
+                                    setHoveredEmpSuggestionIndex((prev) =>
+                                      prev + 1 >= sugerenciasEmpleados.length
+                                        ? 0
+                                        : prev + 1,
+                                    );
+                                  } else if (e.key === "ArrowUp") {
+                                    e.preventDefault();
+                                    setHoveredEmpSuggestionIndex((prev) =>
+                                      prev - 1 < 0
+                                        ? sugerenciasEmpleados.length - 1
+                                        : prev - 1,
+                                    );
+                                  } else if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    handleSelectEmpleadoSugerencia(
+                                      sugerenciasEmpleados[
+                                        hoveredEmpSuggestionIndex
+                                      ] || sugerenciasEmpleados[0],
+                                    );
+                                  } else if (e.key === "Escape") {
+                                    setIsEmpSuggestionsOpen(false);
+                                  }
+                                }}
                               />
+
+                              {isEmpSuggestionsOpen &&
+                              sugerenciasEmpleados.length > 0 ? (
+                                <div className="absolute left-0 right-0 mt-1 z-20 rounded-md border bg-white shadow">
+                                  <ul className="max-h-64 overflow-auto">
+                                    {sugerenciasEmpleados.map((emp, idx) => (
+                                      <li
+                                        key={emp.id_empleado}
+                                        onMouseDown={() =>
+                                          handleSelectEmpleadoSugerencia(emp)
+                                        }
+                                        onMouseEnter={() =>
+                                          setHoveredEmpSuggestionIndex(idx)
+                                        }
+                                        className={`px-3 py-2 cursor-pointer text-sm ${
+                                          idx === hoveredEmpSuggestionIndex
+                                            ? "bg-blue-50"
+                                            : ""
+                                        }`}
+                                      >
+                                        {emp.nombre_completo}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ) : null}
+
+                              {/* Campo "real" que viaja al submit: ID del empleado */}
                               <input
                                 type="hidden"
                                 value={field.value || ""}
                                 readOnly
                               />
                             </div>
-                          ) : (
-                            // 👉 AQUÍ YA NO METEMOS {} EXTRA
-                            <Combobox
-                              options={empleadosElabora}
-                              value={field.value}
-                              onChange={field.onChange}
-                              placeholder={
-                                !empresaSeleccionada
-                                  ? "Selecciona primero una empresa"
-                                  : "Selecciona quién elabora"
-                              }
-                              emptyText={
-                                empresaSeleccionada
-                                  ? "No se encontraron empleados"
-                                  : "Selecciona una empresa"
-                              }
-                              disabled={!empresaSeleccionada}
-                              name="elabora"
-                            />
-                          )}
-                        </FormControl>
+                          </FormControl>
 
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="tipoActa"
+                    render={({ field }) => {
+                      return (
+                        <FormItem>
+                          <FormLabelWithAsterisk
+                            required
+                            className="text-gray-600"
+                          >
+                            Tipo de Acta
+                          </FormLabelWithAsterisk>
+
+                          <FormControl>
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1">
+                                {/*
+                                 * FIX (2026-01):
+                                 * El `Combobox` (Popover + Command) dentro de `Dialog` estaba causando que algunos usuarios
+                                 * NO pudieran seleccionar correctamente el tipo de acta (click no aplicaba el valor).
+                                 *
+                                 * Para estabilizar UX, usamos `Select` (Radix) que es consistente dentro de Dialog/scroll.
+                                 * Relación:
+                                 * - Tipos se administran en `src/components/NewTipoActaModal.jsx`
+                                 */}
+                                <Select
+                                  disabled={
+                                    !empresaSeleccionada || loadingTipos
+                                  }
+                                  value={field.value}
+                                  onValueChange={field.onChange}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue
+                                      placeholder={
+                                        !empresaSeleccionada
+                                          ? "Selecciona primero una empresa"
+                                          : loadingTipos
+                                          ? "Cargando tipos..."
+                                          : "Selecciona un tipo de acta"
+                                      }
+                                    />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {(tiposActa || []).map((tipo) => (
+                                      <SelectItem
+                                        key={tipo.id_tipo_acta}
+                                        value={String(tipo.id_tipo_acta)}
+                                      >
+                                        {tipo.nombre_tipo} (ID{" "}
+                                        {tipo.id_tipo_acta})
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              <Button
+                                type="button"
+                                className="p-2 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+                                onClick={() => setOpenNewTipoActa(true)}
+                                title="Crear tipo de acta"
+                              >
+                                <PlusIcon className="w-4 h-4 text-[#7C3AED]" />
+                              </Button>
+                            </div>
+                          </FormControl>
+
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Incidente */}
+              <div className="bg-gradient-to-br from-green-50 via-white to-emerald-50 border border-green-100 rounded-xl p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="bg-emerald-600 p-2 rounded-lg">
+                    <CalendarDays className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="font-semibold text-gray-900">
+                    Detalles del incidente
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+                  <FormField
+                    control={form.control}
+                    name="fechaIncidente"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabelWithAsterisk
+                          required
+                          className="text-gray-600"
+                        >
+                          Fecha del incidente
+                        </FormLabelWithAsterisk>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="horaIncidente"
+                    render={({ field }) => (
+                      <FormItem>
+                        <Label className="text-gray-600">
+                          Hora del incidente
+                        </Label>
+                        <FormControl>
+                          <Input type="time" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="lugar"
+                    render={({ field }) => (
+                      <FormItem>
+                        <Label className="text-gray-600">
+                          Lugar del incidente
+                        </Label>
+                        <FormControl>
+                          <Input
+                            placeholder="Ej: Oficina, Almacén"
+                            {...field}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Hechos y testigos */}
+              <div className="bg-gradient-to-br from-yellow-50 via-white to-amber-50 border border-yellow-100 rounded-xl p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="bg-yellow-500 p-2 rounded-lg">
+                    <FileText className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="font-semibold text-gray-900">
+                    Hechos y testigos
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+                  <FormField
+                    control={form.control}
+                    name="descripcion"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-2">
+                        <FormLabelWithAsterisk
+                          required
+                          className="text-gray-600"
+                        >
+                          Descripción de los hechos
+                        </FormLabelWithAsterisk>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Describe detalladamente lo sucedido..."
+                            rows={4}
+                            {...field}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="testigos"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-2">
+                        <Label className="text-gray-600">Testigos</Label>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Nombres de testigos presentes (Opcional)"
+                            rows={2}
+                            {...field}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Sanción */}
+              <div className="bg-gradient-to-br from-purple-50 via-white to-fuchsia-50 border border-purple-100 rounded-xl p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="bg-[#7C3AED] p-2 rounded-lg">
+                    <ShieldAlert className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="font-semibold text-gray-900">Sanción</div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+                  <FormField
+                    control={form.control}
+                    name="sancion"
+                    render={({ field }) => {
+                      const sanciones = [
+                        "amonestacion_verbal",
+                        "amonestacion_escrita",
+                        "suspension",
+                        "rescision",
+                      ];
+
+                      return (
+                        <FormItem>
+                          <FormLabelWithAsterisk
+                            required
+                            className="text-gray-600"
+                          >
+                            Tipo de sanción
+                          </FormLabelWithAsterisk>
+
+                          <FormControl>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecciona una sanción" />
+                              </SelectTrigger>
+
+                              <SelectContent>
+                                {sanciones.map((s) => (
+                                  <SelectItem key={s} value={s}>
+                                    {formatearTexto(s)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Elaboración */}
+              <div className="bg-gradient-to-br from-teal-50 via-white to-cyan-50 border border-teal-100 rounded-xl p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="bg-teal-600 p-2 rounded-lg">
+                    <FileSignature className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="font-semibold text-gray-900">Elaboración</div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+                  <FormField
+                    control={form.control}
+                    name="elabora"
+                    render={({ field }) => {
+                      return (
+                        <FormItem>
+                          <FormLabelWithAsterisk
+                            required
+                            className="text-gray-600"
+                          >
+                            Elabora el acta
+                          </FormLabelWithAsterisk>
+
+                          <FormControl>
+                            {/*
+                            Autollenado SOLO en modo "create":
+                            - Si logramos resolver el empleado logeado (por id_empleado o correo),
+                              se bloquea el campo y se muestra el nombre.
+                          */}
+                            {mode === "create" && elaboraAutoEnProceso ? (
+                              <Input
+                                value="Cargando usuario logeado..."
+                                disabled
+                                className="bg-muted"
+                              />
+                            ) : mode === "create" &&
+                              empleadoElaboraAuto?.id_empleado ? (
+                              <div className="space-y-2">
+                                <Input
+                                  value={empleadoElaboraAutoNombre || "—"}
+                                  disabled
+                                  className="bg-muted"
+                                />
+                                <input
+                                  type="hidden"
+                                  value={field.value || ""}
+                                  readOnly
+                                />
+                              </div>
+                            ) : (
+                              // 👉 AQUÍ YA NO METEMOS {} EXTRA
+                              <Combobox
+                                options={empleadosElabora}
+                                value={field.value}
+                                onChange={field.onChange}
+                                placeholder={
+                                  !empresaSeleccionada
+                                    ? "Selecciona primero una empresa"
+                                    : "Selecciona quién elabora"
+                                }
+                                emptyText={
+                                  empresaSeleccionada
+                                    ? "No se encontraron empleados"
+                                    : "Selecciona una empresa"
+                                }
+                                disabled={!empresaSeleccionada}
+                                name="elabora"
+                              />
+                            )}
+                          </FormControl>
+
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="cargoElabora"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-2">
+                        <Label className="text-gray-600">
+                          Cargo de quien elabora
+                        </Label>
+                        <FormControl>
+                          <Input
+                            placeholder="Ej: Jefe de RH"
+                            {...field}
+                            // Si elabora viene de sesión, este campo se autollenará y será solo lectura.
+                            disabled={
+                              mode === "create" &&
+                              Boolean(empleadoElaboraAuto?.id_empleado)
+                            }
+                            className={
+                              mode === "create" &&
+                              Boolean(empleadoElaboraAuto?.id_empleado)
+                                ? "bg-muted"
+                                : ""
+                            }
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* Declaraciones */}
+              <div className="bg-gradient-to-br from-slate-50 via-white to-slate-50 border border-slate-200 rounded-xl p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="bg-slate-700 p-2 rounded-lg">
+                    <FileText className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="font-semibold text-gray-900">
+                    Declaraciones
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
+                  <FormField
+                    control={form.control}
+                    name="descargo"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-2">
+                        <Label className="text-gray-600">
+                          Descargo del trabajador
+                        </Label>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Versión del empleado (opcional)"
+                            rows={3}
+                            {...field}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="aceptaHechos"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-2 border p-3 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            className="h-7 w-11 [&>span]:size-5.5 
+             data-[state=checked]:bg-emerald-500 
+             data-[state=unchecked]:bg-gray-300"
+                          />
+                          <div>
+                            <Label>El trabajador acepta los hechos</Label>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Marca si el empleado reconoce los hechos descritos
+                            </p>
+                          </div>
+                        </div>
                         <FormMessage />
                       </FormItem>
-                    );
-                  }}
-                />
+                    )}
+                  />
 
-                <FormField
-                  control={form.control}
-                  name="cargoElabora"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <Label className="text-gray-600">
-                        Cargo de quien elabora
-                      </Label>
-                      <FormControl>
-                        <Input
-                          placeholder="Ej: Jefe de RH"
-                          {...field}
-                          // Si elabora viene de sesión, este campo se autollenará y será solo lectura.
-                          disabled={
-                            mode === "create" &&
-                            Boolean(empleadoElaboraAuto?.id_empleado)
-                          }
-                          className={
-                            mode === "create" &&
-                            Boolean(empleadoElaboraAuto?.id_empleado)
-                              ? "bg-muted"
-                              : ""
-                          }
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="descargo"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <Label className="text-gray-600">
-                        Descargo del trabajador
-                      </Label>
-                      <FormControl>
-                        <Textarea
-                          placeholder="Versión del empleado (opcional)"
-                          rows={3}
-                          {...field}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="aceptaHechos"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2 border p-3 rounded-lg">
-                      <div className="flex items-center gap-3">
+                  <FormField
+                    control={form.control}
+                    name="esReincidencia"
+                    render={({ field }) => (
+                      <FormItem className="md:col-span-2 flex items-center gap-3 border p-3 rounded-lg">
                         <Switch
                           checked={field.value}
                           onCheckedChange={field.onChange}
@@ -931,59 +1064,43 @@ const NewActaModal = ({
              data-[state=checked]:bg-emerald-500 
              data-[state=unchecked]:bg-gray-300"
                         />
+
                         <div>
-                          <Label>El trabajador acepta los hechos</Label>
+                          <Label>Es reincidencia</Label>
                           <p className="text-xs text-gray-500 mt-1">
-                            Marca si el empleado reconoce los hechos descritos
+                            Marca si el empleado ya tiene actas previas
+                            similares
                           </p>
                         </div>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="esReincidencia"
-                  render={({ field }) => (
-                    <FormItem className="md:col-span-2 flex items-center gap-3 border p-3 rounded-lg">
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                        className="h-7 w-11 [&>span]:size-5.5 
-             data-[state=checked]:bg-emerald-500 
-             data-[state=unchecked]:bg-gray-300"
-                      />
-
-                      <div>
-                        <Label>Es reincidencia</Label>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Marca si el empleado ya tiene actas previas similares
-                        </p>
-                      </div>
-                    </FormItem>
-                  )}
-                />
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
 
-              <div className="flex justify-end gap-3 mt-6">
-                <Button variant="outline" type="button" onClick={handleClose}>
+              <div className="bg-gray-50 -mx-6 px-6 py-4 flex flex-col-reverse sm:flex-row justify-end gap-2 mt-6 border-t">
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={handleClose}
+                  className="border-gray-300"
+                >
                   Cancelar
                 </Button>
 
                 <Button
-                  className="bg-slate-700 hover:bg-slate-800"
+                  className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm"
                   type="submit"
                   disabled={isSubmitting}
                 >
-                  {isSubmitting
-                    ? mode === "edit"
-                      ? "Actualizando..."
-                      : "Creando..."
-                    : mode === "edit"
-                    ? "💾 Guardar Cambios"
-                    : "💾 Crear Acta"}
+                  {isSubmitting ? (
+                    "Guardando..."
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Guardar
+                    </>
+                  )}
                 </Button>
               </div>
             </form>

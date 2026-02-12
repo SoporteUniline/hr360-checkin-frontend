@@ -1,4 +1,15 @@
 "use client";
+
+/**
+ * Página preservada (legacy) que antes vivía en `src/app/(public)/page.jsx`.
+ *
+ * Motivo del cambio:
+ * - La homepage "/" ahora la ocupa la landing en `src/app/(landing)/page.jsx`.
+ * - Next.js no permite múltiples `page.jsx` resolviendo a la misma ruta "/".
+ *
+ * URL nueva: `/reloj-publico`
+ */
+
 import { useEffect, useState } from "react";
 import {
   Clock,
@@ -466,3 +477,4 @@ export default function Home() {
     </>
   );
 }
+

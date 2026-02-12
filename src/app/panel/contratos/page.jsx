@@ -33,7 +33,6 @@ import useContratosData from "@/hooks/useContratosData";
 import { contratosApi } from "@/lib/contratosApi";
 import { useSnackbar } from "notistack";
 import useEmpleadosData from "@/hooks/useEmpleadosData";
-import styles from "./contratos-theme.module.css";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import { Combobox } from "@/components/Combobox";
 
@@ -81,7 +80,7 @@ export default function ContratosPage() {
     search,
     "",
     "",
-    ""
+    "",
   );
 
   const sugerencias = useMemo(() => {
@@ -188,7 +187,7 @@ export default function ContratosPage() {
             (x) =>
               `<td>${String(x ?? "")
                 .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;")}</td>`
+                .replace(/>/g, "&gt;")}</td>`,
           )
           .join("")}</tr>`;
       })
@@ -232,13 +231,51 @@ export default function ContratosPage() {
   };
 
   return (
-    <div className={`${styles.contratosTheme} space-y-6`}>
-      {/* Filtros (barra superior) */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">Contratos</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+    <div className="min-h-screen bg-[#F9FAFB] p-6">
+      {/* Header del módulo - Estilo ADAMIA */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="bg-indigo-50 p-3 rounded-lg">
+            <svg
+              className="w-7 h-7 text-indigo-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-2xl font-semibold text-gray-900">Contratos</h1>
+            <p className="text-sm text-gray-600">
+              Gestiona los contratos de tus empleados
+            </p>
+          </div>
+        </div>
+        <Button
+          className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
+          onClick={() => {
+            setSeedItem(null);
+            setEditItem(null);
+            setOpenDialog(true);
+          }}
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Nuevo contrato
+        </Button>
+      </div>
+
+      {/* Filtros - Estilo ADAMIA */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Filtros de búsqueda
+        </h3>
+        <div className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase text-muted-foreground">
@@ -259,13 +296,12 @@ export default function ContratosPage() {
                 />
               </div>
             </div>
-
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">
+              <label className="text-sm font-medium text-gray-700">
                 Buscar
               </label>
               <div className="relative">
-                <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <Input
                   className="pl-9"
                   placeholder="Folio o empleado..."
@@ -296,17 +332,17 @@ export default function ContratosPage() {
                     if (e.key === "ArrowDown") {
                       e.preventDefault();
                       setHoveredSuggestionIndex((prev) =>
-                        prev + 1 >= sugerencias.length ? 0 : prev + 1
+                        prev + 1 >= sugerencias.length ? 0 : prev + 1,
                       );
                     } else if (e.key === "ArrowUp") {
                       e.preventDefault();
                       setHoveredSuggestionIndex((prev) =>
-                        prev - 1 < 0 ? sugerencias.length - 1 : prev - 1
+                        prev - 1 < 0 ? sugerencias.length - 1 : prev - 1,
                       );
                     } else if (e.key === "Enter") {
                       e.preventDefault();
                       handleSelectEmpleado(
-                        sugerencias[hoveredSuggestionIndex] || sugerencias[0]
+                        sugerencias[hoveredSuggestionIndex] || sugerencias[0],
                       );
                     } else if (e.key === "Escape") {
                       setIsSuggestionsOpen(false);
@@ -336,9 +372,7 @@ export default function ContratosPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">
-                Tipo
-              </label>
+              <label className="text-sm font-medium text-gray-700">Tipo</label>
               <Select
                 value={tipoContrato === "" ? "__all__" : tipoContrato}
                 onValueChange={(v) => setTipoContrato(v === "__all__" ? "" : v)}
@@ -364,8 +398,8 @@ export default function ContratosPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">
-                Estatus
+              <label className="text-sm font-medium text-gray-700">
+                Estado
               </label>
               <Select
                 value={estatus === "" ? "__all__" : estatus}
@@ -384,9 +418,7 @@ export default function ContratosPage() {
               </Select>
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">
-                Desde
-              </label>
+              <label className="text-sm font-medium text-gray-700">Desde</label>
               <Input
                 type="date"
                 value={desde}
@@ -394,9 +426,7 @@ export default function ContratosPage() {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">
-                Hasta
-              </label>
+              <label className="text-sm font-medium text-gray-700">Hasta</label>
               <Input
                 type="date"
                 value={hasta}
@@ -404,92 +434,134 @@ export default function ContratosPage() {
               />
             </div>
           </div>
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 pt-4 border-t border-gray-100">
             <Button
-              variant="secondary"
+              variant="outline"
               onClick={limpiarFiltros}
-              className="bg-[#e74c3c] hover:bg-[#c0392b] text-white shadow-[0_2px_8px_rgba(231,76,60,0.3)]"
+              className="border-gray-300"
             >
-              🔄 Limpiar
+              Limpiar filtros
             </Button>
             <Button
               onClick={() => mutate()}
-              className="shadow-[0_4px_12px_rgba(55,73,94,0.3)] transition-all hover:-translate-y-0.5"
+              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
             >
-              🔍 Buscar
+              Aplicar filtros
             </Button>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Estadísticas rápidas */}
-      <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <Card
-          className="border-l-4 py-3 sm:py-6"
-          style={{ borderLeftColor: "#37495E" }}
-        >
-          <CardHeader className="pb-1 sm:pb-2">
-            <CardTitle className="text-xs text-muted-foreground uppercase">
-              Total Contratos
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <div className="text-2xl sm:text-3xl font-extrabold">
-              {stats.total}
-            </div>
-          </CardContent>
-        </Card>
-        <Card
-          className="border-l-4 py-3 sm:py-6"
-          style={{ borderLeftColor: "#10b981" }}
-        >
-          <CardHeader className="pb-1 sm:pb-2">
-            <CardTitle className="text-xs text-muted-foreground uppercase">
-              Activos
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <div className="text-2xl sm:text-3xl font-extrabold">
-              {stats.activos}
-            </div>
-          </CardContent>
-        </Card>
-        <Card
-          className="border-l-4 py-3 sm:py-6"
-          style={{ borderLeftColor: "#f59e0b" }}
-        >
-          <CardHeader className="pb-1 sm:pb-2">
-            <CardTitle className="text-xs text-muted-foreground uppercase">
-              Por Vencer (30d)
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <div className="text-2xl sm:text-3xl font-extrabold">
-              {stats.porVencer}
-            </div>
-          </CardContent>
-        </Card>
-        <Card
-          className="border-l-4 py-3 sm:py-6"
-          style={{ borderLeftColor: "#ef4444" }}
-        >
-          <CardHeader className="pb-1 sm:pb-2">
-            <CardTitle className="text-xs text-muted-foreground uppercase">
-              Vencidos
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center justify-between">
-            <div className="text-2xl sm:text-3xl font-extrabold">
-              {stats.vencidos}
-            </div>
-          </CardContent>
-        </Card>
+        </div>
       </div>
 
-      {/* Toolbar */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative w-full max-w-sm">
-          <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+      {/* Estadísticas - Estilo ADAMIA */}
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600 mb-1">
+                Total Contratos
+              </p>
+              <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
+            </div>
+            <div className="bg-blue-50 p-3 rounded-lg">
+              <svg
+                className="w-6 h-6 text-[#2563EB]"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600 mb-1">Activos</p>
+              <p className="text-3xl font-bold text-gray-900">
+                {stats.activos}
+              </p>
+            </div>
+            <div className="bg-green-50 p-3 rounded-lg">
+              <svg
+                className="w-6 h-6 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600 mb-1">
+                Por Vencer (30d)
+              </p>
+              <p className="text-3xl font-bold text-gray-900">
+                {stats.porVencer}
+              </p>
+            </div>
+            <div className="bg-yellow-50 p-3 rounded-lg">
+              <svg
+                className="w-6 h-6 text-yellow-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600 mb-1">Vencidos</p>
+              <p className="text-3xl font-bold text-gray-900">
+                {stats.vencidos}
+              </p>
+            </div>
+            <div className="bg-red-50 p-3 rounded-lg">
+              <svg
+                className="w-6 h-6 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Barra de búsqueda rápida */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
+        <div className="relative w-full">
+          <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <Input
             className="pl-9"
             placeholder="Buscar por folio o empleado..."
@@ -520,17 +592,17 @@ export default function ContratosPage() {
               if (e.key === "ArrowDown") {
                 e.preventDefault();
                 setHoveredSuggestionIndex((prev) =>
-                  prev + 1 >= sugerencias.length ? 0 : prev + 1
+                  prev + 1 >= sugerencias.length ? 0 : prev + 1,
                 );
               } else if (e.key === "ArrowUp") {
                 e.preventDefault();
                 setHoveredSuggestionIndex((prev) =>
-                  prev - 1 < 0 ? sugerencias.length - 1 : prev - 1
+                  prev - 1 < 0 ? sugerencias.length - 1 : prev - 1,
                 );
               } else if (e.key === "Enter") {
                 e.preventDefault();
                 handleSelectEmpleado(
-                  sugerencias[hoveredSuggestionIndex] || sugerencias[0]
+                  sugerencias[hoveredSuggestionIndex] || sugerencias[0],
                 );
               } else if (e.key === "Escape") {
                 setIsSuggestionsOpen(false);
@@ -540,7 +612,7 @@ export default function ContratosPage() {
           {isSuggestionsOpen &&
           activeSearchBox === "toolbar" &&
           sugerencias.length > 0 ? (
-            <div className="absolute left-0 right-0 mt-1 z-20 rounded-md border bg-white shadow">
+            <div className="absolute left-0 right-0 mt-1 z-20 rounded-md border bg-white shadow-lg">
               <ul className="max-h-64 overflow-auto">
                 {sugerencias.map((emp, idx) => (
                   <li
@@ -548,7 +620,7 @@ export default function ContratosPage() {
                     onMouseDown={() => handleSelectEmpleado(emp)}
                     onMouseEnter={() => setHoveredSuggestionIndex(idx)}
                     className={`px-3 py-2 cursor-pointer text-sm ${
-                      idx === hoveredSuggestionIndex ? "bg-slate-100" : ""
+                      idx === hoveredSuggestionIndex ? "bg-blue-50" : ""
                     }`}
                   >
                     {emp.nombre_completo}
@@ -558,28 +630,7 @@ export default function ContratosPage() {
             </div>
           ) : null}
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            onClick={exportarExcel}
-            className="hidden"
-          >
-            <Download className="h-4 w-4 mr-2" /> Exportar Excel
-          </Button>
-          <Button
-            onClick={() => {
-              setSeedItem(null);
-              setEditItem(null);
-              setOpenDialog(true);
-            }}
-            className="shadow-[0_4px_12px_rgba(55,73,94,0.3)] transition-all hover:-translate-y-0.5"
-          >
-            <Plus className="h-4 w-4 mr-2" /> Nuevo Contrato
-          </Button>
-        </div>
       </div>
-
-      <Separator />
 
       {/* Tabla */}
       <ContratosTable
@@ -628,33 +679,71 @@ export default function ContratosPage() {
         item={viewItem}
       />
 
-      {/* Confirmación de eliminación */}
+      {/* Confirmación de eliminación - ADAMIA */}
       <AlertDialog
         open={!!deleteRow}
         onOpenChange={(open) => !open && setDeleteRow(null)}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar contrato?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer. Se eliminará el contrato
-              {deleteRow?.folio
-                ? ` ${deleteRow.folio}`
-                : deleteRow?.id
-                ? ` #${deleteRow.id}`
-                : ""}
-              .
-            </AlertDialogDescription>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="bg-gradient-to-br from-red-500 to-red-600 p-3 rounded-lg shadow-md">
+                <svg
+                  className="w-6 h-6 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                  />
+                </svg>
+              </div>
+              <AlertDialogTitle className="text-xl font-bold text-gray-900">
+                ¿Eliminar contrato?
+              </AlertDialogTitle>
+            </div>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
+              <div className="flex items-start gap-3">
+                <div className="bg-red-500 p-2 rounded-lg flex-shrink-0">
+                  <svg
+                    className="w-5 h-5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
+                <AlertDialogDescription className="flex-1 text-sm text-red-700">
+                  Esta acción no se puede deshacer. Se eliminará el contrato
+                  {deleteRow?.folio
+                    ? ` ${deleteRow.folio}`
+                    : deleteRow?.id
+                    ? ` #${deleteRow.id}`
+                    : ""}
+                  .
+                </AlertDialogDescription>
+              </div>
+            </div>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]">
+          <AlertDialogFooter className="mt-6">
+            <AlertDialogCancel className="border-gray-300">
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
-              className="bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(239,68,68,0.3)]"
+              className="bg-red-500 hover:bg-red-600 text-white font-medium shadow-sm"
             >
-              Eliminar
+              Eliminar contrato
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

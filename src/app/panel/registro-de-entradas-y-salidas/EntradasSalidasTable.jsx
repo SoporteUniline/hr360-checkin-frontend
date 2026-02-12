@@ -87,103 +87,105 @@ export default function EntradasSalidasTable({
 
     await exportToExcel(data, columns, "Entradas_Salidas", {
       sheetName: "Registros",
-      headerColor: "FF1E3A8A",
+      headerColor: "2563EB",
     });
   };
 
   return (
     <>
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between bg-slate-700 shadow-md px-4 py-3 rounded-tl-md rounded-tr-md gap-3">
-        <div className="flex items-center text-lg font-bold text-white">
-          {/* Si viene `fecha` estamos en modo single-day (desde === hasta). Si no, es rango. */}
-          <h1>{fecha ? "Registros del día" : "Registros del período"}</h1>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+        <div className="px-6 py-4 border-b border-gray-100 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            {/* Si viene `fecha` estamos en modo single-day (desde === hasta). Si no, es rango. */}
+            <h2 className="text-lg font-semibold text-gray-900">
+              {fecha ? "Registros del día" : "Registros del período"}
+            </h2>
+            <p className="text-sm text-gray-500">
+              Consulta y corrige entradas/salidas.
+            </p>
+          </div>
+          <div className="flex justify-end">
+            <Button
+              onClick={handleExportExcel}
+              variant="outline"
+              className="border-gray-300 text-gray-700 hover:bg-gray-100"
+            >
+              <FileSpreadsheet className="mr-2 h-4 w-4" />
+              Exportar Excel
+            </Button>
+          </div>
         </div>
-        <div className="flex flex-col md:flex-row flex-wrap justify-end gap-3 w-full md:w-auto">
-          <Button
-            onClick={handleExportExcel}
-            className="bg-emerald-600 hover:bg-emerald-700 shadow-lg"
-          >
-            <FileSpreadsheet className="mr-2 h-4 w-4" />
-            Exportar Excel
-          </Button>
 
-          <Button
-            onClick={onResetFilters}
-            variant="outline"
-            className="flex items-center gap-2 w-full sm:w-auto"
-          >
-            <RotateCcw className="w-4 h-4" />
-            Limpiar Filtros
-          </Button>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-gray-50 hover:bg-gray-50">
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs">
+                  Empleado
+                </TableHead>
+                {empresaActiva === "all" && (
+                  <TableHead className="font-semibold text-gray-700 uppercase text-xs">
+                    Empresa
+                  </TableHead>
+                )}
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs">
+                  Departamento / Sucursal
+                </TableHead>
+                {/* IMPORTANTE (UX): aunque filtremos 1 solo día (desde===hasta), siempre mostramos la fecha */}
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                  Fecha de entrada
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                  Hora entrada
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                  Hora salida
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                  Entrada corregida
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                  Salida corregida
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                  Estado
+                </TableHead>
+                <TableHead className="sticky right-0 bg-gray-50 z-10 text-center font-semibold text-gray-700 uppercase text-xs">
+                  Acciones
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {registros.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={(empresaActiva = "all" ? 10 : 9)}
+                    className="text-center py-10 text-gray-500"
+                  >
+                    No hay registros para los filtros seleccionados.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                registros.map((reg) => (
+                  <EntradasSalidasRow
+                    key={reg.id}
+                    registro={reg}
+                    fecha={fecha}
+                    isEditing={editingMovimientoId === reg.id}
+                    editingRowData={editingMovimientoData}
+                    isSaving={isSavingMovimiento}
+                    handleEditMovimientoClick={handleEditMovimientoClick}
+                    handleCancelMovimientoEdit={handleCancelMovimientoEdit}
+                    handleMovimientoFieldChange={handleMovimientoFieldChange}
+                    handleSaveMovimientoClick={handleSaveMovimientoClick}
+                    empresaActiva={empresaActiva}
+                  />
+                ))
+              )}
+            </TableBody>
+          </Table>
         </div>
       </div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="text-white bg-slate-700 ">Empleado</TableHead>
-            {empresaActiva === "all" && (
-              <TableHead className="text-white bg-slate-700 ">
-                Empresa
-              </TableHead>
-            )}
-
-            <TableHead className="text-white bg-slate-700 ">
-              Departamento / Sucursal
-            </TableHead>
-            {/* IMPORTANTE (UX): aunque filtremos 1 solo día (desde===hasta), siempre mostramos la fecha
-                para que el usuario pueda validar día exacto cuando el backend trae registros con timezone. */}
-            <TableHead className="text-white bg-slate-700 text-center">
-              Fecha de entrada
-            </TableHead>
-            <TableHead className="text-white bg-slate-700 text-center">
-              Hora de entrada
-            </TableHead>
-            <TableHead className="text-white bg-slate-700 text-center">
-              Hora de salida
-            </TableHead>
-            <TableHead className="text-white bg-slate-700 text-center">
-              Entrada corregida
-            </TableHead>
-            <TableHead className="text-white bg-slate-700 text-center">
-              Salida corregida
-            </TableHead>
-            <TableHead className="text-white bg-slate-700 text-center">
-              Estado
-            </TableHead>
-            <TableHead className="text-white bg-slate-700 sticky right-0  z-10 text-center">
-              Acciones
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {registros.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={10}
-                className="text-center py-2 text-muted-foreground"
-              >
-                No hay registros para hoy o búsqueda sin resultados.
-              </TableCell>
-            </TableRow>
-          ) : (
-            registros.map((reg) => (
-              <EntradasSalidasRow
-                key={reg.id}
-                registro={reg}
-                fecha={fecha}
-                isEditing={editingMovimientoId === reg.id}
-                editingRowData={editingMovimientoData}
-                isSaving={isSavingMovimiento}
-                handleEditMovimientoClick={handleEditMovimientoClick}
-                handleCancelMovimientoEdit={handleCancelMovimientoEdit}
-                handleMovimientoFieldChange={handleMovimientoFieldChange}
-                handleSaveMovimientoClick={handleSaveMovimientoClick}
-                empresaActiva={empresaActiva}
-              />
-            ))
-          )}
-        </TableBody>
-      </Table>
     </>
   );
 }

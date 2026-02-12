@@ -3,9 +3,11 @@ import { Combobox } from "@/components/Combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Plus, RotateCcw } from "lucide-react"; // Icono para resetear
+import { RotateCcw, Filter, Search } from "lucide-react";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import AgruparOpciones from "@/components/AgruparOpciones";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function AsistenciaFilters({
   empresaActiva,
@@ -151,8 +153,14 @@ export default function AsistenciaFilters({
   ];
 
   return (
-    <div className="space-y-4">
-      {/* <div className="flex justify-end gap-4">
+    <Card className="border-blue-100 bg-blue-50">
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base font-bold text-blue-700 flex items-center gap-2">
+          <Filter className="h-4 w-4" /> Filtros de búsqueda
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* <div className="flex justify-end gap-4">
         <Button
           onClick={abrirFormulario}
           className=" shadow-lg transition-all duration-200 hover:shadow-xl"
@@ -169,147 +177,148 @@ export default function AsistenciaFilters({
           Limpiar Filtros
         </Button>
       </div> */}
-      <div className="p-4">
-        <div className="flex flex-col gap-2 mb-4">
-          <Label>Empresa</Label>
-          <Combobox
-            options={[
-              { value: "all", label: "Todas las empresas" },
-              ...empresas.map((e) => ({
-                value: e.id_empresa,
-                label: e.nombre,
-              })),
-            ]}
-            value={empresaActiva}
-            onChange={(val) => {
-              setEmpresaActiva(val === "all" ? "all" : Number(val));
-              setFiltroEmpleado("");
-              setPage(1);
-            }}
-            placeholder="Seleccionar empresa"
-          />
-        </div>
+        <div className="p-4">
+          <div className="flex flex-col gap-2 mb-4">
+            <Label>Empresa</Label>
+            <Combobox
+              options={[
+                { value: "all", label: "Todas las empresas" },
+                ...empresas.map((e) => ({
+                  value: e.id_empresa,
+                  label: e.nombre,
+                })),
+              ]}
+              value={empresaActiva}
+              onChange={(val) => {
+                setEmpresaActiva(val === "all" ? "all" : Number(val));
+                setFiltroEmpleado("");
+                setPage(1);
+              }}
+              placeholder="Seleccionar empresa"
+            />
+          </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtros.map((filtro) => (
-            <div key={filtro.id} className="flex flex-col gap-2 w-full">
-              <Label htmlFor={filtro.id}>{filtro.label}</Label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filtros.map((filtro) => (
+              <div key={filtro.id} className="flex flex-col gap-2 w-full">
+                <Label
+                  htmlFor={filtro.id}
+                  className="text-sm font-medium text-gray-700"
+                >
+                  {filtro.label}
+                </Label>
 
-              {filtro.component === "input" ? (
-                <Input
-                  id={filtro.id}
-                  type={filtro.type || "text"}
-                  placeholder={filtro.placeholder}
-                  value={filtro.value}
-                  onChange={filtro.onChange}
+                {filtro.component === "input" ? (
+                  <div className="relative">
+                    {filtro.id === "empleado" ? (
+                      <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    ) : null}
+                    <Input
+                      id={filtro.id}
+                      type={filtro.type || "text"}
+                      placeholder={filtro.placeholder}
+                      value={filtro.value}
+                      onChange={filtro.onChange}
+                      className={filtro.id === "empleado" ? "pl-9" : ""}
+                    />
+                  </div>
+                ) : (
+                  <Combobox
+                    name={filtro.id}
+                    options={filtro.options}
+                    value={filtro.value}
+                    onChange={filtro.onChange}
+                    placeholder={filtro.placeholder}
+                    emptyText={filtro.emptyText}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="pt-4 border-t border-blue-100">
+            <div className="text-sm font-semibold text-gray-900 mb-2">
+              Filtros rápidos
+            </div>
+            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <Checkbox
+                  checked={soloPresentes}
+                  onCheckedChange={(v) => setSoloPresentes(Boolean(v))}
                 />
-              ) : (
-                <Combobox
-                  name={filtro.id}
-                  options={filtro.options}
-                  value={filtro.value}
-                  onChange={filtro.onChange}
-                  placeholder={filtro.placeholder}
-                  emptyText={filtro.emptyText}
+                <span className="text-sm text-gray-700">Solo presentes</span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <Checkbox
+                  checked={soloAusentes}
+                  onCheckedChange={(v) => setSoloAusentes(Boolean(v))}
                 />
-              )}
-            </div>
-          ))}
-        </div>
-        <div className="mb-6">
-          <hr className="mt-4 mb-2" />
-          <p className="mb-2 font-semibold">Filtros rápidos:</p>
-          <div className="grid gap-3 mt-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="checkPresentes"
-                checked={soloPresentes}
-                onChange={(e) => setSoloPresentes(e.target.checked)}
-              />
-              <label htmlFor="checkPresentes" className="cursor-pointer">
-                Solo Presentes
+                <span className="text-sm text-gray-700">Solo ausencias</span>
               </label>
-            </div>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="checkAusentes"
-                checked={soloAusentes}
-                onChange={(e) => setSoloAusentes(e.target.checked)}
-              />
-              <label htmlFor="checkAusentes" className="cursor-pointer">
-                Solo Ausencias
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <Checkbox
+                  checked={horasExtra}
+                  onCheckedChange={(v) => setHorasExtra(Boolean(v))}
+                />
+                <span className="text-sm text-gray-700">Con horas extra</span>
               </label>
-            </div>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="checkHrsExtra"
-                checked={horasExtra}
-                onChange={(e) => setHorasExtra(e.target.checked)}
-              />
-              <label htmlFor="checkHrsExtra" className="cursor-pointer">
-                Con Horas Extra
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <Checkbox
+                  checked={sinGoceDeSueldo}
+                  onCheckedChange={(v) => setSinGoceDeSueldo(Boolean(v))}
+                />
+                <span className="text-sm text-gray-700">
+                  Sin goce de sueldo
+                </span>
               </label>
-            </div>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="checkSinGoceDeSueldo"
-                checked={sinGoceDeSueldo}
-                onChange={(e) => setSinGoceDeSueldo(e.target.checked)}
-              />
-              <label htmlFor="checkSinGoceDeSueldo" className="cursor-pointer">
-                Sin goce de sueldo
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <Checkbox
+                  checked={diasFestivos}
+                  onCheckedChange={(v) => setDiasFestivos(Boolean(v))}
+                />
+                <span className="text-sm text-gray-700">Días festivos</span>
               </label>
-            </div>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="checkDiasFestivos"
-                checked={diasFestivos}
-                onChange={(e) => setDiasFestivos(e.target.checked)}
-              />
-              <label htmlFor="checkDiasFestivos" className="cursor-pointer">
-                Días festivos
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <Checkbox
+                  checked={requiereAutorizacion}
+                  onCheckedChange={(v) => setRequiereAutorizacion(Boolean(v))}
+                />
+                <span className="text-sm text-gray-700">
+                  Requiere autorización
+                </span>
               </label>
-            </div>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="checkRequiereAutorizacion"
-                checked={requiereAutorizacion}
-                onChange={(e) => setRequiereAutorizacion(e.target.checked)}
-              />
-              <label
-                htmlFor="checkRequiereAutorizacion"
-                className="cursor-pointer"
-              >
-                Requiere autorización
-              </label>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="toggleCamposExtras"
-                checked={mostrarCamposExtras}
-                onChange={(e) => setMostrarCamposExtras(e.target.checked)}
-              />
-              <label htmlFor="toggleCamposExtras">
-                Mostrar todos los campos
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <Checkbox
+                  checked={mostrarCamposExtras}
+                  onCheckedChange={(v) => setMostrarCamposExtras(Boolean(v))}
+                />
+                <span className="text-sm text-gray-700">
+                  Mostrar todos los campos
+                </span>
               </label>
             </div>
           </div>
+
+          <AgruparOpciones />
+
+          <div className="flex justify-end">
+            <Button
+              onClick={onResetFilters}
+              variant="outline"
+              className="border-gray-300 text-gray-700 hover:bg-gray-100"
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Limpiar
+            </Button>
+          </div>
         </div>
-        <AgruparOpciones />
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

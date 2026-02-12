@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { formatDateDMY } from "@/lib/formatDate";
+import { AlertTriangle, Save } from "lucide-react";
 
 /**
  * Modal: Reclasificación de días PASADOS al cancelar un permiso.
@@ -163,27 +164,34 @@ export default function PermisoCancelacionDiasPasadosDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Cancelar permiso: definir días pasados</DialogTitle>
+      <DialogContent className="p-0 overflow-hidden max-w-[95vw] sm:max-w-2xl">
+        <DialogHeader className="p-5 bg-gradient-to-r from-red-600 to-red-700 text-white">
+          <DialogTitle className="flex items-center gap-2 text-base font-bold">
+            <span className="grid size-9 place-items-center rounded-lg bg-white/15">
+              <AlertTriangle className="size-5 text-white" />
+            </span>
+            Cancelar permiso: definir días pasados
+          </DialogTitle>
+          <p className="text-sm text-red-100">
+            Para mantener consistencia en asistencias, define el tipo de registro para los días ya transcurridos.
+          </p>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <Alert>
-            <AlertTitle>Acción requerida</AlertTitle>
-            <AlertDescription>
-              Este permiso tiene días que <b>ya pasaron</b>. Selecciona qué{" "}
-              <b>tipo de registro</b> se aplicará en asistencias para esos días.
+        <div className="max-h-[70vh] overflow-y-auto p-5 space-y-4">
+          <Alert className="border-red-200 bg-red-50 text-red-900">
+            <AlertTitle className="text-red-900">Acción requerida</AlertTitle>
+            <AlertDescription className="text-red-800">
+              Este permiso tiene días que <b>ya pasaron</b>. Selecciona qué <b>tipo de registro</b> se aplicará en asistencias para esos días.
             </AlertDescription>
           </Alert>
 
           {/* Selector masivo */}
           <div className="space-y-2">
-            <div className="text-xs font-semibold uppercase text-muted-foreground">
+            <div className="text-sm font-medium text-gray-700">
               Aplicar a todos los días pasados
             </div>
             <Select value={tipoTodos} onValueChange={aplicarATodos}>
-              <SelectTrigger>
+              <SelectTrigger className="bg-white">
                 <SelectValue placeholder="Selecciona un tipo..." />
               </SelectTrigger>
               <SelectContent className="max-h-72 overflow-y-auto">
@@ -199,7 +207,7 @@ export default function PermisoCancelacionDiasPasadosDialog({
 
           {/* Día por día */}
           <div className="space-y-2">
-            <div className="text-xs font-semibold uppercase text-muted-foreground">
+            <div className="text-sm font-medium text-gray-700">
               Selección día por día
             </div>
             <div className="rounded-md border divide-y">
@@ -236,7 +244,7 @@ export default function PermisoCancelacionDiasPasadosDialog({
                         }
                         disabled={isLocked}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="bg-white">
                           <SelectValue placeholder="Selecciona tipo..." />
                         </SelectTrigger>
                         <SelectContent className="max-h-72 overflow-y-auto">
@@ -266,11 +274,14 @@ export default function PermisoCancelacionDiasPasadosDialog({
           ) : null}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
+        <DialogFooter className="bg-gray-50 border-t border-gray-100 p-4 flex gap-2 sm:justify-end">
+          <Button variant="outline" onClick={() => setOpen(false)} className="border-gray-300 text-gray-700 hover:bg-gray-100">
             Volver
           </Button>
-          <Button onClick={confirmar}>Confirmar cancelación</Button>
+          <Button onClick={confirmar} className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-2">
+            <Save className="h-4 w-4" />
+            Confirmar selección
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

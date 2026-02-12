@@ -61,20 +61,24 @@ export default function EstadoEmpleadoDialog({
 
   return (
     <>
-      <Button
-        className={item.estado === "Inactivo" ? className : ""}
-        variant={item.estado === "Activo" ? "destructive" : "reactivate"}
+      <button
+        className={`p-2 rounded-lg transition-colors ${
+          item.estado === "Activo"
+            ? "bg-red-50 hover:bg-red-100"
+            : "bg-green-50 hover:bg-green-100"
+        }`}
         onClick={(e) => {
           e.stopPropagation(); // 👈 Para que no se dispare el onClick de la fila
           setOpen(true);
         }}
+        title={item.estado === "Activo" ? "Eliminar" : "Reactivar"}
       >
         {item.estado === "Activo" ? (
-          <Trash2 />
+          <Trash2 className="h-4 w-4 text-red-600" />
         ) : (
-          <ShieldCheck className="text-white" />
+          <ShieldCheck className="h-4 w-4 text-green-600" />
         )}
-      </Button>
+      </button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">

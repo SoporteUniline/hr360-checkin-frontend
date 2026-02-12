@@ -46,6 +46,14 @@ import { useMemo, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { useAuth } from "@/context/AuthContext";
 import { Combobox } from "./Combobox";
+import {
+  FileText,
+  Pencil,
+  Trash2,
+  AlertTriangle,
+  Save,
+  SlidersHorizontal,
+} from "lucide-react";
 
 const getSchema = (isEdit) =>
   z.object({
@@ -166,7 +174,7 @@ const NewTipoActaModal = ({
         err?.response?.data?.message || "Error al guardar el tipo de acta",
         {
           variant: "error",
-        }
+        },
       );
     } finally {
       setIsSubmitting(false);
@@ -230,7 +238,7 @@ const NewTipoActaModal = ({
       console.error("Error al eliminar tipo de acta:", err);
       enqueueSnackbar(
         err?.response?.data?.message || "Error al eliminar el tipo de acta",
-        { variant: "error" }
+        { variant: "error" },
       );
     } finally {
       setIsSubmitting(false);
@@ -239,7 +247,7 @@ const NewTipoActaModal = ({
 
   const tiposOrdenados = useMemo(() => {
     return [...(tiposActaList || [])].sort(
-      (a, b) => (b.id_tipo_acta || 0) - (a.id_tipo_acta || 0)
+      (a, b) => (b.id_tipo_acta || 0) - (a.id_tipo_acta || 0),
     );
   }, [tiposActaList]);
 
@@ -255,165 +263,167 @@ const NewTipoActaModal = ({
            * Relación:
            * - Este modal se abre desde `src/components/NewActaModal.jsx` (botón + en "Tipo de Acta").
            */
-          "w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-xl md:max-w-2xl"
+          "w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-xl md:max-w-2xl p-0 overflow-hidden",
         )}
       >
-        <DialogHeader className="border-b-2 pb-2">
-          <DialogTitle className="pb-2">
-            {editingTipo ? "✏️ Editar Tipo de Acta" : "➕ Nuevo Tipo de Acta"}
-          </DialogTitle>
+        {/* Header - Diseño ADAMIA (patrón Contratos) */}
+        <DialogHeader className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white p-6 rounded-t-lg">
+          <div className="flex items-center gap-3">
+            <FileText className="h-6 w-6" />
+            <DialogTitle className="text-white text-lg font-semibold">
+              {editingTipo ? "✏️ Editar Tipo de Acta" : "➕ Nuevo Tipo de Acta"}
+            </DialogTitle>
+          </div>
         </DialogHeader>
 
         {/*
           Contenedor con scroll interno:
           - Evita que el modal se salga de la pantalla en móviles.
         */}
-        <div className="max-h-[75vh] overflow-y-auto pr-1">
+        <div className="max-h-[75vh] overflow-y-auto px-6 py-6">
           <Form {...form}>
             <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
-              {!editingTipo && (
+              {/* Información del tipo */}
+              <div className="bg-gradient-to-br from-blue-50 via-white to-blue-50 border border-blue-100 rounded-xl p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="bg-[#2563EB] p-2 rounded-lg">
+                    <FileText className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="font-semibold text-gray-900">
+                    Información del tipo
+                  </div>
+                </div>
+
+                {!editingTipo && (
+                  <FormField
+                    control={form.control}
+                    name="empresa"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabelWithAsterisk required>
+                          Empresa
+                        </FormLabelWithAsterisk>
+
+                        <FormControl>
+                          <Combobox
+                            options={(dataUser?.empresas_detalle || []).map(
+                              (e) => ({
+                                value: String(e.id_empresa),
+                                label: e.nombre,
+                              }),
+                            )}
+                            value={field.value}
+                            onChange={field.onChange}
+                            placeholder="Selecciona una empresa"
+                          />
+                        </FormControl>
+
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
                 <FormField
                   control={form.control}
-                  name="empresa"
+                  name="nombre_tipo"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabelWithAsterisk required>
-                        Empresa
+                      <FormLabelWithAsterisk required className="text-gray-600">
+                        Nombre del tipo
                       </FormLabelWithAsterisk>
-
                       <FormControl>
-                        <Combobox
-                          options={(dataUser?.empresas_detalle || []).map(
-                            (e) => ({
-                              value: String(e.id_empresa),
-                              label: e.nombre,
-                            })
-                          )}
-                          value={field.value}
-                          onChange={field.onChange}
-                          placeholder="Selecciona una empresa"
+                        <Input
+                          placeholder="Ej: Falta injustificada"
+                          {...field}
                         />
                       </FormControl>
-
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              )}
-
-              <FormField
-                control={form.control}
-                name="nombre_tipo"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabelWithAsterisk required className="text-gray-600">
-                      Nombre del Tipo
-                    </FormLabelWithAsterisk>
-                    <FormControl>
-                      <Input placeholder="Ej: Falta injustificada" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="descripcion"
-                render={({ field }) => (
-                  <FormItem>
-                    <Label className="text-gray-600">Descripción</Label>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Describe brevemente este tipo de acta..."
-                        rows={3}
-                        {...field}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="clasificacion"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabelWithAsterisk required className="text-gray-600">
-                        Clasificación
-                      </FormLabelWithAsterisk>
-                      <FormControl>
-                        <div className="flex gap-4">
-                          <label>
-                            <input
-                              type="radio"
-                              value="falta"
-                              checked={field.value === "falta"}
-                              onChange={field.onChange}
-                            />{" "}
-                            Falta
-                          </label>
-                          <label>
-                            <input
-                              type="radio"
-                              value="sancion"
-                              checked={field.value === "sancion"}
-                              onChange={field.onChange}
-                            />{" "}
-                            Sanción
-                          </label>
-                        </div>
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
 
                 <FormField
                   control={form.control}
-                  name="gravedad"
+                  name="descripcion"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabelWithAsterisk required className="text-gray-600">
-                        Gravedad
-                      </FormLabelWithAsterisk>
+                      <Label className="text-gray-600">Descripción</Label>
                       <FormControl>
-                        <div className="flex gap-4">
-                          <label>
-                            <input
-                              type="radio"
-                              value="leve"
-                              checked={field.value === "leve"}
-                              onChange={field.onChange}
-                            />{" "}
-                            Leve
-                          </label>
-                          <label>
-                            <input
-                              type="radio"
-                              value="grave"
-                              checked={field.value === "grave"}
-                              onChange={field.onChange}
-                            />{" "}
-                            Grave
-                          </label>
-                        </div>
+                        <Textarea
+                          placeholder="Describe brevemente este tipo de acta..."
+                          rows={3}
+                          {...field}
+                        />
                       </FormControl>
                     </FormItem>
                   )}
                 />
               </div>
 
-              <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4">
+              {/* Clasificación y gravedad */}
+              <div className="bg-gradient-to-br from-purple-50 via-white to-fuchsia-50 border border-purple-100 rounded-xl p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <div className="bg-[#7C3AED] p-2 rounded-lg">
+                    <SlidersHorizontal className="h-4 w-4 text-white" />
+                  </div>
+                  <div className="font-semibold text-gray-900">
+                    Clasificación y gravedad
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="nombre_tipo"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabelWithAsterisk
+                          required
+                          className="text-gray-600"
+                        >
+                          Nombre del Tipo
+                        </FormLabelWithAsterisk>
+                        <FormControl>
+                          <Input
+                            placeholder="Ej: Falta injustificada"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="descripcion"
+                    render={({ field }) => (
+                      <FormItem>
+                        <Label className="text-gray-600">Descripción</Label>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Describe brevemente este tipo de acta..."
+                            rows={3}
+                            {...field}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              <div className="bg-gray-50 -mx-6 px-6 py-4 flex flex-col-reverse sm:flex-row justify-end gap-2 mt-6 border-t">
                 {editingTipo ? (
                   <Button
                     variant="outline"
                     type="button"
                     onClick={cancelEdit}
                     disabled={isSubmitting}
-                    className="w-full sm:w-auto"
+                    className="w-full sm:w-auto border-gray-300"
                   >
-                    Cancelar edición
+                    {isSubmitting ? "Guardando..." : "💾 Guardar Tipo"}
                   </Button>
                 ) : (
                   <Button
@@ -421,7 +431,7 @@ const NewTipoActaModal = ({
                     type="button"
                     onClick={handleClose}
                     disabled={isSubmitting}
-                    className="w-full sm:w-auto"
+                    className="w-full sm:w-auto border-gray-300"
                   >
                     Cancelar
                   </Button>
@@ -429,12 +439,17 @@ const NewTipoActaModal = ({
 
                 <Button
                   type="submit"
-                  className="bg-slate-700 hover:bg-slate-800 w-full sm:w-auto"
-                  disabled={
-                    isSubmitting || (!editingTipo && !empresaSeleccionada)
-                  }
+                  className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm w-full sm:w-auto"
+                  disabled={isSubmitting}
                 >
-                  {isSubmitting ? "Guardando..." : "💾 Guardar Tipo"}
+                  {isSubmitting ? (
+                    "Guardando..."
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Guardar
+                    </>
+                  )}
                 </Button>
               </div>
             </form>
@@ -444,10 +459,10 @@ const NewTipoActaModal = ({
             Relación:
             - Se usa desde `src/components/NewActaModal.jsx` (botón + al lado de Tipo de Acta).
             - Cualquier cambio aquí debe reflejarse en el Select de Tipo de Acta al crear acta. */}
-          <div className="pt-4 border-t">
+          <div className="pt-6 border-t">
             <div className="flex items-center justify-between gap-2 pb-2">
-              <p className="font-semibold text-sm text-gray-700">
-                📚 Tipos existentes
+              <p className="font-semibold text-sm text-gray-900">
+                Tipos existentes
               </p>
               {loadingTiposActaList ? (
                 <span className="text-xs text-gray-500">Cargando...</span>
@@ -466,22 +481,28 @@ const NewTipoActaModal = ({
             <div className="max-h-[260px] overflow-y-auto overflow-x-auto rounded-md border">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Clasificación</TableHead>
-                    <TableHead>Gravedad</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
+                  <TableRow className="bg-gray-50 hover:bg-gray-50">
+                    <TableHead className="font-semibold text-gray-700 uppercase text-xs">
+                      Nombre
+                    </TableHead>
+                    <TableHead className="font-semibold text-gray-700 uppercase text-xs">
+                      Clasificación
+                    </TableHead>
+                    <TableHead className="font-semibold text-gray-700 uppercase text-xs">
+                      Gravedad
+                    </TableHead>
+                    <TableHead className="font-semibold text-gray-700 uppercase text-xs text-right">
+                      Acciones
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {tiposOrdenados.length === 0 ? (
                     <TableRow>
-                      <TableCell
-                        colSpan={4}
-                        className="text-center text-muted-foreground py-8"
-                      >
-                        No hay tipos de acta.
-                      </TableCell>
+                      <TableHead>Nombre</TableHead>
+                      <TableHead>Clasificación</TableHead>
+                      <TableHead>Gravedad</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   ) : (
                     tiposOrdenados.map((tipo) => (
@@ -535,37 +556,42 @@ const NewTipoActaModal = ({
         open={!!deletingTipo}
         onOpenChange={(o) => !o && setDeletingTipo(null)}
       >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar tipo de acta?</AlertDialogTitle>
-            <AlertDialogDescription>
-              {deletingTipo?.usadas > 0 ? (
-                <span className="text-red-600 font-medium">
-                  ⚠️ Este tipo de acta ya está asignado a {deletingTipo.usadas}{" "}
-                  actas y no puede eliminarse.
-                </span>
-              ) : (
-                <>
-                  Se eliminará{" "}
-                  <span className="font-semibold">
-                    {deletingTipo?.nombre_tipo}
-                  </span>
-                  . Esta acción no se puede deshacer.
-                </>
-              )}
-            </AlertDialogDescription>
+        <AlertDialogContent className="sm:max-w-[425px] p-0">
+          <AlertDialogHeader className="bg-gradient-to-r from-red-500 to-red-600 text-white p-6 rounded-t-lg">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="h-6 w-6" />
+              <AlertDialogTitle className="text-white">
+                ¿Eliminar tipo de acta?
+              </AlertDialogTitle>
+            </div>
           </AlertDialogHeader>
-          <AlertDialogFooter>
+          <div className="p-6 space-y-4">
+            <div className="bg-red-50 border-l-4 border-red-500 text-red-800 p-4 rounded-md">
+              <AlertDialogDescription className="text-sm">
+                {deletingTipo && (
+                  <>
+                    Se eliminará{" "}
+                    <span className="font-semibold">
+                      {deletingTipo.nombre_tipo}
+                    </span>
+                    . Si ya está asignado a actas, el sistema no permitirá
+                    eliminarlo.
+                  </>
+                )}
+              </AlertDialogDescription>
+            </div>
+          </div>
+          <AlertDialogFooter className="bg-gray-50 p-4 flex justify-end gap-2 rounded-b-lg">
             <AlertDialogCancel
-              className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
+              className="border-gray-300"
               disabled={isSubmitting}
             >
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
-              disabled={isSubmitting || deletingTipo?.usadas > 0}
-              className="bg-[#ef4444] hover:bg-[#dc2626] text-white"
+              className="bg-red-600 hover:bg-red-700 text-white shadow-sm"
+              disabled={isSubmitting}
             >
               {isSubmitting ? "Eliminando..." : "Eliminar"}
             </AlertDialogAction>

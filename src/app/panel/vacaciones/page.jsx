@@ -16,7 +16,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "@/lib/axios";
 import { useAuth } from "@/context/AuthContext";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -33,10 +33,24 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import TablePagination from "@/components/TablePagination";
 import styles from "./vacaciones-theme.module.css";
 import { formatDateDMY } from "@/lib/formatDate";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import StatCard from "@/components/StatCard";
+import {
+  CalendarDays,
+  CheckCircle2,
+  ChevronRight,
+  ClipboardList,
+  Filter,
+  RotateCcw,
+  Search,
+  Users,
+  XCircle,
+} from "lucide-react";
+import { Label } from "@/components/ui/label";
 
 function numberFormat(n) {
   try {
@@ -412,164 +426,200 @@ export default function VacacionesPage() {
   };
 
   return (
-    <div className={`${styles.vacacionesTheme} p-4 md:p-6 space-y-4`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl md:text-2xl font-semibold">
-            📊 Reporte de Vacaciones
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Control de días de vacaciones por empleado
-          </p>
+    <div className={`${styles.vacacionesTheme} space-y-6`}>
+      {/* Header ADAMIA */}
+      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+        <div className="flex items-center gap-3">
+          <div className="bg-[#2563EB] p-2.5 rounded-lg">
+            <CalendarDays className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">
+              Panel de vacaciones
+            </h1>
+            <p className="text-sm text-gray-600">
+              Control de días cargados, tomados y disponibles por empleado.
+            </p>
+          </div>
         </div>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="p-4 border-l-4" style={{ borderLeftColor: "#3498db" }}>
-          <div className="text-[11px] uppercase font-semibold text-slate-500">
-            Total Empleados
-          </div>
-          <div className="text-2xl font-extrabold">
-            {numberFormat(kpis.total)}
-          </div>
-        </Card>
-        <Card className="p-4 border-l-4" style={{ borderLeftColor: "#10b981" }}>
-          <div className="text-[11px] uppercase font-semibold text-slate-500">
-            Con Vacaciones
-          </div>
-          <div className="text-2xl font-extrabold">
-            {numberFormat(kpis.conV)}
-          </div>
-        </Card>
-        <Card className="p-4 border-l-4" style={{ borderLeftColor: "#ef4444" }}>
-          <div className="text-[11px] uppercase font-semibold text-slate-500">
-            Sin Vacaciones
-          </div>
-          <div className="text-2xl font-extrabold">
-            {numberFormat(kpis.sinV)}
-          </div>
-        </Card>
-        <Card className="p-4 border-l-4" style={{ borderLeftColor: "#9b59b6" }}>
-          <div className="text-[11px] uppercase font-semibold text-slate-500">
-            Total Días Disponibles
-          </div>
-          <div className="text-2xl font-extrabold">
-            {numberFormat(kpis.totalDias)}
-          </div>
-        </Card>
+        <StatCard
+          title="Total empleados"
+          value={numberFormat(kpis.total)}
+          icon={Users}
+        />
+        <StatCard
+          title="Con vacaciones"
+          value={numberFormat(kpis.conV)}
+          icon={CheckCircle2}
+        />
+        <StatCard
+          title="Sin vacaciones"
+          value={numberFormat(kpis.sinV)}
+          icon={XCircle}
+        />
+        <StatCard
+          title="Total días disponibles"
+          value={numberFormat(kpis.totalDias)}
+          icon={ClipboardList}
+        />
       </div>
 
       {/* Filtros */}
-      <Card className="p-4 space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-          <div>
-            <select
-              className="w-full border rounded-md px-3 py-2 text-sm bg-white"
-              value={empresaActiva}
-              onChange={(e) => setEmpresaActiva(e.target.value)}
-            >
-              <option value="all">🏢 Todas las empresas</option>
-              {dataUser?.empresas_detalle?.map((emp) => (
-                <option key={emp.id_empresa} value={emp.id_empresa}>
-                  {emp.nombre}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="relative">
-            {/* Campo de búsqueda con sugerencias (typeahead) */}
-            <input
-              className="w-full border rounded-md px-3 py-2 text-sm"
-              placeholder="🔍 Buscar empleado..."
-              value={filterEmpleado}
-              onChange={(e) => {
-                setFilterEmpleado(e.target.value);
-                setIsSuggestionsOpen(true);
-                setHoveredSuggestionIndex(0);
-              }}
-              onFocus={() => setIsSuggestionsOpen(!!filterEmpleado)}
-              onBlur={() => {
-                // Delay para permitir onMouseDown de las opciones
-                setTimeout(() => setIsSuggestionsOpen(false), 120);
-              }}
-              onKeyDown={(e) => {
-                if (!isSuggestionsOpen || sugerencias.length === 0) return;
-                if (e.key === "ArrowDown") {
-                  e.preventDefault();
-                  setHoveredSuggestionIndex((prev) =>
-                    prev + 1 >= sugerencias.length ? 0 : prev + 1,
-                  );
-                } else if (e.key === "ArrowUp") {
-                  e.preventDefault();
-                  setHoveredSuggestionIndex((prev) =>
-                    prev - 1 < 0 ? sugerencias.length - 1 : prev - 1,
-                  );
-                } else if (e.key === "Enter") {
-                  e.preventDefault();
-                  handleSelectEmpleado(
-                    sugerencias[hoveredSuggestionIndex] || sugerencias[0],
-                  );
-                } else if (e.key === "Escape") {
-                  setIsSuggestionsOpen(false);
-                }
-              }}
-            />
-            {/* Lista de sugerencias */}
-            {isSuggestionsOpen && sugerencias.length > 0 ? (
-              <div className="absolute left-0 right-0 mt-1 z-20 rounded-md border bg-white shadow">
-                <ul className="max-h-64 overflow-auto">
-                  {sugerencias.map((emp, idx) => (
-                    <li
-                      key={emp.id_empleado}
-                      onMouseDown={() => handleSelectEmpleado(emp)}
-                      onMouseEnter={() => setHoveredSuggestionIndex(idx)}
-                      className={`px-3 py-2 cursor-pointer text-sm ${
-                        idx === hoveredSuggestionIndex ? "bg-slate-100" : ""
-                      }`}
-                    >
-                      {emp.nombre_completo}
-                    </li>
-                  ))}
-                </ul>
+      <Card className="border-blue-100 bg-blue-50">
+        <CardHeader>
+          <CardTitle className="text-base font-bold text-blue-700 flex items-center gap-2">
+            <Filter className="h-4 w-4" /> Filtros de búsqueda
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {/* Grid: 1 col en móvil, 2 en tablets (md), 3 en laptops (lg) y 5 en desktop (xl) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 items-end">
+            {/* Empresa */}
+            <div className="flex flex-col gap-1">
+              <Label className="text-sm font-medium text-gray-700">
+                Empresa
+              </Label>
+              <select
+                className="h-9 w-full border rounded-md px-3 text-sm bg-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                value={empresaActiva}
+                onChange={(e) => setEmpresaActiva(e.target.value)}
+              >
+                <option value="all">🏢 Todas las empresas</option>
+                {dataUser?.empresas_detalle?.map((emp) => (
+                  <option key={emp.id_empresa} value={emp.id_empresa}>
+                    {emp.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Búsqueda de Empleado (Typeahead) */}
+            <div className="flex flex-col gap-1 relative">
+              <Label className="text-sm font-medium text-gray-700">
+                Empleado
+              </Label>
+              <div className="relative">
+                <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Input
+                  className="pl-9 bg-white h-9"
+                  placeholder="Nombre del empleado..."
+                  value={filterEmpleado}
+                  onChange={(e) => {
+                    setFilterEmpleado(e.target.value);
+                    setIsSuggestionsOpen(true);
+                    setHoveredSuggestionIndex(0);
+                  }}
+                  onFocus={() => setIsSuggestionsOpen(!!filterEmpleado)}
+                  onBlur={() =>
+                    setTimeout(() => setIsSuggestionsOpen(false), 120)
+                  }
+                  onKeyDown={(e) => {
+                    if (!isSuggestionsOpen || sugerencias.length === 0) return;
+                    if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      setHoveredSuggestionIndex((prev) =>
+                        prev + 1 >= sugerencias.length ? 0 : prev + 1,
+                      );
+                    } else if (e.key === "ArrowUp") {
+                      e.preventDefault();
+                      setHoveredSuggestionIndex((prev) =>
+                        prev - 1 < 0 ? sugerencias.length - 1 : prev - 1,
+                      );
+                    } else if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleSelectEmpleado(
+                        sugerencias[hoveredSuggestionIndex] || sugerencias[0],
+                      );
+                    } else if (e.key === "Escape") {
+                      setIsSuggestionsOpen(false);
+                    }
+                  }}
+                />
               </div>
-            ) : null}
+              {/* Sugerencias flotantes */}
+              {isSuggestionsOpen && sugerencias.length > 0 && (
+                <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 rounded-md border bg-white shadow-lg overflow-hidden">
+                  <ul className="max-h-60 overflow-auto py-1">
+                    {sugerencias.map((emp, idx) => (
+                      <li
+                        key={emp.id_empleado}
+                        onMouseDown={() => handleSelectEmpleado(emp)}
+                        onMouseEnter={() => setHoveredSuggestionIndex(idx)}
+                        className={`px-3 py-2 cursor-pointer text-sm ${
+                          idx === hoveredSuggestionIndex
+                            ? "bg-blue-50 text-blue-700"
+                            : "text-gray-700"
+                        }`}
+                      >
+                        {emp.nombre_completo}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            {/* Departamento */}
+            <div className="flex flex-col gap-1">
+              <Label className="text-sm font-medium text-gray-700">
+                Departamento
+              </Label>
+              <select
+                className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm shadow-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                value={filterDepartamento}
+                onChange={(e) => setFilterDepartamento(e.target.value)}
+              >
+                <option value="">Todos los departamentos</option>
+                {departamentos.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Estado */}
+            <div className="flex flex-col gap-1">
+              <Label className="text-sm font-medium text-gray-700">
+                Estado Vacaciones
+              </Label>
+              <select
+                className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm shadow-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                value={filterEstado}
+                onChange={(e) => setFilterEstado(e.target.value)}
+              >
+                <option value="">Todos los estados</option>
+                <option value="con">Con vacaciones</option>
+                <option value="sin">Sin vacaciones</option>
+              </select>
+            </div>
+
+            {/* Botón Limpiar */}
+            <div className="flex">
+              <Button
+                variant="outline"
+                onClick={limpiarFiltros}
+                className="w-full h-9 border-gray-300 text-gray-700 hover:bg-gray-100 flex items-center justify-center gap-2"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Limpiar Filtros
+              </Button>
+            </div>
           </div>
-          <select
-            className="w-full border rounded-md px-3 py-2 text-sm"
-            value={filterDepartamento}
-            onChange={(e) => setFilterDepartamento(e.target.value)}
-          >
-            <option value="">📁 Todos los departamentos</option>
-            {departamentos.map((d) => (
-              <option key={d} value={d}>
-                {d}
-              </option>
-            ))}
-          </select>
-          <select
-            className="w-full border rounded-md px-3 py-2 text-sm"
-            value={filterEstado}
-            onChange={(e) => setFilterEstado(e.target.value)}
-          >
-            <option value="">📊 Todos los estados</option>
-            <option value="con">✅ Con vacaciones</option>
-            <option value="sin">❌ Sin vacaciones</option>
-          </select>
-          <div className="flex md:justify-end">
-            <Button
-              variant="outline"
-              onClick={limpiarFiltros}
-              className="bg-[#e74c3c] hover:bg-[#c0392b] text-white shadow-[0_2px_8px_rgba(231,76,60,0.3)]"
-            >
-              🗑️ Limpiar filtros
-            </Button>
-          </div>
-        </div>
+        </CardContent>
       </Card>
 
       {/* Contenido */}
-      <Card className="p-0">
+      <Card className="p-0 overflow-hidden border-gray-100">
+        <CardHeader className="border-b border-gray-100 bg-white pt-6">
+          <CardTitle className="text-sm font-bold text-gray-900">
+            Lista de vacaciones
+          </CardTitle>
+        </CardHeader>
         {loading ? (
           <div className="text-center text-slate-400 py-16">
             Cargando datos...
@@ -585,13 +635,21 @@ export default function VacacionesPage() {
             <div className="overflow-auto">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Empleado</TableHead>
-                    <TableHead>Departamento</TableHead>
-                    <TableHead className="text-center">Días Cargados</TableHead>
-                    <TableHead className="text-center">Días Tomados</TableHead>
-                    <TableHead className="text-center">
-                      Días Disponibles
+                  <TableRow className="bg-gray-50">
+                    <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                      Empleado
+                    </TableHead>
+                    <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                      Departamento
+                    </TableHead>
+                    <TableHead className="text-center text-xs font-semibold uppercase text-gray-600">
+                      Días cargados
+                    </TableHead>
+                    <TableHead className="text-center text-xs font-semibold uppercase text-gray-600">
+                      Días tomados
+                    </TableHead>
+                    <TableHead className="text-center text-xs font-semibold uppercase text-gray-600">
+                      Días disponibles
                     </TableHead>
                   </TableRow>
                 </TableHeader>
@@ -612,13 +670,13 @@ export default function VacacionesPage() {
                         >
                           <TableCell className="font-semibold">
                             <span
-                              className={`mr-2 inline-block transition-transform ${
+                              className={`mr-2 inline-flex transition-transform ${
                                 expandedRow === emp.id_empleado
                                   ? "rotate-90"
                                   : ""
                               }`}
                             >
-                              ▶
+                              <ChevronRight className="h-4 w-4 text-gray-500" />
                             </span>
                             {emp.nombre_completo}
                           </TableCell>
@@ -638,26 +696,26 @@ export default function VacacionesPage() {
                             <TableCell colSpan={5} className="p-0 bg-slate-50">
                               <div className="border-t p-3">
                                 {/* Tabs tipo botones */}
-                                <div className="inline-flex rounded-md bg-slate-100 p-1 mb-3">
+                                <div className="inline-flex rounded-lg border border-blue-100 bg-blue-50 p-1 mb-3">
                                   <button
                                     className={`px-3 py-1.5 text-sm font-semibold rounded ${
                                       expandedTab === "cargados"
-                                        ? "bg-white shadow"
-                                        : "text-slate-600"
+                                        ? "bg-white text-[#2563EB] shadow-sm"
+                                        : "text-gray-600 hover:bg-white/60"
                                     }`}
                                     onClick={() => setExpandedTab("cargados")}
                                   >
-                                    📅 Días Cargados
+                                    Días cargados
                                   </button>
                                   <button
                                     className={`px-3 py-1.5 text-sm font-semibold rounded ${
                                       expandedTab === "tomados"
-                                        ? "bg-white shadow"
-                                        : "text-slate-600"
+                                        ? "bg-white text-[#2563EB] shadow-sm"
+                                        : "text-gray-600 hover:bg-white/60"
                                     }`}
                                     onClick={() => setExpandedTab("tomados")}
                                   >
-                                    🏖️ Días Tomados
+                                    Días tomados
                                   </button>
                                 </div>
 
@@ -717,14 +775,20 @@ export default function VacacionesPage() {
                                       ) : (
                                         <Table>
                                           <TableHeader>
-                                            <TableRow>
-                                              <TableHead>Año</TableHead>
-                                              <TableHead className="text-center">
+                                            <TableRow className="bg-gray-50">
+                                              <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                                                Año
+                                              </TableHead>
+                                              <TableHead className="text-center text-xs font-semibold uppercase text-gray-600">
                                                 Días
                                               </TableHead>
-                                              <TableHead>Inicio</TableHead>
-                                              <TableHead>Fin</TableHead>
-                                              <TableHead className="text-center">
+                                              <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                                                Inicio
+                                              </TableHead>
+                                              <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                                                Fin
+                                              </TableHead>
+                                              <TableHead className="text-center text-xs font-semibold uppercase text-gray-600">
                                                 Estado
                                               </TableHead>
                                             </TableRow>
@@ -750,7 +814,6 @@ export default function VacacionesPage() {
                                                     </Badge>
                                                   </TableCell>
                                                   <TableCell>
-                                                    📆{" "}
                                                     {p?.fecha_inicio
                                                       ? formatDateDMY(
                                                           p.fecha_inicio,
@@ -758,7 +821,6 @@ export default function VacacionesPage() {
                                                       : "-"}
                                                   </TableCell>
                                                   <TableCell>
-                                                    📆{" "}
                                                     {p?.fecha_fin
                                                       ? formatDateDMY(
                                                           p.fecha_fin,
@@ -855,24 +917,12 @@ export default function VacacionesPage() {
                                                         key={v.id}
                                                         className="flex items-center gap-3 rounded-md border bg-white p-3 shadow-sm transition hover:shadow-md"
                                                       >
-                                                        <div
-                                                          className="w-12 h-12 rounded-md text-white flex items-center justify-center font-extrabold text-xl"
-                                                          style={{
-                                                            backgroundColor:
-                                                              "#2c3e50",
-                                                          }}
-                                                        >
+                                                        <div className="w-12 h-12 rounded-md text-white flex items-center justify-center font-extrabold text-xl bg-gradient-to-br from-[#2563EB] to-[#1d4ed8]">
                                                           {f.day}
                                                         </div>
                                                         <div className="min-w-0">
                                                           <div className="mb-1">
-                                                            <span
-                                                              className="inline-block text-[11px] font-bold text-white rounded-full px-2 py-0.5"
-                                                              style={{
-                                                                backgroundColor:
-                                                                  "#10b981",
-                                                              }}
-                                                            >
+                                                            <span className="inline-block text-[11px] font-bold text-white rounded-full px-2 py-0.5 bg-[#2563EB]">
                                                               {f.weekday.toUpperCase()}
                                                             </span>
                                                           </div>
@@ -967,136 +1017,152 @@ export default function VacacionesPage() {
 
       {/* Diálogo de detalles */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{dialogTitle}</DialogTitle>
+        <DialogContent className="p-0 overflow-hidden max-w-[95vw] sm:max-w-2xl">
+          <DialogHeader className="p-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white">
+            <DialogTitle className="flex items-center gap-2 text-base font-bold">
+              <span className="grid size-9 place-items-center rounded-lg bg-white/15">
+                <CalendarDays className="size-5 text-white" />
+              </span>
+              {dialogTitle}
+            </DialogTitle>
           </DialogHeader>
-          {detalleLoading ? (
-            <div className="text-center text-slate-400 py-10">Cargando...</div>
-          ) : !detalleData ? (
-            <div className="text-center text-slate-400 py-10">Sin datos</div>
-          ) : dialogTitle.includes("Cargados") ? (
-            <div className="space-y-4">
-              <Card className="p-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
-                  <div>
-                    <div className="text-[11px] uppercase text-slate-500">
-                      Nombre
-                    </div>
-                    <div className="font-semibold">
-                      {detalleData?.empleado?.nombre_completo}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] uppercase text-slate-500">
-                      Empresa
-                    </div>
-                    <div className="font-semibold">
-                      {detalleData?.empleado?.empresa}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] uppercase text-slate-500">
-                      Departamento
-                    </div>
-                    <div className="font-semibold">
-                      {detalleData?.empleado?.departamento}
-                    </div>
-                  </div>
-                </div>
-              </Card>
-              <div className="space-y-2">
-                {(detalleData?.periodos ?? []).length === 0 ? (
-                  <div className="text-center text-slate-400 py-6">
-                    No tiene periodos registrados
-                  </div>
-                ) : (
-                  (detalleData?.periodos ?? []).map((p) => {
-                    const activa = p?.estado === "Activa";
-                    return (
-                      <Card key={p.id} className="p-4">
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="font-semibold">Año {p?.anios}</div>
-                          <div className="text-xl font-extrabold text-emerald-600">
-                            {numberFormat(p?.dias)} días
-                          </div>
-                        </div>
-                        <div className="text-sm text-slate-500 mb-2">
-                          📆 {p?.fecha_inicio} → {p?.fecha_fin}
-                        </div>
-                        <Badge variant={activa ? "default" : "secondary"}>
-                          {p?.estado}
-                        </Badge>
-                      </Card>
-                    );
-                  })
-                )}
+          <div className="max-h-[70vh] overflow-y-auto p-5">
+            {detalleLoading ? (
+              <div className="text-center text-slate-400 py-10">
+                Cargando...
               </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <Card className="p-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
-                  <div>
-                    <div className="text-[11px] uppercase text-slate-500">
-                      Nombre
+            ) : !detalleData ? (
+              <div className="text-center text-slate-400 py-10">Sin datos</div>
+            ) : dialogTitle.includes("Cargados") ? (
+              <div className="space-y-4">
+                <Card className="p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+                    <div>
+                      <div className="text-[11px] uppercase text-slate-500">
+                        Nombre
+                      </div>
+                      <div className="font-semibold">
+                        {detalleData?.empleado?.nombre_completo}
+                      </div>
                     </div>
-                    <div className="font-semibold">
-                      {detalleData?.empleado?.nombre_completo}
+                    <div>
+                      <div className="text-[11px] uppercase text-slate-500">
+                        Empresa
+                      </div>
+                      <div className="font-semibold">
+                        {detalleData?.empleado?.empresa}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[11px] uppercase text-slate-500">
+                        Departamento
+                      </div>
+                      <div className="font-semibold">
+                        {detalleData?.empleado?.departamento}
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <div className="text-[11px] uppercase text-slate-500">
-                      Empresa
+                </Card>
+                <div className="space-y-2">
+                  {(detalleData?.periodos ?? []).length === 0 ? (
+                    <div className="text-center text-slate-400 py-6">
+                      No tiene periodos registrados
                     </div>
-                    <div className="font-semibold">
-                      {detalleData?.empleado?.empresa}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] uppercase text-slate-500">
-                      Total días tomados
-                    </div>
-                    <div className="font-extrabold text-red-600">
-                      {numberFormat(detalleData?.total)} días
-                    </div>
-                  </div>
+                  ) : (
+                    (detalleData?.periodos ?? []).map((p) => {
+                      const activa = p?.estado === "Activa";
+                      return (
+                        <Card key={p.id} className="p-4">
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="font-semibold">Año {p?.anios}</div>
+                            <div className="text-xl font-extrabold text-emerald-600">
+                              {numberFormat(p?.dias)} días
+                            </div>
+                          </div>
+                          <div className="text-sm text-slate-500 mb-2">
+                            {p?.fecha_inicio
+                              ? formatDateDMY(p?.fecha_inicio)
+                              : "-"}{" "}
+                            → {p?.fecha_fin ? formatDateDMY(p?.fecha_fin) : "-"}
+                          </div>
+                          <Badge variant={activa ? "default" : "secondary"}>
+                            {p?.estado}
+                          </Badge>
+                        </Card>
+                      );
+                    })
+                  )}
                 </div>
-              </Card>
-              <Card className="p-0 overflow-hidden">
-                <div className="max-h-[400px] overflow-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Fecha</TableHead>
-                        <TableHead>Notas</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {(detalleData?.vacaciones ?? []).length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={2} className="text-center">
-                            No ha tomado vacaciones
-                          </TableCell>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <Card className="p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
+                    <div>
+                      <div className="text-[11px] uppercase text-slate-500">
+                        Nombre
+                      </div>
+                      <div className="font-semibold">
+                        {detalleData?.empleado?.nombre_completo}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[11px] uppercase text-slate-500">
+                        Empresa
+                      </div>
+                      <div className="font-semibold">
+                        {detalleData?.empleado?.empresa}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[11px] uppercase text-slate-500">
+                        Total días tomados
+                      </div>
+                      <div className="font-extrabold text-red-600">
+                        {numberFormat(detalleData?.total)} días
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+                <Card className="p-0 overflow-hidden">
+                  <div className="max-h-[400px] overflow-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-gray-50">
+                          <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                            Fecha
+                          </TableHead>
+                          <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                            Notas
+                          </TableHead>
                         </TableRow>
-                      ) : (
-                        (detalleData?.vacaciones ?? []).map((v) => (
-                          <TableRow key={v.id}>
-                            <TableCell className="font-semibold">
-                              {v.fecha}
-                            </TableCell>
-                            <TableCell className="text-sm text-slate-500">
-                              {v.notas || "-"}
+                      </TableHeader>
+                      <TableBody>
+                        {(detalleData?.vacaciones ?? []).length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={2} className="text-center">
+                              No ha tomado vacaciones
                             </TableCell>
                           </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </Card>
-            </div>
-          )}
+                        ) : (
+                          (detalleData?.vacaciones ?? []).map((v) => (
+                            <TableRow key={v.id}>
+                              <TableCell className="font-semibold">
+                                {v.fecha}
+                              </TableCell>
+                              <TableCell className="text-sm text-slate-500">
+                                {v.notas || "-"}
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </Card>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 

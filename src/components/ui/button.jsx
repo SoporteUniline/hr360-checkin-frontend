@@ -58,13 +58,26 @@ function Button({
       disabled={disabled || loading}
       {...props}
     >
-      {loading ? (
-        <Icon icon="eos-icons:three-dots-loading" width="24" height="24" />
-      ) : startIcon ? (
-        startIcon
-      ) : null}
-      {props.children}
-      {endIcon}
+      {/* 
+        IMPORTANTE:
+        - Cuando `asChild` es true, Radix `Slot` exige un solo child (React.Children.only).
+        - Nuestro botón soporta `startIcon` / `endIcon` / `loading`, pero esos renderizan
+          nodos hermanos adicionales (aunque sean `null`) y rompen `Slot`.
+        - Por eso, en modo `asChild` renderizamos únicamente `children`.
+      */}
+      {asChild ? (
+        props.children
+      ) : (
+        <>
+          {loading ? (
+            <Icon icon="eos-icons:three-dots-loading" width="24" height="24" />
+          ) : startIcon ? (
+            startIcon
+          ) : null}
+          {props.children}
+          {endIcon}
+        </>
+      )}
     </Comp>
   );
 }

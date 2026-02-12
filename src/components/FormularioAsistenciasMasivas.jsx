@@ -94,37 +94,33 @@ export default function FormularioAsistenciasMasivas({
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black-40 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={cerrarModal}
       />
 
       {/* Modal */}
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        {/* Header (Diseño ADAMIA) */}
+        <div className="flex items-center justify-between p-6 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-t-2xl">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Calendar className="w-6 h-6 text-blue-600" />
+            <div className="p-2 bg-white/15 rounded-lg">
+              <Calendar className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">
-                Registrar Asistencia Masiva
-              </h2>
-              <p className="text-gray-500">
-                Complete los datos de las asistencias
-              </p>
+              <h2 className="text-lg font-semibold text-white">Registrar asistencia masiva</h2>
+              <p className="text-sm text-white/90">Completa los datos para registrar incidencias.</p>
             </div>
           </div>
           <button
             onClick={cerrarModal}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
           >
-            <X className="w-6 h-6 text-gray-400" />
+            <X className="w-6 h-6 text-white/80" />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6">
+        <form onSubmit={handleSubmit} className="p-6 text-sm">
           <div className="space-y-6">
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -269,7 +265,7 @@ export default function FormularioAsistenciasMasivas({
             <Button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-slate-700 hover:bg-slate-800 text-white py-3 rounded-lg font-medium transition-all duration-200 disabled:opacity-50"
+              className="flex-1 bg-[#2563EB] hover:bg-[#1d4ed8] text-white py-3 rounded-lg font-medium transition-all duration-200 disabled:opacity-50 shadow-sm"
             >
               {loading ? (
                 <div className="flex items-center justify-center gap-2">
@@ -279,7 +275,7 @@ export default function FormularioAsistenciasMasivas({
               ) : (
                 <div className="flex items-center justify-center gap-2">
                   <Save className="w-5 h-5" />
-                  Registrar Asistencia(s)
+                  Registrar asistencia(s)
                 </div>
               )}
             </Button>
@@ -287,9 +283,13 @@ export default function FormularioAsistenciasMasivas({
             <Button
               type="button"
               onClick={cerrarModal}
-              className="flex-1 bg-white hover:bg-gray-100 text-black py-3 rounded-lg font-medium transition-all duration-200"
+              variant="outline"
+              className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-100 py-3 rounded-lg font-medium transition-all duration-200"
             >
-              Cancelar
+              <div className="flex items-center justify-center gap-2">
+                <X className="w-5 h-5" />
+                Cancelar
+              </div>
             </Button>
           </div>
         </form>

@@ -13,6 +13,7 @@ import axios from "@/lib/axios";
 import { useSnackbar } from "notistack";
 import { mutate } from "swr";
 import Cookies from "js-cookie";
+import { AlertTriangle, Trash2 } from "lucide-react";
 
 export default function TipoRegistroDeleteDialog({
   open,
@@ -50,31 +51,29 @@ export default function TipoRegistroDeleteDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Eliminar tipo de registro</DialogTitle>
-          <p>
-            ¿Seguro que quieres eliminar este tipo de registro? Esta acción no
-            se puede deshacer.
-          </p>
+      <DialogContent className="p-0 overflow-hidden sm:max-w-lg">
+        <DialogHeader className="p-5 bg-gradient-to-r from-red-600 to-red-700 text-white">
+          <DialogTitle className="flex items-center gap-2 text-base font-bold">
+            <span className="grid size-9 place-items-center rounded-lg bg-white/15">
+              <AlertTriangle className="size-5 text-white" />
+            </span>
+            Eliminar tipo de registro
+          </DialogTitle>
+          <p className="text-sm text-red-100">Esta acción no se puede deshacer.</p>
         </DialogHeader>
-        <DialogFooter className="flex justify-end gap-2">
-          {/* Secundario según `Colores.txt` */}
-          <Button
-            variant="outline"
-            onClick={() => setOpen(false)}
-            disabled={deleting}
-            className="bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
-          >
+
+        <div className="p-5">
+          <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+            ¿Seguro que quieres eliminar este tipo de registro?
+          </div>
+        </div>
+
+        <DialogFooter className="bg-gray-50 border-t border-gray-100 p-4 flex gap-2 sm:justify-end">
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={deleting} className="border-gray-300 text-gray-700 hover:bg-gray-100">
             Cancelar
           </Button>
-          {/* Danger según `Colores.txt` */}
-          <Button
-            variant="destructive"
-            onClick={confirmDelete}
-            disabled={deleting}
-            className="bg-[#ef4444] hover:bg-[#dc2626] text-white shadow-[0_4px_12px_rgba(239,68,68,0.3)]"
-          >
+          <Button variant="destructive" onClick={confirmDelete} disabled={deleting} className="gap-2">
+            <Trash2 className="h-4 w-4" />
             {deleting ? "Eliminando..." : "Eliminar"}
           </Button>
         </DialogFooter>

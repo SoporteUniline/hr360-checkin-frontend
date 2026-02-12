@@ -28,6 +28,7 @@ import { useAuth } from "@/context/AuthContext";
 import { contratosApi } from "@/lib/contratosApi";
 import styles from "./contratos-theme.module.css";
 import { Combobox } from "@/components/Combobox";
+import { Copy, FileText, Pencil, Plus, Save } from "lucide-react";
 
 /**
  * Dialog para crear/editar/duplicar Contratos.
@@ -105,7 +106,7 @@ export default function ContratoDialog({
           `/checador/empleados/activos?empresa=${empresaSeleccionada}&page=1&limit=1000`,
           {
             headers: { Authorization: `Bearer ${token}` },
-          }
+          },
         );
         const list = Array.isArray(res.data?.data) ? res.data.data : [];
         const mapped = list.map((e) => ({
@@ -127,14 +128,14 @@ export default function ContratoDialog({
           `/checador/empleados/puestos?empresa=${empresaSeleccionada}`,
           {
             headers: { Authorization: `Bearer ${token}` },
-          }
+          },
         );
         const arr = Array.isArray(r2.data) ? r2.data : [];
         setPuestos(
           arr.map((p) => ({
             id: String(p.id || p.id_puesto || p.id),
             nombre: p.nombre || p.nombre_puesto || "",
-          }))
+          })),
         );
       } catch {}
     })();
@@ -239,7 +240,7 @@ export default function ContratoDialog({
         const fin = dayjs(
           c.fecha_fin || c.fechaFin,
           ["YYYY-MM-DD", "DD/MM/YYYY"],
-          true
+          true,
         );
         if (fin.isValid()) fechaInicio = fin.add(1, "day").format("YYYY-MM-DD");
       }
@@ -322,7 +323,7 @@ export default function ContratoDialog({
   // Autocompletar desde selección empleado
   const empleadoSeleccionado = useMemo(
     () => empleados.find((e) => e.id === empleadoId),
-    [empleados, empleadoId]
+    [empleados, empleadoId],
   );
   useEffect(() => {
     if (empleadoSeleccionado) {
@@ -418,22 +419,43 @@ export default function ContratoDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent
-        className={`${styles.contratosTheme} max-w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto`}
-      >
-        <DialogHeader>
-          <DialogTitle>
-            {isEdit
-              ? "✏️ Editar Contrato"
-              : isDuplicate
-              ? `📋 Duplicar Contrato - ${
-                  seedItem?.folio || seedItem?.id || ""
-                }`
-              : "➕ Nuevo Contrato"}
-          </DialogTitle>
+      <DialogContent className="max-w-[95vw] sm:max-w-5xl max-h-[90vh] overflow-y-auto p-0">
+        {/* Header ADAMIA */}
+        <DialogHeader className="p-0">
+          <div className="bg-gradient-to-r from-[#2563EB] to-[#1d4ed8] p-6">
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 p-3 rounded-lg backdrop-blur-sm">
+                {isEdit ? (
+                  <Pencil className="h-6 w-6 text-white" />
+                ) : isDuplicate ? (
+                  <Copy className="h-6 w-6 text-white" />
+                ) : (
+                  <FileText className="h-6 w-6 text-white" />
+                )}
+              </div>
+              <div>
+                <DialogTitle className="text-white text-xl font-bold">
+                  {isEdit
+                    ? "Editar contrato"
+                    : isDuplicate
+                    ? `Duplicar contrato ${
+                        seedItem?.folio || seedItem?.id || ""
+                      }`
+                    : "Nuevo contrato"}
+                </DialogTitle>
+                <p className="text-sm text-blue-100">
+                  {isEdit
+                    ? "Actualiza la información del contrato"
+                    : isDuplicate
+                    ? "Crea una renovación a partir del contrato anterior"
+                    : "Registra un nuevo contrato para un empleado"}
+                </p>
+              </div>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="p-6 space-y-6">
           {isDuplicate ? (
             <div className="rounded-md border-l-4 border-yellow-500 bg-yellow-50 p-3 text-sm text-yellow-800">
               <div className="font-semibold mb-1">
@@ -453,9 +475,14 @@ export default function ContratoDialog({
           ) : null}
 
           {/* Información Básica */}
-          <div className="space-y-4">
-            <div className="text-sm font-semibold text-slate-700">
-              👤 Información Básica
+          <div className="bg-gradient-to-br from-blue-50 via-white to-blue-50 border border-blue-100 rounded-xl p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="bg-[#2563EB] p-2 rounded-lg">
+                <FileText className="h-4 w-4 text-white" />
+              </div>
+              <div className="font-semibold text-gray-900">
+                Información básica
+              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {!isEdit && (
@@ -493,7 +520,7 @@ export default function ContratoDialog({
                         .filter((x) =>
                           x.nombre
                             .toLowerCase()
-                            .includes(empSearch.trim().toLowerCase())
+                            .includes(empSearch.trim().toLowerCase()),
                         )
                         .slice(0, 50)
                         .map((emp) => (
@@ -565,7 +592,7 @@ export default function ContratoDialog({
                         .filter((x) =>
                           x.nombre
                             .toLowerCase()
-                            .includes(jefeSearch.trim().toLowerCase())
+                            .includes(jefeSearch.trim().toLowerCase()),
                         )
                         .slice(0, 50)
                         .map((emp) => (
@@ -591,9 +618,24 @@ export default function ContratoDialog({
           </div>
 
           {/* Tipo y Vigencia */}
-          <div className="space-y-4">
-            <div className="text-sm font-semibold text-slate-700">
-              📋 Tipo y Vigencia
+          <div className="bg-gradient-to-br from-amber-50 via-white to-amber-50 border border-amber-100 rounded-xl p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="bg-amber-500 p-2 rounded-lg">
+                <svg
+                  className="h-4 w-4 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  />
+                </svg>
+              </div>
+              <div className="font-semibold text-gray-900">Tipo y vigencia</div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
@@ -649,9 +691,24 @@ export default function ContratoDialog({
           </div>
 
           {/* Compensación */}
-          <div className="space-y-4">
-            <div className="text-sm font-semibold text-slate-700">
-              💰 Compensación
+          <div className="bg-gradient-to-br from-green-50 via-white to-green-50 border border-green-100 rounded-xl p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="bg-green-600 p-2 rounded-lg">
+                <svg
+                  className="h-4 w-4 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+              <div className="font-semibold text-gray-900">Compensación</div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
@@ -704,9 +761,24 @@ export default function ContratoDialog({
           </div>
 
           {/* Jornada */}
-          <div className="space-y-4">
-            <div className="text-sm font-semibold text-slate-700">
-              ⏰ Jornada Laboral
+          <div className="bg-gradient-to-br from-orange-50 via-white to-orange-50 border border-orange-100 rounded-xl p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="bg-orange-600 p-2 rounded-lg">
+                <svg
+                  className="h-4 w-4 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              </div>
+              <div className="font-semibold text-gray-900">Jornada laboral</div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
@@ -794,9 +866,24 @@ export default function ContratoDialog({
 
           {/* Prestaciones */}
           {form.tipo_contrato !== "prestacion_servicios" ? (
-            <div className="space-y-4">
-              <div className="text-sm font-semibold text-slate-700">
-                🎁 Prestaciones
+            <div className="bg-gradient-to-br from-purple-50 via-white to-purple-50 border border-purple-100 rounded-xl p-5 space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="bg-[#7C3AED] p-2 rounded-lg">
+                  <svg
+                    className="h-4 w-4 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8c1.657 0 3-1.343 3-3S13.657 2 12 2 9 3.343 9 5s1.343 3 3 3zm0 0v14m-7-7h14"
+                    />
+                  </svg>
+                </div>
+                <div className="font-semibold text-gray-900">Prestaciones</div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
@@ -857,9 +944,32 @@ export default function ContratoDialog({
           ) : null}
 
           {/* Ubicación y modalidad + Notas */}
-          <div className="space-y-4">
-            <div className="text-sm font-semibold text-slate-700">
-              📍 Ubicación y Modalidad
+          <div className="bg-gradient-to-br from-teal-50 via-white to-teal-50 border border-teal-100 rounded-xl p-5 space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="bg-teal-600 p-2 rounded-lg">
+                <svg
+                  className="h-4 w-4 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+                  />
+                </svg>
+              </div>
+              <div className="font-semibold text-gray-900">
+                Ubicación y modalidad
+              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -918,21 +1028,22 @@ export default function ContratoDialog({
           ) : null}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="p-6 pt-0">
           <Button
             variant="outline"
             onClick={() => setOpen(false)}
             disabled={loading}
-            className="bg-white border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb]"
+            className="border-gray-300"
           >
             Cancelar
           </Button>
           <Button
             onClick={guardar}
             disabled={loading}
-            className="bg-[#37495E] hover:bg-[#2c3a4a] text-white shadow-[0_4px_12px_rgba(55,73,94,0.3)] transition-all hover:-translate-y-0.5"
+            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
           >
-            💾 Guardar
+            <Save className="h-4 w-4 mr-2" />
+            Guardar
           </Button>
         </DialogFooter>
       </DialogContent>

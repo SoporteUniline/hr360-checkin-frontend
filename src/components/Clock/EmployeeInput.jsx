@@ -1,4 +1,4 @@
-import { User, Delete, Camera, Eraser, QrCode } from "lucide-react";
+import { User, Eraser, QrCode, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -85,7 +85,7 @@ export default function EmployeeInput({
           <Button
             key={num}
             onClick={() => handleDigit(num.toString())}
-            className="py-6 text-2xl font-bold rounded-2xl text-slate-700 bg-white hover:bg-gray-100 shadow-md hover:scale-105 transition-transform"
+            className="py-6 text-2xl font-bold rounded-2xl text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 shadow-sm"
           >
             {num}
           </Button>
@@ -93,30 +93,32 @@ export default function EmployeeInput({
 
         <Button
           onClick={handleClear}
-          className="py-6 text-md font-bold rounded-2xl bg-slate-700 text-white hover:bg-slate-800 shadow-md hover:scale-105 transition-transform flex justify-center items-center space-x-2"
+          variant="outline"
+          className="py-6 text-md font-bold rounded-2xl border-gray-300 text-gray-700 hover:bg-gray-100 flex justify-center items-center space-x-2"
         >
+          <Eraser className="w-5 h-5 mr-2" />
           <span>Limpiar</span>
         </Button>
 
         <Button
           onClick={() => handleDigit("0")}
-          className="py-6 text-2xl font-bold rounded-2xl text-slate-700 bg-white hover:bg-gray-100 shadow-md hover:scale-105 transition-transform"
+          className="py-6 text-2xl font-bold rounded-2xl text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 shadow-sm"
         >
           0
         </Button>
 
         <Button
           onClick={handleDelete}
-          className="py-6 text-2xl font-bold rounded-2xl bg-red-600 text-white hover:bg-red-700 shadow-md hover:scale-105 transition-transform flex justify-center items-center"
+          className="py-6 text-2xl font-bold rounded-2xl bg-red-600 text-white hover:bg-red-700 shadow-sm flex justify-center items-center"
         >
-          <Delete className="w-6 h-6" />
+          <Trash2 className="w-6 h-6" />
         </Button>
       </div>
 
       <Button
         onClick={() => handleRegistrar()}
         disabled={registrando || !codigo.trim()}
-        className="w-full py-4 bg-linear-to-r from-slate-700 to-slate-800 text-white font-bold text-lg rounded-2xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 disabled:opacity-50 disabled:transform-none"
+        className="w-full py-4 bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-bold text-lg rounded-2xl shadow-md disabled:opacity-50"
       >
         {registrando ? (
           <div className="flex items-center justify-center space-x-2">

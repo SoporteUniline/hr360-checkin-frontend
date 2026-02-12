@@ -13,7 +13,7 @@ import "dayjs/locale/es";
 import React, { useState } from "react";
 import { RotateCcw } from "lucide-react";
 import { Button } from "./ui/button";
-import { Eye, Edit3, Trash2 } from "lucide-react";
+import { Eye, Pencil, Trash2 } from "lucide-react";
 
 dayjs.locale("es");
 
@@ -34,100 +34,114 @@ export const AdministrativeTable = ({
 }) => {
   const mostrarEmpresa = empresaSeleccionada !== "all";
 
+  const hasRows = Array.isArray(actas) && actas.length > 0;
   return (
     <>
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between bg-slate-700 shadow-md px-4 py-3 rounded-tl-md rounded-tr-md gap-3">
-        <div className="flex items-center text-lg font-bold text-white">
-          <h1>Lista de actas administrativas</h1>
-        </div>
-        <div className="flex flex-col md:flex-row flex-wrap justify-end gap-3 w-full md:w-auto">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Lista de actas administrativas
+          </h2>
           <Button
             onClick={limpiarFiltros}
             variant="outline"
-            className="flex items-center gap-2 w-full sm:w-auto"
+            className="border-gray-300 w-full sm:w-auto"
           >
-            <RotateCcw className="w-4 h-4" />
-            Limpiar Filtros
+            <RotateCcw className="w-4 h-4 mr-2" />
+            Limpiar filtros
           </Button>
         </div>
-      </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-slate-700 text-white">
-            <TableHead className="bg-slate-700 text-white">Folio</TableHead>
-            {!mostrarEmpresa && (
-              <TableHead className="bg-slate-700 text-white">Empresa</TableHead>
-            )}
-            <TableHead className="bg-slate-700 text-white">Empleado</TableHead>
-            <TableHead className="bg-slate-700 text-white">
-              Tipo de acta
-            </TableHead>
-            <TableHead className="bg-slate-700 text-white">Gravedad</TableHead>
-            <TableHead className="bg-slate-700 text-white">
-              Fecha incidente
-            </TableHead>
-            <TableHead className="text-center bg-slate-700 text-white">
-              Estatus
-            </TableHead>
-            <TableHead className="text-right bg-slate-700 text-white">
-              Acciones
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-
-        <TableBody>
-          {!actas ||
-            (actas.length === 0 && (
-              <TableRow>
-                <TableCell
-                  colSpan={7}
-                  className="text-center text-muted-foreground py-10"
-                >
-                  No hay registros de actas administrativas.
-                </TableCell>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-gray-50 hover:bg-gray-50">
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs">
+                  Folio
+                </TableHead>
+                {!mostrarEmpresa && (
+                  <TableHead className="font-semibold text-gray-700 uppercase text-xs">
+                    Empresa
+                  </TableHead>
+                )}
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs">
+                  Empleado
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs">
+                  Tipo de acta
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs">
+                  Gravedad
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs">
+                  Fecha incidente
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                  Estado
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-right">
+                  Acciones
+                </TableHead>
               </TableRow>
-            ))}
-          {actas.map((acta) => (
-            <TableRow key={acta.id_acta} className="hover:bg-gray-100">
-              <TableCell className="font-bold">{acta.folio}</TableCell>
-              {!mostrarEmpresa && <TableCell>{acta.nombre_empresa}</TableCell>}
-              <TableCell>
-                {acta.nombre_empleado} {acta.apellido_paterno_empleado}{" "}
-                {acta.apellido_materno_empleado}
-              </TableCell>
-              <TableCell>{acta.nombre_tipo_acta}</TableCell>
-              <TableCell>
-                <span
-                  className={`px-3 py-1 rounded-2xl text-xs font-semibold ${
-                    acta.gravedad_tipo === "grave"
-                      ? "bg-red-200 text-red-800"
-                      : "bg-yellow-100 text-yellow-800"
-                  }`}
+            </TableHeader>
+
+            <TableBody>
+              {!hasRows ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={7}
+                    className="text-center text-gray-500 py-10"
+                  >
+                    No hay registros de actas administrativas.
+                  </TableCell>
+                </TableRow>
+              ) : null}
+
+              {(actas || []).map((acta) => (
+                <TableRow
+                  key={acta.id_acta}
+                  className="hover:bg-gray-50 border-b border-gray-100"
                 >
-                  {acta.gravedad_tipo?.toUpperCase()}
-                </span>
-              </TableCell>
-              <TableCell>
-                {dayjs(acta.fecha_incidente).format("DD/MM/YYYY")}
-              </TableCell>
-              <TableCell className="capitalize text-center">
-                <span
-                  className={`px-3 py-1 rounded-2xl text-xs font-semibold ${
-                    acta.estatus === "elaborada"
-                      ? "bg-blue-200 text-blue-800"
-                      : acta.estatus === "cerrada"
-                      ? "bg-red-200 text-red-800"
-                      : acta.estatus === "notificada"
-                      ? "bg-emerald-200 text-emerald-800"
-                      : "bg-purple-200 text-purple-800"
-                  }`}
-                >
-                  {acta.estatus}
-                </span>
-              </TableCell>
-              <TableCell className="text-right">
-                {/*
+                  <TableCell className="font-bold">{acta.folio}</TableCell>
+                  {!mostrarEmpresa && (
+                    <TableCell>{acta.nombre_empresa}</TableCell>
+                  )}
+                  <TableCell>
+                    {acta.nombre_empleado} {acta.apellido_paterno_empleado}{" "}
+                    {acta.apellido_materno_empleado}
+                  </TableCell>
+                  <TableCell>{acta.nombre_tipo_acta}</TableCell>
+                  <TableCell>
+                    <span
+                      className={`px-3 py-1 rounded-2xl text-xs font-semibold ${
+                        acta.gravedad_tipo === "grave"
+                          ? "bg-red-200 text-red-800"
+                          : "bg-yellow-100 text-yellow-800"
+                      }`}
+                    >
+                      {acta.gravedad_tipo?.toUpperCase()}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    {dayjs(acta.fecha_incidente).format("DD/MM/YYYY")}
+                  </TableCell>
+                  <TableCell className="capitalize text-center">
+                    <span
+                      className={`px-3 py-1 rounded-2xl text-xs font-semibold ${
+                        acta.estatus === "elaborada"
+                          ? "bg-blue-200 text-blue-800"
+                          : acta.estatus === "cerrada"
+                          ? "bg-red-200 text-red-800"
+                          : acta.estatus === "notificada"
+                          ? "bg-emerald-200 text-emerald-800"
+                          : "bg-purple-200 text-purple-800"
+                      }`}
+                    >
+                      {acta.estatus}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {/*
                   Botones estilo "Finiquitos y liquidaciones":
                   - Ver (Eye)
                   - Editar (Edit3)
@@ -136,40 +150,36 @@ export const AdministrativeTable = ({
                   Relación:
                   - UX equivalente a `src/app/panel/finiquitos-y-liquidaciones/page.jsx`
                 */}
-                <div className="flex justify-end gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-[#e5e7eb] text-[#374151] hover:bg-[#f9fafb]"
-                    title="Ver"
-                    onClick={() => onView?.(acta)}
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-[#93c5fd] text-[#2563eb] hover:bg-[#dbeafe] hover:text-[#1e40af]"
-                    onClick={() => onEdit?.(acta)}
-                  >
-                    <Edit3 className="h-4 w-4 mr-1" /> Editar
-                  </Button>
-
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="border-[#fecaca] text-[#b91c1c] hover:bg-[#fee2e2]"
-                    onClick={() => onDelete?.(acta)}
-                  >
-                    <Trash2 className="h-4 w-4 mr-1" /> Eliminar
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+                    <div className="flex justify-end items-center gap-2">
+                      <button
+                        onClick={() => onEdit?.(acta)}
+                        className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                        title="Editar"
+                      >
+                        <Pencil className="h-4 w-4 text-[#2563EB]" />
+                      </button>
+                      <button
+                        onClick={() => onView?.(acta)}
+                        className="p-2 bg-green-50 rounded-lg hover:bg-green-100 transition-colors"
+                        title="Ver"
+                      >
+                        <Eye className="h-4 w-4 text-green-600" />
+                      </button>
+                      <button
+                        onClick={() => onDelete?.(acta)}
+                        className="p-2 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                        title="Eliminar"
+                      >
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                      </button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
     </>
   );
 };

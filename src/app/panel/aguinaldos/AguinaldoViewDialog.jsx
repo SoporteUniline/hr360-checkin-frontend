@@ -34,6 +34,7 @@ import {
   ensureSpace,
   fmtMoneyMXN,
 } from "@/lib/pdfUnifiedLayout";
+import { Download, FileText } from "lucide-react";
 
 export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActualizado }) {
   const { dataUser } = useAuth();
@@ -577,15 +578,27 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
          - xl:max-w-5xl: pantallas extra grandes
          - max-h-[85vh]: altura máxima con scroll interno
          Relación: usado en `src/app/panel/aguinaldos/page.jsx` */}
-      <DialogContent className="max-w-[95vw] sm:max-w-lg md:max-w-2xl lg:max-w-4xl xl:max-w-5xl max-h-[85vh] overflow-hidden flex flex-col p-4 sm:p-6">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle className="text-base sm:text-lg">📋 Detalle del Cálculo de Aguinaldos #{maestro.id_calculo}</DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm">
-            Año Fiscal: {maestro.año_fiscal} | Fecha de Corte: {dayjs(maestro.fecha_corte).format("DD/MM/YYYY")}
-          </DialogDescription>
+      <DialogContent className="max-w-[95vw] sm:max-w-2xl md:max-w-4xl xl:max-w-5xl max-h-[85vh] overflow-hidden flex flex-col p-0">
+        {/* Header - patrón Contratos */}
+        <DialogHeader className="p-0 flex-shrink-0">
+          <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white p-6">
+            <div className="flex items-center gap-3">
+              <div className="bg-white/20 p-3 rounded-lg backdrop-blur-sm">
+                <FileText className="h-6 w-6 text-white" />
+              </div>
+              <div className="min-w-0">
+                <DialogTitle className="text-white text-xl font-bold truncate">
+                  Nómina de aguinaldos #{String(maestro.id_calculo || "").padStart(3, "0")}
+                </DialogTitle>
+                <DialogDescription className="text-sm text-indigo-100 truncate">
+                  Año fiscal: {maestro.año_fiscal} · Fecha corte: {dayjs(maestro.fecha_corte).format("DD/MM/YYYY")}
+                </DialogDescription>
+              </div>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto pr-1 md:pr-0 -mx-2 sm:mx-0 px-2 sm:px-0">
+        <div className="flex-1 overflow-y-auto p-6">
           {loading ? (
             <div className="py-6 text-sm text-muted-foreground">Cargando...</div>
           ) : detalle ? (
@@ -607,8 +620,8 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
               </div>
 
               {/* Total General */}
-              <div className="bg-gradient-to-r from-[#3a4b61] to-[#2f3f52] text-white p-4 sm:p-6 rounded-xl text-center shadow-[0_4px_12px_rgba(55,73,94,0.25)]">
-                <div className="text-xs sm:text-sm uppercase tracking-wider mb-2 opacity-90 font-bold">💰 Total General a Pagar</div>
+              <div className="bg-gradient-to-r from-[#2563EB] to-[#1d4ed8] text-white p-4 sm:p-6 rounded-xl text-center shadow-sm">
+                <div className="text-xs sm:text-sm uppercase tracking-wider mb-2 opacity-90 font-bold">Total general a pagar</div>
                 <div className="text-2xl sm:text-3xl md:text-4xl font-extrabold break-words">
                   ${parseFloat(maestro.total_general).toLocaleString("es-MX", { minimumFractionDigits: 2 })} MXN
                 </div>
@@ -653,11 +666,11 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
 
               {/* Tabla de aguinaldos */}
               <div>
-                <h4 className="text-xs sm:text-sm font-bold text-slate-700 mb-2">📋 Detalle por Empleado</h4>
-                <div className="overflow-x-auto rounded-md border -mx-2 sm:mx-0">
+                <h4 className="text-sm font-bold text-gray-900 mb-2">Detalle por empleado</h4>
+                <div className="overflow-x-auto rounded-md border border-gray-200">
                   <div className="min-w-full inline-block">
                     <table className="w-full text-[10px] sm:text-xs md:text-sm min-w-[800px]">
-                      <thead className="bg-slate-50">
+                      <thead className="bg-gray-50">
                         <tr>
                           <th className="text-left p-1.5 sm:p-2 whitespace-nowrap">Empleado</th>
                           <th className="text-left p-1.5 sm:p-2 whitespace-nowrap">Puesto</th>
@@ -719,10 +732,11 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
                                 variant="outline"
                                 size="sm"
                                 onClick={() => generarPDFIndividualFormatoNuevo(ag)}
-                                className="text-[9px] sm:text-xs h-7 sm:h-8 px-2"
+                                className="text-[9px] sm:text-xs h-7 sm:h-8 px-2 border-gray-300"
                                 title="Generar PDF individual para este empleado"
                               >
-                                📄 PDF
+                                <Download className="h-4 w-4 mr-2" />
+                                PDF
                               </Button>
                             </td>
                           </tr>
@@ -739,20 +753,21 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
         </div>
 
         {/* Footer con botones - Responsivo */}
-        <DialogFooter className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-4 border-t flex-shrink-0 mt-4">
+        <DialogFooter className="bg-gray-50 p-4 flex flex-col-reverse sm:flex-row justify-end gap-2 flex-shrink-0">
           <Button
             variant="outline"
             onClick={() => setOpen(false)}
-            className="w-full sm:w-auto bg-white border border-[#d1d5db] text-[#374151] hover:bg-[#f9fafb] text-sm sm:text-base"
+            className="w-full sm:w-auto border-gray-300"
           >
             Cerrar
           </Button>
           <Button
             onClick={generarPDFFormatoNuevo}
             disabled={!detalle}
-            className="w-full sm:w-auto bg-[#f59e0b] hover:bg-[#d97706] text-white shadow-[0_4px_12px_rgba(245,158,11,0.3)] transition-all hover:-translate-y-0.5 text-sm sm:text-base"
+            className="w-full sm:w-auto bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm disabled:opacity-50"
           >
-            📄 Descargar PDF
+            <Download className="h-4 w-4 mr-2" />
+            Descargar PDF
           </Button>
         </DialogFooter>
       </DialogContent>

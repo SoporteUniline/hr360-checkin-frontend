@@ -117,193 +117,202 @@ export default function AsistenciaTable({
     estadoAsistencia: r.estadoAsistencia,
   }));
 
-  useEffect(() => {
-    console.log(exportData);
-  }, [exportData]);
-
   return (
     <>
-      {!readOnly && (
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between bg-slate-700 shadow-md px-4 py-3 rounded-tl-md rounded-tr-md gap-3">
-          <div className="flex items-center text-lg font-bold text-white">
-            <h1>Registros de Asistencia</h1>
-          </div>
-          <div className="flex flex-col md:flex-row flex-wrap justify-end gap-3 w-full md:w-auto">
-            <Button
-              onClick={() =>
-                exportToExcel(exportData, columns, "Reporte_Asistencias", {
-                  sheetName: "Asistencias",
-                  headerColor: "15803D",
-                })
-              }
-              className="bg-emerald-600 hover:bg-emerald-700 shadow-lg"
-            >
-              <FileSpreadsheet className="w-5 h-5 mr-2" />
-              Exportar Excel
-            </Button>
-
-            <Button
-              onClick={abrirFormulario}
-              className="bg-violet-700 shadow-lg transition-all duration-200 hover:shadow-xl hover:bg-violet-800 w-full sm:w-auto"
-            >
-              <Plus className="w-5 h-5 mr-2" />
-              Registrar Asistencia Masiva
-            </Button>
-
-            <Button
-              onClick={onResetFilters}
-              variant="outline"
-              className="flex items-center gap-2 w-full sm:w-auto"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Limpiar Filtros
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="text-white bg-slate-700 ">Empleado</TableHead>
-            {empresaActiva === "all" && (
-              <TableHead className="text-white bg-slate-700">Empresa</TableHead>
-            )}
-            {mostrarCamposExtras && (
-              <TableHead className="text-white bg-slate-700 ">Código</TableHead>
-            )}
-            <TableHead className="text-white bg-slate-700 ">
-              Departamento
-            </TableHead>
-            <TableHead className="text-white bg-slate-700 ">
-              Tipo de registro
-            </TableHead>
-
-            <TableHead className="text-white bg-slate-700 text-center">
-              Fecha
-            </TableHead>
-
-            {mostrarCamposExtras && (
-              <TableHead className="text-white bg-slate-700 text-center">
-                Corrección
-              </TableHead>
-            )}
-
-            <TableHead className="text-white bg-slate-700 text-center">
-              Entrada
-            </TableHead>
-            <TableHead className="text-white bg-slate-700 text-center">
-              Salida
-            </TableHead>
-            {mostrarCamposExtras && (
-              <>
-                <TableHead className="text-white bg-slate-700 text-center">
-                  Autorizado por
-                </TableHead>
-              </>
-            )}
-            <TableHead className="text-white bg-slate-700 text-center">
-              ¿Asistió?
-            </TableHead>
-            <TableHead className="text-white bg-slate-700 text-center">
-              ¿Goce de sueldo?
-            </TableHead>
-
-            {mostrarCamposExtras && (
-              <>
-                <TableHead className="text-white bg-slate-700 text-center">
-                  ¿Pago triple?
-                </TableHead>
-                <TableHead className="text-white bg-slate-700 text-center">
-                  ¿Es domingo?
-                </TableHead>
-                <TableHead className="text-white bg-slate-700 text-center">
-                  Prima dominical
-                </TableHead>
-                <TableHead className="text-white bg-slate-700 text-center">
-                  ¿Es festivo?
-                </TableHead>
-                <TableHead className="text-white bg-slate-700 text-center">
-                  Porcentaje día festivo
-                </TableHead>
-              </>
-            )}
-
-            <TableHead className="text-white bg-slate-700 text-center">
-              ¿Trabajó horas extra?
-            </TableHead>
-
-            {mostrarCamposExtras && (
-              <>
-                <TableHead className="text-white bg-slate-700 text-center">
-                  Forma de pago horas extra
-                </TableHead>
-                <TableHead className="text-white bg-slate-700 text-center">
-                  Horas extras autorizadas por
-                </TableHead>
-                <TableHead className="text-white bg-slate-700 text-center">
-                  Horas de comida
-                </TableHead>
-              </>
-            )}
-            <TableHead className="text-white bg-slate-700 text-center">
-              Observaciones
-            </TableHead>
-            {mostrarCamposExtras && (
-              <TableHead className="text-white bg-slate-700 text-center">
-                Notas horas extra
-              </TableHead>
-            )}
-            <TableHead className="text-white bg-slate-700 text-center">
-              Estado
-            </TableHead>
-
-            {mostrarCamposExtras && (
-              <TableHead className="text-white bg-slate-700 ">
-                Estado asistencia
-              </TableHead>
-            )}
-            {!readOnly && (
-              <TableHead className="text-white bg-slate-700 sticky right-0 z-10 text-center ">
-                Acciones
-              </TableHead>
-            )}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filtrados.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={mostrarCamposExtras ? 22 : 12} // ajusta según cuántas columnas tengas
-                className="text-center py-2 text-muted-foreground"
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+        {!readOnly ? (
+          <div className="px-6 py-4 border-b border-gray-100 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Registros de asistencia
+              </h2>
+              <p className="text-sm text-gray-500">
+                Exporta o registra asistencias masivas.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+              <Button
+                onClick={() =>
+                  exportToExcel(exportData, columns, "Reporte_Asistencias", {
+                    sheetName: "Asistencias",
+                    headerColor: "2563EB",
+                  })
+                }
+                variant="outline"
+                className="border-gray-300 text-gray-700 hover:bg-gray-100"
               >
-                No hay registros para hoy o búsqueda sin resultados.
-              </TableCell>
-            </TableRow>
-          ) : (
-            filtrados.map((reg) => (
-              <AsistenciaRow
-                key={reg.id}
-                registro={reg}
-                fecha={fecha}
-                readOnly={readOnly}
-                isEditing={editingRowId === reg.id}
-                editingRowData={editingRowData}
-                isSaving={isSaving}
-                empleados={empleados}
-                tiposPermiso={tiposPermiso}
-                handleEditClick={handleEditClick}
-                handleCancelEdit={handleCancelEdit}
-                handleFieldChange={handleFieldChange}
-                handleSaveClick={handleSaveClick}
-                mutateAsistencia={mutateAsistencia}
-                mostrarCamposExtras={mostrarCamposExtras}
-                empresaActiva={empresaActiva}
-              />
-            ))
-          )}
-        </TableBody>
-      </Table>
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Exportar Excel
+              </Button>
+
+              <Button
+                onClick={abrirFormulario}
+                className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-md"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Registrar asistencia masiva
+              </Button>
+
+              {/* <Button
+                onClick={onResetFilters}
+                variant="outline"
+                className="border-gray-300 text-gray-700 hover:bg-gray-100"
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Limpiar
+              </Button> */}
+            </div>
+          </div>
+        ) : (
+          <div className="px-6 py-4 border-b border-gray-100">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Registros de asistencia
+            </h2>
+          </div>
+        )}
+
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-gray-50 hover:bg-gray-50">
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs">
+                  Empleado
+                </TableHead>
+                {empresaActiva === "all" && (
+                  <TableHead className="font-semibold text-gray-700 uppercase text-xs">
+                    Empresa
+                  </TableHead>
+                )}
+                {mostrarCamposExtras && (
+                  <TableHead className="font-semibold text-gray-700 uppercase text-xs">
+                    Código
+                  </TableHead>
+                )}
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs">
+                  Departamento
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs">
+                  Tipo
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                  Fecha
+                </TableHead>
+                {mostrarCamposExtras && (
+                  <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                    Corrección
+                  </TableHead>
+                )}
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                  Entrada
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                  Salida
+                </TableHead>
+                {mostrarCamposExtras && (
+                  <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                    Autorizado por
+                  </TableHead>
+                )}
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                  Asistió
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                  Goce
+                </TableHead>
+                {mostrarCamposExtras && (
+                  <>
+                    <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                      Pago triple
+                    </TableHead>
+                    <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                      Domingo
+                    </TableHead>
+                    <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                      Prima dom.
+                    </TableHead>
+                    <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                      Festivo
+                    </TableHead>
+                    <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                      % festivo
+                    </TableHead>
+                  </>
+                )}
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                  Hrs extra
+                </TableHead>
+                {mostrarCamposExtras && (
+                  <>
+                    <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                      Forma pago
+                    </TableHead>
+                    <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                      Aut. extra
+                    </TableHead>
+                    <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                      Hrs comida
+                    </TableHead>
+                  </>
+                )}
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                  Notas
+                </TableHead>
+                {mostrarCamposExtras && (
+                  <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                    Notas extra
+                  </TableHead>
+                )}
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                  Estado
+                </TableHead>
+                {mostrarCamposExtras && (
+                  <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                    Estado asis.
+                  </TableHead>
+                )}
+                {!readOnly && (
+                  <TableHead className="sticky right-0 bg-gray-50 z-10 text-center font-semibold text-gray-700 uppercase text-xs">
+                    Acciones
+                  </TableHead>
+                )}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filtrados.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={mostrarCamposExtras ? 50 : 20}
+                    className="text-center py-10 text-gray-500"
+                  >
+                    No hay registros para los filtros seleccionados.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filtrados.map((reg) => (
+                  <AsistenciaRow
+                    key={reg.id}
+                    registro={reg}
+                    fecha={fecha}
+                    readOnly={readOnly}
+                    isEditing={editingRowId === reg.id}
+                    editingRowData={editingRowData}
+                    isSaving={isSaving}
+                    empleados={empleados}
+                    tiposPermiso={tiposPermiso}
+                    handleEditClick={handleEditClick}
+                    handleCancelEdit={handleCancelEdit}
+                    handleFieldChange={handleFieldChange}
+                    handleSaveClick={handleSaveClick}
+                    mutateAsistencia={mutateAsistencia}
+                    mostrarCamposExtras={mostrarCamposExtras}
+                    empresaActiva={empresaActiva}
+                  />
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
     </>
   );
 }

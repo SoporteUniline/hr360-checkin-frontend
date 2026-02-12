@@ -22,12 +22,14 @@ import useDebounce from "@/hooks/useDebounce";
 import useEmpleadosData from "@/hooks/useEmpleadosData";
 import useTiposPermisoData from "@/hooks/useTiposPermisoData";
 import AsistenciaDataContainer from "@/app/panel/registro-asistencia/AsistenciaDataContainer";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/Combobox";
 import { useCallback } from "react";
 import styles from "../vacaciones-theme.module.css";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import { CalendarDays, Filter, Search } from "lucide-react";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -167,147 +169,186 @@ export default function RegistroVacacionesPage() {
   }, [empresaActiva]);
 
   return (
-    <div className={`${styles.vacacionesTheme} space-y-4`}>
-      {/* Encabezado limpio */}
-      <div className="px-4 pt-4">
-        <h1 className="text-xl md:text-2xl font-semibold">
-          📒 Registro de vacaciones
-        </h1>
-      </div>
-
-      {/* Filtros esenciales (5 columnas en pantallas grandes) */}
-      <div className="p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {/* 1. FILTRO DE EMPRESA (Movido aquí) */}
-          <div className="flex flex-col gap-2 w-full">
-            <Label htmlFor="empresa_select">Empresa</Label>
-            <select
-              id="empresa_select"
-              value={empresaActiva}
-              onChange={(e) => {
-                setEmpresaActiva(e.target.value);
-                setPage(1);
-              }}
-              className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
-            >
-              <option value="all">Todas las empresas</option>
-              {dataUser?.empresas_detalle?.map((emp) => (
-                <option key={emp.id_empresa} value={emp.id_empresa}>
-                  {emp.nombre}
-                </option>
-              ))}
-            </select>
+    <div className={`${styles.vacacionesTheme} space-y-6`}>
+      {/* Header ADAMIA */}
+      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+        <div className="flex items-center gap-3">
+          <div className="bg-[#2563EB] p-2.5 rounded-lg">
+            <CalendarDays className="w-5 h-5 text-white" />
           </div>
-
-          {/* 2. FECHA INICIO */}
-          <div className="flex flex-col gap-2 w-full">
-            <Label htmlFor="fecha_inicio">Fecha Inicio</Label>
-            <Input
-              id="fecha_inicio"
-              type="date"
-              value={fechaInicio}
-              onChange={(e) => {
-                setFechaInicio(e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-
-          {/* 3. FECHA FIN */}
-          <div className="flex flex-col gap-2 w-full">
-            <Label htmlFor="fecha_fin">Fecha Fin</Label>
-            <Input
-              id="fecha_fin"
-              type="date"
-              value={fechaFin}
-              onChange={(e) => {
-                setFechaFin(e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-
-          {/* 4. EMPLEADO */}
-          <div className="flex flex-col gap-2 w-full">
-            <Label htmlFor="empleado">Empleado</Label>
-            <div className="relative">
-              <Input
-                id="empleado"
-                placeholder="Buscar por nombre..."
-                value={filtroEmpleado}
-                onChange={(e) => {
-                  setFiltroEmpleado(e.target.value);
-                  setIsSuggestionsOpen(true);
-                  setHoveredSuggestionIndex(0);
-                }}
-                onFocus={() => setIsSuggestionsOpen(!!filtroEmpleado)}
-                onBlur={() =>
-                  setTimeout(() => setIsSuggestionsOpen(false), 120)
-                }
-                onKeyDown={(e) => {
-                  if (!isSuggestionsOpen || sugerencias.length === 0) return;
-                  if (e.key === "ArrowDown") {
-                    e.preventDefault();
-                    setHoveredSuggestionIndex((prev) =>
-                      prev + 1 >= sugerencias.length ? 0 : prev + 1,
-                    );
-                  } else if (e.key === "ArrowUp") {
-                    e.preventDefault();
-                    setHoveredSuggestionIndex((prev) =>
-                      prev - 1 < 0 ? sugerencias.length - 1 : prev - 1,
-                    );
-                  } else if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleSelectEmpleado(
-                      sugerencias[hoveredSuggestionIndex] || sugerencias[0],
-                    );
-                  } else if (e.key === "Escape") {
-                    setIsSuggestionsOpen(false);
-                  }
-                }}
-              />
-              {isSuggestionsOpen && sugerencias.length > 0 && (
-                <div className="absolute left-0 right-0 mt-1 z-20 rounded-md border bg-white shadow">
-                  <ul className="max-h-64 overflow-auto">
-                    {sugerencias.map((emp, idx) => (
-                      <li
-                        key={emp.id_empleado}
-                        onMouseDown={() => handleSelectEmpleado(emp)}
-                        onMouseEnter={() => setHoveredSuggestionIndex(idx)}
-                        className={`px-3 py-2 cursor-pointer text-sm ${
-                          idx === hoveredSuggestionIndex ? "bg-slate-100" : ""
-                        }`}
-                      >
-                        {emp.nombre_completo}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* 5. DEPARTAMENTO */}
-          <div className="flex flex-col gap-2 w-full">
-            <Label htmlFor="departamento">Departamento</Label>
-            <Combobox
-              name="departamento"
-              options={departamentoOptions}
-              value={filtroDepartamento}
-              onChange={(value) => {
-                setFiltroDepartamento(value);
-                setPage(1);
-              }}
-              placeholder="Todos..."
-              emptyText="No hay departamentos."
-            />
+          <div>
+            <h1 className="text-lg font-bold text-gray-900">
+              Registro de vacaciones
+            </h1>
+            <p className="text-sm text-gray-600">
+              Consulta informativa de registros (solo lectura) por periodo.
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Tabla de Asistencias */}
-      <div className="px-4">{ui}</div>
+      {/* Filtros esenciales (sin filtros rápidos) */}
+      <Card className="border-blue-100 bg-blue-50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-bold text-blue-700 flex items-center gap-2">
+            <Filter className="h-4 w-4" /> Filtros de búsqueda
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="flex flex-col gap-2 w-full">
+              <Label htmlFor="empresa_select">Empresa</Label>
+              <select
+                id="empresa_select"
+                value={empresaActiva}
+                onChange={(e) => {
+                  setEmpresaActiva(e.target.value);
+                  setPage(1);
+                }}
+                className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
+              >
+                <option value="all">Todas las empresas</option>
+                {dataUser?.empresas_detalle?.map((emp) => (
+                  <option key={emp.id_empresa} value={emp.id_empresa}>
+                    {emp.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-2 w-full">
+              <Label
+                className="text-sm font-medium text-gray-700"
+                htmlFor="fecha_inicio"
+              >
+                Fecha inicio
+              </Label>
+              <Input
+                id="fecha_inicio"
+                type="date"
+                value={fechaInicio}
+                onChange={(e) => {
+                  setFechaInicio(e.target.value);
+                  setPage(1);
+                }}
+                className="bg-white"
+              />
+            </div>
 
+            {/* 3. FECHA FIN */}
+            <div className="flex flex-col gap-2 w-full">
+              <Label
+                className="text-sm font-medium text-gray-700"
+                htmlFor="fecha_fin"
+              >
+                Fecha fin
+              </Label>
+              <Input
+                id="fecha_fin"
+                type="date"
+                value={fechaFin}
+                onChange={(e) => {
+                  setFechaFin(e.target.value);
+                  setPage(1);
+                }}
+                className="bg-white"
+              />
+            </div>
+
+            {/* 4. EMPLEADO */}
+            <div className="flex flex-col gap-2 w-full">
+              <Label
+                className="text-sm font-medium text-gray-700"
+                htmlFor="empleado"
+              >
+                Empleado
+              </Label>
+              <div className="relative">
+                <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Input
+                  id="empleado"
+                  placeholder="Buscar por nombre..."
+                  value={filtroEmpleado}
+                  onChange={(e) => {
+                    setFiltroEmpleado(e.target.value);
+                    setIsSuggestionsOpen(true);
+                    setHoveredSuggestionIndex(0);
+                  }}
+                  onFocus={() => setIsSuggestionsOpen(!!filtroEmpleado)}
+                  onBlur={() =>
+                    setTimeout(() => setIsSuggestionsOpen(false), 120)
+                  }
+                  onKeyDown={(e) => {
+                    if (!isSuggestionsOpen || sugerencias.length === 0) return;
+                    if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      setHoveredSuggestionIndex((prev) =>
+                        prev + 1 >= sugerencias.length ? 0 : prev + 1,
+                      );
+                    } else if (e.key === "ArrowUp") {
+                      e.preventDefault();
+                      setHoveredSuggestionIndex((prev) =>
+                        prev - 1 < 0 ? sugerencias.length - 1 : prev - 1,
+                      );
+                    } else if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleSelectEmpleado(
+                        sugerencias[hoveredSuggestionIndex] || sugerencias[0],
+                      );
+                    } else if (e.key === "Escape") {
+                      setIsSuggestionsOpen(false);
+                    }
+                  }}
+                  className="bg-white pl-9"
+                />
+                {isSuggestionsOpen && sugerencias.length > 0 && (
+                  <div className="absolute left-0 right-0 mt-1 z-20 rounded-md border bg-white shadow">
+                    <ul className="max-h-64 overflow-auto">
+                      {sugerencias.map((emp, idx) => (
+                        <li
+                          key={emp.id_empleado}
+                          onMouseDown={() => handleSelectEmpleado(emp)}
+                          onMouseEnter={() => setHoveredSuggestionIndex(idx)}
+                          className={`px-3 py-2 cursor-pointer text-sm ${
+                            idx === hoveredSuggestionIndex ? "bg-slate-100" : ""
+                          }`}
+                        >
+                          {emp.nombre_completo}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* 5. DEPARTAMENTO */}
+            <div className="flex flex-col gap-2 w-full">
+              <Label
+                className="text-sm font-medium text-gray-700"
+                htmlFor="departamento"
+              >
+                Departamento
+              </Label>
+              <Combobox
+                name="departamento"
+                options={departamentoOptions}
+                value={filtroDepartamento}
+                onChange={(value) => {
+                  setFiltroDepartamento(value);
+                  setPage(1);
+                }}
+                placeholder="Todos..."
+                emptyText="No hay departamentos."
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Tabla de Asistencias (reutilizada) */}
+      <div>{ui}</div>
+
+      {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
       <AccesosRapidos />
     </div>
   );

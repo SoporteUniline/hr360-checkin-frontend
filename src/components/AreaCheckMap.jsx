@@ -110,18 +110,22 @@ export default function AreaCheckMap({ area, onChange }) {
       {/* Búsqueda y ubicación */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="md:col-span-2">
-          <Label htmlFor="buscar-direccion">Buscar dirección</Label>
+          <Label className="text-sm font-medium text-gray-700" htmlFor="buscar-direccion">
+            Buscar dirección
+          </Label>
           <div className="flex gap-2 mt-1">
             <Input
               id="buscar-direccion"
               ref={searchInputRef}
               placeholder="Ej: Av. Reforma 123, CDMX"
               onKeyDown={handleKeyDown}
+              className="bg-white"
             />
             <Button
               variant="outline"
               onClick={buscarDireccion}
               disabled={cargando}
+              className="border-gray-300 text-gray-700 hover:bg-gray-100"
             >
               <Search className="h-4 w-4" />
             </Button>
@@ -132,7 +136,7 @@ export default function AreaCheckMap({ area, onChange }) {
             onClick={obtenerUbicacionActual}
             disabled={cargando}
             variant="outline"
-            className="w-full"
+            className="w-full border-gray-300 text-gray-700 hover:bg-gray-100"
           >
             <Navigation className="h-4 w-4 mr-2" />
             {cargando ? "Buscando..." : "Mi ubicación"}
@@ -140,7 +144,9 @@ export default function AreaCheckMap({ area, onChange }) {
         </div>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="radio_metros">Radio permitido (metros)</Label>
+        <Label className="text-sm font-medium text-gray-700" htmlFor="radio_metros">
+          Radio permitido (metros)
+        </Label>
         <Input
           id="radio_metros"
           type="number"
@@ -149,6 +155,7 @@ export default function AreaCheckMap({ area, onChange }) {
           value={area.radio_metros || ""}
           onChange={(e) => onChange({ ...area, radio_metros: e.target.value })}
           placeholder="Ej. 100"
+          className="bg-white"
         />
       </div>
 
@@ -168,12 +175,12 @@ export default function AreaCheckMap({ area, onChange }) {
 
       {/* Información del punto */}
       {area?.latitud && area?.longitud && (
-        <div className="bg-blue-50 p-4 rounded-lg">
-          <h4 className="font-semibold text-blue-800 mb-2 flex items-center gap-2">
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <h4 className="text-sm font-semibold text-blue-900 mb-2 flex items-center gap-2">
             <MapPin className="h-4 w-4" /> Área seleccionada
           </h4>
-          <p>Latitud: {area.latitud ? Number(area.latitud).toFixed(6) : "—"}</p>
-          <p>
+          <p className="text-sm text-blue-900">Latitud: {area.latitud ? Number(area.latitud).toFixed(6) : "—"}</p>
+          <p className="text-sm text-blue-900">
             Longitud: {area.longitud ? Number(area.longitud).toFixed(6) : "—"}
           </p>
         </div>

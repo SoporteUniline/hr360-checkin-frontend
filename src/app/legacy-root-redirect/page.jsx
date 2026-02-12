@@ -1,4 +1,17 @@
 "use client";
+
+/**
+ * LEGACY
+ * Esta página contiene el comportamiento histórico que antes vivía en `src/app/page.jsx`.
+ *
+ * Motivo del cambio:
+ * - Ahora la homepage ("/") es una landing dedicada (ver `src/app/(landing)/page.jsx`).
+ * - Next.js no permite dos páginas resolviendo a la misma ruta "/".
+ *
+ * Nota:
+ * - Se conserva para referencia y para poder acceder manualmente a este flujo si lo necesitas.
+ */
+
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
@@ -6,7 +19,7 @@ import axiosInstance from "@/lib/axios";
 import Navbar from "@/components/Navbar";
 import { Building2 } from "lucide-react"; // Icono de respaldo
 
-export default function Home() {
+export default function HomeLegacyRootRedirect() {
   const { dataUser, isLoggedIn } = useAuth();
   const router = useRouter();
   const [status, setStatus] = useState("idle");

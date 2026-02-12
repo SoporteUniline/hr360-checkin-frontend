@@ -123,9 +123,9 @@ export default function QRScanner({ onScan, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-0 md:p-4 animate-fade-in">
       <div className="relative w-full max-w-md bg-white md:rounded-3xl overflow-hidden shadow-2xl animate-slide-up">
-        <div className="flex justify-between items-center p-4 border-b bg-white">
-          <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <Scan className="w-5 h-5 text-indigo-600" />
+        <div className="flex justify-between items-center p-4 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Scan className="w-5 h-5 text-white" />
             Escanear QR
           </h2>
           <div className="flex gap-2">
@@ -133,7 +133,7 @@ export default function QRScanner({ onScan, onClose }) {
               onClick={handleSwitchCamera}
               variant="outline"
               size="sm"
-              className="hidden md:flex items-center gap-2"
+              className="hidden md:flex items-center gap-2 border-white/30 text-white hover:bg-white/10"
             >
               <RotateCcw className="w-4 h-4" />
               Girar
@@ -181,7 +181,7 @@ export default function QRScanner({ onScan, onClose }) {
 
           {!scanning && !error && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 z-10">
-              <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+              <div className="w-12 h-12 border-4 border-[#2563EB] border-t-transparent rounded-full animate-spin mb-4"></div>
               <p className="text-white text-sm">Iniciando cámara...</p>
             </div>
           )}
