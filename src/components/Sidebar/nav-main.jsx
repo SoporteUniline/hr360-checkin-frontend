@@ -156,7 +156,7 @@ const menuGroups = [
       },
       {
         title: "Reloj Checador",
-        url: "/",
+        url: "/seleccionar-reloj",
         rol: "Recruiter",
         icon: ClockIcon,
       },

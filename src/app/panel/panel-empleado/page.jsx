@@ -52,7 +52,6 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
  */
 export default function PanelEmpleadoPage() {
   const { dataUser } = useAuth();
-  console.log(dataUser);
   const [empresaActiva, setEmpresaActiva] = useState(null);
   const idEmpresa = empresaActiva;
 
@@ -164,97 +163,6 @@ export default function PanelEmpleadoPage() {
       <ErrorPage message={error?.message || "Error al cargar los datos"} />
     );
   }
-
-  // Componente del sidebar (reutilizable)
-  const SidebarContent = ({ onSelectEmpleado, closeSidebar }) => (
-    <>
-      {/* Header del sidebar - ADAMIA */}
-      <div className="p-2 sm:p-3 md:p-4 border-b-2 border-blue-200 bg-gradient-to-br from-blue-50 to-white">
-        <div className="flex items-center gap-1.5 sm:gap-2 mb-2 sm:mb-3">
-          <div className="bg-[#2563EB] p-1.5 rounded-lg">
-            <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 text-white" />
-          </div>
-          <h3 className="font-bold text-xs sm:text-sm text-gray-900">
-            Empleados ({empleados.length})
-          </h3>
-        </div>
-        <div className="relative">
-          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-gray-400" />
-          <Input
-            placeholder="Buscar empleado..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            className="pl-7 sm:pl-8 h-8 sm:h-10 text-xs sm:text-sm"
-          />
-        </div>
-      </div>
-
-      {/* Lista de empleados */}
-      <ScrollArea className="flex-1">
-        <div className="p-1.5 sm:p-2">
-          {empleadosFiltrados.length === 0 ? (
-            <div className="text-center py-6 sm:py-8 text-xs sm:text-sm text-gray-500">
-              No se encontraron empleados
-            </div>
-          ) : (
-            empleadosFiltrados.map((emp) => {
-              const esSeleccionado = empleadoSeleccionado === emp.id_empleado;
-              return (
-                <div
-                  key={emp.id_empleado}
-                  onClick={() => {
-                    onSelectEmpleado(emp.id_empleado);
-                    if (closeSidebar) closeSidebar();
-                  }}
-                  className={`
-                    p-2 sm:p-3 mb-1 sm:mb-1.5 rounded-lg cursor-pointer transition-all
-                    flex items-center gap-2 sm:gap-3
-                    ${
-                      esSeleccionado
-                        ? "bg-gradient-to-r from-[#2563EB] to-[#1d4ed8] text-white shadow-md"
-                        : "hover:bg-blue-50 border border-transparent hover:border-blue-200"
-                    }
-                  `}
-                >
-                  {/* Avatar */}
-                  <div
-                    className={`
-                      w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center
-                      text-xs sm:text-sm font-bold flex-shrink-0
-                      ${
-                        esSeleccionado
-                          ? "bg-white/20 text-white"
-                          : "bg-gradient-to-br from-[#2563EB] to-[#7C3AED] text-white"
-                      }
-                    `}
-                  >
-                    {obtenerIniciales(emp.nombre_completo)}
-                  </div>
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div
-                      className={`font-semibold text-xs sm:text-sm truncate ${
-                        esSeleccionado ? "text-white" : "text-gray-900"
-                      }`}
-                    >
-                      {emp.nombre_completo}
-                    </div>
-                    <div
-                      className={`text-[10px] sm:text-xs truncate ${
-                        esSeleccionado ? "text-white/80" : "text-gray-500"
-                      }`}
-                    >
-                      {emp.puesto || "Sin asignar"}
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </ScrollArea>
-    </>
-  );
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] bg-[#F9FAFB]">
