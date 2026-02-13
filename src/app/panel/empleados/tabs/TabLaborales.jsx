@@ -176,8 +176,18 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
       <div className="bg-gradient-to-br from-emerald-50 via-white to-emerald-50 border-2 border-emerald-100 rounded-xl p-6">
         <div className="flex items-center gap-3 mb-5">
           <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-3 rounded-lg shadow-md">
-            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            <svg
+              className="w-6 h-6 text-white"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+              />
             </svg>
           </div>
           <h3 className="text-xl font-bold text-gray-900">
@@ -185,414 +195,418 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
           </h3>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <FormField
-          name="id_empresa"
-          control={form.control}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabelWithAsterisk required>Empresa</FormLabelWithAsterisk>
-              <FormControl>
-                <Combobox
-                  options={empresasOptions}
-                  value={field.value ? String(field.value) : ""}
-                  placeholder="Seleccionar empresa"
-                  emptyText="No hay empresas"
-                  disabled={soloLectura || editar}
-                  onChange={(val) => {
-                    if (soloLectura || editar) return;
-
-                    const parsed = val ? Number(val) : "";
-                    field.onChange(parsed);
-
-                    form.setValue("sucursal", "");
-                    form.setValue("departamento", "");
-                    form.setValue("id_jefe_inmediato", null);
-                    form.setValue("id_autoriza_vacaciones", null);
-                    form.setValue("id_autoriza_permisos", null);
-                  }}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          name="sucursal"
-          control={form.control}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabelWithAsterisk required>
-                Unidad de negocio o sucursal
-              </FormLabelWithAsterisk>
-
-              <CreatableCombobox
-                disabled={soloLectura || !idEmpresa}
-                value={field.value ?? ""} // 🔥 STRING
-                compareBy="label" // 🔥 LABEL
-                placeholder="Seleccionar o crear sucursal"
-                searchPlaceholder="Buscar sucursal..."
-                fetchOptions={async (q) => {
-                  const { data } = await axios.get(
-                    `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/sucursales`,
-                    { params: { id_empresa: idEmpresa, nombre: q } },
-                  );
-                  return data.sucursales;
-                }}
-                createOption={async (nombre) => {
-                  const { data } = await axios.post(
-                    `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/sucursales`,
-                    { nombre, id_empresa: idEmpresa },
-                  );
-                  return data;
-                }}
-                getOptionLabel={(o) => o.nombre}
-                getOptionValue={(o) => o.nombre} // 🔥 CLAVE
-                onChange={(nombre) => {
-                  field.onChange(nombre);
-                  form.setValue("departamento", "");
-                }}
-                onCreated={(nuevo) => {
-                  field.onChange(nuevo.nombre);
-                }}
-              />
-
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          name="departamento"
-          control={form.control}
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Departamento</FormLabel>
-
-              <CreatableCombobox
-                disabled={soloLectura || !idSucursal}
-                value={field.value ?? ""}
-                compareBy="label"
-                placeholder="Seleccionar o crear departamento"
-                searchPlaceholder="Buscar departamento..."
-                fetchOptions={async (q) => {
-                  if (!idSucursal) return [];
-
-                  const { data } = await axios.get(
-                    `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/departamentos`,
-                    {
-                      params: {
-                        id_sucursal: idSucursal,
-                        id_empresa: idEmpresa,
-                        nombre: q,
-                      },
-                    },
-                  );
-                  return data.departamentos;
-                }}
-                createOption={async (nombre) => {
-                  const { data } = await axios.post(
-                    `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/departamentos`,
-                    {
-                      nombre,
-                      id_empresa: idEmpresa,
-                      id_sucursal: idSucursal,
-                    },
-                  );
-                  return data;
-                }}
-                getOptionLabel={(o) => o.nombre}
-                getOptionValue={(o) => o.nombre} // 🔥 CLAVE
-                onChange={(nombre) => field.onChange(nombre)}
-                onCreated={(nuevo) => field.onChange(nuevo.nombre)}
-              />
-
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        {[
-          {
-            name: "fecha_ingreso",
-            label: "Fecha de ingreso",
-            type: "date",
-            required: false,
-          },
-        ].map(({ name, label, type = "text", required = false }) => (
           <FormField
-            key={name}
-            name={name}
+            name="id_empresa"
             control={form.control}
             render={({ field }) => (
               <FormItem>
-                <FormLabelWithAsterisk required={required}>
-                  {label}
-                </FormLabelWithAsterisk>
-                <FormControl>
-                  <Input type={type} disabled={soloLectura} {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        ))}
-
-        <div className="col-span-1 sm:col-span-2">
-          <FormField
-            name="metodo_chequeo"
-            control={form.control}
-            render={({ field }) => (
-              <FormItem className="flex flex-col gap-1 rounded-lg border p-4">
-                <FormLabel className="text-base">Método de chequeo</FormLabel>
-                <div className="text-sm text-muted-foreground mb-2">
-                  Selecciona cómo el empleado registrará su entrada/salida
-                </div>
-                <Select
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  disabled={soloLectura}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue
-                        placeholder="Selecciona un método"
-                        className="text-xs"
-                      />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="codigo">Código</SelectItem>
-                    <SelectItem value="facial">Facial</SelectItem>
-                    <SelectItem value="ambos">Ambos</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="col-span-1 sm:col-span-2">
-          <FormField
-            control={form.control}
-            name="cierre_turno"
-            render={({ field }) => (
-              <FormItem className="flex flex-col gap-1 rounded-lg border p-4">
-                <FormLabel className="text-base">Cierre de turno</FormLabel>
-
-                <div className="text-sm text-muted-foreground mb-2">
-                  Define si el sistema cierra el turno automáticamente o si el
-                  empleado debe hacerlo manualmente
-                </div>
-
-                <Select
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  disabled={soloLectura}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona un modo" />
-                    </SelectTrigger>
-                  </FormControl>
-
-                  <SelectContent>
-                    <SelectItem value="Automático">Automático</SelectItem>
-                    <SelectItem value="Manual">Manual</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <div className="col-span-1 sm:col-span-2">
-          <FormField
-            name="new_pass"
-            control={form.control}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabelWithAsterisk required={true}>
-                  Contraseña
-                </FormLabelWithAsterisk>
-                <FormControl>
-                  <Input
-                    type="password"
-                    placeholder="Nueva contraseña"
-                    name="new_pass_laboral"
-                    autoComplete="new-password"
-                    {...field}
-                    disabled={soloLectura}
-                    value={field.value ?? ""}
-                  />
-                </FormControl>
-                <FormDescription>
-                  Deja vacío si no deseas cambiar la contraseña.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        {[{ name: "nip", label: "Código de empleado", required: false }].map(
-          ({ name, label, type = "text", required = false }) => (
-            <div key={name}>
-              <FormField
-                name={name}
-                control={form.control}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabelWithAsterisk required={required}>
-                      {label}
-                    </FormLabelWithAsterisk>
-                    <FormControl>
-                      <Input type={type} disabled={soloLectura} {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />{" "}
-            </div>
-          ),
-        )}
-
-        {responsables.map(({ name, label }) => (
-          <FormField
-            key={name}
-            name={name}
-            control={form.control}
-            render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>{label}</FormLabel>
+                <FormLabelWithAsterisk required>Empresa</FormLabelWithAsterisk>
                 <FormControl>
                   <Combobox
-                    name={name}
-                    options={opcionesEmpleados}
-                    value={field.value}
-                    onChange={(val) => field.onChange(val)}
-                    placeholder="Buscar empleado..."
-                    emptyText="No se encontraron empleados"
-                    disabled={soloLectura}
+                    options={empresasOptions}
+                    value={field.value ? String(field.value) : ""}
+                    placeholder="Seleccionar empresa"
+                    emptyText="No hay empresas"
+                    disabled={soloLectura || editar}
+                    onChange={(val) => {
+                      if (soloLectura || editar) return;
+
+                      const parsed = val ? Number(val) : "";
+                      field.onChange(parsed);
+
+                      form.setValue("sucursal", "");
+                      form.setValue("departamento", "");
+                      form.setValue("id_jefe_inmediato", null);
+                      form.setValue("id_autoriza_vacaciones", null);
+                      form.setValue("id_autoriza_permisos", null);
+                    }}
                   />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-        ))}
 
-        <FormField
-          name="checar_gps"
-          control={form.control}
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <FormLabel className="text-base">Checar GPS</FormLabel>
-                <div className="text-sm text-muted-foreground">
-                  Requerir ubicación GPS al checar entrada/salida
-                </div>
-              </div>
-              <FormControl>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                  disabled={soloLectura}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
+          <FormField
+            name="sucursal"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabelWithAsterisk required>
+                  Unidad de negocio o sucursal
+                </FormLabelWithAsterisk>
 
-        <FormField
-          name="usar_reloj_checador"
-          control={form.control}
-          render={({ field }) => (
-            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <FormLabel className="text-base">Usar reloj checador</FormLabel>
-                <div className="text-sm text-muted-foreground">
-                  Permitir que el empleado use el sistema de checador
-                </div>
-              </div>
-              <FormControl>
-                <Switch
-                  checked={field.value}
-                  onCheckedChange={field.onChange}
-                  disabled={soloLectura}
-                />
-              </FormControl>
-            </FormItem>
-          )}
-        />
-
-        {form.watch("checar_gps") && idEmpresa && (
-          <Button
-            size="sm"
-            onClick={() => setMostrarModalArea(true)}
-            type="button"
-            className="col-span-1 sm:col-span-2"
-          >
-            + Crear nueva área
-          </Button>
-        )}
-
-        {/* 🔹 Áreas permitidas (solo si usar_reloj_checador = true) */}
-        <div className="col-span-1 sm:col-span-2">
-          {form.watch("checar_gps") && (
-            <div className="border rounded-xl p-4 bg-slate-50 shadow-sm">
-              <FormLabel className="text-base font-semibold block mb-3">
-                Áreas donde el empleado puede checar
-              </FormLabel>
-
-              {areas.length === 0 ? (
-                <p className="text-gray-500 italic text-sm">
-                  ⚠️ No hay áreas registradas todavía. Crea una en el sistema.
-                </p>
-              ) : (
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {areas.map((area, index) => {
-                    const asignada = areasAsignadas.includes(area.id_area);
-                    return (
-                      <div
-                        key={area.id_area ?? `area-temp-${index}`}
-                        className={`border rounded-lg p-3 flex items-center justify-between ${
-                          asignada
-                            ? "bg-blue-50 border-blue-300"
-                            : "bg-white border-gray-200"
-                        }`}
-                      >
-                        <div>
-                          <p className="font-medium">{area.nombre_area}</p>
-                          <p className="text-xs text-gray-500">
-                            {area.latitud}, {area.longitud}
-                          </p>
-                        </div>
-                        {!soloLectura && (
-                          <Checkbox
-                            checked={asignada}
-                            onCheckedChange={() => toggleArea(area.id_area)}
-                          />
-                        )}
-                      </div>
+                <CreatableCombobox
+                  disabled={soloLectura || !idEmpresa}
+                  value={field.value ?? ""} // 🔥 STRING
+                  compareBy="label" // 🔥 LABEL
+                  placeholder="Seleccionar o crear sucursal"
+                  searchPlaceholder="Buscar sucursal..."
+                  fetchOptions={async (q) => {
+                    const { data } = await axios.get(
+                      `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/sucursales`,
+                      { params: { id_empresa: idEmpresa, nombre: q } },
                     );
-                  })}
-                </div>
+                    return data.sucursales;
+                  }}
+                  createOption={async (nombre) => {
+                    const { data } = await axios.post(
+                      `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/sucursales`,
+                      { nombre, id_empresa: idEmpresa },
+                    );
+                    return data;
+                  }}
+                  getOptionLabel={(o) => o.nombre}
+                  getOptionValue={(o) => o.nombre} // 🔥 CLAVE
+                  onChange={(nombre) => {
+                    field.onChange(nombre);
+                    form.setValue("departamento", "");
+                  }}
+                  onCreated={(nuevo) => {
+                    field.onChange(nuevo.nombre);
+                  }}
+                />
+
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            name="departamento"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Departamento</FormLabel>
+
+                <CreatableCombobox
+                  disabled={soloLectura || !idSucursal}
+                  value={field.value ?? ""}
+                  compareBy="label"
+                  placeholder="Seleccionar o crear departamento"
+                  searchPlaceholder="Buscar departamento..."
+                  fetchOptions={async (q) => {
+                    if (!idSucursal) return [];
+
+                    const { data } = await axios.get(
+                      `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/departamentos`,
+                      {
+                        params: {
+                          id_sucursal: idSucursal,
+                          id_empresa: idEmpresa,
+                          nombre: q,
+                        },
+                      },
+                    );
+                    return data.departamentos;
+                  }}
+                  createOption={async (nombre) => {
+                    const { data } = await axios.post(
+                      `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/departamentos`,
+                      {
+                        nombre,
+                        id_empresa: idEmpresa,
+                        id_sucursal: idSucursal,
+                      },
+                    );
+                    return data;
+                  }}
+                  getOptionLabel={(o) => o.nombre}
+                  getOptionValue={(o) => o.nombre} // 🔥 CLAVE
+                  onChange={(nombre) => field.onChange(nombre)}
+                  onCreated={(nuevo) => field.onChange(nuevo.nombre)}
+                />
+
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          {[
+            {
+              name: "fecha_ingreso",
+              label: "Fecha de ingreso",
+              type: "date",
+              required: false,
+            },
+          ].map(({ name, label, type = "text", required = false }) => (
+            <FormField
+              key={name}
+              name={name}
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabelWithAsterisk required={required}>
+                    {label}
+                  </FormLabelWithAsterisk>
+                  <FormControl>
+                    <Input type={type} disabled={soloLectura} {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )}
-            </div>
+            />
+          ))}
+
+          <div className="col-span-1 sm:col-span-2">
+            <FormField
+              name="metodo_chequeo"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem className="flex flex-col gap-1 rounded-lg border p-4">
+                  <FormLabel className="text-base">Método de chequeo</FormLabel>
+                  <div className="text-sm text-muted-foreground mb-2">
+                    Selecciona cómo el empleado registrará su entrada/salida
+                  </div>
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={soloLectura}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder="Selecciona un método"
+                          className="text-xs"
+                        />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="codigo">Código</SelectItem>
+                      <SelectItem value="facial">Facial</SelectItem>
+                      <SelectItem value="ambos">Ambos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="col-span-1 sm:col-span-2">
+            <FormField
+              control={form.control}
+              name="cierre_turno"
+              render={({ field }) => (
+                <FormItem className="flex flex-col gap-1 rounded-lg border p-4">
+                  <FormLabel className="text-base">Cierre de turno</FormLabel>
+
+                  <div className="text-sm text-muted-foreground mb-2">
+                    Define si el sistema cierra el turno automáticamente o si el
+                    empleado debe hacerlo manualmente
+                  </div>
+
+                  <Select
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    disabled={soloLectura}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona un modo" />
+                      </SelectTrigger>
+                    </FormControl>
+
+                    <SelectContent>
+                      <SelectItem value="Automático">Automático</SelectItem>
+                      <SelectItem value="Manual">Manual</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="col-span-1 sm:col-span-2">
+            <FormField
+              name="new_pass"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabelWithAsterisk required={true}>
+                    Contraseña
+                  </FormLabelWithAsterisk>
+                  <FormControl>
+                    <Input
+                      type="password"
+                      placeholder="Nueva contraseña"
+                      name="new_pass_laboral"
+                      autoComplete="new-password"
+                      {...field}
+                      disabled={soloLectura}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Deja vacío si no deseas cambiar la contraseña.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {[{ name: "nip", label: "Código de empleado", required: false }].map(
+            ({ name, label, type = "text", required = false }) => (
+              <div key={name}>
+                <FormField
+                  name={name}
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabelWithAsterisk required={required}>
+                        {label}
+                      </FormLabelWithAsterisk>
+                      <FormControl>
+                        <Input type={type} disabled={soloLectura} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />{" "}
+              </div>
+            ),
           )}
+
+          {responsables.map(({ name, label }) => (
+            <FormField
+              key={name}
+              name={name}
+              control={form.control}
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>{label}</FormLabel>
+                  <FormControl>
+                    <Combobox
+                      name={name}
+                      options={opcionesEmpleados}
+                      value={field.value}
+                      onChange={(val) => field.onChange(val)}
+                      placeholder="Buscar empleado..."
+                      emptyText="No se encontraron empleados"
+                      disabled={soloLectura}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          ))}
+
+          <FormField
+            name="checar_gps"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                <div className="space-y-0.5">
+                  <FormLabel className="text-base">Checar GPS</FormLabel>
+                  <div className="text-sm text-muted-foreground">
+                    Requerir ubicación GPS al checar entrada/salida
+                  </div>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    disabled={soloLectura}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            name="enviar_asistencia_automatica"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
+                <div className="space-y-0.5">
+                  <FormLabel className="text-base">
+                    Asistencia Automática
+                  </FormLabel>
+                  <div className="text-sm text-muted-foreground">
+                    El sistema generará los registros de entrada y salida
+                    basados en su horario sin que el empleado tenga que checar
+                    manualmente.
+                  </div>
+                </div>
+                <FormControl>
+                  <Switch
+                    disabled={soloLectura}
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          {form.watch("checar_gps") && idEmpresa && (
+            <Button
+              size="sm"
+              onClick={() => setMostrarModalArea(true)}
+              type="button"
+              className="col-span-1 sm:col-span-2"
+            >
+              + Crear nueva área
+            </Button>
+          )}
+
+          {/* 🔹 Áreas permitidas (solo si usar_reloj_checador = true) */}
+          <div className="col-span-1 sm:col-span-2">
+            {form.watch("checar_gps") && (
+              <div className="border rounded-xl p-4 bg-slate-50 shadow-sm">
+                <FormLabel className="text-base font-semibold block mb-3">
+                  Áreas donde el empleado puede checar
+                </FormLabel>
+
+                {areas.length === 0 ? (
+                  <p className="text-gray-500 italic text-sm">
+                    ⚠️ No hay áreas registradas todavía. Crea una en el sistema.
+                  </p>
+                ) : (
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {areas.map((area, index) => {
+                      const asignada = areasAsignadas.includes(area.id_area);
+                      return (
+                        <div
+                          key={area.id_area ?? `area-temp-${index}`}
+                          className={`border rounded-lg p-3 flex items-center justify-between ${
+                            asignada
+                              ? "bg-blue-50 border-blue-300"
+                              : "bg-white border-gray-200"
+                          }`}
+                        >
+                          <div>
+                            <p className="font-medium">{area.nombre_area}</p>
+                            <p className="text-xs text-gray-500">
+                              {area.latitud}, {area.longitud}
+                            </p>
+                          </div>
+                          {!soloLectura && (
+                            <Checkbox
+                              checked={asignada}
+                              onCheckedChange={() => toggleArea(area.id_area)}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-      <ModalArea
-        isOpen={mostrarModalArea}
-        onClose={() => setMostrarModalArea(false)}
-        onSave={crearArea}
-        initialData={null}
-        loading={guardandoArea}
-      />
+        <ModalArea
+          isOpen={mostrarModalArea}
+          onClose={() => setMostrarModalArea(false)}
+          onSave={crearArea}
+          initialData={null}
+          loading={guardandoArea}
+        />
       </div>
     </section>
   );

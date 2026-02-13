@@ -132,7 +132,7 @@ export default function FormularioEmpleado({
       lugar_checkin: null,
       lugar_checkout: null,
       checar_gps: false,
-      usar_reloj_checador: true,
+      enviar_asistencia_automatica: true,
       cierre_turno: "Automático",
       areasAsignadas: [],
       new_pass: "",
@@ -232,8 +232,8 @@ export default function FormularioEmpleado({
             ? JSON.parse(restoEmpleado.lugar_checkout)
             : restoEmpleado.lugar_checkout || null,
         checar_gps: restoEmpleado.checar_gps === 1 ? true : false,
-        usar_reloj_checador:
-          restoEmpleado.usar_reloj_checador === 1 ? true : false,
+        enviar_asistencia_automatica:
+          restoEmpleado.enviar_asistencia_automatica === 1 ? true : false,
         new_pass: "",
       });
 
