@@ -108,17 +108,18 @@ export default function AltaEmpresasForm() {
   if (isLoggedIn) return null;
 
   return (
-    <section className="w-full bg-gray-100 flex justify-center items-center md:p-10">
-      <div className="bg-white shadow-md p-5 rounded-md w-[800px] max-w-full">
+    <section className="flex w-full items-center justify-center bg-[var(--adamia-bg-light)] md:p-10">
+      <div className="w-[800px] max-w-full rounded-md border border-[var(--adamia-blue)]/15 bg-white p-5 shadow-md">
         <div className="flex justify-center py-5">
           <Image
-            alt="BackgroundHR"
-            src="/assets/logo.png"
-            height={100}
-            width={100}
+            alt="ADAMIA"
+            src="/assets/adamia.png"
+            height={60}
+            width={180}
+            className="h-12 w-auto"
           />
         </div>
-        <h3 className="text-2xl font-extrabold text-center text-slate-700">
+        <h3 className="text-center text-2xl font-extrabold text-[var(--adamia-text-primary)]">
           Formulario de Alta de Empresas
         </h3>
         <Form {...form}>
@@ -275,7 +276,7 @@ export default function AltaEmpresasForm() {
                     Acepto los{" "}
                     <a
                       href="/terminos-condiciones"
-                      className="underline text-blue-500"
+                      className="underline text-[var(--adamia-blue)]"
                       target="_blank"
                     >
                       Términos y Condiciones
@@ -283,7 +284,7 @@ export default function AltaEmpresasForm() {
                     y el{" "}
                     <a
                       href="/aviso-privacidad"
-                      className="underline text-blue-500"
+                      className="underline text-[var(--adamia-blue)]"
                       target="_blank"
                     >
                       Aviso de Privacidad
@@ -295,20 +296,28 @@ export default function AltaEmpresasForm() {
               )}
             />
             <div className="flex justify-center my-5">
-              <Button type="submit" className="bg-slate-700" loading={loading}>
+              <Button
+                type="submit"
+                className="bg-gradient-to-r from-[var(--adamia-blue)] to-[var(--adamia-purple)] hover:opacity-95"
+                loading={loading}
+              >
                 Registrarme
               </Button>
             </div>
           </form>
         </Form>
-        <p className="text-center font-extrabold text-slate-700 text-sm">
+        <p className="text-center text-sm font-extrabold text-[var(--adamia-text-primary)]">
           💡 Al registrarte, tu empresa da el primer paso para digitalizar su
           reclutamiento.
         </p>
-        <p className="font-light text-center text-sm mt-3">
+        <p className="mt-3 text-center text-sm font-light text-[var(--adamia-text-secondary)]">
           Una vez validada, podrás publicar vacantes, recibir postulaciones
           directas y administrar todo tu proceso desde una sola plataforma.
-          <span className="font-bold"> HR360</span> conecta tu negocio con el
+          <span className="font-bold text-[var(--adamia-text-primary)]">
+            {" "}
+            ADAMIA
+          </span>{" "}
+          conecta tu negocio con el
           mejor talento y te ayuda a tomar decisiones inteligentes, rápidas y
           eficientes.
         </p>

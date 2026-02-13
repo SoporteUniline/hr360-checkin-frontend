@@ -26,7 +26,7 @@ export default function Main() {
   const router = useRouter();
 
   return (
-    <main className="w-full bg-gray-100">
+    <main className="w-full bg-white">
       <header className="h-[50vh] w-full relative">
         <Image
           alt="BackgroundHR"
@@ -35,17 +35,25 @@ export default function Main() {
           className="object-cover"
           //priority
         />
-        <div className="absolute inset-0 flex items-center justify-center flex-col bg-slate-700/80">
+        <div className="absolute inset-0 flex items-center justify-center flex-col bg-gradient-to-br from-[var(--adamia-blue)]/80 to-[var(--adamia-purple)]/80 px-6 text-center">
+          <Image
+            alt="ADAMIA"
+            src="/assets/adamia.png"
+            width={220}
+            height={70}
+            className="mb-6 h-auto w-[180px] sm:w-[220px]"
+            priority
+          />
           <h1 className="text-white text-3xl font-bold">
             Convierte tu Organización en un Imán de Talento
           </h1>
           <p className="text-white text-md mt-2">
-            Empresas, ayuntamientos y universidades utilizan HR360 para publicar
+            Empresas, ayuntamientos y universidades utilizan ADAMIA para publicar
             sus vacantes, llegar al mejor talento y optimizar su proceso de
             selección.
           </p>
           <Button
-            className="mt-7 bg-slate-700 font-semibold"
+            className="mt-7 bg-white font-semibold text-[var(--adamia-blue)] hover:bg-white/90"
             onClick={() => router.push("/alta-empresas")}
           >
             Publicar un empleo
@@ -54,8 +62,8 @@ export default function Main() {
       </header>
 
       <section className="p-5 py-20 md:px-10 lg:px-30 xl:px-40">
-        <h2 className="text-center text-3xl font-extrabold text-slate-700">
-          Cómo Funciona HR360
+        <h2 className="text-center text-3xl font-extrabold text-[var(--adamia-text-primary)]">
+          Cómo Funciona ADAMIA
         </h2>
         <p className="pt-5 font-light text-md text-center">
           Publicar empleos y encontrar talento nunca fue tan fácil. Sigue estos
@@ -65,9 +73,9 @@ export default function Main() {
           {steps.map(({ title, description }, i) => (
             <article
               key={i}
-              className="p-7 border-1 border-gray-100 rounded-md shadow-lg hover:shadow-xl"
+              className="rounded-md border border-gray-100 p-7 shadow-lg transition hover:-translate-y-1 hover:border-[var(--adamia-blue)]/40 hover:shadow-xl"
             >
-              <p className="text-center text-xl font-bold text-slate-700">
+              <p className="text-center text-xl font-bold text-[var(--adamia-text-primary)]">
                 {title}
               </p>
               <p className="mt-3 text-gray-600 text-center text-sm">
@@ -79,16 +87,16 @@ export default function Main() {
       </section>
 
       <section className="p-5 py-20 md:px-10 lg:px-30 xl:px-40">
-        <h2 className="text-center text-3xl font-extrabold text-slate-700">
+        <h2 className="text-center text-3xl font-extrabold text-[var(--adamia-text-primary)]">
           Soluciones para tu Organización
         </h2>
         <p className="pt-5 font-light text-md text-center">
-          Sea cual sea tu sector, en HR360 encontrarás la herramienta perfecta
+          Sea cual sea tu sector, en ADAMIA encontraras la herramienta perfecta
           para atraer y gestionar talento.
         </p>
         <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-5 min-h-50">
-          <article className="p-7 border-1 border-gray-100 rounded-md shadow-lg hover:shadow-xl transition transform hover:-translate-y-1.5 duration-300">
-            <p className="text-center text-xl font-bold text-slate-700">
+          <article className="rounded-md border border-gray-100 p-7 shadow-lg transition duration-300 hover:-translate-y-1.5 hover:border-[var(--adamia-blue)]/40 hover:shadow-xl">
+            <p className="text-center text-xl font-bold text-[var(--adamia-text-primary)]">
               🏢 Para Empresas
             </p>
             <p className="mt-3 text-gray-600 text-center text-sm">
@@ -96,8 +104,8 @@ export default function Main() {
               competencias y acelera tu proceso de contratación.
             </p>
           </article>
-          <article className="p-7 border-1 border-gray-100 rounded-md shadow-lg hover:shadow-xl transition transform hover:-translate-y-1.5 duration-300">
-            <p className="text-center text-xl font-bold text-slate-700">
+          <article className="rounded-md border border-gray-100 p-7 shadow-lg transition duration-300 hover:-translate-y-1.5 hover:border-[var(--adamia-blue)]/40 hover:shadow-xl">
+            <p className="text-center text-xl font-bold text-[var(--adamia-text-primary)]">
               🏛️ Para Ayuntamientos
             </p>
             <p className="mt-3 text-gray-600 text-center text-sm">
@@ -105,8 +113,8 @@ export default function Main() {
               convocatorias ciudadanas y transparencia en tiempo real.
             </p>
           </article>
-          <article className="p-7 border-1 border-gray-100 rounded-md shadow-lg hover:shadow-xl transition transform hover:-translate-y-1.5 duration-300">
-            <p className="text-center text-xl font-bold text-slate-700">
+          <article className="rounded-md border border-gray-100 p-7 shadow-lg transition duration-300 hover:-translate-y-1.5 hover:border-[var(--adamia-blue)]/40 hover:shadow-xl">
+            <p className="text-center text-xl font-bold text-[var(--adamia-text-primary)]">
               🎓 Para Universidades
             </p>
             <p className="mt-3 text-gray-600 text-center text-sm">

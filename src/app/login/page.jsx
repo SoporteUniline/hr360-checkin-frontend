@@ -87,13 +87,13 @@ export default function LoginPage() {
     <section className="grid grid-cols-1 md:grid-cols-2">
       <div className="hidden sm:block">
         <section className="relative min-h-screen flex flex-col justify-center items-center bg-[url(/assets/bg.jpg)] bg-cover bg-center">
-          <div className="absolute w-full h-full bg-slate-600/60" />
+          <div className="absolute w-full h-full bg-gradient-to-br from-[var(--adamia-blue)]/70 to-[var(--adamia-purple)]/70" />
           <Image
-            alt="HR360"
-            src="/assets/logo.png"
-            height={300}
-            width={300}
-            className="z-10"
+            alt="ADAMIA"
+            src="/assets/adamia.png"
+            height={170}
+            width={460}
+            className="z-10 h-auto w-[260px] lg:w-[360px]"
           />
         </section>
       </div>
@@ -101,6 +101,7 @@ export default function LoginPage() {
         <nav className="flex justify-end p-3">
           <Button
             variant="ghost"
+            className="text-[var(--adamia-text-primary)] hover:bg-[var(--adamia-blue)]/10"
             startIcon={<CircleArrowLeftIcon />}
             onClick={handleBack}
           >
@@ -108,7 +109,7 @@ export default function LoginPage() {
           </Button>
         </nav>
         <div className="flex flex-col justify-center items-center flex-1">
-          <h1 className="text-slate-700 text-4xl font-bold self-center">
+          <h1 className="text-[var(--adamia-text-primary)] text-4xl font-bold self-center">
             Iniciar sesión
           </h1>
 
@@ -159,16 +160,16 @@ export default function LoginPage() {
 
                 <Button
                   type="submit"
-                  className="w-full bg-slate-700 cursor-pointer hover:bg-slate-500 "
+                  className="w-full cursor-pointer bg-gradient-to-r from-[var(--adamia-blue)] to-[var(--adamia-purple)] hover:opacity-95"
                 >
                   Ingresar
                 </Button>
-                {/* <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1">
                   <Button
                     onClick={handleRecovery}
                     type="button"
                     variant="ghost"
-                    className="w-full text-slate-700 cursor-pointer"
+                    className="w-full cursor-pointer text-[var(--adamia-text-primary)] hover:bg-[var(--adamia-blue)]/10"
                   >
                     Olvidé mi contraseña
                   </Button>
@@ -176,11 +177,11 @@ export default function LoginPage() {
                     onClick={irARegistro}
                     type="button"
                     variant="ghost"
-                    className="w-full text-slate-700 cursor-pointer"
+                    className="w-full cursor-pointer text-[var(--adamia-text-primary)] hover:bg-[var(--adamia-blue)]/10"
                   >
                     Registrarme
                   </Button>
-                </div> */}
+                </div>
               </form>
             </Form>
           </section>

@@ -31,11 +31,11 @@ export default function LandingHeader() {
         <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-6 py-4">
           <Link href="/" className="flex items-center gap-3 min-w-0">
             <Image
-              src="/assets/logo.png"
+              src="/assets/adamia.png"
               alt="ADAMIA"
-              width={140}
-              height={40}
-              className="h-9 w-auto"
+              width={180}
+              height={60}
+              className="h-10 w-auto"
               priority
             />
           </Link>
@@ -100,11 +100,11 @@ export default function LandingHeader() {
               <SheetContent side="right" className="w-[320px] sm:w-[360px]">
                 <div className="flex items-center gap-3">
                   <Image
-                    src="/assets/logo.png"
+                    src="/assets/adamia.png"
                     alt="ADAMIA"
-                    width={140}
-                    height={40}
-                    className="h-9 w-auto"
+                    width={180}
+                    height={60}
+                    className="h-10 w-auto"
                   />
                 </div>
 

@@ -53,7 +53,7 @@ export default function ImageForm({
           </Button>
         ) : (
           <Label className="cursor-pointer">
-            <span className="text-sm text-blue-600">Subir imagen</span>
+            <span className="text-sm text-[var(--adamia-blue)]">Subir imagen</span>
             <Input
               type="file"
               accept="image/*"

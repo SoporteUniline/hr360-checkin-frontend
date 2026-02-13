@@ -34,6 +34,12 @@ import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 export default function Navbar() {
   const pathname = usePathname();
   const { isLoggedIn, isAuthChecked, logout, dataUser } = useAuth();
+  const publicLinks = [
+    { href: "/", label: "Inicio" },
+    { href: "/alta-empresas", label: "Alta Empresas" },
+    { href: "/quienes-somos", label: "Quienes somos" },
+    { href: "/aviso-privacidad", label: "Ayuda" },
+  ];
 
   const { data: imagenData } = useSWR(
     dataUser?.id_usuario ? `/users/imagen/${dataUser.id_usuario}` : null,
@@ -78,116 +84,31 @@ export default function Navbar() {
         />
       </div>
       <div className="flex-1 p-2.5">
-        <Image alt="HR360" src="/assets/logo.png" height={80} width={70} />
+        <Image
+          alt="ADAMIA"
+          src="/assets/adamia.png"
+          height={56}
+          width={170}
+          className="h-10 w-auto"
+          priority
+        />
       </div>
       <div className="hidden md:flex">
         <NavigationMenu>
           <NavigationMenuList>
-            <NavigationMenuItem>
-              <Link
-                href="/"
-                className={twMerge(
-                  navigationMenuTriggerStyle(),
-                  pathname === "/" && "font-medium"
-                )}
-              >
-                Inicio
-              </Link>
-            </NavigationMenuItem>
-            {!isLoggedIn && (
-              <NavigationMenuItem>
+            {publicLinks.map((item) => (
+              <NavigationMenuItem key={item.href}>
                 <Link
-                  href="/alta-empresas"
+                  href={item.href}
                   className={twMerge(
                     navigationMenuTriggerStyle(),
-                    pathname === "/alta-empresas" && "font-medium"
+                    pathname === item.href && "font-medium"
                   )}
                 >
-                  Alta Empresas
+                  {item.label}
                 </Link>
               </NavigationMenuItem>
-            )}
-            <NavigationMenuItem>
-              <Link
-                href="/quienes-somos"
-                className={twMerge(
-                  navigationMenuTriggerStyle(),
-                  pathname === "/quienes-somos" && "font-medium"
-                )}
-              >
-                Conócenos
-              </Link>
-            </NavigationMenuItem>
-            {/* <NavigationMenuItem>
-              <Link
-                href="/blog-y-noticias"
-                className={twMerge(
-                  navigationMenuTriggerStyle(),
-                  pathname === "/blog-y-noticias" && "font-medium"
-                )}
-              >
-                Blog y Noticias
-              </Link>
-            </NavigationMenuItem> */}
-            {/* <NavigationMenuItem>
-              <Link
-                href="/capacitacion"
-                className={twMerge(
-                  navigationMenuTriggerStyle(),
-                  pathname === "/capacitacion" && "font-medium"
-                )}
-              >
-                Capacitación
-              </Link>
-            </NavigationMenuItem> */}
-            <NavigationMenuItem>
-              {/* Menú Vacaciones (desplegable): Panel Vacaciones + Vacaciones por ley */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    className={twMerge(
-                      navigationMenuTriggerStyle(),
-                      pathname?.startsWith("/panel/vacaciones") && "font-medium"
-                    )}
-                  >
-                    Vacaciones
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-56">
-                  <DropdownMenuItem asChild className="cursor-pointer">
-                    <Link href="/panel/vacaciones" className="w-full">
-                      Panel vacaciones
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild className="cursor-pointer">
-                    <Link href="/panel/vacaciones/registro" className="w-full">
-                      Registro de vacaciones
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild className="cursor-pointer">
-                    <Link href="/panel/vacaciones/por-ley" className="w-full">
-                      Vacaciones por ley
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild className="cursor-pointer">
-                    <Link href="/panel/vacaciones/por-periodo" className="w-full">
-                      Vacaciones por periodo
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </NavigationMenuItem>
-            <NavigationMenuItem>
-              <Link
-                href="/panel/contratos"
-                className={twMerge(
-                  navigationMenuTriggerStyle(),
-                  pathname === "/panel/contratos" && "font-medium"
-                )}
-              >
-                Contratos
-              </Link>
-            </NavigationMenuItem>
+            ))}
             <NavigationMenuItem>
               {isLoggedIn ? (
                 <DropdownMenu>
@@ -302,97 +223,24 @@ const MenuResposive = ({
       <DrawerContent className="mt-0 inset-y-0 w-60 bottom-0 z-50 rounded-r-sm rounded-l-none px-4 py-4">
         <div className="flex flex-col h-full justify-between">
           <div className="flex flex-col space-y-3 mt-2">
-            <DrawerClose asChild>
-              <Link
-                href="/"
-                className={twMerge(
-                  navigationMenuTriggerStyle(),
-                  pathname === "/" && "font-medium"
-                )}
-              >
-                Inicio
-              </Link>
-            </DrawerClose>
-            <DrawerClose asChild>
-              <Link
-                href="/alta-empresas"
-                className={twMerge(
-                  navigationMenuTriggerStyle(),
-                  pathname === "/alta-empresas" && "font-medium"
-                )}
-              >
-                Alta Empresas
-              </Link>
-            </DrawerClose>
-            <DrawerClose asChild>
-              <Link
-                href="/quienes-somos"
-                className={twMerge(
-                  navigationMenuTriggerStyle(),
-                  pathname === "/quienes-somos" && "font-medium"
-                )}
-              >
-                Conócenos
-              </Link>
-            </DrawerClose>
-            <DrawerClose asChild>
-              <Link
-                href="/blog-y-noticias"
-                className={twMerge(
-                  navigationMenuTriggerStyle(),
-                  pathname === "/blog-y-noticias" && "font-medium"
-                )}
-              >
-                Blog y Noticias
-              </Link>
-            </DrawerClose>
-            <DrawerClose asChild>
-              <Link
-                href="/capacitacion"
-                className={twMerge(
-                  navigationMenuTriggerStyle(),
-                  pathname === "/capacitacion" && "font-medium"
-                )}
-              >
-                Capacitación
-              </Link>
-            </DrawerClose>
-
-            {/* Menú responsive: Vacaciones */}
-            <div className="pt-1" />
-            <div className="text-[11px] uppercase text-muted-foreground px-1">Vacaciones</div>
-            <DrawerClose asChild>
-              <Link
-                href="/panel/vacaciones"
-                className={twMerge(navigationMenuTriggerStyle())}
-              >
-                Panel vacaciones
-              </Link>
-            </DrawerClose>
-            <DrawerClose asChild>
-              <Link
-                href="/panel/vacaciones/registro"
-                className={twMerge(navigationMenuTriggerStyle())}
-              >
-                Registro de vacaciones
-              </Link>
-            </DrawerClose>
-            <DrawerClose asChild>
-              <Link
-                href="/panel/vacaciones/por-ley"
-                className={twMerge(navigationMenuTriggerStyle())}
-              >
-                Vacaciones por ley
-              </Link>
-            </DrawerClose>
-            <DrawerClose asChild>
-              <Link
-                href="/panel/contratos"
-                className={twMerge(navigationMenuTriggerStyle())}
-              >
-                Contratos
-              </Link>
-            </DrawerClose>
+            {[
+              { href: "/", label: "Inicio" },
+              { href: "/alta-empresas", label: "Alta Empresas" },
+              { href: "/quienes-somos", label: "Quienes somos" },
+              { href: "/aviso-privacidad", label: "Ayuda" },
+            ].map((item) => (
+              <DrawerClose key={item.href} asChild>
+                <Link
+                  href={item.href}
+                  className={twMerge(
+                    navigationMenuTriggerStyle(),
+                    pathname === item.href && "font-medium"
+                  )}
+                >
+                  {item.label}
+                </Link>
+              </DrawerClose>
+            ))}
 
             {isLoggedIn && tipo_usuario && (
               <DrawerClose asChild>

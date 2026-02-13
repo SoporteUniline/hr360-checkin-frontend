@@ -9,7 +9,7 @@ export const cards1 = [
   {
     title: "🤝 Genera confianza",
     description:
-      "Al registrarte, proyectas profesionalismo y transparencia. HR360 respalda tu proceso de contratación.",
+      "Al registrarte, proyectas profesionalismo y transparencia. ADAMIA respalda tu proceso de contratación.",
   },
   {
     title: "📢 Vacantes con validación",

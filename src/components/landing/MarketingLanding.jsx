@@ -4,7 +4,7 @@ import { ArrowRight, Play, Shield, Smartphone, Calculator, Check } from "lucide-
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import AdamiaChatWidget from "@/components/landing/AdamiaChatWidget";
-import LandingHeader from "@/components/landing/LandingHeader";
+import Navbar from "@/components/Navbar";
 
 /**
  * Landing principal (solo UI).
@@ -14,10 +14,9 @@ import LandingHeader from "@/components/landing/LandingHeader";
 export default function MarketingLanding() {
   return (
     <div className="min-h-[100dvh] bg-white text-[var(--adamia-text-primary)] overflow-x-hidden">
+      <Navbar />
       {/* Hero */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] text-white">
-        <LandingHeader />
-
+      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] pt-16 text-white">
         {/* Decoración radial (equivalente a ::before/::after del HTML) */}
         <div
           aria-hidden="true"
@@ -512,10 +511,10 @@ export default function MarketingLanding() {
             <div>
               <div className="flex items-center gap-3">
                 <Image
-                  src="/assets/logo.png"
+                  src="/assets/adamia.png"
                   alt="ADAMIA"
-                  width={160}
-                  height={48}
+                  width={180}
+                  height={60}
                   className="h-12 w-auto"
                 />
               </div>

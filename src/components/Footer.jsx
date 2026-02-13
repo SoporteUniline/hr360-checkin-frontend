@@ -1,11 +1,20 @@
 import Link from "next/link";
+import Image from "next/image";
 import React from "react";
 
 export default function Footer() {
   return (
-    <div className="flex justify-center items-center flex-col bg-gradient-to-r from-[#2563EB] to-[#1d4ed8] text-white py-10">
+    <div className="flex justify-center items-center flex-col bg-gradient-to-r from-[var(--adamia-blue)] to-[var(--adamia-purple)] text-white py-10">
       <div>
-        <h1 className="font-extrabold text-center text-xl">HR360</h1>
+        <div className="flex justify-center">
+          <Image
+            alt="ADAMIA"
+            src="/assets/adamia.png"
+            width={180}
+            height={60}
+            className="h-12 w-auto"
+          />
+        </div>
         <h2 className="font-extrabold text-center">
           Plataforma Inteligente de Reclutamiento{" "}
         </h2>
@@ -16,9 +25,9 @@ export default function Footer() {
       </div>
       <div className="grid grid-cols-1 w-full md:grid-cols-3 p-3 mt-3 md:px-10 lg:px-30 xl:px-60 space-x-5 space-y-3">
         <div>
-          <p className="font-bold">Sobre HR360</p>
+          <p className="font-bold">Sobre ADAMIA</p>
           <p className="text-sm mt-1 text-white/90">
-            HR360 es la plataforma líder en gestión de capital humano, diseñada
+            ADAMIA es la plataforma lider en gestion de capital humano, disenada
             para optimizar procesos y mejorar la experiencia de tus
             colaboradores.
           </p>
@@ -48,7 +57,7 @@ export default function Footer() {
       </div>
 
       <p className="text-xs mt-4 text-white/90">
-        © 2025 HR360. Todos los derechos reservados.
+        © 2025 ADAMIA. Todos los derechos reservados.
       </p>
     </div>
   );

@@ -156,11 +156,11 @@ export default function AdamiaChatWidget() {
             <div className="flex h-16 items-center justify-between bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] px-4 text-white sm:h-[70px] sm:rounded-t-2xl">
               <div className="flex min-w-0 items-center gap-3">
                 <Image
-                  src="/assets/logo.png"
+                  src="/assets/adamia.png"
                   alt="ADAMIA"
-                  width={36}
-                  height={36}
-                  className="h-9 w-9 object-contain"
+                  width={120}
+                  height={40}
+                  className="h-8 w-auto object-contain"
                 />
                 <div className="min-w-0">
                   <div className="truncate text-sm font-semibold sm:text-[15px]">
