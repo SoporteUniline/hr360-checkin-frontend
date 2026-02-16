@@ -34,11 +34,25 @@ import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 export default function Navbar() {
   const pathname = usePathname();
   const { isLoggedIn, isAuthChecked, logout, dataUser } = useAuth();
-  const publicLinks = [
-    { href: "/", label: "Inicio" },
-    { href: "/alta-empresas", label: "Alta Empresas" },
+  const funcionalidadesLinks = [
+    { href: "/funcionalidades", label: "Ver todas" },
+    { href: "/funcionalidades/reloj-checador", label: "Reloj Checador" },
+    { href: "/funcionalidades/dashboard-empleados", label: "Dashboard de Empleados" },
+    { href: "/funcionalidades/notificaciones-reglas", label: "Notificaciones y Reglas" },
+    { href: "/funcionalidades/colaboradores", label: "Colaboradores" },
+    { href: "/funcionalidades/contratos", label: "Contratos" },
+  ];
+  const cotizaLinks = [
+    {
+      href: "https://planes.hr360.mx/contratar-plan",
+      label: "Cotizar ahora",
+      external: true,
+    },
+  ];
+  const sobreNosotrosLinks = [
     { href: "/quienes-somos", label: "Quienes somos" },
-    { href: "/aviso-privacidad", label: "Ayuda" },
+    { href: "/terminos-condiciones", label: "Terminos y condiciones" },
+    { href: "/aviso-privacidad", label: "Aviso de privacidad" },
   ];
 
   const { data: imagenData } = useSWR(
@@ -96,19 +110,101 @@ export default function Navbar() {
       <div className="hidden md:flex">
         <NavigationMenu>
           <NavigationMenuList>
-            {publicLinks.map((item) => (
-              <NavigationMenuItem key={item.href}>
-                <Link
-                  href={item.href}
-                  className={twMerge(
-                    navigationMenuTriggerStyle(),
-                    pathname === item.href && "font-medium"
-                  )}
-                >
-                  {item.label}
-                </Link>
-              </NavigationMenuItem>
-            ))}
+            <NavigationMenuItem>
+              <Link
+                href="/"
+                className={twMerge(
+                  navigationMenuTriggerStyle(),
+                  pathname === "/" && "font-medium"
+                )}
+              >
+                Inicio
+              </Link>
+            </NavigationMenuItem>
+
+            <NavigationMenuItem>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className={twMerge(
+                      navigationMenuTriggerStyle(),
+                      pathname?.startsWith("/funcionalidades") && "font-medium"
+                    )}
+                  >
+                    Funcionalidades
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-64">
+                  {funcionalidadesLinks.map((item) => (
+                    <DropdownMenuItem key={item.href} asChild className="cursor-pointer">
+                      <Link href={item.href} className="w-full">
+                        {item.label}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </NavigationMenuItem>
+
+            <NavigationMenuItem>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className={twMerge(navigationMenuTriggerStyle())}>Cotiza</button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-64">
+                  {cotizaLinks.map((item) => (
+                    <DropdownMenuItem key={item.label} asChild className="cursor-pointer">
+                      <a href={item.href} target="_blank" rel="noreferrer" className="w-full">
+                        {item.label}
+                      </a>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </NavigationMenuItem>
+            <NavigationMenuItem>
+              <a
+                href="https://planes.hr360.mx/contratar-plan"
+                target="_blank"
+                rel="noreferrer"
+                className={twMerge(navigationMenuTriggerStyle())}
+              >
+                Contratar Plan
+              </a>
+            </NavigationMenuItem>
+            <NavigationMenuItem>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className={twMerge(
+                      navigationMenuTriggerStyle(),
+                      pathname?.startsWith("/quienes-somos") && "font-medium"
+                    )}
+                  >
+                    Sobre Nosotros
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-64">
+                  {sobreNosotrosLinks.map((item) => (
+                    <DropdownMenuItem key={item.href} asChild className="cursor-pointer">
+                      <Link href={item.href} className="w-full">
+                        {item.label}
+                      </Link>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </NavigationMenuItem>
+            <NavigationMenuItem>
+              <a
+                href="https://planes.hr360.mx/calculadora-de-aguinaldo"
+                target="_blank"
+                rel="noreferrer"
+                className={twMerge(navigationMenuTriggerStyle())}
+              >
+                Calculadora Aguinaldos
+              </a>
+            </NavigationMenuItem>
             <NavigationMenuItem>
               {isLoggedIn ? (
                 <DropdownMenu>
@@ -209,6 +305,26 @@ const MenuResposive = ({
   getDashboardPath,
 }) => {
   const pathname = usePathname();
+  const mobilePublicLinks = [
+    { href: "/", label: "Inicio" },
+    { href: "/funcionalidades", label: "Funcionalidades" },
+    {
+      href: "https://planes.hr360.mx/contratar-plan",
+      label: "Cotiza",
+      external: true,
+    },
+    {
+      href: "https://planes.hr360.mx/contratar-plan",
+      label: "Contratar Plan",
+      external: true,
+    },
+    { href: "/quienes-somos", label: "Sobre Nosotros" },
+    {
+      href: "https://planes.hr360.mx/calculadora-de-aguinaldo",
+      label: "Calculadora Aguinaldos",
+      external: true,
+    },
+  ];
 
   return (
     <Drawer direction="left">
@@ -223,22 +339,28 @@ const MenuResposive = ({
       <DrawerContent className="mt-0 inset-y-0 w-60 bottom-0 z-50 rounded-r-sm rounded-l-none px-4 py-4">
         <div className="flex flex-col h-full justify-between">
           <div className="flex flex-col space-y-3 mt-2">
-            {[
-              { href: "/", label: "Inicio" },
-              { href: "/alta-empresas", label: "Alta Empresas" },
-              { href: "/quienes-somos", label: "Quienes somos" },
-              { href: "/aviso-privacidad", label: "Ayuda" },
-            ].map((item) => (
-              <DrawerClose key={item.href} asChild>
-                <Link
-                  href={item.href}
-                  className={twMerge(
-                    navigationMenuTriggerStyle(),
-                    pathname === item.href && "font-medium"
-                  )}
-                >
-                  {item.label}
-                </Link>
+            {mobilePublicLinks.map((item) => (
+              <DrawerClose key={`${item.label}-${item.href}`} asChild>
+                {item.external ? (
+                  <a
+                    href={item.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={twMerge(navigationMenuTriggerStyle())}
+                  >
+                    {item.label}
+                  </a>
+                ) : (
+                  <Link
+                    href={item.href}
+                    className={twMerge(
+                      navigationMenuTriggerStyle(),
+                      pathname === item.href && "font-medium"
+                    )}
+                  >
+                    {item.label}
+                  </Link>
+                )}
               </DrawerClose>
             ))}
 
@@ -266,7 +388,7 @@ const MenuResposive = ({
                     pathname === "/login" && "font-medium"
                   )}
                 >
-                  Iniciar sesión
+                  Inicio de sesion
                 </Link>
               </DrawerClose>
             )}
