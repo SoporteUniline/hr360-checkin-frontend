@@ -12,7 +12,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import axios from "@/lib/axios";
-import { mutate } from "swr";
 import { useSnackbar } from "notistack";
 import { ShieldCheck, Trash2 } from "lucide-react";
 
@@ -28,22 +27,24 @@ export default function EstadoEmpleadoDialog({
   const [motivo, setMotivo] = useState("");
 
   const cambiarEstado = async () => {
+    const datosEnvio = { ...item };
+    delete datosEnvio.nombre_empresa;
     try {
       await axios.put(
         `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados/${item.id_empleado}`,
         {
-          ...item,
+          ...datosEnvio,
           estado: item.estado === "Activo" ? "Inactivo" : "Activo",
           motivo_baja: item.estado === "Activo" ? motivo : null,
           fecha_baja: item.estado === "Activo" ? new Date() : null,
-        }
+        },
       );
 
       enqueueSnackbar(
         item.estado === "Activo"
           ? "Empleado inactivado"
           : "Empleado reactivado",
-        { variant: "success" }
+        { variant: "success" },
       );
 
       setOpen(false);
@@ -51,10 +52,19 @@ export default function EstadoEmpleadoDialog({
 
       mutate();
     } catch (err) {
-      const msg =
-        err?.response?.data?.error ||
-        "Ocurrió un error al cambiar el estado del empleado.";
+      // Esto te dirá si el error es de Axios, de Red o de tu propio código
+      console.log("Error completo:", err);
 
+      if (err.response) {
+        console.log("Data del servidor:", err.response.data);
+      } else if (err.request) {
+        console.log("No se recibió respuesta del servidor");
+      } else {
+        console.log("Error de configuración/JS:", err.message);
+      }
+
+      const msg =
+        err?.response?.data?.error || "Ocurrió un error al cambiar el estado.";
       enqueueSnackbar(msg, { variant: "error" });
     }
   };

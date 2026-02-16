@@ -28,16 +28,17 @@ export default function Sucursales() {
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] p-6">
-      {/* Header del módulo - Estilo ADAMIA */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
           <div className="bg-emerald-50 p-3 rounded-lg">
             <MapPin className="w-7 h-7 text-emerald-600" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900">Sucursales</h1>
+            <h1 className="text-2xl font-semibold text-gray-900">
+              Unidades de negocio
+            </h1>
             <p className="text-sm text-gray-600">
-              Gestiona las sucursales de tu empresa
+              Gestiona las unidades de negocio de tu empresa
             </p>
           </div>
         </div>
@@ -49,7 +50,7 @@ export default function Sucursales() {
           }}
         >
           <Plus className="w-4 h-4 mr-2" />
-          Nueva sucursal
+          Nueva unidad de negocio
         </Button>
       </div>
 
@@ -73,7 +74,7 @@ export default function Sucursales() {
         <div className="flex flex-col gap-1">
           <Label>Buscar</Label>
           <Input
-            placeholder="Buscar por nombre de sucursal..."
+            placeholder="Buscar por nombre de unidad de negocio..."
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
           />
@@ -119,7 +120,6 @@ export default function Sucursales() {
         mutateKey={key}
       />
 
-      {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
       <AccesosRapidos />
     </div>
   );

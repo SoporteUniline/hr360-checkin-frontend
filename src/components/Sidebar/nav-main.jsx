@@ -222,8 +222,8 @@ const menuGroups = [
         rol: "Recruiter",
       },
       {
-        title: "Sucursales",
-        url: "/panel/catalogos/sucursales",
+        title: "Unidades de negocio",
+        url: "/panel/catalogos/unidades-de-negocio",
         icon: Store,
         rol: "Recruiter",
       },
@@ -264,7 +264,7 @@ export function NavMain() {
     router.push(href);
   };
 
-  let perfilRoute = "/home/cuenta"; // default
+  let perfilRoute = "/home/cuenta";
 
   if (dataUser?.tipo_usuario === "Recruiter") {
     perfilRoute = "/panel/cuenta";

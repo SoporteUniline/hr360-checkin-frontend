@@ -233,7 +233,7 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
             render={({ field }) => (
               <FormItem>
                 <FormLabelWithAsterisk required>
-                  Unidad de negocio o sucursal
+                  Unidad de negocio
                 </FormLabelWithAsterisk>
 
                 <CreatableCombobox

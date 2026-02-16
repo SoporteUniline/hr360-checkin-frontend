@@ -15,6 +15,8 @@ import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { useEffect, useState } from "react";
 import TablePagination from "@/components/TablePagination";
 import { useRouter } from "next/navigation";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Building2 } from "lucide-react";
 
 export default function SucursalesTable({
   id_empresa,
@@ -47,7 +49,9 @@ export default function SucursalesTable({
   if (isLoading) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-10">
-        <div className="text-center text-gray-500">Cargando sucursales...</div>
+        <div className="text-center text-gray-500">
+          Cargando unidades de negocio...
+        </div>
       </div>
     );
   }
@@ -56,7 +60,7 @@ export default function SucursalesTable({
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-10">
         <div className="text-center text-red-500">
-          Error al cargar sucursales
+          Error al cargar unidades de negocio
         </div>
       </div>
     );
@@ -66,7 +70,7 @@ export default function SucursalesTable({
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-10">
         <div className="text-center text-gray-500">
-          No se encontraron sucursales.
+          No se encontraron unidades de negocio.
         </div>
       </div>
     );
@@ -77,7 +81,7 @@ export default function SucursalesTable({
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
         <div className="px-6 py-4 border-b border-gray-100">
           <h2 className="text-lg font-semibold text-gray-900">
-            Lista de sucursales
+            Lista de unidades de negocio
           </h2>
         </div>
         <div className="overflow-x-auto">
@@ -85,7 +89,7 @@ export default function SucursalesTable({
             <TableHeader>
               <TableRow className="bg-gray-50 hover:bg-gray-50">
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                  Nombre
+                  Unidad de negocio
                 </TableHead>
                 {id_empresa === "all" && (
                   <TableHead className="font-semibold text-gray-700 uppercase text-xs">
@@ -103,8 +107,20 @@ export default function SucursalesTable({
                   key={suc.id_sucursal}
                   className="hover:bg-gray-50 border-b border-gray-100"
                 >
-                  <TableCell className="font-medium text-gray-900">
-                    {suc.nombre}
+                  <TableCell className="flex gap-2 items-center font-medium text-gray-900">
+                    <div>
+                      <Avatar className="h-10 w-10 border border-gray-200 rounded-lg bg-gray-50">
+                        <AvatarImage
+                          src={suc.logotipo}
+                          alt={suc.nombre}
+                          className="object-contain p-1"
+                        />
+                        <AvatarFallback className="bg-emerald-50 text-emerald-600 rounded-lg">
+                          <Building2 className="h-5 w-5" />
+                        </AvatarFallback>
+                      </Avatar>
+                    </div>
+                    <div>{suc.nombre}</div>
                   </TableCell>
                   {id_empresa === "all" && (
                     <TableCell className="font-medium text-gray-900">

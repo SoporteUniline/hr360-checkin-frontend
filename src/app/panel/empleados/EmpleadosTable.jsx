@@ -226,6 +226,7 @@ export default function EmpleadosTable({
                             item={emp}
                             limit={limit}
                             page={page}
+                            mutate={mutate}
                           />
                         </div>
                       </div>
