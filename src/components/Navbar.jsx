@@ -44,9 +44,8 @@ export default function Navbar() {
   ];
   const cotizaLinks = [
     {
-      href: "https://planes.hr360.mx/contratar-plan",
-      label: "Cotizar ahora",
-      external: true,
+      href: "/cotiza",
+      label: "Precios",
     },
   ];
   const sobreNosotrosLinks = [
@@ -149,14 +148,27 @@ export default function Navbar() {
             <NavigationMenuItem>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className={twMerge(navigationMenuTriggerStyle())}>Cotiza</button>
+                  <button
+                    className={twMerge(
+                      navigationMenuTriggerStyle(),
+                      pathname?.startsWith("/cotiza") && "font-medium"
+                    )}
+                  >
+                    Cotiza
+                  </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-64">
                   {cotizaLinks.map((item) => (
                     <DropdownMenuItem key={item.label} asChild className="cursor-pointer">
-                      <a href={item.href} target="_blank" rel="noreferrer" className="w-full">
-                        {item.label}
-                      </a>
+                      {item.external ? (
+                        <a href={item.href} target="_blank" rel="noreferrer" className="w-full">
+                          {item.label}
+                        </a>
+                      ) : (
+                        <Link href={item.href} className="w-full">
+                          {item.label}
+                        </Link>
+                      )}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
@@ -309,9 +321,8 @@ const MenuResposive = ({
     { href: "/", label: "Inicio" },
     { href: "/funcionalidades", label: "Funcionalidades" },
     {
-      href: "https://planes.hr360.mx/contratar-plan",
+      href: "/cotiza",
       label: "Cotiza",
-      external: true,
     },
     {
       href: "https://planes.hr360.mx/contratar-plan",
