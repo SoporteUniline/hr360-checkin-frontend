@@ -54,7 +54,7 @@ export default function Academics({ user }) {
 
   const form = useForm({
     defaultValues: {
-      nivel_educativo: "", // Usamos "" siempre como valor inicial
+      nivel_educativo: "",
       institucion: "",
       carrera: "",
       anio_finalizacion: "",
@@ -76,7 +76,7 @@ export default function Academics({ user }) {
           `/users/estudios/${user.id_usuario}`,
           {
             headers: { Authorization: `Bearer ${token}` },
-          }
+          },
         );
         setEstudios(response.data);
       } catch (error) {
@@ -92,13 +92,11 @@ export default function Academics({ user }) {
   const onSubmit = async (data) => {
     try {
       if (editId) {
-        // Update
         await axiosInstance.put(`/users/estudios/${editId}`, data, {
           headers: { Authorization: `Bearer ${token}` },
         });
         enqueueSnackbar("Estudio actualizado", { variant: "success" });
       } else {
-        // Create
         await axiosInstance.post(`/users/estudios/${user.id_usuario}`, data, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -116,7 +114,7 @@ export default function Academics({ user }) {
         `/users/estudios/${user.id_usuario}`,
         {
           headers: { Authorization: `Bearer ${token}` },
-        }
+        },
       );
       setEstudios(updatedUser.data);
     } catch (error) {
@@ -149,7 +147,7 @@ export default function Academics({ user }) {
 
   return (
     <section className="space-y-6">
-      <div className="my-5 border-b-1 border-gray-200">
+      <div className="my-5 border-b border-gray-200">
         <p className="font-semibold">Estudios Académicos</p>
       </div>
 

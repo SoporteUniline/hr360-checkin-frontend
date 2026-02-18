@@ -1,8 +1,3 @@
-// Dashboard (adaptado desde uniline-web/src/app/page.js)
-// - Backend: GET /api/checador/dashboard (redlab_back)
-// - Server Component: se renderiza en el servidor y trae datos con fetch
-// - Relacionado con: redlab_back/modules/attendance/controllers/dashboardController.js
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -49,8 +44,6 @@ function fmtDayMonthDe(dateStr) {
   return `${day} de ${mon}`;
 }
 
-// Utilidades de fecha/hora independientes del huso del servidor/navegador.
-// Se alinean al horario de México. Relacionado con: redlab_back/modules/attendance/controllers/dashboardController.js
 const MONTHS_SHORT_ES = [
   "ene",
   "feb",
@@ -67,14 +60,12 @@ const MONTHS_SHORT_ES = [
 ];
 
 function parseYMD(dateStr) {
-  // dateStr esperado: YYYY-MM-DD
   const [y, m, d] = String(dateStr).split("-").map(Number);
   if (!y || !m || !d) return null;
   return { y, m, d };
 }
 
 function monthShortUpperMX(dateStr) {
-  // Devuelve "ENE." "FEB." etc. a partir del YMD sin convertir zonas horarias
   const parts = parseYMD(dateStr);
   if (!parts) return "";
   const idx = Math.min(Math.max(parts.m - 1, 0), 11);
@@ -82,7 +73,6 @@ function monthShortUpperMX(dateStr) {
 }
 
 function fmtDayMonthDeMX(dateStr) {
-  // Devuelve "DD de mmm" usando el YMD literal
   const parts = parseYMD(dateStr);
   if (!parts) return "";
   const day = String(parts.d).padStart(2, "0");
@@ -91,7 +81,6 @@ function fmtDayMonthDeMX(dateStr) {
 }
 
 function formatTimeMexico(datetimeStr) {
-  // Muestra HH:mm respetando México. Si no hay zona, usa la parte horaria literal.
   if (!datetimeStr) return "-";
   const hasTZ = /[zZ]|[+\-]\d{2}:?\d{2}$/.test(datetimeStr);
   if (hasTZ) {
@@ -121,30 +110,19 @@ function formatTimeMexico(datetimeStr) {
 import { cookies } from "next/headers";
 
 export default async function PanelDashboardPage() {
-  // Traemos datos del backend oficial. No cache para ver el día al instante.
   const base =
     process.env.NEXT_PUBLIC_RUTA_BACKEND || "http://localhost:4000/api";
   let data = null;
   let empresaId = null;
   let token = null;
   try {
-    // Compatibilidad Next 14/15: cookies() puede ser síncrono o Promise
     let cookieStore = cookies();
     if (typeof cookieStore?.then === "function") {
-      cookieStore = await cookieStore; // Next 15+ (API asíncrona)
+      cookieStore = await cookieStore;
     }
     token = cookieStore?.get("token")?.value || null;
   } catch (_) {}
 
-  /**
-   * Festivos (empresa) para calcular días hábiles en Permisos del Dashboard.
-   * Importante:
-   * - Este archivo es Server Component, por lo que NO podemos pasar un `Set` al cliente.
-   *   Pasamos un array `festivosYmd` y el cliente construye el `Set`.
-   * Relación:
-   * - Se usa en `src/app/panel/dashboard/PermisosTable.jsx` (Client Component).
-   * - Endpoint compartido con Permisos: `GET /checador/holidays/:id_empresa`.
-   */
   let festivosYmd = [];
   try {
     if (empresaId && token) {
@@ -158,7 +136,6 @@ export default async function PanelDashboardPage() {
       });
       const hJson = await hRes.json().catch(() => null);
       const list = hJson?.festivos || [];
-      // Normalizar a YYYY-MM-DD (solo parte de fecha).
       festivosYmd = Array.isArray(list)
         ? list
             .map((f) => String(f?.fecha || "").slice(0, 10))
@@ -183,7 +160,6 @@ export default async function PanelDashboardPage() {
     data = null;
   }
 
-  // Cargar tabla de asistencias de HOY (informativa)
   let asistenciasHoy = [];
   try {
     if (empresaId && data?.fecha) {
@@ -216,7 +192,6 @@ export default async function PanelDashboardPage() {
     data.totalEmpleados > 0
       ? Math.round((data.presentesHoy / data.totalEmpleados) * 100)
       : 0;
-  // Preferir distribución detallada si viene del backend; fallback a la clásica
   const distribData =
     data.distribucionAsistenciaDetallada &&
     Array.isArray(data.distribucionAsistenciaDetallada)
@@ -244,7 +219,6 @@ export default async function PanelDashboardPage() {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-6">
-      {/* Resumen superior */}
       <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-white">
           <CardHeader className="flex flex-row items-center justify-between">
@@ -320,14 +294,12 @@ export default async function PanelDashboardPage() {
         </Card>
       </div>
 
-      {/* Resumen del día */}
       <div className="mt-8">
         <div className="mb-3 flex items-center gap-2">
           <span className="text-lg font-semibold">Resumen del Día</span>
         </div>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-          {/* Asistencias de hoy */}
           <Card className="bg-white lg:col-span-4">
             <CardHeader className="flex items-center justify-between">
               <CardTitle className="text-base">Asistencias de Hoy</CardTitle>
@@ -338,7 +310,7 @@ export default async function PanelDashboardPage() {
                   <div className="text-emerald-600 text-lg sm:text-xl font-semibold">
                     {data.presentesHoy}
                   </div>
-                  <div className="text-[10px] sm:text-[11px] xl:text-[10px] 2xl:text-[11px] text-zinc-500 mt-1 uppercase tracking-normal leading-snug break-words">
+                  <div className="text-[10px] sm:text-[11px] xl:text-[10px] 2xl:text-[11px] text-zinc-500 mt-1 uppercase tracking-normal leading-snug wrap-break-word">
                     PRESENTES
                   </div>
                 </div>
@@ -346,7 +318,7 @@ export default async function PanelDashboardPage() {
                   <div className="text-amber-600 text-lg sm:text-xl font-semibold">
                     {data.tardanzasHoy}
                   </div>
-                  <div className="text-[10px] sm:text-[11px] xl:text-[10px] 2xl:text-[11px] text-zinc-500 mt-1 uppercase tracking-normal leading-snug break-words">
+                  <div className="text-[10px] sm:text-[11px] xl:text-[10px] 2xl:text-[11px] text-zinc-500 mt-1 uppercase tracking-normal leading-snug wrap-break-word">
                     TARDANZAS
                   </div>
                 </div>
@@ -354,7 +326,7 @@ export default async function PanelDashboardPage() {
                   <div className="text-rose-600 text-lg sm:text-xl font-semibold">
                     {data.ausentesHoy}
                   </div>
-                  <div className="text-[10px] sm:text-[11px] xl:text-[10px] 2xl:text-[11px] text-zinc-500 mt-1 uppercase tracking-normal leading-snug break-words">
+                  <div className="text-[10px] sm:text-[11px] xl:text-[10px] 2xl:text-[11px] text-zinc-500 mt-1 uppercase tracking-normal leading-snug wrap-break-word">
                     AUSENTES
                   </div>
                 </div>
@@ -362,7 +334,6 @@ export default async function PanelDashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Cumpleaños */}
           <Card className="bg-white lg:col-span-4">
             <CardHeader className="flex items-center justify-between">
               <CardTitle className="text-base flex items-center gap-2">
@@ -406,7 +377,7 @@ export default async function PanelDashboardPage() {
                           </div>
                         </div>
                         <div className="ml-auto">
-                          <span className="inline-flex h-9 min-w-[110px] items-center justify-center rounded-full bg-amber-50 text-amber-800 border border-amber-200 px-3 text-sm font-medium">
+                          <span className="inline-flex h-9 min-w-27.5 items-center justify-center rounded-full bg-amber-50 text-amber-800 border border-amber-200 px-3 text-sm font-medium">
                             {fmtDayMonthDeMX(c.fecha_nacimiento)}
                           </span>
                         </div>
@@ -418,7 +389,6 @@ export default async function PanelDashboardPage() {
             </CardContent>
           </Card>
 
-          {/* Aniversarios */}
           <Card className="bg-white lg:col-span-4">
             <CardHeader className="flex items-center justify-between">
               <CardTitle className="text-base flex items-center gap-2">
@@ -466,7 +436,7 @@ export default async function PanelDashboardPage() {
                             </div>
                           </div>
                           <div className="ml-auto">
-                            <span className="inline-flex h-9 min-w-[110px] items-center justify-center rounded-full bg-sky-50 text-sky-900 border border-sky-200 px-3 text-sm font-medium">
+                            <span className="inline-flex h-9 min-w-27.5 items-center justify-center rounded-full bg-sky-50 text-sky-900 border border-sky-200 px-3 text-sm font-medium">
                               {fmtDayMonthDeMX(a.fecha_ingreso)}
                             </span>
                           </div>
@@ -478,12 +448,9 @@ export default async function PanelDashboardPage() {
               )}
             </CardContent>
           </Card>
-
-          {/* (Permisos Activos se reubica debajo del detalle de asistencias) */}
         </div>
       </div>
 
-      {/* Detalle de Asistencias Hoy (informativo) */}
       <div className="mt-6">
         <Card className="bg-white">
           <CardHeader className="flex items-center justify-between">
@@ -498,7 +465,7 @@ export default async function PanelDashboardPage() {
                 No hay registros de asistencia para hoy.
               </div>
             ) : (
-              <div className="overflow-x-auto max-h-[420px] overflow-y-auto">
+              <div className="overflow-x-auto max-h-105 overflow-y-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-zinc-50 text-zinc-600">
@@ -591,7 +558,6 @@ export default async function PanelDashboardPage() {
         </Card>
       </div>
 
-      {/* Permisos activos con filtros (reubicado debajo del detalle) */}
       <div className="mt-6">
         <Card className="bg-white">
           <CardHeader className="flex items-center justify-between">
@@ -617,7 +583,6 @@ export default async function PanelDashboardPage() {
         </Card>
       </div>
 
-      {/* Distribución y Tendencia */}
       <div className="mt-10 grid grid-cols-1 gap-4">
         <Card className="bg-white">
           <CardHeader className="flex items-center justify-between">
@@ -714,7 +679,6 @@ export default async function PanelDashboardPage() {
         </Card>
       </div>
 
-      {/* Análisis detallado */}
       <div className="mt-10">
         <div className="mb-3 flex items-center gap-2">
           <span className="text-lg font-semibold">Análisis Detallado</span>
@@ -871,7 +835,6 @@ export default async function PanelDashboardPage() {
         </div>
       </div>
 
-      {/* Accesos Rápidos - Componente reutilizable */}
       <AccesosRapidos />
     </div>
   );

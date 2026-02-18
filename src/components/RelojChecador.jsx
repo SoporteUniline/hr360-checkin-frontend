@@ -269,8 +269,7 @@ export default function RelojChecador({
     <>
       <main className="min-h-screen bg-[#F9FAFB] p-4">
         <div className="max-w-7xl mx-auto space-y-6">
-          {/* Header ADAMIA */}
-          <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+          <div className="bg-linear-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
             <div className="flex items-center gap-3">
               <div className="bg-[#2563EB] p-2.5 rounded-lg">
                 <Clock4 className="w-5 h-5 text-white" />
@@ -385,7 +384,6 @@ export default function RelojChecador({
                   </div>
                 )}
 
-                {/* Interfaz para el Tab de QR */}
                 {metodo === "qr" && (
                   <div className="block md:hidden bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 p-8 animate-in zoom-in-95 fade-in duration-300">
                     <div className="text-center mb-8">
@@ -509,7 +507,7 @@ export default function RelojChecador({
               <div className="flex flex-col gap-3">
                 <Button
                   onClick={() => registrarConAccion("salida_temporal")}
-                  disabled={registrando} // Bloquea el botón si está cargando
+                  disabled={registrando}
                   className="w-full py-7 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold border-none transition-all disabled:opacity-50"
                 >
                   {registrando ? "Procesando..." : "Salida temporal"}
@@ -517,7 +515,7 @@ export default function RelojChecador({
 
                 <Button
                   onClick={() => registrarConAccion("cerrar_turno")}
-                  disabled={registrando} // Bloquea el botón si está cargando
+                  disabled={registrando}
                   className="w-full py-7 rounded-2xl bg-red-500 text-white hover:bg-red-600 font-bold shadow-lg shadow-red-200 transition-all border-none disabled:bg-red-300"
                 >
                   {registrando ? "Cerrando..." : "Cerrar turno"}
@@ -528,7 +526,7 @@ export default function RelojChecador({
                     setMostrarModalTurno(false);
                     setPendiente(null);
                   }}
-                  disabled={registrando} // Evita cancelar mientras se guarda en el servidor
+                  disabled={registrando}
                   variant="ghost"
                   className="w-full py-4 text-slate-400 font-bold hover:text-slate-600 disabled:opacity-30"
                 >
@@ -556,9 +554,8 @@ export default function RelojChecador({
         }
       `}</style>
 
-      {/* Overlay de carga global para procesos asíncronos */}
       {registrando && !mostrarQR && (
-        <div className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-200 flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl flex flex-col items-center gap-4">
             <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
             <div className="text-center">
