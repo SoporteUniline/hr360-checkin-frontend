@@ -18,8 +18,7 @@ export default function LandingHeader() {
     { label: "Quiénes somos", href: "/quienes-somos" },
     {
       label: "Contratar",
-      href: "https://planes.hr360.mx/contratar-plan",
-      external: true,
+      href: "/contratar-plan",
     },
     { label: "Iniciar sesión", href: "/login" },
     { label: "Ayuda", href: "/aviso-privacidad" },
@@ -74,11 +73,7 @@ export default function LandingHeader() {
                 "shadow-[0_10px_30px_rgba(0,0,0,0.14)] transition hover:-translate-y-0.5"
               )}
             >
-              <a
-                href="https://planes.hr360.mx/contratar-plan"
-                target="_blank"
-                rel="noreferrer"
-              >
+              <a href="/contratar-plan">
                 Prueba gratis <ArrowRight className="ml-2 h-4 w-4" />
               </a>
             </Button>
@@ -134,11 +129,7 @@ export default function LandingHeader() {
 
                 <div className="mt-6">
                   <Button asChild className="w-full rounded-xl">
-                    <a
-                      href="https://planes.hr360.mx/contratar-plan"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
+                    <a href="/contratar-plan">
                       Comenzar prueba gratis
                     </a>
                   </Button>

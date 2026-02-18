@@ -340,14 +340,12 @@ export default function CotizaPage() {
                     Este monto usa el siguiente rango disponible para darte una referencia rapida.
                   </p>
                 ) : null}
-                <a
-                  href="https://planes.hr360.mx/contratar-plan"
-                  target="_blank"
-                  rel="noreferrer"
+                <Link
+                  href="/contratar-plan"
                   className="mt-5 inline-flex rounded-xl bg-gradient-to-r from-[var(--adamia-blue)] to-[var(--adamia-purple)] px-7 py-3 text-sm font-black text-white transition hover:opacity-90"
                 >
                   Ir a contratar plan →
-                </a>
+                </Link>
               </div>
             ) : null}
           </form>
@@ -423,14 +421,12 @@ export default function CotizaPage() {
                             Contactar
                           </a>
                         ) : (
-                          <a
-                            href="https://planes.hr360.mx/contratar-plan"
-                            target="_blank"
-                            rel="noreferrer"
+                          <Link
+                            href="/contratar-plan"
                             className="inline-flex rounded-lg bg-[var(--adamia-blue)] px-4 py-2 text-xs font-bold text-white"
                           >
                             Contratar
-                          </a>
+                          </Link>
                         )}
                       </td>
                     </tr>
@@ -486,14 +482,12 @@ export default function CotizaPage() {
             Sin tarjeta de credito, sin compromiso y con setup rapido.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-            <a
-              href="https://planes.hr360.mx/contratar-plan"
-              target="_blank"
-              rel="noreferrer"
+            <Link
+              href="/contratar-plan"
               className="inline-flex rounded-xl bg-white px-8 py-3 text-sm font-black text-[var(--adamia-blue)]"
             >
               Comenzar prueba gratis →
-            </a>
+            </Link>
             <Link
               href="/quienes-somos"
               className="inline-flex rounded-xl border border-white/40 bg-white/10 px-8 py-3 text-sm font-black text-white"

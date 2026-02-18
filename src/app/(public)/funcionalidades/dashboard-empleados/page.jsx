@@ -37,16 +37,6 @@ const imgs = {
 export default function DashboardEmpleadosPage() {
   return (
     <main className="bg-white text-[var(--adamia-text-primary)]">
-      <section className="bg-[var(--adamia-bg-light)] py-4">
-        <div className="mx-auto w-full max-w-7xl px-6 text-sm text-[var(--adamia-text-secondary)]">
-          <span>Inicio</span> <span className="mx-2">→</span>
-          <span>Funcionalidades</span> <span className="mx-2">→</span>
-          <span className="font-semibold text-[var(--adamia-text-primary)]">
-            Dashboard de Empleados
-          </span>
-        </div>
-      </section>
-
       <section className="relative overflow-hidden bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] py-20 text-white">
         <div className="mx-auto w-full max-w-7xl px-6 text-center">
           <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-6 py-3 text-sm font-bold">
@@ -77,7 +67,7 @@ export default function DashboardEmpleadosPage() {
           </div>
 
           <a
-            href="https://planes.hr360.mx/contratar-plan"
+            href="/contratar-plan"
             target="_blank"
             rel="noreferrer"
             className="mt-10 inline-flex items-center rounded-2xl bg-white px-10 py-5 text-xl font-black text-[var(--adamia-blue)] shadow-2xl transition hover:-translate-y-1"
@@ -274,7 +264,7 @@ export default function DashboardEmpleadosPage() {
 
           <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
             <a
-              href="https://planes.hr360.mx/contratar-plan"
+              href="/contratar-plan"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-[var(--adamia-blue)] to-[var(--adamia-purple)] px-12 py-5 text-2xl font-black text-white shadow-2xl transition hover:-translate-y-1"

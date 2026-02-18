@@ -155,7 +155,7 @@ export default function RelojChecadorPage() {
           </p>
           <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
             <a
-              href="https://planes.hr360.mx/contratar-plan"
+              href="/contratar-plan"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center justify-center rounded-xl bg-white px-10 py-4 text-lg font-bold text-[var(--adamia-blue)] shadow-xl transition hover:-translate-y-1"
@@ -319,7 +319,7 @@ export default function RelojChecadorPage() {
           </p>
           <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
             <a
-              href="https://planes.hr360.mx/contratar-plan"
+              href="/contratar-plan"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center justify-center rounded-xl bg-white px-10 py-4 text-lg font-bold text-[var(--adamia-blue)] shadow-xl transition hover:-translate-y-1"

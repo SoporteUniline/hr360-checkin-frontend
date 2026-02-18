@@ -49,9 +49,10 @@ export default function Navbar() {
     },
   ];
   const sobreNosotrosLinks = [
-    { href: "/quienes-somos", label: "Quienes somos" },
-    { href: "/terminos-condiciones", label: "Terminos y condiciones" },
-    { href: "/aviso-privacidad", label: "Aviso de privacidad" },
+    { href: "/quienes-somos", label: "Sobre nosotros" },
+    { href: "/contacto", label: "Contacto" },
+    { href: "/politicas", label: "Políticas" },
+    { href: "/bot", label: "Bot" },
   ];
 
   const { data: imagenData } = useSWR(
@@ -175,14 +176,12 @@ export default function Navbar() {
               </DropdownMenu>
             </NavigationMenuItem>
             <NavigationMenuItem>
-              <a
-                href="https://planes.hr360.mx/contratar-plan"
-                target="_blank"
-                rel="noreferrer"
+              <Link
+                href="/contratar-plan"
                 className={twMerge(navigationMenuTriggerStyle())}
               >
                 Contratar Plan
-              </a>
+              </Link>
             </NavigationMenuItem>
             <NavigationMenuItem>
               <DropdownMenu>
@@ -190,7 +189,11 @@ export default function Navbar() {
                   <button
                     className={twMerge(
                       navigationMenuTriggerStyle(),
-                      pathname?.startsWith("/quienes-somos") && "font-medium"
+                      (pathname?.startsWith("/quienes-somos") ||
+                        pathname?.startsWith("/contacto") ||
+                        pathname?.startsWith("/politicas") ||
+                        pathname?.startsWith("/bot")) &&
+                        "font-medium"
                     )}
                   >
                     Sobre Nosotros
@@ -208,14 +211,15 @@ export default function Navbar() {
               </DropdownMenu>
             </NavigationMenuItem>
             <NavigationMenuItem>
-              <a
-                href="https://planes.hr360.mx/calculadora-de-aguinaldo"
-                target="_blank"
-                rel="noreferrer"
-                className={twMerge(navigationMenuTriggerStyle())}
+              <Link
+                href="/calculadora-aguinaldos"
+                className={twMerge(
+                  navigationMenuTriggerStyle(),
+                  pathname === "/calculadora-aguinaldos" && "font-medium"
+                )}
               >
                 Calculadora Aguinaldos
-              </a>
+              </Link>
             </NavigationMenuItem>
             <NavigationMenuItem>
               {isLoggedIn ? (
@@ -325,16 +329,14 @@ const MenuResposive = ({
       label: "Cotiza",
     },
     {
-      href: "https://planes.hr360.mx/contratar-plan",
+      href: "/contratar-plan",
       label: "Contratar Plan",
-      external: true,
     },
     { href: "/quienes-somos", label: "Sobre Nosotros" },
-    {
-      href: "https://planes.hr360.mx/calculadora-de-aguinaldo",
-      label: "Calculadora Aguinaldos",
-      external: true,
-    },
+    { href: "/contacto", label: "Contacto" },
+    { href: "/politicas", label: "Políticas" },
+    { href: "/bot", label: "Bot" },
+    { href: "/calculadora-aguinaldos", label: "Calculadora Aguinaldos" },
   ];
 
   return (

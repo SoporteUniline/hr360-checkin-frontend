@@ -304,7 +304,7 @@ function buildBotReply(userText, ctx) {
     return {
       nextCtx: ctx,
       reply:
-        "ADAMIA incluye:\n- Reloj checador facial + GPS (anti-fraude)\n- Gestión de empleados\n- Vacaciones y permisos\n- Reportes en tiempo real\n- Apps móviles (iOS/Android)\n\n¿Quieres que te ayude a cotizar?",
+        "ADAMIA incluye:\n- Reloj checador facial + GPS (anti-fraude)\n- Gestión de empleados\n- Vacaciones y permisos\n- Reportes en tiempo real\n- Plataforma web empresarial\n\n¿Quieres que te ayude a cotizar?",
     };
   }
 

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Play, Shield, Smartphone, Calculator, Check } from "lucide-react";
+import { ArrowRight, Play, Shield, Monitor, Calculator, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import AdamiaChatWidget from "@/components/landing/AdamiaChatWidget";
@@ -68,7 +68,7 @@ export default function MarketingLanding() {
                   className="h-12 rounded-xl bg-white px-7 text-base font-semibold text-[var(--adamia-blue)] shadow-[0_10px_30px_rgba(0,0,0,0.15)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.2)]"
                 >
                   <a
-                    href="https://planes.hr360.mx/contratar-plan"
+                    href="/contratar-plan"
                     target="_blank"
                     rel="noreferrer"
                   >
@@ -172,10 +172,10 @@ export default function MarketingLanding() {
                   <div className="flex items-center justify-between">
                     <div>
                       <div className="text-sm font-medium text-[var(--adamia-text-secondary)]">
-                        Apps disponibles
+                        Acceso al sistema
                       </div>
                       <div className="mt-1 text-2xl font-bold text-[var(--adamia-text-primary)]">
-                        iOS + Android
+                        Web empresarial
                       </div>
                     </div>
                     <div className="text-5xl">📱</div>
@@ -229,10 +229,10 @@ export default function MarketingLanding() {
 
           <div className="mt-16 grid gap-8 md:grid-cols-3">
             <FeatureCard
-              icon={<Smartphone className="h-8 w-8 text-white" />}
-              title="Apps Móviles"
-              description="Aplicaciones nativas para iOS y Android con sincronización en tiempo real"
-              items={["Reconocimiento facial", "Validación GPS", "Solicitudes móviles"]}
+              icon={<Monitor className="h-8 w-8 text-white" />}
+              title="Plataforma Web"
+              description="Gestión integral desde navegador con sincronización en tiempo real"
+              items={["Reconocimiento facial", "Validación GPS", "Solicitudes en línea"]}
             />
 
             <FeatureCard
@@ -420,7 +420,7 @@ export default function MarketingLanding() {
 
               <div className="mt-10 grid gap-6 md:grid-cols-3">
                 {[
-                  { top: "✓", title: "Apps móviles", sub: "iOS + Android" },
+                  { top: "✓", title: "Plataforma web", sub: "Acceso en navegador" },
                   { top: "✓", title: "Sin límites", sub: "Todo incluido" },
                   { top: "✓", title: "Soporte VIP", sub: "Chat en vivo" },
                 ].map((c) => (
@@ -439,7 +439,7 @@ export default function MarketingLanding() {
 
               <div className="mt-10 text-center">
                 <a
-                  href="https://planes.hr360.mx/contratar-plan"
+                  href="/contratar-plan"
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center justify-center rounded-xl bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] px-12 py-5 text-xl font-semibold text-white shadow-2xl transition hover:scale-[1.03]"
@@ -479,7 +479,7 @@ export default function MarketingLanding() {
 
           <div className="mt-10 flex justify-center">
             <a
-              href="https://planes.hr360.mx/contratar-plan"
+              href="/contratar-plan"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-12 py-6 text-2xl font-semibold text-[var(--adamia-blue)] shadow-2xl ring-1 ring-black/5 transition hover:-translate-y-0.5"
@@ -577,7 +577,7 @@ export default function MarketingLanding() {
                 </Link>
                 <a
                   className="block transition hover:text-white"
-                  href="https://planes.hr360.mx/contratar-plan"
+                  href="/contratar-plan"
                   target="_blank"
                   rel="noreferrer"
                 >

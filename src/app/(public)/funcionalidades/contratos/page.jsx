@@ -83,14 +83,6 @@ const moduleFeatures = [
 export default function ContratosPage() {
   return (
     <main className="bg-white text-[var(--adamia-text-primary)]">
-      <section className="bg-[var(--adamia-bg-light)] py-4">
-        <div className="mx-auto w-full max-w-7xl px-6 text-sm text-[var(--adamia-text-secondary)]">
-          <span>Inicio</span> <span className="mx-2">→</span>
-          <span>Funcionalidades</span> <span className="mx-2">→</span>
-          <span className="font-semibold text-[var(--adamia-text-primary)]">Contratos</span>
-        </div>
-      </section>
-
       <section className="relative overflow-hidden bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] py-20 text-white">
         <div className="mx-auto w-full max-w-7xl px-6 text-center">
           <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-6 py-3 text-sm font-bold">
@@ -109,7 +101,7 @@ export default function ContratosPage() {
           </p>
           <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
             <a
-              href="https://planes.hr360.mx/contratar-plan"
+              href="/contratar-plan"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center rounded-xl bg-white px-10 py-5 text-xl font-bold text-[var(--adamia-blue)] shadow-2xl transition hover:-translate-y-1"
@@ -293,7 +285,7 @@ export default function ContratosPage() {
             Control de vigencias, prestaciones y condiciones laborales.
           </p>
           <a
-            href="https://planes.hr360.mx/contratar-plan"
+            href="/contratar-plan"
             target="_blank"
             rel="noreferrer"
             className="mt-10 inline-flex items-center rounded-xl bg-white px-12 py-6 text-2xl font-bold text-[var(--adamia-blue)] shadow-2xl transition hover:-translate-y-1"
@@ -338,7 +330,7 @@ export default function ContratosPage() {
           </p>
           <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
             <a
-              href="https://planes.hr360.mx/contratar-plan"
+              href="/contratar-plan"
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center rounded-xl bg-white px-12 py-6 text-2xl font-bold text-[var(--adamia-blue)] shadow-2xl transition hover:-translate-y-1"
