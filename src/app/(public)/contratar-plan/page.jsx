@@ -3,21 +3,20 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import axios from "@/lib/axios";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 function getPlanId(row) {
   return row?.id ?? row?.id_tipo_plan ?? row?.tipo_plan_id ?? null;
 }
 
 function getLabelFromRow(row, fallback) {
-  return (
-    row?.nombre ||
-    row?.descripcion ||
-    row?.titulo ||
-    row?.plan ||
-    row?.tipo ||
-    row?.metodo ||
-    fallback
-  );
+  return row?.nombre || row?.descripcion || row?.titulo || row?.plan || row?.tipo || fallback;
 }
 
 function parseFlexibleNumber(value) {
@@ -36,31 +35,12 @@ function parseFlexibleNumber(value) {
 }
 
 function getPriceFromPlan(row, months, employees) {
-  const possible = [row?.precio_mensual, row?.precio, row?.costo_mensual, row?.monto_mensual];
-  for (const value of possible) {
+  const monthlyCandidates = [row?.precio_mensual, row?.precio, row?.costo_mensual, row?.monto_mensual];
+  for (const value of monthlyCandidates) {
     const n = parseFlexibleNumber(value);
     if (Number.isFinite(n) && n > 0) return n;
   }
 
-  // Fallback por columnas adicionales frecuentes
-  const extraPossible = [row?.precio_por_mes, row?.precio_mes, row?.mensual];
-  for (const value of extraPossible) {
-    const n = parseFlexibleNumber(value);
-    if (Number.isFinite(n) && n > 0) return n;
-  }
-
-  // Heurística flexible: cualquier columna que parezca precio/costo/monto/mensual
-  for (const [key, rawValue] of Object.entries(row || {})) {
-    const keyLc = key.toLowerCase();
-    const looksLikePrice =
-      /(precio|costo|monto|mensual|tarifa)/.test(keyLc) &&
-      !/(id|descuento|porcentaje|max|min|usuarios|empleados|meses|anio|año)/.test(keyLc);
-    if (!looksLikePrice) continue;
-    const n = parseFlexibleNumber(rawValue);
-    if (Number.isFinite(n) && n > 0) return n;
-  }
-
-  // Fallback por columnas por duración (1/6/12 meses)
   const byMonths = {
     1: [row?.precio_1_mes, row?.precio_1mes, row?.monto_1_mes, row?.mes_1],
     6: [row?.precio_6_meses, row?.precio_6meses, row?.monto_6_meses, row?.mes_6],
@@ -71,13 +51,21 @@ function getPriceFromPlan(row, months, employees) {
     if (Number.isFinite(n) && n > 0) return n;
   }
 
-  // Fallback por precio unitario
-  const unit =
-    row?.precio_por_empleado ?? row?.costo_por_empleado ?? row?.precio_unitario ?? null;
+  const unit = row?.precio_por_empleado ?? row?.costo_por_empleado ?? row?.precio_unitario ?? null;
   const unitNum = parseFlexibleNumber(unit);
   const employeesNum = Number(employees);
   if (Number.isFinite(unitNum) && unitNum > 0 && Number.isFinite(employeesNum) && employeesNum > 0) {
     return unitNum * employeesNum;
+  }
+
+  for (const [key, rawValue] of Object.entries(row || {})) {
+    const keyLc = key.toLowerCase();
+    const looksLikePrice =
+      /(precio|costo|monto|mensual|tarifa)/.test(keyLc) &&
+      !/(id|descuento|porcentaje|max|min|usuarios|empleados|meses|anio|año)/.test(keyLc);
+    if (!looksLikePrice) continue;
+    const n = parseFlexibleNumber(rawValue);
+    if (Number.isFinite(n) && n > 0) return n;
   }
 
   return null;
@@ -92,14 +80,8 @@ function getMaxUsersFromPlan(row) {
   return Number.POSITIVE_INFINITY;
 }
 
-function getPlanDescription(row) {
-  return (
-    row?.descripcion ||
-    row?.detalle ||
-    row?.beneficios ||
-    row?.caracteristicas ||
-    "Plan empresarial para gestion integral de talento en ADAMIA."
-  );
+function formatCurrencyMXN(value) {
+  return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(value);
 }
 
 function getPlanEmployeesRange(row, allPlans) {
@@ -107,25 +89,36 @@ function getPlanEmployeesRange(row, allPlans) {
   if (!Number.isFinite(currentMax)) return "Plan sin límite definido";
 
   const sorted = [...allPlans].sort((a, b) => getMaxUsersFromPlan(a) - getMaxUsersFromPlan(b));
-  const currentIndex = sorted.findIndex((plan) => Number(plan.id) === Number(row.id));
+  const currentIndex = sorted.findIndex((plan) => Number(getPlanId(plan)) === Number(getPlanId(row)));
   if (currentIndex === -1) return `Hasta ${currentMax} empleados`;
 
   const prev = sorted[currentIndex - 1];
   const prevMax = prev ? getMaxUsersFromPlan(prev) : 0;
   const min = prevMax + 1;
 
-  if (currentMax >= 99999 || currentMax === Number.POSITIVE_INFINITY) {
-    return `${min}+ empleados`;
-  }
+  if (currentMax >= 99999 || currentMax === Number.POSITIVE_INFINITY) return `${min}+ empleados`;
   if (min === currentMax) return `${min} empleado${min > 1 ? "s" : ""}`;
   return `${min} - ${currentMax} empleados`;
 }
 
-function formatCurrencyMXN(value) {
-  return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(value);
-}
-
 export default function ContratarPlanPage() {
+  const initialForm = {
+    nombre_cliente: "",
+    correo: "",
+    telefono: "",
+    direccion_cliente: "",
+    rfc: "",
+    empleados: "15",
+    tipo_plan_id: "",
+    meses_contratados: "1",
+    metodo_pago_id: "",
+    notas: "",
+    demo: "Si",
+    tipo_contratacion: "Prueba",
+    contrasenia: "",
+    confirmar_contrasenia: "",
+  };
+
   const [catalogos, setCatalogos] = useState({ tipo_planes: [], metodos_pago: [] });
   const [loadingCatalogos, setLoadingCatalogos] = useState(true);
   const [errorCatalogos, setErrorCatalogos] = useState("");
@@ -134,20 +127,16 @@ export default function ContratarPlanPage() {
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState("");
   const [stripeLink, setStripeLink] = useState("");
-
-  const [form, setForm] = useState({
-    nombre_cliente: "",
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
+  const [successModalData, setSuccessModalData] = useState({
+    folio: "",
     correo: "",
-    telefono: "",
-    direccion_cliente: "",
-    rfc: "",
-    empleados: "",
-    tipo_plan_id: "",
-    meses_contratados: "1",
-    metodo_pago_id: "",
-    notas: "",
-    demo: "No",
+    contrasenia: "",
+    esPrueba: false,
+    fechaFin: "",
   });
+
+  const [form, setForm] = useState(initialForm);
 
   useEffect(() => {
     let mounted = true;
@@ -161,7 +150,7 @@ export default function ContratarPlanPage() {
           tipo_planes: response?.data?.tipo_planes ?? [],
           metodos_pago: response?.data?.metodos_pago ?? [],
         });
-      } catch (error) {
+      } catch (_error) {
         if (!mounted) return;
         setErrorCatalogos("No fue posible cargar los catálogos. Intenta nuevamente.");
       } finally {
@@ -183,9 +172,7 @@ export default function ContratarPlanPage() {
       (a, b) => getMaxUsersFromPlan(a) - getMaxUsersFromPlan(b)
     );
     const matched =
-      sorted.find((plan) => employees <= getMaxUsersFromPlan(plan)) ||
-      sorted[sorted.length - 1];
-
+      sorted.find((plan) => employees <= getMaxUsersFromPlan(plan)) || sorted[sorted.length - 1];
     const matchedId = getPlanId(matched);
     if (matchedId !== null && String(form.tipo_plan_id) !== String(matchedId)) {
       setForm((prev) => ({ ...prev, tipo_plan_id: String(matchedId) }));
@@ -194,8 +181,7 @@ export default function ContratarPlanPage() {
 
   const selectedPlan = useMemo(
     () =>
-      catalogos.tipo_planes.find((plan) => Number(getPlanId(plan)) === Number(form.tipo_plan_id)) ||
-      null,
+      catalogos.tipo_planes.find((plan) => Number(getPlanId(plan)) === Number(form.tipo_plan_id)) || null,
     [catalogos.tipo_planes, form.tipo_plan_id]
   );
 
@@ -210,9 +196,36 @@ export default function ContratarPlanPage() {
     return { monthly, subtotal, descuento, total };
   }, [selectedPlan, form.meses_contratados, form.empleados]);
 
+  const planCards = useMemo(
+    () => [
+      { months: 1, title: "Mensual", badge: "Sin compromiso", discount: 0 },
+      { months: 6, title: "Semestral", badge: "Más popular", discount: 5 },
+      { months: 12, title: "Anual", badge: "Mejor ahorro", discount: 10 },
+    ],
+    []
+  );
+
   const onChange = (event) => {
     const { name, value } = event.target;
+    if (name === "tipo_contratacion") {
+      setForm((prev) => ({
+        ...prev,
+        tipo_contratacion: value,
+        demo: value === "Prueba" ? "Si" : "No",
+      }));
+      return;
+    }
     setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const changeEmployees = (delta) => {
+    const current = Number(form.empleados) || 1;
+    const next = Math.max(1, current + delta);
+    setForm((prev) => ({ ...prev, empleados: String(next) }));
+  };
+
+  const selectMonths = (months) => {
+    setForm((prev) => ({ ...prev, meses_contratados: String(months) }));
   };
 
   const onSubmit = async (event) => {
@@ -241,17 +254,29 @@ export default function ContratarPlanPage() {
       setSubmitError("El RFC no tiene un formato válido.");
       return;
     }
+    if (!form.contrasenia || form.contrasenia.length < 8) {
+      setSubmitError("La contraseña debe tener al menos 8 caracteres.");
+      return;
+    }
+    if (form.contrasenia !== form.confirmar_contrasenia) {
+      setSubmitError("Las contraseñas no coinciden.");
+      return;
+    }
     if (!form.empleados || Number(form.empleados) < 1) {
       setSubmitError("Ingresa un número de empleados válido.");
       return;
     }
     if (!form.tipo_plan_id) {
-      setSubmitError("Selecciona un tipo de plan.");
+      setSubmitError("No fue posible inferir el plan. Ajusta el número de empleados.");
       return;
     }
 
     try {
       setSubmitting(true);
+      const credentialsToShow = {
+        correo: form.correo,
+        contrasenia: form.contrasenia,
+      };
       const payload = {
         ...form,
         empleados: Number(form.empleados),
@@ -260,18 +285,27 @@ export default function ContratarPlanPage() {
         metodo_pago_id: form.metodo_pago_id ? Number(form.metodo_pago_id) : null,
         precio_por_mes: estimado?.monthly ?? null,
       };
-
       const response = await axios.post("/checador/contrataciones/publica", payload);
+      const folio = response?.data?.data?.contrato_id ?? "";
+      const esPrueba = response?.data?.data?.demo === "Si";
+      const fechaFinPrueba = response?.data?.data?.fecha_fin ?? "";
       setSubmitSuccess(
-        `¡Listo! Tu contratación fue registrada con folio ${response?.data?.data?.contrato_id ?? ""}.`
+        esPrueba
+          ? `¡Registro exitoso! Folio ${folio}. Tu prueba de 7 días está activa hasta ${fechaFinPrueba}.`
+          : `¡Listo! Tu contratación fue registrada con folio ${folio}.`
       );
       if (response?.data?.data?.enlace_pago_stripe) {
         setStripeLink(response.data.data.enlace_pago_stripe);
       }
-      setForm((prev) => ({
-        ...prev,
-        notas: "",
-      }));
+      setSuccessModalData({
+        folio,
+        correo: credentialsToShow.correo,
+        contrasenia: credentialsToShow.contrasenia,
+        esPrueba,
+        fechaFin: fechaFinPrueba,
+      });
+      setSuccessModalOpen(true);
+      setForm(initialForm);
     } catch (error) {
       setSubmitError(error?.response?.data?.message || "No fue posible registrar la contratación.");
     } finally {
@@ -280,102 +314,189 @@ export default function ContratarPlanPage() {
   };
 
   return (
-    <main className="bg-[var(--adamia-bg-light)] text-[var(--adamia-text-primary)]">
-      <section className="bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] px-6 py-20 text-white">
-        <div className="mx-auto w-full max-w-7xl text-center">
-          <span className="inline-flex rounded-full border border-white/30 bg-white/10 px-4 py-2 text-xs font-bold">
-            CONTRATAR PLAN
-          </span>
-          <h1 className="mt-5 text-4xl font-black md:text-6xl">
-            Activa ADAMIA para tu empresa
-          </h1>
-          <p className="mx-auto mt-4 max-w-3xl text-lg text-white/90">
-            Completa este formulario y registramos tu contratación en minutos.
+    <main className="min-h-screen bg-gradient-to-br from-[var(--adamia-bg-light)] to-white text-[var(--adamia-text-primary)]">
+      <Dialog open={successModalOpen} onOpenChange={setSuccessModalOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black text-[var(--adamia-blue)]">
+              Registro completado correctamente
+            </DialogTitle>
+            <DialogDescription className="text-sm text-[var(--adamia-text-secondary)]">
+              Ya puedes iniciar sesión con esta cuenta.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 rounded-xl bg-[var(--adamia-bg-light)] p-4 text-sm">
+            <p>
+              <strong>Folio de contratación:</strong> {successModalData.folio}
+            </p>
+            <p>
+              <strong>Ir a:</strong> <span className="font-mono">/login</span>
+            </p>
+            <p>
+              <strong>Correo:</strong> {successModalData.correo}
+            </p>
+            <p>
+              <strong>Contraseña:</strong> {successModalData.contrasenia}
+            </p>
+            {successModalData.esPrueba ? (
+              <p className="rounded-lg bg-[var(--adamia-blue)]/10 px-3 py-2 font-semibold text-[var(--adamia-blue)]">
+                Tu prueba de 7 días está activa hasta {successModalData.fechaFin}.
+              </p>
+            ) : null}
+          </div>
+
+          <div className="flex justify-end gap-2">
+            <Link
+              href="/login"
+              className="rounded-xl bg-[var(--adamia-blue)] px-4 py-2 text-sm font-bold text-white"
+              onClick={() => setSuccessModalOpen(false)}
+            >
+              Ir a iniciar sesión
+            </Link>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <section className="bg-gradient-to-r from-[var(--adamia-blue)] to-[var(--adamia-purple)] px-6 py-12 text-center text-white">
+        <div className="mx-auto max-w-5xl">
+          <h1 className="text-3xl font-black md:text-5xl">Activa ADAMIA para tu empresa</h1>
+          <p className="mx-auto mt-3 max-w-3xl text-sm text-white/90 md:text-base">
+            Selecciona el tamaño de tu equipo, elige modalidad y registra tu contratación.
           </p>
         </div>
       </section>
 
-      <section className="px-6 py-16">
-        <div className="mx-auto grid w-full max-w-7xl gap-8 lg:grid-cols-[1.2fr_0.8fr]">
-          <form
-            onSubmit={onSubmit}
-            className="rounded-3xl border border-[var(--adamia-blue)]/15 bg-white p-6 shadow-sm md:p-8"
-          >
-            <h2 className="text-2xl font-black">Datos de contratación</h2>
-            <p className="mt-2 text-sm text-[var(--adamia-text-secondary)]">
-              Esta información se guarda en la tabla <strong>Contrataciones</strong>.
-            </p>
-
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <Input name="nombre_cliente" label="Nombre del cliente" value={form.nombre_cliente} onChange={onChange} />
-              <Input name="correo" label="Correo" type="email" value={form.correo} onChange={onChange} />
-              <Input name="telefono" label="Teléfono" value={form.telefono} onChange={onChange} />
-              <Input name="rfc" label="RFC" value={form.rfc} onChange={onChange} />
-              <Input
+      <section className="mx-auto w-full max-w-7xl px-4 py-8 md:px-6">
+        <div className="rounded-2xl border border-[var(--adamia-blue)]/15 bg-white p-4 shadow-sm md:p-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-lg font-black md:text-xl">¿Cuántos empleados tiene tu empresa?</h2>
+              <p className="text-sm text-[var(--adamia-text-secondary)]">
+                El plan se asigna automáticamente por rango de empleados.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => changeEmployees(-1)}
+                className="h-11 w-11 rounded-xl bg-[var(--adamia-blue)] text-2xl font-bold text-white"
+              >
+                -
+              </button>
+              <input
                 name="empleados"
-                label="Empleados"
                 type="number"
                 min={1}
                 value={form.empleados}
                 onChange={onChange}
+                className="h-12 w-28 rounded-xl border-2 border-[var(--adamia-blue)] px-3 text-center text-2xl font-black text-[var(--adamia-blue)] outline-none"
               />
-              <Select
-                name="meses_contratados"
-                label="Meses contratados"
-                value={form.meses_contratados}
-                onChange={onChange}
-                options={[
-                  { value: "1", label: "1 mes" },
-                  { value: "6", label: "6 meses (5% descuento)" },
-                  { value: "12", label: "12 meses (10% descuento)" },
-                ]}
-              />
-              <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-semibold">Plan</label>
-                <select
-                  name="tipo_plan_id"
-                  value={form.tipo_plan_id}
-                  onChange={onChange}
-                  className="w-full rounded-xl border border-[var(--adamia-blue)]/20 bg-white px-4 py-3 outline-none ring-[var(--adamia-blue)]/30 focus:ring-2"
-                  disabled={loadingCatalogos}
-                >
-                  <option value="">Selecciona un plan</option>
-                  {catalogos.tipo_planes.map((plan) => {
-                    const planId = getPlanId(plan);
-                    const planLabel = getLabelFromRow(plan, `Plan ${planId ?? "-"}`);
-                    const price = getPriceFromPlan(plan, Number(form.meses_contratados), Number(form.empleados));
-                    return (
-                      <option key={planId ?? `${planLabel}-plan`} value={planId ?? ""}>
-                        {planLabel} {price ? `- ${formatCurrencyMXN(price)}/mes` : ""}
-                      </option>
-                    );
-                  })}
-                </select>
-                {selectedPlan ? (
-                  <div className="mt-3 rounded-xl border border-[var(--adamia-blue)]/15 bg-[var(--adamia-bg-light)] p-4">
-                    <p className="text-xs font-bold uppercase tracking-wide text-[var(--adamia-blue)]">
-                      Rango del plan seleccionado
-                    </p>
-                    <p className="mt-1 text-sm text-[var(--adamia-text-secondary)]">
-                      {getPlanEmployeesRange(selectedPlan, catalogos.tipo_planes)}
-                    </p>
-                    <p className="mt-2 text-xs text-[var(--adamia-text-secondary)]">
-                      {getPlanDescription(selectedPlan)}
-                    </p>
-                  </div>
-                ) : null}
-              </div>
+              <button
+                type="button"
+                onClick={() => changeEmployees(1)}
+                className="h-11 w-11 rounded-xl bg-[var(--adamia-blue)] text-2xl font-bold text-white"
+              >
+                +
+              </button>
+            </div>
+          </div>
+        </div>
 
-              <div className="md:col-span-2">
+        <div className="mt-6 grid gap-4 md:grid-cols-3">
+          {planCards.map((card) => {
+            const monthly = getPriceFromPlan(selectedPlan, card.months, Number(form.empleados));
+            const subtotal = (monthly || 0) * card.months;
+            const total = subtotal - subtotal * (card.discount / 100);
+            const active = Number(form.meses_contratados) === card.months;
+            return (
+              <article
+                key={card.months}
+                className={`rounded-2xl border bg-white p-5 shadow-sm transition ${
+                  active ? "border-[var(--adamia-blue)] ring-2 ring-[var(--adamia-blue)]/20" : "border-slate-200"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xl font-black">{card.title}</h3>
+                  <span className="rounded-full bg-[var(--adamia-blue)]/10 px-3 py-1 text-xs font-bold text-[var(--adamia-blue)]">
+                    {card.badge}
+                  </span>
+                </div>
+                <p className="mt-4 text-3xl font-black text-[var(--adamia-blue)]">
+                  {monthly ? formatCurrencyMXN(monthly) : "—"}
+                  <span className="text-sm font-semibold text-[var(--adamia-text-secondary)]">/mes</span>
+                </p>
+                <p className="mt-1 text-sm text-[var(--adamia-text-secondary)]">
+                  Total {card.months} {card.months === 1 ? "mes" : "meses"}:{" "}
+                  <strong>{monthly ? formatCurrencyMXN(total) : "—"}</strong>
+                </p>
+                <button
+                  type="button"
+                  onClick={() => selectMonths(card.months)}
+                  className={`mt-4 w-full rounded-xl px-4 py-2.5 text-sm font-bold ${
+                    active
+                      ? "bg-[var(--adamia-blue)] text-white"
+                      : "border border-[var(--adamia-blue)]/30 bg-white text-[var(--adamia-blue)]"
+                  }`}
+                >
+                  {active ? "Plan seleccionado" : "Seleccionar plan"}
+                </button>
+              </article>
+            );
+          })}
+        </div>
+
+        <div className="mt-8 grid gap-8 lg:grid-cols-[1.25fr_0.75fr]">
+          <form onSubmit={onSubmit} className="rounded-2xl border border-[var(--adamia-blue)]/15 bg-white p-5 shadow-sm md:p-7">
+            <h2 className="text-2xl font-black">Completa tus datos</h2>
+            <p className="mt-1 text-sm text-[var(--adamia-text-secondary)]">
+              Registro directo en la tabla <strong>Contrataciones</strong>.
+            </p>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <Field label="Nombre completo" name="nombre_cliente" value={form.nombre_cliente} onChange={onChange} required />
+              <Field label="Empresa / razón social" name="direccion_cliente" value={form.direccion_cliente} onChange={onChange} />
+              <Field label="Teléfono" name="telefono" value={form.telefono} onChange={onChange} required />
+              <Field label="Correo electrónico" name="correo" type="email" value={form.correo} onChange={onChange} required />
+              <Field label="RFC" name="rfc" value={form.rfc} onChange={onChange} />
+              <Field
+                label="Contraseña de acceso"
+                name="contrasenia"
+                type="password"
+                value={form.contrasenia}
+                onChange={onChange}
+                required
+              />
+              <Field
+                label="Confirmar contraseña"
+                name="confirmar_contrasenia"
+                type="password"
+                value={form.confirmar_contrasenia}
+                onChange={onChange}
+                required
+              />
+              <div>
+                <label className="mb-2 block text-sm font-semibold">Tipo de contratación</label>
+                <select
+                  name="tipo_contratacion"
+                  value={form.tipo_contratacion}
+                  onChange={onChange}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 outline-none ring-[var(--adamia-blue)]/20 focus:ring-2"
+                >
+                  <option value="Prueba">Prueba (7 días)</option>
+                  <option value="Normal">Normal</option>
+                </select>
+              </div>
+              <div>
                 <label className="mb-2 block text-sm font-semibold">Método de pago</label>
                 <select
                   name="metodo_pago_id"
                   value={form.metodo_pago_id}
                   onChange={onChange}
-                  className="w-full rounded-xl border border-[var(--adamia-blue)]/20 bg-white px-4 py-3 outline-none ring-[var(--adamia-blue)]/30 focus:ring-2"
                   disabled={loadingCatalogos}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 outline-none ring-[var(--adamia-blue)]/20 focus:ring-2 disabled:opacity-60"
                 >
-                  <option value="">Selecciona un método (opcional)</option>
+                  <option value="">Selecciona (opcional)</option>
                   {catalogos.metodos_pago.map((item) => (
                     <option key={item.id} value={item.id}>
                       {getLabelFromRow(item, `Método ${item.id}`)}
@@ -383,14 +504,8 @@ export default function ContratarPlanPage() {
                   ))}
                 </select>
               </div>
-
-              <div className="md:col-span-2">
-                <Input
-                  name="direccion_cliente"
-                  label="Dirección"
-                  value={form.direccion_cliente}
-                  onChange={onChange}
-                />
+              <div className="md:col-span-2 rounded-lg bg-[var(--adamia-bg-light)] px-3 py-2 text-xs text-[var(--adamia-text-secondary)]">
+                Esta contraseña será la que use el cliente para iniciar sesión en ADAMIA.
               </div>
               <div className="md:col-span-2">
                 <label className="mb-2 block text-sm font-semibold">Notas</label>
@@ -398,109 +513,88 @@ export default function ContratarPlanPage() {
                   name="notas"
                   value={form.notas}
                   onChange={onChange}
-                  rows={4}
-                  className="w-full rounded-xl border border-[var(--adamia-blue)]/20 bg-white px-4 py-3 outline-none ring-[var(--adamia-blue)]/30 focus:ring-2"
-                  placeholder="Comentarios adicionales para ventas o facturación"
+                  rows={3}
+                  placeholder="Cuéntanos detalles para el alta"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 outline-none ring-[var(--adamia-blue)]/20 focus:ring-2"
                 />
               </div>
             </div>
 
-            {submitError ? <p className="mt-4 text-sm font-semibold text-red-600">{submitError}</p> : null}
-            {submitSuccess ? <p className="mt-4 text-sm font-semibold text-emerald-700">{submitSuccess}</p> : null}
+            {submitError ? <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{submitError}</p> : null}
+            {submitSuccess ? <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">{submitSuccess}</p> : null}
+
             {stripeLink ? (
               <a
                 href={stripeLink}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-3 inline-flex rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white"
+                className="mt-4 inline-flex rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white"
               >
-                Ir a pagar con Stripe →
+                Ir a pagar con Stripe
               </a>
             ) : null}
 
-            <div className="mt-6 flex flex-wrap gap-3">
+            <div className="mt-5 flex flex-wrap gap-3">
               <button
                 type="submit"
                 disabled={submitting || loadingCatalogos}
-                className="inline-flex rounded-xl bg-gradient-to-r from-[var(--adamia-blue)] to-[var(--adamia-purple)] px-6 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-70"
+                className="rounded-xl bg-[var(--adamia-blue)] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
               >
-                {submitting ? "Guardando..." : "Guardar contratación"}
+                {submitting ? "Guardando..." : "Registrar contratación"}
               </button>
-              <a
-                href="https://wa.me/523171035768?text=Hola,%20quiero%20contratar%20ADAMIA"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex rounded-xl border border-[var(--adamia-blue)]/25 bg-white px-6 py-3 text-sm font-bold text-[var(--adamia-blue)]"
+              <Link
+                href="/cotiza"
+                className="rounded-xl border border-[var(--adamia-blue)]/30 px-5 py-2.5 text-sm font-bold text-[var(--adamia-blue)]"
               >
-                Hablar por WhatsApp
-              </a>
+                Ver tabla de precios
+              </Link>
             </div>
           </form>
 
-          <aside className="space-y-6">
-            <article className="rounded-3xl border border-[var(--adamia-blue)]/15 bg-white p-6 shadow-sm">
-              <h3 className="text-xl font-black">¿Necesitas ayuda?</h3>
+          <aside className="space-y-5">
+            <article className="rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-5 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-wide text-[var(--adamia-blue)]">Plan automático</p>
+              <h3 className="mt-1 text-xl font-black">
+                {selectedPlan ? getLabelFromRow(selectedPlan, "Plan seleccionado") : "Selecciona empleados"}
+              </h3>
               <p className="mt-2 text-sm text-[var(--adamia-text-secondary)]">
-                Nuestro equipo puede apoyarte para definir plan, implementación y activación inicial.
+                {selectedPlan ? getPlanEmployeesRange(selectedPlan, catalogos.tipo_planes) : "Sin rango disponible"}
               </p>
-              <div className="mt-4">
-                <Link
-                  href="/cotiza"
-                  className="text-sm font-bold text-[var(--adamia-blue)] hover:underline"
-                >
-                  Ver tabla de precios →
-                </Link>
-              </div>
             </article>
 
-            <article className="rounded-3xl border-2 border-[var(--adamia-blue)]/30 bg-gradient-to-r from-white via-[var(--adamia-bg-light)] to-white p-6 shadow-xl">
-              <div className="mb-2 flex items-center justify-between">
-                <h3 className="text-lg font-black md:text-2xl">Resumen estimado</h3>
-                <span className="rounded-full bg-[var(--adamia-blue)]/10 px-3 py-1 text-xs font-bold text-[var(--adamia-blue)]">
-                  Cotización en tiempo real
-                </span>
-              </div>
+            <article className="rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-5 shadow-sm">
+              <h3 className="text-xl font-black">Resumen estimado</h3>
               {estimado ? (
                 <div className="mt-3 space-y-2 text-sm">
-                  <Row label="Precio mensual" value={formatCurrencyMXN(estimado.monthly)} />
-                  <Row label="Subtotal" value={formatCurrencyMXN(estimado.subtotal)} />
-                  <Row label="Descuento" value={`${estimado.descuento}%`} />
-                  <Row label="Total a pagar" value={formatCurrencyMXN(estimado.total)} highlight />
+                  <SummaryRow label="Precio mensual" value={formatCurrencyMXN(estimado.monthly)} />
+                  <SummaryRow label="Subtotal" value={formatCurrencyMXN(estimado.subtotal)} />
+                  <SummaryRow label="Descuento" value={`${estimado.descuento}%`} />
+                  <SummaryRow label="Total" value={formatCurrencyMXN(estimado.total)} highlight />
                 </div>
               ) : (
-                <p className="mt-2 rounded-lg border border-dashed border-[var(--adamia-blue)]/35 bg-white px-3 py-2 text-sm font-medium text-[var(--adamia-text-secondary)]">
-                  Completa <strong>empleados</strong> y <strong>meses contratados</strong> para ver el total.
+                <p className="mt-2 text-sm text-[var(--adamia-text-secondary)]">
+                  Ajusta empleados para calcular precio.
                 </p>
               )}
+              {form.tipo_contratacion === "Prueba" ? (
+                <p className="mt-3 rounded-lg bg-[var(--adamia-blue)]/10 px-3 py-2 text-sm font-semibold text-[var(--adamia-blue)]">
+                  Incluye 7 días de prueba al registrarte.
+                </p>
+              ) : null}
             </article>
 
-            <article className="rounded-3xl border border-[var(--adamia-blue)]/15 bg-white p-6 shadow-sm">
+            <article className="rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-5 shadow-sm">
               <h3 className="text-xl font-black">Beneficios del software</h3>
-              <p className="mt-2 text-sm text-[var(--adamia-text-secondary)]">
-                Todo lo que incluye ADAMIA para mejorar control, cumplimiento y productividad.
-              </p>
-              <div className="mt-4 space-y-2">
-                {[
-                  "Reloj checador con reconocimiento facial + GPS anti-fraude",
-                  "Dashboard en tiempo real con indicadores de asistencia y operación",
-                  "Gestión de contratos, vigencias y alertas automáticas",
-                  "Control de permisos, vacaciones y reportes listos para nómina",
-                  "Notificaciones inteligentes por correo, WhatsApp y push",
-                  "Plataforma web empresarial con soporte y actualizaciones continuas",
-                ].map((benefit) => (
-                  <div
-                    key={benefit}
-                    className="flex items-start gap-3 rounded-lg bg-[var(--adamia-bg-light)] px-3 py-2"
-                  >
-                    <span className="mt-1 inline-block h-2.5 w-2.5 rounded-full bg-[var(--adamia-blue)]" />
-                    <p className="text-sm text-[var(--adamia-text-secondary)]">{benefit}</p>
-                  </div>
-                ))}
+              <div className="mt-3 space-y-2 text-sm text-[var(--adamia-text-secondary)]">
+                <p>• Reloj checador con evidencia y control en tiempo real.</p>
+                <p>• Gestión de contratos, permisos y vacaciones.</p>
+                <p>• Reportes para operación y nómina.</p>
+                <p>• Plataforma web empresarial con soporte continuo.</p>
               </div>
             </article>
 
             {errorCatalogos ? (
-              <article className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+              <article className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
                 {errorCatalogos}
               </article>
             ) : null}
@@ -511,47 +605,23 @@ export default function ContratarPlanPage() {
   );
 }
 
-function Input({ label, ...props }) {
+function Field({ label, ...props }) {
   return (
     <div>
       <label className="mb-2 block text-sm font-semibold">{label}</label>
       <input
         {...props}
-        className="w-full rounded-xl border border-[var(--adamia-blue)]/20 bg-white px-4 py-3 outline-none ring-[var(--adamia-blue)]/30 focus:ring-2"
+        className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 outline-none ring-[var(--adamia-blue)]/20 focus:ring-2"
       />
     </div>
   );
 }
 
-function Select({ label, options, ...props }) {
+function SummaryRow({ label, value, highlight = false }) {
   return (
-    <div>
-      <label className="mb-2 block text-sm font-semibold">{label}</label>
-      <select
-        {...props}
-        className="w-full rounded-xl border border-[var(--adamia-blue)]/20 bg-white px-4 py-3 outline-none ring-[var(--adamia-blue)]/30 focus:ring-2"
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
-function Row({ label, value, highlight = false }) {
-  return (
-    <div
-      className={`flex items-center justify-between rounded-lg px-3 py-2 ${
-        highlight
-          ? "border border-[var(--adamia-blue)]/25 bg-[var(--adamia-blue)]/10"
-          : "bg-white border border-slate-200"
-      }`}
-    >
-      <span className="text-[var(--adamia-text-secondary)]">{label}</span>
-      <span className={highlight ? "text-lg font-black text-[var(--adamia-blue)]" : "font-bold"}>{value}</span>
+    <div className={`flex items-center justify-between rounded-lg px-3 py-2 ${highlight ? "bg-[var(--adamia-blue)]/10" : "bg-[var(--adamia-bg-light)]"}`}>
+      <span>{label}</span>
+      <strong className={highlight ? "text-[var(--adamia-blue)]" : ""}>{value}</strong>
     </div>
   );
 }

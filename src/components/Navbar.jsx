@@ -73,7 +73,7 @@ export default function Navbar() {
       case "Admin":
         return "/dashboard";
       case "User":
-        return "/home";
+        return "/panel";
       case "Recruiter":
         return "/panel";
       case "Empleado":
@@ -122,15 +122,15 @@ export default function Navbar() {
               </Link>
             </NavigationMenuItem>
 
-            <NavigationMenuItem>
+              <NavigationMenuItem>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    className={twMerge(
-                      navigationMenuTriggerStyle(),
+                  className={twMerge(
+                    navigationMenuTriggerStyle(),
                       pathname?.startsWith("/funcionalidades") && "font-medium"
-                    )}
-                  >
+                  )}
+                >
                     Funcionalidades
                   </button>
                 </DropdownMenuTrigger>
@@ -139,22 +139,22 @@ export default function Navbar() {
                     <DropdownMenuItem key={item.href} asChild className="cursor-pointer">
                       <Link href={item.href} className="w-full">
                         {item.label}
-                      </Link>
+                </Link>
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-            </NavigationMenuItem>
+              </NavigationMenuItem>
 
             <NavigationMenuItem>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    className={twMerge(
-                      navigationMenuTriggerStyle(),
+                className={twMerge(
+                  navigationMenuTriggerStyle(),
                       pathname?.startsWith("/cotiza") && "font-medium"
-                    )}
-                  >
+                )}
+              >
                     Cotiza
                   </button>
                 </DropdownMenuTrigger>
@@ -168,7 +168,7 @@ export default function Navbar() {
                       ) : (
                         <Link href={item.href} className="w-full">
                           {item.label}
-                        </Link>
+              </Link>
                       )}
                     </DropdownMenuItem>
                   ))}
@@ -204,8 +204,8 @@ export default function Navbar() {
                     <DropdownMenuItem key={item.href} asChild className="cursor-pointer">
                       <Link href={item.href} className="w-full">
                         {item.label}
-                      </Link>
-                    </DropdownMenuItem>
+                    </Link>
+                  </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -279,7 +279,7 @@ export default function Navbar() {
                           {tipo_usuario === "Admin"
                             ? "Dashboard"
                             : tipo_usuario === "User"
-                            ? "Dashboard"
+                            ? "Panel"
                             : "Panel"}
                         </Link>
                       </DropdownMenuItem>
@@ -360,21 +360,21 @@ const MenuResposive = ({
                     target="_blank"
                     rel="noreferrer"
                     className={twMerge(navigationMenuTriggerStyle())}
-                  >
+              >
                     {item.label}
                   </a>
                 ) : (
-                  <Link
+              <Link
                     href={item.href}
-                    className={twMerge(
-                      navigationMenuTriggerStyle(),
+                className={twMerge(
+                  navigationMenuTriggerStyle(),
                       pathname === item.href && "font-medium"
-                    )}
-                  >
-                    {item.label}
-                  </Link>
                 )}
-              </DrawerClose>
+              >
+                    {item.label}
+              </Link>
+                )}
+            </DrawerClose>
             ))}
 
             {isLoggedIn && tipo_usuario && (
@@ -386,7 +386,7 @@ const MenuResposive = ({
                   {tipo_usuario === "Admin"
                     ? "Dashboard"
                     : tipo_usuario === "User"
-                    ? "Home"
+                    ? "Panel"
                     : "Panel"}
                 </Link>
               </DrawerClose>

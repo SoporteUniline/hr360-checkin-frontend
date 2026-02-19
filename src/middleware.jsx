@@ -4,14 +4,14 @@ import { jwtVerify } from "jose";
 const accessRules = {
   Admin: ["/dashboard"],
   Recruiter: ["/panel"],
-  User: ["/home"],
+  User: ["/panel", "/home"],
   Empleado: ["/empleado"],
 };
 
 const defaultRedirects = {
   Admin: "/dashboard",
   Recruiter: "/panel",
-  User: "/home",
+  User: "/panel",
   Empleado: "/empleado",
 };
 

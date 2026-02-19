@@ -52,7 +52,7 @@ export default function LoginPage() {
       login(token);
 
       const rutas = {
-        User: "/home",
+        User: "/panel",
         Recruiter: "/panel",
         Admin: "/dashboard",
         Empleado: "/empleado",

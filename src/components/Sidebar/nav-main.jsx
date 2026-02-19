@@ -259,6 +259,8 @@ export function NavMain() {
   const path = usePathname();
   const { dataUser } = useAuth();
   const [open, setOpen] = useState();
+  const effectiveRole =
+    dataUser?.tipo_usuario === "User" ? "Recruiter" : dataUser?.tipo_usuario;
 
   const handleClick = (href) => {
     router.push(href);
@@ -266,9 +268,9 @@ export function NavMain() {
 
   let perfilRoute = "/home/cuenta";
 
-  if (dataUser?.tipo_usuario === "Recruiter") {
+  if (effectiveRole === "Recruiter") {
     perfilRoute = "/panel/cuenta";
-  } else if (dataUser?.tipo_usuario === "Admin") {
+  } else if (effectiveRole === "Admin") {
     perfilRoute = "/dashboard/empresas";
   }
 
@@ -277,7 +279,7 @@ export function NavMain() {
       <SidebarGroupContent className="flex flex-col gap-2">
         <SidebarMenu>
           {dashboardItems.map((item) => {
-            if (item.rol && item.rol !== dataUser?.tipo_usuario) return null;
+            if (item.rol && item.rol !== effectiveRole) return null;
 
             return (
               <SidebarMenuItem key={item.title}>
@@ -297,10 +299,10 @@ export function NavMain() {
             );
           })}
 
-          {dataUser?.tipo_usuario !== "Admin" &&
+          {effectiveRole !== "Admin" &&
             menuGroups.map((group) => {
               const itemsVisibles = group.items.filter(
-                (item) => !item.rol || item.rol === dataUser?.tipo_usuario,
+                (item) => !item.rol || item.rol === effectiveRole,
               );
               if (itemsVisibles.length === 0) return null;
 
@@ -311,7 +313,7 @@ export function NavMain() {
                   </p>
 
                   {group.items.map((item) => {
-                    if (item.rol && item.rol !== dataUser?.tipo_usuario)
+                    if (item.rol && item.rol !== effectiveRole)
                       return null;
 
                     return (
