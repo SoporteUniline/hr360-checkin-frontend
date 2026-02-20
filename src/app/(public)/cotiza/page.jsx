@@ -1,501 +1,621 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import axios from "@/lib/axios";
 
-// Tabla de precios tomada de la referencia entregada por negocio y presentada
-// con tokens visuales ADAMIA para mantener consistencia de marca.
-
-const fallbackPricingRanges = [
-  { range: "1 - 2 empleados", min: 1, max: 2, monthly: "$580", perEmployee: "$290", annual: "$696" },
-  { range: "6 - 10 empleados", min: 6, max: 10, monthly: "$1,137", perEmployee: "~$142", annual: "$1,364" },
-  {
-    range: "11 - 15 empleados",
-    min: 11,
-    max: 15,
-    monthly: "$1,671",
-    perEmployee: "~$128",
-    annual: "$2,005",
-    popular: true,
-  },
-  { range: "16 - 20 empleados", min: 16, max: 20, monthly: "$2,184", perEmployee: "~$120", annual: "$2,621" },
-  { range: "21 - 25 empleados", min: 21, max: 25, monthly: "$2,675", perEmployee: "~$114", annual: "$3,210" },
-  { range: "26 - 30 empleados", min: 26, max: 30, monthly: "$3,146", perEmployee: "~$110", annual: "$3,775" },
-  { range: "31 - 35 empleados", min: 31, max: 35, monthly: "$3,597", perEmployee: "~$107", annual: "$4,316" },
-  { range: "36 - 40 empleados", min: 36, max: 40, monthly: "$4,028", perEmployee: "~$105", annual: "$4,834" },
-  { range: "41 - 45 empleados", min: 41, max: 45, monthly: "$4,441", perEmployee: "~$103", annual: "$5,329" },
-  { range: "46 - 50 empleados", min: 46, max: 50, monthly: "$4,836", perEmployee: "~$100", annual: "$5,803" },
-  { range: "51 - 70 empleados", min: 51, max: 70, monthly: "$6,634", perEmployee: "~$108", annual: "$7,961" },
-  { range: "71 - 90 empleados", min: 71, max: 90, monthly: "$8,358", perEmployee: "~$104", annual: "$10,030" },
-  { range: "91 - 100 empleados", min: 91, max: 100, monthly: "$9,102", perEmployee: "~$96", annual: "$10,922" },
-  {
-    range: "101+ empleados",
-    min: 101,
-    max: null,
-    monthly: "$91/empleado",
-    perEmployee: "$91",
-    annual: "Descuento especial",
-    enterprise: true,
-  },
-];
-
 function formatCurrencyMXN(value) {
-  return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(
-    value
-  );
+  return new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: "MXN",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value || 0);
 }
 
-function resolvePlanByEmployees(employees, pricingRanges) {
-  const exactPlan = pricingRanges.find(
-    (plan) => employees >= plan.min && (plan.max === null || employees <= plan.max)
-  );
-  if (exactPlan) return { plan: exactPlan, exact: true };
-
-  // Si el numero cae en un hueco de rangos, mostramos el siguiente disponible.
-  const nextPlan = pricingRanges.find((plan) => employees < plan.min);
-  if (nextPlan) return { plan: nextPlan, exact: false };
-
-  return { plan: pricingRanges[pricingRanges.length - 1], exact: false };
+function formatCompact(value) {
+  return new Intl.NumberFormat("es-MX", {
+    maximumFractionDigits: 2,
+  }).format(value || 0);
 }
 
 function toNumber(value) {
   if (typeof value === "number") return Number.isFinite(value) ? value : null;
   if (typeof value !== "string") return null;
-
-  // Permite valores como "$1,671.00", "1671", "91/empleado"
-  const normalized = value.replace(/[^\d.-]/g, "");
-  if (!normalized) return null;
-  const parsed = Number.parseFloat(normalized);
+  const cleaned = value.replace(/[^\d.-]/g, "");
+  if (!cleaned) return null;
+  const parsed = Number.parseFloat(cleaned);
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function getFirstValue(source, keys) {
+function getFirst(source, keys) {
   for (const key of keys) {
-    if (source?.[key] !== undefined && source?.[key] !== null && source?.[key] !== "") {
-      return source[key];
-    }
+    const val = source?.[key];
+    if (val !== undefined && val !== null && val !== "") return val;
   }
   return null;
 }
 
-function transformTipoPlanesToPricingRanges(tipoPlanes = []) {
-  if (!Array.isArray(tipoPlanes) || !tipoPlanes.length) return [];
-
-  const base = tipoPlanes
-    .map((plan) => {
-      const min = toNumber(
-        getFirstValue(plan, [
-          "empleados_min",
-          "usuarios_min",
-          "min_usuarios",
-          "minimo_empleados",
-          "rango_min",
-          "desde",
-        ])
-      );
-      const max = toNumber(
-        getFirstValue(plan, [
-          "empleados_max",
-          "usuarios_max",
-          "max_usuarios",
-          "maximo_empleados",
-          "rango_max",
-          "hasta",
-        ])
-      );
-      const monthlyNumber = toNumber(
-        getFirstValue(plan, [
-          "precio_mensual",
-          "precio",
+function transformTipoPlanes(rows = []) {
+  return rows
+    .map((row) => {
+      const id = getFirst(row, ["id", "id_tipo_plan"]);
+      const min = toNumber(getFirst(row, ["usuarios_min", "empleados_min", "min", "rango_min"]));
+      const max = toNumber(getFirst(row, ["usuarios_max", "empleados_max", "max", "rango_max"]));
+      const precioBase = toNumber(
+        getFirst(row, [
           "precio_base",
+          "precio_mensual",
+          "precio_por_mes",
+          "precio_mes",
+          "precio",
           "monto_mensual",
           "costo_mensual",
         ])
       );
-      const perEmployeeNumber = toNumber(
-        getFirstValue(plan, ["precio_por_empleado", "costo_por_empleado", "precio_unitario"])
-      );
-      const annualRaw = getFirstValue(plan, ["precio_anual", "anual", "precio_12_meses", "ahorro_anual"]);
-      const annualNumber = toNumber(annualRaw);
-      const label =
-        getFirstValue(plan, ["nombre", "plan", "descripcion"]) ||
-        `Plan ${getFirstValue(plan, ["id", "id_tipo_plan"]) ?? ""}`.trim();
-
       return {
-        raw: plan,
+        id: Number(id),
         min: Number.isFinite(min) ? min : null,
-        max: Number.isFinite(max) && max > 0 ? max : null,
-        monthlyNumber: Number.isFinite(monthlyNumber) ? monthlyNumber : null,
-        perEmployeeNumber: Number.isFinite(perEmployeeNumber) ? perEmployeeNumber : null,
-        annualNumber: Number.isFinite(annualNumber) ? annualNumber : null,
-        label,
+        max: Number.isFinite(max) ? max : null,
+        precioBase: Number.isFinite(precioBase) ? precioBase : null,
       };
     })
-    .filter((item) => item.monthlyNumber !== null);
-
-  if (!base.length) return [];
-
-  const sorted = [...base].sort((a, b) => {
-    const aMax = a.max ?? Number.MAX_SAFE_INTEGER;
-    const bMax = b.max ?? Number.MAX_SAFE_INTEGER;
-    return aMax - bMax;
-  });
-
-  return sorted.map((item, index) => {
-    const inferredMin = item.min ?? (index === 0 ? 1 : (sorted[index - 1].max ?? 0) + 1);
-    const monthly = formatCurrencyMXN(item.monthlyNumber);
-    const perEmployeeValue =
-      item.perEmployeeNumber ??
-      (item.max && item.max > 0 ? Math.round(item.monthlyNumber / item.max) : item.monthlyNumber);
-
-    return {
-      id: getFirstValue(item.raw, ["id", "id_tipo_plan"]) ?? `${inferredMin}-${item.max ?? "plus"}`,
-      range: item.max ? `${inferredMin} - ${item.max} empleados` : `${inferredMin}+ empleados`,
-      min: inferredMin,
-      max: item.max,
-      monthly,
-      perEmployee: `~${formatCurrencyMXN(perEmployeeValue)}`,
-      annual: item.annualNumber ? formatCurrencyMXN(item.annualNumber) : "Consultar",
-      enterprise: item.max === null,
-      sourceName: item.label,
-    };
-  });
+    .filter((item) => Number.isInteger(item.id) && item.id > 0 && item.precioBase !== null)
+    .sort((a, b) => {
+      const aMax = a.max ?? Number.MAX_SAFE_INTEGER;
+      const bMax = b.max ?? Number.MAX_SAFE_INTEGER;
+      return aMax - bMax;
+    });
 }
 
-const includedItems = [
-  "Apps moviles ilimitadas (Admin + Empleados)",
-  "Reconocimiento facial + GPS anti-fraude",
-  "Almacenamiento ilimitado en la nube",
-  "Soporte por chat y acompanamiento inicial",
-  "Actualizaciones automaticas sin costo extra",
-  "Calculadoras LFT Mexico",
-  "Reportes y dashboards en tiempo real",
-  "Backups automaticos diarios",
-  "Usuarios administrativos ilimitados",
-];
+function transformDescuentos(rows = []) {
+  const defaults = { 1: 0, 6: 10, 12: 20 };
+  if (!rows.length) return defaults;
 
-const faqs = [
-  {
-    q: "Que pasa despues de los 7 dias gratis?",
-    a: "Si decides continuar, activamos tu plan seleccionado. Si no continuas, la cuenta queda inactiva sin cargo. No solicitamos tarjeta para iniciar.",
-  },
-  {
-    q: "Puedo cambiar de plan despues?",
-    a: "Si. Puedes aumentar o reducir tu plan cuando lo necesites y se ajusta la facturacion de forma proporcional.",
-  },
-  {
-    q: "Hay descuentos por pago anual?",
-    a: "Si. Los planes de 6 meses aplican 5% de descuento y los de 12 meses aplican 10%.",
-  },
-  {
-    q: "Hay costo de implementacion?",
-    a: "No. El setup inicial no tiene costo y nuestro equipo te acompana sin cargos adicionales.",
-  },
-  {
-    q: "Que metodos de pago aceptan?",
-    a: "Transferencia bancaria, deposito y pago con tarjeta. Emitimos factura electronica.",
-  },
-];
+  const result = { ...defaults };
+  rows.forEach((row) => {
+    const meses = Number(getFirst(row, ["meses"]));
+    const descuento = toNumber(getFirst(row, ["descuento_porcentaje", "descuento"]));
+    if ([1, 6, 12].includes(meses) && Number.isFinite(descuento)) {
+      result[meses] = descuento;
+    }
+  });
+  return result;
+}
+
+function calcularCotizacionLocal({ empleados, meses, planes, descuentos }) {
+  const empleadosNum = Math.max(1, Number(empleados || 1));
+  const mesesNum = Number(meses);
+  const empleadosLookup = empleadosNum > 58 ? 58 : empleadosNum;
+
+  let planBase = planes.find(
+    (plan) =>
+      empleadosLookup >= (plan.min ?? 1) &&
+      (plan.max === null || plan.max === undefined || empleadosLookup <= plan.max)
+  );
+  if (!planBase) {
+    planBase = planes[planes.length - 1];
+  }
+
+  let precioMensual = planBase?.precioBase ?? 0;
+  if (empleadosNum > 58) {
+    precioMensual = (planBase?.precioBase ?? 0) * empleadosNum;
+  }
+
+  const descuento = descuentos[mesesNum] ?? 0;
+  const subtotal = precioMensual * mesesNum;
+  const descuentoAplicado = subtotal * (descuento / 100);
+  const total = subtotal - descuentoAplicado;
+
+  return {
+    tipoPlanId: planBase?.id ?? null,
+    empleados: empleadosNum,
+    meses: mesesNum,
+    precioMensual,
+    precioPorMes: total / mesesNum,
+    descuentoPorcentaje: descuento,
+    descuentoAplicado,
+    subtotal,
+    total,
+  };
+}
 
 export default function CotizaPage() {
-  const [dbPlans, setDbPlans] = useState([]);
-  const [dbPlansLoaded, setDbPlansLoaded] = useState(false);
-  const [employeesInput, setEmployeesInput] = useState("");
-  const [calculated, setCalculated] = useState(null);
-  const [error, setError] = useState("");
-  const pricingRanges = useMemo(() => {
-    const transformed = transformTipoPlanesToPricingRanges(dbPlans);
-    return transformed.length ? transformed : fallbackPricingRanges;
-  }, [dbPlans]);
+  const beneficios = [
+    {
+      icon: "👥",
+      title: "Gestión de Empleados",
+      text: "Administra expedientes, datos laborales y documentos en un solo lugar.",
+    },
+    {
+      icon: "⏰",
+      title: "Control de Asistencias",
+      text: "Registra entradas, salidas, retardos y faltas con reportes listos para nómina.",
+    },
+    {
+      icon: "🏖️",
+      title: "Vacaciones y Permisos",
+      text: "Flujos de solicitud y aprobación con cálculo automático de días disponibles.",
+    },
+    {
+      icon: "📄",
+      title: "Contratos Digitales",
+      text: "Plantillas y documentos laborales centralizados para operación más ágil.",
+    },
+    {
+      icon: "📊",
+      title: "Reportes y Dashboards",
+      text: "Métricas clave para tomar decisiones con datos en tiempo real.",
+    },
+    {
+      icon: "🔔",
+      title: "Notificaciones Inteligentes",
+      text: "Alertas automáticas de incidencias, vencimientos y eventos importantes.",
+    },
+  ];
+  const garantias = [
+    { icon: "✓", title: "Sin compromiso", text: "Cancela cuando quieras." },
+    { icon: "🔒", title: "Datos seguros", text: "Infraestructura robusta y respaldo continuo." },
+    { icon: "💬", title: "Soporte cercano", text: "Acompañamiento en implementación y operación." },
+  ];
+  const faqs = [
+    {
+      q: "¿La cotización tiene vigencia?",
+      a: "Sí, la cotización PDF tiene vigencia de 30 días naturales a partir de su emisión.",
+    },
+    {
+      q: "¿Puedo cambiar de plan después?",
+      a: "Sí, puedes escalar o ajustar tu plan según el crecimiento de tu empresa.",
+    },
+    {
+      q: "¿Incluye implementación?",
+      a: "Sí, ADAMIA incluye acompañamiento de arranque para que empieces rápido.",
+    },
+  ];
+  const [planes, setPlanes] = useState([]);
+  const [descuentos, setDescuentos] = useState({ 1: 0, 6: 10, 12: 20 });
+  const [empleados, setEmpleados] = useState(15);
+  const [loading, setLoading] = useState(false);
+  const [mensaje, setMensaje] = useState("");
+  const [planSeleccionado, setPlanSeleccionado] = useState(6);
+  const [form, setForm] = useState({
+    nombre: "",
+    empresa: "",
+    telefono: "",
+    correo: "",
+    tipoContratacion: "Normal",
+  });
 
   useEffect(() => {
     let isMounted = true;
-
-    const fetchTipoPlanes = async () => {
+    const loadCatalogos = async () => {
       try {
-        const response = await axios.get("/checador/tipo-planes");
+        const response = await axios.get("/checador/contrataciones/catalogos");
         if (!isMounted) return;
-        setDbPlans(response?.data?.tipo_planes ?? []);
-      } catch (fetchError) {
-        console.error("No se pudieron cargar los planes desde Tipo_Planes:", fetchError);
-      } finally {
-        if (isMounted) setDbPlansLoaded(true);
+        setPlanes(transformTipoPlanes(response?.data?.tipo_planes ?? []));
+        setDescuentos(transformDescuentos(response?.data?.planes_duracion ?? []));
+      } catch (error) {
+        console.error("No se pudo cargar catalogo de cotiza:", error);
       }
     };
-
-    fetchTipoPlanes();
+    loadCatalogos();
     return () => {
       isMounted = false;
     };
   }, []);
 
-  const handleCalculate = (event) => {
+  const planesCalculados = useMemo(() => {
+    if (!planes.length) return [];
+    return [1, 6, 12].map((meses) =>
+      calcularCotizacionLocal({
+        empleados,
+        meses,
+        planes,
+        descuentos,
+      })
+    );
+  }, [descuentos, empleados, planes]);
+
+  const seleccion = useMemo(
+    () => planesCalculados.find((plan) => plan.meses === planSeleccionado) ?? null,
+    [planSeleccionado, planesCalculados]
+  );
+
+  const handleEmployees = (delta) => {
+    const next = Math.max(1, Math.min(9999, empleados + delta));
+    const rounded = delta > 0 ? Math.ceil(next / 5) * 5 : Math.floor(next / 5) * 5 || 1;
+    setEmpleados(Math.max(1, rounded));
+  };
+
+  const updateField = (key, value) => {
+    setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const validate = () => {
+    if (!form.nombre.trim() || !form.empresa.trim() || !form.telefono.trim() || !form.correo.trim()) {
+      return "Todos los campos son obligatorios.";
+    }
+    if (!/^\d{10}$/.test(form.telefono.trim())) {
+      return "El teléfono debe tener 10 dígitos.";
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo.trim())) {
+      return "El correo no es válido.";
+    }
+    if (!seleccion) {
+      return "Primero selecciona un plan.";
+    }
+    return "";
+  };
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    const employees = Number.parseInt(employeesInput, 10);
-
-    if (!Number.isInteger(employees) || employees < 1) {
-      setCalculated(null);
-      setError("Ingresa un numero de empleados valido (mayor a 0).");
+    const error = validate();
+    if (error) {
+      setMensaje(error);
       return;
     }
 
-    setError("");
-    const result = resolvePlanByEmployees(employees, pricingRanges);
-
-    if (result.plan.enterprise) {
-      const monthlyEstimate = employees * 91;
-      setCalculated({
-        ...result,
-        employees,
-        monthlyEstimate,
-        monthlyEstimateText: formatCurrencyMXN(monthlyEstimate),
+    try {
+      setLoading(true);
+      setMensaje("");
+      const { jsPDF } = await import("jspdf");
+      const doc = new jsPDF({ unit: "mm", format: "letter" });
+      const planNombre = seleccion.meses === 1 ? "Mensual" : seleccion.meses === 6 ? "Semestral" : "Anual";
+      const fecha = new Date().toLocaleDateString("es-MX", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
       });
-      return;
-    }
+      // Paleta ADAMIA para PDF (indigo/purpura + acento cian)
+      const colorPrimary = [43, 63, 156];
+      const colorSecondary = [109, 40, 217];
+      const colorAccent = [6, 182, 212];
+      const colorMuted = [71, 85, 105];
+      const colorSurface = [238, 242, 255];
+      const pageWidth = 216;
+      const left = 14;
+      const right = 202;
 
-    setCalculated({ ...result, employees });
+      const drawInfoCard = (x, y, w, h, label, value) => {
+        doc.setFillColor(255, 255, 255);
+        doc.setDrawColor(226, 232, 240);
+        doc.roundedRect(x, y, w, h, 2, 2, "FD");
+        doc.setTextColor(...colorMuted);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.text(label.toUpperCase(), x + 4, y + 5);
+        doc.setTextColor(17, 24, 39);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.text(String(value), x + 4, y + 12);
+      };
+
+      // Header
+      doc.setFillColor(...colorPrimary);
+      doc.rect(0, 0, pageWidth, 36, "F");
+      doc.setFillColor(...colorSecondary);
+      doc.rect(0, 32, pageWidth, 4, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(22);
+      doc.text("ADAMIA", left, 15);
+      doc.setFontSize(12);
+      doc.text("Tu cotización personalizada", left, 23);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text(`Generada el ${fecha}`, right, 15, { align: "right" });
+      doc.text(`Plan ${planNombre} - ${seleccion.meses} ${seleccion.meses === 1 ? "mes" : "meses"}`, right, 22, {
+        align: "right",
+      });
+
+      // Saludo + cliente
+      doc.setTextColor(...colorPrimary);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.text(`Hola ${form.nombre},`, left, 48);
+      doc.setTextColor(...colorMuted);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text("Gracias por cotizar ADAMIA. Esta es la propuesta para tu empresa:", left, 55);
+      doc.setTextColor(...colorPrimary);
+      doc.setFont("helvetica", "bold");
+      doc.text(form.empresa, left, 61);
+
+      // Caja principal de plan
+      doc.setFillColor(...colorSurface);
+      doc.setDrawColor(165, 180, 252);
+      doc.roundedRect(left, 66, 188, 50, 3, 3, "FD");
+      doc.setTextColor(...colorPrimary);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.text(`Plan ${planNombre}`, left + 5, 75);
+      if (seleccion.descuentoPorcentaje > 0) {
+        doc.setFillColor(...colorAccent);
+        doc.roundedRect(left + 144, 69.5, 39, 7, 2, 2, "F");
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(9);
+        doc.text(`${seleccion.descuentoPorcentaje}% DESCUENTO`, left + 163.5, 74.3, { align: "center" });
+      }
+
+      // Tres cuadros informativos para evitar redundancia entre "precio mensual" e "inversión".
+      drawInfoCard(left + 5, 84, 56, 20, "Empleados", formatCompact(seleccion.empleados));
+      drawInfoCard(left + 66, 84, 56, 20, "Duración", `${seleccion.meses} ${seleccion.meses === 1 ? "mes" : "meses"}`);
+      drawInfoCard(left + 127, 84, 56, 20, "Precio mensual", formatCurrencyMXN(seleccion.precioPorMes));
+
+      // Total destacado
+      doc.setFillColor(...colorSecondary);
+      doc.roundedRect(left, 121, 188, 18, 3, 3, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.text("TOTAL COTIZADO", left + 5, 129);
+      doc.setFontSize(18);
+      doc.text(formatCurrencyMXN(seleccion.total), right - 4, 132, { align: "right" });
+
+      // Beneficios incluidos
+      doc.setFillColor(...colorSurface);
+      doc.setDrawColor(226, 232, 240);
+      doc.roundedRect(left, 146, 188, 52, 3, 3, "FD");
+      doc.setFillColor(...colorAccent);
+      doc.roundedRect(left + 4, 149, 64, 7, 2, 2, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.text("BENEFICIOS", left + 36, 153.8, { align: "center" });
+      doc.setTextColor(17, 24, 39);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text("Incluye en tu plan ADAMIA", left + 5, 160);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(...colorMuted);
+      const beneficios = [
+        "Control de asistencias y turnos",
+        "Vacaciones, permisos y justificantes",
+        "Contratos digitales y expedientes",
+        "Reportes y panel de indicadores",
+        "Portal de empleados y notificaciones",
+        "Soporte y acompañamiento de implementación",
+      ];
+      beneficios.forEach((item, idx) => {
+        const y = 168 + (idx % 3) * 8;
+        const x = idx < 3 ? left + 6 : left + 98;
+        doc.text(`- ${item}`, x, y);
+      });
+
+      // CTA contacto
+      doc.setFillColor(...colorPrimary);
+      doc.roundedRect(left, 202, 188, 22, 3, 3, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text("¿Listo para comenzar?", left + 5, 211);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.text("WhatsApp: +52 317 388 7959 | Correo: soporte@adamia.mx", left + 5, 218);
+
+      // Footer
+      doc.setTextColor(100, 116, 139);
+      doc.setFontSize(8);
+      doc.text("Cotización informativa sujeta a validación comercial y técnica.", left, 268);
+      doc.text("Vigencia de la cotización: 30 días naturales desde su emisión.", left, 272);
+      doc.text("www.adamia.mx | soporte@adamia.mx | +52 317 388 7959", left, 276);
+      doc.text(`ADAMIA by Uniline - ${new Date().getFullYear()}`, right, 276, { align: "right" });
+
+      const fileName = `Cotizacion_ADAMIA_${form.empresa.replace(/\s+/g, "_")}_${planNombre}.pdf`;
+      doc.save(fileName);
+      setMensaje("PDF generado correctamente.");
+    } catch (error) {
+      console.error(error);
+      setMensaje("No se pudo generar el PDF.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <main className="bg-[var(--adamia-bg-light)] text-[var(--adamia-text-primary)]">
-      {/* Hero principal de precios */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] py-20 text-white">
-        <div className="absolute -left-20 top-6 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
-        <div className="absolute -right-20 bottom-0 h-72 w-72 rounded-full bg-white/10 blur-3xl" />
-        <div className="relative mx-auto w-full max-w-7xl px-6 text-center">
-          <span className="inline-flex rounded-full border border-white/25 bg-white/10 px-4 py-2 text-sm font-bold">
-            PRECIOS TRANSPARENTES
-          </span>
-          <h1 className="mt-6 text-4xl font-black leading-tight md:text-6xl">
-            Planes diseñados para
-            <br />
-            empresas de todos los tamaños
-          </h1>
-          <p className="mx-auto mt-4 max-w-3xl text-lg text-white/90 md:text-xl">
-            Sin costos ocultos, sin sorpresas y con todas las funcionalidades desde el primer dia.
-          </p>
-          <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-5 py-2 text-sm font-semibold">
-            <span>7 dias de prueba gratis</span>
-            <span className="h-1 w-1 rounded-full bg-white/70" />
-            <span>Sin tarjeta de credito</span>
-          </div>
-        </div>
+    <main className="min-h-screen bg-[var(--adamia-bg-light)] text-[var(--adamia-text-primary)]">
+      <section className="bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] px-6 py-14 text-center text-white">
+        <h1 className="text-4xl font-black md:text-5xl">Cotiza tu plan ADAMIA</h1>
+        <p className="mx-auto mt-3 max-w-3xl text-white/90">
+          Calcula tu plan y descarga tu PDF de cotización en segundos.
+        </p>
       </section>
 
-      <section className="px-6 py-16 md:py-20">
-        <div className="mx-auto w-full max-w-4xl rounded-3xl border border-[var(--adamia-blue)]/25 bg-white p-8 shadow-xl md:p-10">
-          <div className="text-center">
-            <h2 className="text-3xl font-black">Calcula tu inversion mensual</h2>
-            <p className="mt-2 text-[var(--adamia-text-secondary)]">
-              Ingresa el numero de colaboradores y te mostramos el rango ideal.
-            </p>
-          </div>
-          <form className="mx-auto mt-7 max-w-lg" onSubmit={handleCalculate}>
-            <label htmlFor="employees" className="mb-3 block text-center text-sm font-bold">
-              Cuantos empleados tienes?
-            </label>
-            <input
-              id="employees"
-              type="number"
-              min={1}
-              placeholder="25"
-              value={employeesInput}
-              onChange={(event) => setEmployeesInput(event.target.value)}
-              className="w-full rounded-2xl border-2 border-[var(--adamia-blue)]/35 px-6 py-5 text-center text-4xl font-black outline-none ring-[var(--adamia-blue)]/30 transition focus:ring-4"
-            />
-            <div className="mt-5 text-center">
+      <section className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-8 md:px-6">
+        <article className="rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-5 shadow-sm">
+          <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
+            <div>
+              <h2 className="text-xl font-black">¿Cuántos empleados tiene tu empresa?</h2>
+              <p className="text-sm text-[var(--adamia-text-secondary)]">Ajusta en incrementos de 5.</p>
+            </div>
+            <div className="flex items-center gap-3">
               <button
-                type="submit"
-                className="inline-flex rounded-xl bg-gradient-to-r from-[var(--adamia-blue)] to-[var(--adamia-purple)] px-8 py-3 font-bold text-white transition hover:opacity-90"
+                type="button"
+                onClick={() => handleEmployees(-5)}
+                className="h-12 w-12 rounded-lg bg-[var(--adamia-blue)] text-3xl font-bold text-white"
               >
-                Calcular
+                -
+              </button>
+              <input
+                type="number"
+                min={1}
+                value={empleados}
+                onChange={(event) => setEmpleados(Math.max(1, Number(event.target.value || 1)))}
+                className="h-12 w-28 rounded-lg border-2 border-[var(--adamia-blue)]/40 text-center text-2xl font-black"
+              />
+              <button
+                type="button"
+                onClick={() => handleEmployees(5)}
+                className="h-12 w-12 rounded-lg bg-[var(--adamia-blue)] text-3xl font-bold text-white"
+              >
+                +
               </button>
             </div>
+          </div>
+        </article>
 
-            {error ? <p className="mt-4 text-center text-sm font-semibold text-red-600">{error}</p> : null}
-
-            {calculated ? (
-              <div className="mt-6 rounded-2xl border border-[var(--adamia-blue)]/20 bg-[var(--adamia-bg-light)] p-6 text-center">
-                <p className="text-sm font-semibold text-[var(--adamia-text-secondary)]">
-                  {calculated.exact
-                    ? `Plan sugerido para ${calculated.employees} empleados`
-                    : `Cotizacion aproximada para ${calculated.employees} empleados`}
+        <article className="grid gap-4 md:grid-cols-3">
+          {planesCalculados.map((plan) => {
+            const active = plan.meses === planSeleccionado;
+            const planName = plan.meses === 1 ? "Mensual" : plan.meses === 6 ? "Semestral" : "Anual";
+            return (
+              <div
+                key={plan.meses}
+                className={`rounded-2xl border-2 p-5 shadow-sm transition ${active ? "border-[var(--adamia-blue)] bg-[var(--adamia-blue)]/5" : "border-slate-200 bg-white"
+                  }`}
+              >
+                <h3 className="text-2xl font-black">{planName}</h3>
+                <p className="mt-1 text-xs font-semibold uppercase text-[var(--adamia-text-secondary)]">
+                  {plan.descuentoPorcentaje}% de descuento
                 </p>
-                <h3 className="mt-2 text-2xl font-black text-[var(--adamia-blue)]">{calculated.plan.range}</h3>
-                {"sourceName" in calculated.plan && calculated.plan.sourceName ? (
-                  <p className="mt-1 text-xs text-[var(--adamia-text-secondary)]">
-                    Tipo de plan: {calculated.plan.sourceName}
-                  </p>
-                ) : null}
-                <p className="mt-3 text-sm text-[var(--adamia-text-secondary)]">Precio mensual estimado</p>
-                <p className="mt-1 text-4xl font-black text-[var(--adamia-purple)]">
-                  {calculated.plan.enterprise ? calculated.monthlyEstimateText : calculated.plan.monthly}
+                <p className="mt-4 text-sm text-[var(--adamia-text-secondary)]">Precio por mes</p>
+                <p className="text-3xl font-black text-[var(--adamia-blue)]">{formatCurrencyMXN(plan.precioPorMes)}</p>
+                <p className="mt-1 text-sm text-[var(--adamia-text-secondary)]">
+                  Total: <strong>{formatCurrencyMXN(plan.total)}</strong>
                 </p>
-                <p className="mt-2 text-sm text-[var(--adamia-text-secondary)]">
-                  Precio por empleado: {calculated.plan.perEmployee}
+                <p className="mt-1 text-xs text-[var(--adamia-text-secondary)]">
+                  {formatCurrencyMXN(plan.precioPorMes / plan.empleados)} por empleado
                 </p>
-                {!calculated.exact ? (
-                  <p className="mt-3 text-xs font-medium text-amber-700">
-                    Este monto usa el siguiente rango disponible para darte una referencia rapida.
-                  </p>
-                ) : null}
-                <Link
-                  href="/contratar-plan"
-                  className="mt-5 inline-flex rounded-xl bg-gradient-to-r from-[var(--adamia-blue)] to-[var(--adamia-purple)] px-7 py-3 text-sm font-black text-white transition hover:opacity-90"
+                <button
+                  type="button"
+                  onClick={() => setPlanSeleccionado(plan.meses)}
+                  className={`mt-4 w-full rounded-lg px-4 py-2 text-sm font-bold ${active
+                      ? "bg-[var(--adamia-blue)] text-white"
+                      : "bg-slate-100 text-[var(--adamia-text-primary)]"
+                    }`}
                 >
-                  Ir a contratar plan →
-                </Link>
+                  {active ? "Plan seleccionado" : `Seleccionar ${planName}`}
+                </button>
+              </div>
+            );
+          })}
+        </article>
+
+        <article className="rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-5 shadow-sm">
+          <h2 className="text-xl font-black">Completa tus datos para cotización PDF</h2>
+          <form onSubmit={handleSubmit} className="mt-4 grid gap-4 md:grid-cols-2">
+            <input
+              type="text"
+              placeholder="Nombre completo"
+              value={form.nombre}
+              onChange={(event) => updateField("nombre", event.target.value)}
+              className="rounded-lg border border-slate-300 px-3 py-2"
+            />
+            <input
+              type="text"
+              placeholder="Empresa"
+              value={form.empresa}
+              onChange={(event) => updateField("empresa", event.target.value)}
+              className="rounded-lg border border-slate-300 px-3 py-2"
+            />
+            <input
+              type="tel"
+              placeholder="Teléfono (10 dígitos)"
+              value={form.telefono}
+              onChange={(event) => updateField("telefono", event.target.value.replace(/\D/g, "").slice(0, 10))}
+              className="rounded-lg border border-slate-300 px-3 py-2"
+            />
+            <input
+              type="email"
+              placeholder="Correo electrónico"
+              value={form.correo}
+              onChange={(event) => updateField("correo", event.target.value)}
+              className="rounded-lg border border-slate-300 px-3 py-2"
+            />
+            <select
+              value={form.tipoContratacion}
+              onChange={(event) => updateField("tipoContratacion", event.target.value)}
+              className="rounded-lg border border-slate-300 px-3 py-2 md:col-span-2"
+            >
+              <option value="Normal">Tipo de contratación: Normal</option>
+              <option value="Prueba">Tipo de contratación: Prueba</option>
+            </select>
+
+            {seleccion ? (
+              <div className="rounded-xl bg-[var(--adamia-blue)] px-4 py-3 text-white md:col-span-2">
+                <p className="text-xs uppercase text-white/80">Resumen seleccionado</p>
+                <p className="text-lg font-black">
+                  {seleccion.meses === 1 ? "Mensual" : seleccion.meses === 6 ? "Semestral" : "Anual"} -{" "}
+                  {formatCurrencyMXN(seleccion.total)}
+                </p>
               </div>
             ) : null}
-          </form>
-          <p className="mt-4 text-center text-xs text-[var(--adamia-text-secondary)]">
-            {dbPlansLoaded && dbPlans.length
-              ? ""
-              : "Mostrando precios de referencia mientras se obtiene Tipo_Planes."}
-          </p>
-        </div>
-      </section>
 
-      {/* Seccion ancla para el submenu "Cotiza -> Precios" */}
-      <section id="precios" className="px-6 pb-16">
-        <div className="mx-auto w-full max-w-7xl">
-          <div className="mb-8 text-center">
-            <span className="inline-flex rounded-full bg-[var(--adamia-blue)]/10 px-4 py-2 text-xs font-bold text-[var(--adamia-blue)]">
-              TODOS NUESTROS PLANES
-            </span>
-            <h2 className="mt-4 text-4xl font-black">Elige el plan perfecto para tu empresa</h2>
-            <p className="mt-2 text-[var(--adamia-text-secondary)]">
-              Todos los planes incluyen las mismas funcionalidades, sin restricciones.
+            <button
+              type="submit"
+              disabled={loading || !planesCalculados.length}
+              className="rounded-lg bg-emerald-600 px-4 py-3 font-bold text-white disabled:opacity-60 md:col-span-2"
+            >
+              {loading ? "Generando PDF..." : "Descargar cotización PDF"}
+            </button>
+          </form>
+          {mensaje ? (
+            <p className="mt-3 text-sm font-semibold text-[var(--adamia-text-secondary)]">{mensaje}</p>
+          ) : null}
+        </article>
+
+        <section className="rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-6 shadow-sm">
+          <div className="text-center">
+            <h2 className="text-3xl font-black text-[var(--adamia-text-primary)]">Todo lo que incluye tu plan ADAMIA</h2>
+            <p className="mt-2 text-sm text-[var(--adamia-text-secondary)]">
+              Funcionalidades clave para operar RRHH con orden, visibilidad y control.
             </p>
           </div>
-
-          <div className="overflow-hidden rounded-3xl border border-[var(--adamia-blue)]/15 bg-white shadow-lg">
-            <div className="overflow-x-auto">
-              <table className="min-w-[980px] w-full">
-                <thead className="bg-gradient-to-r from-[var(--adamia-blue)] to-[var(--adamia-purple)] text-white">
-                  <tr>
-                    <th className="px-5 py-4 text-left text-sm font-bold">Rango de empleados</th>
-                    <th className="px-5 py-4 text-center text-sm font-bold">Precio mensual</th>
-                    <th className="px-5 py-4 text-center text-sm font-bold">Precio por empleado</th>
-                    <th className="px-5 py-4 text-center text-sm font-bold">Ahorro anual (-10%)</th>
-                    <th className="px-5 py-4 text-center text-sm font-bold">Accion</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pricingRanges.map((row) => (
-                    <tr
-                      key={row.range}
-                      className={`border-b border-slate-100 ${row.popular ? "bg-[var(--adamia-blue)]/5" : "bg-white"}`}
-                    >
-                      <td className="px-5 py-4 text-sm font-bold">
-                        <div className="flex items-center gap-2">
-                          <span>{row.range}</span>
-                          {row.popular ? (
-                            <span className="rounded-full bg-orange-500 px-2 py-1 text-[10px] font-black text-white">
-                              POPULAR
-                            </span>
-                          ) : null}
-                          {row.enterprise ? (
-                            <span className="rounded-full bg-emerald-600 px-2 py-1 text-[10px] font-black text-white">
-                              EMPRESARIAL
-                            </span>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 text-center text-2xl font-black text-[var(--adamia-blue)]">
-                        {row.monthly}
-                      </td>
-                      <td className="px-5 py-4 text-center text-sm text-[var(--adamia-text-secondary)]">
-                        {row.perEmployee}
-                      </td>
-                      <td className="px-5 py-4 text-center text-sm font-bold text-emerald-600">
-                        {row.annual}
-                      </td>
-                      <td className="px-5 py-4 text-center">
-                        {row.enterprise ? (
-                          <a
-                            href="mailto:soporte@adamia.mx"
-                            className="inline-flex rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white"
-                          >
-                            Contactar
-                          </a>
-                        ) : (
-                          <Link
-                            href="/contratar-plan"
-                            className="inline-flex rounded-lg bg-[var(--adamia-blue)] px-4 py-2 text-xs font-bold text-white"
-                          >
-                            Contratar
-                          </Link>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Beneficios incluidos en todos los planes */}
-      <section className="px-6 pb-16">
-        <div className="mx-auto w-full max-w-7xl rounded-3xl border border-[var(--adamia-blue)]/10 bg-white p-8 md:p-10">
-          <h2 className="text-center text-3xl font-black md:text-4xl">Cada plan incluye</h2>
-          <p className="mt-2 text-center text-[var(--adamia-text-secondary)]">
-            Sin costos ocultos y con soporte para crecer contigo.
-          </p>
-          <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {includedItems.map((item) => (
+          <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {beneficios.map((item, idx) => (
               <article
-                key={item}
-                className="rounded-xl border border-[var(--adamia-blue)]/10 bg-[var(--adamia-bg-light)] p-4"
+                key={item.title}
+                className={`rounded-xl border p-4 ${idx % 3 === 0
+                    ? "border-emerald-200 bg-emerald-50/50"
+                    : idx % 3 === 1
+                      ? "border-sky-200 bg-sky-50/50"
+                      : "border-violet-200 bg-violet-50/50"
+                  }`}
               >
-                <div className="flex items-start gap-3">
-                  <span className="mt-1 inline-block h-2.5 w-2.5 rounded-full bg-[var(--adamia-blue)]" />
-                  <p className="text-sm font-medium">{item}</p>
-                </div>
+                <div className="text-2xl">{item.icon}</div>
+                <h3 className="mt-2 text-base font-black">{item.title}</h3>
+                <p className="mt-1 text-sm text-[var(--adamia-text-secondary)]">{item.text}</p>
               </article>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="px-6 pb-16">
-        <div className="mx-auto w-full max-w-4xl rounded-3xl border border-[var(--adamia-blue)]/10 bg-white p-8 md:p-10">
-          <h2 className="text-center text-3xl font-black">Preguntas frecuentes sobre precios</h2>
-          <div className="mt-7 space-y-4">
+        <section className="grid gap-4 md:grid-cols-3">
+          {garantias.map((item) => (
+            <article
+              key={item.title}
+              className="rounded-2xl border border-[var(--adamia-blue)]/15 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm"
+            >
+              <div className="mb-2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-600 text-lg font-bold text-white">
+                {item.icon}
+              </div>
+              <h3 className="text-lg font-black">{item.title}</h3>
+              <p className="mt-1 text-sm text-[var(--adamia-text-secondary)]">{item.text}</p>
+            </article>
+          ))}
+        </section>
+
+        <section className="rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-6 shadow-sm">
+          <h2 className="text-2xl font-black">Preguntas frecuentes</h2>
+          <div className="mt-4 grid gap-3">
             {faqs.map((faq) => (
-              <article key={faq.q} className="rounded-2xl bg-[var(--adamia-bg-light)] p-5">
+              <article key={faq.q} className="rounded-xl bg-slate-50 p-4">
                 <h3 className="font-bold">{faq.q}</h3>
-                <p className="mt-2 text-sm text-[var(--adamia-text-secondary)]">{faq.a}</p>
+                <p className="mt-1 text-sm text-[var(--adamia-text-secondary)]">{faq.a}</p>
               </article>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] px-6 py-20 text-white">
-        <div className="mx-auto w-full max-w-5xl text-center">
-          <h2 className="text-4xl font-black md:text-5xl">Comienza tu prueba gratuita hoy</h2>
-          <p className="mx-auto mt-4 max-w-3xl text-white/90">
-            Sin tarjeta de credito, sin compromiso y con setup rapido.
+        <section className="rounded-2xl bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] p-8 text-center text-white shadow-sm">
+          <h2 className="text-3xl font-black">¿Listo para activar ADAMIA en tu empresa?</h2>
+          <p className="mx-auto mt-2 max-w-3xl text-white/90">
+            Recibe tu cotización en PDF, compártela internamente y avanza con una implementación guiada.
           </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-            <Link
-              href="/contratar-plan"
-              className="inline-flex rounded-xl bg-white px-8 py-3 text-sm font-black text-[var(--adamia-blue)]"
-            >
-              Comenzar prueba gratis →
-            </Link>
-            <Link
-              href="/quienes-somos"
-              className="inline-flex rounded-xl border border-white/40 bg-white/10 px-8 py-3 text-sm font-black text-white"
-            >
-              Hablar con ventas
-            </Link>
-          </div>
-        </div>
+          <p className="mt-4 text-sm text-white/85">
+            Sitio web: <span className="font-bold">www.adamia.mx</span> · Correo: <span className="font-bold">soporte@adamia.mx</span>
+          </p>
+        </section>
       </section>
     </main>
   );

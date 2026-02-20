@@ -42,12 +42,6 @@ export default function Navbar() {
     { href: "/funcionalidades/colaboradores", label: "Colaboradores" },
     { href: "/funcionalidades/contratos", label: "Contratos" },
   ];
-  const cotizaLinks = [
-    {
-      href: "/cotiza",
-      label: "Precios",
-    },
-  ];
   const sobreNosotrosLinks = [
     { href: "/quienes-somos", label: "Sobre nosotros" },
     { href: "/contacto", label: "Contacto" },
@@ -147,33 +141,15 @@ export default function Navbar() {
               </NavigationMenuItem>
 
             <NavigationMenuItem>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
+              <Link
+                href="/cotiza"
                 className={twMerge(
                   navigationMenuTriggerStyle(),
-                      pathname?.startsWith("/cotiza") && "font-medium"
+                  pathname?.startsWith("/cotiza") && "font-medium"
                 )}
               >
-                    Cotiza
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-64">
-                  {cotizaLinks.map((item) => (
-                    <DropdownMenuItem key={item.label} asChild className="cursor-pointer">
-                      {item.external ? (
-                        <a href={item.href} target="_blank" rel="noreferrer" className="w-full">
-                          {item.label}
-                        </a>
-                      ) : (
-                        <Link href={item.href} className="w-full">
-                          {item.label}
+                Cotiza
               </Link>
-                      )}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
             </NavigationMenuItem>
             <NavigationMenuItem>
               <Link
