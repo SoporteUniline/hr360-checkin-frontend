@@ -10,13 +10,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useSearchParams } from "next/navigation";
 
 function getPlanId(row) {
   return row?.id ?? row?.id_tipo_plan ?? row?.tipo_plan_id ?? null;
 }
 
 function getLabelFromRow(row, fallback) {
-  return row?.nombre || row?.descripcion || row?.titulo || row?.plan || row?.tipo || fallback;
+  return (
+    row?.nombre ||
+    row?.descripcion ||
+    row?.titulo ||
+    row?.plan ||
+    row?.tipo ||
+    fallback
+  );
 }
 
 function parseFlexibleNumber(value) {
@@ -29,13 +37,21 @@ function parseFlexibleNumber(value) {
     const n = Number.parseFloat(normalized);
     return Number.isFinite(n) ? n : null;
   }
-  const normalized = cleaned.includes(",") && !cleaned.includes(".") ? cleaned.replace(",", ".") : cleaned;
+  const normalized =
+    cleaned.includes(",") && !cleaned.includes(".")
+      ? cleaned.replace(",", ".")
+      : cleaned;
   const n = Number.parseFloat(normalized);
   return Number.isFinite(n) ? n : null;
 }
 
 function getPriceFromPlan(row, months, employees) {
-  const monthlyCandidates = [row?.precio_mensual, row?.precio, row?.costo_mensual, row?.monto_mensual];
+  const monthlyCandidates = [
+    row?.precio_mensual,
+    row?.precio,
+    row?.costo_mensual,
+    row?.monto_mensual,
+  ];
   for (const value of monthlyCandidates) {
     const n = parseFlexibleNumber(value);
     if (Number.isFinite(n) && n > 0) return n;
@@ -43,18 +59,37 @@ function getPriceFromPlan(row, months, employees) {
 
   const byMonths = {
     1: [row?.precio_1_mes, row?.precio_1mes, row?.monto_1_mes, row?.mes_1],
-    6: [row?.precio_6_meses, row?.precio_6meses, row?.monto_6_meses, row?.mes_6],
-    12: [row?.precio_12_meses, row?.precio_12meses, row?.monto_12_meses, row?.mes_12],
+    6: [
+      row?.precio_6_meses,
+      row?.precio_6meses,
+      row?.monto_6_meses,
+      row?.mes_6,
+    ],
+    12: [
+      row?.precio_12_meses,
+      row?.precio_12meses,
+      row?.monto_12_meses,
+      row?.mes_12,
+    ],
   };
   for (const value of byMonths[months] || []) {
     const n = parseFlexibleNumber(value);
     if (Number.isFinite(n) && n > 0) return n;
   }
 
-  const unit = row?.precio_por_empleado ?? row?.costo_por_empleado ?? row?.precio_unitario ?? null;
+  const unit =
+    row?.precio_por_empleado ??
+    row?.costo_por_empleado ??
+    row?.precio_unitario ??
+    null;
   const unitNum = parseFlexibleNumber(unit);
   const employeesNum = Number(employees);
-  if (Number.isFinite(unitNum) && unitNum > 0 && Number.isFinite(employeesNum) && employeesNum > 0) {
+  if (
+    Number.isFinite(unitNum) &&
+    unitNum > 0 &&
+    Number.isFinite(employeesNum) &&
+    employeesNum > 0
+  ) {
     return unitNum * employeesNum;
   }
 
@@ -62,7 +97,9 @@ function getPriceFromPlan(row, months, employees) {
     const keyLc = key.toLowerCase();
     const looksLikePrice =
       /(precio|costo|monto|mensual|tarifa)/.test(keyLc) &&
-      !/(id|descuento|porcentaje|max|min|usuarios|empleados|meses|anio|año)/.test(keyLc);
+      !/(id|descuento|porcentaje|max|min|usuarios|empleados|meses|anio|año)/.test(
+        keyLc,
+      );
     if (!looksLikePrice) continue;
     const n = parseFlexibleNumber(rawValue);
     if (Number.isFinite(n) && n > 0) return n;
@@ -72,7 +109,12 @@ function getPriceFromPlan(row, months, employees) {
 }
 
 function getMaxUsersFromPlan(row) {
-  const candidates = [row?.usuarios_max, row?.empleados_max, row?.max_usuarios, row?.empleados];
+  const candidates = [
+    row?.usuarios_max,
+    row?.empleados_max,
+    row?.max_usuarios,
+    row?.empleados,
+  ];
   for (const value of candidates) {
     const n = Number(value);
     if (Number.isFinite(n) && n > 0) return n;
@@ -81,22 +123,30 @@ function getMaxUsersFromPlan(row) {
 }
 
 function formatCurrencyMXN(value) {
-  return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(value);
+  return new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: "MXN",
+  }).format(value);
 }
 
 function getPlanEmployeesRange(row, allPlans) {
   const currentMax = getMaxUsersFromPlan(row);
   if (!Number.isFinite(currentMax)) return "Plan sin límite definido";
 
-  const sorted = [...allPlans].sort((a, b) => getMaxUsersFromPlan(a) - getMaxUsersFromPlan(b));
-  const currentIndex = sorted.findIndex((plan) => Number(getPlanId(plan)) === Number(getPlanId(row)));
+  const sorted = [...allPlans].sort(
+    (a, b) => getMaxUsersFromPlan(a) - getMaxUsersFromPlan(b),
+  );
+  const currentIndex = sorted.findIndex(
+    (plan) => Number(getPlanId(plan)) === Number(getPlanId(row)),
+  );
   if (currentIndex === -1) return `Hasta ${currentMax} empleados`;
 
   const prev = sorted[currentIndex - 1];
   const prevMax = prev ? getMaxUsersFromPlan(prev) : 0;
   const min = prevMax + 1;
 
-  if (currentMax >= 99999 || currentMax === Number.POSITIVE_INFINITY) return `${min}+ empleados`;
+  if (currentMax >= 99999 || currentMax === Number.POSITIVE_INFINITY)
+    return `${min}+ empleados`;
   if (min === currentMax) return `${min} empleado${min > 1 ? "s" : ""}`;
   return `${min} - ${currentMax} empleados`;
 }
@@ -119,7 +169,10 @@ export default function ContratarPlanPage() {
     confirmar_contrasenia: "",
   };
 
-  const [catalogos, setCatalogos] = useState({ tipo_planes: [], metodos_pago: [] });
+  const [catalogos, setCatalogos] = useState({
+    tipo_planes: [],
+    metodos_pago: [],
+  });
   const [loadingCatalogos, setLoadingCatalogos] = useState(true);
   const [errorCatalogos, setErrorCatalogos] = useState("");
 
@@ -135,6 +188,23 @@ export default function ContratarPlanPage() {
     esPrueba: false,
     fechaFin: "",
   });
+
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const status = searchParams.get("status");
+    const contrato = searchParams.get("contrato");
+
+    if (status === "success") {
+      setSubmitSuccess(
+        `¡Pago procesado con éxito para el folio ${contrato}! En unos minutos tu cuenta estará activa.`,
+      );
+    } else if (status === "cancelled") {
+      setSubmitError(
+        "El pago fue cancelado. Tu registro está guardado pero el plan no se ha activado.",
+      );
+    }
+  }, [searchParams]);
 
   const [form, setForm] = useState(initialForm);
 
@@ -152,7 +222,9 @@ export default function ContratarPlanPage() {
         });
       } catch (_error) {
         if (!mounted) return;
-        setErrorCatalogos("No fue posible cargar los catálogos. Intenta nuevamente.");
+        setErrorCatalogos(
+          "No fue posible cargar los catálogos. Intenta nuevamente.",
+        );
       } finally {
         if (mounted) setLoadingCatalogos(false);
       }
@@ -166,13 +238,19 @@ export default function ContratarPlanPage() {
 
   useEffect(() => {
     const employees = Number(form.empleados);
-    if (!Number.isFinite(employees) || employees < 1 || !catalogos.tipo_planes.length) return;
+    if (
+      !Number.isFinite(employees) ||
+      employees < 1 ||
+      !catalogos.tipo_planes.length
+    )
+      return;
 
     const sorted = [...catalogos.tipo_planes].sort(
-      (a, b) => getMaxUsersFromPlan(a) - getMaxUsersFromPlan(b)
+      (a, b) => getMaxUsersFromPlan(a) - getMaxUsersFromPlan(b),
     );
     const matched =
-      sorted.find((plan) => employees <= getMaxUsersFromPlan(plan)) || sorted[sorted.length - 1];
+      sorted.find((plan) => employees <= getMaxUsersFromPlan(plan)) ||
+      sorted[sorted.length - 1];
     const matchedId = getPlanId(matched);
     if (matchedId !== null && String(form.tipo_plan_id) !== String(matchedId)) {
       setForm((prev) => ({ ...prev, tipo_plan_id: String(matchedId) }));
@@ -181,8 +259,10 @@ export default function ContratarPlanPage() {
 
   const selectedPlan = useMemo(
     () =>
-      catalogos.tipo_planes.find((plan) => Number(getPlanId(plan)) === Number(form.tipo_plan_id)) || null,
-    [catalogos.tipo_planes, form.tipo_plan_id]
+      catalogos.tipo_planes.find(
+        (plan) => Number(getPlanId(plan)) === Number(form.tipo_plan_id),
+      ) || null,
+    [catalogos.tipo_planes, form.tipo_plan_id],
   );
 
   const estimado = useMemo(() => {
@@ -202,7 +282,7 @@ export default function ContratarPlanPage() {
       { months: 6, title: "Semestral", badge: "Más popular", discount: 5 },
       { months: 12, title: "Anual", badge: "Mejor ahorro", discount: 10 },
     ],
-    []
+    [],
   );
 
   const onChange = (event) => {
@@ -267,7 +347,9 @@ export default function ContratarPlanPage() {
       return;
     }
     if (!form.tipo_plan_id) {
-      setSubmitError("No fue posible inferir el plan. Ajusta el número de empleados.");
+      setSubmitError(
+        "No fue posible inferir el plan. Ajusta el número de empleados.",
+      );
       return;
     }
 
@@ -282,21 +364,29 @@ export default function ContratarPlanPage() {
         empleados: Number(form.empleados),
         tipo_plan_id: Number(form.tipo_plan_id),
         meses_contratados: Number(form.meses_contratados),
-        metodo_pago_id: form.metodo_pago_id ? Number(form.metodo_pago_id) : null,
+        metodo_pago_id: form.metodo_pago_id
+          ? Number(form.metodo_pago_id)
+          : null,
         precio_por_mes: estimado?.monthly ?? null,
       };
-      const response = await axios.post("/checador/contrataciones/publica", payload);
-      const folio = response?.data?.data?.contrato_id ?? "";
-      const esPrueba = response?.data?.data?.demo === "Si";
-      const fechaFinPrueba = response?.data?.data?.fecha_fin ?? "";
-      setSubmitSuccess(
-        esPrueba
-          ? `¡Registro exitoso! Folio ${folio}. Tu prueba de 7 días está activa hasta ${fechaFinPrueba}.`
-          : `¡Listo! Tu contratación fue registrada con folio ${folio}.`
+      const response = await axios.post(
+        "/checador/contrataciones/publica",
+        payload,
       );
-      if (response?.data?.data?.enlace_pago_stripe) {
-        setStripeLink(response.data.data.enlace_pago_stripe);
+      const data = response?.data?.data;
+      const folio = data?.contrato_id ?? "";
+      const esPrueba = data?.demo === "Si";
+      const fechaFinPrueba = data?.fecha_fin ?? "";
+      const stripeUrl = data?.enlace_pago_stripe;
+
+      if (!esPrueba && stripeUrl) {
+        window.location.href = stripeUrl;
+        return;
       }
+
+      setSubmitSuccess(
+        `¡Registro exitoso! Folio ${folio}. Tu prueba de 7 días está activa.`,
+      );
       setSuccessModalData({
         folio,
         correo: credentialsToShow.correo,
@@ -307,7 +397,10 @@ export default function ContratarPlanPage() {
       setSuccessModalOpen(true);
       setForm(initialForm);
     } catch (error) {
-      setSubmitError(error?.response?.data?.message || "No fue posible registrar la contratación.");
+      setSubmitError(
+        error?.response?.data?.message ||
+          "No fue posible registrar la contratación.",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -341,7 +434,8 @@ export default function ContratarPlanPage() {
             </p>
             {successModalData.esPrueba ? (
               <p className="rounded-lg bg-[var(--adamia-blue)]/10 px-3 py-2 font-semibold text-[var(--adamia-blue)]">
-                Tu prueba de 7 días está activa hasta {successModalData.fechaFin}.
+                Tu prueba de 7 días está activa hasta{" "}
+                {successModalData.fechaFin}.
               </p>
             ) : null}
           </div>
@@ -360,9 +454,12 @@ export default function ContratarPlanPage() {
 
       <section className="bg-gradient-to-r from-[var(--adamia-blue)] to-[var(--adamia-purple)] px-6 py-12 text-center text-white">
         <div className="mx-auto max-w-5xl">
-          <h1 className="text-3xl font-black md:text-5xl">Activa ADAMIA para tu empresa</h1>
+          <h1 className="text-3xl font-black md:text-5xl">
+            Activa ADAMIA para tu empresa
+          </h1>
           <p className="mx-auto mt-3 max-w-3xl text-sm text-white/90 md:text-base">
-            Selecciona el tamaño de tu equipo, elige modalidad y registra tu contratación.
+            Selecciona el tamaño de tu equipo, elige modalidad y registra tu
+            contratación.
           </p>
         </div>
       </section>
@@ -371,7 +468,9 @@ export default function ContratarPlanPage() {
         <div className="rounded-2xl border border-[var(--adamia-blue)]/15 bg-white p-4 shadow-sm md:p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h2 className="text-lg font-black md:text-xl">¿Cuántos empleados tiene tu empresa?</h2>
+              <h2 className="text-lg font-black md:text-xl">
+                ¿Cuántos empleados tiene tu empresa?
+              </h2>
               <p className="text-sm text-[var(--adamia-text-secondary)]">
                 El plan se asigna automáticamente por rango de empleados.
               </p>
@@ -405,7 +504,11 @@ export default function ContratarPlanPage() {
 
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           {planCards.map((card) => {
-            const monthly = getPriceFromPlan(selectedPlan, card.months, Number(form.empleados));
+            const monthly = getPriceFromPlan(
+              selectedPlan,
+              card.months,
+              Number(form.empleados),
+            );
             const subtotal = (monthly || 0) * card.months;
             const total = subtotal - subtotal * (card.discount / 100);
             const active = Number(form.meses_contratados) === card.months;
@@ -413,7 +516,9 @@ export default function ContratarPlanPage() {
               <article
                 key={card.months}
                 className={`rounded-2xl border bg-white p-5 shadow-sm transition ${
-                  active ? "border-[var(--adamia-blue)] ring-2 ring-[var(--adamia-blue)]/20" : "border-slate-200"
+                  active
+                    ? "border-[var(--adamia-blue)] ring-2 ring-[var(--adamia-blue)]/20"
+                    : "border-slate-200"
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -424,7 +529,9 @@ export default function ContratarPlanPage() {
                 </div>
                 <p className="mt-4 text-3xl font-black text-[var(--adamia-blue)]">
                   {monthly ? formatCurrencyMXN(monthly) : "—"}
-                  <span className="text-sm font-semibold text-[var(--adamia-text-secondary)]">/mes</span>
+                  <span className="text-sm font-semibold text-[var(--adamia-text-secondary)]">
+                    /mes
+                  </span>
                 </p>
                 <p className="mt-1 text-sm text-[var(--adamia-text-secondary)]">
                   Total {card.months} {card.months === 1 ? "mes" : "meses"}:{" "}
@@ -447,18 +554,50 @@ export default function ContratarPlanPage() {
         </div>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[1.25fr_0.75fr]">
-          <form onSubmit={onSubmit} className="rounded-2xl border border-[var(--adamia-blue)]/15 bg-white p-5 shadow-sm md:p-7">
+          <form
+            onSubmit={onSubmit}
+            className="rounded-2xl border border-[var(--adamia-blue)]/15 bg-white p-5 shadow-sm md:p-7"
+          >
             <h2 className="text-2xl font-black">Completa tus datos</h2>
             <p className="mt-1 text-sm text-[var(--adamia-text-secondary)]">
               Registro directo en la tabla <strong>Contrataciones</strong>.
             </p>
 
             <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <Field label="Nombre completo" name="nombre_cliente" value={form.nombre_cliente} onChange={onChange} required />
-              <Field label="Empresa / razón social" name="direccion_cliente" value={form.direccion_cliente} onChange={onChange} />
-              <Field label="Teléfono" name="telefono" value={form.telefono} onChange={onChange} required />
-              <Field label="Correo electrónico" name="correo" type="email" value={form.correo} onChange={onChange} required />
-              <Field label="RFC" name="rfc" value={form.rfc} onChange={onChange} />
+              <Field
+                label="Nombre completo"
+                name="nombre_cliente"
+                value={form.nombre_cliente}
+                onChange={onChange}
+                required
+              />
+              <Field
+                label="Empresa / razón social"
+                name="direccion_cliente"
+                value={form.direccion_cliente}
+                onChange={onChange}
+              />
+              <Field
+                label="Teléfono"
+                name="telefono"
+                value={form.telefono}
+                onChange={onChange}
+                required
+              />
+              <Field
+                label="Correo electrónico"
+                name="correo"
+                type="email"
+                value={form.correo}
+                onChange={onChange}
+                required
+              />
+              <Field
+                label="RFC"
+                name="rfc"
+                value={form.rfc}
+                onChange={onChange}
+              />
               <Field
                 label="Contraseña de acceso"
                 name="contrasenia"
@@ -476,7 +615,9 @@ export default function ContratarPlanPage() {
                 required
               />
               <div>
-                <label className="mb-2 block text-sm font-semibold">Tipo de contratación</label>
+                <label className="mb-2 block text-sm font-semibold">
+                  Tipo de contratación
+                </label>
                 <select
                   name="tipo_contratacion"
                   value={form.tipo_contratacion}
@@ -488,7 +629,9 @@ export default function ContratarPlanPage() {
                 </select>
               </div>
               <div>
-                <label className="mb-2 block text-sm font-semibold">Método de pago</label>
+                <label className="mb-2 block text-sm font-semibold">
+                  Método de pago
+                </label>
                 <select
                   name="metodo_pago_id"
                   value={form.metodo_pago_id}
@@ -505,10 +648,13 @@ export default function ContratarPlanPage() {
                 </select>
               </div>
               <div className="md:col-span-2 rounded-lg bg-[var(--adamia-bg-light)] px-3 py-2 text-xs text-[var(--adamia-text-secondary)]">
-                Esta contraseña será la que use el cliente para iniciar sesión en ADAMIA.
+                Esta contraseña será la que use el cliente para iniciar sesión
+                en ADAMIA.
               </div>
               <div className="md:col-span-2">
-                <label className="mb-2 block text-sm font-semibold">Notas</label>
+                <label className="mb-2 block text-sm font-semibold">
+                  Notas
+                </label>
                 <textarea
                   name="notas"
                   value={form.notas}
@@ -520,8 +666,16 @@ export default function ContratarPlanPage() {
               </div>
             </div>
 
-            {submitError ? <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{submitError}</p> : null}
-            {submitSuccess ? <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">{submitSuccess}</p> : null}
+            {submitError ? (
+              <p className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">
+                {submitError}
+              </p>
+            ) : null}
+            {submitSuccess ? (
+              <p className="mt-4 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
+                {submitSuccess}
+              </p>
+            ) : null}
 
             {stripeLink ? (
               <a
@@ -553,12 +707,18 @@ export default function ContratarPlanPage() {
 
           <aside className="space-y-5">
             <article className="rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-5 shadow-sm">
-              <p className="text-xs font-bold uppercase tracking-wide text-[var(--adamia-blue)]">Plan automático</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-[var(--adamia-blue)]">
+                Plan automático
+              </p>
               <h3 className="mt-1 text-xl font-black">
-                {selectedPlan ? getLabelFromRow(selectedPlan, "Plan seleccionado") : "Selecciona empleados"}
+                {selectedPlan
+                  ? getLabelFromRow(selectedPlan, "Plan seleccionado")
+                  : "Selecciona empleados"}
               </h3>
               <p className="mt-2 text-sm text-[var(--adamia-text-secondary)]">
-                {selectedPlan ? getPlanEmployeesRange(selectedPlan, catalogos.tipo_planes) : "Sin rango disponible"}
+                {selectedPlan
+                  ? getPlanEmployeesRange(selectedPlan, catalogos.tipo_planes)
+                  : "Sin rango disponible"}
               </p>
             </article>
 
@@ -566,10 +726,23 @@ export default function ContratarPlanPage() {
               <h3 className="text-xl font-black">Resumen estimado</h3>
               {estimado ? (
                 <div className="mt-3 space-y-2 text-sm">
-                  <SummaryRow label="Precio mensual" value={formatCurrencyMXN(estimado.monthly)} />
-                  <SummaryRow label="Subtotal" value={formatCurrencyMXN(estimado.subtotal)} />
-                  <SummaryRow label="Descuento" value={`${estimado.descuento}%`} />
-                  <SummaryRow label="Total" value={formatCurrencyMXN(estimado.total)} highlight />
+                  <SummaryRow
+                    label="Precio mensual"
+                    value={formatCurrencyMXN(estimado.monthly)}
+                  />
+                  <SummaryRow
+                    label="Subtotal"
+                    value={formatCurrencyMXN(estimado.subtotal)}
+                  />
+                  <SummaryRow
+                    label="Descuento"
+                    value={`${estimado.descuento}%`}
+                  />
+                  <SummaryRow
+                    label="Total"
+                    value={formatCurrencyMXN(estimado.total)}
+                    highlight
+                  />
                 </div>
               ) : (
                 <p className="mt-2 text-sm text-[var(--adamia-text-secondary)]">
@@ -619,9 +792,15 @@ function Field({ label, ...props }) {
 
 function SummaryRow({ label, value, highlight = false }) {
   return (
-    <div className={`flex items-center justify-between rounded-lg px-3 py-2 ${highlight ? "bg-[var(--adamia-blue)]/10" : "bg-[var(--adamia-bg-light)]"}`}>
+    <div
+      className={`flex items-center justify-between rounded-lg px-3 py-2 ${
+        highlight ? "bg-[var(--adamia-blue)]/10" : "bg-[var(--adamia-bg-light)]"
+      }`}
+    >
       <span>{label}</span>
-      <strong className={highlight ? "text-[var(--adamia-blue)]" : ""}>{value}</strong>
+      <strong className={highlight ? "text-[var(--adamia-blue)]" : ""}>
+        {value}
+      </strong>
     </div>
   );
 }
