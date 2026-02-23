@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import axios from "@/lib/axios";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 function formatCurrencyMXN(value) {
   return new Intl.NumberFormat("es-MX", {
@@ -175,7 +176,7 @@ export default function CotizaPage() {
   const [descuentos, setDescuentos] = useState({ 1: 0, 6: 10, 12: 20 });
   const [empleados, setEmpleados] = useState(15);
   const [loading, setLoading] = useState(false);
-  const [mensaje, setMensaje] = useState("");
+  const [alertaModal, setAlertaModal] = useState({ open: false, title: "", description: "", variant: "info" });
   const [planSeleccionado, setPlanSeleccionado] = useState(6);
   const [form, setForm] = useState({
     nombre: "",
@@ -230,6 +231,15 @@ export default function CotizaPage() {
     setForm((prev) => ({ ...prev, [key]: value }));
   };
 
+  const showAlert = ({ title, description, variant = "info" }) => {
+    setAlertaModal({
+      open: true,
+      title,
+      description,
+      variant,
+    });
+  };
+
   const validate = () => {
     if (!form.nombre.trim() || !form.empresa.trim() || !form.telefono.trim() || !form.correo.trim()) {
       return "Todos los campos son obligatorios.";
@@ -250,16 +260,24 @@ export default function CotizaPage() {
     event.preventDefault();
     const error = validate();
     if (error) {
-      setMensaje(error);
+      showAlert({
+        title: "Datos incompletos",
+        description: error,
+        variant: "error",
+      });
       return;
     }
 
     try {
       setLoading(true);
-      setMensaje("");
       const { jsPDF } = await import("jspdf");
       const doc = new jsPDF({ unit: "mm", format: "letter" });
       const planNombre = seleccion.meses === 1 ? "Mensual" : seleccion.meses === 6 ? "Semestral" : "Anual";
+      const planSeleccionadoData = planes.find((plan) => plan.id === seleccion.tipoPlanId) ?? null;
+      const rangoEmpleados =
+        planSeleccionadoData && (planSeleccionadoData.min !== null || planSeleccionadoData.max !== null)
+          ? `${planSeleccionadoData.min ?? 1} - ${planSeleccionadoData.max ?? "en adelante"} empleados`
+          : null;
       const fecha = new Date().toLocaleDateString("es-MX", {
         year: "numeric",
         month: "long",
@@ -402,11 +420,49 @@ export default function CotizaPage() {
       doc.text(`ADAMIA by Uniline - ${new Date().getFullYear()}`, right, 276, { align: "right" });
 
       const fileName = `Cotizacion_ADAMIA_${form.empresa.replace(/\s+/g, "_")}_${planNombre}.pdf`;
+      const pdfDataUri = doc.output("datauristring");
+      const pdfBase64 = (pdfDataUri.split(",")[1] || "").trim();
       doc.save(fileName);
-      setMensaje("PDF generado correctamente.");
+      try {
+        await axios.post("/checador/contrataciones/cotizacion", {
+          nombre_cliente: form.nombre.trim(),
+          correo: form.correo.trim(),
+          telefono: form.telefono.trim(),
+          empresa_nombre: form.empresa.trim(),
+          tipo_contratacion: form.tipoContratacion,
+          plan_nombre: planNombre,
+          empleados: Number(seleccion.empleados),
+          rango_empleados: rangoEmpleados,
+          meses_contratados: Number(seleccion.meses),
+          precio_mensual: Number(seleccion.precioPorMes.toFixed(2)),
+          descuento_porcentaje: Number(seleccion.descuentoPorcentaje || 0),
+          monto_total: Number(seleccion.total.toFixed(2)),
+          pdf_base64: pdfBase64,
+          pdf_filename: fileName,
+        });
+        showAlert({
+          title: "Cotización lista",
+          description:
+            "Tu cotización se descargó localmente y también fue enviada al correo capturado en el formulario.",
+          variant: "success",
+        });
+      } catch (mailError) {
+        const backendMessage = mailError?.response?.data?.message;
+        showAlert({
+          title: "PDF descargado",
+          description: backendMessage
+            ? `Tu cotización se descargó localmente, pero no se pudo enviar al correo: ${backendMessage}`
+            : "Tu cotización se descargó localmente, pero no se pudo enviar al correo.",
+          variant: "warning",
+        });
+      }
     } catch (error) {
       console.error(error);
-      setMensaje("No se pudo generar el PDF.");
+      showAlert({
+        title: "Error al generar cotización",
+        description: "No se pudo generar la cotización en PDF.",
+        variant: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -546,12 +602,9 @@ export default function CotizaPage() {
               disabled={loading || !planesCalculados.length}
               className="rounded-lg bg-emerald-600 px-4 py-3 font-bold text-white disabled:opacity-60 md:col-span-2"
             >
-              {loading ? "Generando PDF..." : "Descargar cotización PDF"}
+              {loading ? "Generando y enviando..." : "Descargar cotización PDF"}
             </button>
           </form>
-          {mensaje ? (
-            <p className="mt-3 text-sm font-semibold text-[var(--adamia-text-secondary)]">{mensaje}</p>
-          ) : null}
         </article>
 
         <section className="rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-6 shadow-sm">
@@ -617,6 +670,39 @@ export default function CotizaPage() {
           </p>
         </section>
       </section>
+      <Dialog
+        open={alertaModal.open}
+        onOpenChange={(open) => setAlertaModal((prev) => ({ ...prev, open }))}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle
+              className={`text-2xl font-black ${alertaModal.variant === "success"
+                  ? "text-emerald-600"
+                  : alertaModal.variant === "warning"
+                    ? "text-amber-600"
+                    : alertaModal.variant === "error"
+                      ? "text-red-600"
+                      : "text-[var(--adamia-blue)]"
+                }`}
+            >
+              {alertaModal.title}
+            </DialogTitle>
+            <DialogDescription className="text-sm text-[var(--adamia-text-secondary)]">
+              {alertaModal.description}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end pt-2">
+            <button
+              type="button"
+              onClick={() => setAlertaModal((prev) => ({ ...prev, open: false }))}
+              className="rounded-lg bg-[var(--adamia-blue)] px-4 py-2 text-sm font-bold text-white"
+            >
+              Entendido
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
