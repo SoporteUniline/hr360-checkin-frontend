@@ -1,55 +1,61 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const sugerencias = [
-  "¿Qué datos personales recopila ADAMIA?",
-  "¿Cómo ejerzo mis derechos ARCO?",
-  "¿Qué son datos sensibles?",
-  "¿Cómo contacto al área de privacidad?",
+  "Quiero cotizar un plan",
+  "Tenemos 35 empleados",
+  "¿Qué incluye ADAMIA?",
+  "¿Cómo puedo contratar?",
 ];
 
 const respuestasFallback = [
   {
-    match: /arco|derechos/i,
-    text: "Puedes ejercer tus derechos ARCO escribiendo a privacidad@adamia.mx con tu nombre, correo, solicitud y un medio de contacto.",
+    match: /que es adamia|qué es adamia|quien es adamia|quién es adamia|de que trata/i,
+    text: "ADAMIA es una plataforma web de Recursos Humanos que centraliza asistencias, empleados, vacaciones, contratos y reportes. Si quieres, te explico cada modulo o te cotizo por numero de empleados.",
   },
   {
-    match: /sensibles|biom[eé]tric|gps/i,
-    text: "Los datos sensibles (por ejemplo, biométricos o de ubicación) se tratan con consentimiento expreso y medidas reforzadas de seguridad.",
+    match: /cotiz|precio|costo|plan/i,
+    text: "Claro, te ayudo a cotizar. Dime cuántos empleados tienen en tu empresa.",
   },
   {
-    match: /datos|recopila/i,
-    text: "Recabamos datos de identificación, contacto, operación laboral y uso de plataforma para brindar el servicio de ADAMIA.",
+    match: /funcion|incluye|ofrece|hace/i,
+    text: "ADAMIA incluye reloj checador facial + GPS, asistencias, vacaciones, expedientes y reportes. ¿Cuántos empleados tienen para cotizarte?",
   },
   {
-    match: /contacto|privacidad/i,
-    text: "Puedes contactar al equipo de privacidad en privacidad@adamia.mx y al equipo de soporte en soporte@adamia.mx.",
+    match: /contratar|comprar|prueba/i,
+    text: "Puedes iniciar aquí: https://planes.hr360.mx/contratar-plan o cotizar en https://planes.hr360.mx/cotiza",
+  },
+  {
+    match: /contacto|soporte|whatsapp/i,
+    text: "Te apoyamos en soporte@adamia.mx o WhatsApp +52 317 388 7959.",
   },
 ];
 
 export default function BotPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const messagesRef = useRef(null);
   const [messages, setMessages] = useState([
     {
       role: "bot",
-      text: "Hola, soy el asistente de privacidad de ADAMIA. Puedo ayudarte con datos personales, ARCO, seguridad y políticas. ¿Qué te gustaría consultar?",
+      text: "Hola, soy el asistente comercial de ADAMIA. Te ayudo con funciones, precios y contratación. ¿Cuántos empleados tienen en tu empresa?",
     },
   ]);
-
-  const endpoint = useMemo(
-    () => process.env.NEXT_PUBLIC_PRIVACY_BOT_URL || "",
-    []
-  );
 
   const resolveFallback = (text) => {
     const found = respuestasFallback.find((item) => item.match.test(text));
     return (
       found?.text ||
-      "Gracias por tu mensaje. Para una atención detallada, escríbenos a privacidad@adamia.mx."
+      "Gracias por tu mensaje. Si quieres, te cotizo según tu número de empleados."
     );
   };
+
+  useEffect(() => {
+    const el = messagesRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [messages, loading]);
 
   const sendMessage = async (preset) => {
     const message = (preset ?? input).trim();
@@ -60,22 +66,23 @@ export default function BotPage() {
     setLoading(true);
 
     try {
-      if (endpoint) {
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message }),
-        });
+      const history = messages.slice(-8).map((m) => ({
+        role: m.role === "user" ? "user" : "assistant",
+        text: m.text,
+      }));
+      const response = await fetch("/api/bot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message,
+          history,
+          context: "sales",
+        }),
+      });
 
-        const data = await response.json();
-        if (data?.message) {
-          setMessages((prev) => [...prev, { role: "bot", text: data.message }]);
-        } else {
-          setMessages((prev) => [
-            ...prev,
-            { role: "bot", text: resolveFallback(message) },
-          ]);
-        }
+      const data = await response.json();
+      if (response.ok && data?.message) {
+        setMessages((prev) => [...prev, { role: "bot", text: data.message }]);
       } else {
         setMessages((prev) => [
           ...prev,
@@ -87,7 +94,7 @@ export default function BotPage() {
         ...prev,
         {
           role: "bot",
-          text: "No pude conectar con el servicio en este momento. Puedes escribir a privacidad@adamia.mx.",
+          text: "No pude conectar con el servicio en este momento. Puedes escribir a soporte@adamia.mx.",
         },
       ]);
     } finally {
@@ -101,9 +108,9 @@ export default function BotPage() {
         <article className="overflow-hidden rounded-3xl border border-[var(--adamia-blue)]/20 bg-white shadow-xl">
           {/* Header visual del bot */}
           <header className="bg-gradient-to-r from-[var(--adamia-blue)] to-[var(--adamia-purple)] px-6 py-5 text-white">
-            <h1 className="text-xl font-black">🔒 Bot de Privacidad ADAMIA</h1>
+            <h1 className="text-xl font-black">🤖 Bot Comercial ADAMIA</h1>
             <p className="mt-1 text-sm text-white/90">
-              Resuelve dudas rápidas sobre datos personales y políticas.
+              Resuelve dudas rápidas sobre funciones, precios y contratación.
             </p>
           </header>
 
@@ -122,7 +129,10 @@ export default function BotPage() {
             </div>
           </div>
 
-          <div className="max-h-[58vh] space-y-3 overflow-y-auto bg-[var(--adamia-bg-light)] p-4">
+          <div
+            ref={messagesRef}
+            className="max-h-[58vh] space-y-3 overflow-y-auto bg-[var(--adamia-bg-light)] p-4"
+          >
             {messages.map((m, idx) => (
               <div
                 key={`${m.role}-${idx}`}
@@ -132,7 +142,7 @@ export default function BotPage() {
                   className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm ${
                     m.role === "user"
                       ? "bg-[var(--adamia-blue)] text-white"
-                      : "border border-[var(--adamia-blue)]/15 bg-white text-[var(--adamia-text-primary)]"
+                      : "border border-[var(--adamia-blue)]/15 bg-white text-[var(--adamia-text-primary)] whitespace-pre-line"
                   }`}
                 >
                   {m.text}
@@ -156,7 +166,7 @@ export default function BotPage() {
               onKeyDown={(e) => {
                 if (e.key === "Enter") sendMessage();
               }}
-              placeholder="Escribe tu pregunta sobre privacidad..."
+              placeholder="Escribe tu pregunta..."
               className="h-11 flex-1 rounded-full border border-[var(--adamia-blue)]/20 px-4 outline-none transition focus:border-[var(--adamia-blue)]"
             />
             <button

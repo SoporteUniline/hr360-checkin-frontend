@@ -41,7 +41,7 @@ export default function AdamiaChatWidget() {
     {
       id: "welcome",
       sender: "bot",
-      text: "¡Hola! Soy el asistente de ADAMIA.\n¿En qué puedo ayudarte?",
+      text: "Hola, soy el asistente comercial de ADAMIA.\nTe ayudo con funciones, precios y contratacion.\n¿Cuantos empleados tienen en tu empresa?",
     },
   ]);
 
@@ -66,7 +66,7 @@ export default function AdamiaChatWidget() {
       {
         id: "welcome",
         sender: "bot",
-        text: "¡Hola! Soy el asistente de ADAMIA.\n¿En qué puedo ayudarte?",
+        text: "Hola, soy el asistente comercial de ADAMIA.\nTe ayudo con funciones, precios y contratacion.\n¿Cuantos empleados tienen en tu empresa?",
       },
     ]);
     setCtx({ empleados: null, nombre: null, generoCotizacion: false });
@@ -102,7 +102,32 @@ export default function AdamiaChatWidget() {
     setIsTyping(true);
     await wait(650);
 
-    const { nextCtx, reply } = buildBotReply(clean, ctx);
+    let reply = "";
+    let nextCtx = ctx;
+    try {
+      const history = messages.slice(-8).map((m) => ({
+        role: m.sender === "user" ? "user" : "assistant",
+        text: m.text,
+      }));
+      const response = await fetch("/api/bot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: clean,
+          history,
+          context: "sales",
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data?.message) {
+        throw new Error(data?.message || "Sin respuesta del asistente.");
+      }
+      reply = data.message;
+    } catch (_error) {
+      const fallback = buildBotReply(clean, ctx);
+      nextCtx = fallback.nextCtx;
+      reply = fallback.reply;
+    }
     setCtx(nextCtx);
 
     const botMsg = {
@@ -299,6 +324,31 @@ function buildBotReply(userText, ctx) {
   const empleadosDetectados = extractEmployees(userText);
   const nombreDetectado = extractName(userText);
 
+  if (/^(hola|holi|buenas|hello|hey|que tal|qué tal|buenas tardes|buenos dias|buenos días|buenas noches)[!. ]*$/i.test(t.trim())) {
+    return {
+      nextCtx: ctx,
+      reply:
+        "Hola, que gusto saludarte.\nSoy el asistente de ADAMIA y puedo ayudarte con funciones, precios y contratacion.\n¿Te explico modulos o prefieres cotizar?",
+    };
+  }
+
+  if (/(^|\b)(gracias|muchas gracias|ok gracias|perfecto gracias)(\b|$)/i.test(t.trim())) {
+    return {
+      nextCtx: ctx,
+      reply:
+        "Con gusto.\nSi quieres, te comparto el enlace para cotizar formalmente o contratar cuando estes listo.",
+    };
+  }
+
+  // 1) Funciones
+  if (t.includes("que es adamia") || t.includes("qué es adamia") || t.includes("de que trata adamia")) {
+    return {
+      nextCtx: ctx,
+      reply:
+        "ADAMIA es una plataforma web de Recursos Humanos.\nCentraliza asistencias, empleados, vacaciones, contratos y reportes en un solo lugar.\n\nSi quieres, te cuento funciones especificas o te ayudo a cotizar.",
+    };
+  }
+
   // 1) Funciones
   if (t.includes("funcion") || t.includes("hace") || t.includes("ofrece")) {
     return {
@@ -392,13 +442,43 @@ function extractName(text) {
   if (t.length < 2 || t.length > 50) return null;
   if (/\d/.test(t)) return null;
 
-  const m = t.match(/^(?:me llamo|soy|mi nombre es)\s+(.+)$/i);
-  if (m?.[1]) {
-    const name = m[1].trim();
-    if (name.length >= 2 && name.length <= 50 && !/\d/.test(name)) return name;
+  const blockedNames = new Set([
+    "hola",
+    "holi",
+    "buenas",
+    "hello",
+    "gracias",
+    "adios",
+    "adiós",
+    "ok",
+    "vale",
+    "listo",
+    "perfecto",
+  ]);
+
+  const cleanCandidate = (candidate) =>
+    String(candidate || "")
+      .replace(/[.,;:!?¡¿]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const splitCandidate = (candidate) =>
+    cleanCandidate(candidate).split(/\s+(?:y|pero|porque|para)\s+/i)[0]?.trim() || "";
+
+  const explicit = t.match(/(?:^|\b)(?:me llamo|soy|mi nombre es)\s+([a-záéíóúñ\s]{2,50})/i);
+  if (explicit?.[1]) {
+    const maybeName = splitCandidate(explicit[1]);
+    if (
+      maybeName &&
+      !blockedNames.has(maybeName.toLowerCase()) &&
+      /^[a-záéíóúñ]+(?:\s+[a-záéíóúñ]+){0,2}$/i.test(maybeName)
+    ) {
+      return maybeName;
+    }
   }
 
   // Nombre simple (1-3 palabras)
+  if (blockedNames.has(t.toLowerCase())) return null;
   if (/^[a-záéíóúñ]+(?:\s+[a-záéíóúñ]+){0,2}$/i.test(t)) return t;
   return null;
 }
