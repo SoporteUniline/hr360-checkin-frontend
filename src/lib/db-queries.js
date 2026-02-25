@@ -2,16 +2,23 @@ import { pool } from "@/config/database";
 
 export async function checkSubscriptionDirect(userId) {
   try {
-    const [rows] = await pool
-      .promise()
-      .query(
-        "SELECT * FROM Contrataciones WHERE usuario_id = ? AND estado = 'Activo' LIMIT 1",
-        [userId],
-      );
+    const query = `
+      SELECT c.id 
+      FROM Contrataciones c
+      INNER JOIN Suscripciones s ON c.id = s.contratacion_id
+      WHERE c.usuario_id = ? 
+        AND c.estado = 'Activo'
+        AND s.estado IN ('Activa', 'Cortesia')
+        AND s.fecha_vencimiento >= CURDATE()
+      LIMIT 1
+    `;
+
+    const [rows] = await pool.promise().query(query, [userId]);
+
     return rows.length > 0;
   } catch (error) {
     console.error("Error directo en DB:", error);
-    return true;
+    return false;
   }
 }
 
