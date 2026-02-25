@@ -270,7 +270,7 @@ export default function ReglasAvisoPage() {
       const token = Cookies.get("token");
       await axios.delete(`/checador/reglas-aviso/${deleteRow.id}`, {
         headers: { Authorization: `Bearer ${token}` },
-        params: { empresa: deleteRow.id_empresa },
+        params: { empresa: deleteRow.idEmpresa },
       });
       setDeleteRow(null);
       await mutate?.();
