@@ -27,7 +27,7 @@ export default function CapacitacionPage() {
         />
         <div className="absolute inset-0 flex items-center justify-center flex-col bg-slate-700/50">
           <h1 className="text-white text-4xl font-bold">
-            Domina HR360 con Nuestros Tutoriales
+            Domina Adamia con Nuestros Tutoriales
           </h1>
           <p className="text-white text-md mt-2">
             Aprende paso a paso todas las funcionalidades clave y lleva tu
@@ -82,7 +82,7 @@ export default function CapacitacionPage() {
       </section>
       <section className="p-5 py-20 md:px-10 lg:px-30 xl:px-40 bg-slate-500">
         <h2 className="text-center text-white text-2xl font-extrabold">
-          🎥 Conoce HR360 en acción
+          🎥 Conoce Adamia en acción
         </h2>
         <p className="text-white text-center text-md mt-2">
           Recibe alertas, novedades y contenido exclusivo directamente en tu

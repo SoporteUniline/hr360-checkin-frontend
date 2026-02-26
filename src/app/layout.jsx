@@ -12,9 +12,9 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: "HR360 Reloj Checador",
+  title: "Adamia",
   description:
-    "En HR360, transformamos la forma en que las empresas encuentran talento: sin vacantes falsas, sin procesos improvisados, sin riesgos.",
+    "En Adamia, transformamos la forma en que las empresas encuentran talento: sin vacantes falsas, sin procesos improvisados, sin riesgos.",
 };
 
 export default function RootLayout({ children }) {

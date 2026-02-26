@@ -39,7 +39,7 @@ export default function EmpleadoInicioPage() {
       <>
         <Navbar />
         <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4 text-center">
-          <img src="/assets/logo.png" alt="HR360 Logo" className="w-40 mb-6" />
+          <img src="/assets/logo.png" alt="Adamia Logo" className="w-40 mb-6" />
           <h1 className="text-3xl font-bold mb-4">
             Hola {dataUser?.nombre}, no tienes acceso a este módulo.
           </h1>

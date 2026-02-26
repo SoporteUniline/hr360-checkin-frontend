@@ -6,7 +6,7 @@ import Cookies from "js-cookie";
  * Objetivo:
  * - En algunos módulos (Permisos, Mapa de Rutas) generamos PDF con `jsPDF` (no HTML->imagen).
  * - El usuario pidió mostrar el logo de la empresa en el encabezado, similar al estilo del PDF
- *   de "Reporte de Horas" donde se ve "HR360" como texto (branding tipográfico).
+ *   de "Reporte de Horas" donde se ve "Adamia" como texto (branding tipográfico).
  *
  * Enfoque:
  * - Si la empresa tiene `url_imagen`, intentamos descargarla y convertirla a DataURL para `doc.addImage`.
@@ -71,7 +71,7 @@ export async function fetchImageAsDataUrl(url) {
 /**
  * Obtiene iniciales cortas a partir del nombre de la empresa.
  * - Ej: "Uniline Innovacion en la Nube" => "UI"
- * - Ej: "HR360" => "HR"
+ * - Ej: "Adamia" => "HR"
  */
 export function getCompanyInitials(nombreEmpresa, maxChars = 3) {
   const s = String(nombreEmpresa || "").trim();
@@ -132,7 +132,7 @@ export function tryAddCompanyMarkToPdf(doc, { logoDataUrl, companyName }, box) {
     }
   }
 
-  // 2) Fallback tipográfico (similar a "HR360" en Reporte de Horas)
+  // 2) Fallback tipográfico (similar a "Adamia" en Reporte de Horas)
   const initials = getCompanyInitials(companyName, 3);
   return drawTextLogo(doc, initials, box);
 }

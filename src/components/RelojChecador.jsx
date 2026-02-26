@@ -311,7 +311,7 @@ export default function RelojChecador({
             <div className="lg:col-span-8 md:col-span-7 md:space-y-6">
               <div className="block md:hidden mb-6 text-center space-y-1">
                 <h1 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                  HR360 - Sistema de Asistencia
+                  Adamia - Sistema de Asistencia
                 </h1>
                 <div className="py-2">
                   <p className="text-6xl font-black text-slate-900 tracking-tighter antialiased">

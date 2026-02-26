@@ -286,7 +286,7 @@ export default function PermisoViewDialog({
 
     // Logo/marca de la empresa en esquina superior izquierda.
     // - Si hay imagen: se dibuja en el recuadro.
-    // - Si no hay imagen: se dibujan iniciales (estilo tipográfico tipo "HR360" en Reporte de Horas).
+    // - Si no hay imagen: se dibujan iniciales (estilo tipográfico tipo "Adamia" en Reporte de Horas).
     const companyName =
       empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
     const logoBox = { x: margin + 6, y: y + 6, boxW: 26, boxH: 14 };
@@ -452,7 +452,7 @@ export default function PermisoViewDialog({
       doc.setFont("helvetica", "normal");
       doc.setFontSize(7);
       doc.text(
-        `Generado el ${fechaGenerado} a las ${horaGenerado} | Sistema HR360 | Página ${p} de ${totalPages}`,
+        `Generado el ${fechaGenerado} a las ${horaGenerado} | Sistema Adamia | Página ${p} de ${totalPages}`,
         pageWidth / 2,
         pageHeight - 10,
         { align: "center" },

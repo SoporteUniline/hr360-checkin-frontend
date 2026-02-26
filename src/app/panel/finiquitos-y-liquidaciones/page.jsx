@@ -477,7 +477,7 @@ export default function PageFiniquitosLiquidaciones() {
     drawSignaturesAndFooter(doc, {
       empleadoName: resultado.nombre_completo || "",
       empresaLabel: companyName || "Uniline Innovacion en la Nube",
-      footerLeft: "Sistema HR360",
+      footerLeft: "Sistema Adamia",
       // En finiquitos: firmas solo en la última página (evita duplicarlas si el PDF es de 2+ hojas)
       signaturesOn: "last",
     });

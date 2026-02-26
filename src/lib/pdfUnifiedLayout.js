@@ -60,7 +60,10 @@ export function ensureSpace(ctx, neededHeightMm, reservedBottom = 65) {
  * - Sublineas (opcional)
  * - KPI a la derecha (label + value)
  */
-export function drawHeaderBox(ctx, { title, linesLeft = [], kpiLabel, kpiValue, companyName, logoDataUrl }) {
+export function drawHeaderBox(
+  ctx,
+  { title, linesLeft = [], kpiLabel, kpiValue, companyName, logoDataUrl },
+) {
   const { doc, pageWidth, margin, contentWidth } = ctx;
   const boxH = 34;
 
@@ -71,7 +74,11 @@ export function drawHeaderBox(ctx, { title, linesLeft = [], kpiLabel, kpiValue, 
   doc.setTextColor(0, 0, 0);
 
   const logoBox = { x: margin + 6, y: ctx.y + 6, boxW: 26, boxH: 14 };
-  const hasMark = tryAddCompanyMarkToPdf(doc, { logoDataUrl, companyName }, logoBox);
+  const hasMark = tryAddCompanyMarkToPdf(
+    doc,
+    { logoDataUrl, companyName },
+    logoBox,
+  );
   const textX = hasMark ? logoBox.x + logoBox.boxW + 4 : margin + 6;
 
   // Título
@@ -92,12 +99,19 @@ export function drawHeaderBox(ctx, { title, linesLeft = [], kpiLabel, kpiValue, 
   if (kpiLabel) {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
-    doc.text(String(kpiLabel).toUpperCase(), pageWidth - margin - 6, ctx.y + 10, { align: "right" });
+    doc.text(
+      String(kpiLabel).toUpperCase(),
+      pageWidth - margin - 6,
+      ctx.y + 10,
+      { align: "right" },
+    );
   }
   if (kpiValue !== undefined && kpiValue !== null) {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(22);
-    doc.text(String(kpiValue), pageWidth - margin - 6, ctx.y + 23, { align: "right" });
+    doc.text(String(kpiValue), pageWidth - margin - 6, ctx.y + 23, {
+      align: "right",
+    });
   }
 
   ctx.y += boxH + 8;
@@ -125,7 +139,11 @@ export function drawKeyValueBox(ctx, { title, rows = [] }) {
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
-  doc.text(String(title || "").toUpperCase(), margin + paddingX, ctx.y + titleY);
+  doc.text(
+    String(title || "").toUpperCase(),
+    margin + paddingX,
+    ctx.y + titleY,
+  );
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
@@ -179,7 +197,10 @@ export function drawMultilineBox(ctx, { title, text }) {
  * @param {Array<[string, string]>} options.rows
  * @param {number} options.valueColWidth - ancho reservado para la columna de valores (mm)
  */
-export function drawRightValueRowsBox(ctx, { title, rows = [], valueColWidth = 55 }) {
+export function drawRightValueRowsBox(
+  ctx,
+  { title, rows = [], valueColWidth = 55 },
+) {
   const { doc, margin, contentWidth } = ctx;
   const paddingX = 6;
   const startY = 16;
@@ -237,18 +258,31 @@ export function drawRightValueRowsBox(ctx, { title, rows = [], valueColWidth = 5
  */
 export function drawSignaturesAndFooter(
   doc,
-  { empleadoName = "", empresaLabel = "Uniline Innovacion en la Nube", footerLeft = "Sistema HR360", signaturesOn = "all" }
+  {
+    empleadoName = "",
+    empresaLabel = "Uniline Innovacion en la Nube",
+    footerLeft = "Sistema Adamia",
+    signaturesOn = "all",
+  },
 ) {
   const { pageWidth, pageHeight, margin } = PDF_A4;
   const totalPages = doc.internal.getNumberOfPages();
-  const fechaGenerado = new Date().toLocaleDateString("es-MX", { day: "2-digit", month: "2-digit", year: "numeric" });
-  const horaGenerado = new Date().toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" });
+  const fechaGenerado = new Date().toLocaleDateString("es-MX", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+  const horaGenerado = new Date().toLocaleTimeString("es-MX", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
   for (let p = 1; p <= totalPages; p++) {
     doc.setPage(p);
 
     // Firmas (por defecto en todas las páginas; para finiquitos se usa solo en la última)
-    const shouldDrawSignatures = signaturesOn === "all" ? true : p === totalPages;
+    const shouldDrawSignatures =
+      signaturesOn === "all" ? true : p === totalPages;
     if (shouldDrawSignatures) {
       const yFirmas = pageHeight - 55;
       doc.setDrawColor(0, 0, 0);
@@ -257,18 +291,40 @@ export function drawSignaturesAndFooter(
       doc.line(margin + 10, yFirmas, margin + 70, yFirmas);
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
-      doc.text("FIRMA DEL TRABAJADOR", margin + 40, yFirmas + 6, { align: "center" });
+      doc.text("FIRMA DEL TRABAJADOR", margin + 40, yFirmas + 6, {
+        align: "center",
+      });
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
-      doc.text(String(empleadoName).slice(0, 45) || "—", margin + 40, yFirmas + 11, { align: "center" });
+      doc.text(
+        String(empleadoName).slice(0, 45) || "—",
+        margin + 40,
+        yFirmas + 11,
+        { align: "center" },
+      );
 
-      doc.line(pageWidth - margin - 70, yFirmas, pageWidth - margin - 10, yFirmas);
+      doc.line(
+        pageWidth - margin - 70,
+        yFirmas,
+        pageWidth - margin - 10,
+        yFirmas,
+      );
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
-      doc.text("REPRESENTANTE DE LA EMPRESA", pageWidth - margin - 40, yFirmas + 6, { align: "center" });
+      doc.text(
+        "REPRESENTANTE DE LA EMPRESA",
+        pageWidth - margin - 40,
+        yFirmas + 6,
+        { align: "center" },
+      );
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
-      doc.text(String(empresaLabel).slice(0, 45), pageWidth - margin - 40, yFirmas + 11, { align: "center" });
+      doc.text(
+        String(empresaLabel).slice(0, 45),
+        pageWidth - margin - 40,
+        yFirmas + 11,
+        { align: "center" },
+      );
     }
 
     // Footer
@@ -280,7 +336,7 @@ export function drawSignaturesAndFooter(
       `Generado el ${fechaGenerado} a las ${horaGenerado} | ${footerLeft} | Página ${p} de ${totalPages}`,
       pageWidth / 2,
       pageHeight - 10,
-      { align: "center" }
+      { align: "center" },
     );
   }
 }
@@ -299,7 +355,9 @@ export function fmtMoneyMXN(value) {
 export function fmtFechaLargaISO(iso) {
   if (!iso) return "—";
   try {
-    return new Date(`${dayjs(iso).format("YYYY-MM-DD")}T00:00:00`).toLocaleDateString("es-MX", {
+    return new Date(
+      `${dayjs(iso).format("YYYY-MM-DD")}T00:00:00`,
+    ).toLocaleDateString("es-MX", {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -308,5 +366,3 @@ export function fmtFechaLargaISO(iso) {
     return String(iso);
   }
 }
-
-

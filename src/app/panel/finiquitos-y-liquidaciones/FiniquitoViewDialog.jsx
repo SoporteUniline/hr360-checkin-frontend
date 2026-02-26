@@ -40,7 +40,7 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
   const { data: empresaData } = useSWR(
     idEmpresa ? `/empresas/${idEmpresa}` : null,
     fetcherWithToken,
-    swr_config
+    swr_config,
   );
 
   /**
@@ -51,8 +51,12 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
     let alive = true;
     const run = async () => {
       const companyUrl = empresaData?.url_imagen;
-      const companyDataUrl = companyUrl ? await fetchImageAsDataUrl(companyUrl) : null;
-      const fallbackDataUrl = companyDataUrl ? null : await fetchImageAsDataUrl("/assets/logo.png");
+      const companyDataUrl = companyUrl
+        ? await fetchImageAsDataUrl(companyUrl)
+        : null;
+      const fallbackDataUrl = companyDataUrl
+        ? null
+        : await fetchImageAsDataUrl("/assets/logo.png");
       if (alive) setLogoDataUrl(companyDataUrl || fallbackDataUrl || null);
     };
     run();
@@ -94,7 +98,8 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
     const doc = new jsPDF("p", "mm", "a4");
     const ctx = createPdfContext({ doc });
 
-    const companyName = empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
+    const companyName =
+      empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
     const tipoDocumento = det.es_liquidacion ? "Liquidación" : "Finiquito";
     const total = fmtMoneyMXN(det.total_pagar);
     const folio = det.id_finiquito || det.id || id || "";
@@ -104,7 +109,9 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
       linesLeft: [
         `Folio: #${String(folio).toString().padStart(3, "0")}`,
         `Empleado: ${det.nombre_completo || "—"}`,
-        `Fecha baja: ${det.fecha_baja ? dayjs(det.fecha_baja).format("DD/MM/YYYY") : "—"}`,
+        `Fecha baja: ${
+          det.fecha_baja ? dayjs(det.fecha_baja).format("DD/MM/YYYY") : "—"
+        }`,
       ],
       kpiLabel: "Total a pagar",
       kpiValue: String(total).replace(" MXN", ""),
@@ -117,9 +124,19 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
       rows: [
         ["Puesto", det.puesto || "—"],
         ["Departamento", det.departamento || "—"],
-        ["Fecha ingreso", det.fecha_ingreso ? dayjs(det.fecha_ingreso).format("DD/MM/YYYY") : "—"],
+        [
+          "Fecha ingreso",
+          det.fecha_ingreso
+            ? dayjs(det.fecha_ingreso).format("DD/MM/YYYY")
+            : "—",
+        ],
         ["Años trabajados", `${det.años_trabajados || 0}`],
-        ["Salario diario", `$${Number(det.salario_diario || 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`],
+        [
+          "Salario diario",
+          `$${Number(det.salario_diario || 0).toLocaleString("es-MX", {
+            minimumFractionDigits: 2,
+          })}`,
+        ],
         ["Días trabajados", `${det.dias_trabajados || 0}`],
       ],
     });
@@ -129,7 +146,10 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
       title: "Conceptos de finiquito",
       rows: [
         ["Salario pendiente", fmtMoneyMXN(det.monto_salario_pendiente)],
-        ["Aguinaldo proporcional", fmtMoneyMXN(det.monto_aguinaldo_proporcional)],
+        [
+          "Aguinaldo proporcional",
+          fmtMoneyMXN(det.monto_aguinaldo_proporcional),
+        ],
         ["Vacaciones no gozadas", fmtMoneyMXN(det.monto_vacaciones_no_gozadas)],
         ["Prima vacacional", fmtMoneyMXN(det.monto_prima_vacacional)],
         ["Subtotal finiquito", fmtMoneyMXN(det.subtotal_finiquito)],
@@ -141,7 +161,10 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
         title: "Conceptos de liquidación",
         rows: [
           ["Prima antigüedad", fmtMoneyMXN(det.monto_prima_antiguedad)],
-          ["Indemnización constitucional", fmtMoneyMXN(det.monto_indemnizacion_constitucional)],
+          [
+            "Indemnización constitucional",
+            fmtMoneyMXN(det.monto_indemnizacion_constitucional),
+          ],
           ["Salarios vencidos", fmtMoneyMXN(det.monto_salarios_vencidos)],
           ["Subtotal liquidación", fmtMoneyMXN(det.subtotal_liquidacion)],
         ],
@@ -156,12 +179,14 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
     drawSignaturesAndFooter(doc, {
       empleadoName: det.nombre_completo || "",
       empresaLabel: companyName || "Uniline Innovacion en la Nube",
-      footerLeft: "Sistema HR360",
+      footerLeft: "Sistema Adamia",
       // En finiquitos: firmas solo en la última página.
       signaturesOn: "last",
     });
 
-    const nombreArchivo = `${(det.es_liquidacion ? "LIQUIDACION" : "FINIQUITO")}_${String(det.nombre_completo || "Empleado").replace(/\s+/g, "_")}.pdf`;
+    const nombreArchivo = `${
+      det.es_liquidacion ? "LIQUIDACION" : "FINIQUITO"
+    }_${String(det.nombre_completo || "Empleado").replace(/\s+/g, "_")}.pdf`;
     doc.save(nombreArchivo);
   };
 
@@ -176,10 +201,14 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
               </div>
               <div className="min-w-0">
                 <DialogTitle className="text-white text-xl font-bold truncate">
-                  {det?.es_liquidacion ? "Detalle de liquidación" : "Detalle de finiquito"}
+                  {det?.es_liquidacion
+                    ? "Detalle de liquidación"
+                    : "Detalle de finiquito"}
                 </DialogTitle>
                 <DialogDescription className="text-sm text-indigo-100 truncate">
-                  {det?.nombre_completo ? `Empleado: ${det.nombre_completo}` : ""}
+                  {det?.nombre_completo
+                    ? `Empleado: ${det.nombre_completo}`
+                    : ""}
                 </DialogDescription>
               </div>
             </div>
@@ -188,72 +217,112 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
 
         <div className="p-6 space-y-4">
           {loading ? (
-            <div className="py-6 text-sm text-muted-foreground">Cargando...</div>
+            <div className="py-6 text-sm text-muted-foreground">
+              Cargando...
+            </div>
           ) : det ? (
             <div className="space-y-4 text-sm">
               <div className={styles.resultsPanel}>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                   <div className={styles.metricCard}>
                     <div className={styles.metricLabel}>Empleado</div>
-                    <div className={`${styles.metricValue} break-words`}>{det.nombre_completo}</div>
+                    <div className={`${styles.metricValue} break-words`}>
+                      {det.nombre_completo}
+                    </div>
                   </div>
                   <div className={styles.metricCard}>
                     <div className={styles.metricLabel}>Días trabajados</div>
-                    <div className={styles.metricValue}>{det.dias_trabajados}</div>
+                    <div className={styles.metricValue}>
+                      {det.dias_trabajados}
+                    </div>
                   </div>
                   <div className={styles.metricCard}>
                     <div className={styles.metricLabel}>Años trabajados</div>
-                    <div className={styles.metricValue}>{det.años_trabajados}</div>
+                    <div className={styles.metricValue}>
+                      {det.años_trabajados}
+                    </div>
                   </div>
                   <div className={styles.metricCard}>
                     <div className={styles.metricLabel}>Salario diario</div>
                     <div className={styles.metricValue}>
-                      ${Number(det.salario_diario).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                      $
+                      {Number(det.salario_diario).toLocaleString("es-MX", {
+                        minimumFractionDigits: 2,
+                      })}
                     </div>
                   </div>
                 </div>
 
-                <div className={styles.sectionTitle}>Conceptos de finiquito</div>
+                <div className={styles.sectionTitle}>
+                  Conceptos de finiquito
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mt-2">
                   <div className={styles.conceptCard}>
                     <div className={styles.conceptTitle}>Salario Pendiente</div>
                     <div className={styles.conceptAmount}>
-                      ${Number(det.monto_salario_pendiente).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                      $
+                      {Number(det.monto_salario_pendiente).toLocaleString(
+                        "es-MX",
+                        { minimumFractionDigits: 2 },
+                      )}
                     </div>
                     <div className={styles.conceptBox}>
                       <div className={styles.row}>
                         <span className={styles.rowLabel}>Días</span>
-                        <span className={styles.rowValue}>{Number(det.dias_salario_pendiente).toFixed(2)} días</span>
+                        <span className={styles.rowValue}>
+                          {Number(det.dias_salario_pendiente).toFixed(2)} días
+                        </span>
                       </div>
                       <div className={styles.row}>
                         <span className={styles.rowLabel}>Salario diario</span>
-                        <span className={styles.rowValue}>${Number(det.salario_diario).toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
+                        <span className={styles.rowValue}>
+                          $
+                          {Number(det.salario_diario).toLocaleString("es-MX", {
+                            minimumFractionDigits: 2,
+                          })}
+                        </span>
                       </div>
                     </div>
                   </div>
 
                   <div className={styles.conceptCard}>
-                    <div className={styles.conceptTitle}>Aguinaldo Proporcional</div>
+                    <div className={styles.conceptTitle}>
+                      Aguinaldo Proporcional
+                    </div>
                     <div className={styles.conceptAmount}>
-                      ${Number(det.monto_aguinaldo_proporcional).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                      $
+                      {Number(det.monto_aguinaldo_proporcional).toLocaleString(
+                        "es-MX",
+                        { minimumFractionDigits: 2 },
+                      )}
                     </div>
                     <div className={styles.conceptBox}>
                       <div className={styles.row}>
                         <span className={styles.rowLabel}>Proporcional</span>
-                        <span className={styles.rowValue}>{det.dias_aguinaldo_proporcional} días</span>
+                        <span className={styles.rowValue}>
+                          {det.dias_aguinaldo_proporcional} días
+                        </span>
                       </div>
                     </div>
                   </div>
 
                   <div className={styles.conceptCard}>
-                    <div className={styles.conceptTitle}>Vacaciones No Gozadas</div>
+                    <div className={styles.conceptTitle}>
+                      Vacaciones No Gozadas
+                    </div>
                     <div className={styles.conceptAmount}>
-                      ${Number(det.monto_vacaciones_no_gozadas).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                      $
+                      {Number(det.monto_vacaciones_no_gozadas).toLocaleString(
+                        "es-MX",
+                        { minimumFractionDigits: 2 },
+                      )}
                     </div>
                     <div className={styles.conceptBox}>
                       <div className={styles.row}>
                         <span className={styles.rowLabel}>Totales</span>
-                        <span className={styles.rowValue}>{det.dias_vacaciones_totales} días</span>
+                        <span className={styles.rowValue}>
+                          {det.dias_vacaciones_totales} días
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -261,12 +330,18 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
                   <div className={styles.conceptCard}>
                     <div className={styles.conceptTitle}>Prima Vacacional</div>
                     <div className={styles.conceptAmount}>
-                      ${Number(det.monto_prima_vacacional).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                      $
+                      {Number(det.monto_prima_vacacional).toLocaleString(
+                        "es-MX",
+                        { minimumFractionDigits: 2 },
+                      )}
                     </div>
                     <div className={styles.conceptBox}>
                       <div className={styles.row}>
                         <span className={styles.rowLabel}>Porcentaje</span>
-                        <span className={styles.rowValue}>{Number(det.prima_vacacional_porcentaje).toFixed(0)}%</span>
+                        <span className={styles.rowValue}>
+                          {Number(det.prima_vacacional_porcentaje).toFixed(0)}%
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -274,41 +349,73 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
 
                 <div className={styles.subtotalBar}>
                   <div className="flex items-center justify-between">
-                    <div className={styles.subtotalLabel}>Subtotal Finiquito</div>
+                    <div className={styles.subtotalLabel}>
+                      Subtotal Finiquito
+                    </div>
                     <div className={styles.subtotalValue}>
-                      ${Number(det.subtotal_finiquito).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                      $
+                      {Number(det.subtotal_finiquito).toLocaleString("es-MX", {
+                        minimumFractionDigits: 2,
+                      })}
                     </div>
                   </div>
                 </div>
 
                 {det.es_liquidacion ? (
                   <div className="space-y-3 mt-3">
-                    <div className="text-sm font-semibold text-red-700">⚖️ Conceptos de Liquidación</div>
+                    <div className="text-sm font-semibold text-red-700">
+                      ⚖️ Conceptos de Liquidación
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                       <div className={styles.conceptCard}>
-                        <div className={styles.conceptTitle}>Prima de Antigüedad</div>
+                        <div className={styles.conceptTitle}>
+                          Prima de Antigüedad
+                        </div>
                         <div className={styles.conceptAmount}>
-                          ${Number(det.monto_prima_antiguedad).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                          $
+                          {Number(det.monto_prima_antiguedad).toLocaleString(
+                            "es-MX",
+                            { minimumFractionDigits: 2 },
+                          )}
                         </div>
                       </div>
                       <div className={styles.conceptCard}>
-                        <div className={styles.conceptTitle}>Indemnización Constitucional</div>
+                        <div className={styles.conceptTitle}>
+                          Indemnización Constitucional
+                        </div>
                         <div className={styles.conceptAmount}>
-                          ${Number(det.monto_indemnizacion_constitucional).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                          $
+                          {Number(
+                            det.monto_indemnizacion_constitucional,
+                          ).toLocaleString("es-MX", {
+                            minimumFractionDigits: 2,
+                          })}
                         </div>
                       </div>
                       <div className={styles.conceptCard}>
-                        <div className={styles.conceptTitle}>Salarios Vencidos</div>
+                        <div className={styles.conceptTitle}>
+                          Salarios Vencidos
+                        </div>
                         <div className={styles.conceptAmount}>
-                          ${Number(det.monto_salarios_vencidos).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                          $
+                          {Number(det.monto_salarios_vencidos).toLocaleString(
+                            "es-MX",
+                            { minimumFractionDigits: 2 },
+                          )}
                         </div>
                       </div>
                     </div>
                     <div className={styles.subtotalBar}>
                       <div className="flex items-center justify-between">
-                        <div className={styles.subtotalLabel}>Subtotal Liquidación</div>
+                        <div className={styles.subtotalLabel}>
+                          Subtotal Liquidación
+                        </div>
                         <div className={styles.subtotalValue}>
-                          ${Number(det.subtotal_liquidacion).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                          $
+                          {Number(det.subtotal_liquidacion).toLocaleString(
+                            "es-MX",
+                            { minimumFractionDigits: 2 },
+                          )}
                         </div>
                       </div>
                     </div>
@@ -319,20 +426,30 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
                   <div className="flex items-center justify-between">
                     <div className={styles.totalLabel}>TOTAL A PAGAR</div>
                     <div className={styles.totalAmount}>
-                      ${Number(det.total_pagar).toLocaleString("es-MX", { minimumFractionDigits: 2 })} MXN
+                      $
+                      {Number(det.total_pagar).toLocaleString("es-MX", {
+                        minimumFractionDigits: 2,
+                      })}{" "}
+                      MXN
                     </div>
                   </div>
                 </div>
               </div>
             </div>
           ) : (
-            <div className="py-6 text-sm text-muted-foreground">Sin información.</div>
+            <div className="py-6 text-sm text-muted-foreground">
+              Sin información.
+            </div>
           )}
         </div>
 
         {/* Footer con acciones (similar al patrón de Aguinaldos/Permisos): cerrar + descargar PDF */}
         <DialogFooter className="bg-gray-50 p-4 flex flex-col-reverse sm:flex-row justify-end gap-2 rounded-b-lg">
-          <Button variant="outline" onClick={() => setOpen(false)} className="w-full sm:w-auto border-gray-300">
+          <Button
+            variant="outline"
+            onClick={() => setOpen(false)}
+            className="w-full sm:w-auto border-gray-300"
+          >
             Cerrar
           </Button>
           <Button
@@ -348,5 +465,3 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
     </Dialog>
   );
 }
-
-

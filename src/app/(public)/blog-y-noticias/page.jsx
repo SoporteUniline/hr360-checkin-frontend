@@ -29,7 +29,7 @@ export default function BlogNoticiasPage() {
         />
         <div className="absolute inset-0 flex items-center justify-center flex-col bg-slate-700/50 rounded-lg">
           <h1 className="text-white text-4xl font-extrabold">
-            Blog & Recursos de HR360
+            Blog & Recursos de Adamia
           </h1>
           <p className="text-white text-md mt-2">
             Últimas novedades, tutoriales en vídeo y material descargable para

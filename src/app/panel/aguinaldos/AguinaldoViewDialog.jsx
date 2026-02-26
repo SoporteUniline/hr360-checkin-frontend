@@ -16,7 +16,13 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { aguinaldosApi } from "@/lib/aguinaldosApi";
 import dayjs from "dayjs";
 import { jsPDF } from "jspdf";
@@ -36,7 +42,12 @@ import {
 } from "@/lib/pdfUnifiedLayout";
 import { Download, FileText } from "lucide-react";
 
-export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActualizado }) {
+export default function AguinaldoViewDialog({
+  open,
+  setOpen,
+  id,
+  onEstadoActualizado,
+}) {
   const { dataUser } = useAuth();
   const idEmpresa = dataUser?.id_empresa;
 
@@ -47,7 +58,7 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
   const { data: empresaData } = useSWR(
     idEmpresa ? `/empresas/${idEmpresa}` : null,
     fetcherWithToken,
-    swr_config
+    swr_config,
   );
 
   /**
@@ -59,8 +70,12 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
     let alive = true;
     const run = async () => {
       const companyUrl = empresaData?.url_imagen;
-      const companyDataUrl = companyUrl ? await fetchImageAsDataUrl(companyUrl) : null;
-      const fallbackDataUrl = companyDataUrl ? null : await fetchImageAsDataUrl("/assets/logo.png");
+      const companyDataUrl = companyUrl
+        ? await fetchImageAsDataUrl(companyUrl)
+        : null;
+      const fallbackDataUrl = companyDataUrl
+        ? null
+        : await fetchImageAsDataUrl("/assets/logo.png");
       if (alive) setLogoDataUrl(companyDataUrl || fallbackDataUrl || null);
     };
     run();
@@ -122,7 +137,8 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
     const doc = new jsPDF("p", "mm", "a4");
     const ctx = createPdfContext({ doc });
 
-    const companyName = empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
+    const companyName =
+      empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
     const totalGeneral = fmtMoneyMXN(maestro.total_general);
 
     drawHeaderBox(ctx, {
@@ -144,7 +160,16 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
         ["Total empleados", maestro.total_empleados ?? "—"],
         ["Completos", completos],
         ["Proporcionales", proporcionales],
-        ["Generado", new Date().toLocaleString("es-MX", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })],
+        [
+          "Generado",
+          new Date().toLocaleString("es-MX", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        ],
       ],
     });
 
@@ -190,10 +215,14 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
       const v = {
         nombre: String(r.nombre_completo || "").slice(0, 40),
         puesto: String(r.puesto || "N/A").slice(0, 22),
-        ingreso: r.fecha_ingreso ? dayjs(r.fecha_ingreso).format("DD/MM/YYYY") : "—",
+        ingreso: r.fecha_ingreso
+          ? dayjs(r.fecha_ingreso).format("DD/MM/YYYY")
+          : "—",
         dias: Number(r.dias_aguinaldo_calculado || 0).toFixed(2),
         tipo: r.es_proporcional ? "Prop." : "Comp.",
-        monto: `$${Number(r.monto_aguinaldo || 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`,
+        monto: `$${Number(r.monto_aguinaldo || 0).toLocaleString("es-MX", {
+          minimumFractionDigits: 2,
+        })}`,
       };
       cols.forEach((c, ci) => {
         const text = v[c.key];
@@ -214,7 +243,10 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
     drawKeyValueBox(ctx, {
       title: "Detalle por empleado",
       rows: [
-        ["Nota", "El monto mostrado corresponde al aguinaldo calculado para cada empleado."],
+        [
+          "Nota",
+          "El monto mostrado corresponde al aguinaldo calculado para cada empleado.",
+        ],
       ],
     });
     drawTableHeader();
@@ -234,10 +266,12 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
     drawSignaturesAndFooter(doc, {
       empleadoName: "", // nómina: no es de un solo empleado
       empresaLabel: companyName || "Uniline Innovacion en la Nube",
-      footerLeft: "Sistema HR360",
+      footerLeft: "Sistema Adamia",
     });
 
-    const nombreArchivo = `Nomina_Aguinaldos_${maestro.año_fiscal || "NA"}_${String(maestro.id_calculo || "").padStart(3, "0")}.pdf`;
+    const nombreArchivo = `Nomina_Aguinaldos_${
+      maestro.año_fiscal || "NA"
+    }_${String(maestro.id_calculo || "").padStart(3, "0")}.pdf`;
     doc.save(nombreArchivo.replace(/\s+/g, "_"));
   };
 
@@ -251,7 +285,8 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
     const doc = new jsPDF("p", "mm", "a4");
     const ctx = createPdfContext({ doc });
 
-    const companyName = empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
+    const companyName =
+      empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
     const empleado = ag.nombre_completo || "Empleado";
     const total = fmtMoneyMXN(ag.monto_aguinaldo);
 
@@ -273,7 +308,10 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
       rows: [
         ["Puesto", ag.puesto || "N/A"],
         ["Departamento", ag.departamento || "N/A"],
-        ["Fecha ingreso", ag.fecha_ingreso ? dayjs(ag.fecha_ingreso).format("DD/MM/YYYY") : "—"],
+        [
+          "Fecha ingreso",
+          ag.fecha_ingreso ? dayjs(ag.fecha_ingreso).format("DD/MM/YYYY") : "—",
+        ],
         ["Años trabajados", Number(ag.años_trabajados || 0).toFixed(2)],
       ],
     });
@@ -282,9 +320,17 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
     drawRightValueRowsBox(ctx, {
       title: "Detalle del cálculo",
       rows: [
-        ["Salario diario", `$${Number(ag.salario_diario || 0).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`],
+        [
+          "Salario diario",
+          `$${Number(ag.salario_diario || 0).toLocaleString("es-MX", {
+            minimumFractionDigits: 2,
+          })}`,
+        ],
         ["Días aguinaldo (Ley)", Number(ag.dias_aguinaldo_ley || 0).toFixed(2)],
-        ["Días aguinaldo calculado", Number(ag.dias_aguinaldo_calculado || 0).toFixed(2)],
+        [
+          "Días aguinaldo calculado",
+          Number(ag.dias_aguinaldo_calculado || 0).toFixed(2),
+        ],
         ["Tipo", ag.es_proporcional ? "Proporcional" : "Completo"],
       ],
     });
@@ -297,17 +343,23 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
     drawSignaturesAndFooter(doc, {
       empleadoName: empleado,
       empresaLabel: companyName || "Uniline Innovacion en la Nube",
-      footerLeft: "Sistema HR360",
+      footerLeft: "Sistema Adamia",
     });
 
-    const nombreArchivo = `Aguinaldo_${maestro.año_fiscal || "NA"}_${String(empleado).replace(/\s+/g, "_")}.pdf`;
+    const nombreArchivo = `Aguinaldo_${maestro.año_fiscal || "NA"}_${String(
+      empleado,
+    ).replace(/\s+/g, "_")}.pdf`;
     doc.save(nombreArchivo);
   };
 
   const generarPDF = () => {
     if (!detalle) return;
 
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "letter",
+    });
     const margenIzq = 15;
     const margenDer = 195;
     let y = 10;
@@ -318,24 +370,37 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(28);
     doc.setFont("helvetica", "bold");
-    doc.text("HR360", margenIzq, 20);
+    doc.text("Adamia", margenIzq, 20);
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.text("Sistema de Gestión de Capital Humano", margenIzq, 26);
     doc.setFontSize(9);
-    doc.text("Fecha: " + new Date().toLocaleDateString("es-MX"), margenDer, 20, { align: "right" });
+    doc.text(
+      "Fecha: " + new Date().toLocaleDateString("es-MX"),
+      margenDer,
+      20,
+      { align: "right" },
+    );
 
     y = 45;
     doc.setTextColor(55, 73, 94);
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.text("NÓMINA DE AGUINALDOS " + maestro.año_fiscal, 105, y, { align: "center" });
+    doc.text("NÓMINA DE AGUINALDOS " + maestro.año_fiscal, 105, y, {
+      align: "center",
+    });
 
     y += 10;
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    doc.text("Fecha de Corte: " + dayjs(maestro.fecha_corte).format("DD/MM/YYYY"), margenIzq, y);
-    doc.text("Total Empleados: " + maestro.total_empleados, margenDer, y, { align: "right" });
+    doc.text(
+      "Fecha de Corte: " + dayjs(maestro.fecha_corte).format("DD/MM/YYYY"),
+      margenIzq,
+      y,
+    );
+    doc.text("Total Empleados: " + maestro.total_empleados, margenDer, y, {
+      align: "right",
+    });
 
     y += 8;
     doc.setDrawColor(0, 0, 0);
@@ -346,10 +411,14 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
     doc.text("TOTAL GENERAL A PAGAR:", margenIzq + 2, y + 6.5);
     doc.setFontSize(14);
     doc.text(
-      "$" + parseFloat(maestro.total_general).toLocaleString("es-MX", { minimumFractionDigits: 2 }) + " MXN",
+      "$" +
+        parseFloat(maestro.total_general).toLocaleString("es-MX", {
+          minimumFractionDigits: 2,
+        }) +
+        " MXN",
       margenDer - 2,
       y + 6.5,
-      { align: "right" }
+      { align: "right" },
     );
 
     y += 14;
@@ -368,7 +437,7 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
     doc.setTextColor(255, 255, 255);
     doc.setFillColor(55, 73, 94);
     doc.rect(margenIzq, y - 4, margenDer - margenIzq, 6, "F");
-    
+
     // Encabezados de tabla
     doc.text("#", margenIzq + 2, y);
     doc.text("Empleado", margenIzq + 8, y);
@@ -400,13 +469,36 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
       doc.text((idx + 1).toString(), margenIzq + 2, y);
       doc.text(emp.nombre_completo.substring(0, 25), margenIzq + 8, y);
       doc.text((emp.puesto || "N/A").substring(0, 15), margenIzq + 50, y);
-      doc.text(dayjs(emp.fecha_ingreso).format("DD/MM/YYYY"), margenIzq + 75, y);
+      doc.text(
+        dayjs(emp.fecha_ingreso).format("DD/MM/YYYY"),
+        margenIzq + 75,
+        y,
+      );
       doc.text(parseFloat(emp.años_trabajados).toFixed(2), margenIzq + 95, y);
-      doc.text("$" + parseFloat(emp.salario_diario).toLocaleString("es-MX", { minimumFractionDigits: 2 }), margenIzq + 105, y);
-      doc.text(parseFloat(emp.dias_aguinaldo_calculado).toFixed(2), margenIzq + 125, y);
+      doc.text(
+        "$" +
+          parseFloat(emp.salario_diario).toLocaleString("es-MX", {
+            minimumFractionDigits: 2,
+          }),
+        margenIzq + 105,
+        y,
+      );
+      doc.text(
+        parseFloat(emp.dias_aguinaldo_calculado).toFixed(2),
+        margenIzq + 125,
+        y,
+      );
       doc.text(emp.es_proporcional ? "Prop." : "Comp.", margenIzq + 135, y);
       doc.setFont("helvetica", "bold");
-      doc.text("$" + parseFloat(emp.monto_aguinaldo).toLocaleString("es-MX", { minimumFractionDigits: 2 }), margenDer - 2, y, { align: "right" });
+      doc.text(
+        "$" +
+          parseFloat(emp.monto_aguinaldo).toLocaleString("es-MX", {
+            minimumFractionDigits: 2,
+          }),
+        margenDer - 2,
+        y,
+        { align: "right" },
+      );
       doc.setFont("helvetica", "normal");
 
       y += 5;
@@ -419,7 +511,12 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
       }
     });
 
-    const nombreArchivo = "Nomina_Aguinaldos_" + maestro.año_fiscal + "_" + maestro.id_calculo + ".pdf";
+    const nombreArchivo =
+      "Nomina_Aguinaldos_" +
+      maestro.año_fiscal +
+      "_" +
+      maestro.id_calculo +
+      ".pdf";
     doc.save(nombreArchivo);
   };
 
@@ -429,7 +526,11 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
   const generarPDFIndividual = (ag) => {
     if (!ag || !detalle) return;
 
-    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "letter",
+    });
     const margenIzq = 15;
     const margenDer = 195;
     let y = 10;
@@ -440,24 +541,35 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(28);
     doc.setFont("helvetica", "bold");
-    doc.text("HR360", margenIzq, 20);
+    doc.text("Adamia", margenIzq, 20);
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.text("Sistema de Gestión de Capital Humano", margenIzq, 26);
     doc.setFontSize(9);
-    doc.text("Fecha: " + new Date().toLocaleDateString("es-MX"), margenDer, 20, { align: "right" });
+    doc.text(
+      "Fecha: " + new Date().toLocaleDateString("es-MX"),
+      margenDer,
+      20,
+      { align: "right" },
+    );
 
     y = 45;
     doc.setTextColor(55, 73, 94);
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.text("RECIBO DE AGUINALDO " + maestro.año_fiscal, 105, y, { align: "center" });
+    doc.text("RECIBO DE AGUINALDO " + maestro.año_fiscal, 105, y, {
+      align: "center",
+    });
 
     y += 10;
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(60, 60, 60);
-    doc.text("Fecha de Corte: " + dayjs(maestro.fecha_corte).format("DD/MM/YYYY"), margenIzq, y);
+    doc.text(
+      "Fecha de Corte: " + dayjs(maestro.fecha_corte).format("DD/MM/YYYY"),
+      margenIzq,
+      y,
+    );
 
     y += 10;
     // Sección: INFORMACIÓN DEL EMPLEADO
@@ -480,9 +592,17 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
     y += 6;
     doc.text("Departamento: " + (ag.departamento || "N/A"), margenIzq, y);
     y += 6;
-    doc.text("Fecha de Ingreso: " + dayjs(ag.fecha_ingreso).format("DD/MM/YYYY"), margenIzq, y);
+    doc.text(
+      "Fecha de Ingreso: " + dayjs(ag.fecha_ingreso).format("DD/MM/YYYY"),
+      margenIzq,
+      y,
+    );
     y += 6;
-    doc.text("Años Trabajados: " + parseFloat(ag.años_trabajados).toFixed(2) + " años", margenIzq, y);
+    doc.text(
+      "Años Trabajados: " + parseFloat(ag.años_trabajados).toFixed(2) + " años",
+      margenIzq,
+      y,
+    );
     y += 10; // Espacio antes de la siguiente sección
 
     // Sección: DETALLE DEL CÁLCULO
@@ -498,19 +618,52 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(60, 60, 60);
-    doc.text("Salario Diario: $" + parseFloat(ag.salario_diario).toLocaleString("es-MX", { minimumFractionDigits: 2 }), margenIzq, y);
+    doc.text(
+      "Salario Diario: $" +
+        parseFloat(ag.salario_diario).toLocaleString("es-MX", {
+          minimumFractionDigits: 2,
+        }),
+      margenIzq,
+      y,
+    );
     y += 6;
-    doc.text("Días Aguinaldo (Ley): " + parseFloat(ag.dias_aguinaldo_ley).toFixed(2) + " días", margenIzq, y);
+    doc.text(
+      "Días Aguinaldo (Ley): " +
+        parseFloat(ag.dias_aguinaldo_ley).toFixed(2) +
+        " días",
+      margenIzq,
+      y,
+    );
     y += 6;
-    doc.text("Días Aguinaldo Calculado: " + parseFloat(ag.dias_aguinaldo_calculado).toFixed(2) + " días", margenIzq, y);
+    doc.text(
+      "Días Aguinaldo Calculado: " +
+        parseFloat(ag.dias_aguinaldo_calculado).toFixed(2) +
+        " días",
+      margenIzq,
+      y,
+    );
     y += 6;
-    doc.text("Tipo: " + (ag.es_proporcional ? "Proporcional" : "Completo"), margenIzq, y);
+    doc.text(
+      "Tipo: " + (ag.es_proporcional ? "Proporcional" : "Completo"),
+      margenIzq,
+      y,
+    );
     y += 6;
     if (parseFloat(ag.dias_no_trabajados) > 0) {
-      doc.text("Días No Trabajados: " + parseFloat(ag.dias_no_trabajados).toFixed(2) + " días", margenIzq, y);
+      doc.text(
+        "Días No Trabajados: " +
+          parseFloat(ag.dias_no_trabajados).toFixed(2) +
+          " días",
+        margenIzq,
+        y,
+      );
       y += 6;
     }
-    doc.text("Días Trabajados: " + parseFloat(ag.dias_trabajados).toFixed(2) + " días", margenIzq, y);
+    doc.text(
+      "Días Trabajados: " + parseFloat(ag.dias_trabajados).toFixed(2) + " días",
+      margenIzq,
+      y,
+    );
     y += 10; // Espacio antes del total
 
     // Total
@@ -522,13 +675,22 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
     doc.text("TOTAL A PAGAR", margenIzq + 2, y + 7);
     doc.setFontSize(16);
     doc.text(
-      "$" + parseFloat(ag.monto_aguinaldo).toLocaleString("es-MX", { minimumFractionDigits: 2 }) + " MXN",
+      "$" +
+        parseFloat(ag.monto_aguinaldo).toLocaleString("es-MX", {
+          minimumFractionDigits: 2,
+        }) +
+        " MXN",
       margenDer - 2,
       y + 7,
-      { align: "right" }
+      { align: "right" },
     );
 
-    const nombreArchivo = "Aguinaldo_" + maestro.año_fiscal + "_" + (ag.nombre_completo || "Empleado").replace(/\s+/g, "_") + ".pdf";
+    const nombreArchivo =
+      "Aguinaldo_" +
+      maestro.año_fiscal +
+      "_" +
+      (ag.nombre_completo || "Empleado").replace(/\s+/g, "_") +
+      ".pdf";
     doc.save(nombreArchivo);
   };
 
@@ -540,14 +702,16 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
     setActualizandoEstados((prev) => ({ ...prev, [idAguinaldo]: true }));
     try {
       await aguinaldosApi.actualizarEstadoIndividual(idAguinaldo, nuevoEstado);
-      
+
       // Actualizar el estado en el detalle local
       setDetalle((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
           aguinaldos: prev.aguinaldos.map((ag) =>
-            ag.id_aguinaldo === idAguinaldo ? { ...ag, estado: nuevoEstado } : ag
+            ag.id_aguinaldo === idAguinaldo
+              ? { ...ag, estado: nuevoEstado }
+              : ag,
           ),
         };
       });
@@ -588,10 +752,12 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
               </div>
               <div className="min-w-0">
                 <DialogTitle className="text-white text-xl font-bold truncate">
-                  Nómina de aguinaldos #{String(maestro.id_calculo || "").padStart(3, "0")}
+                  Nómina de aguinaldos #
+                  {String(maestro.id_calculo || "").padStart(3, "0")}
                 </DialogTitle>
                 <DialogDescription className="text-sm text-indigo-100 truncate">
-                  Año fiscal: {maestro.año_fiscal} · Fecha corte: {dayjs(maestro.fecha_corte).format("DD/MM/YYYY")}
+                  Año fiscal: {maestro.año_fiscal} · Fecha corte:{" "}
+                  {dayjs(maestro.fecha_corte).format("DD/MM/YYYY")}
                 </DialogDescription>
               </div>
             </div>
@@ -600,30 +766,50 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
 
         <div className="flex-1 overflow-y-auto p-6">
           {loading ? (
-            <div className="py-6 text-sm text-muted-foreground">Cargando...</div>
+            <div className="py-6 text-sm text-muted-foreground">
+              Cargando...
+            </div>
           ) : detalle ? (
             <div className="space-y-4 text-sm">
               {/* Estadísticas */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3">
                 <div className="bg-white border border-[#e5e7eb] rounded-lg p-3 sm:p-4 shadow-[0_2px_10px_rgba(17,24,39,0.04)]">
-                  <div className="text-[10px] sm:text-xs text-[#6b7280] font-semibold uppercase tracking-wider">Total Empleados</div>
-                  <div className="text-xl sm:text-2xl font-bold text-[#37495E] mt-1">{maestro.total_empleados}</div>
+                  <div className="text-[10px] sm:text-xs text-[#6b7280] font-semibold uppercase tracking-wider">
+                    Total Empleados
+                  </div>
+                  <div className="text-xl sm:text-2xl font-bold text-[#37495E] mt-1">
+                    {maestro.total_empleados}
+                  </div>
                 </div>
                 <div className="bg-white border border-[#e5e7eb] rounded-lg p-3 sm:p-4 shadow-[0_2px_10px_rgba(17,24,39,0.04)]">
-                  <div className="text-[10px] sm:text-xs text-[#6b7280] font-semibold uppercase tracking-wider">Aguinaldos Completos</div>
-                  <div className="text-xl sm:text-2xl font-bold text-[#065f46] mt-1">{completos}</div>
+                  <div className="text-[10px] sm:text-xs text-[#6b7280] font-semibold uppercase tracking-wider">
+                    Aguinaldos Completos
+                  </div>
+                  <div className="text-xl sm:text-2xl font-bold text-[#065f46] mt-1">
+                    {completos}
+                  </div>
                 </div>
                 <div className="bg-white border border-[#e5e7eb] rounded-lg p-3 sm:p-4 shadow-[0_2px_10px_rgba(17,24,39,0.04)] sm:col-span-2 md:col-span-1">
-                  <div className="text-[10px] sm:text-xs text-[#6b7280] font-semibold uppercase tracking-wider">Aguinaldos Proporcionales</div>
-                  <div className="text-xl sm:text-2xl font-bold text-[#92400e] mt-1">{proporcionales}</div>
+                  <div className="text-[10px] sm:text-xs text-[#6b7280] font-semibold uppercase tracking-wider">
+                    Aguinaldos Proporcionales
+                  </div>
+                  <div className="text-xl sm:text-2xl font-bold text-[#92400e] mt-1">
+                    {proporcionales}
+                  </div>
                 </div>
               </div>
 
               {/* Total General */}
               <div className="bg-gradient-to-r from-[#2563EB] to-[#1d4ed8] text-white p-4 sm:p-6 rounded-xl text-center shadow-sm">
-                <div className="text-xs sm:text-sm uppercase tracking-wider mb-2 opacity-90 font-bold">Total general a pagar</div>
+                <div className="text-xs sm:text-sm uppercase tracking-wider mb-2 opacity-90 font-bold">
+                  Total general a pagar
+                </div>
                 <div className="text-2xl sm:text-3xl md:text-4xl font-extrabold break-words">
-                  ${parseFloat(maestro.total_general).toLocaleString("es-MX", { minimumFractionDigits: 2 })} MXN
+                  $
+                  {parseFloat(maestro.total_general).toLocaleString("es-MX", {
+                    minimumFractionDigits: 2,
+                  })}{" "}
+                  MXN
                 </div>
               </div>
 
@@ -631,13 +817,16 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
               <div className="bg-[#f8fafc] p-3 sm:p-4 rounded-lg border border-[#e5e7eb]">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3 text-xs sm:text-sm">
                   <div>
-                    <span className="font-semibold">Año Fiscal:</span> {maestro.año_fiscal}
+                    <span className="font-semibold">Año Fiscal:</span>{" "}
+                    {maestro.año_fiscal}
                   </div>
                   <div>
-                    <span className="font-semibold">Fecha de Corte:</span> {dayjs(maestro.fecha_corte).format("DD/MM/YYYY")}
+                    <span className="font-semibold">Fecha de Corte:</span>{" "}
+                    {dayjs(maestro.fecha_corte).format("DD/MM/YYYY")}
                   </div>
                   <div>
-                    <span className="font-semibold">Fecha de Cálculo:</span> {dayjs(maestro.fecha_calculo).format("DD/MM/YYYY HH:mm")}
+                    <span className="font-semibold">Fecha de Cálculo:</span>{" "}
+                    {dayjs(maestro.fecha_calculo).format("DD/MM/YYYY HH:mm")}
                   </div>
                   <div>
                     <span className="font-semibold">Estado:</span>{" "}
@@ -655,46 +844,88 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
                   </div>
                   {maestro.observaciones && (
                     <div className="md:col-span-2">
-                      <span className="font-semibold">Observaciones:</span> {maestro.observaciones}
+                      <span className="font-semibold">Observaciones:</span>{" "}
+                      {maestro.observaciones}
                     </div>
                   )}
                   <div className="md:col-span-2">
-                    <span className="font-semibold">Calculado por:</span> {maestro.calculado_por?.split("@")[0] || "N/A"}
+                    <span className="font-semibold">Calculado por:</span>{" "}
+                    {maestro.calculado_por?.split("@")[0] || "N/A"}
                   </div>
                 </div>
               </div>
 
               {/* Tabla de aguinaldos */}
               <div>
-                <h4 className="text-sm font-bold text-gray-900 mb-2">Detalle por empleado</h4>
+                <h4 className="text-sm font-bold text-gray-900 mb-2">
+                  Detalle por empleado
+                </h4>
                 <div className="overflow-x-auto rounded-md border border-gray-200">
                   <div className="min-w-full inline-block">
                     <table className="w-full text-[10px] sm:text-xs md:text-sm min-w-[800px]">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="text-left p-1.5 sm:p-2 whitespace-nowrap">Empleado</th>
-                          <th className="text-left p-1.5 sm:p-2 whitespace-nowrap">Puesto</th>
-                          <th className="text-left p-1.5 sm:p-2 whitespace-nowrap">F. Ingreso</th>
-                          <th className="text-left p-1.5 sm:p-2 whitespace-nowrap">Años</th>
-                          <th className="text-left p-1.5 sm:p-2 whitespace-nowrap">Salario</th>
-                          <th className="text-left p-1.5 sm:p-2 whitespace-nowrap">Días</th>
-                          <th className="text-left p-1.5 sm:p-2 whitespace-nowrap">Tipo</th>
-                          <th className="text-left p-1.5 sm:p-2 whitespace-nowrap">Monto</th>
-                          <th className="text-left p-1.5 sm:p-2 whitespace-nowrap">Estado</th>
-                          <th className="text-left p-1.5 sm:p-2 whitespace-nowrap">Acciones</th>
+                          <th className="text-left p-1.5 sm:p-2 whitespace-nowrap">
+                            Empleado
+                          </th>
+                          <th className="text-left p-1.5 sm:p-2 whitespace-nowrap">
+                            Puesto
+                          </th>
+                          <th className="text-left p-1.5 sm:p-2 whitespace-nowrap">
+                            F. Ingreso
+                          </th>
+                          <th className="text-left p-1.5 sm:p-2 whitespace-nowrap">
+                            Años
+                          </th>
+                          <th className="text-left p-1.5 sm:p-2 whitespace-nowrap">
+                            Salario
+                          </th>
+                          <th className="text-left p-1.5 sm:p-2 whitespace-nowrap">
+                            Días
+                          </th>
+                          <th className="text-left p-1.5 sm:p-2 whitespace-nowrap">
+                            Tipo
+                          </th>
+                          <th className="text-left p-1.5 sm:p-2 whitespace-nowrap">
+                            Monto
+                          </th>
+                          <th className="text-left p-1.5 sm:p-2 whitespace-nowrap">
+                            Estado
+                          </th>
+                          <th className="text-left p-1.5 sm:p-2 whitespace-nowrap">
+                            Acciones
+                          </th>
                         </tr>
                       </thead>
                       <tbody>
                         {aguinaldos.map((ag) => (
                           <tr key={ag.id_aguinaldo} className="border-t">
                             <td className="p-1.5 sm:p-2">
-                              <strong className="break-words">{ag.nombre_completo}</strong>
+                              <strong className="break-words">
+                                {ag.nombre_completo}
+                              </strong>
                             </td>
-                            <td className="p-1.5 sm:p-2 whitespace-nowrap">{ag.puesto || "Sin puesto"}</td>
-                            <td className="p-1.5 sm:p-2 whitespace-nowrap">{dayjs(ag.fecha_ingreso).format("DD/MM/YYYY")}</td>
-                            <td className="p-1.5 sm:p-2 whitespace-nowrap">{parseFloat(ag.años_trabajados).toFixed(2)} años</td>
-                            <td className="p-1.5 sm:p-2 whitespace-nowrap">${parseFloat(ag.salario_diario).toLocaleString("es-MX", { minimumFractionDigits: 2 })}</td>
-                            <td className="p-1.5 sm:p-2 whitespace-nowrap">{parseFloat(ag.dias_aguinaldo_calculado).toFixed(2)}</td>
+                            <td className="p-1.5 sm:p-2 whitespace-nowrap">
+                              {ag.puesto || "Sin puesto"}
+                            </td>
+                            <td className="p-1.5 sm:p-2 whitespace-nowrap">
+                              {dayjs(ag.fecha_ingreso).format("DD/MM/YYYY")}
+                            </td>
+                            <td className="p-1.5 sm:p-2 whitespace-nowrap">
+                              {parseFloat(ag.años_trabajados).toFixed(2)} años
+                            </td>
+                            <td className="p-1.5 sm:p-2 whitespace-nowrap">
+                              $
+                              {parseFloat(ag.salario_diario).toLocaleString(
+                                "es-MX",
+                                { minimumFractionDigits: 2 },
+                              )}
+                            </td>
+                            <td className="p-1.5 sm:p-2 whitespace-nowrap">
+                              {parseFloat(ag.dias_aguinaldo_calculado).toFixed(
+                                2,
+                              )}
+                            </td>
                             <td className="p-1.5 sm:p-2 whitespace-nowrap">
                               {ag.es_proporcional ? (
                                 <span className="px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full text-[9px] sm:text-xs font-bold uppercase bg-[#fef3c7] text-[#92400e]">
@@ -707,13 +938,20 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
                               )}
                             </td>
                             <td className="p-1.5 sm:p-2 font-bold whitespace-nowrap">
-                              ${parseFloat(ag.monto_aguinaldo).toLocaleString("es-MX", { minimumFractionDigits: 2 })}
+                              $
+                              {parseFloat(ag.monto_aguinaldo).toLocaleString(
+                                "es-MX",
+                                { minimumFractionDigits: 2 },
+                              )}
                             </td>
                             <td className="p-1.5 sm:p-2 whitespace-nowrap">
                               <Select
                                 value={ag.estado || "Pendiente"}
                                 onValueChange={(nuevoEstado) => {
-                                  actualizarEstadoIndividual(ag.id_aguinaldo, nuevoEstado);
+                                  actualizarEstadoIndividual(
+                                    ag.id_aguinaldo,
+                                    nuevoEstado,
+                                  );
                                 }}
                                 disabled={actualizandoEstados[ag.id_aguinaldo]}
                               >
@@ -721,9 +959,13 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="Pendiente">Pendiente</SelectItem>
+                                  <SelectItem value="Pendiente">
+                                    Pendiente
+                                  </SelectItem>
                                   <SelectItem value="Pagado">Pagado</SelectItem>
-                                  <SelectItem value="Cancelado">Cancelado</SelectItem>
+                                  <SelectItem value="Cancelado">
+                                    Cancelado
+                                  </SelectItem>
                                 </SelectContent>
                               </Select>
                             </td>
@@ -731,7 +973,9 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => generarPDFIndividualFormatoNuevo(ag)}
+                                onClick={() =>
+                                  generarPDFIndividualFormatoNuevo(ag)
+                                }
                                 className="text-[9px] sm:text-xs h-7 sm:h-8 px-2 border-gray-300"
                                 title="Generar PDF individual para este empleado"
                               >
@@ -748,7 +992,9 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
               </div>
             </div>
           ) : (
-            <div className="py-6 text-sm text-muted-foreground">Sin información.</div>
+            <div className="py-6 text-sm text-muted-foreground">
+              Sin información.
+            </div>
           )}
         </div>
 
@@ -774,4 +1020,3 @@ export default function AguinaldoViewDialog({ open, setOpen, id, onEstadoActuali
     </Dialog>
   );
 }
-

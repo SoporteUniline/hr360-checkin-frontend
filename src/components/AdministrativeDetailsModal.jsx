@@ -271,7 +271,7 @@ export const AdministrativeDetailsModal = ({
     drawSignaturesAndFooter(doc, {
       empleadoName: empleadoName || "—",
       empresaLabel: companyName || "Uniline Innovacion en la Nube",
-      footerLeft: "Sistema HR360",
+      footerLeft: "Sistema Adamia",
       // En Actas: firmas solo en la última página (evita duplicarlas si el PDF es de 2+ hojas).
       signaturesOn: "last",
     });

@@ -19,7 +19,7 @@ export const cards1 = [
 export const clientes = [
   {
     comment:
-      '"Gracias a HR360 hemos simplificado toda la gestión de empleados y permisos. ¡Un antes y un después!"',
+      '"Gracias a Adamia hemos simplificado toda la gestión de empleados y permisos. ¡Un antes y un después!"',
     author: "Mariana R., Grupo Innovamed",
   },
   {
@@ -28,7 +28,7 @@ export const clientes = [
     author: "Pedro L., Constructora Avance",
   },
   {
-    comment: "HR360 es muy sencillo de usar, SIUU!",
+    comment: "Adamia es muy sencillo de usar, SIUU!",
     author: "Cristian Orlando",
   },
 ];

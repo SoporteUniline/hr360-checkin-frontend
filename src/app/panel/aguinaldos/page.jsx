@@ -623,7 +623,7 @@ export default function PageAguinaldos() {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(28);
     doc.setFont("helvetica", "bold");
-    doc.text("HR360", margenIzq, 20);
+    doc.text("Adamia", margenIzq, 20);
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.text("Sistema de Gestión de Capital Humano", margenIzq, 26);
@@ -858,7 +858,7 @@ export default function PageAguinaldos() {
     drawSignaturesAndFooter(doc, {
       empleadoName: empleado,
       empresaLabel: companyName || "Uniline Innovacion en la Nube",
-      footerLeft: "Sistema HR360",
+      footerLeft: "Sistema Adamia",
     });
 
     const nombreArchivo = `Aguinaldo_${
@@ -885,7 +885,7 @@ export default function PageAguinaldos() {
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(28);
     doc.setFont("helvetica", "bold");
-    doc.text("HR360", margenIzq, 20);
+    doc.text("Adamia", margenIzq, 20);
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.text("Sistema de Gestión de Capital Humano", margenIzq, 26);
@@ -1164,7 +1164,7 @@ export default function PageAguinaldos() {
     drawSignaturesAndFooter(d, {
       empleadoName: "",
       empresaLabel: companyName || "Uniline Innovacion en la Nube",
-      footerLeft: "Sistema HR360",
+      footerLeft: "Sistema Adamia",
     });
 
     const nombreArchivo = `Nomina_Aguinaldos_${

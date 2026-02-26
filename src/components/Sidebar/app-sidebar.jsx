@@ -26,7 +26,7 @@ export function AppSidebar({ ...props }) {
             >
               <div className="flex-1 p-2.5">
                 <Image
-                  alt="HR360"
+                  alt="Adamia"
                   src="/assets/logo.png"
                   height={80}
                   width={70}
