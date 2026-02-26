@@ -45,6 +45,23 @@ function parseFlexibleNumber(value) {
   return Number.isFinite(n) ? n : null;
 }
 
+function buildDescuentosMap(rows = []) {
+  const defaults = { 1: 0, 6: 10, 12: 20 };
+  if (!rows.length) return defaults;
+
+  const result = { ...defaults };
+  rows.forEach((row) => {
+    const meses = Number(row?.meses);
+    const descuento = parseFlexibleNumber(
+      row?.descuento_porcentaje ?? row?.descuento ?? null,
+    );
+    if ([1, 6, 12].includes(meses) && Number.isFinite(descuento)) {
+      result[meses] = descuento;
+    }
+  });
+  return result;
+}
+
 function getPriceFromPlan(row, months, employees) {
   const monthlyCandidates = [
     row?.precio_mensual,
@@ -172,7 +189,9 @@ export default function ContratarPlanContent() {
   const [catalogos, setCatalogos] = useState({
     tipo_planes: [],
     metodos_pago: [],
+    planes_duracion: [],
   });
+  const [descuentos, setDescuentos] = useState({ 1: 0, 6: 10, 12: 20 });
   const [loadingCatalogos, setLoadingCatalogos] = useState(true);
   const [errorCatalogos, setErrorCatalogos] = useState("");
 
@@ -219,7 +238,9 @@ export default function ContratarPlanContent() {
         setCatalogos({
           tipo_planes: response?.data?.tipo_planes ?? [],
           metodos_pago: response?.data?.metodos_pago ?? [],
+          planes_duracion: response?.data?.planes_duracion ?? [],
         });
+        setDescuentos(buildDescuentosMap(response?.data?.planes_duracion ?? []));
       } catch (_error) {
         if (!mounted) return;
         setErrorCatalogos(
@@ -268,21 +289,42 @@ export default function ContratarPlanContent() {
   const estimado = useMemo(() => {
     const months = Number(form.meses_contratados);
     const employees = Number(form.empleados);
-    const monthly = getPriceFromPlan(selectedPlan, months, employees);
-    if (!monthly || ![1, 6, 12].includes(months)) return null;
-    const descuento = months === 6 ? 5 : months === 12 ? 10 : 0;
-    const subtotal = monthly * months;
+    const monthlyBase = getPriceFromPlan(selectedPlan, months, employees);
+    if (!monthlyBase || ![1, 6, 12].includes(months)) return null;
+    const descuento = descuentos[months] ?? 0;
+    const subtotal = monthlyBase * months;
     const total = subtotal - subtotal * (descuento / 100);
-    return { monthly, subtotal, descuento, total };
-  }, [selectedPlan, form.meses_contratados, form.empleados]);
+    return {
+      monthlyBase,
+      monthlyFinal: total / months,
+      subtotal,
+      descuento,
+      total,
+    };
+  }, [selectedPlan, form.meses_contratados, form.empleados, descuentos]);
 
   const planCards = useMemo(
     () => [
-      { months: 1, title: "Mensual", badge: "Sin compromiso", discount: 0 },
-      { months: 6, title: "Semestral", badge: "Más popular", discount: 5 },
-      { months: 12, title: "Anual", badge: "Mejor ahorro", discount: 10 },
+      {
+        months: 1,
+        title: "Mensual",
+        badge: "Sin compromiso",
+        discount: descuentos[1] ?? 0,
+      },
+      {
+        months: 6,
+        title: "Semestral",
+        badge: "Más popular",
+        discount: descuentos[6] ?? 0,
+      },
+      {
+        months: 12,
+        title: "Anual",
+        badge: "Mejor ahorro",
+        discount: descuentos[12] ?? 0,
+      },
     ],
-    [],
+    [descuentos],
   );
 
   const onChange = (event) => {
@@ -367,7 +409,7 @@ export default function ContratarPlanContent() {
         metodo_pago_id: form.metodo_pago_id
           ? Number(form.metodo_pago_id)
           : null,
-        precio_por_mes: estimado?.monthly ?? null,
+        precio_por_mes: estimado?.monthlyBase ?? null,
       };
       const response = await axios.post(
         "/checador/contrataciones/publica",
@@ -504,13 +546,15 @@ export default function ContratarPlanContent() {
 
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           {planCards.map((card) => {
-            const monthly = getPriceFromPlan(
+            const monthlyBase = getPriceFromPlan(
               selectedPlan,
               card.months,
               Number(form.empleados),
             );
-            const subtotal = (monthly || 0) * card.months;
+            const subtotal = (monthlyBase || 0) * card.months;
             const total = subtotal - subtotal * (card.discount / 100);
+            const monthlyFinal =
+              monthlyBase && card.months ? total / card.months : null;
             const active = Number(form.meses_contratados) === card.months;
             return (
               <article
@@ -527,15 +571,23 @@ export default function ContratarPlanContent() {
                     {card.badge}
                   </span>
                 </div>
+                <p className="mt-2 text-xs font-bold uppercase tracking-wide text-[var(--adamia-text-secondary)]">
+                  {card.discount}% de descuento
+                </p>
                 <p className="mt-4 text-3xl font-black text-[var(--adamia-blue)]">
-                  {monthly ? formatCurrencyMXN(monthly) : "—"}
+                  {monthlyFinal ? formatCurrencyMXN(monthlyFinal) : "—"}
                   <span className="text-sm font-semibold text-[var(--adamia-text-secondary)]">
                     /mes
                   </span>
                 </p>
+                {monthlyBase && card.discount > 0 ? (
+                  <p className="mt-1 text-xs text-[var(--adamia-text-secondary)]">
+                    Precio mensual base: <strong>{formatCurrencyMXN(monthlyBase)}</strong>
+                  </p>
+                ) : null}
                 <p className="mt-1 text-sm text-[var(--adamia-text-secondary)]">
                   Total {card.months} {card.months === 1 ? "mes" : "meses"}:{" "}
-                  <strong>{monthly ? formatCurrencyMXN(total) : "—"}</strong>
+                  <strong>{monthlyBase ? formatCurrencyMXN(total) : "—"}</strong>
                 </p>
                 <button
                   type="button"
@@ -727,9 +779,15 @@ export default function ContratarPlanContent() {
               {estimado ? (
                 <div className="mt-3 space-y-2 text-sm">
                   <SummaryRow
-                    label="Precio mensual"
-                    value={formatCurrencyMXN(estimado.monthly)}
+                    label="Precio por mes (con descuento)"
+                    value={formatCurrencyMXN(estimado.monthlyFinal)}
                   />
+                  {estimado.descuento > 0 ? (
+                    <SummaryRow
+                      label="Precio mensual base"
+                      value={formatCurrencyMXN(estimado.monthlyBase)}
+                    />
+                  ) : null}
                   <SummaryRow
                     label="Subtotal"
                     value={formatCurrencyMXN(estimado.subtotal)}
