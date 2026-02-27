@@ -21,6 +21,11 @@ import ErrorPage from "@/components/ErrorPage";
 import ImageEmpresa from "./ImagenEmpresa";
 import { loadOptionsGiros } from "@/app/(public)/alta-empresas/dataMappings";
 import AutocompleteInput from "@/components/Inputs/FormCreatebleAutocomplete";
+import { Combobox } from "@/components/Combobox";
+import {
+  DEFAULT_COMPANY_TIMEZONE,
+  getTimeZoneOptions,
+} from "@/lib/timezones";
 
 export default function EmpresaForm() {
   const { dataUser } = useAuth();
@@ -35,7 +40,9 @@ export default function EmpresaForm() {
   );
 
   const form = useForm();
-  const { register, handleSubmit, reset, formState } = form;
+  const { register, handleSubmit, reset, formState, setValue, watch } = form;
+  const selectedTimeZone = watch("zona_horaria");
+  const timeZoneOptions = React.useMemo(() => getTimeZoneOptions(), []);
 
   const getOptionGiros = async (value) => {
     setLoading(true);
@@ -51,6 +58,7 @@ export default function EmpresaForm() {
         reset({
           ...data,
           giro,
+          zona_horaria: data.zona_horaria || DEFAULT_COMPANY_TIMEZONE,
         });
       };
       setDataGiro();
@@ -76,6 +84,14 @@ export default function EmpresaForm() {
       },
     };
     try {
+      if (!data.zona_horaria) {
+        form.setError("zona_horaria", {
+          type: "manual",
+          message: "Selecciona una zona horaria",
+        });
+        setLoading(false);
+        return;
+      }
       const { createdAt, updatedAt, giro, ...input } = data;
 
       await axios.put(
@@ -204,6 +220,24 @@ export default function EmpresaForm() {
               </FormItem>
             </div>
           </div>
+          <FormItem>
+            <FormLabel className="text-sm font-medium text-gray-700">
+              Zona horaria
+            </FormLabel>
+            <Combobox
+              name="zona_horaria"
+              options={timeZoneOptions}
+              value={selectedTimeZone || DEFAULT_COMPANY_TIMEZONE}
+              placeholder="Selecciona la zona horaria"
+              emptyText="No se encontraron zonas horarias"
+              onChange={(value) => {
+                setValue("zona_horaria", value || DEFAULT_COMPANY_TIMEZONE);
+                form.clearErrors("zona_horaria");
+              }}
+              disabled={loading}
+            />
+            <FormMessage>{formState.errors.zona_horaria?.message}</FormMessage>
+          </FormItem>
           {/* <FormItem>
             <FormLabel>Giro</FormLabel>
             <FormControl>

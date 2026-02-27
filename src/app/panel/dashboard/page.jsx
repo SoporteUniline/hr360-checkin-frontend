@@ -107,6 +107,20 @@ function formatTimeMexico(datetimeStr) {
   }
 }
 
+function getServiceYears(fechaIngreso) {
+  if (!fechaIngreso) return 0;
+  const ingreso = new Date(`${String(fechaIngreso).slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(ingreso.getTime())) return 0;
+  const today = new Date();
+  let years = today.getUTCFullYear() - ingreso.getUTCFullYear();
+  const hasAnniversaryThisYear =
+    today.getUTCMonth() > ingreso.getUTCMonth() ||
+    (today.getUTCMonth() === ingreso.getUTCMonth() &&
+      today.getUTCDate() >= ingreso.getUTCDate());
+  if (!hasAnniversaryThisYear) years -= 1;
+  return Math.max(years, 0);
+}
+
 import { cookies } from "next/headers";
 
 export default async function PanelDashboardPage() {
@@ -200,6 +214,9 @@ export default async function PanelDashboardPage() {
   const distribTotal = distribData.reduce(
     (acc, it) => acc + (it.count || 0),
     0,
+  );
+  const aniversariosMesFiltrados = (data.aniversariosMes || []).filter(
+    (a) => getServiceYears(a.fecha_ingreso) >= 1,
   );
 
   function formatDateDMY(ymd) {
@@ -395,23 +412,19 @@ export default async function PanelDashboardPage() {
                 <PartyPopper className="size-4 text-indigo-600" /> Aniversarios
               </CardTitle>
               <span className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-900">
-                {data.aniversariosMes?.length || 0} este mes
+                {aniversariosMesFiltrados.length} este mes
               </span>
             </CardHeader>
             <CardContent>
-              {!data.aniversariosMes || data.aniversariosMes.length === 0 ? (
+              {aniversariosMesFiltrados.length === 0 ? (
                 <div className="text-sm text-zinc-500">
                   No hay aniversarios este mes
                 </div>
               ) : (
                 <div className="max-h-64 overflow-y-auto pr-1">
                   <ul className="divide-y">
-                    {data.aniversariosMes.map((a) => {
-                      const years =
-                        new Date().getUTCFullYear() -
-                        new Date(
-                          a.fecha_ingreso + "T00:00:00Z",
-                        ).getUTCFullYear();
+                    {aniversariosMesFiltrados.map((a) => {
+                      const years = getServiceYears(a.fecha_ingreso);
                       return (
                         <li
                           key={`a-${a.id_empleado}`}
