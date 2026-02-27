@@ -156,7 +156,7 @@ export default function ContratarPlanContent() {
     nombre_cliente: "",
     correo: "",
     telefono: "",
-    direccion_cliente: "",
+    empresa_nombre: "",
     rfc: "",
     empleados: "15",
     tipo_plan_id: "",
@@ -573,8 +573,8 @@ export default function ContratarPlanContent() {
               />
               <Field
                 label="Empresa / razón social"
-                name="direccion_cliente"
-                value={form.direccion_cliente}
+                name="empresa_nombre"
+                value={form.empresa_nombre}
                 onChange={onChange}
               />
               <Field
@@ -778,12 +778,13 @@ export default function ContratarPlanContent() {
   );
 }
 
-function Field({ label, ...props }) {
+function Field({ label, value, ...props }) {
   return (
     <div>
       <label className="mb-2 block text-sm font-semibold">{label}</label>
       <input
         {...props}
+        value={value ?? ""}
         className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 outline-none ring-[var(--adamia-blue)]/20 focus:ring-2"
       />
     </div>

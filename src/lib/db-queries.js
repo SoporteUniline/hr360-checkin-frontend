@@ -7,7 +7,6 @@ export async function checkSubscriptionDirect(userId) {
       FROM Contrataciones c
       INNER JOIN Suscripciones s ON c.id = s.contratacion_id
       WHERE c.usuario_id = ? 
-        AND c.estado = 'Activo'
         AND s.estado IN ('Activa', 'Cortesia')
         AND s.fecha_vencimiento >= CURDATE()
       LIMIT 1

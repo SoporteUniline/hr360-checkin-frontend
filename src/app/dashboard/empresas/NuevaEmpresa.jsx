@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import {
   Sheet,
@@ -15,6 +15,13 @@ import {
   FormControl,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { useSnackbar } from "notistack";
 import axios from "@/lib/axios";
@@ -26,6 +33,7 @@ import ImageForm from "@/app/(public)/alta-empresas/ImageForm";
 import ImageEmpresa from "@/app/panel/cuenta/Empresa/ImagenEmpresa";
 import AutocompleteInput from "@/components/Inputs/FormCreatebleAutocomplete";
 import { loadOptionsGiros } from "@/app/(public)/alta-empresas/dataMappings";
+import { Combobox } from "@/components/Combobox";
 
 export default function NuevaEmpresa({
   editar = false,
@@ -38,6 +46,7 @@ export default function NuevaEmpresa({
   const [loading, setLoading] = React.useState(false);
   const [imagePreview, setImagePreview] = React.useState(null);
   const [selectedFile, setSelectedFile] = React.useState(null);
+  const [planes, setPlanes] = React.useState([]);
   const { enqueueSnackbar } = useSnackbar();
   const token = Cookies.get("token");
 
@@ -52,14 +61,46 @@ export default function NuevaEmpresa({
       facebook: "",
       instagram: "",
       pagina_web: "",
+      tipo_plan_id: "",
+      tipo_contratacion: "Prueba",
+      meses_contratados: "1",
+      precio_por_mes: 0,
+      monto_total: 0,
     },
   });
 
-  const { handleSubmit, register, formState, setError, clearErrors } = form;
+  const {
+    handleSubmit,
+    register,
+    formState,
+    setError,
+    clearErrors,
+    watch,
+    setValue,
+  } = form;
   const { errors } = formState;
+  const watchTipoContratacion = watch("tipo_contratacion");
+
+  React.useEffect(() => {
+    if (open && !editar) {
+      const fetchPlanes = async () => {
+        try {
+          const { data } = await axios.get(
+            `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/tipo-planes`,
+            { headers: { Authorization: `Bearer ${token}` } },
+          );
+
+          console.log(data);
+          setPlanes(data.tipo_planes || []);
+        } catch (error) {
+          console.error("Error al cargar planes:", error);
+        }
+      };
+      fetchPlanes();
+    }
+  }, [open, editar, token]);
 
   const onSubmit = async (data) => {
-    // 1. Validación manual de la Imagen (Solo en creación)
     if (!editar && !selectedFile) {
       setError("imagen_logo", {
         type: "manual",
@@ -68,11 +109,17 @@ export default function NuevaEmpresa({
       return;
     }
 
-    // 2. Validación manual del Giro
     if (!data?.giro?.value) {
       setError("giro", {
         type: "manual",
         message: "Debes seleccionar un giro",
+      });
+      return;
+    }
+
+    if (!editar && !data.tipo_plan_id) {
+      enqueueSnackbar("Debes seleccionar un plan para la empresa", {
+        variant: "warning",
       });
       return;
     }
@@ -86,10 +133,21 @@ export default function NuevaEmpresa({
 
     try {
       if (editar) {
-        const { createdAt, updatedAt, giro, ...input } = data;
+        const datosParaActualizar = {
+          nombre_empresa: data.nombre_empresa,
+          nombre_duenio: data.nombre_duenio,
+          correo_empresa: data.correo_empresa,
+          celular: data.celular,
+          direccion: data.direccion,
+          facebook: data.facebook,
+          instagram: data.instagram,
+          pagina_web: data.pagina_web,
+          giro: data.giro?.value || data.giro,
+        };
+
         await axios.put(
           `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/empresas/${data.id_empresa}`,
-          { ...input, giro: giro.value },
+          datosParaActualizar,
           headers,
         );
       } else {
@@ -97,10 +155,16 @@ export default function NuevaEmpresa({
         if (selectedFile) formData.append("imagen", selectedFile);
 
         Object.entries(data).forEach(([key, value]) => {
-          if (key !== "imagen" && key !== "giro" && value) {
+          if (
+            key !== "imagen" &&
+            key !== "giro" &&
+            value !== undefined &&
+            value !== null
+          ) {
             formData.append(key, value);
           }
         });
+
         formData.append("giro", data?.giro?.label);
 
         await axios.post(
@@ -150,6 +214,23 @@ export default function NuevaEmpresa({
     setSelectedFile(null);
   };
 
+  const planOptions = planes.map((plan) => ({
+    label: `${plan.usuarios_min} - ${plan.usuarios_max} Usuarios ($${plan.precio_base})`,
+    value: plan.id.toString(),
+  }));
+
+  const watchMeses = watch("meses_contratados");
+  const watchPrecio = watch("precio_por_mes");
+
+  useEffect(() => {
+    if (watchTipoContratacion === "Normal") {
+      const total = parseFloat(watchPrecio || 0) * parseInt(watchMeses || 1);
+      setValue("monto_total", total.toFixed(2));
+    } else {
+      setValue("monto_total", 0);
+    }
+  }, [watchMeses, watchPrecio, watchTipoContratacion, setValue]);
+
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
@@ -183,7 +264,6 @@ export default function NuevaEmpresa({
         <div className="mt-3 h-[85vh] overflow-y-auto pr-2">
           <Form {...form}>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              {/* LOGO */}
               <div className="flex flex-col gap-2">
                 {editar ? (
                   <ImageEmpresa empresa={values} keepData />
@@ -202,7 +282,6 @@ export default function NuevaEmpresa({
                 )}
               </div>
 
-              {/* DATOS PRINCIPALES */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
                 <div className="flex flex-col gap-3">
                   <FormItem>
@@ -269,7 +348,6 @@ export default function NuevaEmpresa({
                 </div>
               </div>
 
-              {/* GIRO */}
               <FormItem>
                 <FormLabel>
                   Giro <span className="text-red-500">*</span>
@@ -279,14 +357,13 @@ export default function NuevaEmpresa({
                   name="giro"
                   loadOptions={loadOptionsGiros}
                   handleChange={(val) => {
-                    form.setValue("giro", val);
+                    setValue("giro", val);
                     clearErrors("giro");
                   }}
                 />
                 <FormMessage>{errors.giro?.message}</FormMessage>
               </FormItem>
 
-              {/* DIRECCIÓN */}
               <FormItem>
                 <FormLabel>
                   Dirección <span className="text-red-500">*</span>
@@ -300,29 +377,125 @@ export default function NuevaEmpresa({
                 <FormMessage>{errors.direccion?.message}</FormMessage>
               </FormItem>
 
-              {/* REDES SOCIALES Y WEB */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-5">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 <FormItem>
                   <FormLabel>Facebook</FormLabel>
-                  <FormControl>
-                    <Input disabled={loading} {...register("facebook")} />
-                  </FormControl>
+                  <Input disabled={loading} {...register("facebook")} />
                 </FormItem>
-
                 <FormItem>
                   <FormLabel>Instagram</FormLabel>
-                  <FormControl>
-                    <Input disabled={loading} {...register("instagram")} />
-                  </FormControl>
+                  <Input disabled={loading} {...register("instagram")} />
                 </FormItem>
-
                 <FormItem>
                   <FormLabel>Página web</FormLabel>
-                  <FormControl>
-                    <Input disabled={loading} {...register("pagina_web")} />
-                  </FormControl>
+                  <Input disabled={loading} {...register("pagina_web")} />
                 </FormItem>
               </div>
+
+              {!editar && (
+                <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-5 mt-8">
+                  <h3 className="text-sm font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2">
+                    <span className="w-2 h-2 bg-slate-400 rounded-full"></span>
+                    Configuración de Suscripción
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <FormItem className="flex flex-col">
+                      <FormLabel>
+                        Plan HR360 <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <Combobox
+                        options={planOptions}
+                        value={watch("tipo_plan_id")}
+                        placeholder="Seleccione rango de usuarios..."
+                        emptyText="No se encontraron planes"
+                        onChange={(val) => {
+                          setValue("tipo_plan_id", val);
+
+                          const planOriginal = planes.find(
+                            (p) => p.id.toString() === val,
+                          );
+                          if (planOriginal) {
+                            setValue(
+                              "precio_por_mes",
+                              planOriginal.precio_base,
+                            );
+                          } else {
+                            setValue("precio_por_mes", 0);
+                            setValue("monto_total", 0);
+                          }
+                        }}
+                      />
+                      <FormMessage>{errors.tipo_plan_id?.message}</FormMessage>
+                    </FormItem>
+
+                    <FormItem>
+                      <FormLabel>Tipo de Contratación</FormLabel>
+                      <Select
+                        defaultValue="Prueba"
+                        onValueChange={(val) =>
+                          setValue("tipo_contratacion", val)
+                        }
+                      >
+                        <FormControl>
+                          <SelectTrigger className="bg-white">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Prueba">
+                            Prueba (7 días gratis)
+                          </SelectItem>
+                          <SelectItem value="Normal">
+                            Contratación Normal
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  </div>
+
+                  {watchTipoContratacion === "Normal" && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-white rounded-lg border border-slate-100 animate-in fade-in zoom-in duration-200">
+                      <FormItem>
+                        <FormLabel>Meses</FormLabel>
+                        <Select
+                          defaultValue="1"
+                          onValueChange={(val) =>
+                            setValue("meses_contratados", val)
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1">1 Mes</SelectItem>
+                            <SelectItem value="6">6 Meses</SelectItem>
+                            <SelectItem value="12">12 Meses</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+
+                      <FormItem>
+                        <FormLabel>Precio p/ Mes</FormLabel>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          {...register("precio_por_mes")}
+                        />
+                      </FormItem>
+
+                      <FormItem>
+                        <FormLabel>Monto Total</FormLabel>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          {...register("monto_total")}
+                        />
+                      </FormItem>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="flex justify-center my-8">
                 <Button
@@ -331,7 +504,7 @@ export default function NuevaEmpresa({
                   loading={loading}
                   disabled={loading}
                 >
-                  {editar ? "Guardar cambios" : "Registrar empresa"}
+                  {editar ? "Guardar cambios" : "Registrar empresa y plan"}
                 </Button>
               </div>
             </form>
