@@ -37,7 +37,7 @@ export default function BolsaTrabajoPage() {
       </section>
       <section className="p-5 py-20 md:px-10 lg:px-30 xl:px-40 bg-slate-100">
         <h2 className="text-center text-2xl font-extrabold text-slate-700">
-          🎥 Conoce HR360 en acción
+          🎥 Conoce Adamia en acción
         </h2>
         <div className="flex justify-center items-center m-10 pb-10">
           <div className="w-full max-w-3xl aspect-video">
@@ -54,7 +54,7 @@ export default function BolsaTrabajoPage() {
         </div>
         <div className="my-10 pt-10">
           <h2 className="text-center text-2xl font-extrabold text-slate-700">
-            HR360 en Números
+            Adamia en Números
           </h2>
           <div className="mt-6 flex justify-center items-center gap-7">
             <div className="text-center text-slate-700">

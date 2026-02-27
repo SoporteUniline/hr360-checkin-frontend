@@ -35,13 +35,22 @@ export default function Footer() {
         <div>
           <p className="font-bold">Enlaces</p>
           <div className="flex flex-col mt-1 text-sm gap-2">
-            <Link href="/quienes-somos" className="hover:underline text-white/90 hover:text-white">
+            <Link
+              href="/quienes-somos"
+              className="hover:underline text-white/90 hover:text-white"
+            >
               Quiénes Somos
             </Link>
-            <Link href="/terminos-condiciones" className="hover:underline text-white/90 hover:text-white">
+            <Link
+              href="/terminos-condiciones"
+              className="hover:underline text-white/90 hover:text-white"
+            >
               Términos y Condiciones
             </Link>
-            <Link href="/aviso-privacidad" className="hover:underline text-white/90 hover:text-white">
+            <Link
+              href="/aviso-privacidad"
+              className="hover:underline text-white/90 hover:text-white"
+            >
               Aviso de Privacidad
             </Link>
           </div>
@@ -49,7 +58,7 @@ export default function Footer() {
         <div>
           <p className="font-bold">contacto</p>
           <div className="mt-1 text-sm leading-loose text-white/90">
-            <p>Email: soporte@hr360.mx</p>
+            <p>Email: sistema@adamia.mx</p>
             <p>Tel: +52 55 1234 5678</p>
             <p>Autlán de Navarro, Jal. México</p>
           </div>

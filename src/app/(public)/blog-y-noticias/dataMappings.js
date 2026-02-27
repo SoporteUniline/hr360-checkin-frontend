@@ -1,10 +1,10 @@
 export const blogs = [
   {
-    title: "Cómo optimizar tu proceso de selección con HR360",
+    title: "Cómo optimizar tu proceso de selección con Adamia",
     description:
-      "Descubre cómo HR360 agiliza cada fase de tu reclutamiento y mejora la calidad de candidatos.",
+      "Descubre cómo Adamia agiliza cada fase de tu reclutamiento y mejora la calidad de candidatos.",
     date: "10 de abril de 2025",
-    author: "Equipo HR360",
+    author: "Equipo Adamia",
     image: "/assets/adidas.png",
   },
   {
@@ -12,23 +12,23 @@ export const blogs = [
     description:
       "Aprende las claves para atraer talento online con estrategias efectivas.",
     date: "10 de abril de 2025",
-    author: "Equipo HR360",
+    author: "Equipo Adamia",
     image: "/assets/adidas.png",
   },
   {
-    title: "Automatización de entrevistas por vídeo con HR360",
+    title: "Automatización de entrevistas por vídeo con Adamia",
     description:
       "Ahorra tiempo y humaniza el proceso usando entrevistas grabadas.",
     date: "10 de abril de 2025",
-    author: "Equipo HR360",
+    author: "Equipo Adamia",
     image: "/assets/adidas.png",
   },
   {
-    title: "Integraciones API de HR360: conecta con tu ecosistema",
+    title: "Integraciones API de Adamia: conecta con tu ecosistema",
     description:
       "Explora cómo nuestra API te permite sincronizar datos en tiempo real con otras plataformas.",
     date: "10 de abril de 2025",
-    author: "Equipo HR360",
+    author: "Equipo Adamia",
     image: "/assets/adidas.png",
   },
 ];

@@ -214,7 +214,7 @@ export default function PanelEmpleadoPage() {
               </SheetContent>
             </Sheet>
             <h1 className="text-base sm:text-xl md:text-2xl font-bold flex-shrink-0">
-              HR360
+              Adamia
             </h1>
             <div className="hidden md:block min-w-0">
               <h2 className="text-sm md:text-base lg:text-lg font-bold truncate">

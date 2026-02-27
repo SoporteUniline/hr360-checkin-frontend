@@ -1,6 +1,6 @@
 "use client";
 
-// Reporte de Horas Trabajadas (adaptado a HR360)
+// Reporte de Horas Trabajadas (adaptado a Adamia)
 // - Backend: /api/checador/reportes/horas (redlab_back)
 // - Empleados: /api/checador/empleados?empresa=ID
 // - Puestos: /api/checador/empleados/puestos?empresa=ID
@@ -703,12 +703,12 @@ export default function ReporteHorasPage() {
             );
             if (previewTopbar) {
               previewTopbar.className = "pdf-topbar";
-              // Asegurar que HR360 tenga el estilo correcto (grande, negrita, sin texto adicional)
+              // Asegurar que Adamia tenga el estilo correcto (grande, negrita, sin texto adicional)
               const brandDiv = previewTopbar.querySelector("div:first-child");
               if (brandDiv) {
                 brandDiv.className = "brand";
                 const brandText = brandDiv.querySelector("div:first-child");
-                if (brandText && brandText.textContent.includes("HR360")) {
+                if (brandText && brandText.textContent.includes("Adamia")) {
                   brandText.style.fontWeight = "800";
                   brandText.style.fontSize = "20pt";
                   brandText.style.color = "#111827";
@@ -1193,7 +1193,7 @@ export default function ReporteHorasPage() {
 
       // Pie de página: numeración de páginas con un diseño limpio.
       // Se dibuja una línea sutil y el texto:
-      // "HR360 · Reporte de Horas" a la izquierda y "Página X de N" a la derecha.
+      // "Adamia · Reporte de Horas" a la izquierda y "Página X de N" a la derecha.
       const totalPages = pdf.getNumberOfPages();
       if (totalPages > 0) {
         // Área reservada para el pie de página; respetando el margen inferior de 2.5cm
@@ -1214,7 +1214,7 @@ export default function ReporteHorasPage() {
           pdf.line(marginLeft, lineY, pageWidth - marginRight, lineY);
 
           // Texto izquierdo (respetando margen izquierdo)
-          const leftText = "HR360 · Reporte de Horas";
+          const leftText = "Adamia · Reporte de Horas";
           pdf.text(leftText, marginLeft, textY);
 
           // Texto derecho con numeración X de N (respetando margen derecho)
@@ -1621,7 +1621,7 @@ export default function ReporteHorasPage() {
                       data-pdf-topbar="true"
                     >
                       <div className="text-2xl font-bold text-gray-900 leading-none">
-                        HR360
+                        Adamia
                       </div>
                       <div className="text-right leading-tight">
                         <div className="font-semibold text-sm text-gray-900">

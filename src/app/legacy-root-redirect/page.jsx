@@ -139,7 +139,7 @@ function LandingLogin({ router }) {
   return (
     <div className="flex flex-col items-center justify-center h-screen text-center">
       <img src="/assets/logo.png" alt="Logo" className="w-40 mb-6" />
-      <h1 className="text-3xl font-bold mb-4">Bienvenido a HR360</h1>
+      <h1 className="text-3xl font-bold mb-4">Bienvenido a Adamia</h1>
       <button
         onClick={() => router.push("/login")}
         className="px-6 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 shadow"

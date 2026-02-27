@@ -1192,7 +1192,7 @@ export default function PageMapaDeRutas() {
               hour: "2-digit",
               minute: "2-digit",
             })}{" "}
-            - Sistema HR360
+            - Sistema Adamia
           </div>
         </div>
 
@@ -1513,7 +1513,7 @@ export default function PageMapaDeRutas() {
         minute: "2-digit",
       });
       doc.text(
-        `Generado el ${fechaGenerado} a las ${horaGenerado} | Sistema HR360 by Uniline | Pagina ${i} de ${totalPages}`,
+        `Generado el ${fechaGenerado} a las ${horaGenerado} | Sistema Adamia by Uniline | Pagina ${i} de ${totalPages}`,
         pageWidth / 2,
         pageHeight - 10,
         { align: "center" },
