@@ -45,7 +45,7 @@ export default function LoginPage() {
         {
           correo,
           contrasenia: password,
-        }
+        },
       );
       const { token, tipo_usuario } = response.data;
       Cookies.set("token", token, { expires: 1 });
@@ -87,10 +87,10 @@ export default function LoginPage() {
     <section className="grid grid-cols-1 md:grid-cols-2">
       <div className="hidden sm:block">
         <section className="relative min-h-screen flex flex-col justify-center items-center bg-[url(/assets/bg.jpg)] bg-cover bg-center">
-          <div className="absolute w-full h-full bg-gradient-to-br from-[var(--adamia-blue)]/70 to-[var(--adamia-purple)]/70" />
+          <div className="absolute w-full h-full bg-slate-900/70" />
           <Image
             alt="ADAMIA"
-            src="/assets/adamia.png"
+            src="/assets/logo.png"
             height={170}
             width={460}
             className="z-10 h-auto w-[260px] lg:w-[360px]"

@@ -28,8 +28,8 @@ export function AppSidebar({ ...props }) {
                 <Image
                   alt="Adamia"
                   src="/assets/logo.png"
-                  height={80}
-                  width={70}
+                  height={110}
+                  width={160}
                 />
               </div>
             </SidebarMenuButton>
