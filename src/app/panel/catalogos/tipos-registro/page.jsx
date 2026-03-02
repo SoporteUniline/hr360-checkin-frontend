@@ -42,7 +42,7 @@ export default function TiposRegistro() {
   return (
     <div className="space-y-6">
       {/* Header ADAMIA */}
-      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+      <div className="bg-linear-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
         <div className="flex items-center justify-between gap-4 flex-col sm:flex-row">
           <div className="flex items-center gap-3">
             <div className="bg-[#2563EB] p-2.5 rounded-lg">

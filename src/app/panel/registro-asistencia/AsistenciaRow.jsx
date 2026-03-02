@@ -11,7 +11,7 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Save, X, Check, X as XIcon } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import HistorialEmpleadoDialog from "./HistorialEmpleadoDialog";
 import { useAuth } from "@/context/AuthContext";
 import dayjs from "dayjs";
@@ -28,7 +28,7 @@ export default function AsistenciaRow({
   editingRowData,
   isSaving,
   empleados,
-  tiposPermiso: { tiposPermiso: tiposPermisoArray } = {},
+  tiposPermiso: { tiposPermiso: tiposPermisoOriginal } = {},
   handleEditClick,
   handleCancelEdit,
   handleFieldChange,
@@ -44,6 +44,19 @@ export default function AsistenciaRow({
   const areTimeInputsDisabled = !currentData.correccion;
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  const empleadoDeFila = empleados?.find(
+    (emp) => emp.id_empleado === registro.id_empleado,
+  );
+  const idEmpresaDeEstaFila = empleadoDeFila?.id_empresa;
+
+  const tiposPermisoArray = useMemo(() => {
+    const todos = tiposPermisoOriginal || [];
+
+    return todos.filter(
+      (tipo) => !tipo.id_empresa || tipo.id_empresa === idEmpresaDeEstaFila,
+    );
+  }, [tiposPermisoOriginal, idEmpresaDeEstaFila]);
+
   const handleRowClick = () => {
     if (!isEditing) {
       setIsModalOpen(true);
@@ -57,7 +70,11 @@ export default function AsistenciaRow({
       <TableRow
         key={registro.id}
         onClick={handleRowClick}
-        className={!isEditing ? "cursor-pointer hover:bg-gray-50 border-b border-gray-100" : "border-b border-gray-100"}
+        className={
+          !isEditing
+            ? "cursor-pointer hover:bg-gray-50 border-b border-gray-100"
+            : "border-b border-gray-100"
+        }
       >
         {isEditing && !readOnly ? (
           <>
@@ -78,18 +95,18 @@ export default function AsistenciaRow({
                 }
                 onValueChange={(val) => {
                   const seleccionado = tiposPermisoArray.find(
-                    (tipo) => String(tipo.id) === val
+                    (tipo) => String(tipo.id) === val,
                   );
 
                   handleFieldChange("id_tipo_permiso", seleccionado?.id);
                   handleFieldChange(
                     "tipo_registro_nombre",
-                    seleccionado?.nombre || ""
+                    seleccionado?.nombre || "",
                   );
                   handleFieldChange("correccion", 1);
                   handleFieldChange(
                     "asistencia",
-                    seleccionado?.cuenta_como_asistencia
+                    seleccionado?.cuenta_como_asistencia,
                   );
                   handleFieldChange("goce_sueldo", seleccionado?.goce_sueldo);
                   // handleFieldChange("es_festivo", seleccionado?.es_festivo);
@@ -209,7 +226,7 @@ export default function AsistenciaRow({
                     }
                     disabled={areTimeInputsDisabled}
                   >
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-45">
                       <SelectValue placeholder="Autorizado por" />
                     </SelectTrigger>
                     <SelectContent className="max-h-60 overflow-y-auto">
@@ -332,7 +349,7 @@ export default function AsistenciaRow({
                     onChange={(e) =>
                       handleFieldChange(
                         "porcentaje_dia_festivo",
-                        e.target.value
+                        e.target.value,
                       )
                     }
                   />
@@ -364,14 +381,22 @@ export default function AsistenciaRow({
                       handleFieldChange("forma_pago_extras", val)
                     }
                   >
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-45">
                       <SelectValue placeholder="Forma de pago" />
                     </SelectTrigger>
                     <SelectContent className="max-h-60 overflow-y-auto">
-                      <SelectItem value="Tiempo por tiempo">Tiempo por tiempo</SelectItem>
-                      <SelectItem value="Descuento sobre nómina">Descuento sobre nómina</SelectItem>
-                      <SelectItem value="Pago de horas extras">Pago de horas extras</SelectItem>
-                      <SelectItem value="Reposición de tiempo por tiempo">Reposición de tiempo por tiempo</SelectItem>
+                      <SelectItem value="Tiempo por tiempo">
+                        Tiempo por tiempo
+                      </SelectItem>
+                      <SelectItem value="Descuento sobre nómina">
+                        Descuento sobre nómina
+                      </SelectItem>
+                      <SelectItem value="Pago de horas extras">
+                        Pago de horas extras
+                      </SelectItem>
+                      <SelectItem value="Reposición de tiempo por tiempo">
+                        Reposición de tiempo por tiempo
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </TableCell>
@@ -386,7 +411,7 @@ export default function AsistenciaRow({
                       handleFieldChange("extras_autorizadas_por", val)
                     }
                   >
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger className="w-45">
                       <SelectValue placeholder="Autorizadas por" />
                     </SelectTrigger>
                     <SelectContent className="max-h-60 overflow-y-auto">
@@ -418,7 +443,7 @@ export default function AsistenciaRow({
               <Textarea
                 value={currentData.notas || ""}
                 onChange={(e) => handleFieldChange("notas", e.target.value)}
-                className="min-w-[150px]"
+                className="min-w-37.5"
               />
             </TableCell>
             {mostrarCamposExtras && (
@@ -428,7 +453,7 @@ export default function AsistenciaRow({
                   onChange={(e) =>
                     handleFieldChange("notas_hrs_extra", e.target.value)
                   }
-                  className="min-w-[150px]"
+                  className="min-w-37.5"
                 />
               </TableCell>
             )}
