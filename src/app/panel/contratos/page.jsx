@@ -1,20 +1,10 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { Download, Plus, Search } from "lucide-react";
+import { Plus } from "lucide-react";
 import TablePagination from "@/components/TablePagination";
 import ContratosTable from "./ContratosTable";
 import ContratoDialog from "./ContratoDialog";
@@ -32,9 +22,7 @@ import {
 import useContratosData from "@/hooks/useContratosData";
 import { contratosApi } from "@/lib/contratosApi";
 import { useSnackbar } from "notistack";
-import useEmpleadosData from "@/hooks/useEmpleadosData";
 import AccesosRapidos from "@/components/AccesosRapidos";
-import { Combobox } from "@/components/Combobox";
 
 /**
  * Página de gestión de Contratos
@@ -50,12 +38,12 @@ export default function ContratosPage() {
   const { enqueueSnackbar } = useSnackbar();
   const idEmpresa = empresaFiltro === "all" ? null : Number(empresaFiltro);
 
-  // Filtros
-  const [search, setSearch] = useState(""); // folio/empleado
-  const [tipoContrato, setTipoContrato] = useState("");
-  const [estatus, setEstatus] = useState("");
-  const [desde, setDesde] = useState("");
-  const [hasta, setHasta] = useState("");
+  // Filtros base para query (controlados por el nuevo filtrado en encabezados)
+  const [search] = useState("");
+  const [tipoContrato] = useState("");
+  const [estatus] = useState("");
+  const [desde] = useState("");
+  const [hasta] = useState("");
 
   // Paginación
   const [page, setPage] = useState(1);
@@ -68,37 +56,11 @@ export default function ContratosPage() {
   const [openView, setOpenView] = useState(false);
   const [viewItem, setViewItem] = useState(null);
   const [deleteRow, setDeleteRow] = useState(null);
-
-  // Sugerencias tipo módulo Permisos
-  const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
-  const [hoveredSuggestionIndex, setHoveredSuggestionIndex] = useState(-1);
-  const [activeSearchBox, setActiveSearchBox] = useState(null); // 'filters' | 'toolbar' | null
-  const empleadosSugResp = useEmpleadosData(
-    empresaFiltro === "all" ? "all" : idEmpresa,
-    1,
-    8,
-    search,
-    "",
-    "",
-    "",
-  );
-
-  const sugerencias = useMemo(() => {
-    const list = empleadosSugResp?.data?.data || [];
-    return list.map((e) => ({
-      id_empleado: e.id_empleado,
-      nombre_completo: [e.nombre, e.apellido_paterno, e.apellido_materno]
-        .filter(Boolean)
-        .join(" "),
-    }));
-  }, [empleadosSugResp?.data]);
-
-  const handleSelectEmpleado = (emp) => {
-    if (!emp) return;
-    setSearch(emp.nombre_completo || "");
-    setIsSuggestionsOpen(false);
-    setPage(1);
-  };
+  const [filterOptionsRows, setFilterOptionsRows] = useState([]);
+  const [headerFilterMeta, setHeaderFilterMeta] = useState({
+    active: false,
+    total: 0,
+  });
 
   const empresaQuery = empresaFiltro === "all" ? "all" : empresaFiltro;
 
@@ -116,6 +78,69 @@ export default function ContratosPage() {
   console.log(data);
   const contratos = data?.data || [];
   const total = data?.total || 0;
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const loadFilterOptionsRows = async () => {
+      if (empresaQuery === undefined || empresaQuery === null) {
+        if (!isCancelled) setFilterOptionsRows([]);
+        return;
+      }
+
+      try {
+        const pageSize = 500;
+        const firstResp = await contratosApi.listar({
+          empresa: empresaQuery,
+          page: 1,
+          limit: pageSize,
+          search,
+          tipo: tipoContrato,
+          estatus,
+          desde,
+          hasta,
+        });
+        let allRows = Array.isArray(firstResp?.data)
+          ? firstResp.data
+          : firstResp?.contratos || [];
+        const totalRows = Number(firstResp?.total || allRows.length);
+        const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+
+        for (let currentPage = 2; currentPage <= totalPages; currentPage += 1) {
+          const pageResp = await contratosApi.listar({
+            empresa: empresaQuery,
+            page: currentPage,
+            limit: pageSize,
+            search,
+            tipo: tipoContrato,
+            estatus,
+            desde,
+            hasta,
+          });
+          const rows = Array.isArray(pageResp?.data)
+            ? pageResp.data
+            : pageResp?.contratos || [];
+          allRows = [...allRows, ...rows];
+        }
+
+        if (!isCancelled) setFilterOptionsRows(allRows);
+      } catch (fetchError) {
+        if (!isCancelled) setFilterOptionsRows([]);
+      }
+    };
+
+    loadFilterOptionsRows();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [empresaQuery, search, tipoContrato, estatus, desde, hasta]);
+
+  useEffect(() => {
+    if (!headerFilterMeta.active) return;
+    const totalPages = Math.max(1, Math.ceil(headerFilterMeta.total / limit));
+    if (page > totalPages) setPage(1);
+  }, [headerFilterMeta, page, limit]);
 
   // Alinear estadísticas con Apps Script (Vacaciones.html)
   const stats = useMemo(() => {
@@ -139,16 +164,6 @@ export default function ContratosPage() {
     });
     return { total: total || contratos.length, activos, porVencer, vencidos };
   }, [contratos, total]);
-
-  const limpiarFiltros = () => {
-    setSearch("");
-    setTipoContrato("");
-    setEstatus("");
-    setDesde("");
-    setHasta("");
-    setPage(1);
-    setEmpresaFiltro("all");
-  };
 
   const exportarExcel = () => {
     if (!contratos || contratos.length === 0) return;
@@ -244,188 +259,6 @@ export default function ContratosPage() {
           <Plus className="w-4 h-4 mr-2" />
           Nuevo contrato
         </Button>
-      </div>
-
-      {/* Filtros - Estilo ADAMIA */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Filtros de búsqueda
-        </h3>
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">
-                EMPRESA
-              </label>
-              <div className="relative">
-                <Combobox
-                  options={[
-                    { value: "all", label: "Todas las empresas" },
-                    ...(dataUser?.empresas_detalle?.map((e) => ({
-                      value: e.id_empresa,
-                      label: e.nombre,
-                    })) || []),
-                  ]}
-                  value={empresaFiltro}
-                  onChange={setEmpresaFiltro}
-                  placeholder="Filtrar por empresa"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Buscar
-              </label>
-              <div className="relative">
-                <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <Input
-                  className="pl-9"
-                  placeholder="Folio o empleado..."
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setIsSuggestionsOpen(true);
-                    setHoveredSuggestionIndex(0);
-                    setActiveSearchBox("filters");
-                  }}
-                  onFocus={() => {
-                    setActiveSearchBox("filters");
-                    setIsSuggestionsOpen(!!search);
-                  }}
-                  onBlur={() => {
-                    setTimeout(() => {
-                      setIsSuggestionsOpen(false);
-                      setActiveSearchBox(null);
-                    }, 120);
-                  }}
-                  onKeyDown={(e) => {
-                    if (
-                      !isSuggestionsOpen ||
-                      activeSearchBox !== "filters" ||
-                      sugerencias.length === 0
-                    )
-                      return;
-                    if (e.key === "ArrowDown") {
-                      e.preventDefault();
-                      setHoveredSuggestionIndex((prev) =>
-                        prev + 1 >= sugerencias.length ? 0 : prev + 1,
-                      );
-                    } else if (e.key === "ArrowUp") {
-                      e.preventDefault();
-                      setHoveredSuggestionIndex((prev) =>
-                        prev - 1 < 0 ? sugerencias.length - 1 : prev - 1,
-                      );
-                    } else if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleSelectEmpleado(
-                        sugerencias[hoveredSuggestionIndex] || sugerencias[0],
-                      );
-                    } else if (e.key === "Escape") {
-                      setIsSuggestionsOpen(false);
-                    }
-                  }}
-                />
-                {isSuggestionsOpen &&
-                activeSearchBox === "filters" &&
-                sugerencias.length > 0 ? (
-                  <div className="absolute left-0 right-0 mt-1 z-20 rounded-md border bg-white shadow">
-                    <ul className="max-h-64 overflow-auto">
-                      {sugerencias.map((emp, idx) => (
-                        <li
-                          key={emp.id_empleado}
-                          onMouseDown={() => handleSelectEmpleado(emp)}
-                          onMouseEnter={() => setHoveredSuggestionIndex(idx)}
-                          className={`px-3 py-2 cursor-pointer text-sm ${
-                            idx === hoveredSuggestionIndex ? "bg-slate-100" : ""
-                          }`}
-                        >
-                          {emp.nombre_completo}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Tipo</label>
-              <Select
-                value={tipoContrato === "" ? "__all__" : tipoContrato}
-                onValueChange={(v) => setTipoContrato(v === "__all__" ? "" : v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">Todos</SelectItem>
-                  <SelectItem value="indefinido">Indefinido</SelectItem>
-                  <SelectItem value="temporal">Temporal</SelectItem>
-                  <SelectItem value="obra_determinada">
-                    Obra Determinada
-                  </SelectItem>
-                  <SelectItem value="capacitacion">
-                    Capacitación Inicial
-                  </SelectItem>
-                  <SelectItem value="prueba">Periodo de Prueba</SelectItem>
-                  <SelectItem value="prestacion_servicios">
-                    Prestación de Servicios
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Estado
-              </label>
-              <Select
-                value={estatus === "" ? "__all__" : estatus}
-                onValueChange={(v) => setEstatus(v === "__all__" ? "" : v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">Todos</SelectItem>
-                  <SelectItem value="activo">Activo</SelectItem>
-                  <SelectItem value="suspendido">Suspendido</SelectItem>
-                  <SelectItem value="terminado">Terminado</SelectItem>
-                  <SelectItem value="cancelado">Cancelado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Desde</label>
-              <Input
-                type="date"
-                value={desde}
-                onChange={(e) => setDesde(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Hasta</label>
-              <Input
-                type="date"
-                value={hasta}
-                onChange={(e) => setHasta(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2 pt-4 border-t border-gray-100">
-            <Button
-              variant="outline"
-              onClick={limpiarFiltros}
-              className="border-gray-300"
-            >
-              Limpiar filtros
-            </Button>
-            <Button
-              onClick={() => mutate()}
-              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
-            >
-              Aplicar filtros
-            </Button>
-          </div>
-        </div>
       </div>
 
       {/* Estadísticas - Estilo ADAMIA */}
@@ -534,84 +367,14 @@ export default function ContratosPage() {
         </div>
       </div>
 
-      {/* Barra de búsqueda rápida */}
-      {/* <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
-        <div className="relative w-full">
-          <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <Input
-            className="pl-9"
-            placeholder="Buscar por folio o empleado..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setIsSuggestionsOpen(true);
-              setHoveredSuggestionIndex(0);
-              setActiveSearchBox("toolbar");
-            }}
-            onFocus={() => {
-              setActiveSearchBox("toolbar");
-              setIsSuggestionsOpen(!!search);
-            }}
-            onBlur={() => {
-              setTimeout(() => {
-                setIsSuggestionsOpen(false);
-                setActiveSearchBox(null);
-              }, 120);
-            }}
-            onKeyDown={(e) => {
-              if (
-                !isSuggestionsOpen ||
-                activeSearchBox !== "toolbar" ||
-                sugerencias.length === 0
-              )
-                return;
-              if (e.key === "ArrowDown") {
-                e.preventDefault();
-                setHoveredSuggestionIndex((prev) =>
-                  prev + 1 >= sugerencias.length ? 0 : prev + 1,
-                );
-              } else if (e.key === "ArrowUp") {
-                e.preventDefault();
-                setHoveredSuggestionIndex((prev) =>
-                  prev - 1 < 0 ? sugerencias.length - 1 : prev - 1,
-                );
-              } else if (e.key === "Enter") {
-                e.preventDefault();
-                handleSelectEmpleado(
-                  sugerencias[hoveredSuggestionIndex] || sugerencias[0],
-                );
-              } else if (e.key === "Escape") {
-                setIsSuggestionsOpen(false);
-              }
-            }}
-          />
-          {isSuggestionsOpen &&
-          activeSearchBox === "toolbar" &&
-          sugerencias.length > 0 ? (
-            <div className="absolute left-0 right-0 mt-1 z-20 rounded-md border bg-white shadow-lg">
-              <ul className="max-h-64 overflow-auto">
-                {sugerencias.map((emp, idx) => (
-                  <li
-                    key={emp.id_empleado}
-                    onMouseDown={() => handleSelectEmpleado(emp)}
-                    onMouseEnter={() => setHoveredSuggestionIndex(idx)}
-                    className={`px-3 py-2 cursor-pointer text-sm ${
-                      idx === hoveredSuggestionIndex ? "bg-blue-50" : ""
-                    }`}
-                  >
-                    {emp.nombre_completo}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </div>
-      </div> */}
-
       {/* Tabla */}
       <ContratosTable
         items={contratos}
+        filterOptionsRows={filterOptionsRows}
         loading={isLoading}
+        page={page}
+        limit={limit}
+        onHeaderFilteringMetaChange={setHeaderFilterMeta}
         onEdit={(row) => {
           setEditItem(row);
           setSeedItem(null);
@@ -629,7 +392,7 @@ export default function ContratosPage() {
       <TablePagination
         page={page}
         limit={limit}
-        total={total}
+        total={headerFilterMeta.active ? headerFilterMeta.total : total}
         onPageChange={setPage}
         onLimitChange={setLimit}
       />

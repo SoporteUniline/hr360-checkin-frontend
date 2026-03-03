@@ -9,12 +9,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Pencil, Eye, Trash2, Mail, Phone, RotateCcw } from "lucide-react";
+import { Pencil, Eye, Mail, Phone } from "lucide-react";
 import EstadoEmpleadoDialog from "./EstadoEmpleadoDialog";
 import dayjs from "dayjs";
 import "dayjs/locale/es";
 import { formatDateDMY } from "@/lib/formatDate";
+import { useEffect, useMemo, useState } from "react";
+import HeaderMultiFilter from "../registro-asistencia/HeaderMultiFilter";
+import ActiveFilterChips from "../registro-asistencia/ActiveFilterChips";
 
 dayjs.locale("es");
 
@@ -43,12 +45,101 @@ const getAvatarColor = (nombreCompleto = "") => {
 
 export default function EmpleadosTable({
   empleados,
+  filterOptionsRows,
   abrirFormulario,
   mutate,
   page,
   limit,
   resetFilters,
+  onHeaderFilteringMetaChange,
 }) {
+  const [nombreSeleccionado, setNombreSeleccionado] = useState([]);
+  const [puestoSeleccionado, setPuestoSeleccionado] = useState([]);
+  const [departamentoSeleccionado, setDepartamentoSeleccionado] = useState([]);
+  const [estadoSeleccionado, setEstadoSeleccionado] = useState([]);
+
+  const sourceRows = useMemo(
+    () => (Array.isArray(filterOptionsRows) ? filterOptionsRows : empleados || []),
+    [filterOptionsRows, empleados],
+  );
+
+  const getNombreCompleto = (emp) =>
+    `${emp.nombre || ""} ${emp.apellido_paterno || ""} ${emp.apellido_materno || ""}`
+      .trim()
+      .replace(/\s+/g, " ");
+
+  const uniqueOptions = (values) =>
+    [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+
+  const nombreOptions = useMemo(
+    () => uniqueOptions(sourceRows.map((emp) => getNombreCompleto(emp))),
+    [sourceRows],
+  );
+  const puestoOptions = useMemo(
+    () => uniqueOptions(sourceRows.map((emp) => emp.puesto)),
+    [sourceRows],
+  );
+  const departamentoOptions = useMemo(
+    () => uniqueOptions(sourceRows.map((emp) => emp.departamento)),
+    [sourceRows],
+  );
+  const estadoOptions = useMemo(
+    () => uniqueOptions(sourceRows.map((emp) => emp.estado)),
+    [sourceRows],
+  );
+
+  const filteredRowsAll = useMemo(
+    () =>
+      sourceRows.filter((emp) => {
+        const nombre = getNombreCompleto(emp);
+        const passNombre =
+          nombreSeleccionado.length === 0 || nombreSeleccionado.includes(nombre);
+        const passPuesto =
+          puestoSeleccionado.length === 0 ||
+          puestoSeleccionado.includes(emp.puesto);
+        const passDepartamento =
+          departamentoSeleccionado.length === 0 ||
+          departamentoSeleccionado.includes(emp.departamento);
+        const passEstado =
+          estadoSeleccionado.length === 0 ||
+          estadoSeleccionado.includes(emp.estado);
+        return passNombre && passPuesto && passDepartamento && passEstado;
+      }),
+    [
+      sourceRows,
+      nombreSeleccionado,
+      puestoSeleccionado,
+      departamentoSeleccionado,
+      estadoSeleccionado,
+    ],
+  );
+
+  const hasActiveHeaderFilters =
+    nombreSeleccionado.length > 0 ||
+    puestoSeleccionado.length > 0 ||
+    departamentoSeleccionado.length > 0 ||
+    estadoSeleccionado.length > 0;
+
+  const displayedRows = useMemo(() => {
+    if (!hasActiveHeaderFilters) return empleados || [];
+    const offset = (page - 1) * limit;
+    return filteredRowsAll.slice(offset, offset + limit);
+  }, [hasActiveHeaderFilters, empleados, page, limit, filteredRowsAll]);
+
+  useEffect(() => {
+    onHeaderFilteringMetaChange?.({
+      active: hasActiveHeaderFilters,
+      total: filteredRowsAll.length,
+    });
+  }, [hasActiveHeaderFilters, filteredRowsAll.length, onHeaderFilteringMetaChange]);
+
+  const clearAllHeaderFilters = () => {
+    setNombreSeleccionado([]);
+    setPuestoSeleccionado([]);
+    setDepartamentoSeleccionado([]);
+    setEstadoSeleccionado([]);
+  };
+
   if (!empleados || empleados.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-10">
@@ -67,6 +158,35 @@ export default function EmpleadosTable({
           Lista de empleados
         </h2>
       </div>
+      <ActiveFilterChips
+        groups={[
+          {
+            category: "Nombre",
+            values: nombreSeleccionado,
+            options: nombreOptions,
+            onChange: setNombreSeleccionado,
+          },
+          {
+            category: "Puesto",
+            values: puestoSeleccionado,
+            options: puestoOptions,
+            onChange: setPuestoSeleccionado,
+          },
+          {
+            category: "Departamento",
+            values: departamentoSeleccionado,
+            options: departamentoOptions,
+            onChange: setDepartamentoSeleccionado,
+          },
+          {
+            category: "Estado",
+            values: estadoSeleccionado,
+            options: estadoOptions,
+            onChange: setEstadoSeleccionado,
+          },
+        ]}
+        onClearAll={clearAllHeaderFilters}
+      />
 
       {/* Tabla */}
       <div className="overflow-x-auto">
@@ -74,13 +194,28 @@ export default function EmpleadosTable({
           <TableHeader>
             <TableRow className="bg-gray-50 hover:bg-gray-50">
               <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                Nombre
+                <HeaderMultiFilter
+                  selected={nombreSeleccionado}
+                  onChange={setNombreSeleccionado}
+                  options={nombreOptions}
+                  placeholder="Nombre"
+                />
               </TableHead>
               <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                Puesto
+                <HeaderMultiFilter
+                  selected={puestoSeleccionado}
+                  onChange={setPuestoSeleccionado}
+                  options={puestoOptions}
+                  placeholder="Puesto"
+                />
               </TableHead>
               <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                Depto.
+                <HeaderMultiFilter
+                  selected={departamentoSeleccionado}
+                  onChange={setDepartamentoSeleccionado}
+                  options={departamentoOptions}
+                  placeholder="Depto."
+                />
               </TableHead>
               <TableHead className="font-semibold text-gray-700 uppercase text-xs">
                 Contacto
@@ -89,7 +224,12 @@ export default function EmpleadosTable({
                 Ingreso
               </TableHead>
               <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                Estado
+                <HeaderMultiFilter
+                  selected={estadoSeleccionado}
+                  onChange={setEstadoSeleccionado}
+                  options={estadoOptions}
+                  placeholder="Estado"
+                />
               </TableHead>
               <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center sticky right-0 bg-gray-50 z-10">
                 Acciones
@@ -97,7 +237,7 @@ export default function EmpleadosTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {empleados.length === 0 ? (
+            {displayedRows.length === 0 ? (
               <TableRow>
                 <TableCell
                   colSpan={7}
@@ -107,7 +247,7 @@ export default function EmpleadosTable({
                 </TableCell>
               </TableRow>
             ) : (
-              empleados.map((emp) => {
+              displayedRows.map((emp) => {
                 const nombreCompleto = `${emp.nombre} ${
                   emp.apellido_paterno ?? ""
                 } ${emp.apellido_materno ?? ""}`.trim();

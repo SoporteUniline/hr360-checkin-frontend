@@ -31,15 +31,11 @@ import styles from "./finiquitos-theme.module.css";
 import {
   Download,
   Plus,
-  Search,
   Trash2,
-  Edit3,
   Calculator,
   Eye,
   AlertTriangle,
-  Filter,
   Pencil,
-  RotateCcw,
   Save,
 } from "lucide-react";
 import FiniquitoViewDialog from "./FiniquitoViewDialog";
@@ -49,6 +45,8 @@ import AccesosRapidos from "@/components/AccesosRapidos";
 import useSWR from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { fetchImageAsDataUrl } from "@/lib/pdfCompanyLogo";
+import HeaderMultiFilter from "../registro-asistencia/HeaderMultiFilter";
+import ActiveFilterChips from "../registro-asistencia/ActiveFilterChips";
 import {
   createPdfContext,
   drawHeaderBox,
@@ -68,7 +66,7 @@ import { Combobox } from "@/components/Combobox";
 export default function PageFiniquitosLiquidaciones() {
   const { dataUser } = useAuth();
 
-  const [empresaFiltro, setEmpresaFiltro] = useState("all");
+  const empresaFiltro = "all";
   const [empresaCalculo, setEmpresaCalculo] = useState("");
 
   const mostrarEmpresa = empresaFiltro !== "all";
@@ -118,47 +116,166 @@ export default function PageFiniquitosLiquidaciones() {
   const [loading, setLoading] = useState(false);
   const [alertMsg, setAlertMsg] = useState("");
 
-  // Estado buscador estilo "Contratos"
-  const [search, setSearch] = useState("");
-  const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
-  const [hoveredSuggestionIndex, setHoveredSuggestionIndex] = useState(-1);
-  const [activeSearchBox, setActiveSearchBox] = useState(null);
-
   // Paginación
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-
-  // Filtros extra
-  const [estatus, setEstatus] = useState("");
-  const [tipo, setTipo] = useState(""); // finiquito | liquidacion
+  const [filterOptionsRows, setFilterOptionsRows] = useState([]);
+  const [headerFilterMeta, setHeaderFilterMeta] = useState({
+    active: false,
+    total: 0,
+  });
+  const [idSeleccionado, setIdSeleccionado] = useState([]);
+  const [empresaSeleccionada, setEmpresaSeleccionada] = useState([]);
+  const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState([]);
+  const [tipoSeleccionado, setTipoSeleccionado] = useState([]);
+  const [estadoSeleccionado, setEstadoSeleccionado] = useState([]);
 
   // Datos listados
   const { data, isLoading, mutate } = useFiniquitosData({
     idEmpresa: idEmpresaFiltro,
     page,
     limit,
-    search,
-    estatus,
-    tipo,
+    search: "",
+    estatus: "",
+    tipo: "",
   });
 
   const finiquitos = data?.data || [];
   const total = data?.total || 0;
 
-  const handleSelectEmpleadoSugerencia = (emp) => {
-    if (!emp) return;
-    setSearch(emp.nombre_completo || "");
-    setIsSuggestionsOpen(false);
-    setPage(1);
+  const sourceRows = useMemo(
+    () =>
+      Array.isArray(filterOptionsRows) && filterOptionsRows.length > 0
+        ? filterOptionsRows
+        : finiquitos,
+    [filterOptionsRows, finiquitos],
+  );
+  const uniqueOptions = (values) =>
+    [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const idOptions = useMemo(
+    () => uniqueOptions(sourceRows.map((f) => String(f.id_finiquito || ""))),
+    [sourceRows],
+  );
+  const empresaOptions = useMemo(
+    () => uniqueOptions(sourceRows.map((f) => f.nombre_empresa)),
+    [sourceRows],
+  );
+  const empleadoOptions = useMemo(
+    () => uniqueOptions(sourceRows.map((f) => f.nombre_completo)),
+    [sourceRows],
+  );
+  const tipoOptions = useMemo(
+    () =>
+      uniqueOptions(
+        sourceRows.map((f) => (f.es_liquidacion ? "Liquidación" : "Finiquito")),
+      ),
+    [sourceRows],
+  );
+  const estadoOptions = useMemo(
+    () => uniqueOptions(sourceRows.map((f) => f.estado || "Pendiente")),
+    [sourceRows],
+  );
+  const filteredRowsAll = useMemo(
+    () =>
+      sourceRows.filter((f) => {
+        const idValue = String(f.id_finiquito || "");
+        const empresaValue = f.nombre_empresa;
+        const empleadoValue = f.nombre_completo;
+        const tipoValue = f.es_liquidacion ? "Liquidación" : "Finiquito";
+        const estadoValue = f.estado || "Pendiente";
+        const passId = idSeleccionado.length === 0 || idSeleccionado.includes(idValue);
+        const passEmpresa =
+          empresaSeleccionada.length === 0 ||
+          empresaSeleccionada.includes(empresaValue);
+        const passEmpleado =
+          empleadoSeleccionado.length === 0 ||
+          empleadoSeleccionado.includes(empleadoValue);
+        const passTipo =
+          tipoSeleccionado.length === 0 || tipoSeleccionado.includes(tipoValue);
+        const passEstado =
+          estadoSeleccionado.length === 0 ||
+          estadoSeleccionado.includes(estadoValue);
+        return passId && passEmpresa && passEmpleado && passTipo && passEstado;
+      }),
+    [
+      sourceRows,
+      idSeleccionado,
+      empresaSeleccionada,
+      empleadoSeleccionado,
+      tipoSeleccionado,
+      estadoSeleccionado,
+    ],
+  );
+  const hasActiveHeaderFilters =
+    idSeleccionado.length > 0 ||
+    empresaSeleccionada.length > 0 ||
+    empleadoSeleccionado.length > 0 ||
+    tipoSeleccionado.length > 0 ||
+    estadoSeleccionado.length > 0;
+  const displayedRows = useMemo(() => {
+    if (!hasActiveHeaderFilters) return finiquitos;
+    const offset = (page - 1) * limit;
+    return filteredRowsAll.slice(offset, offset + limit);
+  }, [hasActiveHeaderFilters, finiquitos, page, limit, filteredRowsAll]);
+  const clearAllHeaderFilters = () => {
+    setIdSeleccionado([]);
+    setEmpresaSeleccionada([]);
+    setEmpleadoSeleccionado([]);
+    setTipoSeleccionado([]);
+    setEstadoSeleccionado([]);
   };
 
-  const limpiarFiltros = () => {
-    setEmpresaFiltro("all");
-    setSearch("");
-    setEstatus("");
-    setTipo("");
-    setPage(1);
-  };
+  useEffect(() => {
+    let isCancelled = false;
+    const loadFilterOptionsRows = async () => {
+      try {
+        const pageSize = 500;
+        const firstResp = await finiquitosApi.listar({
+          empresa: idEmpresaFiltro ?? "all",
+          page: 1,
+          limit: pageSize,
+          search: "",
+          estatus: "",
+          tipo: "",
+        });
+        let allRows = Array.isArray(firstResp?.data) ? firstResp.data : [];
+        const totalRows = Number(firstResp?.total || allRows.length);
+        const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+        for (let currentPage = 2; currentPage <= totalPages; currentPage += 1) {
+          const pageResp = await finiquitosApi.listar({
+            empresa: idEmpresaFiltro ?? "all",
+            page: currentPage,
+            limit: pageSize,
+            search: "",
+            estatus: "",
+            tipo: "",
+          });
+          const rows = Array.isArray(pageResp?.data) ? pageResp.data : [];
+          allRows = [...allRows, ...rows];
+        }
+        if (!isCancelled) setFilterOptionsRows(allRows);
+      } catch (_) {
+        if (!isCancelled) setFilterOptionsRows([]);
+      }
+    };
+    loadFilterOptionsRows();
+    return () => {
+      isCancelled = true;
+    };
+  }, [idEmpresaFiltro]);
+
+  useEffect(() => {
+    setHeaderFilterMeta({
+      active: hasActiveHeaderFilters,
+      total: filteredRowsAll.length,
+    });
+  }, [hasActiveHeaderFilters, filteredRowsAll.length]);
+
+  useEffect(() => {
+    if (!headerFilterMeta.active) return;
+    const totalPages = Math.max(1, Math.ceil(headerFilterMeta.total / limit));
+    if (page > totalPages) setPage(1);
+  }, [headerFilterMeta, page, limit]);
 
   // ---------------- Calculadora ----------------
   const [idEmpleado, setIdEmpleado] = useState("");
@@ -545,171 +662,6 @@ export default function PageFiniquitosLiquidaciones() {
 
   return (
     <div className={`${styles.finTheme} space-y-6`}>
-      {/* Filtros superiores (estilo Contratos) */}
-      <Card className="fin-card border-indigo-100 bg-indigo-50">
-        <CardHeader>
-          <CardTitle className="text-base font-bold text-indigo-700 flex items-center gap-2">
-            <Filter className="h-4 w-4" /> Filtros de búsqueda
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">
-                Empresa
-              </label>
-              <div className="relative">
-                <Combobox
-                  options={[
-                    { value: "all", label: "Todas las empresas" },
-                    ...(dataUser?.empresas_detalle || []).map((e) => ({
-                      value: String(e.id_empresa),
-                      label: e.nombre,
-                    })),
-                  ]}
-                  value={empresaFiltro}
-                  onChange={(value) => {
-                    setEmpresaFiltro(value);
-                    setSearch("");
-                    setEstatus("");
-                    setTipo("");
-                    setPage(1);
-                  }}
-                  placeholder="Empresa"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Buscar
-              </label>
-              <div className="relative">
-                <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <Input
-                  className="pl-9"
-                  placeholder="Empleado, puesto o ID..."
-                  value={search}
-                  onChange={(e) => {
-                    setSearch(e.target.value);
-                    setIsSuggestionsOpen(true);
-                    setHoveredSuggestionIndex(0);
-                    setActiveSearchBox("filters");
-                  }}
-                  onFocus={() => {
-                    setActiveSearchBox("filters");
-                    setIsSuggestionsOpen(!!search);
-                  }}
-                  onBlur={() => {
-                    setTimeout(() => {
-                      setIsSuggestionsOpen(false);
-                      setActiveSearchBox(null);
-                    }, 120);
-                  }}
-                  onKeyDown={(e) => {
-                    if (
-                      !isSuggestionsOpen ||
-                      activeSearchBox !== "filters" ||
-                      sugerencias.length === 0
-                    )
-                      return;
-                    if (e.key === "ArrowDown") {
-                      e.preventDefault();
-                      setHoveredSuggestionIndex((prev) =>
-                        prev + 1 >= sugerencias.length ? 0 : prev + 1,
-                      );
-                    } else if (e.key === "ArrowUp") {
-                      e.preventDefault();
-                      setHoveredSuggestionIndex((prev) =>
-                        prev - 1 < 0 ? sugerencias.length - 1 : prev - 1,
-                      );
-                    } else if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleSelectEmpleadoSugerencia(
-                        sugerencias[hoveredSuggestionIndex] || sugerencias[0],
-                      );
-                    } else if (e.key === "Escape") {
-                      setIsSuggestionsOpen(false);
-                    }
-                  }}
-                />
-                {isSuggestionsOpen &&
-                activeSearchBox === "filters" &&
-                sugerencias.length > 0 ? (
-                  <div className="absolute left-0 right-0 mt-1 z-20 rounded-md border bg-white shadow">
-                    <ul className="max-h-64 overflow-auto">
-                      {sugerencias.map((emp, idx) => (
-                        <li
-                          key={emp.id_empleado}
-                          onMouseDown={() =>
-                            handleSelectEmpleadoSugerencia(emp)
-                          }
-                          onMouseEnter={() => setHoveredSuggestionIndex(idx)}
-                          className={`px-3 py-2 cursor-pointer text-sm ${
-                            idx === hoveredSuggestionIndex ? "bg-blue-50" : ""
-                          }`}
-                        >
-                          {emp.nombre_completo}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Estado
-              </label>
-              <Select
-                value={estatus === "" ? "__all__" : estatus}
-                onValueChange={(v) => setEstatus(v === "__all__" ? "" : v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">Todos</SelectItem>
-                  <SelectItem value="Pendiente">Pendiente</SelectItem>
-                  <SelectItem value="Pagado">Pagado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Tipo</label>
-              <Select
-                value={tipo === "" ? "__all__" : tipo}
-                onValueChange={(v) => setTipo(v === "__all__" ? "" : v)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">Todos</SelectItem>
-                  <SelectItem value="finiquito">Finiquito</SelectItem>
-                  <SelectItem value="liquidacion">Liquidación</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              onClick={limpiarFiltros}
-              variant="outline"
-              className="border-gray-300 text-gray-700 hover:bg-gray-100"
-            >
-              <RotateCcw className="h-4 w-4 mr-2" /> Limpiar
-            </Button>
-            <Button
-              onClick={() => mutate()}
-              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm"
-            >
-              <Search className="h-4 w-4 mr-2" /> Buscar
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Tabs */}
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="grid w-full grid-cols-2 bg-gray-100 rounded-lg p-1">
@@ -748,32 +700,92 @@ export default function PageFiniquitosLiquidaciones() {
                 Lista de finiquitos y liquidaciones
               </h2>
             </div>
+            <ActiveFilterChips
+              groups={[
+                {
+                  category: "ID",
+                  values: idSeleccionado,
+                  options: idOptions,
+                  onChange: setIdSeleccionado,
+                },
+                {
+                  category: "Empresa",
+                  values: empresaSeleccionada,
+                  options: empresaOptions,
+                  onChange: setEmpresaSeleccionada,
+                },
+                {
+                  category: "Empleado",
+                  values: empleadoSeleccionado,
+                  options: empleadoOptions,
+                  onChange: setEmpleadoSeleccionado,
+                },
+                {
+                  category: "Tipo",
+                  values: tipoSeleccionado,
+                  options: tipoOptions,
+                  onChange: setTipoSeleccionado,
+                },
+                {
+                  category: "Estado",
+                  values: estadoSeleccionado,
+                  options: estadoOptions,
+                  onChange: setEstadoSeleccionado,
+                },
+              ]}
+              onClearAll={clearAllHeaderFilters}
+            />
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b">
                   <tr>
                     <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">
-                      ID
+                      <HeaderMultiFilter
+                        selected={idSeleccionado}
+                        onChange={setIdSeleccionado}
+                        options={idOptions}
+                        placeholder="ID"
+                      />
                     </th>
                     {!mostrarEmpresa && (
                       <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">
-                        Empresa
+                        <HeaderMultiFilter
+                          selected={empresaSeleccionada}
+                          onChange={setEmpresaSeleccionada}
+                          options={empresaOptions}
+                          placeholder="Empresa"
+                        />
                       </th>
                     )}
                     <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">
-                      Empleado
+                      <HeaderMultiFilter
+                        selected={empleadoSeleccionado}
+                        onChange={setEmpleadoSeleccionado}
+                        options={empleadoOptions}
+                        placeholder="Empleado"
+                      />
                     </th>
                     <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">
                       Fecha baja
                     </th>
                     <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">
-                      Tipo
+                      <HeaderMultiFilter
+                        selected={tipoSeleccionado}
+                        onChange={setTipoSeleccionado}
+                        options={tipoOptions}
+                        placeholder="Tipo"
+                      />
                     </th>
                     <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">
                       Total
                     </th>
                     <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">
-                      Estado
+                      <HeaderMultiFilter
+                        selected={estadoSeleccionado}
+                        onChange={setEstadoSeleccionado}
+                        options={estadoOptions}
+                        placeholder="Estado"
+                      />
                     </th>
                     <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">
                       Acciones
@@ -781,7 +793,7 @@ export default function PageFiniquitosLiquidaciones() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(finiquitos || []).map((f) => {
+                  {(displayedRows || []).map((f) => {
                     const tipoBadge = f.es_liquidacion
                       ? "Liquidación"
                       : "Finiquito";
@@ -800,6 +812,9 @@ export default function PageFiniquitosLiquidaciones() {
                         <td className="px-3 py-2 font-semibold">
                           #{f.id_finiquito}
                         </td>
+                        {!mostrarEmpresa && (
+                          <td className="px-3 py-2">{f.nombre_empresa || "-"}</td>
+                        )}
                         <td className="px-3 py-2">{f.nombre_completo}</td>
                         <td className="px-3 py-2">
                           {f.fecha_baja
@@ -850,9 +865,9 @@ export default function PageFiniquitosLiquidaciones() {
                       </tr>
                     );
                   })}
-                  {(!finiquitos || finiquitos.length === 0) && (
+                  {(!displayedRows || displayedRows.length === 0) && (
                     <tr>
-                      <td className="p-6 text-center text-gray-500" colSpan={7}>
+                      <td className="p-6 text-center text-gray-500" colSpan={8}>
                         No hay finiquitos guardados
                       </td>
                     </tr>
@@ -865,7 +880,7 @@ export default function PageFiniquitosLiquidaciones() {
           <TablePagination
             page={page}
             limit={limit}
-            total={total}
+            total={headerFilterMeta.active ? headerFilterMeta.total : total}
             onPageChange={setPage}
             onLimitChange={setLimit}
           />

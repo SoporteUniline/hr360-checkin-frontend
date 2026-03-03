@@ -1,9 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { Eye, Pencil, Trash2, Copy } from "lucide-react";
 import styles from "./contratos-theme.module.css";
+import HeaderMultiFilter from "../registro-asistencia/HeaderMultiFilter";
+import ActiveFilterChips from "../registro-asistencia/ActiveFilterChips";
 
 function formatDMY(value) {
   if (!value) return "";
@@ -201,12 +203,112 @@ function badgeEstatus(estatus) {
  */
 export default function ContratosTable({
   items = [],
+  filterOptionsRows = [],
   loading,
   onEdit,
   onDelete,
   onDuplicate,
   onView,
+  page = 1,
+  limit = 10,
+  onHeaderFilteringMetaChange,
 }) {
+  const [folioSeleccionado, setFolioSeleccionado] = useState([]);
+  const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState([]);
+  const [puestoSeleccionado, setPuestoSeleccionado] = useState([]);
+  const [tipoSeleccionado, setTipoSeleccionado] = useState([]);
+  const [estatusSeleccionado, setEstatusSeleccionado] = useState([]);
+
+  const sourceRows = useMemo(
+    () => (Array.isArray(filterOptionsRows) && filterOptionsRows.length > 0 ? filterOptionsRows : items),
+    [filterOptionsRows, items],
+  );
+
+  const uniqueOptions = (values) =>
+    [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+
+  const getEmpleado = (c) =>
+    c.nombre_empleado || c.empleado_nombre || c.nombreEmpleado || "";
+  const getFolio = (c) => String(c.folio || c.id || "");
+
+  const folioOptions = useMemo(
+    () => uniqueOptions(sourceRows.map((c) => getFolio(c))),
+    [sourceRows],
+  );
+  const empleadoOptions = useMemo(
+    () => uniqueOptions(sourceRows.map((c) => getEmpleado(c))),
+    [sourceRows],
+  );
+  const puestoOptions = useMemo(
+    () => uniqueOptions(sourceRows.map((c) => c.puesto)),
+    [sourceRows],
+  );
+  const tipoOptions = useMemo(
+    () => uniqueOptions(sourceRows.map((c) => c.tipo_contrato || c.tipoContrato)),
+    [sourceRows],
+  );
+  const estatusOptions = useMemo(
+    () => uniqueOptions(sourceRows.map((c) => c.estatus)),
+    [sourceRows],
+  );
+
+  const filteredRowsAll = useMemo(
+    () =>
+      sourceRows.filter((c) => {
+        const passFolio =
+          folioSeleccionado.length === 0 ||
+          folioSeleccionado.includes(getFolio(c));
+        const passEmpleado =
+          empleadoSeleccionado.length === 0 ||
+          empleadoSeleccionado.includes(getEmpleado(c));
+        const passPuesto =
+          puestoSeleccionado.length === 0 || puestoSeleccionado.includes(c.puesto);
+        const passTipo =
+          tipoSeleccionado.length === 0 ||
+          tipoSeleccionado.includes(c.tipo_contrato || c.tipoContrato);
+        const passEstatus =
+          estatusSeleccionado.length === 0 ||
+          estatusSeleccionado.includes(c.estatus);
+        return passFolio && passEmpleado && passPuesto && passTipo && passEstatus;
+      }),
+    [
+      sourceRows,
+      folioSeleccionado,
+      empleadoSeleccionado,
+      puestoSeleccionado,
+      tipoSeleccionado,
+      estatusSeleccionado,
+    ],
+  );
+
+  const hasActiveHeaderFilters =
+    folioSeleccionado.length > 0 ||
+    empleadoSeleccionado.length > 0 ||
+    puestoSeleccionado.length > 0 ||
+    tipoSeleccionado.length > 0 ||
+    estatusSeleccionado.length > 0;
+
+  const displayedRows = useMemo(() => {
+    if (!hasActiveHeaderFilters) return items;
+    const offset = (page - 1) * limit;
+    return filteredRowsAll.slice(offset, offset + limit);
+  }, [hasActiveHeaderFilters, items, page, limit, filteredRowsAll]);
+
+  useEffect(() => {
+    onHeaderFilteringMetaChange?.({
+      active: hasActiveHeaderFilters,
+      total: filteredRowsAll.length,
+    });
+  }, [hasActiveHeaderFilters, filteredRowsAll.length, onHeaderFilteringMetaChange]);
+
+  const clearAllHeaderFilters = () => {
+    setFolioSeleccionado([]);
+    setEmpleadoSeleccionado([]);
+    setPuestoSeleccionado([]);
+    setTipoSeleccionado([]);
+    setEstatusSeleccionado([]);
+  };
+
   if (loading) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-10">
@@ -232,22 +334,92 @@ export default function ContratosTable({
           Lista de contratos
         </h2>
       </div>
+      <ActiveFilterChips
+        groups={[
+          {
+            category: "Folio",
+            values: folioSeleccionado,
+            options: folioOptions,
+            onChange: setFolioSeleccionado,
+          },
+          {
+            category: "Empleado",
+            values: empleadoSeleccionado,
+            options: empleadoOptions,
+            onChange: setEmpleadoSeleccionado,
+          },
+          {
+            category: "Puesto",
+            values: puestoSeleccionado,
+            options: puestoOptions,
+            onChange: setPuestoSeleccionado,
+          },
+          {
+            category: "Tipo",
+            values: tipoSeleccionado,
+            options: tipoOptions,
+            onChange: setTipoSeleccionado,
+          },
+          {
+            category: "Estatus",
+            values: estatusSeleccionado,
+            options: estatusOptions,
+            onChange: setEstatusSeleccionado,
+          },
+        ]}
+        onClearAll={clearAllHeaderFilters}
+      />
       <div className="overflow-x-auto">
         <table className="w-full border-collapse">
           <thead className="bg-gray-50 border-b">
             <tr className="text-left text-xs uppercase font-semibold text-gray-700">
-              <th className="px-3 py-2">Folio</th>
-              <th className="px-3 py-2">Empleado</th>
-              <th className="px-3 py-2">Puesto</th>
-              <th className="px-3 py-2">Tipo</th>
+              <th className="px-3 py-2">
+                <HeaderMultiFilter
+                  selected={folioSeleccionado}
+                  onChange={setFolioSeleccionado}
+                  options={folioOptions}
+                  placeholder="Folio"
+                />
+              </th>
+              <th className="px-3 py-2">
+                <HeaderMultiFilter
+                  selected={empleadoSeleccionado}
+                  onChange={setEmpleadoSeleccionado}
+                  options={empleadoOptions}
+                  placeholder="Empleado"
+                />
+              </th>
+              <th className="px-3 py-2">
+                <HeaderMultiFilter
+                  selected={puestoSeleccionado}
+                  onChange={setPuestoSeleccionado}
+                  options={puestoOptions}
+                  placeholder="Puesto"
+                />
+              </th>
+              <th className="px-3 py-2">
+                <HeaderMultiFilter
+                  selected={tipoSeleccionado}
+                  onChange={setTipoSeleccionado}
+                  options={tipoOptions}
+                  placeholder="Tipo"
+                />
+              </th>
               <th className="px-3 py-2">Inicio</th>
               <th className="px-3 py-2">Vigencia</th>
-              <th className="px-3 py-2">Estatus</th>
+              <th className="px-3 py-2">
+                <HeaderMultiFilter
+                  selected={estatusSeleccionado}
+                  onChange={setEstatusSeleccionado}
+                  options={estatusOptions}
+                  placeholder="Estatus"
+                />
+              </th>
               <th className="px-3 py-2">Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {items.map((c) => {
+            {displayedRows.map((c) => {
               const vigenciaNodo =
                 c.tipo_contrato === "indefinido" || !c.fecha_fin ? (
                   <span className="text-xs text-muted-foreground">
@@ -319,6 +491,13 @@ export default function ContratosTable({
                 </tr>
               );
             })}
+            {displayedRows.length === 0 && (
+              <tr>
+                <td className="px-3 py-8 text-center text-gray-500" colSpan={8}>
+                  No hay contratos para los filtros seleccionados.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

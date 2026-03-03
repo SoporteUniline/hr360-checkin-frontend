@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import useDebounce from "@/hooks/useDebounce";
-import EmpleadosFilters from "./EmpleadosFilters";
 import EmpleadosDataContainer from "./EmpleadosDataContainer";
 import FormularioEmpleado from "./FormularioEmpleado";
 import { Button } from "@/components/ui/button";
@@ -41,12 +39,6 @@ export default function RegistroEmpleados() {
   const [editar, setEditar] = useState(false);
   const [soloLectura, setSoloLectura] = useState(false);
   const [values, setValues] = useState(null);
-
-  const [filtroEmpleado, setFiltroEmpleado] = useState("");
-  const filtroNombre = useDebounce(filtroEmpleado, 500);
-  const [departamento, setDepartamento] = useState("");
-  const [estado, setEstado] = useState("");
-  const [fechaDesde, setFechaDesde] = useState("");
 
   const { dataUser } = useAuth();
   const [empresaActiva, setEmpresaActiva] = useState("all");
@@ -99,10 +91,6 @@ export default function RegistroEmpleados() {
   };
 
   const resetFilters = () => {
-    setFiltroEmpleado("");
-    setDepartamento("");
-    setEstado("");
-    setFechaDesde("");
     setEmpresaActiva("all");
     setPage(1);
   };
@@ -111,10 +99,10 @@ export default function RegistroEmpleados() {
     idEmpresa,
     page,
     limit,
-    filtroNombre,
-    departamento,
-    estado,
-    fechaDesde,
+    filtroNombre: "",
+    departamento: "",
+    estado: "",
+    fechaDesde: "",
     setPage,
     abrirFormulario,
     resetFilters,
@@ -171,21 +159,6 @@ export default function RegistroEmpleados() {
                 icon={Building2}
               />
             </div>
-
-            {/* Filtros */}
-            <EmpleadosFilters
-              filtroEmpleado={filtroEmpleado}
-              setFiltroEmpleado={setFiltroEmpleado}
-              departamento={departamento}
-              setDepartamento={setDepartamento}
-              estado={estado}
-              setEstado={setEstado}
-              setPage={setPage}
-              fechaDesde={fechaDesde}
-              setFechaDesde={setFechaDesde}
-              empresaActiva={empresaActiva}
-              setEmpresaActiva={setEmpresaActiva}
-            />
             {ui}
 
             {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}

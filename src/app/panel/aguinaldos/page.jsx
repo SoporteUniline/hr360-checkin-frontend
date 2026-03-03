@@ -34,17 +34,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import TablePagination from "@/components/TablePagination";
 import useAguinaldosData from "@/hooks/useAguinaldosData";
-import useEmpleadosActivosAguinaldo from "@/hooks/useEmpleadosActivosAguinaldo";
 import { aguinaldosApi } from "@/lib/aguinaldosApi";
 import {
   AlertTriangle,
   Calculator,
   Download,
   Eye,
-  Filter,
   Pencil,
   Plus,
-  RotateCcw,
   Save,
   Search,
   Trash2,
@@ -58,6 +55,8 @@ import AccesosRapidos from "@/components/AccesosRapidos";
 import useSWR from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { fetchImageAsDataUrl } from "@/lib/pdfCompanyLogo";
+import HeaderMultiFilter from "../registro-asistencia/HeaderMultiFilter";
+import ActiveFilterChips from "../registro-asistencia/ActiveFilterChips";
 import {
   createPdfContext,
   drawHeaderBox,
@@ -73,7 +72,7 @@ import { Combobox } from "@/components/Combobox";
 export default function PageAguinaldos() {
   const { dataUser } = useAuth();
 
-  const [empresaFiltro, setEmpresaFiltro] = useState("all");
+  const empresaFiltro = "all";
   const [empresaCalculo, setEmpresaCalculo] = useState("");
 
   const mostrarEmpresa = empresaFiltro !== "all";
@@ -124,46 +123,149 @@ export default function PageAguinaldos() {
   const [loading, setLoading] = useState(false);
   const [alertMsg, setAlertMsg] = useState("");
 
-  // Estado buscador
-  const [search, setSearch] = useState("");
-  const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
-  const [hoveredSuggestionIndex, setHoveredSuggestionIndex] = useState(-1);
-  const [activeSearchBox, setActiveSearchBox] = useState(null);
-
   // Paginación
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-
-  // Filtros extra
-  const [estatus, setEstatus] = useState("");
-  const [añoFiscal, setAñoFiscal] = useState("");
+  const [filterOptionsRows, setFilterOptionsRows] = useState([]);
+  const [headerFilterMeta, setHeaderFilterMeta] = useState({
+    active: false,
+    total: 0,
+  });
+  const [idSeleccionado, setIdSeleccionado] = useState([]);
+  const [empresaSeleccionada, setEmpresaSeleccionada] = useState([]);
+  const [anioSeleccionado, setAnioSeleccionado] = useState([]);
+  const [estadoSeleccionado, setEstadoSeleccionado] = useState([]);
 
   // Datos listados
   const { data, isLoading, mutate } = useAguinaldosData({
     idEmpresa: idEmpresaFiltro,
     page,
     limit,
-    search,
-    estatus,
-    año_fiscal: añoFiscal,
+    search: "",
+    estatus: "",
+    año_fiscal: "",
   });
   const calculos = data?.data || [];
   const total = data?.total || 0;
-
-  const handleSelectEmpleadoSugerencia = (emp) => {
-    if (!emp) return;
-    setSearch(emp.nombre_completo || "");
-    setIsSuggestionsOpen(false);
-    setPage(1);
+  const sourceRows = useMemo(
+    () =>
+      Array.isArray(filterOptionsRows) && filterOptionsRows.length > 0
+        ? filterOptionsRows
+        : calculos,
+    [filterOptionsRows, calculos],
+  );
+  const uniqueOptions = (values) =>
+    [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const idOptions = useMemo(
+    () => uniqueOptions(sourceRows.map((c) => String(c.id_calculo || ""))),
+    [sourceRows],
+  );
+  const empresaOptions = useMemo(
+    () => uniqueOptions(sourceRows.map((c) => c.nombre_empresa)),
+    [sourceRows],
+  );
+  const anioOptions = useMemo(
+    () => uniqueOptions(sourceRows.map((c) => String(c.año_fiscal || ""))),
+    [sourceRows],
+  );
+  const estadoOptions = useMemo(
+    () => uniqueOptions(sourceRows.map((c) => c.estado || "Pendiente")),
+    [sourceRows],
+  );
+  const filteredRowsAll = useMemo(
+    () =>
+      sourceRows.filter((c) => {
+        const idValue = String(c.id_calculo || "");
+        const empresaValue = c.nombre_empresa;
+        const anioValue = String(c.año_fiscal || "");
+        const estadoValue = c.estado || "Pendiente";
+        const passId = idSeleccionado.length === 0 || idSeleccionado.includes(idValue);
+        const passEmpresa =
+          empresaSeleccionada.length === 0 ||
+          empresaSeleccionada.includes(empresaValue);
+        const passAnio =
+          anioSeleccionado.length === 0 || anioSeleccionado.includes(anioValue);
+        const passEstado =
+          estadoSeleccionado.length === 0 ||
+          estadoSeleccionado.includes(estadoValue);
+        return passId && passEmpresa && passAnio && passEstado;
+      }),
+    [
+      sourceRows,
+      idSeleccionado,
+      empresaSeleccionada,
+      anioSeleccionado,
+      estadoSeleccionado,
+    ],
+  );
+  const hasActiveHeaderFilters =
+    idSeleccionado.length > 0 ||
+    empresaSeleccionada.length > 0 ||
+    anioSeleccionado.length > 0 ||
+    estadoSeleccionado.length > 0;
+  const displayedRows = useMemo(() => {
+    if (!hasActiveHeaderFilters) return calculos;
+    const offset = (page - 1) * limit;
+    return filteredRowsAll.slice(offset, offset + limit);
+  }, [hasActiveHeaderFilters, calculos, page, limit, filteredRowsAll]);
+  const clearAllHeaderFilters = () => {
+    setIdSeleccionado([]);
+    setEmpresaSeleccionada([]);
+    setAnioSeleccionado([]);
+    setEstadoSeleccionado([]);
   };
 
-  const limpiarFiltros = () => {
-    setEmpresaFiltro("all");
-    setSearch("");
-    setEstatus("");
-    setAñoFiscal("");
-    setPage(1);
-  };
+  useEffect(() => {
+    let isCancelled = false;
+    const loadFilterOptionsRows = async () => {
+      try {
+        const pageSize = 500;
+        const firstResp = await aguinaldosApi.listar({
+          empresa: idEmpresaFiltro,
+          page: 1,
+          limit: pageSize,
+          search: "",
+          estatus: "",
+          año_fiscal: "",
+        });
+        let allRows = Array.isArray(firstResp?.data) ? firstResp.data : [];
+        const totalRows = Number(firstResp?.total || allRows.length);
+        const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+        for (let currentPage = 2; currentPage <= totalPages; currentPage += 1) {
+          const pageResp = await aguinaldosApi.listar({
+            empresa: idEmpresaFiltro,
+            page: currentPage,
+            limit: pageSize,
+            search: "",
+            estatus: "",
+            año_fiscal: "",
+          });
+          const rows = Array.isArray(pageResp?.data) ? pageResp.data : [];
+          allRows = [...allRows, ...rows];
+        }
+        if (!isCancelled) setFilterOptionsRows(allRows);
+      } catch (_) {
+        if (!isCancelled) setFilterOptionsRows([]);
+      }
+    };
+    loadFilterOptionsRows();
+    return () => {
+      isCancelled = true;
+    };
+  }, [idEmpresaFiltro]);
+
+  useEffect(() => {
+    setHeaderFilterMeta({
+      active: hasActiveHeaderFilters,
+      total: filteredRowsAll.length,
+    });
+  }, [hasActiveHeaderFilters, filteredRowsAll.length]);
+
+  useEffect(() => {
+    if (!headerFilterMeta.active) return;
+    const totalPages = Math.max(1, Math.ceil(headerFilterMeta.total / limit));
+    if (page > totalPages) setPage(1);
+  }, [headerFilterMeta, page, limit]);
 
   // ---------------- Calculadora Masiva ----------------
   const [fechaCorte, setFechaCorte] = useState(dayjs().format("YYYY-MM-DD"));
@@ -183,18 +285,6 @@ export default function PageAguinaldos() {
   const [estadoDialogOpen, setEstadoDialogOpen] = useState(false);
   const [calculoParaCambiarEstado, setCalculoParaCambiarEstado] =
     useState(null);
-
-  // Sugerencias de empleados
-  const empleadosSugResp = useEmpleadosActivosAguinaldo({
-    empresa: empresaFiltro === "all" ? "all" : Number(empresaFiltro),
-    q: search,
-    limit: 8,
-  });
-
-  const sugerencias = useMemo(
-    () => empleadosSugResp?.data || [],
-    [empleadosSugResp?.data],
-  );
 
   const resetFormulario = () => {
     setFechaCorte(dayjs().format("YYYY-MM-DD"));
@@ -1210,144 +1300,6 @@ export default function PageAguinaldos() {
 
   return (
     <div className={`${styles.aguTheme} space-y-6`}>
-      {/* Filtros superiores */}
-      <Card className="agu-card border-indigo-100 bg-indigo-50">
-        <CardHeader>
-          <CardTitle className="text-base font-bold text-indigo-700 flex items-center gap-2">
-            <Filter className="h-4 w-4" /> Filtros de búsqueda
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">
-                Empresa
-              </label>
-              <div className="relative">
-                <Combobox
-                  options={[
-                    { value: "all", label: "Todas las empresas" },
-                    ...(dataUser?.empresas_detalle || []).map((e) => ({
-                      value: String(e.id_empresa),
-                      label: e.nombre,
-                    })),
-                  ]}
-                  value={empresaFiltro}
-                  onChange={(value) => {
-                    setEmpresaFiltro(value);
-                    setSearch("");
-                    setEstatus("");
-                    setAñoFiscal("");
-                    setPage(1);
-                  }}
-                  placeholder="Empresa"
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Buscar
-              </label>
-              <div className="relative">
-                <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <Input
-                  className="bg-white pl-9"
-                  placeholder="Empleado, puesto o ID..."
-                  value={search}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    setSearch(value);
-                    setIsSuggestionsOpen(value.length > 0);
-                    setHoveredSuggestionIndex(0);
-                    setActiveSearchBox("filters");
-                  }}
-                  onFocus={() => {
-                    setActiveSearchBox("filters");
-                    setIsSuggestionsOpen(!!search);
-                  }}
-                  onBlur={() => {
-                    setTimeout(() => {
-                      setIsSuggestionsOpen(false);
-                      setActiveSearchBox(null);
-                    }, 120);
-                  }}
-                />
-                {isSuggestionsOpen &&
-                activeSearchBox === "filters" &&
-                sugerencias.length > 0 ? (
-                  <div className="absolute left-0 right-0 mt-1 z-20 rounded-md border bg-white shadow">
-                    <ul className="max-h-64 overflow-auto">
-                      {sugerencias.map((emp, idx) => (
-                        <li
-                          key={emp.id_empleado}
-                          onMouseDown={() =>
-                            handleSelectEmpleadoSugerencia(emp)
-                          }
-                          onMouseEnter={() => setHoveredSuggestionIndex(idx)}
-                          className={`px-3 py-2 cursor-pointer text-sm ${
-                            idx === hoveredSuggestionIndex ? "bg-blue-50" : ""
-                          }`}
-                        >
-                          {emp.nombre_completo}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Estado
-              </label>
-              <Select
-                value={estatus === "" ? "__all__" : estatus}
-                onValueChange={(v) => setEstatus(v === "__all__" ? "" : v)}
-              >
-                <SelectTrigger className="bg-white">
-                  <SelectValue placeholder="Todos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">Todos</SelectItem>
-                  <SelectItem value="Pendiente">Pendiente</SelectItem>
-                  <SelectItem value="Pagado">Pagado</SelectItem>
-                  <SelectItem value="Cancelado">Cancelado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Año fiscal
-              </label>
-              <Input
-                type="number"
-                placeholder="Ej: 2025"
-                value={añoFiscal}
-                onChange={(e) => setAñoFiscal(e.target.value)}
-                min="2020"
-                max="2030"
-                className="bg-white"
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              onClick={limpiarFiltros}
-              variant="outline"
-              className="border-gray-300 text-gray-700 hover:bg-gray-100"
-            >
-              <RotateCcw className="h-4 w-4 mr-2" /> Limpiar
-            </Button>
-            <Button
-              onClick={() => mutate()}
-              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm"
-            >
-              <Search className="h-4 w-4 mr-2" /> Buscar
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Tabs */}
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="grid w-full grid-cols-2 bg-gray-100 rounded-lg p-1">
@@ -1386,20 +1338,64 @@ export default function PageAguinaldos() {
                 Lista de cálculos
               </h2>
             </div>
+            <ActiveFilterChips
+              groups={[
+                {
+                  category: "ID",
+                  values: idSeleccionado,
+                  options: idOptions,
+                  onChange: setIdSeleccionado,
+                },
+                {
+                  category: "Empresa",
+                  values: empresaSeleccionada,
+                  options: empresaOptions,
+                  onChange: setEmpresaSeleccionada,
+                },
+                {
+                  category: "Año",
+                  values: anioSeleccionado,
+                  options: anioOptions,
+                  onChange: setAnioSeleccionado,
+                },
+                {
+                  category: "Estado",
+                  values: estadoSeleccionado,
+                  options: estadoOptions,
+                  onChange: setEstadoSeleccionado,
+                },
+              ]}
+              onClearAll={clearAllHeaderFilters}
+            />
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b">
                   <tr>
                     <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">
-                      ID
+                      <HeaderMultiFilter
+                        selected={idSeleccionado}
+                        onChange={setIdSeleccionado}
+                        options={idOptions}
+                        placeholder="ID"
+                      />
                     </th>
                     {!mostrarEmpresa && (
                       <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">
-                        Empresa
+                        <HeaderMultiFilter
+                          selected={empresaSeleccionada}
+                          onChange={setEmpresaSeleccionada}
+                          options={empresaOptions}
+                          placeholder="Empresa"
+                        />
                       </th>
                     )}
                     <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">
-                      Año
+                      <HeaderMultiFilter
+                        selected={anioSeleccionado}
+                        onChange={setAnioSeleccionado}
+                        options={anioOptions}
+                        placeholder="Año"
+                      />
                     </th>
                     <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">
                       Fecha cálculo
@@ -1414,7 +1410,12 @@ export default function PageAguinaldos() {
                       Total
                     </th>
                     <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">
-                      Estado
+                      <HeaderMultiFilter
+                        selected={estadoSeleccionado}
+                        onChange={setEstadoSeleccionado}
+                        options={estadoOptions}
+                        placeholder="Estado"
+                      />
                     </th>
                     <th className="text-left px-3 py-2 text-xs font-semibold uppercase text-gray-700">
                       Acciones
@@ -1422,7 +1423,7 @@ export default function PageAguinaldos() {
                   </tr>
                 </thead>
                 <tbody>
-                  {(calculos || []).map((calc) => {
+                  {(displayedRows || []).map((calc) => {
                     const estClass =
                       calc.estado === "Pagado"
                         ? "bg-green-100 text-green-800"
@@ -1498,9 +1499,9 @@ export default function PageAguinaldos() {
                       </tr>
                     );
                   })}
-                  {(!calculos || calculos.length === 0) && (
+                  {(!displayedRows || displayedRows.length === 0) && (
                     <tr>
-                      <td className="p-6 text-center text-gray-500" colSpan={8}>
+                      <td className="p-6 text-center text-gray-500" colSpan={9}>
                         No hay cálculos de aguinaldos guardados
                       </td>
                     </tr>
@@ -1513,7 +1514,7 @@ export default function PageAguinaldos() {
           <TablePagination
             page={page}
             limit={limit}
-            total={total}
+            total={headerFilterMeta.active ? headerFilterMeta.total : total}
             onPageChange={setPage}
             onLimitChange={setLimit}
           />
