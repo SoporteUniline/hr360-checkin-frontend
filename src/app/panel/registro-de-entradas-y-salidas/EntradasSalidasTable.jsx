@@ -9,11 +9,14 @@ import {
 import EntradasSalidasRow from "./EntradasSalidasRow";
 import { exportToExcel } from "@/utils/exportExcelJS";
 import { Button } from "@/components/ui/button";
-import { FileSpreadsheet, RotateCcw } from "lucide-react";
+import { FileSpreadsheet } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
+import { useMemo, useState } from "react";
+import HeaderMultiFilter from "../registro-asistencia/HeaderMultiFilter";
+import ActiveFilterChips from "../registro-asistencia/ActiveFilterChips";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -33,6 +36,79 @@ export default function EntradasSalidasTable({
 }) {
   const { dataUser } = useAuth();
   const userTimezone = dataUser?.zona_horaria || "America/Mexico_City";
+  const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState([]);
+  const [empresaSeleccionada, setEmpresaSeleccionada] = useState([]);
+  const [departamentoSeleccionado, setDepartamentoSeleccionado] = useState([]);
+  const [estadoSeleccionado, setEstadoSeleccionado] = useState([]);
+
+  const getEmpleadoNombre = (registro) =>
+    [registro.nombre, registro.apellido_paterno, registro.apellido_materno]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+
+  const getDepartamentoSucursal = (registro) =>
+    `${registro.departamento || "-"} / ${registro.sucursal || "-"}`;
+
+  const uniqueOptions = (values) =>
+    [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+
+  const empleadoOptions = useMemo(
+    () => uniqueOptions(registros.map((registro) => getEmpleadoNombre(registro))),
+    [registros],
+  );
+  const empresaOptions = useMemo(
+    () => uniqueOptions(registros.map((registro) => registro.nombre_empresa)),
+    [registros],
+  );
+  const departamentoOptions = useMemo(
+    () =>
+      uniqueOptions(
+        registros.map((registro) => getDepartamentoSucursal(registro)),
+      ),
+    [registros],
+  );
+  const estadoOptions = useMemo(
+    () => uniqueOptions(registros.map((registro) => registro.estado)),
+    [registros],
+  );
+
+  const filteredRows = useMemo(
+    () =>
+      registros.filter((registro) => {
+        const nombreEmpleado = getEmpleadoNombre(registro);
+        const departamentoSucursal = getDepartamentoSucursal(registro);
+
+        const pasaEmpleado =
+          empleadoSeleccionado.length === 0 ||
+          empleadoSeleccionado.includes(nombreEmpleado);
+        const pasaEmpresa =
+          empresaSeleccionada.length === 0 ||
+          empresaSeleccionada.includes(registro.nombre_empresa);
+        const pasaDepartamento =
+          departamentoSeleccionado.length === 0 ||
+          departamentoSeleccionado.includes(departamentoSucursal);
+        const pasaEstado =
+          estadoSeleccionado.length === 0 ||
+          estadoSeleccionado.includes(registro.estado);
+
+        return pasaEmpleado && pasaEmpresa && pasaDepartamento && pasaEstado;
+      }),
+    [
+      registros,
+      empleadoSeleccionado,
+      empresaSeleccionada,
+      departamentoSeleccionado,
+      estadoSeleccionado,
+    ],
+  );
+
+  const clearAllTableFilters = () => {
+    setEmpleadoSeleccionado([]);
+    setEmpresaSeleccionada([]);
+    setDepartamentoSeleccionado([]);
+    setEstadoSeleccionado([]);
+  };
 
   const handleExportExcel = async () => {
     const columns = [
@@ -50,7 +126,7 @@ export default function EntradasSalidasTable({
       { header: "Estado", key: "estado", width: 15 },
     ];
 
-    const data = registros.map((r) => ({
+    const data = filteredRows.map((r) => ({
       nombre: r.nombre,
       apellido_paterno: r.apellido_paterno,
       apellido_materno: r.apellido_materno,
@@ -115,21 +191,69 @@ export default function EntradasSalidasTable({
             </Button>
           </div>
         </div>
+        <ActiveFilterChips
+          groups={[
+            {
+              category: "Empleado",
+              values: empleadoSeleccionado,
+              options: empleadoOptions,
+              onChange: setEmpleadoSeleccionado,
+            },
+            ...(empresaActiva === "all"
+              ? [
+                  {
+                    category: "Empresa",
+                    values: empresaSeleccionada,
+                    options: empresaOptions,
+                    onChange: setEmpresaSeleccionada,
+                  },
+                ]
+              : []),
+            {
+              category: "Departamento",
+              values: departamentoSeleccionado,
+              options: departamentoOptions,
+              onChange: setDepartamentoSeleccionado,
+            },
+            {
+              category: "Estado",
+              values: estadoSeleccionado,
+              options: estadoOptions,
+              onChange: setEstadoSeleccionado,
+            },
+          ]}
+          onClearAll={clearAllTableFilters}
+        />
 
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50 hover:bg-gray-50">
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                  Empleado
+                  <HeaderMultiFilter
+                    selected={empleadoSeleccionado}
+                    onChange={setEmpleadoSeleccionado}
+                    options={empleadoOptions}
+                    placeholder="Empleado"
+                  />
                 </TableHead>
                 {empresaActiva === "all" && (
                   <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                    Empresa
+                    <HeaderMultiFilter
+                      selected={empresaSeleccionada}
+                      onChange={setEmpresaSeleccionada}
+                      options={empresaOptions}
+                      placeholder="Empresa"
+                    />
                   </TableHead>
                 )}
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                  Departamento / Sucursal
+                  <HeaderMultiFilter
+                    selected={departamentoSeleccionado}
+                    onChange={setDepartamentoSeleccionado}
+                    options={departamentoOptions}
+                    placeholder="Departamento"
+                  />
                 </TableHead>
                 {/* IMPORTANTE (UX): aunque filtremos 1 solo día (desde===hasta), siempre mostramos la fecha */}
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
@@ -148,7 +272,12 @@ export default function EntradasSalidasTable({
                   Salida corregida
                 </TableHead>
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  Estado
+                  <HeaderMultiFilter
+                    selected={estadoSeleccionado}
+                    onChange={setEstadoSeleccionado}
+                    options={estadoOptions}
+                    placeholder="Estado"
+                  />
                 </TableHead>
                 <TableHead className="sticky right-0 bg-gray-50 z-10 text-center font-semibold text-gray-700 uppercase text-xs">
                   Acciones
@@ -156,17 +285,17 @@ export default function EntradasSalidasTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {registros.length === 0 ? (
+              {filteredRows.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={(empresaActiva = "all" ? 10 : 9)}
+                    colSpan={empresaActiva === "all" ? 10 : 9}
                     className="text-center py-10 text-gray-500"
                   >
                     No hay registros para los filtros seleccionados.
                   </TableCell>
                 </TableRow>
               ) : (
-                registros.map((reg) => (
+                filteredRows.map((reg) => (
                   <EntradasSalidasRow
                     key={reg.id}
                     registro={reg}

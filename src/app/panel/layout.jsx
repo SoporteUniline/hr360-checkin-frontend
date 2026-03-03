@@ -30,7 +30,7 @@ export default async function LayoutPanel({ children }) {
       <SidebarInset>
         <SiteHeader />
 
-        <div className="flex flex-1 flex-col p-5 text-sm text-gray-900">
+        <div className="panel-modules-content flex flex-1 flex-col p-5 text-sm text-gray-900">
           {!hasActivePlan ? <SubscriptionRequiredView /> : children}
         </div>
       </SidebarInset>

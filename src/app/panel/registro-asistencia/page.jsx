@@ -4,10 +4,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import useDebounce from "@/hooks/useDebounce";
-import AsistenciaFilters from "./AsistenciaFilters";
 import AsistenciaDataContainer from "./AsistenciaDataContainer";
-import useEmpleadosData from "@/hooks/useEmpleadosData";
-import useTiposPermisoData from "@/hooks/useTiposPermisoData";
 import AsistenciaCards from "./AsistenciaCards";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -15,6 +12,10 @@ import timezone from "dayjs/plugin/timezone";
 import FormularioAsistenciasMasivas from "@/components/FormularioAsistenciasMasivas";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import { ClipboardCheck } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { RotateCcw } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -48,9 +49,7 @@ export default function ControlAsistencia() {
   const [filtroEmpleado, setFiltroEmpleado] = useState("");
   const debouncedFiltroEmpleado = useDebounce(filtroEmpleado, 500);
   const [filtroDepartamento, setFiltroDepartamento] = useState("");
-  const [departamentosUnicos, setDepartamentosUnicos] = useState([]);
   const [filtroTipoRegistro, setFiltroTipoRegistro] = useState("");
-  const [tiposRegistroUnicos, setTiposRegistroUnicos] = useState([]);
   const [filtroEstadoAsistencia, setFiltroEstadoAsistencia] = useState("");
   const [mostrarCamposExtras, setMostrarCamposExtras] = useState(false);
   const [soloPresentes, setSoloPresentes] = useState(false);
@@ -67,17 +66,6 @@ export default function ControlAsistencia() {
       setEmpresaActiva("all");
     }
   }, [dataUser, empresaActiva]);
-
-  const { data: empleados } = useEmpleadosData(idEmpresa);
-  const { data: tiposPermiso } = useTiposPermisoData();
-
-  const empleadosOptions =
-    empleados?.data?.map((emp) => ({
-      value: emp.id_empleado,
-      label: `${emp.nombre} ${emp.apellido_paterno ?? ""} ${
-        emp.apellido_materno ?? ""
-      }`,
-    })) || [];
 
   const [modoFormulario, setModoFormulario] = useState(false);
   const [values, setValues] = useState(null);
@@ -109,32 +97,6 @@ export default function ControlAsistencia() {
     setRequiereAutorizacion(initial.filtroRequiereAutorizacion);
     setMostrarCamposExtras(false);
   };
-
-  useEffect(() => {
-    if (empleados?.data) {
-      const uniqueDepartamentos = [
-        ...new Set(empleados.data.map((emp) => emp.departamento)),
-      ];
-      setDepartamentosUnicos(uniqueDepartamentos.filter(Boolean).sort());
-    }
-  }, [empleados]);
-
-  useEffect(() => {
-    console.log(tiposPermiso);
-    if (tiposPermiso) {
-      const uniqueTipos = tiposPermiso?.tiposPermiso.map((tipo) => ({
-        clave: tipo.clave,
-        nombre: tipo.nombre,
-      }));
-      console.log(uniqueTipos);
-      const distinctTipos = Array.from(
-        new Map(uniqueTipos.map((item) => [item.clave, item])).values(),
-      );
-      setTiposRegistroUnicos(
-        distinctTipos.sort((a, b) => a.nombre.localeCompare(b.nombre)),
-      );
-    }
-  }, [tiposPermiso]);
 
   const { ui, data, mutate } = AsistenciaDataContainer({
     idEmpresa,
@@ -187,43 +149,51 @@ export default function ControlAsistencia() {
       )}
 
       <AsistenciaCards totals={data} />
-      <AsistenciaFilters
-        empresaActiva={empresaActiva}
-        setEmpresaActiva={setEmpresaActiva}
-        empresas={dataUser?.empresas_detalle || []}
-        empleadosOptions={empleadosOptions}
-        filtroEmpleado={filtroEmpleado}
-        setFiltroEmpleado={setFiltroEmpleado}
-        fechaInicio={fechaInicio}
-        setFechaInicio={setFechaInicio}
-        fechaFin={fechaFin}
-        setFechaFin={setFechaFin}
-        setPage={setPage}
-        filtroDepartamento={filtroDepartamento}
-        setFiltroDepartamento={setFiltroDepartamento}
-        departamentos={departamentosUnicos}
-        filtroTipoRegistro={filtroTipoRegistro}
-        setFiltroTipoRegistro={setFiltroTipoRegistro}
-        tiposRegistro={tiposRegistroUnicos}
-        filtroEstadoAsistencia={filtroEstadoAsistencia}
-        setFiltroEstadoAsistencia={setFiltroEstadoAsistencia}
-        onResetFilters={handleResetFilters}
-        abrirFormulario={abrirFormulario}
-        mostrarCamposExtras={mostrarCamposExtras}
-        setMostrarCamposExtras={setMostrarCamposExtras}
-        soloPresentes={soloPresentes}
-        setSoloPresentes={setSoloPresentes}
-        soloAusentes={soloAusentes}
-        setSoloAusentes={setSoloAusentes}
-        horasExtra={horasExtra}
-        setHorasExtra={setHorasExtra}
-        sinGoceDeSueldo={sinGoceDeSueldo}
-        setSinGoceDeSueldo={setSinGoceDeSueldo}
-        diasFestivos={diasFestivos}
-        setDiasFestivos={setDiasFestivos}
-        requiereAutorizacion={requiereAutorizacion}
-        setRequiereAutorizacion={setRequiereAutorizacion}
-      />
+      <div className="bg-white rounded-xl border border-gray-100 p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-end">
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">Desde</label>
+            <Input
+              type="date"
+              value={fechaInicio}
+              onChange={(event) => {
+                setFechaInicio(event.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">Hasta</label>
+            <Input
+              type="date"
+              value={fechaFin}
+              onChange={(event) => {
+                setFechaFin(event.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+          <div className="flex justify-start lg:justify-end">
+            <Button
+              onClick={handleResetFilters}
+              variant="outline"
+              className="border-gray-300 text-gray-700 hover:bg-gray-100"
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Limpiar
+            </Button>
+          </div>
+        </div>
+        <div className="pt-3 mt-3 border-t border-gray-100">
+          <label className="flex items-center gap-2 cursor-pointer select-none w-fit">
+            <Checkbox
+              checked={mostrarCamposExtras}
+              onCheckedChange={(value) => setMostrarCamposExtras(Boolean(value))}
+            />
+            <span className="text-sm text-gray-700">Mostrar todos los campos</span>
+          </label>
+        </div>
+      </div>
       {ui}
 
       {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}

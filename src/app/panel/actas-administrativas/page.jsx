@@ -10,7 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useAdministrativeMinutes } from "@/hooks/useAdministrativeMinutes";
 import useEmpleadosActivosData from "@/hooks/useEmpleadosActivos";
 import useTiposActa from "@/hooks/useTiposActa";
-import { FileText, PlusIcon, AlertTriangle } from "lucide-react";
+import { PlusIcon, AlertTriangle } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import { AdministrativeDetailsModal } from "@/components/AdministrativeDetailsModal";
@@ -136,21 +136,7 @@ const page = () => {
   return (
     <>
       <div className="min-h-screen bg-[#F9FAFB] p-6 space-y-6">
-        {/* Header del módulo - Diseño ADAMIA */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="bg-blue-50 p-3 rounded-lg">
-              <FileText className="w-7 h-7 text-[#2563EB]" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-semibold text-gray-900">
-                Actas administrativas
-              </h1>
-              <p className="text-sm text-gray-600">
-                Gestión de actas según Ley Federal del Trabajo
-              </p>
-            </div>
-          </div>
+        <div className="flex justify-end">
           <Button
             onClick={() => setOpenNewActa(true)}
             className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"

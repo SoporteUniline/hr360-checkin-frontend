@@ -8,13 +8,15 @@ import {
 } from "@/components/ui/table";
 import AsistenciaRow from "./AsistenciaRow";
 import { Button } from "@/components/ui/button";
-import { Plus, RotateCcw, FileSpreadsheet } from "lucide-react";
+import { Plus, FileSpreadsheet } from "lucide-react";
 import { exportToExcel } from "@/utils/exportExcelJS";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { useAuth } from "@/context/AuthContext";
-import { useEffect } from "react";
+import { useMemo, useState } from "react";
+import HeaderMultiFilter from "./HeaderMultiFilter";
+import ActiveFilterChips from "./ActiveFilterChips";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -41,6 +43,159 @@ export default function AsistenciaTable({
   const { dataUser } = useAuth();
   const userTimezone = dataUser?.zona_horaria || "America/Mexico_City";
   const DB_TIMEZONE = "America/Mexico_City";
+  const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState([]);
+  const [empresaSeleccionada, setEmpresaSeleccionada] = useState([]);
+  const [departamentoSeleccionado, setDepartamentoSeleccionado] = useState([]);
+  const [tipoSeleccionado, setTipoSeleccionado] = useState([]);
+  const [estadoSeleccionado, setEstadoSeleccionado] = useState([]);
+  const [asistioSeleccionado, setAsistioSeleccionado] = useState([]);
+  const [goceSeleccionado, setGoceSeleccionado] = useState([]);
+  const [horasExtraSeleccionado, setHorasExtraSeleccionado] = useState([]);
+  const [festivoSeleccionado, setFestivoSeleccionado] = useState([]);
+  const [autorizacionSeleccionada, setAutorizacionSeleccionada] = useState([]);
+  const [estadoAsistenciaSeleccionado, setEstadoAsistenciaSeleccionado] =
+    useState([]);
+
+  const getEmpleadoNombre = (registro) =>
+    [registro.nombre, registro.apellido_paterno, registro.apellido_materno]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+
+  const uniqueOptions = (values) =>
+    [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const toYesNo = (value) => (value === 1 || value === true ? "Sí" : "No");
+  const toAutorizacion = (registro) =>
+    registro.autorizado_por || registro.nombre_autorizador
+      ? "Con autorización"
+      : "Sin autorización";
+
+  const empleadoOptions = useMemo(
+    () => uniqueOptions(filtrados.map((registro) => getEmpleadoNombre(registro))),
+    [filtrados],
+  );
+  const empresaOptions = useMemo(
+    () => uniqueOptions(filtrados.map((registro) => registro.empresa_nombre)),
+    [filtrados],
+  );
+  const departamentoOptions = useMemo(
+    () => uniqueOptions(filtrados.map((registro) => registro.departamento)),
+    [filtrados],
+  );
+  const tipoOptions = useMemo(
+    () => uniqueOptions(filtrados.map((registro) => registro.tipo_registro_nombre)),
+    [filtrados],
+  );
+  const estadoOptions = useMemo(
+    () => uniqueOptions(filtrados.map((registro) => registro.estado)),
+    [filtrados],
+  );
+  const asistioOptions = useMemo(
+    () => uniqueOptions(filtrados.map((registro) => toYesNo(registro.asistencia))),
+    [filtrados],
+  );
+  const goceOptions = useMemo(
+    () => uniqueOptions(filtrados.map((registro) => toYesNo(registro.goce_sueldo))),
+    [filtrados],
+  );
+  const horasExtraOptions = useMemo(
+    () => uniqueOptions(filtrados.map((registro) => toYesNo(registro.hrs_extra))),
+    [filtrados],
+  );
+  const festivoOptions = useMemo(
+    () => uniqueOptions(filtrados.map((registro) => toYesNo(registro.es_festivo))),
+    [filtrados],
+  );
+  const estadoAsistenciaOptions = useMemo(
+    () => uniqueOptions(filtrados.map((registro) => registro.estadoAsistencia)),
+    [filtrados],
+  );
+  const autorizacionOptions = useMemo(
+    () => uniqueOptions(filtrados.map((registro) => toAutorizacion(registro))),
+    [filtrados],
+  );
+
+  const filteredRows = useMemo(
+    () =>
+      filtrados.filter((registro) => {
+        const nombreEmpleado = getEmpleadoNombre(registro);
+        const pasaEmpleado =
+          empleadoSeleccionado.length === 0 ||
+          empleadoSeleccionado.includes(nombreEmpleado);
+        const pasaEmpresa =
+          empresaSeleccionada.length === 0 ||
+          empresaSeleccionada.includes(registro.empresa_nombre);
+        const pasaDepartamento =
+          departamentoSeleccionado.length === 0 ||
+          departamentoSeleccionado.includes(registro.departamento);
+        const pasaTipo =
+          tipoSeleccionado.length === 0 ||
+          tipoSeleccionado.includes(registro.tipo_registro_nombre);
+        const pasaEstado =
+          estadoSeleccionado.length === 0 ||
+          estadoSeleccionado.includes(registro.estado);
+        const pasaAsistio =
+          asistioSeleccionado.length === 0 ||
+          asistioSeleccionado.includes(toYesNo(registro.asistencia));
+        const pasaGoce =
+          goceSeleccionado.length === 0 ||
+          goceSeleccionado.includes(toYesNo(registro.goce_sueldo));
+        const pasaHorasExtra =
+          horasExtraSeleccionado.length === 0 ||
+          horasExtraSeleccionado.includes(toYesNo(registro.hrs_extra));
+        const pasaFestivo =
+          festivoSeleccionado.length === 0 ||
+          festivoSeleccionado.includes(toYesNo(registro.es_festivo));
+        const pasaAutorizacion =
+          autorizacionSeleccionada.length === 0 ||
+          autorizacionSeleccionada.includes(toAutorizacion(registro));
+        const pasaEstadoAsistencia =
+          estadoAsistenciaSeleccionado.length === 0 ||
+          estadoAsistenciaSeleccionado.includes(registro.estadoAsistencia);
+
+        return (
+          pasaEmpleado &&
+          pasaEmpresa &&
+          pasaDepartamento &&
+          pasaTipo &&
+          pasaEstado &&
+          pasaAsistio &&
+          pasaGoce &&
+          pasaHorasExtra &&
+          pasaFestivo &&
+          pasaAutorizacion &&
+          pasaEstadoAsistencia
+        );
+      }),
+    [
+      filtrados,
+      empleadoSeleccionado,
+      empresaSeleccionada,
+      departamentoSeleccionado,
+      tipoSeleccionado,
+      estadoSeleccionado,
+      asistioSeleccionado,
+      goceSeleccionado,
+      horasExtraSeleccionado,
+      festivoSeleccionado,
+      autorizacionSeleccionada,
+      estadoAsistenciaSeleccionado,
+    ],
+  );
+
+  const clearAllTableFilters = () => {
+    setEmpleadoSeleccionado([]);
+    setEmpresaSeleccionada([]);
+    setDepartamentoSeleccionado([]);
+    setTipoSeleccionado([]);
+    setEstadoSeleccionado([]);
+    setAsistioSeleccionado([]);
+    setGoceSeleccionado([]);
+    setHorasExtraSeleccionado([]);
+    setFestivoSeleccionado([]);
+    setAutorizacionSeleccionada([]);
+    setEstadoAsistenciaSeleccionado([]);
+  };
 
   const columns = [
     { header: "Nombre", key: "nombre" },
@@ -72,7 +227,7 @@ export default function AsistenciaTable({
     { header: "Estado Asistencia", key: "estadoAsistencia" },
   ];
 
-  const exportData = filtrados.map((r) => ({
+  const exportData = filteredRows.map((r) => ({
     nombre: r.nombre,
     apellido_paterno: r.apellido_paterno,
     apellido_materno: r.apellido_materno,
@@ -170,17 +325,106 @@ export default function AsistenciaTable({
             </h2>
           </div>
         )}
+        <ActiveFilterChips
+          groups={[
+            {
+              category: "Empleado",
+              values: empleadoSeleccionado,
+              options: empleadoOptions,
+              onChange: setEmpleadoSeleccionado,
+            },
+            ...(empresaActiva === "all"
+              ? [
+                  {
+                    category: "Empresa",
+                    values: empresaSeleccionada,
+                    options: empresaOptions,
+                    onChange: setEmpresaSeleccionada,
+                  },
+                ]
+              : []),
+            {
+              category: "Departamento",
+              values: departamentoSeleccionado,
+              options: departamentoOptions,
+              onChange: setDepartamentoSeleccionado,
+            },
+            {
+              category: "Tipo",
+              values: tipoSeleccionado,
+              options: tipoOptions,
+              onChange: setTipoSeleccionado,
+            },
+            {
+              category: "Estado",
+              values: estadoSeleccionado,
+              options: estadoOptions,
+              onChange: setEstadoSeleccionado,
+            },
+            {
+              category: "Asistió",
+              values: asistioSeleccionado,
+              options: asistioOptions,
+              onChange: setAsistioSeleccionado,
+            },
+            {
+              category: "Goce",
+              values: goceSeleccionado,
+              options: goceOptions,
+              onChange: setGoceSeleccionado,
+            },
+            {
+              category: "Hrs extra",
+              values: horasExtraSeleccionado,
+              options: horasExtraOptions,
+              onChange: setHorasExtraSeleccionado,
+            },
+            ...(mostrarCamposExtras
+              ? [
+                  {
+                    category: "Festivo",
+                    values: festivoSeleccionado,
+                    options: festivoOptions,
+                    onChange: setFestivoSeleccionado,
+                  },
+                  {
+                    category: "Autorización",
+                    values: autorizacionSeleccionada,
+                    options: autorizacionOptions,
+                    onChange: setAutorizacionSeleccionada,
+                  },
+                  {
+                    category: "Estado asis.",
+                    values: estadoAsistenciaSeleccionado,
+                    options: estadoAsistenciaOptions,
+                    onChange: setEstadoAsistenciaSeleccionado,
+                  },
+                ]
+              : []),
+          ]}
+          onClearAll={clearAllTableFilters}
+        />
 
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50 hover:bg-gray-50">
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                  Empleado
+                  <HeaderMultiFilter
+                    selected={empleadoSeleccionado}
+                    onChange={setEmpleadoSeleccionado}
+                    options={empleadoOptions}
+                    placeholder="Empleado"
+                  />
                 </TableHead>
                 {empresaActiva === "all" && (
                   <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                    Empresa
+                    <HeaderMultiFilter
+                      selected={empresaSeleccionada}
+                      onChange={setEmpresaSeleccionada}
+                      options={empresaOptions}
+                      placeholder="Empresa"
+                    />
                   </TableHead>
                 )}
                 {mostrarCamposExtras && (
@@ -189,10 +433,20 @@ export default function AsistenciaTable({
                   </TableHead>
                 )}
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                  Departamento
+                  <HeaderMultiFilter
+                    selected={departamentoSeleccionado}
+                    onChange={setDepartamentoSeleccionado}
+                    options={departamentoOptions}
+                    placeholder="Departamento"
+                  />
                 </TableHead>
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                  Tipo
+                  <HeaderMultiFilter
+                    selected={tipoSeleccionado}
+                    onChange={setTipoSeleccionado}
+                    options={tipoOptions}
+                    placeholder="Tipo"
+                  />
                 </TableHead>
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
                   Fecha
@@ -210,14 +464,29 @@ export default function AsistenciaTable({
                 </TableHead>
                 {mostrarCamposExtras && (
                   <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                    Autorizado por
+                    <HeaderMultiFilter
+                      selected={autorizacionSeleccionada}
+                      onChange={setAutorizacionSeleccionada}
+                      options={autorizacionOptions}
+                      placeholder="Autorizado"
+                    />
                   </TableHead>
                 )}
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  Asistió
+                  <HeaderMultiFilter
+                    selected={asistioSeleccionado}
+                    onChange={setAsistioSeleccionado}
+                    options={asistioOptions}
+                    placeholder="Asistió"
+                  />
                 </TableHead>
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  Goce
+                  <HeaderMultiFilter
+                    selected={goceSeleccionado}
+                    onChange={setGoceSeleccionado}
+                    options={goceOptions}
+                    placeholder="Goce"
+                  />
                 </TableHead>
                 {mostrarCamposExtras && (
                   <>
@@ -231,7 +500,12 @@ export default function AsistenciaTable({
                       Prima dom.
                     </TableHead>
                     <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                      Festivo
+                      <HeaderMultiFilter
+                        selected={festivoSeleccionado}
+                        onChange={setFestivoSeleccionado}
+                        options={festivoOptions}
+                        placeholder="Festivo"
+                      />
                     </TableHead>
                     <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
                       % festivo
@@ -239,7 +513,12 @@ export default function AsistenciaTable({
                   </>
                 )}
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  Hrs extra
+                  <HeaderMultiFilter
+                    selected={horasExtraSeleccionado}
+                    onChange={setHorasExtraSeleccionado}
+                    options={horasExtraOptions}
+                    placeholder="Hrs extra"
+                  />
                 </TableHead>
                 {mostrarCamposExtras && (
                   <>
@@ -263,11 +542,21 @@ export default function AsistenciaTable({
                   </TableHead>
                 )}
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  Estado
+                  <HeaderMultiFilter
+                    selected={estadoSeleccionado}
+                    onChange={setEstadoSeleccionado}
+                    options={estadoOptions}
+                    placeholder="Estado"
+                  />
                 </TableHead>
                 {mostrarCamposExtras && (
                   <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                    Estado asis.
+                    <HeaderMultiFilter
+                      selected={estadoAsistenciaSeleccionado}
+                      onChange={setEstadoAsistenciaSeleccionado}
+                      options={estadoAsistenciaOptions}
+                      placeholder="Estado asis."
+                    />
                   </TableHead>
                 )}
                 {!readOnly && (
@@ -278,7 +567,7 @@ export default function AsistenciaTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtrados.length === 0 ? (
+              {filteredRows.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={mostrarCamposExtras ? 50 : 20}
@@ -288,7 +577,7 @@ export default function AsistenciaTable({
                   </TableCell>
                 </TableRow>
               ) : (
-                filtrados.map((reg) => (
+                filteredRows.map((reg) => (
                   <AsistenciaRow
                     key={reg.id}
                     registro={reg}

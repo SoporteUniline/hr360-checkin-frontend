@@ -166,71 +166,46 @@ export default function PanelEmpleadoPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] bg-[#F9FAFB]">
-      {/* Header - Estilo ADAMIA */}
       <div className="bg-gradient-to-r from-[#2563EB] to-[#1d4ed8] text-white p-2 sm:p-3 md:p-4 shadow-lg border-b-2 border-[#7C3AED]">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5 sm:gap-2 md:gap-4 min-w-0 flex-1">
-            {/* Botón para abrir sidebar en móvil */}
-            <Sheet
-              modal={false}
-              open={sidebarOpen}
-              onOpenChange={setSidebarOpen}
+        {/* Mantiene solo el acceso al sidebar móvil, sin títulos duplicados */}
+        <Sheet modal={false} open={sidebarOpen} onOpenChange={setSidebarOpen}>
+          <SheetTrigger asChild className="lg:hidden">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-white hover:bg-white/10 h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0"
             >
-              <SheetTrigger asChild className="lg:hidden">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-white hover:bg-white/10 h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0"
-                >
-                  <Menu className="h-4 w-4 sm:h-5 sm:w-5" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent
-                side="left"
-                className="w-[280px] sm:w-[320px] p-0 flex flex-col"
-              >
-                <VisuallyHidden>
-                  <SheetHeader>
-                    <SheetTitle>Lista de empleados</SheetTitle>
-                  </SheetHeader>
-                </VisuallyHidden>
+              <Menu className="h-4 w-4 sm:h-5 sm:w-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent
+            side="left"
+            className="w-[280px] sm:w-[320px] p-0 flex flex-col"
+          >
+            <VisuallyHidden>
+              <SheetHeader>
+                <SheetTitle>Lista de empleados</SheetTitle>
+              </SheetHeader>
+            </VisuallyHidden>
 
-                <SidebarContent
-                  empleados={empleados}
-                  empleadosFiltrados={empleadosFiltrados}
-                  empleadoSeleccionado={empleadoSeleccionado}
-                  busqueda={busqueda}
-                  setBusqueda={setBusqueda}
-                  empresasOptions={empresasOptions}
-                  empresaActiva={empresaActiva}
-                  setEmpresaActiva={setEmpresaActiva}
-                  obtenerIniciales={obtenerIniciales}
-                  onSelectEmpleado={(id) => {
-                    setEmpleadoSeleccionado(id);
-                    setTabActivo("general");
-                  }}
-                  closeSidebar={() => setSidebarOpen(false)}
-                />
-              </SheetContent>
-            </Sheet>
-            <h1 className="text-base sm:text-xl md:text-2xl font-bold flex-shrink-0">
-              Adamia
-            </h1>
-            <div className="hidden md:block min-w-0">
-              <h2 className="text-sm md:text-base lg:text-lg font-bold truncate">
-                Panel de Empleados
-              </h2>
-              <p className="text-xs opacity-85">
-                Sistema de Gestión de Capital Humano
-              </p>
-            </div>
-            <div className="md:hidden min-w-0">
-              <h2 className="text-xs sm:text-sm font-bold truncate">
-                Panel Empleados
-              </h2>
-            </div>
-          </div>
-        </div>
+            <SidebarContent
+              empleados={empleados}
+              empleadosFiltrados={empleadosFiltrados}
+              empleadoSeleccionado={empleadoSeleccionado}
+              busqueda={busqueda}
+              setBusqueda={setBusqueda}
+              empresasOptions={empresasOptions}
+              empresaActiva={empresaActiva}
+              setEmpresaActiva={setEmpresaActiva}
+              obtenerIniciales={obtenerIniciales}
+              onSelectEmpleado={(id) => {
+                setEmpleadoSeleccionado(id);
+                setTabActivo("general");
+              }}
+              closeSidebar={() => setSidebarOpen(false)}
+            />
+          </SheetContent>
+        </Sheet>
       </div>
 
       {/* Layout principal */}

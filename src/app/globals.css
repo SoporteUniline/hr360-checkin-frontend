@@ -353,3 +353,12 @@ body {
 .adamia-typing-dot-3 {
   animation-delay: 0.4s;
 }
+
+/* ==========================================================================
+   Panel módulos - ocultar headers de título duplicados
+   - Se oculta el bloque visual "Header ADAMIA" repetido en módulos del panel.
+   ========================================================================== */
+.panel-modules-content
+  div[class*="from-indigo-50"][class*="to-blue-50"][class*="border-indigo-100"][class*="rounded-xl"][class*="p-6"] {
+  display: none;
+}

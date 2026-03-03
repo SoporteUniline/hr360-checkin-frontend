@@ -2,15 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import EntradasSalidasFilters from "./EntradasSalidasFilter";
 import StatCard from "@/components/StatCard";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
-import useDebounce from "@/hooks/useDebounce";
 import EntradasSalidasDataContainer from "./EntradasSalidasDataContainer";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import { ClockArrowUp } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { RotateCcw } from "lucide-react";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -33,10 +34,6 @@ export default function RegistroEntradasSalidas() {
   const fecha = desde && hasta && desde === hasta ? desde : "";
   const [page, setPage] = useState(1);
   const limit = 10;
-  const [filtroEmpleado, setFiltroEmpleado] = useState("");
-  const filtroNombre = useDebounce(filtroEmpleado, 500);
-  const [departamento, setDepartamento] = useState("");
-  const [estado, setEstado] = useState("");
 
   const { dataUser } = useAuth();
 
@@ -51,9 +48,6 @@ export default function RegistroEntradasSalidas() {
     setEmpresaActiva("all");
     setDesde(today);
     setHasta(today);
-    setFiltroEmpleado("");
-    setDepartamento("");
-    setEstado("");
     setPage(1);
   };
 
@@ -64,9 +58,9 @@ export default function RegistroEntradasSalidas() {
     hasta,
     page,
     limit,
-    filtroNombre,
-    departamento,
-    estado,
+    filtroNombre: "",
+    departamento: "",
+    estado: "",
     setPage,
     empresaActiva,
     onResetFilters: handleResetFilters,
@@ -115,27 +109,42 @@ export default function RegistroEntradasSalidas() {
         />
       </div>
 
-      <EntradasSalidasFilters
-        empresaActiva={empresaActiva}
-        setEmpresaActiva={setEmpresaActiva}
-        empresas={dataUser?.empresas_detalle || []}
-        filtroEmpleado={filtroEmpleado}
-        setFiltroEmpleado={setFiltroEmpleado}
-        fecha={fecha}
-        // `setFecha` ya no se usa en este panel (ahora es desde/hasta),
-        // pero lo dejamos por compatibilidad con la firma del componente.
-        setFecha={() => {}}
-        desde={desde}
-        setDesde={setDesde}
-        hasta={hasta}
-        setHasta={setHasta}
-        departamento={departamento}
-        setDepartamento={setDepartamento}
-        estado={estado}
-        setEstado={setEstado}
-        setPage={setPage}
-        onResetFilters={handleResetFilters}
-      />
+      <div className="bg-white rounded-xl border border-gray-100 p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-end">
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">Desde</label>
+            <Input
+              type="date"
+              value={desde}
+              onChange={(event) => {
+                setDesde(event.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">Hasta</label>
+            <Input
+              type="date"
+              value={hasta}
+              onChange={(event) => {
+                setHasta(event.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+          <div className="flex justify-start lg:justify-end">
+            <Button
+              onClick={handleResetFilters}
+              variant="outline"
+              className="border-gray-300 text-gray-700 hover:bg-gray-100"
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Limpiar
+            </Button>
+          </div>
+        </div>
+      </div>
 
       {ui}
 

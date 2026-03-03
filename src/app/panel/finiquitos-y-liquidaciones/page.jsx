@@ -38,7 +38,6 @@ import {
   Eye,
   AlertTriangle,
   Filter,
-  HandCoins,
   Pencil,
   RotateCcw,
   Save,
@@ -546,23 +545,6 @@ export default function PageFiniquitosLiquidaciones() {
 
   return (
     <div className={`${styles.finTheme} space-y-6`}>
-      {/* Header - Diseño ADAMIA */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-6">
-        <div className="flex items-center gap-3">
-          <div className="bg-[#2563EB] p-2.5 rounded-lg">
-            <HandCoins className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Finiquitos y liquidaciones
-            </h1>
-            <p className="text-sm text-gray-600">
-              Calcula y gestiona finiquitos/liquidaciones.
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Filtros superiores (estilo Contratos) */}
       <Card className="fin-card border-indigo-100 bg-indigo-50">
         <CardHeader>

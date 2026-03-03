@@ -42,7 +42,6 @@ import {
   Download,
   Eye,
   Filter,
-  Gift,
   Pencil,
   Plus,
   RotateCcw,
@@ -1211,21 +1210,6 @@ export default function PageAguinaldos() {
 
   return (
     <div className={`${styles.aguTheme} space-y-6`}>
-      {/* Header - Diseño ADAMIA */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-6">
-        <div className="flex items-center gap-3">
-          <div className="bg-[#2563EB] p-2.5 rounded-lg">
-            <Gift className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Aguinaldos</h1>
-            <p className="text-sm text-gray-600">
-              Calcula y gestiona aguinaldos según la Ley Federal del Trabajo.
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Filtros superiores */}
       <Card className="agu-card border-indigo-100 bg-indigo-50">
         <CardHeader>
