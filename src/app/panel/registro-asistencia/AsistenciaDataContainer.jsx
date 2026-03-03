@@ -8,6 +8,8 @@ import AsistenciaTable from "./AsistenciaTable";
 import TablePagination from "@/components/TablePagination";
 import LoadingTable from "@/components/LoadingTable";
 import ErrorPage from "@/components/ErrorPage";
+import { useEffect, useState } from "react";
+import { fetcherWithToken } from "@/lib/fetcher";
 
 export default function AsistenciaDataContainer({
   idEmpresa,
@@ -33,6 +35,13 @@ export default function AsistenciaDataContainer({
   diasFestivos,
   requiereAutorizacion,
 }) {
+  const [filterOptionsRows, setFilterOptionsRows] = useState([]);
+  const [headerFilterMeta, setHeaderFilterMeta] = useState({
+    active: false,
+    total: 0,
+  });
+  const [cachedData, setCachedData] = useState(null);
+
   const { data, error, isLoading, mutate } = useAsistenciaData(
     idEmpresa,
     fechaInicio,
@@ -51,19 +60,119 @@ export default function AsistenciaDataContainer({
     requiereAutorizacion,
   );
 
+  useEffect(() => {
+    let isCancelled = false;
+
+    const appendIf = (params, key, value) => {
+      if (value !== undefined && value !== null && value !== "") {
+        params.append(key, String(value));
+      }
+    };
+
+    const loadFilterOptionsRows = async () => {
+      if (!idEmpresa) {
+        if (!isCancelled) setFilterOptionsRows([]);
+        return;
+      }
+
+      try {
+        const pageSize = 500;
+        const baseParams = new URLSearchParams({
+          empresa: String(idEmpresa),
+          fechaInicio: fechaInicio || "",
+          fechaFin: fechaFin || "",
+          limit: String(pageSize),
+        });
+
+        appendIf(baseParams, "filtroEmpleado", debouncedFiltroEmpleado);
+        appendIf(baseParams, "filtroDepartamento", filtroDepartamento);
+        appendIf(baseParams, "filtroTipoRegistro", filtroTipoRegistro);
+        appendIf(baseParams, "filtroEstadoAsistencia", filtroEstadoAsistencia);
+        if (soloPresentes) baseParams.append("soloPresentes", "1");
+        if (soloAusentes) baseParams.append("soloAusentes", "1");
+        if (horasExtra) baseParams.append("horasExtra", "1");
+        if (sinGoceDeSueldo) baseParams.append("sinGoceDeSueldo", "0");
+        if (diasFestivos) baseParams.append("diasFestivos", "1");
+        if (requiereAutorizacion) baseParams.append("requiereAutorizacion", "1");
+
+        const firstParams = new URLSearchParams(baseParams);
+        firstParams.set("page", "1");
+        const firstData = await fetcherWithToken(
+          `/checador/asistencias?${firstParams.toString()}`,
+        );
+
+        let allRows = Array.isArray(firstData?.registros)
+          ? firstData.registros
+          : [];
+        const totalPages = Number(firstData?.totalPages || 1);
+
+        for (let currentPage = 2; currentPage <= totalPages; currentPage += 1) {
+          const pageParams = new URLSearchParams(baseParams);
+          pageParams.set("page", String(currentPage));
+          const pageData = await fetcherWithToken(
+            `/checador/asistencias?${pageParams.toString()}`,
+          );
+          if (Array.isArray(pageData?.registros)) {
+            allRows = [...allRows, ...pageData.registros];
+          }
+        }
+
+        if (!isCancelled) {
+          setFilterOptionsRows(allRows);
+        }
+      } catch (fetchError) {
+        if (!isCancelled) {
+          setFilterOptionsRows([]);
+        }
+      }
+    };
+
+    loadFilterOptionsRows();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [
+    idEmpresa,
+    fechaInicio,
+    fechaFin,
+    debouncedFiltroEmpleado,
+    filtroDepartamento,
+    filtroTipoRegistro,
+    filtroEstadoAsistencia,
+    soloPresentes,
+    soloAusentes,
+    horasExtra,
+    sinGoceDeSueldo,
+    diasFestivos,
+    requiereAutorizacion,
+  ]);
+
   const { data: empleados } = useEmpleadosData(idEmpresa);
   const { data: tiposPermiso } = useTiposPermisoData();
+  const effectiveData = data || cachedData;
 
-  const registros = Array.isArray(data?.registros) ? data.registros : [];
-  const totalPages = data?.totalPages || 1;
-  const currentPage = data?.page || 1;
+  useEffect(() => {
+    if (data) setCachedData(data);
+  }, [data]);
 
-  const mostrarPaginacion = data?.aplicarPaginacion !== false;
-  const totalRegistros = data?.total || 0;
+  const registros = Array.isArray(effectiveData?.registros)
+    ? effectiveData.registros
+    : [];
+  const currentPage = effectiveData?.page || page || 1;
+
+  const mostrarPaginacion = effectiveData?.aplicarPaginacion !== false;
+  const totalRegistros = effectiveData?.total || 0;
 
   const onPageChange = (newPage) => {
     setPage(newPage);
   };
+
+  useEffect(() => {
+    if (!headerFilterMeta.active) return;
+    const totalPages = Math.max(1, Math.ceil(headerFilterMeta.total / limit));
+    if (page > totalPages) setPage(1);
+  }, [headerFilterMeta, page, limit, setPage]);
 
   const {
     editingRowId,
@@ -77,7 +186,7 @@ export default function AsistenciaDataContainer({
     handleSaveClick,
   } = useAsistenciaActions(mutate);
 
-  if (isLoading) return <LoadingTable rows={10} />;
+  if (isLoading && !effectiveData) return <LoadingTable rows={10} />;
   if (error) {
     console.error(error);
     return <ErrorPage message="Error al cargar los registros de asistencia" />;
@@ -88,6 +197,10 @@ export default function AsistenciaDataContainer({
       <>
         <AsistenciaTable
           filtrados={registros}
+          filterOptionsRows={filterOptionsRows}
+          page={page}
+          limit={limit}
+          onHeaderFilteringMetaChange={setHeaderFilterMeta}
           fecha={fechaInicio}
           readOnly={readOnly}
           editingRowId={editingRowId}
@@ -110,8 +223,7 @@ export default function AsistenciaDataContainer({
           <TablePagination
             page={currentPage}
             limit={limit}
-            total={totalRegistros}
-            totalPages={totalPages}
+            total={headerFilterMeta.active ? headerFilterMeta.total : totalRegistros}
             onPageChange={onPageChange}
             onLimitChange={onLimitChange}
           />
@@ -134,7 +246,7 @@ export default function AsistenciaDataContainer({
         )}
       </>
     ),
-    data,
+    data: effectiveData,
     mutate,
   };
 }

@@ -14,7 +14,7 @@ import { useAuth } from "@/context/AuthContext";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import HeaderMultiFilter from "../registro-asistencia/HeaderMultiFilter";
 import ActiveFilterChips from "../registro-asistencia/ActiveFilterChips";
 
@@ -33,6 +33,10 @@ export default function EntradasSalidasTable({
   handleSaveMovimientoClick,
   onResetFilters,
   empresaActiva,
+  filterOptionsRows,
+  page = 1,
+  limit = 10,
+  onHeaderFilteringMetaChange,
 }) {
   const { dataUser } = useAuth();
   const userTimezone = dataUser?.zona_horaria || "America/Mexico_City";
@@ -40,6 +44,11 @@ export default function EntradasSalidasTable({
   const [empresaSeleccionada, setEmpresaSeleccionada] = useState([]);
   const [departamentoSeleccionado, setDepartamentoSeleccionado] = useState([]);
   const [estadoSeleccionado, setEstadoSeleccionado] = useState([]);
+
+  const optionSourceRows = useMemo(
+    () => (Array.isArray(filterOptionsRows) ? filterOptionsRows : registros),
+    [filterOptionsRows, registros],
+  );
 
   const getEmpleadoNombre = (registro) =>
     [registro.nombre, registro.apellido_paterno, registro.apellido_materno]
@@ -54,28 +63,32 @@ export default function EntradasSalidasTable({
     [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
 
   const empleadoOptions = useMemo(
-    () => uniqueOptions(registros.map((registro) => getEmpleadoNombre(registro))),
-    [registros],
+    () =>
+      uniqueOptions(
+        optionSourceRows.map((registro) => getEmpleadoNombre(registro)),
+      ),
+    [optionSourceRows],
   );
   const empresaOptions = useMemo(
-    () => uniqueOptions(registros.map((registro) => registro.nombre_empresa)),
-    [registros],
+    () =>
+      uniqueOptions(optionSourceRows.map((registro) => registro.nombre_empresa)),
+    [optionSourceRows],
   );
   const departamentoOptions = useMemo(
     () =>
       uniqueOptions(
-        registros.map((registro) => getDepartamentoSucursal(registro)),
+        optionSourceRows.map((registro) => getDepartamentoSucursal(registro)),
       ),
-    [registros],
+    [optionSourceRows],
   );
   const estadoOptions = useMemo(
-    () => uniqueOptions(registros.map((registro) => registro.estado)),
-    [registros],
+    () => uniqueOptions(optionSourceRows.map((registro) => registro.estado)),
+    [optionSourceRows],
   );
 
-  const filteredRows = useMemo(
+  const filteredRowsAll = useMemo(
     () =>
-      registros.filter((registro) => {
+      optionSourceRows.filter((registro) => {
         const nombreEmpleado = getEmpleadoNombre(registro);
         const departamentoSucursal = getDepartamentoSucursal(registro);
 
@@ -95,13 +108,32 @@ export default function EntradasSalidasTable({
         return pasaEmpleado && pasaEmpresa && pasaDepartamento && pasaEstado;
       }),
     [
-      registros,
+      optionSourceRows,
       empleadoSeleccionado,
       empresaSeleccionada,
       departamentoSeleccionado,
       estadoSeleccionado,
     ],
   );
+
+  const hasActiveHeaderFilters =
+    empleadoSeleccionado.length > 0 ||
+    empresaSeleccionada.length > 0 ||
+    departamentoSeleccionado.length > 0 ||
+    estadoSeleccionado.length > 0;
+
+  const displayedRows = useMemo(() => {
+    if (!hasActiveHeaderFilters) return registros;
+    const offset = (page - 1) * limit;
+    return filteredRowsAll.slice(offset, offset + limit);
+  }, [hasActiveHeaderFilters, registros, page, limit, filteredRowsAll]);
+
+  useEffect(() => {
+    onHeaderFilteringMetaChange?.({
+      active: hasActiveHeaderFilters,
+      total: filteredRowsAll.length,
+    });
+  }, [hasActiveHeaderFilters, filteredRowsAll.length, onHeaderFilteringMetaChange]);
 
   const clearAllTableFilters = () => {
     setEmpleadoSeleccionado([]);
@@ -126,7 +158,8 @@ export default function EntradasSalidasTable({
       { header: "Estado", key: "estado", width: 15 },
     ];
 
-    const data = filteredRows.map((r) => ({
+    const data = (hasActiveHeaderFilters ? filteredRowsAll : registros).map(
+      (r) => ({
       nombre: r.nombre,
       apellido_paterno: r.apellido_paterno,
       apellido_materno: r.apellido_materno,
@@ -159,7 +192,8 @@ export default function EntradasSalidasTable({
             .format("DD/MM/YYYY HH:mm:ss")
         : "-",
       estado: r.estado,
-    }));
+      }),
+    );
 
     await exportToExcel(data, columns, "Entradas_Salidas", {
       sheetName: "Registros",
@@ -285,7 +319,7 @@ export default function EntradasSalidasTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredRows.length === 0 ? (
+              {displayedRows.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={empresaActiva === "all" ? 10 : 9}
@@ -295,7 +329,7 @@ export default function EntradasSalidasTable({
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredRows.map((reg) => (
+                displayedRows.map((reg) => (
                   <EntradasSalidasRow
                     key={reg.id}
                     registro={reg}

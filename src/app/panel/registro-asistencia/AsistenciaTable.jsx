@@ -14,7 +14,7 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { useAuth } from "@/context/AuthContext";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import HeaderMultiFilter from "./HeaderMultiFilter";
 import ActiveFilterChips from "./ActiveFilterChips";
 
@@ -39,6 +39,10 @@ export default function AsistenciaTable({
   abrirFormulario,
   onResetFilters,
   empresaActiva,
+  filterOptionsRows,
+  page = 1,
+  limit = 10,
+  onHeaderFilteringMetaChange,
 }) {
   const { dataUser } = useAuth();
   const userTimezone = dataUser?.zona_horaria || "America/Mexico_City";
@@ -56,6 +60,11 @@ export default function AsistenciaTable({
   const [estadoAsistenciaSeleccionado, setEstadoAsistenciaSeleccionado] =
     useState([]);
 
+  const optionSourceRows = useMemo(
+    () => (Array.isArray(filterOptionsRows) ? filterOptionsRows : filtrados),
+    [filterOptionsRows, filtrados],
+  );
+
   const getEmpleadoNombre = (registro) =>
     [registro.nombre, registro.apellido_paterno, registro.apellido_materno]
       .filter(Boolean)
@@ -71,53 +80,69 @@ export default function AsistenciaTable({
       : "Sin autorización";
 
   const empleadoOptions = useMemo(
-    () => uniqueOptions(filtrados.map((registro) => getEmpleadoNombre(registro))),
-    [filtrados],
+    () =>
+      uniqueOptions(
+        optionSourceRows.map((registro) => getEmpleadoNombre(registro)),
+      ),
+    [optionSourceRows],
   );
   const empresaOptions = useMemo(
-    () => uniqueOptions(filtrados.map((registro) => registro.empresa_nombre)),
-    [filtrados],
+    () => uniqueOptions(optionSourceRows.map((registro) => registro.empresa_nombre)),
+    [optionSourceRows],
   );
   const departamentoOptions = useMemo(
-    () => uniqueOptions(filtrados.map((registro) => registro.departamento)),
-    [filtrados],
+    () => uniqueOptions(optionSourceRows.map((registro) => registro.departamento)),
+    [optionSourceRows],
   );
   const tipoOptions = useMemo(
-    () => uniqueOptions(filtrados.map((registro) => registro.tipo_registro_nombre)),
-    [filtrados],
+    () =>
+      uniqueOptions(
+        optionSourceRows.map((registro) => registro.tipo_registro_nombre),
+      ),
+    [optionSourceRows],
   );
   const estadoOptions = useMemo(
-    () => uniqueOptions(filtrados.map((registro) => registro.estado)),
-    [filtrados],
+    () => uniqueOptions(optionSourceRows.map((registro) => registro.estado)),
+    [optionSourceRows],
   );
   const asistioOptions = useMemo(
-    () => uniqueOptions(filtrados.map((registro) => toYesNo(registro.asistencia))),
-    [filtrados],
+    () =>
+      uniqueOptions(
+        optionSourceRows.map((registro) => toYesNo(registro.asistencia)),
+      ),
+    [optionSourceRows],
   );
   const goceOptions = useMemo(
-    () => uniqueOptions(filtrados.map((registro) => toYesNo(registro.goce_sueldo))),
-    [filtrados],
+    () =>
+      uniqueOptions(
+        optionSourceRows.map((registro) => toYesNo(registro.goce_sueldo)),
+      ),
+    [optionSourceRows],
   );
   const horasExtraOptions = useMemo(
-    () => uniqueOptions(filtrados.map((registro) => toYesNo(registro.hrs_extra))),
-    [filtrados],
+    () =>
+      uniqueOptions(optionSourceRows.map((registro) => toYesNo(registro.hrs_extra))),
+    [optionSourceRows],
   );
   const festivoOptions = useMemo(
-    () => uniqueOptions(filtrados.map((registro) => toYesNo(registro.es_festivo))),
-    [filtrados],
+    () =>
+      uniqueOptions(optionSourceRows.map((registro) => toYesNo(registro.es_festivo))),
+    [optionSourceRows],
   );
   const estadoAsistenciaOptions = useMemo(
-    () => uniqueOptions(filtrados.map((registro) => registro.estadoAsistencia)),
-    [filtrados],
+    () =>
+      uniqueOptions(optionSourceRows.map((registro) => registro.estadoAsistencia)),
+    [optionSourceRows],
   );
   const autorizacionOptions = useMemo(
-    () => uniqueOptions(filtrados.map((registro) => toAutorizacion(registro))),
-    [filtrados],
+    () =>
+      uniqueOptions(optionSourceRows.map((registro) => toAutorizacion(registro))),
+    [optionSourceRows],
   );
 
-  const filteredRows = useMemo(
+  const filteredRowsAll = useMemo(
     () =>
-      filtrados.filter((registro) => {
+      optionSourceRows.filter((registro) => {
         const nombreEmpleado = getEmpleadoNombre(registro);
         const pasaEmpleado =
           empleadoSeleccionado.length === 0 ||
@@ -168,7 +193,7 @@ export default function AsistenciaTable({
         );
       }),
     [
-      filtrados,
+      optionSourceRows,
       empleadoSeleccionado,
       empresaSeleccionada,
       departamentoSeleccionado,
@@ -182,6 +207,32 @@ export default function AsistenciaTable({
       estadoAsistenciaSeleccionado,
     ],
   );
+
+  const hasActiveHeaderFilters =
+    empleadoSeleccionado.length > 0 ||
+    empresaSeleccionada.length > 0 ||
+    departamentoSeleccionado.length > 0 ||
+    tipoSeleccionado.length > 0 ||
+    estadoSeleccionado.length > 0 ||
+    asistioSeleccionado.length > 0 ||
+    goceSeleccionado.length > 0 ||
+    horasExtraSeleccionado.length > 0 ||
+    festivoSeleccionado.length > 0 ||
+    autorizacionSeleccionada.length > 0 ||
+    estadoAsistenciaSeleccionado.length > 0;
+
+  const displayedRows = useMemo(() => {
+    if (!hasActiveHeaderFilters) return filtrados;
+    const offset = (page - 1) * limit;
+    return filteredRowsAll.slice(offset, offset + limit);
+  }, [hasActiveHeaderFilters, filtrados, page, limit, filteredRowsAll]);
+
+  useEffect(() => {
+    onHeaderFilteringMetaChange?.({
+      active: hasActiveHeaderFilters,
+      total: filteredRowsAll.length,
+    });
+  }, [hasActiveHeaderFilters, filteredRowsAll.length, onHeaderFilteringMetaChange]);
 
   const clearAllTableFilters = () => {
     setEmpleadoSeleccionado([]);
@@ -227,7 +278,8 @@ export default function AsistenciaTable({
     { header: "Estado Asistencia", key: "estadoAsistencia" },
   ];
 
-  const exportData = filteredRows.map((r) => ({
+  const exportData = (hasActiveHeaderFilters ? filteredRowsAll : filtrados).map(
+    (r) => ({
     nombre: r.nombre,
     apellido_paterno: r.apellido_paterno,
     apellido_materno: r.apellido_materno,
@@ -270,7 +322,8 @@ export default function AsistenciaTable({
     notas_hrs_extra: r.notas_hrs_extra ?? "-",
     estado: r.estado ?? "-",
     estadoAsistencia: r.estadoAsistencia,
-  }));
+    }),
+  );
 
   return (
     <>
@@ -567,7 +620,7 @@ export default function AsistenciaTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredRows.length === 0 ? (
+              {displayedRows.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={mostrarCamposExtras ? 50 : 20}
@@ -577,7 +630,7 @@ export default function AsistenciaTable({
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredRows.map((reg) => (
+                displayedRows.map((reg) => (
                   <AsistenciaRow
                     key={reg.id}
                     registro={reg}

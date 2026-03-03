@@ -6,6 +6,8 @@ import EntradasSalidasTable from "./EntradasSalidasTable";
 import TablePagination from "@/components/TablePagination";
 import LoadingTable from "@/components/LoadingTable";
 import ErrorPage from "@/components/ErrorPage";
+import { useEffect, useState } from "react";
+import { fetcherWithToken } from "@/lib/fetcher";
 
 export default function EntradasSalidasDataContainer({
   idEmpresa,
@@ -25,6 +27,13 @@ export default function EntradasSalidasDataContainer({
   empresaActiva,
   onResetFilters,
 }) {
+  const [filterOptionsRows, setFilterOptionsRows] = useState([]);
+  const [headerFilterMeta, setHeaderFilterMeta] = useState({
+    active: false,
+    total: 0,
+  });
+  const [cachedData, setCachedData] = useState(null);
+
   const { data, error, isLoading, mutate } = useRelojChecadorData(
     idEmpresa,
     fecha,
@@ -38,7 +47,84 @@ export default function EntradasSalidasDataContainer({
     hasta,
   );
 
-  const registros = Array.isArray(data?.registros) ? data.registros : [];
+  useEffect(() => {
+    let isCancelled = false;
+
+    const appendIf = (params, key, value) => {
+      if (value !== undefined && value !== null && value !== "") {
+        params.append(key, String(value));
+      }
+    };
+
+    const loadFilterOptionsRows = async () => {
+      if (!idEmpresa) {
+        if (!isCancelled) setFilterOptionsRows([]);
+        return;
+      }
+
+      try {
+        const pageSize = 500;
+        const baseParams = new URLSearchParams({
+          empresa: String(idEmpresa),
+          limit: String(pageSize),
+        });
+        const hasRange = Boolean(desde || hasta);
+
+        if (!hasRange && fecha) baseParams.append("fecha", fecha);
+        appendIf(baseParams, "desde", desde);
+        appendIf(baseParams, "hasta", hasta);
+        appendIf(baseParams, "nombre", filtroNombre);
+        appendIf(baseParams, "departamento", departamento);
+        appendIf(baseParams, "estado", estado);
+
+        const firstParams = new URLSearchParams(baseParams);
+        firstParams.set("page", "1");
+        const firstData = await fetcherWithToken(
+          `/checador/reloj/asistencia?${firstParams.toString()}`,
+        );
+
+        let allRows = Array.isArray(firstData?.registros)
+          ? firstData.registros
+          : [];
+        const totalPages = Number(firstData?.totalPages || 1);
+
+        for (let currentPage = 2; currentPage <= totalPages; currentPage += 1) {
+          const pageParams = new URLSearchParams(baseParams);
+          pageParams.set("page", String(currentPage));
+          const pageData = await fetcherWithToken(
+            `/checador/reloj/asistencia?${pageParams.toString()}`,
+          );
+          if (Array.isArray(pageData?.registros)) {
+            allRows = [...allRows, ...pageData.registros];
+          }
+        }
+
+        if (!isCancelled) {
+          setFilterOptionsRows(allRows);
+        }
+      } catch (fetchError) {
+        if (!isCancelled) {
+          setFilterOptionsRows([]);
+        }
+      }
+    };
+
+    loadFilterOptionsRows();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [idEmpresa, fecha, desde, hasta, filtroNombre, departamento, estado]);
+
+  const effectiveData = data || cachedData;
+
+  useEffect(() => {
+    if (data) setCachedData(data);
+  }, [data]);
+
+  const registros = Array.isArray(effectiveData?.registros)
+    ? effectiveData.registros
+    : [];
 
   const totalHoy = registros.length;
 
@@ -52,7 +138,13 @@ export default function EntradasSalidasDataContainer({
     handleSaveMovimientoClick,
   } = useEntradaSalida(mutate);
 
-  if (isLoading) return <LoadingTable rows={10} />;
+  useEffect(() => {
+    if (!headerFilterMeta.active) return;
+    const totalPages = Math.max(1, Math.ceil(headerFilterMeta.total / limit));
+    if (page > totalPages) setPage(1);
+  }, [headerFilterMeta, page, limit, setPage]);
+
+  if (isLoading && !effectiveData) return <LoadingTable rows={10} />;
   if (error) {
     console.error(error);
     return (
@@ -65,6 +157,10 @@ export default function EntradasSalidasDataContainer({
       <>
         <EntradasSalidasTable
           registros={registros}
+          filterOptionsRows={filterOptionsRows}
+          page={page}
+          limit={limit}
+          onHeaderFilteringMetaChange={setHeaderFilterMeta}
           fecha={fecha}
           editingMovimientoId={editingMovimientoId}
           editingMovimientoData={editingMovimientoData}
@@ -79,18 +175,22 @@ export default function EntradasSalidasDataContainer({
         {/* IMPORTANTE (UX):
             Aunque una página venga vacía por cambios de filtros o desajustes temporales,
             dejamos la paginación visible si el backend reporta total > 0, para poder regresar. */}
-        {(data?.total || 0) > 0 && (
+        {(effectiveData?.total || 0) > 0 && (
           <TablePagination
             page={page}
             limit={limit}
-            total={data?.total || 0}
+            total={
+              headerFilterMeta.active
+                ? headerFilterMeta.total
+                : effectiveData?.total || 0
+            }
             onPageChange={setPage}
           />
         )}
       </>
     ),
     data: {
-      ...data,
+      ...effectiveData,
       totalHoy,
     },
   };
