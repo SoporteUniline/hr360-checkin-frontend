@@ -8,15 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import {
-  Search,
   CalendarDays,
   Table as TableIcon,
   ChevronLeft,
@@ -25,12 +16,11 @@ import {
   CheckCircle2,
   ClipboardList,
   Clock3,
-  Filter,
   Plus,
+  RotateCcw,
   XCircle,
 } from "lucide-react";
 import usePermisosData from "@/hooks/usePermisosData";
-import useEmpleadosData from "@/hooks/useEmpleadosData";
 import useTiposPermisoData from "@/hooks/useTiposPermisoData";
 import TablePagination from "@/components/TablePagination";
 import StatCard from "@/components/StatCard";
@@ -56,6 +46,11 @@ export default function PermisosPage() {
   // Lógica Multiempresa replicada
   const [empresaActiva, setEmpresaActiva] = useState(null);
   const idEmpresa = empresaActiva; // Se usa para los hooks de datos
+  const empleado = "";
+  const idTipoPermiso = "";
+  const estado = "";
+  const [desde, setDesde] = useState("");
+  const [hasta, setHasta] = useState("");
 
   useEffect(() => {
     if (dataUser?.empresas_detalle?.length > 0 && !empresaActiva) {
@@ -63,13 +58,12 @@ export default function PermisosPage() {
     }
   }, [dataUser, empresaActiva]);
 
-  // Filtros
-  const [empleado, setEmpleado] = useState("");
-  const [idTipoPermiso, setIdTipoPermiso] = useState("");
-  const [estado, setEstado] = useState("");
-  const [desde, setDesde] = useState("");
-  const [hasta, setHasta] = useState("");
-  // const [search, setSearch] = useState(""); // texto libre eliminado
+  const [filterOptionsRows, setFilterOptionsRows] = useState([]);
+  const [headerFilterMeta, setHeaderFilterMeta] = useState({
+    active: false,
+    total: 0,
+  });
+  const [cachedData, setCachedData] = useState(null);
 
   // Paginación
   const [page, setPage] = useState(1);
@@ -101,21 +95,25 @@ export default function PermisosPage() {
     idEmpresa,
     page,
     limit,
-    empleado,
-    idEmpleado: "", // futuro: podríamos usar un selector de empleados por ID
-    idTipoPermiso: idTipoPermiso || "",
-    estado,
+    empleado: "",
+    idEmpleado: "",
+    idTipoPermiso: "",
+    estado: "",
     desde,
     hasta,
-    // search eliminado
     // Por defecto NO mostramos cancelados en "Todos".
     // Si el usuario elige estado="Cancelado", se muestran (y este flag se ignora en backend).
-    excludeCancelados: !estado,
+    excludeCancelados: true,
   });
 
-  const registros = data?.data || [];
-  const total = data?.total || 0;
-  const estadisticas = data?.estadisticas || {
+  useEffect(() => {
+    if (data) setCachedData(data);
+  }, [data]);
+
+  const effectiveData = data || cachedData;
+  const registros = effectiveData?.data || [];
+  const total = effectiveData?.total || 0;
+  const estadisticas = effectiveData?.estadisticas || {
     total: 0,
     pendientes: 0,
     aprobados: 0,
@@ -161,47 +159,62 @@ export default function PermisosPage() {
     return map;
   }, [festivosResp]);
 
-  // Buscador con sugerencias (como en Vacaciones)
-  const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
-  const [hoveredSuggestionIndex, setHoveredSuggestionIndex] = useState(-1);
-  const [activeSearchBox, setActiveSearchBox] = useState(null); // 'filters' | 'toolbar' | null
+  useEffect(() => {
+    let isCancelled = false;
 
-  // Cargar sugerencias de empleados desde catálogo de empleados (limit 8)
-  const empleadosSugResp = useEmpleadosData(
-    idEmpresa,
-    1,
-    8,
-    empleado,
-    "",
-    "",
-    "",
-  );
-  const sugerencias = useMemo(() => {
-    const list = empleadosSugResp?.data?.data || [];
-    return list.map((e) => ({
-      id_empleado: e.id_empleado,
-      nombre_completo: [e.nombre, e.apellido_paterno, e.apellido_materno]
-        .filter(Boolean)
-        .join(" "),
-    }));
-  }, [empleadosSugResp?.data]);
+    const loadFilterOptionsRows = async () => {
+      if (!idEmpresa) {
+        if (!isCancelled) setFilterOptionsRows([]);
+        return;
+      }
 
-  const handleSelectEmpleado = (emp) => {
-    if (!emp) return;
-    setEmpleado(emp.nombre_completo || "");
-    setIsSuggestionsOpen(false);
-    setPage(1);
-  };
+      try {
+        const pageSize = 500;
+        const firstParams = new URLSearchParams({
+          empresa: String(idEmpresa),
+          page: "1",
+          limit: String(pageSize),
+          exclude_cancelados: "1",
+        });
+        if (desde) firstParams.set("desde", desde);
+        if (hasta) firstParams.set("hasta", hasta);
+        const firstData = await fetcherWithToken(
+          `/checador/solicitudes-permiso?${firstParams.toString()}`,
+        );
 
-  const limpiarFiltros = () => {
-    setEmpresaActiva("all");
-    setEmpleado("");
-    setIdTipoPermiso("");
-    setEstado("");
-    setDesde("");
-    setHasta("");
-    setPage(1);
-  };
+        let allRows = Array.isArray(firstData?.data) ? firstData.data : [];
+        const totalRows = Number(firstData?.total || allRows.length);
+        const totalPagesAll = Math.max(1, Math.ceil(totalRows / pageSize));
+
+        for (let currentPage = 2; currentPage <= totalPagesAll; currentPage += 1) {
+          const pageParams = new URLSearchParams(firstParams);
+          pageParams.set("page", String(currentPage));
+          const pageData = await fetcherWithToken(
+            `/checador/solicitudes-permiso?${pageParams.toString()}`,
+          );
+          if (Array.isArray(pageData?.data)) {
+            allRows = [...allRows, ...pageData.data];
+          }
+        }
+
+        if (!isCancelled) setFilterOptionsRows(allRows);
+      } catch (_) {
+        if (!isCancelled) setFilterOptionsRows([]);
+      }
+    };
+
+    loadFilterOptionsRows();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [idEmpresa, desde, hasta]);
+
+  useEffect(() => {
+    if (!headerFilterMeta.active) return;
+    const totalPagesMeta = Math.max(1, Math.ceil(headerFilterMeta.total / limit));
+    if (page > totalPagesMeta) setPage(1);
+  }, [headerFilterMeta, page, limit]);
 
   const exportarExcel = () => {
     if (!registros || registros.length === 0) return;
@@ -407,12 +420,13 @@ export default function PermisosPage() {
     page: 1,
     limit: 1000,
     // Usar los mismos filtros que la tabla para mostrar exactamente lo mismo
-    empleado: empleado || "",
+      empleado: "",
     idEmpleado: "",
-    idTipoPermiso: idTipoPermiso || "",
-    estado: estado || "",
+      idTipoPermiso: "",
+      estado: "",
     desde: rangoDesde,
     hasta: rangoHasta,
+      excludeCancelados: true,
   });
   const registrosCalendario = calendarioResp?.data || [];
 
@@ -514,205 +528,6 @@ export default function PermisosPage() {
         </div>
       </div>
 
-      {/* Filtros */}
-      <Card className="border-blue-100 bg-blue-50">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-bold text-blue-700 flex items-center gap-2">
-            <Filter className="h-4 w-4" /> Filtros de búsqueda
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            <div className="space-y-2">
-              <label className="text-xs font-semibold uppercase text-muted-foreground">
-                Empresa
-              </label>
-              <Select
-                value={String(empresaActiva)}
-                onValueChange={(v) =>
-                  setEmpresaActiva(v === "all" ? "all" : Number(v))
-                }
-              >
-                <SelectTrigger className="bg-slate-50 border-blue-200">
-                  <SelectValue placeholder="Seleccionar empresa" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">🌐 Todas las empresas</SelectItem>
-                  {dataUser?.empresas_detalle?.map((e) => (
-                    <SelectItem key={e.id_empresa} value={String(e.id_empresa)}>
-                      🏢 {e.nombre}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Empleado
-              </label>
-              <div className="relative">
-                <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <Input
-                  className="pl-9 bg-white"
-                  placeholder="Nombre del empleado"
-                  value={empleado}
-                  onChange={(e) => {
-                    setEmpleado(e.target.value);
-                    setIsSuggestionsOpen(true);
-                    setHoveredSuggestionIndex(0);
-                    setActiveSearchBox("filters");
-                  }}
-                  onFocus={() => {
-                    setActiveSearchBox("filters");
-                    setIsSuggestionsOpen(!!empleado);
-                  }}
-                  onBlur={() => {
-                    setTimeout(() => {
-                      setIsSuggestionsOpen(false);
-                      setActiveSearchBox(null);
-                    }, 120);
-                  }}
-                  onKeyDown={(e) => {
-                    if (
-                      !isSuggestionsOpen ||
-                      activeSearchBox !== "filters" ||
-                      sugerencias.length === 0
-                    )
-                      return;
-                    if (e.key === "ArrowDown") {
-                      e.preventDefault();
-                      setHoveredSuggestionIndex((prev) =>
-                        prev + 1 >= sugerencias.length ? 0 : prev + 1,
-                      );
-                    } else if (e.key === "ArrowUp") {
-                      e.preventDefault();
-                      setHoveredSuggestionIndex((prev) =>
-                        prev - 1 < 0 ? sugerencias.length - 1 : prev - 1,
-                      );
-                    } else if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleSelectEmpleado(
-                        sugerencias[hoveredSuggestionIndex] || sugerencias[0],
-                      );
-                    } else if (e.key === "Escape") {
-                      setIsSuggestionsOpen(false);
-                    }
-                  }}
-                />
-                {isSuggestionsOpen &&
-                activeSearchBox === "filters" &&
-                sugerencias.length > 0 ? (
-                  <div className="absolute left-0 right-0 mt-1 z-20 rounded-md border bg-white shadow">
-                    <ul className="max-h-64 overflow-auto">
-                      {sugerencias.map((emp, idx) => (
-                        <li
-                          key={emp.id_empleado}
-                          onMouseDown={() => handleSelectEmpleado(emp)}
-                          onMouseEnter={() => setHoveredSuggestionIndex(idx)}
-                          className={`px-3 py-2 cursor-pointer text-sm ${
-                            idx === hoveredSuggestionIndex ? "bg-slate-100" : ""
-                          }`}
-                        >
-                          {emp.nombre_completo}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Tipo de permiso
-              </label>
-              <Select
-                value={idTipoPermiso === "" ? "__all__" : idTipoPermiso}
-                onValueChange={(v) =>
-                  setIdTipoPermiso(v === "__all__" ? "" : v)
-                }
-              >
-                <SelectTrigger className="bg-white">
-                  <SelectValue placeholder="Todos los tipos" />
-                </SelectTrigger>
-                <SelectContent
-                  className="max-h-64 overflow-y-auto"
-                  position="popper"
-                  align="start"
-                >
-                  <SelectItem value="__all__">Todos</SelectItem>
-                  {Array.isArray(tiposPermiso) &&
-                    tiposPermiso.map((t) => (
-                      <SelectItem key={t.id} value={String(t.id)}>
-                        {t.nombre}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Estado
-              </label>
-              <Select
-                value={estado === "" ? "__all__" : estado}
-                onValueChange={(v) => setEstado(v === "__all__" ? "" : v)}
-              >
-                <SelectTrigger className="bg-white">
-                  <SelectValue placeholder="Todos (sin cancelados)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__all__">
-                    Todos (sin cancelados)
-                  </SelectItem>
-                  <SelectItem value="Pendiente">Pendiente</SelectItem>
-                  <SelectItem value="Aprobado">Aprobado</SelectItem>
-                  <SelectItem value="Rechazado">Rechazado</SelectItem>
-                  <SelectItem value="Cancelado">Cancelado</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Fecha desde
-              </label>
-              <Input
-                className="bg-white"
-                type="date"
-                value={desde}
-                onChange={(e) => setDesde(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Fecha hasta
-              </label>
-              <Input
-                className="bg-white"
-                type="date"
-                value={hasta}
-                onChange={(e) => setHasta(e.target.value)}
-              />
-            </div>
-            {/* Filtro de texto libre eliminado por requerimiento */}
-          </div>
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={limpiarFiltros}
-              className="border-gray-300 text-gray-700 hover:bg-gray-100"
-            >
-              Limpiar
-            </Button>
-            <Button
-              onClick={() => mutate()}
-              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white"
-            >
-              Buscar
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Estadísticas rápidas */}
       {/* En móvil se compacta el espacio vertical y tipografías para no ocupar demasiada altura. */}
       <div className="grid gap-2 sm:gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
@@ -738,92 +553,58 @@ export default function PermisosPage() {
         />
       </div>
 
-      {/* Toolbar */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative w-full max-w-sm">
-          <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
-          <Input
-            className="pl-9 bg-white"
-            placeholder="Buscar empleado..."
-            value={empleado}
-            onChange={(e) => {
-              setEmpleado(e.target.value);
-              setIsSuggestionsOpen(true);
-              setHoveredSuggestionIndex(0);
-              setActiveSearchBox("toolbar");
-            }}
-            onFocus={() => {
-              setActiveSearchBox("toolbar");
-              setIsSuggestionsOpen(!!empleado);
-            }}
-            onBlur={() => {
-              setTimeout(() => {
-                setIsSuggestionsOpen(false);
-                setActiveSearchBox(null);
-              }, 120);
-            }}
-            onKeyDown={(e) => {
-              if (
-                !isSuggestionsOpen ||
-                activeSearchBox !== "toolbar" ||
-                sugerencias.length === 0
-              )
-                return;
-              if (e.key === "ArrowDown") {
-                e.preventDefault();
-                setHoveredSuggestionIndex((prev) =>
-                  prev + 1 >= sugerencias.length ? 0 : prev + 1,
-                );
-              } else if (e.key === "ArrowUp") {
-                e.preventDefault();
-                setHoveredSuggestionIndex((prev) =>
-                  prev - 1 < 0 ? sugerencias.length - 1 : prev - 1,
-                );
-              } else if (e.key === "Enter") {
-                e.preventDefault();
-                handleSelectEmpleado(
-                  sugerencias[hoveredSuggestionIndex] || sugerencias[0],
-                );
-              } else if (e.key === "Escape") {
-                setIsSuggestionsOpen(false);
-              }
-            }}
-          />
-          {isSuggestionsOpen &&
-          activeSearchBox === "toolbar" &&
-          sugerencias.length > 0 ? (
-            <div className="absolute left-0 right-0 mt-1 z-20 rounded-md border bg-white shadow">
-              <ul className="max-h-64 overflow-auto">
-                {sugerencias.map((emp, idx) => (
-                  <li
-                    key={emp.id_empleado}
-                    onMouseDown={() => handleSelectEmpleado(emp)}
-                    onMouseEnter={() => setHoveredSuggestionIndex(idx)}
-                    className={`px-3 py-2 cursor-pointer text-sm ${
-                      idx === hoveredSuggestionIndex ? "bg-slate-100" : ""
-                    }`}
-                  >
-                    {emp.nombre_completo}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </div>
-        <div className="flex gap-2">
-          <Button
-            onClick={() => {
-              setEditItem(null);
-              setOpenDialog(true);
-            }}
-            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white"
-          >
-            <Plus className="h-4 w-4 mr-2" /> Nuevo Permiso
-          </Button>
+      <div className="bg-white rounded-xl border border-gray-100 p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-end">
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">Desde</label>
+            <Input
+              type="date"
+              value={desde}
+              onChange={(event) => {
+                setDesde(event.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">Hasta</label>
+            <Input
+              type="date"
+              value={hasta}
+              onChange={(event) => {
+                setHasta(event.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+          <div className="flex justify-start lg:justify-end">
+            <Button
+              onClick={() => {
+                setDesde("");
+                setHasta("");
+                setPage(1);
+              }}
+              variant="outline"
+              className="border-gray-300 text-gray-700 hover:bg-gray-100"
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Limpiar
+            </Button>
+          </div>
         </div>
       </div>
 
-      <Separator />
+      <div className="flex justify-end">
+        <Button
+          onClick={() => {
+            setEditItem(null);
+            setOpenDialog(true);
+          }}
+          className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white"
+        >
+          <Plus className="h-4 w-4 mr-2" /> Nuevo Permiso
+        </Button>
+      </div>
 
       {/* Selector de vista encima de la tabla/calendario */}
       <div className="flex items-center justify-start">
@@ -859,6 +640,10 @@ export default function PermisosPage() {
           {/* Tabla */}
           <PermisosTable
             items={registros}
+            filterOptionsRows={filterOptionsRows}
+            page={page}
+            limit={limit}
+            onHeaderFilteringMetaChange={setHeaderFilterMeta}
             loading={isLoading}
             festivosSet={festivosSet}
             onEdit={(row) => {
@@ -882,7 +667,7 @@ export default function PermisosPage() {
           <TablePagination
             page={page}
             limit={limit}
-            total={total}
+            total={headerFilterMeta.active ? headerFilterMeta.total : total}
             onPageChange={setPage}
             onLimitChange={setLimit}
           />

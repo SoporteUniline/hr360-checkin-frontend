@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import {
   Table,
@@ -17,6 +17,8 @@ import { Eye, Inbox, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDateDMY } from "@/lib/formatDate";
 import { calcDiasTotalesYHabiles } from "@/lib/permisosDias";
+import HeaderMultiFilter from "../registro-asistencia/HeaderMultiFilter";
+import ActiveFilterChips from "../registro-asistencia/ActiveFilterChips";
 
 /**
  * Tabla de solicitudes de permiso.
@@ -26,6 +28,10 @@ import { calcDiasTotalesYHabiles } from "@/lib/permisosDias";
  */
 export default function PermisosTable({
   items,
+  filterOptionsRows = [],
+  page = 1,
+  limit = 10,
+  onHeaderFilteringMetaChange,
   loading,
   onEdit,
   onChanged,
@@ -33,8 +39,95 @@ export default function PermisosTable({
   onDelete,
   festivosSet = new Set(),
 }) {
+  const [empresaSeleccionada, setEmpresaSeleccionada] = useState([]);
+  const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState([]);
+  const [tipoSeleccionado, setTipoSeleccionado] = useState([]);
+  const [estadoSeleccionado, setEstadoSeleccionado] = useState([]);
+  const safeItems = Array.isArray(items) ? items : [];
+
+  const sourceRows = useMemo(
+    () =>
+      Array.isArray(filterOptionsRows) && filterOptionsRows.length > 0
+        ? filterOptionsRows
+        : safeItems,
+    [filterOptionsRows, safeItems],
+  );
+
+  const uniqueOptions = (values) =>
+    [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+
+  const empresaOptions = useMemo(
+    () =>
+      uniqueOptions(sourceRows.map((row) => row.nombre_empresa || row.empresa_nombre)),
+    [sourceRows],
+  );
+  const empleadoOptions = useMemo(
+    () => uniqueOptions(sourceRows.map((row) => row.empleado_nombre)),
+    [sourceRows],
+  );
+  const tipoOptions = useMemo(
+    () => uniqueOptions(sourceRows.map((row) => row.tipo_permiso_nombre)),
+    [sourceRows],
+  );
+  const estadoOptions = useMemo(
+    () => uniqueOptions(sourceRows.map((row) => row.estado)),
+    [sourceRows],
+  );
+
+  const filteredRowsAll = useMemo(
+    () =>
+      sourceRows.filter((row) => {
+        const empresa = row.nombre_empresa || row.empresa_nombre;
+        const passEmpresa =
+          empresaSeleccionada.length === 0 ||
+          empresaSeleccionada.includes(empresa);
+        const passEmpleado =
+          empleadoSeleccionado.length === 0 ||
+          empleadoSeleccionado.includes(row.empleado_nombre);
+        const passTipo =
+          tipoSeleccionado.length === 0 ||
+          tipoSeleccionado.includes(row.tipo_permiso_nombre);
+        const passEstado =
+          estadoSeleccionado.length === 0 || estadoSeleccionado.includes(row.estado);
+        return passEmpresa && passEmpleado && passTipo && passEstado;
+      }),
+    [
+      sourceRows,
+      empresaSeleccionada,
+      empleadoSeleccionado,
+      tipoSeleccionado,
+      estadoSeleccionado,
+    ],
+  );
+
+  const hasActiveHeaderFilters =
+    empresaSeleccionada.length > 0 ||
+    empleadoSeleccionado.length > 0 ||
+    tipoSeleccionado.length > 0 ||
+    estadoSeleccionado.length > 0;
+
+  const displayedRows = useMemo(() => {
+    if (!hasActiveHeaderFilters) return safeItems;
+    const offset = (page - 1) * limit;
+    return filteredRowsAll.slice(offset, offset + limit);
+  }, [hasActiveHeaderFilters, safeItems, page, limit, filteredRowsAll]);
+
+  useEffect(() => {
+    onHeaderFilteringMetaChange?.({
+      active: hasActiveHeaderFilters,
+      total: filteredRowsAll.length,
+    });
+  }, [hasActiveHeaderFilters, filteredRowsAll.length, onHeaderFilteringMetaChange]);
+
+  const clearAllHeaderFilters = () => {
+    setEmpresaSeleccionada([]);
+    setEmpleadoSeleccionado([]);
+    setTipoSeleccionado([]);
+    setEstadoSeleccionado([]);
+  };
+
   if (loading) return <LoadingTable />;
-  if (!Array.isArray(items) || items.length === 0) {
+  if (!hasActiveHeaderFilters && safeItems.length === 0) {
     return (
       <div className="rounded-xl border border-gray-100 bg-white p-10 text-center">
         <div className="mx-auto mb-3 grid size-12 place-items-center rounded-xl bg-blue-50 text-blue-700">
@@ -51,25 +144,83 @@ export default function PermisosTable({
       <CardHeader className="border-b border-gray-100 bg-white pb-4">
         <CardTitle className="text-sm font-bold text-gray-900">Lista de permisos</CardTitle>
       </CardHeader>
+      <ActiveFilterChips
+        groups={[
+          {
+            category: "Empresa",
+            values: empresaSeleccionada,
+            options: empresaOptions,
+            onChange: setEmpresaSeleccionada,
+          },
+          {
+            category: "Empleado",
+            values: empleadoSeleccionado,
+            options: empleadoOptions,
+            onChange: setEmpleadoSeleccionado,
+          },
+          {
+            category: "Tipo",
+            values: tipoSeleccionado,
+            options: tipoOptions,
+            onChange: setTipoSeleccionado,
+          },
+          {
+            category: "Estado",
+            values: estadoSeleccionado,
+            options: estadoOptions,
+            onChange: setEstadoSeleccionado,
+          },
+        ]}
+        onClearAll={clearAllHeaderFilters}
+      />
       <CardContent className="p-0">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50">
                 <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">#</TableHead>
-                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">Empleado</TableHead>
-                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">Tipo</TableHead>
+                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
+                  <HeaderMultiFilter
+                    selected={empresaSeleccionada}
+                    onChange={setEmpresaSeleccionada}
+                    options={empresaOptions}
+                    placeholder="Empresa"
+                  />
+                </TableHead>
+                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
+                  <HeaderMultiFilter
+                    selected={empleadoSeleccionado}
+                    onChange={setEmpleadoSeleccionado}
+                    options={empleadoOptions}
+                    placeholder="Empleado"
+                  />
+                </TableHead>
+                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
+                  <HeaderMultiFilter
+                    selected={tipoSeleccionado}
+                    onChange={setTipoSeleccionado}
+                    options={tipoOptions}
+                    placeholder="Tipo"
+                  />
+                </TableHead>
                 <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">Fecha inicio</TableHead>
                 <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">Fecha fin</TableHead>
                 <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">Días totales</TableHead>
                 <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">Días hábiles</TableHead>
-                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">Estado</TableHead>
+                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
+                  <HeaderMultiFilter
+                    selected={estadoSeleccionado}
+                    onChange={setEstadoSeleccionado}
+                    options={estadoOptions}
+                    placeholder="Estado"
+                  />
+                </TableHead>
                 <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">Solicitado</TableHead>
                 <TableHead className="whitespace-nowrap text-right text-xs font-semibold uppercase text-gray-600">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((row) => {
+              {displayedRows.map((row) => {
                 const di = dayjs(row.fecha_inicio);
                 const df = row.fecha_fin ? dayjs(row.fecha_fin) : di;
                 const diasNaturales = Math.max(1, df.diff(di, "day") + 1);
@@ -98,6 +249,9 @@ export default function PermisosTable({
                   <TableRow key={row.id} className="hover:bg-zinc-50">
                     <TableCell className="text-gray-500 font-semibold">
                       {String(row.id).padStart(3, "0")}
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm text-gray-700">{row.nombre_empresa || row.empresa_nombre || "-"}</div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -177,6 +331,13 @@ export default function PermisosTable({
                   </TableRow>
                 );
               })}
+              {displayedRows.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={12} className="py-8 text-center text-muted-foreground">
+                    No hay permisos para los filtros seleccionados.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>
