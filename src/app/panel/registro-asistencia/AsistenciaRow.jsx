@@ -23,12 +23,12 @@ dayjs.extend(timezone);
 export default function AsistenciaRow({
   registro,
   fecha,
-  readOnly = false, // Si true, fila solo lectura y sin columna de acciones
+  readOnly = false,
   isEditing,
   editingRowData,
   isSaving,
   empleados,
-  tiposPermiso: { tiposPermiso: tiposPermisoOriginal } = {},
+  tiposPermiso,
   handleEditClick,
   handleCancelEdit,
   handleFieldChange,
@@ -44,26 +44,13 @@ export default function AsistenciaRow({
   const areTimeInputsDisabled = !currentData.correccion;
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const empleadoDeFila = empleados?.find(
-    (emp) => emp.id_empleado === registro.id_empleado,
-  );
-  const idEmpresaDeEstaFila = empleadoDeFila?.id_empresa;
-
-  const tiposPermisoArray = useMemo(() => {
-    const todos = tiposPermisoOriginal || [];
-
-    return todos.filter(
-      (tipo) => !tipo.id_empresa || tipo.id_empresa === idEmpresaDeEstaFila,
-    );
-  }, [tiposPermisoOriginal, idEmpresaDeEstaFila]);
-
   const handleRowClick = () => {
     if (!isEditing) {
       setIsModalOpen(true);
     }
   };
 
-  console.log(registro);
+  console.log(tiposPermiso);
 
   return (
     <>
@@ -94,7 +81,7 @@ export default function AsistenciaRow({
                     : ""
                 }
                 onValueChange={(val) => {
-                  const seleccionado = tiposPermisoArray.find(
+                  const seleccionado = tiposPermiso?.tiposPermiso.find(
                     (tipo) => String(tipo.id) === val,
                   );
 
@@ -109,14 +96,13 @@ export default function AsistenciaRow({
                     seleccionado?.cuenta_como_asistencia,
                   );
                   handleFieldChange("goce_sueldo", seleccionado?.goce_sueldo);
-                  // handleFieldChange("es_festivo", seleccionado?.es_festivo);
                 }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Tipo" />
                 </SelectTrigger>
                 <SelectContent className="max-h-60 overflow-y-auto">
-                  {tiposPermisoArray?.map((tipo) => (
+                  {tiposPermiso?.tiposPermiso?.map((tipo) => (
                     <SelectItem key={tipo.id} value={String(tipo.id)}>
                       {tipo.nombre}
                     </SelectItem>

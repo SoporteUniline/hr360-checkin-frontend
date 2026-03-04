@@ -19,7 +19,7 @@ export default function AsistenciaDataContainer({
   fechaFin,
   page,
   limit,
-  readOnly = false, // Si true, solo lectura y sin acciones
+  readOnly = false,
   debouncedFiltroEmpleado,
   filtroDepartamento,
   filtroTipoRegistro,
@@ -153,6 +153,7 @@ export default function AsistenciaDataContainer({
 
   const { data: empleados } = useEmpleadosData(idEmpresa);
   const { data: tiposPermiso } = useTiposPermisoData();
+
   const effectiveData = data || cachedData;
 
   useEffect(() => {
