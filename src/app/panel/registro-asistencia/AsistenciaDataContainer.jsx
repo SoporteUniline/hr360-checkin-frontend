@@ -10,6 +10,7 @@ import LoadingTable from "@/components/LoadingTable";
 import ErrorPage from "@/components/ErrorPage";
 import { useEffect, useState } from "react";
 import { fetcherWithToken } from "@/lib/fetcher";
+import useDepartamentosData from "@/hooks/useDepartamentosData";
 
 export default function AsistenciaDataContainer({
   idEmpresa,
@@ -35,6 +36,7 @@ export default function AsistenciaDataContainer({
   diasFestivos,
   requiereAutorizacion,
 }) {
+  const { departamentos } = useDepartamentosData(idEmpresa);
   const [filterOptionsRows, setFilterOptionsRows] = useState([]);
   const [headerFilterMeta, setHeaderFilterMeta] = useState({
     active: false,
@@ -93,7 +95,8 @@ export default function AsistenciaDataContainer({
         if (horasExtra) baseParams.append("horasExtra", "1");
         if (sinGoceDeSueldo) baseParams.append("sinGoceDeSueldo", "0");
         if (diasFestivos) baseParams.append("diasFestivos", "1");
-        if (requiereAutorizacion) baseParams.append("requiereAutorizacion", "1");
+        if (requiereAutorizacion)
+          baseParams.append("requiereAutorizacion", "1");
 
         const firstParams = new URLSearchParams(baseParams);
         firstParams.set("page", "1");
@@ -217,13 +220,16 @@ export default function AsistenciaDataContainer({
           abrirFormulario={abrirFormulario}
           onResetFilters={onResetFilters}
           empresaActiva={empresaActiva}
+          departamentosCatalogo={departamentos}
         />
 
         {mostrarPaginacion && registros.length > 0 && (
           <TablePagination
             page={currentPage}
             limit={limit}
-            total={headerFilterMeta.active ? headerFilterMeta.total : totalRegistros}
+            total={
+              headerFilterMeta.active ? headerFilterMeta.total : totalRegistros
+            }
             onPageChange={onPageChange}
             onLimitChange={onLimitChange}
           />

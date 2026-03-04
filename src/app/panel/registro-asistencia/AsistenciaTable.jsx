@@ -23,6 +23,7 @@ dayjs.extend(timezone);
 
 export default function AsistenciaTable({
   filtrados,
+  departamentosCatalogo,
   fecha,
   readOnly = false, // Si true, oculta acciones/botones (vista informativa)
   editingRowId,
@@ -87,13 +88,20 @@ export default function AsistenciaTable({
     [optionSourceRows],
   );
   const empresaOptions = useMemo(
-    () => uniqueOptions(optionSourceRows.map((registro) => registro.empresa_nombre)),
+    () =>
+      uniqueOptions(
+        optionSourceRows.map((registro) => registro.empresa_nombre),
+      ),
     [optionSourceRows],
   );
-  const departamentoOptions = useMemo(
-    () => uniqueOptions(optionSourceRows.map((registro) => registro.departamento)),
-    [optionSourceRows],
-  );
+  const departamentoOptions = useMemo(() => {
+    if (departamentosCatalogo && departamentosCatalogo.length > 0) {
+      return [...new Set(departamentosCatalogo.map((d) => d.nombre))].sort();
+    }
+    return uniqueOptions(
+      optionSourceRows.map((registro) => registro.departamento),
+    );
+  }, [departamentosCatalogo, optionSourceRows]);
   const tipoOptions = useMemo(
     () =>
       uniqueOptions(
@@ -121,22 +129,30 @@ export default function AsistenciaTable({
   );
   const horasExtraOptions = useMemo(
     () =>
-      uniqueOptions(optionSourceRows.map((registro) => toYesNo(registro.hrs_extra))),
+      uniqueOptions(
+        optionSourceRows.map((registro) => toYesNo(registro.hrs_extra)),
+      ),
     [optionSourceRows],
   );
   const festivoOptions = useMemo(
     () =>
-      uniqueOptions(optionSourceRows.map((registro) => toYesNo(registro.es_festivo))),
+      uniqueOptions(
+        optionSourceRows.map((registro) => toYesNo(registro.es_festivo)),
+      ),
     [optionSourceRows],
   );
   const estadoAsistenciaOptions = useMemo(
     () =>
-      uniqueOptions(optionSourceRows.map((registro) => registro.estadoAsistencia)),
+      uniqueOptions(
+        optionSourceRows.map((registro) => registro.estadoAsistencia),
+      ),
     [optionSourceRows],
   );
   const autorizacionOptions = useMemo(
     () =>
-      uniqueOptions(optionSourceRows.map((registro) => toAutorizacion(registro))),
+      uniqueOptions(
+        optionSourceRows.map((registro) => toAutorizacion(registro)),
+      ),
     [optionSourceRows],
   );
 
@@ -232,7 +248,11 @@ export default function AsistenciaTable({
       active: hasActiveHeaderFilters,
       total: filteredRowsAll.length,
     });
-  }, [hasActiveHeaderFilters, filteredRowsAll.length, onHeaderFilteringMetaChange]);
+  }, [
+    hasActiveHeaderFilters,
+    filteredRowsAll.length,
+    onHeaderFilteringMetaChange,
+  ]);
 
   const clearAllTableFilters = () => {
     setEmpleadoSeleccionado([]);
@@ -280,48 +300,48 @@ export default function AsistenciaTable({
 
   const exportData = (hasActiveHeaderFilters ? filteredRowsAll : filtrados).map(
     (r) => ({
-    nombre: r.nombre,
-    apellido_paterno: r.apellido_paterno,
-    apellido_materno: r.apellido_materno,
-    empresa: r.empresa_nombre,
-    nip: r.nip,
-    departamento: r.departamento,
-    tipo_registro_nombre: r.tipo_registro_nombre,
-    fecha: r.fecha
-      ? dayjs.tz(r.fecha, DB_TIMEZONE).tz(userTimezone).format("DD/MM/YYYY")
-      : "-",
+      nombre: r.nombre,
+      apellido_paterno: r.apellido_paterno,
+      apellido_materno: r.apellido_materno,
+      empresa: r.empresa_nombre,
+      nip: r.nip,
+      departamento: r.departamento,
+      tipo_registro_nombre: r.tipo_registro_nombre,
+      fecha: r.fecha
+        ? dayjs.tz(r.fecha, DB_TIMEZONE).tz(userTimezone).format("DD/MM/YYYY")
+        : "-",
 
-    correccion: r.correcion ? "Sí" : "No",
-    entrada: r.entrada
-      ? dayjs
-          .tz(r.entrada, DB_TIMEZONE)
-          .tz(userTimezone)
-          .format("DD/MM/YYYY HH:mm:ss")
-      : "-",
+      correccion: r.correcion ? "Sí" : "No",
+      entrada: r.entrada
+        ? dayjs
+            .tz(r.entrada, DB_TIMEZONE)
+            .tz(userTimezone)
+            .format("DD/MM/YYYY HH:mm:ss")
+        : "-",
 
-    salida: r.salida
-      ? dayjs
-          .tz(r.salida, DB_TIMEZONE)
-          .tz(userTimezone)
-          .format("DD/MM/YYYY HH:mm:ss")
-      : "-",
+      salida: r.salida
+        ? dayjs
+            .tz(r.salida, DB_TIMEZONE)
+            .tz(userTimezone)
+            .format("DD/MM/YYYY HH:mm:ss")
+        : "-",
 
-    autorizado_por: r.autorizado_por ?? "-",
-    asistencia: r.asistencia ? "Sí" : "No",
-    goce_sueldo: r.goce_sueldo ? "Sí" : "No",
-    pago_triple: r.pago_triple ? "Sí" : "No",
-    es_domingo: r.es_domingo ? "Sí" : "No",
-    prima_dominical: r.prima_dominical ?? "-",
-    es_festivo: r.es_festivo ? "Sí" : "No",
-    porcentaje_dia_festivo: r.porcentaje_dia_festivo ?? "-",
-    hrs_extra: r.hrs_extra ? "Sí" : "No",
-    forma_pago_extras: r.forma_pago_extras ?? "-",
-    extras_autorizadas_por: r.extras_autorizadas_por ?? "-",
-    hrs_comida: r.hrs_comida ?? "-",
-    notas: r.notas ?? "-",
-    notas_hrs_extra: r.notas_hrs_extra ?? "-",
-    estado: r.estado ?? "-",
-    estadoAsistencia: r.estadoAsistencia,
+      autorizado_por: r.autorizado_por ?? "-",
+      asistencia: r.asistencia ? "Sí" : "No",
+      goce_sueldo: r.goce_sueldo ? "Sí" : "No",
+      pago_triple: r.pago_triple ? "Sí" : "No",
+      es_domingo: r.es_domingo ? "Sí" : "No",
+      prima_dominical: r.prima_dominical ?? "-",
+      es_festivo: r.es_festivo ? "Sí" : "No",
+      porcentaje_dia_festivo: r.porcentaje_dia_festivo ?? "-",
+      hrs_extra: r.hrs_extra ? "Sí" : "No",
+      forma_pago_extras: r.forma_pago_extras ?? "-",
+      extras_autorizadas_por: r.extras_autorizadas_por ?? "-",
+      hrs_comida: r.hrs_comida ?? "-",
+      notas: r.notas ?? "-",
+      notas_hrs_extra: r.notas_hrs_extra ?? "-",
+      estado: r.estado ?? "-",
+      estadoAsistencia: r.estadoAsistencia,
     }),
   );
 
