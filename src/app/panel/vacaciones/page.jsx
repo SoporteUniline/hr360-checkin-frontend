@@ -63,10 +63,11 @@ function numberFormat(n) {
 export default function VacacionesPage() {
   // Empresa actual (todo se maneja por empresa)
   const { dataUser } = useAuth();
-  const idEmpresa = dataUser?.id_empresa;
 
   // Cerca de los otros useState
   const [empresaActiva, setEmpresaActiva] = useState("all");
+  const empresaDetalleParam =
+    empresaActiva && empresaActiva !== "all" ? Number(empresaActiva) : null;
 
   // Estado de datos
   const [loading, setLoading] = useState(true);
@@ -236,12 +237,14 @@ export default function VacacionesPage() {
       tipo === "cargados"
         ? cacheCargados?.[idEmpleado]
         : cacheTomados?.[idEmpleado];
-    if (cache || !idEmpresa) return;
+    if (cache) return;
     setRowLoading(true);
     try {
       const url = `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/vacaciones/${tipo}/${idEmpleado}`;
       const res = await axios.get(url, {
-        params: { empresa: idEmpresa, id_empresa: idEmpresa },
+        params: empresaDetalleParam
+          ? { empresa: empresaDetalleParam, id_empresa: empresaDetalleParam }
+          : {},
       });
       if (tipo === "cargados") {
         setCacheCargados((prev) => ({ ...prev, [idEmpleado]: res.data }));
@@ -260,12 +263,12 @@ export default function VacacionesPage() {
   };
 
   useEffect(() => {
-    if (expandedRow && idEmpresa) {
+    if (expandedRow) {
       // Asegura que al cambiar de pestaña se carguen datos si faltan
       ensureRowDetalle(expandedTab, expandedRow);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expandedTab, expandedRow, idEmpresa]);
+  }, [expandedTab, expandedRow, empresaDetalleParam]);
 
   // Click sobre la fila: si está abierta, plegar SIEMPRE; si está cerrada, abrir con "cargados"
   const handleRowClick = async (idEmpleado) => {
@@ -405,10 +408,9 @@ export default function VacacionesPage() {
     try {
       const url = `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/vacaciones/${tipo}/${idEmpleado}`;
       const res = await axios.get(url, {
-        params: {
-          empresa: idEmpresa,
-          id_empresa: idEmpresa,
-        },
+        params: empresaDetalleParam
+          ? { empresa: empresaDetalleParam, id_empresa: empresaDetalleParam }
+          : {},
       });
       setDetalleData(res.data);
     } catch {
