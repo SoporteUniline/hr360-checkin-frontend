@@ -69,6 +69,18 @@ export default function TiposRegistro() {
         </div>
       </div>
 
+      <div className="flex justify-end">
+        <Button
+          className="w-full sm:w-auto bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-2"
+          onClick={() => {
+            setEditPerm(null);
+            setOpenForm(true);
+          }}
+        >
+          <Plus className="h-4 w-4" /> Nuevo
+        </Button>
+      </div>
+
       {/* Filtros */}
       <Card className="border-blue-100 bg-blue-50">
         <CardHeader className="pb-3">
