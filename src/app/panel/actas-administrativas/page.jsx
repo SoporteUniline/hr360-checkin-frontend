@@ -1,6 +1,5 @@
 "use client";
 
-import AdministrativeFilters from "@/components/AdministrativeFilters";
 import AdministrativeTable from "@/components/AdministrativeMinutesTable";
 import NewActaModal from "@/components/NewActaModal";
 import StatCard from "@/components/StatCard";
@@ -11,7 +10,7 @@ import { useAdministrativeMinutes } from "@/hooks/useAdministrativeMinutes";
 import useEmpleadosActivosData from "@/hooks/useEmpleadosActivos";
 import useTiposActa from "@/hooks/useTiposActa";
 import { PlusIcon, AlertTriangle } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import { AdministrativeDetailsModal } from "@/components/AdministrativeDetailsModal";
 import {
@@ -29,13 +28,13 @@ import { useSnackbar } from "notistack";
 
 const page = () => {
   const { enqueueSnackbar } = useSnackbar();
-  const [empresaSeleccionada, setEmpresaSeleccionada] = useState("all");
+  const [empresaSeleccionada] = useState("all");
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const [filters, setFilters] = useState({
-    empleado: "",
-    folio: "",
-    estatus: "",
+  const [filters] = useState({});
+  const [headerFilterMeta, setHeaderFilterMeta] = useState({
+    active: false,
+    total: 0,
   });
   const [openNewActa, setOpenNewActa] = useState(false);
   const [openEditActa, setOpenEditActa] = useState(false);
@@ -43,10 +42,6 @@ const page = () => {
   const [actaToView, setActaToView] = useState(null);
   const [openView, setOpenView] = useState(false);
   const [deleteRow, setDeleteRow] = useState(null);
-  const [empleado, setEmpleado] = useState("");
-  const [folio, setFolio] = useState("");
-  const [estatus, setEstatus] = useState("");
-
   const { dataUser } = useAuth();
   const {
     data,
@@ -55,19 +50,6 @@ const page = () => {
     stats,
     isLoading,
   } = useAdministrativeMinutes(empresaSeleccionada, page, limit, filters);
-
-  const limpiarFiltros = () => {
-    setEmpresaSeleccionada("all");
-    setEmpleado("");
-    setFolio("");
-    setEstatus("");
-
-    setFilters({
-      empleado: "",
-      folio: "",
-      estatus: "",
-    });
-  };
 
   const {
     data: empleados,
@@ -129,10 +111,6 @@ const page = () => {
     }
   };
 
-  useEffect(() => {
-    setPage(1);
-  }, [empresaSeleccionada]);
-
   return (
     <>
       <div className="min-h-screen bg-[#F9FAFB] p-6 space-y-6">
@@ -173,37 +151,23 @@ const page = () => {
           />
         </div>
 
-        <AdministrativeFilters
-          empresaSeleccionada={empresaSeleccionada}
-          setEmpresaSeleccionada={setEmpresaSeleccionada}
-          dataUser={dataUser}
-          onChange={setFilters}
-          empleado={empleado}
-          setEmpleado={setEmpleado}
-          folio={folio}
-          setFolio={setFolio}
-          estatus={estatus}
-          setEstatus={setEstatus}
-          empleados={empleados}
-        />
-
         <div className="mt-5">
           <AdministrativeTable
             actas={data}
             page={page}
             limit={limit}
-            limpiarFiltros={limpiarFiltros}
             onView={onViewActa}
             onEdit={onEditActa}
             onDelete={onDeleteActa}
-            empresaSeleccionada={empresaSeleccionada}
+            onPageChange={setPage}
+            onHeaderFilterMetaChange={setHeaderFilterMeta}
           />
         </div>
 
         <TablePagination
           page={page}
           limit={limit}
-          total={total}
+          total={headerFilterMeta.active ? headerFilterMeta.total : total}
           onPageChange={setPage}
           onLimitChange={setLimit}
         />

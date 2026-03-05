@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { Input } from "@/components/ui/input";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -9,12 +8,8 @@ import DepartamentosTable from "./DepartamentosTable";
 import DepartamentoFormDialog from "./DepartamentoFormDialog";
 import DepartamentoDeleteDialog from "./DepartamentoDeleteDialog";
 import AccesosRapidos from "@/components/AccesosRapidos";
-import { Label } from "@/components/ui/label";
-import { Combobox } from "@/components/Combobox";
 
 export default function Departamentos() {
-  const [filter, setFilter] = useState("");
-  const [debouncedFilter, setDebouncedFilter] = useState("");
   const [departamentos, setDepartamentos] = useState([]);
   const [editDep, setEditDep] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
@@ -23,21 +18,8 @@ export default function Departamentos() {
 
   const { dataUser } = useAuth();
 
-  const [empresaActiva, setEmpresaActiva] = useState(null);
-  const id_empresa = empresaActiva;
-
-  useEffect(() => {
-    if (dataUser?.empresas?.length > 0 && !empresaActiva) {
-      setEmpresaActiva("all");
-    }
-  }, [dataUser, empresaActiva]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedFilter(filter);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [filter]);
+  const id_empresa = "all";
+  const idEmpresaForm = null;
 
   const key = id_empresa
     ? `/checador/departamentos?id_empresa=${id_empresa}`
@@ -45,34 +27,8 @@ export default function Departamentos() {
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] p-6">
-      {/* Filtro de búsqueda - Estilo ADAMIA */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-[260px_1fr_auto] items-end">
-        <div className="flex flex-col gap-1">
-          <Label>Empresa</Label>
-          <Combobox
-            options={[
-              { value: "all", label: "Todas las empresas" },
-              ...(dataUser?.empresas_detalle?.map((e) => ({
-                value: e.id_empresa,
-                label: e.nombre,
-              })) || []),
-            ]}
-            value={empresaActiva}
-            onChange={(val) =>
-              setEmpresaActiva(val === "all" ? "all" : Number(val))
-            }
-            placeholder="Seleccionar empresa"
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="departamento-search">Departamento</Label>
-          <Input
-            id="departamento-search"
-            placeholder="Buscar departamento..."
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-          />
-        </div>
+      {/* Filtro principal */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6 flex justify-end">
         <Button
           className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
           onClick={() => {
@@ -87,7 +43,6 @@ export default function Departamentos() {
 
       <DepartamentosTable
         id_empresa={id_empresa}
-        filter={debouncedFilter}
         swrKey={key}
         onEdit={(dep, lista) => {
           setEditDep(dep);
@@ -111,7 +66,7 @@ export default function Departamentos() {
         open={openFormModal}
         setOpen={setOpenFormModal}
         editDep={editDep}
-        id_empresa={id_empresa}
+        id_empresa={idEmpresaForm}
         departamentos={departamentos}
         mutateKey={key}
         empresas={dataUser?.empresas_detalle || []}

@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { Input } from "@/components/ui/input";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -9,67 +8,22 @@ import PositionFormDialog from "./PositionFormDialog";
 import PositionDeleteDialog from "./PositionDeleteDialog";
 import PositionsTable from "./PositionsTable";
 import AccesosRapidos from "@/components/AccesosRapidos";
-import { Label } from "@/components/ui/label";
-import { Combobox } from "@/components/Combobox";
 
 export default function Positions() {
-  const [filter, setFilter] = useState("");
-  const [debouncedFilter, setDebouncedFilter] = useState("");
   const [positions, setPositions] = useState([]);
   const [editPosition, setEditPosition] = useState(null);
   const [deletePosition, setDeletePosition] = useState(null);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [openFormModal, setOpenFormModal] = useState(false);
   const { dataUser } = useAuth();
-  const [empresaActiva, setEmpresaActiva] = useState(null);
-  const id_empresa = empresaActiva;
-
-  useEffect(() => {
-    if (dataUser?.empresas?.length > 0 && !empresaActiva) {
-      setEmpresaActiva("all");
-    }
-  }, [dataUser, empresaActiva]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedFilter(filter);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [filter]);
+  const id_empresa = "all";
+  const idEmpresaForm = null;
 
   const key = id_empresa ? `/checador/puestos?id_empresa=${id_empresa}` : null;
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] p-6">
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-[260px_1fr_auto] items-end">
-        <div className="flex flex-col gap-1">
-          <Label>Empresa</Label>
-          <Combobox
-            options={[
-              { value: "all", label: "Todas las empresas" },
-              ...(dataUser?.empresas_detalle?.map((e) => ({
-                value: e.id_empresa,
-                label: e.nombre,
-              })) || []),
-            ]}
-            value={empresaActiva}
-            onChange={(val) =>
-              setEmpresaActiva(val === "all" ? "all" : Number(val))
-            }
-            placeholder="Seleccionar empresa"
-          />
-        </div>
-
-        {/* Buscador */}
-        <div className="flex flex-col gap-1">
-          <Label htmlFor="puesto-search">Puesto</Label>
-          <Input
-            id="puesto-search"
-            placeholder="Buscar puesto..."
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-          />
-        </div>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6 flex justify-end">
         <Button
           className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
           onClick={() => {
@@ -84,7 +38,6 @@ export default function Positions() {
 
       <PositionsTable
         id_empresa={id_empresa}
-        filter={debouncedFilter}
         swrKey={key}
         onEdit={(position, lista) => {
           setEditPosition(position);
@@ -108,7 +61,7 @@ export default function Positions() {
         open={openFormModal}
         setOpen={setOpenFormModal}
         editPosition={editPosition}
-        id_empresa={id_empresa}
+        id_empresa={idEmpresaForm}
         positions={positions}
         mutateKey={key}
         empresas={dataUser?.empresas_detalle || []}
