@@ -23,7 +23,7 @@ import {
 } from "@/lib/pdfCompanyLogo";
 import { calcDiasTotalesYHabiles } from "@/lib/permisosDias";
 import styles from "./permisos-theme.module.css";
-import { CalendarDays, Download, Printer } from "lucide-react";
+import { CalendarDays, Download, Loader2, Printer } from "lucide-react";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
@@ -60,6 +60,7 @@ export default function PermisoViewDialog({
    * - Si no hay imagen o falla, se usa fallback tipográfico (iniciales) en `tryAddCompanyMarkToPdf`.
    */
   const [logoDataUrl, setLogoDataUrl] = useState(null);
+  const [isPreparingPrint, setIsPreparingPrint] = useState(false);
   useEffect(() => {
     let alive = true;
     const run = async () => {
@@ -137,63 +138,149 @@ export default function PermisoViewDialog({
   const totalDias = isVacaciones ? diasHabiles : diasTotales;
 
   /**
-   * Formatea fecha ISO (YYYY-MM-DD) para títulos/impresión (estilo humano).
-   * - Relación: similar a `formatearFechaLarga` del módulo `Mapa de rutas`.
-   */
-  function formatearFechaLarga(fechaISO) {
-    if (!fechaISO) return "-";
-    try {
-      const opciones = { year: "numeric", month: "long", day: "numeric" };
-      return new Date(
-        `${dayjs(fechaISO).format("YYYY-MM-DD")}T00:00:00`,
-      ).toLocaleDateString("es-MX", opciones);
-    } catch {
-      return String(fechaISO);
-    }
-  }
-
-  /**
    * Abre el PDF en un iframe oculto y dispara `print()` (mejor UX: "Imprimir" directo).
    * - Nota: si el navegador bloquea el print o el iframe, hacemos fallback a descarga.
    * - Relación: el PDF se genera con `jsPDF` (mismo enfoque que Mapa de Rutas).
    */
   function imprimirPDF(doc, nombreArchivo) {
-    try {
-      const blob = doc.output("blob");
-      const url = URL.createObjectURL(blob);
+    return new Promise((resolve) => {
+      try {
+        const blob = doc.output("blob");
+        const url = URL.createObjectURL(blob);
 
-      const iframe = document.createElement("iframe");
-      iframe.style.position = "fixed";
-      iframe.style.right = "0";
-      iframe.style.bottom = "0";
-      iframe.style.width = "0";
-      iframe.style.height = "0";
-      iframe.style.border = "0";
-      iframe.src = url;
+        const iframe = document.createElement("iframe");
+        iframe.style.position = "fixed";
+        iframe.style.right = "0";
+        iframe.style.bottom = "0";
+        iframe.style.width = "0";
+        iframe.style.height = "0";
+        iframe.style.border = "0";
+        iframe.src = url;
 
-      iframe.onload = () => {
-        try {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-        } catch {
-          // Si el browser no permite imprimir desde iframe, descargamos.
-          doc.save(nombreArchivo);
-        } finally {
-          // Limpieza para evitar fugas de memoria.
+        let finished = false;
+        let fallbackTimer = null;
+        let mediaPollTimer = null;
+        const MIN_PREPARING_MS = 4000;
+        const preparingStartedAt = Date.now();
+        let parentBlurred = false;
+        let didEnterPrintMode = false;
+        const mediaQuery =
+          typeof window !== "undefined" && window.matchMedia
+            ? window.matchMedia("print")
+            : null;
+
+        const finish = () => {
+          if (finished) return;
+          const elapsed = Date.now() - preparingStartedAt;
+          const remaining = Math.max(0, MIN_PREPARING_MS - elapsed);
           setTimeout(() => {
+            if (finished) return;
+            finished = true;
             try {
-              URL.revokeObjectURL(url);
-              iframe.remove();
+              window.removeEventListener("blur", onParentBlur);
+              window.removeEventListener("focus", onParentFocus);
+              window.removeEventListener("afterprint", onAfterPrint);
+              if (mediaQuery?.removeEventListener) {
+                mediaQuery.removeEventListener("change", onMediaPrintChange);
+              } else if (mediaQuery?.removeListener) {
+                mediaQuery.removeListener(onMediaPrintChange);
+              }
             } catch {}
-          }, 2000);
-        }
-      };
+            if (fallbackTimer) clearTimeout(fallbackTimer);
+            if (mediaPollTimer) clearInterval(mediaPollTimer);
+            resolve();
+            setTimeout(() => {
+              try {
+                URL.revokeObjectURL(url);
+                iframe.remove();
+              } catch {}
+            }, 2000);
+          }, remaining);
+        };
 
-      document.body.appendChild(iframe);
-    } catch (e) {
-      console.error(e);
-      doc.save(nombreArchivo);
-    }
+        const onAfterPrint = () => {
+          finish();
+        };
+
+        const onParentBlur = () => {
+          parentBlurred = true;
+        };
+
+        const onParentFocus = () => {
+          // Cierra el estado cuando el usuario regresa de la ventana de impresión.
+          if (parentBlurred) finish();
+        };
+
+        const onMediaPrintChange = (event) => {
+          const isPrinting = !!event?.matches;
+          if (isPrinting) {
+            didEnterPrintMode = true;
+            return;
+          }
+          if (didEnterPrintMode) finish();
+        };
+
+        iframe.onload = () => {
+          try {
+            window.addEventListener("afterprint", onAfterPrint);
+            window.addEventListener("blur", onParentBlur);
+            window.addEventListener("focus", onParentFocus);
+            if (mediaQuery?.addEventListener) {
+              mediaQuery.addEventListener("change", onMediaPrintChange);
+            } else if (mediaQuery?.addListener) {
+              mediaQuery.addListener(onMediaPrintChange);
+            }
+            if (iframe.contentWindow) {
+              iframe.contentWindow.onafterprint = () => {
+                // Señal principal: se cierra cuando el navegador reporta evento de impresión.
+                finish();
+              };
+            }
+            iframe.contentWindow?.focus();
+            setTimeout(() => {
+              iframe.contentWindow?.print();
+            }, 80);
+
+            // Polling defensivo para navegadores que no emiten eventos de print.
+            mediaPollTimer = setInterval(() => {
+              const hasFocus =
+                typeof document !== "undefined" && typeof document.hasFocus === "function"
+                  ? document.hasFocus()
+                  : true;
+
+              // Si el diálogo de impresión abrió y cerró, normalmente recuperamos foco aquí
+              // aunque el navegador no emita evento `focus`.
+              if (parentBlurred && hasFocus) {
+                finish();
+                return;
+              }
+
+              if (!mediaQuery) return;
+              if (mediaQuery.matches) {
+                didEnterPrintMode = true;
+              } else if (didEnterPrintMode) {
+                finish();
+              }
+            }, 400);
+
+            // Respaldo final para no dejar bloqueado el UI indefinidamente.
+            fallbackTimer = setTimeout(() => {
+              finish();
+            }, 25000);
+          } catch {
+            // Si el browser no permite imprimir desde iframe, descargamos.
+            doc.save(nombreArchivo);
+            finish();
+          }
+        };
+
+        document.body.appendChild(iframe);
+      } catch (e) {
+        console.error(e);
+        doc.save(nombreArchivo);
+        resolve();
+      }
+    });
   }
 
   /**
@@ -208,189 +295,272 @@ export default function PermisoViewDialog({
 
     const pageWidth = 210;
     const pageHeight = 297;
-    const margin = 20;
-    const contentWidth = pageWidth - margin * 2;
-    let y = margin;
+    const marginLeft = 20;
+    const marginRight = 20;
+    const contentWidth = pageWidth - marginLeft - marginRight;
+    const systemLabel = "ADAMIA HR360";
+    let y = marginLeft;
 
-    /**
-     * Quita emojis/pictogramas del texto para evitar caracteres raros en el PDF (ej. "�" o símbolos).
-     * - Relación: el campo `tipo_permiso_nombre` se muestra en UI (con emojis), pero el PDF debe ser formal y legible.
-     */
-    const stripEmojis = (value) => {
-      try {
-        return (
-          String(value || "")
-            // Emojis/pictogramas (Unicode) + variación + joiners
-            .replace(/\p{Extended_Pictographic}|\uFE0F|\u200D/gu, "")
-            .replace(/\s+/g, " ")
-            .trim()
-        );
-      } catch {
-        // Fallback defensivo si el runtime no soporta Unicode property escapes (muy raro en Next moderno).
-        return String(value || "")
-          .replace(/\s+/g, " ")
-          .trim();
+    const safe = (value) =>
+      String(value || "")
+        .replace(/\p{Extended_Pictographic}|\uFE0F|\u200D/gu, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const formatDateLong = (isoDate) => {
+      if (!isoDate) return "—";
+      const d = dayjs(isoDate).tz("America/Mexico_City");
+      return d.isValid() ? d.format("DD [de] MMMM [de] YYYY") : String(isoDate);
+    };
+
+    const formatDateTime = (value) => {
+      if (!value) return "—";
+      const d = dayjs(value).tz("America/Mexico_City");
+      return d.isValid() ? d.format("DD/MM/YYYY HH:mm") : String(value);
+    };
+
+    // Deja espacio para firmas + footer en la última página y hace salto cuando sea necesario.
+    const needSpace = (height) => {
+      if (y + height > pageHeight - 65) {
+        doc.addPage();
+        y = marginLeft;
       }
     };
 
-    const folio = `#${String(item.id).padStart(3, "0")}`;
-    const empleado =
-      item.empleado_nombre ||
-      (item.id_empleado ? `ID ${item.id_empleado}` : "—");
-    const tipo = stripEmojis(item.tipo_permiso_nombre) || "—";
-    const estado = item.estado || "—";
+    const hRule = (yPos, width = contentWidth, lineWidth = 0.3) => {
+      doc.setDrawColor(0);
+      doc.setLineWidth(lineWidth);
+      doc.line(marginLeft, yPos, marginLeft + width, yPos);
+    };
+
+    const sectionTitle = (text) => {
+      needSpace(12);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(0);
+      doc.text(String(text || "").toUpperCase(), marginLeft, y + 5);
+      hRule(y + 7, contentWidth, 0.5);
+      y += 12;
+    };
+
+    const fieldPair = (label, value, x, yPos, width = contentWidth / 2 - 4) => {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      doc.setTextColor(140);
+      doc.text(String(label || "").toUpperCase(), x, yPos);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(0);
+      doc.text(safe(value), x, yPos + 5);
+
+      doc.setDrawColor(200);
+      doc.setLineWidth(0.2);
+      doc.line(x, yPos + 7, x + width, yPos + 7);
+    };
+
+    const folio = `#${String(item.id || "").padStart(3, "0")}`;
+    const empleado = safe(
+      item.empleado_nombre || (item.id_empleado ? `ID ${item.id_empleado}` : "—"),
+    );
+    const noEmpleado = safe(item.no_empleado || item.id_empleado || "—");
+    const departamento = safe(item.departamento || "—");
+    const puesto = safe(item.puesto || "—");
+    const tipo = safe(item.tipo_permiso_nombre || "—");
+    const estado = safe(item.estado || "—");
+    const motivo = safe(item.motivo || "");
+    const notas = safe(item.notas || "");
+    const actualizadoPor = safe(
+      item.actualizado_por_nombre ||
+        (item.actualizado_por ? `ID ${item.actualizado_por}` : "—"),
+    );
+
     const fechaInicioISO = item.fecha_inicio
       ? dayjs(item.fecha_inicio).format("YYYY-MM-DD")
       : "";
     const fechaFinISO = item.fecha_fin
       ? dayjs(item.fecha_fin).format("YYYY-MM-DD")
       : "";
-    const fechaInicioLarga = formatearFechaLarga(fechaInicioISO);
-    const fechaFinLarga = formatearFechaLarga(fechaFinISO || fechaInicioISO);
 
-    const solicitadoLarga = item.marca_tiempo
-      ? formatDateDMYTime(dayjs.tz(item.marca_tiempo, "America/Mexico_City"))
-      : "—";
-    const actualizadoLarga = item.fecha_actualizacion
-      ? formatDateDMYTime(
-          dayjs.tz(item.fecha_actualizacion, "America/Mexico_City"),
-        )
-      : "—";
+    const fechaInicioLarga = formatDateLong(fechaInicioISO);
+    const fechaFinLarga = formatDateLong(fechaFinISO || fechaInicioISO);
+    const solicitadoLarga = formatDateTime(item.marca_tiempo);
+    const actualizadoLarga = formatDateTime(item.fecha_actualizacion);
 
-    const actualizadoPor =
-      item.actualizado_por_nombre ||
-      (item.actualizado_por ? `ID ${item.actualizado_por}` : "—");
-    const motivo = item.motivo ? String(item.motivo) : "";
-    const notas = item.notas ? String(item.notas) : "";
+    const empresaNombre =
+      safe(empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa) ||
+      "ADAMIA Human Resources";
 
-    /**
-     * Evita que se corte contenido cerca del final:
-     * - Reserva una zona para firmas + footer.
-     */
-    const ensureSpace = (neededHeightMm) => {
-      const reservedBottom = 65; // firmas + footer
-      if (y + neededHeightMm > pageHeight - margin - reservedBottom) {
-        doc.addPage();
-        y = margin;
-      }
-    };
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // HEADER (caja superior estilo “documento”)
-    // ─────────────────────────────────────────────────────────────────────────
-    doc.setDrawColor(0, 0, 0);
-    doc.setLineWidth(1);
-    doc.rect(margin, y, contentWidth, 34, "S");
-
-    doc.setTextColor(0, 0, 0);
-
-    // Logo/marca de la empresa en esquina superior izquierda.
-    // - Si hay imagen: se dibuja en el recuadro.
-    // - Si no hay imagen: se dibujan iniciales (estilo tipográfico tipo "Adamia" en Reporte de Horas).
-    const companyName =
-      empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
-    const logoBox = { x: margin + 6, y: y + 6, boxW: 26, boxH: 14 };
-    const hasMark = tryAddCompanyMarkToPdf(
+    const hasLogo = tryAddCompanyMarkToPdf(
       doc,
-      { logoDataUrl, companyName },
-      logoBox,
+      { logoDataUrl, companyName: empresaNombre },
+      { x: marginLeft, y, boxW: 28, boxH: 10 },
     );
-    const textX = hasMark ? logoBox.x + logoBox.boxW + 4 : margin + 6;
 
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.text("PERMISO", textX, y + 10);
+    if (!hasLogo && logoDataUrl) {
+      try {
+        doc.addImage(logoDataUrl, "PNG", marginLeft, y, 28, 10);
+      } catch {
+        // Ignoramos errores de imagen para no bloquear la generación del PDF.
+      }
+    }
 
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.text(`Folio: ${folio}`, textX, y + 17);
-    doc.text(`Estado: ${estado}`, textX, y + 23);
-    doc.text(`Tipo: ${tipo}`, textX, y + 29);
+    doc.setFontSize(7);
+    doc.setTextColor(150);
+    doc.text("HUMAN RESOURCES CLOUD PLATFORM", marginLeft, y + 13);
 
-    // Resumen a la derecha
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.text("TOTAL DÍAS", pageWidth - margin - 6, y + 10, { align: "right" });
-    doc.setFontSize(22);
-    doc.text(String(totalDias || 0), pageWidth - margin - 6, y + 23, {
+    doc.setFontSize(20);
+    doc.setTextColor(0);
+    doc.text("PERMISO", pageWidth - marginRight, y + 7, { align: "right" });
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(100);
+    doc.text(`Folio ${folio}`, pageWidth - marginRight, y + 13, {
       align: "right",
     });
 
-    y += 42;
+    y += 20;
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // DATOS PRINCIPALES (bloque)
-    // ─────────────────────────────────────────────────────────────────────────
-    ensureSpace(38);
-    doc.setLineWidth(0.5);
-    doc.rect(margin, y, contentWidth, 38, "S");
+    hRule(y, contentWidth, 0.8);
+    y += 6;
+
+    // Reservamos una columna fija para la caja de días para evitar que se monte sobre el periodo.
+    const daysBoxWidth = 24;
+    const daysBoxGap = 8;
+    const metaWidth = contentWidth - daysBoxWidth - daysBoxGap;
+    const col = metaWidth / 3;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(140);
+    doc.text("ESTADO", marginLeft, y + 3);
+    doc.text("TIPO", marginLeft + col, y + 3);
+    doc.text("PERIODO", marginLeft + col * 2, y + 3);
 
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.text("DATOS DEL PERMISO", margin + 6, y + 8);
-
-    doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    doc.text(`Empleado: ${empleado}`, margin + 6, y + 16);
-    doc.text(`Fecha inicio: ${fechaInicioLarga}`, margin + 6, y + 23);
-    doc.text(`Fecha fin: ${fechaFinLarga}`, margin + 6, y + 30);
+    doc.setTextColor(0);
+    doc.text(estado, marginLeft, y + 9);
+    doc.text(tipo, marginLeft + col, y + 9);
+    doc.text(`${fechaInicioLarga} — ${fechaFinLarga}`, marginLeft + col * 2, y + 9, {
+      maxWidth: col - 6,
+    });
 
-    // Días (separados para mayor claridad, como en la vista de Permisos)
-    // - Relación: usa el mismo cálculo de `calcDiasTotalesYHabiles` que la tabla.
-    doc.text(`Días totales: ${String(diasTotales || 0)}`, margin + 110, y + 23);
-    doc.text(`Días hábiles: ${String(diasHabiles || 0)}`, margin + 110, y + 30);
-
-    y += 46;
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // DETALLES DE AUDITORÍA (tipo Mapa de rutas: "Generado", etc.)
-    // ─────────────────────────────────────────────────────────────────────────
-    // Altura + posiciones ajustadas para que el texto NO toque los bordes del cuadro.
-    ensureSpace(32);
+    const boxX = marginLeft + metaWidth + daysBoxGap;
+    const boxY = y - 1;
+    doc.setDrawColor(0);
     doc.setLineWidth(0.5);
-    doc.rect(margin, y, contentWidth, 32, "S");
-
+    doc.rect(boxX, boxY, daysBoxWidth, 18, "S");
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.text("AUDITORÍA", margin + 6, y + 8);
-
+    doc.setFontSize(18);
+    doc.text(String(totalDias || 0), boxX + daysBoxWidth / 2, boxY + 10, {
+      align: "center",
+    });
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.text(`Solicitado: ${solicitadoLarga}`, margin + 6, y + 17);
-    doc.text(`Actualizado por: ${actualizadoPor}`, margin + 6, y + 24);
-    doc.text(`Fecha actualización: ${actualizadoLarga}`, margin + 6, y + 30);
+    doc.setFontSize(7);
+    doc.setTextColor(120);
+    doc.text("DIAS", boxX + daysBoxWidth / 2, boxY + 15, { align: "center" });
 
-    y += 40;
+    y += 18;
+    hRule(y, contentWidth, 0.3);
+    y += 8;
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // MOTIVO / OBSERVACIONES
-    // ─────────────────────────────────────────────────────────────────────────
-    const writeMultilineBox = (title, text) => {
-      const safeText = text && String(text).trim() ? String(text).trim() : "—";
-      const lines = doc.splitTextToSize(safeText, contentWidth - 12);
-      const lineHeight = 5;
-      const boxHeight = Math.min(120, 14 + lines.length * lineHeight); // evita cajas gigantes
-      ensureSpace(boxHeight + 6);
+    sectionTitle("Datos del empleado");
+    needSpace(20);
+    fieldPair("Nombre completo", empleado, marginLeft, y);
+    fieldPair("No. Empleado", noEmpleado, marginLeft + contentWidth / 2 + 4, y);
+    y += 16;
+    fieldPair("Departamento", departamento, marginLeft, y);
+    fieldPair("Puesto", puesto, marginLeft + contentWidth / 2 + 4, y);
+    y += 18;
 
-      doc.setLineWidth(0.5);
-      doc.rect(margin, y, contentWidth, boxHeight, "S");
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
-      doc.text(title, margin + 6, y + 8);
+    sectionTitle("Detalle del permiso");
+    needSpace(20);
+    const c3 = contentWidth / 3;
+    fieldPair("Fecha de inicio", fechaInicioLarga, marginLeft, y, c3 - 4);
+    fieldPair("Fecha de fin", fechaFinLarga, marginLeft + c3, y, c3 - 4);
+    fieldPair("Tipo de permiso", tipo, marginLeft + c3 * 2, y, c3 - 4);
+    y += 16;
+    fieldPair("Dias totales", String(diasTotales || 0), marginLeft, y, c3 - 4);
+    fieldPair("Dias habiles", String(diasHabiles || 0), marginLeft + c3, y, c3 - 4);
+    fieldPair("Dias naturales", String(totalDias || 0), marginLeft + c3 * 2, y, c3 - 4);
+    y += 18;
 
+    const drawWrappedSectionText = ({ sectionName, textValue, emptyFallback }) => {
+      sectionTitle(sectionName);
+
+      const textInsetLeft = 2;
+      const textInsetRight = 8; // margen derecho mayor para evitar cualquier desborde visual
+      const lineHeight = 6;
+      const maxTextWidth = contentWidth - textInsetLeft - textInsetRight;
+      const sourceText = String(textValue || emptyFallback)
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n")
+        .replace(/\u00A0/g, " "); // normaliza non-breaking spaces
+
+      // Separamos por párrafos para controlar nosotros el wrapping y evitar doble render.
+      const safeLines = [];
+      const paragraphs = sourceText.split("\n");
+
+      // IMPORTANTE: el wrapping se calcula con la misma fuente/tamaño que se usa al dibujar.
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
-      doc.text(lines, margin + 6, y + 15);
+      doc.setTextColor(textValue ? 0 : 160);
 
-      y += boxHeight + 8;
+      for (const paragraph of paragraphs) {
+        const cleanedParagraph = paragraph.trim();
+        if (!cleanedParagraph) {
+          safeLines.push("");
+          continue;
+        }
+        // Si viene una palabra extremadamente larga, forzamos cortes suaves para no romper márgenes.
+        const breakableParagraph = cleanedParagraph.replace(
+          /(\S{24})(?=\S)/g,
+          "$1 ",
+        );
+        const fragments = doc.splitTextToSize(breakableParagraph, maxTextWidth);
+        safeLines.push(...fragments);
+      }
+
+      for (const line of safeLines) {
+        // Si no cabe una línea más (considerando firma/footer), saltamos de página.
+        needSpace(lineHeight + 2);
+        doc.text(String(line || " "), marginLeft + textInsetLeft, y);
+        y += lineHeight;
+      }
+
+      hRule(y + 1, contentWidth, 0.2);
+      y += 10;
     };
 
-    writeMultilineBox("MOTIVO / OBSERVACIONES", motivo);
-    writeMultilineBox("NOTA INTERNA", notas);
+    drawWrappedSectionText({
+      sectionName: "Motivo / Observaciones",
+      textValue: motivo,
+      emptyFallback: "—",
+    });
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // FIRMAS (al final de cada página) + FOOTER con paginación
-    // ─────────────────────────────────────────────────────────────────────────
+    drawWrappedSectionText({
+      sectionName: "Nota interna",
+      textValue: notas,
+      emptyFallback: "Sin notas adicionales.",
+    });
+
+    sectionTitle("Auditoria");
+    needSpace(20);
+    fieldPair("Solicitado el", solicitadoLarga, marginLeft, y);
+    fieldPair(
+      "Ultima actualizacion",
+      actualizadoLarga,
+      marginLeft + contentWidth / 2 + 4,
+      y,
+    );
+    y += 16;
+    fieldPair("Actualizado por", actualizadoPor, marginLeft, y);
+    fieldPair("Sistema", systemLabel, marginLeft + contentWidth / 2 + 4, y);
+    y += 18;
+
     const totalPages = doc.internal.getNumberOfPages();
     const fechaGenerado = new Date().toLocaleDateString("es-MX", {
       day: "2-digit",
@@ -404,68 +574,69 @@ export default function PermisoViewDialog({
 
     for (let p = 1; p <= totalPages; p++) {
       doc.setPage(p);
+      if (p === totalPages) {
+        const yFirmas = pageHeight - 50;
+        doc.setDrawColor(0);
+        doc.setLineWidth(0.4);
+        doc.line(marginLeft + 5, yFirmas, marginLeft + 75, yFirmas);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(0);
+        doc.text("FIRMA DEL TRABAJADOR", marginLeft + 40, yFirmas + 5, {
+          align: "center",
+        });
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.5);
+        doc.setTextColor(100);
+        doc.text(empleado.slice(0, 40), marginLeft + 40, yFirmas + 10, {
+          align: "center",
+        });
 
-      // Firmas
-      const yFirmas = pageHeight - 55;
-      doc.setDrawColor(0, 0, 0);
-      doc.setLineWidth(0.5);
+        doc.line(
+          pageWidth - marginRight - 75,
+          yFirmas,
+          pageWidth - marginRight - 5,
+          yFirmas,
+        );
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(0);
+        doc.text(
+          "REPRESENTANTE DE LA EMPRESA",
+          pageWidth - marginRight - 40,
+          yFirmas + 5,
+          { align: "center" },
+        );
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.5);
+        doc.setTextColor(100);
+        doc.text(
+          empresaNombre.slice(0, 40),
+          pageWidth - marginRight - 40,
+          yFirmas + 10,
+          {
+            align: "center",
+          },
+        );
+      }
 
-      doc.line(margin + 10, yFirmas, margin + 70, yFirmas);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(9);
-      doc.text("FIRMA DEL TRABAJADOR", margin + 40, yFirmas + 6, {
-        align: "center",
-      });
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
-      doc.text(String(empleado).slice(0, 45), margin + 40, yFirmas + 11, {
-        align: "center",
-      });
-
-      doc.line(
-        pageWidth - margin - 70,
-        yFirmas,
-        pageWidth - margin - 10,
-        yFirmas,
-      );
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(9);
-      doc.text(
-        "REPRESENTANTE DE LA EMPRESA",
-        pageWidth - margin - 40,
-        yFirmas + 6,
-        { align: "center" },
-      );
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
-      // Se conserva el mismo nombre usado en Mapa de Rutas para consistencia visual del sistema.
-      doc.text(
-        "Uniline Innovacion en la Nube",
-        pageWidth - margin - 40,
-        yFirmas + 11,
-        { align: "center" },
-      );
-
-      // Footer
-      doc.setLineWidth(0.3);
-      doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
+      doc.setDrawColor(180);
+      doc.setLineWidth(0.2);
+      doc.line(marginLeft, pageHeight - 14, pageWidth - marginRight, pageHeight - 14);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(7);
+      doc.setTextColor(160);
       doc.text(
-        `Generado el ${fechaGenerado} a las ${horaGenerado} | Sistema Adamia | Página ${p} de ${totalPages}`,
+        `Generado el ${fechaGenerado} a las ${horaGenerado} · ${systemLabel} · Folio ${folio} · Pagina ${p} de ${totalPages}`,
         pageWidth / 2,
-        pageHeight - 10,
+        pageHeight - 9,
         { align: "center" },
       );
     }
 
-    const nombreArchivo = `Permiso_${String(empleado || "Empleado").replace(
-      / /g,
-      "_",
-    )}_${dayjs().format("YYYY-MM-DD")}_${String(item.id || "").padStart(
-      3,
-      "0",
-    )}.pdf`;
+    const nombreArchivo = `Permiso_${empleado.replace(/ /g, "_")}_${dayjs().format(
+      "YYYY-MM-DD",
+    )}_${String(item.id || "").padStart(3, "0")}.pdf`;
     return { doc, nombreArchivo };
   }
 
@@ -609,26 +780,47 @@ export default function PermisoViewDialog({
 
         {/* Acciones PDF */}
         <div className="bg-gray-50 border-t border-gray-100 p-4 flex flex-col sm:flex-row gap-2 sm:justify-end">
+          {isPreparingPrint ? (
+            <div className="text-sm text-blue-700 flex items-center gap-2 sm:mr-auto">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Preparando impresión...
+            </div>
+          ) : (
+            <div className="sm:mr-auto" />
+          )}
           <Button
             variant="outline"
             onClick={() => {
               const { doc, nombreArchivo } = buildPermisoPDF();
               doc.save(nombreArchivo);
             }}
+            disabled={isPreparingPrint}
             className="border-gray-300 text-gray-700 hover:bg-gray-100 gap-2"
           >
             <Download className="h-4 w-4" />
             Descargar PDF
           </Button>
           <Button
-            onClick={() => {
-              const { doc, nombreArchivo } = buildPermisoPDF();
-              imprimirPDF(doc, nombreArchivo);
+            onClick={async () => {
+              setIsPreparingPrint(true);
+              try {
+                // Permite que React pinte el mensaje antes de iniciar la generación pesada del PDF.
+                await new Promise((resolve) => setTimeout(resolve, 0));
+                const { doc, nombreArchivo } = buildPermisoPDF();
+                await imprimirPDF(doc, nombreArchivo);
+              } finally {
+                setIsPreparingPrint(false);
+              }
             }}
+            disabled={isPreparingPrint}
             className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-2"
           >
-            <Printer className="h-4 w-4" />
-            Imprimir permiso
+            {isPreparingPrint ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Printer className="h-4 w-4" />
+            )}
+            {isPreparingPrint ? "Preparando..." : "Imprimir permiso"}
           </Button>
         </div>
       </DialogContent>
