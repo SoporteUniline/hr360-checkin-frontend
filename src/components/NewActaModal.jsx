@@ -289,6 +289,28 @@ const NewActaModal = ({
   }, [empleadoElaboraAuto]);
 
   /**
+   * El autollenado "Elabora" solo aplica cuando:
+   * - estamos en creación
+   * - hay empleado resuelto desde sesión
+   * - y la empresa seleccionada coincide con la del empleado resuelto
+   */
+  const autoElaboraDisponible = useMemo(() => {
+    if (mode !== "create") return false;
+    if (!empleadoElaboraAuto?.id_empleado) return false;
+    if (!empresaSeleccionada) return false;
+    const empresaEmpleadoAuto =
+      empleadoElaboraAuto?.id_empresa || dataUser?.id_empresa || null;
+    if (!empresaEmpleadoAuto) return false;
+    return String(empresaEmpleadoAuto) === String(empresaSeleccionada);
+  }, [
+    mode,
+    empleadoElaboraAuto?.id_empleado,
+    empleadoElaboraAuto?.id_empresa,
+    dataUser?.id_empresa,
+    empresaSeleccionada,
+  ]);
+
+  /**
    * Precarga valores cuando el modal se usa en modo edición.
    * Importante: se hace cuando `open` cambia para no pisar cambios del usuario mientras escribe.
    */
@@ -332,13 +354,31 @@ const NewActaModal = ({
     if (!open) return;
     if (mode !== "create") return;
 
+    // En creación, preseleccionamos empresa desde la sesión para evitar estado vacío
+    // al abrir "Nuevo Tipo de Acta" y al cargar combos dependientes.
+    const empresaActual = form.getValues("empresa");
+    if (!empresaActual) {
+      const empresaSesion =
+        dataUser?.id_empresa ||
+        (Array.isArray(dataUser?.empresas_detalle) &&
+        dataUser.empresas_detalle.length === 1
+          ? dataUser.empresas_detalle[0]?.id_empresa
+          : null);
+      if (empresaSesion) {
+        form.setValue("empresa", String(empresaSesion), {
+          shouldValidate: false,
+          shouldDirty: false,
+        });
+      }
+    }
+
     // Reset de la UI del buscador (sin borrar otros campos si el usuario ya escribió)
     setEmpSearch("");
     setIsEmpSuggestionsOpen(false);
     setHoveredEmpSuggestionIndex(-1);
 
-    // Autollenado desde sesión (id_empleado o por correo) (si aplica)
-    if (empleadoElaboraAuto?.id_empleado) {
+    // Autollenado desde sesión (id_empleado o por correo) (si aplica y empresa coincide)
+    if (autoElaboraDisponible) {
       form.setValue("elabora", String(empleadoElaboraAuto.id_empleado), {
         shouldValidate: true,
         shouldDirty: false,
@@ -349,9 +389,29 @@ const NewActaModal = ({
           shouldDirty: false,
         });
       }
+    } else {
+      // Si no aplica autollenado para la empresa seleccionada, permitimos captura manual.
+      form.setValue("elabora", "", {
+        shouldValidate: false,
+        shouldDirty: false,
+      });
+      form.setValue("cargoElabora", "", {
+        shouldValidate: false,
+        shouldDirty: false,
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, mode, empleadoElaboraAuto?.id_empleado, empleadoElaboraAutoPuesto]);
+  }, [
+    open,
+    mode,
+    dataUser?.id_empresa,
+    dataUser?.empresas_detalle,
+    form,
+    empresaSeleccionada,
+    autoElaboraDisponible,
+    empleadoElaboraAuto?.id_empleado,
+    empleadoElaboraAutoPuesto,
+  ]);
 
   const onSubmit = async (values) => {
     try {
@@ -402,7 +462,8 @@ const NewActaModal = ({
       console.error("Error al crear el acta:", error);
 
       enqueueSnackbar(
-        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+          error?.response?.data?.message ||
           (mode === "edit"
             ? "Hubo un error al actualizar el acta"
             : "Hubo un error al crear el acta"),
@@ -508,6 +569,7 @@ const NewActaModal = ({
                                 field.onChange(value);
                                 form.setValue("empleado", "");
                                 form.setValue("elabora", "");
+                                form.setValue("cargoElabora", "");
                                 form.setValue("tipoActa", "");
                                 setEmpSearch("");
                               }}
@@ -923,8 +985,7 @@ const NewActaModal = ({
                                 disabled
                                 className="bg-muted"
                               />
-                            ) : mode === "create" &&
-                              empleadoElaboraAuto?.id_empleado ? (
+                            ) : mode === "create" && autoElaboraDisponible ? (
                               <div className="space-y-2">
                                 <Input
                                   value={empleadoElaboraAutoNombre || "—"}
@@ -980,11 +1041,11 @@ const NewActaModal = ({
                             // Si elabora viene de sesión, este campo se autollenará y será solo lectura.
                             disabled={
                               mode === "create" &&
-                              Boolean(empleadoElaboraAuto?.id_empleado)
+                              Boolean(autoElaboraDisponible)
                             }
                             className={
                               mode === "create" &&
-                              Boolean(empleadoElaboraAuto?.id_empleado)
+                              Boolean(autoElaboraDisponible)
                                 ? "bg-muted"
                                 : ""
                             }

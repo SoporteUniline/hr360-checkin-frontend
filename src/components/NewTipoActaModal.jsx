@@ -11,6 +11,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Form,
   FormField,
   FormItem,
@@ -42,7 +49,7 @@ import axios from "@/lib/axios";
 import { useSnackbar } from "notistack";
 import { FormLabelWithAsterisk } from "./FormLabelWithAsterisk";
 import useTiposActa from "@/hooks/useTiposActa";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { twMerge } from "tailwind-merge";
 import { useAuth } from "@/context/AuthContext";
 import { Combobox } from "./Combobox";
@@ -119,6 +126,21 @@ const NewTipoActaModal = ({
     form.reset();
     onClose(false);
   };
+
+  /**
+   * Sincroniza la empresa inicial desde el modal padre (Nueva Acta).
+   * - Evita que el listado "Tipos existentes" aparezca vacío al abrir,
+   *   cuando ya existe una empresa seleccionada en el formulario principal.
+   */
+  useEffect(() => {
+    if (!open) return;
+    if (editingTipo) return;
+    if (!idEmpresa) return;
+    form.setValue("empresa", String(idEmpresa), {
+      shouldValidate: false,
+      shouldDirty: false,
+    });
+  }, [open, editingTipo, idEmpresa, form]);
 
   const onSubmit = async (values) => {
     try {
@@ -375,20 +397,28 @@ const NewTipoActaModal = ({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="nombre_tipo"
+                    name="clasificacion"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabelWithAsterisk
                           required
                           className="text-gray-600"
                         >
-                          Nombre del Tipo
+                          Clasificación
                         </FormLabelWithAsterisk>
                         <FormControl>
-                          <Input
-                            placeholder="Ej: Falta injustificada"
-                            {...field}
-                          />
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecciona clasificación" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="falta">Falta</SelectItem>
+                              <SelectItem value="sancion">Sanción</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -397,17 +427,30 @@ const NewTipoActaModal = ({
 
                   <FormField
                     control={form.control}
-                    name="descripcion"
+                    name="gravedad"
                     render={({ field }) => (
                       <FormItem>
-                        <Label className="text-gray-600">Descripción</Label>
+                        <FormLabelWithAsterisk
+                          required
+                          className="text-gray-600"
+                        >
+                          Gravedad
+                        </FormLabelWithAsterisk>
                         <FormControl>
-                          <Textarea
-                            placeholder="Describe brevemente este tipo de acta..."
-                            rows={3}
-                            {...field}
-                          />
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecciona gravedad" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="leve">Leve</SelectItem>
+                              <SelectItem value="grave">Grave</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -499,10 +542,12 @@ const NewTipoActaModal = ({
                 <TableBody>
                   {tiposOrdenados.length === 0 ? (
                     <TableRow>
-                      <TableHead>Nombre</TableHead>
-                      <TableHead>Clasificación</TableHead>
-                      <TableHead>Gravedad</TableHead>
-                      <TableHead className="text-right">Acciones</TableHead>
+                      <TableCell
+                        colSpan={4}
+                        className="text-center text-gray-500 py-8"
+                      >
+                        No hay tipos de acta para esta empresa.
+                      </TableCell>
                     </TableRow>
                   ) : (
                     tiposOrdenados.map((tipo) => (

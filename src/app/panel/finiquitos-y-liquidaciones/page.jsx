@@ -37,6 +37,8 @@ import {
   AlertTriangle,
   Pencil,
   Save,
+  Loader2,
+  Printer,
 } from "lucide-react";
 import FiniquitoViewDialog from "./FiniquitoViewDialog";
 import dayjs from "dayjs";
@@ -47,15 +49,6 @@ import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { fetchImageAsDataUrl } from "@/lib/pdfCompanyLogo";
 import HeaderMultiFilter from "../registro-asistencia/HeaderMultiFilter";
 import ActiveFilterChips from "../registro-asistencia/ActiveFilterChips";
-import {
-  createPdfContext,
-  drawHeaderBox,
-  drawKeyValueBox,
-  drawMultilineBox,
-  drawSignaturesAndFooter,
-  drawRightValueRowsBox,
-  fmtMoneyMXN,
-} from "@/lib/pdfUnifiedLayout";
 import { Combobox } from "@/components/Combobox";
 
 // Página de Panel para "Finiquitos y liquidaciones"
@@ -303,6 +296,8 @@ export default function PageFiniquitosLiquidaciones() {
   const [empleadoInfo, setEmpleadoInfo] = useState(null);
   const [resultado, setResultado] = useState(null);
   const [guardable, setGuardable] = useState(false);
+  const [editingFiniquitoId, setEditingFiniquitoId] = useState(null);
+  const [isPreparingPrintCalc, setIsPreparingPrintCalc] = useState(false);
   const [deleteRow, setDeleteRow] = useState(null);
   const [viewRow, setViewRow] = useState(null);
 
@@ -338,6 +333,7 @@ export default function PageFiniquitosLiquidaciones() {
     setPanelConfigVisible(false);
     setResultado(null);
     setGuardable(false);
+    setEditingFiniquitoId(null);
     setEmpSearch("");
     setOpenEmpSug(false);
   };
@@ -401,6 +397,7 @@ export default function PageFiniquitosLiquidaciones() {
     setEmpSearch(emp.nombre_completo || emp.nombre || "");
     setResultado(null);
     setGuardable(false);
+    setEditingFiniquitoId(null);
     await cargarEmpleadoEnFormulario({
       id_empleado: emp.id_empleado || emp.id,
       nombre_completo: emp.nombre_completo || emp.nombre || "",
@@ -466,145 +463,64 @@ export default function PageFiniquitosLiquidaciones() {
     if (!resultado) return;
     const payload = {
       ...resultado,
+      id_empleado: parseInt(idEmpleado || resultado.id_empleado || 0),
+      id_empresa: parseInt(idEmpresaCalculo || resultado.id_empresa || 0),
+      fecha_baja: fechaBaja,
+      tipo_terminacion: tipoTerminacion,
+      es_liquidacion: tipoCalculo === "liquidacion",
+      salario_diario: parseFloat(salarioDiario || resultado.salario_diario || 0),
+      dias_salario_pendiente: parseFloat(
+        diasSalarioPendiente || resultado.dias_salario_pendiente || 0,
+      ),
+      dias_no_trabajados: parseFloat(
+        diasNoTrabajados || resultado.dias_no_trabajados || 0,
+      ),
+      dias_vacaciones_años_anteriores: parseFloat(
+        diasVacAnteriores || resultado.dias_vacaciones_años_anteriores || 0,
+      ),
+      dias_vacaciones_ley_año_actual: parseFloat(
+        diasVacLeyActual || resultado.dias_vacaciones_ley_año_actual || 12,
+      ),
+      dias_vacaciones_año_actual_ya_gozadas: parseFloat(
+        diasVacYaGozadas || resultado.dias_vacaciones_año_actual_ya_gozadas || 0,
+      ),
+      prima_vacacional_porcentaje: parseFloat(
+        primaVacacional || resultado.prima_vacacional_porcentaje || 25,
+      ),
+      dias_aguinaldo: parseFloat(diasAguinaldo || resultado.dias_aguinaldo || 15),
+      dias_salarios_vencidos: parseFloat(
+        diasSalariosVencidos || resultado.dias_salarios_vencidos || 0,
+      ),
       motivo_baja: motivoBaja,
       calculado_por: dataUser?.correo || dataUser?.email || "",
     };
     setLoading(true);
     try {
-      const res = await finiquitosApi.guardar(payload);
-      // Actualizar estado a "Pagado" inmediatamente después de crear
-      try {
-        const nuevoId = res?.id_finiquito || res?.id || null;
-        if (nuevoId) {
-          await finiquitosApi.actualizarEstado(nuevoId, "Pagado");
-        }
-      } catch (_) {}
+      if (editingFiniquitoId) {
+        await finiquitosApi.actualizar(editingFiniquitoId, payload);
+      } else {
+        const res = await finiquitosApi.guardar(payload);
+        // Actualizar estado a "Pagado" inmediatamente después de crear
+        try {
+          const nuevoId = res?.id_finiquito || res?.id || null;
+          if (nuevoId) {
+            await finiquitosApi.actualizarEstado(nuevoId, "Pagado");
+          }
+        } catch (_) {}
+        setAlertMsg(
+          "✅ Guardado correctamente y marcado como Pagado. Puedes ver el registro en la pestaña de 'Finiquitos Guardados'.",
+        );
+      }
       setGuardable(false);
       await mutate();
-      setAlertMsg(
-        "✅ Guardado correctamente y marcado como Pagado. Puedes ver el registro en la pestaña de 'Finiquitos Guardados'.",
-      );
+      if (editingFiniquitoId) {
+        setAlertMsg("✅ Cambios guardados correctamente.");
+      }
       setTab("tabla");
       resetFormulario();
     } finally {
       setLoading(false);
     }
-  };
-
-  /**
-   * PDF unificado (formato nuevo) para Finiquito/Liquidación (Calculadora).
-   * - Relación:
-   *   - Botón "📄 Generar PDF" en el formulario de cálculo.
-   *   - Mantiene el PDF anterior como referencia (no se elimina).
-   */
-  const generarPDFFormatoNuevo = () => {
-    if (!idEmpresaCalculo) {
-      setAlertMsg("Selecciona una empresa para el cálculo");
-      return;
-    }
-
-    if (!resultado) return;
-
-    const doc = new jsPDF("p", "mm", "a4");
-    const ctx = createPdfContext({ doc });
-    const companyName =
-      empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
-    const tipoDocumento = resultado.es_liquidacion
-      ? "Liquidación"
-      : "Finiquito";
-    const total = fmtMoneyMXN(resultado.total_pagar);
-
-    drawHeaderBox(ctx, {
-      title: tipoDocumento,
-      linesLeft: [
-        `Empleado: ${resultado.nombre_completo || "—"}`,
-        `Fecha baja: ${
-          resultado.fecha_baja
-            ? dayjs(resultado.fecha_baja).format("DD/MM/YYYY")
-            : "—"
-        }`,
-        `Tipo terminación: ${resultado.tipo_terminacion || "—"}`,
-      ],
-      kpiLabel: "Total a pagar",
-      kpiValue: String(total).replace(" MXN", ""),
-      companyName,
-      logoDataUrl,
-    });
-
-    drawKeyValueBox(ctx, {
-      title: "Datos del empleado",
-      rows: [
-        ["Puesto", resultado.puesto || "—"],
-        ["Departamento", resultado.departamento || "—"],
-        [
-          "Fecha ingreso",
-          resultado.fecha_ingreso
-            ? dayjs(resultado.fecha_ingreso).format("DD/MM/YYYY")
-            : "—",
-        ],
-        ["Años trabajados", `${resultado.años_trabajados || 0}`],
-        [
-          "Salario diario",
-          `$${Number(resultado.salario_diario || 0).toLocaleString("es-MX", {
-            minimumFractionDigits: 2,
-          })}`,
-        ],
-      ],
-    });
-
-    // Conceptos: valor alineado a la derecha para evitar encimados.
-    drawRightValueRowsBox(ctx, {
-      title: "Conceptos de finiquito",
-      rows: [
-        ["Salario pendiente", fmtMoneyMXN(resultado.monto_salario_pendiente)],
-        [
-          "Aguinaldo proporcional",
-          fmtMoneyMXN(resultado.monto_aguinaldo_proporcional),
-        ],
-        [
-          "Vacaciones no gozadas",
-          fmtMoneyMXN(resultado.monto_vacaciones_no_gozadas),
-        ],
-        ["Prima vacacional", fmtMoneyMXN(resultado.monto_prima_vacacional)],
-        ["Subtotal finiquito", fmtMoneyMXN(resultado.subtotal_finiquito)],
-      ],
-    });
-
-    if (resultado.es_liquidacion) {
-      drawRightValueRowsBox(ctx, {
-        title: "Conceptos de liquidación",
-        rows: [
-          ["Prima antigüedad", fmtMoneyMXN(resultado.monto_prima_antiguedad)],
-          [
-            "Indemnización constitucional",
-            fmtMoneyMXN(resultado.monto_indemnizacion_constitucional),
-          ],
-          ["Salarios vencidos", fmtMoneyMXN(resultado.monto_salarios_vencidos)],
-          ["Subtotal liquidación", fmtMoneyMXN(resultado.subtotal_liquidacion)],
-        ],
-      });
-    }
-
-    drawMultilineBox(ctx, {
-      title: "Motivo de baja",
-      text: motivoBaja || resultado.motivo_baja || "—",
-    });
-
-    drawSignaturesAndFooter(doc, {
-      empleadoName: resultado.nombre_completo || "",
-      empresaLabel: companyName || "Uniline Innovacion en la Nube",
-      footerLeft: "Sistema Adamia",
-      // En finiquitos: firmas solo en la última página (evita duplicarlas si el PDF es de 2+ hojas)
-      signaturesOn: "last",
-    });
-
-    const nombreArchivo = `${
-      resultado.es_liquidacion ? "LIQUIDACION" : "FINIQUITO"
-    }_${String(resultado.nombre_completo || "Empleado").replace(
-      /\s+/g,
-      "_",
-    )}.pdf`;
-    doc.save(nombreArchivo);
   };
 
   const editarFiniquito = async (row) => {
@@ -644,14 +560,459 @@ export default function PageFiniquitosLiquidaciones() {
         id_empresa: det.id_empresa,
       });
       setEmpSearch(det.nombre_completo || "");
-      setResultado(null);
-      setGuardable(false);
+      // Mantener resultado y habilitar guardado inmediato en edición.
+      setResultado(det);
+      setGuardable(true);
+      setEditingFiniquitoId(det.id_finiquito || row.id || null);
     } catch (_) {}
   };
 
   const eliminarFiniquito = (row) => {
     setDeleteRow(row);
   };
+
+  /**
+   * PDF unificado (formato nuevo) para Finiquito/Liquidación (Calculadora).
+   * - Relación:
+   *   - Botón "📄 Generar PDF" en el formulario de cálculo.
+   *   - Mantiene el PDF anterior como referencia (no se elimina).
+   */
+  const buildPdfFormatoNuevo = () => {
+    if (!idEmpresaCalculo) {
+      setAlertMsg("Selecciona una empresa para el cálculo");
+      return null;
+    }
+
+    if (!resultado) return null;
+
+    const doc = new jsPDF("p", "mm", "a4");
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const marginLeft = 20;
+    const marginRight = 20;
+    const contentWidth = pageWidth - marginLeft - marginRight;
+    const systemLabel = "ADAMIA HR360";
+    let y = marginLeft;
+
+    const safe = (value) =>
+      String(value || "")
+        .replace(/\p{Extended_Pictographic}|\uFE0F|\u200D/gu, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    const money = (value) =>
+      `$${Number(value || 0).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const needSpace = (height) => {
+      if (y + height > pageHeight - 65) {
+        doc.addPage();
+        y = marginLeft;
+      }
+    };
+    const hRule = (yPos, width = contentWidth, lineWidth = 0.3) => {
+      doc.setDrawColor(0);
+      doc.setLineWidth(lineWidth);
+      doc.line(marginLeft, yPos, marginLeft + width, yPos);
+    };
+    const sectionTitle = (text) => {
+      needSpace(12);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(0);
+      doc.text(String(text || "").toUpperCase(), marginLeft, y + 5);
+      hRule(y + 7, contentWidth, 0.5);
+      y += 12;
+    };
+    const fieldPair = (label, value, x, yPos, width = contentWidth / 2 - 4) => {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      doc.setTextColor(140);
+      doc.text(String(label || "").toUpperCase(), x, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(0);
+      doc.text(safe(value), x, yPos + 5);
+      doc.setDrawColor(200);
+      doc.setLineWidth(0.2);
+      doc.line(x, yPos + 7, x + width, yPos + 7);
+    };
+    const drawWrappedSectionText = ({ sectionName, textValue, emptyFallback }) => {
+      sectionTitle(sectionName);
+      const textInsetLeft = 2;
+      const textInsetRight = 8;
+      const lineHeight = 6;
+      const maxTextWidth = contentWidth - textInsetLeft - textInsetRight;
+      const sourceText = String(textValue || emptyFallback)
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n")
+        .replace(/\u00A0/g, " ");
+      const safeLines = [];
+      const paragraphs = sourceText.split("\n");
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(textValue ? 0 : 160);
+      for (const paragraph of paragraphs) {
+        const cleanedParagraph = paragraph.trim();
+        if (!cleanedParagraph) {
+          safeLines.push("");
+          continue;
+        }
+        const breakableParagraph = cleanedParagraph.replace(
+          /(\S{24})(?=\S)/g,
+          "$1 ",
+        );
+        safeLines.push(...doc.splitTextToSize(breakableParagraph, maxTextWidth));
+      }
+      for (const line of safeLines) {
+        needSpace(lineHeight + 2);
+        doc.text(String(line || " "), marginLeft + textInsetLeft, y);
+        y += lineHeight;
+      }
+      hRule(y + 1, contentWidth, 0.2);
+      y += 10;
+    };
+    const drawAmountRows = (title, rows) => {
+      sectionTitle(title);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      rows.forEach(([label, amount]) => {
+        needSpace(8);
+        doc.setTextColor(70);
+        doc.text(safe(label), marginLeft, y);
+        doc.setTextColor(0);
+        doc.setFont("helvetica", "bold");
+        doc.text(safe(amount), pageWidth - marginRight, y, { align: "right" });
+        doc.setFont("helvetica", "normal");
+        doc.setDrawColor(220);
+        doc.setLineWidth(0.2);
+        doc.line(marginLeft, y + 2, pageWidth - marginRight, y + 2);
+        y += 7;
+      });
+      y += 4;
+    };
+
+    const companyName =
+      safe(empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa) ||
+      "ADAMIA Human Resources";
+    const tipoDocumento = resultado.es_liquidacion ? "LIQUIDACION" : "FINIQUITO";
+    const folio = String(resultado.id_finiquito || resultado.id || "").padStart(3, "0");
+    const fechaBaja = resultado.fecha_baja
+      ? dayjs(resultado.fecha_baja).format("DD/MM/YYYY")
+      : "—";
+    const empleadoName = safe(resultado.nombre_completo || "—");
+    const totalPagar = money(resultado.total_pagar);
+
+    if (logoDataUrl) {
+      try {
+        doc.addImage(logoDataUrl, "PNG", marginLeft, y, 28, 10);
+      } catch {}
+    }
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(150);
+    doc.text("HUMAN RESOURCES CLOUD PLATFORM", marginLeft, y + 13);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.setTextColor(0);
+    doc.text(tipoDocumento, pageWidth - marginRight, y + 7, { align: "right" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(100);
+    doc.text(`Folio #${folio}`, pageWidth - marginRight, y + 13, { align: "right" });
+
+    y += 20;
+    hRule(y, contentWidth, 0.8);
+    y += 6;
+
+    const boxWidth = 24;
+    const boxGap = 8;
+    const metaWidth = contentWidth - boxWidth - boxGap;
+    const col = metaWidth / 3;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(140);
+    doc.text("TIPO", marginLeft, y + 3);
+    doc.text("EMPLEADO", marginLeft + col, y + 3);
+    doc.text("FECHA BAJA", marginLeft + col * 2, y + 3);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(0);
+    doc.text(tipoDocumento, marginLeft, y + 9);
+    doc.text(empleadoName, marginLeft + col, y + 9, { maxWidth: col - 6 });
+    doc.text(fechaBaja, marginLeft + col * 2, y + 9, { maxWidth: col - 6 });
+
+    const boxX = marginLeft + metaWidth + boxGap;
+    const boxY = y - 1;
+    doc.setDrawColor(0);
+    doc.setLineWidth(0.5);
+    doc.rect(boxX, boxY, boxWidth, 18, "S");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text(totalPagar.replace("$", ""), boxX + boxWidth / 2, boxY + 9, {
+      align: "center",
+      maxWidth: boxWidth - 2,
+    });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(120);
+    doc.text("TOTAL", boxX + boxWidth / 2, boxY + 15, { align: "center" });
+
+    y += 18;
+    hRule(y, contentWidth, 0.3);
+    y += 8;
+
+    sectionTitle("Datos del empleado");
+    needSpace(20);
+    fieldPair("Nombre completo", empleadoName, marginLeft, y);
+    fieldPair("Puesto", resultado.puesto || "—", marginLeft + contentWidth / 2 + 4, y);
+    y += 16;
+    fieldPair("Departamento", resultado.departamento || "—", marginLeft, y);
+    fieldPair(
+      "Fecha ingreso",
+      resultado.fecha_ingreso ? dayjs(resultado.fecha_ingreso).format("DD/MM/YYYY") : "—",
+      marginLeft + contentWidth / 2 + 4,
+      y,
+    );
+    y += 16;
+    fieldPair("Anios trabajados", `${resultado.años_trabajados || 0}`, marginLeft, y);
+    fieldPair(
+      "Salario diario",
+      money(resultado.salario_diario),
+      marginLeft + contentWidth / 2 + 4,
+      y,
+    );
+    y += 18;
+
+    drawAmountRows("Conceptos de finiquito", [
+      ["Salario pendiente", money(resultado.monto_salario_pendiente)],
+      ["Aguinaldo proporcional", money(resultado.monto_aguinaldo_proporcional)],
+      ["Vacaciones no gozadas", money(resultado.monto_vacaciones_no_gozadas)],
+      ["Prima vacacional", money(resultado.monto_prima_vacacional)],
+      ["Subtotal finiquito", money(resultado.subtotal_finiquito)],
+    ]);
+
+    if (resultado.es_liquidacion) {
+      drawAmountRows("Conceptos de liquidacion", [
+        ["Prima antiguedad", money(resultado.monto_prima_antiguedad)],
+        [
+          "Indemnizacion constitucional",
+          money(resultado.monto_indemnizacion_constitucional),
+        ],
+        ["Salarios vencidos", money(resultado.monto_salarios_vencidos)],
+        ["Subtotal liquidacion", money(resultado.subtotal_liquidacion)],
+      ]);
+    }
+
+    drawWrappedSectionText({
+      sectionName: "Motivo de baja",
+      textValue: motivoBaja || resultado.motivo_baja,
+      emptyFallback: "—",
+    });
+
+    const totalPages = doc.internal.getNumberOfPages();
+    const fechaGenerado = new Date().toLocaleDateString("es-MX", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+    const horaGenerado = new Date().toLocaleTimeString("es-MX", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    for (let p = 1; p <= totalPages; p++) {
+      doc.setPage(p);
+      if (p === totalPages) {
+        const yFirmas = pageHeight - 50;
+        doc.setDrawColor(0);
+        doc.setLineWidth(0.4);
+        doc.line(marginLeft + 5, yFirmas, marginLeft + 75, yFirmas);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(0);
+        doc.text("FIRMA DEL TRABAJADOR", marginLeft + 40, yFirmas + 5, {
+          align: "center",
+        });
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.5);
+        doc.setTextColor(100);
+        doc.text(empleadoName.slice(0, 40), marginLeft + 40, yFirmas + 10, {
+          align: "center",
+        });
+
+        doc.line(
+          pageWidth - marginRight - 75,
+          yFirmas,
+          pageWidth - marginRight - 5,
+          yFirmas,
+        );
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(0);
+        doc.text(
+          "REPRESENTANTE DE LA EMPRESA",
+          pageWidth - marginRight - 40,
+          yFirmas + 5,
+          { align: "center" },
+        );
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.5);
+        doc.setTextColor(100);
+        doc.text(companyName.slice(0, 40), pageWidth - marginRight - 40, yFirmas + 10, {
+          align: "center",
+        });
+      }
+      doc.setDrawColor(180);
+      doc.setLineWidth(0.2);
+      doc.line(marginLeft, pageHeight - 14, pageWidth - marginRight, pageHeight - 14);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      doc.setTextColor(160);
+      doc.text(
+        `Generado el ${fechaGenerado} a las ${horaGenerado} · ${systemLabel} · Folio #${folio} · Página ${p} de ${totalPages}`,
+        pageWidth / 2,
+        pageHeight - 9,
+        { align: "center" },
+      );
+    }
+
+    const nombreArchivo = `${
+      resultado.es_liquidacion ? "LIQUIDACION" : "FINIQUITO"
+    }_${String(resultado.nombre_completo || "Empleado").replace(
+      /\s+/g,
+      "_",
+    )}.pdf`;
+    return { doc, nombreArchivo };
+  };
+
+  const generarPDFFormatoNuevo = () => {
+    const built = buildPdfFormatoNuevo();
+    if (!built) return;
+    built.doc.save(built.nombreArchivo);
+  };
+
+  const imprimirPDF = (doc, nombreArchivo) =>
+    new Promise((resolve) => {
+      try {
+        const blob = doc.output("blob");
+        const url = URL.createObjectURL(blob);
+        const iframe = document.createElement("iframe");
+        iframe.style.position = "fixed";
+        iframe.style.right = "0";
+        iframe.style.bottom = "0";
+        iframe.style.width = "0";
+        iframe.style.height = "0";
+        iframe.style.border = "0";
+        iframe.src = url;
+
+        let finished = false;
+        let fallbackTimer = null;
+        let mediaPollTimer = null;
+        const MIN_PREPARING_MS = 4000;
+        const preparingStartedAt = Date.now();
+        let parentBlurred = false;
+        let didEnterPrintMode = false;
+        const mediaQuery =
+          typeof window !== "undefined" && window.matchMedia
+            ? window.matchMedia("print")
+            : null;
+
+        const finish = () => {
+          if (finished) return;
+          const elapsed = Date.now() - preparingStartedAt;
+          const remaining = Math.max(0, MIN_PREPARING_MS - elapsed);
+          setTimeout(() => {
+            if (finished) return;
+            finished = true;
+            try {
+              window.removeEventListener("blur", onParentBlur);
+              window.removeEventListener("focus", onParentFocus);
+              window.removeEventListener("afterprint", onAfterPrint);
+              if (mediaQuery?.removeEventListener) {
+                mediaQuery.removeEventListener("change", onMediaPrintChange);
+              } else if (mediaQuery?.removeListener) {
+                mediaQuery.removeListener(onMediaPrintChange);
+              }
+            } catch {}
+            if (fallbackTimer) clearTimeout(fallbackTimer);
+            if (mediaPollTimer) clearInterval(mediaPollTimer);
+            resolve();
+            setTimeout(() => {
+              try {
+                URL.revokeObjectURL(url);
+                iframe.remove();
+              } catch {}
+            }, 2000);
+          }, remaining);
+        };
+
+        const onAfterPrint = () => finish();
+        const onParentBlur = () => {
+          parentBlurred = true;
+        };
+        const onParentFocus = () => {
+          if (parentBlurred) finish();
+        };
+        const onMediaPrintChange = (event) => {
+          const isPrinting = !!event?.matches;
+          if (isPrinting) {
+            didEnterPrintMode = true;
+            return;
+          }
+          if (didEnterPrintMode) finish();
+        };
+
+        iframe.onload = () => {
+          try {
+            window.addEventListener("afterprint", onAfterPrint);
+            window.addEventListener("blur", onParentBlur);
+            window.addEventListener("focus", onParentFocus);
+            if (mediaQuery?.addEventListener) {
+              mediaQuery.addEventListener("change", onMediaPrintChange);
+            } else if (mediaQuery?.addListener) {
+              mediaQuery.addListener(onMediaPrintChange);
+            }
+            if (iframe.contentWindow) {
+              iframe.contentWindow.onafterprint = () => finish();
+            }
+            iframe.contentWindow?.focus();
+            setTimeout(() => {
+              iframe.contentWindow?.print();
+            }, 80);
+
+            mediaPollTimer = setInterval(() => {
+              const hasFocus =
+                typeof document !== "undefined" &&
+                typeof document.hasFocus === "function"
+                  ? document.hasFocus()
+                  : true;
+              if (parentBlurred && hasFocus) {
+                finish();
+                return;
+              }
+              if (!mediaQuery) return;
+              if (mediaQuery.matches) {
+                didEnterPrintMode = true;
+              } else if (didEnterPrintMode) {
+                finish();
+              }
+            }, 400);
+
+            fallbackTimer = setTimeout(() => {
+              finish();
+            }, 25000);
+          } catch {
+            doc.save(nombreArchivo);
+            finish();
+          }
+        };
+
+        document.body.appendChild(iframe);
+      } catch (e) {
+        console.error(e);
+        doc.save(nombreArchivo);
+        resolve();
+      }
+    });
+
 
   const confirmDelete = async () => {
     if (!deleteRow) return;
@@ -1367,18 +1728,42 @@ export default function PageFiniquitosLiquidaciones() {
                       </Button>
                       <Button
                         onClick={generarPDFFormatoNuevo}
-                        disabled={!guardable}
+                        disabled={!guardable || isPreparingPrintCalc}
                         variant="outline"
                         className="border-gray-300 disabled:opacity-50"
                       >
                         <Download className="h-4 w-4 mr-2" /> Descargar PDF
                       </Button>
                       <Button
+                        onClick={async () => {
+                          setIsPreparingPrintCalc(true);
+                          try {
+                            await new Promise((resolve) => setTimeout(resolve, 0));
+                            const built = buildPdfFormatoNuevo();
+                            if (!built) return;
+                            await imprimirPDF(built.doc, built.nombreArchivo);
+                          } finally {
+                            setIsPreparingPrintCalc(false);
+                          }
+                        }}
+                        disabled={!guardable || isPreparingPrintCalc}
+                        variant="outline"
+                        className="border-gray-300 disabled:opacity-50"
+                      >
+                        {isPreparingPrintCalc ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Printer className="h-4 w-4 mr-2" />
+                        )}
+                        {isPreparingPrintCalc ? "Preparando..." : "Imprimir PDF"}
+                      </Button>
+                      <Button
                         onClick={guardar}
-                        disabled={!guardable}
+                        disabled={!guardable || isPreparingPrintCalc}
                         className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm disabled:opacity-50"
                       >
-                        <Save className="h-4 w-4 mr-2" /> Guardar
+                        <Save className="h-4 w-4 mr-2" />{" "}
+                        {editingFiniquitoId ? "Guardar cambios" : "Guardar"}
                       </Button>
                     </div>
                   </div>

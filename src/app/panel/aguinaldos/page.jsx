@@ -57,16 +57,6 @@ import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { fetchImageAsDataUrl } from "@/lib/pdfCompanyLogo";
 import HeaderMultiFilter from "../registro-asistencia/HeaderMultiFilter";
 import ActiveFilterChips from "../registro-asistencia/ActiveFilterChips";
-import {
-  createPdfContext,
-  drawHeaderBox,
-  drawKeyValueBox,
-  drawMultilineBox,
-  drawSignaturesAndFooter,
-  drawRightValueRowsBox,
-  ensureSpace,
-  fmtMoneyMXN,
-} from "@/lib/pdfUnifiedLayout";
 import { Combobox } from "@/components/Combobox";
 
 export default function PageAguinaldos() {
@@ -880,75 +870,293 @@ export default function PageAguinaldos() {
     if (!emp || !resultadoCalculo) return;
 
     const doc = new jsPDF("p", "mm", "a4");
-    const ctx = createPdfContext({ doc });
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const marginLeft = 20;
+    const marginRight = 20;
+    const contentWidth = pageWidth - marginLeft - marginRight;
+    const systemLabel = "ADAMIA HR360";
+    let y = marginLeft;
+
+    const safe = (value) =>
+      String(value || "")
+        .replace(/\p{Extended_Pictographic}|\uFE0F|\u200D/gu, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    const money = (value) =>
+      `$${Number(value || 0).toLocaleString("es-MX", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
+    const needSpace = (height) => {
+      if (y + height > pageHeight - 65) {
+        doc.addPage();
+        y = marginLeft;
+      }
+    };
+    const hRule = (yPos, width = contentWidth, lineWidth = 0.3) => {
+      doc.setDrawColor(0);
+      doc.setLineWidth(lineWidth);
+      doc.line(marginLeft, yPos, marginLeft + width, yPos);
+    };
+    const sectionTitle = (text) => {
+      needSpace(12);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(0);
+      doc.text(String(text || "").toUpperCase(), marginLeft, y + 5);
+      hRule(y + 7, contentWidth, 0.5);
+      y += 12;
+    };
+    const fieldPair = (label, value, x, yPos, width = contentWidth / 2 - 4) => {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      doc.setTextColor(140);
+      doc.text(String(label || "").toUpperCase(), x, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(0);
+      doc.text(safe(value), x, yPos + 5);
+      doc.setDrawColor(200);
+      doc.setLineWidth(0.2);
+      doc.line(x, yPos + 7, x + width, yPos + 7);
+    };
+    const drawWrappedSectionText = ({ sectionName, textValue, emptyFallback }) => {
+      sectionTitle(sectionName);
+      const textInsetLeft = 2;
+      const textInsetRight = 8;
+      const lineHeight = 6;
+      const maxTextWidth = contentWidth - textInsetLeft - textInsetRight;
+      const sourceText = String(textValue || emptyFallback)
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n")
+        .replace(/\u00A0/g, " ");
+      const safeLines = [];
+      const paragraphs = sourceText.split("\n");
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(textValue ? 0 : 160);
+      for (const paragraph of paragraphs) {
+        const cleanedParagraph = paragraph.trim();
+        if (!cleanedParagraph) {
+          safeLines.push("");
+          continue;
+        }
+        const breakableParagraph = cleanedParagraph.replace(
+          /(\S{24})(?=\S)/g,
+          "$1 ",
+        );
+        safeLines.push(...doc.splitTextToSize(breakableParagraph, maxTextWidth));
+      }
+      for (const line of safeLines) {
+        needSpace(lineHeight + 2);
+        doc.text(String(line || " "), marginLeft + textInsetLeft, y);
+        y += lineHeight;
+      }
+      hRule(y + 1, contentWidth, 0.2);
+      y += 10;
+    };
+    const drawAmountRows = (title, rows) => {
+      sectionTitle(title);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      rows.forEach(([label, amount]) => {
+        needSpace(8);
+        doc.setTextColor(70);
+        doc.text(safe(label), marginLeft, y);
+        doc.setTextColor(0);
+        doc.setFont("helvetica", "bold");
+        doc.text(safe(amount), pageWidth - marginRight, y, { align: "right" });
+        doc.setFont("helvetica", "normal");
+        doc.setDrawColor(220);
+        doc.setLineWidth(0.2);
+        doc.line(marginLeft, y + 2, pageWidth - marginRight, y + 2);
+        y += 7;
+      });
+      y += 4;
+    };
+
     const companyName =
-      empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
-    const empleado = emp.nombre_completo || "Empleado";
-    const total = fmtMoneyMXN(emp.monto_aguinaldo);
+      safe(empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa) ||
+      "ADAMIA Human Resources";
+    const empleado = safe(emp.nombre_completo || "Empleado");
+    const total = money(emp.monto_aguinaldo);
+    const anioFiscal = safe(resultadoCalculo.año_fiscal || "—");
+    const fechaCorte = resultadoCalculo.fecha_corte
+      ? dayjs(resultadoCalculo.fecha_corte).format("DD/MM/YYYY")
+      : "—";
 
-    drawHeaderBox(ctx, {
-      title: "Recibo de Aguinaldo",
-      linesLeft: [
-        `Empleado: ${empleado}`,
-        `Año fiscal: ${resultadoCalculo.año_fiscal || "—"}`,
-        `Fecha corte: ${dayjs(resultadoCalculo.fecha_corte).format(
-          "DD/MM/YYYY",
-        )}`,
+    if (logoDataUrl) {
+      try {
+        doc.addImage(logoDataUrl, "PNG", marginLeft, y, 28, 10);
+      } catch {}
+    }
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(150);
+    doc.text("HUMAN RESOURCES CLOUD PLATFORM", marginLeft, y + 13);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.setTextColor(0);
+    doc.text("AGUINALDO", pageWidth - marginRight, y + 7, { align: "right" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(100);
+    doc.text(`Anio fiscal ${anioFiscal}`, pageWidth - marginRight, y + 13, {
+      align: "right",
+    });
+
+    y += 20;
+    hRule(y, contentWidth, 0.8);
+    y += 6;
+
+    const boxWidth = 24;
+    const boxGap = 8;
+    const metaWidth = contentWidth - boxWidth - boxGap;
+    const col = metaWidth / 3;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(140);
+    doc.text("TIPO", marginLeft, y + 3);
+    doc.text("EMPLEADO", marginLeft + col, y + 3);
+    doc.text("FECHA CORTE", marginLeft + col * 2, y + 3);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(0);
+    doc.text(emp.es_proporcional ? "PROPORCIONAL" : "COMPLETO", marginLeft, y + 9);
+    doc.text(empleado, marginLeft + col, y + 9, { maxWidth: col - 6 });
+    doc.text(fechaCorte, marginLeft + col * 2, y + 9, { maxWidth: col - 6 });
+
+    const boxX = marginLeft + metaWidth + boxGap;
+    const boxY = y - 1;
+    doc.setDrawColor(0);
+    doc.setLineWidth(0.5);
+    doc.rect(boxX, boxY, boxWidth, 18, "S");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text(total.replace("$", ""), boxX + boxWidth / 2, boxY + 9, {
+      align: "center",
+      maxWidth: boxWidth - 2,
+    });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(120);
+    doc.text("TOTAL", boxX + boxWidth / 2, boxY + 15, { align: "center" });
+
+    y += 18;
+    hRule(y, contentWidth, 0.3);
+    y += 8;
+
+    sectionTitle("Datos del empleado");
+    needSpace(20);
+    fieldPair("Nombre completo", empleado, marginLeft, y);
+    fieldPair("Puesto", emp.puesto || "N/A", marginLeft + contentWidth / 2 + 4, y);
+    y += 16;
+    fieldPair("Departamento", emp.departamento || "N/A", marginLeft, y);
+    fieldPair(
+      "Fecha ingreso",
+      emp.fecha_ingreso ? dayjs(emp.fecha_ingreso).format("DD/MM/YYYY") : "—",
+      marginLeft + contentWidth / 2 + 4,
+      y,
+    );
+    y += 16;
+    fieldPair(
+      "Anios trabajados",
+      Number(emp.años_trabajados || 0).toFixed(2),
+      marginLeft,
+      y,
+    );
+    fieldPair(
+      "Dias trabajados",
+      Number(emp.dias_trabajados || 0).toFixed(2),
+      marginLeft + contentWidth / 2 + 4,
+      y,
+    );
+    y += 18;
+
+    drawAmountRows("Detalle del calculo", [
+      ["Salario diario", money(emp.salario_diario)],
+      ["Dias aguinaldo (ley)", Number(emp.dias_aguinaldo_ley || 0).toFixed(2)],
+      [
+        "Dias aguinaldo calculado",
+        Number(emp.dias_aguinaldo_calculado || 0).toFixed(2),
       ],
-      kpiLabel: "Total a pagar",
-      kpiValue: String(total).replace(" MXN", ""),
-      companyName,
-      logoDataUrl,
+      ["Tipo", emp.es_proporcional ? "Proporcional" : "Completo"],
+      ["Monto aguinaldo", money(emp.monto_aguinaldo)],
+    ]);
+
+    drawWrappedSectionText({
+      sectionName: "Observaciones",
+      textValue: resultadoCalculo.observaciones || "",
+      emptyFallback: "—",
     });
 
-    drawKeyValueBox(ctx, {
-      title: "Información del empleado",
-      rows: [
-        ["Puesto", emp.puesto || "N/A"],
-        ["Departamento", emp.departamento || "N/A"],
-        [
-          "Fecha ingreso",
-          emp.fecha_ingreso
-            ? dayjs(emp.fecha_ingreso).format("DD/MM/YYYY")
-            : "—",
-        ],
-        ["Años trabajados", Number(emp.años_trabajados || 0).toFixed(2)],
-      ],
+    const totalPages = doc.internal.getNumberOfPages();
+    const fechaGenerado = new Date().toLocaleDateString("es-MX", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+    const horaGenerado = new Date().toLocaleTimeString("es-MX", {
+      hour: "2-digit",
+      minute: "2-digit",
     });
 
-    // Detalle del cálculo: valores alineados a la derecha para evitar encimados en labels largos.
-    drawRightValueRowsBox(ctx, {
-      title: "Detalle del cálculo",
-      rows: [
-        [
-          "Salario diario",
-          `$${Number(emp.salario_diario || 0).toLocaleString("es-MX", {
-            minimumFractionDigits: 2,
-          })}`,
-        ],
-        [
-          "Días aguinaldo (Ley)",
-          Number(emp.dias_aguinaldo_ley || 0).toFixed(2),
-        ],
-        [
-          "Días aguinaldo calculado",
-          Number(emp.dias_aguinaldo_calculado || 0).toFixed(2),
-        ],
-        ["Tipo", emp.es_proporcional ? "Proporcional" : "Completo"],
-        ["Días trabajados", Number(emp.dias_trabajados || 0).toFixed(2)],
-      ],
-    });
+    for (let p = 1; p <= totalPages; p++) {
+      doc.setPage(p);
+      if (p === totalPages) {
+        const yFirmas = pageHeight - 50;
+        doc.setDrawColor(0);
+        doc.setLineWidth(0.4);
+        doc.line(marginLeft + 5, yFirmas, marginLeft + 75, yFirmas);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(0);
+        doc.text("FIRMA DEL TRABAJADOR", marginLeft + 40, yFirmas + 5, {
+          align: "center",
+        });
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.5);
+        doc.setTextColor(100);
+        doc.text(empleado.slice(0, 40), marginLeft + 40, yFirmas + 10, {
+          align: "center",
+        });
 
-    drawMultilineBox(ctx, {
-      title: "Observaciones",
-      text: resultadoCalculo.observaciones || "—",
-    });
-
-    drawSignaturesAndFooter(doc, {
-      empleadoName: empleado,
-      empresaLabel: companyName || "Uniline Innovacion en la Nube",
-      footerLeft: "Sistema Adamia",
-    });
+        doc.line(
+          pageWidth - marginRight - 75,
+          yFirmas,
+          pageWidth - marginRight - 5,
+          yFirmas,
+        );
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(0);
+        doc.text(
+          "REPRESENTANTE DE LA EMPRESA",
+          pageWidth - marginRight - 40,
+          yFirmas + 5,
+          { align: "center" },
+        );
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.5);
+        doc.setTextColor(100);
+        doc.text(companyName.slice(0, 40), pageWidth - marginRight - 40, yFirmas + 10, {
+          align: "center",
+        });
+      }
+      doc.setDrawColor(180);
+      doc.setLineWidth(0.2);
+      doc.line(marginLeft, pageHeight - 14, pageWidth - marginRight, pageHeight - 14);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      doc.setTextColor(160);
+      doc.text(
+        `Generado el ${fechaGenerado} a las ${horaGenerado} · ${systemLabel} · Anio ${anioFiscal} · Página ${p} de ${totalPages}`,
+        pageWidth / 2,
+        pageHeight - 9,
+        { align: "center" },
+      );
+    }
 
     const nombreArchivo = `Aguinaldo_${
       resultadoCalculo.año_fiscal || "NA"
@@ -1134,132 +1342,247 @@ export default function PageAguinaldos() {
     if (!resultadoCalculo) return;
 
     const doc = new jsPDF("p", "mm", "a4");
-    const ctx = createPdfContext({ doc });
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const marginLeft = 20;
+    const marginRight = 20;
+    const contentWidth = pageWidth - marginLeft - marginRight;
+    const systemLabel = "ADAMIA HR360";
+    let y = marginLeft;
+    const safe = (value) =>
+      String(value || "")
+        .replace(/\p{Extended_Pictographic}|\uFE0F|\u200D/gu, "")
+        .replace(/\s+/g, " ")
+        .trim();
+    const money = (value) =>
+      `$${Number(value || 0).toLocaleString("es-MX", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
+    const hRule = (yPos, width = contentWidth, lineWidth = 0.3) => {
+      doc.setDrawColor(0);
+      doc.setLineWidth(lineWidth);
+      doc.line(marginLeft, yPos, marginLeft + width, yPos);
+    };
+    const sectionTitle = (text) => {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(0);
+      doc.text(String(text || "").toUpperCase(), marginLeft, y + 5);
+      hRule(y + 7, contentWidth, 0.5);
+      y += 12;
+    };
 
     const companyName =
-      empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
-    const totalGeneral = fmtMoneyMXN(resultadoCalculo.total_general);
+      safe(empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa) ||
+      "ADAMIA Human Resources";
+    const totalGeneral = money(resultadoCalculo.total_general);
     const resultados = resultadoCalculo.resultados || [];
     const completos = resultados.filter((x) => !x.es_proporcional).length;
     const proporcionales = resultados.filter((x) => !!x.es_proporcional).length;
+    const anioFiscal = safe(resultadoCalculo.año_fiscal || "—");
+    const fechaCorte = resultadoCalculo.fecha_corte
+      ? dayjs(resultadoCalculo.fecha_corte).format("DD/MM/YYYY")
+      : "—";
 
-    drawHeaderBox(ctx, {
-      title: "Nómina de Aguinaldos",
-      linesLeft: [
-        `Año fiscal: ${resultadoCalculo.año_fiscal || "—"}`,
-        `Fecha corte: ${dayjs(resultadoCalculo.fecha_corte).format(
-          "DD/MM/YYYY",
-        )}`,
-        `Total empleados: ${
-          resultadoCalculo.total_empleados ?? resultados.length
-        }`,
-      ],
-      kpiLabel: "Total general",
-      kpiValue: String(totalGeneral).replace(" MXN", ""),
-      companyName,
-      logoDataUrl,
+    if (logoDataUrl) {
+      try {
+        doc.addImage(logoDataUrl, "PNG", marginLeft, y, 28, 10);
+      } catch {}
+    }
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(150);
+    doc.text("HUMAN RESOURCES CLOUD PLATFORM", marginLeft, y + 13);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.setTextColor(0);
+    doc.text("AGUINALDOS", pageWidth - marginRight, y + 7, { align: "right" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(100);
+    doc.text(`Anio fiscal ${anioFiscal}`, pageWidth - marginRight, y + 13, {
+      align: "right",
     });
 
-    drawKeyValueBox(ctx, {
-      title: "Resumen",
-      rows: [
-        ["Completos", completos],
-        ["Proporcionales", proporcionales],
-        [
-          "Generado",
-          new Date().toLocaleString("es-MX", {
-            year: "numeric",
-            month: "2-digit",
-            day: "2-digit",
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
-        ],
-      ],
-    });
+    y += 20;
+    hRule(y, contentWidth, 0.8);
+    y += 6;
 
-    // Tabla multi-página
-    const { doc: d, margin, contentWidth, pageHeight } = ctx;
+    const boxWidth = 24;
+    const boxGap = 8;
+    const metaWidth = contentWidth - boxWidth - boxGap;
+    const col = metaWidth / 3;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(140);
+    doc.text("EMPLEADOS", marginLeft, y + 3);
+    doc.text("FECHA CORTE", marginLeft + col, y + 3);
+    doc.text("PROPORCIONALES", marginLeft + col * 2, y + 3);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(0);
+    doc.text(String(resultadoCalculo.total_empleados ?? resultados.length), marginLeft, y + 9);
+    doc.text(fechaCorte, marginLeft + col, y + 9);
+    doc.text(String(proporcionales), marginLeft + col * 2, y + 9);
+
+    const boxX = marginLeft + metaWidth + boxGap;
+    const boxY = y - 1;
+    doc.setDrawColor(0);
+    doc.setLineWidth(0.5);
+    doc.rect(boxX, boxY, boxWidth, 18, "S");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text(totalGeneral.replace("$", ""), boxX + boxWidth / 2, boxY + 9, {
+      align: "center",
+      maxWidth: boxWidth - 2,
+    });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(120);
+    doc.text("TOTAL", boxX + boxWidth / 2, boxY + 15, { align: "center" });
+
+    y += 18;
+    hRule(y, contentWidth, 0.3);
+    y += 8;
+
+    sectionTitle("Resumen");
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(0);
+    doc.text(`Completos: ${completos}`, marginLeft, y);
+    doc.text(`Proporcionales: ${proporcionales}`, marginLeft + 55, y);
+    doc.text(`Total: ${resultadoCalculo.total_empleados ?? resultados.length}`, marginLeft + 110, y);
+    y += 10;
+    hRule(y, contentWidth, 0.2);
+    y += 8;
+
+    sectionTitle("Detalle por empleado");
     const cols = [
-      { key: "nombre", title: "Empleado", w: 62 },
-      { key: "puesto", title: "Puesto", w: 36 },
+      { key: "nombre", title: "Empleado", w: 58 },
+      { key: "puesto", title: "Puesto", w: 32 },
       { key: "ingreso", title: "Ingreso", w: 22 },
-      { key: "dias", title: "Días", w: 16 },
+      { key: "dias", title: "Dias", w: 14 },
       { key: "tipo", title: "Tipo", w: 18 },
-      { key: "monto", title: "Monto", w: 28 },
+      { key: "monto", title: "Monto", w: 26 },
     ];
-    const sumW = cols.reduce((a, c) => a + c.w, 0);
-    if (sumW !== contentWidth) cols[0].w += contentWidth - sumW;
-
+    const totalW = cols.reduce((a, c) => a + c.w, 0);
+    if (totalW !== contentWidth) cols[0].w += contentWidth - totalW;
     const headerH = 8;
     const rowH = 7;
     const drawTableHeader = () => {
-      d.setLineWidth(0.8);
-      d.rect(margin, ctx.y, contentWidth, headerH, "S");
-      d.setFont("helvetica", "bold");
-      d.setFontSize(9);
-      let x = margin;
+      doc.setLineWidth(0.8);
+      doc.rect(marginLeft, y, contentWidth, headerH, "S");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8.5);
+      let x = marginLeft;
       cols.forEach((c) => {
-        d.text(c.title, x + 2, ctx.y + 5.5);
+        doc.text(c.title, x + 2, y + 5.5);
         x += c.w;
-        d.line(x, ctx.y, x, ctx.y + headerH);
+        doc.line(x, y, x, y + headerH);
       });
-      ctx.y += headerH;
+      y += headerH;
     };
     const drawRow = (r) => {
-      d.setLineWidth(0.3);
-      d.rect(margin, ctx.y, contentWidth, rowH, "S");
-      d.setFont("helvetica", "normal");
-      d.setFontSize(8.5);
-      let x = margin;
+      doc.setLineWidth(0.25);
+      doc.rect(marginLeft, y, contentWidth, rowH, "S");
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      let x = marginLeft;
       const v = {
-        nombre: String(r.nombre_completo || "").slice(0, 40),
-        puesto: String(r.puesto || "N/A").slice(0, 22),
-        ingreso: r.fecha_ingreso
-          ? dayjs(r.fecha_ingreso).format("DD/MM/YYYY")
-          : "—",
+        nombre: safe(r.nombre_completo || "—").slice(0, 38),
+        puesto: safe(r.puesto || "N/A").slice(0, 20),
+        ingreso: r.fecha_ingreso ? dayjs(r.fecha_ingreso).format("DD/MM/YYYY") : "—",
         dias: Number(r.dias_aguinaldo_calculado || 0).toFixed(2),
         tipo: r.es_proporcional ? "Prop." : "Comp.",
-        monto: `$${Number(r.monto_aguinaldo || 0).toLocaleString("es-MX", {
-          minimumFractionDigits: 2,
-        })}`,
+        monto: money(r.monto_aguinaldo),
       };
-      cols.forEach((c, ci) => {
-        const text = v[c.key];
+      cols.forEach((c, idx) => {
         if (c.key === "monto") {
-          d.setFont("helvetica", "bold");
-          d.text(text, x + c.w - 2, ctx.y + 5, { align: "right" });
-          d.setFont("helvetica", "normal");
+          doc.setFont("helvetica", "bold");
+          doc.text(v[c.key], x + c.w - 2, y + 5, { align: "right" });
+          doc.setFont("helvetica", "normal");
         } else {
-          d.text(text, x + 2, ctx.y + 5);
+          doc.text(v[c.key], x + 2, y + 5);
         }
         x += c.w;
-        if (ci < cols.length - 1) d.line(x, ctx.y, x, ctx.y + rowH);
+        if (idx < cols.length - 1) doc.line(x, y, x, y + rowH);
       });
-      ctx.y += rowH;
+      y += rowH;
     };
 
     drawTableHeader();
     resultados.forEach((r) => {
-      ensureSpace(ctx, rowH + 4);
-      drawRow(r);
-      if (ctx.y > pageHeight - ctx.margin - 70) {
-        d.addPage();
-        ctx.y = ctx.margin;
+      if (y + rowH > pageHeight - 65) {
+        doc.addPage();
+        y = marginLeft;
         drawTableHeader();
       }
+      drawRow(r);
     });
 
-    drawSignaturesAndFooter(d, {
-      empleadoName: "",
-      empresaLabel: companyName || "Uniline Innovacion en la Nube",
-      footerLeft: "Sistema Adamia",
+    const totalPages = doc.internal.getNumberOfPages();
+    const fechaGenerado = new Date().toLocaleDateString("es-MX", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
     });
+    const horaGenerado = new Date().toLocaleTimeString("es-MX", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+    for (let p = 1; p <= totalPages; p++) {
+      doc.setPage(p);
+      if (p === totalPages) {
+        const yFirmas = pageHeight - 50;
+        doc.setDrawColor(0);
+        doc.setLineWidth(0.4);
+        doc.line(marginLeft + 5, yFirmas, marginLeft + 75, yFirmas);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(0);
+        doc.text("RESPONSABLE DE NOMINA", marginLeft + 40, yFirmas + 5, {
+          align: "center",
+        });
+
+        doc.line(
+          pageWidth - marginRight - 75,
+          yFirmas,
+          pageWidth - marginRight - 5,
+          yFirmas,
+        );
+        doc.text(
+          "REPRESENTANTE DE LA EMPRESA",
+          pageWidth - marginRight - 40,
+          yFirmas + 5,
+          { align: "center" },
+        );
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.5);
+        doc.setTextColor(100);
+        doc.text(companyName.slice(0, 40), pageWidth - marginRight - 40, yFirmas + 10, {
+          align: "center",
+        });
+      }
+      doc.setDrawColor(180);
+      doc.setLineWidth(0.2);
+      doc.line(marginLeft, pageHeight - 14, pageWidth - marginRight, pageHeight - 14);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      doc.setTextColor(160);
+      doc.text(
+        `Generado el ${fechaGenerado} a las ${horaGenerado} · ${systemLabel} · Anio ${anioFiscal} · Página ${p} de ${totalPages}`,
+        pageWidth / 2,
+        pageHeight - 9,
+        { align: "center" },
+      );
+    }
 
     const nombreArchivo = `Nomina_Aguinaldos_${
       resultadoCalculo.año_fiscal || "NA"
     }.pdf`;
-    d.save(nombreArchivo.replace(/\s+/g, "_"));
+    doc.save(nombreArchivo.replace(/\s+/g, "_"));
   };
 
   const eliminarCalculo = (row) => {

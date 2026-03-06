@@ -11,12 +11,13 @@ import {
 import { Pencil, Trash2 } from "lucide-react";
 import useSWR from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import TablePagination from "@/components/TablePagination";
+import HeaderMultiFilter from "../../registro-asistencia/HeaderMultiFilter";
+import ActiveFilterChips from "../../registro-asistencia/ActiveFilterChips";
 
 export default function EstadoCivilTable({
   id_empresa,
-  filter,
   swrKey,
   onEdit,
   onDelete,
@@ -26,8 +27,18 @@ export default function EstadoCivilTable({
   const showEmpresa = id_empresa === "all";
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const key = `${swrKey}&page=${page}&limit=${limit}&nombre=${filter}`;
-  const { data, error, isLoading } = useSWR(key, fetcherWithToken, swr_config);
+  const [filterOptionsRows, setFilterOptionsRows] = useState([]);
+  const [headerFilterMeta, setHeaderFilterMeta] = useState({
+    active: false,
+    total: 0,
+  });
+  const [nombreSeleccionado, setNombreSeleccionado] = useState([]);
+  const [empresaSeleccionada, setEmpresaSeleccionada] = useState([]);
+
+  const url = swrKey
+    ? `${swrKey}${swrKey.includes("?") ? "&" : "?"}page=${page}&limit=${limit}`
+    : null;
+  const { data, error, isLoading } = useSWR(url, fetcherWithToken, swr_config);
 
   useEffect(() => {
     if (data?.total && onTotalChange) {
@@ -35,14 +46,134 @@ export default function EstadoCivilTable({
     }
   }, [data?.total, onTotalChange]);
 
-  const estadoCivil = data?.estados_civiles || [];
+  const estadoCivil = Array.isArray(data?.estados_civiles)
+    ? data.estados_civiles
+    : [];
+  const sourceRows = useMemo(
+    () =>
+      Array.isArray(filterOptionsRows) && filterOptionsRows.length > 0
+        ? filterOptionsRows
+        : estadoCivil,
+    [filterOptionsRows, estadoCivil],
+  );
+  const uniqueOptions = (values) =>
+    [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const nombreOptions = useMemo(
+    () => uniqueOptions(sourceRows.map((row) => row.nombre)),
+    [sourceRows],
+  );
+  const empresaOptions = useMemo(
+    () => uniqueOptions(sourceRows.map((row) => row.empresa_nombre)),
+    [sourceRows],
+  );
+
+  const filteredRowsAll = useMemo(
+    () =>
+      sourceRows.filter((row) => {
+        const passNombre =
+          nombreSeleccionado.length === 0 ||
+          nombreSeleccionado.includes(row.nombre);
+        const passEmpresa =
+          !showEmpresa ||
+          empresaSeleccionada.length === 0 ||
+          empresaSeleccionada.includes(row.empresa_nombre);
+        return passNombre && passEmpresa;
+      }),
+    [sourceRows, nombreSeleccionado, empresaSeleccionada, showEmpresa],
+  );
+
+  const hasActiveHeaderFilters =
+    nombreSeleccionado.length > 0 ||
+    (showEmpresa && empresaSeleccionada.length > 0);
+
+  const displayedRows = useMemo(() => {
+    if (!hasActiveHeaderFilters) return estadoCivil;
+    const offset = (page - 1) * limit;
+    return filteredRowsAll.slice(offset, offset + limit);
+  }, [hasActiveHeaderFilters, estadoCivil, page, limit, filteredRowsAll]);
+
+  const clearAllHeaderFilters = () => {
+    setNombreSeleccionado([]);
+    setEmpresaSeleccionada([]);
+  };
+
   useEffect(() => {
     if (onLoad) {
-      onLoad(estadoCivil);
+      onLoad(sourceRows);
     }
-  }, [estadoCivil]);
+  }, [sourceRows, onLoad]);
 
-  if (estadoCivil.length === 0)
+  useEffect(() => {
+    setPage(1);
+  }, [id_empresa]);
+
+  useEffect(() => {
+    setHeaderFilterMeta({
+      active: hasActiveHeaderFilters,
+      total: filteredRowsAll.length,
+    });
+  }, [hasActiveHeaderFilters, filteredRowsAll.length]);
+
+  useEffect(() => {
+    if (!headerFilterMeta.active) return;
+    const totalPages = Math.max(1, Math.ceil(headerFilterMeta.total / limit));
+    if (page > totalPages) setPage(1);
+  }, [headerFilterMeta, page, limit]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [nombreSeleccionado, empresaSeleccionada, limit]);
+
+  useEffect(() => {
+    setNombreSeleccionado([]);
+    setEmpresaSeleccionada([]);
+  }, [id_empresa]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    const loadFilterOptionsRows = async () => {
+      if (!swrKey) {
+        if (!isCancelled) setFilterOptionsRows([]);
+        return;
+      }
+
+      try {
+        const pageSize = 500;
+        const firstUrl = `${swrKey}${
+          swrKey.includes("?") ? "&" : "?"
+        }page=1&limit=${pageSize}`;
+        const firstData = await fetcherWithToken(firstUrl);
+        let allRows = Array.isArray(firstData?.estados_civiles)
+          ? firstData.estados_civiles
+          : [];
+        const totalRows = Number(firstData?.total || allRows.length);
+        const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
+
+        for (let currentPage = 2; currentPage <= totalPages; currentPage += 1) {
+          const pageUrl = `${swrKey}${
+            swrKey.includes("?") ? "&" : "?"
+          }page=${currentPage}&limit=${pageSize}`;
+          const pageData = await fetcherWithToken(pageUrl);
+          if (Array.isArray(pageData?.estados_civiles)) {
+            allRows = [...allRows, ...pageData.estados_civiles];
+          }
+        }
+
+        if (!isCancelled) setFilterOptionsRows(allRows);
+      } catch (_) {
+        if (!isCancelled) setFilterOptionsRows([]);
+      }
+    };
+
+    loadFilterOptionsRows();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [swrKey]);
+
+  if (estadoCivil.length === 0 && !hasActiveHeaderFilters)
     return (
       <div className="text-center py-10 text-muted-foreground">
         No se encontraron estados civiles.
@@ -60,17 +191,48 @@ export default function EstadoCivilTable({
             Lista de estados civiles
           </h2>
         </div>
+        <ActiveFilterChips
+          groups={[
+            {
+              category: "Nombre",
+              values: nombreSeleccionado,
+              options: nombreOptions,
+              onChange: setNombreSeleccionado,
+            },
+            ...(showEmpresa
+              ? [
+                  {
+                    category: "Empresa",
+                    values: empresaSeleccionada,
+                    options: empresaOptions,
+                    onChange: setEmpresaSeleccionada,
+                  },
+                ]
+              : []),
+          ]}
+          onClearAll={clearAllHeaderFilters}
+        />
 
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50 hover:bg-gray-50">
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                  Nombre
+                  <HeaderMultiFilter
+                    selected={nombreSeleccionado}
+                    onChange={setNombreSeleccionado}
+                    options={nombreOptions}
+                    placeholder="Nombre"
+                  />
                 </TableHead>
                 {showEmpresa && (
                   <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                    Empresa
+                    <HeaderMultiFilter
+                      selected={empresaSeleccionada}
+                      onChange={setEmpresaSeleccionada}
+                      options={empresaOptions}
+                      placeholder="Empresa"
+                    />
                   </TableHead>
                 )}
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs text-right">
@@ -79,7 +241,7 @@ export default function EstadoCivilTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {estadoCivil.map((civ) => (
+              {displayedRows.map((civ) => (
                 <TableRow
                   key={civ.id_estado_civil}
                   className="hover:bg-gray-50 border-b border-gray-100"
@@ -108,6 +270,16 @@ export default function EstadoCivilTable({
                   </TableCell>
                 </TableRow>
               ))}
+              {displayedRows.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={showEmpresa ? 3 : 2}
+                    className="py-8 text-center text-gray-500"
+                  >
+                    No hay estados civiles para los filtros seleccionados.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>
@@ -115,8 +287,9 @@ export default function EstadoCivilTable({
       <TablePagination
         page={page}
         limit={limit}
-        total={data?.total}
+        total={headerFilterMeta.active ? headerFilterMeta.total : data?.total}
         onPageChange={setPage}
+        onLimitChange={setLimit}
       />
     </>
   );

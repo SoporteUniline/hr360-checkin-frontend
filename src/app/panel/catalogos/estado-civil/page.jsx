@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { Input } from "@/components/ui/input";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -9,12 +8,8 @@ import EstadoCivilTable from "./EstadoCivilTable";
 import EstadoCivilFormDialog from "./EstadoCivilFormDialog";
 import EstadoCivilDeleteDialog from "./EstadoCivilDeleteDialog";
 import AccesosRapidos from "@/components/AccesosRapidos";
-import { Label } from "@/components/ui/label";
-import { Combobox } from "@/components/Combobox";
 
 export default function EstadoCivil() {
-  const [filter, setFilter] = useState("");
-  const [debouncedFilter, setDebouncedFilter] = useState("");
   const [estadoCivil, setEstadoCivil] = useState([]);
   const [editCiv, setEditCiv] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
@@ -23,22 +18,8 @@ export default function EstadoCivil() {
 
   const { dataUser } = useAuth();
 
-  const [empresaActiva, setEmpresaActiva] = useState(null);
-
-  useEffect(() => {
-    if (dataUser?.empresas?.length > 0 && !empresaActiva) {
-      setEmpresaActiva("all");
-    }
-  }, [dataUser, empresaActiva]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedFilter(filter);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, [filter]);
-
-  const id_empresa = empresaActiva;
+  const id_empresa = "all";
+  const idEmpresaForm = null;
   const key = id_empresa
     ? `/checador/estados-civiles?id_empresa=${id_empresa}`
     : null;
@@ -46,35 +27,7 @@ export default function EstadoCivil() {
   return (
     <div className="space-y-6">
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-6">
-        <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-[260px_1fr_auto] items-end">
-          <div className="flex flex-col gap-1">
-            <Label>Empresa</Label>
-            <Combobox
-              options={[
-                { value: "all", label: "Todas las empresas" },
-                ...(dataUser?.empresas_detalle?.map((e) => ({
-                  value: e.id_empresa,
-                  label: e.nombre,
-                })) || []),
-              ]}
-              value={empresaActiva}
-              onChange={(val) =>
-                setEmpresaActiva(val === "all" ? "all" : Number(val))
-              }
-              placeholder="Seleccionar empresa"
-            />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <Label>Estado civil</Label>
-            <Input
-              className="bg-white"
-              placeholder="Buscar estado civil..."
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-            />
-          </div>
-
+        <div className="mb-4 flex justify-end">
           <Button
             onClick={() => {
               setEditCiv(null);
@@ -89,7 +42,6 @@ export default function EstadoCivil() {
 
       <EstadoCivilTable
         id_empresa={id_empresa}
-        filter={debouncedFilter}
         swrKey={key}
         onEdit={(civ, lista) => {
           setEditCiv(civ);
@@ -113,7 +65,7 @@ export default function EstadoCivil() {
         open={openFormModal}
         setOpen={setOpenFormModal}
         editCiv={editCiv}
-        id_empresa={id_empresa}
+        id_empresa={idEmpresaForm}
         estadoCivil={estadoCivil}
         mutateKey={key}
         empresas={dataUser?.empresas_detalle || []}

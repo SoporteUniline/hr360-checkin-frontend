@@ -20,13 +20,6 @@ import { useEffect, useState } from "react";
 import { useSnackbar } from "notistack";
 import { administrativeMinutesApi } from "@/lib/administrativeMinutesApi";
 import {
-  createPdfContext,
-  drawHeaderBox,
-  drawKeyValueBox,
-  drawMultilineBox,
-  drawSignaturesAndFooter,
-} from "@/lib/pdfUnifiedLayout";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -43,7 +36,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileText, AlertTriangle } from "lucide-react";
+import {
+  FileText,
+  AlertTriangle,
+  Download,
+  Loader2,
+  Printer,
+} from "lucide-react";
 
 dayjs.locale("es");
 
@@ -115,6 +114,7 @@ export const AdministrativeDetailsModal = ({
     String(acta?.estatus || "").toLowerCase(),
   );
   const [savingEstatus, setSavingEstatus] = useState(false);
+  const [isPreparingPrint, setIsPreparingPrint] = useState(false);
 
   useEffect(() => {
     // Cuando cambia el acta (por abrir otra), sincronizamos estado local.
@@ -192,89 +192,302 @@ export const AdministrativeDetailsModal = ({
   };
 
   /**
-   * Descarga PDF con el mismo formato visual que Permisos (cajas/encabezado/firmas).
-   * Implementación:
-   * - Usa `src/lib/pdfUnifiedLayout.js` (que replica el estilo de Permisos).
-   * - Incluye marca/empresa (logo) si existe.
+   * Genera PDF con formato unificado (mismo estilo aplicado en otros módulos).
+   * - Relación: lo reutilizamos para descargar e imprimir.
    */
-  const descargarPDFActaFormatoPermisos = () => {
+  const buildActaPdfFormatoPermisos = () => {
     const doc = new jsPDF("p", "mm", "a4");
-    const ctx = createPdfContext({ doc });
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const marginLeft = 20;
+    const marginRight = 20;
+    const contentWidth = pageWidth - marginLeft - marginRight;
+    const systemLabel = "ADAMIA HR360";
+    let y = marginLeft;
+
+    const safe = (value) =>
+      String(value || "")
+        .replace(/\p{Extended_Pictographic}|\uFE0F|\u200D/gu, "")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    const needSpace = (height) => {
+      if (y + height > pageHeight - 65) {
+        doc.addPage();
+        y = marginLeft;
+      }
+    };
+
+    const hRule = (yPos, width = contentWidth, lineWidth = 0.3) => {
+      doc.setDrawColor(0);
+      doc.setLineWidth(lineWidth);
+      doc.line(marginLeft, yPos, marginLeft + width, yPos);
+    };
+
+    const sectionTitle = (text) => {
+      needSpace(12);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(0);
+      doc.text(String(text || "").toUpperCase(), marginLeft, y + 5);
+      hRule(y + 7, contentWidth, 0.5);
+      y += 12;
+    };
+
+    const fieldPair = (label, value, x, yPos, width = contentWidth / 2 - 4) => {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      doc.setTextColor(140);
+      doc.text(String(label || "").toUpperCase(), x, yPos);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(0);
+      doc.text(safe(value), x, yPos + 5);
+      doc.setDrawColor(200);
+      doc.setLineWidth(0.2);
+      doc.line(x, yPos + 7, x + width, yPos + 7);
+    };
+
+    const drawWrappedSectionText = ({ sectionName, textValue, emptyFallback }) => {
+      sectionTitle(sectionName);
+      const textInsetLeft = 2;
+      const textInsetRight = 8;
+      const lineHeight = 6;
+      const maxTextWidth = contentWidth - textInsetLeft - textInsetRight;
+      const sourceText = String(textValue || emptyFallback)
+        .replace(/\r\n/g, "\n")
+        .replace(/\r/g, "\n")
+        .replace(/\u00A0/g, " ");
+
+      const safeLines = [];
+      const paragraphs = sourceText.split("\n");
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(textValue ? 0 : 160);
+
+      for (const paragraph of paragraphs) {
+        const cleanedParagraph = paragraph.trim();
+        if (!cleanedParagraph) {
+          safeLines.push("");
+          continue;
+        }
+        const breakableParagraph = cleanedParagraph.replace(
+          /(\S{24})(?=\S)/g,
+          "$1 ",
+        );
+        safeLines.push(...doc.splitTextToSize(breakableParagraph, maxTextWidth));
+      }
+
+      for (const line of safeLines) {
+        needSpace(lineHeight + 2);
+        doc.text(String(line || " "), marginLeft + textInsetLeft, y);
+        y += lineHeight;
+      }
+
+      hRule(y + 1, contentWidth, 0.2);
+      y += 10;
+    };
 
     const companyName =
-      empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
-    const empleadoName = `${acta.nombre_empleado || ""} ${
-      acta.apellido_paterno_empleado || ""
-    } ${acta.apellido_materno_empleado || ""}`
-      .replace(/\s+/g, " ")
-      .trim();
+      safe(empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa) ||
+      "ADAMIA Human Resources";
+    const empleadoName = safe(
+      `${acta.nombre_empleado || ""} ${acta.apellido_paterno_empleado || ""} ${
+        acta.apellido_materno_empleado || ""
+      }`,
+    );
+    const folio = safe(acta.folio || acta.id_acta || "—");
+    const estatus = safe(acta.estatus || "—");
+    const gravedad = safe(acta.gravedad_tipo || "—");
+    const tipoActa = safe(acta.nombre_tipo_acta || "—");
+    const fechaIncidente = acta.fecha_incidente
+      ? dayjs(acta.fecha_incidente).format("DD/MM/YYYY")
+      : "—";
 
-    drawHeaderBox(ctx, {
-      title: "Acta administrativa",
-      linesLeft: [
-        `Folio: ${acta.folio || "—"}`,
-        `Empleado: ${empleadoName || "—"}`,
-        `Fecha incidente: ${
-          acta.fecha_incidente
-            ? dayjs(acta.fecha_incidente).format("DD/MM/YYYY")
-            : "—"
-        }`,
-      ],
-      kpiLabel: "Estatus",
-      kpiValue: String(acta.estatus || "—").toUpperCase(),
-      companyName,
-      logoDataUrl,
+    if (logoDataUrl) {
+      try {
+        doc.addImage(logoDataUrl, "PNG", marginLeft, y, 28, 10);
+      } catch {}
+    }
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(150);
+    doc.text("HUMAN RESOURCES CLOUD PLATFORM", marginLeft, y + 13);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.setTextColor(0);
+    doc.text("ACTA", pageWidth - marginRight, y + 7, { align: "right" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(100);
+    doc.text(`Folio #${folio}`, pageWidth - marginRight, y + 13, {
+      align: "right",
     });
 
-    drawKeyValueBox(ctx, {
-      title: "Información general",
-      rows: [
-        ["Tipo de acta", acta.nombre_tipo_acta || "—"],
-        ["Gravedad", String(acta.gravedad_tipo || "—").toUpperCase()],
-        ["Hora incidente", acta.hora_incidente || "—"],
-        ["Lugar incidente", acta.lugar_incidente || "—"],
-        ["Sanción", formatSancion(acta.tipo_sancion) || "—"],
-        ["Acepta hechos", acta.acepta_hechos ? "Sí" : "No"],
-        ["Reincidencia", acta.es_reincidencia ? "Sí" : "No"],
-      ],
+    y += 20;
+    hRule(y, contentWidth, 0.8);
+    y += 6;
+
+    const boxWidth = 24;
+    const boxGap = 8;
+    const metaWidth = contentWidth - boxWidth - boxGap;
+    const col = metaWidth / 3;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(140);
+    doc.text("ESTATUS", marginLeft, y + 3);
+    doc.text("TIPO", marginLeft + col, y + 3);
+    doc.text("FECHA", marginLeft + col * 2, y + 3);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(0);
+    doc.text(estatus, marginLeft, y + 9);
+    doc.text(tipoActa, marginLeft + col, y + 9);
+    doc.text(fechaIncidente, marginLeft + col * 2, y + 9, { maxWidth: col - 6 });
+
+    const boxX = marginLeft + metaWidth + boxGap;
+    const boxY = y - 1;
+    doc.setDrawColor(0);
+    doc.setLineWidth(0.5);
+    doc.rect(boxX, boxY, boxWidth, 18, "S");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text(gravedad.toUpperCase().slice(0, 5), boxX + boxWidth / 2, boxY + 10, {
+      align: "center",
+    });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(120);
+    doc.text("GRAVEDAD", boxX + boxWidth / 2, boxY + 15, { align: "center" });
+
+    y += 18;
+    hRule(y, contentWidth, 0.3);
+    y += 8;
+
+    sectionTitle("Datos del empleado");
+    needSpace(20);
+    fieldPair("Nombre completo", empleadoName, marginLeft, y);
+    fieldPair("Empresa", companyName, marginLeft + contentWidth / 2 + 4, y);
+    y += 16;
+    fieldPair("Elabora", acta.nombre_quien_elabora || "—", marginLeft, y);
+    fieldPair(
+      "Cargo elabora",
+      acta.nombre_cargo_elabora || "—",
+      marginLeft + contentWidth / 2 + 4,
+      y,
+    );
+    y += 18;
+
+    sectionTitle("Detalle del acta");
+    needSpace(20);
+    const c3 = contentWidth / 3;
+    fieldPair("Hora incidente", acta.hora_incidente || "—", marginLeft, y, c3 - 4);
+    fieldPair("Lugar incidente", acta.lugar_incidente || "—", marginLeft + c3, y, c3 - 4);
+    fieldPair("Sancion", formatSancion(acta.tipo_sancion) || "—", marginLeft + c3 * 2, y, c3 - 4);
+    y += 16;
+    fieldPair("Acepta hechos", acta.acepta_hechos ? "Si" : "No", marginLeft, y, c3 - 4);
+    fieldPair("Reincidencia", acta.es_reincidencia ? "Si" : "No", marginLeft + c3, y, c3 - 4);
+    fieldPair("Folio", `#${folio}`, marginLeft + c3 * 2, y, c3 - 4);
+    y += 18;
+
+    drawWrappedSectionText({
+      sectionName: "Descripcion de los hechos",
+      textValue: acta.descripcion_hechos,
+      emptyFallback: "—",
+    });
+    drawWrappedSectionText({
+      sectionName: "Testigos",
+      textValue: acta.testigos,
+      emptyFallback: "—",
+    });
+    drawWrappedSectionText({
+      sectionName: "Descargo del trabajador",
+      textValue: acta.descargo_trabajador,
+      emptyFallback: "—",
     });
 
-    drawMultilineBox(ctx, {
-      title: "Descripción de los hechos",
-      text: acta.descripcion_hechos || "—",
+    sectionTitle("Auditoria");
+    needSpace(20);
+    fieldPair(
+      "Fecha creacion",
+      acta.fecha_creacion
+        ? dayjs(acta.fecha_creacion).format("DD/MM/YYYY HH:mm")
+        : "—",
+      marginLeft,
+      y,
+    );
+    fieldPair("Sistema", systemLabel, marginLeft + contentWidth / 2 + 4, y);
+    y += 18;
+
+    const totalPages = doc.internal.getNumberOfPages();
+    const fechaGenerado = new Date().toLocaleDateString("es-MX", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+    const horaGenerado = new Date().toLocaleTimeString("es-MX", {
+      hour: "2-digit",
+      minute: "2-digit",
     });
 
-    drawMultilineBox(ctx, {
-      title: "Testigos",
-      text: acta.testigos || "—",
-    });
+    for (let p = 1; p <= totalPages; p++) {
+      doc.setPage(p);
+      if (p === totalPages) {
+        const yFirmas = pageHeight - 50;
+        doc.setDrawColor(0);
+        doc.setLineWidth(0.4);
+        doc.line(marginLeft + 5, yFirmas, marginLeft + 75, yFirmas);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(0);
+        doc.text("FIRMA DEL TRABAJADOR", marginLeft + 40, yFirmas + 5, {
+          align: "center",
+        });
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.5);
+        doc.setTextColor(100);
+        doc.text(empleadoName.slice(0, 40), marginLeft + 40, yFirmas + 10, {
+          align: "center",
+        });
 
-    drawMultilineBox(ctx, {
-      title: "Descargo del trabajador",
-      text: acta.descargo_trabajador || "—",
-    });
+        doc.line(
+          pageWidth - marginRight - 75,
+          yFirmas,
+          pageWidth - marginRight - 5,
+          yFirmas,
+        );
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(0);
+        doc.text(
+          "REPRESENTANTE DE LA EMPRESA",
+          pageWidth - marginRight - 40,
+          yFirmas + 5,
+          { align: "center" },
+        );
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.5);
+        doc.setTextColor(100);
+        doc.text(companyName.slice(0, 40), pageWidth - marginRight - 40, yFirmas + 10, {
+          align: "center",
+        });
+      }
 
-    drawKeyValueBox(ctx, {
-      title: "Información administrativa",
-      rows: [
-        ["Elabora", acta.nombre_quien_elabora || "—"],
-        ["Cargo elabora", acta.nombre_cargo_elabora || "—"],
-        [
-          "Fecha creación",
-          acta.fecha_creacion
-            ? dayjs(acta.fecha_creacion).format("DD/MM/YYYY HH:mm")
-            : "—",
-        ],
-      ],
-    });
-
-    drawSignaturesAndFooter(doc, {
-      empleadoName: empleadoName || "—",
-      empresaLabel: companyName || "Uniline Innovacion en la Nube",
-      footerLeft: "Sistema Adamia",
-      // En Actas: firmas solo en la última página (evita duplicarlas si el PDF es de 2+ hojas).
-      signaturesOn: "last",
-    });
+      doc.setDrawColor(180);
+      doc.setLineWidth(0.2);
+      doc.line(marginLeft, pageHeight - 14, pageWidth - marginRight, pageHeight - 14);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      doc.setTextColor(160);
+      doc.text(
+        `Generado el ${fechaGenerado} a las ${horaGenerado} · ${systemLabel} · Folio #${folio} · Página ${p} de ${totalPages}`,
+        pageWidth / 2,
+        pageHeight - 9,
+        { align: "center" },
+      );
+    }
 
     const nombreArchivo = `ACTA_ADMINISTRATIVA_${String(
       acta.folio || "FOLIO",
@@ -282,6 +495,135 @@ export const AdministrativeDetailsModal = ({
       /\s+/g,
       "_",
     )}.pdf`;
+    return { doc, nombreArchivo };
+  };
+
+  const imprimirPDF = (doc, nombreArchivo) =>
+    new Promise((resolve) => {
+      try {
+        const blob = doc.output("blob");
+        const url = URL.createObjectURL(blob);
+        const iframe = document.createElement("iframe");
+        iframe.style.position = "fixed";
+        iframe.style.right = "0";
+        iframe.style.bottom = "0";
+        iframe.style.width = "0";
+        iframe.style.height = "0";
+        iframe.style.border = "0";
+        iframe.src = url;
+
+        let finished = false;
+        let fallbackTimer = null;
+        let mediaPollTimer = null;
+        const MIN_PREPARING_MS = 4000;
+        const preparingStartedAt = Date.now();
+        let parentBlurred = false;
+        let didEnterPrintMode = false;
+        const mediaQuery =
+          typeof window !== "undefined" && window.matchMedia
+            ? window.matchMedia("print")
+            : null;
+
+        const finish = () => {
+          if (finished) return;
+          const elapsed = Date.now() - preparingStartedAt;
+          const remaining = Math.max(0, MIN_PREPARING_MS - elapsed);
+          setTimeout(() => {
+            if (finished) return;
+            finished = true;
+            try {
+              window.removeEventListener("blur", onParentBlur);
+              window.removeEventListener("focus", onParentFocus);
+              window.removeEventListener("afterprint", onAfterPrint);
+              if (mediaQuery?.removeEventListener) {
+                mediaQuery.removeEventListener("change", onMediaPrintChange);
+              } else if (mediaQuery?.removeListener) {
+                mediaQuery.removeListener(onMediaPrintChange);
+              }
+            } catch {}
+            if (fallbackTimer) clearTimeout(fallbackTimer);
+            if (mediaPollTimer) clearInterval(mediaPollTimer);
+            resolve();
+            setTimeout(() => {
+              try {
+                URL.revokeObjectURL(url);
+                iframe.remove();
+              } catch {}
+            }, 2000);
+          }, remaining);
+        };
+
+        const onAfterPrint = () => finish();
+        const onParentBlur = () => {
+          parentBlurred = true;
+        };
+        const onParentFocus = () => {
+          if (parentBlurred) finish();
+        };
+        const onMediaPrintChange = (event) => {
+          const isPrinting = !!event?.matches;
+          if (isPrinting) {
+            didEnterPrintMode = true;
+            return;
+          }
+          if (didEnterPrintMode) finish();
+        };
+
+        iframe.onload = () => {
+          try {
+            window.addEventListener("afterprint", onAfterPrint);
+            window.addEventListener("blur", onParentBlur);
+            window.addEventListener("focus", onParentFocus);
+            if (mediaQuery?.addEventListener) {
+              mediaQuery.addEventListener("change", onMediaPrintChange);
+            } else if (mediaQuery?.addListener) {
+              mediaQuery.addListener(onMediaPrintChange);
+            }
+            if (iframe.contentWindow) {
+              iframe.contentWindow.onafterprint = () => finish();
+            }
+            iframe.contentWindow?.focus();
+            setTimeout(() => {
+              iframe.contentWindow?.print();
+            }, 80);
+
+            mediaPollTimer = setInterval(() => {
+              const hasFocus =
+                typeof document !== "undefined" &&
+                typeof document.hasFocus === "function"
+                  ? document.hasFocus()
+                  : true;
+              if (parentBlurred && hasFocus) {
+                finish();
+                return;
+              }
+              if (!mediaQuery) return;
+              if (mediaQuery.matches) {
+                didEnterPrintMode = true;
+              } else if (didEnterPrintMode) {
+                finish();
+              }
+            }, 400);
+
+            fallbackTimer = setTimeout(() => {
+              finish();
+            }, 25000);
+          } catch {
+            doc.save(nombreArchivo);
+            finish();
+          }
+        };
+
+        document.body.appendChild(iframe);
+      } catch (e) {
+        console.error(e);
+        doc.save(nombreArchivo);
+        resolve();
+      }
+    });
+
+  const descargarPDFActaFormatoPermisos = () => {
+    const { doc, nombreArchivo } = buildActaPdfFormatoPermisos();
     doc.save(nombreArchivo);
   };
 
@@ -452,18 +794,50 @@ export const AdministrativeDetailsModal = ({
         {/* Footer de acciones: cerrar + descargar PDF.
             Relación: patrón igual a `PermisoViewDialog` y `FiniquitoViewDialog`. */}
         <div className="bg-gray-50 p-4 flex flex-col-reverse sm:flex-row justify-end gap-2 rounded-b-lg">
+          {isPreparingPrint ? (
+            <div className="text-sm text-blue-700 flex items-center gap-2 sm:mr-auto">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Preparando impresión...
+            </div>
+          ) : (
+            <div className="sm:mr-auto" />
+          )}
           <Button
             variant="outline"
             onClick={() => onClose(false)}
+            disabled={isPreparingPrint}
             className="w-full sm:w-auto border-gray-300"
           >
             Cerrar
           </Button>
           <Button
             onClick={descargarPDFActaFormatoPermisos}
+            disabled={isPreparingPrint}
             className="w-full sm:w-auto bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm"
           >
-            📄 Descargar PDF
+            <Download className="h-4 w-4 mr-2" />
+            Descargar PDF
+          </Button>
+          <Button
+            onClick={async () => {
+              setIsPreparingPrint(true);
+              try {
+                await new Promise((resolve) => setTimeout(resolve, 0));
+                const { doc, nombreArchivo } = buildActaPdfFormatoPermisos();
+                await imprimirPDF(doc, nombreArchivo);
+              } finally {
+                setIsPreparingPrint(false);
+              }
+            }}
+            disabled={isPreparingPrint}
+            className="w-full sm:w-auto bg-[#1e3a8a] hover:bg-[#1d4ed8] text-white shadow-sm"
+          >
+            {isPreparingPrint ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Printer className="h-4 w-4 mr-2" />
+            )}
+            {isPreparingPrint ? "Preparando..." : "Imprimir acta"}
           </Button>
         </div>
 

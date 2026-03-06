@@ -32,6 +32,12 @@ export const finiquitosApi = {
     });
     return res.data;
   },
+  async actualizar(id, payload) {
+    const res = await axios.put(`/checador/finiquitos/${id}`, payload, {
+      headers: authHeaders(),
+    });
+    return res.data;
+  },
   async actualizarEstado(id, estado) {
     const res = await axios.patch(
       `/checador/finiquitos/${id}/estado`,
