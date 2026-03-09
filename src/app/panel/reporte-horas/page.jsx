@@ -225,7 +225,11 @@ export default function ReporteHorasPage() {
       };
       const requests = ids.map((id) =>
         axios.get(`/checador/reportes/horas`, {
-          params: { empleadoId: id, fechaInicio, fechaFin },
+          params: {
+            empleadoId: id,
+            fechaInicio,
+            fechaFin,
+          },
           ...auth,
         }),
       );
@@ -445,6 +449,9 @@ export default function ReporteHorasPage() {
                   <td><div class="h">Promedio Diario</div><div class="v">${
                     r.resumen.promedioHoras
                   }</div><div class="s">horas/día</div></td>
+                  <td><div class="h">Horas Extra</div><div class="v">${
+                    r.resumen.horasExtrasLaboradas || "0:00"
+                  }</div><div class="s">autorizadas</div></td>
                 </tr>
               </table>
             </div>
@@ -1685,7 +1692,7 @@ export default function ReporteHorasPage() {
                       <div className="lg:col-span-4">
                         <section
                           data-summary-section="true"
-                          className="grid grid-cols-3 gap-0 border border-gray-300 rounded-sm overflow-hidden bg-gray-50"
+                          className="grid grid-cols-4 gap-0 border border-gray-300 rounded-sm overflow-hidden bg-gray-50"
                           aria-label="Resumen del periodo"
                         >
                           <div className="text-center px-2 py-3 border-r border-gray-300 bg-gray-50">
@@ -1728,6 +1735,20 @@ export default function ReporteHorasPage() {
                               data-summary-value="true"
                             >
                               {reporte.resumen?.promedioHoras || "0:00"}
+                            </div>
+                          </div>
+                          <div className="text-center px-2 py-3 border-l border-gray-300 bg-gray-50">
+                            <div
+                              className="text-[8px] text-gray-600 uppercase font-semibold mb-1.5 tracking-wide"
+                              data-summary-label="true"
+                            >
+                              Horas Extra
+                            </div>
+                            <div
+                              className="text-xl font-bold leading-none text-gray-900 mb-1"
+                              data-summary-value="true"
+                            >
+                              {reporte.resumen?.horasExtrasLaboradas || "0:00"}
                             </div>
                           </div>
                         </section>

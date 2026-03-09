@@ -133,6 +133,7 @@ export default function FormularioEmpleado({
       lugar_checkout: null,
       checar_gps: false,
       enviar_asistencia_automatica: true,
+      autoriza_horas_extra: false,
       cierre_turno: "Automático",
       areasAsignadas: [],
       new_pass: "",
@@ -234,6 +235,8 @@ export default function FormularioEmpleado({
         checar_gps: restoEmpleado.checar_gps === 1 ? true : false,
         enviar_asistencia_automatica:
           restoEmpleado.enviar_asistencia_automatica === 1 ? true : false,
+        autoriza_horas_extra:
+          restoEmpleado.autoriza_horas_extra === 1 ? true : false,
         new_pass: "",
       });
 

@@ -6,10 +6,12 @@ import {
   FormField,
   FormItem,
   FormLabel,
+  FormControl,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/context/AuthContext";
 
 const DIAS_SEMANA = [
@@ -149,6 +151,31 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
         </div>
 
         <div className="space-y-6">
+      <FormField
+        name="autoriza_horas_extra"
+        control={form.control}
+        render={({ field }) => (
+          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 shadow-sm">
+            <div className="space-y-0.5">
+              <FormLabel className="text-base">
+                Autorizar horas extra (reporte)
+              </FormLabel>
+              <div className="text-sm text-muted-foreground">
+                Si está activo, este empleado acumula horas extra en el reporte
+                de horas trabajadas.
+              </div>
+            </div>
+            <FormControl>
+              <Switch
+                disabled={soloLectura}
+                checked={!!field.value}
+                onCheckedChange={field.onChange}
+              />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+
       {isSubmitted && errors.horarios && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3">
           <p className="text-red-800 text-sm font-medium">

@@ -55,6 +55,7 @@ export const schemaEmpleado = z
     nip: z.string().optional(),
     checar_gps: z.boolean().default(false).optional(),
     enviar_asistencia_automatica: z.boolean().default(true).optional(),
+    autoriza_horas_extra: z.boolean().default(false).optional(),
     metodo_chequeo: z
       .enum(["codigo", "facial", "ambos"])
       .default("ambos")
