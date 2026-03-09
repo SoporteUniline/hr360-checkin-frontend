@@ -42,7 +42,6 @@ export default function RelojChecador({
 
   const { dataUser } = useAuth();
   const DB_TIMEZONE = "America/Mexico_City";
-  const USER_TIMEZONE = dataUser?.zona_horaria || "America/Mexico_City";
   const [mostrarQR, setMostrarQR] = useState(false);
   const [horaActual, setHoraActual] = useState("");
   const [fechaActual, setFechaActual] = useState("");
@@ -57,7 +56,7 @@ export default function RelojChecador({
     if (!fechaString) return "-";
     return dayjs
       .tz(fechaString, DB_TIMEZONE)
-      .tz(USER_TIMEZONE)
+      .tz(EMPRESA_TIMEZONE)
       .format("HH:mm:ss");
   };
 
@@ -75,15 +74,36 @@ export default function RelojChecador({
       ? endpoint
       : null,
     fetcher,
+    { refreshInterval: 30000 }, // fallback cada 30 s; SSE lo actualiza al instante
   );
 
   const movimientos = registrosData?.registrosHoy || [];
   const empleadosActivos = registrosData?.activosHoy || 0;
   const totalRegistros = registrosData?.totalRegistrosHoy || 0;
+  const EMPRESA_TIMEZONE = registrosData?.zona_horaria || "America/Mexico_City";
+
+  // ── SSE: actualización en tiempo real cuando llega una checada ──────────────
+  useEffect(() => {
+    const sseParam = modoEmpleado && idEmpleado
+      ? `id_empleado=${idEmpleado}`
+      : idEmpresa
+        ? `id_empresa=${idEmpresa}`
+        : null;
+    if (!sseParam) return;
+
+    const es = new EventSource(
+      `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/reloj/eventos-checada?${sseParam}`
+    );
+    es.addEventListener("checada", () => mutate());
+    es.onerror = () => {}; // silencioso; el refreshInterval cubre el fallback
+
+    return () => es.close();
+  }, [idEmpresa, idEmpleado, modoEmpleado]);
+  // ───────────────────────────────────────────────────────────────────────────
 
   useEffect(() => {
     const actualizarHora = () => {
-      const ahora = dayjs().tz(USER_TIMEZONE);
+      const ahora = dayjs().tz(EMPRESA_TIMEZONE);
       setHoraActual(ahora.format("HH:mm:ss"));
       const fechaFormateada = ahora.format("dddd, D [de] MMMM [de] YYYY");
       const [dia, ...resto] = fechaFormateada.split(", ");
@@ -94,7 +114,7 @@ export default function RelojChecador({
     actualizarHora();
     const intervalo = setInterval(actualizarHora, 1000);
     return () => clearInterval(intervalo);
-  }, [USER_TIMEZONE]);
+  }, [EMPRESA_TIMEZONE]);
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);

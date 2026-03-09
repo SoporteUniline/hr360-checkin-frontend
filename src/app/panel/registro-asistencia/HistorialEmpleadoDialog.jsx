@@ -19,7 +19,7 @@ import {
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
 import useClockCheckData from "@/hooks/useRelojChecador";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth, useEmpresaTimezone } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Pencil, Save, X, Clock } from "lucide-react";
@@ -27,7 +27,8 @@ import useEntradaSalida from "@/hooks/useEntradaSalida";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
-dayjs.tz.setDefault("America/Mexico_City");
+
+const DB_TIMEZONE = "America/Mexico_City";
 
 export default function HistorialEmpleadoDialog({
   isOpen,
@@ -36,6 +37,7 @@ export default function HistorialEmpleadoDialog({
   mutateAsistencia,
 }) {
   const { dataUser } = useAuth();
+  const empresaTimezone = useEmpresaTimezone(dataUser?.id_empresa);
   const page = 1;
   const limit = 10;
 
@@ -52,10 +54,13 @@ export default function HistorialEmpleadoDialog({
 
   const formatTime = (dateTimeString) => {
     if (!dateTimeString) return "-";
-    return dayjs(dateTimeString).format("HH:mm");
+    return dayjs.tz(dateTimeString, DB_TIMEZONE).tz(empresaTimezone).format("HH:mm");
   };
 
-  const baseDateForCorrection = dayjs(empleado.entrada).format("YYYY-MM-DD");
+  const baseDateForCorrection = dayjs
+    .tz(empleado.entrada, DB_TIMEZONE)
+    .tz(empresaTimezone)
+    .format("YYYY-MM-DD");
 
   const {
     editingMovimientoId,
@@ -111,7 +116,7 @@ export default function HistorialEmpleadoDialog({
                       <TableRow key={index} className="border-b border-gray-100 hover:bg-gray-50">
                     <TableCell className="text-center">
                       {checador.entrada
-                        ? dayjs(checador.entrada).format("HH:mm:ss")
+                        ? dayjs.tz(checador.entrada, DB_TIMEZONE).tz(empresaTimezone).format("HH:mm:ss")
                         : "-"}
                     </TableCell>
                     <TableCell className="text-center">
@@ -120,16 +125,12 @@ export default function HistorialEmpleadoDialog({
                           type="time"
                           value={
                             editingMovimientoData.entrada_corregida
-                              ? dayjs(
-                                  editingMovimientoData.entrada_corregida
-                                ).format("HH:mm")
+                              ? dayjs.tz(editingMovimientoData.entrada_corregida, DB_TIMEZONE).tz(empresaTimezone).format("HH:mm")
                               : ""
                           }
                           max={
                             editingMovimientoData.salida_corregida
-                              ? dayjs(
-                                  editingMovimientoData.salida_corregida
-                                ).format("HH:mm")
+                              ? dayjs.tz(editingMovimientoData.salida_corregida, DB_TIMEZONE).tz(empresaTimezone).format("HH:mm")
                               : undefined
                           }
                           onChange={(e) => {
@@ -149,16 +150,14 @@ export default function HistorialEmpleadoDialog({
                       ) : (
                         <span>
                           {checador.entrada_corregida
-                            ? dayjs(checador.entrada_corregida).format(
-                                "HH:mm:ss"
-                              )
+                            ? dayjs.tz(checador.entrada_corregida, DB_TIMEZONE).tz(empresaTimezone).format("HH:mm:ss")
                             : "-"}
                         </span>
                       )}
                     </TableCell>
                     <TableCell className="text-center">
                       {checador.salida
-                        ? dayjs(checador.salida).format("HH:mm:ss")
+                        ? dayjs.tz(checador.salida, DB_TIMEZONE).tz(empresaTimezone).format("HH:mm:ss")
                         : "-"}
                     </TableCell>
                     <TableCell className="text-center">
@@ -167,16 +166,12 @@ export default function HistorialEmpleadoDialog({
                           type="time"
                           value={
                             editingMovimientoData.salida_corregida
-                              ? dayjs(
-                                  editingMovimientoData.salida_corregida
-                                ).format("HH:mm")
+                              ? dayjs.tz(editingMovimientoData.salida_corregida, DB_TIMEZONE).tz(empresaTimezone).format("HH:mm")
                               : ""
                           }
                           min={
                             editingMovimientoData.entrada_corregida
-                              ? dayjs(
-                                  editingMovimientoData.entrada_corregida
-                                ).format("HH:mm")
+                              ? dayjs.tz(editingMovimientoData.entrada_corregida, DB_TIMEZONE).tz(empresaTimezone).format("HH:mm")
                               : undefined
                           }
                           onChange={(e) => {
@@ -197,9 +192,7 @@ export default function HistorialEmpleadoDialog({
                       ) : (
                         <span>
                           {checador.salida_corregida
-                            ? dayjs(checador.salida_corregida).format(
-                                "HH:mm:ss"
-                              )
+                            ? dayjs.tz(checador.salida_corregida, DB_TIMEZONE).tz(empresaTimezone).format("HH:mm:ss")
                             : "-"}
                         </span>
                       )}

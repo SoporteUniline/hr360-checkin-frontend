@@ -27,14 +27,16 @@ import {
   getTimeZoneOptions,
 } from "@/lib/timezones";
 
-export default function EmpresaForm() {
+export default function EmpresaForm({ idEmpresa }) {
   const { dataUser } = useAuth();
   const token = Cookies.get("token");
   const [loading, setLoading] = React.useState(false);
   const { enqueueSnackbar } = useSnackbar();
 
+  const empresaId = idEmpresa ?? dataUser?.id_empresa;
+
   const { data, isLoading, error } = useSWR(
-    `/empresas/${dataUser?.id_empresa}`,
+    empresaId ? `/empresas/${empresaId}` : null,
     fetcherWithToken,
     swr_config
   );
@@ -104,7 +106,7 @@ export default function EmpresaForm() {
       });
       form.reset();
       setLoading(false);
-      await mutate(`/empresas/${dataUser?.id_empresa}`);
+      await mutate(`/empresas/${empresaId}`);
     } catch (error) {
       console.log(error);
       setLoading(false);

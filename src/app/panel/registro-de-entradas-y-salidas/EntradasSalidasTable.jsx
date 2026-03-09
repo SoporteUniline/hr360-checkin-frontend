@@ -10,7 +10,7 @@ import EntradasSalidasRow from "./EntradasSalidasRow";
 import { exportToExcel } from "@/utils/exportExcelJS";
 import { Button } from "@/components/ui/button";
 import { FileSpreadsheet } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { useEmpresaTimezone } from "@/context/AuthContext";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -38,8 +38,8 @@ export default function EntradasSalidasTable({
   limit = 10,
   onHeaderFilteringMetaChange,
 }) {
-  const { dataUser } = useAuth();
-  const userTimezone = dataUser?.zona_horaria || "America/Mexico_City";
+  const fallbackTimezone = useEmpresaTimezone(empresaActiva);
+  const userTimezone = registros?.[0]?.zona_horaria || fallbackTimezone;
   const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState([]);
   const [empresaSeleccionada, setEmpresaSeleccionada] = useState([]);
   const [departamentoSeleccionado, setDepartamentoSeleccionado] = useState([]);

@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/context/AuthContext";
 import BasicInfoForm from "./BasicInfoForm";
@@ -12,6 +12,12 @@ import EmpresaInfoForm from "./Empresa/EmpresaForm";
 
 export default function MyAccountReclutador() {
   const { dataUser } = useAuth();
+  const [empresaSeleccionada, setEmpresaSeleccionada] = useState(null);
+
+  // id de empresa activa para el tab "Mi empresa"
+  const idEmpresaActiva = empresaSeleccionada ?? dataUser?.id_empresa;
+  const tieneMultiplesEmpresas = (dataUser?.empresas_detalle?.length ?? 0) > 1;
+
   const { data, isLoading, error } = useSWR(
     `/users/${dataUser?.id_usuario}`,
     fetcherWithToken,
@@ -69,7 +75,30 @@ export default function MyAccountReclutador() {
               <PasswordChange user={data} />
             </TabsContent>
             <TabsContent value="empresa" className="mt-0">
-              <EmpresaInfoForm />
+              {tieneMultiplesEmpresas && (
+                <div className="mb-6">
+                  <p className="text-sm font-medium text-gray-700 mb-2">Selecciona la empresa a editar</p>
+                  <div className="flex flex-wrap gap-2">
+                    {dataUser.empresas_detalle.map((emp) => (
+                      <button
+                        key={emp.id_empresa}
+                        onClick={() => setEmpresaSeleccionada(emp.id_empresa)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                          idEmpresaActiva === emp.id_empresa
+                            ? "bg-[#2563EB] text-white border-[#2563EB]"
+                            : "bg-white text-gray-700 border-gray-200 hover:border-[#2563EB] hover:text-[#2563EB]"
+                        }`}
+                      >
+                        {emp.url_imagen && (
+                          <img src={emp.url_imagen} alt="" className="w-5 h-5 rounded object-cover" />
+                        )}
+                        {emp.nombre}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <EmpresaInfoForm idEmpresa={idEmpresaActiva} />
             </TabsContent>
           </div>
         </Tabs>

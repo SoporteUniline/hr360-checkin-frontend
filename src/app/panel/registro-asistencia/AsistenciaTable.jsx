@@ -13,7 +13,7 @@ import { exportToExcel } from "@/utils/exportExcelJS";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
-import { useAuth } from "@/context/AuthContext";
+import { useEmpresaTimezone } from "@/context/AuthContext";
 import { useEffect, useMemo, useState } from "react";
 import HeaderMultiFilter from "./HeaderMultiFilter";
 import ActiveFilterChips from "./ActiveFilterChips";
@@ -45,8 +45,9 @@ export default function AsistenciaTable({
   limit = 10,
   onHeaderFilteringMetaChange,
 }) {
-  const { dataUser } = useAuth();
-  const userTimezone = dataUser?.zona_horaria || "America/Mexico_City";
+  // Para el Excel usamos la zona de la primera empresa visible (o la activa como fallback)
+  const fallbackTimezone = useEmpresaTimezone(empresaActiva);
+  const userTimezone = filtrados?.[0]?.zona_horaria || fallbackTimezone;
   const DB_TIMEZONE = "America/Mexico_City";
   const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState([]);
   const [empresaSeleccionada, setEmpresaSeleccionada] = useState([]);

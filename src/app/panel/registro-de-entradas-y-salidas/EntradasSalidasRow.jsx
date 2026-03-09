@@ -5,7 +5,7 @@ import { Pencil, Save, X } from "lucide-react";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
-import { useAuth } from "@/context/AuthContext";
+import { useEmpresaTimezone } from "@/context/AuthContext";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -22,8 +22,8 @@ export default function EntradasSalidasRow({
   handleSaveMovimientoClick,
   empresaActiva,
 }) {
-  const { dataUser } = useAuth();
-  const userTimezone = dataUser?.zona_horaria || "America/Mexico_City";
+  const fallbackTimezone = useEmpresaTimezone(empresaActiva);
+  const userTimezone = registro.zona_horaria || fallbackTimezone;
 
   const currentData = isEditing ? editingRowData : registro;
 

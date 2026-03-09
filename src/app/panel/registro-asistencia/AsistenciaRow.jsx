@@ -13,7 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Save, X, Check, X as XIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import HistorialEmpleadoDialog from "./HistorialEmpleadoDialog";
-import { useAuth } from "@/context/AuthContext";
+import { useEmpresaTimezone } from "@/context/AuthContext";
+
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -37,8 +38,8 @@ export default function AsistenciaRow({
   mostrarCamposExtras,
   empresaActiva,
 }) {
-  const { dataUser } = useAuth();
-  const userTimezone = dataUser?.zona_horaria || "America/Mexico_City";
+  const fallbackTimezone = useEmpresaTimezone(empresaActiva);
+  const userTimezone = registro.zona_horaria || fallbackTimezone;
   const DB_TIMEZONE = "America/Mexico_City";
   const currentData = isEditing ? editingRowData : registro;
   const areTimeInputsDisabled = !currentData.correccion;

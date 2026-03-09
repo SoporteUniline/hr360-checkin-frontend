@@ -18,11 +18,12 @@ function Avatar({ className, ...props }) {
   );
 }
 
-function AvatarImage({ className, ...props }) {
+function AvatarImage({ className, src, ...props }) {
   return (
     <AvatarPrimitive.Image
       data-slot="avatar-image"
       className={cn("aspect-square size-full", className)}
+      src={src || undefined}
       {...props}
     />
   );

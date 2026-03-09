@@ -70,7 +70,20 @@ export default function Home() {
       ? `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/reloj/registros-del-dia?id_empresa=${dataUser.id_empresa}`
       : null,
     fetcherWithToken,
+    { refreshInterval: 30000 }, // fallback cada 30 s; SSE lo actualiza al instante
   );
+
+  // ── SSE: actualización en tiempo real cuando llega una checada ──────────────
+  useEffect(() => {
+    if (!dataUser?.id_empresa) return;
+    const es = new EventSource(
+      `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/reloj/eventos-checada?id_empresa=${dataUser.id_empresa}`
+    );
+    es.addEventListener("checada", () => mutate());
+    es.onerror = () => {};
+    return () => es.close();
+  }, [dataUser?.id_empresa]);
+  // ───────────────────────────────────────────────────────────────────────────
 
   const movimientos = registrosData?.registrosHoy || [];
   const movimientosParaTabla = movimientos.slice(0, 10);

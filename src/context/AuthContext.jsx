@@ -94,3 +94,18 @@ export function AuthProvider({ children }) {
 export function useAuth() {
   return useContext(AuthContext);
 }
+
+/**
+ * Devuelve la zona horaria de la empresa activa.
+ * Si idEmpresa es null / "all", usa la zona de la primera empresa del usuario.
+ */
+export function useEmpresaTimezone(idEmpresa) {
+  const { dataUser } = useContext(AuthContext);
+  if (idEmpresa && idEmpresa !== "all") {
+    const empresa = dataUser?.empresas_detalle?.find(
+      (e) => String(e.id_empresa) === String(idEmpresa),
+    );
+    if (empresa?.zona_horaria) return empresa.zona_horaria;
+  }
+  return dataUser?.zona_horaria || "America/Mexico_City";
+}
