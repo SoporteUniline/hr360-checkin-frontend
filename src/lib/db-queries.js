@@ -3,12 +3,21 @@ import { pool } from "@/config/database";
 export async function checkSubscriptionDirect(userId) {
   try {
     const query = `
-      SELECT c.id 
+      SELECT c.id
       FROM Contrataciones c
-      INNER JOIN Suscripciones s ON c.id = s.contratacion_id
-      WHERE c.usuario_id = ? 
-        AND s.estado IN ('Activa', 'Cortesia')
-        AND s.fecha_vencimiento >= CURDATE()
+      WHERE c.usuario_id = ?
+        AND (
+          EXISTS (
+            SELECT 1 FROM Suscripciones s
+            WHERE s.contratacion_id = c.id
+              AND s.estado IN ('Activa', 'Cortesia')
+              AND s.fecha_vencimiento >= CURDATE()
+          )
+          OR (
+            c.estado = 'Activo'
+            AND (c.fecha_fin IS NULL OR c.fecha_fin >= CURDATE())
+          )
+        )
       LIMIT 1
     `;
 
