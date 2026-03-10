@@ -8,7 +8,7 @@ import AsistenciaTable from "./AsistenciaTable";
 import TablePagination from "@/components/TablePagination";
 import LoadingTable from "@/components/LoadingTable";
 import ErrorPage from "@/components/ErrorPage";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { fetcherWithToken } from "@/lib/fetcher";
 import useDepartamentosData from "@/hooks/useDepartamentosData";
 
@@ -61,6 +61,21 @@ export default function AsistenciaDataContainer({
     diasFestivos,
     requiereAutorizacion,
   );
+
+  // Ref para siempre tener el mutate más reciente sin recrear el EventSource
+  const mutateRef = useRef(mutate);
+  useEffect(() => { mutateRef.current = mutate; }, [mutate]);
+
+  // SSE: actualización en tiempo real cuando llega una checada
+  useEffect(() => {
+    if (!idEmpresa) return;
+    const es = new EventSource(
+      `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/reloj/eventos-checada?id_empresa=${idEmpresa}`
+    );
+    es.addEventListener("checada", () => mutateRef.current());
+    es.onerror = () => {};
+    return () => es.close();
+  }, [idEmpresa]);
 
   useEffect(() => {
     let isCancelled = false;

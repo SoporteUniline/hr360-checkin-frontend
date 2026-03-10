@@ -33,6 +33,8 @@ import {
   FolderClosed,
   ShieldCheck,
   UserCog,
+  Monitor,
+  CreditCard,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -49,6 +51,18 @@ const dashboardItems = [
     url: "/dashboard/usuarios",
     rol: "Admin",
     icon: UsersIcon,
+  },
+  {
+    title: "Checadores",
+    url: "/dashboard/checadores",
+    rol: "Admin",
+    icon: Monitor,
+  },
+  {
+    title: "Planes",
+    url: "/dashboard/planes",
+    rol: "Admin",
+    icon: CreditCard,
   },
   {
     title: "Dashboard",
