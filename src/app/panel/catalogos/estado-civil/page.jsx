@@ -1,8 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import EstadoCivilTable from "./EstadoCivilTable";
 import EstadoCivilFormDialog from "./EstadoCivilFormDialog";
@@ -26,23 +24,13 @@ export default function EstadoCivil() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-xl p-6">
-        <div className="mb-4 flex justify-end">
-          <Button
-            onClick={() => {
-              setEditCiv(null);
-              setOpenFormModal(true);
-            }}
-            className="w-full md:w-auto bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-md"
-          >
-            <Plus className="h-4 w-4 mr-1" /> Nuevo estado civil
-          </Button>
-        </div>
-      </div>
-
       <EstadoCivilTable
         id_empresa={id_empresa}
         swrKey={key}
+        onCreate={() => {
+          setEditCiv(null);
+          setOpenFormModal(true);
+        }}
         onEdit={(civ, lista) => {
           setEditCiv(civ);
           setEstadoCivil(lista);

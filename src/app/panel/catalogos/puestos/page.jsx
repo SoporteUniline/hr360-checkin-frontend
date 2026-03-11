@@ -1,8 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import PositionFormDialog from "./PositionFormDialog";
 import PositionDeleteDialog from "./PositionDeleteDialog";
@@ -23,22 +21,13 @@ export default function Positions() {
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] p-6">
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6 flex justify-end">
-        <Button
-          className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
-          onClick={() => {
-            setEditPosition(null);
-            setOpenFormModal(true);
-          }}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Nuevo puesto
-        </Button>
-      </div>
-
       <PositionsTable
         id_empresa={id_empresa}
         swrKey={key}
+        onCreate={() => {
+          setEditPosition(null);
+          setOpenFormModal(true);
+        }}
         onEdit={(position, lista) => {
           setEditPosition(position);
           setPositions(lista);

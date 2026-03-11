@@ -283,11 +283,7 @@ export default function UserAccessPage() {
 
       {/* Filtros */}
       <Card className="border-blue-100 bg-blue-50">
-        <CardHeader>
-          <CardTitle className="text-base font-bold text-blue-700 flex items-center gap-2">
-            <Search className="h-4 w-4" /> Búsqueda
-          </CardTitle>
-        </CardHeader>
+       
         <CardContent>
           <div className="flex flex-col md:flex-row gap-2 md:items-end">
             <div className="w-full md:max-w-sm">
@@ -317,11 +313,7 @@ export default function UserAccessPage() {
 
       {/* Tabla */}
       <Card className="p-0 overflow-hidden border-gray-100">
-        <CardHeader className="border-b border-gray-100 bg-white pb-4">
-          <CardTitle className="text-sm font-bold text-gray-900">
-            Lista de usuarios
-          </CardTitle>
-        </CardHeader>
+        
         <CardContent className="p-0">
           <div className="overflow-auto">
             <Table>

@@ -8,7 +8,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Pencil, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 import useSWR, { mutate } from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { useEffect, useMemo, useState } from "react";
@@ -19,6 +20,7 @@ import ActiveFilterChips from "../../registro-asistencia/ActiveFilterChips";
 export default function PositionsTable({
   id_empresa,
   swrKey,
+  onCreate,
   onEdit,
   onDelete,
   onTotalChange,
@@ -187,23 +189,17 @@ export default function PositionsTable({
     );
   }
 
-  if (positions.length === 0 && !hasActiveHeaderFilters) {
-    return (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-10">
-        <div className="text-center text-gray-500">
-          No se encontraron puestos.
-        </div>
-      </div>
-    );
-  }
-
   return (
     <>
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
-        <div className="px-6 py-4 border-b border-gray-100">
-          <h2 className="text-lg font-semibold text-gray-900">
-            Lista de puestos
-          </h2>
+        <div className="px-6 py-4 border-b border-gray-100 flex justify-end">
+          <Button
+            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
+            onClick={onCreate}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Nuevo puesto
+          </Button>
         </div>
         <ActiveFilterChips
           groups={[

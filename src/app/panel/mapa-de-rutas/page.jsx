@@ -1552,11 +1552,7 @@ export default function PageMapaDeRutas() {
             className={cn(styles.cardShadow, "border")}
             style={{ borderColor: "var(--mr-border)" }}
           >
-            <CardHeader>
-              <CardTitle className="text-base font-bold text-[#2563EB] flex items-center gap-2">
-                <Filter className="h-4 w-4" /> Filtros de búsqueda
-              </CardTitle>
-            </CardHeader>
+           
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <label className="text-xs font-semibold uppercase text-muted-foreground">

@@ -594,18 +594,6 @@ export default function PermisosPage() {
         </div>
       </div>
 
-      <div className="flex justify-end">
-        <Button
-          onClick={() => {
-            setEditItem(null);
-            setOpenDialog(true);
-          }}
-          className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white"
-        >
-          <Plus className="h-4 w-4 mr-2" /> Nuevo Permiso
-        </Button>
-      </div>
-
       {/* Selector de vista encima de la tabla/calendario */}
       <div className="flex items-center justify-start">
         <div className="inline-flex rounded-lg border border-blue-100 p-1 bg-blue-50">
@@ -646,6 +634,10 @@ export default function PermisosPage() {
             onHeaderFilteringMetaChange={setHeaderFilterMeta}
             loading={isLoading}
             festivosSet={festivosSet}
+            onCreate={() => {
+              setEditItem(null);
+              setOpenDialog(true);
+            }}
             onEdit={(row) => {
               setEditItem(row);
               setOpenDialog(true);

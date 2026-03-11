@@ -1656,11 +1656,7 @@ export default function PageAguinaldos() {
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-100">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Lista de cálculos
-              </h2>
-            </div>
+            
             <ActiveFilterChips
               groups={[
                 {

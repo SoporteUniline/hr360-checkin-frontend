@@ -1,8 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import DepartamentosTable from "./DepartamentosTable";
 import DepartamentoFormDialog from "./DepartamentoFormDialog";
@@ -27,23 +25,13 @@ export default function Departamentos() {
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] p-6">
-      {/* Filtro principal */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6 flex justify-end">
-        <Button
-          className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
-          onClick={() => {
-            setEditDep(null);
-            setOpenFormModal(true);
-          }}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Nuevo departamento
-        </Button>
-      </div>
-
       <DepartamentosTable
         id_empresa={id_empresa}
         swrKey={key}
+        onCreate={() => {
+          setEditDep(null);
+          setOpenFormModal(true);
+        }}
         onEdit={(dep, lista) => {
           setEditDep(dep);
           setDepartamentos(lista);

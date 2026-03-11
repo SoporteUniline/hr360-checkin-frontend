@@ -1289,11 +1289,7 @@ export default function ReporteHorasPage() {
       </div>
 
       <Card className="border-blue-100 bg-blue-50">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-bold text-blue-700 flex items-center gap-2">
-            <Filter className="h-4 w-4" /> Filtros de búsqueda
-          </CardTitle>
-        </CardHeader>
+       
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-2 md:col-span-2">

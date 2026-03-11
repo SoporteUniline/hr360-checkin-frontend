@@ -329,11 +329,7 @@ export default function ReglasAvisoPage() {
 
       {/* Filtros */}
       <Card className="border-blue-100 bg-blue-50">
-        <CardHeader>
-          <CardTitle className="text-base font-bold text-blue-700 flex items-center gap-2">
-            <Filter className="h-4 w-4" /> Filtros de búsqueda
-          </CardTitle>
-        </CardHeader>
+        
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
             <div className="flex flex-col gap-1">
@@ -403,11 +399,7 @@ export default function ReglasAvisoPage() {
 
       {/* Tabla */}
       <Card className="p-0 overflow-hidden border-gray-100">
-        <CardHeader className="border-b border-gray-100 bg-white pb-4">
-          <CardTitle className="text-sm font-bold text-gray-900">
-            Listado de reglas
-          </CardTitle>
-        </CardHeader>
+        
         <CardContent className="p-0">
           <div className="overflow-auto">
             <Table>

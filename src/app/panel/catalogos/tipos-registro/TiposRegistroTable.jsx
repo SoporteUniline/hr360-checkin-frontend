@@ -53,11 +53,7 @@ export default function TiposRegistroTable({
   return (
     <>
       <Card className="p-0 overflow-hidden border-gray-100">
-        <CardHeader className="border-b border-gray-100 bg-white pb-4">
-          <CardTitle className="text-sm font-bold text-gray-900">
-            Lista de tipos de registro
-          </CardTitle>
-        </CardHeader>
+        
         <CardContent className="p-0">
           <div className="overflow-auto">
             <Table>

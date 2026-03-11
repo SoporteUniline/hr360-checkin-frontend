@@ -472,11 +472,7 @@ export default function VacacionesPage() {
 
       {/* Filtros */}
       <Card className="border-blue-100 bg-blue-50">
-        <CardHeader>
-          <CardTitle className="text-base font-bold text-blue-700 flex items-center gap-2">
-            <Filter className="h-4 w-4" /> Filtros de búsqueda
-          </CardTitle>
-        </CardHeader>
+        
         <CardContent>
           {/* Grid: 1 col en móvil, 2 en tablets (md), 3 en laptops (lg) y 5 en desktop (xl) */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 items-end">
@@ -617,11 +613,7 @@ export default function VacacionesPage() {
 
       {/* Contenido */}
       <Card className="p-0 overflow-hidden border-gray-100">
-        <CardHeader className="border-b border-gray-100 bg-white pt-6">
-          <CardTitle className="text-sm font-bold text-gray-900">
-            Lista de vacaciones
-          </CardTitle>
-        </CardHeader>
+       
         {loading ? (
           <div className="text-center text-slate-400 py-16">
             Cargando datos...

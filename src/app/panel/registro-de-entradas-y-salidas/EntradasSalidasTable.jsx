@@ -205,15 +205,7 @@ export default function EntradasSalidasTable({
     <>
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
         <div className="px-6 py-4 border-b border-gray-100 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            {/* Si viene `fecha` estamos en modo single-day (desde === hasta). Si no, es rango. */}
-            <h2 className="text-lg font-semibold text-gray-900">
-              {fecha ? "Registros del día" : "Registros del período"}
-            </h2>
-            <p className="text-sm text-gray-500">
-              Consulta y corrige entradas/salidas.
-            </p>
-          </div>
+          
           <div className="flex justify-end">
             <Button
               onClick={handleExportExcel}

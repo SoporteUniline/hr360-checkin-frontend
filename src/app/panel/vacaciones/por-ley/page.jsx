@@ -17,7 +17,7 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "@/lib/axios";
 import { useAuth } from "@/context/AuthContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -262,28 +262,40 @@ export default function VacacionesPorLeyPage() {
         </div>
       </div>
 
-      <select
-        value={empresaActiva}
-        onChange={(e) =>
-          setEmpresaActiva(
-            e.target.value === "all" ? "all" : Number(e.target.value),
-          )
-        }
-        className="text-sm border rounded-md px-2 py-1 bg-white"
-      >
-        <option value="all">🌍 Todas las empresas</option>
-        {dataUser?.empresas_detalle?.map((emp) => (
-          <option key={emp.id_empresa} value={emp.id_empresa}>
-            {emp.nombre}
-          </option>
-        ))}
-      </select>
-
       <Card className="p-0 overflow-hidden border-gray-100">
-        <CardHeader className="border-b border-gray-100 bg-white pb-4">
-          <CardTitle className="text-sm font-bold text-gray-900">
-            Lista de reglas
-          </CardTitle>
+        <CardHeader className="border-b border-gray-100 bg-white py-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-slate-100 rounded-lg">🏢</div>
+              <div>
+                <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                  Empresa Actual
+                </p>
+                <select
+                  value={empresaActiva}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setEmpresaActiva(val === "all" ? "all" : Number(val));
+                    setPage(1);
+                  }}
+                  className="block w-full mt-1 font-medium text-slate-700 bg-transparent focus:outline-none cursor-pointer"
+                >
+                  <option value="all">🌍 Todas las empresas</option>
+                  {dataUser?.empresas_detalle?.map((emp) => (
+                    <option key={emp.id_empresa} value={emp.id_empresa}>
+                      {emp.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] uppercase font-bold text-slate-500">
+                Total Reglas
+              </p>
+              <p className="text-xl font-semibold text-[#37495E]">{rows.length}</p>
+            </div>
+          </div>
         </CardHeader>
         {loading ? (
           <div className="text-center text-slate-400 py-16">Cargando...</div>

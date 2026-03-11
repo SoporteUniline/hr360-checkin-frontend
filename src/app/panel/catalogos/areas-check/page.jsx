@@ -332,11 +332,7 @@ export default function AreasCheckPage() {
       </div> */}
 
       <Card className="border-blue-100 bg-blue-50">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-bold text-blue-700 flex items-center gap-2">
-            <Search className="h-4 w-4" /> Búsqueda
-          </CardTitle>
-        </CardHeader>
+       
         <CardContent className="grid grid-cols-1 md:grid-cols-[250px_1fr_auto] gap-4 items-end">
           <div className="flex flex-col gap-1">
             <Label>Empresa</Label>

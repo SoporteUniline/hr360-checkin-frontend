@@ -189,11 +189,7 @@ export default function RegistroVacacionesPage() {
 
       {/* Filtros esenciales (sin filtros rápidos) */}
       <Card className="border-blue-100 bg-blue-50">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-bold text-blue-700 flex items-center gap-2">
-            <Filter className="h-4 w-4" /> Filtros de búsqueda
-          </CardTitle>
-        </CardHeader>
+        
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="flex flex-col gap-2 w-full">

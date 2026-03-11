@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BookOpen, Filter, Plus, Search } from "lucide-react";
+import { BookOpen, Filter, Plus } from "lucide-react";
 import TiposRegistroTable from "./TiposRegistroTable";
 import TipoRegistroFormDialog from "./TipoRegistroFormDialog";
 import TipoRegistroDeleteDialog from "./TipoRegistroDeleteDialog";
@@ -57,37 +57,12 @@ export default function TiposRegistro() {
               </p>
             </div>
           </div>
-          <Button
-            className="w-full sm:w-auto bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-2"
-            onClick={() => {
-              setEditPerm(null);
-              setOpenForm(true);
-            }}
-          >
-            <Plus className="h-4 w-4" /> Nuevo
-          </Button>
         </div>
-      </div>
-
-      <div className="flex justify-end">
-        <Button
-          className="w-full sm:w-auto bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-2"
-          onClick={() => {
-            setEditPerm(null);
-            setOpenForm(true);
-          }}
-        >
-          <Plus className="h-4 w-4" /> Nuevo
-        </Button>
       </div>
 
       {/* Filtros */}
       <Card className="border-blue-100 bg-blue-50">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-bold text-blue-700 flex items-center gap-2">
-            <Filter className="h-4 w-4" /> Filtros de búsqueda
-          </CardTitle>
-        </CardHeader>
+        
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-[250px_1fr_auto] gap-4 items-end mb-2">
             <div className="space-y-1">
@@ -107,13 +82,23 @@ export default function TiposRegistro() {
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-gray-500">Buscar</Label>
               <Input
                 className="bg-white"
                 placeholder="Buscar tipo de registro..."
                 value={filter}
                 onChange={handleFilterChange}
               />
+            </div>
+            <div className="flex justify-start md:justify-end">
+              <Button
+                className="w-full md:w-auto bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-2"
+                onClick={() => {
+                  setEditPerm(null);
+                  setOpenForm(true);
+                }}
+              >
+                <Plus className="h-4 w-4" /> Nuevo
+              </Button>
             </div>
           </div>
         </CardContent>

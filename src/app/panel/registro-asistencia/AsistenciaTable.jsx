@@ -351,14 +351,7 @@ export default function AsistenciaTable({
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
         {!readOnly ? (
           <div className="px-6 py-4 border-b border-gray-100 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">
-                Registros de asistencia
-              </h2>
-              <p className="text-sm text-gray-500">
-                Exporta o registra asistencias masivas.
-              </p>
-            </div>
+            
             <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
               <Button
                 onClick={() =>
@@ -394,9 +387,7 @@ export default function AsistenciaTable({
           </div>
         ) : (
           <div className="px-6 py-4 border-b border-gray-100">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Registros de asistencia
-            </h2>
+           
           </div>
         )}
         <ActiveFilterChips

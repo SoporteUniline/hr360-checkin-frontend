@@ -11,9 +11,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import LoadingTable from "@/components/LoadingTable";
-import { Eye, Inbox, Pencil, Trash2 } from "lucide-react";
+import { Eye, Inbox, Pencil, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDateDMY } from "@/lib/formatDate";
 import { calcDiasTotalesYHabiles } from "@/lib/permisosDias";
@@ -33,6 +33,7 @@ export default function PermisosTable({
   limit = 10,
   onHeaderFilteringMetaChange,
   loading,
+  onCreate,
   onEdit,
   onChanged,
   onView,
@@ -129,20 +130,43 @@ export default function PermisosTable({
   if (loading) return <LoadingTable />;
   if (!hasActiveHeaderFilters && safeItems.length === 0) {
     return (
-      <div className="rounded-xl border border-gray-100 bg-white p-10 text-center">
-        <div className="mx-auto mb-3 grid size-12 place-items-center rounded-xl bg-blue-50 text-blue-700">
-          <Inbox className="size-6" />
-        </div>
-        <div className="text-sm font-semibold text-gray-900">Sin permisos para mostrar</div>
-        <div className="mt-1 text-sm text-gray-600">Ajusta los filtros o crea un nuevo permiso.</div>
-      </div>
+      <Card className="overflow-hidden border-gray-100">
+        <CardHeader className="border-b border-gray-100 bg-white pb-4">
+          <div className="flex justify-end">
+            <Button
+              onClick={onCreate}
+              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white"
+            >
+              <Plus className="h-4 w-4 mr-2" /> Nuevo permiso
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="p-10 text-center">
+          <div className="mx-auto mb-3 grid size-12 place-items-center rounded-xl bg-blue-50 text-blue-700">
+            <Inbox className="size-6" />
+          </div>
+          <div className="text-sm font-semibold text-gray-900">
+            Sin permisos para mostrar
+          </div>
+          <div className="mt-1 text-sm text-gray-600">
+            Ajusta los filtros o crea un nuevo permiso.
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
     <Card className="overflow-hidden border-gray-100">
       <CardHeader className="border-b border-gray-100 bg-white pb-4">
-        <CardTitle className="text-sm font-bold text-gray-900">Lista de permisos</CardTitle>
+        <div className="flex justify-end">
+          <Button
+            onClick={onCreate}
+            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white"
+          >
+            <Plus className="h-4 w-4 mr-2" /> Nuevo permiso
+          </Button>
+        </div>
       </CardHeader>
       <ActiveFilterChips
         groups={[

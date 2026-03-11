@@ -30,17 +30,8 @@ export default function Sucursales() {
     <div className="min-h-screen bg-[#F9FAFB] p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
-          <div className="bg-emerald-50 p-3 rounded-lg">
-            <MapPin className="w-7 h-7 text-emerald-600" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">
-              Unidades de negocio
-            </h1>
-            <p className="text-sm text-gray-600">
-              Gestiona las unidades de negocio de tu empresa
-            </p>
-          </div>
+          
+        
         </div>
         <Button
           className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
