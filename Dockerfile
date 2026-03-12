@@ -1,6 +1,8 @@
 # Etapa 1: build
 FROM node:20-alpine AS builder
 WORKDIR /app
+ARG NEXT_PUBLIC_RUTA_BACKEND
+ENV NEXT_PUBLIC_RUTA_BACKEND=$NEXT_PUBLIC_RUTA_BACKEND
 COPY package*.json ./
 RUN npm ci
 COPY . .
