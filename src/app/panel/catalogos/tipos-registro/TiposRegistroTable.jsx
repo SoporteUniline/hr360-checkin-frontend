@@ -67,7 +67,7 @@ export default function TiposRegistroTable({
                   </TableHead>
                   {mostrarColumnaEmpresa && (
                     <TableHead className="text-xs font-semibold uppercase text-gray-600">
-                      Empresa
+                      Unidad de negocio
                     </TableHead>
                   )}
                   <TableHead className="text-xs font-semibold uppercase text-gray-600">
@@ -117,7 +117,10 @@ export default function TiposRegistroTable({
                                   : "bg-blue-50 text-blue-600 font-medium"
                               }`}
                             >
-                              {nombreEmpresa}
+                              {regi.unidad_negocio ||
+                                regi.nombre_sucursal ||
+                                regi.sucursal ||
+                                nombreEmpresa}
                             </span>
                           </TableCell>
                         )}
