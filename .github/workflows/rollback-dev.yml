@@ -1,0 +1,75 @@
+name: Rollback — Dev
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: "SHA del commit al que regresar (git log para obtenerlo)"
+        required: true
+        type: string
+      reason:
+        description: "Motivo del rollback (para el log)"
+        required: false
+        default: "Bug encontrado en producción"
+        type: string
+
+jobs:
+  rollback:
+    name: Rollback a ${{ inputs.target_sha }}
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Validar que el SHA existe en el repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verificar que el SHA es válido
+        run: |
+          if ! git cat-file -e "${{ inputs.target_sha }}^{commit}" 2>/dev/null; then
+            echo "❌ El SHA '${{ inputs.target_sha }}' no existe en este repositorio"
+            exit 1
+          fi
+          COMMIT_MSG=$(git log --oneline -1 "${{ inputs.target_sha }}")
+          echo "✅ SHA válido: $COMMIT_MSG"
+
+      - name: Ejecutar rollback en Lightsail
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.LIGHTSAIL_HOST }}
+          username: ${{ secrets.LIGHTSAIL_USER }}
+          key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          script: |
+            set -e
+            echo "⏪ Iniciando rollback..."
+            echo "   SHA objetivo : ${{ inputs.target_sha }}"
+            echo "   Motivo       : ${{ inputs.reason }}"
+            echo "   Solicitado por: ${{ github.actor }}"
+
+            bash ~/deploy-dev.sh --ref "${{ inputs.target_sha }}"
+            echo "✅ Rollback completado"
+
+      - name: Esperar que la app levante
+        run: sleep 15
+
+      - name: Health check post-rollback
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "${{ secrets.APP_HEALTH_URL }}")
+          echo "HTTP Status: $STATUS"
+          if [ "$STATUS" -lt 200 ] || [ "$STATUS" -ge 400 ]; then
+            echo "❌ Health check falló tras rollback — Status $STATUS"
+            echo "⚠️  Revisar el servidor manualmente"
+            exit 1
+          fi
+          echo "✅ Rollback exitoso — App responde (HTTP $STATUS)"
+
+      - name: Resumen del rollback
+        if: success()
+        run: |
+          echo "## Rollback completado ✅" >> $GITHUB_STEP_SUMMARY
+          echo "| Campo | Valor |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| SHA desplegado | \`${{ inputs.target_sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Motivo | ${{ inputs.reason }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Ejecutado por | ${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Fecha | $(date -u '+%Y-%m-%d %H:%M UTC') |" >> $GITHUB_STEP_SUMMARY
