@@ -17,6 +17,7 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "@/lib/axios";
 import { useAuth } from "@/context/AuthContext";
+import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,7 +67,12 @@ function num(n, d = 0) {
 export default function VacacionesPorLeyPage() {
   const { dataUser } = useAuth();
   const { enqueueSnackbar } = useSnackbar();
-  const [empresaActiva, setEmpresaActiva] = useState("all");
+  const [unidadActiva, setUnidadActiva] = useState("all");
+  const { options: unidadOptions, byId: unidadById } = useUnidadesNegocio();
+  const empresaActiva =
+    unidadActiva === "all"
+      ? "all"
+      : String(unidadById[unidadActiva]?.id_empresa || "all");
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -269,21 +275,21 @@ export default function VacacionesPorLeyPage() {
               <div className="p-2 bg-slate-100 rounded-lg">🏢</div>
               <div>
                 <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
-                  Empresa Actual
+                  Unidad de negocio
                 </p>
                 <select
-                  value={empresaActiva}
+                  value={unidadActiva}
                   onChange={(e) => {
                     const val = e.target.value;
-                    setEmpresaActiva(val === "all" ? "all" : Number(val));
+                    setUnidadActiva(val);
                     setPage(1);
                   }}
                   className="block w-full mt-1 font-medium text-slate-700 bg-transparent focus:outline-none cursor-pointer"
                 >
-                  <option value="all">🌍 Todas las empresas</option>
-                  {dataUser?.empresas_detalle?.map((emp) => (
-                    <option key={emp.id_empresa} value={emp.id_empresa}>
-                      {emp.nombre}
+                  <option value="all">🌍 Todas las unidades de negocio</option>
+                  {unidadOptions.map((unidad) => (
+                    <option key={unidad.value} value={unidad.value}>
+                      {unidad.label}
                     </option>
                   ))}
                 </select>
@@ -310,7 +316,7 @@ export default function VacacionesPorLeyPage() {
                 <TableHeader>
                   <TableRow className="bg-gray-50">
                     <TableHead className="text-xs font-semibold uppercase text-gray-600">
-                      Empresa
+                      Unidad de negocio
                     </TableHead>
                     <TableHead className="text-xs font-semibold uppercase text-gray-600">
                       Años
@@ -342,9 +348,12 @@ export default function VacacionesPorLeyPage() {
                   {pageRows.map((r) => (
                     <TableRow key={r.id}>
                       <TableCell className="text-[10px] text-muted-foreground uppercase">
-                        {dataUser?.empresas_detalle?.find(
-                          (e) => e.id_empresa === r.id_empresa,
-                        )?.nombre || "N/A"}
+                        {r.unidad_negocio ||
+                          r.nombre_sucursal ||
+                          dataUser?.empresas_detalle?.find(
+                            (e) => e.id_empresa === r.id_empresa,
+                          )?.nombre ||
+                          "N/A"}
                       </TableCell>
                       <TableCell className="font-semibold">{r.anios}</TableCell>
                       <TableCell>{r.dias}</TableCell>

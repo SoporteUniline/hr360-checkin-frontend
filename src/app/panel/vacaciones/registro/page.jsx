@@ -21,6 +21,7 @@ import { useAuth } from "@/context/AuthContext";
 import useDebounce from "@/hooks/useDebounce";
 import useEmpleadosData from "@/hooks/useEmpleadosData";
 import useTiposPermisoData from "@/hooks/useTiposPermisoData";
+import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 import AsistenciaDataContainer from "@/app/panel/registro-asistencia/AsistenciaDataContainer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -37,7 +38,12 @@ dayjs.extend(timezone);
 export default function RegistroVacacionesPage() {
   // Empresa autenticada
   const { dataUser } = useAuth();
-  const [empresaActiva, setEmpresaActiva] = useState("all");
+  const [unidadActiva, setUnidadActiva] = useState("all");
+  const { options: unidadOptions, byId: unidadById } = useUnidadesNegocio();
+  const idEmpresa =
+    unidadActiva === "all"
+      ? "all"
+      : String(unidadById[unidadActiva]?.id_empresa || "all");
 
   // Fechas por defecto (hoy)
   const [fechaInicio, setFechaInicio] = useState(
@@ -61,7 +67,7 @@ export default function RegistroVacacionesPage() {
   const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
   const [hoveredSuggestionIndex, setHoveredSuggestionIndex] = useState(0);
   const empleadosSugResp = useEmpleadosData(
-    empresaActiva,
+    idEmpresa,
     1,
     8,
     filtroEmpleado,
@@ -89,7 +95,7 @@ export default function RegistroVacacionesPage() {
   const [filtroTipoRegistro, setFiltroTipoRegistro] = useState("");
 
   // Catálogos
-  const { data: empleados } = useEmpleadosData(empresaActiva);
+  const { data: empleados } = useEmpleadosData(idEmpresa);
   const { data: tiposPermiso } = useTiposPermisoData();
 
   // Derivar departamentos únicos desde empleados
@@ -134,8 +140,8 @@ export default function RegistroVacacionesPage() {
 
   // Usar el contenedor de datos como función (retorna { ui, data, mutate })
   const { ui } = AsistenciaDataContainer({
-    idEmpresa: empresaActiva,
-    empresaActiva,
+    idEmpresa,
+    empresaActiva: idEmpresa,
     fechaInicio,
     fechaFin,
     page,
@@ -166,7 +172,7 @@ export default function RegistroVacacionesPage() {
     // Opcional: Limpiar filtro de empleado al cambiar de empresa para evitar inconsistencias
     setFiltroEmpleado("");
     setFiltroDepartamento("");
-  }, [empresaActiva]);
+  }, [unidadActiva]);
 
   return (
     <div className={`${styles.vacacionesTheme} space-y-6`}>
@@ -193,23 +199,21 @@ export default function RegistroVacacionesPage() {
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="flex flex-col gap-2 w-full">
-              <Label htmlFor="empresa_select">Empresa</Label>
-              <select
-                id="empresa_select"
-                value={empresaActiva}
-                onChange={(e) => {
-                  setEmpresaActiva(e.target.value);
+              <Label htmlFor="unidad_select">Unidad de negocio</Label>
+              <Combobox
+                name="unidad_select"
+                options={[
+                  { value: "all", label: "Todas las unidades de negocio" },
+                  ...unidadOptions,
+                ]}
+                value={unidadActiva}
+                onChange={(value) => {
+                  setUnidadActiva(value || "all");
                   setPage(1);
                 }}
-                className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
-              >
-                <option value="all">Todas las empresas</option>
-                {dataUser?.empresas_detalle?.map((emp) => (
-                  <option key={emp.id_empresa} value={emp.id_empresa}>
-                    {emp.nombre}
-                  </option>
-                ))}
-              </select>
+                placeholder="Seleccionar unidad de negocio"
+                emptyText="No hay unidades disponibles."
+              />
             </div>
             <div className="flex flex-col gap-2 w-full">
               <Label

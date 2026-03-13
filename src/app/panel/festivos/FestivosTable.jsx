@@ -41,7 +41,7 @@ export default function FestivosTable({
     active: false,
     total: 0,
   });
-  const [empresaSeleccionada, setEmpresaSeleccionada] = useState([]);
+  const [unidadSeleccionada, setUnidadSeleccionada] = useState([]);
   const [fechaSeleccionada, setFechaSeleccionada] = useState([]);
   const [descripcionSeleccionada, setDescripcionSeleccionada] = useState([]);
 
@@ -63,8 +63,14 @@ export default function FestivosTable({
   const uniqueOptions = (values) =>
     [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
 
-  const empresaOptions = useMemo(
-    () => uniqueOptions(sourceRows.map((row) => row.empresa_nombre)),
+  const unidadOptions = useMemo(
+    () =>
+      uniqueOptions(
+        sourceRows.map(
+          (row) =>
+            row.unidad_negocio || row.nombre_sucursal || row.sucursal || row.empresa_nombre,
+        ),
+      ),
     [sourceRows],
   );
   const fechaOptions = useMemo(
@@ -84,29 +90,30 @@ export default function FestivosTable({
   const filteredRowsAll = useMemo(
     () =>
       sourceRows.filter((row) => {
-        const empresa = row.empresa_nombre;
+        const unidad =
+          row.unidad_negocio || row.nombre_sucursal || row.sucursal || row.empresa_nombre;
         const fecha = row.fecha ? formatDateDMYLocal(row.fecha) : null;
         const descripcion = row.descripcion;
-        const passEmpresa =
-          empresaSeleccionada.length === 0 ||
-          empresaSeleccionada.includes(empresa);
+        const passUnidad =
+          unidadSeleccionada.length === 0 ||
+          unidadSeleccionada.includes(unidad);
         const passFecha =
           fechaSeleccionada.length === 0 || fechaSeleccionada.includes(fecha);
         const passDescripcion =
           descripcionSeleccionada.length === 0 ||
           descripcionSeleccionada.includes(descripcion);
-        return passEmpresa && passFecha && passDescripcion;
+        return passUnidad && passFecha && passDescripcion;
       }),
     [
       sourceRows,
-      empresaSeleccionada,
+      unidadSeleccionada,
       fechaSeleccionada,
       descripcionSeleccionada,
     ],
   );
 
   const hasActiveHeaderFilters =
-    empresaSeleccionada.length > 0 ||
+    unidadSeleccionada.length > 0 ||
     fechaSeleccionada.length > 0 ||
     descripcionSeleccionada.length > 0;
 
@@ -117,7 +124,7 @@ export default function FestivosTable({
   }, [hasActiveHeaderFilters, festivos, page, limit, filteredRowsAll]);
 
   const clearAllHeaderFilters = () => {
-    setEmpresaSeleccionada([]);
+    setUnidadSeleccionada([]);
     setFechaSeleccionada([]);
     setDescripcionSeleccionada([]);
   };
@@ -199,10 +206,10 @@ export default function FestivosTable({
         <ActiveFilterChips
           groups={[
             {
-              category: "Empresa",
-              values: empresaSeleccionada,
-              options: empresaOptions,
-              onChange: setEmpresaSeleccionada,
+              category: "Unidad de negocio",
+              values: unidadSeleccionada,
+              options: unidadOptions,
+              onChange: setUnidadSeleccionada,
             },
             {
               category: "Fecha",
@@ -226,10 +233,10 @@ export default function FestivosTable({
                 <TableRow className="bg-gray-50">
                   <TableHead className="text-xs font-semibold uppercase text-gray-600">
                     <HeaderMultiFilter
-                      selected={empresaSeleccionada}
-                      onChange={setEmpresaSeleccionada}
-                      options={empresaOptions}
-                      placeholder="Empresa"
+                      selected={unidadSeleccionada}
+                      onChange={setUnidadSeleccionada}
+                      options={unidadOptions}
+                      placeholder="Unidad de negocio"
                     />
                   </TableHead>
                   <TableHead className="text-xs font-semibold uppercase text-gray-600">
@@ -256,7 +263,13 @@ export default function FestivosTable({
               <TableBody>
                 {displayedRows.map((festivo) => (
                   <TableRow key={festivo.id} className="hover:bg-zinc-50">
-                    <TableCell>{festivo.empresa_nombre || "-"}</TableCell>
+                    <TableCell>
+                      {festivo.unidad_negocio ||
+                        festivo.nombre_sucursal ||
+                        festivo.sucursal ||
+                        festivo.empresa_nombre ||
+                        "-"}
+                    </TableCell>
                     <TableCell>
                       {festivo.fecha ? formatDateDMYLocal(festivo.fecha) : "-"}
                     </TableCell>

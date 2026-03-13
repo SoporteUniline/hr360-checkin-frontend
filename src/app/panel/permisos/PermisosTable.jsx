@@ -40,7 +40,7 @@ export default function PermisosTable({
   onDelete,
   festivosSet = new Set(),
 }) {
-  const [empresaSeleccionada, setEmpresaSeleccionada] = useState([]);
+  const [unidadSeleccionada, setUnidadSeleccionada] = useState([]);
   const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState([]);
   const [tipoSeleccionado, setTipoSeleccionado] = useState([]);
   const [estadoSeleccionado, setEstadoSeleccionado] = useState([]);
@@ -57,9 +57,18 @@ export default function PermisosTable({
   const uniqueOptions = (values) =>
     [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
 
-  const empresaOptions = useMemo(
+  const unidadOptions = useMemo(
     () =>
-      uniqueOptions(sourceRows.map((row) => row.nombre_empresa || row.empresa_nombre)),
+      uniqueOptions(
+        sourceRows.map(
+          (row) =>
+            row.unidad_negocio ||
+            row.nombre_sucursal ||
+            row.sucursal ||
+            row.nombre_empresa ||
+            row.empresa_nombre,
+        ),
+      ),
     [sourceRows],
   );
   const empleadoOptions = useMemo(
@@ -78,10 +87,14 @@ export default function PermisosTable({
   const filteredRowsAll = useMemo(
     () =>
       sourceRows.filter((row) => {
-        const empresa = row.nombre_empresa || row.empresa_nombre;
-        const passEmpresa =
-          empresaSeleccionada.length === 0 ||
-          empresaSeleccionada.includes(empresa);
+        const unidad =
+          row.unidad_negocio ||
+          row.nombre_sucursal ||
+          row.sucursal ||
+          row.nombre_empresa ||
+          row.empresa_nombre;
+        const passUnidad =
+          unidadSeleccionada.length === 0 || unidadSeleccionada.includes(unidad);
         const passEmpleado =
           empleadoSeleccionado.length === 0 ||
           empleadoSeleccionado.includes(row.empleado_nombre);
@@ -90,11 +103,11 @@ export default function PermisosTable({
           tipoSeleccionado.includes(row.tipo_permiso_nombre);
         const passEstado =
           estadoSeleccionado.length === 0 || estadoSeleccionado.includes(row.estado);
-        return passEmpresa && passEmpleado && passTipo && passEstado;
+        return passUnidad && passEmpleado && passTipo && passEstado;
       }),
     [
       sourceRows,
-      empresaSeleccionada,
+      unidadSeleccionada,
       empleadoSeleccionado,
       tipoSeleccionado,
       estadoSeleccionado,
@@ -102,7 +115,7 @@ export default function PermisosTable({
   );
 
   const hasActiveHeaderFilters =
-    empresaSeleccionada.length > 0 ||
+    unidadSeleccionada.length > 0 ||
     empleadoSeleccionado.length > 0 ||
     tipoSeleccionado.length > 0 ||
     estadoSeleccionado.length > 0;
@@ -121,7 +134,7 @@ export default function PermisosTable({
   }, [hasActiveHeaderFilters, filteredRowsAll.length, onHeaderFilteringMetaChange]);
 
   const clearAllHeaderFilters = () => {
-    setEmpresaSeleccionada([]);
+    setUnidadSeleccionada([]);
     setEmpleadoSeleccionado([]);
     setTipoSeleccionado([]);
     setEstadoSeleccionado([]);
@@ -171,10 +184,10 @@ export default function PermisosTable({
       <ActiveFilterChips
         groups={[
           {
-            category: "Empresa",
-            values: empresaSeleccionada,
-            options: empresaOptions,
-            onChange: setEmpresaSeleccionada,
+            category: "Unidad de negocio",
+            values: unidadSeleccionada,
+            options: unidadOptions,
+            onChange: setUnidadSeleccionada,
           },
           {
             category: "Empleado",
@@ -205,10 +218,10 @@ export default function PermisosTable({
                 <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">#</TableHead>
                 <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
                   <HeaderMultiFilter
-                    selected={empresaSeleccionada}
-                    onChange={setEmpresaSeleccionada}
-                    options={empresaOptions}
-                    placeholder="Empresa"
+                    selected={unidadSeleccionada}
+                    onChange={setUnidadSeleccionada}
+                    options={unidadOptions}
+                    placeholder="Unidad de negocio"
                   />
                 </TableHead>
                 <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
@@ -275,7 +288,14 @@ export default function PermisosTable({
                       {String(row.id).padStart(3, "0")}
                     </TableCell>
                     <TableCell>
-                      <div className="text-sm text-gray-700">{row.nombre_empresa || row.empresa_nombre || "-"}</div>
+                      <div className="text-sm text-gray-700">
+                        {row.unidad_negocio ||
+                          row.nombre_sucursal ||
+                          row.sucursal ||
+                          row.nombre_empresa ||
+                          row.empresa_nombre ||
+                          "-"}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">
