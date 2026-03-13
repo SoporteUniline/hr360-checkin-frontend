@@ -59,7 +59,12 @@ export default function DepartamentosTable({
     [sourceRows],
   );
   const empresaOptions = useMemo(
-    () => uniqueOptions(sourceRows.map((row) => row.empresa_nombre)),
+    () =>
+      uniqueOptions(
+        sourceRows.map(
+          (row) => row.unidad_negocio || row.nombre_sucursal || row.empresa_nombre,
+        ),
+      ),
     [sourceRows],
   );
 
@@ -72,7 +77,9 @@ export default function DepartamentosTable({
         const passEmpresa =
           !showEmpresa ||
           empresaSeleccionada.length === 0 ||
-          empresaSeleccionada.includes(row.empresa_nombre);
+          empresaSeleccionada.includes(
+            row.unidad_negocio || row.nombre_sucursal || row.empresa_nombre,
+          );
         return passNombre && passEmpresa;
       }),
     [sourceRows, nombreSeleccionado, empresaSeleccionada, showEmpresa],
@@ -218,7 +225,7 @@ export default function DepartamentosTable({
             ...(showEmpresa
               ? [
                   {
-                    category: "Empresa",
+                    category: "Unidad de negocio",
                     values: empresaSeleccionada,
                     options: empresaOptions,
                     onChange: setEmpresaSeleccionada,
@@ -248,7 +255,7 @@ export default function DepartamentosTable({
                       selected={empresaSeleccionada}
                       onChange={setEmpresaSeleccionada}
                       options={empresaOptions}
-                      placeholder="Empresa"
+                      placeholder="Unidad de negocio"
                     />
                   </TableHead>
                 )}
@@ -268,7 +275,7 @@ export default function DepartamentosTable({
                   </TableCell>
                   {showEmpresa && (
                     <TableCell className="font-medium text-gray-900">
-                      {dep.empresa_nombre}
+                      {dep.unidad_negocio || dep.nombre_sucursal || dep.empresa_nombre}
                     </TableCell>
                   )}
                   <TableCell className="text-right">

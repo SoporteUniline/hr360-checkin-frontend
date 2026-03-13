@@ -42,6 +42,7 @@ import { fetcherWithToken } from "@/lib/fetcher";
 import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/Combobox";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 
 /**
  * Página principal del Panel de Empleados
@@ -52,33 +53,34 @@ import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
  */
 export default function PanelEmpleadoPage() {
   const { dataUser } = useAuth();
-  const [empresaActiva, setEmpresaActiva] = useState(null);
-  const idEmpresa = empresaActiva;
+  const [unidadActiva, setUnidadActiva] = useState("");
+  const { options: unidadOptions, byId: unidadById } = useUnidadesNegocio();
+  const unidadSeleccionada = unidadById?.[String(unidadActiva)] || null;
+  const idEmpresa = unidadSeleccionada?.id_empresa || "all";
+  const sucursalFiltro = unidadSeleccionada?.label || "";
 
   useEffect(() => {
-    if (dataUser?.empresas?.length > 0 && !empresaActiva) {
-      setEmpresaActiva("all");
+    if (dataUser?.empresas?.length > 0 && !unidadActiva) {
+      setUnidadActiva("all");
     }
-  }, [dataUser, empresaActiva]);
+  }, [dataUser, unidadActiva]);
 
   useEffect(() => {
-    if (empresaActiva) {
+    if (unidadActiva) {
       setBusqueda("");
       setEmpleadoSeleccionado(null);
     }
-  }, [empresaActiva]);
+  }, [unidadActiva]);
 
-  const empresasOptions = [
-    { value: "all", label: "Todas las empresas" },
-    ...(dataUser?.empresas_detalle?.map((empresa) => ({
-      value: empresa.id_empresa,
-      label: empresa.nombre,
-    })) || []),
+  const unidadesOptions = [
+    { value: "all", label: "Todas las unidades de negocio" },
+    ...unidadOptions,
   ];
 
   const { data, error, isLoading } = usePanelEmpleadoData(
-    empresaActiva,
+    idEmpresa,
     dataUser?.empresas || [],
+    sucursalFiltro,
   );
 
   /**
@@ -121,6 +123,7 @@ export default function PanelEmpleadoPage() {
       emp.nombre_completo?.toLowerCase().includes(termino) ||
       emp.puesto?.toLowerCase().includes(termino) ||
       emp.departamento?.toLowerCase().includes(termino) ||
+      emp.unidad_negocio?.toLowerCase().includes(termino) ||
       emp.empresa?.toLowerCase().includes(termino)
     );
   });
@@ -194,9 +197,9 @@ export default function PanelEmpleadoPage() {
               empleadoSeleccionado={empleadoSeleccionado}
               busqueda={busqueda}
               setBusqueda={setBusqueda}
-              empresasOptions={empresasOptions}
-              empresaActiva={empresaActiva}
-              setEmpresaActiva={setEmpresaActiva}
+              unidadOptions={unidadesOptions}
+              unidadActiva={unidadActiva}
+              setUnidadActiva={setUnidadActiva}
               obtenerIniciales={obtenerIniciales}
               onSelectEmpleado={(id) => {
                 setEmpleadoSeleccionado(id);
@@ -218,9 +221,9 @@ export default function PanelEmpleadoPage() {
             empleadoSeleccionado={empleadoSeleccionado}
             busqueda={busqueda}
             setBusqueda={setBusqueda}
-            empresasOptions={empresasOptions}
-            empresaActiva={empresaActiva}
-            setEmpresaActiva={setEmpresaActiva}
+            unidadOptions={unidadesOptions}
+            unidadActiva={unidadActiva}
+            setUnidadActiva={setUnidadActiva}
             obtenerIniciales={obtenerIniciales}
             onSelectEmpleado={(id) => {
               setEmpleadoSeleccionado(id);
@@ -430,9 +433,9 @@ const SidebarContent = ({
   empleadoSeleccionado,
   busqueda,
   setBusqueda,
-  empresasOptions,
-  empresaActiva,
-  setEmpresaActiva,
+  unidadOptions,
+  unidadActiva,
+  setUnidadActiva,
   obtenerIniciales,
   onSelectEmpleado,
   closeSidebar,
@@ -446,14 +449,12 @@ const SidebarContent = ({
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label>Empresa</Label>
+        <Label>Unidad de negocio</Label>
         <Combobox
-          options={empresasOptions}
-          value={empresaActiva}
-          onChange={(val) =>
-            setEmpresaActiva(val === "all" ? "all" : Number(val))
-          }
-          placeholder="Seleccionar empresa"
+          options={unidadOptions}
+          value={unidadActiva}
+          onChange={(val) => setUnidadActiva(val)}
+          placeholder="Seleccionar unidad"
         />
 
         <div className="relative">

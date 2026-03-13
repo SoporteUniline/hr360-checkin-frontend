@@ -58,12 +58,14 @@ import { fetchImageAsDataUrl } from "@/lib/pdfCompanyLogo";
 import HeaderMultiFilter from "../registro-asistencia/HeaderMultiFilter";
 import ActiveFilterChips from "../registro-asistencia/ActiveFilterChips";
 import { Combobox } from "@/components/Combobox";
+import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 
 export default function PageAguinaldos() {
   const { dataUser } = useAuth();
+  const { options: unidadOptions, byId: unidadById } = useUnidadesNegocio();
 
   const empresaFiltro = "all";
-  const [empresaCalculo, setEmpresaCalculo] = useState("");
+  const [unidadCalculo, setUnidadCalculo] = useState("");
 
   const mostrarEmpresa = empresaFiltro !== "all";
 
@@ -72,7 +74,9 @@ export default function PageAguinaldos() {
     empresaFiltro === "all" ? "all" : Number(empresaFiltro);
 
   // Para el cálculo
-  const idEmpresaCalculo = empresaCalculo ? Number(empresaCalculo) : null;
+  const idEmpresaCalculo = unidadCalculo
+    ? Number(unidadById?.[String(unidadCalculo)]?.id_empresa)
+    : null;
 
   /**
    * Datos de empresa para marca/imagen en PDFs.
@@ -151,7 +155,12 @@ export default function PageAguinaldos() {
     [sourceRows],
   );
   const empresaOptions = useMemo(
-    () => uniqueOptions(sourceRows.map((c) => c.nombre_empresa)),
+    () =>
+      uniqueOptions(
+        sourceRows.map(
+          (c) => c.unidad_negocio || c.nombre_sucursal || c.nombre_empresa,
+        ),
+      ),
     [sourceRows],
   );
   const anioOptions = useMemo(
@@ -166,7 +175,8 @@ export default function PageAguinaldos() {
     () =>
       sourceRows.filter((c) => {
         const idValue = String(c.id_calculo || "");
-        const empresaValue = c.nombre_empresa;
+        const empresaValue =
+          c.unidad_negocio || c.nombre_sucursal || c.nombre_empresa;
         const anioValue = String(c.año_fiscal || "");
         const estadoValue = c.estado || "Pendiente";
         const passId = idSeleccionado.length === 0 || idSeleccionado.includes(idValue);
@@ -1666,7 +1676,7 @@ export default function PageAguinaldos() {
                   onChange: setIdSeleccionado,
                 },
                 {
-                  category: "Empresa",
+                  category: "Unidad de negocio",
                   values: empresaSeleccionada,
                   options: empresaOptions,
                   onChange: setEmpresaSeleccionada,
@@ -1704,7 +1714,7 @@ export default function PageAguinaldos() {
                           selected={empresaSeleccionada}
                           onChange={setEmpresaSeleccionada}
                           options={empresaOptions}
-                          placeholder="Empresa"
+                          placeholder="Unidad de negocio"
                         />
                       </th>
                     )}
@@ -1881,22 +1891,19 @@ export default function PageAguinaldos() {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase text-muted-foreground">
-                    Empresa
+                    Unidad de negocio
                   </label>
 
                   <Combobox
-                    options={(dataUser?.empresas_detalle || []).map((e) => ({
-                      value: String(e.id_empresa),
-                      label: e.nombre,
-                    }))}
-                    value={empresaCalculo}
+                    options={unidadOptions}
+                    value={unidadCalculo}
                     onChange={(value) => {
-                      setEmpresaCalculo(value);
+                      setUnidadCalculo(value);
                       setFechaCorte(dayjs().format("YYYY-MM-DD"));
                       setAñoFiscalCalculo(dayjs().year().toString());
                       setObservaciones("");
                     }}
-                    placeholder="Selecciona empresa para cálculo"
+                    placeholder="Selecciona unidad para cálculo"
                   />
                 </div>
                 <div className="space-y-2">

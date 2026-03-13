@@ -65,7 +65,12 @@ export default function EstadoCivilTable({
     [sourceRows],
   );
   const empresaOptions = useMemo(
-    () => uniqueOptions(sourceRows.map((row) => row.empresa_nombre)),
+    () =>
+      uniqueOptions(
+        sourceRows.map(
+          (row) => row.unidad_negocio || row.nombre_sucursal || row.empresa_nombre,
+        ),
+      ),
     [sourceRows],
   );
 
@@ -78,7 +83,9 @@ export default function EstadoCivilTable({
         const passEmpresa =
           !showEmpresa ||
           empresaSeleccionada.length === 0 ||
-          empresaSeleccionada.includes(row.empresa_nombre);
+          empresaSeleccionada.includes(
+            row.unidad_negocio || row.nombre_sucursal || row.empresa_nombre,
+          );
         return passNombre && passEmpresa;
       }),
     [sourceRows, nombreSeleccionado, empresaSeleccionada, showEmpresa],
@@ -208,7 +215,7 @@ export default function EstadoCivilTable({
             ...(showEmpresa
               ? [
                   {
-                    category: "Empresa",
+                    category: "Unidad de negocio",
                     values: empresaSeleccionada,
                     options: empresaOptions,
                     onChange: setEmpresaSeleccionada,
@@ -237,7 +244,7 @@ export default function EstadoCivilTable({
                       selected={empresaSeleccionada}
                       onChange={setEmpresaSeleccionada}
                       options={empresaOptions}
-                      placeholder="Empresa"
+                      placeholder="Unidad de negocio"
                     />
                   </TableHead>
                 )}
@@ -255,7 +262,11 @@ export default function EstadoCivilTable({
                   <TableCell className="font-medium text-gray-900">
                     {civ.nombre}
                   </TableCell>
-                  {showEmpresa && <TableCell>{civ?.empresa_nombre}</TableCell>}
+                  {showEmpresa && (
+                    <TableCell>
+                      {civ?.unidad_negocio || civ?.nombre_sucursal || civ?.empresa_nombre}
+                    </TableCell>
+                  )}
                   <TableCell className="text-right">
                     <div className="flex justify-end items-center gap-2">
                       <button

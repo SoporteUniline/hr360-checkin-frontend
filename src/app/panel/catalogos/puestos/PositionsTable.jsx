@@ -59,7 +59,12 @@ export default function PositionsTable({
     [sourceRows],
   );
   const empresaOptions = useMemo(
-    () => uniqueOptions(sourceRows.map((row) => row.empresa_nombre)),
+    () =>
+      uniqueOptions(
+        sourceRows.map(
+          (row) => row.unidad_negocio || row.nombre_sucursal || row.empresa_nombre,
+        ),
+      ),
     [sourceRows],
   );
 
@@ -72,7 +77,9 @@ export default function PositionsTable({
         const passEmpresa =
           !showEmpresa ||
           empresaSeleccionada.length === 0 ||
-          empresaSeleccionada.includes(row.empresa_nombre);
+          empresaSeleccionada.includes(
+            row.unidad_negocio || row.nombre_sucursal || row.empresa_nombre,
+          );
         return passNombre && passEmpresa;
       }),
     [sourceRows, nombreSeleccionado, empresaSeleccionada, showEmpresa],
@@ -212,7 +219,7 @@ export default function PositionsTable({
             ...(showEmpresa
               ? [
                   {
-                    category: "Empresa",
+                    category: "Unidad de negocio",
                     values: empresaSeleccionada,
                     options: empresaOptions,
                     onChange: setEmpresaSeleccionada,
@@ -240,7 +247,7 @@ export default function PositionsTable({
                       selected={empresaSeleccionada}
                       onChange={setEmpresaSeleccionada}
                       options={empresaOptions}
-                      placeholder="Empresa"
+                      placeholder="Unidad de negocio"
                     />
                   </TableHead>
                 )}
@@ -259,7 +266,9 @@ export default function PositionsTable({
                     {puesto.nombre_puesto}
                   </TableCell>
                   {showEmpresa && (
-                    <TableCell>{puesto.empresa_nombre}</TableCell>
+                    <TableCell>
+                      {puesto.unidad_negocio || puesto.nombre_sucursal || puesto.empresa_nombre}
+                    </TableCell>
                   )}
                   <TableCell className="text-right">
                     <div className="flex justify-end items-center gap-2">

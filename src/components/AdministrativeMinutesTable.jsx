@@ -66,7 +66,14 @@ export const AdministrativeTable = ({
     [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
 
   const empresaOptions = useMemo(
-    () => uniqueOptions(sourceRows.map((row) => normalize(row.nombre_empresa))),
+    () =>
+      uniqueOptions(
+        sourceRows.map((row) =>
+          normalize(
+            row.unidad_negocio || row.nombre_sucursal || row.nombre_empresa,
+          ),
+        ),
+      ),
     [sourceRows],
   );
   const folioOptions = useMemo(
@@ -102,7 +109,9 @@ export const AdministrativeTable = ({
       sourceRows.filter((row) => {
         const passEmpresa =
           empresaSeleccionada.length === 0 ||
-          empresaSeleccionada.includes(normalize(row.nombre_empresa));
+          empresaSeleccionada.includes(
+            normalize(row.unidad_negocio || row.nombre_sucursal || row.nombre_empresa),
+          );
         const passFolio =
           folioSeleccionado.length === 0 ||
           folioSeleccionado.includes(normalize(row.folio));
@@ -238,7 +247,7 @@ export const AdministrativeTable = ({
         <ActiveFilterChips
           groups={[
             {
-              category: "Empresa",
+              category: "Unidad de negocio",
               values: empresaSeleccionada,
               options: empresaOptions,
               onChange: setEmpresaSeleccionada,
@@ -300,7 +309,7 @@ export const AdministrativeTable = ({
                     selected={empresaSeleccionada}
                     onChange={setEmpresaSeleccionada}
                     options={empresaOptions}
-                    placeholder="Empresa"
+                    placeholder="Unidad de negocio"
                   />
                 </TableHead>
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs">
@@ -367,7 +376,9 @@ export const AdministrativeTable = ({
                   className="hover:bg-gray-50 border-b border-gray-100"
                 >
                   <TableCell className="font-bold">{acta.folio}</TableCell>
-                  <TableCell>{acta.nombre_empresa || "-"}</TableCell>
+                  <TableCell>
+                    {acta.unidad_negocio || acta.nombre_sucursal || acta.nombre_empresa || "-"}
+                  </TableCell>
                   <TableCell>
                     {acta.nombre_empleado} {acta.apellido_paterno_empleado}{" "}
                     {acta.apellido_materno_empleado}

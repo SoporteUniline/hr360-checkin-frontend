@@ -43,6 +43,31 @@ const getAvatarColor = (nombreCompleto = "") => {
   return colors[charCode % colors.length];
 };
 
+// Evita llaves duplicadas en render cuando llegan registros repetidos.
+const dedupeEmployeesById = (rows = []) => {
+  const uniqueMap = new Map();
+
+  rows.forEach((row) => {
+    if (!row) return;
+    const employeeId = row.id_empleado;
+    if (!employeeId) return;
+
+    if (!uniqueMap.has(employeeId)) {
+      uniqueMap.set(employeeId, row);
+      return;
+    }
+
+    const existingRow = uniqueMap.get(employeeId);
+    uniqueMap.set(employeeId, {
+      ...existingRow,
+      ...row,
+      unidad_negocio: existingRow?.unidad_negocio || row?.unidad_negocio,
+    });
+  });
+
+  return Array.from(uniqueMap.values());
+};
+
 export default function EmpleadosTable({
   empleados,
   filterOptionsRows,
@@ -55,13 +80,16 @@ export default function EmpleadosTable({
 }) {
   const [nombreSeleccionado, setNombreSeleccionado] = useState([]);
   const [puestoSeleccionado, setPuestoSeleccionado] = useState([]);
+  const [unidadNegocioSeleccionada, setUnidadNegocioSeleccionada] = useState([]);
   const [departamentoSeleccionado, setDepartamentoSeleccionado] = useState([]);
   const [estadoSeleccionado, setEstadoSeleccionado] = useState([]);
 
-  const sourceRows = useMemo(
-    () => (Array.isArray(filterOptionsRows) ? filterOptionsRows : empleados || []),
-    [filterOptionsRows, empleados],
-  );
+  const sourceRows = useMemo(() => {
+    const baseRows = Array.isArray(filterOptionsRows)
+      ? filterOptionsRows
+      : empleados || [];
+    return dedupeEmployeesById(baseRows);
+  }, [filterOptionsRows, empleados]);
 
   const getNombreCompleto = (emp) =>
     `${emp.nombre || ""} ${emp.apellido_paterno || ""} ${emp.apellido_materno || ""}`
@@ -77,6 +105,13 @@ export default function EmpleadosTable({
   );
   const puestoOptions = useMemo(
     () => uniqueOptions(sourceRows.map((emp) => emp.puesto)),
+    [sourceRows],
+  );
+  const unidadNegocioOptions = useMemo(
+    () =>
+      uniqueOptions(
+        sourceRows.map((emp) => emp.unidad_negocio || String(emp.sucursal || "")),
+      ),
     [sourceRows],
   );
   const departamentoOptions = useMemo(
@@ -97,18 +132,30 @@ export default function EmpleadosTable({
         const passPuesto =
           puestoSeleccionado.length === 0 ||
           puestoSeleccionado.includes(emp.puesto);
+        const unidadNegocioEmpleado =
+          emp.unidad_negocio || String(emp.sucursal || "");
+        const passUnidadNegocio =
+          unidadNegocioSeleccionada.length === 0 ||
+          unidadNegocioSeleccionada.includes(unidadNegocioEmpleado);
         const passDepartamento =
           departamentoSeleccionado.length === 0 ||
           departamentoSeleccionado.includes(emp.departamento);
         const passEstado =
           estadoSeleccionado.length === 0 ||
           estadoSeleccionado.includes(emp.estado);
-        return passNombre && passPuesto && passDepartamento && passEstado;
+        return (
+          passNombre &&
+          passPuesto &&
+          passUnidadNegocio &&
+          passDepartamento &&
+          passEstado
+        );
       }),
     [
       sourceRows,
       nombreSeleccionado,
       puestoSeleccionado,
+      unidadNegocioSeleccionada,
       departamentoSeleccionado,
       estadoSeleccionado,
     ],
@@ -117,11 +164,12 @@ export default function EmpleadosTable({
   const hasActiveHeaderFilters =
     nombreSeleccionado.length > 0 ||
     puestoSeleccionado.length > 0 ||
+    unidadNegocioSeleccionada.length > 0 ||
     departamentoSeleccionado.length > 0 ||
     estadoSeleccionado.length > 0;
 
   const displayedRows = useMemo(() => {
-    if (!hasActiveHeaderFilters) return empleados || [];
+    if (!hasActiveHeaderFilters) return dedupeEmployeesById(empleados || []);
     const offset = (page - 1) * limit;
     return filteredRowsAll.slice(offset, offset + limit);
   }, [hasActiveHeaderFilters, empleados, page, limit, filteredRowsAll]);
@@ -136,6 +184,7 @@ export default function EmpleadosTable({
   const clearAllHeaderFilters = () => {
     setNombreSeleccionado([]);
     setPuestoSeleccionado([]);
+    setUnidadNegocioSeleccionada([]);
     setDepartamentoSeleccionado([]);
     setEstadoSeleccionado([]);
   };
@@ -171,6 +220,12 @@ export default function EmpleadosTable({
             values: puestoSeleccionado,
             options: puestoOptions,
             onChange: setPuestoSeleccionado,
+          },
+          {
+            category: "Unidad de negocio",
+            values: unidadNegocioSeleccionada,
+            options: unidadNegocioOptions,
+            onChange: setUnidadNegocioSeleccionada,
           },
           {
             category: "Departamento",
@@ -211,6 +266,14 @@ export default function EmpleadosTable({
               </TableHead>
               <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
                 <HeaderMultiFilter
+                  selected={unidadNegocioSeleccionada}
+                  onChange={setUnidadNegocioSeleccionada}
+                  options={unidadNegocioOptions}
+                  placeholder="Unidad de negocio"
+                />
+              </TableHead>
+              <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                <HeaderMultiFilter
                   selected={departamentoSeleccionado}
                   onChange={setDepartamentoSeleccionado}
                   options={departamentoOptions}
@@ -240,7 +303,7 @@ export default function EmpleadosTable({
             {displayedRows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={8}
                   className="text-center py-2 text-muted-foreground"
                 >
                   No hay empleados o búsqueda sin resultados.
@@ -289,6 +352,15 @@ export default function EmpleadosTable({
                     </TableCell>
                     <TableCell className="text-gray-700 font-medium">
                       {emp.puesto}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {emp.unidad_negocio || emp.sucursal ? (
+                        <span className="text-sm text-gray-700">
+                          {emp.unidad_negocio || emp.sucursal}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-sm">-</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-center">
                       {emp.departamento ? (
