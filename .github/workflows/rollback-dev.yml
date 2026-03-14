@@ -46,7 +46,7 @@ jobs:
             echo "   Motivo       : ${{ inputs.reason }}"
             echo "   Solicitado por: ${{ github.actor }}"
 
-            bash ~/deploy-dev.sh --ref "${{ inputs.target_sha }}"
+            bash ~/adamia/rollback-dev.sh
             echo "✅ Rollback completado"
 
       - name: Esperar que la app levante

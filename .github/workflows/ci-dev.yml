@@ -110,7 +110,7 @@ jobs:
           script: |
             set -e
             echo "🚀 Iniciando deploy — SHA: ${{ github.sha }}"
-            bash ~/deploy-dev.sh
+            bash ~/adamia/deploy-dev.sh
             echo "✅ deploy-dev.sh completado"
 
   # ─────────────────────────────────────────────
