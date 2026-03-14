@@ -41,7 +41,7 @@ export default function EntradasSalidasTable({
   const fallbackTimezone = useEmpresaTimezone(empresaActiva);
   const userTimezone = registros?.[0]?.zona_horaria || fallbackTimezone;
   const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState([]);
-  const [empresaSeleccionada, setEmpresaSeleccionada] = useState([]);
+  const [unidadSeleccionada, setUnidadSeleccionada] = useState([]);
   const [departamentoSeleccionado, setDepartamentoSeleccionado] = useState([]);
   const [estadoSeleccionado, setEstadoSeleccionado] = useState([]);
 
@@ -69,9 +69,14 @@ export default function EntradasSalidasTable({
       ),
     [optionSourceRows],
   );
-  const empresaOptions = useMemo(
+  const unidadNegocioOptions = useMemo(
     () =>
-      uniqueOptions(optionSourceRows.map((registro) => registro.nombre_empresa)),
+      uniqueOptions(
+        optionSourceRows.map(
+          (registro) =>
+            registro.unidad_negocio || registro.sucursal || registro.nombre_empresa,
+        ),
+      ),
     [optionSourceRows],
   );
   const departamentoOptions = useMemo(
@@ -95,9 +100,11 @@ export default function EntradasSalidasTable({
         const pasaEmpleado =
           empleadoSeleccionado.length === 0 ||
           empleadoSeleccionado.includes(nombreEmpleado);
-        const pasaEmpresa =
-          empresaSeleccionada.length === 0 ||
-          empresaSeleccionada.includes(registro.nombre_empresa);
+        const unidadRegistro =
+          registro.unidad_negocio || registro.sucursal || registro.nombre_empresa;
+        const pasaUnidad =
+          unidadSeleccionada.length === 0 ||
+          unidadSeleccionada.includes(unidadRegistro);
         const pasaDepartamento =
           departamentoSeleccionado.length === 0 ||
           departamentoSeleccionado.includes(departamentoSucursal);
@@ -105,12 +112,12 @@ export default function EntradasSalidasTable({
           estadoSeleccionado.length === 0 ||
           estadoSeleccionado.includes(registro.estado);
 
-        return pasaEmpleado && pasaEmpresa && pasaDepartamento && pasaEstado;
+        return pasaEmpleado && pasaUnidad && pasaDepartamento && pasaEstado;
       }),
     [
       optionSourceRows,
       empleadoSeleccionado,
-      empresaSeleccionada,
+      unidadSeleccionada,
       departamentoSeleccionado,
       estadoSeleccionado,
     ],
@@ -118,7 +125,7 @@ export default function EntradasSalidasTable({
 
   const hasActiveHeaderFilters =
     empleadoSeleccionado.length > 0 ||
-    empresaSeleccionada.length > 0 ||
+    unidadSeleccionada.length > 0 ||
     departamentoSeleccionado.length > 0 ||
     estadoSeleccionado.length > 0;
 
@@ -137,7 +144,7 @@ export default function EntradasSalidasTable({
 
   const clearAllTableFilters = () => {
     setEmpleadoSeleccionado([]);
-    setEmpresaSeleccionada([]);
+    setUnidadSeleccionada([]);
     setDepartamentoSeleccionado([]);
     setEstadoSeleccionado([]);
   };
@@ -147,7 +154,7 @@ export default function EntradasSalidasTable({
       { header: "Nombre", key: "nombre", width: 25 },
       { header: "Apellido Paterno", key: "apellido_paterno", width: 20 },
       { header: "Apellido Materno", key: "apellido_materno", width: 20 },
-      { header: "Empresa", key: "nombre_empresa", width: 20 },
+      { header: "Unidad de negocio", key: "unidad_negocio", width: 20 },
       { header: "Puesto", key: "puesto", width: 25 },
       { header: "Departamento", key: "departamento", width: 20 },
       { header: "Sucursal", key: "sucursal", width: 20 },
@@ -163,7 +170,7 @@ export default function EntradasSalidasTable({
       nombre: r.nombre,
       apellido_paterno: r.apellido_paterno,
       apellido_materno: r.apellido_materno,
-      nombre_empresa: r.nombre_empresa,
+      unidad_negocio: r.unidad_negocio || r.sucursal || r.nombre_empresa,
       puesto: r.puesto,
       departamento: r.departamento,
       sucursal: r.sucursal,
@@ -228,10 +235,10 @@ export default function EntradasSalidasTable({
             ...(empresaActiva === "all"
               ? [
                   {
-                    category: "Empresa",
-                    values: empresaSeleccionada,
-                    options: empresaOptions,
-                    onChange: setEmpresaSeleccionada,
+                    category: "Unidad de negocio",
+                    values: unidadSeleccionada,
+                    options: unidadNegocioOptions,
+                    onChange: setUnidadSeleccionada,
                   },
                 ]
               : []),
@@ -266,10 +273,10 @@ export default function EntradasSalidasTable({
                 {empresaActiva === "all" && (
                   <TableHead className="font-semibold text-gray-700 uppercase text-xs">
                     <HeaderMultiFilter
-                      selected={empresaSeleccionada}
-                      onChange={setEmpresaSeleccionada}
-                      options={empresaOptions}
-                      placeholder="Empresa"
+                      selected={unidadSeleccionada}
+                      onChange={setUnidadSeleccionada}
+                      options={unidadNegocioOptions}
+                      placeholder="Unidad de negocio"
                     />
                   </TableHead>
                 )}

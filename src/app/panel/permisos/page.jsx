@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import usePermisosData from "@/hooks/usePermisosData";
 import useTiposPermisoData from "@/hooks/useTiposPermisoData";
+import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 import TablePagination from "@/components/TablePagination";
 import StatCard from "@/components/StatCard";
 import PermisosTable from "./PermisosTable";
@@ -30,6 +31,7 @@ import PermisoDeleteDialog from "./PermisoDeleteDialog";
 import PermisoViewDialog from "./PermisoViewDialog";
 import styles from "./permisos-theme.module.css";
 import { fetcherWithToken } from "@/lib/fetcher";
+import { Combobox } from "@/components/Combobox";
 import AccesosRapidos from "@/components/AccesosRapidos";
 
 /**
@@ -44,8 +46,12 @@ export default function PermisosPage() {
   const { dataUser } = useAuth();
 
   // Lógica Multiempresa replicada
-  const [empresaActiva, setEmpresaActiva] = useState(null);
-  const idEmpresa = empresaActiva; // Se usa para los hooks de datos
+  const [unidadActiva, setUnidadActiva] = useState("all");
+  const { options: unidadOptions, byId: unidadById } = useUnidadesNegocio();
+  const idEmpresa =
+    unidadActiva === "all"
+      ? "all"
+      : String(unidadById[unidadActiva]?.id_empresa || "all");
   const empleado = "";
   const idTipoPermiso = "";
   const estado = "";
@@ -53,10 +59,10 @@ export default function PermisosPage() {
   const [hasta, setHasta] = useState("");
 
   useEffect(() => {
-    if (dataUser?.empresas_detalle?.length > 0 && !empresaActiva) {
-      setEmpresaActiva("all");
+    if (dataUser?.empresas_detalle?.length > 0 && !unidadActiva) {
+      setUnidadActiva("all");
     }
-  }, [dataUser, empresaActiva]);
+  }, [dataUser, unidadActiva]);
 
   const [filterOptionsRows, setFilterOptionsRows] = useState([]);
   const [headerFilterMeta, setHeaderFilterMeta] = useState({
@@ -554,7 +560,25 @@ export default function PermisosPage() {
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-end">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">
+              Unidad de negocio
+            </label>
+            <Combobox
+              options={[
+                { value: "all", label: "Todas las unidades de negocio" },
+                ...unidadOptions,
+              ]}
+              value={unidadActiva}
+              onChange={(value) => {
+                setUnidadActiva(value || "all");
+                setPage(1);
+              }}
+              placeholder="Seleccionar unidad de negocio"
+              emptyText="No hay unidades disponibles."
+            />
+          </div>
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Desde</label>
             <Input

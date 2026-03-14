@@ -2,8 +2,10 @@
 
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Combobox } from "@/components/Combobox";
 import { CalendarDays, Plus } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 import FestivosTable from "./FestivosTable";
 import FestivoFormDialog from "./FestivoFormDialog";
 import FestivoDeleteDialog from "./FestivoDeleteDialog";
@@ -17,14 +19,18 @@ export default function Festivos() {
   const [openFormModal, setOpenFormModal] = useState(false);
 
   const { dataUser } = useAuth();
-  const [empresaActiva, setEmpresaActiva] = useState(null);
-  const id_empresa = empresaActiva;
+  const [unidadActiva, setUnidadActiva] = useState("all");
+  const { options: unidadOptions, byId: unidadById } = useUnidadesNegocio();
+  const id_empresa =
+    unidadActiva === "all"
+      ? "all"
+      : String(unidadById[unidadActiva]?.id_empresa || "all");
 
   useEffect(() => {
-    if (dataUser?.empresas?.length > 0 && !empresaActiva) {
-      setEmpresaActiva("all");
+    if (dataUser?.empresas?.length > 0 && !unidadActiva) {
+      setUnidadActiva("all");
     }
-  }, [dataUser, empresaActiva]);
+  }, [dataUser, unidadActiva]);
 
   const key = id_empresa ? `/checador/holidays/${id_empresa}` : null;
 
@@ -56,16 +62,22 @@ export default function Festivos() {
         </div>
       </div>
 
-      <div className="flex justify-end">
-        <Button
-          className="w-full sm:w-auto bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-2"
-          onClick={() => {
-            setEditFestivo(null);
-            setOpenFormModal(true);
-          }}
-        >
-          <Plus className="h-4 w-4" /> Nuevo
-        </Button>
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-end sm:justify-between">
+        <div className="w-full sm:max-w-sm">
+          <p className="text-sm font-medium text-gray-700 mb-1">
+            Unidad de negocio
+          </p>
+          <Combobox
+            options={[
+              { value: "all", label: "Todas las unidades de negocio" },
+              ...unidadOptions,
+            ]}
+            value={unidadActiva}
+            onChange={(value) => setUnidadActiva(value || "all")}
+            placeholder="Seleccionar unidad de negocio"
+            emptyText="No hay unidades disponibles."
+          />
+        </div>
       </div>
 
       <FestivosTable

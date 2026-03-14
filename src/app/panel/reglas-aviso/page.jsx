@@ -62,6 +62,7 @@ import {
 } from "lucide-react";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import { Combobox } from "@/components/Combobox";
+import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 
 // Utilidades locales
 const diasSemanaMap = {
@@ -129,7 +130,12 @@ function descripcionConfig(regla) {
 
 export default function ReglasAvisoPage() {
   const { dataUser } = useAuth();
-  const [empresaFiltro, setEmpresaFiltro] = useState("all");
+  const [unidadFiltro, setUnidadFiltro] = useState("all");
+  const { options: unidadOptions, byId: unidadById } = useUnidadesNegocio();
+  const empresaFiltro =
+    unidadFiltro === "all"
+      ? "all"
+      : String(unidadById[unidadFiltro]?.id_empresa || "all");
 
   const [search, setSearch] = useState("");
   const [estado, setEstado] = useState("all");
@@ -143,15 +149,13 @@ export default function ReglasAvisoPage() {
     swr_config,
   );
 
-  const opcionesEmpresas = React.useMemo(() => {
-    const empresas = dataUser?.empresas_detalle || [];
-    const lista = empresas.map((e) => ({
-      label: e.nombre,
-      value: String(e.id_empresa),
-    }));
-
-    return [{ label: "Todas las empresas", value: "all" }, ...lista];
-  }, [dataUser]);
+  const opcionesUnidades = React.useMemo(
+    () => [
+      { label: "Todas las unidades de negocio", value: "all" },
+      ...unidadOptions,
+    ],
+    [unidadOptions],
+  );
 
   const reglas = data || [];
 
@@ -334,17 +338,17 @@ export default function ReglasAvisoPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
             <div className="flex flex-col gap-1">
               <Label className="text-sm font-medium text-gray-700">
-                Empresa
+                Unidad de negocio
               </Label>
               <Combobox
-                options={opcionesEmpresas}
-                value={String(empresaFiltro)}
+                options={opcionesUnidades}
+                value={String(unidadFiltro)}
                 onChange={(val) => {
-                  setEmpresaFiltro(val || "all");
+                  setUnidadFiltro(val || "all");
                   setPage(1);
                 }}
-                placeholder="Filtrar por empresa..."
-                emptyText="Empresa no encontrada"
+                placeholder="Filtrar por unidad..."
+                emptyText="Unidad no encontrada"
               />
             </div>
 
@@ -386,7 +390,7 @@ export default function ReglasAvisoPage() {
                 onClick={() => {
                   setSearch("");
                   setEstado("all");
-                  setEmpresaFiltro("all");
+                  setUnidadFiltro("all");
                 }}
               >
                 <RotateCcw className="h-4 w-4 mr-2" />
@@ -409,7 +413,7 @@ export default function ReglasAvisoPage() {
                     Tipo de regla
                   </TableHead>
                   <TableHead className="text-xs font-semibold uppercase text-gray-600">
-                    Empresa
+                    Unidad de negocio
                   </TableHead>
                   <TableHead className="text-xs font-semibold uppercase text-gray-600">
                     Configuración actual
@@ -463,7 +467,10 @@ export default function ReglasAvisoPage() {
                           )}
                         </TableCell>
                         <TableCell className="text-gray-700">
-                          {regla.empresa}
+                          {regla.unidad_negocio ||
+                            regla.nombre_sucursal ||
+                            regla.sucursal ||
+                            regla.empresa}
                         </TableCell>
                         <TableCell className="text-gray-700">
                           {descripcionConfig(regla)}

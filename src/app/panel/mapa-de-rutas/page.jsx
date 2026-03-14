@@ -62,6 +62,7 @@ import {
 
 import styles from "./mapa-rutas-theme.module.css";
 import { Combobox } from "@/components/Combobox";
+import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 
 // Leaflet se carga SOLO en cliente para evitar "window is not defined" en SSR al recargar.
 // - Relación: `leaflet-maps.jsx` contiene los imports de leaflet/react-leaflet.
@@ -231,17 +232,20 @@ function calcularPuntosTotales(movimientos) {
 // ───────────────────────────────────────────────────────────────────────────────
 
 export default function PageMapaDeRutas() {
-  const [empresaFiltro, setEmpresaFiltro] = useState("all");
+  const [unidadFiltro, setUnidadFiltro] = useState("all");
 
   const { dataUser } = useAuth();
+  const { options: unidadOptions, byId: unidadById } = useUnidadesNegocio();
+  const unidadSeleccionada = unidadById?.[String(unidadFiltro)] || null;
+  const empresaFiltro =
+    unidadFiltro === "all" ? "all" : Number(unidadSeleccionada?.id_empresa);
   const idEmpresa = empresaFiltro === "all" ? "all" : Number(empresaFiltro);
 
   /**
    * Datos de empresa para logo en PDF (nombre + url_imagen).
    * - Relación: el logo se administra en `src/app/panel/cuenta/Empresa/ImagenEmpresa.jsx`.
    */
-  const empresaIdNumerica =
-    empresaFiltro !== "all" ? Number(empresaFiltro) : null;
+  const empresaIdNumerica = idEmpresa !== "all" ? Number(idEmpresa) : null;
 
   const { data: empresaData } = useSWR(
     empresaIdNumerica ? `/empresas/${empresaIdNumerica}` : null,
@@ -321,7 +325,7 @@ export default function PageMapaDeRutas() {
   // Cargar empleados activos (cuando ya hay empresa)
   useEffect(() => {
     const run = async () => {
-      if (!empresaFiltro) return;
+      if (!unidadFiltro) return;
       try {
         const resp = await mapaRutasApi.empleadosActivos({
           empresa: empresaFiltro,
@@ -336,7 +340,7 @@ export default function PageMapaDeRutas() {
       }
     };
     run();
-  }, [idEmpresa]);
+  }, [unidadFiltro, empresaFiltro, idEmpresa]);
 
   const limpiarTodo = () => {
     setMovimientos([]);
@@ -1556,24 +1560,21 @@ export default function PageMapaDeRutas() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <label className="text-xs font-semibold uppercase text-muted-foreground">
-                  🏢 Empresa
+                  🏢 Unidad de negocio
                 </label>
                 <Combobox
                   options={[
-                    { value: "all", label: "Todas las empresas" },
-                    ...(dataUser?.empresas_detalle || []).map((e) => ({
-                      value: String(e.id_empresa),
-                      label: e.nombre,
-                    })),
+                    { value: "all", label: "Todas las unidades de negocio" },
+                    ...unidadOptions,
                   ]}
-                  value={empresaFiltro}
+                  value={unidadFiltro}
                   onChange={(value) => {
-                    setEmpresaFiltro(value);
+                    setUnidadFiltro(value);
                     setEmpleadoId("");
                     setEmpSearch("");
                     limpiarTodo();
                   }}
-                  placeholder="Empresa"
+                  placeholder="Unidad de negocio"
                 />
               </div>
 

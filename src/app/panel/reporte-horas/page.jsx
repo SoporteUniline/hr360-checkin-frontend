@@ -23,6 +23,8 @@ import { useSnackbar } from "notistack";
 import { useAuth } from "@/context/AuthContext";
 import axios from "@/lib/axios";
 import Cookies from "js-cookie";
+import { Combobox } from "@/components/Combobox";
+import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import {
   BarChart3,
@@ -95,7 +97,16 @@ export default function ReporteHorasPage() {
   }, []);
 
   const { dataUser } = useAuth();
-  const [empresaActiva, setEmpresaActiva] = useState("all");
+  const [unidadActiva, setUnidadActiva] = useState("all");
+  const { options: unidadOptions, byId: unidadById } = useUnidadesNegocio();
+  const empresaActiva =
+    unidadActiva === "all"
+      ? "all"
+      : String(unidadById[unidadActiva]?.id_empresa || "all");
+  const unidadNombreActiva =
+    unidadActiva === "all"
+      ? ""
+      : String(unidadById[unidadActiva]?.label || "").toLowerCase();
   const { enqueueSnackbar } = useSnackbar();
 
   const [empleados, setEmpleados] = useState([]);
@@ -144,6 +155,7 @@ export default function ReporteHorasPage() {
             .filter(Boolean)
             .join(" "),
           nombre_empresa: e.nombre_empresa || "N/A",
+          unidad_negocio: e.unidad_negocio || e.sucursal || "",
           puesto: e.puesto || null,
         }));
 
@@ -172,11 +184,17 @@ export default function ReporteHorasPage() {
   }, [empresaActiva, dataUser]);
 
   const empleadosFiltrados = useMemo(() => {
-    if (!cargo) return empleados;
-    return empleados.filter(
+    const empleadosUnidad = unidadNombreActiva
+      ? empleados.filter(
+          (e) =>
+            String(e.unidad_negocio || "").toLowerCase() === unidadNombreActiva,
+        )
+      : empleados;
+    if (!cargo) return empleadosUnidad;
+    return empleadosUnidad.filter(
       (e) => (e.puesto || "").toLowerCase() === cargo.toLowerCase(),
     );
-  }, [empleados, cargo]);
+  }, [empleados, cargo, unidadNombreActiva]);
 
   const dialogResultados = useMemo(() => {
     const q = searchEmpleado.trim().toLowerCase();
@@ -184,7 +202,8 @@ export default function ReporteHorasPage() {
     return empleadosFiltrados.filter((e) => {
       const nombre = String(e.nombre_empleado || "").toLowerCase();
       const empresa = String(e.nombre_empresa || "").toLowerCase();
-      return nombre.includes(q) || empresa.includes(q);
+      const unidad = String(e.unidad_negocio || "").toLowerCase();
+      return nombre.includes(q) || empresa.includes(q) || unidad.includes(q);
     });
   }, [empleadosFiltrados, searchEmpleado]);
 
@@ -1293,24 +1312,23 @@ export default function ReporteHorasPage() {
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-2 md:col-span-2">
-              <label className="text-sm text-muted-foreground">Empresa</label>
-              <select
-                className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm shadow-xs focus:border-ring focus:ring-ring/50"
-                value={empresaActiva}
-                onChange={(e) => {
-                  setEmpresaActiva(e.target.value);
+              <label className="text-sm text-muted-foreground">
+                Unidad de negocio
+              </label>
+              <Combobox
+                options={[
+                  { value: "all", label: "Todas las unidades de negocio" },
+                  ...unidadOptions,
+                ]}
+                value={unidadActiva}
+                onChange={(value) => {
+                  setUnidadActiva(value || "all");
                   setCargo("");
                   setEmpleadoId("");
                   setEmpleadoIds([]);
                 }}
-              >
-                <option value="all">Todas las empresas</option>
-                {dataUser?.empresas_detalle?.map((emp) => (
-                  <option key={emp.id_empresa} value={emp.id_empresa}>
-                    {emp.nombre}
-                  </option>
-                ))}
-              </select>
+                placeholder="Seleccionar unidad de negocio"
+              />
             </div>
 
             <div className="flex flex-col gap-2">
@@ -1343,7 +1361,7 @@ export default function ReporteHorasPage() {
                 >
                   {empleadosFiltrados.map((e) => (
                     <option key={e.id_empleado} value={e.id_empleado}>
-                      {e.nombre_empleado} - {e.nombre_empresa}
+                      {e.nombre_empleado} - {e.unidad_negocio || e.nombre_empresa}
                     </option>
                   ))}
                 </select>
@@ -1384,7 +1402,7 @@ export default function ReporteHorasPage() {
                     >
                       {empleadosFiltrados.map((e) => (
                         <option key={e.id_empleado} value={e.id_empleado}>
-                          {e.nombre_empleado} - {e.nombre_empresa}
+                        {e.nombre_empleado} - {e.unidad_negocio || e.nombre_empresa}
                         </option>
                       ))}
                     </select>
@@ -1399,7 +1417,7 @@ export default function ReporteHorasPage() {
                       <span
                         key={`sel-${e.id_empleado}`}
                         className="inline-flex items-center gap-1 rounded-full bg-zinc-100 border border-zinc-200 px-2 py-0.5 text-xs"
-                        title={`${e.nombre_empleado} - ${e.nombre_empresa}`}
+                          title={`${e.nombre_empleado} - ${e.unidad_negocio || e.nombre_empresa}`}
                       >
                         {e.nombre_empleado}
                         <button
@@ -1443,7 +1461,7 @@ export default function ReporteHorasPage() {
                         Seleccionar empleados
                       </DialogTitle>
                       <DialogDescription className="text-white/90 text-sm">
-                        Busca por nombre o empresa, marca múltiples empleados y
+                        Busca por nombre, empresa o unidad, marca múltiples empleados y
                         aplica la selección.
                       </DialogDescription>
                     </DialogHeader>
@@ -1457,7 +1475,7 @@ export default function ReporteHorasPage() {
                           <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                           <Input
                             className="pl-9"
-                            placeholder="Escribe para filtrar por nombre o empresa..."
+                            placeholder="Escribe para filtrar por nombre, empresa o unidad..."
                             value={searchEmpleado}
                             onChange={(e) => setSearchEmpleado(e.target.value)}
                           />
@@ -1518,7 +1536,7 @@ export default function ReporteHorasPage() {
                                       {e.nombre_empleado}
                                     </div>
                                     <div className="truncate text-xs text-gray-500">
-                                      {e.nombre_empresa}
+                                      {e.unidad_negocio || e.nombre_empresa}
                                     </div>
                                   </div>
                                 </li>

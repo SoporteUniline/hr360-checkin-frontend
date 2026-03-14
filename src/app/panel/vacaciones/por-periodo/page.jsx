@@ -16,6 +16,7 @@
 import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { useAuth } from "@/context/AuthContext";
+import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 import { Card, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,7 +69,12 @@ import {
 
 export default function VacacionesPorPeriodoPage() {
   const { dataUser } = useAuth();
-  const [empresaActiva, setEmpresaActiva] = useState("all");
+  const [unidadActiva, setUnidadActiva] = useState("all");
+  const { options: unidadOptions, byId: unidadById } = useUnidadesNegocio();
+  const empresaActiva =
+    unidadActiva === "all"
+      ? "all"
+      : String(unidadById[unidadActiva]?.id_empresa || "all");
   const [empresaEnModal, setEmpresaEnModal] = useState("");
   const { enqueueSnackbar } = useSnackbar();
 
@@ -417,21 +423,21 @@ export default function VacacionesPorPeriodoPage() {
               <div className="p-2 bg-slate-100 rounded-lg">🏢</div>
               <div>
                 <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
-                  Empresa Actual
+                  Unidad de negocio
                 </p>
                 <select
-                  value={empresaActiva}
+                  value={unidadActiva}
                   onChange={(e) => {
                     const val = e.target.value;
-                    setEmpresaActiva(val === "all" ? "all" : Number(val));
+                    setUnidadActiva(val);
                     setPage(1);
                   }}
                   className="block w-full mt-1 font-medium text-slate-700 bg-transparent focus:outline-none cursor-pointer"
                 >
-                  <option value="all">🌍 Todas las empresas</option>
-                  {dataUser?.empresas_detalle?.map((emp) => (
-                    <option key={emp.id_empresa} value={emp.id_empresa}>
-                      {emp.nombre}
+                  <option value="all">🌍 Todas las unidades de negocio</option>
+                  {unidadOptions.map((unidad) => (
+                    <option key={unidad.value} value={unidad.value}>
+                      {unidad.label}
                     </option>
                   ))}
                 </select>

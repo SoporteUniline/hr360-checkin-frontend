@@ -50,6 +50,7 @@ import { fetchImageAsDataUrl } from "@/lib/pdfCompanyLogo";
 import HeaderMultiFilter from "../registro-asistencia/HeaderMultiFilter";
 import ActiveFilterChips from "../registro-asistencia/ActiveFilterChips";
 import { Combobox } from "@/components/Combobox";
+import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 
 // Página de Panel para "Finiquitos y liquidaciones"
 // - Relación:
@@ -58,9 +59,10 @@ import { Combobox } from "@/components/Combobox";
 //   - Hook datos: `src/hooks/useFiniquitosData.js`
 export default function PageFiniquitosLiquidaciones() {
   const { dataUser } = useAuth();
+  const { options: unidadOptions, byId: unidadById } = useUnidadesNegocio();
 
   const empresaFiltro = "all";
-  const [empresaCalculo, setEmpresaCalculo] = useState("");
+  const [unidadCalculo, setUnidadCalculo] = useState("");
 
   const mostrarEmpresa = empresaFiltro !== "all";
 
@@ -69,7 +71,9 @@ export default function PageFiniquitosLiquidaciones() {
     empresaFiltro === "all" ? null : Number(empresaFiltro);
 
   // Para el cálculo
-  const idEmpresaCalculo = empresaCalculo ? Number(empresaCalculo) : null;
+  const idEmpresaCalculo = unidadCalculo
+    ? Number(unidadById?.[String(unidadCalculo)]?.id_empresa)
+    : null;
 
   /**
    * Datos de empresa para logo/marca del PDF (formato unificado).
@@ -150,7 +154,12 @@ export default function PageFiniquitosLiquidaciones() {
     [sourceRows],
   );
   const empresaOptions = useMemo(
-    () => uniqueOptions(sourceRows.map((f) => f.nombre_empresa)),
+    () =>
+      uniqueOptions(
+        sourceRows.map(
+          (f) => f.unidad_negocio || f.nombre_sucursal || f.nombre_empresa,
+        ),
+      ),
     [sourceRows],
   );
   const empleadoOptions = useMemo(
@@ -172,7 +181,8 @@ export default function PageFiniquitosLiquidaciones() {
     () =>
       sourceRows.filter((f) => {
         const idValue = String(f.id_finiquito || "");
-        const empresaValue = f.nombre_empresa;
+        const empresaValue =
+          f.unidad_negocio || f.nombre_sucursal || f.nombre_empresa;
         const empleadoValue = f.nombre_completo;
         const tipoValue = f.es_liquidacion ? "Liquidación" : "Finiquito";
         const estadoValue = f.estado || "Pendiente";
@@ -413,7 +423,7 @@ export default function PageFiniquitosLiquidaciones() {
 
   const calcular = async () => {
     if (!idEmpresaCalculo) {
-      setAlertMsg("Selecciona una empresa para el cálculo");
+      setAlertMsg("Selecciona una unidad de negocio para el cálculo");
       return;
     }
 
@@ -456,7 +466,7 @@ export default function PageFiniquitosLiquidaciones() {
 
   const guardar = async () => {
     if (!idEmpresaCalculo) {
-      setAlertMsg("Selecciona una empresa para el cálculo");
+      setAlertMsg("Selecciona una unidad de negocio para el cálculo");
       return;
     }
 
@@ -544,7 +554,10 @@ export default function PageFiniquitosLiquidaciones() {
       setDiasAguinaldo(String(det.dias_aguinaldo || "15"));
       setDiasSalariosVencidos(String(det.dias_salarios_vencidos || "0"));
       setMotivoBaja(det.motivo_baja || "");
-      setEmpresaCalculo(String(det.id_empresa));
+      const unidadByEmpresa = unidadOptions.find(
+        (unidad) => Number(unidad.id_empresa) === Number(det.id_empresa),
+      );
+      setUnidadCalculo(unidadByEmpresa ? unidadByEmpresa.value : "");
       // Mostrar paneles
       setPanelEmpleadoVisible(true);
       setPanelConfigVisible(true);
@@ -1066,7 +1079,7 @@ export default function PageFiniquitosLiquidaciones() {
                   onChange: setIdSeleccionado,
                 },
                 {
-                  category: "Empresa",
+                  category: "Unidad de negocio",
                   values: empresaSeleccionada,
                   options: empresaOptions,
                   onChange: setEmpresaSeleccionada,
@@ -1110,7 +1123,7 @@ export default function PageFiniquitosLiquidaciones() {
                           selected={empresaSeleccionada}
                           onChange={setEmpresaSeleccionada}
                           options={empresaOptions}
-                          placeholder="Empresa"
+                          placeholder="Unidad de negocio"
                         />
                       </th>
                     )}
@@ -1284,24 +1297,21 @@ export default function PageFiniquitosLiquidaciones() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <label className="text-xs font-semibold uppercase text-muted-foreground">
-                    Empresa
+                    Unidad de negocio
                   </label>
 
                   <Combobox
-                    options={(dataUser?.empresas_detalle || []).map((e) => ({
-                      value: String(e.id_empresa),
-                      label: e.nombre,
-                    }))}
-                    value={empresaCalculo}
+                    options={unidadOptions}
+                    value={unidadCalculo}
                     onChange={(value) => {
-                      setEmpresaCalculo(value);
+                      setUnidadCalculo(value);
                       setEmpSearch("");
                       setIdEmpleado("");
                       setEmpleadoInfo(null);
                       setResultado(null);
                       setGuardable(false);
                     }}
-                    placeholder="Selecciona empresa para cálculo"
+                    placeholder="Selecciona unidad para cálculo"
                   />
                 </div>
 
@@ -1312,18 +1322,18 @@ export default function PageFiniquitosLiquidaciones() {
                   <div className="relative">
                     <Input
                       placeholder={
-                        empresaCalculo
+                        unidadCalculo
                           ? "Buscar empleado..."
-                          : "Selecciona primero una empresa"
+                          : "Selecciona primero una unidad"
                       }
                       value={empSearch}
-                      disabled={!empresaCalculo}
+                      disabled={!unidadCalculo}
                       onChange={(e) => {
                         setEmpSearch(e.target.value);
                         setOpenEmpSug(true);
                       }}
                       onFocus={() => {
-                        if (!empresaCalculo) return;
+                        if (!unidadCalculo) return;
                         setOpenEmpSug(true);
                       }}
                     />

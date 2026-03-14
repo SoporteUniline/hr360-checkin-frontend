@@ -63,7 +63,7 @@ export default function EntradasSalidasRow({
           </TableCell>
           {empresaActiva === "all" && (
             <TableCell className="font-bold text-gray-500">
-              {registro.nombre_empresa}
+              {registro.unidad_negocio || registro.sucursal || registro.nombre_empresa}
             </TableCell>
           )}
           <TableCell>
@@ -123,7 +123,7 @@ export default function EntradasSalidasRow({
           </TableCell>
           {empresaActiva === "all" && (
             <TableCell className="font-bold text-gray-500">
-              {registro.nombre_empresa}
+              {registro.unidad_negocio || registro.sucursal || registro.nombre_empresa}
             </TableCell>
           )}
           <TableCell>

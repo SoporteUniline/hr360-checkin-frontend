@@ -50,7 +50,7 @@ export default function AsistenciaTable({
   const userTimezone = filtrados?.[0]?.zona_horaria || fallbackTimezone;
   const DB_TIMEZONE = "America/Mexico_City";
   const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState([]);
-  const [empresaSeleccionada, setEmpresaSeleccionada] = useState([]);
+  const [unidadSeleccionada, setUnidadSeleccionada] = useState([]);
   const [departamentoSeleccionado, setDepartamentoSeleccionado] = useState([]);
   const [tipoSeleccionado, setTipoSeleccionado] = useState([]);
   const [estadoSeleccionado, setEstadoSeleccionado] = useState([]);
@@ -88,10 +88,13 @@ export default function AsistenciaTable({
       ),
     [optionSourceRows],
   );
-  const empresaOptions = useMemo(
+  const unidadNegocioOptions = useMemo(
     () =>
       uniqueOptions(
-        optionSourceRows.map((registro) => registro.empresa_nombre),
+        optionSourceRows.map(
+          (registro) =>
+            registro.unidad_negocio || registro.sucursal || registro.empresa_nombre,
+        ),
       ),
     [optionSourceRows],
   );
@@ -164,9 +167,11 @@ export default function AsistenciaTable({
         const pasaEmpleado =
           empleadoSeleccionado.length === 0 ||
           empleadoSeleccionado.includes(nombreEmpleado);
-        const pasaEmpresa =
-          empresaSeleccionada.length === 0 ||
-          empresaSeleccionada.includes(registro.empresa_nombre);
+        const unidadRegistro =
+          registro.unidad_negocio || registro.sucursal || registro.empresa_nombre;
+        const pasaUnidad =
+          unidadSeleccionada.length === 0 ||
+          unidadSeleccionada.includes(unidadRegistro);
         const pasaDepartamento =
           departamentoSeleccionado.length === 0 ||
           departamentoSeleccionado.includes(registro.departamento);
@@ -197,7 +202,7 @@ export default function AsistenciaTable({
 
         return (
           pasaEmpleado &&
-          pasaEmpresa &&
+          pasaUnidad &&
           pasaDepartamento &&
           pasaTipo &&
           pasaEstado &&
@@ -212,7 +217,7 @@ export default function AsistenciaTable({
     [
       optionSourceRows,
       empleadoSeleccionado,
-      empresaSeleccionada,
+      unidadSeleccionada,
       departamentoSeleccionado,
       tipoSeleccionado,
       estadoSeleccionado,
@@ -227,7 +232,7 @@ export default function AsistenciaTable({
 
   const hasActiveHeaderFilters =
     empleadoSeleccionado.length > 0 ||
-    empresaSeleccionada.length > 0 ||
+    unidadSeleccionada.length > 0 ||
     departamentoSeleccionado.length > 0 ||
     tipoSeleccionado.length > 0 ||
     estadoSeleccionado.length > 0 ||
@@ -257,7 +262,7 @@ export default function AsistenciaTable({
 
   const clearAllTableFilters = () => {
     setEmpleadoSeleccionado([]);
-    setEmpresaSeleccionada([]);
+    setUnidadSeleccionada([]);
     setDepartamentoSeleccionado([]);
     setTipoSeleccionado([]);
     setEstadoSeleccionado([]);
@@ -273,7 +278,7 @@ export default function AsistenciaTable({
     { header: "Nombre", key: "nombre" },
     { header: "Apellido Paterno", key: "apellido_paterno" },
     { header: "Apellido Materno", key: "apellido_materno" },
-    { header: "Empresa", key: "empresa" },
+    { header: "Unidad de negocio", key: "unidad_negocio" },
     { header: "Código", key: "nip" },
     { header: "Departamento", key: "departamento" },
     { header: "Tipo de Registro", key: "tipo_registro_nombre" },
@@ -304,7 +309,7 @@ export default function AsistenciaTable({
       nombre: r.nombre,
       apellido_paterno: r.apellido_paterno,
       apellido_materno: r.apellido_materno,
-      empresa: r.empresa_nombre,
+      unidad_negocio: r.unidad_negocio || r.sucursal || r.empresa_nombre,
       nip: r.nip,
       departamento: r.departamento,
       tipo_registro_nombre: r.tipo_registro_nombre,
@@ -401,10 +406,10 @@ export default function AsistenciaTable({
             ...(empresaActiva === "all"
               ? [
                   {
-                    category: "Empresa",
-                    values: empresaSeleccionada,
-                    options: empresaOptions,
-                    onChange: setEmpresaSeleccionada,
+                    category: "Unidad de negocio",
+                    values: unidadSeleccionada,
+                    options: unidadNegocioOptions,
+                    onChange: setUnidadSeleccionada,
                   },
                 ]
               : []),
@@ -485,10 +490,10 @@ export default function AsistenciaTable({
                 {empresaActiva === "all" && (
                   <TableHead className="font-semibold text-gray-700 uppercase text-xs">
                     <HeaderMultiFilter
-                      selected={empresaSeleccionada}
-                      onChange={setEmpresaSeleccionada}
-                      options={empresaOptions}
-                      placeholder="Empresa"
+                      selected={unidadSeleccionada}
+                      onChange={setUnidadSeleccionada}
+                      options={unidadNegocioOptions}
+                      placeholder="Unidad de negocio"
                     />
                   </TableHead>
                 )}

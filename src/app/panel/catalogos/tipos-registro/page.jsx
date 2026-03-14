@@ -11,13 +11,19 @@ import TipoRegistroDeleteDialog from "./TipoRegistroDeleteDialog";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import { useAuth } from "@/context/AuthContext";
 import useDebounce from "@/hooks/useDebounce";
+import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/Combobox";
 
 export default function TiposRegistro() {
   const { dataUser } = useAuth();
   const [filter, setFilter] = useState("");
-  const [empresaActiva, setEmpresaActiva] = useState("all");
+  const [unidadActiva, setUnidadActiva] = useState("all");
+  const { options: unidadOptions, byId: unidadById } = useUnidadesNegocio();
+  const empresaActiva =
+    unidadActiva === "all"
+      ? "all"
+      : String(unidadById[unidadActiva]?.id_empresa || "all");
   const debouncedFilter = useDebounce(filter, 500);
   const [registros, setRegistros] = useState([]);
   const [editPerm, setEditPerm] = useState(null);
@@ -28,7 +34,7 @@ export default function TiposRegistro() {
   const [page, setPage] = useState(1);
 
   const handleEmpresaChange = (val) => {
-    setEmpresaActiva(val === "all" ? "all" : Number(val));
+    setUnidadActiva(val || "all");
     setPage(1);
   };
 
@@ -67,17 +73,14 @@ export default function TiposRegistro() {
           <div className="grid grid-cols-1 md:grid-cols-[250px_1fr_auto] gap-4 items-end mb-2">
             <div className="space-y-1">
               <Label className="text-xs text-gray-500">
-                Filtrar por Empresa
+                Filtrar por Unidad de negocio
               </Label>
               <Combobox
                 options={[
-                  { value: "all", label: "Todas las empresas" },
-                  ...(dataUser?.empresas_detalle?.map((e) => ({
-                    value: e.id_empresa,
-                    label: e.nombre,
-                  })) || []),
+                  { value: "all", label: "Todas las unidades de negocio" },
+                  ...unidadOptions,
                 ]}
-                value={empresaActiva}
+                value={unidadActiva}
                 onChange={handleEmpresaChange}
               />
             </div>

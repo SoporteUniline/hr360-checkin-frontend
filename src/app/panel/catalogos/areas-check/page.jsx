@@ -27,6 +27,7 @@ import debounce from "lodash.debounce";
 import ModalArea from "@/components/ModalArea";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import { Combobox } from "@/components/Combobox";
+import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 
 function AreaCard({ area, onEdit, onDelete }) {
   return (
@@ -43,7 +44,8 @@ function AreaCard({ area, onEdit, onDelete }) {
           {/* 🏢 Muestra la empresa si existe (útil cuando el filtro es "all") */}
           {area.empresa_nombre && (
             <p className="text-xs text-gray-500 mb-2 italic">
-              Empresa: {area.empresa_nombre}
+              Unidad de negocio:{" "}
+              {area.unidad_negocio || area.sucursal || area.empresa_nombre}
             </p>
           )}
 
@@ -157,7 +159,12 @@ export default function AreasCheckPage() {
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  const [empresaActiva, setEmpresaActiva] = useState("all");
+  const [unidadActiva, setUnidadActiva] = useState("all");
+  const { options: unidadOptions, byId: unidadById } = useUnidadesNegocio();
+  const empresaActiva =
+    unidadActiva === "all"
+      ? "all"
+      : String(unidadById[unidadActiva]?.id_empresa || "all");
 
   // 🕒 Debounce (para no spamear el servidor)
   const handleSearchChange = debounce((value) => {
@@ -203,7 +210,7 @@ export default function AreasCheckPage() {
 
   const guardarArea = async (formData) => {
     if (!formData.id_empresa && empresaActiva === "all") {
-      enqueueSnackbar("Debes seleccionar una empresa para el área", {
+      enqueueSnackbar("Debes seleccionar una unidad de negocio para el área", {
         variant: "warning",
       });
       return;
@@ -335,19 +342,14 @@ export default function AreasCheckPage() {
        
         <CardContent className="grid grid-cols-1 md:grid-cols-[250px_1fr_auto] gap-4 items-end">
           <div className="flex flex-col gap-1">
-            <Label>Empresa</Label>
+            <Label>Unidad de negocio</Label>
             <Combobox
               options={[
-                { value: "all", label: "Todas las empresas" },
-                ...(dataUser?.empresas_detalle?.map((e) => ({
-                  value: e.id_empresa,
-                  label: e.nombre,
-                })) || []),
+                { value: "all", label: "Todas las unidades de negocio" },
+                ...unidadOptions,
               ]}
-              value={empresaActiva}
-              onChange={(val) =>
-                setEmpresaActiva(val === "all" ? "all" : Number(val))
-              }
+              value={unidadActiva}
+              onChange={(val) => setUnidadActiva(val || "all")}
             />
           </div>
           <div className="flex flex-col gap-1">

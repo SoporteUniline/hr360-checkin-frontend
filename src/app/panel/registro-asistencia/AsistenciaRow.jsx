@@ -69,7 +69,7 @@ export default function AsistenciaRow({
             <TableCell className="font-bold">{`${registro.nombre} ${registro.apellido_paterno}`}</TableCell>
             {empresaActiva === "all" && (
               <TableCell className="font-bold">
-                {registro.empresa_nombre}
+                {registro.unidad_negocio || registro.sucursal || registro.empresa_nombre}
               </TableCell>
             )}
             {mostrarCamposExtras && <TableCell>{registro.nip}</TableCell>}
@@ -505,7 +505,7 @@ export default function AsistenciaRow({
             <TableCell className="font-bold">{`${registro.nombre} ${registro.apellido_paterno}`}</TableCell>
             {empresaActiva === "all" && (
               <TableCell className="font-bold">
-                {registro.empresa_nombre}
+                {registro.unidad_negocio || registro.sucursal || registro.empresa_nombre}
               </TableCell>
             )}
             {mostrarCamposExtras && <TableCell>{registro.nip}</TableCell>}

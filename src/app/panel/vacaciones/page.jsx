@@ -16,6 +16,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "@/lib/axios";
 import { useAuth } from "@/context/AuthContext";
+import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -51,6 +52,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import { Combobox } from "@/components/Combobox";
 
 function numberFormat(n) {
   try {
@@ -65,7 +67,12 @@ export default function VacacionesPage() {
   const { dataUser } = useAuth();
 
   // Cerca de los otros useState
-  const [empresaActiva, setEmpresaActiva] = useState("all");
+  const [unidadActiva, setUnidadActiva] = useState("all");
+  const { options: unidadOptions, byId: unidadById } = useUnidadesNegocio();
+  const empresaActiva =
+    unidadActiva === "all"
+      ? "all"
+      : String(unidadById[unidadActiva]?.id_empresa || "all");
   const empresaDetalleParam =
     empresaActiva && empresaActiva !== "all" ? Number(empresaActiva) : null;
 
@@ -424,7 +431,7 @@ export default function VacacionesPage() {
     setFilterEmpleado("");
     setFilterDepartamento("");
     setFilterEstado("");
-    setEmpresaActiva("all");
+    setUnidadActiva("all");
   };
 
   return (
@@ -479,20 +486,18 @@ export default function VacacionesPage() {
             {/* Empresa */}
             <div className="flex flex-col gap-1">
               <Label className="text-sm font-medium text-gray-700">
-                Empresa
+                Unidad de negocio
               </Label>
-              <select
-                className="h-9 w-full border rounded-md px-3 text-sm bg-white shadow-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                value={empresaActiva}
-                onChange={(e) => setEmpresaActiva(e.target.value)}
-              >
-                <option value="all">🏢 Todas las empresas</option>
-                {dataUser?.empresas_detalle?.map((emp) => (
-                  <option key={emp.id_empresa} value={emp.id_empresa}>
-                    {emp.nombre}
-                  </option>
-                ))}
-              </select>
+              <Combobox
+                options={[
+                  { value: "all", label: "Todas las unidades de negocio" },
+                  ...unidadOptions,
+                ]}
+                value={unidadActiva}
+                onChange={(value) => setUnidadActiva(value || "all")}
+                placeholder="Seleccionar unidad de negocio"
+                emptyText="No hay unidades disponibles."
+              />
             </div>
 
             {/* Búsqueda de Empleado (Typeahead) */}

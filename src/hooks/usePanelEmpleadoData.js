@@ -8,7 +8,11 @@ import { fetcherWithToken } from "@/lib/fetcher";
  * - Backend: modules/attendance/controllers/empleadoController.js (cargarTodosDatosCompletos)
  * - Frontend: src/app/panel/panel-empleado/page.jsx
  */
-export default function usePanelEmpleadoData(idEmpresa, empresasUsuario = []) {
+export default function usePanelEmpleadoData(
+  idEmpresa,
+  empresasUsuario = [],
+  unidadNegocio = "",
+) {
   let url = null;
 
   if (idEmpresa === "all") {
@@ -21,9 +25,13 @@ export default function usePanelEmpleadoData(idEmpresa, empresasUsuario = []) {
      * - Backend: `modules/attendance/controllers/empleadoController.js` (cargarTodosDatosCompletos)
      */
     const empresas = empresasUsuario.join(",");
-    url = `/checador/empleados/panel-empleado/todos?empresas=${empresas}&includeInactivos=1`;
+    url = `/checador/empleados/panel-empleado/todos?empresas=${empresas}&includeInactivos=1${
+      unidadNegocio ? `&sucursal=${encodeURIComponent(unidadNegocio)}` : ""
+    }`;
   } else if (idEmpresa) {
-    url = `/checador/empleados/panel-empleado/todos?empresa=${idEmpresa}&includeInactivos=1`;
+    url = `/checador/empleados/panel-empleado/todos?empresa=${idEmpresa}&includeInactivos=1${
+      unidadNegocio ? `&sucursal=${encodeURIComponent(unidadNegocio)}` : ""
+    }`;
   }
 
   const { data, error, isLoading, mutate } = useSWR(url, fetcherWithToken);
