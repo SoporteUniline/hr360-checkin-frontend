@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import AdamiaChatWidget from "@/components/landing/AdamiaChatWidget";
 import Navbar from "@/components/Navbar";
+import SystemMessageRenderer from "@/components/system-messages/SystemMessageRenderer";
 
 /**
  * Landing principal (solo UI).
@@ -184,6 +185,9 @@ export default function MarketingLanding() {
               </div>
             </div>
           </div>
+        </div>
+        <div className="relative mx-auto w-full max-w-7xl px-6 pb-6 md:pb-0">
+          <SystemMessageRenderer tipo="externa" contexto="landing" />
         </div>
       </section>
 

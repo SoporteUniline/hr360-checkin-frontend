@@ -79,7 +79,8 @@ export default function Navbar() {
 
   return (
     <div
-      className={`flex items-center px-2 py-1 fixed top-0 right-0 left-0 bg-white z-40`}
+      className="flex items-center px-2 py-1 fixed right-0 left-0 bg-white z-40 transition-[top] duration-300"
+      style={{ top: "var(--landing-banner-offset, 0px)" }}
     >
       <div className="flex md:hidden mr-3 ml-1">
         <MenuResposive

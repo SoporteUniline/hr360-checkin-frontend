@@ -364,6 +364,15 @@ export default function AreasCheckPage() {
               }}
             />
           </div>
+          <div className="flex md:justify-end">
+            <Button
+              onClick={abrirModalNuevaArea}
+              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white w-full md:w-auto gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Agregar nueva área
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

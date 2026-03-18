@@ -65,6 +65,12 @@ const dashboardItems = [
     icon: CreditCard,
   },
   {
+    title: "Mensajes sistema",
+    url: "/dashboard/mensajes-sistema",
+    rol: "Admin",
+    icon: BellRing,
+  },
+  {
     title: "Dashboard",
     url: "/panel/dashboard",
     rol: "Recruiter",

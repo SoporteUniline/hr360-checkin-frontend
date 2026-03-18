@@ -26,6 +26,7 @@ import {
 import PermisosTable from "./PermisosTable";
 import WeeklyTrend from "./WeeklyTrend";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import SystemMessageRenderer from "@/components/system-messages/SystemMessageRenderer";
 
 function monthShortUpperWithDot(dateStr) {
   const d = new Date(dateStr + "T00:00:00Z");
@@ -236,6 +237,7 @@ export default async function PanelDashboardPage() {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-6">
+      <SystemMessageRenderer tipo="interna" contexto="dashboard" />
       <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="bg-white">
           <CardHeader className="flex flex-row items-center justify-between">
