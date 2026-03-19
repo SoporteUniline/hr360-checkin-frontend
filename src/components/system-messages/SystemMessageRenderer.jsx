@@ -31,35 +31,42 @@ function BandaMessage({ message, onClose, contexto = "landing" }) {
       initial={{ y: -24, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.35 }}
+      id={contexto === "landing" ? "system-message-banda" : undefined}
       className="fixed left-0 right-0 top-0 z-[90] px-3 py-2 pt-[calc(env(safe-area-inset-top)+0.5rem)] text-sm md:text-[15px]"
       style={style}
       role="status"
       aria-live="polite"
     >
-      <div className="mx-auto flex w-full max-w-7xl items-center gap-3 rounded-xl border border-white/20 px-3 py-2 shadow-[0_10px_24px_rgba(0,0,0,0.25)] backdrop-blur-sm">
-        <span className="text-base leading-none">{message.icono || "•"}</span>
-        <div className="min-w-0 flex-1 truncate">
-          <strong className="font-semibold">{message.titulo}</strong>{" "}
-          <span className="opacity-95">{message.mensaje}</span>
+      <div className="mx-auto grid w-full max-w-7xl grid-cols-[auto_1fr_auto] items-start gap-3 rounded-xl border border-white/20 px-3 py-2 shadow-[0_10px_24px_rgba(0,0,0,0.25)] backdrop-blur-sm">
+        <span className="pt-0.5 text-base leading-none">{message.icono || "•"}</span>
+        <div className="min-w-0">
+          <strong className="font-semibold whitespace-pre-wrap break-words">
+            {message.titulo}
+          </strong>
+          <div className="opacity-95 whitespace-pre-wrap break-words leading-snug">
+            {message.mensaje}
+          </div>
         </div>
 
-        {message.boton_texto && message.boton_url ? (
-          <Link
-            href={message.boton_url}
-            className="hidden rounded-md bg-white/15 px-3 py-1.5 text-xs font-semibold hover:bg-white/25 md:inline-flex"
-          >
-            {message.boton_texto}
-          </Link>
-        ) : null}
+        <div className="flex items-center gap-2 pl-1">
+          {message.boton_texto && message.boton_url ? (
+            <Link
+              href={message.boton_url}
+              className="hidden rounded-md bg-white/15 px-3 py-1.5 text-xs font-semibold hover:bg-white/25 md:inline-flex"
+            >
+              {message.boton_texto}
+            </Link>
+          ) : null}
 
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Ocultar mensaje"
-          className="rounded-md p-1.5 hover:bg-white/20"
-        >
-          <X className="h-4 w-4" />
-        </button>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Ocultar mensaje"
+            className="rounded-md p-1.5 hover:bg-white/20"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </motion.div>
   );
@@ -126,7 +133,7 @@ function BannerMessage({ message, onClose, contexto = "landing" }) {
                 </button>
               </div>
 
-              <p className="text-base md:text-lg leading-relaxed opacity-95">
+              <p className="text-base md:text-lg leading-relaxed opacity-95 whitespace-pre-wrap break-words">
                 {message.mensaje}
               </p>
 
@@ -180,7 +187,9 @@ function BannerMessage({ message, onClose, contexto = "landing" }) {
           </button>
         </div>
 
-        <p className="text-sm leading-relaxed opacity-95">{message.mensaje}</p>
+        <p className="text-sm leading-relaxed opacity-95 whitespace-pre-wrap break-words">
+          {message.mensaje}
+        </p>
 
         {message.boton_texto && message.boton_url ? (
           <div className="mt-4">
@@ -228,16 +237,28 @@ export default function SystemMessageRenderer({ tipo, contexto = "landing" }) {
 
     const root = document.documentElement;
     const shouldOffsetNavbar = message?.formato === "banda" && !oculto;
+    if (!shouldOffsetNavbar) {
+      root.style.setProperty("--landing-banner-offset", "0px");
+      return;
+    }
 
-    root.style.setProperty(
-      "--landing-banner-offset",
-      shouldOffsetNavbar ? "64px" : "0px",
-    );
+    const element = document.getElementById("system-message-banda");
+    if (!element) return;
+
+    const updateOffset = () => {
+      const h = Math.ceil(element.getBoundingClientRect().height);
+      root.style.setProperty("--landing-banner-offset", `${h}px`);
+    };
+
+    updateOffset();
+    const observer = new ResizeObserver(updateOffset);
+    observer.observe(element);
 
     return () => {
+      observer.disconnect();
       root.style.setProperty("--landing-banner-offset", "0px");
     };
-  }, [contexto, message?.formato, oculto]);
+  }, [contexto, message?.formato, oculto, message?.mensaje, message?.titulo]);
 
   if (!tipo || isLoading || oculto || !message) return null;
 
