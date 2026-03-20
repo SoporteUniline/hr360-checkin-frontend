@@ -87,14 +87,14 @@ function BannerMessage({ message, onClose, contexto = "landing" }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.25 }}
-        className="fixed inset-0 z-[80] bg-black/55 backdrop-blur-[2px] p-4 md:p-6"
+        className="fixed inset-0 z-[80] overflow-y-auto touch-pan-y bg-black/55 p-3 backdrop-blur-[2px] md:p-6 [-webkit-overflow-scrolling:touch]"
       >
-        <div className="mx-auto flex h-full w-full max-w-6xl items-start justify-center pt-[11vh]">
+        <div className="mx-auto flex min-h-full w-full max-w-6xl items-start justify-center py-3 md:py-[8vh]">
           <motion.aside
             initial={{ y: 28, opacity: 0, scale: 0.97 }}
             animate={{ y: 0, opacity: 1, scale: 1 }}
             transition={{ type: "spring", stiffness: 130, damping: 14 }}
-            className="relative w-full max-w-2xl overflow-hidden rounded-3xl border border-white/20 shadow-[0_30px_80px_rgba(0,0,0,0.45)]"
+            className="relative w-full max-w-2xl overflow-y-auto overscroll-contain touch-pan-y rounded-3xl border border-white/20 shadow-[0_30px_80px_rgba(0,0,0,0.45)] max-h-[calc(100dvh-1.5rem)] md:max-h-[calc(100dvh-5rem)] [-webkit-overflow-scrolling:touch]"
             style={style}
             role="dialog"
             aria-modal="true"
@@ -224,6 +224,9 @@ export default function SystemMessageRenderer({ tipo, contexto = "landing" }) {
 
   useEffect(() => {
     if (!shouldBlockBackground) return;
+    const isMobile = window.matchMedia("(max-width: 767px)").matches;
+    if (isMobile) return;
+
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
