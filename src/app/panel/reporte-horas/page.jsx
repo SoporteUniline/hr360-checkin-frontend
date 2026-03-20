@@ -112,6 +112,7 @@ export default function ReporteHorasPage() {
   const [empleados, setEmpleados] = useState([]);
   const [cargos, setCargos] = useState([]);
   const [cargo, setCargo] = useState("");
+  const [periodo, setPeriodo] = useState("");
   const [empleadoId, setEmpleadoId] = useState("");
   const [empleadoIds, setEmpleadoIds] = useState([]);
   const [multi, setMulti] = useState(false);
@@ -139,7 +140,7 @@ export default function ReporteHorasPage() {
 
         const [eRes, pRes] = await Promise.all([
           axios.get(
-            `/checador/empleados?empresa=${empresaActiva}&page=1&limit=1000`,
+            `/checador/empleados?empresa=${empresaActiva}&page=1&limit=1000&estado=Activo`,
             auth,
           ),
           axios.get(
@@ -157,6 +158,7 @@ export default function ReporteHorasPage() {
           nombre_empresa: e.nombre_empresa || "N/A",
           unidad_negocio: e.unidad_negocio || e.sucursal || "",
           puesto: e.puesto || null,
+          periodo_pago: e.periodo_pago || "",
         }));
 
         setEmpleados(empleadosMapped);
@@ -184,17 +186,23 @@ export default function ReporteHorasPage() {
   }, [empresaActiva, dataUser]);
 
   const empleadosFiltrados = useMemo(() => {
-    const empleadosUnidad = unidadNombreActiva
+    let result = unidadNombreActiva
       ? empleados.filter(
           (e) =>
             String(e.unidad_negocio || "").toLowerCase() === unidadNombreActiva,
         )
       : empleados;
-    if (!cargo) return empleadosUnidad;
-    return empleadosUnidad.filter(
-      (e) => (e.puesto || "").toLowerCase() === cargo.toLowerCase(),
-    );
-  }, [empleados, cargo, unidadNombreActiva]);
+    if (cargo)
+      result = result.filter(
+        (e) => (e.puesto || "").toLowerCase() === cargo.toLowerCase(),
+      );
+    if (periodo)
+      result = result.filter(
+        (e) =>
+          (e.periodo_pago || "").toLowerCase() === periodo.toLowerCase(),
+      );
+    return result;
+  }, [empleados, cargo, periodo, unidadNombreActiva]);
 
   const dialogResultados = useMemo(() => {
     const q = searchEmpleado.trim().toLowerCase();
@@ -1324,6 +1332,7 @@ export default function ReporteHorasPage() {
                 onChange={(value) => {
                   setUnidadActiva(value || "all");
                   setCargo("");
+                  setPeriodo("");
                   setEmpleadoId("");
                   setEmpleadoIds([]);
                 }}
@@ -1338,7 +1347,7 @@ export default function ReporteHorasPage() {
                 value={cargo}
                 onChange={(e) => {
                   setCargo(e.target.value);
-                  setEmpleadoId(""); // Limpiamos para forzar la actualización
+                  setEmpleadoId("");
                 }}
               >
                 <option value="">Todos los cargos</option>
@@ -1349,6 +1358,30 @@ export default function ReporteHorasPage() {
                 ))}
               </select>
             </div>
+
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-medium text-gray-700">
+                Periodo de pago
+              </label>
+              <select
+                className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm shadow-xs focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                value={periodo}
+                onChange={(e) => {
+                  setPeriodo(e.target.value);
+                  setEmpleadoId("");
+                  setEmpleadoIds([]);
+                }}
+              >
+                <option value="">Todos los periodos</option>
+                <option value="Semanal">Semanal</option>
+                <option value="Catorcenal">Catorcenal</option>
+                <option value="Quincenal">Quincenal</option>
+                <option value="Mensual">Mensual</option>
+                <option value="Diario">Diario</option>
+                <option value="Por hora">Por hora</option>
+              </select>
+            </div>
+
             <div className={`flex flex-col gap-2`}>
               <label className="text-sm font-medium text-gray-700">
                 Empleado{multi ? "(s)" : ""}
