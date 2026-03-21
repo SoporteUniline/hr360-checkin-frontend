@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
+//Prueba CI/CD
+
 const accessRules = {
   Admin: ["/dashboard"],
   Recruiter: ["/panel"],
@@ -21,7 +23,7 @@ export async function middleware(request) {
 
   if (!token) {
     const protectedRoutes = ["/dashboard", "/panel", "/home", "/empleado"].some(
-      (path) => pathname.startsWith(path)
+      (path) => pathname.startsWith(path),
     );
     if (protectedRoutes) {
       return NextResponse.redirect(new URL("/login", request.url));
