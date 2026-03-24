@@ -15,6 +15,7 @@ import {
   X,
   MonitorUp,
   Building2,
+  MessageCircle,
 } from "lucide-react";
 import axios from "@/lib/axios";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
@@ -146,6 +147,16 @@ export default function MensajesSistemaPage() {
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState("");
   const [form, setForm] = useState(EMPTY_FORM);
+  const [waOpen, setWaOpen] = useState(false);
+  const [waSending, setWaSending] = useState(false);
+  const [waLoadingRecipients, setWaLoadingRecipients] = useState(false);
+  const [waRecipients, setWaRecipients] = useState([]);
+  const [waMode, setWaMode] = useState("todos");
+  const [waSearch, setWaSearch] = useState("");
+  const [waSelectedIds, setWaSelectedIds] = useState([]);
+  const [waError, setWaError] = useState("");
+  const [waResult, setWaResult] = useState(null);
+  const [waMessage, setWaMessage] = useState(null);
 
   const selectedUrlPreset = useMemo(() => {
     const current = form.boton_url || "";
@@ -160,6 +171,17 @@ export default function MensajesSistemaPage() {
     const internas = mensajes.filter((m) => m.tipo === "interna").length;
     return { total, activos, externas, internas };
   }, [mensajes]);
+
+  const filteredRecipients = useMemo(() => {
+    const q = waSearch.trim().toLowerCase();
+    if (!q) return waRecipients;
+    return waRecipients.filter((item) => {
+      const name = String(item.nombre_empresa || "").toLowerCase();
+      const owner = String(item.nombre_duenio || "").toLowerCase();
+      const phone = String(item.celular || "").toLowerCase();
+      return name.includes(q) || owner.includes(q) || phone.includes(q);
+    });
+  }, [waRecipients, waSearch]);
 
   const resetForm = () => {
     setForm(EMPTY_FORM);
@@ -222,6 +244,79 @@ export default function MensajesSistemaPage() {
       mutate();
     } catch {
       // Se mantiene silencioso para no interrumpir el flujo de configuración.
+    }
+  };
+
+  const loadRecipients = async () => {
+    setWaLoadingRecipients(true);
+    setWaError("");
+    try {
+      const response = await axios.get(
+        `${API_PATH}/whatsapp/destinatarios`,
+        tokenHeader(),
+      );
+      setWaRecipients(Array.isArray(response?.data) ? response.data : []);
+    } catch (e) {
+      setWaRecipients([]);
+      setWaError(
+        e?.response?.data?.error || "No se pudo cargar el listado de destinatarios.",
+      );
+    } finally {
+      setWaLoadingRecipients(false);
+    }
+  };
+
+  const openWhatsAppDialog = async (message) => {
+    setWaMessage(message);
+    setWaMode("todos");
+    setWaSearch("");
+    setWaSelectedIds([]);
+    setWaResult(null);
+    setWaError("");
+    setWaOpen(true);
+    await loadRecipients();
+  };
+
+  const toggleCompany = (id) => {
+    setWaSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  const selectAllFiltered = () => {
+    const ids = filteredRecipients.map((item) => item.id_empresa);
+    setWaSelectedIds((prev) => Array.from(new Set([...prev, ...ids])));
+  };
+
+  const clearSelected = () => setWaSelectedIds([]);
+
+  const sendWhatsApp = async () => {
+    if (!waMessage?.id) return;
+    if (waMode === "seleccionados" && waSelectedIds.length === 0) {
+      setWaError("Debes elegir al menos una empresa para el envío.");
+      return;
+    }
+
+    setWaSending(true);
+    setWaError("");
+    setWaResult(null);
+    try {
+      const payload =
+        waMode === "seleccionados"
+          ? { modo: waMode, empresa_ids: waSelectedIds }
+          : { modo: waMode };
+      const response = await axios.post(
+        `${API_PATH}/${waMessage.id}/enviar-whatsapp`,
+        payload,
+        tokenHeader(),
+      );
+      setWaResult(response?.data || null);
+    } catch (e) {
+      setWaError(
+        e?.response?.data?.error || "No fue posible enviar el mensaje por WhatsApp.",
+      );
+    } finally {
+      setWaSending(false);
     }
   };
 
@@ -295,6 +390,10 @@ export default function MensajesSistemaPage() {
                         checked={!!m.activa}
                         onCheckedChange={(val) => handleToggle(m.id, val)}
                       />
+                      <Button variant="outline" onClick={() => openWhatsAppDialog(m)}>
+                        <MessageCircle className="h-4 w-4 mr-2" />
+                        Enviar WhatsApp
+                      </Button>
                       <Button variant="outline" onClick={() => openEdit(m)}>
                         <Pencil className="h-4 w-4 mr-2" />
                         Editar
@@ -562,6 +661,156 @@ export default function MensajesSistemaPage() {
             >
               <Save className="h-4 w-4 mr-2" />
               {saving ? "Guardando..." : "Guardar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={waOpen} onOpenChange={setWaOpen}>
+        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Enviar mensaje por WhatsApp</DialogTitle>
+            <DialogDescription>
+              {waMessage?.titulo
+                ? `Mensaje seleccionado: "${waMessage.titulo}".`
+                : "Selecciona destinatarios para enviar este mensaje por WhatsApp."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setWaMode("todos")}
+                className={`rounded-lg border px-4 py-3 text-left text-sm transition ${
+                  waMode === "todos"
+                    ? "border-blue-600 bg-blue-50 text-blue-900"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <p className="font-semibold">Enviar a todos</p>
+                <p className="text-xs opacity-80">
+                  Empresas activas con teléfono registrado.
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setWaMode("seleccionados")}
+                className={`rounded-lg border px-4 py-3 text-left text-sm transition ${
+                  waMode === "seleccionados"
+                    ? "border-blue-600 bg-blue-50 text-blue-900"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <p className="font-semibold">Elegir destinatarios</p>
+                <p className="text-xs opacity-80">
+                  Selecciona empresas específicas para este envío.
+                </p>
+              </button>
+            </div>
+
+            <div className="rounded-lg border p-3 bg-slate-50">
+              <p className="text-xs text-gray-600">
+                Destinatarios disponibles:{" "}
+                <strong>{waRecipients.length}</strong> | Seleccionados:{" "}
+                <strong>{waSelectedIds.length}</strong>
+              </p>
+            </div>
+
+            {waMode === "seleccionados" ? (
+              <div className="space-y-3">
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Input
+                    placeholder="Buscar por empresa, dueño o teléfono..."
+                    value={waSearch}
+                    onChange={(e) => setWaSearch(e.target.value)}
+                  />
+                  <Button type="button" variant="outline" onClick={selectAllFiltered}>
+                    Seleccionar visibles
+                  </Button>
+                  <Button type="button" variant="outline" onClick={clearSelected}>
+                    Limpiar
+                  </Button>
+                </div>
+
+                <div className="max-h-64 overflow-y-auto rounded-lg border bg-white">
+                  {waLoadingRecipients ? (
+                    <p className="p-3 text-sm text-gray-500">Cargando empresas...</p>
+                  ) : filteredRecipients.length === 0 ? (
+                    <p className="p-3 text-sm text-gray-500">
+                      No hay coincidencias para la búsqueda.
+                    </p>
+                  ) : (
+                    <div className="divide-y">
+                      {filteredRecipients.map((item) => {
+                        const checked = waSelectedIds.includes(item.id_empresa);
+                        return (
+                          <label
+                            key={item.id_empresa}
+                            className="flex items-start gap-3 p-3 text-sm cursor-pointer hover:bg-slate-50"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => toggleCompany(item.id_empresa)}
+                              className="mt-0.5"
+                            />
+                            <div>
+                              <p className="font-medium text-gray-900">
+                                {item.nombre_empresa}
+                              </p>
+                              <p className="text-xs text-gray-600">
+                                {item.nombre_duenio || "Sin dueño"} - {item.celular}
+                              </p>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : null}
+
+            {waError ? (
+              <p className="rounded-md bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+                {waError}
+              </p>
+            ) : null}
+
+            {waResult ? (
+              <div className="rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-800 space-y-1">
+                <p>
+                  Enviados: <strong>{waResult.enviados}</strong> /{" "}
+                  {waResult.total_objetivo}
+                </p>
+                <p>
+                  Fallidos: <strong>{waResult.fallidos}</strong>
+                </p>
+                {Array.isArray(waResult.errores) && waResult.errores.length > 0 ? (
+                  <div className="max-h-24 overflow-y-auto rounded bg-white/70 p-2 text-xs">
+                    {waResult.errores.map((err) => (
+                      <p key={`${err.id_empresa}-${err.empresa}`}>
+                        {err.empresa}: {err.error}
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setWaOpen(false)} disabled={waSending}>
+              Cerrar
+            </Button>
+            <Button
+              className="bg-[#2563EB] hover:bg-[#1d4ed8]"
+              onClick={sendWhatsApp}
+              disabled={waSending || waLoadingRecipients}
+            >
+              {waSending ? "Enviando..." : "Enviar mensaje"}
             </Button>
           </DialogFooter>
         </DialogContent>

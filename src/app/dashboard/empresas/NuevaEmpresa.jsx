@@ -35,6 +35,43 @@ import AutocompleteInput from "@/components/Inputs/FormCreatebleAutocomplete";
 import { loadOptionsGiros } from "@/app/(public)/alta-empresas/dataMappings";
 import { Combobox } from "@/components/Combobox";
 
+const COUNTRY_CODES = [
+  { code: "+52", label: "MX (+52)" },
+  { code: "+1", label: "US/CA (+1)" },
+  { code: "+57", label: "CO (+57)" },
+  { code: "+54", label: "AR (+54)" },
+  { code: "+56", label: "CL (+56)" },
+  { code: "+51", label: "PE (+51)" },
+  { code: "+34", label: "ES (+34)" },
+];
+
+function onlyPhoneDigits(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function normalizeCountryCode(value) {
+  const digits = String(value || "").replace(/[^\d+]/g, "");
+  if (!digits) return "+52";
+  return digits.startsWith("+") ? digits : `+${digits}`;
+}
+
+function splitPhoneValue(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return { codigo_pais: "+52", celular: "" };
+
+  if (raw.startsWith("+")) {
+    const matched = COUNTRY_CODES.find((country) => raw.startsWith(country.code));
+    if (matched) {
+      return {
+        codigo_pais: matched.code,
+        celular: onlyPhoneDigits(raw.slice(matched.code.length)),
+      };
+    }
+  }
+
+  return { codigo_pais: "+52", celular: onlyPhoneDigits(raw) };
+}
+
 export default function NuevaEmpresa({
   editar = false,
   values,
@@ -55,6 +92,7 @@ export default function NuevaEmpresa({
       nombre_empresa: "",
       nombre_duenio: "",
       correo_empresa: "",
+      codigo_pais: "+52",
       celular: "",
       giro: "",
       direccion: "",
@@ -132,12 +170,14 @@ export default function NuevaEmpresa({
     };
 
     try {
+      const celularCompleto = `${normalizeCountryCode(data.codigo_pais)}${onlyPhoneDigits(data.celular)}`;
+
       if (editar) {
         const datosParaActualizar = {
           nombre_empresa: data.nombre_empresa,
           nombre_duenio: data.nombre_duenio,
           correo_empresa: data.correo_empresa,
-          celular: data.celular,
+          celular: celularCompleto,
           direccion: data.direccion,
           facebook: data.facebook,
           instagram: data.instagram,
@@ -158,12 +198,14 @@ export default function NuevaEmpresa({
           if (
             key !== "imagen" &&
             key !== "giro" &&
+            key !== "codigo_pais" &&
             value !== undefined &&
             value !== null
           ) {
             formData.append(key, value);
           }
         });
+        formData.set("celular", celularCompleto);
 
         formData.append("giro", data?.giro?.label);
 
@@ -200,7 +242,8 @@ export default function NuevaEmpresa({
     e.stopPropagation();
     const options = await loadOptionsGiros(values.giro);
     const giro = options.find((opt) => opt.label === values.giro);
-    form.reset({ ...values, giro });
+    const parsedPhone = splitPhoneValue(values?.celular);
+    form.reset({ ...values, giro, ...parsedPhone });
     setOpen(true);
     setImagePreview(values.url_imagen || null);
     setSelectedFile(null);
@@ -337,11 +380,25 @@ export default function NuevaEmpresa({
                       Teléfono <span className="text-red-500">*</span>
                     </FormLabel>
                     <FormControl>
-                      <Input
-                        disabled={loading}
-                        type="tel"
-                        {...register("celular", { required: "Obligatorio" })}
-                      />
+                      <div className="flex gap-2">
+                        <select
+                          disabled={loading}
+                          {...register("codigo_pais")}
+                          className="w-36 rounded-md border border-input bg-background px-3 text-sm"
+                          aria-label="Código de país"
+                        >
+                          {COUNTRY_CODES.map((country) => (
+                            <option key={country.code} value={country.code}>
+                              {country.label}
+                            </option>
+                          ))}
+                        </select>
+                        <Input
+                          disabled={loading}
+                          type="tel"
+                          {...register("celular", { required: "Obligatorio" })}
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage>{errors.celular?.message}</FormMessage>
                   </FormItem>
