@@ -135,23 +135,23 @@ export default function MarketingLanding() {
 
             {/* Right card */}
             <div className="relative">
-              <div className="rounded-3xl border border-white/20 bg-white/90 p-8 text-[var(--adamia-text-primary)] shadow-[0_20px_40px_rgba(0,0,0,0.12)] backdrop-blur lg:p-10">
+              <div className="rounded-3xl border border-white/20 bg-white/90 p-5 text-[var(--adamia-text-primary)] shadow-[0_20px_40px_rgba(0,0,0,0.12)] backdrop-blur sm:p-8 lg:p-10">
                 <div className="mb-8 flex items-center justify-between">
-                  <div className="text-sm font-medium text-[color:rgba(37,99,235,0.65)]">
+                  <div className="text-xs font-medium text-[color:rgba(37,99,235,0.65)] sm:text-sm">
                     Datos en tiempo real
                   </div>
-                  <div className="text-3xl">📊</div>
+                  <div className="text-2xl sm:text-3xl">📊</div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6">
                   <div>
                     <div className="mb-2 text-sm font-medium text-[var(--adamia-text-secondary)]">
                       Empleados activos
                     </div>
-                    <div className="text-5xl font-extrabold leading-none text-transparent bg-clip-text bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)]">
+                    <div className="text-4xl font-extrabold leading-none text-transparent bg-clip-text bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] sm:text-5xl">
                       1,247
                     </div>
-                    <div className="mt-2 text-sm font-semibold text-[var(--adamia-blue)]">
+                    <div className="mt-2 text-base font-semibold text-[var(--adamia-blue)] sm:text-sm">
                       ↗ +12% este mes
                     </div>
                   </div>
@@ -160,10 +160,10 @@ export default function MarketingLanding() {
                     <div className="mb-2 text-sm font-medium text-[var(--adamia-text-secondary)]">
                       Asistencia hoy
                     </div>
-                    <div className="text-5xl font-extrabold leading-none text-transparent bg-clip-text bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)]">
+                    <div className="text-4xl font-extrabold leading-none text-transparent bg-clip-text bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] sm:text-5xl">
                       98.5%
                     </div>
-                    <div className="mt-2 text-sm font-semibold text-[var(--adamia-blue)]">
+                    <div className="mt-2 text-base font-semibold text-[var(--adamia-blue)] sm:text-sm">
                       ✓ Excelente
                     </div>
                   </div>
@@ -200,11 +200,11 @@ export default function MarketingLanding() {
             </p>
           </div>
 
-          <div className="mt-8 grid grid-cols-2 place-items-center gap-8 md:grid-cols-4">
+          <div className="mt-8 grid grid-cols-2 place-items-center gap-6 md:grid-cols-4 md:gap-8">
             {["MOBLAR", "STT", "ULTRAFARMS", "+500"].map((t) => (
               <div
                 key={t}
-                className="select-none text-3xl font-bold text-gray-400 opacity-80 grayscale transition hover:grayscale-0 hover:opacity-100 hover:scale-[1.03]"
+                className="select-none text-[clamp(1.9rem,8vw,3rem)] leading-none font-bold tracking-tight text-gray-400 opacity-80 grayscale transition hover:grayscale-0 hover:opacity-100 hover:scale-[1.03]"
               >
                 {t}
               </div>

@@ -3,6 +3,17 @@
 import { useEffect, useMemo, useState } from "react";
 import axios from "@/lib/axios";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+
+const COUNTRY_CODES = [
+  { code: "+52", label: "MX (+52)" },
+  { code: "+1", label: "US/CA (+1)" },
+  { code: "+57", label: "CO (+57)" },
+  { code: "+54", label: "AR (+54)" },
+  { code: "+56", label: "CL (+56)" },
+  { code: "+51", label: "PE (+51)" },
+  { code: "+34", label: "ES (+34)" },
+];
 
 function formatCurrencyMXN(value) {
   return new Intl.NumberFormat("es-MX", {
@@ -26,6 +37,23 @@ function toNumber(value) {
   if (!cleaned) return null;
   const parsed = Number.parseFloat(cleaned);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function onlyPhoneDigits(value) {
+  return String(value || "").replace(/\D/g, "");
+}
+
+function normalizeCountryCode(value) {
+  const digits = String(value || "").replace(/[^\d+]/g, "");
+  if (!digits) return "+52";
+  if (digits.startsWith("+")) return digits;
+  return `+${digits}`;
+}
+
+function buildInternationalPhone(countryCode, phone) {
+  const cc = normalizeCountryCode(countryCode);
+  const phoneDigits = onlyPhoneDigits(phone);
+  return `${cc}${phoneDigits}`;
 }
 
 function getFirst(source, keys) {
@@ -181,10 +209,19 @@ export default function CotizaPage() {
   const [form, setForm] = useState({
     nombre: "",
     empresa: "",
+    codigo_pais: "+52",
     telefono: "",
     correo: "",
     tipoContratacion: "Normal",
   });
+  const [otpCode, setOtpCode] = useState("");
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [phoneVerificationToken, setPhoneVerificationToken] = useState("");
+  const [otpMessage, setOtpMessage] = useState("");
+  const [otpCountdown, setOtpCountdown] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -203,6 +240,14 @@ export default function CotizaPage() {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (otpCountdown <= 0) return undefined;
+    const interval = window.setInterval(() => {
+      setOtpCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [otpCountdown]);
 
   const planesCalculados = useMemo(() => {
     if (!planes.length) return [];
@@ -228,8 +273,21 @@ export default function CotizaPage() {
   };
 
   const updateField = (key, value) => {
+    if (key === "telefono" || key === "codigo_pais") {
+      setOtpSent(false);
+      setOtpVerified(false);
+      setPhoneVerificationToken("");
+      setOtpCode("");
+      setOtpMessage("");
+      setOtpCountdown(0);
+    }
     setForm((prev) => ({ ...prev, [key]: value }));
   };
+
+  const fullPhone = useMemo(
+    () => buildInternationalPhone(form.codigo_pais, form.telefono),
+    [form.codigo_pais, form.telefono]
+  );
 
   const showAlert = ({ title, description, variant = "info" }) => {
     setAlertaModal({
@@ -244,16 +302,103 @@ export default function CotizaPage() {
     if (!form.nombre.trim() || !form.empresa.trim() || !form.telefono.trim() || !form.correo.trim()) {
       return "Todos los campos son obligatorios.";
     }
-    if (!/^\d{10}$/.test(form.telefono.trim())) {
-      return "El teléfono debe tener 10 dígitos.";
+    if (!/^\+[0-9]{8,20}$/.test(fullPhone.trim())) {
+      return "El teléfono con código de país no tiene un formato válido.";
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.correo.trim())) {
       return "El correo no es válido.";
+    }
+    if (!otpVerified || !phoneVerificationToken) {
+      return "Debes verificar tu número por WhatsApp antes de generar la cotización.";
     }
     if (!seleccion) {
       return "Primero selecciona un plan.";
     }
     return "";
+  };
+
+  const sendOtpByWhatsApp = async () => {
+    setOtpMessage("");
+    const phoneDigits = onlyPhoneDigits(form.telefono);
+    if (phoneDigits.length < 7 || phoneDigits.length > 15) {
+      showAlert({
+        title: "Número inválido",
+        description: "Ingresa un número de WhatsApp válido para enviar el código.",
+        variant: "error",
+      });
+      return;
+    }
+
+    try {
+      setOtpSending(true);
+      await axios.post("/otp/send", {
+        telefono: fullPhone,
+        canal: "whatsapp",
+      });
+      setOtpSent(true);
+      setOtpVerified(false);
+      setPhoneVerificationToken("");
+      setOtpCountdown(45);
+      setOtpMessage("Código enviado por WhatsApp. Revisa tu chat para continuar.");
+    } catch (error) {
+      showAlert({
+        title: "No se pudo enviar el código",
+        description:
+          error?.response?.data?.error ||
+          error?.response?.data?.message ||
+          "Intenta nuevamente en unos segundos.",
+        variant: "error",
+      });
+    } finally {
+      setOtpSending(false);
+    }
+  };
+
+  const verifyOtp = async () => {
+    if (String(otpCode || "").trim().length !== 6) {
+      showAlert({
+        title: "Código incompleto",
+        description: "Ingresa los 6 dígitos enviados por WhatsApp.",
+        variant: "error",
+      });
+      return;
+    }
+
+    try {
+      setOtpVerifying(true);
+      const response = await axios.post("/otp/verify", {
+        telefono: fullPhone,
+        code: otpCode,
+        canal: "whatsapp",
+      });
+      const verificationToken = response?.data?.data?.verification_token;
+      if (!verificationToken) {
+        setOtpVerified(false);
+        setPhoneVerificationToken("");
+        showAlert({
+          title: "No se pudo verificar",
+          description: "No se recibió token de verificación. Intenta nuevamente.",
+          variant: "error",
+        });
+        return;
+      }
+      setOtpVerified(true);
+      setPhoneVerificationToken(verificationToken);
+      setOtpMessage("Número verificado correctamente por WhatsApp.");
+    } catch (error) {
+      setOtpVerified(false);
+      setPhoneVerificationToken("");
+      showAlert({
+        title: "Código inválido",
+        description:
+          error?.response?.data?.error ||
+          error?.response?.data?.message ||
+          "El código no es válido o expiró.",
+        variant: "error",
+      });
+    } finally {
+      setOtpVerifying(false);
+    }
   };
 
   const handleSubmit = async (event) => {
@@ -416,7 +561,7 @@ export default function CotizaPage() {
       doc.setFontSize(8);
       doc.text("Cotización informativa sujeta a validación comercial y técnica.", left, 268);
       doc.text("Vigencia de la cotización: 30 días naturales desde su emisión.", left, 272);
-      doc.text("www.adamia.mx | soporte@adamia.mx | +52 317 388 7959", left, 276);
+      doc.text("https://adamia.com.mx/ | soporte@adamia.mx | +52 317 388 7959", left, 276);
       doc.text(`ADAMIA by Uniline - ${new Date().getFullYear()}`, right, 276, { align: "right" });
 
       const fileName = `Cotizacion_ADAMIA_${form.empresa.replace(/\s+/g, "_")}_${planNombre}.pdf`;
@@ -424,10 +569,10 @@ export default function CotizaPage() {
       const pdfBase64 = (pdfDataUri.split(",")[1] || "").trim();
       doc.save(fileName);
       try {
-        await axios.post("/checador/contrataciones/cotizacion", {
+        const response = await axios.post("/checador/contrataciones/cotizacion", {
           nombre_cliente: form.nombre.trim(),
           correo: form.correo.trim(),
-          telefono: form.telefono.trim(),
+          telefono: fullPhone.trim(),
           empresa_nombre: form.empresa.trim(),
           tipo_contratacion: form.tipoContratacion,
           plan_nombre: planNombre,
@@ -439,11 +584,14 @@ export default function CotizaPage() {
           monto_total: Number(seleccion.total.toFixed(2)),
           pdf_base64: pdfBase64,
           pdf_filename: fileName,
+          telefono_verificacion_token: phoneVerificationToken,
         });
+        const backendMessage = response?.data?.message;
         showAlert({
-          title: "Cotización lista",
+          title: "Cotización enviada",
           description:
-            "Tu cotización se descargó localmente y también fue enviada al correo capturado en el formulario.",
+            backendMessage ||
+            `Tu cotización se descargó localmente y el PDF fue enviado al correo ${form.correo.trim()}.`,
           variant: "success",
         });
       } catch (mailError) {
@@ -564,13 +712,31 @@ export default function CotizaPage() {
               onChange={(event) => updateField("empresa", event.target.value)}
               className="rounded-lg border border-slate-300 px-3 py-2"
             />
-            <input
-              type="tel"
-              placeholder="Teléfono (10 dígitos)"
-              value={form.telefono}
-              onChange={(event) => updateField("telefono", event.target.value.replace(/\D/g, "").slice(0, 10))}
-              className="rounded-lg border border-slate-300 px-3 py-2"
-            />
+            <div className="md:col-span-2">
+              <div className="flex items-center gap-2">
+                <select
+                  value={form.codigo_pais}
+                  onChange={(event) => updateField("codigo_pais", event.target.value)}
+                  className="h-10 w-28 rounded-lg border border-slate-300 px-2 text-sm"
+                  aria-label="Código de país"
+                >
+                  {COUNTRY_CODES.map((country) => (
+                    <option key={country.code} value={country.code}>
+                      {country.code}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="tel"
+                  placeholder="Número de WhatsApp"
+                  value={form.telefono}
+                  onChange={(event) =>
+                    updateField("telefono", event.target.value.replace(/\D/g, "").slice(0, 15))
+                  }
+                  className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
+                />
+              </div>
+            </div>
             <input
               type="email"
               placeholder="Correo electrónico"
@@ -578,6 +744,61 @@ export default function CotizaPage() {
               onChange={(event) => updateField("correo", event.target.value)}
               className="rounded-lg border border-slate-300 px-3 py-2"
             />
+            <div className="rounded-xl border border-slate-200 bg-[var(--adamia-bg-light)] p-3 md:col-span-2">
+              <p className="text-xs text-[var(--adamia-text-secondary)]">
+                Número internacional: <strong>{fullPhone || "—"}</strong>
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={sendOtpByWhatsApp}
+                  disabled={otpSending || otpCountdown > 0}
+                  className="rounded-lg border border-[var(--adamia-blue)]/25 bg-white px-3 py-2 text-xs font-bold text-[var(--adamia-blue)] disabled:opacity-60"
+                >
+                  {otpSending
+                    ? "Enviando..."
+                    : otpCountdown > 0
+                      ? `Reenviar en ${otpCountdown}s`
+                      : otpSent
+                        ? "Reenviar código WhatsApp"
+                        : "Enviar código por WhatsApp"}
+                </button>
+                <span
+                  className={`inline-flex items-center rounded-lg px-3 py-2 text-xs font-semibold ${
+                    otpVerified ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"
+                  }`}
+                >
+                  {otpVerified ? "Número verificado" : "Pendiente de verificar"}
+                </span>
+              </div>
+              {otpSent ? (
+                <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode}>
+                    <InputOTPGroup>
+                      <InputOTPSlot index={0} className="h-9 w-8 text-sm" />
+                      <InputOTPSlot index={1} className="h-9 w-8 text-sm" />
+                      <InputOTPSlot index={2} className="h-9 w-8 text-sm" />
+                      <InputOTPSlot index={3} className="h-9 w-8 text-sm" />
+                      <InputOTPSlot index={4} className="h-9 w-8 text-sm" />
+                      <InputOTPSlot index={5} className="h-9 w-8 text-sm" />
+                    </InputOTPGroup>
+                  </InputOTP>
+                  <button
+                    type="button"
+                    onClick={verifyOtp}
+                    disabled={otpVerifying || otpCode.length !== 6}
+                    className="rounded-lg bg-[var(--adamia-blue)] px-4 py-2 text-xs font-bold text-white disabled:opacity-60"
+                  >
+                    {otpVerifying ? "Validando..." : "Validar código"}
+                  </button>
+                </div>
+              ) : null}
+              {otpMessage ? (
+                <p className="mt-2 text-xs font-semibold text-[var(--adamia-blue)]">
+                  {otpMessage}
+                </p>
+              ) : null}
+            </div>
             <select
               value={form.tipoContratacion}
               onChange={(event) => updateField("tipoContratacion", event.target.value)}
@@ -666,7 +887,7 @@ export default function CotizaPage() {
             Recibe tu cotización en PDF, compártela internamente y avanza con una implementación guiada.
           </p>
           <p className="mt-4 text-sm text-white/85">
-            Sitio web: <span className="font-bold">www.adamia.mx</span> · Correo: <span className="font-bold">soporte@adamia.mx</span>
+            Sitio web: <span className="font-bold">https://adamia.com.mx/</span> · Correo: <span className="font-bold">soporte@adamia.mx</span>
           </p>
         </section>
       </section>

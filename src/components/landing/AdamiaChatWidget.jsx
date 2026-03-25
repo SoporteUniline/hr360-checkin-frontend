@@ -19,6 +19,7 @@ export default function AdamiaChatWidget() {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [badgeVisible, setBadgeVisible] = useState(true);
+  const [hasOpenedOnce, setHasOpenedOnce] = useState(false);
   const listRef = useRef(null);
 
   // Contexto mínimo para simular el flujo de cotización.
@@ -45,10 +46,17 @@ export default function AdamiaChatWidget() {
     },
   ]);
 
-  // Auto-open (como en Landing.txt) para replicar el diseño.
+  // En desktop mantenemos auto-open; en móvil inicia cerrado con notificación.
   useEffect(() => {
+    const canAutoOpen = window.matchMedia("(min-width: 640px)").matches;
+    if (!canAutoOpen) {
+      setBadgeVisible(true);
+      return;
+    }
+
     const t = setTimeout(() => {
       setIsOpen(true);
+      setHasOpenedOnce(true);
       setBadgeVisible(false);
     }, 500);
     return () => clearTimeout(t);
@@ -72,7 +80,7 @@ export default function AdamiaChatWidget() {
     setCtx({ empleados: null, nombre: null, generoCotizacion: false });
     setInput("");
     setIsTyping(false);
-    setBadgeVisible(true);
+    setBadgeVisible(!hasOpenedOnce);
   }
 
   function closeChat() {
@@ -81,6 +89,7 @@ export default function AdamiaChatWidget() {
 
   function openChat() {
     setIsOpen(true);
+    setHasOpenedOnce(true);
     setBadgeVisible(false);
   }
 
@@ -149,17 +158,26 @@ export default function AdamiaChatWidget() {
           "h-14 w-14 rounded-full p-0",
           "bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)]",
           "shadow-[0_10px_30px_rgba(37,99,235,0.35)] hover:shadow-[0_14px_38px_rgba(37,99,235,0.45)]",
+          !isOpen && badgeVisible && "adamia-pulse",
           isOpen && "opacity-0 pointer-events-none sm:opacity-100 sm:pointer-events-auto"
         )}
         aria-label={isOpen ? "Cerrar chat" : "Abrir chat"}
       >
         {isOpen ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
         {badgeVisible ? (
-          <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-red-500 text-[11px] font-bold text-white">
-            1
-          </span>
+          <>
+            <span className="absolute -right-1 -top-1 inline-flex h-6 w-6 rounded-full bg-red-500/70 animate-ping" />
+            <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-red-500 text-[11px] font-bold text-white">
+              1
+            </span>
+          </>
         ) : null}
       </Button>
+      {!isOpen && badgeVisible ? (
+        <div className="pointer-events-none absolute -top-9 right-0 rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-[var(--adamia-blue)] shadow-md ring-1 ring-black/5 sm:hidden">
+          Nuevo mensaje
+        </div>
+      ) : null}
 
       {/* Window */}
       <AnimatePresence>
