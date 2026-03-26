@@ -71,6 +71,12 @@ const dashboardItems = [
     icon: BellRing,
   },
   {
+    title: "Cotizaciones",
+    url: "/dashboard/cotizaciones",
+    rol: "Admin",
+    icon: FileText,
+  },
+  {
     title: "Dashboard",
     url: "/panel/dashboard",
     rol: "Recruiter",
