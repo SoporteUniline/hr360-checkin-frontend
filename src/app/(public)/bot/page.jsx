@@ -103,18 +103,18 @@ export default function BotPage() {
   };
 
   return (
-    <main className="bg-[var(--adamia-bg-light)] py-12 text-[var(--adamia-text-primary)]">
-      <section className="mx-auto w-full max-w-3xl px-6">
-        <article className="overflow-hidden rounded-3xl border border-[var(--adamia-blue)]/20 bg-white shadow-xl">
+    <main className="bg-[var(--adamia-bg-light)] py-6 text-[var(--adamia-text-primary)] sm:py-10">
+      <section className="mx-auto w-full max-w-3xl px-4 sm:px-6">
+        <article className="overflow-hidden rounded-2xl border border-[var(--adamia-blue)]/20 bg-white shadow-xl sm:rounded-3xl">
           {/* Header visual del bot */}
-          <header className="bg-gradient-to-r from-[var(--adamia-blue)] to-[var(--adamia-purple)] px-6 py-5 text-white">
-            <h1 className="text-xl font-black">🤖 Bot Comercial ADAMIA</h1>
-            <p className="mt-1 text-sm text-white/90">
+          <header className="bg-gradient-to-r from-[var(--adamia-blue)] to-[var(--adamia-purple)] px-4 py-4 text-white sm:px-6 sm:py-5">
+            <h1 className="text-2xl font-black sm:text-3xl">🤖 Bot Comercial ADAMIA</h1>
+            <p className="mt-1 text-base text-white/90 sm:text-sm">
               Resuelve dudas rápidas sobre funciones, precios y contratación.
             </p>
           </header>
 
-          <div className="border-b border-[var(--adamia-blue)]/10 px-4 py-3">
+          <div className="border-b border-[var(--adamia-blue)]/10 px-3 py-3 sm:px-4">
             <div className="flex flex-wrap gap-2">
               {sugerencias.map((item) => (
                 <button
@@ -131,7 +131,7 @@ export default function BotPage() {
 
           <div
             ref={messagesRef}
-            className="max-h-[58vh] space-y-3 overflow-y-auto bg-[var(--adamia-bg-light)] p-4"
+            className="h-[48vh] min-h-[300px] space-y-3 overflow-y-auto bg-[var(--adamia-bg-light)] p-3 sm:h-[58vh] sm:p-4"
           >
             {messages.map((m, idx) => (
               <div
@@ -139,7 +139,7 @@ export default function BotPage() {
                 className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <p
-                  className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm ${
+                  className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm sm:max-w-[85%] ${
                     m.role === "user"
                       ? "bg-[var(--adamia-blue)] text-white"
                       : "border border-[var(--adamia-blue)]/15 bg-white text-[var(--adamia-text-primary)] whitespace-pre-line"
@@ -159,7 +159,7 @@ export default function BotPage() {
             ) : null}
           </div>
 
-          <div className="flex gap-2 border-t border-[var(--adamia-blue)]/10 bg-white p-4">
+          <div className="flex items-stretch gap-2 border-t border-[var(--adamia-blue)]/10 bg-white p-3 sm:p-4">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -167,13 +167,13 @@ export default function BotPage() {
                 if (e.key === "Enter") sendMessage();
               }}
               placeholder="Escribe tu pregunta..."
-              className="h-11 flex-1 rounded-full border border-[var(--adamia-blue)]/20 px-4 outline-none transition focus:border-[var(--adamia-blue)]"
+              className="h-11 min-w-0 flex-1 rounded-full border border-[var(--adamia-blue)]/20 px-4 outline-none transition focus:border-[var(--adamia-blue)]"
             />
             <button
               type="button"
               onClick={() => sendMessage()}
               disabled={loading}
-              className="h-11 rounded-full bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] px-5 font-semibold text-white disabled:opacity-70"
+              className="h-11 min-w-[96px] rounded-full bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] px-5 font-semibold text-white disabled:opacity-70 sm:min-w-[108px]"
             >
               Enviar
             </button>

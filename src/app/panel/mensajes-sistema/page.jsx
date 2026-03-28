@@ -321,8 +321,8 @@ export default function MensajesSistemaPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+    <div className="space-y-5 sm:space-y-6">
+      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-4 sm:p-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
             <div className="bg-[#2563EB] p-2.5 rounded-lg">
@@ -336,7 +336,10 @@ export default function MensajesSistemaPage() {
             </div>
           </div>
 
-          <Button onClick={openCreate} className="bg-[#2563EB] hover:bg-[#1d4ed8]">
+          <Button
+            onClick={openCreate}
+            className="bg-[#2563EB] hover:bg-[#1d4ed8] w-full sm:w-auto"
+          >
             <Plus className="h-4 w-4 mr-2" />
             Nuevo mensaje
           </Button>
@@ -362,7 +365,7 @@ export default function MensajesSistemaPage() {
           ) : (
             <div className="space-y-3">
               {mensajes.map((m) => (
-                <div key={m.id} className="rounded-xl border p-4">
+                <div key={m.id} className="rounded-xl border p-3 sm:p-4">
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 flex-wrap">
@@ -385,23 +388,42 @@ export default function MensajesSistemaPage() {
                       <p className="text-sm text-gray-600">{m.mensaje}</p>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={!!m.activa}
-                        onCheckedChange={(val) => handleToggle(m.id, val)}
-                      />
-                      <Button variant="outline" onClick={() => openWhatsAppDialog(m)}>
-                        <MessageCircle className="h-4 w-4 mr-2" />
-                        Enviar WhatsApp
-                      </Button>
-                      <Button variant="outline" onClick={() => openEdit(m)}>
-                        <Pencil className="h-4 w-4 mr-2" />
-                        Editar
-                      </Button>
-                      <Button variant="destructive" onClick={() => setDeleting(m.id)}>
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Eliminar
-                      </Button>
+                    <div className="w-full md:w-auto space-y-2">
+                      <div className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2 md:border-none md:px-0 md:py-0">
+                        <span className="text-xs font-semibold text-slate-600 md:hidden">
+                          Activo
+                        </span>
+                        <Switch
+                          checked={!!m.activa}
+                          onCheckedChange={(val) => handleToggle(m.id, val)}
+                        />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 md:justify-end">
+                        <Button
+                          variant="outline"
+                          onClick={() => openWhatsAppDialog(m)}
+                          className="w-full sm:w-auto"
+                        >
+                          <MessageCircle className="h-4 w-4 mr-2" />
+                          Enviar WhatsApp
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => openEdit(m)}
+                          className="w-full sm:w-auto"
+                        >
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Editar
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          onClick={() => setDeleting(m.id)}
+                          className="w-full sm:w-auto"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Eliminar
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -412,7 +434,7 @@ export default function MensajesSistemaPage() {
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {editingId ? "Editar mensaje" : "Crear mensaje del sistema"}
@@ -649,15 +671,20 @@ export default function MensajesSistemaPage() {
 
           {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)} disabled={saving}>
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
+            <Button
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={saving}
+              className="w-full sm:w-auto"
+            >
               <X className="h-4 w-4 mr-2" />
               Cancelar
             </Button>
             <Button
-              className="bg-[#2563EB] hover:bg-[#1d4ed8]"
               onClick={handleSave}
               disabled={saving}
+              className="bg-[#2563EB] hover:bg-[#1d4ed8] w-full sm:w-auto"
             >
               <Save className="h-4 w-4 mr-2" />
               {saving ? "Guardando..." : "Guardar"}
@@ -667,7 +694,7 @@ export default function MensajesSistemaPage() {
       </Dialog>
 
       <Dialog open={waOpen} onOpenChange={setWaOpen}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Enviar mensaje por WhatsApp</DialogTitle>
             <DialogDescription>
@@ -801,14 +828,19 @@ export default function MensajesSistemaPage() {
             ) : null}
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setWaOpen(false)} disabled={waSending}>
+          <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
+            <Button
+              variant="outline"
+              onClick={() => setWaOpen(false)}
+              disabled={waSending}
+              className="w-full sm:w-auto"
+            >
               Cerrar
             </Button>
             <Button
-              className="bg-[#2563EB] hover:bg-[#1d4ed8]"
               onClick={sendWhatsApp}
               disabled={waSending || waLoadingRecipients}
+              className="bg-[#2563EB] hover:bg-[#1d4ed8] w-full sm:w-auto"
             >
               {waSending ? "Enviando..." : "Enviar mensaje"}
             </Button>

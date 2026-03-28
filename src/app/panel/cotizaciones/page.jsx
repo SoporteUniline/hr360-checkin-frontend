@@ -8,8 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
-
-const LIMIT = 20;
+import TablePagination from "@/components/TablePagination";
 
 function formatCurrencyMXN(value) {
   return new Intl.NumberFormat("es-MX", {
@@ -29,22 +28,22 @@ function formatDateTime(value) {
 
 export default function CotizacionesAdminPage() {
   const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
 
   const endpoint = useMemo(() => {
     const params = new URLSearchParams({
       page: String(page),
-      limit: String(LIMIT),
+      limit: String(limit),
     });
     if (search) params.set("search", search);
     return `/checador/contrataciones/cotizaciones/admin?${params.toString()}`;
-  }, [page, search]);
+  }, [page, limit, search]);
 
   const { data, isLoading } = useSWR(endpoint, fetcherWithToken, swr_config);
   const cotizaciones = data?.cotizaciones || [];
   const total = Number(data?.total || 0);
-  const totalPages = Math.max(1, Number(data?.totalPages || 1));
 
   const onSearch = () => {
     setPage(1);
@@ -72,7 +71,7 @@ export default function CotizacionesAdminPage() {
           <CardTitle>Listado de cotizaciones</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <div className="relative w-full">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
               <Input
@@ -90,7 +89,47 @@ export default function CotizacionesAdminPage() {
             </Button>
           </div>
 
-          <div className="rounded-lg border overflow-x-auto">
+          <div className="space-y-3 md:hidden">
+            {isLoading ? (
+              <div className="rounded-lg border bg-white p-3 text-sm text-gray-500">
+                Cargando cotizaciones...
+              </div>
+            ) : cotizaciones.length === 0 ? (
+              <div className="rounded-lg border bg-white p-3 text-sm text-gray-500">
+                No hay cotizaciones registradas.
+              </div>
+            ) : (
+              cotizaciones.map((row) => (
+                <article key={row.id} className="rounded-lg border bg-white p-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold">#{row.id}</p>
+                    <Badge variant="secondary">{row.estado || "Pendiente"}</Badge>
+                  </div>
+                  <p className="mt-2 text-sm font-medium">{row.nombre_contacto || "—"}</p>
+                  <p className="text-xs text-gray-600">{row.empresa || "—"}</p>
+                  <div className="mt-2 space-y-1 text-xs text-gray-700">
+                    <p>
+                      <strong>Tel:</strong> {row.telefono || "—"}
+                    </p>
+                    <p>
+                      <strong>Correo:</strong> {row.correo || "—"}
+                    </p>
+                    <p>
+                      <strong>Plan:</strong> {row.meses ?? "—"} meses • {row.empleados ?? "—"} empleados
+                    </p>
+                    <p>
+                      <strong>Total:</strong> {formatCurrencyMXN(row.monto_total)}
+                    </p>
+                    <p>
+                      <strong>Fecha:</strong> {formatDateTime(row.fecha_cotizacion)}
+                    </p>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+
+          <div className="hidden rounded-lg border overflow-x-auto md:block">
             <table className="min-w-[1200px] w-full text-sm">
               <thead className="bg-slate-50">
                 <tr className="text-left text-slate-700">
@@ -155,30 +194,13 @@ export default function CotizacionesAdminPage() {
             </table>
           </div>
 
-          <div className="flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-gray-600">
-              Total: <strong>{total}</strong> registros
-            </p>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                Anterior
-              </Button>
-              <span className="text-gray-700">
-                Página <strong>{page}</strong> de <strong>{totalPages}</strong>
-              </span>
-              <Button
-                variant="outline"
-                disabled={page >= totalPages}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              >
-                Siguiente
-              </Button>
-            </div>
-          </div>
+          <TablePagination
+            page={page}
+            limit={limit}
+            total={total}
+            onPageChange={setPage}
+            onLimitChange={setLimit}
+          />
         </CardContent>
       </Card>
     </div>
