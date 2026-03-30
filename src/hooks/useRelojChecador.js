@@ -1,6 +1,7 @@
 import useSWR from "swr";
 import { fetcherWithToken } from "@/lib/fetcher";
 
+//Comentario
 export default function useClockCheckData(
   idEmpresa,
   fecha,
