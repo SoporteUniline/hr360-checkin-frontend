@@ -77,6 +77,15 @@ function buildDescuentosMap(rows = []) {
   return result;
 }
 
+function applyHighEmployeeRule(price, employees) {
+  const employeesNum = Number(employees);
+  if (!Number.isFinite(price) || price <= 0) return null;
+  if (Number.isFinite(employeesNum) && employeesNum >= 1000) {
+    return price * employeesNum;
+  }
+  return price;
+}
+
 function getPriceFromPlan(row, months, employees) {
   const monthlyCandidates = [
     row?.precio_mensual,
@@ -86,7 +95,7 @@ function getPriceFromPlan(row, months, employees) {
   ];
   for (const value of monthlyCandidates) {
     const n = parseFlexibleNumber(value);
-    if (Number.isFinite(n) && n > 0) return n;
+    if (Number.isFinite(n) && n > 0) return applyHighEmployeeRule(n, employees);
   }
 
   const byMonths = {
@@ -106,7 +115,7 @@ function getPriceFromPlan(row, months, employees) {
   };
   for (const value of byMonths[months] || []) {
     const n = parseFlexibleNumber(value);
-    if (Number.isFinite(n) && n > 0) return n;
+    if (Number.isFinite(n) && n > 0) return applyHighEmployeeRule(n, employees);
   }
 
   const unit =
@@ -134,7 +143,7 @@ function getPriceFromPlan(row, months, employees) {
       );
     if (!looksLikePrice) continue;
     const n = parseFlexibleNumber(rawValue);
-    if (Number.isFinite(n) && n > 0) return n;
+    if (Number.isFinite(n) && n > 0) return applyHighEmployeeRule(n, employees);
   }
 
   return null;

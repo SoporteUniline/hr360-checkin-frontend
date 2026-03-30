@@ -114,7 +114,7 @@ function transformDescuentos(rows = []) {
 function calcularCotizacionLocal({ empleados, meses, planes, descuentos }) {
   const empleadosNum = Math.max(1, Number(empleados || 1));
   const mesesNum = Number(meses);
-  const empleadosLookup = empleadosNum > 58 ? 58 : empleadosNum;
+  const empleadosLookup = empleadosNum;
 
   let planBase = planes.find(
     (plan) =>
@@ -126,7 +126,7 @@ function calcularCotizacionLocal({ empleados, meses, planes, descuentos }) {
   }
 
   let precioMensual = planBase?.precioBase ?? 0;
-  if (empleadosNum > 58) {
+  if (empleadosNum >= 1000) {
     precioMensual = (planBase?.precioBase ?? 0) * empleadosNum;
   }
 
