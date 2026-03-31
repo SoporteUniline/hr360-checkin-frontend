@@ -17,15 +17,17 @@ import {
 } from "@/components/ui/select";
 import useTiposPermisoData from "@/hooks/useTiposPermisoData";
 import { Input } from "@/components/ui/input";
-import dayjs from "dayjs";
 import { Textarea } from "../ui/textarea";
 import { useAuth } from "@/context/AuthContext";
-import { enqueueSnackbar } from "notistack";
+import { useSnackbar } from "notistack";
 import axios from "@/lib/axios";
 import Cookies from "js-cookie";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { CalendarCheck2, Save } from "lucide-react";
 
 export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
   const { dataUser } = useAuth();
+  const { enqueueSnackbar } = useSnackbar();
   const initialForm = {
     id_tipo_permiso: "",
     fecha_inicio: "",
@@ -36,8 +38,11 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
   };
 
   const [form, setForm] = useState(initialForm);
+  const [errors, setErrors] = useState([]);
 
   const isReadOnly = mode === "ver";
+  const isEdit = mode === "editar";
+  const isCreate = mode === "crear";
 
   useEffect(() => {
     if (open) {
@@ -53,22 +58,99 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
       } else {
         setForm(initialForm);
       }
+      setErrors([]);
     } else {
       setForm(initialForm);
+      setErrors([]);
     }
   }, [open, mode, selected]);
-
-  const isExpired = false;
 
   const { data: tiposPermisoResponse } = useTiposPermisoData();
 
   const arrayTiposPermiso = tiposPermisoResponse?.tiposPermiso;
 
-  const handleSave = async () => {
+  const validateForm = () => {
+    const validationErrors = [];
+    if (!form.id_tipo_permiso) validationErrors.push("Selecciona el tipo de permiso.");
+    if (!form.fecha_inicio) validationErrors.push("La fecha de inicio es obligatoria.");
+    if (!form.fecha_fin) validationErrors.push("La fecha fin es obligatoria.");
+    if (
+      form.fecha_inicio &&
+      form.fecha_fin &&
+      form.fecha_fin < form.fecha_inicio
+    ) {
+      validationErrors.push("La fecha fin no puede ser anterior a la fecha inicio.");
+    }
+    return validationErrors;
+  };
+
+  const getEmpresaIdSesion = () => {
+    return (
+      dataUser?.id_empresa ||
+      dataUser?.empresas_detalle?.[0]?.id_empresa ||
+      dataUser?.empresas?.[0] ||
+      null
+    );
+  };
+
+  const resolveEmpleadoId = async () => {
+    const directId = Number(dataUser?.id_empleado || form.id_empleado || selected?.id_empleado);
+    if (Number.isFinite(directId) && directId > 0) {
+      return directId;
+    }
+
+    const correoSesion = String(dataUser?.correo || dataUser?.email || "").trim();
+    const empresaSesion = getEmpresaIdSesion();
+    if (!correoSesion || !empresaSesion) return null;
+
     try {
       const token = Cookies.get("token");
+      const response = await axios.get(
+        `/checador/empleados/por-correo?empresa=${empresaSesion}&correo=${encodeURIComponent(correoSesion)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const resolvedId = Number(response?.data?.id_empleado);
+      return Number.isFinite(resolvedId) && resolvedId > 0 ? resolvedId : null;
+    } catch {
+      return null;
+    }
+  };
 
-      const { data } = await axios.post(`/checador/solicitudes-permiso`, form, {
+  const handleSave = async () => {
+    const validationErrors = validateForm();
+    if (validationErrors.length > 0) {
+      setErrors(validationErrors);
+      enqueueSnackbar("Revisa los campos marcados.", { variant: "warning" });
+      return;
+    }
+
+    try {
+      const token = Cookies.get("token");
+      const empleadoId = await resolveEmpleadoId();
+      if (!empleadoId) {
+        setErrors((prev) => [
+          ...prev,
+          "No se pudo identificar tu empleado en la sesión. Contacta al administrador.",
+        ]);
+        enqueueSnackbar("No se pudo identificar el empleado de la sesión.", {
+          variant: "error",
+        });
+        return;
+      }
+      const payload = {
+        id_tipo_permiso: Number(form.id_tipo_permiso),
+        fecha_inicio: form.fecha_inicio,
+        fecha_fin: form.fecha_fin,
+        motivo: form.motivo || null,
+        estado: "Pendiente",
+        id_empleado: empleadoId,
+      };
+
+      await axios.post(`/checador/solicitudes-permiso`, payload, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -86,12 +168,38 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
   };
 
   const handleUpdate = async () => {
+    const validationErrors = validateForm();
+    if (validationErrors.length > 0) {
+      setErrors(validationErrors);
+      enqueueSnackbar("Revisa los campos marcados.", { variant: "warning" });
+      return;
+    }
+
     try {
       const token = Cookies.get("token");
+      const empleadoId = await resolveEmpleadoId();
+      if (!empleadoId) {
+        setErrors((prev) => [
+          ...prev,
+          "No se pudo identificar tu empleado en la sesión. Contacta al administrador.",
+        ]);
+        enqueueSnackbar("No se pudo identificar el empleado de la sesión.", {
+          variant: "error",
+        });
+        return;
+      }
+      const payload = {
+        id_tipo_permiso: Number(form.id_tipo_permiso),
+        fecha_inicio: form.fecha_inicio,
+        fecha_fin: form.fecha_fin,
+        motivo: form.motivo || null,
+        id_empleado: empleadoId,
+        estado: "Pendiente",
+      };
 
-      const { data } = await axios.put(
+      await axios.put(
         `/checador/solicitudes-permiso/${selected.id}`,
-        form,
+        payload,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -119,19 +227,27 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            {mode === "crear"
+      <DialogContent className="p-0 overflow-hidden max-w-[95vw] sm:max-w-xl">
+        <DialogHeader className="p-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white">
+          <DialogTitle className="flex items-center gap-2 text-base font-bold">
+            <span className="grid size-9 place-items-center rounded-lg bg-white/15">
+              <CalendarCheck2 className="size-5 text-white" />
+            </span>
+            {isCreate
               ? "Solicitar permiso"
-              : mode === "editar"
-              ? "Editar permiso"
+              : isEdit
+              ? "Editar solicitud"
               : "Detalles del permiso"}
           </DialogTitle>
+          <p className="text-sm text-white/80">
+            {isReadOnly
+              ? "Consulta el detalle de la solicitud."
+              : "Completa los datos de tu solicitud de permiso."}
+          </p>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-4">
+        <div className="max-h-[70vh] overflow-y-auto p-5 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Tipo de permiso</Label>
               <Select
@@ -144,7 +260,7 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
                 }
                 disabled={isReadOnly}
               >
-                <SelectTrigger>
+                <SelectTrigger className="bg-white">
                   <SelectValue placeholder="Selecciona un tipo de permiso" />
                 </SelectTrigger>
 
@@ -163,7 +279,6 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
               <Input
                 type="date"
                 value={form.fecha_inicio}
-                min={dayjs().format("YYYY-MM-DD")}
                 onChange={(e) =>
                   setForm((formOriginal) => ({
                     ...formOriginal,
@@ -179,7 +294,7 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
               <Input
                 type="date"
                 value={form.fecha_fin}
-                min={dayjs().format("YYYY-MM-DD")}
+                min={form.fecha_inicio || undefined}
                 onChange={(e) =>
                   setForm((formOriginal) => ({
                     ...formOriginal,
@@ -187,10 +302,11 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
                   }))
                 }
                 disabled={isReadOnly}
-              ></Input>
+              />
             </div>
+          </div>
 
-            <div className="space-y-2">
+          <div className="space-y-2">
               <Label>Motivo</Label>
               <Textarea
                 rows={4}
@@ -204,19 +320,45 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
                 }
                 disabled={isReadOnly}
               />
-            </div>
           </div>
+
+          {errors.length > 0 ? (
+            <Alert variant="destructive">
+              <AlertTitle>Corrige los siguientes puntos</AlertTitle>
+              <AlertDescription>
+                <ul className="list-disc pl-5 space-y-1">
+                  {errors.map((errorMsg, index) => (
+                    <li key={`error-${index}`}>{errorMsg}</li>
+                  ))}
+                </ul>
+              </AlertDescription>
+            </Alert>
+          ) : null}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="bg-gray-50 border-t border-gray-100 p-4 flex gap-2 sm:justify-end">
           <Button variant="secondary" onClick={() => setOpen(false)}>
             Cancelar
           </Button>
 
-          {mode === "crear" && <Button onClick={handleSave}>Guardar</Button>}
+          {mode === "crear" && (
+            <Button
+              onClick={handleSave}
+              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-2"
+            >
+              <Save className="h-4 w-4" />
+              Guardar
+            </Button>
+          )}
 
           {mode === "editar" && (
-            <Button onClick={handleUpdate}>Actualizar</Button>
+            <Button
+              onClick={handleUpdate}
+              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-2"
+            >
+              <Save className="h-4 w-4" />
+              Actualizar
+            </Button>
           )}
         </DialogFooter>
       </DialogContent>

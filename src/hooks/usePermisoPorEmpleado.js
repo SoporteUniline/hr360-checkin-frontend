@@ -4,21 +4,59 @@ import useSWR from "swr";
 
 export const usePermisosEmpleado = (page = 1, limit = 10) => {
   const { dataUser } = useAuth();
+  const correoSesion = String(dataUser?.correo || dataUser?.email || "").trim();
+  const empresaSesion =
+    dataUser?.id_empresa ||
+    dataUser?.empresas_detalle?.[0]?.id_empresa ||
+    dataUser?.empresas?.[0] ||
+    null;
 
-  const shouldFetch = Boolean(dataUser?.id_empleado);
+  const idEmpleadoSesion = Number(dataUser?.id_empleado || 0);
 
-  const { data, error, isLoading, mutate } = useSWR(
-    shouldFetch
-      ? `/checador/solicitudes-permiso/empleado/${dataUser.id_empleado}?page=${page}&limit=${limit}`
+  // Fallback: cuando el token no trae id_empleado, resolverlo por correo + empresa.
+  const { data: empleadoPorCorreo } = useSWR(
+    !idEmpleadoSesion && correoSesion && empresaSesion
+      ? `/checador/empleados/por-correo?empresa=${empresaSesion}&correo=${encodeURIComponent(correoSesion)}`
       : null,
-    fetcherWithToken
+    fetcherWithToken,
+    {
+      revalidateOnFocus: false,
+      keepPreviousData: true,
+    }
   );
 
-  return {
-    data: data?.results || [],
-    total: data?.total || 0,
+  const idEmpleadoResuelto = idEmpleadoSesion || Number(empleadoPorCorreo?.id_empleado || 0);
+  const shouldFetch = Boolean(idEmpleadoResuelto);
+
+  const {
+    data,
     error,
-    isLoading,
+    isLoading: isLoadingPermisos,
+    mutate,
+  } = useSWR(
+    shouldFetch
+      ? `/checador/solicitudes-permiso/empleado/${idEmpleadoResuelto}?page=${page}&limit=${limit}`
+      : null,
+    fetcherWithToken,
+    {
+      // Refresca automáticamente para reflejar cambios de estado (ej. Aprobado/Rechazado)
+      refreshInterval: 15000,
+      revalidateOnFocus: true,
+      keepPreviousData: true,
+    }
+  );
+
+  const normalizedData = Array.isArray(data?.results)
+    ? data.results
+    : Array.isArray(data?.results?.data)
+      ? data.results.data
+      : [];
+
+  return {
+    data: normalizedData,
+    total: Number(data?.total || normalizedData.length || 0),
+    error,
+    isLoading: isLoadingPermisos && shouldFetch,
     mutate,
   };
 };

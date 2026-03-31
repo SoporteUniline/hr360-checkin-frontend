@@ -47,7 +47,7 @@ const SolicitudesPage = () => {
       />
 
       <PermissionTable
-        data={data?.data}
+        data={data}
         setOpen={setOpen}
         setMode={setMode}
         setSelected={setSelected}

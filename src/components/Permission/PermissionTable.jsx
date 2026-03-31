@@ -9,20 +9,21 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Eye, Pencil } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export const PermissionTable = ({ data, setOpen, setMode, setSelected }) => {
   return (
     <div className="overflow-x-auto rounded-lg border mt-4">
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead>Tipo de permiso</TableHead>
-            <TableHead>Fecha Inicio</TableHead>
-            <TableHead>Fecha Fin</TableHead>
-            <TableHead>Días</TableHead>
-            <TableHead>Estado</TableHead>
-            <TableHead>Solicitado</TableHead>
-            <TableHead className="text-right">Acciones</TableHead>
+          <TableRow className="bg-gray-50">
+            <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">Tipo de permiso</TableHead>
+            <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">Fecha inicio</TableHead>
+            <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">Fecha fin</TableHead>
+            <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">Días</TableHead>
+            <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">Estado</TableHead>
+            <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">Solicitado</TableHead>
+            <TableHead className="whitespace-nowrap text-right text-xs font-semibold uppercase text-gray-600">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -35,7 +36,7 @@ export const PermissionTable = ({ data, setOpen, setMode, setSelected }) => {
               : "-";
 
             return (
-              <TableRow key={row.id}>
+              <TableRow key={row.id} className="hover:bg-zinc-50">
                 <TableCell>{row.tipo_permiso_nombre}</TableCell>
                 <TableCell>{fechaInicio}</TableCell>
                 <TableCell>{fechaFin}</TableCell>
@@ -47,7 +48,9 @@ export const PermissionTable = ({ data, setOpen, setMode, setSelected }) => {
                       ) + 1
                     : 1}
                 </TableCell>
-                <TableCell>{row.estado}</TableCell>
+                <TableCell>
+                  <EstadoBadge estado={row.estado} />
+                </TableCell>
                 <TableCell>
                   {new Date(row.marca_tiempo).toLocaleDateString("es-MX")}
                 </TableCell>
@@ -57,7 +60,8 @@ export const PermissionTable = ({ data, setOpen, setMode, setSelected }) => {
                     {row.estado === "Pendiente" && (
                       <Button
                         size="icon"
-                        variant="secondary"
+                        variant="outline"
+                        className="h-8 w-8 border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
                         onClick={() => {
                           setSelected(row);
                           setMode("editar");
@@ -71,7 +75,8 @@ export const PermissionTable = ({ data, setOpen, setMode, setSelected }) => {
 
                     <Button
                       size="icon"
-                      variant="secondary"
+                      variant="outline"
+                      className="h-8 w-8 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
                       onClick={() => {
                         setSelected(row);
                         setMode("ver");
@@ -91,3 +96,22 @@ export const PermissionTable = ({ data, setOpen, setMode, setSelected }) => {
     </div>
   );
 };
+
+function EstadoBadge({ estado }) {
+  const base =
+    "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold";
+
+  if (estado === "Pendiente") {
+    return <span className={cn(base, "bg-amber-100 text-amber-900")}>Pendiente</span>;
+  }
+  if (estado === "Aprobado") {
+    return <span className={cn(base, "bg-emerald-100 text-emerald-900")}>Aprobado</span>;
+  }
+  if (estado === "Rechazado") {
+    return <span className={cn(base, "bg-red-100 text-red-900")}>Rechazado</span>;
+  }
+  if (estado === "Cancelado") {
+    return <span className={cn(base, "bg-zinc-200 text-zinc-700")}>Cancelado</span>;
+  }
+  return <span className={cn(base, "bg-zinc-200 text-zinc-700")}>{estado || "—"}</span>;
+}
