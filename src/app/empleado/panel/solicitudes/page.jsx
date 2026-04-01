@@ -27,7 +27,7 @@ const SolicitudesPage = () => {
     <>
       <div className="w-full flex justify-center sm:justify-end gap-2">
         <Button
-          className="w-full sm:w-auto"
+              className="w-full sm:w-auto bg-[#2563EB] hover:bg-[#1d4ed8] text-white"
           onClick={() => {
             setMode("crear");
             setSelected(null);
