@@ -81,14 +81,12 @@ export default function TiposRegistroTable({
               <TableBody>
                 {registros.length === 0 ? (
                   <TableRow>
-                    <TableRow>
-                      <TableCell
-                        colSpan={mostrarColumnaEmpresa ? 5 : 4}
-                        className="text-center py-10 text-muted-foreground"
-                      >
-                        No se encontraron registros.
-                      </TableCell>
-                    </TableRow>
+                    <TableCell
+                      colSpan={mostrarColumnaEmpresa ? 5 : 4}
+                      className="text-center py-10 text-muted-foreground"
+                    >
+                      No se encontraron registros.
+                    </TableCell>
                   </TableRow>
                 ) : (
                   registros.map((regi) => {
