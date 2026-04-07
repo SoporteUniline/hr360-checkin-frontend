@@ -50,7 +50,9 @@ export async function middleware(request) {
       return NextResponse.redirect(new URL(redirectTo, request.url));
     }
 
-    return NextResponse.next();
+    const response = NextResponse.next();
+    response.headers.set("x-pathname", pathname);
+    return response;
   } catch (err) {
     // Borrar cookie expirado y dejar que el frontend maneje la redirección
     const response = NextResponse.next();

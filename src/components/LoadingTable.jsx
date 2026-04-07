@@ -19,7 +19,7 @@ export default function LoadingTable({ cols = 4, rows = 4 }) {
   return (
     <div>
       <Table>
-        <TableCaption>Cargando reultados</TableCaption>
+        <TableCaption>Cargando resultados</TableCaption>
         <TableHeader>
           <TableRow>
             {arrCols.map((item) => (

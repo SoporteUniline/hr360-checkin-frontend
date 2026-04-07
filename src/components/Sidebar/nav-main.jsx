@@ -279,6 +279,12 @@ const menuGroups = [
         rol: "Recruiter",
         icon: ShieldCheck,
       },
+      {
+        title: "Mi suscripción",
+        url: "/panel/mi-suscripcion",
+        rol: "Recruiter",
+        icon: CreditCard,
+      },
     ],
   },
 ];

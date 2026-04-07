@@ -5,23 +5,27 @@ export async function checkSubscriptionDirect(userId) {
     const query = `
       SELECT c.id
       FROM Contrataciones c
-      WHERE c.usuario_id = ?
-        AND (
-          EXISTS (
-            SELECT 1 FROM Suscripciones s
-            WHERE s.contratacion_id = c.id
-              AND s.estado IN ('Activa', 'Cortesia')
-              AND s.fecha_vencimiento >= CURDATE()
-          )
-          OR (
-            c.estado = 'Activo'
-            AND (c.fecha_fin IS NULL OR c.fecha_fin >= CURDATE())
-          )
+      WHERE (
+        c.usuario_id = ?
+        OR EXISTS (
+          SELECT 1 FROM usuarios_empresas ue
+          WHERE ue.id_usuario = ? AND ue.id_empresa = c.empresa
         )
+      )
+      AND c.estado = 'Activo'
+      AND (
+        EXISTS (
+          SELECT 1 FROM Suscripciones s
+          WHERE s.contratacion_id = c.id
+            AND s.estado IN ('Activa', 'Cortesia')
+            AND s.fecha_vencimiento >= CURDATE()
+        )
+        OR (c.fecha_fin IS NULL OR c.fecha_fin >= CURDATE())
+      )
       LIMIT 1
     `;
 
-    const [rows] = await pool.promise().query(query, [userId]);
+    const [rows] = await pool.promise().query(query, [userId, userId]);
 
     return rows.length > 0;
   } catch (error) {
