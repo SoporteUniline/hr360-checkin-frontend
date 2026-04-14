@@ -7,6 +7,13 @@ import axiosInstance from "@/lib/axios";
 import { enqueueSnackbar } from "notistack";
 import { Button } from "@/components/ui/button";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
   CreditCard,
   ExternalLink,
   CheckCircle2,
@@ -16,6 +23,7 @@ import {
   RefreshCw,
   Download,
   CalendarDays,
+  ArrowUpCircle,
 } from "lucide-react";
 import LoadingTable from "@/components/LoadingTable";
 
@@ -31,10 +39,13 @@ function formatMXN(val) {
 
 function formatDate(val) {
   if (!val) return "—";
-  return new Date(val).toLocaleDateString("es-MX", {
+  const d = new Date(val);
+  // Forzar UTC para timestamps de Stripe (evita desfase por zona horaria)
+  return d.toLocaleDateString("es-MX", {
     day: "2-digit",
     month: "long",
     year: "numeric",
+    timeZone: "UTC",
   });
 }
 
@@ -70,6 +81,35 @@ export default function MiSuscripcionPage() {
 
   const [abriendo, setAbriendo] = useState(false);
   const [generando, setGenerando] = useState(false);
+  const [dialogPlanes, setDialogPlanes] = useState(false);
+  const [cambiando, setCambiando] = useState(false);
+  const [planSeleccionado, setPlanSeleccionado] = useState(null);
+
+  const { data: planesData } = useSWR(
+    dialogPlanes ? "/stripe/planes-disponibles" : null,
+    fetcherWithToken,
+  );
+
+  const handleCambiarPlan = async () => {
+    if (!planSeleccionado) return;
+    setCambiando(true);
+    try {
+      const { data: res } = await axiosInstance.post("/stripe/cambiar-plan", {
+        tipo_plan_id: planSeleccionado,
+      });
+      enqueueSnackbar(res.message, { variant: "success" });
+      setDialogPlanes(false);
+      setPlanSeleccionado(null);
+      await mutate();
+    } catch (err) {
+      enqueueSnackbar(
+        err.response?.data?.message || "Error al cambiar el plan.",
+        { variant: "error" },
+      );
+    } finally {
+      setCambiando(false);
+    }
+  };
 
   const handleGenerarEnlace = async () => {
     setGenerando(true);
@@ -86,6 +126,24 @@ export default function MiSuscripcionPage() {
       );
     } finally {
       setGenerando(false);
+    }
+  };
+
+  const [reactivando, setReactivando] = useState(false);
+
+  const handleReactivar = async () => {
+    setReactivando(true);
+    try {
+      const { data: res } = await axiosInstance.post("/stripe/reactivar");
+      // Redirigir al Stripe Checkout para que el usuario pague
+      window.location.href = res.url;
+    } catch (err) {
+      enqueueSnackbar(
+        err.response?.data?.message || "Error al generar el enlace de reactivación.",
+        { variant: "error" },
+      );
+    } finally {
+      setReactivando(false);
     }
   };
 
@@ -141,11 +199,77 @@ export default function MiSuscripcionPage() {
   const precioMensualFinal = precioPorMes * (1 - descuento / 100);
 
   const facturasPagadas = stripeInfo?.facturas?.filter((f) => f.estado === "paid") || [];
+  const facturasAbiertas = stripeInfo?.facturas?.filter((f) => f.estado === "open") || [];
   const mesesPagados = facturasPagadas.length;
+
+  // Trial
+  const esTrial = stripeInfo?.estado_stripe === "trialing" && stripeInfo?.trial_end;
+  const diasTrial = esTrial
+    ? Math.ceil((new Date(stripeInfo.trial_end) - new Date()) / (1000 * 60 * 60 * 24))
+    : null;
+
+  // Calcular fecha de corte si hay facturas pendientes
+  const MESES_TOLERANCIA = 2;
+  let fechaCorteAviso = null;
+  if (facturasAbiertas.length > 0 && suscripcion.fecha_fin) {
+    const fin = new Date(suscripcion.fecha_fin + "T00:00:00");
+    fechaCorteAviso = new Date(fin.getFullYear(), fin.getMonth() + MESES_TOLERANCIA + 1, 1);
+  }
+  const diasParaCorte = fechaCorteAviso
+    ? Math.ceil((fechaCorteAviso - new Date()) / (1000 * 60 * 60 * 24))
+    : null;
 
   return (
     <div className="space-y-6 max-w-2xl">
       <Header onRefresh={mutate} />
+
+      {/* Banner: período de prueba activo */}
+      {esTrial && (
+        <div className="flex items-start gap-3 bg-blue-50 border border-blue-300 rounded-xl px-4 py-4 text-sm text-blue-800">
+          <Clock className="w-5 h-5 shrink-0 mt-0.5 text-blue-500" />
+          <div>
+            <p className="font-semibold">
+              Período de prueba activo
+            </p>
+            <p className="mt-0.5 text-blue-700">
+              {diasTrial > 0
+                ? `Te quedan ${diasTrial} día${diasTrial === 1 ? "" : "s"} de prueba gratis. Al vencerse, se realizará el primer cobro automático.`
+                : "Tu período de prueba vence hoy. Asegúrate de tener una tarjeta registrada para continuar."}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Banner: facturas pendientes */}
+      {facturasAbiertas.length > 0 && (
+        <div className="flex items-start gap-3 bg-orange-50 border border-orange-300 rounded-xl px-4 py-4 text-sm text-orange-800">
+          <AlertTriangle className="w-5 h-5 shrink-0 mt-0.5 text-orange-500" />
+          <div className="flex-1">
+            <p className="font-semibold">
+              {facturasAbiertas.length === 1
+                ? "Tienes 1 factura pendiente de pago"
+                : `Tienes ${facturasAbiertas.length} facturas pendientes de pago`}
+            </p>
+            <p className="mt-0.5 text-orange-700">
+              {diasParaCorte != null && diasParaCorte > 0
+                ? `Tu servicio se suspenderá en ${diasParaCorte} día${diasParaCorte === 1 ? "" : "s"} (${formatDate(fechaCorteAviso)}) si no se regulariza el pago.`
+                : fechaCorteAviso
+                ? `Tu servicio puede suspenderse en cualquier momento. Regulariza tu pago lo antes posible.`
+                : "Actualiza tu método de pago para evitar la suspensión del servicio."}
+            </p>
+            {suscripcion.stripe_subscription_id && (
+              <button
+                onClick={handleAbrirPortal}
+                disabled={abriendo}
+                className="mt-2 inline-flex items-center gap-1.5 font-semibold underline underline-offset-2 hover:text-orange-900"
+              >
+                <CreditCard className="w-3.5 h-3.5" />
+                {abriendo ? "Abriendo..." : "Actualizar tarjeta"}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Tarjeta principal */}
       <div className="border rounded-xl p-6 space-y-4">
@@ -237,17 +361,17 @@ export default function MiSuscripcionPage() {
             <p className="font-semibold mb-1">Tu acceso está suspendido</p>
             <p className="mb-3">
               Tu suscripción fue cancelada por falta de pago. Puedes reactivarla
-              en cualquier momento — el cobro será mensual a partir del 1 del
-              mes siguiente.
+              en cualquier momento — se cobrará el resto del mes actual y a
+              partir del día 1 se facturará mensualmente.
             </p>
             <Button
               size="sm"
-              disabled={generando}
-              onClick={handleGenerarEnlace}
+              disabled={reactivando}
+              onClick={handleReactivar}
               className="gap-2 bg-red-700 hover:bg-red-800 text-white"
             >
               <CreditCard className="w-4 h-4" />
-              {generando ? "Generando enlace..." : "Reactivar suscripción"}
+              {reactivando ? "Generando enlace..." : "Reactivar suscripción"}
             </Button>
           </div>
         )}
@@ -255,6 +379,10 @@ export default function MiSuscripcionPage() {
         {/* Caso 4: Activa con Stripe */}
         {suscripcion.estado_suscripcion === "Activa" && suscripcion.stripe_customer_id && (
           <div className="space-y-2">
+            <Button onClick={() => { setPlanSeleccionado(null); setDialogPlanes(true); }} className="w-full gap-2 bg-violet-600 hover:bg-violet-700 text-white">
+              <ArrowUpCircle className="w-4 h-4" />
+              Cambiar plan
+            </Button>
             <Button onClick={handleAbrirPortal} disabled={abriendo} className="w-full gap-2" variant="outline">
               <CreditCard className="w-4 h-4" />
               {abriendo ? "Abriendo portal..." : "Cambiar tarjeta o cancelar suscripción"}
@@ -271,6 +399,76 @@ export default function MiSuscripcionPage() {
           </div>
         )}
       </div>
+
+      {/* Dialog: cambiar plan */}
+      <Dialog open={dialogPlanes} onOpenChange={setDialogPlanes}>
+        <DialogContent className="max-w-md flex flex-col max-h-[85vh]">
+          <DialogHeader className="shrink-0">
+            <DialogTitle>Cambiar plan</DialogTitle>
+            <p className="text-sm text-slate-500 mt-1">
+              Selecciona el nuevo plan. El cambio de precio se aplicará de forma
+              proporcional al resto del mes actual.
+            </p>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto py-2 space-y-2 min-h-0">
+            {!planesData ? (
+              <div className="text-sm text-slate-400 text-center py-8">
+                Cargando planes...
+              </div>
+            ) : planesData.planes.length === 0 ? (
+              <div className="text-sm text-slate-400 text-center py-8">
+                No hay planes disponibles.
+              </div>
+            ) : (
+              planesData.planes.map((plan) => {
+                const nombre =
+                  plan.usuarios_min != null && plan.usuarios_max != null
+                    ? `Plan ${plan.usuarios_min}–${plan.usuarios_max} empleados`
+                    : plan.usuarios_max != null
+                    ? `Hasta ${plan.usuarios_max} empleados`
+                    : `Plan #${plan.id}`;
+                const precio = Number(plan.precio_base || 0);
+                const esCurrent = plan.id === suscripcion.tipo_plan_id;
+                const sel = planSeleccionado === plan.id;
+                return (
+                  <button
+                    key={plan.id}
+                    disabled={esCurrent}
+                    onClick={() => setPlanSeleccionado(plan.id)}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-lg border text-sm transition-colors text-left
+                      ${esCurrent ? "bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed" : ""}
+                      ${sel ? "border-violet-500 bg-violet-50 text-violet-800" : ""}
+                      ${!esCurrent && !sel ? "border-slate-200 hover:border-violet-300 hover:bg-violet-50/50" : ""}
+                    `}
+                  >
+                    <span className="font-medium">{nombre}</span>
+                    <span className="shrink-0 ml-4 text-slate-500">
+                      {precio > 0 ? `${formatMXN(precio)}/mes` : "—"}
+                      {esCurrent && (
+                        <span className="ml-2 text-xs text-slate-400">(actual)</span>
+                      )}
+                    </span>
+                  </button>
+                );
+              })
+            )}
+          </div>
+
+          <DialogFooter className="shrink-0 pt-2 border-t">
+            <Button variant="outline" onClick={() => setDialogPlanes(false)}>
+              Cancelar
+            </Button>
+            <Button
+              disabled={!planSeleccionado || cambiando}
+              onClick={handleCambiarPlan}
+              className="bg-violet-600 hover:bg-violet-700 text-white"
+            >
+              {cambiando ? "Cambiando..." : "Confirmar cambio"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Historial de facturas de Stripe */}
       {stripeInfo?.facturas?.length > 0 && (

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import useSWR from "swr";
+import { fetcherWithToken } from "@/lib/fetcher";
 import { useAuth } from "@/context/AuthContext";
 import EmpleadosDataContainer from "./EmpleadosDataContainer";
 import FormularioEmpleado from "./FormularioEmpleado";
@@ -11,16 +13,25 @@ import AccesosRapidos from "@/components/AccesosRapidos";
 import axios from "@/lib/axios";
 
 // Componente de tarjeta de estadística estilo ADAMIA
-const StatCard = ({ title, count, icon: Icon, trend }) => {
+const StatCard = ({ title, count, limit, icon: Icon, trend }) => {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow">
       <div className="flex items-center justify-between">
         <div className="flex-1">
           <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
-          <p className="text-3xl font-bold text-gray-900">{count || 0}</p>
-          {trend && (
+          <p className="text-3xl font-bold text-gray-900">
+            {count || 0}
+            {limit != null && (
+              <span className="text-xl font-normal text-gray-400"> / {limit}</span>
+            )}
+          </p>
+          {limit != null ? (
+            <p className="text-xs text-gray-500 font-medium mt-1">
+              {limit - (count || 0)} lugar{limit - (count || 0) === 1 ? "" : "es"} disponible{limit - (count || 0) === 1 ? "" : "s"}
+            </p>
+          ) : trend ? (
             <p className="text-xs text-green-600 font-medium mt-1">{trend}</p>
-          )}
+          ) : null}
         </div>
         <div className="bg-blue-50 p-3 rounded-lg">
           <Icon className="w-6 h-6 text-[#2563EB]" />
@@ -42,6 +53,16 @@ export default function RegistroEmpleados() {
 
   const { dataUser } = useAuth();
   const [empresaActiva, setEmpresaActiva] = useState("all");
+
+  const empresaId = empresaActiva && empresaActiva !== "all" ? empresaActiva : null;
+  const { data: capacidadData } = useSWR(
+    empresaId
+      ? `/checador/empleados-capacidad/check-capacidad?empresa_id=${empresaId}`
+      : null, // null = no fetches
+    fetcherWithToken,
+    { revalidateOnFocus: false, shouldRetryOnError: false },
+  );
+  const limiteEmpleados = capacidadData?.limite ?? null;
 
   const idEmpresa = empresaActiva;
 
@@ -146,6 +167,7 @@ export default function RegistroEmpleados() {
               <StatCard
                 title="Activos"
                 count={data?.estadisticas?.empleados_activos || 0}
+                limit={limiteEmpleados}
                 icon={UsersRound}
               />
               <StatCard

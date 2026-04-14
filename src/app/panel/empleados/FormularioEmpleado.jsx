@@ -482,14 +482,29 @@ export default function FormularioEmpleado({
       mutate();
     } catch (error) {
       console.log(error);
-      // console.error(error);
-      // enqueueSnackbar("Error al guardar empleado", { variant: "error" });
+      const status = error.response?.status;
       const mensaje =
         error.response?.data?.error ||
         error.response?.data?.message ||
         "Error desconocido";
 
-      enqueueSnackbar(mensaje, { variant: "error" });
+      if (status === 403) {
+        // Límite de empleados alcanzado — mostrar aviso con link a suscripción
+        enqueueSnackbar(
+          <span>
+            {mensaje}{" "}
+            <a
+              href="/panel/mi-suscripcion"
+              className="underline font-semibold"
+            >
+              Mejorar plan →
+            </a>
+          </span>,
+          { variant: "warning", autoHideDuration: 6000 },
+        );
+      } else {
+        enqueueSnackbar(mensaje, { variant: "error" });
+      }
     }
   };
 

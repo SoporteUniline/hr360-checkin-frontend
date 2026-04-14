@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import LoadingTable from "@/components/LoadingTable";
 import ErrorPage from "@/components/ErrorPage";
-import { Plus, Trash2, Monitor } from "lucide-react";
+import { Plus, Trash2, Monitor, Pencil } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -50,6 +50,8 @@ export default function CheckadoresPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState({ sn: "", id_empresa: "" });
   const [saving, setSaving] = useState(false);
+  const [editItem, setEditItem] = useState(null);
+  const [editEmpresa, setEditEmpresa] = useState("");
 
   const checadores = checadoresData?.checadores || [];
   const empresas = empresasData?.data || [];
@@ -80,6 +82,28 @@ export default function CheckadoresPage() {
       mutate();
     } catch {
       enqueueSnackbar("Error al eliminar", { variant: "error" });
+    }
+  };
+
+  const handleEditarGuardar = async () => {
+    if (!editEmpresa) {
+      enqueueSnackbar("Selecciona una empresa", { variant: "warning" });
+      return;
+    }
+    setSaving(true);
+    try {
+      await axiosInstance.put(
+        `/checador/dispositivos/${editItem.id}`,
+        { id_empresa: editEmpresa },
+        { headers },
+      );
+      enqueueSnackbar("Checador actualizado correctamente", { variant: "success" });
+      setEditItem(null);
+      mutate();
+    } catch {
+      enqueueSnackbar("Error al actualizar", { variant: "error" });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -148,7 +172,7 @@ export default function CheckadoresPage() {
               <TableHead>Número de serie (SN)</TableHead>
               <TableHead>Empresa</TableHead>
               <TableHead className="text-center">Activo</TableHead>
-              <TableHead className="text-center w-16" />
+              <TableHead className="text-center w-24" />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -172,14 +196,24 @@ export default function CheckadoresPage() {
                     />
                   </TableCell>
                   <TableCell className="text-center">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                      onClick={() => handleDelete(item)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div className="flex items-center justify-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                        onClick={() => { setEditItem(item); setEditEmpresa(String(item.id_empresa)); }}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={() => handleDelete(item)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -187,6 +221,41 @@ export default function CheckadoresPage() {
           </TableBody>
         </Table>
       </div>
+
+      <Dialog open={!!editItem} onOpenChange={(open) => { if (!open) setEditItem(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar checador — {editItem?.sn}</DialogTitle>
+          </DialogHeader>
+
+          <div className="py-2">
+            <label className="text-sm font-medium text-slate-700 mb-1 block">
+              Empresa
+            </label>
+            <Select value={editEmpresa} onValueChange={setEditEmpresa}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona una empresa" />
+              </SelectTrigger>
+              <SelectContent className="max-h-60 overflow-y-auto">
+                {empresas.map((e) => (
+                  <SelectItem key={e.id_empresa} value={String(e.id_empresa)}>
+                    {e.nombre_empresa}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditItem(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleEditarGuardar} disabled={saving}>
+              {saving ? "Guardando..." : "Guardar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md">

@@ -2,10 +2,12 @@ import useSWR from "swr";
 import { fetcherWithToken } from "@/lib/fetcher";
 
 /**
- * Hook para obtener todos los datos completos de todos los empleados
- * para el Panel de Empleados
+ * Hook para obtener la lista ligera de empleados para el sidebar del Panel de Empleados.
+ * Solo trae id, nombre, puesto, departamento, unidad_negocio, empresa, estado.
+ * El detalle de cada empleado se carga bajo demanda con usePanelEmpleadoDetalle.
+ *
  * Relacionado con:
- * - Backend: modules/attendance/controllers/empleadoController.js (cargarTodosDatosCompletos)
+ * - Backend: empleadoController.js → cargarListaEmpleados
  * - Frontend: src/app/panel/panel-empleado/page.jsx
  */
 export default function usePanelEmpleadoData(
@@ -16,25 +18,21 @@ export default function usePanelEmpleadoData(
   let url = null;
 
   if (idEmpresa === "all") {
-    /**
-     * includeInactivos=1:
-     * - Para que el Panel de Empleados muestre el mismo universo que el módulo "Empleados"
-     *   (que por defecto no restringe a solo 'Activo' si el filtro de estado está vacío).
-     *
-     * Relación:
-     * - Backend: `modules/attendance/controllers/empleadoController.js` (cargarTodosDatosCompletos)
-     */
     const empresas = empresasUsuario.join(",");
-    url = `/checador/empleados/panel-empleado/todos?empresas=${empresas}&includeInactivos=1${
-      unidadNegocio ? `&sucursal=${encodeURIComponent(unidadNegocio)}` : ""
-    }`;
+    if (empresas) {
+      url = `/checador/empleados/panel-empleado/lista?empresas=${empresas}&includeInactivos=1${
+        unidadNegocio ? `&sucursal=${encodeURIComponent(unidadNegocio)}` : ""
+      }`;
+    }
   } else if (idEmpresa) {
-    url = `/checador/empleados/panel-empleado/todos?empresa=${idEmpresa}&includeInactivos=1${
+    url = `/checador/empleados/panel-empleado/lista?empresa=${idEmpresa}&includeInactivos=1${
       unidadNegocio ? `&sucursal=${encodeURIComponent(unidadNegocio)}` : ""
     }`;
   }
 
-  const { data, error, isLoading, mutate } = useSWR(url, fetcherWithToken);
+  const { data, error, isLoading, mutate } = useSWR(url, fetcherWithToken, {
+    shouldRetryOnError: false,
+  });
 
   return { data, error, isLoading, mutate };
 }

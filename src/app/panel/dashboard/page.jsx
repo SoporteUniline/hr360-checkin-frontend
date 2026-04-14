@@ -251,9 +251,16 @@ export default async function PanelDashboardPage() {
           <CardContent>
             <div className="text-3xl sm:text-4xl font-semibold">
               {data.totalEmpleados}
+              {data.limiteEmpleados != null && (
+                <span className="text-xl sm:text-2xl font-normal text-zinc-400">
+                  {" "}/{" "}{data.limiteEmpleados}
+                </span>
+              )}
             </div>
             <div className="text-xs text-zinc-500 mt-1">
-              Personal activo en el sistema
+              {data.limiteEmpleados != null
+                ? `${data.limiteEmpleados - data.totalEmpleados} lugares disponibles`
+                : "Personal activo en el sistema"}
             </div>
           </CardContent>
         </Card>

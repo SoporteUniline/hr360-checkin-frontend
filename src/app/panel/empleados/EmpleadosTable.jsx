@@ -179,7 +179,8 @@ export default function EmpleadosTable({
       active: hasActiveHeaderFilters,
       total: filteredRowsAll.length,
     });
-  }, [hasActiveHeaderFilters, filteredRowsAll.length, onHeaderFilteringMetaChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasActiveHeaderFilters, filteredRowsAll.length]); // ⚠️ onHeaderFilteringMetaChange excluido: es setHeaderFilterMeta, estable, pero al ser llamado como función causa loop
 
   const clearAllHeaderFilters = () => {
     setNombreSeleccionado([]);

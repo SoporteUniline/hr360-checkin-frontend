@@ -45,7 +45,7 @@ export default function EmpleadosDataContainer({
     let isCancelled = false;
 
     const loadFilterOptionsRows = async () => {
-      if (!idEmpresa) {
+      if (!idEmpresa || idEmpresa === "all") {
         if (!isCancelled) setFilterOptionsRows([]);
         return;
       }

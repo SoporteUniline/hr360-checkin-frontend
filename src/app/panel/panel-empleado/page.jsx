@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useAuth } from "@/context/AuthContext";
 import usePanelEmpleadoData from "@/hooks/usePanelEmpleadoData";
+import usePanelEmpleadoDetalle from "@/hooks/usePanelEmpleadoDetalle";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -83,6 +84,8 @@ export default function PanelEmpleadoPage() {
     sucursalFiltro,
   );
 
+  const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState(null);
+
   /**
    * Festivos (empresa) para cálculo consistente de días hábiles en Permisos del Panel de Empleados.
    * Relación:
@@ -108,13 +111,11 @@ export default function PanelEmpleadoPage() {
     return set;
   }, [festivosResp]);
 
-  const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState(null);
   const [busqueda, setBusqueda] = useState("");
   const [tabActivo, setTabActivo] = useState("general");
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const empleados = data?.lista_empleados || [];
-  const datosCompletos = data?.datos_completos || {};
 
   // Filtrar empleados por búsqueda
   const empleadosFiltrados = empleados.filter((emp) => {
@@ -135,10 +136,9 @@ export default function PanelEmpleadoPage() {
     }
   }, [empleados, empleadoSeleccionado]);
 
-  // Obtener datos del empleado seleccionado
-  const datosEmpleado = empleadoSeleccionado
-    ? datosCompletos[empleadoSeleccionado]
-    : null;
+  // Cargar detalle del empleado seleccionado bajo demanda
+  const { datosEmpleado, isLoading: isLoadingDetalle } =
+    usePanelEmpleadoDetalle(empleadoSeleccionado);
 
   // Función para obtener iniciales
   const obtenerIniciales = (nombreCompleto) => {
@@ -234,7 +234,14 @@ export default function PanelEmpleadoPage() {
 
         {/* Contenido principal */}
         <div className="flex-1 overflow-y-auto p-2 sm:p-3 md:p-4 lg:p-6">
-          {!datosEmpleado ? (
+          {isLoadingDetalle ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="flex flex-col items-center gap-4">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Cargando información...</p>
+              </div>
+            </div>
+          ) : !datosEmpleado ? (
             <div className="flex flex-col items-center justify-center h-full text-center">
               <div className="text-6xl mb-4">👈</div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">
