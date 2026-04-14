@@ -85,9 +85,8 @@ export default function EmpleadosTable({
   const [estadoSeleccionado, setEstadoSeleccionado] = useState([]);
 
   const sourceRows = useMemo(() => {
-    const baseRows = Array.isArray(filterOptionsRows)
-      ? filterOptionsRows
-      : empleados || [];
+    const baseRows =
+      filterOptionsRows?.length > 0 ? filterOptionsRows : empleados || [];
     return dedupeEmployeesById(baseRows);
   }, [filterOptionsRows, empleados]);
 
