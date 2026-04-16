@@ -4,7 +4,7 @@ import React from "react";
 
 export default function Footer() {
   return (
-    <div className="flex justify-center items-center flex-col bg-gradient-to-r from-[var(--adamia-blue)] to-[var(--adamia-purple)] text-white py-10">
+    <div className="flex justify-center items-center flex-col bg-linear-to-r from-(--adamia-blue) to-(--adamia-purple) text-white py-10">
       <div>
         <div className="flex justify-center">
           <Image
