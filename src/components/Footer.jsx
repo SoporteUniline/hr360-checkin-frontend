@@ -59,7 +59,7 @@ export default function Footer() {
           <p className="font-bold">contacto</p>
           <div className="mt-1 text-sm leading-loose text-white/90">
             <p>Email: sistema@adamia.mx</p>
-            <p>Tel: +52 55 1234 5678</p>
+            <p>Tel: +52 317 128 8029</p>
             <p>Autlán de Navarro, Jal. México</p>
           </div>
         </div>

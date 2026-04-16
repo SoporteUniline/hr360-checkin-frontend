@@ -35,6 +35,7 @@ import {
   UserCog,
   Monitor,
   CreditCard,
+  Landmark,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -75,6 +76,12 @@ const dashboardItems = [
     url: "/dashboard/cotizaciones",
     rol: "Admin",
     icon: FileText,
+  },
+  {
+    title: "Cuentas bancarias",
+    url: "/dashboard/cuentas-bancarias",
+    rol: "Admin",
+    icon: Landmark,
   },
   {
     title: "Dashboard",
