@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import { fetcherWithToken } from "@/lib/fetcher";
 import { useAuth } from "@/context/AuthContext";
@@ -51,8 +52,19 @@ export default function RegistroEmpleados() {
   const [soloLectura, setSoloLectura] = useState(false);
   const [values, setValues] = useState(null);
 
+  const searchParams = useSearchParams();
+  const [filtroNombre, setFiltroNombre] = useState(searchParams.get("buscar") || "");
+
   const { dataUser } = useAuth();
   const [empresaActiva, setEmpresaActiva] = useState("all");
+
+  // Abrir empleado directo si viene ?id= desde la búsqueda global
+  useEffect(() => {
+    const idParam = searchParams.get("id");
+    if (!idParam) return;
+    abrirFormulario({ id_empleado: idParam }, false, true);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const empresaId = empresaActiva && empresaActiva !== "all" ? empresaActiva : null;
   const { data: capacidadData } = useSWR(
@@ -120,7 +132,7 @@ export default function RegistroEmpleados() {
     idEmpresa,
     page,
     limit,
-    filtroNombre: "",
+    filtroNombre,
     departamento: "",
     estado: "",
     fechaDesde: "",

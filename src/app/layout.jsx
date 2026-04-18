@@ -2,7 +2,7 @@
 // Tipografía oficial ADAMIA: Inter
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/context/AuthContext";
+import { ClientProviders } from "@/app/ClientProviders";
 import Script from "next/script";
 
 const inter = Inter({
@@ -32,7 +32,7 @@ export default function RootLayout({ children }) {
         className={`${inter.variable} antialiased`}
         style={{ fontFamily: "var(--font-inter)" }}
       >
-        <AuthProvider>{children}</AuthProvider>
+        <ClientProviders>{children}</ClientProviders>
       </body>
     </html>
   );

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import PositionFormDialog from "./PositionFormDialog";
 import PositionDeleteDialog from "./PositionDeleteDialog";
@@ -13,7 +14,16 @@ export default function Positions() {
   const [deletePosition, setDeletePosition] = useState(null);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [openFormModal, setOpenFormModal] = useState(false);
+  const searchParams = useSearchParams();
   const { dataUser } = useAuth();
+
+  useEffect(() => {
+    const id = searchParams.get("id");
+    const nombre = searchParams.get("nombre");
+    if (!id) return;
+    setEditPosition({ id_puesto: Number(id), nombre_puesto: nombre || "" });
+    setOpenFormModal(true);
+  }, [searchParams]);
   const id_empresa = "all";
   const idEmpresaForm = null;
 

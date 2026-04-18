@@ -280,7 +280,7 @@ export default function PositionsTable({
                         <Pencil className="h-4 w-4 text-[#2563EB]" />
                       </button>
                       <button
-                        onClick={() => onDelete(puesto.id_puesto, key)}
+                        onClick={() => onDelete(puesto.id_puesto)}
                         className="p-2 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
                         title="Eliminar"
                       >

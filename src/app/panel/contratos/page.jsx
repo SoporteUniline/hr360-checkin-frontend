@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import dayjs from "dayjs";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,7 @@ export default function ContratosPage() {
   const [empresaFiltro, setEmpresaFiltro] = useState("all");
   const { dataUser } = useAuth();
   const { enqueueSnackbar } = useSnackbar();
+  const searchParams = useSearchParams();
   const idEmpresa = empresaFiltro === "all" ? null : Number(empresaFiltro);
 
   // Filtros base para query (controlados por el nuevo filtrado en encabezados)
@@ -55,6 +57,17 @@ export default function ContratosPage() {
   const [seedItem, setSeedItem] = useState(null); // para duplicación
   const [openView, setOpenView] = useState(false);
   const [viewItem, setViewItem] = useState(null);
+
+  useEffect(() => {
+    const id = searchParams.get("id");
+    if (!id) return;
+    contratosApi.getById(id).then((contrato) => {
+      if (!contrato) return;
+      setViewItem(contrato);
+      setOpenView(true);
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
   const [deleteRow, setDeleteRow] = useState(null);
   const [filterOptionsRows, setFilterOptionsRows] = useState([]);
   const [headerFilterMeta, setHeaderFilterMeta] = useState({

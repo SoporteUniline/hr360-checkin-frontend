@@ -57,6 +57,12 @@ export const contratosApi = {
     );
     return res.data;
   },
+  async getById(id) {
+    const res = await axios.get(`/checador/contratos/${id}`, {
+      headers: authHeaders(),
+    });
+    return res.data;
+  },
 };
 
 

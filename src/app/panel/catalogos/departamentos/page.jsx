@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import DepartamentosTable from "./DepartamentosTable";
 import DepartamentoFormDialog from "./DepartamentoFormDialog";
@@ -14,7 +15,16 @@ export default function Departamentos() {
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [openFormModal, setOpenFormModal] = useState(false);
 
+  const searchParams = useSearchParams();
   const { dataUser } = useAuth();
+
+  useEffect(() => {
+    const id = searchParams.get("id");
+    const nombre = searchParams.get("nombre");
+    if (!id) return;
+    setEditDep({ id_departamento: Number(id), nombre: nombre || "" });
+    setOpenFormModal(true);
+  }, [searchParams]);
 
   const id_empresa = "all";
   const idEmpresaForm = null;
