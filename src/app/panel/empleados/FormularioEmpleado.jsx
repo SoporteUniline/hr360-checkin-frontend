@@ -29,7 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BriefcaseBusiness, Hammer, User } from "lucide-react";
+import { BriefcaseBusiness, Hammer, User, FolderOpen } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ComboboxSucursal } from "@/components/ComboboxSucursal";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -41,6 +41,7 @@ import TabNomina from "./tabs/TabNomina";
 import TabCuentasBancarias from "./tabs/TabCuentasBancarias";
 import TabReconocimiento from "./tabs/TabReconocimiento";
 import TabGPS from "./tabs/TabGPS";
+import PanelEmpleadoDocumentos from "@/app/panel/panel-empleado/components/PanelEmpleadoDocumentos";
 import BotonCredencial from "@/components/BotonCredencial";
 import { toPng } from "html-to-image";
 
@@ -725,6 +726,16 @@ export default function FormularioEmpleado({
                   <Icon icon="mdi:face-recognition" className="mr-2 h-4 w-4" />
                   Escanear rostro
                 </TabsTrigger>
+                {/* Pestaña Documentos: solo disponible cuando el empleado ya existe */}
+                {values?.id_empleado && (
+                  <TabsTrigger
+                    value="documentos"
+                    className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-4 px-6 font-medium"
+                  >
+                    <FolderOpen className="mr-2 h-4 w-4" />
+                    Documentos
+                  </TabsTrigger>
+                )}
               </TabsList>
             </div>
 
@@ -786,6 +797,13 @@ export default function FormularioEmpleado({
                   {/* {tab === "gps" && (
                     <TabGPS form={form} soloLectura={soloLectura} />
                   )} */}
+
+                  {tab === "documentos" && values?.id_empleado && (
+                    <PanelEmpleadoDocumentos
+                      idEmpleado={values.id_empleado}
+                      idEmpresa={values.id_empresa}
+                    />
+                  )}
                 </motion.div>
               </AnimatePresence>
             </motion.div>

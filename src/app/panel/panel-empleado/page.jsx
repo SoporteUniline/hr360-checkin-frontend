@@ -23,6 +23,7 @@ import {
   Loader2,
   Menu,
   X,
+  FolderOpen,
 } from "lucide-react";
 import {
   Sheet,
@@ -37,6 +38,7 @@ import PanelEmpleadoAsistencias from "./components/PanelEmpleadoAsistencias";
 import PanelEmpleadoEntradasSalidas from "./components/PanelEmpleadoEntradasSalidas";
 import PanelEmpleadoContratos from "./components/PanelEmpleadoContratos";
 import PanelEmpleadoVacaciones from "./components/PanelEmpleadoVacaciones";
+import PanelEmpleadoDocumentos from "./components/PanelEmpleadoDocumentos";
 import useSWR from "swr";
 import dayjs from "dayjs";
 import { fetcherWithToken } from "@/lib/fetcher";
@@ -377,6 +379,13 @@ export default function PanelEmpleadoPage() {
                         <Plane className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 mr-1 sm:mr-1.5 md:mr-2 flex-shrink-0" />
                         Vacaciones
                       </TabsTrigger>
+                      <TabsTrigger
+                        value="documentos"
+                        className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] data-[state=active]:text-[#2563EB] text-[11px] sm:text-xs md:text-sm px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3 font-medium"
+                      >
+                        <FolderOpen className="h-3 w-3 sm:h-3.5 sm:w-3.5 md:h-4 md:w-4 mr-1 sm:mr-1.5 md:mr-2 flex-shrink-0" />
+                        Documentos
+                      </TabsTrigger>
                     </TabsList>
                   </div>
 
@@ -403,6 +412,9 @@ export default function PanelEmpleadoPage() {
                     </TabsContent>
                     <TabsContent value="vacaciones" className="mt-0">
                       <PanelEmpleadoVacaciones datosEmpleado={datosEmpleado} />
+                    </TabsContent>
+                    <TabsContent value="documentos" className="mt-0">
+                      <PanelEmpleadoDocumentos datosEmpleado={datosEmpleado} />
                     </TabsContent>
                   </div>
                 </Tabs>
