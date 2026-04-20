@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import StatCard from "@/components/StatCard";
 import dayjs from "dayjs";
@@ -17,6 +18,7 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 export default function RegistroEntradasSalidas() {
+  const searchParams = useSearchParams();
   const [empresaActiva, setEmpresaActiva] = useState(null);
   const idEmpresa = empresaActiva;
   // =========================
@@ -27,8 +29,10 @@ export default function RegistroEntradasSalidas() {
   //   - Si es un rango real, `fecha` queda vacío y el backend filtra por `desde/hasta`.
   // =========================
   const today = dayjs().tz("America/Mexico_City").format("YYYY-MM-DD");
-  const [desde, setDesde] = useState(today);
-  const [hasta, setHasta] = useState(today);
+  const initialDate = searchParams.get("fecha") || today;
+  const [desde, setDesde] = useState(initialDate);
+  const [hasta, setHasta] = useState(initialDate);
+  const [filtroNombre, setFiltroNombre] = useState(searchParams.get("empleado") || "");
 
   // `fecha` se conserva porque otros componentes lo usan como "modo single-day".
   const fecha = desde && hasta && desde === hasta ? desde : "";
@@ -44,10 +48,10 @@ export default function RegistroEntradasSalidas() {
   }, [dataUser, empresaActiva]);
 
   const handleResetFilters = () => {
-    const today = dayjs().tz("America/Mexico_City").format("YYYY-MM-DD");
     setEmpresaActiva("all");
     setDesde(today);
     setHasta(today);
+    setFiltroNombre("");
     setPage(1);
   };
 
@@ -58,7 +62,7 @@ export default function RegistroEntradasSalidas() {
     hasta,
     page,
     limit,
-    filtroNombre: "",
+    filtroNombre,
     departamento: "",
     estado: "",
     setPage,
@@ -110,7 +114,16 @@ export default function RegistroEntradasSalidas() {
       </div>
 
       <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-end">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">Empleado</label>
+            <Input
+              type="text"
+              placeholder="Buscar empleado..."
+              value={filtroNombre}
+              onChange={(e) => { setFiltroNombre(e.target.value); setPage(1); }}
+            />
+          </div>
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Desde</label>
             <Input

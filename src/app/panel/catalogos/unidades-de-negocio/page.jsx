@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Plus, MapPin, Search } from "lucide-react";
@@ -14,7 +15,8 @@ import { Combobox } from "@/components/Combobox";
 import useDebounce from "@/hooks/useDebounce";
 
 export default function Sucursales() {
-  const [filter, setFilter] = useState("");
+  const searchParams = useSearchParams();
+  const [filter, setFilter] = useState(searchParams.get("nombre") || "");
   const debouncedFilter = useDebounce(filter, 500);
   const [sucursales, setSucursales] = useState([]);
   const [editSuc, setEditSuc] = useState(null);

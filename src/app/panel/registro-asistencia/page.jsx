@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import useDebounce from "@/hooks/useDebounce";
 import AsistenciaDataContainer from "./AsistenciaDataContainer";
@@ -21,12 +22,14 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 export default function ControlAsistencia() {
+  const searchParams = useSearchParams();
   const [empresaActiva, setEmpresaActiva] = useState(null);
   const idEmpresa = empresaActiva;
+  const initialDate = searchParams.get("fecha") || dayjs().tz("America/Mexico_City").format("YYYY-MM-DD");
   const getInitialFilters = () => ({
-    fechaInicio: dayjs().tz("America/Mexico_City").format("YYYY-MM-DD"),
-    fechaFin: dayjs().tz("America/Mexico_City").format("YYYY-MM-DD"),
-    filtroEmpleado: "",
+    fechaInicio: initialDate,
+    fechaFin: initialDate,
+    filtroEmpleado: searchParams.get("empleado") || "",
     filtroDepartamento: "",
     filtroTipoRegistro: "",
     filtroEstadoAsistencia: "",
@@ -38,15 +41,11 @@ export default function ControlAsistencia() {
     filtroDiasFestivos: false,
     filtroRequiereAutorizacion: false,
   });
-  const [fechaInicio, setFechaInicio] = useState(
-    dayjs().tz("America/Mexico_City").format("YYYY-MM-DD"),
-  );
-  const [fechaFin, setFechaFin] = useState(
-    dayjs().tz("America/Mexico_City").format("YYYY-MM-DD"),
-  );
+  const [fechaInicio, setFechaInicio] = useState(initialDate);
+  const [fechaFin, setFechaFin] = useState(initialDate);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const [filtroEmpleado, setFiltroEmpleado] = useState("");
+  const [filtroEmpleado, setFiltroEmpleado] = useState(searchParams.get("empleado") || "");
   const debouncedFiltroEmpleado = useDebounce(filtroEmpleado, 500);
   const [filtroDepartamento, setFiltroDepartamento] = useState("");
   const [filtroTipoRegistro, setFiltroTipoRegistro] = useState("");
@@ -79,22 +78,23 @@ export default function ControlAsistencia() {
     setLimit(newLimit);
   };
 
+  const today = dayjs().tz("America/Mexico_City").format("YYYY-MM-DD");
+
   const handleResetFilters = () => {
-    const initial = getInitialFilters();
     setEmpresaActiva("all");
-    setFechaInicio(initial.fechaInicio);
-    setFechaFin(initial.fechaFin);
-    setFiltroEmpleado(initial.filtroEmpleado);
-    setFiltroDepartamento(initial.filtroDepartamento);
-    setFiltroTipoRegistro(initial.filtroTipoRegistro);
-    setFiltroEstadoAsistencia(initial.filtroEstadoAsistencia);
-    setPage(initial.page);
-    setSoloPresentes(initial.filtroPresentes);
-    setSoloAusentes(initial.filtroAusentes);
-    setHorasExtra(initial.filtroHorasExtra);
-    setSinGoceDeSueldo(initial.filtroSinGoceDeSueldo);
-    setDiasFestivos(initial.filtroDiasFestivos);
-    setRequiereAutorizacion(initial.filtroRequiereAutorizacion);
+    setFechaInicio(today);
+    setFechaFin(today);
+    setFiltroEmpleado("");
+    setFiltroDepartamento("");
+    setFiltroTipoRegistro("");
+    setFiltroEstadoAsistencia("");
+    setPage(1);
+    setSoloPresentes(false);
+    setSoloAusentes(false);
+    setHorasExtra(false);
+    setSinGoceDeSueldo(false);
+    setDiasFestivos(false);
+    setRequiereAutorizacion(false);
     setMostrarCamposExtras(false);
   };
 
@@ -150,7 +150,16 @@ export default function ControlAsistencia() {
 
       <AsistenciaCards totals={data} />
       <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 items-end">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">Empleado</label>
+            <Input
+              type="text"
+              placeholder="Buscar empleado..."
+              value={filtroEmpleado}
+              onChange={(e) => { setFiltroEmpleado(e.target.value); setPage(1); }}
+            />
+          </div>
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-gray-700">Desde</label>
             <Input

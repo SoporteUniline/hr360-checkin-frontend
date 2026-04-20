@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import axios from "axios";
 import { fetcherWithToken } from "@/lib/fetcher";
@@ -153,11 +154,13 @@ export default function AreasCheckPage() {
   const API_URL = process.env.NEXT_PUBLIC_RUTA_BACKEND;
   const { enqueueSnackbar } = useSnackbar();
   const { dataUser } = useAuth();
+  const searchParams = useSearchParams();
 
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const initialNombre = searchParams.get("nombre") || "";
+  const [search, setSearch] = useState(initialNombre);
+  const [debouncedSearch, setDebouncedSearch] = useState(initialNombre);
 
   const [unidadActiva, setUnidadActiva] = useState("all");
   const { options: unidadOptions, byId: unidadById } = useUnidadesNegocio();

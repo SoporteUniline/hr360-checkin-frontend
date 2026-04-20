@@ -5,6 +5,7 @@ import axios from "@/lib/axios";
 import useSWR from "swr";
 import { useSnackbar } from "notistack";
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import useDebounce from "@/hooks/useDebounce";
 import AccesosRapidos from "@/components/AccesosRapidos";
@@ -63,6 +64,7 @@ export default function UserAccessPage() {
   const { enqueueSnackbar } = useSnackbar();
   const { dataUser } = useAuth();
   const token = Cookies.get("token");
+  const searchParams = useSearchParams();
 
   const [openConfirm, setOpenConfirm] = useState(false);
   const [openForm, setOpenForm] = useState(false);
@@ -70,7 +72,7 @@ export default function UserAccessPage() {
 
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const [searchInput, setSearchInput] = useState("");
+  const [searchInput, setSearchInput] = useState(searchParams.get("nombre") || "");
   const debouncedSearch = useDebounce(searchInput, 500);
 
   const [form, setForm] = useState({

@@ -51,6 +51,14 @@ export const permisosApi = {
     });
     return res.data;
   },
+
+  async getById(id) {
+    const token = Cookies.get("token");
+    const res = await axios.get(`/checador/solicitudes-permiso/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return res.data;
+  },
 };
 
 

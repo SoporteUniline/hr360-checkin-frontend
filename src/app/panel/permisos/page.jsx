@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import dayjs from "dayjs";
 import useSWR from "swr";
 import { useAuth } from "@/context/AuthContext";
@@ -33,6 +34,7 @@ import styles from "./permisos-theme.module.css";
 import { fetcherWithToken } from "@/lib/fetcher";
 import { Combobox } from "@/components/Combobox";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import { permisosApi } from "@/lib/permisosApi";
 
 /**
  * Página de gestión de Permisos (solicitudes_permiso)
@@ -44,6 +46,7 @@ import AccesosRapidos from "@/components/AccesosRapidos";
  */
 export default function PermisosPage() {
   const { dataUser } = useAuth();
+  const searchParams = useSearchParams();
 
   // Lógica Multiempresa replicada
   const [unidadActiva, setUnidadActiva] = useState("all");
@@ -81,6 +84,17 @@ export default function PermisosPage() {
   const [openView, setOpenView] = useState(false);
   const [viewItem, setViewItem] = useState(null);
   const [openDelete, setOpenDelete] = useState(false);
+
+  useEffect(() => {
+    const id = searchParams.get("id");
+    if (!id) return;
+    permisosApi.getById(id).then((permiso) => {
+      if (!permiso) return;
+      setViewItem(permiso);
+      setOpenView(true);
+    }).catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
   const [deleteId, setDeleteId] = useState(null);
 
   // Vista principal: 'tabla' | 'calendario'

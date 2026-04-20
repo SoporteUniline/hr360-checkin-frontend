@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +18,8 @@ import { Combobox } from "@/components/Combobox";
 
 export default function TiposRegistro() {
   const { dataUser } = useAuth();
-  const [filter, setFilter] = useState("");
+  const searchParams = useSearchParams();
+  const [filter, setFilter] = useState(searchParams.get("filter") || "");
   const [unidadActiva, setUnidadActiva] = useState("all");
   const { options: unidadOptions, byId: unidadById } = useUnidadesNegocio();
   const empresaActiva =
