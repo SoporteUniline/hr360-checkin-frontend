@@ -17,26 +17,39 @@ export default function useAsistenciaData(
   horasExtra,
   sinGoceDeSueldo,
   diasFestivos,
-  requiereAutorizacion
+  requiereAutorizacion,
 ) {
   let url = null;
+
   if (idEmpresa) {
     const params = new URLSearchParams({
-      empresa: idEmpresa,
+      empresa: String(idEmpresa),
       fechaInicio,
       fechaFin,
-      page: page.toString(),
-      limit: limit.toString(),
+      page: String(page),
+      limit: String(limit),
     });
 
-    if (debouncedFiltroEmpleado)
+    if (debouncedFiltroEmpleado) {
       params.append("filtroEmpleado", debouncedFiltroEmpleado);
-    if (filtroDepartamento)
+    }
+
+    if (Array.isArray(filtroDepartamento)) {
+      if (filtroDepartamento.length > 0) {
+        params.append("filtroDepartamento", JSON.stringify(filtroDepartamento));
+      }
+    } else if (filtroDepartamento) {
       params.append("filtroDepartamento", filtroDepartamento);
-    if (filtroTipoRegistro)
+    }
+
+    if (filtroTipoRegistro) {
       params.append("filtroTipoRegistro", filtroTipoRegistro);
-    if (filtroEstadoAsistencia)
+    }
+
+    if (filtroEstadoAsistencia) {
       params.append("filtroEstadoAsistencia", filtroEstadoAsistencia);
+    }
+
     if (soloPresentes) params.append("soloPresentes", "1");
     if (soloAusentes) params.append("soloAusentes", "1");
     if (horasExtra) params.append("horasExtra", "1");

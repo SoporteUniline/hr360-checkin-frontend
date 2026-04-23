@@ -64,13 +64,15 @@ export default function AsistenciaDataContainer({
 
   // Ref para siempre tener el mutate más reciente sin recrear el EventSource
   const mutateRef = useRef(mutate);
-  useEffect(() => { mutateRef.current = mutate; }, [mutate]);
+  useEffect(() => {
+    mutateRef.current = mutate;
+  }, [mutate]);
 
   // SSE: actualización en tiempo real cuando llega una checada
   useEffect(() => {
     if (!idEmpresa) return;
     const es = new EventSource(
-      `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/reloj/eventos-checada?id_empresa=${idEmpresa}`
+      `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/reloj/eventos-checada?id_empresa=${idEmpresa}`,
     );
     es.addEventListener("checada", () => mutateRef.current());
     es.onerror = () => {};
@@ -81,7 +83,16 @@ export default function AsistenciaDataContainer({
     let isCancelled = false;
 
     const appendIf = (params, key, value) => {
-      if (value !== undefined && value !== null && value !== "") {
+      if (value === undefined || value === null) return;
+
+      if (Array.isArray(value)) {
+        if (value.length > 0) {
+          params.append(key, JSON.stringify(value));
+        }
+        return;
+      }
+
+      if (value !== "") {
         params.append(key, String(value));
       }
     };

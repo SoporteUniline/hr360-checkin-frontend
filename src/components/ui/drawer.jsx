@@ -43,9 +43,9 @@ const DrawerContent = React.forwardRef(
         )}
         {...props}
       >
-        {/* <VisuallyHidden> */}
-        <DrawerTitle className="text-center">Adamia</DrawerTitle>
-        {/* </VisuallyHidden> */}
+        <VisuallyHidden>
+          <DrawerTitle>Adamia</DrawerTitle>
+        </VisuallyHidden>
 
         {children}
       </DrawerPrimitive.Content>

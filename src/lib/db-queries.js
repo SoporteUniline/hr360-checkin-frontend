@@ -1,4 +1,4 @@
-import { pool } from "@/config/database";
+import pool from "@/config/database";
 
 export async function checkSubscriptionDirect(userId) {
   try {
@@ -25,8 +25,7 @@ export async function checkSubscriptionDirect(userId) {
       LIMIT 1
     `;
 
-    const [rows] = await pool.promise().query(query, [userId, userId]);
-
+    const [rows] = await pool.query(query, [userId, userId]);
     return rows.length > 0;
   } catch (error) {
     console.error("Error directo en DB:", error);
@@ -44,7 +43,7 @@ export async function checkEmpresaSubscription(idEmpresa) {
       LIMIT 1
     `;
 
-    const [rows] = await pool.promise().query(query, [idEmpresa]);
+    const [rows] = await pool.query(query, [idEmpresa]);
     return rows.length > 0;
   } catch (error) {
     console.error("Error validando empresa en DB:", error);
@@ -54,11 +53,10 @@ export async function checkEmpresaSubscription(idEmpresa) {
 
 export async function getEmpresaSlug(idEmpresa) {
   try {
-    const [rows] = await pool
-      .promise()
-      .query("SELECT slug FROM empresas WHERE id_empresa = ? LIMIT 1", [
-        idEmpresa,
-      ]);
+    const [rows] = await pool.query(
+      "SELECT slug FROM empresas WHERE id_empresa = ? LIMIT 1",
+      [idEmpresa],
+    );
     return rows[0]?.slug || null;
   } catch (error) {
     return null;
@@ -66,14 +64,20 @@ export async function getEmpresaSlug(idEmpresa) {
 }
 
 export async function checkSlugSubscription(slug) {
-  const query = `
-    SELECT c.id 
-    FROM Contrataciones c
-    JOIN usuarios_empresas ue ON c.usuario_id = ue.id_usuario
-    JOIN empresas e ON ue.id_empresa = e.id_empresa
-    WHERE e.slug = ? AND c.estado = 'Activo'
-    LIMIT 1
-  `;
-  const [rows] = await pool.promise().query(query, [slug]);
-  return rows.length > 0;
+  try {
+    const query = `
+      SELECT c.id 
+      FROM Contrataciones c
+      JOIN usuarios_empresas ue ON c.usuario_id = ue.id_usuario
+      JOIN empresas e ON ue.id_empresa = e.id_empresa
+      WHERE e.slug = ? AND c.estado = 'Activo'
+      LIMIT 1
+    `;
+
+    const [rows] = await pool.query(query, [slug]);
+    return rows.length > 0;
+  } catch (error) {
+    console.error("Error validando slug en DB:", error);
+    return false;
+  }
 }

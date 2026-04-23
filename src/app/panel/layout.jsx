@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { AppSidebar } from "../../components/Sidebar/app-sidebar";
 import { SiteHeader } from "../../components/Sidebar/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -8,13 +9,20 @@ import SubscriptionRequiredView from "@/components/SubscriptionRequiredView";
 // Rutas del panel que siempre se muestran aunque no haya suscripción activa
 const RUTAS_SIN_RESTRICCION = ["/panel/mi-suscripcion"];
 
+// Cachea por request/argumento
+const getSubscriptionStatus = cache(async (userId) => {
+  return await checkSubscriptionDirect(userId);
+});
+
 export default async function LayoutPanel({ children }) {
   const cookieStore = await cookies();
   const token = cookieStore.get("token")?.value;
   const headersList = await headers();
   const pathname = headersList.get("x-pathname") || "";
 
-  const sinRestriccion = RUTAS_SIN_RESTRICCION.some((r) => pathname.startsWith(r));
+  const sinRestriccion = RUTAS_SIN_RESTRICCION.some((r) =>
+    pathname.startsWith(r),
+  );
 
   let userId = null;
 
@@ -30,7 +38,9 @@ export default async function LayoutPanel({ children }) {
     }
   }
 
-  const hasActivePlan = sinRestriccion || (userId ? await checkSubscriptionDirect(userId) : true);
+  const hasActivePlan =
+    sinRestriccion || (userId ? await getSubscriptionStatus(userId) : true);
+
   return (
     <SidebarProvider>
       <AppSidebar variant="inset" />

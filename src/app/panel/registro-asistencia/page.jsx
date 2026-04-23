@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import useDebounce from "@/hooks/useDebounce";
 import AsistenciaDataContainer from "./AsistenciaDataContainer";
 import AsistenciaCards from "./AsistenciaCards";
+import MobileAsistenciaView from "./MobileAsistenciaView";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -17,6 +18,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { RotateCcw } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useIsMobile } from "@/hooks/use-mobile";
+import useDepartamentosData from "@/hooks/useDepartamentosData";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -25,12 +28,14 @@ export default function ControlAsistencia() {
   const searchParams = useSearchParams();
   const [empresaActiva, setEmpresaActiva] = useState(null);
   const idEmpresa = empresaActiva;
-  const initialDate = searchParams.get("fecha") || dayjs().tz("America/Mexico_City").format("YYYY-MM-DD");
+  const initialDate =
+    searchParams.get("fecha") ||
+    dayjs().tz("America/Mexico_City").format("YYYY-MM-DD");
   const getInitialFilters = () => ({
     fechaInicio: initialDate,
     fechaFin: initialDate,
     filtroEmpleado: searchParams.get("empleado") || "",
-    filtroDepartamento: "",
+    filtroDepartamento: [],
     filtroTipoRegistro: "",
     filtroEstadoAsistencia: "",
     page: 1,
@@ -45,9 +50,11 @@ export default function ControlAsistencia() {
   const [fechaFin, setFechaFin] = useState(initialDate);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const [filtroEmpleado, setFiltroEmpleado] = useState(searchParams.get("empleado") || "");
+  const [filtroEmpleado, setFiltroEmpleado] = useState(
+    searchParams.get("empleado") || "",
+  );
   const debouncedFiltroEmpleado = useDebounce(filtroEmpleado, 500);
-  const [filtroDepartamento, setFiltroDepartamento] = useState("");
+  const [filtroDepartamento, setFiltroDepartamento] = useState([]);
   const [filtroTipoRegistro, setFiltroTipoRegistro] = useState("");
   const [filtroEstadoAsistencia, setFiltroEstadoAsistencia] = useState("");
   const [mostrarCamposExtras, setMostrarCamposExtras] = useState(false);
@@ -59,12 +66,20 @@ export default function ControlAsistencia() {
   const [requiereAutorizacion, setRequiereAutorizacion] = useState(false);
 
   const { dataUser } = useAuth();
+  const isMobile = useIsMobile();
+  const { departamentos } = useDepartamentosData(idEmpresa);
 
   useEffect(() => {
     if (dataUser?.empresas?.length > 0 && !empresaActiva) {
       setEmpresaActiva("all");
     }
   }, [dataUser, empresaActiva]);
+
+  // Use a larger limit on mobile to load all employees for client-side grouping
+  useEffect(() => {
+    if (isMobile) setLimit(500);
+    else setLimit(10);
+  }, [isMobile]);
 
   const [modoFormulario, setModoFormulario] = useState(false);
   const [values, setValues] = useState(null);
@@ -85,7 +100,7 @@ export default function ControlAsistencia() {
     setFechaInicio(today);
     setFechaFin(today);
     setFiltroEmpleado("");
-    setFiltroDepartamento("");
+    setFiltroDepartamento([]);
     setFiltroTipoRegistro("");
     setFiltroEstadoAsistencia("");
     setPage(1);
@@ -122,9 +137,58 @@ export default function ControlAsistencia() {
     requiereAutorizacion,
   });
 
+  // Mobile view: full-height layout overriding panel padding
+  if (isMobile) {
+    const registros = data?.registros || [];
+    return (
+      <>
+        {modoFormulario && (
+          <FormularioAsistenciasMasivas
+            values={values}
+            setModoFormulario={setModoFormulario}
+            mutate={mutate}
+            idEmpresa={idEmpresa}
+          />
+        )}
+        <div className="-m-5 h-[calc(100dvh-3.5rem)] overflow-hidden">
+          <MobileAsistenciaView
+            registros={registros}
+            data={data}
+            mutate={mutate}
+            fechaInicio={fechaInicio}
+            fechaFin={fechaFin}
+            setFechaInicio={setFechaInicio}
+            setFechaFin={setFechaFin}
+            filtroEmpleado={filtroEmpleado}
+            setFiltroEmpleado={(v) => {
+              setFiltroEmpleado(v);
+              setPage(1);
+            }}
+            filtroEstadoAsistencia={filtroEstadoAsistencia}
+            setFiltroEstadoAsistencia={setFiltroEstadoAsistencia}
+            filtroDepartamento={filtroDepartamento}
+            setFiltroDepartamento={setFiltroDepartamento}
+            soloPresentes={soloPresentes}
+            setSoloPresentes={setSoloPresentes}
+            page={page}
+            setPage={setPage}
+            limit={limit}
+            setLimit={setLimit}
+            empresaActiva={empresaActiva}
+            departamentos={departamentos}
+            abrirFormulario={abrirFormulario}
+            isLoading={!data}
+            onResetFilters={handleResetFilters}
+          />
+        </div>
+      </>
+    );
+  }
+
+  // Desktop view
   return (
     <div className="space-y-6">
-      {/* Header ADAMIA */}
+      {/* Header */}
       <div className="bg-linear-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
         <div className="flex items-center gap-3">
           <div className="bg-[#2563EB] p-2.5 rounded-lg">
@@ -152,12 +216,17 @@ export default function ControlAsistencia() {
       <div className="bg-white rounded-xl border border-gray-100 p-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Empleado</label>
+            <label className="text-sm font-medium text-gray-700">
+              Empleado
+            </label>
             <Input
               type="text"
               placeholder="Buscar empleado..."
               value={filtroEmpleado}
-              onChange={(e) => { setFiltroEmpleado(e.target.value); setPage(1); }}
+              onChange={(e) => {
+                setFiltroEmpleado(e.target.value);
+                setPage(1);
+              }}
             />
           </div>
           <div className="flex flex-col gap-1">
@@ -197,9 +266,13 @@ export default function ControlAsistencia() {
           <label className="flex items-center gap-2 cursor-pointer select-none w-fit">
             <Checkbox
               checked={mostrarCamposExtras}
-              onCheckedChange={(value) => setMostrarCamposExtras(Boolean(value))}
+              onCheckedChange={(value) =>
+                setMostrarCamposExtras(Boolean(value))
+              }
             />
-            <span className="text-sm text-gray-700">Mostrar todos los campos</span>
+            <span className="text-sm text-gray-700">
+              Mostrar todos los campos
+            </span>
           </label>
         </div>
       </div>

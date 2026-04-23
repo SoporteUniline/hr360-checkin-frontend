@@ -3,7 +3,7 @@ import { useState } from "react";
 import axios from "axios";
 import { useSnackbar } from "notistack";
 
-export default function useAsistenciaActions(mutateTable) {
+export default function useAsistenciaActions(mutateTable, onSaveSuccess) {
   const { enqueueSnackbar } = useSnackbar();
   const [editingRowId, setEditingRowId] = useState(null);
   const [editingRowData, setEditingRowData] = useState({});
@@ -30,6 +30,23 @@ export default function useAsistenciaActions(mutateTable) {
     setIsSaving(true);
 
     const dataToSend = { ...editingRowData };
+
+    if (dataToSend.correccion) {
+      if (!dataToSend.entrada && !dataToSend.salida) {
+        enqueueSnackbar("Debes capturar al menos una hora (entrada o salida)", {
+          variant: "warning",
+        });
+        setIsSaving(false);
+        return;
+      }
+    }
+
+    // if (!editingRowData?.entrada) {
+    //   enqueueSnackbar("Debes ingresar la hora de entrada antes de guardar", {
+    //     variant: "warning",
+    //   });
+    //   return;
+    // }
 
     console.log("Datos que se van a enviar al backend:", dataToSend);
 
@@ -78,7 +95,7 @@ export default function useAsistenciaActions(mutateTable) {
 
     if (dataToSend.extras_autorizadas_por) {
       dataToSend.extras_autorizadas_por = Number(
-        dataToSend.extras_autorizadas_por
+        dataToSend.extras_autorizadas_por,
       );
     } else {
       dataToSend.extras_autorizadas_por = null;
@@ -92,7 +109,7 @@ export default function useAsistenciaActions(mutateTable) {
 
     if (dataToSend.porcentaje_dia_festivo) {
       dataToSend.porcentaje_dia_festivo = parseFloat(
-        dataToSend.porcentaje_dia_festivo
+        dataToSend.porcentaje_dia_festivo,
       );
     } else {
       dataToSend.porcentaje_dia_festivo = 0;
@@ -114,23 +131,24 @@ export default function useAsistenciaActions(mutateTable) {
     dataToSend.hrs_extra = dataToSend.hrs_extra ? 1 : 0;
 
     try {
-      await axios.put(
+      const response = await axios.put(
         `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/asistencias/${dataToSend.id}`,
         dataToSend,
         {
           headers: {
             "Content-Type": "application/json",
-            // "Authorization": `Bearer ${tuTokenDeAuth}`, // Asegúrate de incluir tu token si es necesario
           },
-        }
+        },
       );
 
       enqueueSnackbar("Asistencia actualizada correctamente.", {
         variant: "success",
       });
+
+      onSaveSuccess?.(response.data?.asistencia ?? null);
       setEditingRowId(null);
       setEditingRowData({});
-      mutateTable(); // Revalida los datos de la tabla para mostrar los cambios
+      await mutateTable?.();
     } catch (error) {
       const msg = error.response?.data?.message || error.message;
       console.error("❌ Error al actualizar asistencia:", msg);
