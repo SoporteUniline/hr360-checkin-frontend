@@ -410,12 +410,12 @@ export default function MobileAsistenciaView({
       {/* ─── Dark header ─── */}
       <div className="text-black px-4 pt-3 pb-4 shrink-0">
         {/* Company row */}
-        <div className="mb-1">
+        {/* <div className="mb-1">
           <h1 className="text-lg font-bold leading-tight">Asistencia</h1>
           <p className="text-xs uppercase tracking-wider">
             {totalEmpleados > 0 ? `${totalEmpleados} EMPLEADOS` : ""}
           </p>
-        </div>
+        </div> */}
 
         {/* Date navigator */}
         <div className="flex items-center justify-between bg-white/8 rounded-xl px-3 py-2 mt-2">
@@ -429,14 +429,14 @@ export default function MobileAsistenciaView({
               </button>
               <div className="text-center flex-1 border-2 rounded-lg mx-5 px-3 flex justify-between">
                 <div className="flex items-center p-3">
-                  <span className="font-bold text-2xl">{diaNumero}</span>
-                  <div className="flex flex-col justify-start px-2">
-                    <span className="text-xs text-gray-500 text-left">
+                  <span className="font-bold text-lg">{diaNumero}</span>
+                  <div className="flex flex-col justify-start px-2 gap-0">
+                    <span className="text-[10px]  text-gray-500 text-left">
                       {mesNombre} {año}
                     </span>
                     <div className="font-bold text-left">
-                      <span className="text-sm"> {diaNombre}</span>
-                      {isToday && <span className="text-sm"> · Hoy</span>}
+                      <span className="text-xs"> {diaNombre}</span>
+                      {isToday && <span className="text-xs"> · Hoy</span>}
                     </div>
                   </div>
                 </div>
@@ -444,7 +444,7 @@ export default function MobileAsistenciaView({
                 {!isToday && (
                   <button
                     onClick={handleGoToToday}
-                    className="text-blue-600 font-medium flex items-center gap-1"
+                    className="text-blue-600 font-medium flex items-center gap-1 cursor-pointer"
                   >
                     {isPast ? (
                       <>
@@ -494,7 +494,7 @@ export default function MobileAsistenciaView({
         </div>
 
         {/* Stats + progress — solo en vista de un día */}
-        {isSingleDay && (
+        {/* {isSingleDay && (
           <div className="bg-gray-900 py-3 rounded-2xl px-5 mt-2">
             <div className="flex justify-between mt-3 mb-2">
               <div className="text-center min-w-0 flex-1">
@@ -556,7 +556,7 @@ export default function MobileAsistenciaView({
               />
             </div>
           </div>
-        )}
+        )} */}
       </div>
 
       {/* ─── Search + Filter ─── */}
