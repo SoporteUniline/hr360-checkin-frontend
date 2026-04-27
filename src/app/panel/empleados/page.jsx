@@ -7,11 +7,13 @@ import { fetcherWithToken } from "@/lib/fetcher";
 import { useAuth } from "@/context/AuthContext";
 import EmpleadosDataContainer from "./EmpleadosDataContainer";
 import FormularioEmpleado from "./FormularioEmpleado";
+import MobileEmpleadosView from "./MobileEmpleadosView";
 import { Button } from "@/components/ui/button";
 import { Users, UsersRound, UserPlus, Building2 } from "lucide-react";
 import ModalCapacidadAgotada from "@/components/ModalCapacidadAgotada";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import axios from "@/lib/axios";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 // Componente de tarjeta de estadística estilo ADAMIA
 const StatCard = ({ title, count, limit, icon: Icon, trend }) => {
@@ -43,10 +45,11 @@ const StatCard = ({ title, count, limit, icon: Icon, trend }) => {
 };
 
 export default function RegistroEmpleados() {
+  const isMobile = useIsMobile();
   const [modalCapacidadAbierto, setModalCapacidadAbierto] = useState(false);
   const [mensajeCapacidad, setMensajeCapacidad] = useState("");
   const [page, setPage] = useState(1);
-  const limit = 10;
+  const [limit, setLimit] = useState(10);
   const [modoFormulario, setModoFormulario] = useState(false);
   const [editar, setEditar] = useState(false);
   const [soloLectura, setSoloLectura] = useState(false);
@@ -54,6 +57,10 @@ export default function RegistroEmpleados() {
 
   const searchParams = useSearchParams();
   const [filtroNombre, setFiltroNombre] = useState(searchParams.get("buscar") || "");
+
+  useEffect(() => {
+    setLimit(isMobile ? 500 : 10);
+  }, [isMobile]);
 
   const { dataUser } = useAuth();
   const [empresaActiva, setEmpresaActiva] = useState("all");
@@ -140,6 +147,52 @@ export default function RegistroEmpleados() {
     abrirFormulario,
     resetFilters,
   });
+
+  if (isMobile && modoFormulario) {
+    return (
+      <>
+        <div className="-m-5 min-h-[calc(100dvh-3.5rem)]">
+          <FormularioEmpleado
+            key={`formulario-${values?.id_empleado || "nuevo"}`}
+            editar={editar}
+            values={values}
+            page={page}
+            limit={limit}
+            setModoFormulario={setModoFormulario}
+            modoFormulario={modoFormulario}
+            soloLectura={soloLectura}
+            setEditar={setEditar}
+            setSoloLectura={setSoloLectura}
+            mutate={mutate}
+          />
+        </div>
+        <ModalCapacidadAgotada
+          open={modalCapacidadAbierto}
+          onClose={() => setModalCapacidadAbierto(false)}
+          mensaje={mensajeCapacidad}
+        />
+      </>
+    );
+  }
+
+  if (isMobile) {
+    return (
+      <>
+        <div className="-m-5 h-[calc(100dvh-3.5rem)] overflow-hidden">
+          <MobileEmpleadosView
+            empleados={data?.data || []}
+            abrirFormulario={abrirFormulario}
+            isLoading={false}
+          />
+        </div>
+        <ModalCapacidadAgotada
+          open={modalCapacidadAbierto}
+          onClose={() => setModalCapacidadAbierto(false)}
+          mensaje={mensajeCapacidad}
+        />
+      </>
+    );
+  }
 
   return (
     <>
