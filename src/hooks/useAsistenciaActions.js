@@ -31,14 +31,26 @@ export default function useAsistenciaActions(mutateTable, onSaveSuccess) {
 
     const dataToSend = { ...editingRowData };
 
-    if (dataToSend.correccion) {
-      if (!dataToSend.entrada && !dataToSend.salida) {
-        enqueueSnackbar("Debes capturar al menos una hora (entrada o salida)", {
-          variant: "warning",
-        });
-        setIsSaving(false);
-        return;
-      }
+    // console.log(dataToSend);
+
+    // if (dataToSend.correccion) {
+    //   if (!dataToSend.entrada && !dataToSend.salida) {
+    //     enqueueSnackbar("Debes capturar al menos una hora (entrada o salida)", {
+    //       variant: "warning",
+    //     });
+    //     setIsSaving(false);
+    //     return;
+    //   }
+    // }
+
+    const requiereHorario = Number(dataToSend.id_tipo_permiso) === 14;
+
+    if (dataToSend.correccion && requiereHorario && !dataToSend.entrada) {
+      enqueueSnackbar("Debes capturar la hora de entrada para asistencia", {
+        variant: "warning",
+      });
+      setIsSaving(false);
+      return;
     }
 
     // if (!editingRowData?.entrada) {

@@ -281,7 +281,10 @@ export default function MobileEmpleadoDetalle({
   };
 
   const areTimesDisabled = !currentData?.correccion;
-  const isInvalid = !!currentData?.correccion && !currentData?.entrada;
+  const requiereHorario = Number(currentData?.id_tipo_permiso) === 14;
+
+  const isInvalid =
+    currentData?.correccion && requiereHorario && !currentData?.entrada;
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange} direction="bottom">
@@ -439,7 +442,7 @@ export default function MobileEmpleadoDetalle({
                       />
                     </div>
                   </div>
-                  {!areTimesDisabled && !entradaEditFmt && (
+                  {!areTimesDisabled && requiereHorario && !entradaEditFmt && (
                     <p className="text-xs text-red-500 mt-1">
                       Debes ingresar la hora de entrada
                     </p>
