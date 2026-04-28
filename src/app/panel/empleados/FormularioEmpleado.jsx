@@ -538,26 +538,33 @@ export default function FormularioEmpleado({
 
   return (
     <Form {...form}>
-      {/* Header del formulario - Estilo ADAMIA */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
-        <div className="flex justify-between items-center">
-          <button
-            type="button"
-            className="flex items-center gap-2 text-[#2563EB] hover:text-[#1d4ed8] transition-colors font-medium"
-            onClick={() => {
-              setModoFormulario(false);
-              setTab("personales");
-            }}
-          >
-            <Icon icon="material-symbols:arrow-back" width={20} height={20} />
-            <span className="text-sm">Regresar a la tabla</span>
-          </button>
+      {/* Contenedor principal: columna fija en mobile, flujo normal en desktop */}
+      <div className="flex flex-col h-[calc(100dvh-3.5rem)] sm:block sm:h-auto">
 
-          <div className="flex items-center gap-3">
+        {/* ── Header mobile (oscuro, fijo arriba) ── */}
+        <div className="sm:hidden bg-gray-900 text-white px-4 pt-4 pb-3 shrink-0">
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              className="flex items-center gap-2 text-white active:opacity-70 min-w-0"
+              onClick={() => {
+                setModoFormulario(false);
+                setTab("personales");
+              }}
+            >
+              <Icon icon="material-symbols:arrow-back" width={20} height={20} className="shrink-0" />
+              <span className="text-sm font-semibold truncate">
+                {soloLectura || editar
+                  ? values
+                    ? `${values.nombre} ${values.apellido_paterno}`
+                    : "Empleado"
+                  : "Nuevo empleado"}
+              </span>
+            </button>
             {soloLectura && (
-              <Button
-                variant="outline"
-                className="border-[#2563EB] text-[#2563EB] hover:bg-blue-50"
+              <button
+                type="button"
+                className="shrink-0 bg-white/10 active:bg-white/20 text-white text-sm font-medium px-3 py-1.5 rounded-lg"
                 onClick={() => {
                   fueDesdeLectura.current = true;
                   setEditar(true);
@@ -565,251 +572,319 @@ export default function FormularioEmpleado({
                 }}
               >
                 Editar
-              </Button>
-            )}
-
-            {soloLectura ? null : (
-              <Button
-                type="submit"
-                form="formulario-empleado"
-                className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
-              >
-                {editar ? "Actualizar" : "Registrar"}
-              </Button>
+              </button>
             )}
           </div>
         </div>
-      </div>
-      <form
-        id="formulario-empleado"
-        onSubmit={form.handleSubmit(onValidSubmit, onInvalidSubmit)}
-        className="space-y-6"
-      >
-        {/* SECCIÓN UNIFICADA: Foto + Info + QR */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex flex-col md:flex-row gap-6 items-start">
-            {/* 1. Foto de Perfil */}
-            <div className="flex-shrink-0">
-              <ImageUpload
-                imagePreview={imagePreview}
-                setImagePreview={setImagePreview}
-                setSelectedFile={setSelectedFile}
-                soloLectura={soloLectura}
-              />
+
+        {/* ── Header desktop (tarjeta blanca) ── */}
+        <div className="hidden sm:block bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
+          <div className="flex justify-between items-center">
+            <button
+              type="button"
+              className="flex items-center gap-2 text-[#2563EB] hover:text-[#1d4ed8] transition-colors font-medium"
+              onClick={() => {
+                setModoFormulario(false);
+                setTab("personales");
+              }}
+            >
+              <Icon icon="material-symbols:arrow-back" width={20} height={20} />
+              <span className="text-sm">Regresar a la tabla</span>
+            </button>
+
+            <div className="flex items-center gap-3">
+              {soloLectura && (
+                <Button
+                  variant="outline"
+                  className="border-[#2563EB] text-[#2563EB] hover:bg-blue-50"
+                  onClick={() => {
+                    fueDesdeLectura.current = true;
+                    setEditar(true);
+                    setSoloLectura(false);
+                  }}
+                >
+                  Editar
+                </Button>
+              )}
+
+              {soloLectura ? null : (
+                <Button
+                  type="submit"
+                  form="formulario-empleado"
+                  className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
+                >
+                  {editar ? "Actualizar" : "Registrar"}
+                </Button>
+              )}
             </div>
+          </div>
+        </div>
 
-            {/* 2. Información Principal (Nombre y Puesto) */}
-            <div className="flex-1 space-y-4 w-full">
-              <FormField
-                name="nombre"
-                control={form.control}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        ref={nombreInputRef}
-                        disabled={soloLectura}
-                        placeholder="Ingrese el nombre del empleado"
-                        className="text-2xl font-semibold text-gray-900 border-0 border-b-2 border-gray-200 focus:border-[#2563EB] focus:ring-0 rounded-none px-0 h-auto py-2 bg-transparent"
-                        autoFocus
-                        value={field.value ?? ""}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                name="puesto"
-                control={form.control}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        autoComplete="organization-title"
-                        autoCorrect="off"
-                        autoCapitalize="off"
-                        disabled={soloLectura}
-                        spellCheck={false}
-                        value={field.value ?? ""}
-                        placeholder="Nombre del puesto"
-                        className="text-lg text-gray-600 border-0 border-b-2 border-gray-200 focus:border-[#2563EB] focus:ring-0 rounded-none px-0 h-auto py-2 bg-transparent"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* Botón de Credencial (Solo si ya existe el empleado) */}
-              {(soloLectura || editar) && values && (
-                <div className="pt-2">
-                  <BotonCredencial
-                    empleado={values}
+        {/* ── Área scrolleable ── */}
+        <div className="flex-1 overflow-y-auto sm:overflow-visible">
+          <form
+            id="formulario-empleado"
+            onSubmit={form.handleSubmit(onValidSubmit, onInvalidSubmit)}
+            className="space-y-0 sm:space-y-6"
+          >
+            {/* SECCIÓN: Foto + Info + QR */}
+            <div className="bg-white border-b border-gray-100 sm:rounded-xl sm:shadow-sm sm:border sm:border-gray-100 p-4 sm:p-6">
+              <div className="flex flex-col md:flex-row gap-4 sm:gap-6 items-start">
+                {/* 1. Foto de Perfil */}
+                <div className="shrink-0">
+                  <ImageUpload
                     imagePreview={imagePreview}
+                    setImagePreview={setImagePreview}
+                    setSelectedFile={setSelectedFile}
+                    soloLectura={soloLectura}
                   />
+                </div>
+
+                {/* 2. Información Principal (Nombre y Puesto) */}
+                <div className="flex-1 space-y-4 w-full">
+                  <FormField
+                    name="nombre"
+                    control={form.control}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            ref={nombreInputRef}
+                            disabled={soloLectura}
+                            placeholder="Ingrese el nombre del empleado"
+                            className="text-2xl font-semibold text-gray-900 border-0 border-b-2 border-gray-200 focus:border-[#2563EB] focus:ring-0 rounded-none px-0 h-auto py-2 bg-transparent"
+                            autoFocus
+                            value={field.value ?? ""}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    name="puesto"
+                    control={form.control}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            autoComplete="organization-title"
+                            autoCorrect="off"
+                            autoCapitalize="off"
+                            disabled={soloLectura}
+                            spellCheck={false}
+                            value={field.value ?? ""}
+                            placeholder="Nombre del puesto"
+                            className="text-lg text-gray-600 border-0 border-b-2 border-gray-200 focus:border-[#2563EB] focus:ring-0 rounded-none px-0 h-auto py-2 bg-transparent"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Botón de Credencial (Solo si ya existe el empleado) */}
+                  {(soloLectura || editar) && values && (
+                    <div className="pt-2">
+                      <BotonCredencial
+                        empleado={values}
+                        imagePreview={imagePreview}
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. QR de Acceso (solo visible en md+) */}
+                {(editar || soloLectura) && nipActual && (
+                  <div className="hidden md:flex flex-col items-center justify-center p-3 bg-gray-50 border rounded-xl shadow-inner min-w-35">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase mb-2">
+                      Acceso QR
+                    </span>
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?data=${nipActual}&size=150x150`}
+                      alt="QR Empleado"
+                      className="w-24 h-24 lg:w-32 lg:h-32 object-contain"
+                      key={nipActual}
+                    />
+                    <div className="mt-2 text-center">
+                      <p className="text-[10px] text-gray-400 uppercase leading-none">
+                        Código
+                      </p>
+                      <span className="text-sm font-mono font-bold text-blue-600">
+                        {nipActual}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* QR compacto en mobile (debajo del nombre/puesto) */}
+              {(editar || soloLectura) && nipActual && (
+                <div className="md:hidden mt-3 flex items-center gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?data=${nipActual}&size=80x80`}
+                    alt="QR Empleado"
+                    className="w-12 h-12 object-contain shrink-0"
+                    key={nipActual}
+                  />
+                  <div>
+                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wide mb-0.5">
+                      Acceso QR
+                    </p>
+                    <span className="text-base font-mono font-bold text-blue-600">
+                      {nipActual}
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
 
-            {/* 3. Tu QR de Acceso (Lado derecho) */}
-            {(editar || soloLectura) && nipActual && (
-              <div className="flex flex-col items-center justify-center p-3 bg-gray-50 border rounded-xl shadow-inner min-w-[140px]">
-                <span className="text-[10px] font-bold text-gray-400 uppercase mb-2">
-                  Acceso QR
-                </span>
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?data=${nipActual}&size=150x150`}
-                  alt="QR Empleado"
-                  className="w-24 h-24 lg:w-32 lg:h-32 object-contain"
-                  key={nipActual}
-                />
-                <div className="mt-2 text-center">
-                  <p className="text-[10px] text-gray-400 uppercase leading-none">
-                    Código
-                  </p>
-                  <span className="text-sm font-mono font-bold text-blue-600">
-                    {nipActual}
-                  </span>
+            {/* TABS */}
+            <Tabs value={tab} onValueChange={setTab} className="w-full">
+              <div className="bg-white sm:rounded-xl sm:shadow-sm sm:border sm:border-gray-100 overflow-hidden sm:mb-6">
+                <div className="overflow-x-auto">
+                  <TabsList className="flex-nowrap w-max min-w-full bg-gray-50 rounded-none border-b border-gray-200 p-0 h-auto">
+                    <TabsTrigger
+                      value="personales"
+                      className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-6 font-medium"
+                    >
+                      <User className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Datos personales</span>
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="laborales"
+                      className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-6 font-medium"
+                    >
+                      <BriefcaseBusiness className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Datos laborales</span>
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="jornada"
+                      className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-6 font-medium"
+                    >
+                      <Hammer className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Jornada laboral</span>
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="nomina"
+                      className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-6 font-medium"
+                    >
+                      <Icon icon="mdi:cash" className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Datos de nómina</span>
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="cuentas"
+                      className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-6 font-medium"
+                    >
+                      <Icon icon="rivet-icons:money" className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Cuentas bancarias</span>
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="reconocimiento"
+                      className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-6 font-medium"
+                    >
+                      <Icon icon="mdi:face-recognition" className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Escanear rostro</span>
+                    </TabsTrigger>
+                    {values?.id_empleado && (
+                      <TabsTrigger
+                        value="documentos"
+                        className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-6 font-medium"
+                      >
+                        <FolderOpen className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Documentos</span>
+                      </TabsTrigger>
+                    )}
+                  </TabsList>
                 </div>
+
+                {/* Contenido de Tabs con Framer Motion */}
+                <motion.div layout className="w-full p-3 sm:p-6">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={tab}
+                      layout
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.3 }}
+                      className="relative w-full overflow-hidden"
+                    >
+                      {tab === "personales" && (
+                        <TabPersonales form={form} soloLectura={soloLectura} />
+                      )}
+
+                      {tab === "laborales" && (
+                        <TabLaborales
+                          form={form}
+                          soloLectura={soloLectura}
+                          dataUser={dataUser}
+                        />
+                      )}
+
+                      {tab === "jornada" && (
+                        <TabJornada
+                          form={form}
+                          soloLectura={soloLectura}
+                          empleadoId={values?.id_empleado}
+                        />
+                      )}
+
+                      {tab === "nomina" && (
+                        <TabNomina form={form} soloLectura={soloLectura} />
+                      )}
+
+                      {tab === "cuentas" && (
+                        <TabCuentasBancarias
+                          form={form}
+                          soloLectura={soloLectura}
+                        />
+                      )}
+
+                      {tab === "reconocimiento" && (
+                        <TabReconocimiento
+                          form={form}
+                          soloLectura={soloLectura}
+                          active={tab === "reconocimiento"}
+                          setDescriptor={(descriptor) =>
+                            form.setValue("descriptor_facial", descriptor)
+                          }
+                        />
+                      )}
+
+                      {tab === "documentos" && values?.id_empleado && (
+                        <PanelEmpleadoDocumentos
+                          idEmpleado={values.id_empleado}
+                          idEmpresa={values.id_empresa}
+                        />
+                      )}
+                    </motion.div>
+                  </AnimatePresence>
+                </motion.div>
               </div>
-            )}
-          </div>
+            </Tabs>
+          </form>
         </div>
 
-        {/* TABS (Asegúrate de borrar la lista duplicada que estaba abajo) */}
-        <Tabs value={tab} onValueChange={setTab} className="w-full">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
-            <div className="overflow-x-auto">
-              <TabsList className="flex-nowrap w-max min-w-full bg-gray-50 rounded-none border-b border-gray-200 p-0 h-auto">
-                <TabsTrigger
-                  value="personales"
-                  className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-4 px-6 font-medium"
-                >
-                  <User className="mr-2 h-4 w-4" />
-                  Datos personales
-                </TabsTrigger>
-                <TabsTrigger
-                  value="laborales"
-                  className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-4 px-6 font-medium"
-                >
-                  <BriefcaseBusiness className="mr-2 h-4 w-4" />
-                  Datos laborales
-                </TabsTrigger>
-                <TabsTrigger
-                  value="jornada"
-                  className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-4 px-6 font-medium"
-                >
-                  <Hammer className="mr-2 h-4 w-4" />
-                  Jornada laboral
-                </TabsTrigger>
-                <TabsTrigger
-                  value="nomina"
-                  className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-4 px-6 font-medium"
-                >
-                  <Icon icon="mdi:cash" className="mr-2 h-4 w-4" />
-                  Datos de nómina
-                </TabsTrigger>
-                <TabsTrigger
-                  value="cuentas"
-                  className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-4 px-6 font-medium"
-                >
-                  <Icon icon="rivet-icons:money" className="mr-2 h-4 w-4" />
-                  Cuentas bancarias
-                </TabsTrigger>
-                <TabsTrigger
-                  value="reconocimiento"
-                  className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-4 px-6 font-medium"
-                >
-                  <Icon icon="mdi:face-recognition" className="mr-2 h-4 w-4" />
-                  Escanear rostro
-                </TabsTrigger>
-                {/* Pestaña Documentos: solo disponible cuando el empleado ya existe */}
-                {values?.id_empleado && (
-                  <TabsTrigger
-                    value="documentos"
-                    className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-4 px-6 font-medium"
-                  >
-                    <FolderOpen className="mr-2 h-4 w-4" />
-                    Documentos
-                  </TabsTrigger>
-                )}
-              </TabsList>
-            </div>
-
-            {/* Contenido de Tabs con Framer Motion */}
-            <motion.div layout className="w-full p-6">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={tab}
-                  layout
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.3 }}
-                  className="relative w-full overflow-hidden"
-                >
-                  {tab === "personales" && (
-                    <TabPersonales form={form} soloLectura={soloLectura} />
-                  )}
-
-                  {tab === "laborales" && (
-                    <TabLaborales
-                      form={form}
-                      soloLectura={soloLectura}
-                      dataUser={dataUser}
-                    />
-                  )}
-
-                  {tab === "jornada" && (
-                    <TabJornada
-                      form={form}
-                      soloLectura={soloLectura}
-                      empleadoId={values?.id_empleado}
-                    />
-                  )}
-
-                  {tab === "nomina" && (
-                    <TabNomina form={form} soloLectura={soloLectura} />
-                  )}
-
-                  {tab === "cuentas" && (
-                    <TabCuentasBancarias
-                      form={form}
-                      soloLectura={soloLectura}
-                    />
-                  )}
-
-                  {/* 🔹 CAMBIO: Solo renderizar TabReconocimiento cuando esté activo */}
-                  {tab === "reconocimiento" && (
-                    <TabReconocimiento
-                      form={form}
-                      soloLectura={soloLectura}
-                      active={tab === "reconocimiento"}
-                      setDescriptor={(descriptor) =>
-                        form.setValue("descriptor_facial", descriptor)
-                      }
-                    />
-                  )}
-
-                  {/* {tab === "gps" && (
-                    <TabGPS form={form} soloLectura={soloLectura} />
-                  )} */}
-
-                  {tab === "documentos" && values?.id_empleado && (
-                    <PanelEmpleadoDocumentos
-                      idEmpleado={values.id_empleado}
-                      idEmpresa={values.id_empresa}
-                    />
-                  )}
-                </motion.div>
-              </AnimatePresence>
-            </motion.div>
-          </div>
-        </Tabs>
-      </form>
+        {/* ── Barra de acción mobile (fija abajo) ── */}
+        <div className="sm:hidden shrink-0 bg-white border-t border-gray-100 px-4 py-3">
+          {soloLectura ? (
+            <p className="text-center text-xs text-gray-400 py-1">
+              Vista de solo lectura
+            </p>
+          ) : (
+            <button
+              type="submit"
+              form="formulario-empleado"
+              className="w-full bg-gray-900 active:bg-gray-700 text-white text-sm font-bold py-3 rounded-xl"
+            >
+              {editar ? "Actualizar empleado" : "Registrar empleado"}
+            </button>
+          )}
+        </div>
+      </div>
     </Form>
   );
 }

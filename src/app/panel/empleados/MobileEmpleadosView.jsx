@@ -1,5 +1,7 @@
 "use client";
 
+import { ListFilter } from "lucide-react";
+import MobileEmpleadosFiltersDrawer from "./MobileEmpleadosFiltersDrawer";
 import { useState, useMemo } from "react";
 import { Search, Plus, X, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -115,21 +117,65 @@ export default function MobileEmpleadosView({
 }) {
   const [activeTab, setActiveTab] = useState("all");
   const [localSearch, setLocalSearch] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [puestoSeleccionado, setPuestoSeleccionado] = useState([]);
+  const [unidadNegocioSeleccionada, setUnidadNegocioSeleccionada] = useState(
+    [],
+  );
+  const [departamentoSeleccionado, setDepartamentoSeleccionado] = useState([]);
+  const [estadoSeleccionado, setEstadoSeleccionado] = useState([]);
 
-  const counts = useMemo(
-    () => ({
-      all: empleados.length,
-      Activo: empleados.filter((e) => e.estado === "Activo").length,
-      Inactivo: empleados.filter((e) => e.estado === "Inactivo").length,
-    }),
+  const uniqueOptions = (values) =>
+    [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+
+  const puestoOptions = useMemo(
+    () => uniqueOptions(empleados.map((emp) => emp.puesto)),
     [empleados],
   );
 
-  const filtered = useMemo(() => {
+  const unidadNegocioOptions = useMemo(
+    () =>
+      uniqueOptions(empleados.map((emp) => emp.unidad_negocio || emp.sucursal)),
+    [empleados],
+  );
+
+  const departamentoOptions = useMemo(
+    () => uniqueOptions(empleados.map((emp) => emp.departamento)),
+    [empleados],
+  );
+
+  const estadoOptions = useMemo(
+    () => uniqueOptions(empleados.map((emp) => emp.estado)),
+    [empleados],
+  );
+
+  const activeFiltersCount =
+    puestoSeleccionado.length +
+    unidadNegocioSeleccionada.length +
+    departamentoSeleccionado.length +
+    estadoSeleccionado.length;
+
+  const baseFiltered = useMemo(() => {
     let rows = empleados;
 
-    if (activeTab !== "all") {
-      rows = rows.filter((e) => e.estado === activeTab);
+    if (puestoSeleccionado.length > 0) {
+      rows = rows.filter((e) => puestoSeleccionado.includes(e.puesto));
+    }
+
+    if (unidadNegocioSeleccionada.length > 0) {
+      rows = rows.filter((e) =>
+        unidadNegocioSeleccionada.includes(e.unidad_negocio || e.sucursal),
+      );
+    }
+
+    if (departamentoSeleccionado.length > 0) {
+      rows = rows.filter((e) =>
+        departamentoSeleccionado.includes(e.departamento),
+      );
+    }
+
+    if (estadoSeleccionado.length > 0) {
+      rows = rows.filter((e) => estadoSeleccionado.includes(e.estado));
     }
 
     const q = localSearch.trim().toLowerCase();
@@ -139,6 +185,7 @@ export default function MobileEmpleadosView({
         const puesto = (e.puesto || "").toLowerCase();
         const depto = (e.departamento || "").toLowerCase();
         const unidad = (e.unidad_negocio || e.sucursal || "").toLowerCase();
+
         return (
           nombre.includes(q) ||
           puesto.includes(q) ||
@@ -149,7 +196,28 @@ export default function MobileEmpleadosView({
     }
 
     return rows;
-  }, [empleados, activeTab, localSearch]);
+  }, [
+    empleados,
+    localSearch,
+    puestoSeleccionado,
+    unidadNegocioSeleccionada,
+    departamentoSeleccionado,
+    estadoSeleccionado,
+  ]);
+
+  const counts = useMemo(
+    () => ({
+      all: baseFiltered.length,
+      Activo: baseFiltered.filter((e) => e.estado === "Activo").length,
+      Inactivo: baseFiltered.filter((e) => e.estado === "Inactivo").length,
+    }),
+    [baseFiltered],
+  );
+
+  const filtered = useMemo(() => {
+    if (activeTab === "all") return baseFiltered;
+    return baseFiltered.filter((e) => e.estado === activeTab);
+  }, [baseFiltered, activeTab]);
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
@@ -170,26 +238,40 @@ export default function MobileEmpleadosView({
         </div>
 
         {/* Buscador */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50 pointer-events-none" />
-          <input
-            type="text"
-            value={localSearch}
-            onChange={(e) => setLocalSearch(e.target.value)}
-            placeholder="Nombre, puesto, departamento..."
-            className="w-full bg-white/10 text-white placeholder-white/50 text-sm pl-9 pr-9 py-2 rounded-lg border border-white/20 focus:outline-none focus:border-white/50"
-          />
-          {localSearch && (
-            <button
-              onClick={() => setLocalSearch("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50 pointer-events-none" />
+            <input
+              type="text"
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
+              placeholder="Nombre, puesto, departamento..."
+              className="w-full bg-white/10 text-white placeholder-white/50 text-sm pl-9 pr-9 py-2 rounded-lg border border-white/20 focus:outline-none focus:border-white/50"
+            />
+            {localSearch && (
+              <button
+                onClick={() => setLocalSearch("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          <button
+            onClick={() => setShowFilters(true)}
+            className="relative p-2.5 bg-blue-500 rounded-lg text-white shrink-0 active:bg-blue-700"
+          >
+            <ListFilter className="w-4 h-4" />
+
+            {activeFiltersCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+                {activeFiltersCount}
+              </span>
+            )}
+          </button>
         </div>
       </div>
-
       {/* Tabs */}
       <div className="flex bg-white border-b border-gray-200 shrink-0">
         {TABS.map((tab) => (
@@ -217,7 +299,6 @@ export default function MobileEmpleadosView({
           </button>
         ))}
       </div>
-
       {/* Lista */}
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
@@ -243,7 +324,6 @@ export default function MobileEmpleadosView({
           ))
         )}
       </div>
-
       {/* Barra inferior */}
       <div className="bg-white border-t border-gray-200 px-4 py-2.5 flex items-center justify-between shrink-0">
         <span className="text-xs text-gray-500">
@@ -258,6 +338,22 @@ export default function MobileEmpleadosView({
           </button>
         )}
       </div>
+      <MobileEmpleadosFiltersDrawer
+        open={showFilters}
+        onOpenChange={setShowFilters}
+        puestoOptions={puestoOptions}
+        unidadNegocioOptions={unidadNegocioOptions}
+        departamentoOptions={departamentoOptions}
+        estadoOptions={estadoOptions}
+        puestoSeleccionado={puestoSeleccionado}
+        setPuestoSeleccionado={setPuestoSeleccionado}
+        unidadNegocioSeleccionada={unidadNegocioSeleccionada}
+        setUnidadNegocioSeleccionada={setUnidadNegocioSeleccionada}
+        departamentoSeleccionado={departamentoSeleccionado}
+        setDepartamentoSeleccionado={setDepartamentoSeleccionado}
+        estadoSeleccionado={estadoSeleccionado}
+        setEstadoSeleccionado={setEstadoSeleccionado}
+      />
     </div>
   );
 }

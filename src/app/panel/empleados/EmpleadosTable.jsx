@@ -20,6 +20,16 @@ import ActiveFilterChips from "../registro-asistencia/ActiveFilterChips";
 
 dayjs.locale("es");
 
+const getFotoPerfilUrl = (foto) => {
+  if (!foto) return null;
+
+  if (foto.startsWith("http://") || foto.startsWith("https://")) {
+    return foto;
+  }
+
+  return null;
+};
+
 // Función auxiliar para iniciales
 const getInitials = (nombreCompleto = "") => {
   const parts = nombreCompleto.split(" ");
@@ -80,7 +90,9 @@ export default function EmpleadosTable({
 }) {
   const [nombreSeleccionado, setNombreSeleccionado] = useState([]);
   const [puestoSeleccionado, setPuestoSeleccionado] = useState([]);
-  const [unidadNegocioSeleccionada, setUnidadNegocioSeleccionada] = useState([]);
+  const [unidadNegocioSeleccionada, setUnidadNegocioSeleccionada] = useState(
+    [],
+  );
   const [departamentoSeleccionado, setDepartamentoSeleccionado] = useState([]);
   const [estadoSeleccionado, setEstadoSeleccionado] = useState([]);
 
@@ -91,7 +103,9 @@ export default function EmpleadosTable({
   }, [filterOptionsRows, empleados]);
 
   const getNombreCompleto = (emp) =>
-    `${emp.nombre || ""} ${emp.apellido_paterno || ""} ${emp.apellido_materno || ""}`
+    `${emp.nombre || ""} ${emp.apellido_paterno || ""} ${
+      emp.apellido_materno || ""
+    }`
       .trim()
       .replace(/\s+/g, " ");
 
@@ -109,7 +123,9 @@ export default function EmpleadosTable({
   const unidadNegocioOptions = useMemo(
     () =>
       uniqueOptions(
-        sourceRows.map((emp) => emp.unidad_negocio || String(emp.sucursal || "")),
+        sourceRows.map(
+          (emp) => emp.unidad_negocio || String(emp.sucursal || ""),
+        ),
       ),
     [sourceRows],
   );
@@ -127,7 +143,8 @@ export default function EmpleadosTable({
       sourceRows.filter((emp) => {
         const nombre = getNombreCompleto(emp);
         const passNombre =
-          nombreSeleccionado.length === 0 || nombreSeleccionado.includes(nombre);
+          nombreSeleccionado.length === 0 ||
+          nombreSeleccionado.includes(nombre);
         const passPuesto =
           puestoSeleccionado.length === 0 ||
           puestoSeleccionado.includes(emp.puesto);
@@ -324,9 +341,9 @@ export default function EmpleadosTable({
                     <TableCell className="py-4">
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10 ring-2 ring-gray-100">
-                          {emp.foto_perfil ? (
+                          {getFotoPerfilUrl(emp.foto_perfil) ? (
                             <AvatarImage
-                              src={emp.foto_perfil}
+                              src={getFotoPerfilUrl(emp.foto_perfil)}
                               alt={nombreCompleto}
                             />
                           ) : null}

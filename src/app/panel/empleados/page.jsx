@@ -25,12 +25,17 @@ const StatCard = ({ title, count, limit, icon: Icon, trend }) => {
           <p className="text-3xl font-bold text-gray-900">
             {count || 0}
             {limit != null && (
-              <span className="text-xl font-normal text-gray-400"> / {limit}</span>
+              <span className="text-xl font-normal text-gray-400">
+                {" "}
+                / {limit}
+              </span>
             )}
           </p>
           {limit != null ? (
             <p className="text-xs text-gray-500 font-medium mt-1">
-              {limit - (count || 0)} lugar{limit - (count || 0) === 1 ? "" : "es"} disponible{limit - (count || 0) === 1 ? "" : "s"}
+              {limit - (count || 0)} lugar
+              {limit - (count || 0) === 1 ? "" : "es"} disponible
+              {limit - (count || 0) === 1 ? "" : "s"}
             </p>
           ) : trend ? (
             <p className="text-xs text-green-600 font-medium mt-1">{trend}</p>
@@ -56,7 +61,9 @@ export default function RegistroEmpleados() {
   const [values, setValues] = useState(null);
 
   const searchParams = useSearchParams();
-  const [filtroNombre, setFiltroNombre] = useState(searchParams.get("buscar") || "");
+  const [filtroNombre, setFiltroNombre] = useState(
+    searchParams.get("buscar") || "",
+  );
 
   useEffect(() => {
     setLimit(isMobile ? 500 : 10);
@@ -70,10 +77,11 @@ export default function RegistroEmpleados() {
     const idParam = searchParams.get("id");
     if (!idParam) return;
     abrirFormulario({ id_empleado: idParam }, false, true);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  const empresaId = empresaActiva && empresaActiva !== "all" ? empresaActiva : null;
+  const empresaId =
+    empresaActiva && empresaActiva !== "all" ? empresaActiva : null;
   const { data: capacidadData } = useSWR(
     empresaId
       ? `/checador/empleados-capacidad/check-capacidad?empresa_id=${empresaId}`
@@ -179,10 +187,15 @@ export default function RegistroEmpleados() {
     return (
       <>
         <div className="-m-5 h-[calc(100dvh-3.5rem)] overflow-hidden">
-          <MobileEmpleadosView
+          {/* <MobileEmpleadosView
             empleados={data?.data || []}
             abrirFormulario={abrirFormulario}
             isLoading={false}
+          /> */}
+          <MobileEmpleadosView
+            empleados={data?.data || []}
+            abrirFormulario={abrirFormulario}
+            isLoading={!data}
           />
         </div>
         <ModalCapacidadAgotada

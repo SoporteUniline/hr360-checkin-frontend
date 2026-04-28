@@ -291,10 +291,10 @@ export function CommandPalette() {
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh]"
-      onMouseDown={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
+      onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
     >
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+      {/* Backdrop - pointer-events-none para que los toques pasen al div padre */}
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-none" />
 
       {/* Palette */}
       <div
