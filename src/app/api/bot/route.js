@@ -33,6 +33,24 @@ function hasConversationHistory(history = []) {
 }
 
 function getSystemPrompt(context) {
+  if (context === "template") {
+    return [
+      "Eres un experto en recursos humanos y redaccion de documentos laborales en Mexico.",
+      "Genera una plantilla visual completa en HTML para ADAMIA.",
+      "Responde unicamente con HTML del cuerpo del documento (sin markdown, sin html/head/body).",
+      "CATALOGO ESTRICTO de variables permitidas (USA SOLO ESTAS, ninguna otra):",
+      "{{empleado.nombre}}, {{empleado.codigo}}, {{empleado.puesto}}, {{empleado.departamento}}, {{empleado.fecha_ingreso}}, {{empleado.salario}}, {{empleado.email}}, {{empleado.telefono}}, {{empleado.rfc}}, {{empleado.curp}}, {{empresa.nombre}}, {{empresa.representante}}, {{fecha.dia}}, {{fecha.mes}}, {{fecha.anio}}, {{fecha.completa}}.",
+      "PROHIBIDO: NO uses {{empresa.rfc}}, {{empresa.ciudad}}, {{empresa.domicilio}}, {{empresa.direccion}}, {{empresa.telefono}}, {{empresa.email}} ni otras: esos datos NO existen en la base.",
+      "Si necesitas datos de la empresa, limitate a {{empresa.nombre}} y {{empresa.representante}}.",
+      "Incluye estructura completa: encabezado, subtitulo, bloques de contenido, lista o tabla si aporta valor y bloque de firmas.",
+      "Incluye estilos inline o en <style> dentro del contenido para que se vea profesional en WYSIWYG.",
+      "Usa paleta ADAMIA: #2563EB (azul), #7C3AED (morado), grises neutros elegantes.",
+      "Mantente profesional, claro y listo para usar sin ediciones manuales.",
+      "Permite etiquetas: h1, h2, h3, p, strong, em, ul, ol, li, hr, br, table, thead, tbody, tr, th, td.",
+      "No agregues bloques markdown ni explicaciones fuera del HTML.",
+    ].join(" ");
+  }
+
   if (context === "privacy") {
     return [
       "Eres el asistente de privacidad de ADAMIA.",
@@ -346,6 +364,52 @@ function buildSalesOfflineReply(message) {
   return "En este momento no pude conectar con Gemini, pero sigo activo para ayudarte con ADAMIA. Si quieres, te explico funciones o te cotizo por numero de empleados.";
 }
 
+function buildTemplateOfflineReply() {
+  return [
+    '<style>',
+    '  .adamia-doc{font-family:Arial,Helvetica,sans-serif;color:#1f2937;line-height:1.5;}',
+    '  .adamia-header{border-bottom:3px solid #2563EB;padding-bottom:10px;margin-bottom:20px;}',
+    '  .adamia-title{margin:0;font-size:24px;color:#2563EB;font-weight:700;}',
+    '  .adamia-subtitle{margin:6px 0 0 0;font-size:13px;color:#6b7280;}',
+    '  .adamia-card{border:1px solid #e5e7eb;border-left:4px solid #7C3AED;border-radius:8px;padding:14px;margin:14px 0;background:#fafafa;}',
+    '  .adamia-signatures{margin-top:34px;display:flex;justify-content:space-between;gap:20px;}',
+    '  .adamia-signatures div{flex:1;text-align:center;}',
+    '  .adamia-line{border-top:1px solid #9ca3af;margin-top:48px;padding-top:8px;font-size:12px;color:#6b7280;}',
+    '</style>',
+    '<div class="adamia-doc">',
+    '  <div class="adamia-header">',
+    '    <h1 class="adamia-title">Constancia Laboral</h1>',
+    '    <p class="adamia-subtitle">Emitida por {{empresa.nombre}} el {{fecha.completa}}</p>',
+    "  </div>",
+    '  <p>Por medio de la presente, se hace constar que <strong>{{empleado.nombre}}</strong>, con código interno <strong>{{empleado.codigo}}</strong>, labora en <strong>{{empresa.nombre}}</strong> desempeñando el puesto de <strong>{{empleado.puesto}}</strong> dentro del área de <strong>{{empleado.departamento}}</strong>, desde la fecha <strong>{{empleado.fecha_ingreso}}</strong>.</p>',
+    '  <div class="adamia-card">',
+    '    <h3 style="margin:0 0 8px 0;color:#7C3AED;">Datos relevantes</h3>',
+    '    <ul style="margin:0;padding-left:20px;">',
+    '      <li>Empresa: {{empresa.nombre}}</li>',
+    '      <li>RFC empleado: {{empleado.rfc}}</li>',
+    '      <li>CURP empleado: {{empleado.curp}}</li>',
+    '      <li>Salario mensual: {{empleado.salario}}</li>',
+    '    </ul>',
+    "  </div>",
+    '  <p>La presente constancia se expide a solicitud de la parte interesada para los fines legales y administrativos que a su derecho convengan.</p>',
+    '  <p>Sin más por el momento, quedamos a sus órdenes.</p>',
+    '  <div class="adamia-signatures">',
+    '    <div><div class="adamia-line">{{empresa.representante}}<br/>Representante de la empresa</div></div>',
+    '    <div><div class="adamia-line">{{empleado.nombre}}<br/>Colaborador</div></div>',
+    "  </div>",
+    "</div>",
+  ].join("");
+}
+
+function sanitizeTemplateHtml(raw) {
+  const text = String(raw || "").trim();
+  if (!text) return "";
+  // Si Gemini responde con bloque markdown, extrae el contenido interno.
+  const fenced = text.match(/```(?:html)?\s*([\s\S]*?)```/i);
+  if (fenced?.[1]) return fenced[1].trim();
+  return text;
+}
+
 async function getGeminiModelCandidates(apiKey) {
   const preferred = process.env.GEMINI_MODEL?.trim();
   const defaults = [
@@ -484,6 +548,11 @@ export async function POST(req) {
       process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY || ""
     ).trim();
     if (!apiKey) {
+      if (context === "template") {
+        return NextResponse.json({
+          message: buildTemplateOfflineReply(),
+        });
+      }
       return NextResponse.json({
         message:
           "Puedo ayudarte con informacion de ADAMIA, funciones, precios y contratacion. Si quieres cotizar, dime cuantas personas tienen en tu empresa.",
@@ -500,12 +569,37 @@ export async function POST(req) {
     const geminiErrors = [];
     for (const model of models) {
       try {
-        const answer = await requestGemini({
-          apiKey,
-          model,
-          systemPrompt,
-          contents,
-        });
+        // Para plantillas, permitimos una respuesta más larga y visual.
+        if (context === "template") {
+          const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+          const response = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              system_instruction: { parts: [{ text: systemPrompt }] },
+              contents,
+              generationConfig: {
+                temperature: 0.75,
+                maxOutputTokens: 1800,
+              },
+            }),
+            cache: "no-store",
+          });
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(`Gemini ${model} template fallo: ${response.status} ${JSON.stringify(data)}`);
+          }
+          const raw =
+            data?.candidates?.[0]?.content?.parts
+              ?.map((part) => part?.text || "")
+              .join("\n")
+              .trim() || "";
+          const html = sanitizeTemplateHtml(raw);
+          if (!html) throw new Error(`Gemini ${model} template sin contenido.`);
+          return NextResponse.json({ message: html });
+        }
+
+        const answer = await requestGemini({ apiKey, model, systemPrompt, contents });
         return NextResponse.json({ message: answer });
       } catch (modelError) {
         const detail = modelError?.message || String(modelError);
@@ -519,6 +613,12 @@ export async function POST(req) {
       process.env.NODE_ENV !== "production" && geminiErrors.length
         ? `\n[Debug Gemini]: ${geminiErrors.slice(0, 2).join(" | ")}`
         : "";
+
+    if (context === "template") {
+      return NextResponse.json({
+        message: buildTemplateOfflineReply(),
+      });
+    }
 
     if (context === "sales") {
       return NextResponse.json({

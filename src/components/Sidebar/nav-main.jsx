@@ -36,6 +36,9 @@ import {
   Monitor,
   CreditCard,
   Landmark,
+  LayoutTemplate,
+  FilePlus2,
+  FolderOpen,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -268,6 +271,29 @@ const menuGroups = [
         url: "/panel/catalogos/tipos-registro",
         icon: BookOpen,
         rol: "Recruiter",
+      },
+    ],
+  },
+  {
+    group: "📄 GESTIÓN DOCUMENTAL",
+    items: [
+      {
+        title: "Plantillas",
+        url: "/panel/gestion-documental/plantillas",
+        rol: "Recruiter",
+        icon: LayoutTemplate,
+      },
+      {
+        title: "Generar documento",
+        url: "/panel/gestion-documental/generar",
+        rol: "Recruiter",
+        icon: FilePlus2,
+      },
+      {
+        title: "Documentos emitidos",
+        url: "/panel/gestion-documental/documentos",
+        rol: "Recruiter",
+        icon: FolderOpen,
       },
     ],
   },
