@@ -36,6 +36,8 @@ import { useRouter } from "next/navigation";
 import { useSnackbar } from "notistack";
 import { motion, AnimatePresence } from "framer-motion";
 import { htmlToPdf } from "@/lib/htmlToPdf";
+import { Combobox } from "@/components/Combobox";
+import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 
 /* ─── Constantes ─── */
 const PASOS = ["Plantilla", "Empleado", "Vista previa", "Listo"];
@@ -49,10 +51,18 @@ const CATEGORIA_COLORES = {
 };
 
 /* ─── Utilidades ─── */
+
 /**
- * Construye el mapa de variables a partir de los datos del empleado y la empresa.
- * Devuelve un objeto { "empleado.nombre": "Juan", ... }
+ * Convierte una fecha ISO "YYYY-MM-DD" (o con hora "YYYY-MM-DDT...")
+ * al formato de día/mes/año "DD/MM/YYYY" para documentos.
  */
+function formatearFecha(iso) {
+  if (!iso) return "";
+  const [yyyy, mm, dd] = String(iso).split("T")[0].split("-");
+  if (!yyyy || !mm || !dd) return String(iso);
+  return `${dd}/${mm}/${yyyy}`;
+}
+
 /**
  * Construye el mapa de variables usando los nombres de columna reales
  * de las tablas `empleados`, `nomina` y `empresas`.
@@ -75,7 +85,7 @@ function buildVariables(empleado, empresa, hoy) {
     "empleado.codigo":        empleado.codigo_empleado || String(empleado.id_empleado || ""),
     "empleado.puesto":        empleado.puesto || empleado.nombre_puesto || "",
     "empleado.departamento":  empleado.departamento || "",
-    "empleado.fecha_ingreso": empleado.fecha_ingreso || "",
+    "empleado.fecha_ingreso": formatearFecha(empleado.fecha_ingreso),
     "empleado.salario":       salarioFmt,
     // La columna se llama `correo` en la BD, no `email`
     "empleado.email":         empleado.correo || empleado.email || "",
@@ -99,14 +109,51 @@ function buildVariables(empleado, empresa, hoy) {
   };
 }
 
-/** Reemplaza {{variable}} en HTML usando el mapa de variables */
+/**
+ * Elimina bloques de contenido que quedaron vacíos después de sustituir
+ * las variables. Cubre dos casos:
+ *  1. Etiquetas <p>/<li>/<td>/<th> cuyo texto visible es solo espacios.
+ *  2. Etiquetas <p>/<li> que solo contienen un label "RFC:" sin valor.
+ */
+function limpiarCamposVacios(html) {
+  let cleaned = String(html || "");
+
+  // 1) Bloques completamente vacíos o con solo tags vacíos internos
+  cleaned = cleaned.replace(
+    /<(p|li|td|th)\b[^>]*>((?:\s|<br\s*\/?>|<[^>]+>\s*<\/[^>]+>)*)<\/\1>/gi,
+    (match, _tag, inner) => {
+      const text = inner.replace(/<[^>]+>/g, "").trim();
+      return text === "" ? "" : match;
+    },
+  );
+
+  // 2) Bloques con solo un label tipo "RFC: " / "<strong>CURP:</strong> " sin valor real
+  cleaned = cleaned.replace(
+    /<(p|li)\b[^>]*>([\s\S]*?)<\/\1>/gi,
+    (match, _tag, inner) => {
+      const text = inner.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim();
+      // Si el texto es solo "Palabra:" o "Palabra Palabra:" sin ningún otro contenido
+      if (/^[A-ZÁÉÍÓÚÑa-záéíóúñ\s]{1,30}:\s*$/.test(text)) return "";
+      return match;
+    },
+  );
+
+  // 3) Limpiar <br> duplicados que pudieran quedar
+  cleaned = cleaned.replace(/(<br\s*\/?>\s*){2,}/gi, "<br/>");
+
+  return cleaned;
+}
+
+/** Reemplaza {{variable}} en HTML usando el mapa de variables y limpia campos vacíos */
 function resolveTemplate(html, vars) {
   const source = String(html || "");
   if (!source.trim() || !vars) return source;
-  return source.replace(/\{\{([^}]+)\}\}/g, (_, key) => {
+  const resolved = source.replace(/\{\{([^}]+)\}\}/g, (_, key) => {
     const v = vars[key.trim()];
-    return v !== undefined && v !== null && v !== "" ? v : `{{${key}}}`;
+    // Si el valor existe y no es vacío, usarlo; de lo contrario, cadena vacía (no placeholder)
+    return v !== undefined && v !== null && v !== "" ? v : "";
   });
+  return limpiarCamposVacios(resolved);
 }
 
 /* ─── Stepper ─── */
@@ -144,8 +191,11 @@ export default function GenerarDocumentoPage() {
   const router = useRouter();
   const previewRef = useRef(null);
 
+  const { options: unidadOptions, byId: unidadById } = useUnidadesNegocio();
+
   const empresa = dataUser?.empresas?.[0] || "all";
   const [paso, setPaso] = useState(0);
+  const [unidadCalculo, setUnidadCalculo] = useState("");
   const [generating, setGenerating] = useState(false);
   const [docGuardado, setDocGuardado] = useState(null);
 
@@ -194,14 +244,19 @@ export default function GenerarDocumentoPage() {
       .catch(() => setEmpleadoCompleto(null));
   }, [empleadoId]);
 
-  /* Cargar datos completos de la empresa activa */
+  /* Cargar datos de empresa según la unidad de negocio seleccionada,
+     o la primera empresa del token si no hay unidad elegida */
   useEffect(() => {
-    const idEmpresa = empresa !== "all" ? empresa : dataUser?.empresas?.[0];
+    const idEmpresa = unidadCalculo
+      ? unidadById[unidadCalculo]?.id_empresa
+      : empresa !== "all"
+        ? empresa
+        : dataUser?.empresas?.[0];
     if (!idEmpresa) return;
     axios.get(`/empresas/${idEmpresa}`)
       .then((res) => setEmpresaData(res.data))
       .catch(() => setEmpresaData(null));
-  }, [empresa, dataUser]);
+  }, [unidadCalculo, unidadById, empresa, dataUser]);
 
   /* SWR — empleados */
   const { data: empData } = useSWR(
@@ -377,6 +432,27 @@ export default function GenerarDocumentoPage() {
               <p className="text-xs text-gray-400 mb-4">
                 Las variables del documento se llenarán con los datos de este empleado
               </p>
+
+              {/* Unidad de negocio */}
+              <div className="mb-4 space-y-1">
+                <Label className="text-xs font-medium text-gray-600 flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5" />
+                  Unidad de negocio
+                </Label>
+                <Combobox
+                  options={unidadOptions}
+                  value={unidadCalculo}
+                  onChange={(val) => {
+                    setUnidadCalculo(val);
+                  }}
+                  placeholder="Selecciona la unidad de negocio..."
+                />
+                {unidadCalculo && unidadById[unidadCalculo] && (
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    Empresa: <span className="font-medium text-gray-600">{unidadById[unidadCalculo].empresa_nombre}</span>
+                  </p>
+                )}
+              </div>
 
               {/* Buscar */}
               <div className="relative mb-4">
@@ -563,6 +639,7 @@ export default function GenerarDocumentoPage() {
                   setEmpleadoId("");
                   setNotas("");
                   setDocGuardado(null);
+                  setUnidadCalculo("");
                 }}
               >
                 <RefreshCw className="w-4 h-4" />
