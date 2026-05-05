@@ -1,11 +1,12 @@
 import pool from "@/config/database";
 
-export async function checkSubscriptionDirect(userId) {
+export async function checkSubscriptionDirect(userId, idEmpresa) {
   try {
     const query = `
       SELECT c.id
       FROM Contrataciones c
-      WHERE (
+      WHERE c.empresa = ?
+      AND (
         c.usuario_id = ?
         OR EXISTS (
           SELECT 1 FROM usuarios_empresas ue
@@ -14,18 +15,13 @@ export async function checkSubscriptionDirect(userId) {
       )
       AND c.estado = 'Activo'
       AND (
-        EXISTS (
-          SELECT 1 FROM Suscripciones s
-          WHERE s.contratacion_id = c.id
-            AND s.estado IN ('Activa', 'Cortesia')
-            AND s.fecha_vencimiento >= CURDATE()
-        )
-        OR (c.fecha_fin IS NULL OR c.fecha_fin >= CURDATE())
+        c.fecha_fin IS NULL
+        OR CURDATE() < DATE_ADD(LAST_DAY(DATE_ADD(c.fecha_fin, INTERVAL 1 MONTH)), INTERVAL 1 DAY)
       )
       LIMIT 1
     `;
 
-    const [rows] = await pool.query(query, [userId, userId]);
+    const [rows] = await pool.query(query, [idEmpresa, userId, userId]);
     return rows.length > 0;
   } catch (error) {
     console.error("Error directo en DB:", error);

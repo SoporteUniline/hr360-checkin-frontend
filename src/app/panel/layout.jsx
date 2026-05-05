@@ -10,8 +10,8 @@ import SubscriptionRequiredView from "@/components/SubscriptionRequiredView";
 const RUTAS_SIN_RESTRICCION = ["/panel/mi-suscripcion"];
 
 // Cachea por request/argumento
-const getSubscriptionStatus = cache(async (userId) => {
-  return await checkSubscriptionDirect(userId);
+const getSubscriptionStatus = cache(async (userId, idEmpresa) => {
+  return await checkSubscriptionDirect(userId, idEmpresa);
 });
 
 export default async function LayoutPanel({ children }) {
@@ -25,21 +25,25 @@ export default async function LayoutPanel({ children }) {
   );
 
   let userId = null;
+  let idEmpresa = null;
 
   if (token) {
     try {
       const base64Payload = token.split(".")[1];
       const payload = Buffer.from(base64Payload, "base64").toString();
       const decoded = JSON.parse(payload);
-
       userId = decoded.id_usuario || decoded.id || decoded.sub;
+      idEmpresa = decoded.id_empresa || decoded.empresa || null;
     } catch (e) {
       console.error("Error decodificando el token:", e);
     }
   }
 
   const hasActivePlan =
-    sinRestriccion || (userId ? await getSubscriptionStatus(userId) : true);
+    sinRestriccion ||
+    (userId && idEmpresa
+      ? await getSubscriptionStatus(userId, idEmpresa)
+      : true);
 
   return (
     <SidebarProvider>

@@ -32,7 +32,18 @@ import {
 } from "@/components/ui/select";
 import LoadingTable from "@/components/LoadingTable";
 import ErrorPage from "@/components/ErrorPage";
-import { Plus, Pencil, Trash2, CreditCard, Users, Link2, CheckCircle2, Copy, DollarSign } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  CreditCard,
+  Users,
+  Link2,
+  CheckCircle2,
+  Copy,
+  DollarSign,
+  ReceiptText,
+} from "lucide-react";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -48,7 +59,9 @@ function labelPlan(plan) {
 function labelPrecio(plan) {
   const precio = plan?.precio_base ?? plan?.plan_precio_base;
   if (precio == null) return "—";
-  return `$${Number(precio).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`;
+  return `$${Number(precio).toLocaleString("es-MX", {
+    minimumFractionDigits: 2,
+  })}`;
 }
 
 function formatDate(val) {
@@ -60,17 +73,137 @@ function formatDate(val) {
   return d.toLocaleDateString("es-MX");
 }
 
-const MESES_TOLERANCIA = 2;
+function toLocalDate(val) {
+  if (!val) return null;
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(val).trim())
+    ? new Date(`${val}T00:00:00`)
+    : new Date(val);
+}
+
+function endOfMonth(date) {
+  return new Date(date.getFullYear(), date.getMonth() + 1, 0);
+}
+
+function addDays(date, days) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function calcularPagoManualSugerido(item) {
+  const precioMensual = Number(
+    item?.precio_por_mes || item?.plan_precio_base || 0,
+  );
+
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+
+  const fechaFin = toLocalDate(item?.fecha_fin);
+  if (fechaFin) fechaFin.setHours(0, 0, 0, 0);
+
+  const fechaCorteReal = fechaCorte(item?.fecha_fin, item?.estado);
+  if (fechaCorteReal) fechaCorteReal.setHours(0, 0, 0, 0);
+
+  const vigentePagado = fechaFin && fechaFin >= hoy;
+  const enGracia =
+    fechaFin && fechaFin < hoy && fechaCorteReal && hoy < fechaCorteReal;
+
+  let periodoInicio;
+  let periodoFin;
+  let tipo;
+
+  if (vigentePagado) {
+    // Ya pagó el mes actual → se cobra el siguiente mes completo
+    periodoInicio = new Date(
+      fechaFin.getFullYear(),
+      fechaFin.getMonth() + 1,
+      1,
+    );
+    periodoFin = endOfMonth(periodoInicio);
+    tipo = "renovacion";
+  } else if (enGracia) {
+    // Tiene acceso por gracia → se cobra el mes completo de gracia
+    periodoInicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    periodoFin = endOfMonth(hoy);
+    tipo = "gracia";
+  } else {
+    // Ya pasó la gracia o no tiene fecha_fin → proporcional desde hoy a fin de mes
+    periodoInicio = hoy;
+    periodoFin = endOfMonth(hoy);
+    tipo = "proporcional";
+  }
+
+  const diasDelMes = periodoFin.getDate();
+  const diasACobrar = periodoFin.getDate() - periodoInicio.getDate() + 1;
+
+  const montoSugerido =
+    tipo === "proporcional"
+      ? Number(((precioMensual / diasDelMes) * diasACobrar).toFixed(2))
+      : precioMensual;
+
+  return {
+    precioMensual,
+    periodoInicio,
+    periodoFin,
+    diasACobrar,
+    diasDelMes,
+    montoSugerido,
+    tipo,
+  };
+}
 
 function fechaCorte(fecha_fin, estado) {
   if (!fecha_fin) return null;
-  if (estado === "Inactivo") return null; // ya fue cortado
-  const corte = /^\d{4}-\d{2}-\d{2}$/.test(String(fecha_fin).trim())
-    ? new Date(`${fecha_fin}T00:00:00`)
-    : new Date(fecha_fin);
-  corte.setMonth(corte.getMonth() + MESES_TOLERANCIA + 1);
-  corte.setDate(1); // siempre el día 1 del mes siguiente al vencimiento + tolerancia
-  return corte;
+  if (estado === "Inactivo") return null;
+
+  const base = new Date(`${fecha_fin}T00:00:00`);
+
+  // Corte = primer día del mes siguiente DESPUÉS del mes de gracia
+  return new Date(base.getFullYear(), base.getMonth() + 2, 1);
+}
+
+function estadoAcceso(item) {
+  if (item.estado === "Inactivo") {
+    return {
+      label: "Inactivo",
+      className: "bg-slate-100 text-slate-600",
+    };
+  }
+
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+
+  const fechaFin = toLocalDate(item.fecha_fin);
+  if (fechaFin) fechaFin.setHours(0, 0, 0, 0);
+
+  const corte = fechaCorte(item.fecha_fin, item.estado);
+  if (corte) corte.setHours(0, 0, 0, 0);
+
+  if (!fechaFin) {
+    return {
+      label: "Sin fecha",
+      className: "bg-slate-100 text-slate-500",
+    };
+  }
+
+  if (fechaFin >= hoy) {
+    return {
+      label: "Pagado",
+      className: "bg-green-100 text-green-700",
+    };
+  }
+
+  if (corte && hoy < corte) {
+    return {
+      label: "En gracia",
+      className: "bg-orange-100 text-orange-600",
+    };
+  }
+
+  return {
+    label: "Suspendido",
+    className: "bg-red-100 text-red-600",
+  };
 }
 
 function FechaCorteLabel({ fecha_fin, estado }) {
@@ -84,17 +217,27 @@ function FechaCorteLabel({ fecha_fin, estado }) {
 
   return (
     <div className="text-center">
-      <p className={`text-xs font-medium ${yaVencio ? "text-red-600" : proxima ? "text-orange-500" : "text-slate-500"}`}>
+      <p
+        className={`text-xs font-medium ${
+          yaVencio
+            ? "text-red-600"
+            : proxima
+            ? "text-orange-500"
+            : "text-slate-500"
+        }`}
+      >
         {corte.toLocaleDateString("es-MX")}
       </p>
       {!yaVencio && (
-        <p className={`text-xs ${proxima ? "text-orange-400" : "text-slate-400"}`}>
+        <p
+          className={`text-xs ${
+            proxima ? "text-orange-400" : "text-slate-400"
+          }`}
+        >
           {diasRestantes === 1 ? "mañana" : `en ${diasRestantes} días`}
         </p>
       )}
-      {yaVencio && (
-        <p className="text-xs text-red-400">vencido</p>
-      )}
+      {yaVencio && <p className="text-xs text-red-400">servicio suspendido</p>}
     </div>
   );
 }
@@ -108,14 +251,19 @@ export default function PlanesPage() {
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <CreditCard className="w-5 h-5 text-slate-600" />
-        <h1 className="text-xl font-bold text-slate-800">Planes y contrataciones</h1>
+        <h1 className="text-xl font-bold text-slate-800">
+          Planes y contrataciones
+        </h1>
       </div>
 
       <div className="flex gap-1 border-b border-slate-200">
         <TabButton active={tab === "tipos"} onClick={() => setTab("tipos")}>
           Tipos de plan
         </TabButton>
-        <TabButton active={tab === "contrataciones"} onClick={() => setTab("contrataciones")}>
+        <TabButton
+          active={tab === "contrataciones"}
+          onClick={() => setTab("contrataciones")}
+        >
           Contrataciones
         </TabButton>
       </div>
@@ -154,7 +302,11 @@ function TiposTab() {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState(null); // null = crear, objeto = editar
-  const [form, setForm] = useState({ usuarios_min: "", usuarios_max: "", precio_base: "" });
+  const [form, setForm] = useState({
+    usuarios_min: "",
+    usuarios_max: "",
+    precio_base: "",
+  });
   const [saving, setSaving] = useState(false);
 
   const planes = data?.tipo_planes || [];
@@ -180,11 +332,16 @@ function TiposTab() {
     try {
       const payload = {
         usuarios_min: form.usuarios_min !== "" ? Number(form.usuarios_min) : 0,
-        usuarios_max: form.usuarios_max !== "" ? Number(form.usuarios_max) : null,
+        usuarios_max:
+          form.usuarios_max !== "" ? Number(form.usuarios_max) : null,
         precio_base: form.precio_base !== "" ? Number(form.precio_base) : null,
       };
       if (editing) {
-        await axiosInstance.put(`/checador/tipo-planes/${editing.id}`, payload, { headers });
+        await axiosInstance.put(
+          `/checador/tipo-planes/${editing.id}`,
+          payload,
+          { headers },
+        );
         enqueueSnackbar("Plan actualizado", { variant: "success" });
       } else {
         await axiosInstance.post(`/checador/tipo-planes`, payload, { headers });
@@ -193,7 +350,9 @@ function TiposTab() {
       setDialogOpen(false);
       mutate();
     } catch (err) {
-      enqueueSnackbar(err.response?.data?.error || "Error al guardar", { variant: "error" });
+      enqueueSnackbar(err.response?.data?.error || "Error al guardar", {
+        variant: "error",
+      });
     } finally {
       setSaving(false);
     }
@@ -207,12 +366,17 @@ function TiposTab() {
     setEliminando(true);
     setErrorEliminar(null);
     try {
-      await axiosInstance.delete(`/checador/tipo-planes/${confirmEliminar.id}`, { headers });
+      await axiosInstance.delete(
+        `/checador/tipo-planes/${confirmEliminar.id}`,
+        { headers },
+      );
       enqueueSnackbar("Plan eliminado", { variant: "success" });
       setConfirmEliminar(null);
       mutate();
     } catch (err) {
-      setErrorEliminar(err.response?.data?.error || "Error al eliminar el plan.");
+      setErrorEliminar(
+        err.response?.data?.error || "Error al eliminar el plan.",
+      );
     } finally {
       setEliminando(false);
     }
@@ -244,7 +408,10 @@ function TiposTab() {
           <TableBody>
             {planes.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-slate-400 py-10">
+                <TableCell
+                  colSpan={5}
+                  className="text-center text-slate-400 py-10"
+                >
                   No hay planes registrados
                 </TableCell>
               </TableRow>
@@ -290,7 +457,15 @@ function TiposTab() {
       </div>
 
       {/* Dialog: Confirmar eliminación */}
-      <Dialog open={!!confirmEliminar} onOpenChange={(v) => { if (!v) { setConfirmEliminar(null); setErrorEliminar(null); } }}>
+      <Dialog
+        open={!!confirmEliminar}
+        onOpenChange={(v) => {
+          if (!v) {
+            setConfirmEliminar(null);
+            setErrorEliminar(null);
+          }
+        }}
+      >
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
@@ -307,7 +482,9 @@ function TiposTab() {
               ?
             </p>
             {!errorEliminar && (
-              <p className="text-xs text-slate-400">Esta acción no se puede deshacer.</p>
+              <p className="text-xs text-slate-400">
+                Esta acción no se puede deshacer.
+              </p>
             )}
             {errorEliminar && (
               <div className="bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700">
@@ -316,11 +493,21 @@ function TiposTab() {
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setConfirmEliminar(null); setErrorEliminar(null); }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setConfirmEliminar(null);
+                setErrorEliminar(null);
+              }}
+            >
               Cancelar
             </Button>
             {!errorEliminar && (
-              <Button variant="destructive" disabled={eliminando} onClick={handleEliminar}>
+              <Button
+                variant="destructive"
+                disabled={eliminando}
+                onClick={handleEliminar}
+              >
                 {eliminando ? "Eliminando..." : "Sí, eliminar"}
               </Button>
             )}
@@ -345,7 +532,9 @@ function TiposTab() {
               )}
             </DialogTitle>
             {editing && (
-              <p className="text-sm text-slate-400 mt-0.5">{labelPlan(editing)}</p>
+              <p className="text-sm text-slate-400 mt-0.5">
+                {labelPlan(editing)}
+              </p>
             )}
           </DialogHeader>
 
@@ -365,7 +554,9 @@ function TiposTab() {
                     min={0}
                     placeholder="Ej. 1"
                     value={form.usuarios_min}
-                    onChange={(e) => setForm((f) => ({ ...f, usuarios_min: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, usuarios_min: e.target.value }))
+                    }
                   />
                 </div>
                 <div>
@@ -377,7 +568,9 @@ function TiposTab() {
                     min={0}
                     placeholder="Ej. 50"
                     value={form.usuarios_max}
-                    onChange={(e) => setForm((f) => ({ ...f, usuarios_max: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, usuarios_max: e.target.value }))
+                    }
                   />
                 </div>
               </div>
@@ -389,7 +582,9 @@ function TiposTab() {
                 Precio
               </p>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
+                  $
+                </span>
                 <Input
                   type="number"
                   min={0}
@@ -397,9 +592,13 @@ function TiposTab() {
                   placeholder="0.00"
                   className="pl-7"
                   value={form.precio_base}
-                  onChange={(e) => setForm((f) => ({ ...f, precio_base: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, precio_base: e.target.value }))
+                  }
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">MXN / mes</span>
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">
+                  MXN / mes
+                </span>
               </div>
             </div>
 
@@ -418,7 +617,11 @@ function TiposTab() {
                 )}
                 {form.precio_base && (
                   <span className="ml-2 font-semibold text-slate-700">
-                    ${Number(form.precio_base).toLocaleString("es-MX", { minimumFractionDigits: 2 })} / mes
+                    $
+                    {Number(form.precio_base).toLocaleString("es-MX", {
+                      minimumFractionDigits: 2,
+                    })}{" "}
+                    / mes
                   </span>
                 )}
               </div>
@@ -430,7 +633,11 @@ function TiposTab() {
               Cancelar
             </Button>
             <Button onClick={handleGuardar} disabled={saving}>
-              {saving ? "Guardando..." : editing ? "Guardar cambios" : "Crear plan"}
+              {saving
+                ? "Guardando..."
+                : editing
+                ? "Guardar cambios"
+                : "Crear plan"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -453,14 +660,20 @@ function ContratacionesTab() {
     fetcherWithToken,
   );
 
-  const { data: planesData } = useSWR(`/checador/tipo-planes`, fetcherWithToken);
-  const { data: empresasData } = useSWR(`/empresas?page=1&limit=200`, fetcherWithToken);
+  const { data: planesData } = useSWR(
+    `/checador/tipo-planes`,
+    fetcherWithToken,
+  );
+  const { data: empresasData } = useSWR(
+    `/empresas?page=1&limit=200`,
+    fetcherWithToken,
+  );
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState({
-    id_empresa: "",   // selector UI; se convierte a usuario_id al guardar
+    id_empresa: "", // selector UI; se convierte a usuario_id al guardar
     tipo_plan_id: "",
     empleados: "",
     fecha_inicio: "",
@@ -471,8 +684,14 @@ function ContratacionesTab() {
   const [saving, setSaving] = useState(false);
   const [generandoStripe, setGenerandoStripe] = useState(null);
   const [pagoManualDialog, setPagoManualDialog] = useState(null); // item seleccionado
-  const [pagoManualForm, setPagoManualForm] = useState({ monto: "", referencia: "" });
+  const [pagoManualForm, setPagoManualForm] = useState({
+    monto: "",
+    referencia: "",
+  });
   const [guardandoPago, setGuardandoPago] = useState(false);
+  const [pagosDialog, setPagosDialog] = useState(null);
+  const [cargandoPagos, setCargandoPagos] = useState(false);
+  const [pagosData, setPagosData] = useState(null);
 
   const contrataciones = data?.contrataciones || [];
   const planes = planesData?.tipo_planes || [];
@@ -487,16 +706,44 @@ function ContratacionesTab() {
     try {
       await axiosInstance.post(
         `/checador/contrataciones/admin/${pagoManualDialog.id}/pago-manual`,
-        { monto: Number(pagoManualForm.monto), referencia: pagoManualForm.referencia },
+        {
+          monto: Number(pagoManualForm.monto),
+          referencia: pagoManualForm.referencia,
+        },
         { headers },
       );
-      enqueueSnackbar("Pago registrado. Fecha extendida 1 mes.", { variant: "success" });
+      enqueueSnackbar("Pago registrado. Fecha extendida 1 mes.", {
+        variant: "success",
+      });
       setPagoManualDialog(null);
       mutate();
     } catch (err) {
-      enqueueSnackbar(err.response?.data?.error || "Error al registrar pago", { variant: "error" });
+      enqueueSnackbar(err.response?.data?.error || "Error al registrar pago", {
+        variant: "error",
+      });
     } finally {
       setGuardandoPago(false);
+    }
+  };
+
+  const handleVerPagos = async (item) => {
+    setPagosDialog(item);
+    setCargandoPagos(true);
+    setPagosData(null);
+
+    try {
+      const { data } = await axiosInstance.get(
+        `/checador/contrataciones/admin/${item.id}/pagos`,
+        { headers },
+      );
+
+      setPagosData(data);
+    } catch (err) {
+      enqueueSnackbar(err.response?.data?.error || "Error al cargar pagos", {
+        variant: "error",
+      });
+    } finally {
+      setCargandoPagos(false);
     }
   };
 
@@ -509,12 +756,17 @@ function ContratacionesTab() {
         { headers },
       );
       await navigator.clipboard.writeText(res.enlace_pago_stripe);
-      enqueueSnackbar("Enlace de Stripe copiado al portapapeles", { variant: "success" });
+      enqueueSnackbar("Enlace de Stripe copiado al portapapeles", {
+        variant: "success",
+      });
       mutate();
     } catch (err) {
-      enqueueSnackbar(err.response?.data?.message || "Error al generar enlace de Stripe", {
-        variant: "error",
-      });
+      enqueueSnackbar(
+        err.response?.data?.message || "Error al generar enlace de Stripe",
+        {
+          variant: "error",
+        },
+      );
     } finally {
       setGenerandoStripe(null);
     }
@@ -573,7 +825,9 @@ function ContratacionesTab() {
       setDialogOpen(false);
       mutate();
     } catch (err) {
-      enqueueSnackbar(err.response?.data?.error || "Error al crear", { variant: "error" });
+      enqueueSnackbar(err.response?.data?.error || "Error al crear", {
+        variant: "error",
+      });
     } finally {
       setSaving(false);
     }
@@ -589,7 +843,8 @@ function ContratacionesTab() {
           empleados: form.empleados !== "" ? Number(form.empleados) : null,
           fecha_inicio: form.fecha_inicio || null,
           fecha_fin: form.fecha_fin || null,
-          precio_por_mes: form.precio_por_mes !== "" ? Number(form.precio_por_mes) : null,
+          precio_por_mes:
+            form.precio_por_mes !== "" ? Number(form.precio_por_mes) : null,
           notas: form.notas || null,
         },
         { headers },
@@ -598,7 +853,9 @@ function ContratacionesTab() {
       setEditDialogOpen(false);
       mutate();
     } catch (err) {
-      enqueueSnackbar(err.response?.data?.error || "Error al actualizar", { variant: "error" });
+      enqueueSnackbar(err.response?.data?.error || "Error al actualizar", {
+        variant: "error",
+      });
     } finally {
       setSaving(false);
     }
@@ -639,18 +896,22 @@ function ContratacionesTab() {
                 </div>
               </TableHead>
               <TableHead className="text-center">$/mes</TableHead>
-              <TableHead className="text-center">Vigencia</TableHead>
-              <TableHead className="text-center">Corte</TableHead>
-              <TableHead className="text-center">Estado</TableHead>
+              <TableHead className="text-center">Servicio cubierto</TableHead>
+              <TableHead className="text-center">Fecha de corte</TableHead>
+              <TableHead className="text-center">Acceso</TableHead>
               <TableHead className="text-center">Stripe</TableHead>
               <TableHead className="text-center">Pago manual</TableHead>
+              <TableHead className="text-center">Pagos</TableHead>
               <TableHead className="text-center w-16" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {contrataciones.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-slate-400 py-10">
+                <TableCell
+                  colSpan={6}
+                  className="text-center text-slate-400 py-10"
+                >
                   No hay contrataciones registradas
                 </TableCell>
               </TableRow>
@@ -662,7 +923,9 @@ function ContratacionesTab() {
                       <p className="font-medium text-slate-800">
                         {item.nombre_empresa || item.empresa || "—"}
                       </p>
-                      <p className="text-xs text-slate-400">{item.contrato_id}</p>
+                      <p className="text-xs text-slate-400">
+                        {item.contrato_id}
+                      </p>
                     </div>
                   </TableCell>
                   <TableCell className="text-slate-600">
@@ -672,50 +935,87 @@ function ContratacionesTab() {
                     {item.empleados ?? "—"}
                   </TableCell>
                   <TableCell className="text-center text-slate-700 text-sm font-medium">
-                    {item.precio_por_mes
-                      ? `$${Number(item.precio_por_mes).toLocaleString("es-MX", { minimumFractionDigits: 2 })}`
-                      : item.plan_precio_base
-                      ? <span className="text-slate-400">${Number(item.plan_precio_base).toLocaleString("es-MX", { minimumFractionDigits: 2 })}</span>
-                      : "—"}
+                    {item.precio_por_mes ? (
+                      `$${Number(item.precio_por_mes).toLocaleString("es-MX", {
+                        minimumFractionDigits: 2,
+                      })}`
+                    ) : item.plan_precio_base ? (
+                      <span className="text-slate-400">
+                        $
+                        {Number(item.plan_precio_base).toLocaleString("es-MX", {
+                          minimumFractionDigits: 2,
+                        })}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
                   </TableCell>
                   <TableCell className="text-center text-slate-500 text-sm">
                     {item.fecha_inicio || item.fecha_fin
-                      ? `${formatDate(item.fecha_inicio)} – ${formatDate(item.fecha_fin)}`
+                      ? `${formatDate(item.fecha_inicio)} – ${formatDate(
+                          item.fecha_fin,
+                        )}`
                       : "—"}
                   </TableCell>
                   <TableCell>
-                    <FechaCorteLabel fecha_fin={item.fecha_fin} estado={item.estado} />
+                    <FechaCorteLabel
+                      fecha_fin={item.fecha_fin}
+                      estado={item.estado}
+                    />
                   </TableCell>
                   <TableCell className="text-center">
-                    <span
-                      className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                        estadoColor[item.estado] || "bg-slate-100 text-slate-600"
-                      }`}
-                    >
-                      {item.estado || "—"}
-                    </span>
+                    {(() => {
+                      const acceso = estadoAcceso(item);
+
+                      return (
+                        <span
+                          className={`text-xs font-semibold px-2 py-1 rounded-full ${acceso.className}`}
+                        >
+                          {acceso.label}
+                        </span>
+                      );
+                    })()}
                   </TableCell>
                   {/* Columna Stripe: indica si ya tiene enlace o permite generar uno */}
                   <TableCell className="text-center">
-                    {item.enlace_pago_stripe ? (
-                      <div className="flex items-center justify-center gap-1">
-                        <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    <div className="flex items-center justify-center gap-1">
+                      {/* <span
+                        className={`text-[11px] font-semibold rounded-full px-2 py-1 ${
+                          item.estado_suscripcion === "Activa"
+                            ? "bg-green-100 text-green-700"
+                            : item.estado_suscripcion === "PendientePago"
+                            ? "bg-orange-100 text-orange-600"
+                            : item.estado_suscripcion === "Vencida"
+                            ? "bg-red-100 text-red-600"
+                            : item.estado_suscripcion === "Cortesia"
+                            ? "bg-blue-100 text-blue-600"
+                            : "bg-slate-100 text-slate-500"
+                        }`}
+                      >
+                        {item.estado_suscripcion || "Sin suscripción"}
+                      </span> */}
+
+                      {item.enlace_pago_stripe && (
                         <button
-                          title="Copiar enlace"
+                          title="Copiar enlace guardado"
                           className="text-slate-400 hover:text-slate-700"
                           onClick={async () => {
-                            await navigator.clipboard.writeText(item.enlace_pago_stripe);
-                            enqueueSnackbar("Enlace copiado", { variant: "info" });
+                            await navigator.clipboard.writeText(
+                              item.enlace_pago_stripe,
+                            );
+                            enqueueSnackbar("Enlace copiado", {
+                              variant: "info",
+                            });
                           }}
                         >
                           <Copy className="w-3.5 h-3.5" />
                         </button>
-                      </div>
-                    ) : (
+                      )}
+
                       <Button
                         variant="ghost"
                         size="icon"
-                        title="Generar enlace de pago Stripe"
+                        title="Generar nuevo enlace Stripe"
                         disabled={generandoStripe === item.id}
                         onClick={() => handleGenerarEnlaceStripe(item)}
                       >
@@ -725,7 +1025,7 @@ function ContratacionesTab() {
                           <Link2 className="w-4 h-4 text-slate-500" />
                         )}
                       </Button>
-                    )}
+                    </div>
                   </TableCell>
                   {/* Pago manual */}
                   <TableCell className="text-center">
@@ -734,11 +1034,31 @@ function ContratacionesTab() {
                       size="icon"
                       title="Registrar pago manual"
                       onClick={() => {
-                        setPagoManualForm({ monto: item.precio_por_mes || "", referencia: "" });
-                        setPagoManualDialog(item);
+                        const sugerido = calcularPagoManualSugerido(item);
+
+                        setPagoManualForm({
+                          monto: sugerido.montoSugerido || "",
+                          referencia: "",
+                        });
+
+                        setPagoManualDialog({
+                          ...item,
+                          pagoSugerido: sugerido,
+                        });
                       }}
                     >
                       <DollarSign className="w-4 h-4 text-slate-500" />
+                    </Button>
+                  </TableCell>
+
+                  <TableCell className="text-center">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      title="Ver historial de pagos"
+                      onClick={() => handleVerPagos(item)}
+                    >
+                      <ReceiptText className="w-4 h-4 text-slate-500" />
                     </Button>
                   </TableCell>
 
@@ -812,16 +1132,57 @@ function ContratacionesTab() {
       />
 
       {/* Dialog: Pago manual */}
-      <Dialog open={!!pagoManualDialog} onOpenChange={(v) => !v && setPagoManualDialog(null)}>
+      <Dialog
+        open={!!pagoManualDialog}
+        onOpenChange={(v) => !v && setPagoManualDialog(null)}
+      >
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Registrar pago manual</DialogTitle>
             {pagoManualDialog && (
               <p className="text-sm text-slate-500 mt-0.5">
-                {pagoManualDialog.nombre_empresa || pagoManualDialog.empresa || `Contrato ${pagoManualDialog.contrato_id}`}
+                {pagoManualDialog.nombre_empresa ||
+                  pagoManualDialog.empresa ||
+                  `Contrato ${pagoManualDialog.contrato_id}`}
               </p>
             )}
           </DialogHeader>
+          {pagoManualDialog?.pagoSugerido && (
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 space-y-1">
+              <p>
+                <span className="font-semibold text-slate-700">Tipo:</span>{" "}
+                {pagoManualDialog.pagoSugerido.tipo === "proporcional"
+                  ? "Pago proporcional"
+                  : pagoManualDialog.pagoSugerido.tipo === "gracia"
+                  ? "Pago de mes en gracia"
+                  : "Renovación mensual"}
+              </p>
+              <p>
+                <span className="font-semibold text-slate-700">
+                  Periodo sugerido:
+                </span>{" "}
+                {formatDate(pagoManualDialog.pagoSugerido.periodoInicio)} –{" "}
+                {formatDate(pagoManualDialog.pagoSugerido.periodoFin)}
+              </p>
+              <p>
+                <span className="font-semibold text-slate-700">
+                  Monto sugerido:
+                </span>{" "}
+                $
+                {Number(
+                  pagoManualDialog.pagoSugerido.montoSugerido,
+                ).toLocaleString("es-MX", {
+                  minimumFractionDigits: 2,
+                })}
+              </p>
+              {pagoManualDialog.pagoSugerido.tipo === "proporcional" && (
+                <p className="text-slate-400">
+                  Cálculo: {pagoManualDialog.pagoSugerido.diasACobrar} de{" "}
+                  {pagoManualDialog.pagoSugerido.diasDelMes} días del mes.
+                </p>
+              )}
+            </div>
+          )}
           <div className="space-y-3 py-2">
             <div>
               <label className="text-sm font-medium text-slate-700 mb-1 block">
@@ -833,7 +1194,9 @@ function ContratacionesTab() {
                 step="0.01"
                 placeholder="Ej. 4800.00"
                 value={pagoManualForm.monto}
-                onChange={(e) => setPagoManualForm((f) => ({ ...f, monto: e.target.value }))}
+                onChange={(e) =>
+                  setPagoManualForm((f) => ({ ...f, monto: e.target.value }))
+                }
               />
             </div>
             <div>
@@ -843,11 +1206,17 @@ function ContratacionesTab() {
               <Input
                 placeholder="Ej. Transferencia SPEI, efectivo, etc."
                 value={pagoManualForm.referencia}
-                onChange={(e) => setPagoManualForm((f) => ({ ...f, referencia: e.target.value }))}
+                onChange={(e) =>
+                  setPagoManualForm((f) => ({
+                    ...f,
+                    referencia: e.target.value,
+                  }))
+                }
               />
             </div>
             <p className="text-xs text-slate-400">
-              Al guardar se extiende la fecha de vigencia 1 mes y el contrato queda Activo.
+              El monto es editable. Al guardar, la vigencia se extenderá según
+              la regla de corte mensual.
             </p>
           </div>
           <DialogFooter>
@@ -856,6 +1225,104 @@ function ContratacionesTab() {
             </Button>
             <Button onClick={handlePagoManual} disabled={guardandoPago}>
               {guardandoPago ? "Guardando..." : "Registrar pago"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Historial de pagos */}
+      <Dialog
+        open={!!pagosDialog}
+        onOpenChange={(v) => {
+          if (!v) {
+            setPagosDialog(null);
+            setPagosData(null);
+          }
+        }}
+      >
+        <DialogContent className="w-[95vw] sm:max-w-5xl">
+          <DialogHeader>
+            <DialogTitle>Historial de pagos</DialogTitle>
+            {pagosDialog && (
+              <p className="text-sm text-slate-500 mt-0.5">
+                {pagosDialog.nombre_empresa ||
+                  pagosDialog.empresa ||
+                  `Contrato ${pagosDialog.contrato_id}`}
+              </p>
+            )}
+          </DialogHeader>
+
+          {cargandoPagos ? (
+            <div className="py-10 text-center text-sm text-slate-400">
+              Cargando pagos...
+            </div>
+          ) : (
+            <div className="max-h-[60vh] overflow-y-auto rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50">
+                    <TableHead>Fecha</TableHead>
+                    <TableHead>Método</TableHead>
+                    <TableHead>Referencia</TableHead>
+                    <TableHead>Periodo</TableHead>
+                    <TableHead className="text-right">Monto</TableHead>
+                    <TableHead className="text-center">Estado</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(pagosData?.pagos || []).length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={6}
+                        className="text-center text-slate-400 py-8"
+                      >
+                        No hay pagos registrados
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    pagosData.pagos.map((pago) => (
+                      <TableRow key={pago.id}>
+                        <TableCell className="text-sm text-slate-600">
+                          {formatDate(pago.fecha_pago || pago.created_at)}
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-600">
+                          {pago.metodo_pago || "—"}
+                        </TableCell>
+                        <TableCell className="text-xs text-slate-500 max-w-[160px] truncate">
+                          {pago.referencia || "—"}
+                        </TableCell>
+
+                        <TableCell className="text-xs text-slate-500 whitespace-nowrap">
+                          {pago.periodo_cubierto || "—"}
+                        </TableCell>
+                        <TableCell className="text-right text-sm font-semibold text-slate-700">
+                          $
+                          {Number(pago.monto || 0).toLocaleString("es-MX", {
+                            minimumFractionDigits: 2,
+                          })}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <span className="text-xs font-semibold px-2 py-1 rounded-full bg-slate-100 text-slate-600">
+                            {pago.estado || "—"}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setPagosDialog(null);
+                setPagosData(null);
+              }}
+            >
+              Cerrar
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -880,7 +1347,10 @@ function ContratacionDialog({
   onGuardar,
 }) {
   const set = (key) => (e) =>
-    setForm((f) => ({ ...f, [key]: typeof e === "string" ? e : e.target.value }));
+    setForm((f) => ({
+      ...f,
+      [key]: typeof e === "string" ? e : e.target.value,
+    }));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -917,7 +1387,10 @@ function ContratacionDialog({
             <label className="text-sm font-medium text-slate-700 mb-1 block">
               Tipo de plan
             </label>
-            <Select value={form.tipo_plan_id} onValueChange={set("tipo_plan_id")}>
+            <Select
+              value={form.tipo_plan_id}
+              onValueChange={set("tipo_plan_id")}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Sin plan asignado" />
               </SelectTrigger>
@@ -949,13 +1422,21 @@ function ContratacionDialog({
               <label className="text-sm font-medium text-slate-700 mb-1 block">
                 Fecha inicio
               </label>
-              <Input type="date" value={form.fecha_inicio} onChange={set("fecha_inicio")} />
+              <Input
+                type="date"
+                value={form.fecha_inicio}
+                onChange={set("fecha_inicio")}
+              />
             </div>
             <div>
               <label className="text-sm font-medium text-slate-700 mb-1 block">
                 Fecha fin
               </label>
-              <Input type="date" value={form.fecha_fin} onChange={set("fecha_fin")} />
+              <Input
+                type="date"
+                value={form.fecha_fin}
+                onChange={set("fecha_fin")}
+              />
             </div>
           </div>
 
@@ -989,7 +1470,8 @@ function ContratacionDialog({
               onChange={set("precio_por_mes")}
             />
             <p className="text-xs text-slate-400 mt-1">
-              Si se configura, este precio sobrescribe el del plan para este cliente.
+              Si se configura, este precio sobrescribe el del plan para este
+              cliente.
             </p>
           </div>
 
