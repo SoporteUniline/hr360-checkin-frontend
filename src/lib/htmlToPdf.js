@@ -43,9 +43,10 @@ export async function htmlToPdf(html, filename = "documento") {
 <head>
   <meta charset="utf-8">
   <style>
+    * { background-color: transparent !important; }
     html, body {
       margin: 0; padding: 0;
-      background: #ffffff;
+      background: #ffffff !important;
       font-family: Georgia, serif;
       font-size: 14px;
       line-height: 1.6;
