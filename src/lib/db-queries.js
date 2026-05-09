@@ -32,14 +32,25 @@ export async function checkSubscriptionDirect(userId, idEmpresa) {
 export async function checkEmpresaSubscription(idEmpresa) {
   try {
     const query = `
-      SELECT c.id 
+      SELECT c.id
       FROM Contrataciones c
-      JOIN usuarios_empresas ue ON c.usuario_id = ue.id_usuario
-      WHERE ue.id_empresa = ? AND c.estado = 'Activo'
+      WHERE c.empresa = ?
+      AND c.estado = 'Activo'
+      AND (
+        c.fecha_fin IS NULL
+        OR CURDATE() < DATE_ADD(LAST_DAY(DATE_ADD(c.fecha_fin, INTERVAL 1 MONTH)), INTERVAL 1 DAY)
+      )
       LIMIT 1
     `;
 
     const [rows] = await pool.query(query, [idEmpresa]);
+
+    console.log("CHECK EMPRESA SUBSCRIPTION:", {
+      idEmpresa,
+      rows,
+      hasActivePlan: rows.length > 0,
+    });
+
     return rows.length > 0;
   } catch (error) {
     console.error("Error validando empresa en DB:", error);

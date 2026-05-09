@@ -289,6 +289,12 @@ export default function RelojChecador({
     const validarSuscripcion = async () => {
       if (!idEmpresa) return;
 
+      if (modoEmpleado) {
+        setSubscriptionActive(true);
+        setSubscriptionLoading(false);
+        return;
+      }
+
       try {
         setSubscriptionLoading(true);
 
@@ -311,7 +317,7 @@ export default function RelojChecador({
     };
 
     validarSuscripcion();
-  }, [idEmpresa]);
+  }, [idEmpresa, modoEmpleado]);
 
   if (subscriptionLoading) {
     return (

@@ -1,19 +1,25 @@
-import { checkEmpresaSubscription, getEmpresaSlug } from "@/lib/db-queries";
+import { checkEmpresaSubscription } from "@/lib/db-queries";
 
-export async function GET(request) {
-  const { searchParams } = new URL(request.url);
-  const id = searchParams.get("id");
-
-  if (!id) return Response.json({ error: "ID requerido" }, { status: 400 });
-
+export async function GET(request, { params }) {
   try {
-    const [hasActivePlan, slug] = await Promise.all([
-      checkEmpresaSubscription(id),
-      getEmpresaSlug(id),
-    ]);
+    const resolvedParams = await params;
+    const id = resolvedParams.id;
 
-    return Response.json({ hasActivePlan, slug });
+    if (!id || id === "null" || id === "undefined") {
+      return Response.json(
+        { hasActivePlan: false, error: "ID inválido" },
+        { status: 400 },
+      );
+    }
+
+    const hasActivePlan = await checkEmpresaSubscription(id);
+
+    return Response.json({ hasActivePlan });
   } catch (error) {
-    return Response.json({ error: "Error en DB" }, { status: 500 });
+    console.error("Error en API Route:", error);
+    return Response.json(
+      { hasActivePlan: false, error: "Error interno" },
+      { status: 500 },
+    );
   }
 }
