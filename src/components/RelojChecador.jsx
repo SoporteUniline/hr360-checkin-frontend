@@ -50,6 +50,8 @@ export default function RelojChecador({
   const { enqueueSnackbar } = useSnackbar();
   const [popupInfo, setPopupInfo] = useState(null);
   const [registrando, setRegistrando] = useState(false);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(true);
+  const [subscriptionActive, setSubscriptionActive] = useState(false);
   const { getCurrentLocation, loading: loadingGPS, error: gpsError } = useGPS();
 
   const formatearHora = (fechaString) => {
@@ -84,15 +86,16 @@ export default function RelojChecador({
 
   // ── SSE: actualización en tiempo real cuando llega una checada ──────────────
   useEffect(() => {
-    const sseParam = modoEmpleado && idEmpleado
-      ? `id_empleado=${idEmpleado}`
-      : idEmpresa
+    const sseParam =
+      modoEmpleado && idEmpleado
+        ? `id_empleado=${idEmpleado}`
+        : idEmpresa
         ? `id_empresa=${idEmpresa}`
         : null;
     if (!sseParam) return;
 
     const es = new EventSource(
-      `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/reloj/eventos-checada?${sseParam}`
+      `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/reloj/eventos-checada?${sseParam}`,
     );
     es.addEventListener("checada", () => mutate());
     es.onerror = () => {}; // silencioso; el refreshInterval cubre el fallback
@@ -281,6 +284,66 @@ export default function RelojChecador({
     setMostrarCamara(false);
     setTimeout(() => setMostrarQR(true), 300);
   };
+
+  useEffect(() => {
+    const validarSuscripcion = async () => {
+      if (!idEmpresa) return;
+
+      try {
+        setSubscriptionLoading(true);
+
+        const response = await fetch(
+          `/api/empresas/check-subscription/${idEmpresa}`,
+          { cache: "no-store" },
+        );
+
+        const data = await response.json();
+
+        console.log("STATUS SUSCRIPCIÓN RELOJ:", data);
+
+        setSubscriptionActive(Boolean(data.hasActivePlan));
+      } catch (error) {
+        console.error("Error validando suscripción:", error);
+        setSubscriptionActive(false);
+      } finally {
+        setSubscriptionLoading(false);
+      }
+    };
+
+    validarSuscripcion();
+  }, [idEmpresa]);
+
+  if (subscriptionLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-blue-600 mr-4"></div>
+        <p className="text-lg font-medium text-gray-600">
+          Validando suscripción...
+        </p>
+      </div>
+    );
+  }
+
+  if (!subscriptionActive) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
+        <div className="max-w-md rounded-3xl border border-red-100 bg-white p-8 text-center shadow-sm">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-50">
+            <AlertTriangle className="h-8 w-8 text-red-500" />
+          </div>
+
+          <h1 className="mb-2 text-2xl font-bold text-red-600">
+            Suscripción inactiva
+          </h1>
+
+          <p className="text-gray-500">
+            Esta empresa no cuenta con una suscripción activa. No se puede usar
+            el reloj checador.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (error)
     return <ErrorPage message="No se pudieron cargar los registros." />;
