@@ -6,7 +6,7 @@ on:
       - dev
 
 concurrency:
-  group: ci-dev-${{ github.ref }}
+  group: adamia-lightsail-deploy
   cancel-in-progress: true
 
 jobs:
