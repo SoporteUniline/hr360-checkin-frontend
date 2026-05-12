@@ -1,9 +1,8 @@
-import { checkEmpresaSubscription } from "@/lib/db-queries";
+import { checkEmpresaSubscription, getEmpresaSlug } from "@/lib/db-queries";
 
-export async function GET(request, { params }) {
+export async function GET(request) {
   try {
-    const resolvedParams = await params;
-    const id = resolvedParams.id;
+    const id = request.nextUrl.searchParams.get("id");
 
     if (!id || id === "null" || id === "undefined") {
       return Response.json(
@@ -13,10 +12,15 @@ export async function GET(request, { params }) {
     }
 
     const hasActivePlan = await checkEmpresaSubscription(id);
+    const slug = await getEmpresaSlug(id);
 
-    return Response.json({ hasActivePlan });
+    return Response.json({
+      hasActivePlan,
+      slug,
+    });
   } catch (error) {
     console.error("Error en API Route:", error);
+
     return Response.json(
       { hasActivePlan: false, error: "Error interno" },
       { status: 500 },
