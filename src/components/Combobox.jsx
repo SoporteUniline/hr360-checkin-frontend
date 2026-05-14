@@ -26,6 +26,7 @@ export function Combobox({
   emptyText = "No se encontraron resultados",
   name,
   disabled = false,
+  multiple = false,
 }) {
   const [open, setOpen] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState("");
@@ -34,11 +35,13 @@ export function Combobox({
   const filteredOptions = React.useMemo(() => {
     if (!searchValue) return options;
     return options.filter((option) =>
-      option.label.toLowerCase().includes(searchValue.toLowerCase())
+      option.label.toLowerCase().includes(searchValue.toLowerCase()),
     );
   }, [options, searchValue]);
 
-  const selectedOption = options.find((option) => option.value === value);
+  const selectedOptions = multiple
+    ? options.filter((option) => (value || []).includes(option.value))
+    : options.find((option) => option.value === value);
 
   return (
     <Popover open={disabled ? false : open} onOpenChange={setOpen} modal={true}>
@@ -52,11 +55,17 @@ export function Combobox({
           disabled={disabled}
           className={cn(
             "w-full justify-between",
-            disabled && "opacity-50 cursor-not-allowed"
+            disabled && "opacity-50 cursor-not-allowed",
           )}
         >
           <span className="truncate">
-            {selectedOption ? selectedOption.label : placeholder}
+            {multiple
+              ? selectedOptions.length > 0
+                ? selectedOptions.map((option) => option.label).join(", ")
+                : placeholder
+              : selectedOptions
+              ? selectedOptions.label
+              : placeholder}
           </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
@@ -95,19 +104,39 @@ export function Combobox({
                   disabled={disabled}
                   onSelect={() => {
                     if (disabled) return;
+                    if (multiple) {
+                      const currentValue = value || [];
+                      const exists = currentValue.includes(option.value);
+
+                      onChange(
+                        exists
+                          ? currentValue.filter((item) => item !== option.value)
+                          : [...currentValue, option.value],
+                      );
+
+                      setSearchValue("");
+                      return;
+                    }
+
                     onChange(option.value === value ? "" : option.value);
                     setOpen(false);
                     setSearchValue("");
                   }}
                   className={cn(
                     "cursor-pointer",
-                    disabled && "pointer-events-none opacity-50"
+                    disabled && "pointer-events-none opacity-50",
                   )}
                 >
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4",
-                      value === option.value ? "opacity-100" : "opacity-0"
+                      multiple
+                        ? (value || []).includes(option.value)
+                          ? "opacity-100"
+                          : "opacity-0"
+                        : value === option.value
+                        ? "opacity-100"
+                        : "opacity-0",
                     )}
                   />
                   <span className="truncate">{option.label}</span>
