@@ -47,10 +47,12 @@ export default function ChecadorPage() {
     const fetchAndValidate = async () => {
       try {
         const res = await axiosInstance.get(`/empresas/slug/${slug}`);
-        console.log(res);
         const id = res.data.id_empresa;
 
-        const response = await fetch(`/api/empresas/check-subscription/${id}`);
+        const response = await fetch(`/api/empresas/check-subscription/${id}`, {
+          cache: "no-store",
+        });
+
         const statusData = await response.json();
         if (!statusData.hasActivePlan) {
           setError("Suscripción inactiva");

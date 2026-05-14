@@ -289,12 +289,6 @@ export default function RelojChecador({
     const validarSuscripcion = async () => {
       if (!idEmpresa) return;
 
-      if (modoEmpleado) {
-        setSubscriptionActive(true);
-        setSubscriptionLoading(false);
-        return;
-      }
-
       try {
         setSubscriptionLoading(true);
 
@@ -304,8 +298,6 @@ export default function RelojChecador({
         );
 
         const data = await response.json();
-
-        console.log("STATUS SUSCRIPCIÓN RELOJ:", data);
 
         setSubscriptionActive(Boolean(data.hasActivePlan));
       } catch (error) {

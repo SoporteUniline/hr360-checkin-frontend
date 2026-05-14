@@ -34,6 +34,7 @@ export function CreatableCombobox({
 
   compareBy = "value",
   onCreated,
+  displayValueAsLabel = false,
 }) {
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
@@ -51,18 +52,34 @@ export function CreatableCombobox({
   }, [search, open]);
 
   const handleCreate = async () => {
-    const created = await createOption(search);
-    if (created) {
-      onCreated(created);
-      setSearch("");
-      setOpen(false);
+    try {
+      if (!search.trim()) return;
+
+      const created = await createOption(search.trim());
+
+      if (created) {
+        setOptions((prev) => {
+          const exists = prev.some(
+            (item) =>
+              String(getOptionValue(item)) === String(getOptionValue(created)),
+          );
+
+          return exists ? prev : [...prev, created];
+        });
+
+        onCreated?.(created);
+        setSearch("");
+        setOpen(false);
+      }
+    } catch (error) {
+      console.error("Error creando opción:", error);
     }
   };
 
   const selected = options.find((o) =>
     compareBy === "label"
       ? getOptionLabel(o) === value
-      : getOptionValue(o) === value
+      : String(getOptionValue(o)) === String(value),
   );
 
   return (
@@ -73,7 +90,14 @@ export function CreatableCombobox({
           className="w-full justify-between"
           disabled={disabled}
         >
-          {value ? value : placeholder}
+          <span className="truncate">
+            {selected
+              ? displayValueAsLabel
+                ? getOptionLabel(selected)
+                : value
+              : placeholder}
+          </span>
+
           <ChevronsUpDown className="h-4 w-4 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -114,7 +138,7 @@ export function CreatableCombobox({
                           : "opacity-0"
                         : value === getOptionValue(item)
                         ? "opacity-100"
-                        : "opacity-0"
+                        : "opacity-0",
                     )}
                   />
                 </CommandItem>

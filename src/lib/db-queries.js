@@ -45,12 +45,6 @@ export async function checkEmpresaSubscription(idEmpresa) {
 
     const [rows] = await pool.query(query, [idEmpresa]);
 
-    console.log("CHECK EMPRESA SUBSCRIPTION:", {
-      idEmpresa,
-      rows,
-      hasActivePlan: rows.length > 0,
-    });
-
     return rows.length > 0;
   } catch (error) {
     console.error("Error validando empresa en DB:", error);

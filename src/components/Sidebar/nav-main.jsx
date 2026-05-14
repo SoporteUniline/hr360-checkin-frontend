@@ -223,17 +223,17 @@ const menuGroups = [
           {
             title: "Vacaciones por ley",
             url: "/panel/vacaciones/por-ley",
-        icon: BookOpen,
+            icon: BookOpen,
           },
           {
             title: "Vacaciones por periodo",
             url: "/panel/vacaciones/por-periodo",
-        icon: CalendarDays,
+            icon: CalendarDays,
           },
           {
             title: "Registro de vacaciones",
             url: "/panel/vacaciones/registro",
-        icon: CalendarDays,
+            icon: CalendarDays,
           },
         ],
       },
@@ -277,6 +277,12 @@ const menuGroups = [
   {
     group: "📄 GESTIÓN DOCUMENTAL",
     items: [
+      {
+        title: "Biblioteca documental",
+        url: "/panel/gestion-documental/biblioteca",
+        rol: "Recruiter",
+        icon: FolderOpen,
+      },
       {
         title: "Plantillas",
         url: "/panel/gestion-documental/plantillas",
@@ -381,8 +387,7 @@ export function NavMain() {
                   </p>
 
                   {group.items.map((item) => {
-                    if (item.rol && item.rol !== effectiveRole)
-                      return null;
+                    if (item.rol && item.rol !== effectiveRole) return null;
 
                     return (
                       <SidebarMenuItem key={item.title}>
