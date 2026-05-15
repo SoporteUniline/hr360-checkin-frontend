@@ -9,8 +9,12 @@ export default function ClockDisplay({ horaActual, fechaActual }) {
         </div>
         <div className="absolute -top-2 -right-2 w-3 h-3 bg-green-500 rounded-full"></div>
       </div>
-      <h2 className="text-5xl font-bold text-gray-900 mb-2 tracking-tight font-mono">
-        {horaActual}
+      <h2 className="text-5xl font-bold text-gray-900 mb-2 tracking-tight font-mono flex items-end justify-center gap-2">
+        <span>{horaActual.replace(/ (AM|PM)/, "")}</span>
+
+        <span className="text-xl text-[#2563EB] font-black tracking-wide">
+          {horaActual.includes("AM") ? "AM" : "PM"}
+        </span>
       </h2>
       <p className="text-sm text-gray-600 mb-8">{fechaActual}</p>
     </div>

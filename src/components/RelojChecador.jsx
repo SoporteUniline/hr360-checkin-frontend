@@ -59,7 +59,7 @@ export default function RelojChecador({
     return dayjs
       .tz(fechaString, DB_TIMEZONE)
       .tz(EMPRESA_TIMEZONE)
-      .format("HH:mm:ss");
+      .format("hh:mm:ss A");
   };
 
   const endpoint = modoEmpleado
@@ -107,7 +107,7 @@ export default function RelojChecador({
   useEffect(() => {
     const actualizarHora = () => {
       const ahora = dayjs().tz(EMPRESA_TIMEZONE);
-      setHoraActual(ahora.format("HH:mm:ss"));
+      setHoraActual(ahora.format("hh:mm:ss A"));
       const fechaFormateada = ahora.format("dddd, D [de] MMMM [de] YYYY");
       const [dia, ...resto] = fechaFormateada.split(", ");
       const diaCapitalizado = dia.charAt(0).toUpperCase() + dia.slice(1);
@@ -395,10 +395,11 @@ export default function RelojChecador({
                   Adamia - Sistema de Asistencia
                 </h1>
                 <div className="py-2">
-                  <p className="text-6xl font-black text-slate-900 tracking-tighter antialiased">
-                    {horaActual.split(":")[0]}:{horaActual.split(":")[1]}
-                    <span className="text-2xl text-blue-500 font-medium ml-1">
-                      {horaActual.split(":")[2]}
+                  <p className="text-6xl font-black text-slate-900 tracking-tighter antialiased flex items-end justify-center gap-2">
+                    <span>{horaActual.replace(/ (AM|PM)/, "")}</span>
+
+                    <span className="text-2xl text-blue-500 font-bold mt-2">
+                      {horaActual.includes("AM") ? "AM" : "PM"}
                     </span>
                   </p>
                   <p className="text-xs font-bold text-slate-500 uppercase mt-1 tracking-wider">
