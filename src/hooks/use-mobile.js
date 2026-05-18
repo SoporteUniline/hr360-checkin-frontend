@@ -6,7 +6,7 @@ export function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
+    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
 
     const onChange = (e) => {
       setIsMobile(e.matches);
