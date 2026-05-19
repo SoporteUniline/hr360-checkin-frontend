@@ -23,6 +23,11 @@ export default function RootLayout({ children }) {
       <head>
         <link rel="icon" href="/favicon.ico" />
 
+        <meta
+          name="facebook-domain-verification"
+          content="3tj0omr2az8z10dvvw73oa198umf0u"
+        />
+
         {/* Script de Google Maps */}
         <Script
           src={`https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`}
