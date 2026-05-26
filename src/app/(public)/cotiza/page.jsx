@@ -2,8 +2,18 @@
 
 import { useEffect, useMemo, useState } from "react";
 import axios from "@/lib/axios";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
 
 const COUNTRY_CODES = [
   { code: "+52", label: "MX (+52)" },
@@ -68,8 +78,12 @@ function transformTipoPlanes(rows = []) {
   return rows
     .map((row) => {
       const id = getFirst(row, ["id", "id_tipo_plan"]);
-      const min = toNumber(getFirst(row, ["usuarios_min", "empleados_min", "min", "rango_min"]));
-      const max = toNumber(getFirst(row, ["usuarios_max", "empleados_max", "max", "rango_max"]));
+      const min = toNumber(
+        getFirst(row, ["usuarios_min", "empleados_min", "min", "rango_min"]),
+      );
+      const max = toNumber(
+        getFirst(row, ["usuarios_max", "empleados_max", "max", "rango_max"]),
+      );
       const precioBase = toNumber(
         getFirst(row, [
           "precio_base",
@@ -79,7 +93,7 @@ function transformTipoPlanes(rows = []) {
           "precio",
           "monto_mensual",
           "costo_mensual",
-        ])
+        ]),
       );
       return {
         id: Number(id),
@@ -88,7 +102,10 @@ function transformTipoPlanes(rows = []) {
         precioBase: Number.isFinite(precioBase) ? precioBase : null,
       };
     })
-    .filter((item) => Number.isInteger(item.id) && item.id > 0 && item.precioBase !== null)
+    .filter(
+      (item) =>
+        Number.isInteger(item.id) && item.id > 0 && item.precioBase !== null,
+    )
     .sort((a, b) => {
       const aMax = a.max ?? Number.MAX_SAFE_INTEGER;
       const bMax = b.max ?? Number.MAX_SAFE_INTEGER;
@@ -103,7 +120,9 @@ function transformDescuentos(rows = []) {
   const result = { ...defaults };
   rows.forEach((row) => {
     const meses = Number(getFirst(row, ["meses"]));
-    const descuento = toNumber(getFirst(row, ["descuento_porcentaje", "descuento"]));
+    const descuento = toNumber(
+      getFirst(row, ["descuento_porcentaje", "descuento"]),
+    );
     if ([1, 6, 12].includes(meses) && Number.isFinite(descuento)) {
       result[meses] = descuento;
     }
@@ -119,7 +138,9 @@ function calcularCotizacionLocal({ empleados, meses, planes, descuentos }) {
   let planBase = planes.find(
     (plan) =>
       empleadosLookup >= (plan.min ?? 1) &&
-      (plan.max === null || plan.max === undefined || empleadosLookup <= plan.max)
+      (plan.max === null ||
+        plan.max === undefined ||
+        empleadosLookup <= plan.max),
   );
   if (!planBase) {
     planBase = planes[planes.length - 1];
@@ -183,8 +204,16 @@ export default function CotizaPage() {
   ];
   const garantias = [
     { icon: "✓", title: "Sin compromiso", text: "Cancela cuando quieras." },
-    { icon: "🔒", title: "Datos seguros", text: "Infraestructura robusta y respaldo continuo." },
-    { icon: "💬", title: "Soporte cercano", text: "Acompañamiento en implementación y operación." },
+    {
+      icon: "🔒",
+      title: "Datos seguros",
+      text: "Infraestructura robusta y respaldo continuo.",
+    },
+    {
+      icon: "💬",
+      title: "Soporte cercano",
+      text: "Acompañamiento en implementación y operación.",
+    },
   ];
   const faqs = [
     {
@@ -204,7 +233,12 @@ export default function CotizaPage() {
   const [descuentos, setDescuentos] = useState({ 1: 0, 6: 10, 12: 20 });
   const [empleados, setEmpleados] = useState(15);
   const [loading, setLoading] = useState(false);
-  const [alertaModal, setAlertaModal] = useState({ open: false, title: "", description: "", variant: "info" });
+  const [alertaModal, setAlertaModal] = useState({
+    open: false,
+    title: "",
+    description: "",
+    variant: "info",
+  });
   const [planSeleccionado, setPlanSeleccionado] = useState(6);
   const [form, setForm] = useState({
     nombre: "",
@@ -230,7 +264,9 @@ export default function CotizaPage() {
         const response = await axios.get("/checador/contrataciones/catalogos");
         if (!isMounted) return;
         setPlanes(transformTipoPlanes(response?.data?.tipo_planes ?? []));
-        setDescuentos(transformDescuentos(response?.data?.planes_duracion ?? []));
+        setDescuentos(
+          transformDescuentos(response?.data?.planes_duracion ?? []),
+        );
       } catch (error) {
         console.error("No se pudo cargar catalogo de cotiza:", error);
       }
@@ -257,18 +293,20 @@ export default function CotizaPage() {
         meses,
         planes,
         descuentos,
-      })
+      }),
     );
   }, [descuentos, empleados, planes]);
 
   const seleccion = useMemo(
-    () => planesCalculados.find((plan) => plan.meses === planSeleccionado) ?? null,
-    [planSeleccionado, planesCalculados]
+    () =>
+      planesCalculados.find((plan) => plan.meses === planSeleccionado) ?? null,
+    [planSeleccionado, planesCalculados],
   );
 
   const handleEmployees = (delta) => {
     const next = Math.max(1, Math.min(9999, empleados + delta));
-    const rounded = delta > 0 ? Math.ceil(next / 5) * 5 : Math.floor(next / 5) * 5 || 1;
+    const rounded =
+      delta > 0 ? Math.ceil(next / 5) * 5 : Math.floor(next / 5) * 5 || 1;
     setEmpleados(Math.max(1, rounded));
   };
 
@@ -286,7 +324,7 @@ export default function CotizaPage() {
 
   const fullPhone = useMemo(
     () => buildInternationalPhone(form.codigo_pais, form.telefono),
-    [form.codigo_pais, form.telefono]
+    [form.codigo_pais, form.telefono],
   );
 
   const showAlert = ({ title, description, variant = "info" }) => {
@@ -299,7 +337,12 @@ export default function CotizaPage() {
   };
 
   const validate = () => {
-    if (!form.nombre.trim() || !form.empresa.trim() || !form.telefono.trim() || !form.correo.trim()) {
+    if (
+      !form.nombre.trim() ||
+      !form.empresa.trim() ||
+      !form.telefono.trim() ||
+      !form.correo.trim()
+    ) {
       return "Todos los campos son obligatorios.";
     }
     if (!/^\+[0-9]{8,20}$/.test(fullPhone.trim())) {
@@ -323,7 +366,8 @@ export default function CotizaPage() {
     if (phoneDigits.length < 7 || phoneDigits.length > 15) {
       showAlert({
         title: "Número inválido",
-        description: "Ingresa un número de WhatsApp válido para enviar el código.",
+        description:
+          "Ingresa un número de WhatsApp válido para enviar el código.",
         variant: "error",
       });
       return;
@@ -339,7 +383,9 @@ export default function CotizaPage() {
       setOtpVerified(false);
       setPhoneVerificationToken("");
       setOtpCountdown(45);
-      setOtpMessage("Código enviado por WhatsApp. Revisa tu chat para continuar.");
+      setOtpMessage(
+        "Código enviado por WhatsApp. Revisa tu chat para continuar.",
+      );
     } catch (error) {
       showAlert({
         title: "No se pudo enviar el código",
@@ -377,7 +423,8 @@ export default function CotizaPage() {
         setPhoneVerificationToken("");
         showAlert({
           title: "No se pudo verificar",
-          description: "No se recibió token de verificación. Intenta nuevamente.",
+          description:
+            "No se recibió token de verificación. Intenta nuevamente.",
           variant: "error",
         });
         return;
@@ -417,11 +464,20 @@ export default function CotizaPage() {
       setLoading(true);
       const { jsPDF } = await import("jspdf");
       const doc = new jsPDF({ unit: "mm", format: "letter" });
-      const planNombre = seleccion.meses === 1 ? "Mensual" : seleccion.meses === 6 ? "Semestral" : "Anual";
-      const planSeleccionadoData = planes.find((plan) => plan.id === seleccion.tipoPlanId) ?? null;
+      const planNombre =
+        seleccion.meses === 1
+          ? "Mensual"
+          : seleccion.meses === 6
+          ? "Semestral"
+          : "Anual";
+      const planSeleccionadoData =
+        planes.find((plan) => plan.id === seleccion.tipoPlanId) ?? null;
       const rangoEmpleados =
-        planSeleccionadoData && (planSeleccionadoData.min !== null || planSeleccionadoData.max !== null)
-          ? `${planSeleccionadoData.min ?? 1} - ${planSeleccionadoData.max ?? "en adelante"} empleados`
+        planSeleccionadoData &&
+        (planSeleccionadoData.min !== null || planSeleccionadoData.max !== null)
+          ? `${planSeleccionadoData.min ?? 1} - ${
+              planSeleccionadoData.max ?? "en adelante"
+            } empleados`
           : null;
       const fecha = new Date().toLocaleDateString("es-MX", {
         year: "numeric",
@@ -466,9 +522,16 @@ export default function CotizaPage() {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
       doc.text(`Generada el ${fecha}`, right, 15, { align: "right" });
-      doc.text(`Plan ${planNombre} - ${seleccion.meses} ${seleccion.meses === 1 ? "mes" : "meses"}`, right, 22, {
-        align: "right",
-      });
+      doc.text(
+        `Plan ${planNombre} - ${seleccion.meses} ${
+          seleccion.meses === 1 ? "mes" : "meses"
+        }`,
+        right,
+        22,
+        {
+          align: "right",
+        },
+      );
 
       // Saludo + cliente
       doc.setTextColor(...colorPrimary);
@@ -478,7 +541,11 @@ export default function CotizaPage() {
       doc.setTextColor(...colorMuted);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10);
-      doc.text("Gracias por cotizar ADAMIA. Esta es la propuesta para tu empresa:", left, 55);
+      doc.text(
+        "Gracias por cotizar ADAMIA. Esta es la propuesta para tu empresa:",
+        left,
+        55,
+      );
       doc.setTextColor(...colorPrimary);
       doc.setFont("helvetica", "bold");
       doc.text(form.empresa, left, 61);
@@ -496,13 +563,39 @@ export default function CotizaPage() {
         doc.roundedRect(left + 144, 69.5, 39, 7, 2, 2, "F");
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(9);
-        doc.text(`${seleccion.descuentoPorcentaje}% DESCUENTO`, left + 163.5, 74.3, { align: "center" });
+        doc.text(
+          `${seleccion.descuentoPorcentaje}% DESCUENTO`,
+          left + 163.5,
+          74.3,
+          { align: "center" },
+        );
       }
 
       // Tres cuadros informativos para evitar redundancia entre "precio mensual" e "inversión".
-      drawInfoCard(left + 5, 84, 56, 20, "Empleados", formatCompact(seleccion.empleados));
-      drawInfoCard(left + 66, 84, 56, 20, "Duración", `${seleccion.meses} ${seleccion.meses === 1 ? "mes" : "meses"}`);
-      drawInfoCard(left + 127, 84, 56, 20, "Precio mensual", formatCurrencyMXN(seleccion.precioPorMes));
+      drawInfoCard(
+        left + 5,
+        84,
+        56,
+        20,
+        "Empleados",
+        formatCompact(seleccion.empleados),
+      );
+      drawInfoCard(
+        left + 66,
+        84,
+        56,
+        20,
+        "Duración",
+        `${seleccion.meses} ${seleccion.meses === 1 ? "mes" : "meses"}`,
+      );
+      drawInfoCard(
+        left + 127,
+        84,
+        56,
+        20,
+        "Precio mensual",
+        formatCurrencyMXN(seleccion.precioPorMes),
+      );
 
       // Total destacado
       doc.setFillColor(...colorSecondary);
@@ -512,7 +605,9 @@ export default function CotizaPage() {
       doc.setFontSize(10);
       doc.text("TOTAL COTIZADO", left + 5, 129);
       doc.setFontSize(18);
-      doc.text(formatCurrencyMXN(seleccion.total), right - 4, 132, { align: "right" });
+      doc.text(formatCurrencyMXN(seleccion.total), right - 4, 132, {
+        align: "right",
+      });
 
       // Beneficios incluidos
       doc.setFillColor(...colorSurface);
@@ -554,38 +649,62 @@ export default function CotizaPage() {
       doc.text("¿Listo para comenzar?", left + 5, 211);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
-      doc.text("WhatsApp: +52 317 388 7959 | Correo: soporte@adamia.mx", left + 5, 218);
+      doc.text(
+        "WhatsApp: +52 317 128 8029 | Correo: sistema@adamia.mx",
+        left + 5,
+        218,
+      );
 
       // Footer
       doc.setTextColor(100, 116, 139);
       doc.setFontSize(8);
-      doc.text("Cotización informativa sujeta a validación comercial y técnica.", left, 268);
-      doc.text("Vigencia de la cotización: 30 días naturales desde su emisión.", left, 272);
-      doc.text("https://adamia.com.mx/ | soporte@adamia.mx | +52 317 388 7959", left, 276);
-      doc.text(`ADAMIA by Uniline - ${new Date().getFullYear()}`, right, 276, { align: "right" });
+      doc.text(
+        "Cotización informativa sujeta a validación comercial y técnica.",
+        left,
+        268,
+      );
+      doc.text(
+        "Vigencia de la cotización: 30 días naturales desde su emisión.",
+        left,
+        272,
+      );
+      doc.text(
+        "https://adamia.com.mx/ | sistema@adamia.mx | +52 317 128 8029",
+        left,
+        276,
+      );
+      doc.text(`ADAMIA by Uniline - ${new Date().getFullYear()}`, right, 276, {
+        align: "right",
+      });
 
-      const fileName = `Cotizacion_ADAMIA_${form.empresa.replace(/\s+/g, "_")}_${planNombre}.pdf`;
+      const fileName = `Cotizacion_ADAMIA_${form.empresa.replace(
+        /\s+/g,
+        "_",
+      )}_${planNombre}.pdf`;
       const pdfDataUri = doc.output("datauristring");
       const pdfBase64 = (pdfDataUri.split(",")[1] || "").trim();
       doc.save(fileName);
       try {
-        const response = await axios.post("/checador/contrataciones/cotizacion", {
-          nombre_cliente: form.nombre.trim(),
-          correo: form.correo.trim(),
-          telefono: fullPhone.trim(),
-          empresa_nombre: form.empresa.trim(),
-          tipo_contratacion: form.tipoContratacion,
-          plan_nombre: planNombre,
-          empleados: Number(seleccion.empleados),
-          rango_empleados: rangoEmpleados,
-          meses_contratados: Number(seleccion.meses),
-          precio_mensual: Number(seleccion.precioPorMes.toFixed(2)),
-          descuento_porcentaje: Number(seleccion.descuentoPorcentaje || 0),
-          monto_total: Number(seleccion.total.toFixed(2)),
-          pdf_base64: pdfBase64,
-          pdf_filename: fileName,
-          telefono_verificacion_token: phoneVerificationToken,
-        });
+        const response = await axios.post(
+          "/checador/contrataciones/cotizacion",
+          {
+            nombre_cliente: form.nombre.trim(),
+            correo: form.correo.trim(),
+            telefono: fullPhone.trim(),
+            empresa_nombre: form.empresa.trim(),
+            tipo_contratacion: form.tipoContratacion,
+            plan_nombre: planNombre,
+            empleados: Number(seleccion.empleados),
+            rango_empleados: rangoEmpleados,
+            meses_contratados: Number(seleccion.meses),
+            precio_mensual: Number(seleccion.precioPorMes.toFixed(2)),
+            descuento_porcentaje: Number(seleccion.descuentoPorcentaje || 0),
+            monto_total: Number(seleccion.total.toFixed(2)),
+            pdf_base64: pdfBase64,
+            pdf_filename: fileName,
+            telefono_verificacion_token: phoneVerificationToken,
+          },
+        );
         const backendMessage = response?.data?.message;
         showAlert({
           title: "Cotización enviada",
@@ -619,7 +738,9 @@ export default function CotizaPage() {
   return (
     <main className="min-h-screen bg-[var(--adamia-bg-light)] text-[var(--adamia-text-primary)]">
       <section className="bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] px-6 py-14 text-center text-white">
-        <h1 className="text-4xl font-black md:text-5xl">Cotiza tu plan ADAMIA</h1>
+        <h1 className="text-4xl font-black md:text-5xl">
+          Cotiza tu plan ADAMIA
+        </h1>
         <p className="mx-auto mt-3 max-w-3xl text-white/90">
           Calcula tu plan y descarga tu PDF de cotización en segundos.
         </p>
@@ -629,8 +750,12 @@ export default function CotizaPage() {
         <article className="rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-5 shadow-sm">
           <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
             <div>
-              <h2 className="text-xl font-black">¿Cuántos empleados tiene tu empresa?</h2>
-              <p className="text-sm text-[var(--adamia-text-secondary)]">Ajusta en incrementos de 5.</p>
+              <h2 className="text-xl font-black">
+                ¿Cuántos empleados tiene tu empresa?
+              </h2>
+              <p className="text-sm text-[var(--adamia-text-secondary)]">
+                Ajusta en incrementos de 5.
+              </p>
             </div>
             <div className="flex items-center gap-3">
               <button
@@ -644,7 +769,9 @@ export default function CotizaPage() {
                 type="number"
                 min={1}
                 value={empleados}
-                onChange={(event) => setEmpleados(Math.max(1, Number(event.target.value || 1)))}
+                onChange={(event) =>
+                  setEmpleados(Math.max(1, Number(event.target.value || 1)))
+                }
                 className="h-12 w-28 rounded-lg border-2 border-[var(--adamia-blue)]/40 text-center text-2xl font-black"
               />
               <button
@@ -661,32 +788,46 @@ export default function CotizaPage() {
         <article className="grid gap-4 md:grid-cols-3">
           {planesCalculados.map((plan) => {
             const active = plan.meses === planSeleccionado;
-            const planName = plan.meses === 1 ? "Mensual" : plan.meses === 6 ? "Semestral" : "Anual";
+            const planName =
+              plan.meses === 1
+                ? "Mensual"
+                : plan.meses === 6
+                ? "Semestral"
+                : "Anual";
             return (
               <div
                 key={plan.meses}
-                className={`rounded-2xl border-2 p-5 shadow-sm transition ${active ? "border-[var(--adamia-blue)] bg-[var(--adamia-blue)]/5" : "border-slate-200 bg-white"
-                  }`}
+                className={`rounded-2xl border-2 p-5 shadow-sm transition ${
+                  active
+                    ? "border-[var(--adamia-blue)] bg-[var(--adamia-blue)]/5"
+                    : "border-slate-200 bg-white"
+                }`}
               >
                 <h3 className="text-2xl font-black">{planName}</h3>
                 <p className="mt-1 text-xs font-semibold uppercase text-[var(--adamia-text-secondary)]">
                   {plan.descuentoPorcentaje}% de descuento
                 </p>
-                <p className="mt-4 text-sm text-[var(--adamia-text-secondary)]">Precio por mes</p>
-                <p className="text-3xl font-black text-[var(--adamia-blue)]">{formatCurrencyMXN(plan.precioPorMes)}</p>
+                <p className="mt-4 text-sm text-[var(--adamia-text-secondary)]">
+                  Precio por mes
+                </p>
+                <p className="text-3xl font-black text-[var(--adamia-blue)]">
+                  {formatCurrencyMXN(plan.precioPorMes)}
+                </p>
                 <p className="mt-1 text-sm text-[var(--adamia-text-secondary)]">
                   Total: <strong>{formatCurrencyMXN(plan.total)}</strong>
                 </p>
                 <p className="mt-1 text-xs text-[var(--adamia-text-secondary)]">
-                  {formatCurrencyMXN(plan.precioPorMes / plan.empleados)} por empleado
+                  {formatCurrencyMXN(plan.precioPorMes / plan.empleados)} por
+                  empleado
                 </p>
                 <button
                   type="button"
                   onClick={() => setPlanSeleccionado(plan.meses)}
-                  className={`mt-4 w-full rounded-lg px-4 py-2 text-sm font-bold ${active
+                  className={`mt-4 w-full rounded-lg px-4 py-2 text-sm font-bold ${
+                    active
                       ? "bg-[var(--adamia-blue)] text-white"
                       : "bg-slate-100 text-[var(--adamia-text-primary)]"
-                    }`}
+                  }`}
                 >
                   {active ? "Plan seleccionado" : `Seleccionar ${planName}`}
                 </button>
@@ -696,8 +837,13 @@ export default function CotizaPage() {
         </article>
 
         <article className="rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-5 shadow-sm">
-          <h2 className="text-xl font-black">Completa tus datos para cotización PDF</h2>
-          <form onSubmit={handleSubmit} className="mt-4 grid gap-4 md:grid-cols-2">
+          <h2 className="text-xl font-black">
+            Completa tus datos para cotización PDF
+          </h2>
+          <form
+            onSubmit={handleSubmit}
+            className="mt-4 grid gap-4 md:grid-cols-2"
+          >
             <input
               type="text"
               placeholder="Nombre completo"
@@ -716,7 +862,9 @@ export default function CotizaPage() {
               <div className="flex items-center gap-2">
                 <select
                   value={form.codigo_pais}
-                  onChange={(event) => updateField("codigo_pais", event.target.value)}
+                  onChange={(event) =>
+                    updateField("codigo_pais", event.target.value)
+                  }
                   className="h-10 w-28 rounded-lg border border-slate-300 px-2 text-sm"
                   aria-label="Código de país"
                 >
@@ -731,7 +879,10 @@ export default function CotizaPage() {
                   placeholder="Número de WhatsApp"
                   value={form.telefono}
                   onChange={(event) =>
-                    updateField("telefono", event.target.value.replace(/\D/g, "").slice(0, 15))
+                    updateField(
+                      "telefono",
+                      event.target.value.replace(/\D/g, "").slice(0, 15),
+                    )
                   }
                   className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
                 />
@@ -758,14 +909,16 @@ export default function CotizaPage() {
                   {otpSending
                     ? "Enviando..."
                     : otpCountdown > 0
-                      ? `Reenviar en ${otpCountdown}s`
-                      : otpSent
-                        ? "Reenviar código WhatsApp"
-                        : "Enviar código por WhatsApp"}
+                    ? `Reenviar en ${otpCountdown}s`
+                    : otpSent
+                    ? "Reenviar código WhatsApp"
+                    : "Enviar código por WhatsApp"}
                 </button>
                 <span
                   className={`inline-flex items-center rounded-lg px-3 py-2 text-xs font-semibold ${
-                    otpVerified ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"
+                    otpVerified
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-slate-100 text-slate-600"
                   }`}
                 >
                   {otpVerified ? "Número verificado" : "Pendiente de verificar"}
@@ -801,7 +954,9 @@ export default function CotizaPage() {
             </div>
             <select
               value={form.tipoContratacion}
-              onChange={(event) => updateField("tipoContratacion", event.target.value)}
+              onChange={(event) =>
+                updateField("tipoContratacion", event.target.value)
+              }
               className="rounded-lg border border-slate-300 px-3 py-2 md:col-span-2"
             >
               <option value="Normal">Tipo de contratación: Normal</option>
@@ -810,10 +965,16 @@ export default function CotizaPage() {
 
             {seleccion ? (
               <div className="rounded-xl bg-[var(--adamia-blue)] px-4 py-3 text-white md:col-span-2">
-                <p className="text-xs uppercase text-white/80">Resumen seleccionado</p>
+                <p className="text-xs uppercase text-white/80">
+                  Resumen seleccionado
+                </p>
                 <p className="text-lg font-black">
-                  {seleccion.meses === 1 ? "Mensual" : seleccion.meses === 6 ? "Semestral" : "Anual"} -{" "}
-                  {formatCurrencyMXN(seleccion.total)}
+                  {seleccion.meses === 1
+                    ? "Mensual"
+                    : seleccion.meses === 6
+                    ? "Semestral"
+                    : "Anual"}{" "}
+                  - {formatCurrencyMXN(seleccion.total)}
                 </p>
               </div>
             ) : null}
@@ -830,25 +991,31 @@ export default function CotizaPage() {
 
         <section className="rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-6 shadow-sm">
           <div className="text-center">
-            <h2 className="text-3xl font-black text-[var(--adamia-text-primary)]">Todo lo que incluye tu plan ADAMIA</h2>
+            <h2 className="text-3xl font-black text-[var(--adamia-text-primary)]">
+              Todo lo que incluye tu plan ADAMIA
+            </h2>
             <p className="mt-2 text-sm text-[var(--adamia-text-secondary)]">
-              Funcionalidades clave para operar RRHH con orden, visibilidad y control.
+              Funcionalidades clave para operar RRHH con orden, visibilidad y
+              control.
             </p>
           </div>
           <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {beneficios.map((item, idx) => (
               <article
                 key={item.title}
-                className={`rounded-xl border p-4 ${idx % 3 === 0
+                className={`rounded-xl border p-4 ${
+                  idx % 3 === 0
                     ? "border-emerald-200 bg-emerald-50/50"
                     : idx % 3 === 1
-                      ? "border-sky-200 bg-sky-50/50"
-                      : "border-violet-200 bg-violet-50/50"
-                  }`}
+                    ? "border-sky-200 bg-sky-50/50"
+                    : "border-violet-200 bg-violet-50/50"
+                }`}
               >
                 <div className="text-2xl">{item.icon}</div>
                 <h3 className="mt-2 text-base font-black">{item.title}</h3>
-                <p className="mt-1 text-sm text-[var(--adamia-text-secondary)]">{item.text}</p>
+                <p className="mt-1 text-sm text-[var(--adamia-text-secondary)]">
+                  {item.text}
+                </p>
               </article>
             ))}
           </div>
@@ -864,7 +1031,9 @@ export default function CotizaPage() {
                 {item.icon}
               </div>
               <h3 className="text-lg font-black">{item.title}</h3>
-              <p className="mt-1 text-sm text-[var(--adamia-text-secondary)]">{item.text}</p>
+              <p className="mt-1 text-sm text-[var(--adamia-text-secondary)]">
+                {item.text}
+              </p>
             </article>
           ))}
         </section>
@@ -875,19 +1044,25 @@ export default function CotizaPage() {
             {faqs.map((faq) => (
               <article key={faq.q} className="rounded-xl bg-slate-50 p-4">
                 <h3 className="font-bold">{faq.q}</h3>
-                <p className="mt-1 text-sm text-[var(--adamia-text-secondary)]">{faq.a}</p>
+                <p className="mt-1 text-sm text-[var(--adamia-text-secondary)]">
+                  {faq.a}
+                </p>
               </article>
             ))}
           </div>
         </section>
 
         <section className="rounded-2xl bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] p-8 text-center text-white shadow-sm">
-          <h2 className="text-3xl font-black">¿Listo para activar ADAMIA en tu empresa?</h2>
+          <h2 className="text-3xl font-black">
+            ¿Listo para activar ADAMIA en tu empresa?
+          </h2>
           <p className="mx-auto mt-2 max-w-3xl text-white/90">
-            Recibe tu cotización en PDF, compártela internamente y avanza con una implementación guiada.
+            Recibe tu cotización en PDF, compártela internamente y avanza con
+            una implementación guiada.
           </p>
           <p className="mt-4 text-sm text-white/85">
-            Sitio web: <span className="font-bold">https://adamia.com.mx/</span> · Correo: <span className="font-bold">soporte@adamia.mx</span>
+            Sitio web: <span className="font-bold">https://adamia.com.mx/</span>{" "}
+            · Correo: <span className="font-bold">sistema@adamia.mx</span>
           </p>
         </section>
       </section>
@@ -898,14 +1073,15 @@ export default function CotizaPage() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle
-              className={`text-2xl font-black ${alertaModal.variant === "success"
+              className={`text-2xl font-black ${
+                alertaModal.variant === "success"
                   ? "text-emerald-600"
                   : alertaModal.variant === "warning"
-                    ? "text-amber-600"
-                    : alertaModal.variant === "error"
-                      ? "text-red-600"
-                      : "text-[var(--adamia-blue)]"
-                }`}
+                  ? "text-amber-600"
+                  : alertaModal.variant === "error"
+                  ? "text-red-600"
+                  : "text-[var(--adamia-blue)]"
+              }`}
             >
               {alertaModal.title}
             </DialogTitle>
@@ -916,7 +1092,9 @@ export default function CotizaPage() {
           <div className="flex justify-end pt-2">
             <button
               type="button"
-              onClick={() => setAlertaModal((prev) => ({ ...prev, open: false }))}
+              onClick={() =>
+                setAlertaModal((prev) => ({ ...prev, open: false }))
+              }
               className="rounded-lg bg-[var(--adamia-blue)] px-4 py-2 text-sm font-bold text-white"
             >
               Entendido

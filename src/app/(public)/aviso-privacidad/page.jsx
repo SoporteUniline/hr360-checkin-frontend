@@ -25,10 +25,12 @@ export default function AvisoPrivacidad() {
             </h2>
             <ul className="mt-2 list-disc space-y-2 pl-6 text-[var(--adamia-text-secondary)]">
               <li>Datos de identificacion: nombre y razon social.</li>
-              <li>Datos de contacto: correo electronico, telefono y direccion.</li>
               <li>
-                Datos de cuenta: credenciales, preferencias y actividad dentro de
-                la plataforma.
+                Datos de contacto: correo electronico, telefono y direccion.
+              </li>
+              <li>
+                Datos de cuenta: credenciales, preferencias y actividad dentro
+                de la plataforma.
               </li>
               <li>
                 Datos de soporte: informacion que compartes al solicitar ayuda.
@@ -65,8 +67,8 @@ export default function AvisoPrivacidad() {
             </h2>
             <p className="mt-2 text-[var(--adamia-text-secondary)]">
               Conservamos los datos durante el tiempo necesario para cumplir las
-              finalidades descritas y aplicamos medidas administrativas, tecnicas
-              y organizativas razonables para proteger la informacion.
+              finalidades descritas y aplicamos medidas administrativas,
+              tecnicas y organizativas razonables para proteger la informacion.
             </p>
           </article>
 
@@ -86,9 +88,9 @@ export default function AvisoPrivacidad() {
               6. Cookies y tecnologias similares
             </h2>
             <p className="mt-2 text-[var(--adamia-text-secondary)]">
-              Utilizamos cookies y herramientas similares para mantener la sesion
-              activa, recordar preferencias y analizar el uso de la plataforma.
-              Puedes ajustar estas preferencias desde tu navegador.
+              Utilizamos cookies y herramientas similares para mantener la
+              sesion activa, recordar preferencias y analizar el uso de la
+              plataforma. Puedes ajustar estas preferencias desde tu navegador.
             </p>
           </article>
 
@@ -110,10 +112,10 @@ export default function AvisoPrivacidad() {
             <p className="mt-2 text-[var(--adamia-text-secondary)]">
               Para cualquier solicitud de privacidad, puedes escribir a{" "}
               <a
-                href="mailto:soporte@adamia.mx"
+                href="mailto:sistema@adamia.mx"
                 className="font-semibold text-[var(--adamia-blue)] underline"
               >
-                soporte@adamia.mx
+                sistema@adamia.mx
               </a>
               .
             </p>

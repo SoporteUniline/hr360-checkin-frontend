@@ -304,11 +304,32 @@ export default function FormularioEmpleado({
   const onInvalidSubmit = (errors) => {
     console.log("ERRORES DE VALIDACIÓN:", errors);
     console.log("VALORES ACTUALES DEL FORM:", form.getValues());
+    const obtenerPrimerMensajeError = (errorObj) => {
+      if (!errorObj) return null;
+
+      if (errorObj.message) return errorObj.message;
+      if (errorObj.root?.message) return errorObj.root.message;
+
+      if (Array.isArray(errorObj)) {
+        for (const item of errorObj) {
+          const mensaje = obtenerPrimerMensajeError(item);
+          if (mensaje) return mensaje;
+        }
+      }
+
+      if (typeof errorObj === "object") {
+        for (const key of Object.keys(errorObj)) {
+          const mensaje = obtenerPrimerMensajeError(errorObj[key]);
+          if (mensaje) return mensaje;
+        }
+      }
+
+      return null;
+    };
+
     const firstErrorKey = Object.keys(errors)[0];
-    const firstError = errors[firstErrorKey];
     const mensaje =
-      firstError?.message ||
-      firstError?.root?.message ||
+      obtenerPrimerMensajeError(errors[firstErrorKey]) ||
       "Faltan campos obligatorios por llenar";
 
     enqueueSnackbar(`⚠️ ${mensaje}`, { variant: "warning" });
@@ -494,10 +515,7 @@ export default function FormularioEmpleado({
         enqueueSnackbar(
           <span>
             {mensaje}{" "}
-            <a
-              href="/panel/mi-suscripcion"
-              className="underline font-semibold"
-            >
+            <a href="/panel/mi-suscripcion" className="underline font-semibold">
               Mejorar plan →
             </a>
           </span>,
@@ -540,7 +558,6 @@ export default function FormularioEmpleado({
     <Form {...form}>
       {/* Contenedor principal: columna fija en mobile, flujo normal en desktop */}
       <div className="flex flex-col h-[calc(100dvh-3.5rem)] sm:block sm:h-auto">
-
         {/* ── Header mobile (oscuro, fijo arriba) ── */}
         <div className="sm:hidden bg-gray-900 text-white px-4 pt-4 pb-3 shrink-0">
           <div className="flex items-center justify-between gap-2">
@@ -552,7 +569,12 @@ export default function FormularioEmpleado({
                 setTab("personales");
               }}
             >
-              <Icon icon="material-symbols:arrow-back" width={20} height={20} className="shrink-0" />
+              <Icon
+                icon="material-symbols:arrow-back"
+                width={20}
+                height={20}
+                className="shrink-0"
+              />
               <span className="text-sm font-semibold truncate">
                 {soloLectura || editar
                   ? values
@@ -641,53 +663,21 @@ export default function FormularioEmpleado({
                 </div>
 
                 {/* 2. Información Principal (Nombre y Puesto) */}
-                <div className="flex-1 space-y-4 w-full">
-                  <FormField
-                    name="nombre"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            ref={nombreInputRef}
-                            disabled={soloLectura}
-                            placeholder="Ingrese el nombre del empleado"
-                            className="text-2xl font-semibold text-gray-900 border-0 border-b-2 border-gray-200 focus:border-[#2563EB] focus:ring-0 rounded-none px-0 h-auto py-2 bg-transparent"
-                            autoFocus
-                            value={field.value ?? ""}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    name="puesto"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            autoComplete="organization-title"
-                            autoCorrect="off"
-                            autoCapitalize="off"
-                            disabled={soloLectura}
-                            spellCheck={false}
-                            value={field.value ?? ""}
-                            placeholder="Nombre del puesto"
-                            className="text-lg text-gray-600 border-0 border-b-2 border-gray-200 focus:border-[#2563EB] focus:ring-0 rounded-none px-0 h-auto py-2 bg-transparent"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">
+                    Empleado
+                  </p>
 
-                  {/* Botón de Credencial (Solo si ya existe el empleado) */}
+                  <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 truncate">
+                    {form.watch("nombre") || "Nuevo empleado"}
+                  </h2>
+
+                  <p className="text-sm text-gray-500 truncate">
+                    {form.watch("puesto") || "Sin puesto asignado"}
+                  </p>
+
                   {(soloLectura || editar) && values && (
-                    <div className="pt-2">
+                    <div className="pt-3">
                       <BotonCredencial
                         empleado={values}
                         imagePreview={imagePreview}
@@ -778,14 +768,22 @@ export default function FormularioEmpleado({
                       value="cuentas"
                       className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-6 font-medium"
                     >
-                      <Icon icon="rivet-icons:money" className="h-4 w-4 sm:mr-2" />
-                      <span className="hidden sm:inline">Cuentas bancarias</span>
+                      <Icon
+                        icon="rivet-icons:money"
+                        className="h-4 w-4 sm:mr-2"
+                      />
+                      <span className="hidden sm:inline">
+                        Cuentas bancarias
+                      </span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="reconocimiento"
                       className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-6 font-medium"
                     >
-                      <Icon icon="mdi:face-recognition" className="h-4 w-4 sm:mr-2" />
+                      <Icon
+                        icon="mdi:face-recognition"
+                        className="h-4 w-4 sm:mr-2"
+                      />
                       <span className="hidden sm:inline">Escanear rostro</span>
                     </TabsTrigger>
                     {values?.id_empleado && (

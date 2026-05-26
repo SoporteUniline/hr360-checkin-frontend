@@ -6,14 +6,14 @@ import { useState } from "react";
 const canales = [
   {
     title: "Email",
-    value: "soporte@adamia.mx",
-    href: "mailto:soporte@adamia.mx",
+    value: "sistema@adamia.mx",
+    href: "mailto:sistema@adamia.mx",
     description: "Consultas generales y soporte técnico.",
     icon: "📧",
   },
   {
     title: "Teléfono y WhatsApp",
-    value: "+52 317 388 7959",
+    value: "+52 317 128 8029",
     href: "tel:+523173887959",
     description: "Atención comercial y operativa.",
     icon: "📱",
@@ -45,8 +45,15 @@ export default function ContactoPage() {
     event.preventDefault();
     const { nombre, email, telefono, asunto, mensaje } = form;
 
-    if (!nombre.trim() || !email.trim() || !telefono.trim() || !mensaje.trim()) {
-      window.alert("Completa nombre, correo, teléfono y mensaje para continuar.");
+    if (
+      !nombre.trim() ||
+      !email.trim() ||
+      !telefono.trim() ||
+      !mensaje.trim()
+    ) {
+      window.alert(
+        "Completa nombre, correo, teléfono y mensaje para continuar.",
+      );
       return;
     }
 
@@ -60,7 +67,9 @@ export default function ContactoPage() {
       `Mensaje: ${mensaje}`,
     ].join("\n");
 
-    const url = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(body)}`;
+    const url = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(
+      body,
+    )}`;
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
@@ -121,7 +130,10 @@ export default function ContactoPage() {
               Déjanos tus datos y te contactamos en breve.
             </p>
 
-            <form className="mt-8 grid gap-5 md:grid-cols-2" onSubmit={onSubmit}>
+            <form
+              className="mt-8 grid gap-5 md:grid-cols-2"
+              onSubmit={onSubmit}
+            >
               <label className="grid gap-2">
                 <span className="text-sm font-semibold">Nombre completo</span>
                 <input
@@ -135,7 +147,9 @@ export default function ContactoPage() {
               </label>
 
               <label className="grid gap-2">
-                <span className="text-sm font-semibold">Correo electrónico</span>
+                <span className="text-sm font-semibold">
+                  Correo electrónico
+                </span>
                 <input
                   type="email"
                   value={form.email}
@@ -193,7 +207,10 @@ export default function ContactoPage() {
                 </button>
                 <p className="mt-3 text-xs text-[var(--adamia-text-secondary)]">
                   Al enviar, aceptas nuestro{" "}
-                  <Link href="/politicas" className="text-[var(--adamia-blue)] underline">
+                  <Link
+                    href="/politicas"
+                    className="text-[var(--adamia-blue)] underline"
+                  >
                     Aviso de Privacidad
                   </Link>
                   .

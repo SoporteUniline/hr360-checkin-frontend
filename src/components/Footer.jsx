@@ -4,70 +4,104 @@ import React from "react";
 
 export default function Footer() {
   return (
-    <div className="flex justify-center items-center flex-col bg-linear-to-r from-(--adamia-blue) to-(--adamia-purple) text-white py-10">
-      <div>
-        <div className="flex justify-center">
-          <Image
-            alt="ADAMIA"
-            src="/assets/adamia.png"
-            width={180}
-            height={60}
-            className="h-12 w-auto"
-          />
-        </div>
-        <h2 className="font-extrabold text-center">
-          Plataforma Inteligente de Reclutamiento{" "}
-        </h2>
-        <h2 className="text-center">
-          Conecta tu empresa con el mejor talento de forma fácil, rápida y
-          profesional.
-        </h2>
-      </div>
-      <div className="grid grid-cols-1 w-full md:grid-cols-3 p-3 mt-3 md:px-10 lg:px-30 xl:px-60 space-x-5 space-y-3">
-        <div>
-          <p className="font-bold">Sobre ADAMIA</p>
-          <p className="text-sm mt-1 text-white/90">
-            ADAMIA es la plataforma lider en gestion de capital humano, disenada
-            para optimizar procesos y mejorar la experiencia de tus
-            colaboradores.
-          </p>
-        </div>
-        <div>
-          <p className="font-bold">Enlaces</p>
-          <div className="flex flex-col mt-1 text-sm gap-2">
-            <Link
-              href="/quienes-somos"
-              className="hover:underline text-white/90 hover:text-white"
-            >
-              Quiénes Somos
-            </Link>
-            <Link
-              href="/terminos-condiciones"
-              className="hover:underline text-white/90 hover:text-white"
-            >
-              Términos y Condiciones
-            </Link>
-            <Link
-              href="/aviso-privacidad"
-              className="hover:underline text-white/90 hover:text-white"
-            >
-              Aviso de Privacidad
-            </Link>
+    <footer className="bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] py-12 text-white">
+      <div className="mx-auto w-full max-w-7xl px-6">
+        <div className="grid gap-8 md:grid-cols-3">
+          <div>
+            <div className="flex items-center gap-3">
+              <Image
+                src="/assets/adamia.png"
+                alt="ADAMIA"
+                width={180}
+                height={60}
+                className="h-12 w-auto"
+              />
+            </div>
+            <p className="mt-4 text-sm leading-relaxed text-white/80">
+              Plataforma empresarial de Recursos Humanos en la nube con control
+              biométrico y reportes en tiempo real.
+            </p>
+            <div className="mt-4 text-yellow-300">★★★★★</div>
+            <p className="mt-1 text-xs text-white/60">4.9/5 - 500+ empresas</p>
           </div>
-        </div>
-        <div>
-          <p className="font-bold">contacto</p>
-          <div className="mt-1 text-sm leading-loose text-white/90">
-            <p>Email: sistema@adamia.mx</p>
-            <p>Tel: +52 317 128 8029</p>
-            <p>Autlán de Navarro, Jal. México</p>
-          </div>
-        </div>
-      </div>
 
-      <p className="text-xs mt-4 text-white/90">
-        © 2025 ADAMIA. Todos los derechos reservados.
-      </p>
-    </div>
+          <div>
+            <h4 className="text-lg font-semibold">Contacto</h4>
+            <div className="mt-4 space-y-3 text-sm text-white/80">
+              <div className="flex items-start gap-3">
+                <span className="text-lg">📧</span>
+                <div>
+                  <p className="font-medium text-white">Email</p>
+                  <a
+                    className="transition hover:text-white"
+                    href="mailto:sistema@adamia.mx"
+                  >
+                    sistema@adamia.mx
+                  </a>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="text-lg">📱</span>
+                <div>
+                  <p className="font-medium text-white">Teléfono</p>
+                  <a
+                    className="transition hover:text-white"
+                    href="tel:+523173887959"
+                  >
+                    +52 317 128 8029
+                  </a>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="text-lg">📍</span>
+                <div>
+                  <p className="font-medium text-white">Dirección</p>
+                  <p>Autlán de Navarro, Jalisco, MX</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="text-lg font-semibold">Enlaces</h4>
+            <div className="mt-4 space-y-3 text-sm text-white/80">
+              <Link className="block transition hover:text-white" href="/">
+                → Inicio
+              </Link>
+              <Link
+                className="block transition hover:text-white"
+                href="/quienes-somos"
+              >
+                → Quiénes somos
+              </Link>
+              <a
+                className="block transition hover:text-white"
+                href="/contratar-plan"
+                target="_blank"
+                rel="noreferrer"
+              >
+                → Contratar
+              </a>
+              <Link className="block transition hover:text-white" href="/login">
+                → Iniciar sesión
+              </Link>
+              <Link
+                className="block transition hover:text-white"
+                href="/aviso-privacidad"
+              >
+                → Ayuda
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-8 border-t border-white/20 pt-6">
+          <div className="flex flex-col items-center justify-between gap-4 text-sm text-white/70 md:flex-row">
+            <div>&copy; 2026 ADAMIA. Todos los derechos reservados.</div>
+            <div>Hecho con ❤️ en México</div>
+          </div>
+        </div>
+      </div>
+    </footer>
   );
 }

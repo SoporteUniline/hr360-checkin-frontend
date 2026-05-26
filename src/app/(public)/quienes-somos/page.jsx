@@ -1,5 +1,11 @@
 import Link from "next/link";
 
+export const metadata = {
+  title: "Quiénes Somos",
+  description:
+    "Conoce ADAMIA, la plataforma empresarial de Recursos Humanos diseñada para digitalizar asistencia, personal e incidencias.",
+};
+
 const valores = [
   {
     title: "Seguridad",
@@ -98,7 +104,9 @@ export default function QuienesSomosPage() {
             <h2 className="mt-5 text-3xl font-black leading-tight md:text-4xl">
               Una solución nacida de
               <br />
-              <span className="text-[var(--adamia-blue)]">la experiencia real</span>
+              <span className="text-[var(--adamia-blue)]">
+                la experiencia real
+              </span>
             </h2>
             <p className="mt-5 text-[var(--adamia-text-secondary)]">
               ADAMIA nace de la experiencia de Uniline en soluciones

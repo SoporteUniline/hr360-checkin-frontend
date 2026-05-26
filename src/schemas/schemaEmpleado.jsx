@@ -192,19 +192,32 @@ export const schemaEmpleado = z
     }
 
     const diasCompletos = data.horarios.filter(
-      (horario) =>
-        horario.entrada &&
-        horario.salida_comida &&
-        horario.regreso_comida &&
-        horario.salida,
+      (horario) => horario.entrada && horario.salida,
     );
+
+    data.horarios.forEach((horario, index) => {
+      if (horario.salida_comida && !horario.regreso_comida) {
+        ctx.addIssue({
+          path: ["horarios", index, "regreso_comida"],
+          code: z.ZodIssueCode.custom,
+          message: `Debes ingresar regreso de comida para ${horario.dia}`,
+        });
+      }
+
+      if (!horario.salida_comida && horario.regreso_comida) {
+        ctx.addIssue({
+          path: ["horarios", index, "salida_comida"],
+          code: z.ZodIssueCode.custom,
+          message: `Debes ingresar salida de comida para ${horario.dia}`,
+        });
+      }
+    });
 
     if (diasCompletos.length === 0) {
       ctx.addIssue({
         path: ["horarios"],
         code: z.ZodIssueCode.custom,
-        message:
-          "Debes completar al menos un día con entrada, salida comida, regreso comida y salida",
+        message: "Debes completar al menos un día con entrada y salida",
       });
     }
 

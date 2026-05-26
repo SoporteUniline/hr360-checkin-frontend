@@ -14,6 +14,13 @@ import ModalCapacidadAgotada from "@/components/ModalCapacidadAgotada";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import axios from "@/lib/axios";
 import { useIsMobile } from "@/hooks/use-mobile";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Componente de tarjeta de estadística estilo ADAMIA
 const StatCard = ({ title, count, limit, icon: Icon, trend }) => {
@@ -72,6 +79,12 @@ export default function RegistroEmpleados() {
   const { dataUser } = useAuth();
   const [empresaActiva, setEmpresaActiva] = useState("all");
 
+  useEffect(() => {
+    if (dataUser?.empresas_detalle?.length === 1) {
+      setEmpresaActiva(String(dataUser.empresas_detalle[0].id_empresa));
+    }
+  }, [dataUser]);
+
   // Abrir empleado directo si viene ?id= desde la búsqueda global
   useEffect(() => {
     const idParam = searchParams.get("id");
@@ -101,6 +114,13 @@ export default function RegistroEmpleados() {
     lectura = false,
   ) => {
     if (!empleado) {
+      if (!idEmpresa || idEmpresa === "all") {
+        setMensajeCapacidad(
+          "Debes seleccionar una empresa específica antes de crear un empleado.",
+        );
+        setModalCapacidadAbierto(true);
+        return;
+      }
       try {
         const { data } = await axios.get(
           `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados-capacidad/check-capacidad?empresa_id=${idEmpresa}`,
@@ -226,7 +246,28 @@ export default function RegistroEmpleados() {
           />
         ) : (
           <>
-            <div className="flex justify-end mb-6">
+            <div className="flex items-center justify-end gap-3 mb-6">
+              {dataUser?.empresas_detalle?.length > 1 && (
+                <Select value={empresaActiva} onValueChange={setEmpresaActiva}>
+                  <SelectTrigger className="w-[240px]">
+                    <SelectValue />
+                  </SelectTrigger>
+
+                  <SelectContent>
+                    <SelectItem value="all">Todas las empresas</SelectItem>
+
+                    {dataUser.empresas_detalle.map((empresa) => (
+                      <SelectItem
+                        key={String(empresa.id_empresa)}
+                        value={String(empresa.id_empresa)}
+                      >
+                        {empresa.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
               <Button
                 className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
                 onClick={() => abrirFormulario(null, false, false)}

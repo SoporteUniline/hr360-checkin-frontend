@@ -12,14 +12,27 @@ const inter = Inter({
 });
 
 export const metadata = {
-  title: "Adamia",
+  metadataBase: new URL("https://adamia.mx"),
+  title: {
+    default: "ADAMIA | Plataforma Empresarial de Recursos Humanos",
+    template: "%s | ADAMIA",
+  },
   description:
-    "En Adamia, transformamos la forma en que las empresas encuentran talento: sin vacantes falsas, sin procesos improvisados, sin riesgos.",
+    "ADAMIA es una plataforma empresarial de Recursos Humanos para control de asistencia biométrico, gestión de personal, incidencias y reportes en tiempo real.",
+  openGraph: {
+    title: "ADAMIA | Plataforma Empresarial de Recursos Humanos",
+    description:
+      "Control de asistencia biométrico, gestión de personal y reportes en tiempo real.",
+    url: "https://adamia.mx",
+    siteName: "ADAMIA",
+    locale: "es_MX",
+    type: "website",
+  },
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="es">
       <head>
         <link rel="icon" href="/favicon.ico" />
 

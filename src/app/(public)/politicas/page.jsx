@@ -58,7 +58,9 @@ export default function PoliticasPage() {
       <section className="py-10">
         <div className="mx-auto w-full max-w-7xl px-6">
           <article className="rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-6 shadow-sm md:p-8">
-            <h2 className="text-2xl font-black">Aviso de Privacidad Integral</h2>
+            <h2 className="text-2xl font-black">
+              Aviso de Privacidad Integral
+            </h2>
             <p className="mt-3 text-[var(--adamia-text-secondary)]">
               Este aviso describe qué datos personales tratamos, por qué lo
               hacemos, cómo protegemos la información y cómo puedes ejercer tus
@@ -92,17 +94,23 @@ export default function PoliticasPage() {
             <ul className="mt-3 space-y-1 text-sm">
               <li>
                 Correo:{" "}
-                <a className="font-semibold text-[var(--adamia-blue)]" href="mailto:privacidad@adamia.mx">
+                <a
+                  className="font-semibold text-[var(--adamia-blue)]"
+                  href="mailto:privacidad@adamia.mx"
+                >
                   privacidad@adamia.mx
                 </a>
               </li>
               <li>
                 Soporte:{" "}
-                <a className="font-semibold text-[var(--adamia-blue)]" href="mailto:soporte@adamia.mx">
-                  soporte@adamia.mx
+                <a
+                  className="font-semibold text-[var(--adamia-blue)]"
+                  href="mailto:sistema@adamia.mx"
+                >
+                  sistema@adamia.mx
                 </a>
               </li>
-              <li>Teléfono: +52 317 388 7959</li>
+              <li>Teléfono: +52 317 128 8029</li>
             </ul>
           </article>
         </div>

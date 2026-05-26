@@ -150,11 +150,11 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
     },
     {
       name: "id_autoriza_vacaciones",
-      label: "Responsable de vacaciones",
+      label: "Responsable de autorizar vacaciones",
     },
     {
       name: "id_autoriza_permisos",
-      label: "Responsable de permisos",
+      label: "Responsable de autorizar permisos",
     },
   ];
 

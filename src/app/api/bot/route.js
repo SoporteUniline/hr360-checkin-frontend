@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 const SALES_KNOWLEDGE_BASE = `
 ADAMIA es un sistema de Recursos Humanos en la nube.
-Contacto comercial: soporte@adamia.mx y WhatsApp +52 317 388 7959.
+Contacto comercial: sistema@adamia.mx y WhatsApp +52 317 128 8029.
 Funciones clave: reloj checador facial + GPS, gestion de empleados, asistencias, vacaciones y permisos, reportes, contratos digitales, actas, notificaciones y portal web empresarial.
 Planes: mensual (0%), semestral (10% off), anual (20% off).
 Prueba: 7 dias gratis.
@@ -10,25 +10,31 @@ Enlaces: contratar https://planes.hr360.mx/contratar-plan y cotizar https://plan
 `;
 
 function normalizeText(value) {
-  return String(value || "").trim().toLowerCase();
+  return String(value || "")
+    .trim()
+    .toLowerCase();
 }
 
 function isGreeting(text) {
   const t = normalizeText(text);
   if (!t) return false;
-  return /^(hola|holi|hello|buenas|buen dia|buen día|que tal|qué tal|hey|hi)\b/.test(t);
+  return /^(hola|holi|hello|buenas|buen dia|buen día|que tal|qué tal|hey|hi)\b/.test(
+    t,
+  );
 }
 
 function isPureGreeting(text) {
   const t = normalizeText(text);
   if (!t) return false;
   return /^(hola|holi|hello|buenas|buen dia|buen día|que tal|qué tal|hey|hi|buenas tardes|buenos dias|buenos días|buenas noches)[!. ]*$/.test(
-    t
+    t,
   );
 }
 
 function hasConversationHistory(history = []) {
-  const valid = history.filter((item) => item && String(item.text || "").trim());
+  const valid = history.filter(
+    (item) => item && String(item.text || "").trim(),
+  );
   return valid.length > 1;
 }
 
@@ -88,13 +94,15 @@ function mapHistoryToGeminiContents(history = []) {
 function extractEmployees(text) {
   const message = String(text || "");
   const sumMatch = message.match(
-    /(\d+)\s+(?:en|de)\s+(?:calle|campo|ruta|exterior|afuera).*?(?:y|mas|más|\+)\s*(\d+)\s+(?:en|de)\s+(?:oficina|admin|administracion|administración|interior|dentro)/i
+    /(\d+)\s+(?:en|de)\s+(?:calle|campo|ruta|exterior|afuera).*?(?:y|mas|más|\+)\s*(\d+)\s+(?:en|de)\s+(?:oficina|admin|administracion|administración|interior|dentro)/i,
   );
   if (sumMatch) {
     return Number.parseInt(sumMatch[1], 10) + Number.parseInt(sumMatch[2], 10);
   }
 
-  const plusMe = message.match(/(\d+)\s*(?:y\s*yo|más\s*yo|incluyéndome|me\s*incluyo)/i);
+  const plusMe = message.match(
+    /(\d+)\s*(?:y\s*yo|más\s*yo|incluyéndome|me\s*incluyo)/i,
+  );
   if (plusMe) {
     return Number.parseInt(plusMe[1], 10) + 1;
   }
@@ -151,15 +159,20 @@ function extractName(text) {
     const normalized = normalizeCandidate(candidate);
     if (!normalized) return null;
     const lower = normalizeText(normalized);
-    const firstChunk = normalized.split(/\s+(?:y|pero|porque|para)\s+/i)[0]?.trim() || normalized;
+    const firstChunk =
+      normalized.split(/\s+(?:y|pero|porque|para)\s+/i)[0]?.trim() ||
+      normalized;
     const firstChunkLower = normalizeText(firstChunk);
     if (!firstChunk || blockedNames.has(firstChunkLower)) return null;
-    if (!/^[a-záéíóúñ]+(?:\s+[a-záéíóúñ]+){0,2}$/i.test(firstChunk)) return null;
+    if (!/^[a-záéíóúñ]+(?:\s+[a-záéíóúñ]+){0,2}$/i.test(firstChunk))
+      return null;
     return firstChunk;
   };
 
   // Detecta nombre aunque venga con saludo o con mas contexto.
-  const explicit = raw.match(/(?:^|\b)(?:me llamo|soy|mi nombre es)\s+([a-záéíóúñ\s]{2,50})/i);
+  const explicit = raw.match(
+    /(?:^|\b)(?:me llamo|soy|mi nombre es)\s+([a-záéíóúñ\s]{2,50})/i,
+  );
   if (explicit?.[1]) {
     const explicitName = cleanCandidate(explicit[1]);
     if (explicitName) return explicitName;
@@ -178,10 +191,13 @@ function extractName(text) {
     "plan",
     "funcion",
   ];
-  if (actionWords.some((word) => normalizeText(raw).includes(word))) return null;
+  if (actionWords.some((word) => normalizeText(raw).includes(word)))
+    return null;
   if (blockedNames.has(normalizeText(raw))) return null;
 
-  const plainNameMatch = raw.match(/^([a-záéíóúñ]{2,}(?:\s+[a-záéíóúñ]+){0,2})$/i);
+  const plainNameMatch = raw.match(
+    /^([a-záéíóúñ]{2,}(?:\s+[a-záéíóúñ]+){0,2})$/i,
+  );
   if (plainNameMatch?.[1]) {
     const plainName = cleanCandidate(plainNameMatch[1]);
     if (plainName) return plainName;
@@ -195,11 +211,12 @@ function getConversationContext(history = []) {
   let nombre = null;
 
   const userMessages = history.filter(
-    (item) => item && item.role === "user" && typeof item.text === "string"
+    (item) => item && item.role === "user" && typeof item.text === "string",
   );
   for (const item of userMessages) {
     const maybeEmployees = extractEmployees(item.text);
-    if (Number.isInteger(maybeEmployees) && maybeEmployees > 0) empleados = maybeEmployees;
+    if (Number.isInteger(maybeEmployees) && maybeEmployees > 0)
+      empleados = maybeEmployees;
     const maybeName = extractName(item.text);
     if (maybeName) nombre = maybeName;
   }
@@ -247,7 +264,11 @@ function isCreativeOrGeneralIntent(text) {
 function getSalesFAQReply(text) {
   const t = normalizeText(text);
 
-  if (/que es adamia|qué es adamia|quien es adamia|quién es adamia|de que trata adamia|de qué trata adamia/.test(t)) {
+  if (
+    /que es adamia|qué es adamia|quien es adamia|quién es adamia|de que trata adamia|de qué trata adamia/.test(
+      t,
+    )
+  ) {
     return [
       "ADAMIA es una plataforma web de Recursos Humanos para empresas.",
       "Te ayuda a controlar asistencias, gestionar empleados, vacaciones, contratos y reportes en un solo lugar.",
@@ -256,7 +277,11 @@ function getSalesFAQReply(text) {
     ].join("\n");
   }
 
-  if (/que incluye|qué incluye|funcion|modulo|m[oó]dulo|que hace|qué hace|ofrece/.test(t)) {
+  if (
+    /que incluye|qué incluye|funcion|modulo|m[oó]dulo|que hace|qué hace|ofrece/.test(
+      t,
+    )
+  ) {
     return [
       "ADAMIA incluye:",
       "• Reloj checador facial + GPS",
@@ -283,7 +308,7 @@ function getSalesFAQReply(text) {
   }
 
   if (/soporte|ayuda|atencion|atenci[oó]n|contacto|whatsapp/.test(t)) {
-    return "Claro. Te atendemos en soporte@adamia.mx y WhatsApp +52 317 388 7959.";
+    return "Claro. Te atendemos en sistema@adamia.mx y WhatsApp +52 317 128 8029.";
   }
 
   if (/seguridad|datos|privacidad|protecci[oó]n/.test(t)) {
@@ -329,13 +354,23 @@ function buildQuote(empleados) {
 
 function buildQuoteResponse({ empleados, nombre }) {
   const q = buildQuote(empleados);
-  const salutation = nombre ? `${nombre}, aqui esta tu referencia para ${q.empleados} empleados:` : `Aqui tienes una referencia para ${q.empleados} empleados:`;
+  const salutation = nombre
+    ? `${nombre}, aqui esta tu referencia para ${q.empleados} empleados:`
+    : `Aqui tienes una referencia para ${q.empleados} empleados:`;
 
   return [
     salutation,
     `• Mensual: ${formatCurrency(q.mensualMes)}/mes`,
-    `• Semestral (10% OFF): ${formatCurrency(q.semestralMes)}/mes (total ${formatCurrency(q.semestralTotal)}, ahorras ${formatCurrency(q.ahorro6)})`,
-    `• Anual (20% OFF): ${formatCurrency(q.anualMes)}/mes (total ${formatCurrency(q.anualTotal)}, ahorras ${formatCurrency(q.ahorro12)})`,
+    `• Semestral (10% OFF): ${formatCurrency(
+      q.semestralMes,
+    )}/mes (total ${formatCurrency(q.semestralTotal)}, ahorras ${formatCurrency(
+      q.ahorro6,
+    )})`,
+    `• Anual (20% OFF): ${formatCurrency(
+      q.anualMes,
+    )}/mes (total ${formatCurrency(q.anualTotal)}, ahorras ${formatCurrency(
+      q.ahorro12,
+    )})`,
     "Incluye reloj checador facial + GPS, asistencias, vacaciones, contratos y reportes.",
     "Cotiza formalmente en https://planes.hr360.mx/cotiza o contrata en https://planes.hr360.mx/contratar-plan.",
   ].join("\n");
@@ -366,33 +401,33 @@ function buildSalesOfflineReply(message) {
 
 function buildTemplateOfflineReply() {
   return [
-    '<style>',
-    '  .adamia-doc{font-family:Arial,Helvetica,sans-serif;color:#1f2937;line-height:1.5;}',
-    '  .adamia-header{border-bottom:3px solid #2563EB;padding-bottom:10px;margin-bottom:20px;}',
-    '  .adamia-title{margin:0;font-size:24px;color:#2563EB;font-weight:700;}',
-    '  .adamia-subtitle{margin:6px 0 0 0;font-size:13px;color:#6b7280;}',
-    '  .adamia-card{border:1px solid #e5e7eb;border-left:4px solid #7C3AED;border-radius:8px;padding:14px;margin:14px 0;background:#fafafa;}',
-    '  .adamia-signatures{margin-top:34px;display:flex;justify-content:space-between;gap:20px;}',
-    '  .adamia-signatures div{flex:1;text-align:center;}',
-    '  .adamia-line{border-top:1px solid #9ca3af;margin-top:48px;padding-top:8px;font-size:12px;color:#6b7280;}',
-    '</style>',
+    "<style>",
+    "  .adamia-doc{font-family:Arial,Helvetica,sans-serif;color:#1f2937;line-height:1.5;}",
+    "  .adamia-header{border-bottom:3px solid #2563EB;padding-bottom:10px;margin-bottom:20px;}",
+    "  .adamia-title{margin:0;font-size:24px;color:#2563EB;font-weight:700;}",
+    "  .adamia-subtitle{margin:6px 0 0 0;font-size:13px;color:#6b7280;}",
+    "  .adamia-card{border:1px solid #e5e7eb;border-left:4px solid #7C3AED;border-radius:8px;padding:14px;margin:14px 0;background:#fafafa;}",
+    "  .adamia-signatures{margin-top:34px;display:flex;justify-content:space-between;gap:20px;}",
+    "  .adamia-signatures div{flex:1;text-align:center;}",
+    "  .adamia-line{border-top:1px solid #9ca3af;margin-top:48px;padding-top:8px;font-size:12px;color:#6b7280;}",
+    "</style>",
     '<div class="adamia-doc">',
     '  <div class="adamia-header">',
     '    <h1 class="adamia-title">Constancia Laboral</h1>',
     '    <p class="adamia-subtitle">Emitida por {{empresa.nombre}} el {{fecha.completa}}</p>',
     "  </div>",
-    '  <p>Por medio de la presente, se hace constar que <strong>{{empleado.nombre}}</strong>, con código interno <strong>{{empleado.codigo}}</strong>, labora en <strong>{{empresa.nombre}}</strong> desempeñando el puesto de <strong>{{empleado.puesto}}</strong> dentro del área de <strong>{{empleado.departamento}}</strong>, desde la fecha <strong>{{empleado.fecha_ingreso}}</strong>.</p>',
+    "  <p>Por medio de la presente, se hace constar que <strong>{{empleado.nombre}}</strong>, con código interno <strong>{{empleado.codigo}}</strong>, labora en <strong>{{empresa.nombre}}</strong> desempeñando el puesto de <strong>{{empleado.puesto}}</strong> dentro del área de <strong>{{empleado.departamento}}</strong>, desde la fecha <strong>{{empleado.fecha_ingreso}}</strong>.</p>",
     '  <div class="adamia-card">',
     '    <h3 style="margin:0 0 8px 0;color:#7C3AED;">Datos relevantes</h3>',
     '    <ul style="margin:0;padding-left:20px;">',
-    '      <li>Empresa: {{empresa.nombre}}</li>',
-    '      <li>RFC empleado: {{empleado.rfc}}</li>',
-    '      <li>CURP empleado: {{empleado.curp}}</li>',
-    '      <li>Salario mensual: {{empleado.salario}}</li>',
-    '    </ul>',
+    "      <li>Empresa: {{empresa.nombre}}</li>",
+    "      <li>RFC empleado: {{empleado.rfc}}</li>",
+    "      <li>CURP empleado: {{empleado.curp}}</li>",
+    "      <li>Salario mensual: {{empleado.salario}}</li>",
+    "    </ul>",
     "  </div>",
-    '  <p>La presente constancia se expide a solicitud de la parte interesada para los fines legales y administrativos que a su derecho convengan.</p>',
-    '  <p>Sin más por el momento, quedamos a sus órdenes.</p>',
+    "  <p>La presente constancia se expide a solicitud de la parte interesada para los fines legales y administrativos que a su derecho convengan.</p>",
+    "  <p>Sin más por el momento, quedamos a sus órdenes.</p>",
     '  <div class="adamia-signatures">',
     '    <div><div class="adamia-line">{{empresa.representante}}<br/>Representante de la empresa</div></div>',
     '    <div><div class="adamia-line">{{empleado.nombre}}<br/>Colaborador</div></div>',
@@ -426,12 +461,22 @@ async function getGeminiModelCandidates(apiKey) {
     const response = await fetch(listEndpoint, { cache: "no-store" });
     const data = await response.json();
     if (!response.ok) {
-      throw new Error(`ListModels fallo: ${response.status} ${JSON.stringify(data)}`);
+      throw new Error(
+        `ListModels fallo: ${response.status} ${JSON.stringify(data)}`,
+      );
     }
 
     const available = (data?.models || [])
-      .filter((m) => Array.isArray(m?.supportedGenerationMethods) && m.supportedGenerationMethods.includes("generateContent"))
-      .map((m) => String(m?.name || "").replace(/^models\//, "").trim())
+      .filter(
+        (m) =>
+          Array.isArray(m?.supportedGenerationMethods) &&
+          m.supportedGenerationMethods.includes("generateContent"),
+      )
+      .map((m) =>
+        String(m?.name || "")
+          .replace(/^models\//, "")
+          .trim(),
+      )
       .filter(Boolean);
 
     if (!available.length) {
@@ -468,7 +513,9 @@ async function requestGemini({ apiKey, model, systemPrompt, contents }) {
 
   const data = await response.json();
   if (!response.ok) {
-    throw new Error(`Gemini ${model} fallo: ${response.status} ${JSON.stringify(data)}`);
+    throw new Error(
+      `Gemini ${model} fallo: ${response.status} ${JSON.stringify(data)}`,
+    );
   }
 
   const answer =
@@ -522,13 +569,22 @@ export async function POST(req) {
         });
       }
 
-      if (empleadosFinal && !nombreFinal && (wantsQuote || employeeOnlyIntent) && !creativeIntent) {
+      if (
+        empleadosFinal &&
+        !nombreFinal &&
+        (wantsQuote || employeeOnlyIntent) &&
+        !creativeIntent
+      ) {
         return NextResponse.json({
           message: `Perfecto, para ${empleadosFinal} empleados. ¿Me compartes tu nombre para personalizar la cotizacion?`,
         });
       }
 
-      if ((wantsQuote || employeeOnlyIntent) && !empleadosFinal && !creativeIntent) {
+      if (
+        (wantsQuote || employeeOnlyIntent) &&
+        !empleadosFinal &&
+        !creativeIntent
+      ) {
         return NextResponse.json({
           message: "Claro. ¿Para cuantos empleados necesitas ADAMIA?",
         });
@@ -545,7 +601,7 @@ export async function POST(req) {
     }
 
     const apiKey = String(
-      process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY || ""
+      process.env.GEMINI_API_KEY || process.env.GOOGLE_GEMINI_API_KEY || "",
     ).trim();
     if (!apiKey) {
       if (context === "template") {
@@ -587,7 +643,11 @@ export async function POST(req) {
           });
           const data = await response.json();
           if (!response.ok) {
-            throw new Error(`Gemini ${model} template fallo: ${response.status} ${JSON.stringify(data)}`);
+            throw new Error(
+              `Gemini ${model} template fallo: ${
+                response.status
+              } ${JSON.stringify(data)}`,
+            );
           }
           const raw =
             data?.candidates?.[0]?.content?.parts
@@ -599,7 +659,12 @@ export async function POST(req) {
           return NextResponse.json({ message: html });
         }
 
-        const answer = await requestGemini({ apiKey, model, systemPrompt, contents });
+        const answer = await requestGemini({
+          apiKey,
+          model,
+          systemPrompt,
+          contents,
+        });
         return NextResponse.json({ message: answer });
       } catch (modelError) {
         const detail = modelError?.message || String(modelError);
@@ -629,15 +694,13 @@ export async function POST(req) {
     }
 
     return NextResponse.json({
-      message:
-        `No pude conectar con Gemini en este momento. Si quieres, te apoyo con dudas generales de privacidad y te canalizo a privacidad@adamia.mx.${debugDetail}`,
+      message: `No pude conectar con Gemini en este momento. Si quieres, te apoyo con dudas generales de privacidad y te canalizo a privacidad@adamia.mx.${debugDetail}`,
     });
   } catch (error) {
     console.error("Error en /api/bot:", error);
     return NextResponse.json(
       { message: "Error interno al consultar el asistente." },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
-

@@ -74,7 +74,7 @@ const URL_OPTIONS = [
   { value: "/contacto", label: "Contacto" },
   { value: "/login", label: "Iniciar sesión" },
   {
-    value: "mailto:soporte@adamia.mx",
+    value: "mailto:sistema@adamia.mx",
     label: "Enviar correo a soporte",
   },
 ];
@@ -138,7 +138,11 @@ function mapToForm(message) {
 }
 
 export default function MensajesSistemaPage() {
-  const { data, isLoading, mutate } = useSWR(API_PATH, fetcherWithToken, swr_config);
+  const { data, isLoading, mutate } = useSWR(
+    API_PATH,
+    fetcherWithToken,
+    swr_config,
+  );
   const mensajes = data || [];
 
   const [open, setOpen] = useState(false);
@@ -259,7 +263,8 @@ export default function MensajesSistemaPage() {
     } catch (e) {
       setWaRecipients([]);
       setWaError(
-        e?.response?.data?.error || "No se pudo cargar el listado de destinatarios.",
+        e?.response?.data?.error ||
+          "No se pudo cargar el listado de destinatarios.",
       );
     } finally {
       setWaLoadingRecipients(false);
@@ -313,7 +318,8 @@ export default function MensajesSistemaPage() {
       setWaResult(response?.data || null);
     } catch (e) {
       setWaError(
-        e?.response?.data?.error || "No fue posible enviar el mensaje por WhatsApp.",
+        e?.response?.data?.error ||
+          "No fue posible enviar el mensaje por WhatsApp.",
       );
     } finally {
       setWaSending(false);
@@ -329,9 +335,12 @@ export default function MensajesSistemaPage() {
               <BellRing className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900">Mensajes del sistema</h1>
+              <h1 className="text-lg font-bold text-gray-900">
+                Mensajes del sistema
+              </h1>
               <p className="text-sm text-gray-600">
-                Configura mensajes para la landing (externa) y para el panel interno.
+                Configura mensajes para la landing (externa) y para el panel
+                interno.
               </p>
             </div>
           </div>
@@ -361,7 +370,9 @@ export default function MensajesSistemaPage() {
           {isLoading ? (
             <p className="text-sm text-gray-500">Cargando mensajes...</p>
           ) : mensajes.length === 0 ? (
-            <p className="text-sm text-gray-500">Aún no hay mensajes creados.</p>
+            <p className="text-sm text-gray-500">
+              Aún no hay mensajes creados.
+            </p>
           ) : (
             <div className="space-y-3">
               {mensajes.map((m) => (
@@ -440,7 +451,8 @@ export default function MensajesSistemaPage() {
               {editingId ? "Editar mensaje" : "Crear mensaje del sistema"}
             </DialogTitle>
             <DialogDescription>
-              Define dónde aparece, diseño visual, colores y ventana de publicación.
+              Define dónde aparece, diseño visual, colores y ventana de
+              publicación.
             </DialogDescription>
           </DialogHeader>
 
@@ -449,7 +461,9 @@ export default function MensajesSistemaPage() {
               <select
                 className="w-full border rounded-md h-10 px-3 text-sm"
                 value={form.tipo}
-                onChange={(e) => setForm((f) => ({ ...f, tipo: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, tipo: e.target.value }))
+                }
               >
                 <option value="externa">Externa (landing)</option>
                 <option value="interna">Interna (panel)</option>
@@ -460,7 +474,9 @@ export default function MensajesSistemaPage() {
               <select
                 className="w-full border rounded-md h-10 px-3 text-sm"
                 value={form.formato}
-                onChange={(e) => setForm((f) => ({ ...f, formato: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, formato: e.target.value }))
+                }
               >
                 <option value="banner">Banner (tarjeta)</option>
                 <option value="banda">Banda (tira superior)</option>
@@ -470,7 +486,9 @@ export default function MensajesSistemaPage() {
             <Field label="Título">
               <Input
                 value={form.titulo}
-                onChange={(e) => setForm((f) => ({ ...f, titulo: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, titulo: e.target.value }))
+                }
                 placeholder="Promoción de septiembre"
               />
             </Field>
@@ -480,11 +498,15 @@ export default function MensajesSistemaPage() {
                 <select
                   className="w-full border rounded-md h-10 px-3 text-sm"
                   value={form.icono}
-                  onChange={(e) => setForm((f) => ({ ...f, icono: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, icono: e.target.value }))
+                  }
                 >
                   {ICON_OPTIONS.map((option) => (
                     <option key={option.label} value={option.value}>
-                      {option.value ? `${option.value} ${option.label}` : option.label}
+                      {option.value
+                        ? `${option.value} ${option.label}`
+                        : option.label}
                     </option>
                   ))}
                 </select>
@@ -521,7 +543,9 @@ export default function MensajesSistemaPage() {
               <Field label="Mensaje">
                 <Textarea
                   value={form.mensaje}
-                  onChange={(e) => setForm((f) => ({ ...f, mensaje: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, mensaje: e.target.value }))
+                  }
                   rows={3}
                   placeholder="Texto principal del mensaje..."
                 />
@@ -578,9 +602,10 @@ export default function MensajesSistemaPage() {
                 <div className="rounded-md border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-900 leading-relaxed">
                   <strong>Recomendación visual para banner:</strong> usa imagen
                   horizontal <strong>16:9</strong> (ideal{" "}
-                  <strong>1200x675 px</strong>), formato <strong>JPG o WEBP</strong>{" "}
-                  y peso menor a <strong>300 KB</strong> para que cargue rápido y
-                  se vea estético.
+                  <strong>1200x675 px</strong>), formato{" "}
+                  <strong>JPG o WEBP</strong> y peso menor a{" "}
+                  <strong>300 KB</strong> para que cargue rápido y se vea
+                  estético.
                 </div>
               </div>
             </Field>
@@ -625,7 +650,7 @@ export default function MensajesSistemaPage() {
                 <p className="text-xs text-gray-500">
                   Tip: usa{" "}
                   <code className="rounded bg-gray-100 px-1 py-0.5">
-                    mailto:soporte@adamia.mx
+                    mailto:sistema@adamia.mx
                   </code>{" "}
                   para abrir el correo a soporte.
                 </p>
@@ -656,7 +681,9 @@ export default function MensajesSistemaPage() {
               <div className="flex items-center gap-2">
                 <Switch
                   checked={!!form.activa}
-                  onCheckedChange={(val) => setForm((f) => ({ ...f, activa: val }))}
+                  onCheckedChange={(val) =>
+                    setForm((f) => ({ ...f, activa: val }))
+                  }
                 />
                 <span className="text-sm font-medium">Mensaje activo</span>
               </div>
@@ -753,17 +780,27 @@ export default function MensajesSistemaPage() {
                     value={waSearch}
                     onChange={(e) => setWaSearch(e.target.value)}
                   />
-                  <Button type="button" variant="outline" onClick={selectAllFiltered}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={selectAllFiltered}
+                  >
                     Seleccionar visibles
                   </Button>
-                  <Button type="button" variant="outline" onClick={clearSelected}>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={clearSelected}
+                  >
                     Limpiar
                   </Button>
                 </div>
 
                 <div className="max-h-64 overflow-y-auto rounded-lg border bg-white">
                   {waLoadingRecipients ? (
-                    <p className="p-3 text-sm text-gray-500">Cargando empresas...</p>
+                    <p className="p-3 text-sm text-gray-500">
+                      Cargando empresas...
+                    </p>
                   ) : filteredRecipients.length === 0 ? (
                     <p className="p-3 text-sm text-gray-500">
                       No hay coincidencias para la búsqueda.
@@ -788,7 +825,8 @@ export default function MensajesSistemaPage() {
                                 {item.nombre_empresa}
                               </p>
                               <p className="text-xs text-gray-600">
-                                {item.nombre_duenio || "Sin dueño"} - {item.celular}
+                                {item.nombre_duenio || "Sin dueño"} -{" "}
+                                {item.celular}
                               </p>
                             </div>
                           </label>
@@ -815,7 +853,8 @@ export default function MensajesSistemaPage() {
                 <p>
                   Fallidos: <strong>{waResult.fallidos}</strong>
                 </p>
-                {Array.isArray(waResult.errores) && waResult.errores.length > 0 ? (
+                {Array.isArray(waResult.errores) &&
+                waResult.errores.length > 0 ? (
                   <div className="max-h-24 overflow-y-auto rounded bg-white/70 p-2 text-xs">
                     {waResult.errores.map((err) => (
                       <p key={`${err.id_empresa}-${err.empresa}`}>
@@ -848,7 +887,10 @@ export default function MensajesSistemaPage() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
+      <AlertDialog
+        open={!!deleting}
+        onOpenChange={(v) => !v && setDeleting(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Eliminar mensaje</AlertDialogTitle>
@@ -858,7 +900,9 @@ export default function MensajesSistemaPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>Eliminar</AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete}>
+              Eliminar
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

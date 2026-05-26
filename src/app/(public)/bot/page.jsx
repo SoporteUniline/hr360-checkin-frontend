@@ -11,7 +11,8 @@ const sugerencias = [
 
 const respuestasFallback = [
   {
-    match: /que es adamia|qué es adamia|quien es adamia|quién es adamia|de que trata/i,
+    match:
+      /que es adamia|qué es adamia|quien es adamia|quién es adamia|de que trata/i,
     text: "ADAMIA es una plataforma web de Recursos Humanos que centraliza asistencias, empleados, vacaciones, contratos y reportes. Si quieres, te explico cada modulo o te cotizo por numero de empleados.",
   },
   {
@@ -28,7 +29,7 @@ const respuestasFallback = [
   },
   {
     match: /contacto|soporte|whatsapp/i,
-    text: "Te apoyamos en soporte@adamia.mx o WhatsApp +52 317 388 7959.",
+    text: "Te apoyamos en sistema@adamia.mx o WhatsApp +52 317 128 8029.",
   },
 ];
 
@@ -94,7 +95,7 @@ export default function BotPage() {
         ...prev,
         {
           role: "bot",
-          text: "No pude conectar con el servicio en este momento. Puedes escribir a soporte@adamia.mx.",
+          text: "No pude conectar con el servicio en este momento. Puedes escribir a sistema@adamia.mx.",
         },
       ]);
     } finally {
@@ -108,7 +109,9 @@ export default function BotPage() {
         <article className="overflow-hidden rounded-2xl border border-[var(--adamia-blue)]/20 bg-white shadow-xl sm:rounded-3xl">
           {/* Header visual del bot */}
           <header className="bg-gradient-to-r from-[var(--adamia-blue)] to-[var(--adamia-purple)] px-4 py-4 text-white sm:px-6 sm:py-5">
-            <h1 className="text-2xl font-black sm:text-3xl">🤖 Bot Comercial ADAMIA</h1>
+            <h1 className="text-2xl font-black sm:text-3xl">
+              🤖 Bot Comercial ADAMIA
+            </h1>
             <p className="mt-1 text-base text-white/90 sm:text-sm">
               Resuelve dudas rápidas sobre funciones, precios y contratación.
             </p>
@@ -136,7 +139,9 @@ export default function BotPage() {
             {messages.map((m, idx) => (
               <div
                 key={`${m.role}-${idx}`}
-                className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                className={`flex ${
+                  m.role === "user" ? "justify-end" : "justify-start"
+                }`}
               >
                 <p
                   className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm sm:max-w-[85%] ${

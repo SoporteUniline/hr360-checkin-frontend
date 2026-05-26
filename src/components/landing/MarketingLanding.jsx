@@ -1,11 +1,19 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Play, Shield, Monitor, Calculator, Check } from "lucide-react";
+import {
+  ArrowRight,
+  Play,
+  Shield,
+  Monitor,
+  Calculator,
+  Check,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import AdamiaChatWidget from "@/components/landing/AdamiaChatWidget";
 import Navbar from "@/components/Navbar";
 import SystemMessageRenderer from "@/components/system-messages/SystemMessageRenderer";
+import Footer from "../Footer";
 
 /**
  * Landing principal (solo UI).
@@ -59,7 +67,9 @@ export default function MarketingLanding() {
               </p>
 
               <p className="mt-4 text-base text-white/80 md:text-lg">
-                <strong className="font-semibold text-white">500+ empresas</strong>{" "}
+                <strong className="font-semibold text-white">
+                  500+ empresas
+                </strong>{" "}
                 ya digitalizaron su gestión de RRHH
               </p>
 
@@ -68,12 +78,9 @@ export default function MarketingLanding() {
                   asChild
                   className="h-12 rounded-xl bg-white px-7 text-base font-semibold text-[var(--adamia-blue)] shadow-[0_10px_30px_rgba(0,0,0,0.15)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.2)]"
                 >
-                  <a
-                    href="/contratar-plan"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Comenzar prueba gratis <ArrowRight className="ml-2 h-5 w-5" />
+                  <a href="/contratar-plan" target="_blank" rel="noreferrer">
+                    Comenzar prueba gratis{" "}
+                    <ArrowRight className="ml-2 h-5 w-5" />
                   </a>
                 </Button>
 
@@ -82,7 +89,7 @@ export default function MarketingLanding() {
                   variant="secondary"
                   className={cn(
                     "h-12 rounded-xl border-2 border-white/30 bg-white/15 px-7 text-base font-semibold text-white backdrop-blur",
-                    "transition hover:bg-white/25 hover:border-white/50"
+                    "transition hover:bg-white/25 hover:border-white/50",
                   )}
                 >
                   <a href="#demo">
@@ -236,7 +243,11 @@ export default function MarketingLanding() {
               icon={<Monitor className="h-8 w-8 text-white" />}
               title="Plataforma Web"
               description="Gestión integral desde navegador con sincronización en tiempo real"
-              items={["Reconocimiento facial", "Validación GPS", "Solicitudes en línea"]}
+              items={[
+                "Reconocimiento facial",
+                "Validación GPS",
+                "Solicitudes en línea",
+              ]}
             />
 
             <FeatureCard
@@ -353,21 +364,21 @@ export default function MarketingLanding() {
               initial="M"
               name="María González"
               role="Dir. RH - Grupo Moblar"
-              quote='“ADAMIA nos ahorró 120+ horas mensuales. El control biométrico es impresionante.”'
+              quote="“ADAMIA nos ahorró 120+ horas mensuales. El control biométrico es impresionante.”"
               meta="Cliente 2 años"
             />
             <TestimonialCard
               initial="C"
               name="Carlos Ramírez"
               role="CEO - STT México"
-              quote='“La mejor inversión que hemos hecho. Plataforma intuitiva y soporte excelente.”'
+              quote="“La mejor inversión que hemos hecho. Plataforma intuitiva y soporte excelente.”"
               meta="Cliente 18 meses"
             />
             <TestimonialCard
               initial="A"
               name="Ana Martínez"
               role="Gerente - Ultrafarms"
-              quote='“De Excel a plataforma enterprise. Implementación rápida y resultados inmediatos.”'
+              quote="“De Excel a plataforma enterprise. Implementación rápida y resultados inmediatos.”"
               meta="Cliente 3 años"
             />
           </div>
@@ -416,7 +427,9 @@ export default function MarketingLanding() {
             <div className="rounded-3xl border border-white/20 bg-white/90 p-10 text-[var(--adamia-text-primary)] shadow-[0_20px_40px_rgba(0,0,0,0.12)] backdrop-blur lg:p-12">
               <div className="text-center">
                 <div className="text-6xl adamia-pulse mb-6">🎁</div>
-                <h3 className="text-3xl font-bold">Prueba completa de 7 días</h3>
+                <h3 className="text-3xl font-bold">
+                  Prueba completa de 7 días
+                </h3>
                 <p className="mt-2 text-xl text-[var(--adamia-text-secondary)]">
                   Acceso total sin restricciones
                 </p>
@@ -424,7 +437,11 @@ export default function MarketingLanding() {
 
               <div className="mt-10 grid gap-6 md:grid-cols-3">
                 {[
-                  { top: "✓", title: "Plataforma web", sub: "Acceso en navegador" },
+                  {
+                    top: "✓",
+                    title: "Plataforma web",
+                    sub: "Acceso en navegador",
+                  },
                   { top: "✓", title: "Sin límites", sub: "Todo incluido" },
                   { top: "✓", title: "Soporte VIP", sub: "Chat en vivo" },
                 ].map((c) => (
@@ -509,105 +526,7 @@ export default function MarketingLanding() {
       </section>
 
       {/* Footer (según Landing.txt) */}
-      <footer className="bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] py-12 text-white">
-        <div className="mx-auto w-full max-w-7xl px-6">
-          <div className="grid gap-8 md:grid-cols-3">
-            <div>
-              <div className="flex items-center gap-3">
-                <Image
-                  src="/assets/adamia.png"
-                  alt="ADAMIA"
-                  width={180}
-                  height={60}
-                  className="h-12 w-auto"
-                />
-              </div>
-              <p className="mt-4 text-sm leading-relaxed text-white/80">
-                Plataforma empresarial de Recursos Humanos en la nube con control
-                biométrico y reportes en tiempo real.
-              </p>
-              <div className="mt-4 text-yellow-300">★★★★★</div>
-              <p className="mt-1 text-xs text-white/60">4.9/5 - 500+ empresas</p>
-            </div>
-
-            <div>
-              <h4 className="text-lg font-semibold">Contacto</h4>
-              <div className="mt-4 space-y-3 text-sm text-white/80">
-                <div className="flex items-start gap-3">
-                  <span className="text-lg">📧</span>
-                  <div>
-                    <p className="font-medium text-white">Email</p>
-                    <a
-                      className="transition hover:text-white"
-                      href="mailto:soporte@adamia.mx"
-                    >
-                      soporte@adamia.mx
-                    </a>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="text-lg">📱</span>
-                  <div>
-                    <p className="font-medium text-white">Teléfono</p>
-                    <a
-                      className="transition hover:text-white"
-                      href="tel:+523173887959"
-                    >
-                      +52 317 388 7959
-                    </a>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <span className="text-lg">📍</span>
-                  <div>
-                    <p className="font-medium text-white">Dirección</p>
-                    <p>Autlán de Navarro, Jalisco, MX</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-lg font-semibold">Enlaces</h4>
-              <div className="mt-4 space-y-3 text-sm text-white/80">
-                <Link className="block transition hover:text-white" href="/">
-                  → Inicio
-                </Link>
-                <Link
-                  className="block transition hover:text-white"
-                  href="/quienes-somos"
-                >
-                  → Quiénes somos
-                </Link>
-                <a
-                  className="block transition hover:text-white"
-                  href="/contratar-plan"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  → Contratar
-                </a>
-                <Link className="block transition hover:text-white" href="/login">
-                  → Iniciar sesión
-                </Link>
-                <Link
-                  className="block transition hover:text-white"
-                  href="/aviso-privacidad"
-                >
-                  → Ayuda
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-8 border-t border-white/20 pt-6">
-            <div className="flex flex-col items-center justify-between gap-4 text-sm text-white/70 md:flex-row">
-              <div>&copy; 2024 ADAMIA by Uniline. Todos los derechos reservados.</div>
-              <div>Hecho con ❤️ en México</div>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
 
       {/* Chatbot UI (solo frontend) */}
       <AdamiaChatWidget />
@@ -622,7 +541,7 @@ function FeatureCard({ icon, title, description, items, featured, badge }) {
         "rounded-[24px] border border-gray-200 bg-white p-8 transition",
         "hover:-translate-y-1 hover:border-[var(--adamia-blue)] hover:shadow-[0_12px_32px_rgba(37,99,235,0.08)]",
         featured &&
-          "border-2 border-[var(--adamia-blue)] shadow-[0_12px_32px_rgba(37,99,235,0.12)]"
+          "border-2 border-[var(--adamia-blue)] shadow-[0_12px_32px_rgba(37,99,235,0.12)]",
       )}
     >
       <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] shadow-[0_8px_16px_rgba(37,99,235,0.2)]">
@@ -682,4 +601,3 @@ function TestimonialCard({ initial, name, role, quote, meta }) {
     </div>
   );
 }
-

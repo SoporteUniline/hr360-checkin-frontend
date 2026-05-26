@@ -91,6 +91,51 @@ export default function TabPersonales({ form, soloLectura }) {
           </h3>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FormField
+            name="nombre"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem className="sm:col-span-2">
+                <FormLabelWithAsterisk required>
+                  Nombre completo
+                </FormLabelWithAsterisk>
+
+                <FormControl>
+                  <Input
+                    {...field}
+                    disabled={soloLectura}
+                    placeholder="Ingrese el nombre del empleado"
+                    className="h-12 text-base font-medium"
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            name="puesto"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem className="sm:col-span-2">
+                <FormLabelWithAsterisk required>Puesto</FormLabelWithAsterisk>
+
+                <FormControl>
+                  <Input
+                    {...field}
+                    disabled={soloLectura}
+                    placeholder="Nombre del puesto"
+                    className="h-11"
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           {[
             {
               name: "apellido_paterno",
