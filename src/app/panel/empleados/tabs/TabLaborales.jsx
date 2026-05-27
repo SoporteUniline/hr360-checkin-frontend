@@ -173,9 +173,9 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
   return (
     <section className="space-y-6">
       {/* Información laboral */}
-      <div className="bg-gradient-to-br from-emerald-50 via-white to-emerald-50 border-2 border-emerald-100 rounded-xl p-6">
+      <div className="bg-linear-to-br from-emerald-50 via-white to-emerald-50 border-2 border-emerald-100 rounded-xl p-6">
         <div className="flex items-center gap-3 mb-5">
-          <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 p-3 rounded-lg shadow-md">
+          <div className="bg-linear-to-br from-emerald-500 to-emerald-600 p-3 rounded-lg shadow-md">
             <svg
               className="w-6 h-6 text-white"
               fill="none"
@@ -266,6 +266,55 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
                     field.onChange(nuevo.nombre);
                   }}
                 />
+
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            name="puesto"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem className="sm:col-span-2">
+                <FormLabelWithAsterisk required>Puesto</FormLabelWithAsterisk>
+
+                <FormControl>
+                  <CreatableCombobox
+                    value={field.value ?? ""}
+                    compareBy="label"
+                    disabled={soloLectura || !idEmpresa}
+                    placeholder="Selecciona o crea un puesto..."
+                    searchPlaceholder="Buscar puesto..."
+                    fetchOptions={(q) =>
+                      axios
+                        .get(
+                          `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/puestos`,
+                          {
+                            params: { id_empresa: idEmpresa, nombre: q },
+                          },
+                        )
+                        .then((r) => r.data.puestos || [])
+                    }
+                    createOption={(nombre) =>
+                      axios
+                        .post(
+                          `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/puestos`,
+                          {
+                            nombre,
+                            id_empresa: idEmpresa,
+                          },
+                        )
+                        .then((r) => r.data)
+                    }
+                    getOptionLabel={(o) => o.nombre_puesto || o.nombre}
+                    getOptionValue={(o) => o.nombre_puesto || o.nombre}
+                    onChange={(nombre) => field.onChange(nombre)}
+                    onCreated={(nuevo) =>
+                      field.onChange(nuevo.nombre_puesto || nuevo.nombre)
+                    }
+                  />
+                </FormControl>
 
                 <FormMessage />
               </FormItem>
@@ -494,6 +543,44 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
               )}
             />
           ))}
+
+          <FormField
+            name="cc_vacaciones"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>CC vacaciones (opcional)</FormLabel>
+                <FormControl>
+                  <Input
+                    disabled={soloLectura}
+                    placeholder="correo1@empresa.com, correo2@empresa.com"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            name="cc_permisos"
+            control={form.control}
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>CC permisos (opcional)</FormLabel>
+                <FormControl>
+                  <Input
+                    disabled={soloLectura}
+                    placeholder="correo1@empresa.com, correo2@empresa.com"
+                    {...field}
+                    value={field.value ?? ""}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           <FormField
             name="checar_gps"

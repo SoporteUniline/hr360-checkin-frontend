@@ -135,6 +135,8 @@ export default function FormularioEmpleado({
       checar_gps: false,
       enviar_asistencia_automatica: true,
       autoriza_horas_extra: false,
+      cc_vacaciones: "",
+      cc_permisos: "",
       cierre_turno: "Automático",
       areasAsignadas: [],
       new_pass: "",
@@ -440,6 +442,8 @@ export default function FormularioEmpleado({
 
       const formData = new FormData();
 
+      console.log("DATA FINAL:", data);
+
       delete data.nombre_empresa;
 
       [
@@ -669,7 +673,9 @@ export default function FormularioEmpleado({
                   </p>
 
                   <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 truncate">
-                    {form.watch("nombre") || "Nuevo empleado"}
+                    {`${form.watch("nombre")} ${form.watch(
+                      "apellido_paterno",
+                    )} ${form.watch("apellido_materno")}` || "Nuevo empleado"}
                   </h2>
 
                   <p className="text-sm text-gray-500 truncate">

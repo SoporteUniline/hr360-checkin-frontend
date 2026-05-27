@@ -74,7 +74,9 @@ export default function EntradasSalidasTable({
       uniqueOptions(
         optionSourceRows.map(
           (registro) =>
-            registro.unidad_negocio || registro.sucursal || registro.nombre_empresa,
+            registro.unidad_negocio ||
+            registro.sucursal ||
+            registro.nombre_empresa,
         ),
       ),
     [optionSourceRows],
@@ -101,7 +103,9 @@ export default function EntradasSalidasTable({
           empleadoSeleccionado.length === 0 ||
           empleadoSeleccionado.includes(nombreEmpleado);
         const unidadRegistro =
-          registro.unidad_negocio || registro.sucursal || registro.nombre_empresa;
+          registro.unidad_negocio ||
+          registro.sucursal ||
+          registro.nombre_empresa;
         const pasaUnidad =
           unidadSeleccionada.length === 0 ||
           unidadSeleccionada.includes(unidadRegistro);
@@ -140,7 +144,11 @@ export default function EntradasSalidasTable({
       active: hasActiveHeaderFilters,
       total: filteredRowsAll.length,
     });
-  }, [hasActiveHeaderFilters, filteredRowsAll.length, onHeaderFilteringMetaChange]);
+  }, [
+    hasActiveHeaderFilters,
+    filteredRowsAll.length,
+    onHeaderFilteringMetaChange,
+  ]);
 
   const clearAllTableFilters = () => {
     setEmpleadoSeleccionado([]);
@@ -167,38 +175,38 @@ export default function EntradasSalidasTable({
 
     const data = (hasActiveHeaderFilters ? filteredRowsAll : registros).map(
       (r) => ({
-      nombre: r.nombre,
-      apellido_paterno: r.apellido_paterno,
-      apellido_materno: r.apellido_materno,
-      unidad_negocio: r.unidad_negocio || r.sucursal || r.nombre_empresa,
-      puesto: r.puesto,
-      departamento: r.departamento,
-      sucursal: r.sucursal,
-      entrada: r.entrada
-        ? dayjs
-            .tz(r.entrada, "America/Mexico_City")
-            .tz(userTimezone)
-            .format("DD/MM/YYYY HH:mm:ss")
-        : "-",
-      entrada_corregida: r.entrada_corregida
-        ? dayjs
-            .tz(r.entrada_corregida, "America/Mexico_City")
-            .tz(userTimezone)
-            .format("DD/MM/YYYY HH:mm:ss")
-        : "-",
-      salida: r.salida
-        ? dayjs
-            .tz(r.salida, "America/Mexico_City")
-            .tz(userTimezone)
-            .format("DD/MM/YYYY HH:mm:ss")
-        : "-",
-      salida_corregida: r.salida_corregida
-        ? dayjs
-            .tz(r.salida_corregida, "America/Mexico_City")
-            .tz(userTimezone)
-            .format("DD/MM/YYYY HH:mm:ss")
-        : "-",
-      estado: r.estado,
+        nombre: r.nombre,
+        apellido_paterno: r.apellido_paterno,
+        apellido_materno: r.apellido_materno,
+        unidad_negocio: r.unidad_negocio || r.sucursal || r.nombre_empresa,
+        puesto: r.puesto,
+        departamento: r.departamento,
+        sucursal: r.sucursal,
+        entrada: r.entrada
+          ? dayjs
+              .tz(r.entrada, "America/Mexico_City")
+              .tz(userTimezone)
+              .format("DD/MM/YYYY HH:mm:ss")
+          : "-",
+        entrada_corregida: r.entrada_corregida
+          ? dayjs
+              .tz(r.entrada_corregida, "America/Mexico_City")
+              .tz(userTimezone)
+              .format("DD/MM/YYYY HH:mm:ss")
+          : "-",
+        salida: r.salida
+          ? dayjs
+              .tz(r.salida, "America/Mexico_City")
+              .tz(userTimezone)
+              .format("DD/MM/YYYY HH:mm:ss")
+          : "-",
+        salida_corregida: r.salida_corregida
+          ? dayjs
+              .tz(r.salida_corregida, "America/Mexico_City")
+              .tz(userTimezone)
+              .format("DD/MM/YYYY HH:mm:ss")
+          : "-",
+        estado: r.estado,
       }),
     );
 
@@ -212,7 +220,6 @@ export default function EntradasSalidasTable({
     <>
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
         <div className="px-6 py-4 border-b border-gray-100 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          
           <div className="flex justify-end">
             <Button
               onClick={handleExportExcel}
@@ -305,6 +312,9 @@ export default function EntradasSalidasTable({
                   Salida corregida
                 </TableHead>
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                  Hrs registro
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
                   <HeaderMultiFilter
                     selected={estadoSeleccionado}
                     onChange={setEstadoSeleccionado}
@@ -321,7 +331,7 @@ export default function EntradasSalidasTable({
               {displayedRows.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={empresaActiva === "all" ? 10 : 9}
+                    colSpan={empresaActiva === "all" ? 11 : 10}
                     className="text-center py-10 text-gray-500"
                   >
                     No hay registros para los filtros seleccionados.

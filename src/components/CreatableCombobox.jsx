@@ -17,6 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { useSnackbar } from "notistack";
 
 export function CreatableCombobox({
   value,
@@ -36,6 +37,7 @@ export function CreatableCombobox({
   onCreated,
   displayValueAsLabel = false,
 }) {
+  const { enqueueSnackbar } = useSnackbar();
   const [open, setOpen] = React.useState(false);
   const [search, setSearch] = React.useState("");
   const [options, setOptions] = React.useState([]);
@@ -72,7 +74,43 @@ export function CreatableCombobox({
         setOpen(false);
       }
     } catch (error) {
-      console.error("Error creando opción:", error);
+      const status = error?.response?.status;
+
+      if (status === 409) {
+        try {
+          const existentes = await fetchOptions(search.trim());
+
+          const existente = existentes.find(
+            (item) =>
+              getOptionLabel(item).toLowerCase() ===
+              search.trim().toLowerCase(),
+          );
+
+          if (existente) {
+            const value = getOptionValue(existente);
+
+            onChange(value);
+            onCreated?.(existente);
+
+            enqueueSnackbar(
+              "La opción ya existía y fue seleccionada automáticamente.",
+              {
+                variant: "info",
+              },
+            );
+
+            setOpen(false);
+            setSearch("");
+            return;
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      enqueueSnackbar("No se pudo crear la opción.", {
+        variant: "error",
+      });
     }
   };
 
@@ -91,11 +129,7 @@ export function CreatableCombobox({
           disabled={disabled}
         >
           <span className="truncate">
-            {selected
-              ? displayValueAsLabel
-                ? getOptionLabel(selected)
-                : value
-              : placeholder}
+            {selected ? getOptionLabel(selected) : value ? value : placeholder}
           </span>
 
           <ChevronsUpDown className="h-4 w-4 opacity-50" />

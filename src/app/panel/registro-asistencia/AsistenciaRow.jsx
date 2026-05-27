@@ -43,6 +43,30 @@ export default function AsistenciaRow({
   const DB_TIMEZONE = "America/Mexico_City";
   const currentData = isEditing ? editingRowData : registro;
   const areTimeInputsDisabled = !currentData.correccion;
+  const calcularHorasDebiaTrabajar = (data) => {
+    if (!data.hora_entrada_programada || !data.hora_salida_programada) return 0;
+
+    const entrada = dayjs(`2000-01-01 ${data.hora_entrada_programada}`);
+    const salida = dayjs(`2000-01-01 ${data.hora_salida_programada}`);
+
+    return Number((salida.diff(entrada, "minute") / 60).toFixed(2));
+  };
+
+  const calcularHorasTrabajadas = (data) => {
+    if (!data.entrada || !data.salida) return 0;
+
+    const entrada = dayjs.tz(data.entrada, DB_TIMEZONE).tz(userTimezone);
+    const salida = dayjs.tz(data.salida, DB_TIMEZONE).tz(userTimezone);
+    const comida = Number(data.hrs_comida || 0);
+
+    return Number((salida.diff(entrada, "minute") / 60 - comida).toFixed(2));
+  };
+
+  const horasDebiaTrabajar = calcularHorasDebiaTrabajar(currentData);
+  const horasTrabajo = calcularHorasTrabajadas(currentData);
+  const diferenciaHoras = Number(
+    (horasTrabajo - horasDebiaTrabajar).toFixed(2),
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleRowClick = () => {
@@ -50,8 +74,6 @@ export default function AsistenciaRow({
       setIsModalOpen(true);
     }
   };
-
-  console.log(tiposPermiso);
 
   return (
     <>
@@ -69,7 +91,9 @@ export default function AsistenciaRow({
             <TableCell className="font-bold">{`${registro.nombre} ${registro.apellido_paterno}`}</TableCell>
             {empresaActiva === "all" && (
               <TableCell className="font-bold">
-                {registro.unidad_negocio || registro.sucursal || registro.empresa_nombre}
+                {registro.unidad_negocio ||
+                  registro.sucursal ||
+                  registro.empresa_nombre}
               </TableCell>
             )}
             {mostrarCamposExtras && <TableCell>{registro.nip}</TableCell>}
@@ -505,7 +529,9 @@ export default function AsistenciaRow({
             <TableCell className="font-bold">{`${registro.nombre} ${registro.apellido_paterno}`}</TableCell>
             {empresaActiva === "all" && (
               <TableCell className="font-bold">
-                {registro.unidad_negocio || registro.sucursal || registro.empresa_nombre}
+                {registro.unidad_negocio ||
+                  registro.sucursal ||
+                  registro.empresa_nombre}
               </TableCell>
             )}
             {mostrarCamposExtras && <TableCell>{registro.nip}</TableCell>}
@@ -542,6 +568,23 @@ export default function AsistenciaRow({
                     .tz(userTimezone)
                     .format("HH:mm:ss")
                 : "-"}
+            </TableCell>
+            <TableCell className="text-center">
+              {horasDebiaTrabajar || "-"}
+            </TableCell>
+
+            <TableCell className="text-center">{horasTrabajo || "-"}</TableCell>
+
+            <TableCell
+              className={`text-center font-bold ${
+                diferenciaHoras < 0
+                  ? "text-red-600"
+                  : diferenciaHoras > 0
+                  ? "text-green-600"
+                  : "text-gray-600"
+              }`}
+            >
+              {diferenciaHoras > 0 ? `+${diferenciaHoras}` : diferenciaHoras}
             </TableCell>
             {mostrarCamposExtras && (
               <TableCell className="text-center">

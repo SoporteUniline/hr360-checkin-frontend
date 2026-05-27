@@ -4,7 +4,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useState, useMemo } from "react";
 import {
   Table,
@@ -131,7 +137,9 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
 
       {/* Selector de vista */}
       <div className="flex justify-between items-center mb-4 sm:mb-6">
-        <h4 className="text-xs sm:text-sm font-bold text-gray-900">📅 Historial de Vacaciones</h4>
+        <h4 className="text-xs sm:text-sm font-bold text-gray-900">
+          📅 Historial de Vacaciones
+        </h4>
         <div className="flex gap-2">
           <Button
             onClick={() => setVista("calendario")}
@@ -154,7 +162,11 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
 
       {/* Vista Calendario */}
       {vista === "calendario" && (
-        <VistaCalendarioVacaciones historial={historial} mesSeleccionado={mesSeleccionado} setMesSeleccionado={setMesSeleccionado} />
+        <VistaCalendarioVacaciones
+          historial={historial}
+          mesSeleccionado={mesSeleccionado}
+          setMesSeleccionado={setMesSeleccionado}
+        />
       )}
 
       {/* Vista Tabla */}
@@ -168,7 +180,12 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
                   <label className="text-xs font-bold text-gray-500 block mb-1">
                     AGRUPAR POR:
                   </label>
-                  <Select value={agrupar || "sin-agrupar"} onValueChange={(v) => setAgrupar(v === "sin-agrupar" ? "" : v)}>
+                  <Select
+                    value={agrupar || "sin-agrupar"}
+                    onValueChange={(v) =>
+                      setAgrupar(v === "sin-agrupar" ? "" : v)
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Sin agrupar" />
                     </SelectTrigger>
@@ -226,15 +243,24 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-[10px] sm:text-xs font-bold uppercase">Fecha</TableHead>
-                      <TableHead className="text-[10px] sm:text-xs font-bold uppercase">Día</TableHead>
-                      <TableHead className="text-[10px] sm:text-xs font-bold uppercase">Estado</TableHead>
+                      <TableHead className="text-[10px] sm:text-xs font-bold uppercase">
+                        Fecha
+                      </TableHead>
+                      <TableHead className="text-[10px] sm:text-xs font-bold uppercase">
+                        Día
+                      </TableHead>
+                      <TableHead className="text-[10px] sm:text-xs font-bold uppercase">
+                        Estado
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {vacacionesFiltradas.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={3} className="text-center py-8 text-gray-500">
+                        <TableCell
+                          colSpan={3}
+                          className="text-center py-8 text-gray-500"
+                        >
                           No hay vacaciones en el período seleccionado
                         </TableCell>
                       </TableRow>
@@ -257,7 +283,9 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
                             <TableCell className="font-semibold text-xs sm:text-sm">
                               {formatearFecha(v.fecha_inicio)}
                             </TableCell>
-                            <TableCell className="text-xs sm:text-sm">{diaSemana}</TableCell>
+                            <TableCell className="text-xs sm:text-sm">
+                              {diaSemana}
+                            </TableCell>
                             <TableCell>
                               <Badge className="bg-green-100 text-green-800 text-[10px] sm:text-xs">
                                 ✅ {v.estado}
@@ -283,7 +311,10 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
               📊 Desglose de Vacaciones
             </h5>
             <div className="space-y-2 text-sm">
-              <InfoRow label="Período actual" value={balance.periodo || "N/A"} />
+              <InfoRow
+                label="Período actual"
+                value={balance.periodo || "N/A"}
+              />
               <InfoRow
                 label="Días correspondientes"
                 value={`${balance.dias_totales || 0} días`}
@@ -343,7 +374,11 @@ function InfoRow({ label, value }) {
 }
 
 // Componente para la vista de calendario de vacaciones
-function VistaCalendarioVacaciones({ historial, mesSeleccionado, setMesSeleccionado }) {
+function VistaCalendarioVacaciones({
+  historial,
+  mesSeleccionado,
+  setMesSeleccionado,
+}) {
   // Obtener días de vacaciones como Set
   const diasVacaciones = useMemo(() => {
     const set = new Set();
@@ -356,7 +391,7 @@ function VistaCalendarioVacaciones({ historial, mesSeleccionado, setMesSeleccion
   // Obtener meses con vacaciones
   const mesesConVacaciones = useMemo(() => {
     const meses = Array.from(
-      new Set(historial.map((v) => v.fecha_inicio.substring(0, 7)))
+      new Set(historial.map((v) => v.fecha_inicio.substring(0, 7))),
     ).sort();
     return meses;
   }, [historial]);
@@ -372,17 +407,17 @@ function VistaCalendarioVacaciones({ historial, mesSeleccionado, setMesSeleccion
   // Generar lista de todos los meses entre el primero y el último con vacaciones
   const todosLosMeses = useMemo(() => {
     if (mesesConVacaciones.length === 0) return [];
-    
+
     const primerMes = mesesConVacaciones[0];
     const ultimoMes = mesesConVacaciones[mesesConVacaciones.length - 1];
-    
+
     const [anioInicio, mesInicio] = primerMes.split("-").map(Number);
     const [anioFin, mesFin] = ultimoMes.split("-").map(Number);
-    
+
     const meses = [];
     let anio = anioInicio;
     let mes = mesInicio;
-    
+
     while (anio < anioFin || (anio === anioFin && mes <= mesFin)) {
       meses.push(`${anio}-${String(mes).padStart(2, "0")}`);
       mes++;
@@ -391,7 +426,7 @@ function VistaCalendarioVacaciones({ historial, mesSeleccionado, setMesSeleccion
         anio++;
       }
     }
-    
+
     return meses;
   }, [mesesConVacaciones]);
 
@@ -399,7 +434,9 @@ function VistaCalendarioVacaciones({ historial, mesSeleccionado, setMesSeleccion
     return (
       <Card>
         <CardContent className="p-6 text-center">
-          <p className="text-gray-500">No hay vacaciones registradas para mostrar en el calendario.</p>
+          <p className="text-gray-500">
+            No hay vacaciones registradas para mostrar en el calendario.
+          </p>
         </CardContent>
       </Card>
     );
@@ -408,19 +445,19 @@ function VistaCalendarioVacaciones({ historial, mesSeleccionado, setMesSeleccion
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Calendario grande */}
-      <Card>
+      {/* <Card>
         <CardContent className="p-3 sm:p-4 md:p-5 lg:p-6">
           <CalendarioGrande mesAnio={mesActual} diasVacaciones={diasVacaciones} />
         </CardContent>
-      </Card>
-      
+      </Card> */}
+
       {/* Calendarios pequeños */}
       {todosLosMeses.length > 0 && (
         <Card>
           <CardContent className="p-2 sm:p-3 md:p-4 lg:p-5">
-            <h5 className="text-[10px] sm:text-xs md:text-sm font-bold text-gray-500 uppercase tracking-wide mb-2 sm:mb-3 md:mb-4">
+            {/* <h5 className="text-[10px] sm:text-xs md:text-sm font-bold text-gray-500 uppercase tracking-wide mb-2 sm:mb-3 md:mb-4">
               Selecciona un mes:
-            </h5>
+            </h5> */}
             {/* Grid responsivo que se adapta mejor cuando el sidebar está abierto */}
             {/* Preferimos 2 columnas en pantallas grandes cuando el sidebar está abierto para mejor visualización */}
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2 sm:gap-2.5 md:gap-3 lg:gap-4">
@@ -471,7 +508,7 @@ function CalendarioGrande({ mesAnio, diasVacaciones }) {
       <h3 className="text-center text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-5 lg:mb-6">
         {nombresMeses[mes - 1]} {anio}
       </h3>
-      
+
       {/* Contenedor con ancho mínimo para mantener proporciones */}
       <div className="min-w-[280px] sm:min-w-[320px] md:min-w-0">
         <div className="grid grid-cols-7 gap-1 sm:gap-1.5 md:gap-2 lg:gap-2.5">
@@ -484,19 +521,21 @@ function CalendarioGrande({ mesAnio, diasVacaciones }) {
               {dia}
             </div>
           ))}
-          
+
           {/* Espacios vacíos antes del primer día */}
           {Array.from({ length: primerDiaSemana }).map((_, i) => (
             <div key={`empty-${i}`} className="aspect-square"></div>
           ))}
-          
+
           {/* Días del mes */}
           {Array.from({ length: diasEnMes }).map((_, i) => {
             const dia = i + 1;
-            const fechaStr = `${anio}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
+            const fechaStr = `${anio}-${String(mes).padStart(2, "0")}-${String(
+              dia,
+            ).padStart(2, "0")}`;
             const esVacacion = diasVacaciones.has(fechaStr);
             const esHoy = fechaStr === hoy;
-            
+
             return (
               <div
                 key={dia}
@@ -522,7 +561,12 @@ function CalendarioGrande({ mesAnio, diasVacaciones }) {
 }
 
 // Componente para calendarios pequeños
-function CalendarioPequeno({ mesAnio, diasVacaciones, esSeleccionado, onClick }) {
+function CalendarioPequeno({
+  mesAnio,
+  diasVacaciones,
+  esSeleccionado,
+  onClick,
+}) {
   const [anio, mes] = mesAnio.split("-").map(Number);
   const nombresMeses = [
     "Ene",
@@ -548,11 +592,8 @@ function CalendarioPequeno({ mesAnio, diasVacaciones, esSeleccionado, onClick })
     <div
       onClick={onClick}
       className={`
-        bg-white p-2 sm:p-2.5 md:p-3 lg:p-4 rounded-lg cursor-pointer transition-all duration-200 w-full
-        ${esSeleccionado 
-          ? "ring-2 ring-[#37495E] ring-offset-1 shadow-md border-2 border-[#37495E]" 
-          : "border border-gray-200 hover:border-gray-300 hover:shadow-sm"
-        }
+        bg-white p-2 sm:p-2.5 md:p-3 lg:p-4 rounded-lg transition-all duration-200 w-full
+        ${"border border-gray-200 hover:border-gray-300 hover:shadow-sm"}
       `}
     >
       <div className="text-center text-xs sm:text-sm md:text-base font-bold text-gray-900 mb-2 sm:mb-2.5 md:mb-3">
@@ -561,15 +602,20 @@ function CalendarioPequeno({ mesAnio, diasVacaciones, esSeleccionado, onClick })
       <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
         {/* Espacios vacíos antes del primer día */}
         {Array.from({ length: primerDiaSemana }).map((_, i) => (
-          <div key={`empty-${i}`} className="aspect-square min-h-[14px] sm:min-h-[16px] md:min-h-[18px] lg:min-h-[20px]"></div>
+          <div
+            key={`empty-${i}`}
+            className="aspect-square min-h-[14px] sm:min-h-[16px] md:min-h-[18px] lg:min-h-[20px]"
+          ></div>
         ))}
-        
+
         {/* Días del mes */}
         {Array.from({ length: diasEnMes }).map((_, i) => {
           const dia = i + 1;
-          const fechaStr = `${anio}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
+          const fechaStr = `${anio}-${String(mes).padStart(2, "0")}-${String(
+            dia,
+          ).padStart(2, "0")}`;
           const esVacacion = diasVacaciones.has(fechaStr);
-          
+
           return (
             <div
               key={dia}
@@ -593,7 +639,7 @@ function CalendarioPequeno({ mesAnio, diasVacaciones, esSeleccionado, onClick })
 
 function formatearFecha(fechaISO) {
   if (!fechaISO || fechaISO === "N/A") return "N/A";
-  
+
   try {
     const fecha = new Date(fechaISO + "T00:00:00");
     const dia = String(fecha.getDate()).padStart(2, "0");
@@ -604,4 +650,3 @@ function formatearFecha(fechaISO) {
     return fechaISO;
   }
 }
-

@@ -97,7 +97,7 @@ export default function TabPersonales({ form, soloLectura }) {
             render={({ field }) => (
               <FormItem className="sm:col-span-2">
                 <FormLabelWithAsterisk required>
-                  Nombre completo
+                  Nombre(s)
                 </FormLabelWithAsterisk>
 
                 <FormControl>
@@ -115,27 +115,6 @@ export default function TabPersonales({ form, soloLectura }) {
             )}
           />
 
-          <FormField
-            name="puesto"
-            control={form.control}
-            render={({ field }) => (
-              <FormItem className="sm:col-span-2">
-                <FormLabelWithAsterisk required>Puesto</FormLabelWithAsterisk>
-
-                <FormControl>
-                  <Input
-                    {...field}
-                    disabled={soloLectura}
-                    placeholder="Nombre del puesto"
-                    className="h-11"
-                    value={field.value ?? ""}
-                  />
-                </FormControl>
-
-                <FormMessage />
-              </FormItem>
-            )}
-          />
           {[
             {
               name: "apellido_paterno",
@@ -287,6 +266,7 @@ export default function TabPersonales({ form, soloLectura }) {
                 <CreatableCombobox
                   value={field.value ?? ""}
                   compareBy="label"
+                  displayValueAsLabel
                   disabled={soloLectura || !idEmpresa}
                   placeholder="Selecciona o crea estado civil..."
                   searchPlaceholder="Buscar estado civil..."

@@ -93,7 +93,9 @@ export default function AsistenciaTable({
       uniqueOptions(
         optionSourceRows.map(
           (registro) =>
-            registro.unidad_negocio || registro.sucursal || registro.empresa_nombre,
+            registro.unidad_negocio ||
+            registro.sucursal ||
+            registro.empresa_nombre,
         ),
       ),
     [optionSourceRows],
@@ -168,7 +170,9 @@ export default function AsistenciaTable({
           empleadoSeleccionado.length === 0 ||
           empleadoSeleccionado.includes(nombreEmpleado);
         const unidadRegistro =
-          registro.unidad_negocio || registro.sucursal || registro.empresa_nombre;
+          registro.unidad_negocio ||
+          registro.sucursal ||
+          registro.empresa_nombre;
         const pasaUnidad =
           unidadSeleccionada.length === 0 ||
           unidadSeleccionada.includes(unidadRegistro);
@@ -356,7 +360,6 @@ export default function AsistenciaTable({
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
         {!readOnly ? (
           <div className="px-6 py-4 border-b border-gray-100 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            
             <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
               <Button
                 onClick={() =>
@@ -391,9 +394,7 @@ export default function AsistenciaTable({
             </div>
           </div>
         ) : (
-          <div className="px-6 py-4 border-b border-gray-100">
-           
-          </div>
+          <div className="px-6 py-4 border-b border-gray-100"></div>
         )}
         <ActiveFilterChips
           groups={[
@@ -531,6 +532,17 @@ export default function AsistenciaTable({
                 </TableHead>
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
                   Salida
+                </TableHead>
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                  Hrs debía
+                </TableHead>
+
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                  Hrs trabajó
+                </TableHead>
+
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                  Hrs +/-
                 </TableHead>
                 {mostrarCamposExtras && (
                   <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">

@@ -29,6 +29,20 @@ export default function EntradasSalidasRow({
 
   const DB_TIMEZONE = "America/Mexico_City";
 
+  const calcularHorasRegistro = (data) => {
+    const entradaFinal = data.entrada_corregida || data.entrada;
+    const salidaFinal = data.salida_corregida || data.salida;
+
+    if (!entradaFinal || !salidaFinal) return null;
+
+    const entrada = dayjs.tz(entradaFinal, DB_TIMEZONE).tz(userTimezone);
+    const salida = dayjs.tz(salidaFinal, DB_TIMEZONE).tz(userTimezone);
+
+    return Number((salida.diff(entrada, "minute") / 60).toFixed(2));
+  };
+
+  const horasRegistro = calcularHorasRegistro(currentData);
+
   const formatDate = (dateTimeString) => {
     if (!dateTimeString) return "-";
     return dayjs
@@ -63,7 +77,9 @@ export default function EntradasSalidasRow({
           </TableCell>
           {empresaActiva === "all" && (
             <TableCell className="font-bold text-gray-500">
-              {registro.unidad_negocio || registro.sucursal || registro.nombre_empresa}
+              {registro.unidad_negocio ||
+                registro.sucursal ||
+                registro.nombre_empresa}
             </TableCell>
           )}
           <TableCell>
@@ -91,6 +107,9 @@ export default function EntradasSalidasRow({
             {registro.salida_corregida
               ? formatTime(registro.salida_corregida)
               : "-"}
+          </TableCell>
+          <TableCell className="text-center font-semibold">
+            {horasRegistro !== null ? horasRegistro : "-"}
           </TableCell>
           <TableCell className="text-center">
             <span
@@ -123,7 +142,9 @@ export default function EntradasSalidasRow({
           </TableCell>
           {empresaActiva === "all" && (
             <TableCell className="font-bold text-gray-500">
-              {registro.unidad_negocio || registro.sucursal || registro.nombre_empresa}
+              {registro.unidad_negocio ||
+                registro.sucursal ||
+                registro.nombre_empresa}
             </TableCell>
           )}
           <TableCell>
