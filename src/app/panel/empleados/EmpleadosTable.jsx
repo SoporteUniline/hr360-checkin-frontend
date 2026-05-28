@@ -99,7 +99,7 @@ export default function EmpleadosTable({
   const sourceRows = useMemo(() => {
     const baseRows =
       filterOptionsRows?.length > 0 ? filterOptionsRows : empleados || [];
-    return dedupeEmployeesById(baseRows);
+    return baseRows;
   }, [filterOptionsRows, empleados]);
 
   const getNombreCompleto = (emp) =>
@@ -185,7 +185,7 @@ export default function EmpleadosTable({
     estadoSeleccionado.length > 0;
 
   const displayedRows = useMemo(() => {
-    if (!hasActiveHeaderFilters) return dedupeEmployeesById(empleados || []);
+    if (!hasActiveHeaderFilters) return empleados || [];
     const offset = (page - 1) * limit;
     return filteredRowsAll.slice(offset, offset + limit);
   }, [hasActiveHeaderFilters, empleados, page, limit, filteredRowsAll]);

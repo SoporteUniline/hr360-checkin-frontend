@@ -48,7 +48,7 @@ export default function EntradasSalidasRow({
     return dayjs
       .tz(dateTimeString, DB_TIMEZONE)
       .tz(userTimezone)
-      .format("DD-MM-YYYY");
+      .format("DD/MM/YYYY");
   };
 
   const formatTime = (dateTimeString) => {
