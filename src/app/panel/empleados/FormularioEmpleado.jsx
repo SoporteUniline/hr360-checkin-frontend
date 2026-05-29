@@ -204,8 +204,13 @@ export default function FormularioEmpleado({
         banco = "Otro";
       }
 
+      console.log("VALUES EMPLEADO:", values);
+      console.table(Object.entries(values).filter(([_, v]) => v === null));
+
       form.reset({
         ...restoEmpleado,
+        cc_vacaciones: restoEmpleado.cc_vacaciones ?? "",
+        cc_permisos: restoEmpleado.cc_permisos ?? "",
         horarios: horariosIniciales,
         hrs_por_dia: Number(hrs_por_dia) || 0,
         hrs_de_comida: Number(hrs_de_comida) || 0,

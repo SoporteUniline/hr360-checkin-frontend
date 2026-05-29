@@ -56,8 +56,16 @@ export const schemaEmpleado = z
     checar_gps: z.boolean().default(false).optional(),
     enviar_asistencia_automatica: z.boolean().default(true).optional(),
     autoriza_horas_extra: z.boolean().default(false).optional(),
-    cc_vacaciones: z.string().optional().or(z.literal("")),
-    cc_permisos: z.string().optional().or(z.literal("")),
+    cc_vacaciones: z
+      .string()
+      .nullable()
+      .optional()
+      .transform((v) => v ?? ""),
+    cc_permisos: z
+      .string()
+      .nullable()
+      .optional()
+      .transform((v) => v ?? ""),
     metodo_chequeo: z
       .enum(["codigo", "facial", "ambos"])
       .default("ambos")
