@@ -21,8 +21,6 @@ export default function Footer() {
               Plataforma empresarial de Recursos Humanos en la nube con control
               biométrico y reportes en tiempo real.
             </p>
-            <div className="mt-4 text-yellow-300">★★★★★</div>
-            <p className="mt-1 text-xs text-white/60">4.9/5 - 500+ empresas</p>
           </div>
 
           <div>

@@ -68,7 +68,7 @@ export default function MarketingLanding() {
 
               <p className="mt-4 text-base text-white/80 md:text-lg">
                 <strong className="font-semibold text-white">
-                  500+ empresas
+                  Empresas de distintos sectores
                 </strong>{" "}
                 ya digitalizaron su gestión de RRHH
               </p>
@@ -100,23 +100,6 @@ export default function MarketingLanding() {
 
               {/* Stats */}
               <div className="mt-12 flex flex-wrap items-center justify-center gap-6 lg:justify-start">
-                <div className="flex items-center gap-3">
-                  <div className="flex -space-x-2">
-                    <div className="h-10 w-10 rounded-full border-2 border-white bg-white/20" />
-                    <div className="h-10 w-10 rounded-full border-2 border-white bg-white/20" />
-                    <div className="h-10 w-10 rounded-full border-2 border-white bg-white/20" />
-                  </div>
-                  <div className="text-left">
-                    <div className="text-xs text-white/70">Calificación</div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-yellow-300">★★★★★</span>
-                      <span className="text-sm font-semibold">4.9/5</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="hidden h-10 w-px bg-white/20 sm:block" />
-
                 <div className="text-left">
                   <div className="text-xs text-white/70">Implementación</div>
                   <div className="flex items-center gap-1 text-base font-semibold">
@@ -145,7 +128,7 @@ export default function MarketingLanding() {
               <div className="rounded-3xl border border-white/20 bg-white/90 p-5 text-[var(--adamia-text-primary)] shadow-[0_20px_40px_rgba(0,0,0,0.12)] backdrop-blur sm:p-8 lg:p-10">
                 <div className="mb-8 flex items-center justify-between">
                   <div className="text-xs font-medium text-[color:rgba(37,99,235,0.65)] sm:text-sm">
-                    Datos en tiempo real
+                    Datos del panel demo
                   </div>
                   <div className="text-2xl sm:text-3xl">📊</div>
                 </div>
@@ -156,7 +139,7 @@ export default function MarketingLanding() {
                       Empleados activos
                     </div>
                     <div className="text-4xl font-extrabold leading-none text-transparent bg-clip-text bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] sm:text-5xl">
-                      1,247
+                      1,250
                     </div>
                     <div className="mt-2 text-base font-semibold text-[var(--adamia-blue)] sm:text-sm">
                       ↗ +12% este mes
@@ -168,7 +151,7 @@ export default function MarketingLanding() {
                       Asistencia hoy
                     </div>
                     <div className="text-4xl font-extrabold leading-none text-transparent bg-clip-text bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] sm:text-5xl">
-                      98.5%
+                      98%
                     </div>
                     <div className="mt-2 text-base font-semibold text-[var(--adamia-blue)] sm:text-sm">
                       ✓ Excelente
@@ -207,8 +190,8 @@ export default function MarketingLanding() {
             </p>
           </div>
 
-          <div className="mt-8 grid grid-cols-2 place-items-center gap-6 md:grid-cols-4 md:gap-8">
-            {["MOBLAR", "STT", "ULTRAFARMS", "+500"].map((t) => (
+          <div className="mt-8 grid grid-cols-2 place-items-center gap-6 md:grid-cols-3 md:gap-8">
+            {["MOBLAR", "STT", "ULTRAFARMS"].map((t) => (
               <div
                 key={t}
                 className="select-none text-[clamp(1.9rem,8vw,3rem)] leading-none font-bold tracking-tight text-gray-400 opacity-80 grayscale transition hover:grayscale-0 hover:opacity-100 hover:scale-[1.03]"
@@ -255,8 +238,12 @@ export default function MarketingLanding() {
               icon={<Shield className="h-8 w-8 text-white" />}
               badge="SEGURIDAD EMPRESARIAL"
               title="Cloud Enterprise"
-              description="Infraestructura segura con encriptación de nivel bancario"
-              items={["SSL 256-bit", "Backup automático", "99.9% uptime"]}
+              description="Infraestructura segura para operación empresarial"
+              items={[
+                "Conexión segura SSL",
+                "Backups automáticos",
+                "Accesos protegidos",
+              ]}
             />
 
             <FeatureCard
@@ -274,7 +261,7 @@ export default function MarketingLanding() {
         <div className="mx-auto w-full max-w-7xl px-6">
           <div className="mx-auto max-w-3xl text-center">
             <h2 className="text-4xl font-bold md:text-5xl">
-              Transformación digital comprobada
+              Transformación digital para RRHH
             </h2>
             <p className="mt-4 text-xl text-[var(--adamia-text-secondary)]">
               Antes y después de implementar ADAMIA
@@ -295,7 +282,7 @@ export default function MarketingLanding() {
                   "Fraude en asistencias",
                   "Datos desorganizados",
                   "Sin visibilidad real",
-                  "160+ horas perdidas/mes",
+                  "Procesos administrativos lentos",
                 ].map((t) => (
                   <li key={t} className="flex items-start gap-3">
                     <span className="text-xl text-red-500">✗</span>
@@ -318,7 +305,7 @@ export default function MarketingLanding() {
                   "Biometría + GPS",
                   "Cloud centralizado",
                   "Analytics en vivo",
-                  "Ahorra 160+ horas/mes",
+                  "Mayor eficiencia operativa",
                 ].map((t) => (
                   <li key={t} className="flex items-start gap-3">
                     <span className="text-xl font-bold text-[var(--adamia-blue)]">
@@ -333,7 +320,7 @@ export default function MarketingLanding() {
 
               <div className="mt-8 rounded-xl bg-white p-4 shadow-lg">
                 <div className="font-semibold text-[var(--adamia-blue)]">
-                  🚀 ROI en 30 días
+                  🚀 Implementación rápida y sencilla
                 </div>
               </div>
             </div>
@@ -354,36 +341,37 @@ export default function MarketingLanding() {
                 nuestros clientes
               </span>
             </h2>
-            <p className="mt-6 text-xl text-[var(--adamia-text-secondary)]">
-              Más de 500 empresas transformaron su gestión de RRHH
+            <p>
+              Empresas de distintos sectores utilizan herramientas digitales
+              para optimizar su gestión de RRHH
             </p>
           </div>
 
           <div className="mt-16 grid gap-8 md:grid-cols-3">
             <TestimonialCard
               initial="M"
-              name="María González"
-              role="Dir. RH - Grupo Moblar"
-              quote="“ADAMIA nos ahorró 120+ horas mensuales. El control biométrico es impresionante.”"
-              meta="Cliente 2 años"
+              name="Responsable de Recursos Humanos"
+              role="Empresa del sector mueblero"
+              quote="“ADAMIA nos ahorró bastante tiempo. El control biométrico es impresionante.”"
+              meta="Sector mueblero"
             />
             <TestimonialCard
               initial="C"
-              name="Carlos Ramírez"
-              role="CEO - STT México"
+              name="Director General"
+              role="Empresa de servicios"
               quote="“La mejor inversión que hemos hecho. Plataforma intuitiva y soporte excelente.”"
-              meta="Cliente 18 meses"
+              meta="Sector servicios"
             />
             <TestimonialCard
               initial="A"
-              name="Ana Martínez"
-              role="Gerente - Ultrafarms"
+              name="Gerencia Administrativa"
+              role="Empresa agroindustrial"
               quote="“De Excel a plataforma enterprise. Implementación rápida y resultados inmediatos.”"
-              meta="Cliente 3 años"
+              meta="Sector agroindustrial"
             />
           </div>
 
-          <div className="mt-16 text-center">
+          {/* <div className="mt-16 text-center">
             <div className="inline-block rounded-2xl border border-gray-200 bg-white px-10 py-6 shadow-lg">
               <div className="flex items-center justify-center gap-3">
                 <span className="text-5xl">⭐</span>
@@ -395,10 +383,10 @@ export default function MarketingLanding() {
                 </span>
               </div>
               <p className="mt-2 font-semibold text-[var(--adamia-text-secondary)]">
-                500+ reseñas verificadas
+                Clientes de sectores como retail, campo, servicios y manufactura
               </p>
             </div>
-          </div>
+          </div> */}
         </div>
       </section>
 
@@ -491,11 +479,8 @@ export default function MarketingLanding() {
           </h2>
 
           <p className="mx-auto mt-6 max-w-3xl text-xl text-[var(--adamia-text-secondary)] md:text-2xl">
-            Únete a las{" "}
-            <strong className="font-semibold text-[var(--adamia-blue)]">
-              500+ empresas
-            </strong>{" "}
-            que ya transformaron sus procesos
+            Empresas de distintos sectores ya están optimizando sus procesos de
+            Recursos Humanos con ADAMIA.
           </p>
 
           <div className="mt-10 flex justify-center">
@@ -577,12 +562,13 @@ function TestimonialCard({ initial, name, role, quote, meta }) {
   return (
     <div className="rounded-[24px] border border-gray-200 bg-white p-8 transition hover:-translate-y-1 hover:border-[var(--adamia-blue)] hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)]">
       <div className="flex items-center gap-4">
-        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] text-2xl font-bold text-white">
+        <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] text-2xl font-bold text-white">
           {initial}
         </div>
-        <div>
-          <div className="text-lg font-semibold">{name}</div>
-          <div className="text-sm text-[var(--adamia-text-secondary)]">
+
+        <div className="min-w-0">
+          <div className="text-lg font-semibold leading-tight">{name}</div>
+          <div className="mt-1 text-sm leading-snug text-[var(--adamia-text-secondary)]">
             {role}
           </div>
         </div>

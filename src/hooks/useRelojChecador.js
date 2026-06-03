@@ -1,7 +1,6 @@
 import useSWR from "swr";
 import { fetcherWithToken } from "@/lib/fetcher";
 
-//Comentario
 export default function useClockCheckData(
   idEmpresa,
   fecha,
@@ -11,28 +10,44 @@ export default function useClockCheckData(
   limit,
   departamento,
   estado,
-  // =========================
-  // NUEVO: filtro por rango de fechas (desde/hasta)
-  // Se usa en el panel "Registro de entradas y salidas".
-  // Importante: se mantiene `fecha` para compatibilidad con pantallas que filtran por un solo día.
-  // =========================
   desde,
   hasta,
+  sortBy,
+  sortOrder,
 ) {
   let url = null;
 
   if (idEmpresa) {
     if (empleado) {
-      url = `/checador/reloj/asistencia-por-empleado?empresa=${idEmpresa}&fecha=${fecha}&empleado=${empleado}&page=${page}&limit=${limit}`;
+      const params = new URLSearchParams({
+        empresa: String(idEmpresa),
+        fecha: String(fecha),
+        empleado: String(empleado),
+        page: String(page),
+        limit: String(limit),
+      });
+
+      url = `/checador/reloj/asistencia-por-empleado?${params.toString()}`;
     } else {
+      const params = new URLSearchParams({
+        empresa: String(idEmpresa),
+        page: String(page),
+        limit: String(limit),
+      });
+
       const hasRange = Boolean(desde || hasta);
-      url = `/checador/reloj/asistencia?empresa=${idEmpresa}${
-        !hasRange && fecha ? `&fecha=${fecha}` : ""
-      }${desde ? `&desde=${desde}` : ""}${hasta ? `&hasta=${hasta}` : ""}${
-        filtroNombre ? `&nombre=${encodeURIComponent(filtroNombre)}` : ""
-      }${departamento ? `&departamento=${departamento}` : ""}${
-        estado ? `&estado=${estado}` : ""
-      }&page=${page}&limit=${limit}`;
+
+      if (!hasRange && fecha) params.append("fecha", fecha);
+      if (desde) params.append("desde", desde);
+      if (hasta) params.append("hasta", hasta);
+      if (filtroNombre) params.append("nombre", filtroNombre);
+      if (departamento) params.append("departamento", departamento);
+      if (estado) params.append("estado", estado);
+
+      if (sortBy) params.append("sortBy", sortBy);
+      if (sortOrder) params.append("sortOrder", sortOrder);
+
+      url = `/checador/reloj/asistencia?${params.toString()}`;
     }
   }
 

@@ -43,6 +43,17 @@ export default function AsistenciaDataContainer({
     total: 0,
   });
   const [cachedData, setCachedData] = useState(null);
+  const DEFAULT_SORT_CONFIG = {
+    sortBy: "fecha",
+    sortOrder: "desc",
+  };
+  const [sortConfig, setSortConfig] = useState(DEFAULT_SORT_CONFIG);
+
+  const handleResetAll = () => {
+    setSortConfig(DEFAULT_SORT_CONFIG);
+    setPage(1);
+    onResetFilters?.();
+  };
 
   const { data, error, isLoading, mutate } = useAsistenciaData(
     idEmpresa,
@@ -60,6 +71,8 @@ export default function AsistenciaDataContainer({
     sinGoceDeSueldo,
     diasFestivos,
     requiereAutorizacion,
+    sortConfig.sortBy,
+    sortConfig.sortOrder,
   );
 
   // Ref para siempre tener el mutate más reciente sin recrear el EventSource
@@ -245,9 +258,12 @@ export default function AsistenciaDataContainer({
           mutateAsistencia={mutate}
           mostrarCamposExtras={mostrarCamposExtras}
           abrirFormulario={abrirFormulario}
-          onResetFilters={onResetFilters}
+          onResetFilters={handleResetAll}
           empresaActiva={empresaActiva}
           departamentosCatalogo={departamentos}
+          sortConfig={sortConfig}
+          setSortConfig={setSortConfig}
+          setPage={setPage}
         />
 
         {mostrarPaginacion && registros.length > 0 && (

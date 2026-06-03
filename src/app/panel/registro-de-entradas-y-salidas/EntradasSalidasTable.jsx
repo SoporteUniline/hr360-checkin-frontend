@@ -17,6 +17,7 @@ import timezone from "dayjs/plugin/timezone";
 import { useEffect, useMemo, useState } from "react";
 import HeaderMultiFilter from "../registro-asistencia/HeaderMultiFilter";
 import ActiveFilterChips from "../registro-asistencia/ActiveFilterChips";
+import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -37,6 +38,9 @@ export default function EntradasSalidasTable({
   page = 1,
   limit = 10,
   onHeaderFilteringMetaChange,
+  sortConfig,
+  setSortConfig,
+  setPage,
 }) {
   const fallbackTimezone = useEmpresaTimezone(empresaActiva);
   const userTimezone = registros?.[0]?.zona_horaria || fallbackTimezone;
@@ -155,6 +159,8 @@ export default function EntradasSalidasTable({
     setUnidadSeleccionada([]);
     setDepartamentoSeleccionado([]);
     setEstadoSeleccionado([]);
+
+    onResetFilters?.();
   };
 
   const handleExportExcel = async () => {
@@ -216,6 +222,28 @@ export default function EntradasSalidasTable({
     });
   };
 
+  const handleSort = (sortBy) => {
+    setSortConfig((prev) => ({
+      sortBy,
+      sortOrder:
+        prev.sortBy === sortBy && prev.sortOrder === "desc" ? "asc" : "desc",
+    }));
+
+    setPage?.(1);
+  };
+
+  const renderSortIcon = (column) => {
+    if (sortConfig.sortBy !== column) {
+      return <ArrowUpDown className="h-3 w-3 ml-1 text-gray-400" />;
+    }
+
+    return sortConfig.sortOrder === "asc" ? (
+      <ArrowUp className="h-3 w-3 ml-1 text-blue-600" />
+    ) : (
+      <ArrowDown className="h-3 w-3 ml-1 text-blue-600" />
+    );
+  };
+
   return (
     <>
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
@@ -270,12 +298,23 @@ export default function EntradasSalidasTable({
             <TableHeader>
               <TableRow className="bg-gray-50 hover:bg-gray-50">
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                  <HeaderMultiFilter
-                    selected={empleadoSeleccionado}
-                    onChange={setEmpleadoSeleccionado}
-                    options={empleadoOptions}
-                    placeholder="Empleado"
-                  />
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleSort("empleado")}
+                      className="flex items-center uppercase"
+                    >
+                      Empleado
+                      {renderSortIcon("empleado")}
+                    </button>
+
+                    <HeaderMultiFilter
+                      selected={empleadoSeleccionado}
+                      onChange={setEmpleadoSeleccionado}
+                      options={empleadoOptions}
+                      placeholder=""
+                    />
+                  </div>
                 </TableHead>
                 {empresaActiva === "all" && (
                   <TableHead className="font-semibold text-gray-700 uppercase text-xs">
@@ -288,22 +327,51 @@ export default function EntradasSalidasTable({
                   </TableHead>
                 )}
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                  <HeaderMultiFilter
-                    selected={departamentoSeleccionado}
-                    onChange={setDepartamentoSeleccionado}
-                    options={departamentoOptions}
-                    placeholder="Departamento"
-                  />
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleSort("departamento")}
+                      className="flex items-center uppercase"
+                    >
+                      Departamento
+                      {renderSortIcon("departamento")}
+                    </button>
+
+                    <HeaderMultiFilter
+                      selected={departamentoSeleccionado}
+                      onChange={setDepartamentoSeleccionado}
+                      options={departamentoOptions}
+                      placeholder=""
+                    />
+                  </div>
                 </TableHead>
                 {/* IMPORTANTE (UX): aunque filtremos 1 solo día (desde===hasta), siempre mostramos la fecha */}
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  Fecha de entrada
+                <TableHead
+                  onClick={() => handleSort("fechaEntrada")}
+                  className="cursor-pointer"
+                >
+                  <div className="flex items-center justify-center">
+                    Fecha de entrada
+                    {renderSortIcon("fechaEntrada")}
+                  </div>
                 </TableHead>
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  Hora entrada
+                <TableHead
+                  onClick={() => handleSort("horaEntrada")}
+                  className="font-semibold text-gray-700 uppercase text-xs text-center cursor-pointer select-none"
+                >
+                  <div className="flex items-center justify-center">
+                    Hora entrada
+                    {renderSortIcon("horaEntrada")}
+                  </div>
                 </TableHead>
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  Hora salida
+                <TableHead
+                  onClick={() => handleSort("horaSalida")}
+                  className="font-semibold text-gray-700 uppercase text-xs text-center cursor-pointer select-none"
+                >
+                  <div className="flex items-center justify-center">
+                    Hora salida
+                    {renderSortIcon("horaSalida")}
+                  </div>
                 </TableHead>
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
                   Entrada corregida
@@ -311,8 +379,14 @@ export default function EntradasSalidasTable({
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
                   Salida corregida
                 </TableHead>
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  Hrs registro
+                <TableHead
+                  onClick={() => handleSort("horasRegistro")}
+                  className="font-semibold text-gray-700 uppercase text-xs text-center cursor-pointer select-none"
+                >
+                  <div className="flex items-center justify-center">
+                    Hrs registro
+                    {renderSortIcon("horasRegistro")}
+                  </div>
                 </TableHead>
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
                   <HeaderMultiFilter

@@ -26,6 +26,8 @@ export default function EntradasSalidasDataContainer({
   setPage,
   empresaActiva,
   onResetFilters,
+  sortConfig,
+  setSortConfig,
 }) {
   const [filterOptionsRows, setFilterOptionsRows] = useState([]);
   const [headerFilterMeta, setHeaderFilterMeta] = useState({
@@ -45,17 +47,21 @@ export default function EntradasSalidasDataContainer({
     estado,
     desde,
     hasta,
+    sortConfig.sortBy,
+    sortConfig.sortOrder,
   );
 
   // Ref para siempre tener el mutate más reciente sin recrear el EventSource
   const mutateRef = useRef(mutate);
-  useEffect(() => { mutateRef.current = mutate; }, [mutate]);
+  useEffect(() => {
+    mutateRef.current = mutate;
+  }, [mutate]);
 
   // SSE: actualización en tiempo real cuando llega una checada
   useEffect(() => {
     if (!idEmpresa) return;
     const es = new EventSource(
-      `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/reloj/eventos-checada?id_empresa=${idEmpresa}`
+      `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/reloj/eventos-checada?id_empresa=${idEmpresa}`,
     );
     es.addEventListener("checada", () => mutateRef.current());
     es.onerror = () => {};
@@ -141,7 +147,7 @@ export default function EntradasSalidasDataContainer({
     ? effectiveData.registros
     : [];
 
-  const totalHoy = registros.length;
+  const totalRegistros = effectiveData?.total ?? 0;
 
   const {
     editingMovimientoId,
@@ -175,6 +181,9 @@ export default function EntradasSalidasDataContainer({
           filterOptionsRows={filterOptionsRows}
           page={page}
           limit={limit}
+          sortConfig={sortConfig}
+          setSortConfig={setSortConfig}
+          setPage={setPage}
           onHeaderFilteringMetaChange={setHeaderFilterMeta}
           fecha={fecha}
           editingMovimientoId={editingMovimientoId}
@@ -206,7 +215,7 @@ export default function EntradasSalidasDataContainer({
     ),
     data: {
       ...effectiveData,
-      totalHoy,
+      totalHoy: totalRegistros,
     },
   };
 }

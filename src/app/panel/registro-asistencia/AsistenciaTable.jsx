@@ -17,6 +17,7 @@ import { useEmpresaTimezone } from "@/context/AuthContext";
 import { useEffect, useMemo, useState } from "react";
 import HeaderMultiFilter from "./HeaderMultiFilter";
 import ActiveFilterChips from "./ActiveFilterChips";
+import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -44,6 +45,9 @@ export default function AsistenciaTable({
   page = 1,
   limit = 10,
   onHeaderFilteringMetaChange,
+  sortConfig,
+  setSortConfig,
+  setPage,
 }) {
   // Para el Excel usamos la zona de la primera empresa visible (o la activa como fallback)
   const fallbackTimezone = useEmpresaTimezone(empresaActiva);
@@ -355,6 +359,28 @@ export default function AsistenciaTable({
     }),
   );
 
+  const handleSort = (sortBy) => {
+    setSortConfig((prev) => ({
+      sortBy,
+      sortOrder:
+        prev.sortBy === sortBy && prev.sortOrder === "desc" ? "asc" : "desc",
+    }));
+
+    setPage?.(1);
+  };
+
+  const renderSortIcon = (column) => {
+    if (sortConfig.sortBy !== column) {
+      return <ArrowUpDown className="h-3 w-3 ml-1 text-gray-400" />;
+    }
+
+    return sortConfig.sortOrder === "asc" ? (
+      <ArrowUp className="h-3 w-3 ml-1 text-blue-600" />
+    ) : (
+      <ArrowDown className="h-3 w-3 ml-1 text-blue-600" />
+    );
+  };
+
   return (
     <>
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
@@ -481,21 +507,43 @@ export default function AsistenciaTable({
             <TableHeader>
               <TableRow className="bg-gray-50 hover:bg-gray-50">
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                  <HeaderMultiFilter
-                    selected={empleadoSeleccionado}
-                    onChange={setEmpleadoSeleccionado}
-                    options={empleadoOptions}
-                    placeholder="Empleado"
-                  />
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleSort("empleado")}
+                      className="flex items-center"
+                    >
+                      EMPLEADO
+                      {renderSortIcon("empleado")}
+                    </button>
+
+                    <HeaderMultiFilter
+                      selected={empleadoSeleccionado}
+                      onChange={setEmpleadoSeleccionado}
+                      options={empleadoOptions}
+                      placeholder=""
+                    />
+                  </div>
                 </TableHead>
                 {empresaActiva === "all" && (
                   <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                    <HeaderMultiFilter
-                      selected={unidadSeleccionada}
-                      onChange={setUnidadSeleccionada}
-                      options={unidadNegocioOptions}
-                      placeholder="Unidad de negocio"
-                    />
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleSort("unidadNegocio")}
+                        className="flex items-center"
+                      >
+                        UNIDAD
+                        {renderSortIcon("unidadNegocio")}
+                      </button>
+
+                      <HeaderMultiFilter
+                        selected={unidadSeleccionada}
+                        onChange={setUnidadSeleccionada}
+                        options={unidadNegocioOptions}
+                        placeholder=""
+                      />
+                    </div>
                   </TableHead>
                 )}
                 {mostrarCamposExtras && (
@@ -504,34 +552,74 @@ export default function AsistenciaTable({
                   </TableHead>
                 )}
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                  <HeaderMultiFilter
-                    selected={departamentoSeleccionado}
-                    onChange={setDepartamentoSeleccionado}
-                    options={departamentoOptions}
-                    placeholder="Departamento"
-                  />
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleSort("departamento")}
+                      className="flex items-center"
+                    >
+                      DEPARTAMENTO
+                      {renderSortIcon("departamento")}
+                    </button>
+
+                    <HeaderMultiFilter
+                      selected={departamentoSeleccionado}
+                      onChange={setDepartamentoSeleccionado}
+                      options={departamentoOptions}
+                      placeholder=""
+                    />
+                  </div>
                 </TableHead>
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                  <HeaderMultiFilter
-                    selected={tipoSeleccionado}
-                    onChange={setTipoSeleccionado}
-                    options={tipoOptions}
-                    placeholder="Tipo"
-                  />
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleSort("tipoRegistro")}
+                      className="flex items-center"
+                    >
+                      TIPO
+                      {renderSortIcon("tipoRegistro")}
+                    </button>
+
+                    <HeaderMultiFilter
+                      selected={tipoSeleccionado}
+                      onChange={setTipoSeleccionado}
+                      options={tipoOptions}
+                      placeholder=""
+                    />
+                  </div>
                 </TableHead>
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  Fecha
+                <TableHead
+                  onClick={() => handleSort("fecha")}
+                  className="font-semibold text-gray-700 uppercase text-xs text-center cursor-pointer select-none"
+                >
+                  <div className="flex items-center justify-center">
+                    Fecha
+                    {renderSortIcon("fecha")}
+                  </div>
                 </TableHead>
                 {mostrarCamposExtras && (
                   <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
                     Corrección
                   </TableHead>
                 )}
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  Entrada
+                <TableHead
+                  onClick={() => handleSort("entrada")}
+                  className="font-semibold text-gray-700 uppercase text-xs text-center cursor-pointer select-none"
+                >
+                  <div className="flex items-center justify-center">
+                    Entrada
+                    {renderSortIcon("entrada")}
+                  </div>
                 </TableHead>
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  Salida
+                <TableHead
+                  onClick={() => handleSort("salida")}
+                  className="font-semibold text-gray-700 uppercase text-xs text-center cursor-pointer select-none"
+                >
+                  <div className="flex items-center justify-center">
+                    Salida
+                    {renderSortIcon("salida")}
+                  </div>
                 </TableHead>
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
                   Hrs debía
@@ -555,20 +643,42 @@ export default function AsistenciaTable({
                   </TableHead>
                 )}
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  <HeaderMultiFilter
-                    selected={asistioSeleccionado}
-                    onChange={setAsistioSeleccionado}
-                    options={asistioOptions}
-                    placeholder="Asistió"
-                  />
+                  <div className="flex items-center justify-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleSort("asistencia")}
+                      className="flex items-center"
+                    >
+                      ASISTIÓ
+                      {renderSortIcon("asistencia")}
+                    </button>
+
+                    <HeaderMultiFilter
+                      selected={asistioSeleccionado}
+                      onChange={setAsistioSeleccionado}
+                      options={asistioOptions}
+                      placeholder=""
+                    />
+                  </div>
                 </TableHead>
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  <HeaderMultiFilter
-                    selected={goceSeleccionado}
-                    onChange={setGoceSeleccionado}
-                    options={goceOptions}
-                    placeholder="Goce"
-                  />
+                  <div className="flex items-center justify-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleSort("goceSueldo")}
+                      className="flex items-center"
+                    >
+                      GOCE
+                      {renderSortIcon("goceSueldo")}
+                    </button>
+
+                    <HeaderMultiFilter
+                      selected={goceSeleccionado}
+                      onChange={setGoceSeleccionado}
+                      options={goceOptions}
+                      placeholder=""
+                    />
+                  </div>
                 </TableHead>
                 {mostrarCamposExtras && (
                   <>
@@ -595,12 +705,23 @@ export default function AsistenciaTable({
                   </>
                 )}
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  <HeaderMultiFilter
-                    selected={horasExtraSeleccionado}
-                    onChange={setHorasExtraSeleccionado}
-                    options={horasExtraOptions}
-                    placeholder="Hrs extra"
-                  />
+                  <div className="flex items-center justify-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleSort("horasExtra")}
+                      className="flex items-center"
+                    >
+                      HRS EXTRA
+                      {renderSortIcon("horasExtra")}
+                    </button>
+
+                    <HeaderMultiFilter
+                      selected={horasExtraSeleccionado}
+                      onChange={setHorasExtraSeleccionado}
+                      options={horasExtraOptions}
+                      placeholder=""
+                    />
+                  </div>
                 </TableHead>
                 {mostrarCamposExtras && (
                   <>
@@ -624,12 +745,23 @@ export default function AsistenciaTable({
                   </TableHead>
                 )}
                 <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  <HeaderMultiFilter
-                    selected={estadoSeleccionado}
-                    onChange={setEstadoSeleccionado}
-                    options={estadoOptions}
-                    placeholder="Estado"
-                  />
+                  <div className="flex items-center justify-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleSort("estado")}
+                      className="flex items-center"
+                    >
+                      ESTADO
+                      {renderSortIcon("estado")}
+                    </button>
+
+                    <HeaderMultiFilter
+                      selected={estadoSeleccionado}
+                      onChange={setEstadoSeleccionado}
+                      options={estadoOptions}
+                      placeholder=""
+                    />
+                  </div>
                 </TableHead>
                 {mostrarCamposExtras && (
                   <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">

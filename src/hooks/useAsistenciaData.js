@@ -18,17 +18,20 @@ export default function useAsistenciaData(
   sinGoceDeSueldo,
   diasFestivos,
   requiereAutorizacion,
+  sortBy,
+  sortOrder,
 ) {
   let url = null;
 
   if (idEmpresa) {
     const params = new URLSearchParams({
       empresa: String(idEmpresa),
-      fechaInicio,
-      fechaFin,
       page: String(page),
       limit: String(limit),
     });
+
+    if (fechaInicio) params.append("fechaInicio", fechaInicio);
+    if (fechaFin) params.append("fechaFin", fechaFin);
 
     if (debouncedFiltroEmpleado) {
       params.append("filtroEmpleado", debouncedFiltroEmpleado);
@@ -56,6 +59,8 @@ export default function useAsistenciaData(
     if (sinGoceDeSueldo) params.append("sinGoceDeSueldo", "0");
     if (diasFestivos) params.append("diasFestivos", "1");
     if (requiereAutorizacion) params.append("requiereAutorizacion", "1");
+    if (sortBy) params.append("sortBy", sortBy);
+    if (sortOrder) params.append("sortOrder", sortOrder);
 
     url = `/checador/asistencias?${params.toString()}`;
   }

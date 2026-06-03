@@ -13,10 +13,12 @@ import dayjs from "dayjs";
 
 const DATE_PRESETS = [
   { label: "Hoy", key: "today" },
-  { label: "Esta semana", key: "week" },
-  { label: "Mes", key: "month" },
-  { label: "Quincena", key: "quincena" },
-  { label: "Personalizado", key: "custom" },
+  { label: "Semana", key: "week" },
+  { label: "15 días", key: "15days" },
+  { label: "Últ. mes", key: "month" },
+  { label: "Semestre", key: "semester" },
+  { label: "Año", key: "year" },
+  { label: "Todo", key: "all" },
 ];
 
 export default function MobileFiltersDrawer({
@@ -41,18 +43,27 @@ export default function MobileFiltersDrawer({
   const today = dayjs().format("YYYY-MM-DD");
 
   const detectPreset = () => {
+    if (!fechaInicio && !fechaFin) return "all";
+
     const now = dayjs();
+
+    const weekStart = now.startOf("week").format("YYYY-MM-DD");
+    const weekEnd = now.endOf("week").format("YYYY-MM-DD");
+
+    const monthStart = now.startOf("month").format("YYYY-MM-DD");
+    const monthEnd = now.endOf("month").format("YYYY-MM-DD");
+
+    const fifteenDays = now.subtract(14, "day").format("YYYY-MM-DD");
+    const semester = now.subtract(6, "month").format("YYYY-MM-DD");
+    const yearStart = now.startOf("year").format("YYYY-MM-DD");
+
     if (fechaInicio === today && fechaFin === today) return "today";
-    if (
-      fechaInicio === now.startOf("week").format("YYYY-MM-DD") &&
-      fechaFin === now.endOf("week").format("YYYY-MM-DD")
-    )
-      return "week";
-    if (
-      fechaInicio === now.startOf("month").format("YYYY-MM-DD") &&
-      fechaFin === now.endOf("month").format("YYYY-MM-DD")
-    )
-      return "month";
+    if (fechaInicio === weekStart && fechaFin === weekEnd) return "week";
+    if (fechaInicio === fifteenDays && fechaFin === today) return "15days";
+    if (fechaInicio === monthStart && fechaFin === monthEnd) return "month";
+    if (fechaInicio === semester && fechaFin === today) return "semester";
+    if (fechaInicio === yearStart && fechaFin === today) return "year";
+
     return "custom";
   };
 
@@ -67,9 +78,25 @@ export default function MobileFiltersDrawer({
         ini = now.startOf("week").format("YYYY-MM-DD");
         fin = now.endOf("week").format("YYYY-MM-DD");
         break;
+      case "15days":
+        ini = now.subtract(14, "day").format("YYYY-MM-DD");
+        fin = today;
+        break;
       case "month":
         ini = now.startOf("month").format("YYYY-MM-DD");
         fin = now.endOf("month").format("YYYY-MM-DD");
+        break;
+      case "semester":
+        ini = now.subtract(6, "month").format("YYYY-MM-DD");
+        fin = today;
+        break;
+      case "year":
+        ini = now.startOf("year").format("YYYY-MM-DD");
+        fin = today;
+        break;
+      case "all":
+        ini = "";
+        fin = "";
         break;
       case "quincena":
         if (now.date() <= 15) {

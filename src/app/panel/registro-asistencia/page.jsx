@@ -64,6 +64,7 @@ export default function ControlAsistencia() {
   const [sinGoceDeSueldo, setSinGoceDeSueldo] = useState(false);
   const [diasFestivos, setDiasFestivos] = useState(false);
   const [requiereAutorizacion, setRequiereAutorizacion] = useState(false);
+  const [filtroRapido, setFiltroRapido] = useState("hoy");
 
   const { dataUser } = useAuth();
   const isMobile = useIsMobile();
@@ -95,6 +96,50 @@ export default function ControlAsistencia() {
 
   const today = dayjs().tz("America/Mexico_City").format("YYYY-MM-DD");
 
+  const aplicarFiltroRapido = (tipo) => {
+    const hoy = dayjs().tz("America/Mexico_City");
+
+    let inicio = hoy;
+    let fin = hoy;
+
+    switch (tipo) {
+      case "hoy":
+        break;
+
+      case "semana":
+        inicio = hoy.startOf("week");
+        break;
+
+      case "quinceDias":
+        inicio = hoy.subtract(14, "day");
+        break;
+
+      case "ultimoMes":
+        inicio = hoy.subtract(1, "month");
+        break;
+
+      case "semestre":
+        inicio = hoy.subtract(6, "month");
+        break;
+
+      case "anio":
+        inicio = hoy.startOf("year");
+        break;
+
+      case "todo":
+        setFechaInicio("");
+        setFechaFin("");
+        setFiltroRapido(tipo);
+        setPage(1);
+        return;
+    }
+
+    setFechaInicio(inicio.format("YYYY-MM-DD"));
+    setFechaFin(fin.format("YYYY-MM-DD"));
+    setFiltroRapido(tipo);
+    setPage(1);
+  };
+
   const handleResetFilters = () => {
     setEmpresaActiva("all");
     setFechaInicio(today);
@@ -111,6 +156,7 @@ export default function ControlAsistencia() {
     setDiasFestivos(false);
     setRequiereAutorizacion(false);
     setMostrarCamposExtras(false);
+    setFiltroRapido("hoy");
   };
 
   const { ui, data, mutate } = AsistenciaDataContainer({
@@ -179,6 +225,8 @@ export default function ControlAsistencia() {
             abrirFormulario={abrirFormulario}
             isLoading={!data}
             onResetFilters={handleResetFilters}
+            filtroRapido={filtroRapido}
+            setFiltroRapido={setFiltroRapido}
           />
         </div>
       </>
@@ -261,6 +309,26 @@ export default function ControlAsistencia() {
               Limpiar
             </Button>
           </div>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {[
+            ["hoy", "Hoy"],
+            ["semana", "Esta semana"],
+            ["quinceDias", "15 días"],
+            ["ultimoMes", "Último mes"],
+            ["semestre", "Semestre"],
+            ["anio", "Año"],
+            ["todo", "Todo"],
+          ].map(([key, label]) => (
+            <Button
+              key={key}
+              size="sm"
+              variant={filtroRapido === key ? "default" : "outline"}
+              onClick={() => aplicarFiltroRapido(key)}
+            >
+              {label}
+            </Button>
+          ))}
         </div>
         <div className="pt-3 mt-3 border-t border-gray-100">
           <label className="flex items-center gap-2 cursor-pointer select-none w-fit">
