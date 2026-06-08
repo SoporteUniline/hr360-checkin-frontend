@@ -66,6 +66,12 @@ export default function ControlAsistencia() {
   const [requiereAutorizacion, setRequiereAutorizacion] = useState(false);
   const [filtroRapido, setFiltroRapido] = useState("hoy");
 
+  const DEFAULT_SORT_CONFIG = {
+    sortBy: "fecha",
+    sortOrder: "desc",
+  };
+  const [sortConfig, setSortConfig] = useState(DEFAULT_SORT_CONFIG);
+
   const { dataUser } = useAuth();
   const isMobile = useIsMobile();
   const { departamentos } = useDepartamentosData(idEmpresa);
@@ -157,6 +163,7 @@ export default function ControlAsistencia() {
     setRequiereAutorizacion(false);
     setMostrarCamposExtras(false);
     setFiltroRapido("hoy");
+    setSortConfig(DEFAULT_SORT_CONFIG);
   };
 
   const { ui, data, mutate } = AsistenciaDataContainer({
@@ -181,6 +188,8 @@ export default function ControlAsistencia() {
     sinGoceDeSueldo,
     diasFestivos,
     requiereAutorizacion,
+    sortConfig,
+    setSortConfig,
   });
 
   // Mobile view: full-height layout overriding panel padding

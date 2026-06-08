@@ -35,6 +35,8 @@ export default function AsistenciaDataContainer({
   sinGoceDeSueldo,
   diasFestivos,
   requiereAutorizacion,
+  sortConfig,
+  setSortConfig,
 }) {
   const { departamentos } = useDepartamentosData(idEmpresa);
   const [filterOptionsRows, setFilterOptionsRows] = useState([]);
@@ -43,11 +45,6 @@ export default function AsistenciaDataContainer({
     total: 0,
   });
   const [cachedData, setCachedData] = useState(null);
-  const DEFAULT_SORT_CONFIG = {
-    sortBy: "fecha",
-    sortOrder: "desc",
-  };
-  const [sortConfig, setSortConfig] = useState(DEFAULT_SORT_CONFIG);
 
   const handleResetAll = () => {
     setSortConfig(DEFAULT_SORT_CONFIG);
