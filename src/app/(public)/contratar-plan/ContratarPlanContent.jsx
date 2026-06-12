@@ -27,6 +27,8 @@ const COUNTRY_CODES = [
   { code: "+34", label: "ES (+34)" },
 ];
 
+const COSTO_POR_USUARIO_DEFAULT = 60;
+
 function getPlanId(row) {
   return row?.id ?? row?.id_tipo_plan ?? row?.tipo_plan_id ?? null;
 }
@@ -298,7 +300,9 @@ export default function ContratarPlanContent() {
           metodos_pago: response?.data?.metodos_pago ?? [],
           planes_duracion: response?.data?.planes_duracion ?? [],
         });
-        setDescuentos(buildDescuentosMap(response?.data?.planes_duracion ?? []));
+        setDescuentos(
+          buildDescuentosMap(response?.data?.planes_duracion ?? []),
+        );
       } catch (_error) {
         if (!mounted) return;
         setErrorCatalogos(
@@ -347,7 +351,7 @@ export default function ContratarPlanContent() {
   const estimado = useMemo(() => {
     const months = Number(form.meses_contratados);
     const employees = Number(form.empleados);
-    const monthlyBase = getPriceFromPlan(selectedPlan, months, employees);
+    const monthlyBase = employees * COSTO_POR_USUARIO_DEFAULT;
     if (!monthlyBase || ![1, 6, 12].includes(months)) return null;
     const descuento = descuentos[months] ?? 0;
     const subtotal = monthlyBase * months;
@@ -519,7 +523,9 @@ export default function ContratarPlanContent() {
       return;
     }
     if (!phoneRegex.test(fullPhone.trim())) {
-      setSubmitError("El teléfono con código de país no tiene un formato válido.");
+      setSubmitError(
+        "El teléfono con código de país no tiene un formato válido.",
+      );
       return;
     }
     if (!otpVerified || !phoneVerificationToken) {
@@ -568,6 +574,7 @@ export default function ContratarPlanContent() {
           ? Number(form.metodo_pago_id)
           : null,
         precio_por_mes: estimado?.monthlyBase ?? null,
+        precio_empleado_extra: COSTO_POR_USUARIO_DEFAULT,
       };
       const response = await axios.post(
         "/checador/contrataciones/publica",
@@ -746,12 +753,15 @@ export default function ContratarPlanContent() {
                 </p>
                 {monthlyBase && card.discount > 0 ? (
                   <p className="mt-1 text-xs text-[var(--adamia-text-secondary)]">
-                    Precio mensual base: <strong>{formatCurrencyMXN(monthlyBase)}</strong>
+                    Precio mensual base:{" "}
+                    <strong>{formatCurrencyMXN(monthlyBase)}</strong>
                   </p>
                 ) : null}
                 <p className="mt-1 text-sm text-[var(--adamia-text-secondary)]">
                   Total {card.months} {card.months === 1 ? "mes" : "meses"}:{" "}
-                  <strong>{monthlyBase ? formatCurrencyMXN(total) : "—"}</strong>
+                  <strong>
+                    {monthlyBase ? formatCurrencyMXN(total) : "—"}
+                  </strong>
                 </p>
                 <button
                   type="button"
@@ -835,10 +845,10 @@ export default function ContratarPlanContent() {
                     {otpSending
                       ? "Enviando..."
                       : otpCountdown > 0
-                        ? `Reenviar en ${otpCountdown}s`
-                        : otpSent
-                          ? "Reenviar código WhatsApp"
-                          : "Enviar código por WhatsApp"}
+                      ? `Reenviar en ${otpCountdown}s`
+                      : otpSent
+                      ? "Reenviar código WhatsApp"
+                      : "Enviar código por WhatsApp"}
                   </button>
                   <span
                     className={`inline-flex items-center rounded-xl px-3 py-2 text-xs font-semibold ${
@@ -847,7 +857,9 @@ export default function ContratarPlanContent() {
                         : "bg-slate-100 text-slate-600"
                     }`}
                   >
-                    {otpVerified ? "Teléfono verificado" : "Pendiente de verificar"}
+                    {otpVerified
+                      ? "Teléfono verificado"
+                      : "Pendiente de verificar"}
                   </span>
                 </div>
 
@@ -857,7 +869,11 @@ export default function ContratarPlanContent() {
                       Ingresa el código de 6 dígitos enviado por WhatsApp
                     </p>
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                      <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode}>
+                      <InputOTP
+                        maxLength={6}
+                        value={otpCode}
+                        onChange={setOtpCode}
+                      >
                         <InputOTPGroup>
                           <InputOTPSlot index={0} />
                           <InputOTPSlot index={1} />
