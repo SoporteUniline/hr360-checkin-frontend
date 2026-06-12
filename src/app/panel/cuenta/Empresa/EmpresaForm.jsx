@@ -26,7 +26,6 @@ import {
   DEFAULT_COMPANY_TIMEZONE,
   getTimeZoneOptions,
 } from "@/lib/timezones";
-import { Switch } from "@/components/ui/switch";
 
 export default function EmpresaForm({ idEmpresa }) {
   const { dataUser } = useAuth();
@@ -45,7 +44,6 @@ export default function EmpresaForm({ idEmpresa }) {
   const form = useForm();
   const { register, handleSubmit, reset, formState, setValue, watch } = form;
   const selectedTimeZone = watch("zona_horaria");
-  const cronActivo = watch("cron_asistencias_activo");
   const timeZoneOptions = React.useMemo(() => getTimeZoneOptions(), []);
 
   const getOptionGiros = async (value) => {
@@ -63,7 +61,6 @@ export default function EmpresaForm({ idEmpresa }) {
           ...data,
           giro,
           zona_horaria: data.zona_horaria || DEFAULT_COMPANY_TIMEZONE,
-          cron_asistencias_activo: data.cron_asistencias_activo ?? 1,
         });
       };
       setDataGiro();
@@ -280,44 +277,6 @@ export default function EmpresaForm({ idEmpresa }) {
             </FormControl>
             <FormMessage>{formState.errors.direccion?.message}</FormMessage>
           </FormItem>
-
-          {/* Sección de Registro Automático de Asistencias */}
-          <div className="border-t-2 border-orange-200 pt-6 mt-6">
-            <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              Registro automático de asistencias
-            </h4>
-            <div className="flex items-start gap-4 bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <Switch
-                id="cron_asistencias_activo"
-                checked={!!cronActivo}
-                onCheckedChange={(checked) =>
-                  setValue("cron_asistencias_activo", checked ? 1 : 0, {
-                    shouldDirty: true,
-                  })
-                }
-                disabled={loading}
-                className="mt-0.5 shrink-0"
-              />
-              <div className="flex flex-col gap-1">
-                <label
-                  htmlFor="cron_asistencias_activo"
-                  className="text-sm font-semibold text-gray-900 cursor-pointer select-none"
-                >
-                  {cronActivo ? "Activo" : "Inactivo"}
-                </label>
-                <p className="text-xs text-gray-600 leading-relaxed">
-                  Cuando está <strong>activo</strong>, el sistema genera y cierra automáticamente los registros de asistencia cada día para todos los empleados de esta empresa.
-                  <br />
-                  <span className="text-amber-700 font-medium">
-                    Desactívalo mientras das de alta a tus empleados y vuelve a activarlo cuando estés listo para comenzar el registro diario.
-                  </span>
-                </p>
-              </div>
-            </div>
-          </div>
 
           {/* Sección de Redes Sociales */}
           <div className="border-t-2 border-orange-200 pt-6 mt-6">
