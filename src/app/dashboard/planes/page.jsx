@@ -1358,11 +1358,38 @@ function ContratacionDialog({
   saving,
   onGuardar,
 }) {
-  const set = (key) => (e) =>
-    setForm((f) => ({
-      ...f,
-      [key]: typeof e === "string" ? e : e.target.value,
-    }));
+  const set = (key) => (e) => {
+    const value = typeof e === "string" ? e : e.target.value;
+
+    setForm((f) => {
+      const next = { ...f, [key]: value };
+
+      const empleados =
+        key === "empleados" ? Number(value || 0) : Number(f.empleados || 0);
+
+      if (key === "precio_por_mes") {
+        const precioPorMes = Number(value || 0);
+        next.precio_empleado_extra =
+          empleados > 0 && precioPorMes > 0
+            ? (precioPorMes / empleados).toFixed(6)
+            : f.precio_empleado_extra;
+      }
+
+      if (key === "precio_empleado_extra" || key === "empleados") {
+        const costo =
+          key === "precio_empleado_extra"
+            ? Number(value || 0)
+            : Number(f.precio_empleado_extra || 0);
+
+        next.precio_por_mes =
+          empleados > 0 && costo > 0
+            ? (empleados * costo).toFixed(2)
+            : f.precio_por_mes;
+      }
+
+      return next;
+    });
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
