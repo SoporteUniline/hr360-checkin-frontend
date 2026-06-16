@@ -130,38 +130,26 @@ function transformDescuentos(rows = []) {
   return result;
 }
 
-function calcularCotizacionLocal({ empleados, meses, planes, descuentos }) {
+function calcularCotizacionLocal({ empleados, meses, descuentos }) {
   const empleadosNum = Math.max(1, Number(empleados || 1));
-  const mesesNum = Number(meses);
-  const empleadosLookup = empleadosNum;
 
-  let planBase = planes.find(
-    (plan) =>
-      empleadosLookup >= (plan.min ?? 1) &&
-      (plan.max === null ||
-        plan.max === undefined ||
-        empleadosLookup <= plan.max),
-  );
-  if (!planBase) {
-    planBase = planes[planes.length - 1];
-  }
+  const COSTO_POR_EMPLEADO = 60;
 
-  let precioMensual = planBase?.precioBase ?? 0;
-  if (empleadosNum >= 1000) {
-    precioMensual = (planBase?.precioBase ?? 0) * empleadosNum;
-  }
+  const precioMensual = empleadosNum * COSTO_POR_EMPLEADO;
 
-  const descuento = descuentos[mesesNum] ?? 0;
-  const subtotal = precioMensual * mesesNum;
+  const descuento = descuentos[meses] ?? 0;
+
+  const subtotal = precioMensual * meses;
+
   const descuentoAplicado = subtotal * (descuento / 100);
+
   const total = subtotal - descuentoAplicado;
 
   return {
-    tipoPlanId: planBase?.id ?? null,
     empleados: empleadosNum,
-    meses: mesesNum,
+    meses,
     precioMensual,
-    precioPorMes: total / mesesNum,
+    precioPorMes: total / meses,
     descuentoPorcentaje: descuento,
     descuentoAplicado,
     subtotal,

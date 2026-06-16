@@ -673,12 +673,14 @@ function ContratacionesTab() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState({
-    id_empresa: "", // selector UI; se convierte a usuario_id al guardar
+    id_empresa: "",
     tipo_plan_id: "",
     empleados: "",
     fecha_inicio: "",
     fecha_fin: "",
     estado: "Activo",
+    precio_por_mes: "",
+    precio_empleado_extra: "",
     notas: "",
   });
   const [saving, setSaving] = useState(false);
@@ -782,6 +784,7 @@ function ContratacionesTab() {
       fecha_fin: item.fecha_fin ? item.fecha_fin.slice(0, 10) : "",
       estado: item.estado || "Activo",
       precio_por_mes: item.precio_por_mes ?? "",
+      precio_empleado_extra: item.precio_empleado_extra ?? "",
       notas: item.notas || "",
     });
     setEditDialogOpen(true);
@@ -795,6 +798,7 @@ function ContratacionesTab() {
       fecha_inicio: "",
       fecha_fin: "",
       estado: "Activo",
+      precio_empleado_extra: "",
       precio_por_mes: "",
       notas: "",
     });
@@ -816,6 +820,10 @@ function ContratacionesTab() {
           empleados: form.empleados !== "" ? Number(form.empleados) : null,
           fecha_inicio: form.fecha_inicio || null,
           fecha_fin: form.fecha_fin || null,
+          precio_empleado_extra:
+            form.precio_empleado_extra !== ""
+              ? Number(form.precio_empleado_extra)
+              : null,
           estado: form.estado,
           notas: form.notas || null,
         },
@@ -846,6 +854,10 @@ function ContratacionesTab() {
           precio_por_mes:
             form.precio_por_mes !== "" ? Number(form.precio_por_mes) : null,
           notas: form.notas || null,
+          precio_empleado_extra:
+            form.precio_empleado_extra !== ""
+              ? Number(form.precio_empleado_extra)
+              : null,
         },
         { headers },
       );
@@ -1346,11 +1358,38 @@ function ContratacionDialog({
   saving,
   onGuardar,
 }) {
-  const set = (key) => (e) =>
-    setForm((f) => ({
-      ...f,
-      [key]: typeof e === "string" ? e : e.target.value,
-    }));
+  const set = (key) => (e) => {
+    const value = typeof e === "string" ? e : e.target.value;
+
+    setForm((f) => {
+      const next = { ...f, [key]: value };
+
+      const empleados =
+        key === "empleados" ? Number(value || 0) : Number(f.empleados || 0);
+
+      if (key === "precio_por_mes") {
+        const precioPorMes = Number(value || 0);
+        next.precio_empleado_extra =
+          empleados > 0 && precioPorMes > 0
+            ? (precioPorMes / empleados).toFixed(6)
+            : f.precio_empleado_extra;
+      }
+
+      if (key === "precio_empleado_extra" || key === "empleados") {
+        const costo =
+          key === "precio_empleado_extra"
+            ? Number(value || 0)
+            : Number(f.precio_empleado_extra || 0);
+
+        next.precio_por_mes =
+          empleados > 0 && costo > 0
+            ? (empleados * costo).toFixed(2)
+            : f.precio_por_mes;
+      }
+
+      return next;
+    });
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1473,6 +1512,20 @@ function ContratacionDialog({
               Si se configura, este precio sobrescribe el del plan para este
               cliente.
             </p>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-slate-700 mb-1 block">
+              Costo por usuario
+            </label>
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              placeholder="60"
+              value={form.precio_empleado_extra}
+              onChange={set("precio_empleado_extra")}
+            />
           </div>
 
           <div>
