@@ -12,6 +12,11 @@ import { useEffect, useRef, useState } from "react";
 import { fetcherWithToken } from "@/lib/fetcher";
 import useDepartamentosData from "@/hooks/useDepartamentosData";
 
+const DEFAULT_SORT_CONFIG = {
+  sortBy: "fecha",
+  sortOrder: "desc",
+};
+
 export default function AsistenciaDataContainer({
   idEmpresa,
   empresaActiva,
@@ -35,8 +40,8 @@ export default function AsistenciaDataContainer({
   sinGoceDeSueldo,
   diasFestivos,
   requiereAutorizacion,
-  sortConfig,
-  setSortConfig,
+  sortConfig = DEFAULT_SORT_CONFIG,
+  setSortConfig = () => {},
 }) {
   const { departamentos } = useDepartamentosData(idEmpresa);
   const [filterOptionsRows, setFilterOptionsRows] = useState([]);

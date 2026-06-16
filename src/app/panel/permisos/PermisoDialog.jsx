@@ -228,6 +228,9 @@ export default function PermisoDialog({
           fecha_fin: form.fecha_fin || null,
           motivo: form.motivo || null,
           id_empresa: Number(idEmpresaSeleccionada || idEmpresa),
+
+          // Evita doble correo: creación + aprobación automática
+          omitir_correo_creacion: true,
         }));
         const created = await Promise.all(
           payloads.map((p) => permisosApi.crear(p)),
