@@ -51,7 +51,7 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
           id_tipo_permiso: String(selected.id_tipo_permiso),
           fecha_inicio: selected.fecha_inicio?.slice(0, 10),
           fecha_fin: selected.fecha_fin?.slice(0, 10),
-          motivo: selected.motivo,
+          motivo: selected?.motivo ?? "",
           estado: selected.estado,
           id_empleado: selected.id_empleado,
         });
@@ -71,15 +71,19 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
 
   const validateForm = () => {
     const validationErrors = [];
-    if (!form.id_tipo_permiso) validationErrors.push("Selecciona el tipo de permiso.");
-    if (!form.fecha_inicio) validationErrors.push("La fecha de inicio es obligatoria.");
+    if (!form.id_tipo_permiso)
+      validationErrors.push("Selecciona el tipo de permiso.");
+    if (!form.fecha_inicio)
+      validationErrors.push("La fecha de inicio es obligatoria.");
     if (!form.fecha_fin) validationErrors.push("La fecha fin es obligatoria.");
     if (
       form.fecha_inicio &&
       form.fecha_fin &&
       form.fecha_fin < form.fecha_inicio
     ) {
-      validationErrors.push("La fecha fin no puede ser anterior a la fecha inicio.");
+      validationErrors.push(
+        "La fecha fin no puede ser anterior a la fecha inicio.",
+      );
     }
     return validationErrors;
   };
@@ -94,24 +98,30 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
   };
 
   const resolveEmpleadoId = async () => {
-    const directId = Number(dataUser?.id_empleado || form.id_empleado || selected?.id_empleado);
+    const directId = Number(
+      dataUser?.id_empleado || form.id_empleado || selected?.id_empleado,
+    );
     if (Number.isFinite(directId) && directId > 0) {
       return directId;
     }
 
-    const correoSesion = String(dataUser?.correo || dataUser?.email || "").trim();
+    const correoSesion = String(
+      dataUser?.correo || dataUser?.email || "",
+    ).trim();
     const empresaSesion = getEmpresaIdSesion();
     if (!correoSesion || !empresaSesion) return null;
 
     try {
       const token = Cookies.get("token");
       const response = await axios.get(
-        `/checador/empleados/por-correo?empresa=${empresaSesion}&correo=${encodeURIComponent(correoSesion)}`,
+        `/checador/empleados/por-correo?empresa=${empresaSesion}&correo=${encodeURIComponent(
+          correoSesion,
+        )}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
       const resolvedId = Number(response?.data?.id_empleado);
       return Number.isFinite(resolvedId) && resolvedId > 0 ? resolvedId : null;
@@ -162,7 +172,7 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
     } catch (error) {
       enqueueSnackbar(
         error?.response?.data?.error || "No se pudo crear la solicitud",
-        { variant: "error" }
+        { variant: "error" },
       );
     }
   };
@@ -197,15 +207,11 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
         estado: "Pendiente",
       };
 
-      await axios.put(
-        `/checador/solicitudes-permiso/${selected.id}`,
-        payload,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      await axios.put(`/checador/solicitudes-permiso/${selected.id}`, payload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
       enqueueSnackbar("Solicitud actualizada correctamente", {
         variant: "success",
@@ -216,7 +222,7 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
       console.error(error);
       enqueueSnackbar(
         error?.response?.data?.error || "No se pudo actualizar la solicitud",
-        { variant: "error" }
+        { variant: "error" },
       );
     }
   };
@@ -228,7 +234,7 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="p-0 overflow-hidden max-w-[95vw] sm:max-w-xl">
-        <DialogHeader className="p-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white">
+        <DialogHeader className="p-5 bg-linear-to-r from-indigo-600 to-blue-600 text-white">
           <DialogTitle className="flex items-center gap-2 text-base font-bold">
             <span className="grid size-9 place-items-center rounded-lg bg-white/15">
               <CalendarCheck2 className="size-5 text-white" />
@@ -307,19 +313,19 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
           </div>
 
           <div className="space-y-2">
-              <Label>Motivo</Label>
-              <Textarea
-                rows={4}
-                placeholder="Describe el motivo del permiso..."
-                value={form.motivo}
-                onChange={(e) =>
-                  setForm((formOriginal) => ({
-                    ...formOriginal,
-                    motivo: e.target.value,
-                  }))
-                }
-                disabled={isReadOnly}
-              />
+            <Label>Motivo</Label>
+            <Textarea
+              rows={4}
+              placeholder="Describe el motivo del permiso..."
+              value={form.motivo ?? ""}
+              onChange={(e) =>
+                setForm((formOriginal) => ({
+                  ...formOriginal,
+                  motivo: e.target.value,
+                }))
+              }
+              disabled={isReadOnly}
+            />
           </div>
 
           {errors.length > 0 ? (

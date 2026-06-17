@@ -16,16 +16,19 @@ export const usePermisosEmpleado = (page = 1, limit = 10) => {
   // Fallback: cuando el token no trae id_empleado, resolverlo por correo + empresa.
   const { data: empleadoPorCorreo } = useSWR(
     !idEmpleadoSesion && correoSesion && empresaSesion
-      ? `/checador/empleados/por-correo?empresa=${empresaSesion}&correo=${encodeURIComponent(correoSesion)}`
+      ? `/checador/empleados/por-correo?empresa=${empresaSesion}&correo=${encodeURIComponent(
+          correoSesion,
+        )}`
       : null,
     fetcherWithToken,
     {
       revalidateOnFocus: false,
       keepPreviousData: true,
-    }
+    },
   );
 
-  const idEmpleadoResuelto = idEmpleadoSesion || Number(empleadoPorCorreo?.id_empleado || 0);
+  const idEmpleadoResuelto =
+    idEmpleadoSesion || Number(empleadoPorCorreo?.id_empleado || 0);
   const shouldFetch = Boolean(idEmpleadoResuelto);
 
   const {
@@ -43,20 +46,47 @@ export const usePermisosEmpleado = (page = 1, limit = 10) => {
       refreshInterval: 15000,
       revalidateOnFocus: true,
       keepPreviousData: true,
-    }
+    },
   );
 
   const normalizedData = Array.isArray(data?.results)
     ? data.results
     : Array.isArray(data?.results?.data)
-      ? data.results.data
-      : [];
+    ? data.results.data
+    : [];
 
   return {
     data: normalizedData,
     total: Number(data?.total || normalizedData.length || 0),
     error,
     isLoading: isLoadingPermisos && shouldFetch,
+    mutate,
+  };
+};
+
+export const usePermisosPorAutorizar = (page = 1, limit = 10) => {
+  const { dataUser } = useAuth();
+  const shouldFetch = Boolean(dataUser?.esEmpleado);
+
+  const { data, error, isLoading, mutate } = useSWR(
+    shouldFetch
+      ? `/checador/solicitudes-permiso/por-autorizar?page=${page}&limit=${limit}`
+      : null,
+    fetcherWithToken,
+    {
+      refreshInterval: 15000,
+      revalidateOnFocus: true,
+      keepPreviousData: true,
+    },
+  );
+
+  const normalizedData = Array.isArray(data?.results) ? data.results : [];
+
+  return {
+    data: normalizedData,
+    total: Number(data?.total || normalizedData.length || 0),
+    error,
+    isLoading,
     mutate,
   };
 };
