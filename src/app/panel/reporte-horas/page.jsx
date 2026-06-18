@@ -198,8 +198,7 @@ export default function ReporteHorasPage() {
       );
     if (periodo)
       result = result.filter(
-        (e) =>
-          (e.periodo_pago || "").toLowerCase() === periodo.toLowerCase(),
+        (e) => (e.periodo_pago || "").toLowerCase() === periodo.toLowerCase(),
       );
     return result;
   }, [empleados, cargo, periodo, unidadNombreActiva]);
@@ -1316,7 +1315,6 @@ export default function ReporteHorasPage() {
       </div>
 
       <Card className="border-blue-100 bg-blue-50">
-       
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex flex-col gap-2 md:col-span-2">
@@ -1387,17 +1385,20 @@ export default function ReporteHorasPage() {
                 Empleado{multi ? "(s)" : ""}
               </label>
               {!multi ? (
-                <select
-                  className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm shadow-xs focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                <Combobox
+                  options={empleadosFiltrados.map((e) => ({
+                    value: String(e.id_empleado),
+                    label: `${e.nombre_empleado} - ${
+                      e.unidad_negocio || e.nombre_empresa
+                    }`,
+                  }))}
                   value={empleadoId}
-                  onChange={(e) => setEmpleadoId(e.target.value)}
-                >
-                  {empleadosFiltrados.map((e) => (
-                    <option key={e.id_empleado} value={e.id_empleado}>
-                      {e.nombre_empleado} - {e.unidad_negocio || e.nombre_empresa}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => setEmpleadoId(value)}
+                  placeholder="Buscar empleado..."
+                  emptyText="No se encontraron empleados"
+                  name="empleado"
+                  disabled={loading || empleadosFiltrados.length === 0}
+                />
               ) : (
                 <div className="flex flex-col gap-2">
                   <Button
@@ -1435,7 +1436,8 @@ export default function ReporteHorasPage() {
                     >
                       {empleadosFiltrados.map((e) => (
                         <option key={e.id_empleado} value={e.id_empleado}>
-                        {e.nombre_empleado} - {e.unidad_negocio || e.nombre_empresa}
+                          {e.nombre_empleado} -{" "}
+                          {e.unidad_negocio || e.nombre_empresa}
                         </option>
                       ))}
                     </select>
@@ -1450,7 +1452,9 @@ export default function ReporteHorasPage() {
                       <span
                         key={`sel-${e.id_empleado}`}
                         className="inline-flex items-center gap-1 rounded-full bg-zinc-100 border border-zinc-200 px-2 py-0.5 text-xs"
-                          title={`${e.nombre_empleado} - ${e.unidad_negocio || e.nombre_empresa}`}
+                        title={`${e.nombre_empleado} - ${
+                          e.unidad_negocio || e.nombre_empresa
+                        }`}
                       >
                         {e.nombre_empleado}
                         <button
@@ -1494,8 +1498,8 @@ export default function ReporteHorasPage() {
                         Seleccionar empleados
                       </DialogTitle>
                       <DialogDescription className="text-white/90 text-sm">
-                        Busca por nombre, empresa o unidad, marca múltiples empleados y
-                        aplica la selección.
+                        Busca por nombre, empresa o unidad, marca múltiples
+                        empleados y aplica la selección.
                       </DialogDescription>
                     </DialogHeader>
 

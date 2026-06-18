@@ -8,7 +8,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Eye, Pencil } from "lucide-react";
+import { Check, Eye, Pencil, X } from "lucide-react";
+import { permisosApi } from "@/lib/permisosApi";
+import { useSnackbar } from "notistack";
 import { cn } from "@/lib/utils";
 
 const formatDateOnly = (value) => {
@@ -30,12 +32,40 @@ const diffDaysInclusive = (start, end) => {
   return Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
 };
 
-export const PermissionTable = ({ data, setOpen, setMode, setSelected }) => {
+export const PermissionTable = ({
+  data,
+  setOpen,
+  setMode,
+  setSelected,
+  modoAutorizar = false,
+  mutate,
+}) => {
+  const { enqueueSnackbar } = useSnackbar();
+
+  const cambiarEstado = async (id, estado) => {
+    try {
+      await permisosApi.actualizarEstado(id, estado);
+      enqueueSnackbar(`Solicitud ${estado.toLowerCase()} correctamente`, {
+        variant: "success",
+      });
+      mutate?.();
+    } catch (error) {
+      enqueueSnackbar(
+        error?.response?.data?.error || "Error al actualizar la solicitud",
+        { variant: "error" },
+      );
+    }
+  };
   return (
     <div className="overflow-x-auto rounded-lg border mt-4">
       <Table>
         <TableHeader>
           <TableRow className="bg-gray-50">
+            {modoAutorizar && (
+              <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
+                Empleado
+              </TableHead>
+            )}
             <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
               Tipo de permiso
             </TableHead>
@@ -54,7 +84,7 @@ export const PermissionTable = ({ data, setOpen, setMode, setSelected }) => {
             <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
               Solicitado
             </TableHead>
-            <TableHead className="whitespace-nowrap text-right text-xs font-semibold uppercase text-gray-600">
+            <TableHead className="sticky right-0 bg-gray-50 z-10 text-right whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
               Acciones
             </TableHead>
           </TableRow>
@@ -66,7 +96,13 @@ export const PermissionTable = ({ data, setOpen, setMode, setSelected }) => {
 
             return (
               <TableRow key={row.id} className="hover:bg-zinc-50">
+                {modoAutorizar && (
+                  <TableCell>
+                    <div className="font-medium">{row.empleado_nombre}</div>
+                  </TableCell>
+                )}
                 <TableCell>{row.tipo_permiso_nombre}</TableCell>
+
                 <TableCell>{fechaInicio}</TableCell>
                 <TableCell>{fechaFin}</TableCell>
                 <TableCell>
@@ -77,9 +113,32 @@ export const PermissionTable = ({ data, setOpen, setMode, setSelected }) => {
                 </TableCell>
                 <TableCell>{formatDateOnly(row.marca_tiempo)} </TableCell>
 
-                <TableCell className="text-right">
+                <TableCell className="sticky right-0 bg-white z-10 text-right shadow-[-4px_0_6px_-4px_rgba(0,0,0,0.1)]">
                   <div className="flex justify-end gap-2">
-                    {row.estado === "Pendiente" && (
+                    {modoAutorizar && row.estado === "Pendiente" && (
+                      <>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-8 w-8 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                          onClick={() => cambiarEstado(row.id, "Aprobado")}
+                          title="Aprobar"
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
+
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-8 w-8 border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                          onClick={() => cambiarEstado(row.id, "Rechazado")}
+                          title="Rechazar"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                    {!modoAutorizar && row.estado === "Pendiente" && (
                       <Button
                         size="icon"
                         variant="outline"
