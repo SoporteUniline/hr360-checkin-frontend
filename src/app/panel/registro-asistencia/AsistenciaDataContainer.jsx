@@ -195,11 +195,11 @@ export default function AsistenciaDataContainer({
   const { data: empleados } = useEmpleadosData(idEmpresa);
   const { data: tiposPermiso } = useTiposPermisoData();
 
-  const effectiveData = data || cachedData;
+  const effectiveData = data;
 
-  useEffect(() => {
-    if (data) setCachedData(data);
-  }, [data]);
+  // useEffect(() => {
+  //   if (data) setCachedData(data);
+  // }, [data]);
 
   const registros = Array.isArray(effectiveData?.registros)
     ? effectiveData.registros

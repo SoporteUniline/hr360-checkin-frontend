@@ -65,7 +65,10 @@ export default function useAsistenciaData(
     url = `/checador/asistencias?${params.toString()}`;
   }
 
-  const { data, error, isLoading, mutate } = useSWR(url, fetcherWithToken);
+  const { data, error, isLoading, mutate } = useSWR(url, fetcherWithToken, {
+    keepPreviousData: false,
+    revalidateOnFocus: false,
+  });
 
   return { data, error, isLoading, mutate };
 }
