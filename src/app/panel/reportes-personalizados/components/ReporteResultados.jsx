@@ -6,7 +6,7 @@
 
 "use client";
 
-import { useMemo, useState, useRef, forwardRef, useImperativeHandle, Fragment } from "react";
+import { useMemo, useState, useEffect, useRef, forwardRef, useImperativeHandle, Fragment } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -29,6 +29,8 @@ import {
 import { useSnackbar } from "notistack";
 import { agruparFilas } from "@/hooks/useReportePersonalizado";
 import { exportReportePersonalizadoPDF } from "@/lib/pdfReportePersonalizado";
+import { fetchImageAsDataUrl } from "@/lib/pdfCompanyLogo";
+import { fetcherWithToken } from "@/lib/fetcher";
 
 const FILAS_POR_PAGINA = 25;
 
@@ -64,7 +66,7 @@ function CeldaValor({ colKey, value }) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const SeccionPDF = forwardRef(function SeccionPDF(
-  { plantilla, filtros, agrupacion, grupos, empresa, pdfContainerWidth = 794 },
+  { plantilla, filtros, agrupacion, grupos, empresa, logoDataUrl, pdfContainerWidth = 794 },
   ref,
 ) {
   const tipoLabel = plantilla.fuente === "asistencia" ? "Asistencia" : "Reloj Checador";
@@ -93,7 +95,16 @@ const SeccionPDF = forwardRef(function SeccionPDF(
     >
       {/* Topbar */}
       <div className="pdf-topbar">
-        <div className="brand">Adamia</div>
+        {/* Logo de la empresa o fallback textual si no hay imagen disponible */}
+        {logoDataUrl ? (
+          <img
+            src={logoDataUrl}
+            alt="Logo empresa"
+            style={{ height: "32px", maxWidth: "130px", objectFit: "contain" }}
+          />
+        ) : (
+          <div className="brand">HR360</div>
+        )}
         <div className="right">
           <div className="title">{plantilla.nombre}</div>
           <div className="subtitle">
@@ -177,8 +188,32 @@ const ReporteResultados = forwardRef(function ReporteResultados({
   const [pagina, setPagina] = useState(1);
   const [exportandoPDF, setExportandoPDF] = useState(false);
   const [exportandoExcel, setExportandoExcel] = useState(false);
+  const [logoDataUrl, setLogoDataUrl] = useState(null);
   const pdfRef = useRef(null);
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
+
+  // Precarga el logo de la empresa seleccionada (o el logo de la plataforma como fallback)
+  // para incrustarlo en el encabezado del PDF capturado por html2canvas
+  useEffect(() => {
+    let alive = true;
+    const run = async () => {
+      let logoUrl = null;
+      if (filtros?.empresa && filtros.empresa !== "all") {
+        try {
+          const resp = await fetcherWithToken(`/empresas/${filtros.empresa}`);
+          logoUrl = resp?.url_imagen || null;
+        } catch {
+          logoUrl = null;
+        }
+      }
+      const dataUrl = logoUrl
+        ? await fetchImageAsDataUrl(logoUrl)
+        : await fetchImageAsDataUrl("/assets/logo.png");
+      if (alive) setLogoDataUrl(dataUrl || null);
+    };
+    run();
+    return () => { alive = false; };
+  }, [filtros?.empresa]);
 
   const columnas = plantilla?.columnas || [];
   const tipoLabel = plantilla?.fuente === "asistencia" ? "Asistencia" : "Reloj Checador";
@@ -212,10 +247,10 @@ const ReporteResultados = forwardRef(function ReporteResultados({
     return result;
   }, [gruposTodos, pagina]);
 
-  // Empresa para el PDF
+  // Empresa para el PDF — usa el nombre legible en lugar del ID numérico
   const empresaLabel = useMemo(() => {
     if (!filtros?.empresa || filtros.empresa === "all") return "Todas las empresas";
-    return String(filtros.empresa);
+    return filtros.empresaNombre || String(filtros.empresa);
   }, [filtros]);
 
   // Badges de filtros activos
@@ -344,6 +379,7 @@ const ReporteResultados = forwardRef(function ReporteResultados({
         agrupacion={agrupacion}
         grupos={gruposTodos}
         empresa={empresaLabel}
+        logoDataUrl={logoDataUrl}
         pdfContainerWidth={columnas.length > 8 ? 1123 : 794}
       />
 

@@ -136,16 +136,20 @@ export default function ReporteCard({
   };
 
   // Construir objeto de filtros para pasar al hook
-  const getFiltros = () => ({
-    empresa,
-    fechaInicio: desde,
-    fechaFin: hasta,
-    empleado,
-    departamento,
-    // Arrays: si hay varios chips el hook filtra en frontend
-    estadoAsistencia: chipsActivos.estadoAsistencia || [],
-    estadoMovimiento: chipsActivos.estadoMovimiento || [],
-  });
+  const getFiltros = () => {
+    const opcion = empresasOptions.find((o) => o.value === empresa);
+    return {
+      empresa,
+      empresaNombre: opcion?.label || "Todas las empresas",
+      fechaInicio: desde,
+      fechaFin: hasta,
+      empleado,
+      departamento,
+      // Arrays: si hay varios chips el hook filtra en frontend
+      estadoAsistencia: chipsActivos.estadoAsistencia || [],
+      estadoMovimiento: chipsActivos.estadoMovimiento || [],
+    };
+  };
 
   const handleEjecutar = () => {
     onEjecutar(getFiltros(), agrupacion);

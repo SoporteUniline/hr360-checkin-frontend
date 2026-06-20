@@ -113,7 +113,7 @@ export async function exportReportePersonalizadoPDF({
           @page{size:A4 ${landscape ? "landscape" : "portrait"};margin:0}
           body{font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue";font-size:10.5pt;color:#111827;background:#ffffff;margin:0;padding:0}
           .pdf-topbar{display:flex;align-items:flex-start;justify-content:space-between;padding:0 0 12px 0;margin-bottom:12px}
-          .pdf-topbar .brand{font-weight:800;font-size:20pt;color:#111827;letter-spacing:0;line-height:1}
+          .pdf-topbar .brand{font-weight:800;font-size:16pt;color:#111827;letter-spacing:0;line-height:1}
           .pdf-topbar .right{line-height:1.3;text-align:right}
           .pdf-topbar .title{font-weight:600;font-size:11pt;color:#111827;margin-bottom:2px}
           .pdf-topbar .subtitle{font-size:9pt;color:#6b7280}
@@ -289,7 +289,7 @@ export async function exportReportePersonalizadoPDF({
         const textY = footerAreaTop + 22;
 
         pdf.line(marginLeft, lineY, pageWidth - marginRight, lineY);
-        pdf.text(`Adamia · Reporte de ${tipoLabelFooter}`, marginLeft, textY);
+        pdf.text(`Reporte de ${tipoLabelFooter}`, marginLeft, textY);
 
         const rightText = `Página ${page} de ${totalPages}`;
         const textWidth = pdf.getTextWidth(rightText);
