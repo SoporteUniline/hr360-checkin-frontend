@@ -44,7 +44,11 @@ export function Combobox({
     : options.find((option) => option.value === value);
 
   return (
-    <Popover open={disabled ? false : open} onOpenChange={setOpen} modal={true}>
+    <Popover
+      open={disabled ? false : open}
+      onOpenChange={setOpen}
+      modal={false}
+    >
       <PopoverTrigger asChild>
         <Button
           id={name}
@@ -94,7 +98,7 @@ export function Combobox({
             autoFocus={false}
             data-radix-combobox-input=""
           />
-          <CommandList>
+          <CommandList className="max-h-72 overflow-y-auto">
             <CommandEmpty>{emptyText}</CommandEmpty>
             <CommandGroup>
               {filteredOptions.map((option) => (
