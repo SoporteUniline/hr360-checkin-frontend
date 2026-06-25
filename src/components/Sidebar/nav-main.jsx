@@ -40,6 +40,7 @@ import {
   LayoutTemplate,
   FilePlus2,
   FolderOpen,
+  SlidersHorizontal,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -318,6 +319,12 @@ const menuGroups = [
         url: "/panel/reglas-aviso",
         rol: "Recruiter",
         icon: BellRing,
+      },
+      {
+        title: "Config. checador",
+        url: "/panel/configuracion-checador",
+        rol: "Recruiter",
+        icon: SlidersHorizontal,
       },
       {
         title: "Usuarios con acceso",
