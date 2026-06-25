@@ -137,7 +137,7 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
 
   const { data: empleados } = useSWR(
     idEmpresa
-      ? `/checador/empleados?empresa=${idEmpresa}&page=1&limit=500`
+      ? `/checador/empleados?empresa=${idEmpresa}&page=1&limit=10000`
       : null,
     fetcherWithToken,
     swr_config,
