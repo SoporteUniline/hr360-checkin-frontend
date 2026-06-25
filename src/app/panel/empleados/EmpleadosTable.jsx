@@ -328,9 +328,9 @@ export default function EmpleadosTable({
               </TableRow>
             ) : (
               displayedRows.map((emp) => {
-                const nombreCompleto = `${emp.nombre} ${
-                  emp.apellido_paterno ?? ""
-                } ${emp.apellido_materno ?? ""}`.trim();
+                const nombreCompleto = ` ${emp.apellido_paterno ?? ""} ${
+                  emp.apellido_materno ?? ""
+                } ${emp.nombre}`.trim();
 
                 return (
                   <TableRow
