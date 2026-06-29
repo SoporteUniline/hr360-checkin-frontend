@@ -29,18 +29,9 @@ const COUNTRY_CODES = [
 
 const COSTO_POR_USUARIO_DEFAULT = 60;
 
-function getPlanId(row) {
-  return row?.id ?? row?.id_tipo_plan ?? row?.tipo_plan_id ?? null;
-}
-
 function getLabelFromRow(row, fallback) {
   return (
-    row?.nombre ||
-    row?.descripcion ||
-    row?.titulo ||
-    row?.plan ||
-    row?.tipo ||
-    fallback
+    row?.nombre || row?.descripcion || row?.titulo || row?.tipo || fallback
   );
 }
 
@@ -79,92 +70,6 @@ function buildDescuentosMap(rows = []) {
   return result;
 }
 
-function applyHighEmployeeRule(price, employees) {
-  const employeesNum = Number(employees);
-  if (!Number.isFinite(price) || price <= 0) return null;
-  if (Number.isFinite(employeesNum) && employeesNum >= 1000) {
-    return price * employeesNum;
-  }
-  return price;
-}
-
-function getPriceFromPlan(row, months, employees) {
-  const monthlyCandidates = [
-    row?.precio_mensual,
-    row?.precio,
-    row?.costo_mensual,
-    row?.monto_mensual,
-  ];
-  for (const value of monthlyCandidates) {
-    const n = parseFlexibleNumber(value);
-    if (Number.isFinite(n) && n > 0) return applyHighEmployeeRule(n, employees);
-  }
-
-  const byMonths = {
-    1: [row?.precio_1_mes, row?.precio_1mes, row?.monto_1_mes, row?.mes_1],
-    6: [
-      row?.precio_6_meses,
-      row?.precio_6meses,
-      row?.monto_6_meses,
-      row?.mes_6,
-    ],
-    12: [
-      row?.precio_12_meses,
-      row?.precio_12meses,
-      row?.monto_12_meses,
-      row?.mes_12,
-    ],
-  };
-  for (const value of byMonths[months] || []) {
-    const n = parseFlexibleNumber(value);
-    if (Number.isFinite(n) && n > 0) return applyHighEmployeeRule(n, employees);
-  }
-
-  const unit =
-    row?.precio_por_empleado ??
-    row?.costo_por_empleado ??
-    row?.precio_unitario ??
-    null;
-  const unitNum = parseFlexibleNumber(unit);
-  const employeesNum = Number(employees);
-  if (
-    Number.isFinite(unitNum) &&
-    unitNum > 0 &&
-    Number.isFinite(employeesNum) &&
-    employeesNum > 0
-  ) {
-    return unitNum * employeesNum;
-  }
-
-  for (const [key, rawValue] of Object.entries(row || {})) {
-    const keyLc = key.toLowerCase();
-    const looksLikePrice =
-      /(precio|costo|monto|mensual|tarifa)/.test(keyLc) &&
-      !/(id|descuento|porcentaje|max|min|usuarios|empleados|meses|anio|año)/.test(
-        keyLc,
-      );
-    if (!looksLikePrice) continue;
-    const n = parseFlexibleNumber(rawValue);
-    if (Number.isFinite(n) && n > 0) return applyHighEmployeeRule(n, employees);
-  }
-
-  return null;
-}
-
-function getMaxUsersFromPlan(row) {
-  const candidates = [
-    row?.usuarios_max,
-    row?.empleados_max,
-    row?.max_usuarios,
-    row?.empleados,
-  ];
-  for (const value of candidates) {
-    const n = Number(value);
-    if (Number.isFinite(n) && n > 0) return n;
-  }
-  return Number.POSITIVE_INFINITY;
-}
-
 function formatCurrencyMXN(value) {
   return new Intl.NumberFormat("es-MX", {
     style: "currency",
@@ -189,28 +94,6 @@ function buildInternationalPhone(countryCode, phone) {
   return `${cc}${phoneDigits}`;
 }
 
-function getPlanEmployeesRange(row, allPlans) {
-  const currentMax = getMaxUsersFromPlan(row);
-  if (!Number.isFinite(currentMax)) return "Plan sin límite definido";
-
-  const sorted = [...allPlans].sort(
-    (a, b) => getMaxUsersFromPlan(a) - getMaxUsersFromPlan(b),
-  );
-  const currentIndex = sorted.findIndex(
-    (plan) => Number(getPlanId(plan)) === Number(getPlanId(row)),
-  );
-  if (currentIndex === -1) return `Hasta ${currentMax} empleados`;
-
-  const prev = sorted[currentIndex - 1];
-  const prevMax = prev ? getMaxUsersFromPlan(prev) : 0;
-  const min = prevMax + 1;
-
-  if (currentMax >= 99999 || currentMax === Number.POSITIVE_INFINITY)
-    return `${min}+ empleados`;
-  if (min === currentMax) return `${min} empleado${min > 1 ? "s" : ""}`;
-  return `${min} - ${currentMax} empleados`;
-}
-
 export default function ContratarPlanContent() {
   const initialForm = {
     nombre_cliente: "",
@@ -220,7 +103,6 @@ export default function ContratarPlanContent() {
     empresa_nombre: "",
     rfc: "",
     empleados: "15",
-    tipo_plan_id: "",
     meses_contratados: "1",
     metodo_pago_id: "",
     notas: "",
@@ -231,7 +113,6 @@ export default function ContratarPlanContent() {
   };
 
   const [catalogos, setCatalogos] = useState({
-    tipo_planes: [],
     metodos_pago: [],
     planes_duracion: [],
   });
@@ -264,7 +145,7 @@ export default function ContratarPlanContent() {
       );
     } else if (status === "cancelled") {
       setSubmitError(
-        "El pago fue cancelado. Tu registro está guardado pero el plan no se ha activado.",
+        "El pago fue cancelado. Tu registro está guardado pero la contratación no se ha activado.",
       );
     }
   }, [searchParams]);
@@ -296,7 +177,6 @@ export default function ContratarPlanContent() {
         const response = await axios.get("/checador/contrataciones/catalogos");
         if (!mounted) return;
         setCatalogos({
-          tipo_planes: response?.data?.tipo_planes ?? [],
           metodos_pago: response?.data?.metodos_pago ?? [],
           planes_duracion: response?.data?.planes_duracion ?? [],
         });
@@ -319,35 +199,6 @@ export default function ContratarPlanContent() {
     };
   }, []);
 
-  useEffect(() => {
-    const employees = Number(form.empleados);
-    if (
-      !Number.isFinite(employees) ||
-      employees < 1 ||
-      !catalogos.tipo_planes.length
-    )
-      return;
-
-    const sorted = [...catalogos.tipo_planes].sort(
-      (a, b) => getMaxUsersFromPlan(a) - getMaxUsersFromPlan(b),
-    );
-    const matched =
-      sorted.find((plan) => employees <= getMaxUsersFromPlan(plan)) ||
-      sorted[sorted.length - 1];
-    const matchedId = getPlanId(matched);
-    if (matchedId !== null && String(form.tipo_plan_id) !== String(matchedId)) {
-      setForm((prev) => ({ ...prev, tipo_plan_id: String(matchedId) }));
-    }
-  }, [form.empleados, catalogos.tipo_planes, form.tipo_plan_id]);
-
-  const selectedPlan = useMemo(
-    () =>
-      catalogos.tipo_planes.find(
-        (plan) => Number(getPlanId(plan)) === Number(form.tipo_plan_id),
-      ) || null,
-    [catalogos.tipo_planes, form.tipo_plan_id],
-  );
-
   const estimado = useMemo(() => {
     const months = Number(form.meses_contratados);
     const employees = Number(form.empleados);
@@ -363,9 +214,9 @@ export default function ContratarPlanContent() {
       descuento,
       total,
     };
-  }, [selectedPlan, form.meses_contratados, form.empleados, descuentos]);
+  }, [form.meses_contratados, form.empleados, descuentos]);
 
-  const planCards = useMemo(
+  const modalidadCards = useMemo(
     () => [
       {
         months: 1,
@@ -550,12 +401,6 @@ export default function ContratarPlanContent() {
       setSubmitError("Ingresa un número de empleados válido.");
       return;
     }
-    if (!form.tipo_plan_id) {
-      setSubmitError(
-        "No fue posible inferir el plan. Ajusta el número de empleados.",
-      );
-      return;
-    }
 
     try {
       setSubmitting(true);
@@ -568,7 +413,7 @@ export default function ContratarPlanContent() {
         telefono: fullPhone,
         telefono_verificacion_token: phoneVerificationToken,
         empleados: Number(form.empleados),
-        tipo_plan_id: Number(form.tipo_plan_id),
+        tipo_plan_id: null,
         meses_contratados: Number(form.meses_contratados),
         metodo_pago_id: form.metodo_pago_id
           ? Number(form.metodo_pago_id)
@@ -685,7 +530,7 @@ export default function ContratarPlanContent() {
                 ¿Cuántos empleados tiene tu empresa?
               </h2>
               <p className="text-sm text-[var(--adamia-text-secondary)]">
-                El plan se asigna automáticamente por rango de empleados.
+                La mensualidad se calcula automáticamente por empleado.
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -716,12 +561,9 @@ export default function ContratarPlanContent() {
         </div>
 
         <div className="mt-6 grid gap-4 md:grid-cols-3">
-          {planCards.map((card) => {
-            const monthlyBase = getPriceFromPlan(
-              selectedPlan,
-              card.months,
-              Number(form.empleados),
-            );
+          {modalidadCards.map((card) => {
+            const monthlyBase =
+              Number(form.empleados || 0) * COSTO_POR_USUARIO_DEFAULT;
             const subtotal = (monthlyBase || 0) * card.months;
             const total = subtotal - subtotal * (card.discount / 100);
             const monthlyFinal =
@@ -772,7 +614,7 @@ export default function ContratarPlanContent() {
                       : "border border-[var(--adamia-blue)]/30 bg-white text-[var(--adamia-blue)]"
                   }`}
                 >
-                  {active ? "Plan seleccionado" : "Seleccionar plan"}
+                  {active ? "Modalidad seleccionada" : "Seleccionar modalidad"}
                 </button>
               </article>
             );
@@ -1025,17 +867,12 @@ export default function ContratarPlanContent() {
           <aside className="space-y-5">
             <article className="rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-5 shadow-sm">
               <p className="text-xs font-bold uppercase tracking-wide text-[var(--adamia-blue)]">
-                Plan automático
+                Cobro automático
               </p>
-              <h3 className="mt-1 text-xl font-black">
-                {selectedPlan
-                  ? getLabelFromRow(selectedPlan, "Plan seleccionado")
-                  : "Selecciona empleados"}
-              </h3>
+              <h3 className="mt-1 text-xl font-black">Por empleado</h3>
               <p className="mt-2 text-sm text-[var(--adamia-text-secondary)]">
-                {selectedPlan
-                  ? getPlanEmployeesRange(selectedPlan, catalogos.tipo_planes)
-                  : "Sin rango disponible"}
+                {Number(form.empleados || 0)} empleados ×{" "}
+                {formatCurrencyMXN(COSTO_POR_USUARIO_DEFAULT)}
               </p>
             </article>
 

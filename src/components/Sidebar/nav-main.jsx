@@ -41,6 +41,7 @@ import {
   FilePlus2,
   FolderOpen,
   SlidersHorizontal,
+  ReceiptText,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -64,11 +65,17 @@ const dashboardItems = [
     rol: "Admin",
     icon: Monitor,
   },
+  // {
+  //   title: "Contrataciones",
+  //   url: "/dashboard/contrataciones",
+  //   rol: "Admin",
+  //   icon: CreditCard,
+  // },
   {
-    title: "Planes",
-    url: "/dashboard/planes",
+    title: "Facturación",
+    url: "/dashboard/facturacion",
     rol: "Admin",
-    icon: CreditCard,
+    icon: ReceiptText,
   },
   {
     title: "Mensajes sistema",

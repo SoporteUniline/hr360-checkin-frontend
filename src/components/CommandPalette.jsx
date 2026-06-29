@@ -44,45 +44,250 @@ import {
 // rol: "Admin" | "Recruiter" (User también mapea a Recruiter)
 const ALL_NAV_ITEMS = [
   // Admin
-  { title: "Empresas",          url: "/dashboard/empresas",                    rol: "Admin",     section: "Admin",               icon: Building2 },
-  { title: "Usuarios",          url: "/dashboard/usuarios",                    rol: "Admin",     section: "Admin",               icon: Users },
-  { title: "Checadores",        url: "/dashboard/checadores",                  rol: "Admin",     section: "Admin",               icon: Monitor },
-  { title: "Planes",            url: "/dashboard/planes",                      rol: "Admin",     section: "Admin",               icon: CreditCard },
-  { title: "Mensajes sistema",  url: "/dashboard/mensajes-sistema",            rol: "Admin",     section: "Admin",               icon: BellRing },
-  { title: "Cotizaciones",      url: "/dashboard/cotizaciones",                rol: "Admin",     section: "Admin",               icon: FileText },
-  { title: "Cuentas bancarias", url: "/dashboard/cuentas-bancarias",           rol: "Admin",     section: "Admin",               icon: Landmark },
+  {
+    title: "Empresas",
+    url: "/dashboard/empresas",
+    rol: "Admin",
+    section: "Admin",
+    icon: Building2,
+  },
+  {
+    title: "Usuarios",
+    url: "/dashboard/usuarios",
+    rol: "Admin",
+    section: "Admin",
+    icon: Users,
+  },
+  {
+    title: "Checadores",
+    url: "/dashboard/checadores",
+    rol: "Admin",
+    section: "Admin",
+    icon: Monitor,
+  },
+  {
+    title: "Planes",
+    url: "/dashboard/planes",
+    rol: "Admin",
+    section: "Admin",
+    icon: CreditCard,
+  },
+  {
+    title: "Facturación",
+    url: "/dashboard/facturacion",
+    rol: "Admin",
+    section: "Admin",
+    icon: ReceiptText,
+  },
+  {
+    title: "Mensajes sistema",
+    url: "/dashboard/mensajes-sistema",
+    rol: "Admin",
+    section: "Admin",
+    icon: BellRing,
+  },
+  {
+    title: "Cotizaciones",
+    url: "/dashboard/cotizaciones",
+    rol: "Admin",
+    section: "Admin",
+    icon: FileText,
+  },
+  {
+    title: "Cuentas bancarias",
+    url: "/dashboard/cuentas-bancarias",
+    rol: "Admin",
+    section: "Admin",
+    icon: Landmark,
+  },
   // Recruiter — General
-  { title: "Dashboard",         url: "/panel/dashboard",                       rol: "Recruiter", section: "General",             icon: LayoutDashboard },
+  {
+    title: "Dashboard",
+    url: "/panel/dashboard",
+    rol: "Recruiter",
+    section: "General",
+    icon: LayoutDashboard,
+  },
   // Gestión de personal
-  { title: "Empleados",         url: "/panel/empleados",                       rol: "Recruiter", section: "Gestión de Personal", icon: Users },
-  { title: "Panel empleado",    url: "/panel/panel-empleado",                  rol: "Recruiter", section: "Gestión de Personal", icon: UserRound },
-  { title: "Departamentos",     url: "/panel/catalogos/departamentos",         rol: "Recruiter", section: "Gestión de Personal", icon: Building2 },
-  { title: "Puestos",           url: "/panel/catalogos/puestos",               rol: "Recruiter", section: "Gestión de Personal", icon: BriefcaseBusiness },
-  { title: "Estado civil",      url: "/panel/catalogos/estado-civil",          rol: "Recruiter", section: "Gestión de Personal", icon: HeartHandshake },
-  { title: "Contratos",         url: "/panel/contratos",                       rol: "Recruiter", section: "Gestión de Personal", icon: FileText },
-  { title: "Actas administrativas", url: "/panel/actas-administrativas",      rol: "Recruiter", section: "Gestión de Personal", icon: ClipboardList },
-  { title: "Finiquitos y liquidaciones", url: "/panel/finiquitos-y-liquidaciones", rol: "Recruiter", section: "Gestión de Personal", icon: HandCoins },
-  { title: "Aguinaldos",        url: "/panel/aguinaldos",                      rol: "Recruiter", section: "Gestión de Personal", icon: Gift },
-  { title: "Mapa de rutas",     url: "/panel/mapa-de-rutas",                   rol: "Recruiter", section: "Gestión de Personal", icon: Route },
+  {
+    title: "Empleados",
+    url: "/panel/empleados",
+    rol: "Recruiter",
+    section: "Gestión de Personal",
+    icon: Users,
+  },
+  {
+    title: "Panel empleado",
+    url: "/panel/panel-empleado",
+    rol: "Recruiter",
+    section: "Gestión de Personal",
+    icon: UserRound,
+  },
+  {
+    title: "Departamentos",
+    url: "/panel/catalogos/departamentos",
+    rol: "Recruiter",
+    section: "Gestión de Personal",
+    icon: Building2,
+  },
+  {
+    title: "Puestos",
+    url: "/panel/catalogos/puestos",
+    rol: "Recruiter",
+    section: "Gestión de Personal",
+    icon: BriefcaseBusiness,
+  },
+  {
+    title: "Estado civil",
+    url: "/panel/catalogos/estado-civil",
+    rol: "Recruiter",
+    section: "Gestión de Personal",
+    icon: HeartHandshake,
+  },
+  {
+    title: "Contratos",
+    url: "/panel/contratos",
+    rol: "Recruiter",
+    section: "Gestión de Personal",
+    icon: FileText,
+  },
+  {
+    title: "Actas administrativas",
+    url: "/panel/actas-administrativas",
+    rol: "Recruiter",
+    section: "Gestión de Personal",
+    icon: ClipboardList,
+  },
+  {
+    title: "Finiquitos y liquidaciones",
+    url: "/panel/finiquitos-y-liquidaciones",
+    rol: "Recruiter",
+    section: "Gestión de Personal",
+    icon: HandCoins,
+  },
+  {
+    title: "Aguinaldos",
+    url: "/panel/aguinaldos",
+    rol: "Recruiter",
+    section: "Gestión de Personal",
+    icon: Gift,
+  },
+  {
+    title: "Mapa de rutas",
+    url: "/panel/mapa-de-rutas",
+    rol: "Recruiter",
+    section: "Gestión de Personal",
+    icon: Route,
+  },
   // Control de tiempo
-  { title: "Asistencias",       url: "/panel/registro-asistencia",             rol: "Recruiter", section: "Control de Tiempo",  icon: ClipboardCheck },
-  { title: "Entradas y salidas",url: "/panel/registro-de-entradas-y-salidas",  rol: "Recruiter", section: "Control de Tiempo",  icon: ClockArrowUp },
-  { title: "Reloj checador",    url: "/seleccionar-reloj",                     rol: "Recruiter", section: "Control de Tiempo",  icon: Clock },
-  { title: "Reporte de horas",  url: "/panel/reporte-horas",                   rol: "Recruiter", section: "Control de Tiempo",  icon: BarChart3 },
+  {
+    title: "Asistencias",
+    url: "/panel/registro-asistencia",
+    rol: "Recruiter",
+    section: "Control de Tiempo",
+    icon: ClipboardCheck,
+  },
+  {
+    title: "Entradas y salidas",
+    url: "/panel/registro-de-entradas-y-salidas",
+    rol: "Recruiter",
+    section: "Control de Tiempo",
+    icon: ClockArrowUp,
+  },
+  {
+    title: "Reloj checador",
+    url: "/seleccionar-reloj",
+    rol: "Recruiter",
+    section: "Control de Tiempo",
+    icon: Clock,
+  },
+  {
+    title: "Reporte de horas",
+    url: "/panel/reporte-horas",
+    rol: "Recruiter",
+    section: "Control de Tiempo",
+    icon: BarChart3,
+  },
   // Ausencias y permisos
-  { title: "Vacaciones",        url: "/panel/vacaciones",                      rol: "Recruiter", section: "Ausencias y Permisos", icon: CalendarDays },
-  { title: "Vacaciones por ley",url: "/panel/vacaciones/por-ley",              rol: "Recruiter", section: "Ausencias y Permisos", icon: BookOpen },
-  { title: "Vacaciones por periodo", url: "/panel/vacaciones/por-periodo",    rol: "Recruiter", section: "Ausencias y Permisos", icon: CalendarDays },
-  { title: "Permisos",          url: "/panel/permisos",                        rol: "Recruiter", section: "Ausencias y Permisos", icon: CalendarCheck2 },
-  { title: "Días festivos",     url: "/panel/festivos",                        rol: "Recruiter", section: "Ausencias y Permisos", icon: CalendarDays },
+  {
+    title: "Vacaciones",
+    url: "/panel/vacaciones",
+    rol: "Recruiter",
+    section: "Ausencias y Permisos",
+    icon: CalendarDays,
+  },
+  {
+    title: "Vacaciones por ley",
+    url: "/panel/vacaciones/por-ley",
+    rol: "Recruiter",
+    section: "Ausencias y Permisos",
+    icon: BookOpen,
+  },
+  {
+    title: "Vacaciones por periodo",
+    url: "/panel/vacaciones/por-periodo",
+    rol: "Recruiter",
+    section: "Ausencias y Permisos",
+    icon: CalendarDays,
+  },
+  {
+    title: "Permisos",
+    url: "/panel/permisos",
+    rol: "Recruiter",
+    section: "Ausencias y Permisos",
+    icon: CalendarCheck2,
+  },
+  {
+    title: "Días festivos",
+    url: "/panel/festivos",
+    rol: "Recruiter",
+    section: "Ausencias y Permisos",
+    icon: CalendarDays,
+  },
   // Catálogos
-  { title: "Áreas de Check",    url: "/panel/catalogos/areas-check",           rol: "Recruiter", section: "Catálogos",           icon: MapPin },
-  { title: "Unidades de negocio", url: "/panel/catalogos/unidades-de-negocio",rol: "Recruiter", section: "Catálogos",           icon: Store },
-  { title: "Tipos de registro", url: "/panel/catalogos/tipos-registro",        rol: "Recruiter", section: "Catálogos",           icon: BookOpen },
+  {
+    title: "Áreas de Check",
+    url: "/panel/catalogos/areas-check",
+    rol: "Recruiter",
+    section: "Catálogos",
+    icon: MapPin,
+  },
+  {
+    title: "Unidades de negocio",
+    url: "/panel/catalogos/unidades-de-negocio",
+    rol: "Recruiter",
+    section: "Catálogos",
+    icon: Store,
+  },
+  {
+    title: "Tipos de registro",
+    url: "/panel/catalogos/tipos-registro",
+    rol: "Recruiter",
+    section: "Catálogos",
+    icon: BookOpen,
+  },
   // Ajustes
-  { title: "Reglas de aviso",   url: "/panel/reglas-aviso",                    rol: "Recruiter", section: "Ajustes",             icon: BellRing },
-  { title: "Usuarios con acceso", url: "/panel/usuarios-con-acceso",           rol: "Recruiter", section: "Ajustes",             icon: ShieldCheck },
-  { title: "Mi suscripción",    url: "/panel/mi-suscripcion",                  rol: "Recruiter", section: "Ajustes",             icon: CreditCard },
+  {
+    title: "Reglas de aviso",
+    url: "/panel/reglas-aviso",
+    rol: "Recruiter",
+    section: "Ajustes",
+    icon: BellRing,
+  },
+  {
+    title: "Usuarios con acceso",
+    url: "/panel/usuarios-con-acceso",
+    rol: "Recruiter",
+    section: "Ajustes",
+    icon: ShieldCheck,
+  },
+  {
+    title: "Mi suscripción",
+    url: "/panel/mi-suscripcion",
+    rol: "Recruiter",
+    section: "Ajustes",
+    icon: CreditCard,
+  },
 ];
 
 // ─── Grupos de resultados de API ──────────────────────────────────────────────
@@ -98,14 +303,20 @@ const GROUPS = [
     key: "departamentos",
     label: "DEPARTAMENTOS",
     icon: Building2,
-    route: (item) => `/panel/catalogos/departamentos?id=${item.id}&nombre=${encodeURIComponent(item.titulo)}`,
+    route: (item) =>
+      `/panel/catalogos/departamentos?id=${item.id}&nombre=${encodeURIComponent(
+        item.titulo,
+      )}`,
     hint: () => "",
   },
   {
     key: "puestos",
     label: "PUESTOS",
     icon: BriefcaseBusiness,
-    route: (item) => `/panel/catalogos/puestos?id=${item.id}&nombre=${encodeURIComponent(item.titulo)}`,
+    route: (item) =>
+      `/panel/catalogos/puestos?id=${item.id}&nombre=${encodeURIComponent(
+        item.titulo,
+      )}`,
     hint: () => "",
   },
   {
@@ -140,35 +351,50 @@ const GROUPS = [
     key: "asistencia_hoy",
     label: "ASISTENCIA",
     icon: ClipboardCheck,
-    route: (item) => `/panel/registro-asistencia?empleado=${encodeURIComponent(item.titulo)}${item.fecha_registro ? `&fecha=${item.fecha_registro}` : ""}`,
+    route: (item) =>
+      `/panel/registro-asistencia?empleado=${encodeURIComponent(item.titulo)}${
+        item.fecha_registro ? `&fecha=${item.fecha_registro}` : ""
+      }`,
     hint: (item) => item.subtitulo || "",
   },
   {
     key: "movimientos_hoy",
     label: "ENTRADAS Y SALIDAS",
     icon: LogIn,
-    route: (item) => `/panel/registro-de-entradas-y-salidas?empleado=${encodeURIComponent(item.titulo)}${item.fecha_movimiento ? `&fecha=${item.fecha_movimiento}` : ""}`,
+    route: (item) =>
+      `/panel/registro-de-entradas-y-salidas?empleado=${encodeURIComponent(
+        item.titulo,
+      )}${item.fecha_movimiento ? `&fecha=${item.fecha_movimiento}` : ""}`,
     hint: (item) => item.subtitulo || "",
   },
   {
     key: "estados_civiles",
     label: "ESTADOS CIVILES",
     icon: HeartHandshake,
-    route: (item) => `/panel/catalogos/estado-civil?id=${item.id}&nombre=${encodeURIComponent(item.titulo)}`,
+    route: (item) =>
+      `/panel/catalogos/estado-civil?id=${item.id}&nombre=${encodeURIComponent(
+        item.titulo,
+      )}`,
     hint: () => "",
   },
   {
     key: "areas_check",
     label: "ÁREAS DE CHECK",
     icon: MapPin,
-    route: (item) => `/panel/catalogos/areas-check?id=${item.id}&nombre=${encodeURIComponent(item.titulo)}`,
+    route: (item) =>
+      `/panel/catalogos/areas-check?id=${item.id}&nombre=${encodeURIComponent(
+        item.titulo,
+      )}`,
     hint: () => "",
   },
   {
     key: "unidades_negocio",
     label: "UNIDADES DE NEGOCIO",
     icon: Store,
-    route: (item) => `/panel/catalogos/unidades-de-negocio?id=${item.id}&nombre=${encodeURIComponent(item.titulo)}`,
+    route: (item) =>
+      `/panel/catalogos/unidades-de-negocio?id=${
+        item.id
+      }&nombre=${encodeURIComponent(item.titulo)}`,
     hint: () => "",
   },
   {
@@ -182,27 +408,35 @@ const GROUPS = [
     key: "tipos_permiso",
     label: "TIPOS DE REGISTRO",
     icon: BookOpen,
-    route: (item) => `/panel/catalogos/tipos-registro?filter=${encodeURIComponent(item.titulo)}`,
+    route: (item) =>
+      `/panel/catalogos/tipos-registro?filter=${encodeURIComponent(
+        item.titulo,
+      )}`,
     hint: (item) => item.subtitulo || "",
   },
   {
     key: "aguinaldos",
     label: "AGUINALDOS",
     icon: Gift,
-    route: (item) => `/panel/aguinaldos?nombre=${encodeURIComponent(item.titulo)}`,
+    route: (item) =>
+      `/panel/aguinaldos?nombre=${encodeURIComponent(item.titulo)}`,
     hint: (item) => item.subtitulo || "",
   },
   {
     key: "usuarios_accesos",
     label: "USUARIOS CON ACCESO",
     icon: ShieldCheck,
-    route: (item) => `/panel/usuarios-con-acceso?nombre=${encodeURIComponent(item.titulo)}`,
+    route: (item) =>
+      `/panel/usuarios-con-acceso?nombre=${encodeURIComponent(item.titulo)}`,
     hint: (item) => item.subtitulo || "",
   },
 ];
 
 function hasResults(data, navItems) {
-  return (data && GROUPS.some((g) => (data[g.key] || []).length > 0)) || navItems.length > 0;
+  return (
+    (data && GROUPS.some((g) => (data[g.key] || []).length > 0)) ||
+    navItems.length > 0
+  );
 }
 
 export function CommandPalette() {
@@ -215,7 +449,8 @@ export function CommandPalette() {
   const { dataUser } = useAuth();
 
   // Rol efectivo: "User" → "Recruiter", igual que en NavMain
-  const effectiveRole = dataUser?.tipo_usuario === "User" ? "Recruiter" : dataUser?.tipo_usuario;
+  const effectiveRole =
+    dataUser?.tipo_usuario === "User" ? "Recruiter" : dataUser?.tipo_usuario;
 
   // Filtrado de nav items — client-side, instantáneo
   const navResults = useMemo(() => {
@@ -224,7 +459,8 @@ export function CommandPalette() {
     return ALL_NAV_ITEMS.filter(
       (item) =>
         item.rol === effectiveRole &&
-        (item.title.toLowerCase().includes(q) || item.section.toLowerCase().includes(q)),
+        (item.title.toLowerCase().includes(q) ||
+          item.section.toLowerCase().includes(q)),
     ).slice(0, 6);
   }, [query, effectiveRole]);
 
@@ -286,12 +522,15 @@ export function CommandPalette() {
 
   if (!open) return null;
 
-  const showEmpty = query.length >= 2 && !loading && data && !hasResults(data, navResults);
+  const showEmpty =
+    query.length >= 2 && !loading && data && !hasResults(data, navResults);
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh]"
-      onClick={(e) => { if (e.target === e.currentTarget) setOpen(false); }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) setOpen(false);
+      }}
     >
       {/* Backdrop - pointer-events-none para que los toques pasen al div padre */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-none" />
@@ -304,7 +543,9 @@ export function CommandPalette() {
         <Command
           className="bg-card border border-border rounded-xl shadow-2xl overflow-hidden"
           shouldFilter={false}
-          onKeyDown={(e) => { if (e.key === "Escape") setOpen(false); }}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setOpen(false);
+          }}
         >
           {/* Input */}
           <div className="flex items-center gap-2 px-4 border-b border-border">
@@ -364,8 +605,12 @@ export function CommandPalette() {
                         <Icon className="w-4 h-4 text-muted-foreground" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold truncate">{item.title}</p>
-                        <p className="text-[10px] text-muted-foreground truncate">{item.section}</p>
+                        <p className="text-xs font-semibold truncate">
+                          {item.title}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground truncate">
+                          {item.section}
+                        </p>
                       </div>
                       <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                     </Command.Item>
@@ -405,9 +650,13 @@ export function CommandPalette() {
                           <Icon className="w-4 h-4 text-muted-foreground" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold truncate">{item.titulo}</p>
+                          <p className="text-xs font-semibold truncate">
+                            {item.titulo}
+                          </p>
                           {item.subtitulo && (
-                            <p className="text-[10px] text-muted-foreground truncate">{item.subtitulo}</p>
+                            <p className="text-[10px] text-muted-foreground truncate">
+                              {item.subtitulo}
+                            </p>
                           )}
                         </div>
                         {group.hint(item) && (
@@ -426,15 +675,21 @@ export function CommandPalette() {
           {/* Footer */}
           <div className="flex items-center gap-4 px-4 py-2 border-t border-border bg-muted/30">
             <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border font-mono text-[10px]">↑↓</kbd>
+              <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border font-mono text-[10px]">
+                ↑↓
+              </kbd>
               navegar
             </span>
             <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border font-mono text-[10px]">↵</kbd>
+              <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border font-mono text-[10px]">
+                ↵
+              </kbd>
               abrir
             </span>
             <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border font-mono text-[10px]">esc</kbd>
+              <kbd className="px-1.5 py-0.5 rounded bg-muted border border-border font-mono text-[10px]">
+                esc
+              </kbd>
               cerrar
             </span>
           </div>

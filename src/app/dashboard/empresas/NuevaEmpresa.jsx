@@ -33,10 +33,10 @@ import ImageForm from "@/app/(public)/alta-empresas/ImageForm";
 import ImageEmpresa from "@/app/panel/cuenta/Empresa/ImagenEmpresa";
 import AutocompleteInput from "@/components/Inputs/FormCreatebleAutocomplete";
 import { loadOptionsGiros } from "@/app/(public)/alta-empresas/dataMappings";
-import { Combobox } from "@/components/Combobox";
 
 const COUNTRY_CODES = [
   { code: "+52", label: "MX (+52)" },
+  { code: "+504", label: "HN (+504)" },
   { code: "+1", label: "US/CA (+1)" },
   { code: "+57", label: "CO (+57)" },
   { code: "+54", label: "AR (+54)" },
@@ -60,7 +60,9 @@ function splitPhoneValue(value) {
   if (!raw) return { codigo_pais: "+52", celular: "" };
 
   if (raw.startsWith("+")) {
-    const matched = COUNTRY_CODES.find((country) => raw.startsWith(country.code));
+    const matched = COUNTRY_CODES.find((country) =>
+      raw.startsWith(country.code),
+    );
     if (matched) {
       return {
         codigo_pais: matched.code,
@@ -83,7 +85,6 @@ export default function NuevaEmpresa({
   const [loading, setLoading] = React.useState(false);
   const [imagePreview, setImagePreview] = React.useState(null);
   const [selectedFile, setSelectedFile] = React.useState(null);
-  const [planes, setPlanes] = React.useState([]);
   const { enqueueSnackbar } = useSnackbar();
   const token = Cookies.get("token");
 
@@ -99,7 +100,10 @@ export default function NuevaEmpresa({
       facebook: "",
       instagram: "",
       pagina_web: "",
-      tipo_plan_id: "",
+      empleados: 0,
+      empleados_incluidos: 0,
+      precio_base_mensual: 0,
+      precio_empleado_extra: 60,
       tipo_contratacion: "Prueba",
       meses_contratados: "1",
       precio_por_mes: 0,
@@ -119,45 +123,19 @@ export default function NuevaEmpresa({
   const { errors } = formState;
   const watchTipoContratacion = watch("tipo_contratacion");
 
-  React.useEffect(() => {
-    if (open && !editar) {
-      const fetchPlanes = async () => {
-        try {
-          const { data } = await axios.get(
-            `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/tipo-planes`,
-            { headers: { Authorization: `Bearer ${token}` } },
-          );
-
-          console.log(data);
-          setPlanes(data.tipo_planes || []);
-        } catch (error) {
-          console.error("Error al cargar planes:", error);
-        }
-      };
-      fetchPlanes();
-    }
-  }, [open, editar, token]);
-
   const onSubmit = async (data) => {
-    if (!editar && !selectedFile) {
-      setError("imagen_logo", {
-        type: "manual",
-        message: "El logo de la empresa es obligatorio",
-      });
-      return;
-    }
+    // if (!editar && !selectedFile) {
+    //   setError("imagen_logo", {
+    //     type: "manual",
+    //     message: "El logo de la empresa es obligatorio",
+    //   });
+    //   return;
+    // }
 
     if (!data?.giro?.value) {
       setError("giro", {
         type: "manual",
         message: "Debes seleccionar un giro",
-      });
-      return;
-    }
-
-    if (!editar && !data.tipo_plan_id) {
-      enqueueSnackbar("Debes seleccionar un plan para la empresa", {
-        variant: "warning",
       });
       return;
     }
@@ -170,7 +148,9 @@ export default function NuevaEmpresa({
     };
 
     try {
-      const celularCompleto = `${normalizeCountryCode(data.codigo_pais)}${onlyPhoneDigits(data.celular)}`;
+      const celularCompleto = `${normalizeCountryCode(
+        data.codigo_pais,
+      )}${onlyPhoneDigits(data.celular)}`;
 
       if (editar) {
         const datosParaActualizar = {
@@ -257,22 +237,39 @@ export default function NuevaEmpresa({
     setSelectedFile(null);
   };
 
-  const planOptions = planes.map((plan) => ({
-    label: `${plan.usuarios_min} - ${plan.usuarios_max} Usuarios ($${plan.precio_base})`,
-    value: plan.id.toString(),
-  }));
-
   const watchMeses = watch("meses_contratados");
-  const watchPrecio = watch("precio_por_mes");
+  const watchEmpleados = watch("empleados");
+  const watchEmpleadosIncluidos = watch("empleados_incluidos");
+  const watchPrecioBaseMensual = watch("precio_base_mensual");
+  const watchPrecioEmpleado = watch("precio_empleado_extra");
 
   useEffect(() => {
-    if (watchTipoContratacion === "Normal") {
-      const total = parseFloat(watchPrecio || 0) * parseInt(watchMeses || 1);
-      setValue("monto_total", total.toFixed(2));
-    } else {
+    if (watchTipoContratacion !== "Normal") {
+      setValue("precio_por_mes", 0);
       setValue("monto_total", 0);
+      return;
     }
-  }, [watchMeses, watchPrecio, watchTipoContratacion, setValue]);
+
+    const meses = parseInt(watchMeses || 1);
+    const empleados = Number(watchEmpleados || 0);
+    const incluidos = Number(watchEmpleadosIncluidos || 0);
+    const base = Number(watchPrecioBaseMensual || 0);
+    const precioExtra = Number(watchPrecioEmpleado || 60);
+
+    const excedentes = Math.max(empleados - incluidos, 0);
+    const mensualidad = base + excedentes * precioExtra;
+
+    setValue("precio_por_mes", mensualidad.toFixed(2));
+    setValue("monto_total", (mensualidad * meses).toFixed(2));
+  }, [
+    watchMeses,
+    watchEmpleados,
+    watchEmpleadosIncluidos,
+    watchPrecioBaseMensual,
+    watchPrecioEmpleado,
+    watchTipoContratacion,
+    setValue,
+  ]);
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -453,41 +450,12 @@ export default function NuevaEmpresa({
                 <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 space-y-5 mt-8">
                   <h3 className="text-sm font-bold text-slate-600 uppercase tracking-widest flex items-center gap-2">
                     <span className="w-2 h-2 bg-slate-400 rounded-full"></span>
-                    Configuración de Suscripción
+                    Configuración de cobro
                   </h3>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <FormItem className="flex flex-col">
-                      <FormLabel>
-                        Plan HR360 <span className="text-red-500">*</span>
-                      </FormLabel>
-                      <Combobox
-                        options={planOptions}
-                        value={watch("tipo_plan_id")}
-                        placeholder="Seleccione rango de usuarios..."
-                        emptyText="No se encontraron planes"
-                        onChange={(val) => {
-                          setValue("tipo_plan_id", val);
-
-                          const planOriginal = planes.find(
-                            (p) => p.id.toString() === val,
-                          );
-                          if (planOriginal) {
-                            setValue(
-                              "precio_por_mes",
-                              planOriginal.precio_base,
-                            );
-                          } else {
-                            setValue("precio_por_mes", 0);
-                            setValue("monto_total", 0);
-                          }
-                        }}
-                      />
-                      <FormMessage>{errors.tipo_plan_id?.message}</FormMessage>
-                    </FormItem>
-
                     <FormItem>
-                      <FormLabel>Tipo de Contratación</FormLabel>
+                      <FormLabel>Tipo de contratación</FormLabel>
                       <Select
                         defaultValue="Prueba"
                         onValueChange={(val) =>
@@ -501,10 +469,10 @@ export default function NuevaEmpresa({
                         </FormControl>
                         <SelectContent>
                           <SelectItem value="Prueba">
-                            Prueba (7 días gratis)
+                            Prueba / cortesía
                           </SelectItem>
                           <SelectItem value="Normal">
-                            Contratación Normal
+                            Contratación normal
                           </SelectItem>
                         </SelectContent>
                       </Select>
@@ -512,7 +480,7 @@ export default function NuevaEmpresa({
                   </div>
 
                   {watchTipoContratacion === "Normal" && (
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-white rounded-lg border border-slate-100 animate-in fade-in zoom-in duration-200">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-white rounded-lg border border-slate-100">
                       <FormItem>
                         <FormLabel>Meses</FormLabel>
                         <Select
@@ -533,19 +501,61 @@ export default function NuevaEmpresa({
                       </FormItem>
 
                       <FormItem>
-                        <FormLabel>Precio p/ Mes</FormLabel>
+                        <FormLabel>Empleados iniciales</FormLabel>
+                        <Input
+                          type="number"
+                          min="0"
+                          {...register("empleados")}
+                        />
+                      </FormItem>
+
+                      <FormItem>
+                        <FormLabel>Precio base mensual</FormLabel>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          {...register("precio_base_mensual")}
+                        />
+                      </FormItem>
+
+                      <FormItem>
+                        <FormLabel>
+                          Empleados incluidos en la mensualidad
+                        </FormLabel>
+                        <Input
+                          type="number"
+                          min="0"
+                          {...register("empleados_incluidos")}
+                        />
+                      </FormItem>
+
+                      <FormItem>
+                        <FormLabel>Precio por empleado excedente</FormLabel>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          {...register("precio_empleado_extra")}
+                        />
+                      </FormItem>
+
+                      <FormItem>
+                        <FormLabel>Mensualidad calculada</FormLabel>
                         <Input
                           type="number"
                           step="0.01"
+                          readOnly
                           {...register("precio_por_mes")}
                         />
                       </FormItem>
 
                       <FormItem>
-                        <FormLabel>Monto Total</FormLabel>
+                        <FormLabel>Monto total</FormLabel>
                         <Input
                           type="number"
                           step="0.01"
+                          readOnly
                           {...register("monto_total")}
                         />
                       </FormItem>
@@ -561,7 +571,7 @@ export default function NuevaEmpresa({
                   loading={loading}
                   disabled={loading}
                 >
-                  {editar ? "Guardar cambios" : "Registrar empresa y plan"}
+                  {editar ? "Guardar cambios" : "Registrar empresa"}
                 </Button>
               </div>
             </form>

@@ -251,15 +251,37 @@ export default async function PanelDashboardPage() {
           <CardContent>
             <div className="text-3xl sm:text-4xl font-semibold">
               {data.totalEmpleados}
-              {data.limiteEmpleados != null && (
+              {data.empleadosIncluidos != null && (
                 <span className="text-xl sm:text-2xl font-normal text-zinc-400">
-                  {" "}/{" "}{data.limiteEmpleados}
+                  {" "}
+                  / {data.empleadosIncluidos}
                 </span>
               )}
             </div>
             <div className="text-xs text-zinc-500 mt-1">
-              {data.limiteEmpleados != null
-                ? `${data.limiteEmpleados - data.totalEmpleados} lugares disponibles`
+              {data.empleadosIncluidos != null
+                ? data.empleadosExcedentes > 0
+                  ? `${data.empleadosExcedentes} empleado${
+                      data.empleadosExcedentes !== 1 ? "s" : ""
+                    } excedente${data.empleadosExcedentes !== 1 ? "s" : ""}`
+                  : `${Math.max(
+                      data.empleadosIncluidos - data.totalEmpleados,
+                      0,
+                    )} incluido${
+                      Math.max(
+                        data.empleadosIncluidos - data.totalEmpleados,
+                        0,
+                      ) !== 1
+                        ? "s"
+                        : ""
+                    } disponible${
+                      Math.max(
+                        data.empleadosIncluidos - data.totalEmpleados,
+                        0,
+                      ) !== 1
+                        ? "s"
+                        : ""
+                    }`
                 : "Personal activo en el sistema"}
             </div>
           </CardContent>

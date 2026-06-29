@@ -145,7 +145,16 @@ const EstatusAceptar = ({ item, limit, page }) => {
       setLoading(true);
       await axios.put(
         `/empresas/activar-nueva/${item.id_empresa}`,
-        {},
+        {
+          tipo_contratacion: "Normal",
+          meses_contratados: 1,
+          empleados: Number(prompt("Empleados de referencia", "0") || 0),
+          precio_base_mensual: Number(prompt("Precio base mensual", "0") || 0),
+          empleados_incluidos: Number(prompt("Empleados incluidos", "0") || 0),
+          precio_empleado_extra: Number(
+            prompt("Precio por empleado extra", "60") || 60,
+          ),
+        },
         {
           headers: {
             Authorization: `Bearer ${token}`,
