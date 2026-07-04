@@ -25,7 +25,7 @@ export default function EmployeeInput({
 
   const handleKeyDown = (e) => {
     if (/^[0-9]$/.test(e.key)) {
-      if (codigo.length < 10) setCodigo((prev) => prev + e.key);
+      setCodigo((prev) => prev + e.key);
     } else if (e.key === "Backspace") {
       handleDelete();
     } else if (e.key === "Enter") {
@@ -52,7 +52,7 @@ export default function EmployeeInput({
             value={codigo}
             onChange={(e) => {
               const val = e.target.value.replace(/\D/g, "");
-              if (val.length <= 10) setCodigo(val);
+              setCodigo(val);
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter") {

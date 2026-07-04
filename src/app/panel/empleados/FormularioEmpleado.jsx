@@ -133,7 +133,7 @@ export default function FormularioEmpleado({
       lugar_checkin: null,
       lugar_checkout: null,
       checar_gps: false,
-      enviar_asistencia_automatica: true,
+      enviar_asistencia_automatica: false,
       autoriza_horas_extra: false,
       cc_vacaciones: "",
       cc_permisos: "",
