@@ -35,18 +35,29 @@ export default function FormularioAsistenciasMasivas({
 
   const { enqueueSnackbar } = useSnackbar();
 
-  const { data: empleados, loading: loadingEmpleados } =
-    useEmpleadosActivosData(empresaSeleccionada);
+  const { data: empleados, isLoading: loadingEmpleados } =
+    useEmpleadosActivosData(empresaSeleccionada, 1, 1000);
   const { data: tiposPermiso, loading: loadingPermisos } =
     useTiposPermisoData();
 
   console.log(empleados);
   console.log(tiposPermiso);
   const empleadosOptions =
-    empleados?.data?.map((emp) => ({
-      value: emp.id_empleado.toString(),
-      label: `${emp.nombre} ${emp.apellido_paterno} ${emp.apellido_materno}`,
-    })) || [];
+    empleados?.data
+      ?.sort((a, b) => {
+        const apellidoA =
+          `${a.apellido_paterno} ${a.apellido_materno} ${a.nombre}`.toLowerCase();
+        const apellidoB =
+          `${b.apellido_paterno} ${b.apellido_materno} ${b.nombre}`.toLowerCase();
+
+        return apellidoA.localeCompare(apellidoB, "es", {
+          sensitivity: "base",
+        });
+      })
+      .map((emp) => ({
+        value: emp.id_empleado.toString(),
+        label: `${emp.apellido_paterno} ${emp.apellido_materno}, ${emp.nombre}`,
+      })) || [];
 
   const tiposPermisoOptions =
     tiposPermiso?.tiposPermiso?.map((perm) => ({
