@@ -6,6 +6,7 @@ import React, { useState } from "react";
 import FacturasEmpresaTab from "./FacturasEmpresaTab";
 import SuscripcionEmpresaTab from "./SuscripcionEmpresaTab";
 import PagosEmpresaTab from "./PagosEmpresaTab";
+import PagoAdelantadoEmpresaTab from "./PagoAdelantadoEmpresaTab";
 
 export default function DetalleEmpresa({ item, setSelected }) {
   const [tab, setTab] = useState("datos");
@@ -70,6 +71,13 @@ export default function DetalleEmpresa({ item, setSelected }) {
           >
             Pagos
           </Button>
+          <Button
+            type="button"
+            variant={tab === "pagoAdelantado" ? "default" : "outline"}
+            onClick={() => setTab("pagoAdelantado")}
+          >
+            Pago adelantado
+          </Button>
         </div>
 
         {tab === "datos" && (
@@ -119,6 +127,9 @@ export default function DetalleEmpresa({ item, setSelected }) {
         {tab === "facturas" && <FacturasEmpresaTab empresa={item} />}
         {tab === "suscripcion" && <SuscripcionEmpresaTab empresa={item} />}
         {tab === "pagos" && <PagosEmpresaTab empresa={item} />}
+        {tab === "pagoAdelantado" && (
+          <PagoAdelantadoEmpresaTab empresa={item} />
+        )}
       </article>
     </section>
   );
