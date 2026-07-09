@@ -14,6 +14,14 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
+import {
+  ADAMIA,
+  ADAMIA_LOGO_RATIO,
+  applyAdamiaFont,
+  gradientLine,
+  lerpColor,
+  loadAdamiaLogo,
+} from "@/lib/pdfAdamiaTheme";
 
 const COUNTRY_CODES = [
   { code: "+52", label: "MX (+52)" },
@@ -472,148 +480,161 @@ export default function CotizaPage() {
         month: "long",
         day: "numeric",
       });
-      // Paleta ADAMIA para PDF (indigo/purpura + acento cian)
-      const colorPrimary = [43, 63, 156];
-      const colorSecondary = [109, 40, 217];
-      const colorAccent = [6, 182, 212];
-      const colorMuted = [71, 85, 105];
-      const colorSurface = [238, 242, 255];
-      const pageWidth = 216;
+      // Tema corporativo ADAMIA: sin rellenos de color, solo líneas de acento
+      // con el degradado azul → morado de la marca, logotipo real y tipografía
+      // Poppins. Si logo o fuentes no cargan, hay fallback tipográfico.
+      const FONT = await applyAdamiaFont(doc);
+      const logo = await loadAdamiaLogo();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
       const left = 14;
-      const right = 202;
+      const right = pageWidth - 14;
+      const contentW = right - left;
 
-      const drawInfoCard = (x, y, w, h, label, value) => {
-        doc.setFillColor(255, 255, 255);
-        doc.setDrawColor(226, 232, 240);
-        doc.roundedRect(x, y, w, h, 2, 2, "FD");
-        doc.setTextColor(...colorMuted);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(8);
-        doc.text(label.toUpperCase(), x + 4, y + 5);
-        doc.setTextColor(17, 24, 39);
-        doc.setFont("helvetica", "bold");
+      // Columna informativa con barra de acento vertical (sin cajas ni rellenos).
+      const drawInfoCard = (x, y, w, h, label, value, accent) => {
+        doc.setDrawColor(...accent);
+        doc.setLineWidth(0.9);
+        doc.line(x + 0.45, y, x + 0.45, y + h);
+        doc.setTextColor(...ADAMIA.muted);
+        doc.setFont(FONT, "normal");
+        doc.setFontSize(7);
+        doc.text(label.toUpperCase(), x + 4.5, y + 4.5, { charSpace: 0.2 });
+        doc.setTextColor(...ADAMIA.text);
+        doc.setFont(FONT, "bold");
         doc.setFontSize(12);
-        doc.text(String(value), x + 4, y + 12);
+        doc.text(String(value), x + 4.5, y + 12);
       };
 
-      // Header
-      doc.setFillColor(...colorPrimary);
-      doc.rect(0, 0, pageWidth, 36, "F");
-      doc.setFillColor(...colorSecondary);
-      doc.rect(0, 32, pageWidth, 4, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(22);
-      doc.text("ADAMIA", left, 15);
-      doc.setFontSize(12);
-      doc.text("Tu cotización personalizada", left, 23);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(9);
-      doc.text(`Generada el ${fecha}`, right, 15, { align: "right" });
+      // Encabezado: logotipo + título y fecha, bajo una línea degradada.
+      if (logo) {
+        const logoH = 12;
+        doc.addImage(
+          logo,
+          "PNG",
+          left - 2.5,
+          9.5,
+          logoH * ADAMIA_LOGO_RATIO,
+          logoH,
+        );
+      } else {
+        doc.setFont(FONT, "bold");
+        doc.setFontSize(18);
+        doc.setTextColor(...ADAMIA.blue);
+        doc.text("Adamia", left, 18.5);
+      }
+      doc.setFont(FONT, "bold");
+      doc.setFontSize(13);
+      doc.setTextColor(...ADAMIA.text);
+      doc.text("Cotización", right, 15, { align: "right" });
+      doc.setFont(FONT, "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(...ADAMIA.muted);
+      doc.text(`Generada el ${fecha}`, right, 20.5, { align: "right" });
       doc.text(
-        `Plan ${planNombre} - ${seleccion.meses} ${
+        `Plan ${planNombre} · ${seleccion.meses} ${
           seleccion.meses === 1 ? "mes" : "meses"
         }`,
         right,
-        22,
+        25,
         {
           align: "right",
         },
       );
+      gradientLine(doc, left, right, 30, 0.55);
 
       // Saludo + cliente
-      doc.setTextColor(...colorPrimary);
-      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...ADAMIA.text);
+      doc.setFont(FONT, "bold");
       doc.setFontSize(13);
-      doc.text(`Hola ${form.nombre},`, left, 48);
-      doc.setTextColor(...colorMuted);
-      doc.setFont("helvetica", "normal");
+      doc.text(`Hola ${form.nombre},`, left, 42);
+      doc.setTextColor(...ADAMIA.text2);
+      doc.setFont(FONT, "normal");
       doc.setFontSize(10);
       doc.text(
         "Gracias por cotizar ADAMIA. Esta es la propuesta para tu empresa:",
         left,
-        55,
+        49,
       );
-      doc.setTextColor(...colorPrimary);
-      doc.setFont("helvetica", "bold");
-      doc.text(form.empresa, left, 61);
+      doc.setTextColor(...ADAMIA.blue);
+      doc.setFont(FONT, "bold");
+      doc.text(form.empresa, left, 55.5);
 
-      // Caja principal de plan
-      doc.setFillColor(...colorSurface);
-      doc.setDrawColor(165, 180, 252);
-      doc.roundedRect(left, 66, 188, 50, 3, 3, "FD");
-      doc.setTextColor(...colorPrimary);
-      doc.setFont("helvetica", "bold");
+      // Plan seleccionado: título y descuento en cifra, sin cajas de color.
+      doc.setDrawColor(...ADAMIA.hairline);
+      doc.setLineWidth(0.25);
+      doc.line(left, 62, right, 62);
+      doc.setTextColor(...ADAMIA.text);
+      doc.setFont(FONT, "bold");
       doc.setFontSize(14);
-      doc.text(`Plan ${planNombre}`, left + 5, 75);
+      doc.text(`Plan ${planNombre}`, left, 71);
       if (seleccion.descuentoPorcentaje > 0) {
-        doc.setFillColor(...colorAccent);
-        doc.roundedRect(left + 144, 69.5, 39, 7, 2, 2, "F");
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(9);
+        doc.setTextColor(...ADAMIA.purple);
+        doc.setFont(FONT, "bold");
+        doc.setFontSize(11);
         doc.text(
-          `${seleccion.descuentoPorcentaje}% DESCUENTO`,
-          left + 163.5,
-          74.3,
-          { align: "center" },
+          `${seleccion.descuentoPorcentaje}% de descuento`,
+          right,
+          71,
+          { align: "right" },
         );
       }
 
-      // Tres cuadros informativos para evitar redundancia entre "precio mensual" e "inversión".
+      // Tres columnas informativas para evitar redundancia entre "precio mensual" e "inversión".
+      const cardW = contentW / 3;
       drawInfoCard(
-        left + 5,
-        84,
-        56,
-        20,
+        left,
+        77,
+        cardW,
+        15,
         "Empleados",
         formatCompact(seleccion.empleados),
+        ADAMIA.blue,
       );
       drawInfoCard(
-        left + 66,
-        84,
-        56,
-        20,
+        left + cardW,
+        77,
+        cardW,
+        15,
         "Duración",
         `${seleccion.meses} ${seleccion.meses === 1 ? "mes" : "meses"}`,
+        lerpColor(ADAMIA.blue, ADAMIA.purple, 0.5),
       );
       drawInfoCard(
-        left + 127,
-        84,
-        56,
-        20,
+        left + cardW * 2,
+        77,
+        cardW,
+        15,
         "Precio mensual",
         formatCurrencyMXN(seleccion.precioPorMes),
+        ADAMIA.purple,
       );
 
-      // Total destacado
-      doc.setFillColor(...colorSecondary);
-      doc.roundedRect(left, 121, 188, 18, 3, 3, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
-      doc.text("TOTAL COTIZADO", left + 5, 129);
+      // Total destacado: cifra grande en azul entre dos líneas finas.
+      doc.setDrawColor(...ADAMIA.hairline);
+      doc.setLineWidth(0.25);
+      doc.line(left, 100, right, 100);
+      doc.line(left, 117, right, 117);
+      doc.setTextColor(...ADAMIA.muted);
+      doc.setFont(FONT, "normal");
+      doc.setFontSize(8);
+      doc.text("TOTAL COTIZADO", left, 110.5, { charSpace: 0.3 });
+      doc.setTextColor(...ADAMIA.blue);
+      doc.setFont(FONT, "bold");
       doc.setFontSize(18);
-      doc.text(formatCurrencyMXN(seleccion.total), right - 4, 132, {
+      doc.text(formatCurrencyMXN(seleccion.total), right, 111.5, {
         align: "right",
       });
 
       // Beneficios incluidos
-      doc.setFillColor(...colorSurface);
-      doc.setDrawColor(226, 232, 240);
-      doc.roundedRect(left, 146, 188, 52, 3, 3, "FD");
-      doc.setFillColor(...colorAccent);
-      doc.roundedRect(left + 4, 149, 64, 7, 2, 2, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(8);
-      doc.text("BENEFICIOS", left + 36, 153.8, { align: "center" });
-      doc.setTextColor(17, 24, 39);
-      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...ADAMIA.text);
+      doc.setFont(FONT, "bold");
       doc.setFontSize(11);
-      doc.text("Incluye en tu plan ADAMIA", left + 5, 160);
-      doc.setFont("helvetica", "normal");
+      doc.text("Incluye en tu plan ADAMIA", left, 129);
+      gradientLine(doc, left, left + 48, 132.2, 0.55);
+      doc.setFont(FONT, "normal");
       doc.setFontSize(9);
-      doc.setTextColor(...colorMuted);
+      doc.setTextColor(...ADAMIA.text2);
       const beneficios = [
         "Control de asistencias y turnos",
         "Vacaciones, permisos y justificantes",
@@ -623,47 +644,71 @@ export default function CotizaPage() {
         "Soporte y acompañamiento de implementación",
       ];
       beneficios.forEach((item, idx) => {
-        const y = 168 + (idx % 3) * 8;
-        const x = idx < 3 ? left + 6 : left + 98;
-        doc.text(`- ${item}`, x, y);
+        const y = 140 + (idx % 3) * 7.5;
+        const x = idx < 3 ? left + 1 : left + contentW / 2 + 1;
+        doc.text(`·  ${item}`, x, y);
       });
 
-      // CTA contacto
-      doc.setFillColor(...colorPrimary);
-      doc.roundedRect(left, 202, 188, 22, 3, 3, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.setFont("helvetica", "bold");
+      // CTA contacto: contorno fino con barra de acento, sin relleno.
+      doc.setDrawColor(...ADAMIA.hairline);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(left, 165, contentW, 22, 2, 2, "S");
+      gradientLine(doc, left + 6, left + 26, 171.5, 0.55);
+      doc.setTextColor(...ADAMIA.text);
+      doc.setFont(FONT, "bold");
       doc.setFontSize(11);
-      doc.text("¿Listo para comenzar?", left + 5, 211);
-      doc.setFont("helvetica", "normal");
+      doc.text("¿Listo para comenzar?", left + 6, 177);
+      doc.setFont(FONT, "normal");
       doc.setFontSize(9);
+      doc.setTextColor(...ADAMIA.text2);
       doc.text(
         "WhatsApp: +52 317 128 8029 | Correo: sistema@adamia.mx",
-        left + 5,
-        218,
+        left + 6,
+        183,
       );
 
-      // Footer
-      doc.setTextColor(100, 116, 139);
-      doc.setFontSize(8);
+      // Notas legales
+      doc.setTextColor(...ADAMIA.muted);
+      doc.setFont(FONT, "normal");
+      doc.setFontSize(7.5);
       doc.text(
         "Cotización informativa sujeta a validación comercial y técnica.",
         left,
-        268,
+        248,
       );
       doc.text(
         "Vigencia de la cotización: 30 días naturales desde su emisión.",
         left,
-        272,
+        252.5,
       );
       doc.text(
         "https://adamia.com.mx/ | sistema@adamia.mx | +52 317 128 8029",
         left,
-        276,
+        257,
       );
-      doc.text(`ADAMIA by Uniline - ${new Date().getFullYear()}`, right, 276, {
+      doc.text(`ADAMIA by Uniline - ${new Date().getFullYear()}`, right, 257, {
         align: "right",
       });
+
+      // Pie de página en todas las hojas: línea degradada, marca y numeración.
+      const totalPages = doc.getNumberOfPages();
+      for (let page = 1; page <= totalPages; page++) {
+        doc.setPage(page);
+        const footerLineY = pageHeight - 14;
+        const footerTextY = footerLineY + 5;
+        gradientLine(doc, left, right, footerLineY, 0.3);
+        doc.setFont(FONT, "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(...ADAMIA.blue);
+        doc.text("Adamia", left, footerTextY);
+        const brandW = doc.getTextWidth("Adamia");
+        doc.setFont(FONT, "normal");
+        doc.setTextColor(...ADAMIA.muted);
+        doc.text("  ·  Cotización", left + brandW, footerTextY);
+        doc.text(`Página ${page} de ${totalPages}`, right, footerTextY, {
+          align: "right",
+        });
+      }
 
       const fileName = `Cotizacion_ADAMIA_${form.empresa.replace(
         /\s+/g,
