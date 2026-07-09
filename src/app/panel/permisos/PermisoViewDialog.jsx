@@ -21,6 +21,7 @@ import {
   fetchImageAsDataUrl,
   tryAddCompanyMarkToPdf,
 } from "@/lib/pdfCompanyLogo";
+import { ADAMIA, gradientLine, applyAdamiaFont } from "@/lib/pdfAdamiaTheme";
 import { calcDiasTotalesYHabiles } from "@/lib/permisosDias";
 import styles from "./permisos-theme.module.css";
 import { CalendarDays, Download, Loader2, Printer } from "lucide-react";
@@ -290,8 +291,10 @@ export default function PermisoViewDialog({
    *   - Se invoca desde este mismo diálogo (botones "Imprimir" y "Descargar PDF").
    *   - Los datos provienen de la misma `item` que ya renderiza el modal (API de permisos).
    */
-  function buildPermisoPDF() {
+  async function buildPermisoPDF() {
     const doc = new jsPDF("p", "mm", "a4");
+    // Tipografía corporativa Poppins (fallback: helvetica). Ver pdfAdamiaTheme.
+    const FONT = await applyAdamiaFont(doc);
 
     const pageWidth = 210;
     const pageHeight = 297;
@@ -327,34 +330,45 @@ export default function PermisoViewDialog({
       }
     };
 
-    const hRule = (yPos, width = contentWidth, lineWidth = 0.3) => {
-      doc.setDrawColor(0);
+    // Reglas horizontales finas (hairline gris del tema Adamia).
+    const hRule = (yPos, width = contentWidth, lineWidth = 0.2) => {
+      doc.setDrawColor(...ADAMIA.hairline);
       doc.setLineWidth(lineWidth);
       doc.line(marginLeft, yPos, marginLeft + width, yPos);
     };
 
     const sectionTitle = (text) => {
       needSpace(12);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(8);
-      doc.setTextColor(0);
-      doc.text(String(text || "").toUpperCase(), marginLeft, y + 5);
-      hRule(y + 7, contentWidth, 0.5);
+      doc.setFont(FONT, "bold");
+      doc.setFontSize(8.5);
+      doc.setTextColor(...ADAMIA.muted);
+      doc.text(String(text || "").toUpperCase(), marginLeft, y + 5, {
+        charSpace: 0.5,
+      });
+      hRule(y + 7, contentWidth, 0.2);
       y += 12;
     };
 
-    const fieldPair = (label, value, x, yPos, width = contentWidth / 2 - 4) => {
-      doc.setFont("helvetica", "normal");
+    const fieldPair = (
+      label,
+      value,
+      x,
+      yPos,
+      width = contentWidth / 2 - 4,
+      { accent = false } = {},
+    ) => {
+      doc.setFont(FONT, "normal");
       doc.setFontSize(7.5);
-      doc.setTextColor(140);
+      doc.setTextColor(...ADAMIA.muted);
       doc.text(String(label || "").toUpperCase(), x, yPos);
 
-      doc.setFont("helvetica", "normal");
+      // Las cifras clave (días) van en azul Adamia y bold; el resto en texto primario.
+      doc.setFont(FONT, accent ? "bold" : "normal");
       doc.setFontSize(10);
-      doc.setTextColor(0);
+      doc.setTextColor(...(accent ? ADAMIA.blue : ADAMIA.text));
       doc.text(safe(value), x, yPos + 5);
 
-      doc.setDrawColor(200);
+      doc.setDrawColor(...ADAMIA.hairline);
       doc.setLineWidth(0.2);
       doc.line(x, yPos + 7, x + width, yPos + 7);
     };
@@ -405,26 +419,34 @@ export default function PermisoViewDialog({
       }
     }
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
-    doc.setTextColor(150);
-    doc.text("HUMAN RESOURCES CLOUD PLATFORM", marginLeft, y + 13);
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(20);
-    doc.setTextColor(0);
-    doc.text("PERMISO", pageWidth - marginRight, y + 7, { align: "right" });
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(100);
-    doc.text(`Folio ${folio}`, pageWidth - marginRight, y + 13, {
+    // Título del documento a la derecha (según el tipo de solicitud).
+    const tituloDocumento = isVacaciones
+      ? "SOLICITUD DE VACACIONES"
+      : "SOLICITUD DE PERMISO";
+    doc.setFont(FONT, "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(...ADAMIA.text);
+    doc.text(tituloDocumento, pageWidth - marginRight, y + 6, {
       align: "right",
     });
 
+    doc.setFont(FONT, "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...ADAMIA.muted);
+    doc.text(`Folio ${folio}`, pageWidth - marginRight, y + 11, {
+      align: "right",
+    });
+    doc.text(
+      `Solicitado el ${solicitadoLarga}`,
+      pageWidth - marginRight,
+      y + 15.5,
+      { align: "right" },
+    );
+
     y += 20;
 
-    hRule(y, contentWidth, 0.8);
+    // Línea de acento degradada azul → morado (identidad Adamia).
+    gradientLine(doc, marginLeft, pageWidth - marginRight, y, 0.55);
     y += 6;
 
     // Reservamos una columna fija para la caja de días para evitar que se monte sobre el periodo.
@@ -432,39 +454,44 @@ export default function PermisoViewDialog({
     const daysBoxGap = 8;
     const metaWidth = contentWidth - daysBoxWidth - daysBoxGap;
     const col = metaWidth / 3;
-    doc.setFont("helvetica", "normal");
+    doc.setFont(FONT, "normal");
     doc.setFontSize(7.5);
-    doc.setTextColor(140);
+    doc.setTextColor(...ADAMIA.muted);
     doc.text("ESTADO", marginLeft, y + 3);
     doc.text("TIPO", marginLeft + col, y + 3);
     doc.text("PERIODO", marginLeft + col * 2, y + 3);
 
-    doc.setFont("helvetica", "bold");
+    doc.setFont(FONT, "bold");
     doc.setFontSize(10);
-    doc.setTextColor(0);
+    // Estado como cifra clave en azul Adamia; tipo y periodo en texto primario.
+    doc.setTextColor(...ADAMIA.blue);
     doc.text(estado, marginLeft, y + 9);
+    doc.setTextColor(...ADAMIA.text);
     doc.text(tipo, marginLeft + col, y + 9);
     doc.text(`${fechaInicioLarga} — ${fechaFinLarga}`, marginLeft + col * 2, y + 9, {
       maxWidth: col - 6,
     });
 
+    // KPI de días: sin caja rellena ni borde; solo hairlines (arriba propia,
+    // abajo la regla del bloque) con etiqueta muted y cifra azul bold.
     const boxX = marginLeft + metaWidth + daysBoxGap;
     const boxY = y - 1;
-    doc.setDrawColor(0);
-    doc.setLineWidth(0.5);
-    doc.rect(boxX, boxY, daysBoxWidth, 18, "S");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(18);
-    doc.text(String(totalDias || 0), boxX + daysBoxWidth / 2, boxY + 10, {
+    doc.setDrawColor(...ADAMIA.hairline);
+    doc.setLineWidth(0.2);
+    doc.line(boxX, boxY, boxX + daysBoxWidth, boxY);
+    doc.setFont(FONT, "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(...ADAMIA.muted);
+    doc.text("DIAS", boxX + daysBoxWidth / 2, boxY + 5, { align: "center" });
+    doc.setFont(FONT, "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(...ADAMIA.blue);
+    doc.text(String(totalDias || 0), boxX + daysBoxWidth / 2, boxY + 13, {
       align: "center",
     });
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
-    doc.setTextColor(120);
-    doc.text("DIAS", boxX + daysBoxWidth / 2, boxY + 15, { align: "center" });
 
     y += 18;
-    hRule(y, contentWidth, 0.3);
+    hRule(y, contentWidth, 0.2);
     y += 8;
 
     sectionTitle("Datos del empleado");
@@ -483,9 +510,15 @@ export default function PermisoViewDialog({
     fieldPair("Fecha de fin", fechaFinLarga, marginLeft + c3, y, c3 - 4);
     fieldPair("Tipo de permiso", tipo, marginLeft + c3 * 2, y, c3 - 4);
     y += 16;
-    fieldPair("Dias totales", String(diasTotales || 0), marginLeft, y, c3 - 4);
-    fieldPair("Dias habiles", String(diasHabiles || 0), marginLeft + c3, y, c3 - 4);
-    fieldPair("Dias naturales", String(totalDias || 0), marginLeft + c3 * 2, y, c3 - 4);
+    fieldPair("Dias totales", String(diasTotales || 0), marginLeft, y, c3 - 4, {
+      accent: true,
+    });
+    fieldPair("Dias habiles", String(diasHabiles || 0), marginLeft + c3, y, c3 - 4, {
+      accent: true,
+    });
+    fieldPair("Dias naturales", String(totalDias || 0), marginLeft + c3 * 2, y, c3 - 4, {
+      accent: true,
+    });
     y += 18;
 
     const drawWrappedSectionText = ({ sectionName, textValue, emptyFallback }) => {
@@ -505,9 +538,9 @@ export default function PermisoViewDialog({
       const paragraphs = sourceText.split("\n");
 
       // IMPORTANTE: el wrapping se calcula con la misma fuente/tamaño que se usa al dibujar.
-      doc.setFont("helvetica", "normal");
+      doc.setFont(FONT, "normal");
       doc.setFontSize(10);
-      doc.setTextColor(textValue ? 0 : 160);
+      doc.setTextColor(...(textValue ? ADAMIA.text : ADAMIA.muted));
 
       for (const paragraph of paragraphs) {
         const cleanedParagraph = paragraph.trim();
@@ -576,40 +609,43 @@ export default function PermisoViewDialog({
       doc.setPage(p);
       if (p === totalPages) {
         const yFirmas = pageHeight - 50;
-        doc.setDrawColor(0);
-        doc.setLineWidth(0.4);
+        doc.setDrawColor(...ADAMIA.text2);
+        doc.setLineWidth(0.3);
         doc.line(marginLeft + 5, yFirmas, marginLeft + 75, yFirmas);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(8);
-        doc.setTextColor(0);
+        doc.setFont(FONT, "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(...ADAMIA.muted);
         doc.text("FIRMA DEL TRABAJADOR", marginLeft + 40, yFirmas + 5, {
           align: "center",
+          charSpace: 0.5,
         });
-        doc.setFont("helvetica", "normal");
+        doc.setFont(FONT, "normal");
         doc.setFontSize(7.5);
-        doc.setTextColor(100);
+        doc.setTextColor(...ADAMIA.text2);
         doc.text(empleado.slice(0, 40), marginLeft + 40, yFirmas + 10, {
           align: "center",
         });
 
+        doc.setDrawColor(...ADAMIA.text2);
+        doc.setLineWidth(0.3);
         doc.line(
           pageWidth - marginRight - 75,
           yFirmas,
           pageWidth - marginRight - 5,
           yFirmas,
         );
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(8);
-        doc.setTextColor(0);
+        doc.setFont(FONT, "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(...ADAMIA.muted);
         doc.text(
           "REPRESENTANTE DE LA EMPRESA",
           pageWidth - marginRight - 40,
           yFirmas + 5,
-          { align: "center" },
+          { align: "center", charSpace: 0.5 },
         );
-        doc.setFont("helvetica", "normal");
+        doc.setFont(FONT, "normal");
         doc.setFontSize(7.5);
-        doc.setTextColor(100);
+        doc.setTextColor(...ADAMIA.text2);
         doc.text(
           empresaNombre.slice(0, 40),
           pageWidth - marginRight - 40,
@@ -620,17 +656,30 @@ export default function PermisoViewDialog({
         );
       }
 
-      doc.setDrawColor(180);
-      doc.setLineWidth(0.2);
-      doc.line(marginLeft, pageHeight - 14, pageWidth - marginRight, pageHeight - 14);
-      doc.setFont("helvetica", "normal");
+      // Pie de página Adamia: línea degradada + marca a la izquierda,
+      // fecha de generación al centro y paginación a la derecha.
+      gradientLine(doc, marginLeft, pageWidth - marginRight, pageHeight - 14, 0.35);
+      doc.setFont(FONT, "bold");
+      doc.setFontSize(7.5);
+      doc.setTextColor(...ADAMIA.blue);
+      doc.text("Adamia", marginLeft, pageHeight - 9);
+      const adamiaBrandW = doc.getTextWidth("Adamia");
+      doc.setFont(FONT, "normal");
+      doc.setFontSize(7.5);
+      doc.setTextColor(...ADAMIA.muted);
+      doc.text(" · Permisos", marginLeft + adamiaBrandW, pageHeight - 9);
       doc.setFontSize(7);
-      doc.setTextColor(160);
       doc.text(
-        `Generado el ${fechaGenerado} a las ${horaGenerado} · ${systemLabel} · Folio ${folio} · Pagina ${p} de ${totalPages}`,
+        `Generado el ${fechaGenerado} a las ${horaGenerado} · Folio ${folio}`,
         pageWidth / 2,
         pageHeight - 9,
         { align: "center" },
+      );
+      doc.text(
+        `Página ${p} de ${totalPages}`,
+        pageWidth - marginRight,
+        pageHeight - 9,
+        { align: "right" },
       );
     }
 
@@ -790,8 +839,8 @@ export default function PermisoViewDialog({
           )}
           <Button
             variant="outline"
-            onClick={() => {
-              const { doc, nombreArchivo } = buildPermisoPDF();
+            onClick={async () => {
+              const { doc, nombreArchivo } = await buildPermisoPDF();
               doc.save(nombreArchivo);
             }}
             disabled={isPreparingPrint}
@@ -806,7 +855,7 @@ export default function PermisoViewDialog({
               try {
                 // Permite que React pinte el mensaje antes de iniciar la generación pesada del PDF.
                 await new Promise((resolve) => setTimeout(resolve, 0));
-                const { doc, nombreArchivo } = buildPermisoPDF();
+                const { doc, nombreArchivo } = await buildPermisoPDF();
                 await imprimirPDF(doc, nombreArchivo);
               } finally {
                 setIsPreparingPrint(false);
