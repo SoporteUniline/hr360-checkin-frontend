@@ -26,6 +26,7 @@ import Cookies from "js-cookie";
 import { Combobox } from "@/components/Combobox";
 import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import { fetchImageAsDataUrl } from "@/lib/pdfCompanyLogo";
 import {
   BarChart3,
   Filter,
@@ -531,27 +532,67 @@ export default function ReporteHorasPage() {
     try {
       setExporting("pdf");
       // PDF nativo (texto + vectores) con jsPDF y jspdf-autotable.
-      // Antes se rasterizaba el DOM con html2canvas a PNG (archivos de cientos de MB);
-      // ahora el documento pesa unos KB y el texto es seleccionable e imprimible.
+      // Diseño corporativo Adamia: sin rellenos de color, solo líneas de acento
+      // con el degradado azul → morado de la marca, logotipo real y tipografía
+      // Poppins (public/fonts). Si logo o fuentes no cargan, hay fallback.
       const { jsPDF } = await import("jspdf");
       const autoTableModule = await import("jspdf-autotable");
       const autoTable = autoTableModule.autoTable || autoTableModule.default;
 
       // Colorimetría oficial ADAMIA (ver variables --adamia-* en globals.css)
-      const ADAMIA = {
-        blue: [37, 99, 235], // --adamia-blue #2563eb
-        textPrimary: [31, 41, 55], // --adamia-text-primary #1f2937
-        textSecondary: [75, 85, 99], // --adamia-text-secondary #4b5563
-        muted: [107, 114, 128], // #6b7280
-        bgLight: [249, 250, 251], // --adamia-bg-light #f9fafb
-        border: [229, 231, 235], // #e5e7eb
-      };
+      const BLUE = [37, 99, 235]; // --adamia-blue #2563eb
+      const PURPLE = [124, 58, 237]; // --adamia-purple #7c3aed
+      const TEXT = [31, 41, 55]; // --adamia-text-primary #1f2937
+      const TEXT2 = [75, 85, 99]; // --adamia-text-secondary #4b5563
+      const MUTED = [107, 114, 128]; // #6b7280
+      const HAIRLINE = [229, 231, 235]; // #e5e7eb
+
+      const lerp = (a, b, t) =>
+        a.map((v, i) => Math.round(v + (b[i] - v) * t));
 
       const pdf = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
+
+      // Tipografía Poppins embebida (misma familia del landing). Se descarga
+      // de /public/fonts en el mismo origen; si falla se usa Helvetica.
+      const loadFontB64 = async (url) => {
+        try {
+          const res = await fetch(url);
+          if (!res.ok) return null;
+          const blob = await res.blob();
+          return await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const s = String(reader.result || "");
+              const i = s.indexOf(",");
+              resolve(i >= 0 ? s.slice(i + 1) : null);
+            };
+            reader.readAsDataURL(blob);
+          });
+        } catch {
+          return null;
+        }
+      };
+      const [fontReg, fontSemi] = await Promise.all([
+        loadFontB64("/fonts/Poppins-Regular.ttf"),
+        loadFontB64("/fonts/Poppins-SemiBold.ttf"),
+      ]);
+      let FONT = "helvetica";
+      if (fontReg && fontSemi) {
+        pdf.addFileToVFS("Poppins-Regular.ttf", fontReg);
+        pdf.addFont("Poppins-Regular.ttf", "Poppins", "normal");
+        pdf.addFileToVFS("Poppins-SemiBold.ttf", fontSemi);
+        pdf.addFont("Poppins-SemiBold.ttf", "Poppins", "bold");
+        FONT = "Poppins";
+      }
+
+      // Logotipo oficial (mismo asset del sitio); proporción 2160x1000.
+      const logoDataUrl = await fetchImageAsDataUrl("/assets/adamia.png");
+      const LOGO_RATIO = 2160 / 1000;
+
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
       const marginX = 48;
-      const marginTop = 56;
+      const marginTop = 46;
       const footerReserved = 46;
       const contentBottom = pageHeight - footerReserved;
       const contentW = pageWidth - marginX * 2;
@@ -577,77 +618,112 @@ export default function ReporteHorasPage() {
             })
           : "-";
 
-      // Encabezado de marca: "Adamia" en azul + título y fecha a la derecha,
-      // separados del contenido por una línea azul.
+      // Línea degradada azul → morado (identidad Adamia), por segmentos.
+      const gradientLine = (x1, x2, y, width) => {
+        const steps = 48;
+        const seg = (x2 - x1) / steps;
+        pdf.setLineWidth(width);
+        for (let i = 0; i < steps; i++) {
+          pdf.setDrawColor(...lerp(BLUE, PURPLE, i / (steps - 1)));
+          pdf.line(x1 + i * seg, y, x1 + (i + 1) * seg + 0.4, y);
+        }
+      };
+
+      // Encabezado: logotipo + título y fecha, bajo una línea degradada.
       const drawHeader = () => {
-        pdf.setFont("helvetica", "bold");
-        pdf.setFontSize(20);
-        pdf.setTextColor(...ADAMIA.blue);
-        pdf.text("Adamia", marginX, marginTop);
+        if (logoDataUrl) {
+          const logoH = 40;
+          pdf.addImage(
+            logoDataUrl,
+            "PNG",
+            marginX - 8,
+            marginTop - 13,
+            logoH * LOGO_RATIO,
+            logoH,
+          );
+        } else {
+          pdf.setFont(FONT, "bold");
+          pdf.setFontSize(18);
+          pdf.setTextColor(...BLUE);
+          pdf.text("Adamia", marginX, marginTop + 8);
+        }
 
-        pdf.setFontSize(10.5);
-        pdf.setTextColor(...ADAMIA.textPrimary);
-        pdf.text("Reporte de Horas Trabajadas", pageWidth - marginX, marginTop - 7, {
-          align: "right",
-        });
-        pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(8);
-        pdf.setTextColor(...ADAMIA.textSecondary);
-        pdf.text(`Generado el ${fechaGeneracion}`, pageWidth - marginX, marginTop + 5, {
-          align: "right",
-        });
-
-        pdf.setDrawColor(...ADAMIA.blue);
-        pdf.setLineWidth(1.5);
-        pdf.line(marginX, marginTop + 14, pageWidth - marginX, marginTop + 14);
-        return marginTop + 34;
-      };
-
-      // Panel de información del empleado (2 x 2) sobre fondo gris claro.
-      const drawMeta = (r, y) => {
-        const boxH = 66;
-        pdf.setFillColor(...ADAMIA.bgLight);
-        pdf.setDrawColor(...ADAMIA.border);
-        pdf.setLineWidth(0.75);
-        pdf.roundedRect(marginX, y, contentW, boxH, 4, 4, "FD");
-
-        const col1 = marginX + 14;
-        const col2 = marginX + contentW / 2 + 6;
-        const halfW = contentW / 2 - 28;
-        const drawLabel = (t, x, yy) => {
-          pdf.setFont("helvetica", "bold");
-          pdf.setFontSize(6.5);
-          pdf.setTextColor(...ADAMIA.muted);
-          pdf.text(String(t).toUpperCase(), x, yy, { charSpace: 0.5 });
-        };
-        const drawValue = (t, x, yy) => {
-          pdf.setFont("helvetica", "bold");
-          pdf.setFontSize(9.5);
-          pdf.setTextColor(...ADAMIA.textPrimary);
-          const lines = pdf.splitTextToSize(String(t || "—"), halfW);
-          pdf.text(lines[0] || "—", x, yy);
-        };
-
-        drawLabel("Empleado", col1, y + 16);
-        drawValue(r.empleado?.nombre_empleado, col1, y + 28);
-        drawLabel("Empresa", col2, y + 16);
-        drawValue(r.empleado?.nombre_empresa, col2, y + 28);
-        drawLabel("Periodo", col1, y + 44);
-        drawValue(
-          `${humanDate(r.periodo.inicio)} al ${humanDate(r.periodo.fin)}`,
-          col1,
-          y + 56,
+        pdf.setFont(FONT, "bold");
+        pdf.setFontSize(11);
+        pdf.setTextColor(...TEXT);
+        pdf.text(
+          "Reporte de Horas Trabajadas",
+          pageWidth - marginX,
+          marginTop + 2,
+          { align: "right" },
         );
-        drawLabel("Días laborados", col2, y + 44);
-        drawValue(String(r.resumen?.diasTrabajados ?? 0), col2, y + 56);
-        return y + boxH + 12;
+        pdf.setFont(FONT, "normal");
+        pdf.setFontSize(7.5);
+        pdf.setTextColor(...MUTED);
+        pdf.text(
+          `Generado el ${fechaGeneracion}`,
+          pageWidth - marginX,
+          marginTop + 14,
+          { align: "right" },
+        );
+
+        gradientLine(marginX, pageWidth - marginX, marginTop + 28, 1.6);
+        return marginTop + 50;
       };
 
-      // Tarjetas de resumen: valor destacado en azul Adamia.
+      // Información del empleado: columnas con barra de acento vertical que
+      // transita del azul al morado. Sin cajas ni rellenos.
+      const drawMeta = (r, y) => {
+        const cols = [
+          {
+            label: "Empleado",
+            value: r.empleado?.nombre_empleado || "—",
+            w: 0.3,
+          },
+          {
+            label: "Empresa",
+            value: r.empleado?.nombre_empresa || "—",
+            w: 0.28,
+          },
+          {
+            label: "Periodo",
+            value: `${humanDate(r.periodo.inicio)} al ${humanDate(
+              r.periodo.fin,
+            )}`,
+            w: 0.27,
+          },
+          {
+            label: "Días laborados",
+            value: String(r.resumen?.diasTrabajados ?? 0),
+            w: 0.15,
+          },
+        ];
+        let x = marginX;
+        cols.forEach((c, i) => {
+          const w = contentW * c.w;
+          const accent = lerp(BLUE, PURPLE, i / (cols.length - 1));
+          pdf.setDrawColor(...accent);
+          pdf.setLineWidth(1.6);
+          pdf.line(x + 0.8, y, x + 0.8, y + 34);
+
+          pdf.setFont(FONT, "normal");
+          pdf.setFontSize(6.3);
+          pdf.setTextColor(...MUTED);
+          pdf.text(c.label.toUpperCase(), x + 9, y + 8, { charSpace: 0.6 });
+          pdf.setFont(FONT, "bold");
+          pdf.setFontSize(9);
+          pdf.setTextColor(...TEXT);
+          const lines = pdf.splitTextToSize(String(c.value), w - 14).slice(0, 2);
+          pdf.text(lines.length ? lines : ["—"], x + 9, y + 21, {
+            lineHeightFactor: 1.25,
+          });
+          x += w;
+        });
+        return y + 56;
+      };
+
+      // Resumen del periodo: cifras en color entre dos líneas finas.
       const drawSummary = (r, y) => {
-        const gap = 8;
-        const boxW = (contentW - gap * 3) / 4;
-        const boxH = 54;
         const items = [
           {
             label: "Total Horas",
@@ -670,29 +746,39 @@ export default function ReporteHorasPage() {
             sub: "autorizadas",
           },
         ];
+        const boxH = 52;
+        const boxW = contentW / 4;
+        pdf.setDrawColor(...HAIRLINE);
+        pdf.setLineWidth(0.6);
+        pdf.line(marginX, y, pageWidth - marginX, y);
+        pdf.line(marginX, y + boxH, pageWidth - marginX, y + boxH);
+
         items.forEach((it, i) => {
-          const x = marginX + i * (boxW + gap);
-          pdf.setFillColor(...ADAMIA.bgLight);
-          pdf.setDrawColor(...ADAMIA.border);
-          pdf.setLineWidth(0.75);
-          pdf.roundedRect(x, y, boxW, boxH, 4, 4, "FD");
+          const x = marginX + i * boxW;
+          if (i > 0) {
+            pdf.setDrawColor(...HAIRLINE);
+            pdf.setLineWidth(0.6);
+            pdf.line(x, y + 9, x, y + boxH - 9);
+          }
           const cx = x + boxW / 2;
-          pdf.setFont("helvetica", "bold");
-          pdf.setFontSize(6.5);
-          pdf.setTextColor(...ADAMIA.muted);
+          const accent = lerp(BLUE, PURPLE, i / (items.length - 1));
+          pdf.setFont(FONT, "normal");
+          pdf.setFontSize(6.3);
+          pdf.setTextColor(...MUTED);
           pdf.text(it.label.toUpperCase(), cx, y + 14, {
             align: "center",
-            charSpace: 0.5,
+            charSpace: 0.6,
           });
+          pdf.setFont(FONT, "bold");
           pdf.setFontSize(15);
-          pdf.setTextColor(...ADAMIA.blue);
-          pdf.text(String(it.value), cx, y + 32, { align: "center" });
-          pdf.setFont("helvetica", "normal");
-          pdf.setFontSize(6.5);
-          pdf.setTextColor(...ADAMIA.textSecondary);
+          pdf.setTextColor(...accent);
+          pdf.text(String(it.value), cx, y + 33, { align: "center" });
+          pdf.setFont(FONT, "normal");
+          pdf.setFontSize(6.3);
+          pdf.setTextColor(...TEXT2);
           pdf.text(it.sub, cx, y + 44, { align: "center" });
         });
-        return y + boxH + 16;
+        return y + boxH + 20;
       };
 
       // Filas de la tabla: una por día, más una fila de detalle cuando el día
@@ -754,9 +840,9 @@ export default function ReporteHorasPage() {
               .filter((m) => m.entrada && m.salida)
               .map(
                 (m) =>
-                  `Entrada: ${fmtHora(m.entrada)}   Salida: ${fmtHora(
+                  `Entrada ${fmtHora(m.entrada)}    Salida ${fmtHora(
                     m.salida,
-                  )}   Horas: ${m.horasHM || "0:00"}`,
+                  )}    ${m.horasHM || "0:00"} hrs`,
               )
               .join("\n");
             if (detalle) {
@@ -765,11 +851,13 @@ export default function ReporteHorasPage() {
                   content: detalle,
                   colSpan: 7,
                   styles: {
-                    font: "courier",
-                    fontSize: 7.5,
-                    textColor: ADAMIA.textSecondary,
-                    fillColor: [255, 255, 255],
-                    cellPadding: { top: 4, bottom: 4, left: 14, right: 6 },
+                    font: FONT,
+                    fontStyle: "normal",
+                    fontSize: 6.8,
+                    textColor: MUTED,
+                    cellPadding: { top: 4, bottom: 5, left: 16, right: 6 },
+                    lineWidth: { bottom: 0.6 },
+                    lineColor: HAIRLINE,
                   },
                 },
               ]);
@@ -783,15 +871,18 @@ export default function ReporteHorasPage() {
         const slotW = contentW / 2;
         const lineW = 170;
         const centers = [marginX + slotW / 2, marginX + slotW + slotW / 2];
-        const labels = ["FIRMA DEL EMPLEADO", "FIRMA DE AUTORIZACIÓN"];
-        pdf.setDrawColor(...ADAMIA.textPrimary);
-        pdf.setLineWidth(0.8);
+        const labels = ["Firma del empleado", "Firma de autorización"];
         centers.forEach((cx, i) => {
+          pdf.setDrawColor(...TEXT2);
+          pdf.setLineWidth(0.8);
           pdf.line(cx - lineW / 2, y, cx + lineW / 2, y);
-          pdf.setFont("helvetica", "bold");
+          pdf.setFont(FONT, "normal");
           pdf.setFontSize(7);
-          pdf.setTextColor(...ADAMIA.muted);
-          pdf.text(labels[i], cx, y + 12, { align: "center", charSpace: 0.5 });
+          pdf.setTextColor(...MUTED);
+          pdf.text(labels[i].toUpperCase(), cx, y + 12, {
+            align: "center",
+            charSpace: 0.6,
+          });
         });
       };
 
@@ -809,58 +900,70 @@ export default function ReporteHorasPage() {
             top: marginTop,
             bottom: footerReserved + 8,
           },
-          head: [["Fecha", "Entrada", "Salida", "Horas", "Estado", "Motivo", "Notas"]],
+          head: [
+            ["Fecha", "Entrada", "Salida", "Horas", "Estado", "Motivo", "Notas"],
+          ],
           body: buildRows(r),
-          theme: "grid",
+          theme: "plain",
           styles: {
-            font: "helvetica",
-            fontSize: 8,
-            textColor: ADAMIA.textPrimary,
-            lineColor: ADAMIA.border,
-            lineWidth: 0.5,
-            cellPadding: { top: 5, bottom: 5, left: 6, right: 6 },
+            font: FONT,
+            fontStyle: "normal",
+            fontSize: 7.5,
+            textColor: TEXT,
+            cellPadding: { top: 6, bottom: 6, left: 6, right: 6 },
+            lineColor: HAIRLINE,
+            lineWidth: { bottom: 0.6 },
             valign: "middle",
           },
           headStyles: {
-            fillColor: ADAMIA.blue,
-            textColor: 255,
+            font: FONT,
             fontStyle: "bold",
+            fontSize: 6.8,
+            textColor: TEXT,
             halign: "center",
-            fontSize: 8,
+            lineColor: BLUE,
+            lineWidth: { bottom: 1.4 },
+            cellPadding: { top: 5, bottom: 7, left: 6, right: 6 },
           },
-          alternateRowStyles: { fillColor: ADAMIA.bgLight },
           columnStyles: {
             0: { cellWidth: 62 },
-            1: { cellWidth: 62, halign: "center" },
-            2: { cellWidth: 62, halign: "center" },
-            3: { cellWidth: 40, halign: "center" },
+            1: { cellWidth: 60, halign: "center" },
+            2: { cellWidth: 60, halign: "center" },
+            3: { cellWidth: 42, halign: "center" },
             4: { cellWidth: 56, halign: "center" },
             5: { cellWidth: 80 },
+          },
+          didParseCell: (data) => {
+            if (data.section === "head") {
+              data.cell.text = data.cell.text.map((t) => t.toUpperCase());
+            }
           },
         });
 
         let afterY = pdf.lastAutoTable?.finalY || y;
         // Firmas al final del reporte del empleado; si no caben, pasan a otra página.
-        if (afterY + 88 > contentBottom) {
+        if (afterY + 92 > contentBottom) {
           pdf.addPage();
           afterY = marginTop;
         }
-        drawSignatures(afterY + 52);
+        drawSignatures(afterY + 56);
       });
 
-      // Pie de página en todas las hojas: línea sutil, marca y numeración.
+      // Pie de página en todas las hojas: línea degradada, marca y numeración.
       const totalPages = pdf.getNumberOfPages();
       for (let page = 1; page <= totalPages; page++) {
         pdf.setPage(page);
         const lineY = pageHeight - footerReserved + 6;
         const textY = lineY + 14;
-        pdf.setDrawColor(...ADAMIA.border);
-        pdf.setLineWidth(0.5);
-        pdf.line(marginX, lineY, pageWidth - marginX, lineY);
-        pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(8);
-        pdf.setTextColor(...ADAMIA.muted);
-        pdf.text("Adamia · Reporte de Horas", marginX, textY);
+        gradientLine(marginX, pageWidth - marginX, lineY, 0.8);
+        pdf.setFont(FONT, "bold");
+        pdf.setFontSize(7.5);
+        pdf.setTextColor(...BLUE);
+        pdf.text("Adamia", marginX, textY);
+        const brandW = pdf.getTextWidth("Adamia");
+        pdf.setFont(FONT, "normal");
+        pdf.setTextColor(...MUTED);
+        pdf.text("  ·  Reporte de Horas", marginX + brandW, textY);
         pdf.text(`Página ${page} de ${totalPages}`, pageWidth - marginX, textY, {
           align: "right",
         });
