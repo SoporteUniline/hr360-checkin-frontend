@@ -389,7 +389,12 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
                     {label}
                   </FormLabelWithAsterisk>
                   <FormControl>
-                    <Input type={type} disabled={soloLectura} {...field} />
+                    <Input
+                      type={type}
+                      disabled={soloLectura}
+                      {...field}
+                      value={field.value ?? ""}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -509,7 +514,12 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
                         {label}
                       </FormLabelWithAsterisk>
                       <FormControl>
-                        <Input type={type} disabled={soloLectura} {...field} />
+                        <Input
+                          type={type}
+                          disabled={soloLectura}
+                          {...field}
+                          value={field.value ?? ""}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

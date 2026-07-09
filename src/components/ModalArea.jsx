@@ -47,14 +47,14 @@ export default function ModalArea({
 
   return (
     <div
-      className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-2 sm:p-4"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-xl overflow-hidden max-w-4xl w-full max-h-[90vh] border border-gray-100 shadow-xl"
+        className="bg-white rounded-xl overflow-hidden max-w-4xl w-full max-h-[90vh] border border-gray-100 shadow-xl flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white">
+        <div className="p-5 bg-linear-to-r from-indigo-600 to-blue-600 text-white">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2">
               <span className="grid size-9 place-items-center rounded-lg bg-white/15">
@@ -79,7 +79,7 @@ export default function ModalArea({
           </div>
         </div>
 
-        <div className="p-5 space-y-4">
+        <div className="p-5 space-y-4 overflow-y-auto flex-1">
           {!formData.id_area && id_empresa_defecto === "all" && (
             <div>
               <Label className="mb-2">Seleccionar Empresa</Label>
@@ -112,7 +112,7 @@ export default function ModalArea({
           <AreaCheckMap area={formData} onChange={setFormData} />
         </div>
 
-        <div className="bg-gray-50 border-t border-gray-100 p-4 flex gap-2 sm:justify-end">
+        <div className="bg-gray-50 border-t border-gray-100 p-4 flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
           <Button
             variant="outline"
             onClick={onClose}

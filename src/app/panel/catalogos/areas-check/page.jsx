@@ -123,7 +123,7 @@ function AlertDialog({ isOpen, onClose, onConfirm, title, description }) {
         className="bg-white rounded-xl overflow-hidden max-w-md w-full border border-gray-100 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-5 bg-gradient-to-r from-red-600 to-red-700 text-white">
+        <div className="p-5 bg-linear-to-r from-red-600 to-red-700 text-white">
           <h3 className="text-base font-bold">{title}</h3>
           <p className="text-sm text-red-100 mt-1">
             Esta acción no se puede deshacer.
@@ -288,7 +288,7 @@ export default function AreasCheckPage() {
   return (
     <div className="space-y-6">
       {/* Header ADAMIA */}
-      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+      <div className="bg-linear-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
         <div className="flex items-center justify-between gap-4 flex-col sm:flex-row">
           <div className="flex items-center gap-3">
             <div className="bg-[#2563EB] p-2.5 rounded-lg">
@@ -342,7 +342,6 @@ export default function AreasCheckPage() {
       </div> */}
 
       <Card className="border-blue-100 bg-blue-50">
-       
         <CardContent className="grid grid-cols-1 md:grid-cols-[250px_1fr_auto] gap-4 items-end">
           <div className="flex flex-col gap-1">
             <Label>Unidad de negocio</Label>
@@ -386,7 +385,7 @@ export default function AreasCheckPage() {
         </div>
       ) : areas.length > 0 ? (
         <>
-          <div className="grid grid-cols-[repeat(auto-fit,_minmax(250px,_1fr))] gap-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-4">
             {areas.map((area) => (
               <AreaCard
                 key={area.id_area}

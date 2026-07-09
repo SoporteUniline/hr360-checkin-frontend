@@ -209,6 +209,12 @@ export default function FormularioEmpleado({
 
       form.reset({
         ...restoEmpleado,
+
+        nip: restoEmpleado.nip ?? "",
+        periodo_pago: restoEmpleado.periodo_pago ?? "sin-seleccion",
+        forma_pago: restoEmpleado.forma_pago ?? "sin-seleccion",
+        forma_calculo: restoEmpleado.forma_calculo ?? "sin-seleccion",
+
         cc_vacaciones: restoEmpleado.cc_vacaciones ?? "",
         cc_permisos: restoEmpleado.cc_permisos ?? "",
         horarios: horariosIniciales,
@@ -223,8 +229,8 @@ export default function FormularioEmpleado({
           restoEmpleado.cierre_turno !== "undefined"
             ? restoEmpleado.cierre_turno
             : "Automático",
-        sueldo: restoEmpleado.sueldo || null,
-        porcentaje: restoEmpleado.porcentaje || null,
+        sueldo: restoEmpleado.sueldo ?? null,
+        porcentaje: restoEmpleado.porcentaje ?? null,
         descriptor_facial: restoEmpleado.descriptor_facial || [],
         solicitar_gps:
           restoEmpleado.solicitar_gps === 1
