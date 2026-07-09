@@ -44,7 +44,12 @@ import {
   SlidersHorizontal,
   ReceiptText,
 } from "lucide-react";
-import { ChevronDown, Search } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronsDownUp,
+  ChevronsUpDown,
+  Search,
+} from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -380,16 +385,35 @@ export function NavMain() {
     }
   }, []);
 
+  const persistirGrupos = (next) => {
+    try {
+      window.localStorage.setItem(GRUPOS_ABIERTOS_KEY, JSON.stringify(next));
+    } catch {
+      // sin persistencia si localStorage no está disponible
+    }
+    return next;
+  };
+
   const toggleGrupo = (nombre) => {
-    setGruposAbiertos((prev) => {
-      const next = { ...prev, [nombre]: prev[nombre] === false ? true : false };
-      try {
-        window.localStorage.setItem(GRUPOS_ABIERTOS_KEY, JSON.stringify(next));
-      } catch {
-        // sin persistencia si localStorage no está disponible
-      }
-      return next;
+    setGruposAbiertos((prev) =>
+      persistirGrupos({
+        ...prev,
+        [nombre]: prev[nombre] === false ? true : false,
+      }),
+    );
+  };
+
+  // ¿Hay al menos un módulo contraído? (para alternar expandir/contraer todo)
+  const hayContraidos = menuGroups.some(
+    (g) => gruposAbiertos[g.group] === false,
+  );
+
+  const toggleTodos = () => {
+    const next = {};
+    menuGroups.forEach((g) => {
+      next[g.group] = hayContraidos ? true : false;
     });
+    setGruposAbiertos(persistirGrupos(next));
   };
 
   const q = normalizar(busqueda.trim());
@@ -431,6 +455,25 @@ export function NavMain() {
             onChange={(e) => setBusqueda(e.target.value)}
           />
         </div>
+        {effectiveRole !== "Admin" && !buscando && (
+          <div className="flex justify-end px-1">
+            <button
+              type="button"
+              onClick={toggleTodos}
+              className="inline-flex items-center gap-1 text-[11px] font-medium text-gray-500 hover:text-gray-800 cursor-pointer transition-colors"
+            >
+              {hayContraidos ? (
+                <>
+                  <ChevronsUpDown size={13} /> Expandir todo
+                </>
+              ) : (
+                <>
+                  <ChevronsDownUp size={13} /> Contraer todo
+                </>
+              )}
+            </button>
+          </div>
+        )}
         <SidebarMenu>
           {dashboardItems.map((item) => {
             if (item.rol && item.rol !== effectiveRole) return null;
@@ -477,13 +520,13 @@ export function NavMain() {
                   <button
                     type="button"
                     onClick={() => toggleGrupo(group.group)}
-                    className="w-full px-1 text-md font-bold mb-2 text-gray-700 cursor-pointer flex items-center justify-between hover:text-gray-900"
+                    className="w-full px-1 mb-2 text-[11px] font-semibold uppercase tracking-widest text-gray-500 cursor-pointer flex items-center justify-between select-none transition-colors hover:text-gray-800"
                     aria-expanded={abierto}
                   >
                     <span>{group.group}</span>
                     <ChevronDown
-                      size={16}
-                      className={`shrink-0 text-gray-400 transition-transform ${
+                      size={14}
+                      className={`shrink-0 text-gray-400 transition-transform duration-200 ${
                         abierto ? "" : "-rotate-90"
                       }`}
                     />
