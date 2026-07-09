@@ -19,6 +19,7 @@ import {
   fetchImageAsDataUrl,
   tryAddCompanyMarkToPdf,
 } from "@/lib/pdfCompanyLogo";
+import { ADAMIA, gradientLine, applyAdamiaFont } from "@/lib/pdfAdamiaTheme";
 import { Download, FileText, Loader2, Printer } from "lucide-react";
 
 dayjs.extend(utc);
@@ -340,8 +341,11 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
     });
   }
 
-  function buildContratoPDF() {
+  async function buildContratoPDF() {
     const doc = new jsPDF("p", "mm", "a4");
+
+    // Tipografía corporativa Adamia (Poppins con fallback a Helvetica).
+    const FONT = await applyAdamiaFont(doc);
 
     const pageWidth = 210;
     const pageHeight = 297;
@@ -412,32 +416,34 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
       }
     };
 
-    const hRule = (yPos, width = contentWidth, lineWidth = 0.3) => {
-      doc.setDrawColor(0);
-      doc.setLineWidth(lineWidth);
+    const hRule = (yPos, width = contentWidth) => {
+      doc.setDrawColor(...ADAMIA.hairline);
+      doc.setLineWidth(0.2);
       doc.line(marginLeft, yPos, marginLeft + width, yPos);
     };
 
     const sectionTitle = (text) => {
       needSpace(12);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(8);
-      doc.setTextColor(0);
-      doc.text(String(text || "").toUpperCase(), marginLeft, y + 5);
-      hRule(y + 7, contentWidth, 0.5);
+      doc.setFont(FONT, "bold");
+      doc.setFontSize(8.5);
+      doc.setTextColor(...ADAMIA.muted);
+      doc.text(String(text || "").toUpperCase(), marginLeft, y + 5, {
+        charSpace: 0.5,
+      });
+      hRule(y + 7, contentWidth);
       y += 12;
     };
 
     const fieldPair = (label, value, x, yPos, width = contentWidth / 2 - 4) => {
-      doc.setFont("helvetica", "normal");
+      doc.setFont(FONT, "normal");
       doc.setFontSize(7.5);
-      doc.setTextColor(140);
+      doc.setTextColor(...ADAMIA.muted);
       doc.text(String(label || "").toUpperCase(), x, yPos);
-      doc.setFont("helvetica", "normal");
+      doc.setFont(FONT, "normal");
       doc.setFontSize(10);
-      doc.setTextColor(0);
+      doc.setTextColor(...ADAMIA.text);
       doc.text(safe(value), x, yPos + 5);
-      doc.setDrawColor(200);
+      doc.setDrawColor(...ADAMIA.hairline);
       doc.setLineWidth(0.2);
       doc.line(x, yPos + 7, x + width, yPos + 7);
     };
@@ -450,18 +456,18 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
       width = contentWidth / 2 - 4,
       { wrap = false } = {},
     ) => {
-      doc.setFont("helvetica", "normal");
+      doc.setFont(FONT, "normal");
       doc.setFontSize(7.5);
-      doc.setTextColor(140);
+      doc.setTextColor(...ADAMIA.muted);
       doc.text(String(label || "").toUpperCase(), x, yPos);
 
-      doc.setFont("helvetica", "normal");
+      doc.setFont(FONT, "normal");
       doc.setFontSize(10);
-      doc.setTextColor(0);
+      doc.setTextColor(...ADAMIA.text);
 
       if (!wrap) {
         doc.text(safe(value), x, yPos + 5);
-        doc.setDrawColor(200);
+        doc.setDrawColor(...ADAMIA.hairline);
         doc.setLineWidth(0.2);
         doc.line(x, yPos + 7, x + width, yPos + 7);
         return 7;
@@ -475,7 +481,7 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
       });
 
       const lineY = yPos + 7 + Math.max(0, (lines.length - 1) * lineStep);
-      doc.setDrawColor(200);
+      doc.setDrawColor(...ADAMIA.hairline);
       doc.setLineWidth(0.2);
       doc.line(x, lineY, x + width, lineY);
       return lineY - yPos;
@@ -501,9 +507,9 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
 
       const safeLines = [];
       const paragraphs = sourceText.split("\n");
-      doc.setFont("helvetica", "normal");
+      doc.setFont(FONT, "normal");
       doc.setFontSize(10);
-      doc.setTextColor(textValue ? 0 : 160);
+      doc.setTextColor(...(textValue ? ADAMIA.text : ADAMIA.muted));
 
       for (const paragraph of paragraphs) {
         const cleanedParagraph = paragraph.trim();
@@ -525,7 +531,7 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
         y += lineHeight;
       }
 
-      hRule(y + 1, contentWidth, 0.2);
+      hRule(y + 1, contentWidth);
       y += 10;
     };
 
@@ -541,39 +547,43 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
       } catch {}
     }
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
-    doc.setTextColor(150);
-    doc.text("HUMAN RESOURCES CLOUD PLATFORM", marginLeft, y + 13);
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(20);
-    doc.setTextColor(0);
+    doc.setFont(FONT, "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(...ADAMIA.text);
     doc.text("CONTRATO", pageWidth - marginRight, y + 7, { align: "right" });
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(100);
-    doc.text(`Folio #${folio}`, pageWidth - marginRight, y + 13, {
+    doc.setFont(FONT, "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(...ADAMIA.blue);
+    doc.text(`Folio #${folio}`, pageWidth - marginRight, y + 12, {
       align: "right",
     });
+    doc.setFont(FONT, "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...ADAMIA.muted);
+    doc.text(
+      `Generado el ${formatDateLong(new Date())}`,
+      pageWidth - marginRight,
+      y + 16.5,
+      { align: "right" },
+    );
 
     y += 20;
-    hRule(y, contentWidth, 0.8);
+    gradientLine(doc, marginLeft, pageWidth - marginRight, y, 0.55);
     y += 6;
 
     const boxWidth = 24;
     const boxGap = 8;
     const metaWidth = contentWidth - boxWidth - boxGap;
     const col = metaWidth / 3;
-    doc.setFont("helvetica", "normal");
+    doc.setFont(FONT, "normal");
     doc.setFontSize(7.5);
-    doc.setTextColor(140);
+    doc.setTextColor(...ADAMIA.muted);
     doc.text("ESTATUS", marginLeft, y + 3);
     doc.text("TIPO", marginLeft + col, y + 3);
     doc.text("VIGENCIA", marginLeft + col * 2, y + 3);
-    doc.setFont("helvetica", "bold");
+    doc.setFont(FONT, "bold");
     doc.setFontSize(10);
-    doc.setTextColor(0);
+    doc.setTextColor(...ADAMIA.text);
     doc.text(estatus, marginLeft, y + 9);
     doc.text(tipoContrato, marginLeft + col, y + 9);
     doc.text(
@@ -587,21 +597,22 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
 
     const boxX = marginLeft + metaWidth + boxGap;
     const boxY = y - 1;
-    doc.setDrawColor(0);
-    doc.setLineWidth(0.5);
+    doc.setDrawColor(...ADAMIA.hairline);
+    doc.setLineWidth(0.2);
     doc.rect(boxX, boxY, boxWidth, 18, "S");
-    doc.setFont("helvetica", "bold");
+    doc.setFont(FONT, "bold");
     doc.setFontSize(16);
+    doc.setTextColor(...ADAMIA.blue);
     doc.text(String(horasSemanales || "—"), boxX + boxWidth / 2, boxY + 10, {
       align: "center",
     });
-    doc.setFont("helvetica", "normal");
+    doc.setFont(FONT, "normal");
     doc.setFontSize(7);
-    doc.setTextColor(120);
+    doc.setTextColor(...ADAMIA.muted);
     doc.text("HRS/SEM", boxX + boxWidth / 2, boxY + 15, { align: "center" });
 
     y += 18;
-    hRule(y, contentWidth, 0.3);
+    hRule(y, contentWidth);
     y += 8;
 
     sectionTitle("Datos del empleado");
@@ -711,40 +722,43 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
       doc.setPage(p);
       if (p === totalPages) {
         const yFirmas = pageHeight - 50;
-        doc.setDrawColor(0);
-        doc.setLineWidth(0.4);
+        doc.setDrawColor(...ADAMIA.text2);
+        doc.setLineWidth(0.3);
         doc.line(marginLeft + 5, yFirmas, marginLeft + 75, yFirmas);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(8);
-        doc.setTextColor(0);
+        doc.setFont(FONT, "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(...ADAMIA.muted);
         doc.text("FIRMA DEL TRABAJADOR", marginLeft + 40, yFirmas + 5, {
           align: "center",
+          charSpace: 0.5,
         });
-        doc.setFont("helvetica", "normal");
+        doc.setFont(FONT, "normal");
         doc.setFontSize(7.5);
-        doc.setTextColor(100);
+        doc.setTextColor(...ADAMIA.text2);
         doc.text(empleado.slice(0, 40), marginLeft + 40, yFirmas + 10, {
           align: "center",
         });
 
+        doc.setDrawColor(...ADAMIA.text2);
+        doc.setLineWidth(0.3);
         doc.line(
           pageWidth - marginRight - 75,
           yFirmas,
           pageWidth - marginRight - 5,
           yFirmas,
         );
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(8);
-        doc.setTextColor(0);
+        doc.setFont(FONT, "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(...ADAMIA.muted);
         doc.text(
           "REPRESENTANTE DE LA EMPRESA",
           pageWidth - marginRight - 40,
           yFirmas + 5,
-          { align: "center" },
+          { align: "center", charSpace: 0.5 },
         );
-        doc.setFont("helvetica", "normal");
+        doc.setFont(FONT, "normal");
         doc.setFontSize(7.5);
-        doc.setTextColor(100);
+        doc.setTextColor(...ADAMIA.text2);
         doc.text(
           empresaNombre.slice(0, 40),
           pageWidth - marginRight - 40,
@@ -755,18 +769,28 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
         );
       }
 
-      doc.setDrawColor(180);
-      doc.setLineWidth(0.2);
-      doc.line(marginLeft, pageHeight - 14, pageWidth - marginRight, pageHeight - 14);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(7);
-      doc.setTextColor(160);
+      const footerLineY = pageHeight - 14;
+      const footerTextY = pageHeight - 9;
+      gradientLine(doc, marginLeft, pageWidth - marginRight, footerLineY, 0.35);
+      doc.setFont(FONT, "bold");
+      doc.setFontSize(7.5);
+      doc.setTextColor(...ADAMIA.blue);
+      doc.text("Adamia", marginLeft, footerTextY);
+      const brandW = doc.getTextWidth("Adamia");
+      doc.setFont(FONT, "normal");
+      doc.setTextColor(...ADAMIA.muted);
+      doc.text(" · Contratos", marginLeft + brandW, footerTextY);
+      doc.setFontSize(6.5);
       doc.text(
-        `Generado el ${fechaGenerado} a las ${horaGenerado} · ${systemLabel} · Folio #${folio} · Página ${p} de ${totalPages}`,
+        `Generado el ${fechaGenerado} a las ${horaGenerado} · ${systemLabel} · Folio #${folio}`,
         pageWidth / 2,
-        pageHeight - 9,
+        footerTextY,
         { align: "center" },
       );
+      doc.setFontSize(7.5);
+      doc.text(`Página ${p} de ${totalPages}`, pageWidth - marginRight, footerTextY, {
+        align: "right",
+      });
     }
 
     const nombreArchivo = `Contrato_${String(folio).replace(
@@ -953,8 +977,8 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
 
           <Button
             variant="outline"
-            onClick={() => {
-              const { doc, nombreArchivo } = buildContratoPDF();
+            onClick={async () => {
+              const { doc, nombreArchivo } = await buildContratoPDF();
               doc.save(nombreArchivo);
             }}
             disabled={isPreparingPrint}
@@ -969,7 +993,7 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
               setIsPreparingPrint(true);
               try {
                 await new Promise((resolve) => setTimeout(resolve, 0));
-                const { doc, nombreArchivo } = buildContratoPDF();
+                const { doc, nombreArchivo } = await buildContratoPDF();
                 await imprimirPDF(doc, nombreArchivo);
               } finally {
                 setIsPreparingPrint(false);
