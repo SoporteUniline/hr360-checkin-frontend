@@ -79,97 +79,107 @@ const SeccionPDF = forwardRef(function SeccionPDF(
   const columnas = plantilla.columnas || [];
 
   return (
-    <div
-      ref={ref}
-      data-pdf-root="true"
-      style={{
-        position: "fixed",
-        top: "-99999px",
-        left: "-99999px",
-        width: `${pdfContainerWidth}px`,
-        background: "#ffffff",
-        padding: "32px 32px 24px 32px",
-        fontFamily: "ui-sans-serif, system-ui, sans-serif",
-      }}
-      aria-hidden="true"
-    >
-      {/* Topbar */}
-      <div className="pdf-topbar">
-        {/* Logo de la empresa o fallback textual si no hay imagen disponible */}
-        {logoDataUrl ? (
-          <img
-            src={logoDataUrl}
-            alt="Logo empresa"
-            style={{ height: "32px", maxWidth: "130px", objectFit: "contain" }}
-          />
-        ) : (
-          <div className="brand">HR360</div>
-        )}
-        <div className="right">
-          <div className="title">{plantilla.nombre}</div>
-          <div className="subtitle">
-            {filtros.fechaInicio} — {filtros.fechaFin}
-          </div>
-        </div>
-      </div>
-      <div className="pdf-hr" />
-
-      {/* Meta + KPIs */}
-      <div className="pdf-meta-grid">
-        <div className="pdf-meta-box">
-          <div className="box-title">Información del reporte</div>
-          <div className="row"><span className="label">Fuente</span><span className="value">{tipoLabel}</span></div>
-          <div className="row"><span className="label">Empresa</span><span className="value">{empresa || "Todas"}</span></div>
-          <div className="row"><span className="label">Desde</span><span className="value">{filtros.fechaInicio || "—"}</span></div>
-          <div className="row"><span className="label">Hasta</span><span className="value">{filtros.fechaFin || "—"}</span></div>
-          {filtros.empleado && <div className="row"><span className="label">Empleado</span><span className="value">{filtros.empleado}</span></div>}
-          {filtros.departamento && <div className="row"><span className="label">Departamento</span><span className="value">{filtros.departamento}</span></div>}
-          <div className="row"><span className="label">Generado</span><span className="value">{hoy}</span></div>
-        </div>
-        <div>
-          <div className="pdf-meta-box" style={{ marginBottom: "8px" }}>
-            <div className="box-title">Resumen</div>
-          </div>
-          <div className="pdf-kpi-grid">
-            <div className="pdf-kpi-item"><div className="k-label">Registros</div><div className="k-value">{totalRegistros}</div></div>
-            <div className="pdf-kpi-item"><div className="k-label">Grupos</div><div className="k-value">{grupos.length === 1 && !grupos[0].label ? "—" : grupos.length}</div></div>
-            <div className="pdf-kpi-item"><div className="k-label">Columnas</div><div className="k-value">{columnas.length}</div></div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tablas por grupo */}
-      {grupos.map((grupo, gi) => (
-        <div key={grupo.key ?? gi}>
-          {grupo.label && (
-            <div className="pdf-section-title">{grupo.label}</div>
+    <>
+      {/* Carga Poppins (public/fonts) en el documento principal para que
+          html2canvas rasterice con la tipografía corporativa. La exportación
+          espera document.fonts.ready antes de capturar
+          (ver pdfReportePersonalizado.js). */}
+      <style>{`
+        @font-face{font-family:"Poppins";src:url("/fonts/Poppins-Regular.ttf") format("truetype");font-weight:400;font-style:normal;font-display:swap}
+        @font-face{font-family:"Poppins";src:url("/fonts/Poppins-SemiBold.ttf") format("truetype");font-weight:600;font-style:normal;font-display:swap}
+      `}</style>
+      <div
+        ref={ref}
+        data-pdf-root="true"
+        style={{
+          position: "fixed",
+          top: "-99999px",
+          left: "-99999px",
+          width: `${pdfContainerWidth}px`,
+          background: "#ffffff",
+          padding: "32px 32px 24px 32px",
+          fontFamily: '"Poppins", ui-sans-serif, system-ui, Helvetica, sans-serif',
+          color: "#1f2937",
+        }}
+        aria-hidden="true"
+      >
+        {/* Topbar: logotipo + título y fecha alineados a la derecha */}
+        <div className="pdf-topbar">
+          {/* Logo de la empresa (o Adamia) con fallback tipográfico */}
+          {logoDataUrl ? (
+            <img
+              src={logoDataUrl}
+              alt="Logo empresa"
+              style={{ height: "40px", maxWidth: "170px", objectFit: "contain" }}
+            />
+          ) : (
+            <div className="brand">Adamia</div>
           )}
-          <table style={{ marginBottom: "12px" }}>
-            <thead>
-              <tr>{columnas.map((col) => <th key={col.key}>{col.label}</th>)}</tr>
-            </thead>
-            <tbody>
-              {grupo.filas.map((fila, ri) => (
-                <tr key={ri}>
-                  {columnas.map((col) => <td key={col.key}>{fila[col.key] ?? "—"}</td>)}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {grupo.label && (
-            <div style={{ fontSize: "8pt", color: "#6b7280", marginBottom: "10px", textAlign: "right" }}>
-              Subtotal: {grupo.filas.length} registro{grupo.filas.length !== 1 ? "s" : ""}
+          <div className="right">
+            <div className="title">{plantilla.nombre}</div>
+            <div className="subtitle">
+              {filtros.fechaInicio} — {filtros.fechaFin}
             </div>
-          )}
+            <div className="subtitle">Generado el {hoy}</div>
+          </div>
         </div>
-      ))}
+        <div className="pdf-hr" />
 
-      {/* Firmas */}
-      <div className="pdf-signatures">
-        <div className="slot"><div className="line" /><div className="label">Firma del responsable</div></div>
-        <div className="slot"><div className="line" /><div className="label">Autorizado por</div></div>
+        {/* Meta + KPIs: sin cajas ni rellenos, solo acentos y filetes */}
+        <div className="pdf-meta-grid">
+          <div className="pdf-meta-box">
+            <div className="box-title">Información del reporte</div>
+            <div className="row"><span className="label">Fuente</span><span className="value">{tipoLabel}</span></div>
+            <div className="row"><span className="label">Empresa</span><span className="value">{empresa || "Todas"}</span></div>
+            <div className="row"><span className="label">Desde</span><span className="value">{filtros.fechaInicio || "—"}</span></div>
+            <div className="row"><span className="label">Hasta</span><span className="value">{filtros.fechaFin || "—"}</span></div>
+            {filtros.empleado && <div className="row"><span className="label">Empleado</span><span className="value">{filtros.empleado}</span></div>}
+            {filtros.departamento && <div className="row"><span className="label">Departamento</span><span className="value">{filtros.departamento}</span></div>}
+            <div className="row"><span className="label">Generado</span><span className="value">{hoy}</span></div>
+          </div>
+          <div>
+            <div className="box-title">Resumen</div>
+            <div className="pdf-kpi-grid">
+              <div className="pdf-kpi-item"><div className="k-label">Registros</div><div className="k-value">{totalRegistros}</div></div>
+              <div className="pdf-kpi-item"><div className="k-label">Grupos</div><div className="k-value">{grupos.length === 1 && !grupos[0].label ? "—" : grupos.length}</div></div>
+              <div className="pdf-kpi-item"><div className="k-label">Columnas</div><div className="k-value">{columnas.length}</div></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tablas por grupo */}
+        {grupos.map((grupo, gi) => (
+          <div key={grupo.key ?? gi}>
+            {grupo.label && (
+              <div className="pdf-section-title">{grupo.label}</div>
+            )}
+            <table style={{ marginBottom: "12px" }}>
+              <thead>
+                <tr>{columnas.map((col) => <th key={col.key}>{col.label}</th>)}</tr>
+              </thead>
+              <tbody>
+                {grupo.filas.map((fila, ri) => (
+                  <tr key={ri}>
+                    {columnas.map((col) => <td key={col.key}>{fila[col.key] ?? "—"}</td>)}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {grupo.label && (
+              <div style={{ fontSize: "8pt", color: "#6b7280", marginBottom: "10px", textAlign: "right" }}>
+                Subtotal: {grupo.filas.length} registro{grupo.filas.length !== 1 ? "s" : ""}
+              </div>
+            )}
+          </div>
+        ))}
+
+        {/* Firmas */}
+        <div className="pdf-signatures">
+          <div className="slot"><div className="line" /><div className="label">Firma del responsable</div></div>
+          <div className="slot"><div className="line" /><div className="label">Autorizado por</div></div>
+        </div>
       </div>
-    </div>
+    </>
   );
 });
 
@@ -208,7 +218,7 @@ const ReporteResultados = forwardRef(function ReporteResultados({
       }
       const dataUrl = logoUrl
         ? await fetchImageAsDataUrl(logoUrl)
-        : await fetchImageAsDataUrl("/assets/logo.png");
+        : await fetchImageAsDataUrl("/assets/adamia.png");
       if (alive) setLogoDataUrl(dataUrl || null);
     };
     run();
