@@ -526,736 +526,346 @@ export default function ReporteHorasPage() {
   }
 
   async function handleGuardarPDF() {
-    if (!reportRef.current || !reportes || reportes.length === 0) return;
-
-    // Función local: calcula puntos de corte verticales "seguros" dentro de un bloque de reporte
-    // para que cada página del PDF termine al final de una fila completa (y su fila de detalle),
-    // evitando que la información se parta en dos hojas. Se relaciona directamente con la tabla
-    // renderizada en este mismo archivo `page.jsx` dentro del panel de reporte de horas.
-    const computeSafeBreaks = (blockEl) => {
-      const rect = blockEl.getBoundingClientRect();
-      const containerTop = rect.top;
-      const totalHeight = rect.height || 1;
-
-      // Siempre arrancamos en 0 (parte superior del bloque)
-      const domBreaks = [0];
-
-      // Localizamos el cuerpo de la tabla principal del reporte
-      const tbody = blockEl.querySelector("table tbody");
-      if (tbody) {
-        const rows = Array.from(tbody.querySelectorAll("tr"));
-
-        // Recorremos las filas agrupando:
-        // - Fila principal del día
-        // - Fila de detalle (colspan) si existe
-        // Así garantizamos que ambas queden en la misma página del PDF.
-        for (let i = 0; i < rows.length; i++) {
-          const row = rows[i];
-          if (!row) continue;
-
-          let rowRect = row.getBoundingClientRect();
-          let bottom = rowRect.bottom - containerTop;
-
-          // Si la siguiente fila es de detalle (colspan), la unimos al mismo bloque
-          if (i + 1 < rows.length) {
-            const next = rows[i + 1];
-            const spanCell =
-              next && next.querySelector && next.querySelector("td[colspan]");
-            if (spanCell) {
-              const nextRect = next.getBoundingClientRect();
-              bottom = nextRect.bottom - containerTop;
-              i += 1; // ya incluimos la fila de detalle
-            }
-          }
-
-          const last = domBreaks[domBreaks.length - 1];
-          // Evitamos puntos demasiado cercanos por pequeños redondeos de layout
-          if (bottom > last + 4) {
-            domBreaks.push(bottom);
-          }
-        }
-      }
-
-      // Aseguramos que el último punto de corte llegue hasta el final del bloque
-      const last = domBreaks[domBreaks.length - 1];
-      if (last < totalHeight) {
-        domBreaks.push(totalHeight);
-      }
-
-      return { domBreaks, totalHeight };
-    };
+    if (!reportes || reportes.length === 0) return;
 
     try {
       setExporting("pdf");
-      const html2canvas = (await import("html2canvas")).default;
+      // PDF nativo (texto + vectores) con jsPDF y jspdf-autotable.
+      // Antes se rasterizaba el DOM con html2canvas a PNG (archivos de cientos de MB);
+      // ahora el documento pesa unos KB y el texto es seleccionable e imprimible.
       const { jsPDF } = await import("jspdf");
+      const autoTableModule = await import("jspdf-autotable");
+      const autoTable = autoTableModule.autoTable || autoTableModule.default;
+
+      // Colorimetría oficial ADAMIA (ver variables --adamia-* en globals.css)
+      const ADAMIA = {
+        blue: [37, 99, 235], // --adamia-blue #2563eb
+        textPrimary: [31, 41, 55], // --adamia-text-primary #1f2937
+        textSecondary: [75, 85, 99], // --adamia-text-secondary #4b5563
+        muted: [107, 114, 128], // #6b7280
+        bgLight: [249, 250, 251], // --adamia-bg-light #f9fafb
+        border: [229, 231, 235], // #e5e7eb
+      };
+
       const pdf = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
       const pageWidth = pdf.internal.pageSize.getWidth();
       const pageHeight = pdf.internal.pageSize.getHeight();
-      // Márgenes de 2.5cm para impresión perfecta (2.5cm * 28.35 pt/cm = 70.875 pt ≈ 71 pt)
-      const marginTop = 71; // 2.5cm margen superior
-      const marginBottom = 71; // 2.5cm margen inferior
-      const marginLeft = 71; // 2.5cm margen izquierdo
-      const marginRight = 71; // 2.5cm margen derecho (simétrico)
-      const imgWidth = pageWidth - marginLeft - marginRight;
+      const marginX = 48;
+      const marginTop = 56;
+      const footerReserved = 46;
+      const contentBottom = pageHeight - footerReserved;
+      const contentW = pageWidth - marginX * 2;
 
-      // Altura reservada en la parte inferior de cada página para el pie de página
-      // (línea separadora + leyenda + numeración). También se usa para que el
-      // contenido de la imagen no "pegue" contra el pie ni lo tape.
-      const footerReserved = 42; // pt
-      const usablePageHeight =
-        pageHeight - marginTop - marginBottom - footerReserved;
-      const blocks = Array.from(
-        reportRef.current.querySelectorAll('[data-report-block="true"]'),
-      );
-
-      // Mapa compartido entre `onclone` y el bucle principal para
-      // guardar los puntos de corte seguros de cada bloque clonado.
-      const safeBreakMap = {};
-
-      // A cada bloque (o al contenedor general, en su defecto) le
-      // asignamos un identificador estable que se copia al DOM clonado.
-      const allBlocks = blocks.length ? blocks : [reportRef.current];
-      allBlocks.forEach((el, index) => {
-        if (!el.getAttribute("data-pdf-block-id")) {
-          el.setAttribute("data-pdf-block-id", String(index + 1));
-        }
+      const fechaGeneracion = new Date().toLocaleDateString("es-MX", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
       });
 
-      const captureOptions = {
-        scale: 3,
-        backgroundColor: "#ffffff",
-        useCORS: true,
-        onclone: (doc) => {
-          // 1) Inyectar paleta segura
-          const style = doc.createElement("style");
-          style.textContent = `
-            :root{
-              --background:#ffffff;--foreground:#111827;--border:#e5e7eb;--muted:#f3f4f6;--muted-foreground:#6b7280;
-              --primary:#111827;--primary-foreground:#ffffff;--secondary:#f3f4f6;--secondary-foreground:#111827;
-              --accent:#f3f4f6;--accent-foreground:#111827;--ring:#3b82f6
-            }
-          `;
-          doc.head.appendChild(style);
+      const stripEmojis = (value) =>
+        String(value || "")
+          .replace(/[\u{1F300}-\u{1F9FF}]/gu, "")
+          .replace(/[\u{2600}-\u{26FF}]/gu, "")
+          .replace(/[\u{2700}-\u{27BF}]/gu, "")
+          .trim();
 
-          // 2) Eliminar hojas de estilo externas y embebidas con colores modernos
-          const links = Array.from(
-            doc.querySelectorAll('link[rel="stylesheet"], style'),
-          );
-          links.forEach((l) => l.parentNode && l.parentNode.removeChild(l));
+      const fmtHora = (iso) =>
+        iso
+          ? new Date(iso).toLocaleTimeString("es-MX", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : "-";
 
-          // 3) Reinyectar CSS mínimo seguro para PDF
-          const safeStyle = doc.createElement("style");
-          safeStyle.textContent = `
-            *{box-sizing:border-box}
-            @page { size: A4; margin: 0 }
-            body{font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue";font-size:10.5pt;color:#111827;background:#ffffff;margin:0;padding:0}
-            .pdf-header-grid{display:grid;grid-template-columns:2fr 1fr;gap:24px;margin:0 0 16px 0;align-items:start}
-            .pdf-card{border:none;border-radius:0;margin:14px 0;overflow:visible;background:transparent}
-            .pdf-header{background:transparent;padding:0}
-            .pdf-header h2{margin:0;font-size:13pt;font-weight:700}
-            .pdf-header .date{font-size:8.5pt;color:#6b7280;float:right}
-            .pdf-divider{height:1px;background:#d1d5db}
-            .pdf-meta{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:0;padding:0;border-left:1px solid #d1d5db;border-bottom:none;background:transparent}
-            .pdf-meta > div{border-right:1px solid #d1d5db;padding:0 12px}
-            .pdf-meta > div:last-child{border-right:none}
-            .pdf-meta > div > .label{font-size:7.5pt;color:#6b7280;text-transform:uppercase;font-weight:600;margin-bottom:4px;letter-spacing:0.5px}
-            .pdf-meta > div > .value{font-size:10pt;font-weight:700;color:#111827;line-height:1.4}
-            table{width:100%;border-collapse:collapse}
-            thead th{background:#1f2937;color:#ffffff;font-weight:700;border:1px solid #1f2937;padding:8px 10px;text-align:center;font-size:9pt}
-            tbody td{border:1px solid #e5e7eb;padding:8px 10px;font-size:9pt;line-height:1.35}
-            tbody tr:nth-child(odd){background:#fafafa}
-            .pdf-summary{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;padding:0;border:1px solid #d1d5db;border-radius:2px;background:#f3f4f6;width:100%;overflow:hidden}
-            .pdf-summary-card{border:none;border-radius:0;background:transparent;padding:0;min-width:280px;max-width:100%}
-            .pdf-summary > div{text-align:center;padding:12px 8px;border-right:1px solid #d1d5db;background:#f3f4f6}
-            .pdf-summary > div:last-child{border-right:none}
-            .pdf-summary > div > div:first-child{font-size:7pt;color:#6b7280;text-transform:uppercase;font-weight:600;margin-bottom:6px;letter-spacing:0.5px;display:block !important;visibility:visible !important;opacity:1 !important}
-            .pdf-summary > div > div:nth-child(2){font-size:16pt;font-weight:700;color:#111827;line-height:1.2;margin-bottom:0;display:block !important;visibility:visible !important;opacity:1 !important}
-            .pdf-summary > div > div:last-child{display:none}
-            .pdf-summary > div > div{display:block !important;visibility:visible !important}
-            .pdf-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-weight:600;font-size:8.5pt;border:1px solid #e5e7eb;background:#f9fafb;color:#111827}
-            .pdf-topbar{display:flex;align-items:flex-start;justify-content:space-between;padding:0 0 12px 0;margin-bottom:12px}
-            .pdf-topbar .brand{font-weight:800;font-size:20pt;color:#111827;letter-spacing:0;line-height:1}
-            .pdf-topbar .right{line-height:1.3;text-align:right}
-            .pdf-topbar .title{font-weight:600;font-size:11pt;color:#111827;margin-bottom:2px}
-            .pdf-topbar .subtitle{font-size:9pt;color:#6b7280}
-            .pdf-topbar img{display:none}
-            .pdf-topbar > div:first-child{display:block}
-            .pdf-hr{height:1px;background:#d1d5db;margin:0 0 16px 0;width:100%}
-            .pdf-meta-card{border:none;border-radius:0;background:transparent;padding:0;flex:1;min-width:0}
-            .pdf-meta-card .head{display:none}
-            .pdf-meta-card .body{padding:0}
-            .pdf-details{font-family:ui-monospace,Menlo,Consolas,monospace;color:#475569;font-size:8.5pt;white-space:pre-wrap !important;line-height:1.6}
-            .pdf-signatures{display:flex;justify-content:space-between;gap:40px;padding:24px 0;margin-top:20px;border-top:1px solid #e5e7eb}
-            .pdf-signatures .slot{display:flex;flex-direction:column;align-items:center;gap:8px;flex:1;max-width:45%}
-            .pdf-signatures .line{height:1px;background:#111827;width:100%;max-width:200px}
-            .pdf-signatures .label{font-size:8pt;color:#6b7280;text-transform:uppercase;font-weight:600;letter-spacing:0.5px}
-          `;
-          doc.head.appendChild(safeStyle);
+      // Encabezado de marca: "Adamia" en azul + título y fecha a la derecha,
+      // separados del contenido por una línea azul.
+      const drawHeader = () => {
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(20);
+        pdf.setTextColor(...ADAMIA.blue);
+        pdf.text("Adamia", marginX, marginTop);
 
-          // 4) Mapear estructura de reporte a clases PDF y forzar badges
-          const props = [
-            "color",
-            "backgroundColor",
-            "borderColor",
-            "borderTopColor",
-            "borderRightColor",
-            "borderBottomColor",
-            "borderLeftColor",
-            "outlineColor",
-            "fill",
-            "stroke",
-          ];
-          const SAFE = {
-            color: "#111827",
-            backgroundColor: "#ffffff",
-            borderColor: "#e5e7eb",
-            outlineColor: "#e5e7eb",
-            fill: "#111827",
-            stroke: "#111827",
-          };
-          const hasModern = (v) =>
-            v &&
-            (v.includes("oklch(") ||
-              v.includes("lab(") ||
-              v.startsWith("color(") ||
-              v.includes("color-mix("));
-          const win = doc.defaultView || window;
+        pdf.setFontSize(10.5);
+        pdf.setTextColor(...ADAMIA.textPrimary);
+        pdf.text("Reporte de Horas Trabajadas", pageWidth - marginX, marginTop - 7, {
+          align: "right",
+        });
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(8);
+        pdf.setTextColor(...ADAMIA.textSecondary);
+        pdf.text(`Generado el ${fechaGeneracion}`, pageWidth - marginX, marginTop + 5, {
+          align: "right",
+        });
 
-          const clonedBlocks = Array.from(
-            doc.querySelectorAll('[data-report-block="true"]'),
-          );
-          for (const block of clonedBlocks) {
-            // asegurar ancho A4 (~794px @96dpi) para texto a escala 1:1
-            block.style.width = "794px";
-            block.style.margin = "0 auto";
-            block.classList.add("pdf-card");
-            // 4.1) Tomar el topbar de PREVIEW y transformarlo a PDF (sin duplicados)
-            const previewTopbar = block.querySelector(
-              '[data-pdf-topbar="true"]',
-            );
-            if (previewTopbar) {
-              previewTopbar.className = "pdf-topbar";
-              // Asegurar que Adamia tenga el estilo correcto (grande, negrita, sin texto adicional)
-              const brandDiv = previewTopbar.querySelector("div:first-child");
-              if (brandDiv) {
-                brandDiv.className = "brand";
-                const brandText = brandDiv.querySelector("div:first-child");
-                if (brandText && brandText.textContent.includes("Adamia")) {
-                  brandText.style.fontWeight = "800";
-                  brandText.style.fontSize = "20pt";
-                  brandText.style.color = "#111827";
-                  brandText.style.lineHeight = "1";
-                  // Eliminar "Recursos Humanos" si existe
-                  const subText = brandDiv.querySelector("div:last-child");
-                  if (subText && subText.textContent.includes("Recursos")) {
-                    subText.parentNode.removeChild(subText);
-                  }
-                }
-              }
-              // Asegurar que el título y fecha tengan el estilo correcto
-              const rightDiv = previewTopbar.querySelector("div:last-child");
-              if (rightDiv) {
-                rightDiv.className = "right";
-                const titleDiv = rightDiv.querySelector("div:first-child");
-                const dateDiv = rightDiv.querySelector("div:last-child");
-                if (titleDiv) {
-                  titleDiv.style.fontWeight = "600";
-                  titleDiv.style.fontSize = "11pt";
-                  titleDiv.style.color = "#111827";
-                  titleDiv.style.marginBottom = "2px";
-                }
-                if (dateDiv) {
-                  dateDiv.style.fontSize = "9pt";
-                  dateDiv.style.color = "#6b7280";
-                }
-              }
-              // Eliminar línea separadora antigua si existe
-              const hrPreview = previewTopbar.nextElementSibling;
-              if (
-                hrPreview &&
-                (String(hrPreview.className || "").includes("bg-") ||
-                  String(hrPreview.className || "").includes("h-px"))
-              ) {
-                hrPreview.parentNode.removeChild(hrPreview);
-              }
-              // Añadir línea separadora limpia y delgada
-              const hr = doc.createElement("div");
-              hr.className = "pdf-hr";
-              previewTopbar.parentNode.insertBefore(
-                hr,
-                previewTopbar.nextSibling,
-              );
-            }
-            // 4.2) Ajustar la sección de metadatos existente y quitar el encabezado interior si existe
-            const metaAttr = block.querySelector('[data-meta-section="true"]');
-            const summaryAttr = block.querySelector(
-              '[data-summary-section="true"]',
-            );
-            if (metaAttr && summaryAttr) {
-              // Nuevo layout: grid de encabezado (meta izquierda, resumen derecha)
-              const grid = doc.createElement("div");
-              grid.className = "pdf-header-grid";
-              // meta
-              const metaCard = doc.createElement("div");
-              metaCard.className = "pdf-meta-card";
-              const body = doc.createElement("div");
-              body.className = "body";
-              metaAttr.classList.add("pdf-meta");
-              // Aplicar bordes y padding a cada columna
-              const items = metaAttr.querySelectorAll(":scope > div");
-              items.forEach((it, index) => {
-                it.style.borderRight =
-                  index < items.length - 1 ? "1px solid #d1d5db" : "none";
-                it.style.padding = "0 12px";
-                const label = it.firstElementChild;
-                const value = it.lastElementChild;
-                if (label) {
-                  label.className = "label";
-                  label.style.fontSize = "7.5pt";
-                  label.style.color = "#6b7280";
-                  label.style.textTransform = "uppercase";
-                  label.style.fontWeight = "600";
-                  label.style.marginBottom = "4px";
-                  label.style.letterSpacing = "0.5px";
-                }
-                if (value) {
-                  value.className = "value";
-                  value.style.fontSize = "10pt";
-                  value.style.fontWeight = "700";
-                  value.style.color = "#111827";
-                  value.style.lineHeight = "1.4";
-                }
-              });
-              // Aplicar borde izquierdo al contenedor
-              metaAttr.style.borderLeft = "1px solid #d1d5db";
-              metaAttr.style.padding = "0";
-              metaAttr.style.background = "transparent";
-              body.appendChild(metaAttr);
-              metaCard.appendChild(body);
-              // summary
-              const summaryCard = doc.createElement("div");
-              summaryCard.className = "pdf-summary-card";
-              summaryAttr.classList.add("pdf-summary");
-              // Asegurar que los elementos del summary tengan los estilos correctos (fondo gris claro)
-              summaryAttr.style.border = "1px solid #d1d5db";
-              summaryAttr.style.borderRadius = "2px";
-              summaryAttr.style.background = "#f3f4f6";
-              summaryAttr.style.overflow = "hidden";
-              const summaryDivs = summaryAttr.querySelectorAll(":scope > div");
-              summaryDivs.forEach((div, index) => {
-                div.style.textAlign = "center";
-                div.style.padding = "12px 8px";
-                div.style.borderRight =
-                  index < summaryDivs.length - 1 ? "1px solid #d1d5db" : "none";
-                div.style.background = "#f3f4f6";
-                // Buscar elementos por atributo data para mayor precisión
-                const label = div.querySelector('[data-summary-label="true"]');
-                const value = div.querySelector('[data-summary-value="true"]');
-                // Si no se encuentran por atributo, buscar por contenido
-                const children = Array.from(div.children);
-                const labelFallback =
-                  label ||
-                  children.find((el) => {
-                    const text = (el.textContent || "").trim();
-                    return (
-                      text === "Total Horas" ||
-                      text === "Días" ||
-                      text === "Promedio"
-                    );
-                  });
-                const valueFallback =
-                  value ||
-                  children.find((el) => {
-                    const text = (el.textContent || "").trim();
-                    return (
-                      text &&
-                      (text.match(/^\d+$/) || text.match(/^\d+:\d+$/)) &&
-                      !text.includes("Total") &&
-                      !text.includes("Días") &&
-                      !text.includes("Promedio")
-                    );
-                  });
-                if (labelFallback) {
-                  labelFallback.style.fontSize = "7pt";
-                  labelFallback.style.color = "#6b7280";
-                  labelFallback.style.textTransform = "uppercase";
-                  labelFallback.style.fontWeight = "600";
-                  labelFallback.style.marginBottom = "6px";
-                  labelFallback.style.letterSpacing = "0.5px";
-                  labelFallback.style.display = "block";
-                  labelFallback.style.visibility = "visible";
-                  labelFallback.style.opacity = "1";
-                }
-                if (valueFallback) {
-                  valueFallback.style.fontSize = "16pt";
-                  valueFallback.style.fontWeight = "700";
-                  valueFallback.style.color = "#111827";
-                  valueFallback.style.lineHeight = "1.2";
-                  valueFallback.style.marginBottom = "0";
-                  valueFallback.style.display = "block";
-                  valueFallback.style.visibility = "visible";
-                  valueFallback.style.opacity = "1";
-                  // Asegurar que el contenido de texto esté presente
-                  if (
-                    !valueFallback.textContent ||
-                    valueFallback.textContent.trim() === ""
-                  ) {
-                    // Intentar obtener el valor del atributo o del texto original
-                    const originalText =
-                      valueFallback.getAttribute("data-original-value") || "";
-                    if (originalText) {
-                      valueFallback.textContent = originalText;
-                    }
-                  }
-                }
-                // Ocultar cualquier subtítulo adicional
-                children.forEach((child) => {
-                  const text = (child.textContent || "").trim();
-                  if (
-                    text.includes("en el periodo") ||
-                    text.includes("días trabajados") ||
-                    text.includes("horas/día")
-                  ) {
-                    child.style.display = "none";
-                  }
-                });
-              });
-              summaryCard.appendChild(summaryAttr);
-              // insertar debajo de la barra superior
-              const insertAfter =
-                block.querySelector(".pdf-hr")?.nextSibling || block.firstChild;
-              block.insertBefore(grid, insertAfter);
-              grid.appendChild(metaCard);
-              grid.appendChild(summaryCard);
-            } else {
-              // Compatibilidad con estructura anterior por índices
-              const sections = block.querySelectorAll("section");
-              if (sections[0]) {
-                const metaCard = doc.createElement("div");
-                metaCard.className = "pdf-meta-card";
-                const head = doc.createElement("div");
-                head.className = "head";
-                head.textContent = "Información del Empleado";
-                const body = doc.createElement("div");
-                body.className = "body";
-                const insertAfter =
-                  block.querySelector(".pdf-hr")?.nextSibling ||
-                  block.firstChild;
-                block.insertBefore(metaCard, insertAfter);
-                sections[0].classList.add("pdf-meta");
-                body.appendChild(sections[0]);
-                metaCard.appendChild(head);
-                metaCard.appendChild(body);
-                const items = sections[0].querySelectorAll(":scope > div");
-                for (const it of items) {
-                  const label = it.firstElementChild;
-                  const value = it.lastElementChild;
-                  if (label) label.className = "label";
-                  if (value) value.className = "value";
-                }
-              }
-              // Resumen inferior eliminado: el totalizado ya está arriba
-            }
-
-            const bodyRows = block.querySelectorAll("table tbody tr");
-            for (const tr of bodyRows) {
-              const tds = tr.children;
-              if (!tds || tds.length === 0) continue;
-              if (tds.length >= 6) {
-                // Columna ESTADO (índice 4): sin color, solo texto
-                const tdEstado = tds[4];
-                const textEstado = (tdEstado.textContent || "").trim();
-                const lowEstado = textEstado.toLowerCase();
-                const shownEstado =
-                  lowEstado === "cerrado" ? "Completo" : textEstado || "";
-                tdEstado.style.textAlign = "center";
-                tdEstado.style.backgroundColor = "#f9fafb";
-                tdEstado.style.color = "#111827";
-                tdEstado.style.border = "1px solid #e5e7eb";
-                tdEstado.style.padding = "4px 8px";
-                tdEstado.style.borderRadius = "4px";
-                tdEstado.innerHTML = shownEstado;
-
-                // Columna MOTIVO (índice 5): sin color ni emojis, solo texto limpio
-                const tdMotivo = tds[5];
-                const textMotivo = (tdMotivo.textContent || "").trim();
-                // Eliminar emojis del motivo
-                const cleanMotivo = textMotivo
-                  .replace(/[\u{1F300}-\u{1F9FF}]/gu, "")
-                  .replace(/[\u{2600}-\u{26FF}]/gu, "")
-                  .replace(/[\u{2700}-\u{27BF}]/gu, "")
-                  .trim();
-                tdMotivo.style.backgroundColor = "#f9fafb";
-                tdMotivo.style.color = "#111827";
-                tdMotivo.style.border = "1px solid #e5e7eb";
-                tdMotivo.style.padding = "4px 8px";
-                tdMotivo.style.borderRadius = "4px";
-                tdMotivo.innerHTML = cleanMotivo || "—";
-              } else {
-                // Fila de detalle (colSpan), forzar salto de línea conservado
-                const t = tds[0];
-                const content = (t.textContent || "").trim();
-                const parentRow = tr;
-                // Detectar si es una fila de detalle (contiene "Entrada:" o tiene atributo data-detail-row)
-                if (
-                  content.includes("Entrada:") ||
-                  parentRow.hasAttribute("data-detail-row") ||
-                  content.startsWith("Registro") ||
-                  content.startsWith("ENTRADAS")
-                ) {
-                  t.classList.add("pdf-details");
-                  // Asegurar que los saltos de línea se preserven con estilos inline
-                  t.style.whiteSpace = "pre-wrap";
-                  t.style.lineHeight = "1.6";
-                  t.style.fontFamily =
-                    "ui-monospace, Menlo, Consolas, monospace";
-                  t.style.color = "#475569";
-                  t.style.fontSize = "8.5pt";
-                  // Si hay un div interno con el contenido, asegurar que también preserve los saltos
-                  const innerDiv = t.querySelector("div");
-                  if (innerDiv) {
-                    innerDiv.style.whiteSpace = "pre-wrap";
-                    innerDiv.style.lineHeight = "1.6";
-                    // Asegurar que los <br> se preserven
-                    const brs = innerDiv.querySelectorAll("br");
-                    brs.forEach((br) => {
-                      br.style.display = "block";
-                      br.style.content = "";
-                      br.style.marginBottom = "2px";
-                    });
-                  }
-                  // Si el contenido tiene <br> tags, asegurarse de que se rendericen correctamente
-                  if (t.innerHTML && t.innerHTML.includes("<br")) {
-                    // Los <br> ya están presentes, solo asegurar estilos
-                    t.style.whiteSpace = "normal";
-                    const allBr = t.querySelectorAll("br");
-                    allBr.forEach((br) => {
-                      br.style.display = "block";
-                      br.style.height = "1em";
-                    });
-                  }
-                }
-              }
-            }
-            // Eliminar firmas del preview si existen (para evitar duplicación)
-            const existingSignatures = Array.from(
-              block.querySelectorAll("div"),
-            ).find((el) => {
-              const text = el.textContent || "";
-              return (
-                text.includes("FIRMA DEL EMPLEADO") ||
-                text.includes("FIRMA DE AUTORIZACIÓN")
-              );
-            });
-            if (existingSignatures) {
-              // Buscar el contenedor padre que tiene las firmas
-              let signatureContainer = existingSignatures.closest(".grid");
-              if (!signatureContainer) {
-                signatureContainer = existingSignatures.parentElement;
-              }
-              if (
-                signatureContainer &&
-                signatureContainer.textContent.includes("FIRMA")
-              ) {
-                signatureContainer.parentNode?.removeChild(signatureContainer);
-              }
-            }
-            // Agregar firmas solo una vez al final del bloque
-            const signatures = doc.createElement("div");
-            signatures.className = "pdf-signatures";
-            signatures.innerHTML = `
-              <div class="slot"><div class="line"></div><div class="label">FIRMA DEL EMPLEADO</div></div>
-              <div class="slot"><div class="line"></div><div class="label">FIRMA DE AUTORIZACIÓN</div></div>
-            `;
-            block.appendChild(signatures);
-
-            // 4.3) Calcular y guardar puntos de corte seguros para este bloque
-            // en el DOM CLONADO (el mismo que usa html2canvas). Esto elimina
-            // pequeñas diferencias de altura entre el DOM original y el clonado.
-            const pdfId = block.getAttribute("data-pdf-block-id");
-            if (pdfId) {
-              const { domBreaks, totalHeight } = computeSafeBreaks(block);
-              if (domBreaks && domBreaks.length > 1) {
-                safeBreakMap[pdfId] = { domBreaks, totalHeight };
-              }
-            }
-          }
-
-          // 5) Reemplazar colores modernos en estilos computados
-          for (const el of Array.from(doc.body.querySelectorAll("*"))) {
-            try {
-              const cs = win.getComputedStyle(el);
-              for (const p of props) {
-                const v = cs[p];
-                if (hasModern(v)) {
-                  const fallback = SAFE[p] || "#111827";
-                  el.style[p] = fallback;
-                }
-              }
-              for (const attr of ["fill", "stroke", "color"]) {
-                const av = el.getAttribute && el.getAttribute(attr);
-                if (hasModern(av)) {
-                  el.setAttribute(attr, SAFE[attr] || "#111827");
-                }
-              }
-            } catch (_) {}
-          }
-          doc.body.style.backgroundColor = "#ffffff";
-        },
+        pdf.setDrawColor(...ADAMIA.blue);
+        pdf.setLineWidth(1.5);
+        pdf.line(marginX, marginTop + 14, pageWidth - marginX, marginTop + 14);
+        return marginTop + 34;
       };
 
-      let isFirst = true;
-      const iterableBlocks = blocks.length ? blocks : [reportRef.current];
-      for (const el of iterableBlocks) {
-        // Renderizamos el bloque a canvas; `onclone` ya calculó los cortes seguros
-        // y los dejó guardados en `safeBreakMap` para el id correspondiente.
-        const canvas = await html2canvas(el, captureOptions);
+      // Panel de información del empleado (2 x 2) sobre fondo gris claro.
+      const drawMeta = (r, y) => {
+        const boxH = 66;
+        pdf.setFillColor(...ADAMIA.bgLight);
+        pdf.setDrawColor(...ADAMIA.border);
+        pdf.setLineWidth(0.75);
+        pdf.roundedRect(marginX, y, contentW, boxH, 4, 4, "FD");
 
-        const canvasHeight = canvas.height;
-        const sliceHeight = (canvas.width * usablePageHeight) / imgWidth;
+        const col1 = marginX + 14;
+        const col2 = marginX + contentW / 2 + 6;
+        const halfW = contentW / 2 - 28;
+        const drawLabel = (t, x, yy) => {
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(6.5);
+          pdf.setTextColor(...ADAMIA.muted);
+          pdf.text(String(t).toUpperCase(), x, yy, { charSpace: 0.5 });
+        };
+        const drawValue = (t, x, yy) => {
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(9.5);
+          pdf.setTextColor(...ADAMIA.textPrimary);
+          const lines = pdf.splitTextToSize(String(t || "—"), halfW);
+          pdf.text(lines[0] || "—", x, yy);
+        };
 
-        const pdfId = el.getAttribute("data-pdf-block-id") || "";
-        const info = pdfId ? safeBreakMap[pdfId] : null;
+        drawLabel("Empleado", col1, y + 16);
+        drawValue(r.empleado?.nombre_empleado, col1, y + 28);
+        drawLabel("Empresa", col2, y + 16);
+        drawValue(r.empleado?.nombre_empresa, col2, y + 28);
+        drawLabel("Periodo", col1, y + 44);
+        drawValue(
+          `${humanDate(r.periodo.inicio)} al ${humanDate(r.periodo.fin)}`,
+          col1,
+          y + 56,
+        );
+        drawLabel("Días laborados", col2, y + 44);
+        drawValue(String(r.resumen?.diasTrabajados ?? 0), col2, y + 56);
+        return y + boxH + 12;
+      };
 
-        // Si por cualquier motivo no tenemos puntos de corte calculados,
-        // hacemos un fallback al comportamiento clásico de cortes uniformes.
-        if (!info || !info.domBreaks || info.domBreaks.length < 2) {
-          let position = 0;
-          while (position < canvasHeight) {
-            const currentHeight = Math.min(
-              sliceHeight,
-              canvasHeight - position,
-            );
-            const slice = document.createElement("canvas");
-            slice.width = canvas.width;
-            slice.height = currentHeight;
-            const ctx = slice.getContext("2d");
-            if (!ctx) break;
+      // Tarjetas de resumen: valor destacado en azul Adamia.
+      const drawSummary = (r, y) => {
+        const gap = 8;
+        const boxW = (contentW - gap * 3) / 4;
+        const boxH = 54;
+        const items = [
+          {
+            label: "Total Horas",
+            value: r.resumen?.totalHoras || "0:00",
+            sub: "en el periodo",
+          },
+          {
+            label: "Días Trabajados",
+            value: String(r.resumen?.diasTrabajados ?? 0),
+            sub: "días únicos",
+          },
+          {
+            label: "Promedio Diario",
+            value: r.resumen?.promedioHoras || "0:00",
+            sub: "horas / día",
+          },
+          {
+            label: "Horas Extra",
+            value: r.resumen?.horasExtrasLaboradas || "0:00",
+            sub: "autorizadas",
+          },
+        ];
+        items.forEach((it, i) => {
+          const x = marginX + i * (boxW + gap);
+          pdf.setFillColor(...ADAMIA.bgLight);
+          pdf.setDrawColor(...ADAMIA.border);
+          pdf.setLineWidth(0.75);
+          pdf.roundedRect(x, y, boxW, boxH, 4, 4, "FD");
+          const cx = x + boxW / 2;
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(6.5);
+          pdf.setTextColor(...ADAMIA.muted);
+          pdf.text(it.label.toUpperCase(), cx, y + 14, {
+            align: "center",
+            charSpace: 0.5,
+          });
+          pdf.setFontSize(15);
+          pdf.setTextColor(...ADAMIA.blue);
+          pdf.text(String(it.value), cx, y + 32, { align: "center" });
+          pdf.setFont("helvetica", "normal");
+          pdf.setFontSize(6.5);
+          pdf.setTextColor(...ADAMIA.textSecondary);
+          pdf.text(it.sub, cx, y + 44, { align: "center" });
+        });
+        return y + boxH + 16;
+      };
 
-            ctx.drawImage(
-              canvas,
-              0,
-              position,
-              canvas.width,
-              currentHeight,
-              0,
-              0,
-              canvas.width,
-              currentHeight,
-            );
+      // Filas de la tabla: una por día, más una fila de detalle cuando el día
+      // tiene múltiples movimientos (misma consolidación que la vista previa).
+      const buildRows = (r) => {
+        const rows = [];
+        r.dias.forEach((d) => {
+          let primeraEntrada = d.entrada;
+          let ultimaSalida = d.salida;
+          let totalHorasTrabajadas = d.horasHM;
 
-            const part = slice.toDataURL("image/png");
-            if (!isFirst) pdf.addPage();
-            pdf.addImage(
-              part,
-              "PNG",
-              marginLeft,
-              marginTop,
-              imgWidth,
-              (currentHeight * imgWidth) / canvas.width,
-            );
+          if (Array.isArray(d.movimientos) && d.movimientos.length > 0) {
+            const entradasValidas = d.movimientos
+              .map((m) => m.entrada)
+              .filter(Boolean)
+              .map((e) => new Date(e))
+              .sort((a, b) => a - b);
+            if (entradasValidas.length > 0) {
+              primeraEntrada = entradasValidas[0].toISOString();
+            }
 
-            isFirst = false;
-            position += currentHeight;
+            const salidasValidas = d.movimientos
+              .map((m) => m.salida)
+              .filter(Boolean)
+              .map((s) => new Date(s))
+              .sort((a, b) => b - a);
+            if (salidasValidas.length > 0) {
+              ultimaSalida = salidasValidas[0].toISOString();
+            }
+
+            const totalMinutos = d.movimientos.reduce((acc, m) => {
+              if (m.horasHM) {
+                const [horas, minutos] = m.horasHM.split(":").map(Number);
+                return acc + horas * 60 + minutos;
+              }
+              return acc;
+            }, 0);
+            const horas = Math.floor(totalMinutos / 60);
+            const minutos = totalMinutos % 60;
+            totalHorasTrabajadas = `${horas}:${String(minutos).padStart(2, "0")}`;
           }
-          continue;
+
+          const estadoRaw = String(d.estado || "").trim();
+          const estado =
+            estadoRaw.toLowerCase() === "cerrado" ? "Completo" : estadoRaw || "—";
+
+          rows.push([
+            humanDate(d.fecha),
+            fmtHora(primeraEntrada),
+            fmtHora(ultimaSalida),
+            totalHorasTrabajadas || "0:00",
+            estado,
+            stripEmojis(d.motivo) || "—",
+            String(d.notas || "—"),
+          ]);
+
+          if (Array.isArray(d.movimientos) && d.movimientos.length > 1) {
+            const detalle = d.movimientos
+              .filter((m) => m.entrada && m.salida)
+              .map(
+                (m) =>
+                  `Entrada: ${fmtHora(m.entrada)}   Salida: ${fmtHora(
+                    m.salida,
+                  )}   Horas: ${m.horasHM || "0:00"}`,
+              )
+              .join("\n");
+            if (detalle) {
+              rows.push([
+                {
+                  content: detalle,
+                  colSpan: 7,
+                  styles: {
+                    font: "courier",
+                    fontSize: 7.5,
+                    textColor: ADAMIA.textSecondary,
+                    fillColor: [255, 255, 255],
+                    cellPadding: { top: 4, bottom: 4, left: 14, right: 6 },
+                  },
+                },
+              ]);
+            }
+          }
+        });
+        return rows;
+      };
+
+      const drawSignatures = (y) => {
+        const slotW = contentW / 2;
+        const lineW = 170;
+        const centers = [marginX + slotW / 2, marginX + slotW + slotW / 2];
+        const labels = ["FIRMA DEL EMPLEADO", "FIRMA DE AUTORIZACIÓN"];
+        pdf.setDrawColor(...ADAMIA.textPrimary);
+        pdf.setLineWidth(0.8);
+        centers.forEach((cx, i) => {
+          pdf.line(cx - lineW / 2, y, cx + lineW / 2, y);
+          pdf.setFont("helvetica", "bold");
+          pdf.setFontSize(7);
+          pdf.setTextColor(...ADAMIA.muted);
+          pdf.text(labels[i], cx, y + 12, { align: "center", charSpace: 0.5 });
+        });
+      };
+
+      reportes.forEach((r, idx) => {
+        if (idx > 0) pdf.addPage();
+        let y = drawHeader();
+        y = drawMeta(r, y);
+        y = drawSummary(r, y);
+
+        autoTable(pdf, {
+          startY: y,
+          margin: {
+            left: marginX,
+            right: marginX,
+            top: marginTop,
+            bottom: footerReserved + 8,
+          },
+          head: [["Fecha", "Entrada", "Salida", "Horas", "Estado", "Motivo", "Notas"]],
+          body: buildRows(r),
+          theme: "grid",
+          styles: {
+            font: "helvetica",
+            fontSize: 8,
+            textColor: ADAMIA.textPrimary,
+            lineColor: ADAMIA.border,
+            lineWidth: 0.5,
+            cellPadding: { top: 5, bottom: 5, left: 6, right: 6 },
+            valign: "middle",
+          },
+          headStyles: {
+            fillColor: ADAMIA.blue,
+            textColor: 255,
+            fontStyle: "bold",
+            halign: "center",
+            fontSize: 8,
+          },
+          alternateRowStyles: { fillColor: ADAMIA.bgLight },
+          columnStyles: {
+            0: { cellWidth: 64 },
+            1: { cellWidth: 48, halign: "center" },
+            2: { cellWidth: 48, halign: "center" },
+            3: { cellWidth: 44, halign: "center" },
+            4: { cellWidth: 58, halign: "center" },
+            5: { cellWidth: 88 },
+          },
+        });
+
+        let afterY = pdf.lastAutoTable?.finalY || y;
+        // Firmas al final del reporte del empleado; si no caben, pasan a otra página.
+        if (afterY + 88 > contentBottom) {
+          pdf.addPage();
+          afterY = marginTop;
         }
+        drawSignatures(afterY + 52);
+      });
 
-        const { domBreaks, totalHeight } = info;
-        const scaleY = canvasHeight / (totalHeight || 1);
-        const safeBreaks = domBreaks.map((v) => Math.round(v * scaleY));
-
-        let pageTop = 0;
-        let breakIndex = 1; // domBreaks[0] === 0 representa el inicio
-
-        // Rebanamos el canvas respetando los puntos seguros de corte
-        while (pageTop < canvasHeight) {
-          const maxBottom = pageTop + sliceHeight;
-          let pageBottom = canvasHeight;
-
-          // Elegimos el último punto seguro que entre en la página actual
-          while (
-            breakIndex < safeBreaks.length &&
-            safeBreaks[breakIndex] <= maxBottom
-          ) {
-            pageBottom = safeBreaks[breakIndex];
-            breakIndex++;
-          }
-
-          // Si por alguna razón no hay punto seguro, cortamos en el límite de página
-          if (pageBottom <= pageTop) {
-            pageBottom = Math.min(maxBottom, canvasHeight);
-            if (pageBottom <= pageTop) break;
-          }
-
-          const currentHeight = pageBottom - pageTop;
-          const slice = document.createElement("canvas");
-          slice.width = canvas.width;
-          slice.height = currentHeight;
-          const ctx = slice.getContext("2d");
-          if (!ctx) break;
-
-          ctx.drawImage(
-            canvas,
-            0,
-            pageTop,
-            canvas.width,
-            currentHeight,
-            0,
-            0,
-            canvas.width,
-            currentHeight,
-          );
-
-          const part = slice.toDataURL("image/png");
-          if (!isFirst) pdf.addPage();
-          pdf.addImage(
-            part,
-            "PNG",
-            marginLeft,
-            marginTop,
-            imgWidth,
-            (currentHeight * imgWidth) / canvas.width,
-          );
-
-          isFirst = false;
-          pageTop = pageBottom;
-        }
-      }
-
-      // Pie de página: numeración de páginas con un diseño limpio.
-      // Se dibuja una línea sutil y el texto:
-      // "Adamia · Reporte de Horas" a la izquierda y "Página X de N" a la derecha.
+      // Pie de página en todas las hojas: línea sutil, marca y numeración.
       const totalPages = pdf.getNumberOfPages();
-      if (totalPages > 0) {
-        // Área reservada para el pie de página; respetando el margen inferior de 2.5cm
-        const footerAreaTop = pageHeight - marginBottom - footerReserved;
-
-        pdf.setFont("helvetica", "normal");
-        pdf.setFontSize(9);
-        pdf.setTextColor(107, 114, 128); // gris medio
-        pdf.setDrawColor(209, 213, 219); // gris claro para la línea
+      for (let page = 1; page <= totalPages; page++) {
+        pdf.setPage(page);
+        const lineY = pageHeight - footerReserved + 6;
+        const textY = lineY + 14;
+        pdf.setDrawColor(...ADAMIA.border);
         pdf.setLineWidth(0.5);
-
-        for (let page = 1; page <= totalPages; page++) {
-          pdf.setPage(page);
-          const lineY = footerAreaTop + 8; // un poco por encima del texto
-          const textY = footerAreaTop + 22; // centrado verticalmente en el área reservada
-
-          // Línea horizontal de separación (respetando márgenes izquierdo y derecho)
-          pdf.line(marginLeft, lineY, pageWidth - marginRight, lineY);
-
-          // Texto izquierdo (respetando margen izquierdo)
-          const leftText = "Adamia · Reporte de Horas";
-          pdf.text(leftText, marginLeft, textY);
-
-          // Texto derecho con numeración X de N (respetando margen derecho)
-          const rightText = `Página ${page} de ${totalPages}`;
-          const textWidth = pdf.getTextWidth(rightText);
-          pdf.text(rightText, pageWidth - marginRight - textWidth, textY);
-        }
+        pdf.line(marginX, lineY, pageWidth - marginX, lineY);
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(8);
+        pdf.setTextColor(...ADAMIA.muted);
+        pdf.text("Adamia · Reporte de Horas", marginX, textY);
+        pdf.text(`Página ${page} de ${totalPages}`, pageWidth - marginX, textY, {
+          align: "right",
+        });
       }
+
       const r0 = reportes[0];
       let filename = "reporte_horas_multiples.pdf";
       if (reportes.length === 1) {
