@@ -830,12 +830,12 @@ export default function ReporteHorasPage() {
           },
           alternateRowStyles: { fillColor: ADAMIA.bgLight },
           columnStyles: {
-            0: { cellWidth: 64 },
-            1: { cellWidth: 48, halign: "center" },
-            2: { cellWidth: 48, halign: "center" },
-            3: { cellWidth: 44, halign: "center" },
-            4: { cellWidth: 58, halign: "center" },
-            5: { cellWidth: 88 },
+            0: { cellWidth: 62 },
+            1: { cellWidth: 62, halign: "center" },
+            2: { cellWidth: 62, halign: "center" },
+            3: { cellWidth: 40, halign: "center" },
+            4: { cellWidth: 56, halign: "center" },
+            5: { cellWidth: 80 },
           },
         });
 
