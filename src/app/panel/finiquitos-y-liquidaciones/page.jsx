@@ -47,6 +47,7 @@ import AccesosRapidos from "@/components/AccesosRapidos";
 import useSWR from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { fetchImageAsDataUrl } from "@/lib/pdfCompanyLogo";
+import { ADAMIA, gradientLine, applyAdamiaFont } from "@/lib/pdfAdamiaTheme";
 import HeaderMultiFilter from "../registro-asistencia/HeaderMultiFilter";
 import ActiveFilterChips from "../registro-asistencia/ActiveFilterChips";
 import { Combobox } from "@/components/Combobox";
@@ -590,7 +591,7 @@ export default function PageFiniquitosLiquidaciones() {
    *   - Botón "📄 Generar PDF" en el formulario de cálculo.
    *   - Mantiene el PDF anterior como referencia (no se elimina).
    */
-  const buildPdfFormatoNuevo = () => {
+  const buildPdfFormatoNuevo = async () => {
     if (!idEmpresaCalculo) {
       setAlertMsg("Selecciona una empresa para el cálculo");
       return null;
@@ -599,12 +600,13 @@ export default function PageFiniquitosLiquidaciones() {
     if (!resultado) return null;
 
     const doc = new jsPDF("p", "mm", "a4");
+    // Tipografía corporativa Adamia (Poppins con fallback Helvetica).
+    const FONT = await applyAdamiaFont(doc);
     const pageWidth = 210;
     const pageHeight = 297;
     const marginLeft = 20;
     const marginRight = 20;
     const contentWidth = pageWidth - marginLeft - marginRight;
-    const systemLabel = "ADAMIA HR360";
     let y = marginLeft;
 
     const safe = (value) =>
@@ -620,30 +622,32 @@ export default function PageFiniquitosLiquidaciones() {
         y = marginLeft;
       }
     };
-    const hRule = (yPos, width = contentWidth, lineWidth = 0.3) => {
-      doc.setDrawColor(0);
+    const hRule = (yPos, width = contentWidth, lineWidth = 0.2) => {
+      doc.setDrawColor(...ADAMIA.hairline);
       doc.setLineWidth(lineWidth);
       doc.line(marginLeft, yPos, marginLeft + width, yPos);
     };
     const sectionTitle = (text) => {
       needSpace(12);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(8);
-      doc.setTextColor(0);
-      doc.text(String(text || "").toUpperCase(), marginLeft, y + 5);
-      hRule(y + 7, contentWidth, 0.5);
+      doc.setFont(FONT, "bold");
+      doc.setFontSize(8.5);
+      doc.setTextColor(...ADAMIA.muted);
+      doc.text(String(text || "").toUpperCase(), marginLeft, y + 5, {
+        charSpace: 0.5,
+      });
+      hRule(y + 7, contentWidth, 0.2);
       y += 12;
     };
     const fieldPair = (label, value, x, yPos, width = contentWidth / 2 - 4) => {
-      doc.setFont("helvetica", "normal");
+      doc.setFont(FONT, "normal");
       doc.setFontSize(7.5);
-      doc.setTextColor(140);
+      doc.setTextColor(...ADAMIA.muted);
       doc.text(String(label || "").toUpperCase(), x, yPos);
-      doc.setFont("helvetica", "normal");
+      doc.setFont(FONT, "normal");
       doc.setFontSize(10);
-      doc.setTextColor(0);
+      doc.setTextColor(...ADAMIA.text);
       doc.text(safe(value), x, yPos + 5);
-      doc.setDrawColor(200);
+      doc.setDrawColor(...ADAMIA.hairline);
       doc.setLineWidth(0.2);
       doc.line(x, yPos + 7, x + width, yPos + 7);
     };
@@ -659,9 +663,9 @@ export default function PageFiniquitosLiquidaciones() {
         .replace(/\u00A0/g, " ");
       const safeLines = [];
       const paragraphs = sourceText.split("\n");
-      doc.setFont("helvetica", "normal");
+      doc.setFont(FONT, "normal");
       doc.setFontSize(10);
-      doc.setTextColor(textValue ? 0 : 160);
+      doc.setTextColor(...(textValue ? ADAMIA.text : ADAMIA.muted));
       for (const paragraph of paragraphs) {
         const cleanedParagraph = paragraph.trim();
         if (!cleanedParagraph) {
@@ -684,17 +688,17 @@ export default function PageFiniquitosLiquidaciones() {
     };
     const drawAmountRows = (title, rows) => {
       sectionTitle(title);
-      doc.setFont("helvetica", "normal");
+      doc.setFont(FONT, "normal");
       doc.setFontSize(10);
       rows.forEach(([label, amount]) => {
         needSpace(8);
-        doc.setTextColor(70);
+        doc.setTextColor(...ADAMIA.text2);
         doc.text(safe(label), marginLeft, y);
-        doc.setTextColor(0);
-        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...ADAMIA.text);
+        doc.setFont(FONT, "bold");
         doc.text(safe(amount), pageWidth - marginRight, y, { align: "right" });
-        doc.setFont("helvetica", "normal");
-        doc.setDrawColor(220);
+        doc.setFont(FONT, "normal");
+        doc.setDrawColor(...ADAMIA.hairline);
         doc.setLineWidth(0.2);
         doc.line(marginLeft, y + 2, pageWidth - marginRight, y + 2);
         y += 7;
@@ -718,58 +722,55 @@ export default function PageFiniquitosLiquidaciones() {
         doc.addImage(logoDataUrl, "PNG", marginLeft, y, 28, 10);
       } catch {}
     }
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
-    doc.setTextColor(150);
-    doc.text("HUMAN RESOURCES CLOUD PLATFORM", marginLeft, y + 13);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(20);
-    doc.setTextColor(0);
-    doc.text(tipoDocumento, pageWidth - marginRight, y + 7, { align: "right" });
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(100);
-    doc.text(`Folio #${folio}`, pageWidth - marginRight, y + 13, { align: "right" });
+    doc.setFont(FONT, "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(...ADAMIA.text);
+    doc.text(tipoDocumento, pageWidth - marginRight, y + 6, { align: "right" });
+    doc.setFont(FONT, "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...ADAMIA.muted);
+    doc.text(`Folio #${folio}`, pageWidth - marginRight, y + 11, {
+      align: "right",
+    });
+    doc.text(dayjs().format("DD/MM/YYYY"), pageWidth - marginRight, y + 15.5, {
+      align: "right",
+    });
 
     y += 20;
-    hRule(y, contentWidth, 0.8);
+    gradientLine(doc, marginLeft, pageWidth - marginRight, y, 0.55);
     y += 6;
 
     const boxWidth = 24;
     const boxGap = 8;
     const metaWidth = contentWidth - boxWidth - boxGap;
     const col = metaWidth / 3;
-    doc.setFont("helvetica", "normal");
+    doc.setFont(FONT, "normal");
     doc.setFontSize(7.5);
-    doc.setTextColor(140);
+    doc.setTextColor(...ADAMIA.muted);
     doc.text("TIPO", marginLeft, y + 3);
     doc.text("EMPLEADO", marginLeft + col, y + 3);
     doc.text("FECHA BAJA", marginLeft + col * 2, y + 3);
-    doc.setFont("helvetica", "bold");
+    doc.setFont(FONT, "bold");
     doc.setFontSize(10);
-    doc.setTextColor(0);
+    doc.setTextColor(...ADAMIA.text);
     doc.text(tipoDocumento, marginLeft, y + 9);
     doc.text(empleadoName, marginLeft + col, y + 9, { maxWidth: col - 6 });
     doc.text(fechaBaja, marginLeft + col * 2, y + 9, { maxWidth: col - 6 });
 
-    const boxX = marginLeft + metaWidth + boxGap;
-    const boxY = y - 1;
-    doc.setDrawColor(0);
-    doc.setLineWidth(0.5);
-    doc.rect(boxX, boxY, boxWidth, 18, "S");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.text(totalPagar.replace("$", ""), boxX + boxWidth / 2, boxY + 9, {
-      align: "center",
-      maxWidth: boxWidth - 2,
+    doc.setFont(FONT, "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...ADAMIA.muted);
+    doc.text("TOTAL", pageWidth - marginRight, y + 3, {
+      align: "right",
+      charSpace: 0.5,
     });
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
-    doc.setTextColor(120);
-    doc.text("TOTAL", boxX + boxWidth / 2, boxY + 15, { align: "center" });
+    doc.setFont(FONT, "bold");
+    doc.setFontSize(12);
+    doc.setTextColor(...ADAMIA.blue);
+    doc.text(totalPagar, pageWidth - marginRight, y + 9, { align: "right" });
 
     y += 18;
-    hRule(y, contentWidth, 0.3);
+    hRule(y, contentWidth, 0.2);
     y += 8;
 
     sectionTitle("Datos del empleado");
@@ -835,56 +836,69 @@ export default function PageFiniquitosLiquidaciones() {
       doc.setPage(p);
       if (p === totalPages) {
         const yFirmas = pageHeight - 50;
-        doc.setDrawColor(0);
-        doc.setLineWidth(0.4);
+        doc.setDrawColor(...ADAMIA.text2);
+        doc.setLineWidth(0.3);
         doc.line(marginLeft + 5, yFirmas, marginLeft + 75, yFirmas);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(8);
-        doc.setTextColor(0);
+        doc.setFont(FONT, "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(...ADAMIA.muted);
         doc.text("FIRMA DEL TRABAJADOR", marginLeft + 40, yFirmas + 5, {
           align: "center",
+          charSpace: 0.5,
         });
-        doc.setFont("helvetica", "normal");
+        doc.setFont(FONT, "normal");
         doc.setFontSize(7.5);
-        doc.setTextColor(100);
+        doc.setTextColor(...ADAMIA.text2);
         doc.text(empleadoName.slice(0, 40), marginLeft + 40, yFirmas + 10, {
           align: "center",
         });
 
+        doc.setDrawColor(...ADAMIA.text2);
+        doc.setLineWidth(0.3);
         doc.line(
           pageWidth - marginRight - 75,
           yFirmas,
           pageWidth - marginRight - 5,
           yFirmas,
         );
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(8);
-        doc.setTextColor(0);
+        doc.setFont(FONT, "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(...ADAMIA.muted);
         doc.text(
           "REPRESENTANTE DE LA EMPRESA",
           pageWidth - marginRight - 40,
           yFirmas + 5,
-          { align: "center" },
+          { align: "center", charSpace: 0.5 },
         );
-        doc.setFont("helvetica", "normal");
+        doc.setFont(FONT, "normal");
         doc.setFontSize(7.5);
-        doc.setTextColor(100);
+        doc.setTextColor(...ADAMIA.text2);
         doc.text(companyName.slice(0, 40), pageWidth - marginRight - 40, yFirmas + 10, {
           align: "center",
         });
       }
-      doc.setDrawColor(180);
-      doc.setLineWidth(0.2);
-      doc.line(marginLeft, pageHeight - 14, pageWidth - marginRight, pageHeight - 14);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(7);
-      doc.setTextColor(160);
+      const lineY = pageHeight - 14;
+      const footerTextY = pageHeight - 9;
+      gradientLine(doc, marginLeft, pageWidth - marginRight, lineY, 0.35);
+      doc.setFont(FONT, "bold");
+      doc.setFontSize(7.5);
+      doc.setTextColor(...ADAMIA.blue);
+      doc.text("Adamia", marginLeft, footerTextY);
+      const brandW = doc.getTextWidth("Adamia");
+      doc.setFont(FONT, "normal");
+      doc.setTextColor(...ADAMIA.muted);
+      doc.text(" · Finiquitos y Liquidaciones", marginLeft + brandW, footerTextY);
+      doc.setFontSize(6.5);
       doc.text(
-        `Generado el ${fechaGenerado} a las ${horaGenerado} · ${systemLabel} · Folio #${folio} · Página ${p} de ${totalPages}`,
-        pageWidth / 2,
-        pageHeight - 9,
+        `Generado el ${fechaGenerado} a las ${horaGenerado} · Folio #${folio}`,
+        pageWidth / 2 + 12,
+        footerTextY,
         { align: "center" },
       );
+      doc.setFontSize(7.5);
+      doc.text(`Página ${p} de ${totalPages}`, pageWidth - marginRight, footerTextY, {
+        align: "right",
+      });
     }
 
     const nombreArchivo = `${
@@ -896,8 +910,8 @@ export default function PageFiniquitosLiquidaciones() {
     return { doc, nombreArchivo };
   };
 
-  const generarPDFFormatoNuevo = () => {
-    const built = buildPdfFormatoNuevo();
+  const generarPDFFormatoNuevo = async () => {
+    const built = await buildPdfFormatoNuevo();
     if (!built) return;
     built.doc.save(built.nombreArchivo);
   };
@@ -1745,7 +1759,7 @@ export default function PageFiniquitosLiquidaciones() {
                           setIsPreparingPrintCalc(true);
                           try {
                             await new Promise((resolve) => setTimeout(resolve, 0));
-                            const built = buildPdfFormatoNuevo();
+                            const built = await buildPdfFormatoNuevo();
                             if (!built) return;
                             await imprimirPDF(built.doc, built.nombreArchivo);
                           } finally {
