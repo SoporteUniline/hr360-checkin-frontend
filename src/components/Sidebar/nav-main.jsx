@@ -3,6 +3,7 @@
 import {
   SidebarGroup,
   SidebarGroupContent,
+  SidebarInput,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -43,8 +44,9 @@ import {
   SlidersHorizontal,
   ReceiptText,
 } from "lucide-react";
+import { ChevronDown, Search } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const dashboardItems = [
   {
@@ -349,13 +351,61 @@ const menuGroups = [
   },
 ];
 
+// Normaliza para el buscador: minúsculas y sin acentos ("Días" -> "dias")
+const normalizar = (s) =>
+  String(s || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+
+const GRUPOS_ABIERTOS_KEY = "sidebar-grupos-abiertos";
+
 export function NavMain() {
   const router = useRouter();
   const path = usePathname();
   const { dataUser } = useAuth();
   const [open, setOpen] = useState();
+  const [busqueda, setBusqueda] = useState("");
+  // Colapso por módulo: todos abiertos por defecto; se recuerda en localStorage.
+  const [gruposAbiertos, setGruposAbiertos] = useState({});
   const effectiveRole =
     dataUser?.tipo_usuario === "User" ? "Recruiter" : dataUser?.tipo_usuario;
+
+  useEffect(() => {
+    try {
+      const guardado = window.localStorage.getItem(GRUPOS_ABIERTOS_KEY);
+      if (guardado) setGruposAbiertos(JSON.parse(guardado));
+    } catch {
+      // si falla la lectura se quedan todos abiertos
+    }
+  }, []);
+
+  const toggleGrupo = (nombre) => {
+    setGruposAbiertos((prev) => {
+      const next = { ...prev, [nombre]: prev[nombre] === false ? true : false };
+      try {
+        window.localStorage.setItem(GRUPOS_ABIERTOS_KEY, JSON.stringify(next));
+      } catch {
+        // sin persistencia si localStorage no está disponible
+      }
+      return next;
+    });
+  };
+
+  const q = normalizar(busqueda.trim());
+  const buscando = q.length > 0;
+
+  // Un item coincide si su título (o el del grupo) contiene la búsqueda;
+  // en items con submenú también cuentan los títulos de los hijos.
+  const filtrarItems = (items, grupoCoincide) =>
+    items.filter((item) => {
+      if (!buscando || grupoCoincide) return true;
+      if (normalizar(item.title).includes(q)) return true;
+      if (item.children) {
+        return item.children.some((c) => normalizar(c.title).includes(q));
+      }
+      return false;
+    });
 
   const handleClick = (href) => {
     router.push(href);
@@ -372,9 +422,19 @@ export function NavMain() {
   return (
     <SidebarGroup>
       <SidebarGroupContent className="flex flex-col gap-2">
+        <div className="relative px-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+          <SidebarInput
+            placeholder="Buscar en el menú..."
+            className="pl-8"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+          />
+        </div>
         <SidebarMenu>
           {dashboardItems.map((item) => {
             if (item.rol && item.rol !== effectiveRole) return null;
+            if (buscando && !normalizar(item.title).includes(q)) return null;
 
             return (
               <SidebarMenuItem key={item.title}>
@@ -396,71 +456,103 @@ export function NavMain() {
 
           {effectiveRole !== "Admin" &&
             menuGroups.map((group) => {
-              const itemsVisibles = group.items.filter(
-                (item) => !item.rol || item.rol === effectiveRole,
+              const grupoCoincide = buscando
+                ? normalizar(group.group).includes(q)
+                : false;
+              const itemsVisibles = filtrarItems(
+                group.items.filter(
+                  (item) => !item.rol || item.rol === effectiveRole,
+                ),
+                grupoCoincide,
               );
               if (itemsVisibles.length === 0) return null;
 
+              // Al buscar siempre se muestra expandido; si no, manda el usuario.
+              const abierto = buscando
+                ? true
+                : gruposAbiertos[group.group] !== false;
+
               return (
                 <div key={group.group} className="mt-3">
-                  <p className=" px-1 text-md font-bold mb-2 text-gray-700">
-                    {group.group}
-                  </p>
+                  <button
+                    type="button"
+                    onClick={() => toggleGrupo(group.group)}
+                    className="w-full px-1 text-md font-bold mb-2 text-gray-700 cursor-pointer flex items-center justify-between hover:text-gray-900"
+                    aria-expanded={abierto}
+                  >
+                    <span>{group.group}</span>
+                    <ChevronDown
+                      size={16}
+                      className={`shrink-0 text-gray-400 transition-transform ${
+                        abierto ? "" : "-rotate-90"
+                      }`}
+                    />
+                  </button>
 
-                  {group.items.map((item) => {
-                    if (item.rol && item.rol !== effectiveRole) return null;
+                  {abierto &&
+                    itemsVisibles.map((item) => {
+                      return (
+                        <SidebarMenuItem key={item.title}>
+                          <SidebarMenuButton
+                            tooltip={item.title}
+                            onClick={() => {
+                              if (item.children) {
+                                setOpen(
+                                  open === item.title ? null : item.title,
+                                );
+                              } else {
+                                handleClick(item.url);
+                              }
+                            }}
+                            className={`${
+                              path === item.url
+                                ? "bg-slate-300 text-slate-900"
+                                : ""
+                            } cursor-pointer flex justify-between`}
+                          >
+                            <div className="flex items-center gap-2">
+                              {item.icon && <item.icon size={16} />}
+                              <span>{item.title}</span>
+                            </div>
 
-                    return (
-                      <SidebarMenuItem key={item.title}>
-                        <SidebarMenuButton
-                          tooltip={item.title}
-                          onClick={() => {
-                            if (item.children) {
-                              setOpen(open === item.title ? null : item.title);
-                            } else {
-                              handleClick(item.url);
-                            }
-                          }}
-                          className={`${
-                            path === item.url
-                              ? "bg-slate-300 text-slate-900"
-                              : ""
-                          } cursor-pointer flex justify-between`}
-                        >
-                          <div className="flex items-center gap-2">
-                            {item.icon && <item.icon size={16} />}
-                            <span>{item.title}</span>
-                          </div>
+                            {item.children && (
+                              <span className="text-xs">
+                                {open === item.title ? "▲" : "▼"}
+                              </span>
+                            )}
+                          </SidebarMenuButton>
 
-                          {item.children && (
-                            <span className="text-xs">
-                              {open === item.title ? "▲" : "▼"}
-                            </span>
-                          )}
-                        </SidebarMenuButton>
-
-                        {item.children && open === item.title && (
-                          <div className="ml-6 mt-1 flex flex-col gap-1">
-                            {item.children.map((child) => (
-                              <SidebarMenuButton
-                                key={child.title}
-                                tooltip={child.title}
-                                onClick={() => handleClick(child.url)}
-                                className={`${
-                                  path === child.url
-                                    ? "bg-slate-200 text-slate-900"
-                                    : ""
-                                } cursor-pointer flex items-center gap-2 text-sm`}
-                              >
-                                {child.icon && <child.icon size={16} />}
-                                <span>{child.title}</span>
-                              </SidebarMenuButton>
-                            ))}
-                          </div>
-                        )}
-                      </SidebarMenuItem>
-                    );
-                  })}
+                          {item.children &&
+                            (open === item.title || buscando) && (
+                              <div className="ml-6 mt-1 flex flex-col gap-1">
+                                {item.children
+                                  .filter(
+                                    (child) =>
+                                      !buscando ||
+                                      grupoCoincide ||
+                                      normalizar(item.title).includes(q) ||
+                                      normalizar(child.title).includes(q),
+                                  )
+                                  .map((child) => (
+                                    <SidebarMenuButton
+                                      key={child.title}
+                                      tooltip={child.title}
+                                      onClick={() => handleClick(child.url)}
+                                      className={`${
+                                        path === child.url
+                                          ? "bg-slate-200 text-slate-900"
+                                          : ""
+                                      } cursor-pointer flex items-center gap-2 text-sm`}
+                                    >
+                                      {child.icon && <child.icon size={16} />}
+                                      <span>{child.title}</span>
+                                    </SidebarMenuButton>
+                                  ))}
+                              </div>
+                            )}
+                        </SidebarMenuItem>
+                      );
+                    })}
                 </div>
               );
             })}
