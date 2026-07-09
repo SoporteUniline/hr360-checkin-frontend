@@ -30,6 +30,7 @@ import { useAuth } from "@/context/AuthContext";
 import useSWR from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { fetchImageAsDataUrl } from "@/lib/pdfCompanyLogo";
+import { ADAMIA, gradientLine, applyAdamiaFont } from "@/lib/pdfAdamiaTheme";
 import { Download, FileText } from "lucide-react";
 
 export default function AguinaldoViewDialog({
@@ -121,16 +122,16 @@ export default function AguinaldoViewDialog({
    *   - Se dispara desde el botón del footer de este diálogo ("Descargar PDF").
    * - Nota: NO se elimina `generarPDF` anterior; se mantiene como referencia.
    */
-  const generarPDFFormatoNuevo = () => {
+  const generarPDFFormatoNuevo = async () => {
     if (!detalle) return;
 
     const doc = new jsPDF("p", "mm", "a4");
+    const FONT = await applyAdamiaFont(doc);
     const pageWidth = 210;
     const pageHeight = 297;
     const marginLeft = 20;
     const marginRight = 20;
     const contentWidth = pageWidth - marginLeft - marginRight;
-    const systemLabel = "ADAMIA HR360";
     let y = marginLeft;
     const safe = (value) =>
       String(value || "")
@@ -142,17 +143,19 @@ export default function AguinaldoViewDialog({
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
       })}`;
-    const hRule = (yPos, width = contentWidth, lineWidth = 0.3) => {
-      doc.setDrawColor(0);
+    const hRule = (yPos, width = contentWidth, lineWidth = 0.2) => {
+      doc.setDrawColor(...ADAMIA.hairline);
       doc.setLineWidth(lineWidth);
       doc.line(marginLeft, yPos, marginLeft + width, yPos);
     };
     const sectionTitle = (text) => {
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(8);
-      doc.setTextColor(0);
-      doc.text(String(text || "").toUpperCase(), marginLeft, y + 5);
-      hRule(y + 7, contentWidth, 0.5);
+      doc.setFont(FONT, "bold");
+      doc.setFontSize(8.5);
+      doc.setTextColor(...ADAMIA.muted);
+      doc.text(String(text || "").toUpperCase(), marginLeft, y + 5, {
+        charSpace: 0.5,
+      });
+      hRule(y + 7);
       y += 12;
     };
 
@@ -170,71 +173,60 @@ export default function AguinaldoViewDialog({
         doc.addImage(logoDataUrl, "PNG", marginLeft, y, 28, 10);
       } catch {}
     }
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
-    doc.setTextColor(150);
-    doc.text("HUMAN RESOURCES CLOUD PLATFORM", marginLeft, y + 13);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(20);
-    doc.setTextColor(0);
+    doc.setFont(FONT, "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(...ADAMIA.text);
     doc.text("AGUINALDOS", pageWidth - marginRight, y + 7, { align: "right" });
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(100);
+    doc.setFont(FONT, "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...ADAMIA.muted);
     doc.text(`Anio fiscal ${anioFiscal}`, pageWidth - marginRight, y + 13, {
       align: "right",
     });
 
     y += 20;
-    hRule(y, contentWidth, 0.8);
+    gradientLine(doc, marginLeft, pageWidth - marginRight, y, 0.55);
     y += 6;
 
-    const boxWidth = 24;
-    const boxGap = 8;
-    const metaWidth = contentWidth - boxWidth - boxGap;
-    const col = metaWidth / 3;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7.5);
-    doc.setTextColor(140);
-    doc.text("EMPLEADOS", marginLeft, y + 3);
-    doc.text("FECHA CORTE", marginLeft + col, y + 3);
-    doc.text("PROPORCIONALES", marginLeft + col * 2, y + 3);
-    doc.setFont("helvetica", "bold");
+    const col = (contentWidth - 32) / 3;
+    doc.setFont(FONT, "normal");
+    doc.setFontSize(6.5);
+    doc.setTextColor(...ADAMIA.muted);
+    doc.text("EMPLEADOS", marginLeft, y + 3, { charSpace: 0.5 });
+    doc.text("FECHA CORTE", marginLeft + col, y + 3, { charSpace: 0.5 });
+    doc.text("PROPORCIONALES", marginLeft + col * 2, y + 3, { charSpace: 0.5 });
+    doc.setFont(FONT, "bold");
     doc.setFontSize(10);
-    doc.setTextColor(0);
+    doc.setTextColor(...ADAMIA.text);
     doc.text(String(maestro.total_empleados ?? aguinaldos.length), marginLeft, y + 9);
     doc.text(fechaCorte, marginLeft + col, y + 9);
     doc.text(String(proporcionales), marginLeft + col * 2, y + 9);
 
-    const boxX = marginLeft + metaWidth + boxGap;
-    const boxY = y - 1;
-    doc.setDrawColor(0);
-    doc.setLineWidth(0.5);
-    doc.rect(boxX, boxY, boxWidth, 18, "S");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.text(totalGeneral.replace("$", ""), boxX + boxWidth / 2, boxY + 9, {
-      align: "center",
-      maxWidth: boxWidth - 2,
+    doc.setFont(FONT, "normal");
+    doc.setFontSize(6.5);
+    doc.setTextColor(...ADAMIA.muted);
+    doc.text("TOTAL", pageWidth - marginRight, y + 3, {
+      align: "right",
+      charSpace: 0.5,
     });
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
-    doc.setTextColor(120);
-    doc.text("TOTAL", boxX + boxWidth / 2, boxY + 15, { align: "center" });
+    doc.setFont(FONT, "bold");
+    doc.setFontSize(12);
+    doc.setTextColor(...ADAMIA.blue);
+    doc.text(totalGeneral, pageWidth - marginRight, y + 10, { align: "right" });
 
     y += 18;
-    hRule(y, contentWidth, 0.3);
+    hRule(y);
     y += 8;
 
     sectionTitle("Resumen");
-    doc.setFont("helvetica", "normal");
+    doc.setFont(FONT, "normal");
     doc.setFontSize(10);
-    doc.setTextColor(0);
+    doc.setTextColor(...ADAMIA.text);
     doc.text(`Completos: ${completos}`, marginLeft, y);
     doc.text(`Proporcionales: ${proporcionales}`, marginLeft + 55, y);
     doc.text(`Total: ${maestro.total_empleados ?? aguinaldos.length}`, marginLeft + 110, y);
     y += 10;
-    hRule(y, contentWidth, 0.2);
+    hRule(y);
     y += 8;
 
     sectionTitle("Detalle por empleado");
@@ -251,23 +243,30 @@ export default function AguinaldoViewDialog({
     const headerH = 8;
     const rowH = 7;
     const drawTableHeader = () => {
-      doc.setLineWidth(0.8);
-      doc.rect(marginLeft, y, contentWidth, headerH, "S");
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(8.5);
+      doc.setFont(FONT, "bold");
+      doc.setFontSize(7);
+      doc.setTextColor(...ADAMIA.text2);
       let x = marginLeft;
       cols.forEach((c) => {
-        doc.text(c.title, x + 2, y + 5.5);
+        if (c.key === "monto") {
+          doc.text(c.title.toUpperCase(), x + c.w - 2, y + 5.5, {
+            align: "right",
+            charSpace: 0.5,
+          });
+        } else {
+          doc.text(c.title.toUpperCase(), x + 2, y + 5.5, { charSpace: 0.5 });
+        }
         x += c.w;
-        doc.line(x, y, x, y + headerH);
       });
+      doc.setDrawColor(...ADAMIA.blue);
+      doc.setLineWidth(0.5);
+      doc.line(marginLeft, y + headerH, marginLeft + contentWidth, y + headerH);
       y += headerH;
     };
     const drawRow = (r) => {
-      doc.setLineWidth(0.25);
-      doc.rect(marginLeft, y, contentWidth, rowH, "S");
-      doc.setFont("helvetica", "normal");
+      doc.setFont(FONT, "normal");
       doc.setFontSize(8);
+      doc.setTextColor(...ADAMIA.text);
       let x = marginLeft;
       const v = {
         nombre: safe(r.nombre_completo || "—").slice(0, 38),
@@ -277,17 +276,19 @@ export default function AguinaldoViewDialog({
         tipo: r.es_proporcional ? "Prop." : "Comp.",
         monto: money(r.monto_aguinaldo),
       };
-      cols.forEach((c, idx) => {
+      cols.forEach((c) => {
         if (c.key === "monto") {
-          doc.setFont("helvetica", "bold");
+          doc.setFont(FONT, "bold");
+          doc.setTextColor(...ADAMIA.blue);
           doc.text(v[c.key], x + c.w - 2, y + 5, { align: "right" });
-          doc.setFont("helvetica", "normal");
+          doc.setFont(FONT, "normal");
+          doc.setTextColor(...ADAMIA.text);
         } else {
           doc.text(v[c.key], x + 2, y + 5);
         }
         x += c.w;
-        if (idx < cols.length - 1) doc.line(x, y, x, y + rowH);
       });
+      hRule(y + rowH);
       y += rowH;
     };
 
@@ -315,14 +316,15 @@ export default function AguinaldoViewDialog({
       doc.setPage(p);
       if (p === totalPages) {
         const yFirmas = pageHeight - 50;
-        doc.setDrawColor(0);
-        doc.setLineWidth(0.4);
+        doc.setDrawColor(...ADAMIA.text2);
+        doc.setLineWidth(0.3);
         doc.line(marginLeft + 5, yFirmas, marginLeft + 75, yFirmas);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(8);
-        doc.setTextColor(0);
+        doc.setFont(FONT, "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(...ADAMIA.muted);
         doc.text("RESPONSABLE DE NOMINA", marginLeft + 40, yFirmas + 5, {
           align: "center",
+          charSpace: 0.5,
         });
         doc.line(
           pageWidth - marginRight - 75,
@@ -334,27 +336,33 @@ export default function AguinaldoViewDialog({
           "REPRESENTANTE DE LA EMPRESA",
           pageWidth - marginRight - 40,
           yFirmas + 5,
-          { align: "center" },
+          { align: "center", charSpace: 0.5 },
         );
-        doc.setFont("helvetica", "normal");
         doc.setFontSize(7.5);
-        doc.setTextColor(100);
+        doc.setTextColor(...ADAMIA.text2);
         doc.text(companyName.slice(0, 40), pageWidth - marginRight - 40, yFirmas + 10, {
           align: "center",
         });
       }
-      doc.setDrawColor(180);
-      doc.setLineWidth(0.2);
-      doc.line(marginLeft, pageHeight - 14, pageWidth - marginRight, pageHeight - 14);
-      doc.setFont("helvetica", "normal");
+      gradientLine(doc, marginLeft, pageWidth - marginRight, pageHeight - 14, 0.35);
+      doc.setFont(FONT, "bold");
+      doc.setFontSize(7.5);
+      doc.setTextColor(...ADAMIA.blue);
+      doc.text("Adamia", marginLeft, pageHeight - 9);
+      const adamiaW = doc.getTextWidth("Adamia");
+      doc.setFont(FONT, "normal");
+      doc.setTextColor(...ADAMIA.muted);
+      doc.text(" · Aguinaldos", marginLeft + adamiaW, pageHeight - 9);
       doc.setFontSize(7);
-      doc.setTextColor(160);
       doc.text(
-        `Generado el ${fechaGenerado} a las ${horaGenerado} · ${systemLabel} · Anio ${anioFiscal} · Página ${p} de ${totalPages}`,
+        `Generado el ${fechaGenerado} a las ${horaGenerado}`,
         pageWidth / 2,
         pageHeight - 9,
         { align: "center" },
       );
+      doc.text(`Página ${p} de ${totalPages}`, pageWidth - marginRight, pageHeight - 9, {
+        align: "right",
+      });
     }
 
     const nombreArchivo = `Nomina_Aguinaldos_${
@@ -367,16 +375,16 @@ export default function AguinaldoViewDialog({
    * PDF unificado (formato nuevo) - Recibo individual.
    * - Relación: se usa desde la tabla (botón por empleado) dentro de este diálogo.
    */
-  const generarPDFIndividualFormatoNuevo = (ag) => {
+  const generarPDFIndividualFormatoNuevo = async (ag) => {
     if (!ag || !detalle) return;
 
     const doc = new jsPDF("p", "mm", "a4");
+    const FONT = await applyAdamiaFont(doc);
     const pageWidth = 210;
     const pageHeight = 297;
     const marginLeft = 20;
     const marginRight = 20;
     const contentWidth = pageWidth - marginLeft - marginRight;
-    const systemLabel = "ADAMIA HR360";
     let y = marginLeft;
 
     const safe = (value) =>
@@ -395,30 +403,32 @@ export default function AguinaldoViewDialog({
         y = marginLeft;
       }
     };
-    const hRule = (yPos, width = contentWidth, lineWidth = 0.3) => {
-      doc.setDrawColor(0);
+    const hRule = (yPos, width = contentWidth, lineWidth = 0.2) => {
+      doc.setDrawColor(...ADAMIA.hairline);
       doc.setLineWidth(lineWidth);
       doc.line(marginLeft, yPos, marginLeft + width, yPos);
     };
     const sectionTitle = (text) => {
       needSpace(12);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(8);
-      doc.setTextColor(0);
-      doc.text(String(text || "").toUpperCase(), marginLeft, y + 5);
-      hRule(y + 7, contentWidth, 0.5);
+      doc.setFont(FONT, "bold");
+      doc.setFontSize(8.5);
+      doc.setTextColor(...ADAMIA.muted);
+      doc.text(String(text || "").toUpperCase(), marginLeft, y + 5, {
+        charSpace: 0.5,
+      });
+      hRule(y + 7);
       y += 12;
     };
     const fieldPair = (label, value, x, yPos, width = contentWidth / 2 - 4) => {
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(7.5);
-      doc.setTextColor(140);
-      doc.text(String(label || "").toUpperCase(), x, yPos);
-      doc.setFont("helvetica", "normal");
+      doc.setFont(FONT, "normal");
+      doc.setFontSize(6.5);
+      doc.setTextColor(...ADAMIA.muted);
+      doc.text(String(label || "").toUpperCase(), x, yPos, { charSpace: 0.5 });
+      doc.setFont(FONT, "normal");
       doc.setFontSize(10);
-      doc.setTextColor(0);
+      doc.setTextColor(...ADAMIA.text);
       doc.text(safe(value), x, yPos + 5);
-      doc.setDrawColor(200);
+      doc.setDrawColor(...ADAMIA.hairline);
       doc.setLineWidth(0.2);
       doc.line(x, yPos + 7, x + width, yPos + 7);
     };
@@ -434,9 +444,9 @@ export default function AguinaldoViewDialog({
         .replace(/\u00A0/g, " ");
       const safeLines = [];
       const paragraphs = sourceText.split("\n");
-      doc.setFont("helvetica", "normal");
+      doc.setFont(FONT, "normal");
       doc.setFontSize(10);
-      doc.setTextColor(textValue ? 0 : 160);
+      doc.setTextColor(...(textValue ? ADAMIA.text : ADAMIA.muted));
       for (const paragraph of paragraphs) {
         const cleanedParagraph = paragraph.trim();
         if (!cleanedParagraph) {
@@ -459,17 +469,18 @@ export default function AguinaldoViewDialog({
     };
     const drawAmountRows = (title, rows) => {
       sectionTitle(title);
-      doc.setFont("helvetica", "normal");
+      doc.setFont(FONT, "normal");
       doc.setFontSize(10);
       rows.forEach(([label, amount]) => {
         needSpace(8);
-        doc.setTextColor(70);
+        doc.setTextColor(...ADAMIA.text2);
         doc.text(safe(label), marginLeft, y);
-        doc.setTextColor(0);
-        doc.setFont("helvetica", "bold");
+        const esMonto = /^monto/i.test(String(label || "").trim());
+        doc.setTextColor(...(esMonto ? ADAMIA.blue : ADAMIA.text));
+        doc.setFont(FONT, "bold");
         doc.text(safe(amount), pageWidth - marginRight, y, { align: "right" });
-        doc.setFont("helvetica", "normal");
-        doc.setDrawColor(220);
+        doc.setFont(FONT, "normal");
+        doc.setDrawColor(...ADAMIA.hairline);
         doc.setLineWidth(0.2);
         doc.line(marginLeft, y + 2, pageWidth - marginRight, y + 2);
         y += 7;
@@ -492,60 +503,49 @@ export default function AguinaldoViewDialog({
         doc.addImage(logoDataUrl, "PNG", marginLeft, y, 28, 10);
       } catch {}
     }
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
-    doc.setTextColor(150);
-    doc.text("HUMAN RESOURCES CLOUD PLATFORM", marginLeft, y + 13);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(20);
-    doc.setTextColor(0);
+    doc.setFont(FONT, "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(...ADAMIA.text);
     doc.text("AGUINALDO", pageWidth - marginRight, y + 7, { align: "right" });
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(100);
+    doc.setFont(FONT, "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...ADAMIA.muted);
     doc.text(`Anio fiscal ${anioFiscal}`, pageWidth - marginRight, y + 13, {
       align: "right",
     });
 
     y += 20;
-    hRule(y, contentWidth, 0.8);
+    gradientLine(doc, marginLeft, pageWidth - marginRight, y, 0.55);
     y += 6;
 
-    const boxWidth = 24;
-    const boxGap = 8;
-    const metaWidth = contentWidth - boxWidth - boxGap;
-    const col = metaWidth / 3;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7.5);
-    doc.setTextColor(140);
-    doc.text("TIPO", marginLeft, y + 3);
-    doc.text("EMPLEADO", marginLeft + col, y + 3);
-    doc.text("FECHA CORTE", marginLeft + col * 2, y + 3);
-    doc.setFont("helvetica", "bold");
+    const col = (contentWidth - 32) / 3;
+    doc.setFont(FONT, "normal");
+    doc.setFontSize(6.5);
+    doc.setTextColor(...ADAMIA.muted);
+    doc.text("TIPO", marginLeft, y + 3, { charSpace: 0.5 });
+    doc.text("EMPLEADO", marginLeft + col, y + 3, { charSpace: 0.5 });
+    doc.text("FECHA CORTE", marginLeft + col * 2, y + 3, { charSpace: 0.5 });
+    doc.setFont(FONT, "bold");
     doc.setFontSize(10);
-    doc.setTextColor(0);
+    doc.setTextColor(...ADAMIA.text);
     doc.text(ag.es_proporcional ? "PROPORCIONAL" : "COMPLETO", marginLeft, y + 9);
     doc.text(empleado, marginLeft + col, y + 9, { maxWidth: col - 6 });
     doc.text(fechaCorte, marginLeft + col * 2, y + 9, { maxWidth: col - 6 });
 
-    const boxX = marginLeft + metaWidth + boxGap;
-    const boxY = y - 1;
-    doc.setDrawColor(0);
-    doc.setLineWidth(0.5);
-    doc.rect(boxX, boxY, boxWidth, 18, "S");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.text(total.replace("$", ""), boxX + boxWidth / 2, boxY + 9, {
-      align: "center",
-      maxWidth: boxWidth - 2,
+    doc.setFont(FONT, "normal");
+    doc.setFontSize(6.5);
+    doc.setTextColor(...ADAMIA.muted);
+    doc.text("TOTAL", pageWidth - marginRight, y + 3, {
+      align: "right",
+      charSpace: 0.5,
     });
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
-    doc.setTextColor(120);
-    doc.text("TOTAL", boxX + boxWidth / 2, boxY + 15, { align: "center" });
+    doc.setFont(FONT, "bold");
+    doc.setFontSize(12);
+    doc.setTextColor(...ADAMIA.blue);
+    doc.text(total, pageWidth - marginRight, y + 10, { align: "right" });
 
     y += 18;
-    hRule(y, contentWidth, 0.3);
+    hRule(y);
     y += 8;
 
     sectionTitle("Datos del empleado");
@@ -603,55 +603,62 @@ export default function AguinaldoViewDialog({
       doc.setPage(p);
       if (p === totalPages) {
         const yFirmas = pageHeight - 50;
-        doc.setDrawColor(0);
-        doc.setLineWidth(0.4);
+        doc.setDrawColor(...ADAMIA.text2);
+        doc.setLineWidth(0.3);
         doc.line(marginLeft + 5, yFirmas, marginLeft + 75, yFirmas);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(8);
-        doc.setTextColor(0);
+        doc.setFont(FONT, "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(...ADAMIA.muted);
         doc.text("FIRMA DEL TRABAJADOR", marginLeft + 40, yFirmas + 5, {
           align: "center",
+          charSpace: 0.5,
         });
-        doc.setFont("helvetica", "normal");
         doc.setFontSize(7.5);
-        doc.setTextColor(100);
+        doc.setTextColor(...ADAMIA.text2);
         doc.text(empleado.slice(0, 40), marginLeft + 40, yFirmas + 10, {
           align: "center",
         });
+        doc.setDrawColor(...ADAMIA.text2);
+        doc.setLineWidth(0.3);
         doc.line(
           pageWidth - marginRight - 75,
           yFirmas,
           pageWidth - marginRight - 5,
           yFirmas,
         );
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(8);
-        doc.setTextColor(0);
+        doc.setFontSize(7);
+        doc.setTextColor(...ADAMIA.muted);
         doc.text(
           "REPRESENTANTE DE LA EMPRESA",
           pageWidth - marginRight - 40,
           yFirmas + 5,
-          { align: "center" },
+          { align: "center", charSpace: 0.5 },
         );
-        doc.setFont("helvetica", "normal");
         doc.setFontSize(7.5);
-        doc.setTextColor(100);
+        doc.setTextColor(...ADAMIA.text2);
         doc.text(companyName.slice(0, 40), pageWidth - marginRight - 40, yFirmas + 10, {
           align: "center",
         });
       }
-      doc.setDrawColor(180);
-      doc.setLineWidth(0.2);
-      doc.line(marginLeft, pageHeight - 14, pageWidth - marginRight, pageHeight - 14);
-      doc.setFont("helvetica", "normal");
+      gradientLine(doc, marginLeft, pageWidth - marginRight, pageHeight - 14, 0.35);
+      doc.setFont(FONT, "bold");
+      doc.setFontSize(7.5);
+      doc.setTextColor(...ADAMIA.blue);
+      doc.text("Adamia", marginLeft, pageHeight - 9);
+      const adamiaW = doc.getTextWidth("Adamia");
+      doc.setFont(FONT, "normal");
+      doc.setTextColor(...ADAMIA.muted);
+      doc.text(" · Aguinaldos", marginLeft + adamiaW, pageHeight - 9);
       doc.setFontSize(7);
-      doc.setTextColor(160);
       doc.text(
-        `Generado el ${fechaGenerado} a las ${horaGenerado} · ${systemLabel} · Anio ${anioFiscal} · Página ${p} de ${totalPages}`,
+        `Generado el ${fechaGenerado} a las ${horaGenerado}`,
         pageWidth / 2,
         pageHeight - 9,
         { align: "center" },
       );
+      doc.text(`Página ${p} de ${totalPages}`, pageWidth - marginRight, pageHeight - 9, {
+        align: "right",
+      });
     }
 
     const nombreArchivo = `Aguinaldo_${maestro.año_fiscal || "NA"}_${String(
