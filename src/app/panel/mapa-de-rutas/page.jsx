@@ -43,6 +43,7 @@ import {
   fetchImageAsDataUrl,
   tryAddCompanyMarkToPdf,
 } from "@/lib/pdfCompanyLogo";
+import { ADAMIA, gradientLine, applyAdamiaFont } from "@/lib/pdfAdamiaTheme";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import {
   Route,
@@ -1216,14 +1217,18 @@ export default function PageMapaDeRutas() {
   /**
    * Exporta a PDF el reporte del día seleccionado.
    * - Relación: copia y adapta la función `exportarAPDF()` del legacy `Mapas -rutas.html`
+   * - Estilo corporativo Adamia (ver `src/lib/pdfAdamiaTheme.js`): sin rellenos
+   *   de color, líneas finas y acentos con el degradado azul → morado.
    */
-  const exportarAPDF = (diaPdf) => {
+  const exportarAPDF = async (diaPdf) => {
     if (!diaPdf) {
       setErrorMsg("⚠️ Selecciona un día primero");
       return;
     }
 
     const doc = new jsPDF("p", "mm", "a4");
+    // Tipografía Poppins (fallback helvetica). Los tamaños siguen siendo pt.
+    const FONT = await applyAdamiaFont(doc);
 
     const margin = 25;
     const pageWidth = 210;
@@ -1249,49 +1254,56 @@ export default function PageMapaDeRutas() {
         ? calcularDuracionDecimal(primeraEntrada, ultimaSalida)
         : 0;
 
-    // HEADER
-    doc.setDrawColor(0, 0, 0);
-    doc.setLineWidth(1);
-    doc.rect(margin, yPos, contentWidth, 35, "S");
-
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(18);
-    doc.setFont("helvetica", "bold");
+    // HEADER (sin caja: logo a la izquierda, texto alineado a la derecha)
     // Logo/marca de empresa (imagen o iniciales) en el encabezado.
     const companyName =
       empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa || "";
-    const logoBox = { x: margin + 5, y: yPos + 6, boxW: 26, boxH: 14 };
-    const hasMark = tryAddCompanyMarkToPdf(
-      doc,
-      { logoDataUrl, companyName },
-      logoBox,
-    );
-    const textX = hasMark ? logoBox.x + logoBox.boxW + 4 : margin + 5;
+    const logoBox = { x: margin, y: yPos + 2, boxW: 26, boxH: 14 };
+    tryAddCompanyMarkToPdf(doc, { logoDataUrl, companyName }, logoBox);
 
-    doc.text("REPORTE DE ASISTENCIA", textX, yPos + 10);
-
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Empleado: ${diaPdf.empleado}`, textX, yPos + 18);
-    doc.text(`Fecha: ${formatearFechaLarga(diaPdf.fecha)}`, textX, yPos + 25);
-
-    // Jornada total - derecha
-    doc.setFont("helvetica", "bold");
-    doc.text("JORNADA TOTAL", pageWidth - margin - 5, yPos + 10, {
+    doc.setFont(FONT, "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(...ADAMIA.text);
+    doc.text("REPORTE DE ASISTENCIA", pageWidth - margin, yPos + 6, {
       align: "right",
     });
-    doc.setFontSize(24);
+
+    doc.setFont(FONT, "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...ADAMIA.muted);
+    doc.text(`Empleado: ${diaPdf.empleado}`, pageWidth - margin, yPos + 12, {
+      align: "right",
+    });
     doc.text(
-      `${horasTrabajadas.toFixed(1)} hrs`,
-      pageWidth - margin - 5,
-      yPos + 22,
+      `Fecha: ${formatearFechaLarga(diaPdf.fecha)}`,
+      pageWidth - margin,
+      yPos + 17,
       { align: "right" },
     );
 
+    // KPI de jornada total (sin caja): etiqueta discreta + valor en azul Adamia
+    doc.setFont(FONT, "bold");
+    doc.setFontSize(6.5);
+    doc.setTextColor(...ADAMIA.muted);
+    doc.text("JORNADA TOTAL", pageWidth - margin, yPos + 25, {
+      align: "right",
+      charSpace: 0.5,
+    });
+    doc.setFontSize(16);
+    doc.setTextColor(...ADAMIA.blue);
+    doc.text(
+      `${horasTrabajadas.toFixed(1)} hrs`,
+      pageWidth - margin,
+      yPos + 32,
+      { align: "right" },
+    );
+
+    // Línea de acento degradada bajo el encabezado (identidad Adamia)
+    gradientLine(doc, margin, pageWidth - margin, yPos + 37, 0.55);
+
     yPos += 45;
 
-    // ESTADÍSTICAS
-    doc.setLineWidth(0.5);
+    // ESTADÍSTICAS (cifras entre dos líneas finas, sin cajas ni rellenos)
     const statWidth = contentWidth / 4;
     const stats = [
       { label: "Primera Entrada", value: primeraEntrada || "-" },
@@ -1303,18 +1315,28 @@ export default function PageMapaDeRutas() {
       },
     ];
 
-    doc.rect(margin, yPos, contentWidth, 20, "S");
+    doc.setDrawColor(...ADAMIA.hairline);
+    doc.setLineWidth(0.2);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+    doc.line(margin, yPos + 20, pageWidth - margin, yPos + 20);
     stats.forEach((stat, i) => {
       const x = margin + i * statWidth;
-      if (i > 0) doc.line(x, yPos, x, yPos + 20);
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "bold");
-      doc.text(stat.label.toUpperCase(), x + statWidth / 2, yPos + 8, {
+      if (i > 0) {
+        doc.setDrawColor(...ADAMIA.hairline);
+        doc.setLineWidth(0.2);
+        doc.line(x, yPos + 3, x, yPos + 17);
+      }
+      doc.setFontSize(6.5);
+      doc.setFont(FONT, "normal");
+      doc.setTextColor(...ADAMIA.muted);
+      doc.text(stat.label.toUpperCase(), x + statWidth / 2, yPos + 7, {
         align: "center",
+        charSpace: 0.5,
       });
-      doc.setFontSize(14);
-      doc.setFont("helvetica", "bold");
-      doc.text(String(stat.value), x + statWidth / 2, yPos + 16, {
+      doc.setFontSize(12);
+      doc.setFont(FONT, "bold");
+      doc.setTextColor(...ADAMIA.blue);
+      doc.text(String(stat.value), x + statWidth / 2, yPos + 15, {
         align: "center",
       });
     });
@@ -1375,10 +1397,10 @@ export default function PageMapaDeRutas() {
     const estadoCenterSalida =
       colX.estado + estadoSubWidth + estadoSubWidth / 2;
 
-    doc.setLineWidth(0.8);
-    doc.rect(margin, yPos, contentWidth, 8, "S");
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
+    // Encabezado de tabla: texto discreto con subrayado azul (sin caja)
+    doc.setFontSize(7);
+    doc.setFont(FONT, "bold");
+    doc.setTextColor(...ADAMIA.muted);
 
     doc.text("TIPO", colCenter.tipo, yPos + 5.5, { align: "center" });
     doc.text("ENTRADA", colCenter.entrada, yPos + 5.5, { align: "center" });
@@ -1388,11 +1410,14 @@ export default function PageMapaDeRutas() {
     });
     doc.text("ESTADO", colCenter.estado, yPos + 5.5, { align: "center" });
 
+    doc.setDrawColor(...ADAMIA.blue);
+    doc.setLineWidth(0.4);
+    doc.line(margin, yPos + 8, pageWidth - margin, yPos + 8);
+
     yPos += 8;
 
-    // DATOS DE UBICACIONES
-    doc.setFont("helvetica", "normal");
-    doc.setLineWidth(0.3);
+    // DATOS DE UBICACIONES (filas con separadores finos, sin cajas)
+    doc.setFont(FONT, "normal");
 
     diaPdf.movimientos.forEach((mov, idx) => {
       if (yPos > pageHeight - margin - 60) {
@@ -1400,20 +1425,19 @@ export default function PageMapaDeRutas() {
         yPos = margin;
       }
 
-      doc.setLineWidth(0.5);
-      doc.rect(margin, yPos, contentWidth, 8, "S");
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.text(`Ubicacion ${mov.id}`, margin + 5, yPos + 5.5);
+      // Título de la ubicación (estilo de sección Adamia)
+      doc.setFontSize(8.5);
+      doc.setFont(FONT, "bold");
+      doc.setTextColor(...ADAMIA.muted);
+      doc.text(`UBICACION ${mov.id}`, margin, yPos + 5.5, { charSpace: 0.5 });
       yPos += 8;
 
-      doc.setLineWidth(0.3);
-      doc.rect(margin, yPos, contentWidth, 10, "S");
       doc.setFontSize(9);
-      doc.setFont("helvetica", "normal");
+      doc.setFont(FONT, "normal");
+      doc.setTextColor(...ADAMIA.text);
 
       doc.text("E / S", colCenter.tipo, yPos + 6.5, { align: "center" });
-      doc.setFont("helvetica", "bold");
+      doc.setFont(FONT, "bold");
       doc.text(mov.hora_entrada || "-", colCenter.entrada, yPos + 6.5, {
         align: "center",
       });
@@ -1431,9 +1455,10 @@ export default function PageMapaDeRutas() {
       const gpsSalida = !!mov.lat_salida && !!mov.lng_salida;
 
       // "ESTADO" se divide en 2: GPS Entrada / GPS Salida
-      // (esto evita que el segundo valor se desborde fuera del cuadro)
+      // (esto evita que el segundo valor se desborde de su columna)
       doc.setFontSize(8);
-      doc.setFont("helvetica", "normal");
+      doc.setFont(FONT, "normal");
+      doc.setTextColor(...ADAMIA.text2);
       doc.text(gpsEntrada ? "Si" : "No", estadoCenterEntrada, yPos + 6.5, {
         align: "center",
       });
@@ -1441,6 +1466,12 @@ export default function PageMapaDeRutas() {
         align: "center",
       });
       doc.setFontSize(9);
+      doc.setTextColor(...ADAMIA.text);
+
+      // Separador fino bajo la fila (sustituye a las cajas negras)
+      doc.setDrawColor(...ADAMIA.hairline);
+      doc.setLineWidth(0.2);
+      doc.line(margin, yPos + 10, pageWidth - margin, yPos + 10);
 
       yPos += 10;
 
@@ -1452,14 +1483,19 @@ export default function PageMapaDeRutas() {
             mov.hora_salida,
             siguiente.hora_entrada,
           );
-          doc.rect(margin, yPos, contentWidth, 7, "S");
           doc.setFontSize(8);
-          doc.setFont("helvetica", "normal");
+          doc.setFont(FONT, "normal");
+          doc.setTextColor(...ADAMIA.muted);
           doc.text("Traslado:", margin + 5, yPos + 4.5);
-          doc.setFont("helvetica", "bold");
+          doc.setFont(FONT, "bold");
+          doc.setTextColor(...ADAMIA.text);
           doc.text(`${traslado}`, margin + 23, yPos + 4.5);
-          doc.setFont("helvetica", "normal");
+          doc.setFont(FONT, "normal");
+          doc.setTextColor(...ADAMIA.muted);
           doc.text("a siguiente ubicacion", margin + 43, yPos + 4.5);
+          doc.setDrawColor(...ADAMIA.hairline);
+          doc.setLineWidth(0.2);
+          doc.line(margin, yPos + 7, pageWidth - margin, yPos + 7);
           yPos += 7;
         }
       }
@@ -1467,29 +1503,32 @@ export default function PageMapaDeRutas() {
 
     // FIRMAS (se ubican al final de la hoja)
     yPos = pageHeight - 55;
-    doc.setLineWidth(0.5);
+    doc.setDrawColor(...ADAMIA.text2);
+    doc.setLineWidth(0.3);
 
     doc.line(margin + 10, yPos, margin + 65, yPos);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.setFont(FONT, "normal");
+    doc.setTextColor(...ADAMIA.muted);
     doc.text("FIRMA DEL TRABAJADOR", margin + 37.5, yPos + 6, {
       align: "center",
+      charSpace: 0.5,
     });
-    doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
+    doc.setTextColor(...ADAMIA.text2);
     doc.text(diaPdf.empleado, margin + 37.5, yPos + 11, { align: "center" });
 
     doc.line(pageWidth - margin - 65, yPos, pageWidth - margin - 10, yPos);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.setTextColor(...ADAMIA.muted);
     doc.text(
       "REPRESENTANTE DE LA EMPRESA",
       pageWidth - margin - 37.5,
       yPos + 6,
-      { align: "center" },
+      { align: "center", charSpace: 0.5 },
     );
-    doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
+    doc.setTextColor(...ADAMIA.text2);
     doc.text(
       "Uniline Innovacion en la Nube",
       pageWidth - margin - 37.5,
@@ -1497,31 +1536,43 @@ export default function PageMapaDeRutas() {
       { align: "center" },
     );
 
-    // FOOTER
+    // FOOTER en todas las hojas: línea degradada, marca y numeración
     const totalPages = doc.internal.getNumberOfPages();
+    const fechaGenerado = new Date().toLocaleDateString("es-MX", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+    const horaGenerado = new Date().toLocaleTimeString("es-MX", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i);
-      doc.setDrawColor(0, 0, 0);
-      doc.setLineWidth(0.3);
-      doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
+      const lineY = pageHeight - 15;
+      const textY = pageHeight - 10;
+      gradientLine(doc, margin, pageWidth - margin, lineY, 0.35);
+
+      doc.setFont(FONT, "bold");
+      doc.setFontSize(7.5);
+      doc.setTextColor(...ADAMIA.blue);
+      doc.text("Adamia", margin, textY);
+      const brandW = doc.getTextWidth("Adamia");
+      doc.setFont(FONT, "normal");
+      doc.setTextColor(...ADAMIA.muted);
+      doc.text(" · Reporte de Asistencia", margin + brandW, textY);
 
       doc.setFontSize(7);
-      doc.setFont("helvetica", "normal");
-      const fechaGenerado = new Date().toLocaleDateString("es-MX", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      });
-      const horaGenerado = new Date().toLocaleTimeString("es-MX", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
       doc.text(
-        `Generado el ${fechaGenerado} a las ${horaGenerado} | Sistema Adamia by Uniline | Pagina ${i} de ${totalPages}`,
+        `Generado el ${fechaGenerado} a las ${horaGenerado}`,
         pageWidth / 2,
-        pageHeight - 10,
+        textY,
         { align: "center" },
       );
+      doc.setFontSize(7.5);
+      doc.text(`Página ${i} de ${totalPages}`, pageWidth - margin, textY, {
+        align: "right",
+      });
     }
 
     const nombreArchivo = `Reporte_Asistencia_${String(
