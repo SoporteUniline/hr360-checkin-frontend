@@ -16,6 +16,7 @@ import { useAuth } from "@/context/AuthContext";
 import useSWR from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { fetchImageAsDataUrl } from "@/lib/pdfCompanyLogo";
+import { ADAMIA, gradientLine, applyAdamiaFont } from "@/lib/pdfAdamiaTheme";
 import { useEffect, useState } from "react";
 import { useSnackbar } from "notistack";
 import { administrativeMinutesApi } from "@/lib/administrativeMinutesApi";
@@ -195,8 +196,10 @@ export const AdministrativeDetailsModal = ({
    * Genera PDF con formato unificado (mismo estilo aplicado en otros módulos).
    * - Relación: lo reutilizamos para descargar e imprimir.
    */
-  const buildActaPdfFormatoPermisos = () => {
+  const buildActaPdfFormatoPermisos = async () => {
     const doc = new jsPDF("p", "mm", "a4");
+    // Tipografía corporativa Adamia (Poppins con fallback a Helvetica).
+    const FONT = await applyAdamiaFont(doc);
     const pageWidth = 210;
     const pageHeight = 297;
     const marginLeft = 20;
@@ -218,32 +221,42 @@ export const AdministrativeDetailsModal = ({
       }
     };
 
-    const hRule = (yPos, width = contentWidth, lineWidth = 0.3) => {
-      doc.setDrawColor(0);
-      doc.setLineWidth(lineWidth);
+    // Regla horizontal fina (hairline) — lenguaje Adamia: líneas, sin cajas negras.
+    const hRule = (yPos, width = contentWidth) => {
+      doc.setDrawColor(...ADAMIA.hairline);
+      doc.setLineWidth(0.2);
       doc.line(marginLeft, yPos, marginLeft + width, yPos);
     };
 
     const sectionTitle = (text) => {
       needSpace(12);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(8);
-      doc.setTextColor(0);
-      doc.text(String(text || "").toUpperCase(), marginLeft, y + 5);
-      hRule(y + 7, contentWidth, 0.5);
+      doc.setFont(FONT, "bold");
+      doc.setFontSize(8.5);
+      doc.setTextColor(...ADAMIA.muted);
+      doc.text(String(text || "").toUpperCase(), marginLeft, y + 5, {
+        charSpace: 0.5,
+      });
+      hRule(y + 7, contentWidth);
       y += 12;
     };
 
-    const fieldPair = (label, value, x, yPos, width = contentWidth / 2 - 4) => {
-      doc.setFont("helvetica", "normal");
+    const fieldPair = (
+      label,
+      value,
+      x,
+      yPos,
+      width = contentWidth / 2 - 4,
+      { valueColor = ADAMIA.text, valueFont = "normal" } = {},
+    ) => {
+      doc.setFont(FONT, "normal");
       doc.setFontSize(7.5);
-      doc.setTextColor(140);
+      doc.setTextColor(...ADAMIA.muted);
       doc.text(String(label || "").toUpperCase(), x, yPos);
-      doc.setFont("helvetica", "normal");
+      doc.setFont(FONT, valueFont);
       doc.setFontSize(10);
-      doc.setTextColor(0);
+      doc.setTextColor(...valueColor);
       doc.text(safe(value), x, yPos + 5);
-      doc.setDrawColor(200);
+      doc.setDrawColor(...ADAMIA.hairline);
       doc.setLineWidth(0.2);
       doc.line(x, yPos + 7, x + width, yPos + 7);
     };
@@ -261,9 +274,9 @@ export const AdministrativeDetailsModal = ({
 
       const safeLines = [];
       const paragraphs = sourceText.split("\n");
-      doc.setFont("helvetica", "normal");
+      doc.setFont(FONT, "normal");
       doc.setFontSize(10);
-      doc.setTextColor(textValue ? 0 : 160);
+      doc.setTextColor(...(textValue ? ADAMIA.text : ADAMIA.muted));
 
       for (const paragraph of paragraphs) {
         const cleanedParagraph = paragraph.trim();
@@ -284,7 +297,7 @@ export const AdministrativeDetailsModal = ({
         y += lineHeight;
       }
 
-      hRule(y + 1, contentWidth, 0.2);
+      hRule(y + 1, contentWidth);
       y += 10;
     };
 
@@ -310,23 +323,28 @@ export const AdministrativeDetailsModal = ({
       } catch {}
     }
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
-    doc.setTextColor(150);
-    doc.text("HUMAN RESOURCES CLOUD PLATFORM", marginLeft, y + 13);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(20);
-    doc.setTextColor(0);
-    doc.text("ACTA", pageWidth - marginRight, y + 7, { align: "right" });
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(100);
+    doc.setFont(FONT, "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(...ADAMIA.text);
+    doc.text("Acta Administrativa", pageWidth - marginRight, y + 7, {
+      align: "right",
+    });
+    doc.setFont(FONT, "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(...ADAMIA.muted);
     doc.text(`Folio #${folio}`, pageWidth - marginRight, y + 13, {
       align: "right",
     });
+    doc.text(
+      `Fecha del incidente: ${fechaIncidente}`,
+      pageWidth - marginRight,
+      y + 18,
+      { align: "right" },
+    );
 
     y += 20;
-    hRule(y, contentWidth, 0.8);
+    // Línea de acento degradada azul → morado (identidad Adamia).
+    gradientLine(doc, marginLeft, pageWidth - marginRight, y, 0.55);
     y += 6;
 
     const boxWidth = 24;
@@ -334,36 +352,38 @@ export const AdministrativeDetailsModal = ({
     const metaWidth = contentWidth - boxWidth - boxGap;
     const col = metaWidth / 3;
 
-    doc.setFont("helvetica", "normal");
+    doc.setFont(FONT, "normal");
     doc.setFontSize(7.5);
-    doc.setTextColor(140);
+    doc.setTextColor(...ADAMIA.muted);
     doc.text("ESTATUS", marginLeft, y + 3);
     doc.text("TIPO", marginLeft + col, y + 3);
     doc.text("FECHA", marginLeft + col * 2, y + 3);
-    doc.setFont("helvetica", "bold");
+    doc.setFont(FONT, "bold");
     doc.setFontSize(10);
-    doc.setTextColor(0);
+    doc.setTextColor(...ADAMIA.text);
     doc.text(estatus, marginLeft, y + 9);
     doc.text(tipoActa, marginLeft + col, y + 9);
     doc.text(fechaIncidente, marginLeft + col * 2, y + 9, { maxWidth: col - 6 });
 
+    // Indicador de gravedad: solo hairlines, valor en azul corporativo.
     const boxX = marginLeft + metaWidth + boxGap;
     const boxY = y - 1;
-    doc.setDrawColor(0);
-    doc.setLineWidth(0.5);
+    doc.setDrawColor(...ADAMIA.hairline);
+    doc.setLineWidth(0.2);
     doc.rect(boxX, boxY, boxWidth, 18, "S");
-    doc.setFont("helvetica", "bold");
+    doc.setFont(FONT, "bold");
     doc.setFontSize(12);
+    doc.setTextColor(...ADAMIA.blue);
     doc.text(gravedad.toUpperCase().slice(0, 5), boxX + boxWidth / 2, boxY + 10, {
       align: "center",
     });
-    doc.setFont("helvetica", "normal");
+    doc.setFont(FONT, "normal");
     doc.setFontSize(7);
-    doc.setTextColor(120);
+    doc.setTextColor(...ADAMIA.muted);
     doc.text("GRAVEDAD", boxX + boxWidth / 2, boxY + 15, { align: "center" });
 
     y += 18;
-    hRule(y, contentWidth, 0.3);
+    hRule(y, contentWidth);
     y += 8;
 
     sectionTitle("Datos del empleado");
@@ -389,7 +409,10 @@ export const AdministrativeDetailsModal = ({
     y += 16;
     fieldPair("Acepta hechos", acta.acepta_hechos ? "Si" : "No", marginLeft, y, c3 - 4);
     fieldPair("Reincidencia", acta.es_reincidencia ? "Si" : "No", marginLeft + c3, y, c3 - 4);
-    fieldPair("Folio", `#${folio}`, marginLeft + c3 * 2, y, c3 - 4);
+    fieldPair("Folio", `#${folio}`, marginLeft + c3 * 2, y, c3 - 4, {
+      valueColor: ADAMIA.blue,
+      valueFont: "bold",
+    });
     y += 18;
 
     drawWrappedSectionText({
@@ -436,56 +459,70 @@ export const AdministrativeDetailsModal = ({
       doc.setPage(p);
       if (p === totalPages) {
         const yFirmas = pageHeight - 50;
-        doc.setDrawColor(0);
-        doc.setLineWidth(0.4);
+        doc.setDrawColor(...ADAMIA.text2);
+        doc.setLineWidth(0.3);
         doc.line(marginLeft + 5, yFirmas, marginLeft + 75, yFirmas);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(8);
-        doc.setTextColor(0);
+        doc.setFont(FONT, "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(...ADAMIA.muted);
         doc.text("FIRMA DEL TRABAJADOR", marginLeft + 40, yFirmas + 5, {
           align: "center",
+          charSpace: 0.5,
         });
-        doc.setFont("helvetica", "normal");
+        doc.setFont(FONT, "normal");
         doc.setFontSize(7.5);
-        doc.setTextColor(100);
+        doc.setTextColor(...ADAMIA.text2);
         doc.text(empleadoName.slice(0, 40), marginLeft + 40, yFirmas + 10, {
           align: "center",
         });
 
+        doc.setDrawColor(...ADAMIA.text2);
+        doc.setLineWidth(0.3);
         doc.line(
           pageWidth - marginRight - 75,
           yFirmas,
           pageWidth - marginRight - 5,
           yFirmas,
         );
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(8);
-        doc.setTextColor(0);
+        doc.setFont(FONT, "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(...ADAMIA.muted);
         doc.text(
           "REPRESENTANTE DE LA EMPRESA",
           pageWidth - marginRight - 40,
           yFirmas + 5,
-          { align: "center" },
+          { align: "center", charSpace: 0.5 },
         );
-        doc.setFont("helvetica", "normal");
+        doc.setFont(FONT, "normal");
         doc.setFontSize(7.5);
-        doc.setTextColor(100);
+        doc.setTextColor(...ADAMIA.text2);
         doc.text(companyName.slice(0, 40), pageWidth - marginRight - 40, yFirmas + 10, {
           align: "center",
         });
       }
 
-      doc.setDrawColor(180);
-      doc.setLineWidth(0.2);
-      doc.line(marginLeft, pageHeight - 14, pageWidth - marginRight, pageHeight - 14);
-      doc.setFont("helvetica", "normal");
+      // Pie de página: línea degradada + marca Adamia + numeración.
+      const footerLineY = pageHeight - 14;
+      const footerTextY = pageHeight - 9;
+      gradientLine(doc, marginLeft, pageWidth - marginRight, footerLineY, 0.35);
+      doc.setFont(FONT, "bold");
+      doc.setFontSize(7.5);
+      doc.setTextColor(...ADAMIA.blue);
+      doc.text("Adamia", marginLeft, footerTextY);
+      const brandW = doc.getTextWidth("Adamia");
+      doc.setFont(FONT, "normal");
       doc.setFontSize(7);
-      doc.setTextColor(160);
+      doc.setTextColor(...ADAMIA.muted);
       doc.text(
-        `Generado el ${fechaGenerado} a las ${horaGenerado} · ${systemLabel} · Folio #${folio} · Página ${p} de ${totalPages}`,
-        pageWidth / 2,
-        pageHeight - 9,
-        { align: "center" },
+        ` · Acta Administrativa · Generado el ${fechaGenerado} a las ${horaGenerado} · Folio #${folio}`,
+        marginLeft + brandW,
+        footerTextY,
+      );
+      doc.text(
+        `Página ${p} de ${totalPages}`,
+        pageWidth - marginRight,
+        footerTextY,
+        { align: "right" },
       );
     }
 
@@ -622,8 +659,8 @@ export const AdministrativeDetailsModal = ({
       }
     });
 
-  const descargarPDFActaFormatoPermisos = () => {
-    const { doc, nombreArchivo } = buildActaPdfFormatoPermisos();
+  const descargarPDFActaFormatoPermisos = async () => {
+    const { doc, nombreArchivo } = await buildActaPdfFormatoPermisos();
     doc.save(nombreArchivo);
   };
 
@@ -823,7 +860,8 @@ export const AdministrativeDetailsModal = ({
               setIsPreparingPrint(true);
               try {
                 await new Promise((resolve) => setTimeout(resolve, 0));
-                const { doc, nombreArchivo } = buildActaPdfFormatoPermisos();
+                const { doc, nombreArchivo } =
+                  await buildActaPdfFormatoPermisos();
                 await imprimirPDF(doc, nombreArchivo);
               } finally {
                 setIsPreparingPrint(false);
