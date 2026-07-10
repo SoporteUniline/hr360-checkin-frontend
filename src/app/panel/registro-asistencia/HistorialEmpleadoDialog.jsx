@@ -61,7 +61,7 @@ export default function HistorialEmpleadoDialog({
   };
 
   const baseDateForCorrection = dayjs
-    .tz(empleado.entrada, DB_TIMEZONE)
+    .tz(empleado?.entrada, DB_TIMEZONE)
     .tz(empresaTimezone)
     .format("YYYY-MM-DD");
 
