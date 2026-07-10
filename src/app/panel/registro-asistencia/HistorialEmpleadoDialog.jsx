@@ -49,12 +49,15 @@ export default function HistorialEmpleadoDialog({
     page,
     limit,
     null,
-    null
+    null,
   );
 
   const formatTime = (dateTimeString) => {
     if (!dateTimeString) return "-";
-    return dayjs.tz(dateTimeString, DB_TIMEZONE).tz(empresaTimezone).format("HH:mm");
+    return dayjs
+      .tz(dateTimeString, DB_TIMEZONE)
+      .tz(empresaTimezone)
+      .format("HH:mm");
   };
 
   const baseDateForCorrection = dayjs
@@ -91,7 +94,9 @@ export default function HistorialEmpleadoDialog({
         </DialogHeader>
 
         <div className="p-6 space-y-4 text-sm">
-          {isLoading && <p className="text-center py-6 text-gray-600">Cargando datos...</p>}
+          {isLoading && (
+            <p className="text-center py-6 text-gray-600">Cargando datos...</p>
+          )}
           {error && (
             <p className="text-center text-red-600 py-6">
               Error al cargar los datos: {error.message}
@@ -103,145 +108,198 @@ export default function HistorialEmpleadoDialog({
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-gray-50 hover:bg-gray-50">
-                      <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">Entrada</TableHead>
-                      <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">Entrada corregida</TableHead>
-                      <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">Salida</TableHead>
-                      <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">Salida corregida</TableHead>
-                      <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">Estado</TableHead>
-                      <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">Acciones</TableHead>
+                      <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                        Entrada
+                      </TableHead>
+                      <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                        Entrada corregida
+                      </TableHead>
+                      <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                        Salida
+                      </TableHead>
+                      <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                        Salida corregida
+                      </TableHead>
+                      <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                        Estado
+                      </TableHead>
+                      <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                        Acciones
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {data.registros.map((checador, index) => (
-                      <TableRow key={index} className="border-b border-gray-100 hover:bg-gray-50">
-                    <TableCell className="text-center">
-                      {checador.entrada
-                        ? dayjs.tz(checador.entrada, DB_TIMEZONE).tz(empresaTimezone).format("HH:mm:ss")
-                        : "-"}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {editingMovimientoId === checador.id ? (
-                        <Input
-                          type="time"
-                          value={
-                            editingMovimientoData.entrada_corregida
-                              ? dayjs.tz(editingMovimientoData.entrada_corregida, DB_TIMEZONE).tz(empresaTimezone).format("HH:mm")
-                              : ""
-                          }
-                          max={
-                            editingMovimientoData.salida_corregida
-                              ? dayjs.tz(editingMovimientoData.salida_corregida, DB_TIMEZONE).tz(empresaTimezone).format("HH:mm")
-                              : undefined
-                          }
-                          onChange={(e) => {
-                            const hora = e.target.value;
-                            const nuevaEntradaCorregida = hora
-                              ? dayjs(
-                                  `${baseDateForCorrection} ${hora}`
-                                ).format("YYYY-MM-DD HH:mm:ss")
-                              : null;
-                            handleMovimientoFieldChange(
-                              "entrada_corregida",
-                              nuevaEntradaCorregida
-                            );
-                          }}
-                          className="max-w-[120px] mx-auto text-center"
-                        />
-                      ) : (
-                        <span>
-                          {checador.entrada_corregida
-                            ? dayjs.tz(checador.entrada_corregida, DB_TIMEZONE).tz(empresaTimezone).format("HH:mm:ss")
-                            : "-"}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {checador.salida
-                        ? dayjs.tz(checador.salida, DB_TIMEZONE).tz(empresaTimezone).format("HH:mm:ss")
-                        : "-"}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {editingMovimientoId === checador.id ? (
-                        <Input
-                          type="time"
-                          value={
-                            editingMovimientoData.salida_corregida
-                              ? dayjs.tz(editingMovimientoData.salida_corregida, DB_TIMEZONE).tz(empresaTimezone).format("HH:mm")
-                              : ""
-                          }
-                          min={
-                            editingMovimientoData.entrada_corregida
-                              ? dayjs.tz(editingMovimientoData.entrada_corregida, DB_TIMEZONE).tz(empresaTimezone).format("HH:mm")
-                              : undefined
-                          }
-                          onChange={(e) => {
-                            const hora = e.target.value;
-                            // Combina la fecha base con la hora seleccionada
-                            const nuevaSalidaCorregida = hora
-                              ? dayjs(
-                                  `${baseDateForCorrection} ${hora}`
-                                ).format("YYYY-MM-DD HH:mm:ss")
-                              : null;
-                            handleMovimientoFieldChange(
-                              "salida_corregida",
-                              nuevaSalidaCorregida
-                            );
-                          }}
-                          className="max-w-[120px] mx-auto text-center"
-                        />
-                      ) : (
-                        <span>
-                          {checador.salida_corregida
-                            ? dayjs.tz(checador.salida_corregida, DB_TIMEZONE).tz(empresaTimezone).format("HH:mm:ss")
-                            : "-"}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <span
-                        className={`px-2 py-1 rounded-full text-sm text-white ${
-                          checador.estado === "Abierto"
-                            ? "bg-green-600"
-                            : "bg-gray-500"
-                        }`}
+                      <TableRow
+                        key={index}
+                        className="border-b border-gray-100 hover:bg-gray-50"
                       >
-                        {checador.estado}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {editingMovimientoId === checador.id ? (
-                        <div className="flex gap-2 justify-center">
-                          <button
-                            onClick={async () => {
-                              await handleSaveMovimientoClick();
-                              if (mutateAsistencia) {
-                                await mutateAsistencia();
+                        <TableCell className="text-center">
+                          {checador.entrada
+                            ? dayjs
+                                .tz(checador.entrada, DB_TIMEZONE)
+                                .tz(empresaTimezone)
+                                .format("HH:mm:ss")
+                            : "-"}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {editingMovimientoId === checador.id ? (
+                            <Input
+                              type="time"
+                              value={
+                                editingMovimientoData.entrada_corregida
+                                  ? dayjs
+                                      .tz(
+                                        editingMovimientoData.entrada_corregida,
+                                        DB_TIMEZONE,
+                                      )
+                                      .tz(empresaTimezone)
+                                      .format("HH:mm")
+                                  : ""
                               }
-                            }}
-                            disabled={isSavingMovimiento}
-                            className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
-                            title="Guardar"
+                              max={
+                                editingMovimientoData.salida_corregida
+                                  ? dayjs
+                                      .tz(
+                                        editingMovimientoData.salida_corregida,
+                                        DB_TIMEZONE,
+                                      )
+                                      .tz(empresaTimezone)
+                                      .format("HH:mm")
+                                  : undefined
+                              }
+                              onChange={(e) => {
+                                const hora = e.target.value;
+                                const nuevaEntradaCorregida = hora
+                                  ? dayjs(
+                                      `${baseDateForCorrection} ${hora}`,
+                                    ).format("YYYY-MM-DD HH:mm:ss")
+                                  : null;
+                                handleMovimientoFieldChange(
+                                  "entrada_corregida",
+                                  nuevaEntradaCorregida,
+                                );
+                              }}
+                              className="max-w-[120px] mx-auto text-center"
+                            />
+                          ) : (
+                            <span>
+                              {checador.entrada_corregida
+                                ? dayjs
+                                    .tz(checador.entrada_corregida, DB_TIMEZONE)
+                                    .tz(empresaTimezone)
+                                    .format("HH:mm:ss")
+                                : "-"}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {checador.salida
+                            ? dayjs
+                                .tz(checador.salida, DB_TIMEZONE)
+                                .tz(empresaTimezone)
+                                .format("HH:mm:ss")
+                            : "-"}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {editingMovimientoId === checador.id ? (
+                            <Input
+                              type="time"
+                              value={
+                                editingMovimientoData.salida_corregida
+                                  ? dayjs
+                                      .tz(
+                                        editingMovimientoData.salida_corregida,
+                                        DB_TIMEZONE,
+                                      )
+                                      .tz(empresaTimezone)
+                                      .format("HH:mm")
+                                  : ""
+                              }
+                              min={
+                                editingMovimientoData.entrada_corregida
+                                  ? dayjs
+                                      .tz(
+                                        editingMovimientoData.entrada_corregida,
+                                        DB_TIMEZONE,
+                                      )
+                                      .tz(empresaTimezone)
+                                      .format("HH:mm")
+                                  : undefined
+                              }
+                              onChange={(e) => {
+                                const hora = e.target.value;
+                                // Combina la fecha base con la hora seleccionada
+                                const nuevaSalidaCorregida = hora
+                                  ? dayjs(
+                                      `${baseDateForCorrection} ${hora}`,
+                                    ).format("YYYY-MM-DD HH:mm:ss")
+                                  : null;
+                                handleMovimientoFieldChange(
+                                  "salida_corregida",
+                                  nuevaSalidaCorregida,
+                                );
+                              }}
+                              className="max-w-[120px] mx-auto text-center"
+                            />
+                          ) : (
+                            <span>
+                              {checador.salida_corregida
+                                ? dayjs
+                                    .tz(checador.salida_corregida, DB_TIMEZONE)
+                                    .tz(empresaTimezone)
+                                    .format("HH:mm:ss")
+                                : "-"}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <span
+                            className={`px-2 py-1 rounded-full text-sm text-white ${
+                              checador.estado === "Abierto"
+                                ? "bg-green-600"
+                                : "bg-gray-500"
+                            }`}
                           >
-                            <Save className="h-4 w-4 text-[#2563EB]" />
-                          </button>
-                          <button
-                            onClick={() => handleCancelMovimientoEdit()}
-                            className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                            title="Cancelar"
-                          >
-                            <X className="h-4 w-4 text-gray-700" />
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => handleEditMovimientoClick(checador)}
-                          className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-                          title="Editar"
-                        >
-                          <Pencil className="h-4 w-4 text-[#2563EB]" />
-                        </button>
-                      )}
-                    </TableCell>
+                            {checador.estado}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {editingMovimientoId === checador.id ? (
+                            <div className="flex gap-2 justify-center">
+                              <button
+                                onClick={async () => {
+                                  await handleSaveMovimientoClick();
+                                  if (mutateAsistencia) {
+                                    await mutateAsistencia();
+                                  }
+                                }}
+                                disabled={isSavingMovimiento}
+                                className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
+                                title="Guardar"
+                              >
+                                <Save className="h-4 w-4 text-[#2563EB]" />
+                              </button>
+                              <button
+                                onClick={() => handleCancelMovimientoEdit()}
+                                className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                                title="Cancelar"
+                              >
+                                <X className="h-4 w-4 text-gray-700" />
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() =>
+                                handleEditMovimientoClick(checador)
+                              }
+                              className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                              title="Editar"
+                            >
+                              <Pencil className="h-4 w-4 text-[#2563EB]" />
+                            </button>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

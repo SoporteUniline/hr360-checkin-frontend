@@ -171,13 +171,14 @@ export default function MobileFiltersDrawer({
       <DrawerContent className="max-h-[92vh] flex flex-col bg-white rounded-t-3xl">
         <div className="w-10 h-1.5 rounded-full bg-gray-300 mx-auto mt-3 shrink-0" />
 
-        <div className="px-6 pt-4 pb-2 shrink-0">
+        <div className="px-6 pt-4 pb-3 shrink-0 border-b border-gray-100">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <DrawerTitle className="text-xl font-bold text-gray-900">
+              <DrawerTitle className="text-xl font-extrabold tracking-tight text-gray-900">
                 Filtros
               </DrawerTitle>
-              <DrawerDescription className="text-sm text-gray-500 mt-0.5">
+              <div className="mt-1.5 h-0.5 w-10 rounded-full bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
+              <DrawerDescription className="text-sm text-gray-500 mt-1.5">
                 {totalEmpleados} empleados · {activeFiltersCount} filtros
                 activos
               </DrawerDescription>
@@ -188,22 +189,22 @@ export default function MobileFiltersDrawer({
                 onResetFilters?.();
                 setShowAllDepts(false);
               }}
-              className="text-sm font-medium text-blue-600"
+              className="text-sm font-semibold text-[#2563eb] min-h-[44px] px-2"
             >
               Limpiar
             </button>
           </div>
         </div>
 
-        <div className="overflow-y-auto flex-1 px-6 pb-10">
+        <div className="overflow-y-auto flex-1 px-6 pb-6">
           {/* Rango de fechas */}
           <section className="mt-4">
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-3">
               Rango de fechas
             </p>
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
-                <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">
                   Desde
                 </p>
                 <input
@@ -214,11 +215,11 @@ export default function MobileFiltersDrawer({
                     setPage(1);
                   }}
                   onClick={(e) => e.currentTarget.showPicker?.()}
-                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-900"
+                  className="w-full min-h-[44px] text-sm tabular-nums border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-900 shadow-sm outline-none focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/15"
                 />
               </div>
               <div>
-                <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">
                   Hasta
                 </p>
                 <input
@@ -229,7 +230,7 @@ export default function MobileFiltersDrawer({
                     setPage(1);
                   }}
                   onClick={(e) => e.currentTarget.showPicker?.()}
-                  className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white text-gray-900"
+                  className="w-full min-h-[44px] text-sm tabular-nums border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-900 shadow-sm outline-none focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/15"
                 />
               </div>
             </div>
@@ -239,10 +240,10 @@ export default function MobileFiltersDrawer({
                   key={p.key}
                   onClick={() => applyPreset(p.key)}
                   className={cn(
-                    "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
+                    "px-4 py-2 rounded-full text-sm font-semibold transition-colors",
                     activePreset === p.key
-                      ? "bg-gray-900 text-white"
-                      : "bg-gray-100 text-gray-700",
+                      ? "bg-gradient-to-br from-[#2563eb] to-[#4f46e5] text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)]"
+                      : "bg-white border border-gray-200 text-gray-600 active:bg-gray-50",
                   )}
                 >
                   {p.label}
@@ -253,7 +254,7 @@ export default function MobileFiltersDrawer({
 
           {/* Estado de asistencia */}
           <section className="mt-6">
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-3">
               Estado de Asistencia
             </p>
             <div className="flex flex-wrap gap-2">
@@ -267,10 +268,10 @@ export default function MobileFiltersDrawer({
                       setPage(1);
                     }}
                     className={cn(
-                      "flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
+                      "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-colors",
                       isSelected
-                        ? "bg-gray-900 text-white"
-                        : "bg-gray-100 text-gray-700",
+                        ? "bg-gradient-to-br from-[#2563eb] to-[#4f46e5] text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)]"
+                        : "bg-white border border-gray-200 text-gray-600 active:bg-gray-50",
                     )}
                   >
                     <span
@@ -279,7 +280,8 @@ export default function MobileFiltersDrawer({
                         opt.dotClass,
                       )}
                     />
-                    {opt.label} {opt.count}
+                    {opt.label}{" "}
+                    <span className="font-bold tabular-nums">{opt.count}</span>
                   </button>
                 );
               })}
@@ -289,7 +291,7 @@ export default function MobileFiltersDrawer({
           {/* Departamento */}
           {departamentos.length > 0 && (
             <section className="mt-6">
-              <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-3">
                 Departamento
               </p>
               <div className="flex flex-wrap gap-2">
@@ -317,10 +319,10 @@ export default function MobileFiltersDrawer({
                         setPage(1);
                       }}
                       className={cn(
-                        "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
+                        "px-4 py-2 rounded-full text-sm font-semibold transition-colors",
                         isSelected
-                          ? "bg-gray-900 text-white"
-                          : "bg-gray-100 text-gray-700",
+                          ? "bg-gradient-to-br from-[#2563eb] to-[#4f46e5] text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)]"
+                          : "bg-white border border-gray-200 text-gray-600 active:bg-gray-50",
                       )}
                     >
                       {dept.nombre} ({dept.empresa_nombre})
@@ -331,7 +333,7 @@ export default function MobileFiltersDrawer({
                 {!showAllDepts && hiddenDepts > 0 && (
                   <button
                     onClick={() => setShowAllDepts(true)}
-                    className="px-4 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-700"
+                    className="px-4 py-2 rounded-full text-sm font-semibold bg-white border border-dashed border-gray-300 text-[#2563eb] active:bg-gray-50"
                   >
                     + {hiddenDepts} más
                   </button>
@@ -342,12 +344,12 @@ export default function MobileFiltersDrawer({
 
           {/* Opciones */}
           <section className="mt-6">
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">
               Opciones
             </p>
-            <div className="flex items-center justify-between py-3 border-t border-gray-100">
+            <div className="flex items-center justify-between min-h-[56px] px-4 py-3 rounded-2xl border border-gray-100 bg-white shadow-sm">
               <div>
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-sm font-semibold text-gray-900">
                   Solo con entrada registrada
                 </p>
                 <p className="text-xs text-gray-400 mt-0.5">
@@ -363,6 +365,16 @@ export default function MobileFiltersDrawer({
               />
             </div>
           </section>
+        </div>
+
+        {/* Apply footer */}
+        <div className="shrink-0 bg-white border-t border-gray-100 px-6 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <button
+            onClick={() => onOpenChange(false)}
+            className="w-full min-h-[48px] py-3 rounded-xl bg-gradient-to-br from-[#2563eb] to-[#4f46e5] text-white text-sm font-semibold shadow-[0_8px_20px_rgba(37,99,235,0.32)] active:opacity-90"
+          >
+            Ver resultados
+          </button>
         </div>
       </DrawerContent>
     </Drawer>

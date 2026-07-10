@@ -6,20 +6,39 @@ import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import useDebounce from "@/hooks/useDebounce";
 import AsistenciaDataContainer from "./AsistenciaDataContainer";
-import AsistenciaCards from "./AsistenciaCards";
 import MobileAsistenciaView from "./MobileAsistenciaView";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import FormularioAsistenciasMasivas from "@/components/FormularioAsistenciasMasivas";
 import AccesosRapidos from "@/components/AccesosRapidos";
-import { ClipboardCheck } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronDown,
+  ClipboardCheck,
+  Layers,
+  RotateCcw,
+  Search,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { RotateCcw } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useIsMobile } from "@/hooks/use-mobile";
 import useDepartamentosData from "@/hooks/useDepartamentosData";
+import ResumenAsistencia from "./ResumenAsistencia";
+import RangoFechasModal from "./RangoFechasModal";
+import VistasGuardadas from "./VistasGuardadas";
+import ColumnasSelector, {
+  cargarColumnasGuardadas,
+  LS_COLUMNAS,
+} from "./ColumnasSelector";
+import { COLUMNAS_ASISTENCIA } from "./AsistenciaTable";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -66,6 +85,17 @@ export default function ControlAsistencia() {
   const [requiereAutorizacion, setRequiereAutorizacion] = useState(false);
   const [filtroRapido, setFiltroRapido] = useState("hoy");
 
+  // Nueva UX de escritorio: rango con modal, agrupación, columnas y detalle
+  const [rangoOpen, setRangoOpen] = useState(false);
+  const [rangoEtiqueta, setRangoEtiqueta] = useState("Hoy");
+  const [agrupar, setAgrupar] = useState(null);
+  const [visibleColumns, setVisibleColumns] = useState(null);
+
+  // Las columnas guardadas se cargan en cliente (localStorage no existe en SSR)
+  useEffect(() => {
+    setVisibleColumns(cargarColumnasGuardadas(COLUMNAS_ASISTENCIA));
+  }, []);
+
   const DEFAULT_SORT_CONFIG = {
     sortBy: "fecha",
     sortOrder: "desc",
@@ -102,50 +132,6 @@ export default function ControlAsistencia() {
 
   const today = dayjs().tz("America/Mexico_City").format("YYYY-MM-DD");
 
-  const aplicarFiltroRapido = (tipo) => {
-    const hoy = dayjs().tz("America/Mexico_City");
-
-    let inicio = hoy;
-    let fin = hoy;
-
-    switch (tipo) {
-      case "hoy":
-        break;
-
-      case "semana":
-        inicio = hoy.startOf("week");
-        break;
-
-      case "quinceDias":
-        inicio = hoy.subtract(14, "day");
-        break;
-
-      case "ultimoMes":
-        inicio = hoy.subtract(1, "month");
-        break;
-
-      case "semestre":
-        inicio = hoy.subtract(6, "month");
-        break;
-
-      case "anio":
-        inicio = hoy.startOf("year");
-        break;
-
-      case "todo":
-        setFechaInicio("");
-        setFechaFin("");
-        setFiltroRapido(tipo);
-        setPage(1);
-        return;
-    }
-
-    setFechaInicio(inicio.format("YYYY-MM-DD"));
-    setFechaFin(fin.format("YYYY-MM-DD"));
-    setFiltroRapido(tipo);
-    setPage(1);
-  };
-
   const handleResetFilters = () => {
     setEmpresaActiva("all");
     setFechaInicio(today);
@@ -164,6 +150,74 @@ export default function ControlAsistencia() {
     setMostrarCamposExtras(false);
     setFiltroRapido("hoy");
     setSortConfig(DEFAULT_SORT_CONFIG);
+    setAgrupar(null);
+    setRangoEtiqueta("Hoy");
+  };
+
+  // ——— Vistas guardadas: serializar/aplicar el estado de la pantalla ———
+  const hayFiltrosParaVista = Boolean(
+    filtroEmpleado ||
+    soloPresentes ||
+    soloAusentes ||
+    horasExtra ||
+    sinGoceDeSueldo ||
+    diasFestivos ||
+    requiereAutorizacion ||
+    filtroEstadoAsistencia ||
+    (filtroDepartamento || []).length ||
+    filtroTipoRegistro ||
+    agrupar ||
+    rangoEtiqueta !== "Hoy",
+  );
+
+  const obtenerEstadoVista = () => ({
+    fechaInicio,
+    fechaFin,
+    rangoEtiqueta,
+    filtroEmpleado,
+    filtroDepartamento,
+    filtroTipoRegistro,
+    filtroEstadoAsistencia,
+    soloPresentes,
+    soloAusentes,
+    horasExtra,
+    sinGoceDeSueldo,
+    diasFestivos,
+    requiereAutorizacion,
+    agrupar,
+    visibleColumns,
+  });
+
+  const aplicarEstadoVista = (v) => {
+    if (!v) return;
+    setFechaInicio(v.fechaInicio ?? today);
+    setFechaFin(v.fechaFin ?? today);
+    setRangoEtiqueta(v.rangoEtiqueta || "Hoy");
+    setFiltroEmpleado(v.filtroEmpleado || "");
+    setFiltroDepartamento(
+      Array.isArray(v.filtroDepartamento) ? v.filtroDepartamento : [],
+    );
+    setFiltroTipoRegistro(v.filtroTipoRegistro || "");
+    setFiltroEstadoAsistencia(v.filtroEstadoAsistencia || "");
+    setSoloPresentes(Boolean(v.soloPresentes));
+    setSoloAusentes(Boolean(v.soloAusentes));
+    setHorasExtra(Boolean(v.horasExtra));
+    setSinGoceDeSueldo(Boolean(v.sinGoceDeSueldo));
+    setDiasFestivos(Boolean(v.diasFestivos));
+    setRequiereAutorizacion(Boolean(v.requiereAutorizacion));
+    setAgrupar(v.agrupar || null);
+    if (Array.isArray(v.visibleColumns) && v.visibleColumns.length >= 2) {
+      setVisibleColumns(v.visibleColumns);
+      try {
+        window.localStorage.setItem(
+          LS_COLUMNAS,
+          JSON.stringify(v.visibleColumns),
+        );
+      } catch {
+        // sin persistencia
+      }
+    }
+    setPage(1);
   };
 
   const { ui, data, mutate } = AsistenciaDataContainer({
@@ -190,6 +244,8 @@ export default function ControlAsistencia() {
     requiereAutorizacion,
     sortConfig,
     setSortConfig,
+    agrupar,
+    visibleColumns,
   });
 
   // Mobile view: full-height layout overriding panel padding
@@ -242,22 +298,26 @@ export default function ControlAsistencia() {
     );
   }
 
-  // Desktop view
+  // Desktop view — UX renovada: encabezado compacto, banda de resumen,
+  // toolbar unificada (búsqueda + rango modal + agrupar + columnas) y vistas.
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-linear-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+    <div className="space-y-5">
+      {/* Encabezado compacto con la tipografía del landing */}
+      <div>
         <div className="flex items-center gap-3">
-          <div className="bg-[#2563EB] p-2.5 rounded-lg">
-            <ClipboardCheck className="w-5 h-5 text-white" />
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[#2563eb] to-[#7c3aed] shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
+            <ClipboardCheck className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-gray-900">Asistencias</h1>
-            <p className="text-sm text-gray-600">
-              Consulta y gestiona registros de entrada/salida por empleado.
+            <h1 className="text-xl font-extrabold tracking-tight text-gray-900">
+              Asistencias
+            </h1>
+            <p className="text-[12.5px] text-gray-500">
+              Registros de entrada y salida por empleado
             </p>
           </div>
         </div>
+        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
       </div>
 
       {modoFormulario && (
@@ -269,91 +329,107 @@ export default function ControlAsistencia() {
         />
       )}
 
-      <AsistenciaCards totals={data} />
-      <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">
-              Empleado
-            </label>
-            <Input
-              type="text"
-              placeholder="Buscar empleado..."
-              value={filtroEmpleado}
-              onChange={(e) => {
-                setFiltroEmpleado(e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Desde</label>
-            <Input
-              type="date"
-              value={fechaInicio}
-              onChange={(event) => {
-                setFechaInicio(event.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Hasta</label>
-            <Input
-              type="date"
-              value={fechaFin}
-              onChange={(event) => {
-                setFechaFin(event.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-          <div className="flex justify-start lg:justify-end">
-            <Button
-              onClick={handleResetFilters}
-              variant="outline"
-              className="border-gray-300 text-gray-700 hover:bg-gray-100"
-            >
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Limpiar
-            </Button>
-          </div>
+      <ResumenAsistencia
+        totals={data}
+        soloPresentes={soloPresentes}
+        setSoloPresentes={setSoloPresentes}
+        soloAusentes={soloAusentes}
+        setSoloAusentes={setSoloAusentes}
+        horasExtra={horasExtra}
+        setHorasExtra={setHorasExtra}
+        filtroEstadoAsistencia={filtroEstadoAsistencia}
+        setFiltroEstadoAsistencia={setFiltroEstadoAsistencia}
+        setPage={setPage}
+      />
+
+      {/* Toolbar unificada */}
+      <div className="flex flex-wrap items-center gap-2.5">
+        <div className="relative min-w-[220px] max-w-[340px] flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Input
+            type="text"
+            placeholder="Buscar empleado..."
+            className="rounded-xl pl-9"
+            value={filtroEmpleado}
+            onChange={(e) => {
+              setFiltroEmpleado(e.target.value);
+              setPage(1);
+            }}
+          />
         </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {[
-            ["hoy", "Hoy"],
-            ["semana", "Esta semana"],
-            ["quinceDias", "15 días"],
-            ["ultimoMes", "Último mes"],
-            ["semestre", "Semestre"],
-            ["anio", "Año"],
-            ["todo", "Todo"],
-          ].map(([key, label]) => (
-            <Button
-              key={key}
-              size="sm"
-              variant={filtroRapido === key ? "default" : "outline"}
-              onClick={() => aplicarFiltroRapido(key)}
-            >
-              {label}
-            </Button>
-          ))}
-        </div>
-        <div className="pt-3 mt-3 border-t border-gray-100">
-          <label className="flex items-center gap-2 cursor-pointer select-none w-fit">
-            <Checkbox
-              checked={mostrarCamposExtras}
-              onCheckedChange={(value) =>
-                setMostrarCamposExtras(Boolean(value))
-              }
-            />
-            <span className="text-sm text-gray-700">
-              Mostrar todos los campos
+
+        <Button
+          variant="outline"
+          onClick={() => setRangoOpen(true)}
+          className="rounded-xl border-gray-200 font-semibold text-gray-700"
+        >
+          <CalendarDays className="mr-1.5 h-4 w-4" />
+          {rangoEtiqueta}
+          <ChevronDown className="ml-1 h-3.5 w-3.5 text-gray-400" />
+        </Button>
+
+        <Select
+          value={agrupar || "none"}
+          onValueChange={(v) => {
+            setAgrupar(v === "none" ? null : v);
+          }}
+        >
+          <SelectTrigger className="w-[200px] rounded-xl border-gray-200 font-semibold text-gray-700">
+            <span className="flex items-center gap-1.5">
+              <Layers className="h-4 w-4 text-gray-500" />
+              <SelectValue placeholder="Agrupar" />
             </span>
-          </label>
-        </div>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Sin agrupar</SelectItem>
+            <SelectItem value="unidad">Unidad de negocio</SelectItem>
+            <SelectItem value="departamento">Departamento</SelectItem>
+            <SelectItem value="tipo">Tipo de registro</SelectItem>
+            <SelectItem value="estado">Estado</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Button
+          onClick={handleResetFilters}
+          variant="ghost"
+          className="rounded-xl font-semibold text-gray-500 hover:text-gray-900"
+        >
+          <RotateCcw className="mr-1.5 h-4 w-4" />
+          Limpiar
+        </Button>
+
+        <div className="flex-1" />
+
+        {Array.isArray(visibleColumns) && (
+          <ColumnasSelector
+            columnas={COLUMNAS_ASISTENCIA}
+            visibles={visibleColumns}
+            onChange={setVisibleColumns}
+          />
+        )}
       </div>
+
+      <VistasGuardadas
+        hayFiltros={hayFiltrosParaVista}
+        obtenerEstado={obtenerEstadoVista}
+        onAplicar={aplicarEstadoVista}
+        onLimpiar={handleResetFilters}
+      />
+
       {ui}
+
+      <RangoFechasModal
+        open={rangoOpen}
+        onOpenChange={setRangoOpen}
+        fechaInicio={fechaInicio}
+        fechaFin={fechaFin}
+        onAplicar={({ inicio, fin, etiqueta }) => {
+          setFechaInicio(inicio);
+          setFechaFin(fin);
+          setRangoEtiqueta(etiqueta);
+          setPage(1);
+        }}
+      />
 
       {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
       <AccesosRapidos />

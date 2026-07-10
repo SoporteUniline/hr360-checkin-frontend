@@ -14,13 +14,55 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { useEmpresaTimezone } from "@/context/AuthContext";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import HeaderMultiFilter from "./HeaderMultiFilter";
 import ActiveFilterChips from "./ActiveFilterChips";
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
+
+// Registro de columnas renderizables de la tabla de asistencias, en orden de
+// aparición. `extra: true` marca las columnas controladas por
+// `mostrarCamposExtras` (campos extras).
+export const COLUMNAS_ASISTENCIA = [
+  { key: "empleado", label: "Empleado", extra: false },
+  { key: "unidad", label: "Unidad", extra: false },
+  { key: "codigo", label: "Código", extra: true },
+  { key: "departamento", label: "Departamento", extra: false },
+  { key: "tipo", label: "Tipo", extra: false },
+  { key: "fecha", label: "Fecha", extra: false },
+  { key: "correccion", label: "Corrección", extra: true },
+  { key: "entrada", label: "Entrada", extra: false },
+  { key: "salida", label: "Salida", extra: false },
+  { key: "hrs_debia", label: "Hrs debía", extra: false },
+  { key: "hrs_trabajo", label: "Hrs trabajó", extra: false },
+  { key: "hrs_diferencia", label: "Hrs +/-", extra: false },
+  { key: "autorizado_por", label: "Autorizado", extra: true },
+  { key: "asistio", label: "Asistió", extra: false },
+  { key: "goce", label: "Goce", extra: false },
+  { key: "pago_triple", label: "Pago triple", extra: true },
+  { key: "domingo", label: "Domingo", extra: true },
+  { key: "prima_dominical", label: "Prima dom.", extra: true },
+  { key: "festivo", label: "Festivo", extra: true },
+  { key: "porcentaje_festivo", label: "% festivo", extra: true },
+  { key: "hrs_extra", label: "Hrs extra", extra: false },
+  { key: "forma_pago", label: "Forma pago", extra: true },
+  { key: "aut_extra", label: "Aut. extra", extra: true },
+  { key: "hrs_comida", label: "Hrs comida", extra: true },
+  { key: "notas", label: "Notas", extra: false },
+  { key: "notas_extra", label: "Notas extra", extra: true },
+  { key: "estado", label: "Estado", extra: false },
+  { key: "estado_asistencia", label: "Estado asis.", extra: true },
+  { key: "acciones", label: "Acciones", extra: false },
+];
+
+const EXTRA_COLUMN_KEYS = new Set(
+  COLUMNAS_ASISTENCIA.filter((col) => col.extra).map((col) => col.key),
+);
+
+// Clases base para los th (header sticky dentro del contenedor con scroll)
+const TH_STICKY = "sticky top-0 z-10 bg-gray-50";
 
 export default function AsistenciaTable({
   filtrados,
@@ -48,6 +90,9 @@ export default function AsistenciaTable({
   sortConfig,
   setSortConfig,
   setPage,
+  visibleColumns,
+  onRowClick,
+  agrupar = null,
 }) {
   // Para el Excel usamos la zona de la primera empresa visible (o la activa como fallback)
   const fallbackTimezone = useEmpresaTimezone(empresaActiva);
@@ -65,6 +110,25 @@ export default function AsistenciaTable({
   const [autorizacionSeleccionada, setAutorizacionSeleccionada] = useState([]);
   const [estadoAsistenciaSeleccionado, setEstadoAsistenciaSeleccionado] =
     useState([]);
+  const [collapsedGroups, setCollapsedGroups] = useState(() => new Set());
+
+  // Visibilidad de columnas: si `visibleColumns` viene (no vacío) manda sobre
+  // `mostrarCamposExtras`; si no, se conserva el comportamiento actual.
+  const visibleSet =
+    Array.isArray(visibleColumns) && visibleColumns.length > 0
+      ? new Set(visibleColumns)
+      : null;
+  const colVisible = (key) => {
+    if (visibleSet) return visibleSet.has(key);
+    return EXTRA_COLUMN_KEYS.has(key) ? Boolean(mostrarCamposExtras) : true;
+  };
+
+  const visibleColumnCount =
+    COLUMNAS_ASISTENCIA.filter((col) => {
+      if (col.key === "unidad" && empresaActiva !== "all") return false;
+      if (col.key === "acciones" && readOnly) return false;
+      return colVisible(col.key);
+    }).length || 1;
 
   const optionSourceRows = useMemo(
     () => (Array.isArray(filterOptionsRows) ? filterOptionsRows : filtrados),
@@ -257,6 +321,50 @@ export default function AsistenciaTable({
     return filteredRowsAll.slice(offset, offset + limit);
   }, [hasActiveHeaderFilters, filtrados, page, limit, filteredRowsAll]);
 
+  // Agrupación de los renglones YA calculados para la página (no altera
+  // filtrado ni paginación). Conserva el orden de aparición.
+  const groupedRows = useMemo(() => {
+    if (!agrupar) return null;
+    const getGroupName = (registro) => {
+      switch (agrupar) {
+        case "unidad":
+          return (
+            registro.unidad_negocio ||
+            registro.sucursal ||
+            registro.empresa_nombre ||
+            "Sin unidad"
+          );
+        case "departamento":
+          return registro.departamento || "Sin departamento";
+        case "tipo":
+          return registro.tipo_registro_nombre || "Sin tipo";
+        case "estado":
+          return registro.estadoAsistencia || "Sin estado";
+        default:
+          return "Sin grupo";
+      }
+    };
+    const map = new Map();
+    for (const registro of displayedRows) {
+      const name = getGroupName(registro);
+      if (!map.has(name)) map.set(name, []);
+      map.get(name).push(registro);
+    }
+    return [...map.entries()];
+  }, [agrupar, displayedRows]);
+
+  const toggleGroup = (name) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
+      return next;
+    });
+  };
+
   useEffect(() => {
     onHeaderFilteringMetaChange?.({
       active: hasActiveHeaderFilters,
@@ -380,6 +488,29 @@ export default function AsistenciaTable({
       <ArrowDown className="h-3 w-3 ml-1 text-blue-600" />
     );
   };
+
+  const renderAsistenciaRow = (reg) => (
+    <AsistenciaRow
+      key={reg.id}
+      registro={reg}
+      fecha={fecha}
+      readOnly={readOnly}
+      isEditing={editingRowId === reg.id}
+      editingRowData={editingRowData}
+      isSaving={isSaving}
+      empleados={empleados}
+      tiposPermiso={tiposPermiso}
+      handleEditClick={handleEditClick}
+      handleCancelEdit={handleCancelEdit}
+      handleFieldChange={handleFieldChange}
+      handleSaveClick={handleSaveClick}
+      mutateAsistencia={mutateAsistencia}
+      mostrarCamposExtras={mostrarCamposExtras}
+      empresaActiva={empresaActiva}
+      colVisible={colVisible}
+      onRowClick={onRowClick}
+    />
+  );
 
   return (
     <>
@@ -506,27 +637,33 @@ export default function AsistenciaTable({
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50 hover:bg-gray-50">
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => handleSort("empleado")}
-                      className="flex items-center"
-                    >
-                      EMPLEADO
-                      {renderSortIcon("empleado")}
-                    </button>
+                {colVisible("empleado") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs`}
+                  >
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleSort("empleado")}
+                        className="flex items-center"
+                      >
+                        EMPLEADO
+                        {renderSortIcon("empleado")}
+                      </button>
 
-                    <HeaderMultiFilter
-                      selected={empleadoSeleccionado}
-                      onChange={setEmpleadoSeleccionado}
-                      options={empleadoOptions}
-                      placeholder=""
-                    />
-                  </div>
-                </TableHead>
-                {empresaActiva === "all" && (
-                  <TableHead className="font-semibold text-gray-700 uppercase text-xs">
+                      <HeaderMultiFilter
+                        selected={empleadoSeleccionado}
+                        onChange={setEmpleadoSeleccionado}
+                        options={empleadoOptions}
+                        placeholder=""
+                      />
+                    </div>
+                  </TableHead>
+                )}
+                {empresaActiva === "all" && colVisible("unidad") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs`}
+                  >
                     <div className="flex items-center gap-1">
                       <button
                         type="button"
@@ -546,94 +683,126 @@ export default function AsistenciaTable({
                     </div>
                   </TableHead>
                 )}
-                {mostrarCamposExtras && (
-                  <TableHead className="font-semibold text-gray-700 uppercase text-xs">
+                {colVisible("codigo") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs`}
+                  >
                     Código
                   </TableHead>
                 )}
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => handleSort("departamento")}
-                      className="flex items-center"
-                    >
-                      DEPARTAMENTO
-                      {renderSortIcon("departamento")}
-                    </button>
+                {colVisible("departamento") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs`}
+                  >
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleSort("departamento")}
+                        className="flex items-center"
+                      >
+                        DEPARTAMENTO
+                        {renderSortIcon("departamento")}
+                      </button>
 
-                    <HeaderMultiFilter
-                      selected={departamentoSeleccionado}
-                      onChange={setDepartamentoSeleccionado}
-                      options={departamentoOptions}
-                      placeholder=""
-                    />
-                  </div>
-                </TableHead>
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => handleSort("tipoRegistro")}
-                      className="flex items-center"
-                    >
-                      TIPO
-                      {renderSortIcon("tipoRegistro")}
-                    </button>
+                      <HeaderMultiFilter
+                        selected={departamentoSeleccionado}
+                        onChange={setDepartamentoSeleccionado}
+                        options={departamentoOptions}
+                        placeholder=""
+                      />
+                    </div>
+                  </TableHead>
+                )}
+                {colVisible("tipo") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs`}
+                  >
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleSort("tipoRegistro")}
+                        className="flex items-center"
+                      >
+                        TIPO
+                        {renderSortIcon("tipoRegistro")}
+                      </button>
 
-                    <HeaderMultiFilter
-                      selected={tipoSeleccionado}
-                      onChange={setTipoSeleccionado}
-                      options={tipoOptions}
-                      placeholder=""
-                    />
-                  </div>
-                </TableHead>
-                <TableHead
-                  onClick={() => handleSort("fecha")}
-                  className="font-semibold text-gray-700 uppercase text-xs text-center cursor-pointer select-none"
-                >
-                  <div className="flex items-center justify-center">
-                    Fecha
-                    {renderSortIcon("fecha")}
-                  </div>
-                </TableHead>
-                {mostrarCamposExtras && (
-                  <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                      <HeaderMultiFilter
+                        selected={tipoSeleccionado}
+                        onChange={setTipoSeleccionado}
+                        options={tipoOptions}
+                        placeholder=""
+                      />
+                    </div>
+                  </TableHead>
+                )}
+                {colVisible("fecha") && (
+                  <TableHead
+                    onClick={() => handleSort("fecha")}
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center cursor-pointer select-none`}
+                  >
+                    <div className="flex items-center justify-center">
+                      Fecha
+                      {renderSortIcon("fecha")}
+                    </div>
+                  </TableHead>
+                )}
+                {colVisible("correccion") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                  >
                     Corrección
                   </TableHead>
                 )}
-                <TableHead
-                  onClick={() => handleSort("entrada")}
-                  className="font-semibold text-gray-700 uppercase text-xs text-center cursor-pointer select-none"
-                >
-                  <div className="flex items-center justify-center">
-                    Entrada
-                    {renderSortIcon("entrada")}
-                  </div>
-                </TableHead>
-                <TableHead
-                  onClick={() => handleSort("salida")}
-                  className="font-semibold text-gray-700 uppercase text-xs text-center cursor-pointer select-none"
-                >
-                  <div className="flex items-center justify-center">
-                    Salida
-                    {renderSortIcon("salida")}
-                  </div>
-                </TableHead>
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  Hrs debía
-                </TableHead>
+                {colVisible("entrada") && (
+                  <TableHead
+                    onClick={() => handleSort("entrada")}
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center cursor-pointer select-none`}
+                  >
+                    <div className="flex items-center justify-center">
+                      Entrada
+                      {renderSortIcon("entrada")}
+                    </div>
+                  </TableHead>
+                )}
+                {colVisible("salida") && (
+                  <TableHead
+                    onClick={() => handleSort("salida")}
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center cursor-pointer select-none`}
+                  >
+                    <div className="flex items-center justify-center">
+                      Salida
+                      {renderSortIcon("salida")}
+                    </div>
+                  </TableHead>
+                )}
+                {colVisible("hrs_debia") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                  >
+                    Hrs debía
+                  </TableHead>
+                )}
 
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  Hrs trabajó
-                </TableHead>
+                {colVisible("hrs_trabajo") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                  >
+                    Hrs trabajó
+                  </TableHead>
+                )}
 
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  Hrs +/-
-                </TableHead>
-                {mostrarCamposExtras && (
-                  <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                {colVisible("hrs_diferencia") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                  >
+                    Hrs +/-
+                  </TableHead>
+                )}
+                {colVisible("autorizado_por") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                  >
                     <HeaderMultiFilter
                       selected={autorizacionSeleccionada}
                       onChange={setAutorizacionSeleccionada}
@@ -642,129 +811,177 @@ export default function AsistenciaTable({
                     />
                   </TableHead>
                 )}
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => handleSort("asistencia")}
-                      className="flex items-center"
-                    >
-                      ASISTIÓ
-                      {renderSortIcon("asistencia")}
-                    </button>
+                {colVisible("asistio") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleSort("asistencia")}
+                        className="flex items-center"
+                      >
+                        ASISTIÓ
+                        {renderSortIcon("asistencia")}
+                      </button>
 
-                    <HeaderMultiFilter
-                      selected={asistioSeleccionado}
-                      onChange={setAsistioSeleccionado}
-                      options={asistioOptions}
-                      placeholder=""
-                    />
-                  </div>
-                </TableHead>
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => handleSort("goceSueldo")}
-                      className="flex items-center"
-                    >
-                      GOCE
-                      {renderSortIcon("goceSueldo")}
-                    </button>
-
-                    <HeaderMultiFilter
-                      selected={goceSeleccionado}
-                      onChange={setGoceSeleccionado}
-                      options={goceOptions}
-                      placeholder=""
-                    />
-                  </div>
-                </TableHead>
-                {mostrarCamposExtras && (
-                  <>
-                    <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                      Pago triple
-                    </TableHead>
-                    <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                      Domingo
-                    </TableHead>
-                    <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                      Prima dom.
-                    </TableHead>
-                    <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
                       <HeaderMultiFilter
-                        selected={festivoSeleccionado}
-                        onChange={setFestivoSeleccionado}
-                        options={festivoOptions}
-                        placeholder="Festivo"
+                        selected={asistioSeleccionado}
+                        onChange={setAsistioSeleccionado}
+                        options={asistioOptions}
+                        placeholder=""
                       />
-                    </TableHead>
-                    <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                      % festivo
-                    </TableHead>
-                  </>
+                    </div>
+                  </TableHead>
                 )}
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => handleSort("horasExtra")}
-                      className="flex items-center"
-                    >
-                      HRS EXTRA
-                      {renderSortIcon("horasExtra")}
-                    </button>
+                {colVisible("goce") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleSort("goceSueldo")}
+                        className="flex items-center"
+                      >
+                        GOCE
+                        {renderSortIcon("goceSueldo")}
+                      </button>
 
-                    <HeaderMultiFilter
-                      selected={horasExtraSeleccionado}
-                      onChange={setHorasExtraSeleccionado}
-                      options={horasExtraOptions}
-                      placeholder=""
-                    />
-                  </div>
-                </TableHead>
-                {mostrarCamposExtras && (
-                  <>
-                    <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                      Forma pago
-                    </TableHead>
-                    <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                      Aut. extra
-                    </TableHead>
-                    <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                      Hrs comida
-                    </TableHead>
-                  </>
+                      <HeaderMultiFilter
+                        selected={goceSeleccionado}
+                        onChange={setGoceSeleccionado}
+                        options={goceOptions}
+                        placeholder=""
+                      />
+                    </div>
+                  </TableHead>
                 )}
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  Notas
-                </TableHead>
-                {mostrarCamposExtras && (
-                  <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                {colVisible("pago_triple") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                  >
+                    Pago triple
+                  </TableHead>
+                )}
+                {colVisible("domingo") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                  >
+                    Domingo
+                  </TableHead>
+                )}
+                {colVisible("prima_dominical") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                  >
+                    Prima dom.
+                  </TableHead>
+                )}
+                {colVisible("festivo") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                  >
+                    <HeaderMultiFilter
+                      selected={festivoSeleccionado}
+                      onChange={setFestivoSeleccionado}
+                      options={festivoOptions}
+                      placeholder="Festivo"
+                    />
+                  </TableHead>
+                )}
+                {colVisible("porcentaje_festivo") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                  >
+                    % festivo
+                  </TableHead>
+                )}
+                {colVisible("hrs_extra") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleSort("horasExtra")}
+                        className="flex items-center"
+                      >
+                        HRS EXTRA
+                        {renderSortIcon("horasExtra")}
+                      </button>
+
+                      <HeaderMultiFilter
+                        selected={horasExtraSeleccionado}
+                        onChange={setHorasExtraSeleccionado}
+                        options={horasExtraOptions}
+                        placeholder=""
+                      />
+                    </div>
+                  </TableHead>
+                )}
+                {colVisible("forma_pago") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                  >
+                    Forma pago
+                  </TableHead>
+                )}
+                {colVisible("aut_extra") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                  >
+                    Aut. extra
+                  </TableHead>
+                )}
+                {colVisible("hrs_comida") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                  >
+                    Hrs comida
+                  </TableHead>
+                )}
+                {colVisible("notas") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                  >
+                    Notas
+                  </TableHead>
+                )}
+                {colVisible("notas_extra") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                  >
                     Notas extra
                   </TableHead>
                 )}
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => handleSort("estado")}
-                      className="flex items-center"
-                    >
-                      ESTADO
-                      {renderSortIcon("estado")}
-                    </button>
+                {colVisible("estado") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                  >
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleSort("estado")}
+                        className="flex items-center"
+                      >
+                        ESTADO
+                        {renderSortIcon("estado")}
+                      </button>
 
-                    <HeaderMultiFilter
-                      selected={estadoSeleccionado}
-                      onChange={setEstadoSeleccionado}
-                      options={estadoOptions}
-                      placeholder=""
-                    />
-                  </div>
-                </TableHead>
-                {mostrarCamposExtras && (
-                  <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                      <HeaderMultiFilter
+                        selected={estadoSeleccionado}
+                        onChange={setEstadoSeleccionado}
+                        options={estadoOptions}
+                        placeholder=""
+                      />
+                    </div>
+                  </TableHead>
+                )}
+                {colVisible("estado_asistencia") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                  >
                     <HeaderMultiFilter
                       selected={estadoAsistenciaSeleccionado}
                       onChange={setEstadoAsistenciaSeleccionado}
@@ -773,8 +990,8 @@ export default function AsistenciaTable({
                     />
                   </TableHead>
                 )}
-                {!readOnly && (
-                  <TableHead className="sticky right-0 bg-gray-50 z-10 text-center font-semibold text-gray-700 uppercase text-xs">
+                {!readOnly && colVisible("acciones") && (
+                  <TableHead className="sticky right-0 top-0 bg-gray-50 z-20 text-center font-semibold text-gray-700 uppercase text-xs">
                     Acciones
                   </TableHead>
                 )}
@@ -784,33 +1001,61 @@ export default function AsistenciaTable({
               {displayedRows.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={mostrarCamposExtras ? 50 : 20}
+                    colSpan={visibleColumnCount}
                     className="text-center py-10 text-gray-500"
                   >
                     No hay registros para los filtros seleccionados.
                   </TableCell>
                 </TableRow>
+              ) : groupedRows ? (
+                groupedRows.map(([groupName, rows]) => {
+                  const isCollapsed = collapsedGroups.has(groupName);
+                  const porcentajeAsistencia =
+                    rows.length > 0
+                      ? Math.round(
+                          (rows.filter((r) => r.estadoAsistencia !== "Ausente")
+                            .length /
+                            rows.length) *
+                            100,
+                        )
+                      : 0;
+                  return (
+                    <Fragment key={groupName}>
+                      <TableRow
+                        onClick={() => toggleGroup(groupName)}
+                        className="bg-[#f4f7fd] hover:bg-[#f4f7fd] cursor-pointer select-none border-b border-gray-100"
+                      >
+                        <TableCell
+                          colSpan={visibleColumnCount}
+                          className="py-2"
+                        >
+                          <div className="flex items-center gap-2">
+                            <ChevronDown
+                              className={`h-4 w-4 shrink-0 text-gray-500 transition-transform duration-200 ${
+                                isCollapsed ? "-rotate-90" : ""
+                              }`}
+                            />
+                            <span className="font-semibold text-[13px] text-gray-900">
+                              {groupName}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              · {rows.length} empleado
+                              {rows.length === 1 ? "" : "s"}
+                            </span>
+                            {agrupar !== "estado" && (
+                              <span className="ml-auto text-xs text-[#2563EB] font-bold">
+                                {porcentajeAsistencia}% asistencia
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      {!isCollapsed && rows.map(renderAsistenciaRow)}
+                    </Fragment>
+                  );
+                })
               ) : (
-                displayedRows.map((reg) => (
-                  <AsistenciaRow
-                    key={reg.id}
-                    registro={reg}
-                    fecha={fecha}
-                    readOnly={readOnly}
-                    isEditing={editingRowId === reg.id}
-                    editingRowData={editingRowData}
-                    isSaving={isSaving}
-                    empleados={empleados}
-                    tiposPermiso={tiposPermiso}
-                    handleEditClick={handleEditClick}
-                    handleCancelEdit={handleCancelEdit}
-                    handleFieldChange={handleFieldChange}
-                    handleSaveClick={handleSaveClick}
-                    mutateAsistencia={mutateAsistencia}
-                    mostrarCamposExtras={mostrarCamposExtras}
-                    empresaActiva={empresaActiva}
-                  />
-                ))
+                displayedRows.map(renderAsistenciaRow)
               )}
             </TableBody>
           </Table>

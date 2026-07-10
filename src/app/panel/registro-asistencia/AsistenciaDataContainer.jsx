@@ -5,12 +5,15 @@ import useEmpleadosData from "@/hooks/useEmpleadosData";
 import useTiposPermisoData from "@/hooks/useTiposPermisoData";
 import useAsistenciaActions from "@/hooks/useAsistenciaActions";
 import AsistenciaTable from "./AsistenciaTable";
+import AsistenciaDetalleSheet from "./AsistenciaDetalleSheet";
+import HistorialEmpleadoDialog from "./HistorialEmpleadoDialog";
 import TablePagination from "@/components/TablePagination";
 import LoadingTable from "@/components/LoadingTable";
 import ErrorPage from "@/components/ErrorPage";
 import { useEffect, useRef, useState } from "react";
 import { fetcherWithToken } from "@/lib/fetcher";
 import useDepartamentosData from "@/hooks/useDepartamentosData";
+import { useSnackbar } from "notistack";
 
 const DEFAULT_SORT_CONFIG = {
   sortBy: "fecha",
@@ -42,6 +45,8 @@ export default function AsistenciaDataContainer({
   requiereAutorizacion,
   sortConfig = DEFAULT_SORT_CONFIG,
   setSortConfig = () => {},
+  agrupar = null,
+  visibleColumns = null,
 }) {
   const { departamentos } = useDepartamentosData(idEmpresa);
   const [filterOptionsRows, setFilterOptionsRows] = useState([]);
@@ -83,16 +88,30 @@ export default function AsistenciaDataContainer({
     mutateRef.current = mutate;
   }, [mutate]);
 
-  // SSE: actualización en tiempo real cuando llega una checada
+  // SSE: actualización en tiempo real cuando llega una checada.
+  // Además de refrescar, se notifica con un toast discreto (máx. 1 cada 8 s
+  // para no saturar en horas pico de entrada).
+  const { enqueueSnackbar } = useSnackbar();
+  const lastToastRef = useRef(0);
   useEffect(() => {
     if (!idEmpresa) return;
     const es = new EventSource(
       `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/reloj/eventos-checada?id_empresa=${idEmpresa}`,
     );
-    es.addEventListener("checada", () => mutateRef.current());
+    es.addEventListener("checada", () => {
+      mutateRef.current();
+      const ahora = Date.now();
+      if (ahora - lastToastRef.current > 8000) {
+        lastToastRef.current = ahora;
+        enqueueSnackbar("Nueva checada recibida — registros actualizados", {
+          variant: "success",
+          autoHideDuration: 3500,
+        });
+      }
+    });
     es.onerror = () => {};
     return () => es.close();
-  }, [idEmpresa]);
+  }, [idEmpresa, enqueueSnackbar]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -231,6 +250,10 @@ export default function AsistenciaDataContainer({
     handleSaveClick,
   } = useAsistenciaActions(mutate);
 
+  // Panel lateral de detalle (clic en una fila) y su acceso al historial
+  const [registroDetalle, setRegistroDetalle] = useState(null);
+  const [registroHistorial, setRegistroHistorial] = useState(null);
+
   if (isLoading && !effectiveData) return <LoadingTable rows={10} />;
   if (error) {
     console.error(error);
@@ -266,6 +289,29 @@ export default function AsistenciaDataContainer({
           sortConfig={sortConfig}
           setSortConfig={setSortConfig}
           setPage={setPage}
+          agrupar={agrupar}
+          visibleColumns={visibleColumns}
+          onRowClick={(registro) => setRegistroDetalle(registro)}
+        />
+
+        <AsistenciaDetalleSheet
+          registro={registroDetalle}
+          open={Boolean(registroDetalle)}
+          onOpenChange={(abierto) => {
+            if (!abierto) setRegistroDetalle(null);
+          }}
+          onCorregir={readOnly ? undefined : handleEditClick}
+          onVerHistorial={(registro) => setRegistroHistorial(registro)}
+        />
+
+        <HistorialEmpleadoDialog
+          isOpen={Boolean(registroHistorial)}
+          onOpenChange={(abierto) => {
+            if (!abierto) setRegistroHistorial(null);
+          }}
+          empleado={registroHistorial}
+          fecha={fechaInicio}
+          mutateAsistencia={mutate}
         />
 
         {mostrarPaginacion && registros.length > 0 && (

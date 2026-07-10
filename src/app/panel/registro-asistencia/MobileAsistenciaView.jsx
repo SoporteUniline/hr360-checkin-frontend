@@ -111,7 +111,6 @@ function EmpleadoCard({ registro, index, totalCount, onClick }) {
     .join(" ");
 
   const initials = getInitials(registro.nombre, registro.apellido_paterno);
-  const avatarColor = getAvatarColor(nombreCompleto);
   const empresa =
     registro.unidad_negocio ||
     registro.sucursal ||
@@ -130,13 +129,10 @@ function EmpleadoCard({ registro, index, totalCount, onClick }) {
   return (
     <button
       onClick={() => onClick(registro, index)}
-      className="w-full flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-100 hover:bg-gray-50 active:bg-gray-100 text-left transition-colors"
+      className="w-[calc(100%-1.5rem)] mx-3 my-1.5 min-h-[64px] flex items-center gap-3 px-3.5 py-3 bg-white rounded-2xl border border-gray-100 shadow-sm hover:bg-gray-50/60 active:bg-gray-50 text-left transition-colors"
     >
       {/* Avatar */}
-      <div
-        className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
-        style={{ backgroundColor: avatarColor }}
-      >
+      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#2563eb] to-[#7c3aed] flex items-center justify-center text-sm font-bold text-white shrink-0">
         {initials}
       </div>
 
@@ -157,31 +153,31 @@ function EmpleadoCard({ registro, index, totalCount, onClick }) {
         {entradaFmt ? (
           <div
             className={cn(
-              "flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg",
+              "flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full border",
               esTarde
-                ? "bg-amber-100 text-amber-700"
-                : "bg-green-100 text-green-700",
+                ? "text-amber-700 bg-amber-50 border-amber-200"
+                : "text-green-700 bg-green-50 border-green-200",
             )}
           >
-            <span className="text-[9px] font-semibold opacity-70">IN</span>
-            <span>{entradaFmt}</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-current" />
+            <span className="font-semibold tabular-nums">{entradaFmt}</span>
           </div>
         ) : (
-          <div className="flex items-center gap-1 text-[11px] font-semibold text-gray-300 px-2 py-1 rounded-lg border border-dashed border-gray-200">
-            <span className="text-[9px] opacity-70">IN</span>
+          <div className="flex items-center gap-1 text-[11px] font-semibold text-gray-300 px-2.5 py-1 rounded-full border border-dashed border-gray-200">
+            <span className="text-[9px] font-bold opacity-70">IN</span>
             <span>—</span>
           </div>
         )}
 
         {/* OUT badge */}
         {salidaFmt ? (
-          <div className="flex items-center gap-1 text-[11px] font-bold px-2 py-1 rounded-lg bg-blue-50 text-blue-700">
-            <span className="text-[9px] font-semibold opacity-70">OUT</span>
-            <span>{salidaFmt}</span>
+          <div className="flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full border text-violet-700 bg-violet-50 border-violet-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-current" />
+            <span className="font-semibold tabular-nums">{salidaFmt}</span>
           </div>
         ) : (
-          <div className="flex items-center gap-1 text-[11px] font-semibold text-gray-300 px-2 py-1">
-            <span className="text-[9px] opacity-70">OUT</span>
+          <div className="flex items-center gap-1 text-[11px] font-semibold text-gray-300 px-2.5 py-1">
+            <span className="text-[9px] font-bold opacity-70">OUT</span>
             <span>—</span>
           </div>
         )}
@@ -207,18 +203,18 @@ function GrupoSection({
     <div>
       <button
         onClick={() => setCollapsed((c) => !c)}
-        className="w-full flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b border-gray-100 sticky top-0 z-10"
+        className="w-full min-h-[44px] flex items-center justify-between px-4 py-2.5 bg-gray-50/95 backdrop-blur-sm sticky top-0 z-10"
       >
         <div className="flex items-center gap-2">
           <span className={cn("w-2 h-2 rounded-full", config.dotClass)} />
-          <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
             {config.label}
           </span>
-          <span className="text-xs font-bold text-gray-400">
+          <span className="text-xs font-extrabold bg-gradient-to-br from-[#2563eb] to-[#7c3aed] bg-clip-text text-transparent tabular-nums">
             {totalFromStats ?? registros.length}
           </span>
         </div>
-        <div className="flex items-center gap-1 text-xs text-gray-400 font-medium">
+        <div className="flex items-center gap-1 text-[11px] text-gray-400 font-medium">
           {collapsed ? "Expandir" : "Contraer"}
           {collapsed ? (
             <ChevronDown className="w-3.5 h-3.5" />
@@ -407,36 +403,40 @@ export default function MobileAsistenciaView({
 
   return (
     <div className="flex flex-col h-full bg-gray-50 overflow-hidden">
-      {/* ─── Dark header ─── */}
-      <div className="text-black px-4 pt-3 pb-4 shrink-0">
-        {/* Company row */}
-        {/* <div className="mb-1">
-          <h1 className="text-lg font-bold leading-tight">Asistencia</h1>
-          <p className="text-xs uppercase tracking-wider">
-            {totalEmpleados > 0 ? `${totalEmpleados} EMPLEADOS` : ""}
-          </p>
-        </div> */}
+      {/* ─── Header ─── */}
+      <div className="bg-white px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 shrink-0">
+        {/* Title row */}
+        <div className="mb-3">
+          <h1 className="text-xl font-extrabold tracking-tight text-gray-900 leading-tight">
+            Asistencia
+          </h1>
+          <div className="mt-1.5 h-0.5 w-12 rounded-full bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
+        </div>
 
         {/* Date navigator */}
-        <div className="flex items-center justify-between bg-white/8 rounded-xl px-3 py-2 mt-2">
+        <div className="flex items-center justify-between gap-2">
           {isSingleDay ? (
             <>
               <button
                 onClick={handlePrevDay}
-                className="p-1 px-3 py-1 font-bold shadow-2xl shadow-black border-2 rounded-lg cursor-pointer"
+                className="w-11 h-11 flex items-center justify-center rounded-xl border border-gray-100 bg-white text-gray-600 text-lg font-bold shadow-sm active:bg-gray-50 cursor-pointer shrink-0"
               >
                 ‹
               </button>
-              <div className="text-center flex-1 border-2 rounded-lg mx-5 px-3 flex justify-between">
-                <div className="flex items-center p-3">
-                  <span className="font-bold text-lg">{diaNumero}</span>
+              <div className="flex-1 min-h-[44px] rounded-xl border border-gray-100 bg-white shadow-sm px-3 flex items-center justify-between min-w-0">
+                <div className="flex items-center py-2">
+                  <span className="text-2xl font-extrabold tracking-tight text-gray-900 tabular-nums">
+                    {diaNumero}
+                  </span>
                   <div className="flex flex-col justify-start px-2 gap-0">
-                    <span className="text-[10px]  text-gray-500 text-left">
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500 text-left">
                       {mesNombre} {año}
                     </span>
-                    <div className="font-bold text-left">
+                    <div className="font-semibold text-gray-900 text-left">
                       <span className="text-xs"> {diaNombre}</span>
-                      {isToday && <span className="text-xs"> · Hoy</span>}
+                      {isToday && (
+                        <span className="text-xs text-gray-400"> · Hoy</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -444,7 +444,7 @@ export default function MobileAsistenciaView({
                 {!isToday && (
                   <button
                     onClick={handleGoToToday}
-                    className="text-blue-600 font-medium flex items-center gap-1 cursor-pointer"
+                    className="text-[#2563eb] text-sm font-semibold flex items-center gap-1 cursor-pointer shrink-0 min-h-[44px]"
                   >
                     {isPast ? (
                       <>
@@ -461,31 +461,31 @@ export default function MobileAsistenciaView({
                 )}
 
                 {isToday && (
-                  <div className="flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                    <span className="text-green-400 text-[10px] font-bold uppercase">
+                  <div className="flex items-center gap-1 shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-green-600 text-[10px] font-bold uppercase tracking-widest">
                       LIVE
                     </span>
                   </div>
                 )}
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleNextDay}
-                  className="p-1 px-3 py-1 font-bold shadow-2xl shadow-black border-2 rounded-lg cursor-pointer"
-                >
-                  ›
-                </button>
-              </div>
+              <button
+                onClick={handleNextDay}
+                className="w-11 h-11 flex items-center justify-center rounded-xl border border-gray-100 bg-white text-gray-600 text-lg font-bold shadow-sm active:bg-gray-50 cursor-pointer shrink-0"
+              >
+                ›
+              </button>
             </>
           ) : (
             <>
-              <div className="flex-1 text-center">
-                <span className="text-sm font-semibold">{rangoLabel}</span>
+              <div className="flex-1 min-h-[44px] rounded-xl border border-gray-100 bg-white shadow-sm px-3 flex items-center justify-center">
+                <span className="text-sm font-semibold text-gray-900 tabular-nums">
+                  {rangoLabel}
+                </span>
               </div>
               <button
                 onClick={handleGoToToday}
-                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-900 text-white shrink-0 cursor-pointer"
+                className="text-xs font-semibold px-4 min-h-[44px] rounded-xl bg-gradient-to-br from-[#2563eb] to-[#4f46e5] text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] shrink-0 cursor-pointer active:opacity-90"
               >
                 × Hoy
               </button>
@@ -560,8 +560,8 @@ export default function MobileAsistenciaView({
       </div>
 
       {/* ─── Search + Filter ─── */}
-      <div className="px-4 py-3 bg-white border-b border-gray-100 shrink-0 flex items-center gap-2">
-        <div className="flex-1 flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2 border border-gray-200">
+      <div className="px-4 py-3 bg-white shrink-0 flex items-center gap-2">
+        <div className="flex-1 min-h-[44px] flex items-center gap-2 bg-white rounded-xl px-3 border border-gray-200 shadow-sm transition-shadow focus-within:border-[#2563eb] focus-within:ring-2 focus-within:ring-[#2563eb]/15">
           <Search className="w-4 h-4 text-gray-400 shrink-0" />
           <input
             type="text"
@@ -571,7 +571,7 @@ export default function MobileAsistenciaView({
               setFiltroEmpleado(e.target.value);
               setPage(1);
             }}
-            className="flex-1 bg-transparent text-sm text-gray-700 placeholder:text-gray-400 outline-none min-w-0"
+            className="flex-1 h-full py-2.5 bg-transparent text-sm text-gray-900 placeholder:text-gray-400 outline-none min-w-0"
           />
           {filtroEmpleado && (
             <button
@@ -579,7 +579,7 @@ export default function MobileAsistenciaView({
                 setFiltroEmpleado("");
                 setPage(1);
               }}
-              className="text-gray-400 text-xs"
+              className="w-6 h-6 flex items-center justify-center rounded-full bg-gray-100 text-gray-500 text-xs shrink-0"
             >
               ✕
             </button>
@@ -587,11 +587,11 @@ export default function MobileAsistenciaView({
         </div>
         <button
           onClick={() => setShowFilters(true)}
-          className="relative p-2.5 bg-gray-900 rounded-xl text-white shrink-0 active:bg-gray-700"
+          className="relative w-11 h-11 flex items-center justify-center bg-gradient-to-br from-[#2563eb] to-[#4f46e5] rounded-xl text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] shrink-0 active:opacity-90"
         >
           <ListFilter className="w-4 h-4" />
           {activeFiltersCount > 0 && (
-            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-blue-500 text-white text-[10px] font-bold flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white text-[#2563eb] border border-[#2563eb]/20 text-[10px] font-bold flex items-center justify-center shadow-sm">
               {activeFiltersCount}
             </span>
           )}
@@ -610,10 +610,10 @@ export default function MobileAsistenciaView({
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors shrink-0",
+                  "flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-colors shrink-0",
                   isActive
-                    ? "bg-gray-900 text-white"
-                    : "text-gray-500 hover:bg-gray-100",
+                    ? "bg-gradient-to-br from-[#2563eb] to-[#4f46e5] text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)]"
+                    : "text-gray-600 border border-gray-200 bg-white hover:bg-gray-50",
                 )}
               >
                 {tab.dotClass && (
@@ -625,10 +625,10 @@ export default function MobileAsistenciaView({
 
                 <span
                   className={cn(
-                    "ml-1 rounded-lg px-2 py-0.5",
+                    "ml-0.5 rounded-full px-2 py-0.5 tabular-nums font-bold",
                     isActive
-                      ? "bg-gray-700 text-white"
-                      : "bg-gray-200 text-gray-600",
+                      ? "bg-white/20 text-white"
+                      : "bg-gray-100 text-gray-500",
                   )}
                 >
                   {count}
@@ -642,19 +642,29 @@ export default function MobileAsistenciaView({
       {/* ─── List ─── */}
       <div className="flex-1 overflow-y-auto">
         {isLoading && registros.length === 0 && (
-          <div className="flex flex-col gap-3 p-4">
+          <div className="flex flex-col gap-3 p-3">
             {[...Array(8)].map((_, i) => (
               <div
                 key={i}
-                className="h-16 bg-white rounded-xl animate-pulse border border-gray-100"
-              />
+                className="min-h-[64px] flex items-center gap-3 px-3.5 py-3 bg-white rounded-2xl border border-gray-100 shadow-sm animate-pulse"
+              >
+                <div className="w-10 h-10 rounded-xl bg-gray-100 shrink-0" />
+                <div className="flex-1 min-w-0 space-y-2">
+                  <div className="h-3 w-2/3 rounded-full bg-gray-100" />
+                  <div className="h-2.5 w-1/2 rounded-full bg-gray-100/80" />
+                </div>
+                <div className="h-6 w-16 rounded-full bg-gray-100 shrink-0" />
+              </div>
             ))}
           </div>
         )}
 
         {!isLoading && registros.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-            <p className="text-sm font-medium">Sin registros</p>
+            <div className="w-12 h-12 rounded-2xl border border-gray-100 bg-white shadow-sm flex items-center justify-center mb-3">
+              <Search className="w-5 h-5 text-gray-300" />
+            </div>
+            <p className="text-sm font-semibold text-gray-500">Sin registros</p>
             <p className="text-xs mt-1">Intenta con otros filtros</p>
           </div>
         )}
@@ -707,29 +717,32 @@ export default function MobileAsistenciaView({
       </div>
 
       {/* ─── Bottom bar ─── */}
-      <div className="shrink-0 bg-white border-t border-gray-100 px-4 py-3 flex items-center justify-between gap-3">
+      <div className="shrink-0 bg-white border-t border-gray-100 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] flex items-center justify-between gap-3">
         <div className="text-[11px] text-gray-400 leading-tight min-w-0">
-          <span className="font-semibold text-gray-600">
-            {totalRegistros} registros
+          <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
+            <span className="text-sm font-extrabold bg-gradient-to-br from-[#2563eb] to-[#7c3aed] bg-clip-text text-transparent tabular-nums normal-case tracking-normal">
+              {totalRegistros}
+            </span>{" "}
+            registros
           </span>
           {totalPages > 1 && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mt-1">
               <button
                 disabled={page === 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+                className="px-3 py-1.5 rounded-full border border-gray-200 bg-white text-gray-600 font-semibold shadow-sm disabled:opacity-50"
               >
                 Anterior
               </button>
 
-              <span className="text-xs">
+              <span className="text-xs font-semibold text-gray-500 tabular-nums">
                 Pág. {page} / {totalPages}
               </span>
 
               <button
                 disabled={page === totalPages}
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
+                className="px-3 py-1.5 rounded-full border border-gray-200 bg-white text-gray-600 font-semibold shadow-sm disabled:opacity-50"
               >
                 Siguiente
               </button>
@@ -739,6 +752,7 @@ export default function MobileAsistenciaView({
                   setPage(1);
                   setLimit(10000);
                 }}
+                className="text-[#2563eb] font-semibold"
               >
                 Ver todos
               </button>
@@ -747,7 +761,7 @@ export default function MobileAsistenciaView({
         </div>
         <button
           onClick={abrirFormulario}
-          className="flex items-center gap-1.5 bg-gray-900 text-white text-xs font-bold px-4 py-2 rounded-xl shrink-0 active:bg-gray-700"
+          className="flex items-center gap-1.5 bg-gradient-to-br from-[#2563eb] to-[#4f46e5] text-white text-xs font-semibold px-4 min-h-[44px] rounded-xl shadow-[0_8px_20px_rgba(37,99,235,0.32)] shrink-0 active:opacity-90"
         >
           <Plus className="w-3.5 h-3.5" />
           Masivo
