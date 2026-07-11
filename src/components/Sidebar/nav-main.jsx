@@ -7,7 +7,13 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useAuth } from "@/context/AuthContext";
 import {
   UsersIcon,
@@ -51,7 +57,7 @@ import {
   Search,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const dashboardItems = [
   {
@@ -124,7 +130,8 @@ const dashboardItems = [
 
 const menuGroups = [
   {
-    group: "👥 GESTIÓN DE PERSONAL",
+    group: "GESTIÓN DE PERSONAL",
+    groupIcon: UsersIcon,
     items: [
       {
         title: "Empleados",
@@ -195,7 +202,8 @@ const menuGroups = [
     ],
   },
   {
-    group: "⏰ CONTROL DE TIEMPO",
+    group: "CONTROL DE TIEMPO",
+    groupIcon: ClockIcon,
     items: [
       {
         title: "Asistencias",
@@ -230,7 +238,8 @@ const menuGroups = [
     ],
   },
   {
-    group: "📅 AUSENCIAS Y PERMISOS",
+    group: "AUSENCIAS Y PERMISOS",
+    groupIcon: CalendarDays,
     items: [
       {
         title: "Vacaciones",
@@ -274,7 +283,8 @@ const menuGroups = [
     ],
   },
   {
-    group: "📚 CATÁLOGOS BASE",
+    group: "CATÁLOGOS BASE",
+    groupIcon: BookOpen,
     items: [
       {
         title: "Áreas de Check",
@@ -297,7 +307,8 @@ const menuGroups = [
     ],
   },
   {
-    group: "📄 GESTIÓN DOCUMENTAL",
+    group: "GESTIÓN DOCUMENTAL",
+    groupIcon: FolderOpen,
     items: [
       {
         title: "Biblioteca documental",
@@ -326,7 +337,8 @@ const menuGroups = [
     ],
   },
   {
-    group: "🔧 AJUSTES",
+    group: "AJUSTES",
+    groupIcon: SlidersHorizontal,
     items: [
       {
         title: "Reglas de aviso",
@@ -365,10 +377,108 @@ const normalizar = (s) =>
 
 const GRUPOS_ABIERTOS_KEY = "sidebar-grupos-abiertos";
 
+// Estilos del item activo: fondo azul suave + barrita redondeada a la
+// izquierda (sin sombras), iconos en gris tenue que se encienden en azul.
+const ITEM_ACTIVO =
+  "bg-[#f0f5ff] text-[#1d4ed8] font-semibold relative before:absolute before:left-[3px] before:top-2 before:bottom-2 before:w-[3px] before:rounded-full before:bg-[#2563EB] [&_svg]:text-[#2563EB]";
+const ITEM_NORMAL =
+  "text-gray-700 [&_svg]:text-gray-400 hover:[&_svg]:text-[#2563EB]";
+
+// Módulo del rail contraído: icono + panel flotante con todos sus items.
+function RailModule({ icon: Icon, title, items, path, onNavigate }) {
+  const [open, setOpen] = useState(false);
+  const cierreRef = useRef(null);
+  const abrir = () => {
+    if (cierreRef.current) clearTimeout(cierreRef.current);
+    setOpen(true);
+  };
+  const cerrar = () => {
+    cierreRef.current = setTimeout(() => setOpen(false), 140);
+  };
+
+  const urls = items.flatMap((i) =>
+    i.children ? i.children.map((c) => c.url) : [i.url],
+  );
+  const moduloActivo = urls.includes(path);
+
+  const enlace = (it) => (
+    <button
+      key={it.title}
+      type="button"
+      onClick={() => {
+        setOpen(false);
+        onNavigate(it.url);
+      }}
+      className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[12.5px] font-medium transition-colors ${
+        path === it.url
+          ? "bg-[#f0f5ff] font-semibold text-[#1d4ed8]"
+          : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+      }`}
+    >
+      {it.icon ? (
+        <it.icon
+          size={15}
+          className={path === it.url ? "text-[#2563EB]" : "text-gray-400"}
+        />
+      ) : null}
+      <span>{it.title}</span>
+    </button>
+  );
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={title}
+          onMouseEnter={abrir}
+          onMouseLeave={cerrar}
+          onFocus={abrir}
+          onBlur={cerrar}
+          className={`relative grid h-10 w-10 place-items-center rounded-xl transition-colors ${
+            moduloActivo
+              ? "bg-[#f0f5ff] text-[#2563EB] before:absolute before:-left-3 before:top-2.5 before:bottom-2.5 before:w-[3px] before:rounded-full before:bg-[#2563EB]"
+              : "text-gray-500 hover:bg-[#f0f4ff] hover:text-[#2563EB]"
+          }`}
+        >
+          <Icon size={19} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        side="right"
+        align="start"
+        sideOffset={10}
+        onMouseEnter={abrir}
+        onMouseLeave={cerrar}
+        className="w-60 overflow-hidden rounded-2xl p-0"
+      >
+        <div className="border-b border-gray-100 px-3.5 pb-2 pt-2.5 text-[10px] font-bold uppercase tracking-widest text-gray-400">
+          {title}
+        </div>
+        <div className="max-h-80 overflow-auto p-1.5">
+          {items.map((item) =>
+            item.children ? (
+              <div key={item.title}>
+                <div className="px-2.5 pb-1 pt-2 text-[11px] font-semibold text-gray-400">
+                  {item.title}
+                </div>
+                {item.children.map((child) => enlace(child))}
+              </div>
+            ) : (
+              enlace(item)
+            ),
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function NavMain() {
   const router = useRouter();
   const path = usePathname();
   const { dataUser } = useAuth();
+  const { state: sidebarState, isMobile } = useSidebar();
   const [open, setOpen] = useState();
   const [busqueda, setBusqueda] = useState("");
   // Colapso por módulo: todos abiertos por defecto; se recuerda en localStorage.
@@ -443,6 +553,53 @@ export function NavMain() {
     perfilRoute = "/dashboard/empresas";
   }
 
+  // ——— Modo rail: contraído en escritorio, un icono por módulo con flyout ———
+  if (sidebarState === "collapsed" && !isMobile) {
+    const gruposVisibles =
+      effectiveRole !== "Admin"
+        ? menuGroups
+            .map((g) => ({
+              ...g,
+              items: g.items.filter(
+                (item) => !item.rol || item.rol === effectiveRole,
+              ),
+            }))
+            .filter((g) => g.items.length > 0)
+        : [];
+
+    return (
+      <SidebarGroup>
+        <SidebarGroupContent className="flex flex-col items-center gap-1 pt-1">
+          {dashboardItems
+            .filter((item) => !item.rol || item.rol === effectiveRole)
+            .map((item) => (
+              <RailModule
+                key={item.title}
+                icon={item.icon}
+                title={item.title}
+                items={[item]}
+                path={path}
+                onNavigate={handleClick}
+              />
+            ))}
+          {gruposVisibles.length > 0 && (
+            <div className="my-1 h-px w-7 bg-gray-200" aria-hidden="true" />
+          )}
+          {gruposVisibles.map((g) => (
+            <RailModule
+              key={g.group}
+              icon={g.groupIcon}
+              title={g.group}
+              items={g.items}
+              path={path}
+              onNavigate={handleClick}
+            />
+          ))}
+        </SidebarGroupContent>
+      </SidebarGroup>
+    );
+  }
+
   return (
     <SidebarGroup>
       <SidebarGroupContent className="flex flex-col gap-2">
@@ -485,7 +642,7 @@ export function NavMain() {
                   tooltip={item.title}
                   onClick={() => handleClick(item.url)}
                   className={`${
-                    path === item.url ? "bg-slate-300 text-slate-900" : ""
+                    path === item.url ? ITEM_ACTIVO : ITEM_NORMAL
                   } cursor-pointer flex justify-between`}
                 >
                   <div className="flex items-center gap-2">
@@ -548,9 +705,7 @@ export function NavMain() {
                               }
                             }}
                             className={`${
-                              path === item.url
-                                ? "bg-slate-300 text-slate-900"
-                                : ""
+                              path === item.url ? ITEM_ACTIVO : ITEM_NORMAL
                             } cursor-pointer flex justify-between`}
                           >
                             <div className="flex items-center gap-2">
@@ -583,8 +738,8 @@ export function NavMain() {
                                       onClick={() => handleClick(child.url)}
                                       className={`${
                                         path === child.url
-                                          ? "bg-slate-200 text-slate-900"
-                                          : ""
+                                          ? ITEM_ACTIVO
+                                          : ITEM_NORMAL
                                       } cursor-pointer flex items-center gap-2 text-sm`}
                                     >
                                       {child.icon && <child.icon size={16} />}
