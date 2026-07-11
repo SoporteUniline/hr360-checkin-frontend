@@ -4,7 +4,16 @@
 // mostradas como pestañas reutilizables y persistidas en localStorage.
 
 import { useEffect, useState } from "react";
-import { X, Plus } from "lucide-react";
+import { X, Plus, Bookmark } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 const LS_VISTAS = "asistencias-vistas";
 
@@ -16,6 +25,8 @@ export default function VistasGuardadas({
 }) {
   const [vistas, setVistas] = useState([]);
   const [vistaActiva, setVistaActiva] = useState(null);
+  const [dialogAbierto, setDialogAbierto] = useState(false);
+  const [nombreVista, setNombreVista] = useState("");
 
   useEffect(() => {
     try {
@@ -35,18 +46,17 @@ export default function VistasGuardadas({
     }
   };
 
-  const guardarActual = () => {
-    const nombre = window.prompt(
-      "Nombre de la vista (ej. Ausencias Planta Zapopan):",
-    );
-    if (!nombre || !nombre.trim()) return;
-    const limpio = nombre.trim().slice(0, 40);
+  const confirmarGuardar = () => {
+    const limpio = nombreVista.trim().slice(0, 40);
+    if (!limpio) return;
     const next = [
       ...vistas.filter((v) => v.nombre !== limpio),
       { nombre: limpio, estado: obtenerEstado() },
     ];
     persistir(next);
     setVistaActiva(limpio);
+    setNombreVista("");
+    setDialogAbierto(false);
   };
 
   const eliminar = (nombre) => {
@@ -112,12 +122,65 @@ export default function VistasGuardadas({
       {hayFiltros && (
         <button
           type="button"
-          onClick={guardarActual}
+          onClick={() => {
+            setNombreVista("");
+            setDialogAbierto(true);
+          }}
           className="inline-flex items-center gap-1 rounded-xl border border-dashed border-violet-200 bg-[#fdfcff] px-3.5 py-1.5 text-[12.5px] font-semibold text-[#7c3aed] transition-colors hover:border-[#7c3aed] hover:bg-violet-50"
         >
           <Plus className="h-3.5 w-3.5" /> Guardar vista actual
         </button>
       )}
+
+      <Dialog open={dialogAbierto} onOpenChange={setDialogAbierto}>
+        <DialogContent className="gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-[420px]">
+          <DialogHeader className="px-6 pb-4 pt-5">
+            <DialogTitle className="flex items-center gap-2 text-base font-extrabold tracking-tight text-gray-900">
+              <span className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-[#2563eb] to-[#7c3aed] shadow-[0_5px_12px_rgba(37,99,235,0.3)]">
+                <Bookmark className="h-4 w-4 text-white" />
+              </span>
+              Guardar vista
+            </DialogTitle>
+          </DialogHeader>
+          <div className="h-[2.5px] bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
+          <div className="px-6 py-5">
+            <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-gray-500">
+              Nombre de la vista
+            </label>
+            <Input
+              autoFocus
+              value={nombreVista}
+              maxLength={40}
+              placeholder="Ej. Ausencias Planta Zapopan"
+              className="rounded-xl"
+              onChange={(e) => setNombreVista(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") confirmarGuardar();
+              }}
+            />
+            <p className="mt-2 text-[11.5px] font-medium leading-snug text-gray-400">
+              Se guardan los filtros, el rango de fechas, la agrupación y las
+              columnas visibles. La vista queda disponible como pestaña.
+            </p>
+          </div>
+          <DialogFooter className="gap-2 border-t border-gray-100 px-6 py-4">
+            <Button
+              variant="outline"
+              onClick={() => setDialogAbierto(false)}
+              className="rounded-xl border-gray-200 font-semibold text-gray-700"
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={confirmarGuardar}
+              disabled={!nombreVista.trim()}
+              className="rounded-xl bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
+            >
+              Guardar vista
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

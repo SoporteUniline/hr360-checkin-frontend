@@ -17,17 +17,28 @@ export default function ResumenAsistencia({
   setFiltroEstadoAsistencia,
   setPage,
 }) {
-  const {
-    total_empleados = 0,
-    total_presentes = 0,
-    total_tardanzas = 0,
-    total_ausencias = 0,
-    total_con_horas_extra = 0,
-  } = totals || {};
+  // El backend puede regresar los conteos como cadenas ("3"): se convierten
+  // SIEMPRE a número antes de operar (evita concatenaciones tipo "3"+0="30").
+  const num = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+  const total_presentes = num(totals?.total_presentes);
+  const total_tardanzas = num(totals?.total_tardanzas);
+  const total_ausencias = num(totals?.total_ausencias);
+  const total_con_horas_extra = num(totals?.total_con_horas_extra);
 
-  const pct = total_empleados
-    ? Math.round(((total_presentes + total_tardanzas) / total_empleados) * 100)
+  // Denominador defensivo: si total_empleados falta o es menor que la suma
+  // de estados, se usa la suma; el porcentaje queda acotado a 0–100.
+  const sumaEstados = total_presentes + total_tardanzas + total_ausencias;
+  const totalBase = Math.max(num(totals?.total_empleados), sumaEstados);
+  const pct = totalBase
+    ? Math.min(
+        100,
+        Math.round(((total_presentes + total_tardanzas) / totalBase) * 100),
+      )
     : 0;
+  const total_empleados = totalBase;
 
   const limpiarEstados = () => {
     setSoloPresentes(false);

@@ -374,11 +374,9 @@ export default function ControlAsistencia() {
             setAgrupar(v === "none" ? null : v);
           }}
         >
-          <SelectTrigger className="w-[200px] rounded-xl border-gray-200 font-semibold text-gray-700">
-            <span className="flex items-center gap-1.5">
-              <Layers className="h-4 w-4 text-gray-500" />
-              <SelectValue placeholder="Agrupar" />
-            </span>
+          <SelectTrigger className="h-9 w-auto min-w-[190px] whitespace-nowrap rounded-xl border-gray-200 font-semibold text-gray-700 [&>span]:flex [&>span]:items-center [&>span]:gap-1.5">
+            <Layers className="h-4 w-4 shrink-0 text-gray-500" />
+            <SelectValue placeholder="Agrupar" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">Sin agrupar</SelectItem>
