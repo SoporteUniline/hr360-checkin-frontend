@@ -7,7 +7,12 @@ import useSWR from "swr";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import {
+  FiltrosGrid,
+  CampoFiltro,
+  SelectorBoton,
+} from "@/components/filtros/CampoFiltro";
+import RangoFechasModal from "@/components/filtros/RangoFechasModal";
 import {
   CalendarDays,
   Table as TableIcon,
@@ -61,6 +66,11 @@ export default function PermisosPage() {
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
 
+  // Filtro homologado de rango de fechas (modal + etiqueta del botón).
+  // Sin fechas iniciales: se muestra todo el historial.
+  const [rangoOpen, setRangoOpen] = useState(false);
+  const [rangoEtiqueta, setRangoEtiqueta] = useState("");
+
   useEffect(() => {
     if (dataUser?.empresas_detalle?.length > 0 && !unidadActiva) {
       setUnidadActiva("all");
@@ -88,12 +98,15 @@ export default function PermisosPage() {
   useEffect(() => {
     const id = searchParams.get("id");
     if (!id) return;
-    permisosApi.getById(id).then((permiso) => {
-      if (!permiso) return;
-      setViewItem(permiso);
-      setOpenView(true);
-    }).catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    permisosApi
+      .getById(id)
+      .then((permiso) => {
+        if (!permiso) return;
+        setViewItem(permiso);
+        setOpenView(true);
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
   const [deleteId, setDeleteId] = useState(null);
 
@@ -206,7 +219,11 @@ export default function PermisosPage() {
         const totalRows = Number(firstData?.total || allRows.length);
         const totalPagesAll = Math.max(1, Math.ceil(totalRows / pageSize));
 
-        for (let currentPage = 2; currentPage <= totalPagesAll; currentPage += 1) {
+        for (
+          let currentPage = 2;
+          currentPage <= totalPagesAll;
+          currentPage += 1
+        ) {
           const pageParams = new URLSearchParams(firstParams);
           pageParams.set("page", String(currentPage));
           const pageData = await fetcherWithToken(
@@ -232,7 +249,10 @@ export default function PermisosPage() {
 
   useEffect(() => {
     if (!headerFilterMeta.active) return;
-    const totalPagesMeta = Math.max(1, Math.ceil(headerFilterMeta.total / limit));
+    const totalPagesMeta = Math.max(
+      1,
+      Math.ceil(headerFilterMeta.total / limit),
+    );
     if (page > totalPagesMeta) setPage(1);
   }, [headerFilterMeta, page, limit]);
 
@@ -440,13 +460,13 @@ export default function PermisosPage() {
     page: 1,
     limit: 1000,
     // Usar los mismos filtros que la tabla para mostrar exactamente lo mismo
-      empleado: "",
+    empleado: "",
     idEmpleado: "",
-      idTipoPermiso: "",
-      estado: "",
+    idTipoPermiso: "",
+    estado: "",
     desde: rangoDesde,
     hasta: rangoHasta,
-      excludeCancelados: true,
+    excludeCancelados: true,
   });
   const registrosCalendario = calendarioResp?.data || [];
 
@@ -533,19 +553,22 @@ export default function PermisosPage() {
 
   return (
     <div className={`${styles.permisosTheme} space-y-6`}>
-      {/* Header ADAMIA */}
-      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+      {/* Encabezado compacto homologado Adamia */}
+      <div>
         <div className="flex items-center gap-3">
-          <div className="bg-[#2563EB] p-2.5 rounded-lg">
-            <CalendarCheck2 className="w-5 h-5 text-white" />
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[#2563eb] to-[#7c3aed] shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
+            <CalendarCheck2 className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-gray-900">Permisos</h1>
-            <p className="text-sm text-gray-600">
+            <h1 className="text-xl font-extrabold tracking-tight text-gray-900">
+              Permisos
+            </h1>
+            <p className="text-[12.5px] text-gray-500">
               Gestión de solicitudes, estados y calendario mensual.
             </p>
           </div>
         </div>
+        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
       </div>
 
       {/* Estadísticas rápidas */}
@@ -573,64 +596,67 @@ export default function PermisosPage() {
         />
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">
-              Unidad de negocio
-            </label>
-            <Combobox
-              options={[
-                { value: "all", label: "Todas las unidades de negocio" },
-                ...unidadOptions,
-              ]}
-              value={unidadActiva}
-              onChange={(value) => {
-                setUnidadActiva(value || "all");
-                setPage(1);
-              }}
-              placeholder="Seleccionar unidad de negocio"
-              emptyText="No hay unidades disponibles."
+      {/* Fila de filtros homologada */}
+      <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+        <FiltrosGrid columnas={4}>
+          <CampoFiltro etiqueta="Unidad de negocio">
+            <div className="[&_button]:h-[38px] [&_button]:w-full [&_button]:rounded-md [&_button]:border-gray-200 [&_button]:text-[13px] [&_button]:font-medium">
+              <Combobox
+                options={[
+                  { value: "all", label: "Todas las unidades de negocio" },
+                  ...unidadOptions,
+                ]}
+                value={unidadActiva}
+                onChange={(value) => {
+                  setUnidadActiva(value || "all");
+                  setPage(1);
+                }}
+                placeholder="Seleccionar unidad de negocio"
+                emptyText="No hay unidades disponibles."
+              />
+            </div>
+          </CampoFiltro>
+
+          <CampoFiltro etiqueta="Rango de fechas">
+            <SelectorBoton
+              valor={rangoEtiqueta}
+              placeholder="Todo el historial"
+              activo={Boolean(desde || hasta)}
+              onClick={() => setRangoOpen(true)}
             />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Desde</label>
-            <Input
-              type="date"
-              value={desde}
-              onChange={(event) => {
-                setDesde(event.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Hasta</label>
-            <Input
-              type="date"
-              value={hasta}
-              onChange={(event) => {
-                setHasta(event.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-          <div className="flex justify-start lg:justify-end">
+          </CampoFiltro>
+
+          <CampoFiltro>
             <Button
               onClick={() => {
                 setDesde("");
                 setHasta("");
+                setRangoEtiqueta("");
                 setPage(1);
               }}
               variant="outline"
-              className="border-gray-300 text-gray-700 hover:bg-gray-100"
+              className="h-[38px] w-full gap-2 rounded-md border-gray-200 text-[13px] font-medium text-gray-700 hover:bg-gray-50"
             >
-              <RotateCcw className="h-4 w-4 mr-2" />
+              <RotateCcw className="h-4 w-4" />
               Limpiar
             </Button>
-          </div>
-        </div>
+          </CampoFiltro>
+        </FiltrosGrid>
       </div>
+
+      {/* Modal de rango de fechas homologado */}
+      <RangoFechasModal
+        open={rangoOpen}
+        onOpenChange={setRangoOpen}
+        fechaInicio={desde}
+        fechaFin={hasta}
+        onAplicar={({ inicio, fin, etiqueta }) => {
+          setDesde(inicio);
+          setHasta(fin);
+          setRangoEtiqueta(etiqueta);
+          setPage(1);
+        }}
+      />
 
       {/* Selector de vista encima de la tabla/calendario */}
       <div className="flex items-center justify-start">
@@ -872,10 +898,10 @@ export default function PermisosPage() {
                                   esHoy
                                     ? "bg-emerald-50"
                                     : esFestivo
-                                    ? "bg-rose-50"
-                                    : esFinde
-                                    ? "bg-slate-50"
-                                    : ""
+                                      ? "bg-rose-50"
+                                      : esFinde
+                                        ? "bg-slate-50"
+                                        : ""
                                 }`}
                               >
                                 {/* Etiquetas informativas para domingos/festivos */}

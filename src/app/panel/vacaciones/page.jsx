@@ -45,14 +45,13 @@ import {
   CheckCircle2,
   ChevronRight,
   ClipboardList,
-  Filter,
   RotateCcw,
   Search,
   Users,
   XCircle,
 } from "lucide-react";
-import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/Combobox";
+import { FiltrosGrid, CampoFiltro } from "@/components/filtros/CampoFiltro";
 
 function numberFormat(n) {
   try {
@@ -436,21 +435,22 @@ export default function VacacionesPage() {
 
   return (
     <div className={`${styles.vacacionesTheme} space-y-6`}>
-      {/* Header ADAMIA */}
-      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+      {/* Encabezado compacto homologado Adamia */}
+      <div>
         <div className="flex items-center gap-3">
-          <div className="bg-[#2563EB] p-2.5 rounded-lg">
-            <CalendarDays className="w-5 h-5 text-white" />
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[#2563eb] to-[#7c3aed] shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
+            <CalendarDays className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-gray-900">
+            <h1 className="text-xl font-extrabold tracking-tight text-gray-900">
               Panel de vacaciones
             </h1>
-            <p className="text-sm text-gray-600">
+            <p className="text-[12.5px] text-gray-500">
               Control de días cargados, tomados y disponibles por empleado.
             </p>
           </div>
         </div>
+        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
       </div>
 
       {/* KPIs */}
@@ -477,17 +477,11 @@ export default function VacacionesPage() {
         />
       </div>
 
-      {/* Filtros */}
-      <Card className="border-blue-100 bg-blue-50">
-        
-        <CardContent>
-          {/* Grid: 1 col en móvil, 2 en tablets (md), 3 en laptops (lg) y 5 en desktop (xl) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 items-end">
-            {/* Empresa */}
-            <div className="flex flex-col gap-1">
-              <Label className="text-sm font-medium text-gray-700">
-                Unidad de negocio
-              </Label>
+      {/* Fila de filtros homologada */}
+      <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+        <FiltrosGrid columnas={5}>
+          <CampoFiltro etiqueta="Unidad de negocio">
+            <div className="[&_button]:h-[38px] [&_button]:w-full [&_button]:rounded-md [&_button]:border-gray-200 [&_button]:text-[13px] [&_button]:font-medium">
               <Combobox
                 options={[
                   { value: "all", label: "Todas las unidades de negocio" },
@@ -499,50 +493,47 @@ export default function VacacionesPage() {
                 emptyText="No hay unidades disponibles."
               />
             </div>
+          </CampoFiltro>
 
-            {/* Búsqueda de Empleado (Typeahead) */}
-            <div className="flex flex-col gap-1 relative">
-              <Label className="text-sm font-medium text-gray-700">
-                Empleado
-              </Label>
-              <div className="relative">
-                <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <Input
-                  className="pl-9 bg-white h-9"
-                  placeholder="Nombre del empleado..."
-                  value={filterEmpleado}
-                  onChange={(e) => {
-                    setFilterEmpleado(e.target.value);
-                    setIsSuggestionsOpen(true);
-                    setHoveredSuggestionIndex(0);
-                  }}
-                  onFocus={() => setIsSuggestionsOpen(!!filterEmpleado)}
-                  onBlur={() =>
-                    setTimeout(() => setIsSuggestionsOpen(false), 120)
+          {/* Búsqueda de Empleado (Typeahead) */}
+          <CampoFiltro etiqueta="Empleado">
+            <div className="relative">
+              <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Input
+                className="h-[38px] rounded-md border-gray-200 bg-white pl-9 text-[13px]"
+                placeholder="Nombre del empleado..."
+                value={filterEmpleado}
+                onChange={(e) => {
+                  setFilterEmpleado(e.target.value);
+                  setIsSuggestionsOpen(true);
+                  setHoveredSuggestionIndex(0);
+                }}
+                onFocus={() => setIsSuggestionsOpen(!!filterEmpleado)}
+                onBlur={() =>
+                  setTimeout(() => setIsSuggestionsOpen(false), 120)
+                }
+                onKeyDown={(e) => {
+                  if (!isSuggestionsOpen || sugerencias.length === 0) return;
+                  if (e.key === "ArrowDown") {
+                    e.preventDefault();
+                    setHoveredSuggestionIndex((prev) =>
+                      prev + 1 >= sugerencias.length ? 0 : prev + 1,
+                    );
+                  } else if (e.key === "ArrowUp") {
+                    e.preventDefault();
+                    setHoveredSuggestionIndex((prev) =>
+                      prev - 1 < 0 ? sugerencias.length - 1 : prev - 1,
+                    );
+                  } else if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleSelectEmpleado(
+                      sugerencias[hoveredSuggestionIndex] || sugerencias[0],
+                    );
+                  } else if (e.key === "Escape") {
+                    setIsSuggestionsOpen(false);
                   }
-                  onKeyDown={(e) => {
-                    if (!isSuggestionsOpen || sugerencias.length === 0) return;
-                    if (e.key === "ArrowDown") {
-                      e.preventDefault();
-                      setHoveredSuggestionIndex((prev) =>
-                        prev + 1 >= sugerencias.length ? 0 : prev + 1,
-                      );
-                    } else if (e.key === "ArrowUp") {
-                      e.preventDefault();
-                      setHoveredSuggestionIndex((prev) =>
-                        prev - 1 < 0 ? sugerencias.length - 1 : prev - 1,
-                      );
-                    } else if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleSelectEmpleado(
-                        sugerencias[hoveredSuggestionIndex] || sugerencias[0],
-                      );
-                    } else if (e.key === "Escape") {
-                      setIsSuggestionsOpen(false);
-                    }
-                  }}
-                />
-              </div>
+                }}
+              />
               {/* Sugerencias flotantes */}
               {isSuggestionsOpen && sugerencias.length > 0 && (
                 <div className="absolute left-0 right-0 top-[calc(100%+4px)] z-50 rounded-md border bg-white shadow-lg overflow-hidden">
@@ -565,60 +556,50 @@ export default function VacacionesPage() {
                 </div>
               )}
             </div>
+          </CampoFiltro>
 
-            {/* Departamento */}
-            <div className="flex flex-col gap-1">
-              <Label className="text-sm font-medium text-gray-700">
-                Departamento
-              </Label>
-              <select
-                className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm shadow-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                value={filterDepartamento}
-                onChange={(e) => setFilterDepartamento(e.target.value)}
-              >
-                <option value="">Todos los departamentos</option>
-                {departamentos.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <CampoFiltro etiqueta="Departamento">
+            <select
+              className="h-[38px] w-full rounded-md border border-gray-200 bg-white px-3 text-[13px] font-medium text-gray-900 focus-visible:border-blue-300 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-blue-500/15"
+              value={filterDepartamento}
+              onChange={(e) => setFilterDepartamento(e.target.value)}
+            >
+              <option value="">Todos los departamentos</option>
+              {departamentos.map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          </CampoFiltro>
 
-            {/* Estado */}
-            <div className="flex flex-col gap-1">
-              <Label className="text-sm font-medium text-gray-700">
-                Estado Vacaciones
-              </Label>
-              <select
-                className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm shadow-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                value={filterEstado}
-                onChange={(e) => setFilterEstado(e.target.value)}
-              >
-                <option value="">Todos los estados</option>
-                <option value="con">Con vacaciones</option>
-                <option value="sin">Sin vacaciones</option>
-              </select>
-            </div>
+          <CampoFiltro etiqueta="Estado vacaciones">
+            <select
+              className="h-[38px] w-full rounded-md border border-gray-200 bg-white px-3 text-[13px] font-medium text-gray-900 focus-visible:border-blue-300 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-blue-500/15"
+              value={filterEstado}
+              onChange={(e) => setFilterEstado(e.target.value)}
+            >
+              <option value="">Todos los estados</option>
+              <option value="con">Con vacaciones</option>
+              <option value="sin">Sin vacaciones</option>
+            </select>
+          </CampoFiltro>
 
-            {/* Botón Limpiar */}
-            <div className="flex">
-              <Button
-                variant="outline"
-                onClick={limpiarFiltros}
-                className="w-full h-9 border-gray-300 text-gray-700 hover:bg-gray-100 flex items-center justify-center gap-2"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Limpiar Filtros
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          <CampoFiltro>
+            <Button
+              variant="outline"
+              onClick={limpiarFiltros}
+              className="h-[38px] w-full gap-2 rounded-md border-gray-200 text-[13px] font-medium text-gray-700 hover:bg-gray-50"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Limpiar filtros
+            </Button>
+          </CampoFiltro>
+        </FiltrosGrid>
+      </div>
 
       {/* Contenido */}
       <Card className="p-0 overflow-hidden border-gray-100">
-       
         {loading ? (
           <div className="text-center text-slate-400 py-16">
             Cargando datos...
@@ -659,8 +640,8 @@ export default function VacacionesPage() {
                       dDisp === 0
                         ? "destructive"
                         : dDisp < 5
-                        ? "secondary"
-                        : "default";
+                          ? "secondary"
+                          : "default";
                     return (
                       <React.Fragment key={`emp-${emp.id_empleado}`}>
                         <TableRow
@@ -747,8 +728,8 @@ export default function VacacionesPage() {
                                           dDisp === 0
                                             ? "#991b1b"
                                             : dDisp < 5
-                                            ? "#92400e"
-                                            : "#065f46",
+                                              ? "#92400e"
+                                              : "#065f46",
                                       }}
                                     >
                                       {numberFormat(dDisp)}
