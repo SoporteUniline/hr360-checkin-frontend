@@ -72,7 +72,9 @@ export default function UserAccessPage() {
 
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const [searchInput, setSearchInput] = useState(searchParams.get("nombre") || "");
+  const [searchInput, setSearchInput] = useState(
+    searchParams.get("nombre") || "",
+  );
   const debouncedSearch = useDebounce(searchInput, 500);
 
   const [form, setForm] = useState({
@@ -249,29 +251,30 @@ export default function UserAccessPage() {
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] p-6 space-y-6">
-      {/* Header ADAMIA */}
-      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
-        <div className="flex items-center justify-between gap-4 flex-col sm:flex-row">
+      {/* Encabezado compacto Adamia */}
+      <div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <div className="bg-[#2563EB] p-2.5 rounded-lg">
-              <ShieldCheck className="w-5 h-5 text-white" />
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[#2563eb] to-[#7c3aed] shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
+              <ShieldCheck className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900">
+              <h1 className="text-xl font-extrabold tracking-tight text-gray-900">
                 Usuarios con acceso
               </h1>
-              <p className="text-sm text-gray-600">
+              <p className="text-[12.5px] text-gray-500">
                 Administra usuarios que pueden acceder al sistema.
               </p>
             </div>
           </div>
           <Button
             onClick={abrirCrear}
-            className="w-full sm:w-auto bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-2"
+            className="h-[38px] w-full gap-2 rounded-md bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95 sm:w-auto"
           >
             <Plus className="h-4 w-4" /> Nuevo acceso
           </Button>
         </div>
+        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
       </div>
 
       <div className="flex justify-end">
@@ -283,39 +286,37 @@ export default function UserAccessPage() {
         </Button>
       </div>
 
-      {/* Filtros */}
-      <Card className="border-blue-100 bg-blue-50">
-       
-        <CardContent>
-          <div className="flex flex-col md:flex-row gap-2 md:items-end">
-            <div className="w-full md:max-w-sm">
-              <Label className="text-sm text-gray-700">Nombre o correo</Label>
-              <div className="relative mt-1">
-                <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <Input
-                  placeholder="Buscar por nombre o correo"
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  className="pl-9 bg-white"
-                />
-              </div>
-            </div>
-            <div className="w-full md:w-auto md:ml-auto">
-              <Button
-                variant="outline"
-                className="w-full md:w-auto border-gray-300 text-gray-700 hover:bg-gray-100"
-                onClick={() => setSearchInput("")}
-              >
-                <RotateCcw className="h-4 w-4 mr-2" /> Limpiar búsqueda
-              </Button>
+      {/* Filtros homologados */}
+      <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
+        <div className="flex flex-col gap-2.5 md:flex-row md:items-end">
+          <div className="w-full md:max-w-sm">
+            <label className="mb-1.5 block text-[11px] font-semibold text-gray-500">
+              Nombre o correo
+            </label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Input
+                placeholder="Buscar por nombre o correo"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className="h-[38px] rounded-md border-gray-200 bg-white pl-9 text-[13px]"
+              />
             </div>
           </div>
-        </CardContent>
-      </Card>
+          <div className="w-full md:ml-auto md:w-auto">
+            <Button
+              variant="outline"
+              className="h-[38px] w-full rounded-md border-gray-200 text-[13px] font-semibold text-gray-700 hover:bg-gray-50 md:w-auto"
+              onClick={() => setSearchInput("")}
+            >
+              <RotateCcw className="mr-2 h-4 w-4" /> Limpiar búsqueda
+            </Button>
+          </div>
+        </div>
+      </div>
 
       {/* Tabla */}
       <Card className="p-0 overflow-hidden border-gray-100">
-        
         <CardContent className="p-0">
           <div className="overflow-auto">
             <Table>

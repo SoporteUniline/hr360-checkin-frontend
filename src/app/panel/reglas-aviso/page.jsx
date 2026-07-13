@@ -62,6 +62,7 @@ import {
 } from "lucide-react";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import { Combobox } from "@/components/Combobox";
+import { FiltrosGrid, CampoFiltro } from "@/components/filtros/CampoFiltro";
 import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 
 // Utilidades locales
@@ -95,8 +96,8 @@ function descripcionConfig(regla) {
       const diaTexto = regla.esUltimoDiaMes
         ? "Último día"
         : regla.esPrimerDiaMes
-        ? "Día 1"
-        : `Día ${regla.diaMes || 1}`;
+          ? "Día 1"
+          : `Día ${regla.diaMes || 1}`;
       if (regla.diasAnticipacion === 30) return `${diaTexto}: este mes`;
       if (regla.diasAnticipacion === 60) return `${diaTexto}: próximo mes`;
     }
@@ -112,8 +113,8 @@ function descripcionConfig(regla) {
       const diaTexto = regla.esUltimoDiaMes
         ? "Último día"
         : regla.esPrimerDiaMes
-        ? "Día 1"
-        : `Día ${regla.diaMes || 1}`;
+          ? "Día 1"
+          : `Día ${regla.diaMes || 1}`;
       return `${diaTexto}: próximos ${regla.diasAnticipacion} días`;
     }
     if (regla.periodicidad === "diario") {
@@ -287,24 +288,23 @@ export default function ReglasAvisoPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header ADAMIA */}
-      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
-        <div className="flex items-center justify-between gap-4 flex-col sm:flex-row">
-          <div className="flex items-center gap-3">
-            <div className="bg-[#2563EB] p-2.5 rounded-lg">
-              <BellRing className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-gray-900">
-                Reglas de aviso
-              </h1>
-              <p className="text-sm text-gray-600">
-                Edita configuración, duplica reglas y activa/desactiva
-                notificaciones.
-              </p>
-            </div>
+      {/* Encabezado compacto Adamia */}
+      <div>
+        <div className="flex items-center gap-3">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[#2563eb] to-[#7c3aed] shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
+            <BellRing className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-extrabold tracking-tight text-gray-900">
+              Reglas de aviso
+            </h1>
+            <p className="text-[12.5px] text-gray-500">
+              Edita configuración, duplica reglas y activa/desactiva
+              notificaciones.
+            </p>
           </div>
         </div>
+        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
       </div>
 
       {/* KPIs */}
@@ -331,15 +331,11 @@ export default function ReglasAvisoPage() {
         />
       </div>
 
-      {/* Filtros */}
-      <Card className="border-blue-100 bg-blue-50">
-        
-        <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-            <div className="flex flex-col gap-1">
-              <Label className="text-sm font-medium text-gray-700">
-                Unidad de negocio
-              </Label>
+      {/* Filtros homologados */}
+      <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
+        <FiltrosGrid columnas={4}>
+          <CampoFiltro etiqueta="Unidad de negocio">
+            <div className="[&_button]:h-[38px] [&_button]:w-full [&_button]:rounded-md [&_button]:border-gray-200 [&_button]:text-[13px] [&_button]:font-medium">
               <Combobox
                 options={opcionesUnidades}
                 value={String(unidadFiltro)}
@@ -351,59 +347,52 @@ export default function ReglasAvisoPage() {
                 emptyText="Unidad no encontrada"
               />
             </div>
+          </CampoFiltro>
 
-            <div className="flex flex-col gap-1">
-              <Label className="text-sm font-medium text-gray-700">
-                Nombre
-              </Label>
-              <div className="relative">
-                <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <Input
-                  placeholder="Buscar regla..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9 bg-white"
-                />
-              </div>
+          <CampoFiltro etiqueta="Nombre">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <Input
+                placeholder="Buscar regla..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-[38px] rounded-md border-gray-200 bg-white pl-9 text-[13px]"
+              />
             </div>
+          </CampoFiltro>
 
-            <div className="flex flex-col gap-1">
-              <Label className="text-sm font-medium text-gray-700">
-                Estado
-              </Label>
-              <Select value={estado} onValueChange={setEstado}>
-                <SelectTrigger className="bg-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los estados</SelectItem>
-                  <SelectItem value="activa">Activas</SelectItem>
-                  <SelectItem value="inactiva">Inactivas</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <CampoFiltro etiqueta="Estado">
+            <Select value={estado} onValueChange={setEstado}>
+              <SelectTrigger className="h-[38px] w-full rounded-md border-gray-200 bg-white text-[13px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos los estados</SelectItem>
+                <SelectItem value="activa">Activas</SelectItem>
+                <SelectItem value="inactiva">Inactivas</SelectItem>
+              </SelectContent>
+            </Select>
+          </CampoFiltro>
 
-            <div className="flex items-end">
-              <Button
-                variant="outline"
-                className="w-full border-gray-300 text-gray-700 hover:bg-gray-100 flex items-center justify-center"
-                onClick={() => {
-                  setSearch("");
-                  setEstado("all");
-                  setUnidadFiltro("all");
-                }}
-              >
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Limpiar filtros
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          <CampoFiltro>
+            <Button
+              variant="outline"
+              className="flex h-[38px] w-full items-center justify-center rounded-md border-gray-200 text-[13px] font-semibold text-gray-700 hover:bg-gray-50"
+              onClick={() => {
+                setSearch("");
+                setEstado("all");
+                setUnidadFiltro("all");
+              }}
+            >
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Limpiar filtros
+            </Button>
+          </CampoFiltro>
+        </FiltrosGrid>
+      </div>
 
       {/* Tabla */}
       <Card className="p-0 overflow-hidden border-gray-100">
-        
         <CardContent className="p-0">
           <div className="overflow-auto">
             <Table>
@@ -805,8 +794,8 @@ function FormularioRegla({ modo, detalle, empleados, onClose, onSaved }) {
             {isContratos
               ? "¿Cuándo recibir el reporte?"
               : isCumpleAvisar
-              ? "¿Cuándo avisar?"
-              : "Configuración"}
+                ? "¿Cuándo avisar?"
+                : "Configuración"}
           </div>
 
           {/* Frecuencia */}
@@ -885,8 +874,8 @@ function FormularioRegla({ modo, detalle, empleados, onClose, onSaved }) {
                   form.esUltimoDiaMes
                     ? "31"
                     : form.esPrimerDiaMes
-                    ? "1"
-                    : `${form.diaMes || 1}`
+                      ? "1"
+                      : `${form.diaMes || 1}`
                 }
                 onValueChange={(v) => {
                   if (v === "31") {
@@ -1084,8 +1073,8 @@ function FormularioRegla({ modo, detalle, empleados, onClose, onSaved }) {
                 {checking
                   ? "Verificando..."
                   : saving
-                  ? "Guardando..."
-                  : "Crear regla duplicada"}
+                    ? "Guardando..."
+                    : "Crear regla duplicada"}
               </>
             )}
           </Button>

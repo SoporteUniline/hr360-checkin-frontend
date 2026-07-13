@@ -8,7 +8,6 @@ import { fetcherWithToken } from "@/lib/fetcher";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   MapPin,
   Plus,
@@ -28,6 +27,7 @@ import debounce from "lodash.debounce";
 import ModalArea from "@/components/ModalArea";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import { Combobox } from "@/components/Combobox";
+import { CampoFiltro } from "@/components/filtros/CampoFiltro";
 import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 
 function AreaCard({ area, onEdit, onDelete }) {
@@ -287,77 +287,51 @@ export default function AreasCheckPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header ADAMIA */}
-      <div className="bg-linear-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
-        <div className="flex items-center justify-between gap-4 flex-col sm:flex-row">
+      {/* Encabezado compacto Adamia */}
+      <div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <div className="bg-[#2563EB] p-2.5 rounded-lg">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[#2563eb] to-[#7c3aed] shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
               <MapPin className="h-5 w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-gray-900">
+              <h1 className="text-xl font-extrabold tracking-tight text-gray-900">
                 Áreas de Check
               </h1>
-              <p className="text-sm text-gray-600">
+              <p className="text-[12.5px] text-gray-500">
                 Administra áreas y radio permitido para registro.
               </p>
             </div>
           </div>
           <Button
             onClick={abrirModalNuevaArea}
-            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white w-full sm:w-auto gap-2"
+            className="h-[38px] w-full gap-2 rounded-md bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95 sm:w-auto"
           >
             <Plus className="h-4 w-4" />
             Nueva área
           </Button>
         </div>
+        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
       </div>
-      {/* <div className="grid grid-cols-1 md:grid-cols-[250px_1fr_auto] gap-4 items-end">
-        <div className="flex flex-col gap-1">
-          <Label>Empresa</Label>
-          <Combobox
-            options={[
-              { value: "all", label: "Todas las empresas" },
-              ...(dataUser?.empresas_detalle?.map((e) => ({
-                value: e.id_empresa,
-                label: e.nombre,
-              })) || []),
-            ]}
-            value={empresaActiva}
-            onChange={(val) =>
-              setEmpresaActiva(val === "all" ? "all" : Number(val))
-            }
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <Label>Buscar</Label>
-          <Input
-            placeholder="Buscar por nombre de área..."
-            onChange={(e) => handleSearchChange(e.target.value)}
-          />
-        </div>
-        <Button onClick={abrirModalNuevaArea} className="bg-[#37495E] ...">
-          <Plus className="h-4 w-4 mr-2" /> Nueva Área
-        </Button>
-      </div> */}
 
-      <Card className="border-blue-100 bg-blue-50">
-        <CardContent className="grid grid-cols-1 md:grid-cols-[250px_1fr_auto] gap-4 items-end">
-          <div className="flex flex-col gap-1">
-            <Label>Unidad de negocio</Label>
-            <Combobox
-              options={[
-                { value: "all", label: "Todas las unidades de negocio" },
-                ...unidadOptions,
-              ]}
-              value={unidadActiva}
-              onChange={(val) => setUnidadActiva(val || "all")}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label>Buscar</Label>
+      {/* Filtros homologados */}
+      <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
+        <div className="grid grid-cols-1 items-end gap-2.5 md:grid-cols-[250px_1fr_auto]">
+          <CampoFiltro etiqueta="Unidad de negocio">
+            <div className="[&_button]:h-[38px] [&_button]:w-full [&_button]:rounded-md [&_button]:border-gray-200 [&_button]:text-[13px] [&_button]:font-medium">
+              <Combobox
+                options={[
+                  { value: "all", label: "Todas las unidades de negocio" },
+                  ...unidadOptions,
+                ]}
+                value={unidadActiva}
+                onChange={(val) => setUnidadActiva(val || "all")}
+              />
+            </div>
+          </CampoFiltro>
+          <CampoFiltro etiqueta="Buscar">
             <Input
-              className="bg-white"
+              className="h-[38px] rounded-md border-gray-200 bg-white text-[13px]"
               placeholder="Buscar por nombre de área..."
               value={search}
               onChange={(e) => {
@@ -365,18 +339,18 @@ export default function AreasCheckPage() {
                 handleSearchChange(e.target.value);
               }}
             />
-          </div>
+          </CampoFiltro>
           <div className="flex md:justify-end">
             <Button
               onClick={abrirModalNuevaArea}
-              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white w-full md:w-auto gap-2"
+              className="h-[38px] w-full gap-2 rounded-md bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95 md:w-auto"
             >
               <Plus className="h-4 w-4" />
               Agregar nueva área
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-12">

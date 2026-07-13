@@ -4,7 +4,6 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BookOpen, Filter, Plus } from "lucide-react";
 import TiposRegistroTable from "./TiposRegistroTable";
 import TipoRegistroFormDialog from "./TipoRegistroFormDialog";
@@ -13,8 +12,8 @@ import AccesosRapidos from "@/components/AccesosRapidos";
 import { useAuth } from "@/context/AuthContext";
 import useDebounce from "@/hooks/useDebounce";
 import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
-import { Label } from "@/components/ui/label";
 import { Combobox } from "@/components/Combobox";
+import { CampoFiltro } from "@/components/filtros/CampoFiltro";
 
 export default function TiposRegistro() {
   const { dataUser } = useAuth();
@@ -49,34 +48,29 @@ export default function TiposRegistro() {
 
   return (
     <div className="space-y-6">
-      {/* Header ADAMIA */}
-      <div className="bg-linear-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
-        <div className="flex items-center justify-between gap-4 flex-col sm:flex-row">
-          <div className="flex items-center gap-3">
-            <div className="bg-[#2563EB] p-2.5 rounded-lg">
-              <BookOpen className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-gray-900">
-                Tipos de registro
-              </h1>
-              <p className="text-sm text-gray-600">
-                Catálogo para asistencias/permisos (crear, editar y eliminar).
-              </p>
-            </div>
+      {/* Encabezado compacto Adamia */}
+      <div>
+        <div className="flex items-center gap-3">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[#2563eb] to-[#7c3aed] shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
+            <BookOpen className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-extrabold tracking-tight text-gray-900">
+              Tipos de registro
+            </h1>
+            <p className="text-[12.5px] text-gray-500">
+              Catálogo para asistencias/permisos (crear, editar y eliminar).
+            </p>
           </div>
         </div>
+        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
       </div>
 
-      {/* Filtros */}
-      <Card className="border-blue-100 bg-blue-50">
-        
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-[250px_1fr_auto] gap-4 items-end mb-2">
-            <div className="space-y-1">
-              <Label className="text-xs text-gray-500">
-                Filtrar por Unidad de negocio
-              </Label>
+      {/* Filtros homologados */}
+      <div className="rounded-xl border border-gray-100 bg-white p-3 shadow-sm">
+        <div className="grid grid-cols-1 items-end gap-2.5 md:grid-cols-[250px_1fr_auto]">
+          <CampoFiltro etiqueta="Unidad de negocio">
+            <div className="[&_button]:h-[38px] [&_button]:w-full [&_button]:rounded-md [&_button]:border-gray-200 [&_button]:text-[13px] [&_button]:font-medium">
               <Combobox
                 options={[
                   { value: "all", label: "Todas las unidades de negocio" },
@@ -86,28 +80,28 @@ export default function TiposRegistro() {
                 onChange={handleEmpresaChange}
               />
             </div>
-            <div className="space-y-1">
-              <Input
-                className="bg-white"
-                placeholder="Buscar tipo de registro..."
-                value={filter}
-                onChange={handleFilterChange}
-              />
-            </div>
-            <div className="flex justify-start md:justify-end">
-              <Button
-                className="w-full md:w-auto bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-2"
-                onClick={() => {
-                  setEditPerm(null);
-                  setOpenForm(true);
-                }}
-              >
-                <Plus className="h-4 w-4" /> Nuevo
-              </Button>
-            </div>
+          </CampoFiltro>
+          <CampoFiltro>
+            <Input
+              className="h-[38px] rounded-md border-gray-200 bg-white text-[13px]"
+              placeholder="Buscar tipo de registro..."
+              value={filter}
+              onChange={handleFilterChange}
+            />
+          </CampoFiltro>
+          <div className="flex justify-start md:justify-end">
+            <Button
+              className="h-[38px] w-full gap-2 rounded-md bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95 md:w-auto"
+              onClick={() => {
+                setEditPerm(null);
+                setOpenForm(true);
+              }}
+            >
+              <Plus className="h-4 w-4" /> Nuevo
+            </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <TiposRegistroTable
         page={page}
