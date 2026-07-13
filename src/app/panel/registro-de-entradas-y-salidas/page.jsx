@@ -9,10 +9,24 @@ import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import EntradasSalidasDataContainer from "./EntradasSalidasDataContainer";
 import AccesosRapidos from "@/components/AccesosRapidos";
-import { ClockArrowUp } from "lucide-react";
+import {
+  CalendarCheck2,
+  ClipboardList,
+  ClockArrowUp,
+  Hourglass,
+  Layers,
+  RotateCcw,
+  Users,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { RotateCcw } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   FiltrosGrid,
   CampoFiltro,
@@ -21,9 +35,16 @@ import {
 import RangoFechasModal, {
   etiquetaDeRango,
 } from "@/components/filtros/RangoFechasModal";
+import VistasGuardadas from "@/components/tabla/VistasGuardadas";
+import ColumnasSelector, {
+  cargarColumnasGuardadas,
+} from "@/components/tabla/ColumnasSelector";
+import { COLUMNAS_ENTRADAS } from "./EntradasSalidasTable";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
+
+const LS_COLUMNAS_ENTRADAS = "entradas-columnas-visibles";
 
 export default function RegistroEntradasSalidas() {
   const searchParams = useSearchParams();
@@ -48,12 +69,23 @@ export default function RegistroEntradasSalidas() {
   const [rangoEtiqueta, setRangoEtiqueta] = useState(() =>
     etiquetaDeRango(initialDate, initialDate),
   );
+  // Agrupación y columnas visibles (patrón de Asistencias)
+  const [agrupar, setAgrupar] = useState(null);
+  const [visibleColumns, setVisibleColumns] = useState(null);
+
+  // Las columnas guardadas se cargan en cliente (localStorage no existe en SSR)
+  useEffect(() => {
+    setVisibleColumns(
+      cargarColumnasGuardadas(COLUMNAS_ENTRADAS, LS_COLUMNAS_ENTRADAS),
+    );
+  }, []);
+
   const mostrarPendientes = desde && hasta && desde === hasta;
 
   // `fecha` se conserva porque otros componentes lo usan como "modo single-day".
   const fecha = desde && hasta && desde === hasta ? desde : "";
   const [page, setPage] = useState(1);
-  const limit = 10;
+  const [limit, setLimit] = useState(10);
 
   const getDefaultSortConfig = () => ({
     sortBy: "fechaEntrada",
@@ -69,6 +101,10 @@ export default function RegistroEntradasSalidas() {
     }
   }, [dataUser, empresaActiva]);
 
+  const handleLimitChange = (newLimit) => {
+    setLimit(newLimit);
+  };
+
   const handleResetFilters = () => {
     setEmpresaActiva("all");
     setDesde(today);
@@ -76,7 +112,46 @@ export default function RegistroEntradasSalidas() {
     setFiltroNombre("");
     setPage(1);
     setRangoEtiqueta("Hoy");
+    setAgrupar(null);
     setSortConfig(getDefaultSortConfig());
+  };
+
+  // ——— Vistas guardadas: serializar/aplicar el estado de la pantalla ———
+  // Alcance: filtros de página (buscar, rango), agrupación y columnas
+  // visibles. Los filtros de encabezado viven dentro de la tabla y no se
+  // capturan (mismo criterio menos invasivo posible).
+  const hayFiltrosParaVista = Boolean(
+    filtroNombre || agrupar || rangoEtiqueta !== "Hoy",
+  );
+
+  const obtenerEstadoVista = () => ({
+    desde,
+    hasta,
+    rangoEtiqueta,
+    filtroNombre,
+    agrupar,
+    visibleColumns,
+  });
+
+  const aplicarEstadoVista = (v) => {
+    if (!v) return;
+    setDesde(v.desde ?? today);
+    setHasta(v.hasta ?? today);
+    setRangoEtiqueta(v.rangoEtiqueta || "Hoy");
+    setFiltroNombre(v.filtroNombre || "");
+    setAgrupar(v.agrupar || null);
+    if (Array.isArray(v.visibleColumns) && v.visibleColumns.length >= 2) {
+      setVisibleColumns(v.visibleColumns);
+      try {
+        window.localStorage.setItem(
+          LS_COLUMNAS_ENTRADAS,
+          JSON.stringify(v.visibleColumns),
+        );
+      } catch {
+        // sin persistencia
+      }
+    }
+    setPage(1);
   };
 
   const { ui, data } = EntradasSalidasDataContainer({
@@ -94,10 +169,13 @@ export default function RegistroEntradasSalidas() {
     onResetFilters: handleResetFilters,
     sortConfig,
     setSortConfig,
+    onLimitChange: handleLimitChange,
+    agrupar,
+    visibleColumns,
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* Encabezado compacto homologado Adamia */}
       <div>
         <div className="flex items-center gap-3">
@@ -118,37 +196,41 @@ export default function RegistroEntradasSalidas() {
       </div>
 
       <div
-        className={`grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 ${
+        className={`grid grid-cols-1 sm:grid-cols-2 gap-4 ${
           mostrarPendientes ? "lg:grid-cols-4" : "lg:grid-cols-3"
         }`}
       >
         <StatCard
           title={mostrarPendientes ? "Registros hoy" : "Registros"}
           value={data?.totalHoy || 0}
-          borderColor="border-[#2563EB]"
+          icon={ClipboardList}
+          accent="blue"
         />
         <StatCard
           title="Empleados únicos"
           value={data?.empleados || 0}
-          borderColor="border-emerald-500"
+          icon={Users}
+          accent="emerald"
         />
         <StatCard
           title="Jornadas completas"
           value={data?.jornadas_completas || 0}
-          borderColor="border-amber-500"
+          icon={CalendarCheck2}
+          accent="amber"
         />
         {mostrarPendientes && (
           <StatCard
             title="Pendientes"
             value={data?.pendientes || 0}
-            borderColor="border-red-500"
+            icon={Hourglass}
+            accent="red"
           />
         )}
       </div>
 
       {/* Fila de filtros homologada */}
       <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
-        <FiltrosGrid columnas={4}>
+        <FiltrosGrid columnas={5}>
           <CampoFiltro etiqueta="Empleado">
             <Input
               type="text"
@@ -170,6 +252,39 @@ export default function RegistroEntradasSalidas() {
             />
           </CampoFiltro>
 
+          <CampoFiltro etiqueta="Agrupar por">
+            <Select
+              value={agrupar || "none"}
+              onValueChange={(v) => {
+                setAgrupar(v === "none" ? null : v);
+              }}
+            >
+              <SelectTrigger className="h-[38px] w-full whitespace-nowrap rounded-md border-gray-200 text-[13px] font-medium text-gray-700 [&>span]:flex [&>span]:items-center [&>span]:gap-1.5">
+                <Layers className="h-4 w-4 shrink-0 text-gray-500" />
+                <SelectValue placeholder="Agrupar" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin agrupar</SelectItem>
+                <SelectItem value="unidad">Unidad de negocio</SelectItem>
+                <SelectItem value="departamento">Departamento</SelectItem>
+                <SelectItem value="estado">Estado</SelectItem>
+              </SelectContent>
+            </Select>
+          </CampoFiltro>
+
+          <CampoFiltro etiqueta="Columnas">
+            <div className="[&_button]:h-[38px] [&_button]:w-full [&_button]:rounded-md [&_button]:border-gray-200 [&_button]:text-[13px]">
+              {Array.isArray(visibleColumns) && (
+                <ColumnasSelector
+                  columnas={COLUMNAS_ENTRADAS}
+                  visibles={visibleColumns}
+                  onChange={setVisibleColumns}
+                  storageKey={LS_COLUMNAS_ENTRADAS}
+                />
+              )}
+            </div>
+          </CampoFiltro>
+
           <CampoFiltro>
             <Button
               onClick={handleResetFilters}
@@ -182,6 +297,14 @@ export default function RegistroEntradasSalidas() {
           </CampoFiltro>
         </FiltrosGrid>
       </div>
+
+      <VistasGuardadas
+        hayFiltros={hayFiltrosParaVista}
+        obtenerEstado={obtenerEstadoVista}
+        onAplicar={aplicarEstadoVista}
+        onLimpiar={handleResetFilters}
+        storageKey="entradas-vistas"
+      />
 
       <RangoFechasModal
         open={rangoOpen}

@@ -14,13 +14,31 @@ import { useEmpresaTimezone } from "@/context/AuthContext";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import HeaderMultiFilter from "@/components/tabla/HeaderMultiFilter";
 import ActiveFilterChips from "@/components/tabla/ActiveFilterChips";
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
+
+// Registro de columnas de datos de la tabla (en orden de aparición).
+// "Acciones" NO forma parte del registro: siempre es visible.
+export const COLUMNAS_ENTRADAS = [
+  { key: "empleado", label: "Empleado" },
+  { key: "unidad", label: "Unidad de negocio" },
+  { key: "departamento", label: "Departamento" },
+  { key: "fecha_entrada", label: "Fecha de entrada" },
+  { key: "hora_entrada", label: "Hora entrada" },
+  { key: "hora_salida", label: "Hora salida" },
+  { key: "entrada_corregida", label: "Entrada corregida" },
+  { key: "salida_corregida", label: "Salida corregida" },
+  { key: "hrs_registro", label: "Hrs registro" },
+  { key: "estado", label: "Estado" },
+];
+
+// Clases base para los th (header sticky dentro del contenedor con scroll)
+const TH_STICKY = "sticky top-0 z-10 bg-gray-50";
 
 export default function EntradasSalidasTable({
   registros,
@@ -41,6 +59,9 @@ export default function EntradasSalidasTable({
   sortConfig,
   setSortConfig,
   setPage,
+  visibleColumns,
+  agrupar = null,
+  onRowClick,
 }) {
   const fallbackTimezone = useEmpresaTimezone(empresaActiva);
   const userTimezone = registros?.[0]?.zona_horaria || fallbackTimezone;
@@ -48,6 +69,25 @@ export default function EntradasSalidasTable({
   const [unidadSeleccionada, setUnidadSeleccionada] = useState([]);
   const [departamentoSeleccionado, setDepartamentoSeleccionado] = useState([]);
   const [estadoSeleccionado, setEstadoSeleccionado] = useState([]);
+  const [collapsedGroups, setCollapsedGroups] = useState(() => new Set());
+
+  // Visibilidad de columnas: si `visibleColumns` viene (no vacío) decide qué
+  // columnas de datos se muestran; si no, se muestran todas.
+  const visibleSet =
+    Array.isArray(visibleColumns) && visibleColumns.length > 0
+      ? new Set(visibleColumns)
+      : null;
+  const colVisible = (key) => {
+    if (visibleSet) return visibleSet.has(key);
+    return true;
+  };
+
+  // +1 por la columna Acciones (siempre visible)
+  const visibleColumnCount =
+    COLUMNAS_ENTRADAS.filter((col) => {
+      if (col.key === "unidad" && empresaActiva !== "all") return false;
+      return colVisible(col.key);
+    }).length + 1;
 
   const optionSourceRows = useMemo(
     () => (Array.isArray(filterOptionsRows) ? filterOptionsRows : registros),
@@ -142,6 +182,48 @@ export default function EntradasSalidasTable({
     const offset = (page - 1) * limit;
     return filteredRowsAll.slice(offset, offset + limit);
   }, [hasActiveHeaderFilters, registros, page, limit, filteredRowsAll]);
+
+  // Agrupación de los renglones YA calculados para la página (no altera
+  // filtrado ni paginación). Conserva el orden de aparición.
+  const groupedRows = useMemo(() => {
+    if (!agrupar) return null;
+    const getGroupName = (registro) => {
+      switch (agrupar) {
+        case "unidad":
+          return (
+            registro.unidad_negocio ||
+            registro.sucursal ||
+            registro.nombre_empresa ||
+            "Sin unidad"
+          );
+        case "departamento":
+          return registro.departamento || "Sin departamento";
+        case "estado":
+          return registro.estado || "Sin estado";
+        default:
+          return "Sin grupo";
+      }
+    };
+    const map = new Map();
+    for (const registro of displayedRows) {
+      const name = getGroupName(registro);
+      if (!map.has(name)) map.set(name, []);
+      map.get(name).push(registro);
+    }
+    return [...map.entries()];
+  }, [agrupar, displayedRows]);
+
+  const toggleGroup = (name) => {
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) {
+        next.delete(name);
+      } else {
+        next.add(name);
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     onHeaderFilteringMetaChange?.({
@@ -244,6 +326,24 @@ export default function EntradasSalidasTable({
     );
   };
 
+  const renderRegistroRow = (reg) => (
+    <EntradasSalidasRow
+      key={reg.id}
+      registro={reg}
+      fecha={fecha}
+      isEditing={editingMovimientoId === reg.id}
+      editingRowData={editingMovimientoData}
+      isSaving={isSavingMovimiento}
+      handleEditMovimientoClick={handleEditMovimientoClick}
+      handleCancelMovimientoEdit={handleCancelMovimientoEdit}
+      handleMovimientoFieldChange={handleMovimientoFieldChange}
+      handleSaveMovimientoClick={handleSaveMovimientoClick}
+      empresaActiva={empresaActiva}
+      colVisible={colVisible}
+      onRowClick={onRowClick}
+    />
+  );
+
   return (
     <>
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
@@ -297,27 +397,33 @@ export default function EntradasSalidasTable({
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50 hover:bg-gray-50">
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => handleSort("empleado")}
-                      className="flex items-center uppercase"
-                    >
-                      Empleado
-                      {renderSortIcon("empleado")}
-                    </button>
+                {colVisible("empleado") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs`}
+                  >
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleSort("empleado")}
+                        className="flex items-center uppercase"
+                      >
+                        Empleado
+                        {renderSortIcon("empleado")}
+                      </button>
 
-                    <HeaderMultiFilter
-                      selected={empleadoSeleccionado}
-                      onChange={setEmpleadoSeleccionado}
-                      options={empleadoOptions}
-                      placeholder=""
-                    />
-                  </div>
-                </TableHead>
-                {empresaActiva === "all" && (
-                  <TableHead className="font-semibold text-gray-700 uppercase text-xs">
+                      <HeaderMultiFilter
+                        selected={empleadoSeleccionado}
+                        onChange={setEmpleadoSeleccionado}
+                        options={empleadoOptions}
+                        placeholder=""
+                      />
+                    </div>
+                  </TableHead>
+                )}
+                {empresaActiva === "all" && colVisible("unidad") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs`}
+                  >
                     <HeaderMultiFilter
                       selected={unidadSeleccionada}
                       onChange={setUnidadSeleccionada}
@@ -326,77 +432,101 @@ export default function EntradasSalidasTable({
                     />
                   </TableHead>
                 )}
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => handleSort("departamento")}
-                      className="flex items-center uppercase"
-                    >
-                      Departamento
-                      {renderSortIcon("departamento")}
-                    </button>
+                {colVisible("departamento") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs`}
+                  >
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleSort("departamento")}
+                        className="flex items-center uppercase"
+                      >
+                        Departamento
+                        {renderSortIcon("departamento")}
+                      </button>
 
-                    <HeaderMultiFilter
-                      selected={departamentoSeleccionado}
-                      onChange={setDepartamentoSeleccionado}
-                      options={departamentoOptions}
-                      placeholder=""
-                    />
-                  </div>
-                </TableHead>
+                      <HeaderMultiFilter
+                        selected={departamentoSeleccionado}
+                        onChange={setDepartamentoSeleccionado}
+                        options={departamentoOptions}
+                        placeholder=""
+                      />
+                    </div>
+                  </TableHead>
+                )}
                 {/* IMPORTANTE (UX): aunque filtremos 1 solo día (desde===hasta), siempre mostramos la fecha */}
-                <TableHead
-                  onClick={() => handleSort("fechaEntrada")}
-                  className="cursor-pointer"
-                >
-                  <div className="flex items-center justify-center">
-                    Fecha de entrada
-                    {renderSortIcon("fechaEntrada")}
-                  </div>
-                </TableHead>
-                <TableHead
-                  onClick={() => handleSort("horaEntrada")}
-                  className="font-semibold text-gray-700 uppercase text-xs text-center cursor-pointer select-none"
-                >
-                  <div className="flex items-center justify-center">
-                    Hora entrada
-                    {renderSortIcon("horaEntrada")}
-                  </div>
-                </TableHead>
-                <TableHead
-                  onClick={() => handleSort("horaSalida")}
-                  className="font-semibold text-gray-700 uppercase text-xs text-center cursor-pointer select-none"
-                >
-                  <div className="flex items-center justify-center">
-                    Hora salida
-                    {renderSortIcon("horaSalida")}
-                  </div>
-                </TableHead>
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  Entrada corregida
-                </TableHead>
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  Salida corregida
-                </TableHead>
-                <TableHead
-                  onClick={() => handleSort("horasRegistro")}
-                  className="font-semibold text-gray-700 uppercase text-xs text-center cursor-pointer select-none"
-                >
-                  <div className="flex items-center justify-center">
-                    Hrs registro
-                    {renderSortIcon("horasRegistro")}
-                  </div>
-                </TableHead>
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  <HeaderMultiFilter
-                    selected={estadoSeleccionado}
-                    onChange={setEstadoSeleccionado}
-                    options={estadoOptions}
-                    placeholder="Estado"
-                  />
-                </TableHead>
-                <TableHead className="sticky right-0 bg-gray-50 z-10 text-center font-semibold text-gray-700 uppercase text-xs">
+                {colVisible("fecha_entrada") && (
+                  <TableHead
+                    onClick={() => handleSort("fechaEntrada")}
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center cursor-pointer select-none`}
+                  >
+                    <div className="flex items-center justify-center">
+                      Fecha de entrada
+                      {renderSortIcon("fechaEntrada")}
+                    </div>
+                  </TableHead>
+                )}
+                {colVisible("hora_entrada") && (
+                  <TableHead
+                    onClick={() => handleSort("horaEntrada")}
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center cursor-pointer select-none`}
+                  >
+                    <div className="flex items-center justify-center">
+                      Hora entrada
+                      {renderSortIcon("horaEntrada")}
+                    </div>
+                  </TableHead>
+                )}
+                {colVisible("hora_salida") && (
+                  <TableHead
+                    onClick={() => handleSort("horaSalida")}
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center cursor-pointer select-none`}
+                  >
+                    <div className="flex items-center justify-center">
+                      Hora salida
+                      {renderSortIcon("horaSalida")}
+                    </div>
+                  </TableHead>
+                )}
+                {colVisible("entrada_corregida") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                  >
+                    Entrada corregida
+                  </TableHead>
+                )}
+                {colVisible("salida_corregida") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                  >
+                    Salida corregida
+                  </TableHead>
+                )}
+                {colVisible("hrs_registro") && (
+                  <TableHead
+                    onClick={() => handleSort("horasRegistro")}
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center cursor-pointer select-none`}
+                  >
+                    <div className="flex items-center justify-center">
+                      Hrs registro
+                      {renderSortIcon("horasRegistro")}
+                    </div>
+                  </TableHead>
+                )}
+                {colVisible("estado") && (
+                  <TableHead
+                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                  >
+                    <HeaderMultiFilter
+                      selected={estadoSeleccionado}
+                      onChange={setEstadoSeleccionado}
+                      options={estadoOptions}
+                      placeholder="Estado"
+                    />
+                  </TableHead>
+                )}
+                <TableHead className="sticky right-0 top-0 bg-gray-50 z-20 text-center font-semibold text-gray-700 uppercase text-xs">
                   Acciones
                 </TableHead>
               </TableRow>
@@ -405,28 +535,47 @@ export default function EntradasSalidasTable({
               {displayedRows.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={empresaActiva === "all" ? 11 : 10}
+                    colSpan={visibleColumnCount}
                     className="text-center py-10 text-gray-500"
                   >
                     No hay registros para los filtros seleccionados.
                   </TableCell>
                 </TableRow>
+              ) : groupedRows ? (
+                groupedRows.map(([groupName, rows]) => {
+                  const isCollapsed = collapsedGroups.has(groupName);
+                  return (
+                    <Fragment key={groupName}>
+                      <TableRow
+                        onClick={() => toggleGroup(groupName)}
+                        className="bg-[#f4f7fd] hover:bg-[#f4f7fd] cursor-pointer select-none border-b border-gray-100"
+                      >
+                        <TableCell
+                          colSpan={visibleColumnCount}
+                          className="py-2"
+                        >
+                          <div className="flex items-center gap-2">
+                            <ChevronDown
+                              className={`h-4 w-4 shrink-0 text-gray-500 transition-transform duration-200 ${
+                                isCollapsed ? "-rotate-90" : ""
+                              }`}
+                            />
+                            <span className="font-semibold text-[13px] text-gray-900">
+                              {groupName}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              · {rows.length} registro
+                              {rows.length === 1 ? "" : "s"}
+                            </span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      {!isCollapsed && rows.map(renderRegistroRow)}
+                    </Fragment>
+                  );
+                })
               ) : (
-                displayedRows.map((reg) => (
-                  <EntradasSalidasRow
-                    key={reg.id}
-                    registro={reg}
-                    fecha={fecha}
-                    isEditing={editingMovimientoId === reg.id}
-                    editingRowData={editingMovimientoData}
-                    isSaving={isSavingMovimiento}
-                    handleEditMovimientoClick={handleEditMovimientoClick}
-                    handleCancelMovimientoEdit={handleCancelMovimientoEdit}
-                    handleMovimientoFieldChange={handleMovimientoFieldChange}
-                    handleSaveMovimientoClick={handleSaveMovimientoClick}
-                    empresaActiva={empresaActiva}
-                  />
-                ))
+                displayedRows.map(renderRegistroRow)
               )}
             </TableBody>
           </Table>

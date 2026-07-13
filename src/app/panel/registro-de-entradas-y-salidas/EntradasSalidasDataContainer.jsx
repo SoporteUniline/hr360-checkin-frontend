@@ -3,6 +3,7 @@
 import useRelojChecadorData from "@/hooks/useRelojChecador";
 import useEntradaSalida from "@/hooks/useEntradaSalida";
 import EntradasSalidasTable from "./EntradasSalidasTable";
+import EntradasDetalleSheet from "./EntradasDetalleSheet";
 import TablePagination from "@/components/TablePagination";
 import LoadingTable from "@/components/LoadingTable";
 import ErrorPage from "@/components/ErrorPage";
@@ -28,6 +29,9 @@ export default function EntradasSalidasDataContainer({
   onResetFilters,
   sortConfig,
   setSortConfig,
+  onLimitChange,
+  agrupar = null,
+  visibleColumns = null,
 }) {
   const [filterOptionsRows, setFilterOptionsRows] = useState([]);
   const [headerFilterMeta, setHeaderFilterMeta] = useState({
@@ -159,6 +163,9 @@ export default function EntradasSalidasDataContainer({
     handleSaveMovimientoClick,
   } = useEntradaSalida(mutate);
 
+  // Panel lateral de detalle (clic en una fila)
+  const [registroDetalle, setRegistroDetalle] = useState(null);
+
   useEffect(() => {
     if (!headerFilterMeta.active) return;
     const totalPages = Math.max(1, Math.ceil(headerFilterMeta.total / limit));
@@ -195,6 +202,19 @@ export default function EntradasSalidasDataContainer({
           handleSaveMovimientoClick={handleSaveMovimientoClick}
           empresaActiva={empresaActiva}
           onResetFilters={onResetFilters}
+          agrupar={agrupar}
+          visibleColumns={visibleColumns}
+          onRowClick={(registro) => setRegistroDetalle(registro)}
+        />
+
+        <EntradasDetalleSheet
+          registro={registroDetalle}
+          open={Boolean(registroDetalle)}
+          onOpenChange={(abierto) => {
+            if (!abierto) setRegistroDetalle(null);
+          }}
+          onCorregir={handleEditMovimientoClick}
+          empresaActiva={empresaActiva}
         />
         {/* IMPORTANTE (UX):
             Aunque una página venga vacía por cambios de filtros o desajustes temporales,
@@ -209,6 +229,7 @@ export default function EntradasSalidasDataContainer({
                 : effectiveData?.total || 0
             }
             onPageChange={setPage}
+            onLimitChange={onLimitChange}
           />
         )}
       </>
