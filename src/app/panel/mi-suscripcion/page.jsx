@@ -24,6 +24,8 @@ import {
   Building2,
 } from "lucide-react";
 import LoadingTable from "@/components/LoadingTable";
+import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
+import StatCard from "@/components/StatCard";
 
 function formatMXN(value) {
   return new Intl.NumberFormat("es-MX", {
@@ -113,23 +115,27 @@ export default function MiSuscripcionPage() {
       <Header onRefresh={mutate} />
 
       <div className="grid gap-4 md:grid-cols-4">
-        <MetricCard
+        <StatCard
           icon={CreditCard}
+          accent="blue"
           title="Estado financiero"
           value={estadoCuentaBadge(resumen.estatus_financiero)}
         />
-        <MetricCard
+        <StatCard
           icon={AlertTriangle}
+          accent="amber"
           title="Saldo pendiente"
           value={formatMXN(resumen.saldo_pendiente)}
         />
-        <MetricCard
+        <StatCard
           icon={CheckCircle2}
+          accent="emerald"
           title="Total pagado"
           value={formatMXN(resumen.total_pagado)}
         />
-        <MetricCard
+        <StatCard
           icon={Clock}
+          accent="violet"
           title="Facturas pendientes"
           value={resumen.facturas_pendientes || 0}
         />
@@ -181,15 +187,15 @@ export default function MiSuscripcionPage() {
       </Card>
 
       {facturasPendientes.length > 0 && (
-        <Card className="border-yellow-300 bg-yellow-50/40">
+        <Card className="border-amber-200 bg-amber-50">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-yellow-800">
+            <CardTitle className="flex items-center gap-2 text-amber-800">
               <AlertTriangle className="h-5 w-5" />
               Tienes facturas pendientes
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-yellow-800">
+            <p className="text-sm text-amber-800">
               Puedes abrir cada factura en Stripe para pagarla en línea. Si ya
               pagaste por transferencia, espera a que el administrador aplique
               el pago.
@@ -334,33 +340,17 @@ export default function MiSuscripcionPage() {
 
 function Header({ onRefresh }) {
   return (
-    <div className="flex items-center justify-between gap-4">
-      <div>
-        <h1 className="text-2xl font-semibold">Mi suscripción</h1>
-        <p className="text-sm text-slate-500">
-          Consulta tu estado de cuenta, facturas y pagos de Adamia.
-        </p>
-      </div>
-
-      <Button variant="outline" onClick={() => onRefresh?.()}>
-        <RefreshCw className="mr-2 h-4 w-4" />
-        Actualizar
-      </Button>
-    </div>
-  );
-}
-
-function MetricCard({ icon: Icon, title, value }) {
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="flex items-center gap-2 text-xs font-medium uppercase text-slate-500">
-          <Icon className="h-4 w-4" />
-          {title}
-        </div>
-        <div className="mt-2 text-lg font-semibold text-slate-800">{value}</div>
-      </CardContent>
-    </Card>
+    <EncabezadoPagina
+      icono={CreditCard}
+      titulo="Mi suscripción"
+      subtitulo="Consulta tu estado de cuenta, facturas y pagos de Adamia."
+      acciones={
+        <Button variant="outline" onClick={() => onRefresh?.()}>
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Actualizar
+        </Button>
+      }
+    />
   );
 }
 

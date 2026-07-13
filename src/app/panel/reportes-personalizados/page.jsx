@@ -19,9 +19,11 @@ import {
   Trash2,
   BarChart3,
   ChevronRight,
+  FileBarChart2,
   Loader2,
   Upload,
 } from "lucide-react";
+import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 
 import ReporteDialog from "./components/ReporteDialog";
 import ReporteCard from "./components/ReporteCard";
@@ -66,13 +68,18 @@ function EstadoVacio({ onNuevo }) {
         <BarChart3 className="h-8 w-8 text-blue-400" />
       </div>
       <div>
-        <h3 className="text-lg font-bold text-gray-800 mb-1">Sin reportes creados</h3>
+        <h3 className="text-lg font-bold text-gray-800 mb-1">
+          Sin reportes creados
+        </h3>
         <p className="text-sm text-gray-500 max-w-xs">
-          Crea tu primer reporte personalizado eligiendo la fuente de datos y las columnas que
-          necesitas.
+          Crea tu primer reporte personalizado eligiendo la fuente de datos y
+          las columnas que necesitas.
         </p>
       </div>
-      <Button onClick={onNuevo} className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-2">
+      <Button
+        onClick={onNuevo}
+        className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white gap-2"
+      >
         <Plus className="h-4 w-4" />
         Crear primer reporte
       </Button>
@@ -97,10 +104,14 @@ function TarjetaPlantilla({ plantilla, onAbrir, onEditar, onEliminar }) {
                 <Icono className="h-5 w-5 text-blue-600" />
               </div>
               <div>
-                <h4 className="font-bold text-gray-900 text-sm leading-tight">{plantilla.nombre}</h4>
+                <h4 className="font-bold text-gray-900 text-sm leading-tight">
+                  {plantilla.nombre}
+                </h4>
                 <p className="text-xs text-gray-500 mt-0.5">
                   {LABEL_FUENTE[plantilla.fuente]}
-                  {plantilla.empresaNombre ? ` · ${plantilla.empresaNombre}` : ""}
+                  {plantilla.empresaNombre
+                    ? ` · ${plantilla.empresaNombre}`
+                    : ""}
                 </p>
               </div>
             </div>
@@ -127,7 +138,9 @@ function TarjetaPlantilla({ plantilla, onAbrir, onEditar, onEliminar }) {
           </div>
 
           {plantilla.descripcion && (
-            <p className="text-xs text-gray-500 mb-3 line-clamp-2">{plantilla.descripcion}</p>
+            <p className="text-xs text-gray-500 mb-3 line-clamp-2">
+              {plantilla.descripcion}
+            </p>
           )}
 
           <div className="flex items-center justify-between">
@@ -228,7 +241,9 @@ export default function ReportesPersonalizadosPage() {
         setPlantillaEditar(null);
         setTabActiva(String(guardada.id));
         enqueueSnackbar(
-          plantillaEditar ? "Reporte actualizado." : "Reporte creado correctamente.",
+          plantillaEditar
+            ? "Reporte actualizado."
+            : "Reporte creado correctamente.",
           { variant: "success" },
         );
       } catch (err) {
@@ -267,7 +282,9 @@ export default function ReportesPersonalizadosPage() {
 
   const handleImportarLocal = useCallback(async () => {
     if (!empresaDefault) {
-      enqueueSnackbar("No hay empresa disponible para importar.", { variant: "warning" });
+      enqueueSnackbar("No hay empresa disponible para importar.", {
+        variant: "warning",
+      });
       return;
     }
 
@@ -292,10 +309,13 @@ export default function ReportesPersonalizadosPage() {
       limpiarPlantillasLocal();
       setMostrarImportBanner(false);
       await recargarPlantillas();
-      enqueueSnackbar("Reportes importados correctamente.", { variant: "success" });
+      enqueueSnackbar("Reportes importados correctamente.", {
+        variant: "success",
+      });
     } catch (err) {
       enqueueSnackbar(
-        err?.response?.data?.error || "Error al importar reportes del navegador",
+        err?.response?.data?.error ||
+          "Error al importar reportes del navegador",
         { variant: "error" },
       );
     } finally {
@@ -325,15 +345,29 @@ export default function ReportesPersonalizadosPage() {
     [plantillaActiva, fetchReporte],
   );
 
-  const ejecucionActiva = plantillaActiva ? ejecuciones[plantillaActiva.id] : null;
+  const ejecucionActiva = plantillaActiva
+    ? ejecuciones[plantillaActiva.id]
+    : null;
 
   return (
     <div className="space-y-0">
+      {/* Encabezado compacto homologado Adamia */}
+      <div className="bg-white px-4 pt-6 sm:px-6">
+        <div className="max-w-6xl mx-auto">
+          <EncabezadoPagina
+            icono={FileBarChart2}
+            titulo="Reportes personalizados"
+            subtitulo="Crea y ejecuta reportes a la medida con tus propias columnas y filtros"
+          />
+        </div>
+      </div>
+
       {mostrarImportBanner && (
         <div className="bg-amber-50 border-b border-amber-200 px-4 sm:px-6 py-3">
           <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <p className="text-sm text-amber-900">
-              Tienes reportes guardados en este navegador. ¿Deseas importarlos al servidor?
+              Tienes reportes guardados en este navegador. ¿Deseas importarlos
+              al servidor?
             </p>
             <div className="flex gap-2">
               <Button
@@ -369,7 +403,7 @@ export default function ReportesPersonalizadosPage() {
             <div className="flex gap-0 min-w-max">
               <button
                 onClick={() => setTabActiva("mis-reportes")}
-                className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-4 py-3 text-[12.5px] font-semibold border-b-2 transition-colors whitespace-nowrap ${
                   tabActiva === "mis-reportes"
                     ? "border-[#2563EB] text-[#2563EB]"
                     : "border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300"
@@ -385,7 +419,7 @@ export default function ReportesPersonalizadosPage() {
                   <button
                     key={p.id}
                     onClick={() => setTabActiva(String(p.id))}
-                    className={`flex items-center gap-1.5 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                    className={`flex items-center gap-1.5 px-4 py-3 text-[12.5px] font-semibold border-b-2 transition-colors whitespace-nowrap ${
                       String(tabActiva) === String(p.id)
                         ? "border-[#2563EB] text-[#2563EB]"
                         : "border-transparent text-gray-500 hover:text-gray-800 hover:border-gray-300"
@@ -401,7 +435,7 @@ export default function ReportesPersonalizadosPage() {
 
           <Button
             onClick={abrirNuevo}
-            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-2 flex-shrink-0"
+            className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white gap-2 flex-shrink-0"
             size="sm"
           >
             <Plus className="h-4 w-4" />

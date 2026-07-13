@@ -20,9 +20,11 @@ import {
   LineChart,
   Clock,
   FileCheck,
+  LayoutDashboard,
   Settings,
   Users,
 } from "lucide-react";
+import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import PermisosTable from "./PermisosTable";
 import WeeklyTrend from "./WeeklyTrend";
 import AccesosRapidos from "@/components/AccesosRapidos";
@@ -237,28 +239,33 @@ export default async function PanelDashboardPage() {
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-6">
+      <EncabezadoPagina
+        icono={LayoutDashboard}
+        titulo="Inicio"
+        subtitulo="Resumen general de tu operación"
+      />
       <SystemMessageRenderer tipo="interna" contexto="dashboard" />
-      <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="bg-white">
+      <div className="mt-6 grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="gap-3 rounded-[10px] border-gray-200 bg-white py-5 shadow-none">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wide text-zinc-600">
+            <CardTitle className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
               TOTAL EMPLEADOS
             </CardTitle>
-            <div className="grid size-7 sm:size-8 place-content-center rounded-md border border-violet-200 bg-violet-50">
-              <UsersRound className="size-4 sm:size-4 text-violet-600" />
+            <div className="grid size-8 place-content-center rounded-lg bg-violet-50">
+              <UsersRound className="size-4 text-[#7c3aed]" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl sm:text-4xl font-semibold">
+            <div className="text-[22px] font-extrabold leading-tight tracking-tight text-gray-900 [font-variant-numeric:tabular-nums]">
               {data.totalEmpleados}
               {data.empleadosIncluidos != null && (
-                <span className="text-xl sm:text-2xl font-normal text-zinc-400">
+                <span className="text-sm font-semibold text-gray-400">
                   {" "}
                   / {data.empleadosIncluidos}
                 </span>
               )}
             </div>
-            <div className="text-xs text-zinc-500 mt-1">
+            <div className="mt-1 text-[11px] font-medium text-gray-500">
               {data.empleadosIncluidos != null
                 ? data.empleadosExcedentes > 0
                   ? `${data.empleadosExcedentes} empleado${
@@ -286,56 +293,56 @@ export default async function PanelDashboardPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-white">
+        <Card className="gap-3 rounded-[10px] border-gray-200 bg-white py-5 shadow-none">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wide text-zinc-600">
+            <CardTitle className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
               PRESENTES HOY
             </CardTitle>
-            <div className="grid size-7 sm:size-8 place-content-center rounded-md border border-emerald-200 bg-emerald-50">
-              <CheckCircle2 className="size-4 sm:size-4 text-emerald-600" />
+            <div className="grid size-8 place-content-center rounded-lg bg-emerald-50">
+              <CheckCircle2 className="size-4 text-emerald-600" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl sm:text-4xl font-semibold">
+            <div className="text-[22px] font-extrabold leading-tight tracking-tight text-gray-900 [font-variant-numeric:tabular-nums]">
               {data.presentesHoy}
             </div>
-            <div className="text-xs text-zinc-500 mt-1">
+            <div className="mt-1 text-[11px] font-medium text-gray-500">
               {asistenciaPct}% de asistencia
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-white">
+        <Card className="gap-3 rounded-[10px] border-gray-200 bg-white py-5 shadow-none">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wide text-zinc-600">
+            <CardTitle className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
               TARDANZAS HOY
             </CardTitle>
-            <div className="grid size-7 sm:size-8 place-content-center rounded-md border border-pink-200 bg-pink-50">
-              <AlarmClock className="size-4 sm:size-4 text-pink-600" />
+            <div className="grid size-8 place-content-center rounded-lg bg-pink-50">
+              <AlarmClock className="size-4 text-pink-600" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl sm:text-4xl font-semibold">
+            <div className="text-[22px] font-extrabold leading-tight tracking-tight text-gray-900 [font-variant-numeric:tabular-nums]">
               {data.tardanzasHoy}
             </div>
-            <div className="text-xs text-zinc-500 mt-1">
+            <div className="mt-1 text-[11px] font-medium text-gray-500">
               Llegadas después de las 9:00 AM
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-white">
+        <Card className="gap-3 rounded-[10px] border-gray-200 bg-white py-5 shadow-none">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wide text-zinc-600">
+            <CardTitle className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
               EVENTOS DEL MES
             </CardTitle>
-            <div className="grid size-7 sm:size-8 place-content-center rounded-md border border-violet-200 bg-violet-50">
-              <CalendarDays className="size-4 sm:size-4 text-violet-600" />
+            <div className="grid size-8 place-content-center rounded-lg bg-violet-50">
+              <CalendarDays className="size-4 text-[#7c3aed]" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl sm:text-4xl font-semibold">
+            <div className="text-[22px] font-extrabold leading-tight tracking-tight text-gray-900 [font-variant-numeric:tabular-nums]">
               {data.eventosMes}
             </div>
-            <div className="text-xs text-zinc-500 mt-1">
+            <div className="mt-1 text-[11px] font-medium text-gray-500">
               Cumpleaños y aniversarios
             </div>
           </CardContent>

@@ -55,18 +55,18 @@ import {
    Schema de validación con Zod
 ───────────────────────────────────────────── */
 const schema = z.object({
-  tolerancia_entrada_min: z
-    .coerce.number({ invalid_type_error: "Debe ser un número" })
+  tolerancia_entrada_min: z.coerce
+    .number({ invalid_type_error: "Debe ser un número" })
     .int("Debe ser un número entero")
     .min(0, "El valor mínimo es 0")
     .max(120, "El valor máximo es 120 minutos"),
-  tolerancia_salida_min: z
-    .coerce.number({ invalid_type_error: "Debe ser un número" })
+  tolerancia_salida_min: z.coerce
+    .number({ invalid_type_error: "Debe ser un número" })
     .int("Debe ser un número entero")
     .min(0, "El valor mínimo es 0")
     .max(120, "El valor máximo es 120 minutos"),
-  jornada_minima_horas: z
-    .coerce.number({ invalid_type_error: "Debe ser un número" })
+  jornada_minima_horas: z.coerce
+    .number({ invalid_type_error: "Debe ser un número" })
     .min(0, "El valor mínimo es 0")
     .max(24, "El valor máximo es 24 horas"),
 });
@@ -83,7 +83,9 @@ function ReglaCard({ icon: Icon, titulo, descripcion, children }) {
         </div>
         <div>
           <p className="text-sm font-semibold text-gray-800">{titulo}</p>
-          <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{descripcion}</p>
+          <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
+            {descripcion}
+          </p>
         </div>
       </div>
       {children}
@@ -98,12 +100,12 @@ export default function ConfiguracionChecadorPage() {
   const { dataUser } = useAuth();
   const idEmpresa = dataUser?.id_empresa;
 
-  const [cargando, setCargando]       = useState(true);
-  const [guardando, setGuardando]     = useState(false);
-  const [alerta, setAlerta]           = useState(null);
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [alerta, setAlerta] = useState(null);
 
   // Estado de la acción "Aplicar a datos históricos"
-  const [aplicando, setAplicando]                 = useState(false);
+  const [aplicando, setAplicando] = useState(false);
   const [resultadoAplicacion, setResultadoAplicacion] = useState(null);
 
   const {
@@ -126,14 +128,19 @@ export default function ConfiguracionChecadorPage() {
 
     const cargar = async () => {
       try {
-        const { data } = await axios.get(`/checador/config-checador?empresa=${idEmpresa}`);
+        const { data } = await axios.get(
+          `/checador/config-checador?empresa=${idEmpresa}`,
+        );
         reset({
           tolerancia_entrada_min: data.tolerancia_entrada_min ?? 0,
-          tolerancia_salida_min:  data.tolerancia_salida_min  ?? 0,
-          jornada_minima_horas:   data.jornada_minima_horas   ?? 0,
+          tolerancia_salida_min: data.tolerancia_salida_min ?? 0,
+          jornada_minima_horas: data.jornada_minima_horas ?? 0,
         });
       } catch {
-        setAlerta({ tipo: "error", mensaje: "No se pudo cargar la configuración." });
+        setAlerta({
+          tipo: "error",
+          mensaje: "No se pudo cargar la configuración.",
+        });
       } finally {
         setCargando(false);
       }
@@ -149,11 +156,20 @@ export default function ConfiguracionChecadorPage() {
     setAlerta(null);
 
     try {
-      await axios.put(`/checador/config-checador?empresa=${idEmpresa}`, valores);
+      await axios.put(
+        `/checador/config-checador?empresa=${idEmpresa}`,
+        valores,
+      );
       reset(valores);
-      setAlerta({ tipo: "exito", mensaje: "Configuración guardada correctamente." });
+      setAlerta({
+        tipo: "exito",
+        mensaje: "Configuración guardada correctamente.",
+      });
     } catch {
-      setAlerta({ tipo: "error", mensaje: "Error al guardar la configuración." });
+      setAlerta({
+        tipo: "error",
+        mensaje: "Error al guardar la configuración.",
+      });
     } finally {
       setGuardando(false);
     }
@@ -176,7 +192,10 @@ export default function ConfiguracionChecadorPage() {
       );
       setResultadoAplicacion(data);
     } catch {
-      setAlerta({ tipo: "error", mensaje: "Error al aplicar la configuración a los datos históricos." });
+      setAlerta({
+        tipo: "error",
+        mensaje: "Error al aplicar la configuración a los datos históricos.",
+      });
     } finally {
       setAplicando(false);
     }
@@ -197,20 +216,24 @@ export default function ConfiguracionChecadorPage() {
 
   return (
     <div className="max-w-2xl mx-auto p-6 space-y-6">
-      {/* Encabezado */}
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 text-white">
-          <Clock size={20} />
+      {/* Encabezado compacto homologado Adamia */}
+      <div>
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#2563eb] to-[#7c3aed] text-white shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
+            <Clock size={20} />
+          </div>
+          <div>
+            <h1 className="text-xl font-extrabold tracking-tight text-gray-900">
+              Configuración del Checador
+            </h1>
+            <p className="text-[12.5px] text-gray-500">
+              Reglas de tolerancia y jornada para los registros de entrada y
+              salida
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Configuración del Checador</h1>
-          <p className="text-sm text-gray-500">
-            Reglas de tolerancia y jornada para los registros de entrada y salida
-          </p>
-        </div>
+        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
       </div>
-
-      <Separator />
 
       {/* Alerta de resultado */}
       {alerta && (
@@ -227,7 +250,9 @@ export default function ConfiguracionChecadorPage() {
             <AlertCircle className="h-4 w-4 text-red-600" />
           )}
           <AlertDescription
-            className={alerta.tipo === "exito" ? "text-green-700" : "text-red-700"}
+            className={
+              alerta.tipo === "exito" ? "text-green-700" : "text-red-700"
+            }
           >
             {alerta.mensaje}
           </AlertDescription>
@@ -236,7 +261,6 @@ export default function ConfiguracionChecadorPage() {
 
       {/* Formulario */}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-
         {/* Regla 1: Tolerancia de entrada */}
         <ReglaCard
           icon={AlarmClock}
@@ -245,7 +269,10 @@ export default function ConfiguracionChecadorPage() {
         >
           <div className="flex items-center gap-3">
             <div className="flex-1">
-              <Label htmlFor="tolerancia_entrada_min" className="text-xs font-medium text-gray-600">
+              <Label
+                htmlFor="tolerancia_entrada_min"
+                className="text-xs font-medium text-gray-600"
+              >
                 Minutos de gracia (0 = sin tolerancia)
               </Label>
               <Input
@@ -258,7 +285,9 @@ export default function ConfiguracionChecadorPage() {
                 {...register("tolerancia_entrada_min")}
               />
               {errors.tolerancia_entrada_min && (
-                <p className="text-xs text-red-500 mt-1">{errors.tolerancia_entrada_min.message}</p>
+                <p className="text-xs text-red-500 mt-1">
+                  {errors.tolerancia_entrada_min.message}
+                </p>
               )}
             </div>
             <span className="text-sm text-gray-500 pt-6">min</span>
@@ -273,7 +302,10 @@ export default function ConfiguracionChecadorPage() {
         >
           <div className="flex items-center gap-3">
             <div className="flex-1">
-              <Label htmlFor="tolerancia_salida_min" className="text-xs font-medium text-gray-600">
+              <Label
+                htmlFor="tolerancia_salida_min"
+                className="text-xs font-medium text-gray-600"
+              >
                 Minutos de gracia (0 = sin tolerancia)
               </Label>
               <Input
@@ -286,7 +318,9 @@ export default function ConfiguracionChecadorPage() {
                 {...register("tolerancia_salida_min")}
               />
               {errors.tolerancia_salida_min && (
-                <p className="text-xs text-red-500 mt-1">{errors.tolerancia_salida_min.message}</p>
+                <p className="text-xs text-red-500 mt-1">
+                  {errors.tolerancia_salida_min.message}
+                </p>
               )}
             </div>
             <span className="text-sm text-gray-500 pt-6">min</span>
@@ -301,7 +335,10 @@ export default function ConfiguracionChecadorPage() {
         >
           <div className="flex items-center gap-3">
             <div className="flex-1">
-              <Label htmlFor="jornada_minima_horas" className="text-xs font-medium text-gray-600">
+              <Label
+                htmlFor="jornada_minima_horas"
+                className="text-xs font-medium text-gray-600"
+              >
                 Horas mínimas (0 = desactivado)
               </Label>
               <Input
@@ -314,7 +351,9 @@ export default function ConfiguracionChecadorPage() {
                 {...register("jornada_minima_horas")}
               />
               {errors.jornada_minima_horas && (
-                <p className="text-xs text-red-500 mt-1">{errors.jornada_minima_horas.message}</p>
+                <p className="text-xs text-red-500 mt-1">
+                  {errors.jornada_minima_horas.message}
+                </p>
               )}
             </div>
             <span className="text-sm text-gray-500 pt-6">hrs</span>
@@ -325,7 +364,7 @@ export default function ConfiguracionChecadorPage() {
           <Button
             type="submit"
             disabled={guardando || !isDirty}
-            className="min-w-36 gap-2"
+            className="min-w-36 gap-2 bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white"
           >
             {guardando ? (
               <>
@@ -349,14 +388,14 @@ export default function ConfiguracionChecadorPage() {
             <History size={18} />
           </div>
           <div>
-            <p className="text-sm font-semibold text-gray-800">
+            <p className="text-sm font-semibold text-amber-800">
               Aplicar reglas a datos históricos
             </p>
-            <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
-              Reclasifica los registros de asistencia pasados de esta empresa usando la
-              tolerancia de entrada guardada actualmente. Solo modifica registros del tipo
-              "Asistencia" o "Retardo" que tengan horario programado. Esta acción es
-              irreversible.
+            <p className="text-xs text-amber-700 mt-0.5 leading-relaxed">
+              Reclasifica los registros de asistencia pasados de esta empresa
+              usando la tolerancia de entrada guardada actualmente. Solo
+              modifica registros del tipo "Asistencia" o "Retardo" que tengan
+              horario programado. Esta acción es irreversible.
             </p>
           </div>
         </div>
@@ -370,7 +409,9 @@ export default function ConfiguracionChecadorPage() {
               <span className="font-semibold">
                 {resultadoAplicacion.registros_actualizados.toLocaleString()}
               </span>{" "}
-              registro{resultadoAplicacion.registros_actualizados !== 1 ? "s" : ""} de asistencia.
+              registro
+              {resultadoAplicacion.registros_actualizados !== 1 ? "s" : ""} de
+              asistencia.
             </p>
           </div>
         )}
@@ -407,12 +448,13 @@ export default function ConfiguracionChecadorPage() {
                 <AlertDialogDescription className="space-y-2 text-left">
                   <span className="block">
                     Esta acción recorrerá todos los registros de{" "}
-                    <strong>asistencias pasadas</strong> de la empresa y los reclasificará
-                    como "Asistencia" o "Retardo" según la tolerancia de entrada configurada
-                    actualmente.
+                    <strong>asistencias pasadas</strong> de la empresa y los
+                    reclasificará como "Asistencia" o "Retardo" según la
+                    tolerancia de entrada configurada actualmente.
                   </span>
                   <span className="block text-red-600 font-medium">
-                    Esta operación modifica registros existentes y no se puede deshacer.
+                    Esta operación modifica registros existentes y no se puede
+                    deshacer.
                   </span>
                 </AlertDialogDescription>
               </AlertDialogHeader>

@@ -7,7 +7,8 @@ import { Icon } from "@iconify/react";
 import useSWR from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import PasswordChange from "./Contrasena";
-import { Building, KeyRound, User } from "lucide-react";
+import { Building, KeyRound, User, UserCog } from "lucide-react";
+import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import EmpresaInfoForm from "./Empresa/EmpresaForm";
 import ErrorPage from "@/components/ErrorPage";
 
@@ -38,29 +39,36 @@ export default function MyAccountReclutador() {
 
   return (
     <div className="min-h-screen bg-[#F9FAFB] p-3 sm:p-6">
-      {/* Header del módulo - Estilo ADAMIA */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6 overflow-hidden">
+      {/* Encabezado compacto homologado Adamia */}
+      <div className="mb-6">
+        <EncabezadoPagina
+          icono={UserCog}
+          titulo="Mi cuenta"
+          subtitulo="Administra tu información personal, seguridad y datos de tu empresa"
+        />
+      </div>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
         {/* Tabs - Estilo ADAMIA */}
         <Tabs defaultValue="cuenta" className="w-full">
-          <div className="border-b-2 border-blue-200 bg-gradient-to-br from-blue-50 to-white overflow-x-auto">
+          <div className="border-b border-gray-200 bg-white overflow-x-auto">
             <TabsList className="bg-transparent h-auto p-0 w-full justify-start min-w-max">
               <TabsTrigger
                 value="cuenta"
-                className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] data-[state=active]:text-[#2563EB] rounded-none py-3 px-4 sm:py-4 sm:px-6 font-medium gap-1.5 text-sm whitespace-nowrap"
+                className="rounded-none border-b-2 border-transparent py-3 px-4 sm:py-4 sm:px-6 text-[12.5px] font-semibold text-gray-500 data-[state=active]:bg-white data-[state=active]:border-[#2563eb] data-[state=active]:text-[#2563eb] data-[state=active]:shadow-none gap-1.5 whitespace-nowrap"
               >
                 <User className="w-4 h-4 shrink-0" />
                 Mi cuenta
               </TabsTrigger>
               <TabsTrigger
                 value="contrasenia"
-                className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] data-[state=active]:text-[#2563EB] rounded-none py-3 px-4 sm:py-4 sm:px-6 font-medium gap-1.5 text-sm whitespace-nowrap"
+                className="rounded-none border-b-2 border-transparent py-3 px-4 sm:py-4 sm:px-6 text-[12.5px] font-semibold text-gray-500 data-[state=active]:bg-white data-[state=active]:border-[#2563eb] data-[state=active]:text-[#2563eb] data-[state=active]:shadow-none gap-1.5 whitespace-nowrap"
               >
                 <KeyRound className="w-4 h-4 shrink-0" />
                 Seguridad
               </TabsTrigger>
               <TabsTrigger
                 value="empresa"
-                className="data-[state=active]:bg-white data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] data-[state=active]:text-[#2563EB] rounded-none py-3 px-4 sm:py-4 sm:px-6 font-medium gap-1.5 text-sm whitespace-nowrap"
+                className="rounded-none border-b-2 border-transparent py-3 px-4 sm:py-4 sm:px-6 text-[12.5px] font-semibold text-gray-500 data-[state=active]:bg-white data-[state=active]:border-[#2563eb] data-[state=active]:text-[#2563eb] data-[state=active]:shadow-none gap-1.5 whitespace-nowrap"
               >
                 <Building className="w-4 h-4 shrink-0" />
                 Mi empresa
@@ -78,7 +86,9 @@ export default function MyAccountReclutador() {
             <TabsContent value="empresa" className="mt-0">
               {tieneMultiplesEmpresas && (
                 <div className="mb-6">
-                  <p className="text-sm font-medium text-gray-700 mb-2">Selecciona la empresa a editar</p>
+                  <p className="text-sm font-medium text-gray-700 mb-2">
+                    Selecciona la empresa a editar
+                  </p>
                   <div className="flex flex-wrap gap-2">
                     {dataUser.empresas_detalle.map((emp) => (
                       <button
@@ -91,7 +101,11 @@ export default function MyAccountReclutador() {
                         }`}
                       >
                         {emp.url_imagen && (
-                          <img src={emp.url_imagen} alt="" className="w-5 h-5 rounded object-cover" />
+                          <img
+                            src={emp.url_imagen}
+                            alt=""
+                            className="w-5 h-5 rounded object-cover"
+                          />
                         )}
                         {emp.nombre}
                       </button>

@@ -94,7 +94,8 @@ export default function PermisosTable({
           row.nombre_empresa ||
           row.empresa_nombre;
         const passUnidad =
-          unidadSeleccionada.length === 0 || unidadSeleccionada.includes(unidad);
+          unidadSeleccionada.length === 0 ||
+          unidadSeleccionada.includes(unidad);
         const passEmpleado =
           empleadoSeleccionado.length === 0 ||
           empleadoSeleccionado.includes(row.empleado_nombre);
@@ -102,7 +103,8 @@ export default function PermisosTable({
           tipoSeleccionado.length === 0 ||
           tipoSeleccionado.includes(row.tipo_permiso_nombre);
         const passEstado =
-          estadoSeleccionado.length === 0 || estadoSeleccionado.includes(row.estado);
+          estadoSeleccionado.length === 0 ||
+          estadoSeleccionado.includes(row.estado);
         return passUnidad && passEmpleado && passTipo && passEstado;
       }),
     [
@@ -131,7 +133,11 @@ export default function PermisosTable({
       active: hasActiveHeaderFilters,
       total: filteredRowsAll.length,
     });
-  }, [hasActiveHeaderFilters, filteredRowsAll.length, onHeaderFilteringMetaChange]);
+  }, [
+    hasActiveHeaderFilters,
+    filteredRowsAll.length,
+    onHeaderFilteringMetaChange,
+  ]);
 
   const clearAllHeaderFilters = () => {
     setUnidadSeleccionada([]);
@@ -148,7 +154,7 @@ export default function PermisosTable({
           <div className="flex justify-end">
             <Button
               onClick={onCreate}
-              className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white"
+              className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white"
             >
               <Plus className="h-4 w-4 mr-2" /> Nuevo permiso
             </Button>
@@ -175,7 +181,7 @@ export default function PermisosTable({
         <div className="flex justify-end">
           <Button
             onClick={onCreate}
-            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white"
+            className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white"
           >
             <Plus className="h-4 w-4 mr-2" /> Nuevo permiso
           </Button>
@@ -215,7 +221,9 @@ export default function PermisosTable({
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50">
-                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">#</TableHead>
+                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
+                  #
+                </TableHead>
                 <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
                   <HeaderMultiFilter
                     selected={unidadSeleccionada}
@@ -240,10 +248,18 @@ export default function PermisosTable({
                     placeholder="Tipo"
                   />
                 </TableHead>
-                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">Fecha inicio</TableHead>
-                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">Fecha fin</TableHead>
-                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">Días totales</TableHead>
-                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">Días hábiles</TableHead>
+                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
+                  Fecha inicio
+                </TableHead>
+                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
+                  Fecha fin
+                </TableHead>
+                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
+                  Días totales
+                </TableHead>
+                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
+                  Días hábiles
+                </TableHead>
                 <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
                   <HeaderMultiFilter
                     selected={estadoSeleccionado}
@@ -252,8 +268,12 @@ export default function PermisosTable({
                     placeholder="Estado"
                   />
                 </TableHead>
-                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">Solicitado</TableHead>
-                <TableHead className="whitespace-nowrap text-right text-xs font-semibold uppercase text-gray-600">Acciones</TableHead>
+                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
+                  Solicitado
+                </TableHead>
+                <TableHead className="whitespace-nowrap text-right text-xs font-semibold uppercase text-gray-600">
+                  Acciones
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -323,8 +343,12 @@ export default function PermisosTable({
                         {row.tipo_permiso_nombre}
                       </span>
                     </TableCell>
-                    <TableCell className="font-mono text-sm">{formatDateDMY(di)}</TableCell>
-                    <TableCell className="font-mono text-sm">{row.fecha_fin ? formatDateDMY(df) : "-"}</TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {formatDateDMY(di)}
+                    </TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {row.fecha_fin ? formatDateDMY(df) : "-"}
+                    </TableCell>
                     <TableCell className="font-mono text-sm">
                       <span className="inline-block whitespace-nowrap rounded-md bg-zinc-100 px-2 py-1 text-sm font-bold text-zinc-800">
                         {diasTotales}
@@ -339,7 +363,9 @@ export default function PermisosTable({
                       <EstadoBadge estado={row.estado} />
                     </TableCell>
                     <TableCell className="font-mono text-sm">
-                      {row.marca_tiempo ? formatDateDMY(dayjs(row.marca_tiempo)) : "-"}
+                      {row.marca_tiempo
+                        ? formatDateDMY(dayjs(row.marca_tiempo))
+                        : "-"}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
@@ -377,7 +403,10 @@ export default function PermisosTable({
               })}
               {displayedRows.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={12} className="py-8 text-center text-muted-foreground">
+                  <TableCell
+                    colSpan={12}
+                    className="py-8 text-center text-muted-foreground"
+                  >
                     No hay permisos para los filtros seleccionados.
                   </TableCell>
                 </TableRow>
@@ -391,10 +420,29 @@ export default function PermisosTable({
 }
 
 function EstadoBadge({ estado }) {
-  const base = "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold";
-  if (estado === "Pendiente") return <span className={cn(base, "bg-amber-100 text-amber-900")}>Pendiente</span>;
-  if (estado === "Aprobado") return <span className={cn(base, "bg-emerald-100 text-emerald-900")}>Aprobado</span>;
-  if (estado === "Rechazado") return <span className={cn(base, "bg-red-100 text-red-900")}>Rechazado</span>;
-  if (estado === "Cancelado") return <span className={cn(base, "bg-zinc-200 text-zinc-700")}>Cancelado</span>;
-  return <span className={cn(base, "bg-zinc-200 text-zinc-700")}>{estado || "—"}</span>;
+  const base =
+    "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold";
+  if (estado === "Pendiente")
+    return (
+      <span className={cn(base, "bg-amber-100 text-amber-900")}>Pendiente</span>
+    );
+  if (estado === "Aprobado")
+    return (
+      <span className={cn(base, "bg-emerald-100 text-emerald-900")}>
+        Aprobado
+      </span>
+    );
+  if (estado === "Rechazado")
+    return (
+      <span className={cn(base, "bg-red-100 text-red-900")}>Rechazado</span>
+    );
+  if (estado === "Cancelado")
+    return (
+      <span className={cn(base, "bg-zinc-200 text-zinc-700")}>Cancelado</span>
+    );
+  return (
+    <span className={cn(base, "bg-zinc-200 text-zinc-700")}>
+      {estado || "—"}
+    </span>
+  );
 }
