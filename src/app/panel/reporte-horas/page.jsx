@@ -8,7 +8,6 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -24,16 +23,16 @@ import { useAuth } from "@/context/AuthContext";
 import axios from "@/lib/axios";
 import Cookies from "js-cookie";
 import { Combobox } from "@/components/Combobox";
+import {
+  FiltrosGrid,
+  CampoFiltro,
+  SelectorBoton,
+} from "@/components/filtros/CampoFiltro";
+import RangoFechasModal from "@/components/filtros/RangoFechasModal";
 import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import { fetchImageAsDataUrl } from "@/lib/pdfCompanyLogo";
-import {
-  BarChart3,
-  Filter,
-  FileDown,
-  FileSpreadsheet,
-  Search,
-} from "lucide-react";
+import { BarChart3, FileDown, FileSpreadsheet, Search } from "lucide-react";
 
 function fmtDate(d) {
   const dd = new Date(d);
@@ -129,6 +128,18 @@ export default function ReporteHorasPage() {
   const [searchEmpleado, setSearchEmpleado] = useState("");
   const [tempEmpleadoIds, setTempEmpleadoIds] = useState([]);
 
+  // Rediseño homologado de filtros: modal de rango de fechas.
+  // Las fechas iniciales (inicio de mes → hoy) corresponden a "Este mes".
+  const [rangoOpen, setRangoOpen] = useState(false);
+  const [rangoEtiqueta, setRangoEtiqueta] = useState("Este mes");
+
+  // Selector de empleados unificado (siempre el diálogo múltiple):
+  // `multi` se fija en true al montar para que handleGenerar tome la ruta
+  // "ids seleccionados o todos los del filtro" sin tocar la lógica de datos.
+  useEffect(() => {
+    setMulti(true);
+  }, []);
+
   // Cargar empleados y puestos por empresa
   useEffect(() => {
     if (!dataUser) return;
@@ -214,6 +225,18 @@ export default function ReporteHorasPage() {
       return nombre.includes(q) || empresa.includes(q) || unidad.includes(q);
     });
   }, [empleadosFiltrados, searchEmpleado]);
+
+  // Texto del botón "Empleado(s)" en la fila de filtros.
+  const empleadoSeleccionValor = useMemo(() => {
+    if (empleadoIds.length === 0) return "";
+    if (empleadoIds.length === 1) {
+      const emp = empleados.find(
+        (e) => String(e.id_empleado) === String(empleadoIds[0]),
+      );
+      return emp?.nombre_empleado || "1 empleado";
+    }
+    return `${empleadoIds.length} empleados`;
+  }, [empleadoIds, empleados]);
 
   function openSelectorWithBuffer() {
     setTempEmpleadoIds(empleadoIds);
@@ -384,8 +407,8 @@ export default function ReporteHorasPage() {
               <td style="text-align:center">${s}</td>
               <td style="text-align:center">${totalHorasTrabajadas}</td>
               <td style="text-align:center"><span class="badge ${badge}">${
-              d.estado || ""
-            }</span></td>
+                d.estado || ""
+              }</span></td>
               <td>${d.motivo || ""}</td>
               <td>${d.notas || ""}</td>
             </tr>
@@ -547,8 +570,7 @@ export default function ReporteHorasPage() {
       const MUTED = [107, 114, 128]; // #6b7280
       const HAIRLINE = [229, 231, 235]; // #e5e7eb
 
-      const lerp = (a, b, t) =>
-        a.map((v, i) => Math.round(v + (b[i] - v) * t));
+      const lerp = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
 
       const pdf = new jsPDF({ orientation: "p", unit: "pt", format: "a4" });
 
@@ -713,7 +735,9 @@ export default function ReporteHorasPage() {
           pdf.setFont(FONT, "bold");
           pdf.setFontSize(9);
           pdf.setTextColor(...TEXT);
-          const lines = pdf.splitTextToSize(String(c.value), w - 14).slice(0, 2);
+          const lines = pdf
+            .splitTextToSize(String(c.value), w - 14)
+            .slice(0, 2);
           pdf.text(lines.length ? lines : ["—"], x + 9, y + 21, {
             lineHeightFactor: 1.25,
           });
@@ -823,7 +847,9 @@ export default function ReporteHorasPage() {
 
           const estadoRaw = String(d.estado || "").trim();
           const estado =
-            estadoRaw.toLowerCase() === "cerrado" ? "Completo" : estadoRaw || "—";
+            estadoRaw.toLowerCase() === "cerrado"
+              ? "Completo"
+              : estadoRaw || "—";
 
           rows.push([
             humanDate(d.fecha),
@@ -901,7 +927,15 @@ export default function ReporteHorasPage() {
             bottom: footerReserved + 8,
           },
           head: [
-            ["Fecha", "Entrada", "Salida", "Horas", "Estado", "Motivo", "Notas"],
+            [
+              "Fecha",
+              "Entrada",
+              "Salida",
+              "Horas",
+              "Estado",
+              "Motivo",
+              "Notas",
+            ],
           ],
           body: buildRows(r),
           theme: "plain",
@@ -964,9 +998,14 @@ export default function ReporteHorasPage() {
         pdf.setFont(FONT, "normal");
         pdf.setTextColor(...MUTED);
         pdf.text("  ·  Reporte de Horas", marginX + brandW, textY);
-        pdf.text(`Página ${page} de ${totalPages}`, pageWidth - marginX, textY, {
-          align: "right",
-        });
+        pdf.text(
+          `Página ${page} de ${totalPages}`,
+          pageWidth - marginX,
+          textY,
+          {
+            align: "right",
+          },
+        );
       }
 
       const r0 = reportes[0];
@@ -1010,30 +1049,29 @@ export default function ReporteHorasPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header ADAMIA */}
-      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+      {/* Encabezado compacto con la tipografía del landing */}
+      <div>
         <div className="flex items-center gap-3">
-          <div className="bg-[#2563EB] p-2.5 rounded-lg">
-            <BarChart3 className="w-5 h-5 text-white" />
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[#2563eb] to-[#7c3aed] shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
+            <BarChart3 className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-gray-900">
+            <h1 className="text-xl font-extrabold tracking-tight text-gray-900">
               Reporte de horas
             </h1>
-            <p className="text-sm text-gray-600">
+            <p className="text-[12.5px] text-gray-500">
               Genera reportes por empleado y periodo.
             </p>
           </div>
         </div>
+        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
       </div>
 
-      <Card className="border-blue-100 bg-blue-50">
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex flex-col gap-2 md:col-span-2">
-              <label className="text-sm text-muted-foreground">
-                Unidad de negocio
-              </label>
+      {/* Fila de filtros homologada */}
+      <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+        <FiltrosGrid columnas={6}>
+          <CampoFiltro etiqueta="Unidad de negocio">
+            <div className="[&_button]:h-[38px] [&_button]:w-full [&_button]:rounded-md [&_button]:border-gray-200 [&_button]:text-[13px] [&_button]:font-medium">
               <Combobox
                 options={[
                   { value: "all", label: "Todas las unidades de negocio" },
@@ -1050,690 +1088,628 @@ export default function ReporteHorasPage() {
                 placeholder="Seleccionar unidad de negocio"
               />
             </div>
+          </CampoFiltro>
 
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-gray-700">Cargo</label>
-              <select
-                className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm shadow-xs focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                value={cargo}
-                onChange={(e) => {
-                  setCargo(e.target.value);
-                  setEmpleadoId("");
-                }}
-              >
-                <option value="">Todos los cargos</option>
-                {cargos.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <CampoFiltro etiqueta="Cargo">
+            <select
+              className="h-[38px] w-full rounded-md border border-gray-200 bg-white px-3 text-[13px] font-medium text-gray-900 focus-visible:border-blue-300 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-blue-500/15"
+              value={cargo}
+              onChange={(e) => {
+                setCargo(e.target.value);
+                setEmpleadoId("");
+              }}
+            >
+              <option value="">Todos los cargos</option>
+              {cargos.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </CampoFiltro>
 
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-gray-700">
-                Periodo de pago
-              </label>
-              <select
-                className="h-9 w-full rounded-md border border-input bg-white px-3 text-sm shadow-xs focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                value={periodo}
-                onChange={(e) => {
-                  setPeriodo(e.target.value);
-                  setEmpleadoId("");
-                  setEmpleadoIds([]);
-                }}
-              >
-                <option value="">Todos los periodos</option>
-                <option value="Semanal">Semanal</option>
-                <option value="Catorcenal">Catorcenal</option>
-                <option value="Quincenal">Quincenal</option>
-                <option value="Mensual">Mensual</option>
-                <option value="Diario">Diario</option>
-                <option value="Por hora">Por hora</option>
-              </select>
-            </div>
+          <CampoFiltro etiqueta="Periodo de pago">
+            <select
+              className="h-[38px] w-full rounded-md border border-gray-200 bg-white px-3 text-[13px] font-medium text-gray-900 focus-visible:border-blue-300 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-blue-500/15"
+              value={periodo}
+              onChange={(e) => {
+                setPeriodo(e.target.value);
+                setEmpleadoId("");
+                setEmpleadoIds([]);
+              }}
+            >
+              <option value="">Todos los periodos</option>
+              <option value="Semanal">Semanal</option>
+              <option value="Catorcenal">Catorcenal</option>
+              <option value="Quincenal">Quincenal</option>
+              <option value="Mensual">Mensual</option>
+              <option value="Diario">Diario</option>
+              <option value="Por hora">Por hora</option>
+            </select>
+          </CampoFiltro>
 
-            <div className={`flex flex-col gap-2`}>
-              <label className="text-sm font-medium text-gray-700">
-                Empleado{multi ? "(s)" : ""}
-              </label>
-              {!multi ? (
-                <Combobox
-                  options={empleadosFiltrados.map((e) => ({
-                    value: String(e.id_empleado),
-                    label: `${e.nombre_empleado} - ${
-                      e.unidad_negocio || e.nombre_empresa
-                    }`,
-                  }))}
-                  value={empleadoId}
-                  onChange={(value) => setEmpleadoId(value)}
-                  placeholder="Buscar empleado..."
-                  emptyText="No se encontraron empleados"
-                  name="empleado"
-                  disabled={loading || empleadosFiltrados.length === 0}
-                />
-              ) : (
-                <div className="flex flex-col gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={openSelectorWithBuffer}
-                    className="w-full justify-between border-gray-300 text-gray-700 hover:bg-gray-100"
-                  >
-                    <span
-                      className="truncate pr-2"
-                      title={
-                        empleadoIds.length > 0
-                          ? `Seleccionar empleados (${empleadoIds.length} seleccionados)`
-                          : "Seleccionar empleados"
-                      }
-                    >
-                      {empleadoIds.length > 0
-                        ? `Seleccionar empleados (${empleadoIds.length} seleccionados)`
-                        : "Seleccionar empleados"}
-                    </span>
-                    <span className="text-xs text-muted-foreground">Abrir</span>
-                  </Button>
-                  <div className="hidden">
-                    <select
-                      multiple
-                      className="min-h-9 h-24 w-full rounded-md border border-input bg-white px-3 text-sm shadow-xs focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                      value={empleadoIds}
-                      onChange={(e) =>
-                        setEmpleadoIds(
-                          Array.from(e.target.selectedOptions).map(
-                            (o) => o.value,
-                          ),
-                        )
-                      }
-                    >
-                      {empleadosFiltrados.map((e) => (
-                        <option key={e.id_empleado} value={e.id_empleado}>
-                          {e.nombre_empleado} -{" "}
-                          {e.unidad_negocio || e.nombre_empresa}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              )}
-              {multi && empleadoIds.length > 0 ? (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {empleados
-                    .filter((e) => empleadoIds.includes(String(e.id_empleado)))
-                    .map((e) => (
-                      <span
-                        key={`sel-${e.id_empleado}`}
-                        className="inline-flex items-center gap-1 rounded-full bg-zinc-100 border border-zinc-200 px-2 py-0.5 text-xs"
-                        title={`${e.nombre_empleado} - ${
-                          e.unidad_negocio || e.nombre_empresa
-                        }`}
-                      >
-                        {e.nombre_empleado}
-                        <button
-                          type="button"
-                          className="ml-1 text-zinc-500 hover:text-zinc-700"
-                          onClick={() =>
-                            setEmpleadoIds((ids) =>
-                              ids.filter((id) => id !== String(e.id_empleado)),
-                            )
-                          }
-                          aria-label={`Quitar ${e.nombre_empleado}`}
-                        >
-                          <Icon icon="lucide:x" className="size-3.5" />
-                        </button>
-                      </span>
-                    ))}
+          <CampoFiltro etiqueta="Empleado(s)">
+            <SelectorBoton
+              valor={empleadoSeleccionValor}
+              placeholder="Todos los del filtro"
+              activo={empleadoIds.length > 0}
+              onClick={openSelectorWithBuffer}
+              disabled={loading || empleadosFiltrados.length === 0}
+            />
+          </CampoFiltro>
+
+          <CampoFiltro etiqueta="Rango de fechas">
+            <SelectorBoton
+              valor={rangoEtiqueta}
+              activo
+              onClick={() => setRangoOpen(true)}
+            />
+          </CampoFiltro>
+
+          <CampoFiltro>
+            <Button
+              onClick={handleGenerar}
+              disabled={loading}
+              className="h-[38px] w-full rounded-md bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
+            >
+              {loading ? "Generando…" : "Generar reporte"}
+            </Button>
+          </CampoFiltro>
+        </FiltrosGrid>
+
+        {empleadoIds.length > 1 ? (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {empleados
+              .filter((e) => empleadoIds.includes(String(e.id_empleado)))
+              .map((e) => (
+                <span
+                  key={`sel-${e.id_empleado}`}
+                  className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50/60 px-2.5 py-0.5 text-xs font-medium text-gray-700"
+                  title={`${e.nombre_empleado} - ${
+                    e.unidad_negocio || e.nombre_empresa
+                  }`}
+                >
+                  {e.nombre_empleado}
                   <button
                     type="button"
-                    className="text-xs text-zinc-600 underline decoration-dotted underline-offset-2"
-                    onClick={() => setEmpleadoIds([])}
+                    className="ml-1 text-blue-500 hover:text-blue-700"
+                    onClick={() =>
+                      setEmpleadoIds((ids) =>
+                        ids.filter((id) => id !== String(e.id_empleado)),
+                      )
+                    }
+                    aria-label={`Quitar ${e.nombre_empleado}`}
                   >
-                    Quitar todos
+                    <Icon icon="lucide:x" className="size-3.5" />
                   </button>
-                </div>
-              ) : null}
-              <label className="inline-flex items-center gap-2 text-xs text-gray-600 mt-1">
-                <input
-                  type="checkbox"
-                  checked={multi}
-                  onChange={(e) => setMulti(e.target.checked)}
-                />
-                Seleccionar múltiples (si no eliges ninguno, se tomarán todos
-                del cargo)
-              </label>
-
-              {multi ? (
-                <Dialog open={openSelector} onOpenChange={setOpenSelector}>
-                  <DialogContent className="sm:max-w-2xl p-0 overflow-hidden">
-                    <DialogHeader className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white p-6">
-                      <DialogTitle className="text-white text-lg font-semibold">
-                        Seleccionar empleados
-                      </DialogTitle>
-                      <DialogDescription className="text-white/90 text-sm">
-                        Busca por nombre, empresa o unidad, marca múltiples
-                        empleados y aplica la selección.
-                      </DialogDescription>
-                    </DialogHeader>
-
-                    <div className="p-6 space-y-4 text-sm">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">
-                          Buscar
-                        </label>
-                        <div className="relative">
-                          <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                          <Input
-                            className="pl-9"
-                            placeholder="Escribe para filtrar por nombre, empresa o unidad..."
-                            value={searchEmpleado}
-                            onChange={(e) => setSearchEmpleado(e.target.value)}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="text-sm text-gray-600">
-                          {tempEmpleadoIds.length} seleccionados de{" "}
-                          {dialogResultados.length} resultados
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={selectAllDialog}
-                            disabled={dialogResultados.length === 0}
-                            className="border-gray-300 text-gray-700 hover:bg-gray-100"
-                          >
-                            Seleccionar todos
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={clearDialogSelection}
-                            disabled={tempEmpleadoIds.length === 0}
-                            className="border-gray-300 text-gray-700 hover:bg-gray-100"
-                          >
-                            Limpiar
-                          </Button>
-                        </div>
-                      </div>
-
-                      <div className="max-h-[380px] overflow-auto rounded-md border border-gray-200 bg-white">
-                        {dialogResultados.length === 0 ? (
-                          <div className="p-4 text-sm text-gray-500">
-                            No hay resultados.
-                          </div>
-                        ) : (
-                          <ul className="divide-y divide-gray-100">
-                            {dialogResultados.map((e) => {
-                              const id = String(e.id_empleado);
-                              const checked = tempEmpleadoIds.includes(id);
-                              return (
-                                <li
-                                  key={`dlg-${id}`}
-                                  className="flex items-center gap-3 p-3"
-                                >
-                                  <input
-                                    type="checkbox"
-                                    className="size-4 accent-[#2563EB]"
-                                    checked={checked}
-                                    onChange={() => toggleTemp(id)}
-                                    aria-label={`Seleccionar ${e.nombre_empleado}`}
-                                  />
-                                  <div className="min-w-0">
-                                    <div className="truncate font-medium text-gray-900">
-                                      {e.nombre_empleado}
-                                    </div>
-                                    <div className="truncate text-xs text-gray-500">
-                                      {e.unidad_negocio || e.nombre_empresa}
-                                    </div>
-                                  </div>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        )}
-                      </div>
-                    </div>
-
-                    <DialogFooter className="bg-gray-50 p-4 flex justify-end gap-2 border-t">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => setOpenSelector(false)}
-                        className="border-gray-300 text-gray-700 hover:bg-gray-100"
-                      >
-                        Cancelar
-                      </Button>
-                      <Button
-                        type="button"
-                        onClick={() => {
-                          setEmpleadoIds(tempEmpleadoIds);
-                          setOpenSelector(false);
-                        }}
-                        className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm"
-                      >
-                        Aplicar selección
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              ) : null}
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-gray-700">
-                Fecha inicio
-              </label>
-              <Input
-                type="date"
-                value={fechaInicio}
-                onChange={(e) => setFechaInicio(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-medium text-gray-700">
-                Fecha fin
-              </label>
-              <Input
-                type="date"
-                value={fechaFin}
-                onChange={(e) => setFechaFin(e.target.value)}
-              />
-            </div>
-            <div className="flex items-end md:col-span-2">
-              <Button
-                onClick={handleGenerar}
-                disabled={loading || (!multi && !empleadoId)}
-                className="w-full bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-md"
-              >
-                {loading ? "Generando…" : "Generar reporte"}
-              </Button>
-            </div>
+                </span>
+              ))}
+            <button
+              type="button"
+              className="text-xs text-gray-500 underline decoration-dotted underline-offset-2"
+              onClick={() => setEmpleadoIds([])}
+            >
+              Quitar todos
+            </button>
           </div>
+        ) : null}
+      </div>
 
-          <div className="flex flex-wrap gap-3 pt-2">
+      {/* Resultado y exportación */}
+      <div className="space-y-3">
+        {reportes && reportes.length > 0 ? (
+          <div className="flex flex-wrap justify-end gap-2">
             <Button
               onClick={handleExcel}
               variant="outline"
-              className="gap-2 border-gray-300 text-gray-700 hover:bg-gray-100"
-              disabled={
-                !reportes || reportes.length === 0 || exporting !== null
-              }
+              className="h-9 gap-2 rounded-md border-gray-200 font-semibold text-gray-700 hover:bg-gray-50"
+              disabled={exporting !== null}
             >
               <FileSpreadsheet className="h-4 w-4" /> Exportar Excel
             </Button>
             <Button
               onClick={handleGuardarPDF}
-              className="gap-2 bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-md"
-              disabled={
-                !reportes || reportes.length === 0 || exporting !== null
-              }
+              className="h-9 gap-2 rounded-md bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
+              disabled={exporting !== null}
             >
               <FileDown className="h-4 w-4" /> Guardar PDF
             </Button>
           </div>
+        ) : null}
 
-          <div
-            ref={reportRef}
-            className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 print:p-0"
-          >
-            {!reportes || reportes.length === 0 ? (
-              <div className="text-center text-muted-foreground py-16">
-                Genera un reporte para visualizar aquí.
+        <div
+          ref={reportRef}
+          className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 print:p-0"
+        >
+          {!reportes || reportes.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="grid h-[52px] w-[52px] place-items-center rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-violet-50">
+                <BarChart3 className="h-6 w-6 text-[#2563eb]" />
               </div>
-            ) : (
-              <div className="space-y-10">
-                {reportes.map((reporte, idx) => (
-                  <div key={idx} className="space-y-6" data-report-block="true">
-                    {/* Top bar - Diseño limpio como imagen de referencia */}
-                    <div
-                      className="flex items-start justify-between mb-3"
-                      data-pdf-topbar="true"
-                    >
-                      <div className="text-2xl font-bold text-gray-900 leading-none">
-                        Adamia
-                      </div>
-                      <div className="text-right leading-tight">
-                        <div className="font-semibold text-sm text-gray-900">
-                          Reporte de Horas Trabajadas
-                        </div>
-                        <div className="text-xs text-gray-600 mt-0.5">
-                          {new Date().toLocaleDateString("es-MX", {
-                            day: "numeric",
-                            month: "long",
-                            year: "numeric",
-                          })}
-                        </div>
-                      </div>
+              <div className="mt-3 text-sm font-bold text-gray-900">
+                Aún no hay reporte
+              </div>
+              <p className="mt-1 text-[12.5px] text-gray-500">
+                Configura los filtros y pulsa “Generar reporte” para ver la
+                vista previa aquí.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-10">
+              {reportes.map((reporte, idx) => (
+                <div key={idx} className="space-y-6" data-report-block="true">
+                  {/* Top bar - Diseño limpio como imagen de referencia */}
+                  <div
+                    className="flex items-start justify-between mb-3"
+                    data-pdf-topbar="true"
+                  >
+                    <div className="text-2xl font-bold text-gray-900 leading-none">
+                      Adamia
                     </div>
-                    {/* Línea separadora delgada */}
-                    <div className="h-px bg-gray-300 mb-4" />
-                    {/* Encabezado con meta a la izquierda y resumen a la derecha - SIN tarjetas, diseño limpio */}
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-4">
-                      {/* Meta del empleado: diseño limpio sin tarjeta, con separadores verticales */}
-                      <div className="lg:col-span-8">
-                        <section
-                          data-meta-section="true"
-                          className="grid grid-cols-4 gap-0 border-l border-gray-300"
-                        >
-                          <div className="px-3 border-r border-gray-300">
-                            <div className="text-[9px] text-gray-500 uppercase font-semibold mb-1 tracking-wide">
-                              Empleado
-                            </div>
-                            <div className="text-sm font-bold text-gray-900 leading-tight">
-                              {reporte.empleado?.nombre_empleado}
-                            </div>
-                          </div>
-                          <div className="px-3 border-r border-gray-300">
-                            <div className="text-[9px] text-gray-500 uppercase font-semibold mb-1 tracking-wide">
-                              Empresa
-                            </div>
-                            <div className="text-sm font-bold text-gray-900 leading-tight">
-                              {reporte.empleado?.nombre_empresa}
-                            </div>
-                          </div>
-                          <div className="px-3 border-r border-gray-300">
-                            <div className="text-[9px] text-gray-500 uppercase font-semibold mb-1 tracking-wide">
-                              Periodo
-                            </div>
-                            <div className="text-sm font-bold text-gray-900 leading-tight">
-                              {humanDate(reporte.periodo.inicio)} —{" "}
-                              {humanDate(reporte.periodo.fin)}
-                            </div>
-                          </div>
-                          <div className="px-3">
-                            <div className="text-[9px] text-gray-500 uppercase font-semibold mb-1 tracking-wide">
-                              Días Laborados
-                            </div>
-                            <div className="text-sm font-bold text-gray-900 leading-tight">
-                              {reporte.resumen.diasTrabajados}
-                            </div>
-                          </div>
-                        </section>
+                    <div className="text-right leading-tight">
+                      <div className="font-semibold text-sm text-gray-900">
+                        Reporte de Horas Trabajadas
                       </div>
-                      {/* Resumen superior: 3 cajas con fondo gris claro como en imagen de referencia */}
-                      <div className="lg:col-span-4">
-                        <section
-                          data-summary-section="true"
-                          className="grid grid-cols-4 gap-0 border border-gray-300 rounded-sm overflow-hidden bg-gray-50"
-                          aria-label="Resumen del periodo"
-                        >
-                          <div className="text-center px-2 py-3 border-r border-gray-300 bg-gray-50">
-                            <div
-                              className="text-[8px] text-gray-600 uppercase font-semibold mb-1.5 tracking-wide"
-                              data-summary-label="true"
-                            >
-                              Total Horas
-                            </div>
-                            <div
-                              className="text-xl font-bold leading-none text-gray-900 mb-1"
-                              data-summary-value="true"
-                            >
-                              {reporte.resumen?.totalHoras || "0:00"}
-                            </div>
-                          </div>
-                          <div className="text-center px-2 py-3 border-r border-gray-300 bg-gray-50">
-                            <div
-                              className="text-[8px] text-gray-600 uppercase font-semibold mb-1.5 tracking-wide"
-                              data-summary-label="true"
-                            >
-                              Días
-                            </div>
-                            <div
-                              className="text-xl font-bold leading-none text-gray-900 mb-1"
-                              data-summary-value="true"
-                            >
-                              {reporte.resumen?.diasTrabajados || "0"}
-                            </div>
-                          </div>
-                          <div className="text-center px-2 py-3 bg-gray-50">
-                            <div
-                              className="text-[8px] text-gray-600 uppercase font-semibold mb-1.5 tracking-wide"
-                              data-summary-label="true"
-                            >
-                              Promedio
-                            </div>
-                            <div
-                              className="text-xl font-bold leading-none text-gray-900 mb-1"
-                              data-summary-value="true"
-                            >
-                              {reporte.resumen?.promedioHoras || "0:00"}
-                            </div>
-                          </div>
-                          <div className="text-center px-2 py-3 border-l border-gray-300 bg-gray-50">
-                            <div
-                              className="text-[8px] text-gray-600 uppercase font-semibold mb-1.5 tracking-wide"
-                              data-summary-label="true"
-                            >
-                              Horas Extra
-                            </div>
-                            <div
-                              className="text-xl font-bold leading-none text-gray-900 mb-1"
-                              data-summary-value="true"
-                            >
-                              {reporte.resumen?.horasExtrasLaboradas || "0:00"}
-                            </div>
-                          </div>
-                        </section>
-                      </div>
-                    </div>
-                    <section className="overflow-x-auto">
-                      <table className="w-full text-sm border-collapse">
-                        <thead className="sticky top-0 z-10">
-                          <tr className="bg-gray-50">
-                            <th className="p-2 border text-xs uppercase font-semibold text-gray-700">
-                              Fecha
-                            </th>
-                            <th className="p-2 border text-xs uppercase font-semibold text-gray-700">
-                              Entrada
-                            </th>
-                            <th className="p-2 border text-xs uppercase font-semibold text-gray-700">
-                              Salida
-                            </th>
-                            <th className="p-2 border text-xs uppercase font-semibold text-gray-700">
-                              Horas
-                            </th>
-                            <th className="p-2 border text-xs uppercase font-semibold text-gray-700">
-                              Estado
-                            </th>
-                            <th className="p-2 border text-xs uppercase font-semibold text-gray-700">
-                              Motivo
-                            </th>
-                            <th className="p-2 border text-xs uppercase font-semibold text-gray-700">
-                              Notas
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {reporte.dias.map((d) => {
-                            // Calcular primera entrada y última salida cuando hay múltiples movimientos
-                            let primeraEntrada = d.entrada;
-                            let ultimaSalida = d.salida;
-                            let totalHorasTrabajadas = d.horasHM;
-
-                            if (
-                              Array.isArray(d.movimientos) &&
-                              d.movimientos.length > 0
-                            ) {
-                              // Obtener primera entrada de todos los movimientos
-                              const entradasValidas = d.movimientos
-                                .map((m) => m.entrada)
-                                .filter(Boolean)
-                                .map((e) => new Date(e))
-                                .sort((a, b) => a - b);
-                              if (entradasValidas.length > 0) {
-                                primeraEntrada =
-                                  entradasValidas[0].toISOString();
-                              }
-
-                              // Obtener última salida de todos los movimientos
-                              const salidasValidas = d.movimientos
-                                .map((m) => m.salida)
-                                .filter(Boolean)
-                                .map((s) => new Date(s))
-                                .sort((a, b) => b - a);
-                              if (salidasValidas.length > 0) {
-                                ultimaSalida = salidasValidas[0].toISOString();
-                              }
-
-                              // Sumar todas las horas trabajadas de cada movimiento
-                              // Convertir cada horasHM a minutos, sumar y convertir de vuelta a formato HH:MM
-                              const totalMinutos = d.movimientos.reduce(
-                                (acc, m) => {
-                                  if (m.horasHM) {
-                                    const [horas, minutos] = m.horasHM
-                                      .split(":")
-                                      .map(Number);
-                                    return acc + horas * 60 + minutos;
-                                  }
-                                  return acc;
-                                },
-                                0,
-                              );
-                              const horas = Math.floor(totalMinutos / 60);
-                              const minutos = totalMinutos % 60;
-                              totalHorasTrabajadas = `${horas}:${String(
-                                minutos,
-                              ).padStart(2, "0")}`;
-                            }
-
-                            return (
-                              <Fragment key={`day-${d.fecha}`}>
-                                <tr className="odd:bg-zinc-50/40 hover:bg-zinc-50">
-                                  <td className="p-2 border whitespace-nowrap align-top">
-                                    {humanDate(d.fecha)}
-                                  </td>
-                                  <td className="p-2 border text-center align-top">
-                                    {primeraEntrada
-                                      ? new Date(
-                                          primeraEntrada,
-                                        ).toLocaleTimeString("es-MX", {
-                                          hour: "2-digit",
-                                          minute: "2-digit",
-                                        })
-                                      : "-"}
-                                  </td>
-                                  <td className="p-2 border text-center align-top">
-                                    {ultimaSalida
-                                      ? new Date(
-                                          ultimaSalida,
-                                        ).toLocaleTimeString("es-MX", {
-                                          hour: "2-digit",
-                                          minute: "2-digit",
-                                        })
-                                      : "-"}
-                                  </td>
-                                  <td className="p-2 border text-center align-top">
-                                    {totalHorasTrabajadas}
-                                  </td>
-                                  <td className="p-2 border text-center align-top">
-                                    <EstadoPill value={d.estado} />
-                                  </td>
-                                  <td className="p-2 border align-top">
-                                    <MotivoPill value={d.motivo} />
-                                  </td>
-                                  <td className="p-2 border align-top">
-                                    {d.notas ? (
-                                      <span className="inline-flex items-center gap-1 text-zinc-700">
-                                        <Icon
-                                          icon="lucide:sticky-note"
-                                          className="size-3.5 text-amber-600"
-                                        />{" "}
-                                        {d.notas}
-                                      </span>
-                                    ) : (
-                                      <span className="text-zinc-500">—</span>
-                                    )}
-                                  </td>
-                                </tr>
-                                {Array.isArray(d.movimientos) &&
-                                d.movimientos.length > 1 ? (
-                                  <tr
-                                    className="bg-white/50"
-                                    data-detail-row="true"
-                                  >
-                                    <td
-                                      colSpan={7}
-                                      className="p-2 pl-6 border-t text-xs text-zinc-600 font-mono"
-                                    >
-                                      <div
-                                        style={{
-                                          whiteSpace: "pre-wrap",
-                                          lineHeight: "1.6",
-                                        }}
-                                      >
-                                        {
-                                          // Formato detallado: cada par entrada-salida con sus horas trabajadas
-                                          // Cada segmento en una línea separada usando <br> para mejor compatibilidad con PDF
-                                          d.movimientos
-                                            .filter(
-                                              (m) => m.entrada && m.salida,
-                                            ) // Solo movimientos completos
-                                            .map((m, idx) => {
-                                              const entrada = m.entrada
-                                                ? new Date(
-                                                    m.entrada,
-                                                  ).toLocaleTimeString(
-                                                    "es-MX",
-                                                    {
-                                                      hour: "2-digit",
-                                                      minute: "2-digit",
-                                                    },
-                                                  )
-                                                : "-";
-                                              const salida = m.salida
-                                                ? new Date(
-                                                    m.salida,
-                                                  ).toLocaleTimeString(
-                                                    "es-MX",
-                                                    {
-                                                      hour: "2-digit",
-                                                      minute: "2-digit",
-                                                    },
-                                                  )
-                                                : "-";
-                                              const horas = m.horasHM || "0:00";
-                                              return (
-                                                <Fragment key={`mov-${idx}`}>
-                                                  {idx > 0 && <br />}
-                                                  {`Entrada: ${entrada}  |  Salida: ${salida}  |  Horas: ${horas}`}
-                                                </Fragment>
-                                              );
-                                            })
-                                        }
-                                      </div>
-                                    </td>
-                                  </tr>
-                                ) : null}
-                              </Fragment>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </section>
-                    {/* Firmas (con etiquetas visibles en preview) */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-10 px-10 mt-4">
-                      <div className="flex flex-col items-center gap-2">
-                        <div className="h-0.5 bg-slate-900 w-1/2" />
-                        <div className="text-[10px] text-zinc-500">
-                          FIRMA DEL EMPLEADO
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-center gap-2">
-                        <div className="h-0.5 bg-slate-900 w-1/2" />
-                        <div className="text-[10px] text-zinc-500">
-                          FIRMA DE AUTORIZACIÓN
-                        </div>
+                      <div className="text-xs text-gray-600 mt-0.5">
+                        {new Date().toLocaleDateString("es-MX", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        })}
                       </div>
                     </div>
                   </div>
-                ))}
+                  {/* Línea separadora delgada */}
+                  <div className="h-px bg-gray-300 mb-4" />
+                  {/* Encabezado con meta a la izquierda y resumen a la derecha - SIN tarjetas, diseño limpio */}
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-4">
+                    {/* Meta del empleado: diseño limpio sin tarjeta, con separadores verticales */}
+                    <div className="lg:col-span-8">
+                      <section
+                        data-meta-section="true"
+                        className="grid grid-cols-4 gap-0 border-l border-gray-300"
+                      >
+                        <div className="px-3 border-r border-gray-300">
+                          <div className="text-[9px] text-gray-500 uppercase font-semibold mb-1 tracking-wide">
+                            Empleado
+                          </div>
+                          <div className="text-sm font-bold text-gray-900 leading-tight">
+                            {reporte.empleado?.nombre_empleado}
+                          </div>
+                        </div>
+                        <div className="px-3 border-r border-gray-300">
+                          <div className="text-[9px] text-gray-500 uppercase font-semibold mb-1 tracking-wide">
+                            Empresa
+                          </div>
+                          <div className="text-sm font-bold text-gray-900 leading-tight">
+                            {reporte.empleado?.nombre_empresa}
+                          </div>
+                        </div>
+                        <div className="px-3 border-r border-gray-300">
+                          <div className="text-[9px] text-gray-500 uppercase font-semibold mb-1 tracking-wide">
+                            Periodo
+                          </div>
+                          <div className="text-sm font-bold text-gray-900 leading-tight">
+                            {humanDate(reporte.periodo.inicio)} —{" "}
+                            {humanDate(reporte.periodo.fin)}
+                          </div>
+                        </div>
+                        <div className="px-3">
+                          <div className="text-[9px] text-gray-500 uppercase font-semibold mb-1 tracking-wide">
+                            Días Laborados
+                          </div>
+                          <div className="text-sm font-bold text-gray-900 leading-tight">
+                            {reporte.resumen.diasTrabajados}
+                          </div>
+                        </div>
+                      </section>
+                    </div>
+                    {/* Resumen superior: 3 cajas con fondo gris claro como en imagen de referencia */}
+                    <div className="lg:col-span-4">
+                      <section
+                        data-summary-section="true"
+                        className="grid grid-cols-4 gap-0 border border-gray-300 rounded-sm overflow-hidden bg-gray-50"
+                        aria-label="Resumen del periodo"
+                      >
+                        <div className="text-center px-2 py-3 border-r border-gray-300 bg-gray-50">
+                          <div
+                            className="text-[8px] text-gray-600 uppercase font-semibold mb-1.5 tracking-wide"
+                            data-summary-label="true"
+                          >
+                            Total Horas
+                          </div>
+                          <div
+                            className="text-xl font-bold leading-none text-gray-900 mb-1"
+                            data-summary-value="true"
+                          >
+                            {reporte.resumen?.totalHoras || "0:00"}
+                          </div>
+                        </div>
+                        <div className="text-center px-2 py-3 border-r border-gray-300 bg-gray-50">
+                          <div
+                            className="text-[8px] text-gray-600 uppercase font-semibold mb-1.5 tracking-wide"
+                            data-summary-label="true"
+                          >
+                            Días
+                          </div>
+                          <div
+                            className="text-xl font-bold leading-none text-gray-900 mb-1"
+                            data-summary-value="true"
+                          >
+                            {reporte.resumen?.diasTrabajados || "0"}
+                          </div>
+                        </div>
+                        <div className="text-center px-2 py-3 bg-gray-50">
+                          <div
+                            className="text-[8px] text-gray-600 uppercase font-semibold mb-1.5 tracking-wide"
+                            data-summary-label="true"
+                          >
+                            Promedio
+                          </div>
+                          <div
+                            className="text-xl font-bold leading-none text-gray-900 mb-1"
+                            data-summary-value="true"
+                          >
+                            {reporte.resumen?.promedioHoras || "0:00"}
+                          </div>
+                        </div>
+                        <div className="text-center px-2 py-3 border-l border-gray-300 bg-gray-50">
+                          <div
+                            className="text-[8px] text-gray-600 uppercase font-semibold mb-1.5 tracking-wide"
+                            data-summary-label="true"
+                          >
+                            Horas Extra
+                          </div>
+                          <div
+                            className="text-xl font-bold leading-none text-gray-900 mb-1"
+                            data-summary-value="true"
+                          >
+                            {reporte.resumen?.horasExtrasLaboradas || "0:00"}
+                          </div>
+                        </div>
+                      </section>
+                    </div>
+                  </div>
+                  <section className="overflow-x-auto">
+                    <table className="w-full text-sm border-collapse">
+                      <thead className="sticky top-0 z-10">
+                        <tr className="bg-gray-50">
+                          <th className="p-2 border text-xs uppercase font-semibold text-gray-700">
+                            Fecha
+                          </th>
+                          <th className="p-2 border text-xs uppercase font-semibold text-gray-700">
+                            Entrada
+                          </th>
+                          <th className="p-2 border text-xs uppercase font-semibold text-gray-700">
+                            Salida
+                          </th>
+                          <th className="p-2 border text-xs uppercase font-semibold text-gray-700">
+                            Horas
+                          </th>
+                          <th className="p-2 border text-xs uppercase font-semibold text-gray-700">
+                            Estado
+                          </th>
+                          <th className="p-2 border text-xs uppercase font-semibold text-gray-700">
+                            Motivo
+                          </th>
+                          <th className="p-2 border text-xs uppercase font-semibold text-gray-700">
+                            Notas
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {reporte.dias.map((d) => {
+                          // Calcular primera entrada y última salida cuando hay múltiples movimientos
+                          let primeraEntrada = d.entrada;
+                          let ultimaSalida = d.salida;
+                          let totalHorasTrabajadas = d.horasHM;
+
+                          if (
+                            Array.isArray(d.movimientos) &&
+                            d.movimientos.length > 0
+                          ) {
+                            // Obtener primera entrada de todos los movimientos
+                            const entradasValidas = d.movimientos
+                              .map((m) => m.entrada)
+                              .filter(Boolean)
+                              .map((e) => new Date(e))
+                              .sort((a, b) => a - b);
+                            if (entradasValidas.length > 0) {
+                              primeraEntrada = entradasValidas[0].toISOString();
+                            }
+
+                            // Obtener última salida de todos los movimientos
+                            const salidasValidas = d.movimientos
+                              .map((m) => m.salida)
+                              .filter(Boolean)
+                              .map((s) => new Date(s))
+                              .sort((a, b) => b - a);
+                            if (salidasValidas.length > 0) {
+                              ultimaSalida = salidasValidas[0].toISOString();
+                            }
+
+                            // Sumar todas las horas trabajadas de cada movimiento
+                            // Convertir cada horasHM a minutos, sumar y convertir de vuelta a formato HH:MM
+                            const totalMinutos = d.movimientos.reduce(
+                              (acc, m) => {
+                                if (m.horasHM) {
+                                  const [horas, minutos] = m.horasHM
+                                    .split(":")
+                                    .map(Number);
+                                  return acc + horas * 60 + minutos;
+                                }
+                                return acc;
+                              },
+                              0,
+                            );
+                            const horas = Math.floor(totalMinutos / 60);
+                            const minutos = totalMinutos % 60;
+                            totalHorasTrabajadas = `${horas}:${String(
+                              minutos,
+                            ).padStart(2, "0")}`;
+                          }
+
+                          return (
+                            <Fragment key={`day-${d.fecha}`}>
+                              <tr className="odd:bg-zinc-50/40 hover:bg-zinc-50">
+                                <td className="p-2 border whitespace-nowrap align-top">
+                                  {humanDate(d.fecha)}
+                                </td>
+                                <td className="p-2 border text-center align-top">
+                                  {primeraEntrada
+                                    ? new Date(
+                                        primeraEntrada,
+                                      ).toLocaleTimeString("es-MX", {
+                                        hour: "2-digit",
+                                        minute: "2-digit",
+                                      })
+                                    : "-"}
+                                </td>
+                                <td className="p-2 border text-center align-top">
+                                  {ultimaSalida
+                                    ? new Date(ultimaSalida).toLocaleTimeString(
+                                        "es-MX",
+                                        {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        },
+                                      )
+                                    : "-"}
+                                </td>
+                                <td className="p-2 border text-center align-top">
+                                  {totalHorasTrabajadas}
+                                </td>
+                                <td className="p-2 border text-center align-top">
+                                  <EstadoPill value={d.estado} />
+                                </td>
+                                <td className="p-2 border align-top">
+                                  <MotivoPill value={d.motivo} />
+                                </td>
+                                <td className="p-2 border align-top">
+                                  {d.notas ? (
+                                    <span className="inline-flex items-center gap-1 text-zinc-700">
+                                      <Icon
+                                        icon="lucide:sticky-note"
+                                        className="size-3.5 text-amber-600"
+                                      />{" "}
+                                      {d.notas}
+                                    </span>
+                                  ) : (
+                                    <span className="text-zinc-500">—</span>
+                                  )}
+                                </td>
+                              </tr>
+                              {Array.isArray(d.movimientos) &&
+                              d.movimientos.length > 1 ? (
+                                <tr
+                                  className="bg-white/50"
+                                  data-detail-row="true"
+                                >
+                                  <td
+                                    colSpan={7}
+                                    className="p-2 pl-6 border-t text-xs text-zinc-600 font-mono"
+                                  >
+                                    <div
+                                      style={{
+                                        whiteSpace: "pre-wrap",
+                                        lineHeight: "1.6",
+                                      }}
+                                    >
+                                      {
+                                        // Formato detallado: cada par entrada-salida con sus horas trabajadas
+                                        // Cada segmento en una línea separada usando <br> para mejor compatibilidad con PDF
+                                        d.movimientos
+                                          .filter((m) => m.entrada && m.salida) // Solo movimientos completos
+                                          .map((m, idx) => {
+                                            const entrada = m.entrada
+                                              ? new Date(
+                                                  m.entrada,
+                                                ).toLocaleTimeString("es-MX", {
+                                                  hour: "2-digit",
+                                                  minute: "2-digit",
+                                                })
+                                              : "-";
+                                            const salida = m.salida
+                                              ? new Date(
+                                                  m.salida,
+                                                ).toLocaleTimeString("es-MX", {
+                                                  hour: "2-digit",
+                                                  minute: "2-digit",
+                                                })
+                                              : "-";
+                                            const horas = m.horasHM || "0:00";
+                                            return (
+                                              <Fragment key={`mov-${idx}`}>
+                                                {idx > 0 && <br />}
+                                                {`Entrada: ${entrada}  |  Salida: ${salida}  |  Horas: ${horas}`}
+                                              </Fragment>
+                                            );
+                                          })
+                                      }
+                                    </div>
+                                  </td>
+                                </tr>
+                              ) : null}
+                            </Fragment>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </section>
+                  {/* Firmas (con etiquetas visibles en preview) */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-10 px-10 mt-4">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="h-0.5 bg-slate-900 w-1/2" />
+                      <div className="text-[10px] text-zinc-500">
+                        FIRMA DEL EMPLEADO
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="h-0.5 bg-slate-900 w-1/2" />
+                      <div className="text-[10px] text-zinc-500">
+                        FIRMA DE AUTORIZACIÓN
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Diálogo unificado de selección de empleados */}
+      <Dialog open={openSelector} onOpenChange={setOpenSelector}>
+        <DialogContent className="sm:max-w-2xl p-0 overflow-hidden gap-0">
+          <DialogHeader className="px-6 pt-5 pb-4">
+            <DialogTitle className="text-base font-extrabold tracking-tight text-gray-900">
+              Seleccionar empleados
+            </DialogTitle>
+            <DialogDescription className="text-[12.5px] text-gray-500">
+              Busca por nombre, empresa o unidad, marca múltiples empleados y
+              aplica la selección. Si no eliges ninguno, se tomarán todos los
+              del filtro.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="h-[2.5px] bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
+
+          <div className="p-6 space-y-4 text-sm">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Buscar
+              </label>
+              <div className="relative">
+                <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Input
+                  className="pl-9"
+                  placeholder="Escribe para filtrar por nombre, empresa o unidad..."
+                  value={searchEmpleado}
+                  onChange={(e) => setSearchEmpleado(e.target.value)}
+                />
               </div>
-            )}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="text-sm text-gray-600">
+                {tempEmpleadoIds.length} seleccionados de{" "}
+                {dialogResultados.length} resultados
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={selectAllDialog}
+                  disabled={dialogResultados.length === 0}
+                  className="rounded-md border-gray-200 text-gray-700 hover:bg-gray-50"
+                >
+                  Seleccionar todos
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={clearDialogSelection}
+                  disabled={tempEmpleadoIds.length === 0}
+                  className="rounded-md border-gray-200 text-gray-700 hover:bg-gray-50"
+                >
+                  Limpiar
+                </Button>
+              </div>
+            </div>
+
+            <div className="max-h-[380px] overflow-auto rounded-md border border-gray-200 bg-white">
+              {dialogResultados.length === 0 ? (
+                <div className="p-4 text-sm text-gray-500">
+                  No hay resultados.
+                </div>
+              ) : (
+                <ul className="divide-y divide-gray-100">
+                  {dialogResultados.map((e) => {
+                    const id = String(e.id_empleado);
+                    const checked = tempEmpleadoIds.includes(id);
+                    return (
+                      <li
+                        key={`dlg-${id}`}
+                        className="flex items-center gap-3 p-3"
+                      >
+                        <input
+                          type="checkbox"
+                          className="size-4 accent-[#2563EB]"
+                          checked={checked}
+                          onChange={() => toggleTemp(id)}
+                          aria-label={`Seleccionar ${e.nombre_empleado}`}
+                        />
+                        <div className="min-w-0">
+                          <div className="truncate font-medium text-gray-900">
+                            {e.nombre_empleado}
+                          </div>
+                          <div className="truncate text-xs text-gray-500">
+                            {e.unidad_negocio || e.nombre_empresa}
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
           </div>
-        </CardContent>
-      </Card>
+
+          <DialogFooter className="bg-gray-50 p-4 flex justify-end gap-2 border-t">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpenSelector(false)}
+              className="rounded-md border-gray-200 text-gray-700 hover:bg-gray-50"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                setEmpleadoIds(tempEmpleadoIds);
+                setOpenSelector(false);
+              }}
+              className="rounded-md bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
+            >
+              Aplicar selección
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de rango de fechas homologado */}
+      <RangoFechasModal
+        open={rangoOpen}
+        onOpenChange={setRangoOpen}
+        fechaInicio={fechaInicio}
+        fechaFin={fechaFin}
+        onAplicar={({ inicio, fin, etiqueta }) => {
+          setFechaInicio(inicio);
+          setFechaFin(fin);
+          setRangoEtiqueta(etiqueta);
+        }}
+      />
+
       {exporting && (
         <div className="fixed inset-0 z-[100] grid place-items-center bg-black/40 backdrop-blur-sm">
           <div className="rounded-xl bg-white shadow-xl p-6 w-[340px] text-center space-y-3 border">
