@@ -68,7 +68,8 @@ export default function EstadoCivilTable({
     () =>
       uniqueOptions(
         sourceRows.map(
-          (row) => row.unidad_negocio || row.nombre_sucursal || row.empresa_nombre,
+          (row) =>
+            row.unidad_negocio || row.nombre_sucursal || row.empresa_nombre,
         ),
       ),
     [sourceRows],
@@ -198,7 +199,7 @@ export default function EstadoCivilTable({
         <div className="px-6 py-4 border-b border-gray-100 flex justify-end">
           <Button
             onClick={onCreate}
-            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
+            className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white"
           >
             <Plus className="w-4 h-4 mr-2" />
             Nuevo estado civil
@@ -264,7 +265,9 @@ export default function EstadoCivilTable({
                   </TableCell>
                   {showEmpresa && (
                     <TableCell>
-                      {civ?.unidad_negocio || civ?.nombre_sucursal || civ?.empresa_nombre}
+                      {civ?.unidad_negocio ||
+                        civ?.nombre_sucursal ||
+                        civ?.empresa_nombre}
                     </TableCell>
                   )}
                   <TableCell className="text-right">

@@ -42,7 +42,9 @@ export default function DepartamentosTable({
     : null;
   const { data, error, isLoading } = useSWR(url, fetcherWithToken, swr_config);
 
-  const departamentos = Array.isArray(data?.departamentos) ? data.departamentos : [];
+  const departamentos = Array.isArray(data?.departamentos)
+    ? data.departamentos
+    : [];
   const sourceRows = useMemo(
     () =>
       Array.isArray(filterOptionsRows) && filterOptionsRows.length > 0
@@ -62,7 +64,8 @@ export default function DepartamentosTable({
     () =>
       uniqueOptions(
         sourceRows.map(
-          (row) => row.unidad_negocio || row.nombre_sucursal || row.empresa_nombre,
+          (row) =>
+            row.unidad_negocio || row.nombre_sucursal || row.empresa_nombre,
         ),
       ),
     [sourceRows],
@@ -207,7 +210,7 @@ export default function DepartamentosTable({
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
         <div className="px-6 py-4 border-b border-gray-100 flex justify-end">
           <Button
-            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
+            className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white"
             onClick={onCreate}
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -275,7 +278,9 @@ export default function DepartamentosTable({
                   </TableCell>
                   {showEmpresa && (
                     <TableCell className="font-medium text-gray-900">
-                      {dep.unidad_negocio || dep.nombre_sucursal || dep.empresa_nombre}
+                      {dep.unidad_negocio ||
+                        dep.nombre_sucursal ||
+                        dep.empresa_nombre}
                     </TableCell>
                   )}
                   <TableCell className="text-right">

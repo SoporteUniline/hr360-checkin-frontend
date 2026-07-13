@@ -9,7 +9,15 @@ import { useAuth } from "@/context/AuthContext";
 import { useAdministrativeMinutes } from "@/hooks/useAdministrativeMinutes";
 import useEmpleadosActivosData from "@/hooks/useEmpleadosActivos";
 import useTiposActa from "@/hooks/useTiposActa";
-import { PlusIcon, AlertTriangle } from "lucide-react";
+import {
+  PlusIcon,
+  AlertTriangle,
+  ScrollText,
+  FileText,
+  Clock,
+  CheckCircle2,
+} from "lucide-react";
+import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import React, { useState } from "react";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import { AdministrativeDetailsModal } from "@/components/AdministrativeDetailsModal";
@@ -113,41 +121,50 @@ const page = () => {
 
   return (
     <>
-      <div className="min-h-screen bg-[#F9FAFB] p-6 space-y-6">
-        <div className="flex justify-end">
-          <Button
-            onClick={() => setOpenNewActa(true)}
-            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
-          >
-            <PlusIcon className="w-4 h-4 mr-2" />
-            Nueva acta
-          </Button>
-        </div>
+      <div className="min-h-screen bg-[#F9FAFB] p-6 space-y-5">
+        <EncabezadoPagina
+          icono={ScrollText}
+          titulo="Actas administrativas"
+          subtitulo="Registro y seguimiento de actas por empleado"
+          acciones={
+            <Button
+              onClick={() => setOpenNewActa(true)}
+              className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white"
+            >
+              <PlusIcon className="w-4 h-4 mr-2" />
+              Nueva acta
+            </Button>
+          }
+        />
 
         {/* Estadísticas - Diseño ADAMIA */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="Total actas"
             value={stats?.totalActas ?? 0}
-            borderColor="border-l-gray-800"
+            icon={FileText}
+            accent="gray"
           />
 
           <StatCard
             title="Elaboradas"
             value={stats?.totalElaboradas ?? 0}
-            borderColor="border-l-amber-500"
+            icon={Clock}
+            accent="amber"
           />
 
           <StatCard
             title="Cerradas"
             value={stats?.totalCerradas ?? 0}
-            borderColor="border-l-emerald-500"
+            icon={CheckCircle2}
+            accent="emerald"
           />
 
           <StatCard
             title="Graves"
             value={stats?.totalGraves ?? 0}
-            borderColor="border-l-red-500"
+            icon={AlertTriangle}
+            accent="red"
           />
         </div>
 

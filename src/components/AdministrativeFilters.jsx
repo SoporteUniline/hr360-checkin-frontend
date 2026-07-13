@@ -51,56 +51,67 @@ export const AdministrativeFilters = ({
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <div className="space-y-2">
-          <Label className="text-sm font-medium text-gray-700">Empresa</Label>
-          <Combobox
-            options={[
-              { value: "all", label: "Todas las empresas" },
-              ...(dataUser?.empresas_detalle || [])
-                .filter((e) => e?.id_empresa != null)
-                .map((e) => ({
-                  value: String(e.id_empresa),
-                  label: e.nombre,
-                })),
-            ]}
-            value={empresaSeleccionada}
-            onChange={(value) => {
-              setEmpresaSeleccionada(value);
+          <Label className="text-[11px] font-semibold text-gray-500">
+            Empresa
+          </Label>
+          <div className="[&_button]:h-[38px] [&_button]:w-full [&_button]:rounded-md [&_button]:border-gray-200 [&_button]:text-[13px]">
+            <Combobox
+              options={[
+                { value: "all", label: "Todas las empresas" },
+                ...(dataUser?.empresas_detalle || [])
+                  .filter((e) => e?.id_empresa != null)
+                  .map((e) => ({
+                    value: String(e.id_empresa),
+                    label: e.nombre,
+                  })),
+              ]}
+              value={empresaSeleccionada}
+              onChange={(value) => {
+                setEmpresaSeleccionada(value);
 
-              setEmpleado("");
-              setFolio("");
-              setEstatus("");
+                setEmpleado("");
+                setFolio("");
+                setEstatus("");
 
-              onChange({
-                empleado: "",
-                folio: "",
-                estatus: "",
-              });
-            }}
-            placeholder="Empresa"
-          />
+                onChange({
+                  empleado: "",
+                  folio: "",
+                  estatus: "",
+                });
+              }}
+              placeholder="Empresa"
+            />
+          </div>
         </div>
 
         <div className="space-y-2">
-          <Label className="text-sm font-medium text-gray-700">Empleado</Label>
-          <Combobox
-            options={empleadosFiltrados}
-            value={empleado}
-            onChange={(value) => {
-              setEmpleado(value);
-              updateFilters({ empleado: value });
-            }}
-            placeholder={
-              empresaSeleccionada === "all"
-                ? "Buscar empleado..."
-                : "Buscar empleado de la empresa..."
-            }
-            emptyText="No se encontró empleado"
-          />
+          <Label className="text-[11px] font-semibold text-gray-500">
+            Empleado
+          </Label>
+          <div className="[&_button]:h-[38px] [&_button]:w-full [&_button]:rounded-md [&_button]:border-gray-200 [&_button]:text-[13px]">
+            <Combobox
+              options={empleadosFiltrados}
+              value={empleado}
+              onChange={(value) => {
+                setEmpleado(value);
+                updateFilters({ empleado: value });
+              }}
+              placeholder={
+                empresaSeleccionada === "all"
+                  ? "Buscar empleado..."
+                  : "Buscar empleado de la empresa..."
+              }
+              emptyText="No se encontró empleado"
+            />
+          </div>
         </div>
 
         <div className="space-y-2">
-          <Label className="text-sm font-medium text-gray-700">Folio</Label>
+          <Label className="text-[11px] font-semibold text-gray-500">
+            Folio
+          </Label>
           <Input
+            className="h-[38px] rounded-md border-gray-200 text-[13px]"
             placeholder="Buscar folio..."
             value={folio}
             onChange={(e) => {
@@ -112,7 +123,9 @@ export const AdministrativeFilters = ({
         </div>
 
         <div className="space-y-2">
-          <Label className="text-sm font-medium text-gray-700">Estado</Label>
+          <Label className="text-[11px] font-semibold text-gray-500">
+            Estado
+          </Label>
           <Select
             value={estatus === "" ? "__all__" : estatus}
             onValueChange={(value) => {
@@ -121,7 +134,7 @@ export const AdministrativeFilters = ({
               updateFilters({ estatus: next });
             }}
           >
-            <SelectTrigger>
+            <SelectTrigger className="h-[38px] w-full rounded-md border-gray-200 text-[13px]">
               <SelectValue placeholder="Todos" />
             </SelectTrigger>
 

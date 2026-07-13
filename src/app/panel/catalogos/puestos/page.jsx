@@ -7,6 +7,8 @@ import PositionFormDialog from "./PositionFormDialog";
 import PositionDeleteDialog from "./PositionDeleteDialog";
 import PositionsTable from "./PositionsTable";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
+import { Briefcase } from "lucide-react";
 
 export default function Positions() {
   const [positions, setPositions] = useState([]);
@@ -30,7 +32,13 @@ export default function Positions() {
   const key = id_empresa ? `/checador/puestos?id_empresa=${id_empresa}` : null;
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] p-6">
+    <div className="min-h-screen space-y-5 bg-[#F9FAFB] p-6">
+      <EncabezadoPagina
+        icono={Briefcase}
+        titulo="Puestos"
+        subtitulo="Catálogo de puestos por unidad de negocio"
+      />
+
       <PositionsTable
         id_empresa={id_empresa}
         swrKey={key}

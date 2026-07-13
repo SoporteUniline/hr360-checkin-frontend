@@ -62,7 +62,8 @@ export default function PositionsTable({
     () =>
       uniqueOptions(
         sourceRows.map(
-          (row) => row.unidad_negocio || row.nombre_sucursal || row.empresa_nombre,
+          (row) =>
+            row.unidad_negocio || row.nombre_sucursal || row.empresa_nombre,
         ),
       ),
     [sourceRows],
@@ -153,7 +154,9 @@ export default function PositionsTable({
           swrKey.includes("?") ? "&" : "?"
         }page=1&limit=${pageSize}`;
         const firstData = await fetcherWithToken(firstUrl);
-        let allRows = Array.isArray(firstData?.puestos) ? firstData.puestos : [];
+        let allRows = Array.isArray(firstData?.puestos)
+          ? firstData.puestos
+          : [];
         const totalRows = Number(firstData?.total || allRows.length);
         const totalPages = Math.max(1, Math.ceil(totalRows / pageSize));
 
@@ -201,7 +204,7 @@ export default function PositionsTable({
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
         <div className="px-6 py-4 border-b border-gray-100 flex justify-end">
           <Button
-            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
+            className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white"
             onClick={onCreate}
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -267,7 +270,9 @@ export default function PositionsTable({
                   </TableCell>
                   {showEmpresa && (
                     <TableCell>
-                      {puesto.unidad_negocio || puesto.nombre_sucursal || puesto.empresa_nombre}
+                      {puesto.unidad_negocio ||
+                        puesto.nombre_sucursal ||
+                        puesto.empresa_nombre}
                     </TableCell>
                   )}
                   <TableCell className="text-right">

@@ -10,6 +10,8 @@ import FestivosTable from "./FestivosTable";
 import FestivoFormDialog from "./FestivoFormDialog";
 import FestivoDeleteDialog from "./FestivoDeleteDialog";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
+import { FiltrosGrid, CampoFiltro } from "@/components/filtros/CampoFiltro";
 
 export default function Festivos() {
   const [festivos, setFestivos] = useState([]);
@@ -35,23 +37,14 @@ export default function Festivos() {
   const key = id_empresa ? `/checador/holidays/${id_empresa}` : null;
 
   return (
-    <div className="space-y-6">
-      {/* Header ADAMIA */}
-      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
-        <div className="flex items-center justify-between gap-4 flex-col sm:flex-row">
-          <div className="flex items-center gap-3">
-            <div className="bg-[#2563EB] p-2.5 rounded-lg">
-              <CalendarDays className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-gray-900">Días festivos</h1>
-              <p className="text-sm text-gray-600">
-                Catálogo por empresa (crear, editar y eliminar).
-              </p>
-            </div>
-          </div>
+    <div className="space-y-5">
+      <EncabezadoPagina
+        icono={CalendarDays}
+        titulo="Días festivos"
+        subtitulo="Catálogo por empresa (crear, editar y eliminar)."
+        acciones={
           <Button
-            className="w-full sm:w-auto bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-2"
+            className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white gap-2"
             onClick={() => {
               setEditFestivo(null);
               setOpenFormModal(true);
@@ -59,25 +52,27 @@ export default function Festivos() {
           >
             <Plus className="h-4 w-4" /> Nuevo
           </Button>
-        </div>
-      </div>
+        }
+      />
 
-      <div className="flex flex-col sm:flex-row gap-3 sm:items-end sm:justify-between">
-        <div className="w-full sm:max-w-sm">
-          <p className="text-sm font-medium text-gray-700 mb-1">
-            Unidad de negocio
-          </p>
-          <Combobox
-            options={[
-              { value: "all", label: "Todas las unidades de negocio" },
-              ...unidadOptions,
-            ]}
-            value={unidadActiva}
-            onChange={(value) => setUnidadActiva(value || "all")}
-            placeholder="Seleccionar unidad de negocio"
-            emptyText="No hay unidades disponibles."
-          />
-        </div>
+      {/* Fila de filtros homologada */}
+      <div className="rounded-xl border border-gray-200 bg-white p-4">
+        <FiltrosGrid columnas={3}>
+          <CampoFiltro etiqueta="Unidad de negocio">
+            <div className="[&_button]:h-[38px] [&_button]:w-full [&_button]:rounded-md [&_button]:border-gray-200 [&_button]:text-[13px] [&_button]:font-medium">
+              <Combobox
+                options={[
+                  { value: "all", label: "Todas las unidades de negocio" },
+                  ...unidadOptions,
+                ]}
+                value={unidadActiva}
+                onChange={(value) => setUnidadActiva(value || "all")}
+                placeholder="Seleccionar unidad de negocio"
+                emptyText="No hay unidades disponibles."
+              />
+            </div>
+          </CampoFiltro>
+        </FiltrosGrid>
       </div>
 
       <FestivosTable

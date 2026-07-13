@@ -7,6 +7,8 @@ import EstadoCivilTable from "./EstadoCivilTable";
 import EstadoCivilFormDialog from "./EstadoCivilFormDialog";
 import EstadoCivilDeleteDialog from "./EstadoCivilDeleteDialog";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
+import { Heart } from "lucide-react";
 
 export default function EstadoCivil() {
   const searchParams = useSearchParams();
@@ -34,7 +36,13 @@ export default function EstadoCivil() {
     : null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      <EncabezadoPagina
+        icono={Heart}
+        titulo="Estado civil"
+        subtitulo="Catálogo de estados civiles por unidad de negocio"
+      />
+
       <EstadoCivilTable
         id_empresa={id_empresa}
         swrKey={key}

@@ -7,6 +7,8 @@ import DepartamentosTable from "./DepartamentosTable";
 import DepartamentoFormDialog from "./DepartamentoFormDialog";
 import DepartamentoDeleteDialog from "./DepartamentoDeleteDialog";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
+import { Building2 } from "lucide-react";
 
 export default function Departamentos() {
   const [departamentos, setDepartamentos] = useState([]);
@@ -34,7 +36,13 @@ export default function Departamentos() {
     : null;
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] p-6">
+    <div className="min-h-screen space-y-5 bg-[#F9FAFB] p-6">
+      <EncabezadoPagina
+        icono={Building2}
+        titulo="Departamentos"
+        subtitulo="Catálogo de departamentos por unidad de negocio"
+      />
+
       <DepartamentosTable
         id_empresa={id_empresa}
         swrKey={key}
