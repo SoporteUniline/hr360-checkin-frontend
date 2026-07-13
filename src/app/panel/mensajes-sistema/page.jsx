@@ -7,7 +7,9 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import {
-  BellRing,
+  CheckCircle2,
+  Megaphone,
+  MessagesSquare,
   Pencil,
   Plus,
   Save,
@@ -19,6 +21,8 @@ import {
 } from "lucide-react";
 import axios from "@/lib/axios";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
+import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
+import StatCard from "@/components/StatCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -327,39 +331,48 @@ export default function MensajesSistemaPage() {
   };
 
   return (
-    <div className="space-y-5 sm:space-y-6">
-      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-4 sm:p-6">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-3">
-            <div className="bg-[#2563EB] p-2.5 rounded-lg">
-              <BellRing className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-gray-900">
-                Mensajes del sistema
-              </h1>
-              <p className="text-sm text-gray-600">
-                Configura mensajes para la landing (externa) y para el panel
-                interno.
-              </p>
-            </div>
-          </div>
-
+    <div className="space-y-5">
+      {/* Encabezado compacto homologado Adamia */}
+      <EncabezadoPagina
+        icono={Megaphone}
+        titulo="Mensajes del sistema"
+        subtitulo="Configura mensajes para la landing (externa) y para el panel interno."
+        acciones={
           <Button
             onClick={openCreate}
-            className="bg-[#2563EB] hover:bg-[#1d4ed8] w-full sm:w-auto"
+            className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white hover:opacity-95"
           >
             <Plus className="h-4 w-4 mr-2" />
             Nuevo mensaje
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-        <SimpleStat title="Total" value={stats.total} />
-        <SimpleStat title="Activos" value={stats.activos} />
-        <SimpleStat title="Externos" value={stats.externas} />
-        <SimpleStat title="Internos" value={stats.internas} />
+        <StatCard
+          title="Total"
+          value={stats.total}
+          icon={MessagesSquare}
+          accent="blue"
+        />
+        <StatCard
+          title="Activos"
+          value={stats.activos}
+          icon={CheckCircle2}
+          accent="emerald"
+        />
+        <StatCard
+          title="Externos"
+          value={stats.externas}
+          icon={MonitorUp}
+          accent="violet"
+        />
+        <StatCard
+          title="Internos"
+          value={stats.internas}
+          icon={Building2}
+          accent="slate"
+        />
       </div>
 
       <Card>
@@ -711,7 +724,7 @@ export default function MensajesSistemaPage() {
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="bg-[#2563EB] hover:bg-[#1d4ed8] w-full sm:w-auto"
+              className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white hover:opacity-95 w-full sm:w-auto"
             >
               <Save className="h-4 w-4 mr-2" />
               {saving ? "Guardando..." : "Guardar"}
@@ -879,7 +892,7 @@ export default function MensajesSistemaPage() {
             <Button
               onClick={sendWhatsApp}
               disabled={waSending || waLoadingRecipients}
-              className="bg-[#2563EB] hover:bg-[#1d4ed8] w-full sm:w-auto"
+              className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white hover:opacity-95 w-full sm:w-auto"
             >
               {waSending ? "Enviando..." : "Enviar mensaje"}
             </Button>
@@ -916,17 +929,6 @@ function Field({ label, children }) {
       <Label>{label}</Label>
       {children}
     </div>
-  );
-}
-
-function SimpleStat({ title, value }) {
-  return (
-    <Card>
-      <CardContent className="pt-5">
-        <p className="text-xs uppercase tracking-wide text-gray-500">{title}</p>
-        <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-      </CardContent>
-    </Card>
   );
 }
 

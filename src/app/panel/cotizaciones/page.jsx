@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import useSWR from "swr";
-import { FileText, Search } from "lucide-react";
+import { Calculator, Search } from "lucide-react";
+import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -51,20 +52,13 @@ export default function CotizacionesAdminPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
-        <div className="flex items-center gap-3">
-          <div className="bg-[#2563EB] p-2.5 rounded-lg">
-            <FileText className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-gray-900">Cotizaciones web</h1>
-            <p className="text-sm text-gray-600">
-              Seguimiento de personas interesadas en ADAMIA desde la landing.
-            </p>
-          </div>
-        </div>
-      </div>
+    <div className="space-y-5">
+      {/* Encabezado compacto homologado Adamia */}
+      <EncabezadoPagina
+        icono={Calculator}
+        titulo="Cotizaciones"
+        subtitulo="Seguimiento de personas interesadas en ADAMIA desde la landing."
+      />
 
       <Card>
         <CardHeader>
@@ -84,7 +78,10 @@ export default function CotizacionesAdminPage() {
                 }}
               />
             </div>
-            <Button onClick={onSearch} className="bg-[#2563EB] hover:bg-[#1d4ed8]">
+            <Button
+              onClick={onSearch}
+              className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white hover:opacity-95"
+            >
               Buscar
             </Button>
           </div>
@@ -100,12 +97,19 @@ export default function CotizacionesAdminPage() {
               </div>
             ) : (
               cotizaciones.map((row) => (
-                <article key={row.id} className="rounded-lg border bg-white p-3">
+                <article
+                  key={row.id}
+                  className="rounded-lg border bg-white p-3"
+                >
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-semibold">#{row.id}</p>
-                    <Badge variant="secondary">{row.estado || "Pendiente"}</Badge>
+                    <Badge variant="secondary">
+                      {row.estado || "Pendiente"}
+                    </Badge>
                   </div>
-                  <p className="mt-2 text-sm font-medium">{row.nombre_contacto || "—"}</p>
+                  <p className="mt-2 text-sm font-medium">
+                    {row.nombre_contacto || "—"}
+                  </p>
                   <p className="text-xs text-gray-600">{row.empresa || "—"}</p>
                   <div className="mt-2 space-y-1 text-xs text-gray-700">
                     <p>
@@ -115,13 +119,16 @@ export default function CotizacionesAdminPage() {
                       <strong>Correo:</strong> {row.correo || "—"}
                     </p>
                     <p>
-                      <strong>Plan:</strong> {row.meses ?? "—"} meses • {row.empleados ?? "—"} empleados
+                      <strong>Plan:</strong> {row.meses ?? "—"} meses •{" "}
+                      {row.empleados ?? "—"} empleados
                     </p>
                     <p>
-                      <strong>Total:</strong> {formatCurrencyMXN(row.monto_total)}
+                      <strong>Total:</strong>{" "}
+                      {formatCurrencyMXN(row.monto_total)}
                     </p>
                     <p>
-                      <strong>Fecha:</strong> {formatDateTime(row.fecha_cotizacion)}
+                      <strong>Fecha:</strong>{" "}
+                      {formatDateTime(row.fecha_cotizacion)}
                     </p>
                   </div>
                 </article>
@@ -165,7 +172,9 @@ export default function CotizacionesAdminPage() {
                   cotizaciones.map((row) => (
                     <tr key={row.id} className="border-t">
                       <td className="px-3 py-2 font-medium">{row.id}</td>
-                      <td className="px-3 py-2">{row.nombre_contacto || "—"}</td>
+                      <td className="px-3 py-2">
+                        {row.nombre_contacto || "—"}
+                      </td>
                       <td className="px-3 py-2">{row.empresa || "—"}</td>
                       <td className="px-3 py-2">{row.telefono || "—"}</td>
                       <td className="px-3 py-2">{row.correo || "—"}</td>
@@ -174,7 +183,9 @@ export default function CotizacionesAdminPage() {
                       <td className="px-3 py-2">
                         {formatCurrencyMXN(row.precio_mensual)}
                       </td>
-                      <td className="px-3 py-2">{formatCurrencyMXN(row.monto_total)}</td>
+                      <td className="px-3 py-2">
+                        {formatCurrencyMXN(row.monto_total)}
+                      </td>
                       <td className="px-3 py-2">
                         {Number(row.descuento_porcentaje || 0)}%
                       </td>
@@ -182,7 +193,9 @@ export default function CotizacionesAdminPage() {
                         <Badge variant="outline">{row.origen || "Web"}</Badge>
                       </td>
                       <td className="px-3 py-2">
-                        <Badge variant="secondary">{row.estado || "Pendiente"}</Badge>
+                        <Badge variant="secondary">
+                          {row.estado || "Pendiente"}
+                        </Badge>
                       </td>
                       <td className="px-3 py-2">
                         {formatDateTime(row.fecha_cotizacion)}

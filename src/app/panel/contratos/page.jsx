@@ -5,7 +5,16 @@ import { useSearchParams } from "next/navigation";
 import dayjs from "dayjs";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  FileSignature,
+  FileText,
+  Plus,
+} from "lucide-react";
+import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
+import StatCard from "@/components/StatCard";
 import TablePagination from "@/components/TablePagination";
 import ContratosTable from "./ContratosTable";
 import ContratoDialog from "./ContratoDialog";
@@ -61,12 +70,15 @@ export default function ContratosPage() {
   useEffect(() => {
     const id = searchParams.get("id");
     if (!id) return;
-    contratosApi.getById(id).then((contrato) => {
-      if (!contrato) return;
-      setViewItem(contrato);
-      setOpenView(true);
-    }).catch(() => {});
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    contratosApi
+      .getById(id)
+      .then((contrato) => {
+        if (!contrato) return;
+        setViewItem(contrato);
+        setOpenView(true);
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
   const [deleteRow, setDeleteRow] = useState(null);
   const [filterOptionsRows, setFilterOptionsRows] = useState([]);
@@ -207,8 +219,8 @@ export default function ContratosPage() {
           c.salario_base != null
             ? String(c.salario_base)
             : c.salarioBase != null
-            ? String(c.salarioBase)
-            : "",
+              ? String(c.salarioBase)
+              : "",
         ];
         return `<tr>${cols
           .map(
@@ -259,125 +271,53 @@ export default function ContratosPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F9FAFB] p-6">
-      <div className="flex justify-end mb-6">
-        <Button
-          className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-medium shadow-sm"
-          onClick={() => {
-            setSeedItem(null);
-            setEditItem(null);
-            setOpenDialog(true);
-          }}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Nuevo contrato
-        </Button>
-      </div>
+    <div className="space-y-5">
+      {/* Encabezado compacto homologado Adamia */}
+      <EncabezadoPagina
+        icono={FileSignature}
+        titulo="Contratos"
+        subtitulo="Gestión de contratos laborales: vigencias, vencimientos y estatus."
+        acciones={
+          <Button
+            className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white shadow-sm hover:opacity-95"
+            onClick={() => {
+              setSeedItem(null);
+              setEditItem(null);
+              setOpenDialog(true);
+            }}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Nuevo contrato
+          </Button>
+        }
+      />
 
       {/* Estadísticas - Estilo ADAMIA */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 mb-1">
-                Total Contratos
-              </p>
-              <p className="text-3xl font-bold text-gray-900">{stats.total}</p>
-            </div>
-            <div className="bg-blue-50 p-3 rounded-lg">
-              <svg
-                className="w-6 h-6 text-[#2563EB]"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 mb-1">Activos</p>
-              <p className="text-3xl font-bold text-gray-900">
-                {stats.activos}
-              </p>
-            </div>
-            <div className="bg-green-50 p-3 rounded-lg">
-              <svg
-                className="w-6 h-6 text-green-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 mb-1">
-                Por Vencer (30d)
-              </p>
-              <p className="text-3xl font-bold text-gray-900">
-                {stats.porVencer}
-              </p>
-            </div>
-            <div className="bg-yellow-50 p-3 rounded-lg">
-              <svg
-                className="w-6 h-6 text-yellow-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600 mb-1">Vencidos</p>
-              <p className="text-3xl font-bold text-gray-900">
-                {stats.vencidos}
-              </p>
-            </div>
-            <div className="bg-red-50 p-3 rounded-lg">
-              <svg
-                className="w-6 h-6 text-red-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </div>
-          </div>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard
+          title="Total contratos"
+          value={stats.total}
+          icon={FileText}
+          accent="blue"
+        />
+        <StatCard
+          title="Activos"
+          value={stats.activos}
+          icon={CheckCircle2}
+          accent="emerald"
+        />
+        <StatCard
+          title="Por vencer (30d)"
+          value={stats.porVencer}
+          icon={Clock}
+          accent="amber"
+        />
+        <StatCard
+          title="Vencidos"
+          value={stats.vencidos}
+          icon={AlertCircle}
+          accent="red"
+        />
       </div>
 
       {/* Tabla */}
@@ -480,8 +420,8 @@ export default function ContratosPage() {
                   {deleteRow?.folio
                     ? ` ${deleteRow.folio}`
                     : deleteRow?.id
-                    ? ` #${deleteRow.id}`
-                    : ""}
+                      ? ` #${deleteRow.id}`
+                      : ""}
                   .
                 </AlertDialogDescription>
               </div>
