@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { User, Briefcase, Phone, MapPin } from "lucide-react";
 
 /**
  * Componente para mostrar la información general del empleado
@@ -17,142 +17,99 @@ export default function PanelEmpleadoGeneral({ datosEmpleado }) {
 
   return (
     <div>
-      {/* Header con diseño ADAMIA */}
-      <div className="bg-gradient-to-br from-blue-50 via-white to-blue-50 border-2 border-blue-100 rounded-xl p-4 sm:p-6 mb-4 sm:mb-6">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="bg-gradient-to-br from-[#2563EB] to-[#1d4ed8] p-3 rounded-lg shadow-md">
-            <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-          </div>
-          <div>
-            <h3 className="text-lg sm:text-xl font-bold text-gray-900">Resumen General</h3>
-            <p className="text-xs sm:text-sm text-gray-600">Vista general del empleado</p>
-          </div>
-        </div>
-
-        {/* KPIs */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
-        <Card className="overflow-hidden">
-          <CardContent className="p-3 sm:p-4 md:p-5 text-center min-w-0">
-            <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-1 break-words overflow-hidden">
-              {stats.porcentaje_asistencia || 0}%
-            </div>
-            <div className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wide break-words">
-              Asistencia
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="overflow-hidden">
-          <CardContent className="p-3 sm:p-4 md:p-5 text-center min-w-0">
-            <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-1 break-words overflow-hidden">
-              {resPermisos.total || 0}
-            </div>
-            <div className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wide break-words">
-              Permisos tomados
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="overflow-hidden">
-          <CardContent className="p-3 sm:p-4 md:p-5 text-center min-w-0">
-            <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-1 break-words overflow-hidden">
-              {vacaciones.dias_tomados || 0}
-            </div>
-            <div className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wide break-words">
-              Días vacaciones
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="overflow-hidden">
-          <CardContent className="p-3 sm:p-4 md:p-5 text-center min-w-0">
-            <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-1 break-words overflow-hidden">
-              {resContratos.activos || 0}
-            </div>
-            <div className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wide break-words">
-              Contratos activos
-            </div>
-          </CardContent>
-        </Card>
-        </div>
+      {/* Mini-KPIs homologados */}
+      <div className="mb-4 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+        <MiniKpi
+          label="Asistencia"
+          value={`${stats.porcentaje_asistencia || 0}%`}
+        />
+        <MiniKpi label="Permisos tomados" value={resPermisos.total || 0} />
+        <MiniKpi label="Días vacaciones" value={vacaciones.dias_tomados || 0} />
+        <MiniKpi label="Contratos activos" value={resContratos.activos || 0} />
       </div>
 
       {/* Información detallada */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-        <Card>
-          <CardHeader className="p-3 sm:p-4 md:p-6 pb-2 sm:pb-3">
-            <CardTitle className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wide">
-              👤 Información Personal
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 sm:p-4 md:p-6 pt-0 space-y-2 sm:space-y-3">
-            <InfoRow label="Nombre Completo" value={emp?.nombre_completo} />
-            <InfoRow label="Fecha de Nacimiento" value={formatearFecha(emp?.fecha_nacimiento)} />
-            <InfoRow label="CURP" value={emp?.curp} />
-            <InfoRow label="RFC" value={emp?.rfc} />
-            <InfoRow label="NSS" value={emp?.nss} />
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-2">
+        <SeccionCard icono={User} titulo="Información personal">
+          <InfoRow label="Nombre Completo" value={emp?.nombre_completo} />
+          <InfoRow
+            label="Fecha de Nacimiento"
+            value={formatearFecha(emp?.fecha_nacimiento)}
+          />
+          <InfoRow label="CURP" value={emp?.curp} />
+          <InfoRow label="RFC" value={emp?.rfc} />
+          <InfoRow label="NSS" value={emp?.nss} />
+        </SeccionCard>
 
-        <Card>
-          <CardHeader className="p-3 sm:p-4 md:p-6 pb-2 sm:pb-3">
-            <CardTitle className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wide">
-              💼 Información Laboral
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 sm:p-4 md:p-6 pt-0 space-y-2 sm:space-y-3">
-            <InfoRow label="Puesto" value={emp?.puesto} />
-            <InfoRow label="Departamento" value={emp?.departamento} />
-            <InfoRow label="Empresa" value={emp?.empresa} />
-            <InfoRow label="Fecha de Ingreso" value={formatearFecha(emp?.fecha_ingreso)} />
-            <InfoRow label="Antigüedad" value={emp?.antiguedad} />
-          </CardContent>
-        </Card>
+        <SeccionCard icono={Briefcase} titulo="Información laboral">
+          <InfoRow label="Puesto" value={emp?.puesto} />
+          <InfoRow label="Departamento" value={emp?.departamento} />
+          <InfoRow label="Empresa" value={emp?.empresa} />
+          <InfoRow
+            label="Fecha de Ingreso"
+            value={formatearFecha(emp?.fecha_ingreso)}
+          />
+          <InfoRow label="Antigüedad" value={emp?.antiguedad} />
+        </SeccionCard>
 
-        <Card>
-          <CardHeader className="p-3 sm:p-4 md:p-6 pb-2 sm:pb-3">
-            <CardTitle className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wide">
-              📞 Contacto
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 sm:p-4 md:p-6 pt-0 space-y-2 sm:space-y-3">
-            <InfoRow label="Email Corporativo" value={emp?.email_corporativo} />
-            <InfoRow label="Email Personal" value={emp?.email_personal} />
-            <InfoRow label="Teléfono" value={emp?.telefono} />
-            <InfoRow label="Extensión" value={emp?.extension} />
-          </CardContent>
-        </Card>
+        <SeccionCard icono={Phone} titulo="Contacto">
+          <InfoRow label="Email Corporativo" value={emp?.email_corporativo} />
+          <InfoRow label="Email Personal" value={emp?.email_personal} />
+          <InfoRow label="Teléfono" value={emp?.telefono} />
+          <InfoRow label="Extensión" value={emp?.extension} />
+        </SeccionCard>
 
-        <Card>
-          <CardHeader className="p-3 sm:p-4 md:p-6 pb-2 sm:pb-3">
-            <CardTitle className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wide">
-              📍 Dirección
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 sm:p-4 md:p-6 pt-0 space-y-2 sm:space-y-3">
-            <InfoRow label="Calle" value={emp?.direccion?.calle} />
-            <InfoRow label="Colonia" value={emp?.direccion?.colonia} />
-            <InfoRow label="Ciudad" value={emp?.direccion?.ciudad} />
-            <InfoRow label="Estado" value={emp?.direccion?.estado} />
-            <InfoRow label="CP" value={emp?.direccion?.codigo_postal} />
-          </CardContent>
-        </Card>
+        <SeccionCard icono={MapPin} titulo="Dirección">
+          <InfoRow label="Calle" value={emp?.direccion?.calle} />
+          <InfoRow label="Colonia" value={emp?.direccion?.colonia} />
+          <InfoRow label="Ciudad" value={emp?.direccion?.ciudad} />
+          <InfoRow label="Estado" value={emp?.direccion?.estado} />
+          <InfoRow label="CP" value={emp?.direccion?.codigo_postal} />
+        </SeccionCard>
       </div>
+    </div>
+  );
+}
+
+function MiniKpi({ label, value }) {
+  return (
+    <div className="min-w-0 rounded-[10px] border border-gray-200 bg-white p-3">
+      <div className="truncate text-[10.5px] font-semibold uppercase tracking-wide text-gray-500">
+        {label}
+      </div>
+      <div className="text-lg font-extrabold tabular-nums text-gray-900">
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function SeccionCard({ icono: Icono, titulo, children }) {
+  return (
+    <div className="rounded-[10px] border border-gray-200 bg-white p-4">
+      <h4 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
+        <Icono className="h-3.5 w-3.5 text-[#2563eb]" />
+        {titulo}
+      </h4>
+      <div className="space-y-2 sm:space-y-3">{children}</div>
     </div>
   );
 }
 
 function InfoRow({ label, value }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-1.5 sm:py-2 border-b border-gray-100 last:border-0 gap-1 sm:gap-0">
-      <span className="text-xs sm:text-sm text-gray-600">{label}:</span>
-      <span className="text-xs sm:text-sm font-semibold text-gray-900 break-words sm:break-all text-right sm:text-left">{value || "N/A"}</span>
+    <div className="flex flex-col gap-1 border-b border-gray-100 py-1.5 last:border-0 sm:flex-row sm:items-center sm:justify-between sm:gap-0 sm:py-2">
+      <span className="text-xs text-gray-600 sm:text-sm">{label}:</span>
+      <span className="break-words text-right text-xs font-semibold text-gray-900 sm:break-all sm:text-left sm:text-sm">
+        {value || "N/A"}
+      </span>
     </div>
   );
 }
 
 function formatearFecha(fechaISO) {
   if (!fechaISO || fechaISO === "N/A") return "N/A";
-  
+
   try {
     const fecha = new Date(fechaISO + "T00:00:00");
     const dia = String(fecha.getDate()).padStart(2, "0");
@@ -163,4 +120,3 @@ function formatearFecha(fechaISO) {
     return fechaISO;
   }
 }
-

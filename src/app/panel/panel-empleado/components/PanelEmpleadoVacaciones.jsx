@@ -1,7 +1,5 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useState, useMemo } from "react";
+import { Plane, CalendarDays, BarChart3, List } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -66,96 +65,63 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
 
   return (
     <div>
-      <h3 className="text-sm sm:text-base font-bold text-gray-900 mb-3 sm:mb-4 flex items-center gap-2">
-        🏖️ Balance de Vacaciones
+      <h3 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
+        <Plane className="h-3.5 w-3.5 text-[#2563eb]" />
+        Balance de vacaciones
       </h3>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6">
-        <Card className="overflow-hidden">
-          <CardContent className="p-3 sm:p-4 md:p-5 text-center min-w-0">
-            <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-1 break-words overflow-hidden">
-              {balance.dias_totales || 0}
-            </div>
-            <div className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wide break-words">
-              Días totales
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="overflow-hidden">
-          <CardContent className="p-3 sm:p-4 md:p-5 text-center min-w-0">
-            <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-1 break-words overflow-hidden">
-              {balance.dias_tomados || 0}
-            </div>
-            <div className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wide break-words">
-              Días tomados
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="overflow-hidden">
-          <CardContent className="p-3 sm:p-4 md:p-5 text-center min-w-0">
-            <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-1 break-words overflow-hidden">
-              {balance.dias_disponibles || 0}
-            </div>
-            <div className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wide break-words">
-              Días disponibles
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="overflow-hidden">
-          <CardContent className="p-3 sm:p-4 md:p-5 text-center min-w-0">
-            <div className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-1 break-words overflow-hidden">
-              {balance.dias_pendientes || 0}
-            </div>
-            <div className="text-[10px] sm:text-xs font-bold text-gray-500 uppercase tracking-wide break-words">
-              Días pendientes
-            </div>
-          </CardContent>
-        </Card>
+      {/* Mini-KPIs homologados */}
+      <div className="mb-4 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
+        <MiniKpi label="Días totales" value={balance.dias_totales || 0} />
+        <MiniKpi label="Días tomados" value={balance.dias_tomados || 0} />
+        <MiniKpi
+          label="Días disponibles"
+          value={balance.dias_disponibles || 0}
+        />
+        <MiniKpi label="Días pendientes" value={balance.dias_pendientes || 0} />
       </div>
 
       {/* Barra de progreso */}
-      <Card className="mb-6">
-        <CardContent className="p-4">
-          <div className="flex justify-between mb-2 text-sm font-semibold">
-            <span>Vacaciones utilizadas</span>
-            <span>
-              <strong>
-                {balance.dias_tomados || 0} / {balance.dias_totales || 0} días (
-                {balance.porcentaje_usado || 0}%)
-              </strong>
-            </span>
-          </div>
-          <div className="h-2.5 bg-gray-200 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-green-500 to-green-600 rounded-full transition-all"
-              style={{ width: `${balance.porcentaje_usado || 0}%` }}
-            />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="mb-6 rounded-[10px] border border-gray-200 bg-white p-4">
+        <div className="mb-2 flex justify-between text-sm font-semibold">
+          <span>Vacaciones utilizadas</span>
+          <span className="tabular-nums">
+            {balance.dias_tomados || 0} / {balance.dias_totales || 0} días (
+            {balance.porcentaje_usado || 0}%)
+          </span>
+        </div>
+        <div className="h-1.5 overflow-hidden rounded-full bg-gray-100">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-[#2563eb] to-[#7c3aed] transition-all"
+            style={{ width: `${balance.porcentaje_usado || 0}%` }}
+          />
+        </div>
+      </div>
 
       {/* Selector de vista */}
-      <div className="flex justify-between items-center mb-4 sm:mb-6">
-        <h4 className="text-xs sm:text-sm font-bold text-gray-900">
-          📅 Historial de Vacaciones
+      <div className="mb-4 flex items-center justify-between sm:mb-6">
+        <h4 className="flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
+          <CalendarDays className="h-3.5 w-3.5 text-[#2563eb]" />
+          Historial de vacaciones
         </h4>
         <div className="flex gap-2">
           <Button
             onClick={() => setVista("calendario")}
             variant={vista === "calendario" ? "default" : "outline"}
             size="sm"
-            className="text-xs sm:text-sm"
+            className="text-xs"
           >
-            📅 Vista Calendario
+            <CalendarDays className="mr-1 h-3.5 w-3.5" />
+            Calendario
           </Button>
           <Button
             onClick={() => setVista("tabla")}
             variant={vista === "tabla" ? "default" : "outline"}
             size="sm"
-            className="text-xs sm:text-sm"
+            className="text-xs"
           >
-            📋 Vista Tabla
+            <List className="mr-1 h-3.5 w-3.5" />
+            Tabla
           </Button>
         </div>
       </div>
@@ -173,192 +139,196 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
       {vista === "tabla" && (
         <>
           {/* Filtros */}
-          <Card className="mb-3 sm:mb-4">
-            <CardContent className="p-3 sm:p-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-3 sm:mb-4">
-                <div>
-                  <label className="text-xs font-bold text-gray-500 block mb-1">
-                    AGRUPAR POR:
-                  </label>
-                  <Select
-                    value={agrupar || "sin-agrupar"}
-                    onValueChange={(v) =>
-                      setAgrupar(v === "sin-agrupar" ? "" : v)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sin agrupar" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="sin-agrupar">Sin agrupar</SelectItem>
-                      <SelectItem value="mes-anio">Mes-Año</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-gray-500 block mb-1">
-                    ORDENAR:
-                  </label>
-                  <Select value={orden} onValueChange={setOrden}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="desc">Más reciente primero</SelectItem>
-                      <SelectItem value="asc">Más antiguo primero</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-gray-500 block mb-1">
-                    DESDE:
-                  </label>
-                  <Input
-                    type="date"
-                    value={filtroDesde}
-                    onChange={(e) => setFiltroDesde(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-gray-500 block mb-1">
-                    HASTA:
-                  </label>
-                  <Input
-                    type="date"
-                    value={filtroHasta}
-                    onChange={(e) => setFiltroHasta(e.target.value)}
-                  />
-                </div>
+          <div className="mb-3 rounded-[10px] border border-gray-200 bg-white p-3 sm:mb-4 sm:p-4">
+            <div className="mb-3 grid grid-cols-1 gap-3 sm:mb-4 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+              <div>
+                <label className="mb-1 block text-xs font-bold text-gray-500">
+                  AGRUPAR POR:
+                </label>
+                <Select
+                  value={agrupar || "sin-agrupar"}
+                  onValueChange={(v) =>
+                    setAgrupar(v === "sin-agrupar" ? "" : v)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sin agrupar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sin-agrupar">Sin agrupar</SelectItem>
+                    <SelectItem value="mes-anio">Mes-Año</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <Button onClick={limpiarFiltros} variant="outline" size="sm">
-                Limpiar Filtros
-              </Button>
-            </CardContent>
-          </Card>
+              <div>
+                <label className="mb-1 block text-xs font-bold text-gray-500">
+                  ORDENAR:
+                </label>
+                <Select value={orden} onValueChange={setOrden}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="desc">Más reciente primero</SelectItem>
+                    <SelectItem value="asc">Más antiguo primero</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold text-gray-500">
+                  DESDE:
+                </label>
+                <Input
+                  type="date"
+                  value={filtroDesde}
+                  onChange={(e) => setFiltroDesde(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-bold text-gray-500">
+                  HASTA:
+                </label>
+                <Input
+                  type="date"
+                  value={filtroHasta}
+                  onChange={(e) => setFiltroHasta(e.target.value)}
+                />
+              </div>
+            </div>
+            <Button onClick={limpiarFiltros} variant="outline" size="sm">
+              Limpiar Filtros
+            </Button>
+          </div>
 
           {/* Tabla */}
-          <Card>
-            <CardContent className="p-0">
-              <div className="overflow-x-auto -mx-2 sm:-mx-4 md:mx-0">
-                <Table>
-                  <TableHeader>
+          <div className="rounded-[10px] border border-gray-200 bg-white">
+            <div className="-mx-2 overflow-x-auto sm:-mx-4 md:mx-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                      Fecha
+                    </TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                      Día
+                    </TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                      Estado
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {vacacionesFiltradas.length === 0 ? (
                     <TableRow>
-                      <TableHead className="text-[10px] sm:text-xs font-bold uppercase">
-                        Fecha
-                      </TableHead>
-                      <TableHead className="text-[10px] sm:text-xs font-bold uppercase">
-                        Día
-                      </TableHead>
-                      <TableHead className="text-[10px] sm:text-xs font-bold uppercase">
-                        Estado
-                      </TableHead>
+                      <TableCell
+                        colSpan={3}
+                        className="py-8 text-center text-gray-500"
+                      >
+                        No hay vacaciones en el período seleccionado
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {vacacionesFiltradas.length === 0 ? (
-                      <TableRow>
-                        <TableCell
-                          colSpan={3}
-                          className="text-center py-8 text-gray-500"
-                        >
-                          No hay vacaciones en el período seleccionado
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      vacacionesFiltradas.map((v) => {
-                        const fecha = new Date(v.fecha_inicio + "T00:00:00");
-                        const dias = [
-                          "Domingo",
-                          "Lunes",
-                          "Martes",
-                          "Miércoles",
-                          "Jueves",
-                          "Viernes",
-                          "Sábado",
-                        ];
-                        const diaSemana = dias[fecha.getDay()];
+                  ) : (
+                    vacacionesFiltradas.map((v) => {
+                      const fecha = new Date(v.fecha_inicio + "T00:00:00");
+                      const dias = [
+                        "Domingo",
+                        "Lunes",
+                        "Martes",
+                        "Miércoles",
+                        "Jueves",
+                        "Viernes",
+                        "Sábado",
+                      ];
+                      const diaSemana = dias[fecha.getDay()];
 
-                        return (
-                          <TableRow key={v.id}>
-                            <TableCell className="font-semibold text-xs sm:text-sm">
-                              {formatearFecha(v.fecha_inicio)}
-                            </TableCell>
-                            <TableCell className="text-xs sm:text-sm">
-                              {diaSemana}
-                            </TableCell>
-                            <TableCell>
-                              <Badge className="bg-green-100 text-green-800 text-[10px] sm:text-xs">
-                                ✅ {v.estado}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+                      return (
+                        <TableRow key={v.id}>
+                          <TableCell className="text-xs font-semibold sm:text-sm">
+                            {formatearFecha(v.fecha_inicio)}
+                          </TableCell>
+                          <TableCell className="text-xs sm:text-sm">
+                            {diaSemana}
+                          </TableCell>
+                          <TableCell>
+                            <span className="inline-block rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-0.5 text-[10.5px] font-bold text-emerald-700">
+                              {v.estado}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
         </>
       )}
 
       {/* Información adicional */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
-        <Card>
-          <CardContent className="p-4">
-            <h5 className="text-xs font-bold text-gray-500 uppercase mb-3">
-              📊 Desglose de Vacaciones
-            </h5>
-            <div className="space-y-2 text-sm">
-              <InfoRow
-                label="Período actual"
-                value={balance.periodo || "N/A"}
-              />
-              <InfoRow
-                label="Días correspondientes"
-                value={`${balance.dias_totales || 0} días`}
-              />
-              <InfoRow
-                label="Días tomados"
-                value={`${balance.dias_tomados || 0} días`}
-              />
-              <InfoRow
-                label="Días restantes"
-                value={`${balance.dias_disponibles || 0} días`}
-              />
-              <InfoRow
-                label="Prima vacacional"
-                value={`${balance.prima_vacacional || 0}%`}
-              />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <h5 className="text-xs font-bold text-gray-500 uppercase mb-3">
-              📅 Próximo Período
-            </h5>
-            <div className="space-y-2 text-sm">
-              <InfoRow
-                label="Inicio del período"
-                value={formatearFecha(balance.fecha_inicio_periodo)}
-              />
-              <InfoRow
-                label="Días a recibir"
-                value={`${(balance.dias_totales || 0) + 2} días`}
-              />
-              <InfoRow
-                label="Antigüedad"
-                value={`${balance.anios_antiguedad || 0} años`}
-              />
-              <InfoRow
-                label="Prima vacacional"
-                value={`${balance.prima_vacacional || 0}%`}
-              />
-            </div>
-          </CardContent>
-        </Card>
+      <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="rounded-[10px] border border-gray-200 bg-white p-4">
+          <h5 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
+            <BarChart3 className="h-3.5 w-3.5 text-[#2563eb]" />
+            Desglose de vacaciones
+          </h5>
+          <div className="space-y-2 text-sm">
+            <InfoRow label="Período actual" value={balance.periodo || "N/A"} />
+            <InfoRow
+              label="Días correspondientes"
+              value={`${balance.dias_totales || 0} días`}
+            />
+            <InfoRow
+              label="Días tomados"
+              value={`${balance.dias_tomados || 0} días`}
+            />
+            <InfoRow
+              label="Días restantes"
+              value={`${balance.dias_disponibles || 0} días`}
+            />
+            <InfoRow
+              label="Prima vacacional"
+              value={`${balance.prima_vacacional || 0}%`}
+            />
+          </div>
+        </div>
+        <div className="rounded-[10px] border border-gray-200 bg-white p-4">
+          <h5 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
+            <CalendarDays className="h-3.5 w-3.5 text-[#2563eb]" />
+            Próximo período
+          </h5>
+          <div className="space-y-2 text-sm">
+            <InfoRow
+              label="Inicio del período"
+              value={formatearFecha(balance.fecha_inicio_periodo)}
+            />
+            <InfoRow
+              label="Días a recibir"
+              value={`${(balance.dias_totales || 0) + 2} días`}
+            />
+            <InfoRow
+              label="Antigüedad"
+              value={`${balance.anios_antiguedad || 0} años`}
+            />
+            <InfoRow
+              label="Prima vacacional"
+              value={`${balance.prima_vacacional || 0}%`}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MiniKpi({ label, value }) {
+  return (
+    <div className="min-w-0 rounded-[10px] border border-gray-200 bg-white p-3">
+      <div className="truncate text-[10.5px] font-semibold uppercase tracking-wide text-gray-500">
+        {label}
+      </div>
+      <div className="text-lg font-extrabold tabular-nums text-gray-900">
+        {value}
       </div>
     </div>
   );
@@ -366,7 +336,7 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
 
 function InfoRow({ label, value }) {
   return (
-    <div className="flex justify-between py-1 border-b border-gray-100 last:border-0">
+    <div className="flex justify-between border-b border-gray-100 py-1 last:border-0">
       <span className="text-gray-600">{label}:</span>
       <span className="font-semibold text-gray-900">{value || "N/A"}</span>
     </div>
@@ -432,47 +402,32 @@ function VistaCalendarioVacaciones({
 
   if (historial.length === 0) {
     return (
-      <Card>
-        <CardContent className="p-6 text-center">
-          <p className="text-gray-500">
-            No hay vacaciones registradas para mostrar en el calendario.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="rounded-[10px] border border-gray-200 bg-white p-6 text-center">
+        <p className="text-gray-500">
+          No hay vacaciones registradas para mostrar en el calendario.
+        </p>
+      </div>
     );
   }
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Calendario grande */}
-      {/* <Card>
-        <CardContent className="p-3 sm:p-4 md:p-5 lg:p-6">
-          <CalendarioGrande mesAnio={mesActual} diasVacaciones={diasVacaciones} />
-        </CardContent>
-      </Card> */}
-
       {/* Calendarios pequeños */}
       {todosLosMeses.length > 0 && (
-        <Card>
-          <CardContent className="p-2 sm:p-3 md:p-4 lg:p-5">
-            {/* <h5 className="text-[10px] sm:text-xs md:text-sm font-bold text-gray-500 uppercase tracking-wide mb-2 sm:mb-3 md:mb-4">
-              Selecciona un mes:
-            </h5> */}
-            {/* Grid responsivo que se adapta mejor cuando el sidebar está abierto */}
-            {/* Preferimos 2 columnas en pantallas grandes cuando el sidebar está abierto para mejor visualización */}
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2 sm:gap-2.5 md:gap-3 lg:gap-4">
-              {todosLosMeses.map((mesAnio) => (
-                <CalendarioPequeno
-                  key={mesAnio}
-                  mesAnio={mesAnio}
-                  diasVacaciones={diasVacaciones}
-                  esSeleccionado={mesAnio === mesActual}
-                  onClick={() => setMesSeleccionado(mesAnio)}
-                />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+        <div className="rounded-[10px] border border-gray-200 bg-white p-2 sm:p-3 md:p-4 lg:p-5">
+          {/* Grid responsivo que se adapta mejor cuando el sidebar está abierto */}
+          <div className="grid grid-cols-2 gap-2 sm:gap-2.5 md:gap-3 lg:gap-4 xl:grid-cols-3 2xl:grid-cols-4">
+            {todosLosMeses.map((mesAnio) => (
+              <CalendarioPequeno
+                key={mesAnio}
+                mesAnio={mesAnio}
+                diasVacaciones={diasVacaciones}
+                esSeleccionado={mesAnio === mesActual}
+                onClick={() => setMesSeleccionado(mesAnio)}
+              />
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -505,18 +460,18 @@ function CalendarioGrande({ mesAnio, diasVacaciones }) {
 
   return (
     <div className="w-full overflow-x-auto">
-      <h3 className="text-center text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-5 lg:mb-6">
+      <h3 className="mb-3 text-center text-lg font-bold text-gray-900 sm:mb-4">
         {nombresMeses[mes - 1]} {anio}
       </h3>
 
       {/* Contenedor con ancho mínimo para mantener proporciones */}
       <div className="min-w-[280px] sm:min-w-[320px] md:min-w-0">
-        <div className="grid grid-cols-7 gap-1 sm:gap-1.5 md:gap-2 lg:gap-2.5">
+        <div className="grid grid-cols-7 gap-1 sm:gap-1.5 md:gap-2">
           {/* Días de la semana */}
           {["DOM", "LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB"].map((dia) => (
             <div
               key={dia}
-              className="text-center text-[9px] sm:text-[10px] md:text-xs lg:text-sm font-extrabold text-gray-600 uppercase tracking-wide py-1.5 sm:py-2 md:py-2.5 lg:py-3"
+              className="py-1.5 text-center text-[9px] font-extrabold uppercase tracking-wide text-gray-600 sm:py-2 sm:text-[10px] md:text-xs"
             >
               {dia}
             </div>
@@ -540,13 +495,13 @@ function CalendarioGrande({ mesAnio, diasVacaciones }) {
               <div
                 key={dia}
                 className={`
-                  aspect-square flex items-center justify-center rounded-md sm:rounded-lg text-[10px] sm:text-xs md:text-sm lg:text-base xl:text-lg font-semibold transition-all
+                  flex aspect-square items-center justify-center rounded-md text-[10px] font-semibold transition-colors sm:text-xs md:text-sm
                   ${
                     esVacacion
-                      ? "bg-gradient-to-br from-green-500 to-green-600 text-white shadow-md sm:shadow-lg border-2 border-green-600 hover:shadow-xl hover:scale-105"
+                      ? "bg-gradient-to-br from-[#2563eb] to-[#7c3aed] text-white"
                       : esHoy
-                      ? "bg-blue-100 text-blue-700 border-2 border-blue-400 font-bold"
-                      : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
+                        ? "border border-blue-300 bg-blue-50 font-bold text-blue-700"
+                        : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
                   }
                 `}
               >
@@ -591,12 +546,9 @@ function CalendarioPequeno({
   return (
     <div
       onClick={onClick}
-      className={`
-        bg-white p-2 sm:p-2.5 md:p-3 lg:p-4 rounded-lg transition-all duration-200 w-full
-        ${"border border-gray-200 hover:border-gray-300 hover:shadow-sm"}
-      `}
+      className="w-full rounded-[10px] border border-gray-200 bg-white p-2 transition-colors hover:border-gray-300 sm:p-2.5 md:p-3 lg:p-4"
     >
-      <div className="text-center text-xs sm:text-sm md:text-base font-bold text-gray-900 mb-2 sm:mb-2.5 md:mb-3">
+      <div className="mb-2 text-center text-xs font-bold text-gray-900 sm:mb-2.5 sm:text-sm md:mb-3">
         {nombresMeses[mes - 1]} {anio}
       </div>
       <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
@@ -620,10 +572,10 @@ function CalendarioPequeno({
             <div
               key={dia}
               className={`
-                aspect-square min-h-[14px] sm:min-h-[16px] md:min-h-[18px] lg:min-h-[20px] flex items-center justify-center text-[8px] sm:text-[9px] md:text-[10px] lg:text-[11px] rounded-sm font-semibold leading-none
+                flex aspect-square min-h-[14px] items-center justify-center rounded-sm text-[8px] font-semibold leading-none sm:min-h-[16px] sm:text-[9px] md:min-h-[18px] md:text-[10px] lg:min-h-[20px] lg:text-[11px]
                 ${
                   esVacacion
-                    ? "bg-green-500 text-white shadow-sm"
+                    ? "bg-gradient-to-br from-[#2563eb] to-[#7c3aed] text-white"
                     : "text-gray-500"
                 }
               `}
