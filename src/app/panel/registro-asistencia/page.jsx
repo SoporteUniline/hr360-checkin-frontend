@@ -32,7 +32,7 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import useDepartamentosData from "@/hooks/useDepartamentosData";
 import ResumenAsistencia from "./ResumenAsistencia";
-import RangoFechasModal from "./RangoFechasModal";
+import RangoFechasModal from "@/components/filtros/RangoFechasModal";
 import VistasGuardadas from "./VistasGuardadas";
 import ColumnasSelector, {
   cargarColumnasGuardadas,
