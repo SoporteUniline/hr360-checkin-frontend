@@ -64,6 +64,8 @@ import {
 import styles from "./mapa-rutas-theme.module.css";
 import { Combobox } from "@/components/Combobox";
 import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
+import { SelectorBoton } from "@/components/filtros/CampoFiltro";
+import RangoFechasModal from "@/components/filtros/RangoFechasModal";
 
 // Leaflet se carga SOLO en cliente para evitar "window is not defined" en SSR al recargar.
 // - Relación: `leaflet-maps.jsx` contiene los imports de leaflet/react-leaflet.
@@ -287,6 +289,10 @@ export default function PageMapaDeRutas() {
   const [fechaInicio, setFechaInicio] = useState("");
   const [fechaFin, setFechaFin] = useState("");
 
+  // Filtros homologados Adamia: modal de rango de fechas + etiqueta del botón.
+  const [rangoOpen, setRangoOpen] = useState(false);
+  const [rangoEtiqueta, setRangoEtiqueta] = useState("Hoy");
+
   /**
    * Buscador de Empleados (mismo patrón que "Nuevo Contrato" en `ContratoDialog.jsx`)
    * - Relación: `src/app/panel/contratos/ContratoDialog.jsx` -> Input + sugerencias con dropdown.
@@ -315,12 +321,16 @@ export default function PageMapaDeRutas() {
   const [velocidad, setVelocidad] = useState(1500);
   const timerRef = useRef(null);
 
-  // Inicializar fechas (hoy y -7 días) como el HTML legacy
+  // Inicializar fechas (hoy y -7 días) como el HTML legacy.
+  // La etiqueta del selector debe reflejar el rango real inicial.
   useEffect(() => {
     const hoy = dayjs().format("YYYY-MM-DD");
     const hace7 = dayjs().subtract(7, "day").format("YYYY-MM-DD");
     setFechaFin(hoy);
     setFechaInicio(hace7);
+    setRangoEtiqueta(
+      `${dayjs(hace7).format("DD/MM/YY")} – ${dayjs(hoy).format("DD/MM/YY")}`,
+    );
   }, []);
 
   // Cargar empleados activos (cuando ya hay empresa)
@@ -1583,19 +1593,22 @@ export default function PageMapaDeRutas() {
 
   return (
     <div className={cn(styles.mrTheme, "space-y-4")}>
-      {/* Header del módulo */}
-      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+      {/* Encabezado compacto homologado Adamia */}
+      <div>
         <div className="flex items-center gap-3">
-          <div className="bg-[#2563EB] p-2.5 rounded-lg">
-            <Route className="w-5 h-5 text-white" />
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[#2563eb] to-[#7c3aed] shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
+            <Route className="h-5 w-5 text-white" />
           </div>
           <div>
-            <div className="text-lg font-bold text-gray-900">Mapa de rutas</div>
-            <div className="text-sm text-gray-600">
-              Auditoría de ubicaciones y recorridos
-            </div>
+            <h1 className="text-xl font-extrabold tracking-tight text-gray-900">
+              Mapa de rutas
+            </h1>
+            <p className="text-[12.5px] text-gray-500">
+              Auditoría de ubicaciones y recorridos.
+            </p>
           </div>
         </div>
+        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
       </div>
 
       {/* Layout principal (Días a la izquierda / Mapa a la derecha como el legacy) */}
@@ -1607,11 +1620,10 @@ export default function PageMapaDeRutas() {
             className={cn(styles.cardShadow, "border")}
             style={{ borderColor: "var(--mr-border)" }}
           >
-           
             <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-xs font-semibold uppercase text-muted-foreground">
-                  🏢 Unidad de negocio
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold text-gray-500">
+                  Unidad de negocio
                 </label>
                 <Combobox
                   options={[
@@ -1629,15 +1641,15 @@ export default function PageMapaDeRutas() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold text-gray-500">
                   Empleado
                 </label>
                 {/* Buscador tipo "Nuevo Contrato" (Contratos) */}
                 <div className="relative">
                   <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <Input
-                    className="pl-9"
+                    className="h-[38px] rounded-md border-gray-200 pl-9 text-[13px]"
                     placeholder="Buscar empleado..."
                     value={empSearch}
                     onChange={(e) => {
@@ -1723,41 +1735,44 @@ export default function PageMapaDeRutas() {
                 ) : null}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
-                    Fecha inicio
-                  </label>
-                  <Input
-                    type="date"
-                    value={fechaInicio}
-                    onChange={(e) => setFechaInicio(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
-                    Fecha fin
-                  </label>
-                  <Input
-                    type="date"
-                    value={fechaFin}
-                    onChange={(e) => setFechaFin(e.target.value)}
-                  />
-                </div>
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-semibold text-gray-500">
+                  Rango de fechas
+                </label>
+                <SelectorBoton
+                  valor={rangoEtiqueta}
+                  activo
+                  onClick={() => setRangoOpen(true)}
+                />
               </div>
+
+              <RangoFechasModal
+                open={rangoOpen}
+                onOpenChange={setRangoOpen}
+                fechaInicio={fechaInicio}
+                fechaFin={fechaFin}
+                onAplicar={({ inicio, fin, etiqueta }) => {
+                  setFechaInicio(inicio);
+                  setFechaFin(fin);
+                  setRangoEtiqueta(etiqueta);
+                }}
+              />
 
               <div className="grid grid-cols-2 gap-2">
                 <Button
                   onClick={buscarMovimientos}
-                  className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-md font-semibold"
+                  className="h-[38px] rounded-md bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
                 >
                   <Search className="h-4 w-4 mr-2" />
                   Buscar
                 </Button>
                 <Button
-                  variant="secondary"
-                  onClick={limpiarTodo}
-                  className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-100 shadow-sm font-semibold"
+                  variant="outline"
+                  onClick={() => {
+                    limpiarTodo();
+                    setRangoEtiqueta("Hoy");
+                  }}
+                  className="h-[38px] rounded-md border-gray-200 font-semibold text-gray-700 hover:bg-gray-50"
                 >
                   <RotateCcw className="h-4 w-4 mr-2" />
                   Limpiar
@@ -1771,10 +1786,10 @@ export default function PageMapaDeRutas() {
                     errorMsg.includes("✅")
                       ? "bg-green-50 text-green-800"
                       : errorMsg.includes("⚠️")
-                      ? "bg-yellow-50 text-yellow-900"
-                      : errorMsg.includes("ℹ️")
-                      ? "bg-blue-50 text-blue-900"
-                      : "bg-red-50 text-red-800",
+                        ? "bg-yellow-50 text-yellow-900"
+                        : errorMsg.includes("ℹ️")
+                          ? "bg-blue-50 text-blue-900"
+                          : "bg-red-50 text-red-800",
                   )}
                 >
                   {errorMsg}

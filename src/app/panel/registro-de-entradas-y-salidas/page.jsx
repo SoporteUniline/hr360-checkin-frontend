@@ -13,6 +13,14 @@ import { ClockArrowUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { RotateCcw } from "lucide-react";
+import {
+  FiltrosGrid,
+  CampoFiltro,
+  SelectorBoton,
+} from "@/components/filtros/CampoFiltro";
+import RangoFechasModal, {
+  etiquetaDeRango,
+} from "@/components/filtros/RangoFechasModal";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -29,55 +37,16 @@ export default function RegistroEntradasSalidas() {
   //   - Si es un rango real, `fecha` queda vacío y el backend filtra por `desde/hasta`.
   // =========================
   const today = dayjs().tz("America/Mexico_City").format("YYYY-MM-DD");
-  const aplicarFiltroRapido = (tipo) => {
-    const hoy = dayjs().tz("America/Mexico_City");
-
-    let inicio = hoy;
-    let fin = hoy;
-
-    switch (tipo) {
-      case "hoy":
-        break;
-
-      case "semana":
-        inicio = hoy.startOf("week");
-        break;
-
-      case "quinceDias":
-        inicio = hoy.subtract(14, "day");
-        break;
-
-      case "ultimoMes":
-        inicio = hoy.subtract(1, "month");
-        break;
-
-      case "semestre":
-        inicio = hoy.subtract(6, "month");
-        break;
-
-      case "anio":
-        inicio = hoy.startOf("year");
-        break;
-
-      case "todo":
-        setDesde("");
-        setHasta("");
-        setFiltroRapido("todo");
-        setPage(1);
-        return;
-    }
-
-    setDesde(inicio.format("YYYY-MM-DD"));
-    setHasta(fin.format("YYYY-MM-DD"));
-    setFiltroRapido(tipo);
-    setPage(1);
-  };
   const initialDate = searchParams.get("fecha") || today;
   const [desde, setDesde] = useState(initialDate);
   const [hasta, setHasta] = useState(initialDate);
-  const [filtroRapido, setFiltroRapido] = useState("hoy");
   const [filtroNombre, setFiltroNombre] = useState(
     searchParams.get("empleado") || "",
+  );
+  // Filtros homologados Adamia: modal de rango de fechas + etiqueta del botón.
+  const [rangoOpen, setRangoOpen] = useState(false);
+  const [rangoEtiqueta, setRangoEtiqueta] = useState(() =>
+    etiquetaDeRango(initialDate, initialDate),
   );
   const mostrarPendientes = desde && hasta && desde === hasta;
 
@@ -106,7 +75,7 @@ export default function RegistroEntradasSalidas() {
     setHasta(today);
     setFiltroNombre("");
     setPage(1);
-    setFiltroRapido("hoy");
+    setRangoEtiqueta("Hoy");
     setSortConfig(getDefaultSortConfig());
   };
 
@@ -129,22 +98,23 @@ export default function RegistroEntradasSalidas() {
 
   return (
     <div className="space-y-6">
-      {/* Header ADAMIA */}
-      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+      {/* Encabezado compacto homologado Adamia */}
+      <div>
         <div className="flex items-center gap-3">
-          <div className="bg-[#2563EB] p-2.5 rounded-lg">
-            <ClockArrowUp className="w-5 h-5 text-white" />
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[#2563eb] to-[#7c3aed] shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
+            <ClockArrowUp className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="text-lg font-bold text-gray-900">
+            <h1 className="text-xl font-extrabold tracking-tight text-gray-900">
               Entradas y salidas
             </h1>
-            <p className="text-sm text-gray-600">
+            <p className="text-[12.5px] text-gray-500">
               Consulta y corrige registros de reloj checador por rango de
               fechas.
             </p>
           </div>
         </div>
+        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
       </div>
 
       <div
@@ -176,12 +146,10 @@ export default function RegistroEntradasSalidas() {
         )}
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">
-              Empleado
-            </label>
+      {/* Fila de filtros homologada */}
+      <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+        <FiltrosGrid columnas={4}>
+          <CampoFiltro etiqueta="Empleado">
             <Input
               type="text"
               placeholder="Buscar empleado..."
@@ -190,62 +158,43 @@ export default function RegistroEntradasSalidas() {
                 setFiltroNombre(e.target.value);
                 setPage(1);
               }}
+              className="h-[38px] rounded-md border-gray-200 text-[13px]"
             />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Desde</label>
-            <Input
-              type="date"
-              value={desde}
-              onChange={(event) => {
-                setDesde(event.target.value);
-                setPage(1);
-              }}
+          </CampoFiltro>
+
+          <CampoFiltro etiqueta="Rango de fechas">
+            <SelectorBoton
+              valor={rangoEtiqueta}
+              activo
+              onClick={() => setRangoOpen(true)}
             />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700">Hasta</label>
-            <Input
-              type="date"
-              value={hasta}
-              onChange={(event) => {
-                setHasta(event.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-          <div className="flex justify-start lg:justify-end">
+          </CampoFiltro>
+
+          <CampoFiltro>
             <Button
               onClick={handleResetFilters}
-              variant="outline"
-              className="border-gray-300 text-gray-700 hover:bg-gray-100"
+              variant="ghost"
+              className="h-[38px] w-full rounded-md font-semibold text-gray-600 hover:bg-gray-50 hover:text-gray-900"
             >
               <RotateCcw className="h-4 w-4 mr-2" />
               Limpiar
             </Button>
-          </div>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-2 lg:flex-nowrap">
-          {[
-            ["hoy", "Hoy"],
-            ["semana", "Esta semana"],
-            ["quinceDias", "15 días"],
-            ["ultimoMes", "Último mes"],
-            ["semestre", "Semestre"],
-            ["anio", "Año"],
-            ["todo", "Todo"],
-          ].map(([key, label]) => (
-            <Button
-              key={key}
-              size="sm"
-              variant={filtroRapido === key ? "default" : "outline"}
-              onClick={() => aplicarFiltroRapido(key)}
-            >
-              {label}
-            </Button>
-          ))}
-        </div>
+          </CampoFiltro>
+        </FiltrosGrid>
       </div>
+
+      <RangoFechasModal
+        open={rangoOpen}
+        onOpenChange={setRangoOpen}
+        fechaInicio={desde}
+        fechaFin={hasta}
+        onAplicar={({ inicio, fin, etiqueta }) => {
+          setDesde(inicio);
+          setHasta(fin);
+          setRangoEtiqueta(etiqueta);
+          setPage(1);
+        }}
+      />
 
       {ui}
 
