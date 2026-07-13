@@ -180,7 +180,8 @@ export default function PageAguinaldos() {
           c.unidad_negocio || c.nombre_sucursal || c.nombre_empresa;
         const anioValue = String(c.año_fiscal || "");
         const estadoValue = c.estado || "Pendiente";
-        const passId = idSeleccionado.length === 0 || idSeleccionado.includes(idValue);
+        const passId =
+          idSeleccionado.length === 0 || idSeleccionado.includes(idValue);
         const passEmpresa =
           empresaSeleccionada.length === 0 ||
           empresaSeleccionada.includes(empresaValue);
@@ -934,7 +935,11 @@ export default function PageAguinaldos() {
       doc.setLineWidth(0.2);
       doc.line(x, yPos + 7, x + width, yPos + 7);
     };
-    const drawWrappedSectionText = ({ sectionName, textValue, emptyFallback }) => {
+    const drawWrappedSectionText = ({
+      sectionName,
+      textValue,
+      emptyFallback,
+    }) => {
       sectionTitle(sectionName);
       const textInsetLeft = 2;
       const textInsetRight = 8;
@@ -959,7 +964,9 @@ export default function PageAguinaldos() {
           /(\S{24})(?=\S)/g,
           "$1 ",
         );
-        safeLines.push(...doc.splitTextToSize(breakableParagraph, maxTextWidth));
+        safeLines.push(
+          ...doc.splitTextToSize(breakableParagraph, maxTextWidth),
+        );
       }
       for (const line of safeLines) {
         needSpace(lineHeight + 2);
@@ -1030,7 +1037,11 @@ export default function PageAguinaldos() {
     doc.setFont(FONT, "bold");
     doc.setFontSize(10);
     doc.setTextColor(...ADAMIA.text);
-    doc.text(emp.es_proporcional ? "PROPORCIONAL" : "COMPLETO", marginLeft, y + 9);
+    doc.text(
+      emp.es_proporcional ? "PROPORCIONAL" : "COMPLETO",
+      marginLeft,
+      y + 9,
+    );
     doc.text(empleado, marginLeft + col, y + 9, { maxWidth: col - 6 });
     doc.text(fechaCorte, marginLeft + col * 2, y + 9, { maxWidth: col - 6 });
 
@@ -1053,7 +1064,12 @@ export default function PageAguinaldos() {
     sectionTitle("Datos del empleado");
     needSpace(20);
     fieldPair("Nombre completo", empleado, marginLeft, y);
-    fieldPair("Puesto", emp.puesto || "N/A", marginLeft + contentWidth / 2 + 4, y);
+    fieldPair(
+      "Puesto",
+      emp.puesto || "N/A",
+      marginLeft + contentWidth / 2 + 4,
+      y,
+    );
     y += 16;
     fieldPair("Departamento", emp.departamento || "N/A", marginLeft, y);
     fieldPair(
@@ -1143,11 +1159,22 @@ export default function PageAguinaldos() {
         );
         doc.setFontSize(7.5);
         doc.setTextColor(...ADAMIA.text2);
-        doc.text(companyName.slice(0, 40), pageWidth - marginRight - 40, yFirmas + 10, {
-          align: "center",
-        });
+        doc.text(
+          companyName.slice(0, 40),
+          pageWidth - marginRight - 40,
+          yFirmas + 10,
+          {
+            align: "center",
+          },
+        );
       }
-      gradientLine(doc, marginLeft, pageWidth - marginRight, pageHeight - 14, 0.35);
+      gradientLine(
+        doc,
+        marginLeft,
+        pageWidth - marginRight,
+        pageHeight - 14,
+        0.35,
+      );
       doc.setFont(FONT, "bold");
       doc.setFontSize(7.5);
       doc.setTextColor(...ADAMIA.blue);
@@ -1163,9 +1190,14 @@ export default function PageAguinaldos() {
         pageHeight - 9,
         { align: "center" },
       );
-      doc.text(`Página ${p} de ${totalPages}`, pageWidth - marginRight, pageHeight - 9, {
-        align: "right",
-      });
+      doc.text(
+        `Página ${p} de ${totalPages}`,
+        pageWidth - marginRight,
+        pageHeight - 9,
+        {
+          align: "right",
+        },
+      );
     }
 
     const nombreArchivo = `Aguinaldo_${
@@ -1427,7 +1459,11 @@ export default function PageAguinaldos() {
     doc.setFont(FONT, "bold");
     doc.setFontSize(10);
     doc.setTextColor(...ADAMIA.text);
-    doc.text(String(resultadoCalculo.total_empleados ?? resultados.length), marginLeft, y + 9);
+    doc.text(
+      String(resultadoCalculo.total_empleados ?? resultados.length),
+      marginLeft,
+      y + 9,
+    );
     doc.text(fechaCorte, marginLeft + col, y + 9);
     doc.text(String(proporcionales), marginLeft + col * 2, y + 9);
 
@@ -1453,7 +1489,11 @@ export default function PageAguinaldos() {
     doc.setTextColor(...ADAMIA.text);
     doc.text(`Completos: ${completos}`, marginLeft, y);
     doc.text(`Proporcionales: ${proporcionales}`, marginLeft + 55, y);
-    doc.text(`Total: ${resultadoCalculo.total_empleados ?? resultados.length}`, marginLeft + 110, y);
+    doc.text(
+      `Total: ${resultadoCalculo.total_empleados ?? resultados.length}`,
+      marginLeft + 110,
+      y,
+    );
     y += 10;
     hRule(y);
     y += 8;
@@ -1500,7 +1540,9 @@ export default function PageAguinaldos() {
       const v = {
         nombre: safe(r.nombre_completo || "—").slice(0, 38),
         puesto: safe(r.puesto || "N/A").slice(0, 20),
-        ingreso: r.fecha_ingreso ? dayjs(r.fecha_ingreso).format("DD/MM/YYYY") : "—",
+        ingreso: r.fecha_ingreso
+          ? dayjs(r.fecha_ingreso).format("DD/MM/YYYY")
+          : "—",
         dias: Number(r.dias_aguinaldo_calculado || 0).toFixed(2),
         tipo: r.es_proporcional ? "Prop." : "Comp.",
         monto: money(r.monto_aguinaldo),
@@ -1571,11 +1613,22 @@ export default function PageAguinaldos() {
         );
         doc.setFontSize(7.5);
         doc.setTextColor(...ADAMIA.text2);
-        doc.text(companyName.slice(0, 40), pageWidth - marginRight - 40, yFirmas + 10, {
-          align: "center",
-        });
+        doc.text(
+          companyName.slice(0, 40),
+          pageWidth - marginRight - 40,
+          yFirmas + 10,
+          {
+            align: "center",
+          },
+        );
       }
-      gradientLine(doc, marginLeft, pageWidth - marginRight, pageHeight - 14, 0.35);
+      gradientLine(
+        doc,
+        marginLeft,
+        pageWidth - marginRight,
+        pageHeight - 14,
+        0.35,
+      );
       doc.setFont(FONT, "bold");
       doc.setFontSize(7.5);
       doc.setTextColor(...ADAMIA.blue);
@@ -1591,9 +1644,14 @@ export default function PageAguinaldos() {
         pageHeight - 9,
         { align: "center" },
       );
-      doc.text(`Página ${p} de ${totalPages}`, pageWidth - marginRight, pageHeight - 9, {
-        align: "right",
-      });
+      doc.text(
+        `Página ${p} de ${totalPages}`,
+        pageWidth - marginRight,
+        pageHeight - 9,
+        {
+          align: "right",
+        },
+      );
     }
 
     const nombreArchivo = `Nomina_Aguinaldos_${
@@ -1640,6 +1698,24 @@ export default function PageAguinaldos() {
 
   return (
     <div className={`${styles.aguTheme} space-y-6`}>
+      {/* Encabezado compacto homologado (Adamia) */}
+      <div>
+        <div className="flex items-center gap-3">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[#2563eb] to-[#7c3aed] shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
+            <Calculator className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-extrabold tracking-tight text-gray-900">
+              Aguinaldos
+            </h1>
+            <p className="text-[12.5px] text-gray-500">
+              Calcula, guarda y consulta los aguinaldos del personal.
+            </p>
+          </div>
+        </div>
+        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
+      </div>
+
       {/* Tabs */}
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="grid w-full grid-cols-2 bg-gray-100 rounded-lg p-1">
@@ -1673,7 +1749,6 @@ export default function PageAguinaldos() {
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            
             <ActiveFilterChips
               groups={[
                 {
@@ -1764,8 +1839,8 @@ export default function PageAguinaldos() {
                       calc.estado === "Pagado"
                         ? "bg-green-100 text-green-800"
                         : calc.estado === "Cancelado"
-                        ? "bg-red-100 text-red-800"
-                        : "bg-yellow-100 text-yellow-800";
+                          ? "bg-red-100 text-red-800"
+                          : "bg-yellow-100 text-yellow-800";
                     return (
                       <tr
                         key={calc.id_calculo}
@@ -1879,8 +1954,8 @@ export default function PageAguinaldos() {
                 alertMsg.includes("✅")
                   ? styles.infoSuccess
                   : alertMsg.includes("⚠️")
-                  ? styles.infoWarning
-                  : styles.infoDanger
+                    ? styles.infoWarning
+                    : styles.infoDanger
               }
             >
               {alertMsg}
@@ -1888,7 +1963,7 @@ export default function PageAguinaldos() {
           )}
 
           {/* Configuración */}
-          <Card className="agu-card">
+          <Card className="agu-card rounded-xl border-gray-100 bg-white">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Calculator className="h-5 w-5" /> Configuración del Cálculo
@@ -1897,28 +1972,31 @@ export default function PageAguinaldos() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                  <label className="block text-[11px] font-semibold text-gray-500">
                     Unidad de negocio
                   </label>
 
-                  <Combobox
-                    options={unidadOptions}
-                    value={unidadCalculo}
-                    onChange={(value) => {
-                      setUnidadCalculo(value);
-                      setFechaCorte(dayjs().format("YYYY-MM-DD"));
-                      setAñoFiscalCalculo(dayjs().year().toString());
-                      setObservaciones("");
-                    }}
-                    placeholder="Selecciona unidad para cálculo"
-                  />
+                  <div className="[&_button]:h-[38px] [&_button]:w-full [&_button]:rounded-md [&_button]:border-gray-200 [&_button]:text-[13px] [&_button]:font-medium">
+                    <Combobox
+                      options={unidadOptions}
+                      value={unidadCalculo}
+                      onChange={(value) => {
+                        setUnidadCalculo(value);
+                        setFechaCorte(dayjs().format("YYYY-MM-DD"));
+                        setAñoFiscalCalculo(dayjs().year().toString());
+                        setObservaciones("");
+                      }}
+                      placeholder="Selecciona unidad para cálculo"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
+                  <label className="block text-[11px] font-semibold text-gray-500">
                     Fecha de corte *
                   </label>
                   <Input
                     type="date"
+                    className="h-[38px] rounded-md border-gray-200 text-[13px]"
                     value={fechaCorte}
                     onChange={async (e) => {
                       const nuevaFecha = e.target.value;
@@ -1944,7 +2022,7 @@ export default function PageAguinaldos() {
                   </small>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
+                  <label className="block text-[11px] font-semibold text-gray-500">
                     Año fiscal *
                   </label>
                   <Input
@@ -1955,7 +2033,7 @@ export default function PageAguinaldos() {
                     onChange={(e) => setAñoFiscalCalculo(e.target.value)}
                     placeholder="2025"
                     readOnly
-                    className="bg-gray-50 cursor-not-allowed"
+                    className="h-[38px] rounded-md border-gray-200 bg-gray-50 text-[13px] cursor-not-allowed"
                   />
                   <small className="text-muted-foreground">
                     Año fiscal del aguinaldo (se actualiza automáticamente según
@@ -1963,10 +2041,11 @@ export default function PageAguinaldos() {
                   </small>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
+                  <label className="block text-[11px] font-semibold text-gray-500">
                     Observaciones
                   </label>
                   <Input
+                    className="h-[38px] rounded-md border-gray-200 text-[13px]"
                     value={observaciones}
                     onChange={(e) => setObservaciones(e.target.value)}
                     placeholder="Ej: Aguinaldo 2025 - Pago anticipado diciembre"
@@ -2005,20 +2084,20 @@ export default function PageAguinaldos() {
 
           {/* Selección de empleados */}
           {empleadosCargados.length > 0 && (
-            <Card className="agu-card">
+            <Card className="agu-card rounded-xl border-gray-100 bg-white">
               <CardHeader>
                 <CardTitle>Selección de empleados</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Buscador de empleados */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
+                  <label className="block text-[11px] font-semibold text-gray-500">
                     Buscar empleado
                   </label>
                   <div className="relative">
                     <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                     <Input
-                      className="pl-9"
+                      className="h-[38px] rounded-md border-gray-200 pl-9 text-[13px]"
                       placeholder="Buscar por nombre, puesto o departamento..."
                       value={busquedaEmpleados}
                       onChange={(e) => setBusquedaEmpleados(e.target.value)}
@@ -2182,7 +2261,7 @@ export default function PageAguinaldos() {
                   <Button
                     onClick={calcularAguinaldos}
                     disabled={empleadosSeleccionados.length === 0}
-                    className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm disabled:opacity-50"
+                    className="h-[38px] rounded-md bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95 disabled:opacity-50"
                   >
                     <Calculator className="h-4 w-4 mr-2" /> Calcular
                   </Button>

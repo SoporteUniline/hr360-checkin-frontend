@@ -187,7 +187,8 @@ export default function PageFiniquitosLiquidaciones() {
         const empleadoValue = f.nombre_completo;
         const tipoValue = f.es_liquidacion ? "Liquidación" : "Finiquito";
         const estadoValue = f.estado || "Pendiente";
-        const passId = idSeleccionado.length === 0 || idSeleccionado.includes(idValue);
+        const passId =
+          idSeleccionado.length === 0 || idSeleccionado.includes(idValue);
         const passEmpresa =
           empresaSeleccionada.length === 0 ||
           empresaSeleccionada.includes(empresaValue);
@@ -479,7 +480,9 @@ export default function PageFiniquitosLiquidaciones() {
       fecha_baja: fechaBaja,
       tipo_terminacion: tipoTerminacion,
       es_liquidacion: tipoCalculo === "liquidacion",
-      salario_diario: parseFloat(salarioDiario || resultado.salario_diario || 0),
+      salario_diario: parseFloat(
+        salarioDiario || resultado.salario_diario || 0,
+      ),
       dias_salario_pendiente: parseFloat(
         diasSalarioPendiente || resultado.dias_salario_pendiente || 0,
       ),
@@ -493,12 +496,16 @@ export default function PageFiniquitosLiquidaciones() {
         diasVacLeyActual || resultado.dias_vacaciones_ley_año_actual || 12,
       ),
       dias_vacaciones_año_actual_ya_gozadas: parseFloat(
-        diasVacYaGozadas || resultado.dias_vacaciones_año_actual_ya_gozadas || 0,
+        diasVacYaGozadas ||
+          resultado.dias_vacaciones_año_actual_ya_gozadas ||
+          0,
       ),
       prima_vacacional_porcentaje: parseFloat(
         primaVacacional || resultado.prima_vacacional_porcentaje || 25,
       ),
-      dias_aguinaldo: parseFloat(diasAguinaldo || resultado.dias_aguinaldo || 15),
+      dias_aguinaldo: parseFloat(
+        diasAguinaldo || resultado.dias_aguinaldo || 15,
+      ),
       dias_salarios_vencidos: parseFloat(
         diasSalariosVencidos || resultado.dias_salarios_vencidos || 0,
       ),
@@ -651,7 +658,11 @@ export default function PageFiniquitosLiquidaciones() {
       doc.setLineWidth(0.2);
       doc.line(x, yPos + 7, x + width, yPos + 7);
     };
-    const drawWrappedSectionText = ({ sectionName, textValue, emptyFallback }) => {
+    const drawWrappedSectionText = ({
+      sectionName,
+      textValue,
+      emptyFallback,
+    }) => {
       sectionTitle(sectionName);
       const textInsetLeft = 2;
       const textInsetRight = 8;
@@ -676,7 +687,9 @@ export default function PageFiniquitosLiquidaciones() {
           /(\S{24})(?=\S)/g,
           "$1 ",
         );
-        safeLines.push(...doc.splitTextToSize(breakableParagraph, maxTextWidth));
+        safeLines.push(
+          ...doc.splitTextToSize(breakableParagraph, maxTextWidth),
+        );
       }
       for (const line of safeLines) {
         needSpace(lineHeight + 2);
@@ -709,8 +722,13 @@ export default function PageFiniquitosLiquidaciones() {
     const companyName =
       safe(empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa) ||
       "ADAMIA Human Resources";
-    const tipoDocumento = resultado.es_liquidacion ? "LIQUIDACION" : "FINIQUITO";
-    const folio = String(resultado.id_finiquito || resultado.id || "").padStart(3, "0");
+    const tipoDocumento = resultado.es_liquidacion
+      ? "LIQUIDACION"
+      : "FINIQUITO";
+    const folio = String(resultado.id_finiquito || resultado.id || "").padStart(
+      3,
+      "0",
+    );
     const fechaBaja = resultado.fecha_baja
       ? dayjs(resultado.fecha_baja).format("DD/MM/YYYY")
       : "—";
@@ -776,17 +794,29 @@ export default function PageFiniquitosLiquidaciones() {
     sectionTitle("Datos del empleado");
     needSpace(20);
     fieldPair("Nombre completo", empleadoName, marginLeft, y);
-    fieldPair("Puesto", resultado.puesto || "—", marginLeft + contentWidth / 2 + 4, y);
-    y += 16;
-    fieldPair("Departamento", resultado.departamento || "—", marginLeft, y);
     fieldPair(
-      "Fecha ingreso",
-      resultado.fecha_ingreso ? dayjs(resultado.fecha_ingreso).format("DD/MM/YYYY") : "—",
+      "Puesto",
+      resultado.puesto || "—",
       marginLeft + contentWidth / 2 + 4,
       y,
     );
     y += 16;
-    fieldPair("Anios trabajados", `${resultado.años_trabajados || 0}`, marginLeft, y);
+    fieldPair("Departamento", resultado.departamento || "—", marginLeft, y);
+    fieldPair(
+      "Fecha ingreso",
+      resultado.fecha_ingreso
+        ? dayjs(resultado.fecha_ingreso).format("DD/MM/YYYY")
+        : "—",
+      marginLeft + contentWidth / 2 + 4,
+      y,
+    );
+    y += 16;
+    fieldPair(
+      "Anios trabajados",
+      `${resultado.años_trabajados || 0}`,
+      marginLeft,
+      y,
+    );
     fieldPair(
       "Salario diario",
       money(resultado.salario_diario),
@@ -873,9 +903,14 @@ export default function PageFiniquitosLiquidaciones() {
         doc.setFont(FONT, "normal");
         doc.setFontSize(7.5);
         doc.setTextColor(...ADAMIA.text2);
-        doc.text(companyName.slice(0, 40), pageWidth - marginRight - 40, yFirmas + 10, {
-          align: "center",
-        });
+        doc.text(
+          companyName.slice(0, 40),
+          pageWidth - marginRight - 40,
+          yFirmas + 10,
+          {
+            align: "center",
+          },
+        );
       }
       const lineY = pageHeight - 14;
       const footerTextY = pageHeight - 9;
@@ -887,7 +922,11 @@ export default function PageFiniquitosLiquidaciones() {
       const brandW = doc.getTextWidth("Adamia");
       doc.setFont(FONT, "normal");
       doc.setTextColor(...ADAMIA.muted);
-      doc.text(" · Finiquitos y Liquidaciones", marginLeft + brandW, footerTextY);
+      doc.text(
+        " · Finiquitos y Liquidaciones",
+        marginLeft + brandW,
+        footerTextY,
+      );
       doc.setFontSize(6.5);
       doc.text(
         `Generado el ${fechaGenerado} a las ${horaGenerado} · Folio #${folio}`,
@@ -896,9 +935,14 @@ export default function PageFiniquitosLiquidaciones() {
         { align: "center" },
       );
       doc.setFontSize(7.5);
-      doc.text(`Página ${p} de ${totalPages}`, pageWidth - marginRight, footerTextY, {
-        align: "right",
-      });
+      doc.text(
+        `Página ${p} de ${totalPages}`,
+        pageWidth - marginRight,
+        footerTextY,
+        {
+          align: "right",
+        },
+      );
     }
 
     const nombreArchivo = `${
@@ -1040,7 +1084,6 @@ export default function PageFiniquitosLiquidaciones() {
       }
     });
 
-
   const confirmDelete = async () => {
     if (!deleteRow) return;
     await finiquitosApi.eliminar(deleteRow.id_finiquito || deleteRow.id);
@@ -1050,6 +1093,24 @@ export default function PageFiniquitosLiquidaciones() {
 
   return (
     <div className={`${styles.finTheme} space-y-6`}>
+      {/* Encabezado compacto homologado (Adamia) */}
+      <div>
+        <div className="flex items-center gap-3">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[#2563eb] to-[#7c3aed] shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
+            <Calculator className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-extrabold tracking-tight text-gray-900">
+              Finiquitos y liquidaciones
+            </h1>
+            <p className="text-[12.5px] text-gray-500">
+              Calcula, guarda y consulta finiquitos y liquidaciones.
+            </p>
+          </div>
+        </div>
+        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
+      </div>
+
       {/* Tabs */}
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="grid w-full grid-cols-2 bg-gray-100 rounded-lg p-1">
@@ -1083,7 +1144,6 @@ export default function PageFiniquitosLiquidaciones() {
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-           
             <ActiveFilterChips
               groups={[
                 {
@@ -1197,7 +1257,9 @@ export default function PageFiniquitosLiquidaciones() {
                           #{f.id_finiquito}
                         </td>
                         {!mostrarEmpresa && (
-                          <td className="px-3 py-2">{f.nombre_empresa || "-"}</td>
+                          <td className="px-3 py-2">
+                            {f.nombre_empresa || "-"}
+                          </td>
                         )}
                         <td className="px-3 py-2">{f.nombre_completo}</td>
                         <td className="px-3 py-2">
@@ -1301,7 +1363,7 @@ export default function PageFiniquitosLiquidaciones() {
           )}
 
           {/* Tipo cálculo */}
-          <Card className="fin-card">
+          <Card className="fin-card rounded-xl border-gray-100 bg-white">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Calculator className="h-5 w-5" /> Tipo de Cálculo
@@ -1310,31 +1372,34 @@ export default function PageFiniquitosLiquidaciones() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">
+                  <label className="block text-[11px] font-semibold text-gray-500">
                     Unidad de negocio
                   </label>
 
-                  <Combobox
-                    options={unidadOptions}
-                    value={unidadCalculo}
-                    onChange={(value) => {
-                      setUnidadCalculo(value);
-                      setEmpSearch("");
-                      setIdEmpleado("");
-                      setEmpleadoInfo(null);
-                      setResultado(null);
-                      setGuardable(false);
-                    }}
-                    placeholder="Selecciona unidad para cálculo"
-                  />
+                  <div className="[&_button]:h-[38px] [&_button]:w-full [&_button]:rounded-md [&_button]:border-gray-200 [&_button]:text-[13px] [&_button]:font-medium">
+                    <Combobox
+                      options={unidadOptions}
+                      value={unidadCalculo}
+                      onChange={(value) => {
+                        setUnidadCalculo(value);
+                        setEmpSearch("");
+                        setIdEmpleado("");
+                        setEmpleadoInfo(null);
+                        setResultado(null);
+                        setGuardable(false);
+                      }}
+                      placeholder="Selecciona unidad para cálculo"
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
+                  <label className="block text-[11px] font-semibold text-gray-500">
                     Empleado
                   </label>
                   <div className="relative">
                     <Input
+                      className="h-[38px] rounded-md border-gray-200 text-[13px]"
                       placeholder={
                         unidadCalculo
                           ? "Buscar empleado..."
@@ -1375,21 +1440,22 @@ export default function PageFiniquitosLiquidaciones() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
+                  <label className="block text-[11px] font-semibold text-gray-500">
                     Fecha de baja
                   </label>
                   <Input
                     type="date"
+                    className="h-[38px] rounded-md border-gray-200 text-[13px]"
                     value={fechaBaja}
                     onChange={(e) => setFechaBaja(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
+                  <label className="block text-[11px] font-semibold text-gray-500">
                     Tipo de cálculo
                   </label>
                   <Select value={tipoCalculo} onValueChange={setTipoCalculo}>
-                    <SelectTrigger>
+                    <SelectTrigger className="h-[38px] rounded-md border-gray-200 text-[13px]">
                       <SelectValue placeholder="Selecciona" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1399,14 +1465,14 @@ export default function PageFiniquitosLiquidaciones() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700">
+                  <label className="block text-[11px] font-semibold text-gray-500">
                     Tipo de terminación
                   </label>
                   <Select
                     value={tipoTerminacion}
                     onValueChange={setTipoTerminacion}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="h-[38px] rounded-md border-gray-200 text-[13px]">
                       <SelectValue placeholder="Selecciona" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1742,7 +1808,7 @@ export default function PageFiniquitosLiquidaciones() {
                     <div className="grid grid-cols-1 gap-2">
                       <Button
                         onClick={calcular}
-                        className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm"
+                        className="h-[38px] rounded-md bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
                       >
                         <Calculator className="h-4 w-4 mr-2" /> Calcular
                       </Button>
@@ -1758,7 +1824,9 @@ export default function PageFiniquitosLiquidaciones() {
                         onClick={async () => {
                           setIsPreparingPrintCalc(true);
                           try {
-                            await new Promise((resolve) => setTimeout(resolve, 0));
+                            await new Promise((resolve) =>
+                              setTimeout(resolve, 0),
+                            );
                             const built = await buildPdfFormatoNuevo();
                             if (!built) return;
                             await imprimirPDF(built.doc, built.nombreArchivo);
@@ -1775,7 +1843,9 @@ export default function PageFiniquitosLiquidaciones() {
                         ) : (
                           <Printer className="h-4 w-4 mr-2" />
                         )}
-                        {isPreparingPrintCalc ? "Preparando..." : "Imprimir PDF"}
+                        {isPreparingPrintCalc
+                          ? "Preparando..."
+                          : "Imprimir PDF"}
                       </Button>
                       <Button
                         onClick={guardar}
