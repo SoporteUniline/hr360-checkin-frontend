@@ -19,6 +19,8 @@ export default function EmpleadosDataContainer({
   abrirFormulario,
   fechaDesde,
   resetFilters,
+  visibleColumns,
+  limpiarFiltrosToken,
 }) {
   const [filterOptionsRows, setFilterOptionsRows] = useState([]);
   const [headerFilterMeta, setHeaderFilterMeta] = useState({
@@ -34,7 +36,7 @@ export default function EmpleadosDataContainer({
     filtroNombre,
     departamento,
     estado,
-    fechaDesde
+    fechaDesde,
   );
 
   useEffect(() => {
@@ -123,11 +125,17 @@ export default function EmpleadosDataContainer({
           limit={limit}
           resetFilters={resetFilters}
           onHeaderFilteringMetaChange={setHeaderFilterMeta}
+          visibleColumns={visibleColumns}
+          limpiarFiltrosToken={limpiarFiltrosToken}
         />
         <TablePagination
           page={page}
           limit={limit}
-          total={headerFilterMeta.active ? headerFilterMeta.total : effectiveData?.total || 0}
+          total={
+            headerFilterMeta.active
+              ? headerFilterMeta.total
+              : effectiveData?.total || 0
+          }
           onPageChange={setPage}
         />
       </>
