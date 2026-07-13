@@ -14,8 +14,8 @@ import useSWR, { mutate } from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { useEffect, useMemo, useState } from "react";
 import TablePagination from "@/components/TablePagination";
-import HeaderMultiFilter from "../../registro-asistencia/HeaderMultiFilter";
-import ActiveFilterChips from "../../registro-asistencia/ActiveFilterChips";
+import HeaderMultiFilter from "@/components/tabla/HeaderMultiFilter";
+import ActiveFilterChips from "@/components/tabla/ActiveFilterChips";
 
 export default function PositionsTable({
   id_empresa,

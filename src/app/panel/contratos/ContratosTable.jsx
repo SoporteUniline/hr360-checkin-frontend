@@ -4,8 +4,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { Eye, Pencil, Trash2, Copy } from "lucide-react";
 import styles from "./contratos-theme.module.css";
-import HeaderMultiFilter from "../registro-asistencia/HeaderMultiFilter";
-import ActiveFilterChips from "../registro-asistencia/ActiveFilterChips";
+import HeaderMultiFilter from "@/components/tabla/HeaderMultiFilter";
+import ActiveFilterChips from "@/components/tabla/ActiveFilterChips";
 
 function formatDMY(value) {
   if (!value) return "";

@@ -17,8 +17,8 @@ import { Eye, Inbox, Pencil, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDateDMY } from "@/lib/formatDate";
 import { calcDiasTotalesYHabiles } from "@/lib/permisosDias";
-import HeaderMultiFilter from "../registro-asistencia/HeaderMultiFilter";
-import ActiveFilterChips from "../registro-asistencia/ActiveFilterChips";
+import HeaderMultiFilter from "@/components/tabla/HeaderMultiFilter";
+import ActiveFilterChips from "@/components/tabla/ActiveFilterChips";
 
 /**
  * Tabla de solicitudes de permiso.

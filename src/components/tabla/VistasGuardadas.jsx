@@ -15,13 +15,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
-const LS_VISTAS = "asistencias-vistas";
+export const LS_VISTAS = "asistencias-vistas";
 
 export default function VistasGuardadas({
   hayFiltros,
   obtenerEstado,
   onAplicar,
   onLimpiar,
+  storageKey = LS_VISTAS,
 }) {
   const [vistas, setVistas] = useState([]);
   const [vistaActiva, setVistaActiva] = useState(null);
@@ -30,7 +31,7 @@ export default function VistasGuardadas({
 
   useEffect(() => {
     try {
-      const v = JSON.parse(window.localStorage.getItem(LS_VISTAS));
+      const v = JSON.parse(window.localStorage.getItem(storageKey));
       if (Array.isArray(v)) setVistas(v);
     } catch {
       // sin vistas guardadas
@@ -40,7 +41,7 @@ export default function VistasGuardadas({
   const persistir = (next) => {
     setVistas(next);
     try {
-      window.localStorage.setItem(LS_VISTAS, JSON.stringify(next));
+      window.localStorage.setItem(storageKey, JSON.stringify(next));
     } catch {
       // localStorage no disponible
     }

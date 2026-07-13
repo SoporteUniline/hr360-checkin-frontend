@@ -33,11 +33,11 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import useDepartamentosData from "@/hooks/useDepartamentosData";
 import ResumenAsistencia from "./ResumenAsistencia";
 import RangoFechasModal from "@/components/filtros/RangoFechasModal";
-import VistasGuardadas from "./VistasGuardadas";
+import VistasGuardadas from "@/components/tabla/VistasGuardadas";
 import ColumnasSelector, {
   cargarColumnasGuardadas,
   LS_COLUMNAS,
-} from "./ColumnasSelector";
+} from "@/components/tabla/ColumnasSelector";
 import { COLUMNAS_ASISTENCIA } from "./AsistenciaTable";
 
 dayjs.extend(utc);

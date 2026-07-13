@@ -15,8 +15,8 @@ import dayjs from "dayjs";
 import "dayjs/locale/es";
 import { formatDateDMY } from "@/lib/formatDate";
 import { useEffect, useMemo, useState } from "react";
-import HeaderMultiFilter from "../registro-asistencia/HeaderMultiFilter";
-import ActiveFilterChips from "../registro-asistencia/ActiveFilterChips";
+import HeaderMultiFilter from "@/components/tabla/HeaderMultiFilter";
+import ActiveFilterChips from "@/components/tabla/ActiveFilterChips";
 
 dayjs.locale("es");
 

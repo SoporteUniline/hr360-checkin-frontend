@@ -1,7 +1,8 @@
 "use client";
 
 // Selector de columnas visibles con persistencia (localStorage).
-// Las columnas disponibles vienen del registro COLUMNAS_ASISTENCIA de la tabla.
+// Componente compartido: cada página pasa su registro de columnas y su
+// storageKey propio (p. ej. "asistencias-columnas-visibles").
 
 import {
   Popover,
@@ -14,9 +15,9 @@ import { Columns3, ChevronDown } from "lucide-react";
 
 export const LS_COLUMNAS = "asistencias-columnas-visibles";
 
-export function cargarColumnasGuardadas(columnas) {
+export function cargarColumnasGuardadas(columnas, storageKey = LS_COLUMNAS) {
   try {
-    const s = JSON.parse(window.localStorage.getItem(LS_COLUMNAS));
+    const s = JSON.parse(window.localStorage.getItem(storageKey));
     if (Array.isArray(s) && s.length >= 2) {
       const validas = columnas.map((c) => c.key);
       const filtradas = s.filter((k) => validas.includes(k));
@@ -28,7 +29,12 @@ export function cargarColumnasGuardadas(columnas) {
   return columnas.filter((c) => !c.extra).map((c) => c.key);
 }
 
-export default function ColumnasSelector({ columnas, visibles, onChange }) {
+export default function ColumnasSelector({
+  columnas,
+  visibles,
+  onChange,
+  storageKey = LS_COLUMNAS,
+}) {
   const toggle = (key, checked) => {
     let next;
     if (checked) {
@@ -42,7 +48,7 @@ export default function ColumnasSelector({ columnas, visibles, onChange }) {
     }
     onChange(next);
     try {
-      window.localStorage.setItem(LS_COLUMNAS, JSON.stringify(next));
+      window.localStorage.setItem(storageKey, JSON.stringify(next));
     } catch {
       // sin persistencia si localStorage no está disponible
     }

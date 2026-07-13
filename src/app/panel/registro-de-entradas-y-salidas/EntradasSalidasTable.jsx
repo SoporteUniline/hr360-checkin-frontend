@@ -15,8 +15,8 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { useEffect, useMemo, useState } from "react";
-import HeaderMultiFilter from "../registro-asistencia/HeaderMultiFilter";
-import ActiveFilterChips from "../registro-asistencia/ActiveFilterChips";
+import HeaderMultiFilter from "@/components/tabla/HeaderMultiFilter";
+import ActiveFilterChips from "@/components/tabla/ActiveFilterChips";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
 dayjs.extend(utc);

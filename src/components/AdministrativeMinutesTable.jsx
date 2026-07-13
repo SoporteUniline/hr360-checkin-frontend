@@ -13,8 +13,8 @@ import dayjs from "dayjs";
 import "dayjs/locale/es";
 import React, { useEffect, useMemo, useState } from "react";
 import { Eye, Pencil, Trash2 } from "lucide-react";
-import HeaderMultiFilter from "@/app/panel/registro-asistencia/HeaderMultiFilter";
-import ActiveFilterChips from "@/app/panel/registro-asistencia/ActiveFilterChips";
+import HeaderMultiFilter from "@/components/tabla/HeaderMultiFilter";
+import ActiveFilterChips from "@/components/tabla/ActiveFilterChips";
 
 dayjs.locale("es");
 
