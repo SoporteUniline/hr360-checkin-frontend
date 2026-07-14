@@ -1,4 +1,4 @@
-"use client";
+// "use client";
 
 // Encabezado compacto estándar Adamia: tile degradado 40px + título +
 // subtítulo + regla de marca. Mismo markup aprobado en Asistencias.
