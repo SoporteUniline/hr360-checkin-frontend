@@ -52,7 +52,6 @@ import {
 } from "@/components/ui/table";
 import { useAuth } from "@/context/AuthContext";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
-import EllipsisLoader from "@/components/loading/EllipsisLoader";
 import SystemMessageRenderer from "@/components/system-messages/SystemMessageRenderer";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import WeeklyTrend from "./WeeklyTrend";
@@ -240,10 +239,12 @@ export default function DashboardRH() {
     ? `/checador/holidays/${idEmpresa}?page=1&limit=5000&filter=`
     : null;
 
-  const { data: dashResp, error, isLoading } = useSWR(
+  const { data: dashResp, error, isLoading, isValidating } = useSWR(
     dashboardKey,
     fetcherWithToken,
-    swr_config,
+    // keepPreviousData: al cambiar de filtro conserva los datos anteriores en
+    // pantalla mientras llega la nueva respuesta → evita el "flash" de recarga.
+    { ...swr_config, keepPreviousData: true },
   );
   const { data: holidaysResp } = useSWR(holidaysKey, fetcherWithToken, swr_config);
 
@@ -264,15 +265,21 @@ export default function DashboardRH() {
 
   if (isLoading && !data) {
     return (
-      <div className="mx-auto w-full max-w-7xl px-1 py-6">
-        <EllipsisLoader />
+      <div className="mx-auto w-full max-w-[1600px] px-1 py-4 space-y-4">
+        <DashboardFilters value={filters} onChange={setFilters} />
+        <div className="flex min-h-[50vh] items-center justify-center">
+          <div className="flex flex-col items-center gap-3 text-zinc-400">
+            <RefreshCw className="size-6 animate-spin text-violet-500" />
+            <span className="text-sm">Cargando dashboard…</span>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="mx-auto w-full max-w-7xl px-1 py-6 space-y-4">
+      <div className="mx-auto w-full max-w-[1600px] px-1 py-6 space-y-4">
         <DashboardFilters value={filters} onChange={setFilters} />
         <div className="rounded-xl border bg-white p-6 text-sm text-rose-600">
           No se pudo cargar el dashboard. Verifica tu conexión o los filtros
@@ -316,16 +323,23 @@ export default function DashboardRH() {
   const rotacion = data.rotacion || null;
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-1 py-4 space-y-4">
+    <div className="mx-auto w-full max-w-[1600px] px-1 py-4 space-y-4">
       <SystemMessageRenderer tipo="interna" contexto="dashboard" />
 
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">
-          Dashboard de Recursos Humanos
-        </h1>
-        <p className="mt-0.5 text-sm text-zinc-500">
-          Asistencia, permisos y plantilla · vista consolidada con filtros
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">
+            Dashboard de Recursos Humanos
+          </h1>
+          <p className="mt-0.5 text-sm text-zinc-500">
+            Asistencia, permisos y plantilla · vista consolidada con filtros
+          </p>
+        </div>
+        {isValidating && (
+          <span className="mt-1 inline-flex items-center gap-1.5 rounded-full border bg-white px-2.5 py-1 text-xs text-zinc-500 shadow-sm">
+            <RefreshCw className="size-3.5 animate-spin text-violet-500" /> Actualizando…
+          </span>
+        )}
       </div>
 
       <DashboardFilters value={filters} onChange={setFilters} />
