@@ -240,25 +240,12 @@ export default function DashboardRH() {
     ? `/checador/holidays/${idEmpresa}?page=1&limit=5000&filter=`
     : null;
 
-  const asistenciasKey = idEmpresa
-    ? `/checador/asistencias${buildQuery({
-        empresa: idEmpresa,
-        fechaInicio: rango.fechaInicio,
-        fechaFin: rango.fechaFin,
-        id_sucursal: filters.id_sucursal,
-        id_departamento: filters.id_departamento,
-        page: 1,
-        limit: 200,
-      })}`
-    : null;
-
   const { data: dashResp, error, isLoading } = useSWR(
     dashboardKey,
     fetcherWithToken,
     swr_config,
   );
   const { data: holidaysResp } = useSWR(holidaysKey, fetcherWithToken, swr_config);
-  const { data: asistResp } = useSWR(asistenciasKey, fetcherWithToken, swr_config);
 
   const data = dashResp?.ok ? dashResp.data : dashResp?.data || null;
 
@@ -271,8 +258,9 @@ export default function DashboardRH() {
       : [];
   }, [holidaysResp]);
 
+  // El detalle de check-ins ahora viaja en la respuesta del dashboard (`presentesDetalle`).
   const asistenciasDetalle =
-    asistResp?.registros || data?.asistenciasDetalle || [];
+    data?.presentesDetalle || data?.asistenciasDetalle || [];
 
   if (isLoading && !data) {
     return (
@@ -299,9 +287,10 @@ export default function DashboardRH() {
   const presentes = pick(data.presentes, data.presentesHoy, 0);
   const tardanzas = pick(data.tardanzas, data.tardanzasHoy, 0);
   const ausentes = pick(data.ausentes, data.ausentesHoy, 0);
-  const asistenciaPct =
+  const asistenciaPct = Math.round(
     pick(data.asistenciaPromedioPct) ??
-    (totalEmpleados > 0 ? Math.round((presentes / totalEmpleados) * 100) : 0);
+      (totalEmpleados > 0 ? (presentes / totalEmpleados) * 100 : 0),
+  );
 
   const ant = data.periodoAnterior || {};
 
@@ -362,13 +351,13 @@ export default function DashboardRH() {
         <KpiCard
           label="Tardanzas" icon={AlarmClock} tone="warn"
           value={tardanzas}
-          sub={data.tardanzasPctSobreRegistros != null ? `${data.tardanzasPctSobreRegistros}% de registros` : "Retrasos"}
+          sub={data.tardanzasPctSobreRegistros != null ? `${Math.round(data.tardanzasPctSobreRegistros)}% de registros` : "Retrasos"}
           delta={<Delta current={tardanzas} prev={ant.tardanzas} goodWhenDown />}
         />
         <KpiCard
           label="Ausentes" icon={XCircle} tone="crit"
           value={ausentes}
-          sub={data.sinChecarPct != null ? `${data.sinChecarPct}% del total` : "Faltas"}
+          sub={data.sinChecarPct != null ? `${Math.round(data.sinChecarPct)}% del total` : "Faltas"}
           delta={<Delta current={ausentes} prev={ant.ausentes} goodWhenDown />}
         />
         <KpiCard
@@ -626,16 +615,18 @@ export default function DashboardRH() {
                   <TableRow className="bg-zinc-50 text-zinc-600">
                     <TableHead className="px-3 py-2 w-10">#</TableHead>
                     <TableHead className="px-3 py-2">Empleado</TableHead>
-                    <TableHead className="px-3 py-2">Empresa</TableHead>
+                    <TableHead className="px-3 py-2">Departamento</TableHead>
+                    <TableHead className="px-3 py-2 text-center">Fecha</TableHead>
                     <TableHead className="px-3 py-2 text-center">Estado</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {(data.sinChecar || []).map((r, idx) => (
-                    <TableRow key={`sc-${r.id_empleado ?? idx}`} className="hover:bg-zinc-50">
+                    <TableRow key={`sc-${r.id_asistencia ?? idx}`} className="hover:bg-zinc-50">
                       <TableCell className="px-3 py-2 text-zinc-400">{idx + 1}</TableCell>
                       <TableCell className="px-3 py-2 font-medium">{r.nombre_empleado}</TableCell>
-                      <TableCell className="px-3 py-2 text-zinc-500">{r.nombre_empresa}</TableCell>
+                      <TableCell className="px-3 py-2 text-zinc-500">{r.departamento || "-"}</TableCell>
+                      <TableCell className="px-3 py-2 text-center tabular-nums">{formatDateDMY(r.fecha)}</TableCell>
                       <TableCell className="px-3 py-2 text-center">
                         <Pill tone="crit"><XCircle className="size-3" /> Sin checar</Pill>
                       </TableCell>
@@ -650,7 +641,8 @@ export default function DashboardRH() {
 
       {/* Detalle de asistencias */}
       <SectionCard
-        title="Asistencias · Detalle" icon={CheckCircle2} iconClass="text-emerald-600" pad={false}
+        title="Registros de asistencia" icon={CheckCircle2} iconClass="text-emerald-600"
+        right={<Pill tone="good">{asistenciasDetalle.length} check-ins</Pill>} pad={false}
       >
         {asistenciasDetalle.length === 0 ? (
           <Empty>No hay registros de asistencia para el periodo.</Empty>
@@ -661,29 +653,33 @@ export default function DashboardRH() {
                 <TableRow className="bg-zinc-50 text-zinc-600">
                   <TableHead className="px-3 py-2">Empleado</TableHead>
                   <TableHead className="px-3 py-2">Departamento</TableHead>
-                  <TableHead className="px-3 py-2">Tipo</TableHead>
+                  <TableHead className="px-3 py-2">Unidad</TableHead>
                   <TableHead className="px-3 py-2 text-center">Fecha</TableHead>
                   <TableHead className="px-3 py-2 text-center">Entrada</TableHead>
                   <TableHead className="px-3 py-2 text-center">Salida</TableHead>
-                  <TableHead className="px-3 py-2 text-center">Asistió</TableHead>
-                  <TableHead className="px-3 py-2">Observaciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {asistenciasDetalle.map((r) => (
-                  <TableRow key={r.id} className="hover:bg-zinc-50">
-                    <TableCell className="px-3 py-2">
-                      {[r.nombre, r.apellido_paterno, r.apellido_materno].filter(Boolean).join(" ")}
-                    </TableCell>
-                    <TableCell className="px-3 py-2">{r.departamento || "-"}</TableCell>
-                    <TableCell className="px-3 py-2">{r.tipo_registro_nombre || "-"}</TableCell>
-                    <TableCell className="px-3 py-2 text-center tabular-nums">{formatDateDMY(r.fecha)}</TableCell>
-                    <TableCell className="px-3 py-2 text-center tabular-nums">{r.entrada ? formatTimeMexico(r.entrada) : "-"}</TableCell>
-                    <TableCell className="px-3 py-2 text-center tabular-nums">{r.salida ? formatTimeMexico(r.salida) : "-"}</TableCell>
-                    <TableCell className="px-3 py-2 text-center">{r.asistencia ? "Sí" : "No"}</TableCell>
-                    <TableCell className="px-3 py-2">{r.notas || "-"}</TableCell>
-                  </TableRow>
-                ))}
+                {asistenciasDetalle.map((r, idx) => {
+                  const salida = r.hora_salida || r.salida;
+                  return (
+                    <TableRow key={`pd-${r.id_asistencia ?? idx}`} className="hover:bg-zinc-50">
+                      <TableCell className="px-3 py-2 font-medium">
+                        {r.nombre_empleado ||
+                          [r.nombre, r.apellido_paterno, r.apellido_materno].filter(Boolean).join(" ")}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-zinc-500">{r.departamento || "-"}</TableCell>
+                      <TableCell className="px-3 py-2 text-zinc-500">{r.sucursal || "-"}</TableCell>
+                      <TableCell className="px-3 py-2 text-center tabular-nums">{formatDateDMY(r.fecha)}</TableCell>
+                      <TableCell className="px-3 py-2 text-center tabular-nums">
+                        {formatTimeMexico(r.hora_entrada || r.entrada)}
+                      </TableCell>
+                      <TableCell className="px-3 py-2 text-center tabular-nums">
+                        {salida ? formatTimeMexico(salida) : "-"}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
@@ -868,7 +864,7 @@ function Heatmap({ heatmap }) {
             {(valores[ri] || []).map((v, ci) => (
               <span
                 key={ci}
-                title={`${u} · ${dias[ci]}: ${v}%`}
+                title={`${u} · ${dias[ci]}: ${Math.round(v ?? 0)}%`}
                 className="h-5 rounded"
                 style={{ background: shade(v) }}
               />
