@@ -52,7 +52,6 @@ import {
 } from "@/components/ui/table";
 import { useAuth } from "@/context/AuthContext";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
-import EllipsisLoader from "@/components/loading/EllipsisLoader";
 import SystemMessageRenderer from "@/components/system-messages/SystemMessageRenderer";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import WeeklyTrend from "./WeeklyTrend";
@@ -240,10 +239,12 @@ export default function DashboardRH() {
     ? `/checador/holidays/${idEmpresa}?page=1&limit=5000&filter=`
     : null;
 
-  const { data: dashResp, error, isLoading } = useSWR(
+  const { data: dashResp, error, isLoading, isValidating } = useSWR(
     dashboardKey,
     fetcherWithToken,
-    swr_config,
+    // keepPreviousData: al cambiar de filtro conserva los datos anteriores en
+    // pantalla mientras llega la nueva respuesta → evita el "flash" de recarga.
+    { ...swr_config, keepPreviousData: true },
   );
   const { data: holidaysResp } = useSWR(holidaysKey, fetcherWithToken, swr_config);
 
@@ -264,15 +265,21 @@ export default function DashboardRH() {
 
   if (isLoading && !data) {
     return (
-      <div className="mx-auto w-full max-w-7xl px-1 py-6">
-        <EllipsisLoader />
+      <div className="mx-auto w-full max-w-[1600px] px-1 py-4 space-y-4">
+        <DashboardFilters value={filters} onChange={setFilters} />
+        <div className="flex min-h-[50vh] items-center justify-center">
+          <div className="flex flex-col items-center gap-3 text-zinc-400">
+            <RefreshCw className="size-6 animate-spin text-violet-500" />
+            <span className="text-sm">Cargando dashboard…</span>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className="mx-auto w-full max-w-7xl px-1 py-6 space-y-4">
+      <div className="mx-auto w-full max-w-[1600px] px-1 py-6 space-y-4">
         <DashboardFilters value={filters} onChange={setFilters} />
         <div className="rounded-xl border bg-white p-6 text-sm text-rose-600">
           No se pudo cargar el dashboard. Verifica tu conexión o los filtros
@@ -316,16 +323,23 @@ export default function DashboardRH() {
   const rotacion = data.rotacion || null;
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-1 py-4 space-y-4">
+    <div className="mx-auto w-full max-w-[1600px] px-1 py-4 space-y-4">
       <SystemMessageRenderer tipo="interna" contexto="dashboard" />
 
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">
-          Dashboard de Recursos Humanos
-        </h1>
-        <p className="mt-0.5 text-sm text-zinc-500">
-          Asistencia, permisos y plantilla · vista consolidada con filtros
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight">
+            Dashboard de Recursos Humanos
+          </h1>
+          <p className="mt-0.5 text-sm text-zinc-500">
+            Asistencia, permisos y plantilla · vista consolidada con filtros
+          </p>
+        </div>
+        {isValidating && (
+          <span className="mt-1 inline-flex items-center gap-1.5 rounded-full border bg-white px-2.5 py-1 text-xs text-zinc-500 shadow-sm">
+            <RefreshCw className="size-3.5 animate-spin text-violet-500" /> Actualizando…
+          </span>
+        )}
       </div>
 
       <DashboardFilters value={filters} onChange={setFilters} />
@@ -575,14 +589,14 @@ export default function DashboardRH() {
               ¡Sin tardanzas en el periodo!
             </div>
           ) : (
-            <div className="max-h-80 overflow-auto">
+            <div className="max-h-[22rem] overflow-y-auto [scrollbar-gutter:stable]">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-zinc-50 text-zinc-600">
                     <TableHead className="px-3 py-2 w-10">#</TableHead>
                     <TableHead className="px-3 py-2">Empleado</TableHead>
                     <TableHead className="px-3 py-2">Empresa</TableHead>
-                    <TableHead className="px-3 py-2">Entrada</TableHead>
+                    <TableHead className="px-3 py-2 text-right">Entrada</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -591,7 +605,7 @@ export default function DashboardRH() {
                       <TableCell className="px-3 py-2 text-zinc-400">{idx + 1}</TableCell>
                       <TableCell className="px-3 py-2 font-medium">{t.nombre_empleado}</TableCell>
                       <TableCell className="px-3 py-2 text-zinc-500">{t.nombre_empresa}</TableCell>
-                      <TableCell className="px-3 py-2 text-amber-700 tabular-nums">
+                      <TableCell className="px-3 py-2 text-right text-amber-700 tabular-nums">
                         {t.hora_entrada ? formatTimeMexico(t.hora_entrada) : "-"}
                       </TableCell>
                     </TableRow>
@@ -604,20 +618,19 @@ export default function DashboardRH() {
 
         <SectionCard
           title="Sin checar" icon={XCircle} iconClass="text-rose-600"
-          right={<Pill tone="crit">{pick(data.sinChecarCount, (data.sinChecar || []).length)} empleados</Pill>} pad={false}
+          right={<Pill tone="crit">{pick(data.sinChecarCount, (data.sinChecar || []).length)} registros</Pill>} pad={false}
         >
           {(data.sinChecar || []).length === 0 ? (
             <Empty>Todos registraron movimiento</Empty>
           ) : (
-            <div className="max-h-80 overflow-auto">
+            <div className="max-h-[22rem] overflow-y-auto [scrollbar-gutter:stable]">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-zinc-50 text-zinc-600">
                     <TableHead className="px-3 py-2 w-10">#</TableHead>
                     <TableHead className="px-3 py-2">Empleado</TableHead>
                     <TableHead className="px-3 py-2">Departamento</TableHead>
-                    <TableHead className="px-3 py-2 text-center">Fecha</TableHead>
-                    <TableHead className="px-3 py-2 text-center">Estado</TableHead>
+                    <TableHead className="px-3 py-2 text-right">Fecha</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -626,10 +639,7 @@ export default function DashboardRH() {
                       <TableCell className="px-3 py-2 text-zinc-400">{idx + 1}</TableCell>
                       <TableCell className="px-3 py-2 font-medium">{r.nombre_empleado}</TableCell>
                       <TableCell className="px-3 py-2 text-zinc-500">{r.departamento || "-"}</TableCell>
-                      <TableCell className="px-3 py-2 text-center tabular-nums">{formatDateDMY(r.fecha)}</TableCell>
-                      <TableCell className="px-3 py-2 text-center">
-                        <Pill tone="crit"><XCircle className="size-3" /> Sin checar</Pill>
-                      </TableCell>
+                      <TableCell className="px-3 py-2 text-right tabular-nums text-zinc-500">{formatDateDMY(r.fecha)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -647,7 +657,7 @@ export default function DashboardRH() {
         {asistenciasDetalle.length === 0 ? (
           <Empty>No hay registros de asistencia para el periodo.</Empty>
         ) : (
-          <div className="max-h-[26rem] overflow-auto">
+          <div className="max-h-[26rem] overflow-y-auto [scrollbar-gutter:stable]">
             <Table>
               <TableHeader>
                 <TableRow className="bg-zinc-50 text-zinc-600">
