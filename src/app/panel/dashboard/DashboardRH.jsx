@@ -589,14 +589,14 @@ export default function DashboardRH() {
               ¡Sin tardanzas en el periodo!
             </div>
           ) : (
-            <div className="max-h-80 overflow-auto">
+            <div className="max-h-[22rem] overflow-y-auto [scrollbar-gutter:stable]">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-zinc-50 text-zinc-600">
                     <TableHead className="px-3 py-2 w-10">#</TableHead>
                     <TableHead className="px-3 py-2">Empleado</TableHead>
                     <TableHead className="px-3 py-2">Empresa</TableHead>
-                    <TableHead className="px-3 py-2">Entrada</TableHead>
+                    <TableHead className="px-3 py-2 text-right">Entrada</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -605,7 +605,7 @@ export default function DashboardRH() {
                       <TableCell className="px-3 py-2 text-zinc-400">{idx + 1}</TableCell>
                       <TableCell className="px-3 py-2 font-medium">{t.nombre_empleado}</TableCell>
                       <TableCell className="px-3 py-2 text-zinc-500">{t.nombre_empresa}</TableCell>
-                      <TableCell className="px-3 py-2 text-amber-700 tabular-nums">
+                      <TableCell className="px-3 py-2 text-right text-amber-700 tabular-nums">
                         {t.hora_entrada ? formatTimeMexico(t.hora_entrada) : "-"}
                       </TableCell>
                     </TableRow>
@@ -618,20 +618,19 @@ export default function DashboardRH() {
 
         <SectionCard
           title="Sin checar" icon={XCircle} iconClass="text-rose-600"
-          right={<Pill tone="crit">{pick(data.sinChecarCount, (data.sinChecar || []).length)} empleados</Pill>} pad={false}
+          right={<Pill tone="crit">{pick(data.sinChecarCount, (data.sinChecar || []).length)} registros</Pill>} pad={false}
         >
           {(data.sinChecar || []).length === 0 ? (
             <Empty>Todos registraron movimiento</Empty>
           ) : (
-            <div className="max-h-80 overflow-auto">
+            <div className="max-h-[22rem] overflow-y-auto [scrollbar-gutter:stable]">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-zinc-50 text-zinc-600">
                     <TableHead className="px-3 py-2 w-10">#</TableHead>
                     <TableHead className="px-3 py-2">Empleado</TableHead>
                     <TableHead className="px-3 py-2">Departamento</TableHead>
-                    <TableHead className="px-3 py-2 text-center">Fecha</TableHead>
-                    <TableHead className="px-3 py-2 text-center">Estado</TableHead>
+                    <TableHead className="px-3 py-2 text-right">Fecha</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -640,10 +639,7 @@ export default function DashboardRH() {
                       <TableCell className="px-3 py-2 text-zinc-400">{idx + 1}</TableCell>
                       <TableCell className="px-3 py-2 font-medium">{r.nombre_empleado}</TableCell>
                       <TableCell className="px-3 py-2 text-zinc-500">{r.departamento || "-"}</TableCell>
-                      <TableCell className="px-3 py-2 text-center tabular-nums">{formatDateDMY(r.fecha)}</TableCell>
-                      <TableCell className="px-3 py-2 text-center">
-                        <Pill tone="crit"><XCircle className="size-3" /> Sin checar</Pill>
-                      </TableCell>
+                      <TableCell className="px-3 py-2 text-right tabular-nums text-zinc-500">{formatDateDMY(r.fecha)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -661,7 +657,7 @@ export default function DashboardRH() {
         {asistenciasDetalle.length === 0 ? (
           <Empty>No hay registros de asistencia para el periodo.</Empty>
         ) : (
-          <div className="max-h-[26rem] overflow-auto">
+          <div className="max-h-[26rem] overflow-y-auto [scrollbar-gutter:stable]">
             <Table>
               <TableHeader>
                 <TableRow className="bg-zinc-50 text-zinc-600">
