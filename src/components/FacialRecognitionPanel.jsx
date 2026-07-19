@@ -27,8 +27,15 @@ const FacialRecognitionPanel = ({
   const countdownTimeoutRef = useRef(null);
 
   const isProcessingRef = useRef(false);
+  const isDetectingRef = useRef(false);
   const lastCheckTimeRef = useRef(0);
   const MIN_INTERVAL = 3000;
+  // Tiempo de espera tras detectar el rostro antes de capturar. Antes eran
+  // 1000 ms fijos; se reduce para que cada checada sea más ágil.
+  const CAPTURE_DELAY = 300;
+  // Edad máxima aceptada del fix de GPS (ms). Antes era 0 (fix nuevo siempre),
+  // lo que añadía segundos por checada. Se permite reusar un fix reciente.
+  const GPS_MAX_AGE = 30000;
 
   const shutdownCamera = () => {
     try {
@@ -108,17 +115,33 @@ const FacialRecognitionPanel = ({
           await window.faceapi.nets.ssdMobilenetv1.loadFromUri("/models");
           await window.faceapi.nets.faceLandmark68Net.loadFromUri("/models");
           await window.faceapi.nets.faceRecognitionNet.loadFromUri("/models");
+          await warmupFaceApi();
           setFaceApiLoaded(true);
         };
 
         document.head.appendChild(script);
       } else {
+        await warmupFaceApi();
         setFaceApiLoaded(true);
       }
     };
 
     loadFaceApi();
   }, []);
+
+  // Warmup: corre una inferencia en blanco para compilar shaders y que el
+  // primer reconocimiento real no salga lento (best-effort, no bloquea).
+  const warmupFaceApi = async () => {
+    try {
+      if (!window.faceapi) return;
+      const warm = document.createElement("canvas");
+      warm.width = 160;
+      warm.height = 160;
+      await window.faceapi.detectSingleFace(warm);
+    } catch {
+      // el warmup es opcional; si falla, el flujo sigue normal
+    }
+  };
 
   useEffect(() => {
     const startCamera = async () => {
@@ -175,25 +198,34 @@ const FacialRecognitionPanel = ({
     if (!videoRef.current || !canvasRef.current || !isOpen) return;
 
     detectionIntervalRef.current = setInterval(async () => {
+      // Guardia de reentrada: si la inferencia anterior aún no termina (equipos
+      // lentos), no encimamos otra detección en paralelo.
+      if (isDetectingRef.current) return;
+
       const canvas = canvasRef.current;
       const video = videoRef.current;
       if (!canvas || !video || video.readyState !== 4) return;
 
-      canvas.width = video.videoWidth || 640;
-      canvas.height = video.videoHeight || 480;
-      const ctx = canvas.getContext("2d", { willReadFrequently: true });
-      ctx.drawImage(video, 0, 0);
+      isDetectingRef.current = true;
+      try {
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        ctx.drawImage(video, 0, 0);
 
-      const detection = await window.faceapi.detectSingleFace(canvas);
+        const detection = await window.faceapi.detectSingleFace(canvas);
 
-      if (detection) {
-        setFaceDetected(true);
-        if (!isProcessingRef.current) {
-          isProcessingRef.current = true;
-          startDelay();
+        if (detection) {
+          setFaceDetected(true);
+          if (!isProcessingRef.current) {
+            isProcessingRef.current = true;
+            startDelay();
+          }
+        } else {
+          setFaceDetected(false);
         }
-      } else {
-        setFaceDetected(false);
+      } finally {
+        isDetectingRef.current = false;
       }
     }, 300);
   };
@@ -207,7 +239,7 @@ const FacialRecognitionPanel = ({
 
     countdownTimeoutRef.current = setTimeout(() => {
       captureAndRecognize();
-    }, 1000);
+    }, CAPTURE_DELAY);
   };
 
   const errorCriticalRef = useRef(false);
@@ -248,7 +280,7 @@ const FacialRecognitionPanel = ({
           navigator.geolocation.getCurrentPosition(resolve, reject, {
             enableHighAccuracy: true,
             timeout: 10000,
-            maximumAge: 0,
+            maximumAge: GPS_MAX_AGE,
           }),
         );
         latitud_actual = position.coords.latitude;

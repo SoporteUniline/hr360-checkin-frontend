@@ -5,8 +5,6 @@ import useEmpleadosData from "@/hooks/useEmpleadosData";
 import useTiposPermisoData from "@/hooks/useTiposPermisoData";
 import useAsistenciaActions from "@/hooks/useAsistenciaActions";
 import AsistenciaTable from "./AsistenciaTable";
-import AsistenciaDetalleSheet from "./AsistenciaDetalleSheet";
-import HistorialEmpleadoDialog from "./HistorialEmpleadoDialog";
 import TablePagination from "@/components/TablePagination";
 import LoadingTable from "@/components/LoadingTable";
 import ErrorPage from "@/components/ErrorPage";
@@ -250,9 +248,6 @@ export default function AsistenciaDataContainer({
     handleSaveClick,
   } = useAsistenciaActions(mutate);
 
-  // Panel lateral de detalle (clic en una fila) y su acceso al historial
-  const [registroDetalle, setRegistroDetalle] = useState(null);
-  const [registroHistorial, setRegistroHistorial] = useState(null);
 
   if (isLoading && !effectiveData) return <LoadingTable rows={10} />;
   if (error) {
@@ -291,27 +286,6 @@ export default function AsistenciaDataContainer({
           setPage={setPage}
           agrupar={agrupar}
           visibleColumns={visibleColumns}
-          onRowClick={(registro) => setRegistroDetalle(registro)}
-        />
-
-        <AsistenciaDetalleSheet
-          registro={registroDetalle}
-          open={Boolean(registroDetalle)}
-          onOpenChange={(abierto) => {
-            if (!abierto) setRegistroDetalle(null);
-          }}
-          onCorregir={readOnly ? undefined : handleEditClick}
-          onVerHistorial={(registro) => setRegistroHistorial(registro)}
-        />
-
-        <HistorialEmpleadoDialog
-          isOpen={Boolean(registroHistorial)}
-          onOpenChange={(abierto) => {
-            if (!abierto) setRegistroHistorial(null);
-          }}
-          empleado={registroHistorial}
-          fecha={fechaInicio}
-          mutateAsistencia={mutate}
         />
 
         {mostrarPaginacion && registros.length > 0 && (

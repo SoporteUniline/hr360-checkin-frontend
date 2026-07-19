@@ -3,7 +3,6 @@
 import useRelojChecadorData from "@/hooks/useRelojChecador";
 import useEntradaSalida from "@/hooks/useEntradaSalida";
 import EntradasSalidasTable from "./EntradasSalidasTable";
-import EntradasDetalleSheet from "./EntradasDetalleSheet";
 import TablePagination from "@/components/TablePagination";
 import LoadingTable from "@/components/LoadingTable";
 import ErrorPage from "@/components/ErrorPage";
@@ -164,7 +163,6 @@ export default function EntradasSalidasDataContainer({
   } = useEntradaSalida(mutate);
 
   // Panel lateral de detalle (clic en una fila)
-  const [registroDetalle, setRegistroDetalle] = useState(null);
 
   useEffect(() => {
     if (!headerFilterMeta.active) return;
@@ -204,17 +202,6 @@ export default function EntradasSalidasDataContainer({
           onResetFilters={onResetFilters}
           agrupar={agrupar}
           visibleColumns={visibleColumns}
-          onRowClick={(registro) => setRegistroDetalle(registro)}
-        />
-
-        <EntradasDetalleSheet
-          registro={registroDetalle}
-          open={Boolean(registroDetalle)}
-          onOpenChange={(abierto) => {
-            if (!abierto) setRegistroDetalle(null);
-          }}
-          onCorregir={handleEditMovimientoClick}
-          empresaActiva={empresaActiva}
         />
         {/* IMPORTANTE (UX):
             Aunque una página venga vacía por cambios de filtros o desajustes temporales,
