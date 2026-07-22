@@ -57,7 +57,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = async (token) => {
-    Cookies.set("token", token);
+    Cookies.set("token", token, { expires: 365 });
     setAuthToken(token); // ← token para todo axios instance
     setIsLoggedIn(true);
     await verifyToken();

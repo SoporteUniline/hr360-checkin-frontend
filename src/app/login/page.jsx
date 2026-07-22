@@ -48,7 +48,7 @@ export default function LoginPage() {
         },
       );
       const { token, tipo_usuario } = response.data;
-      Cookies.set("token", token, { expires: 1 });
+      Cookies.set("token", token, { expires: 365 });
       login(token);
 
       const rutas = {
