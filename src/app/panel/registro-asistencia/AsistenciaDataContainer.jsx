@@ -5,6 +5,7 @@ import useEmpleadosData from "@/hooks/useEmpleadosData";
 import useTiposPermisoData from "@/hooks/useTiposPermisoData";
 import useAsistenciaActions from "@/hooks/useAsistenciaActions";
 import AsistenciaTable from "./AsistenciaTable";
+import AsistenciaMatriz from "./AsistenciaMatriz";
 import TablePagination from "@/components/TablePagination";
 import LoadingTable from "@/components/LoadingTable";
 import ErrorPage from "@/components/ErrorPage";
@@ -45,6 +46,7 @@ export default function AsistenciaDataContainer({
   setSortConfig = () => {},
   agrupar = null,
   visibleColumns = null,
+  vista = "lista",
 }) {
   const { departamentos } = useDepartamentosData(idEmpresa);
   const [filterOptionsRows, setFilterOptionsRows] = useState([]);
@@ -258,6 +260,15 @@ export default function AsistenciaDataContainer({
   return {
     ui: (
       <>
+        {vista === "matriz" ? (
+          <AsistenciaMatriz
+            registros={filterOptionsRows}
+            fechaInicio={fechaInicio}
+            fechaFin={fechaFin}
+            cargando={isLoading && filterOptionsRows.length === 0}
+          />
+        ) : (
+        <>
         <AsistenciaTable
           filtrados={registros}
           filterOptionsRows={filterOptionsRows}
@@ -314,6 +325,8 @@ export default function AsistenciaDataContainer({
               día
             </p>
           </div>
+        )}
+        </>
         )}
       </>
     ),

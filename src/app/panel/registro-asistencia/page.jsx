@@ -16,21 +16,12 @@ import {
   CalendarDays,
   ChevronDown,
   ClipboardCheck,
-  FileBarChart2,
+  Grid3x3,
   Layers,
-  MoreHorizontal,
+  List,
   RotateCcw,
   Search,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import ReporteAsistenciaModal from "./ReporteAsistenciaModal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -98,7 +89,7 @@ export default function ControlAsistencia() {
 
   // Nueva UX de escritorio: rango con modal, agrupación, columnas y detalle
   const [rangoOpen, setRangoOpen] = useState(false);
-  const [reporteOpen, setReporteOpen] = useState(false);
+  const [vista, setVista] = useState("lista"); // "lista" | "matriz"
   const [rangoEtiqueta, setRangoEtiqueta] = useState("Hoy");
   const [agrupar, setAgrupar] = useState(null);
   const [visibleColumns, setVisibleColumns] = useState(null);
@@ -258,6 +249,7 @@ export default function ControlAsistencia() {
     setSortConfig,
     agrupar,
     visibleColumns,
+    vista,
   });
 
   // Mobile view: full-height layout overriding panel padding
@@ -380,24 +372,54 @@ export default function ControlAsistencia() {
           <ChevronDown className="ml-1 h-3.5 w-3.5 text-gray-400" />
         </Button>
 
-        <Select
-          value={agrupar || "none"}
-          onValueChange={(v) => {
-            setAgrupar(v === "none" ? null : v);
-          }}
-        >
-          <SelectTrigger className="h-9 w-auto min-w-[190px] whitespace-nowrap rounded-xl border-gray-200 font-semibold text-gray-700 [&>span]:flex [&>span]:items-center [&>span]:gap-1.5">
-            <Layers className="h-4 w-4 shrink-0 text-gray-500" />
-            <SelectValue placeholder="Agrupar" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">Sin agrupar</SelectItem>
-            <SelectItem value="unidad">Unidad de negocio</SelectItem>
-            <SelectItem value="departamento">Departamento</SelectItem>
-            <SelectItem value="tipo">Tipo de registro</SelectItem>
-            <SelectItem value="estado">Estado</SelectItem>
-          </SelectContent>
-        </Select>
+        {/* Toggle Lista / Matriz */}
+        <div className="inline-flex overflow-hidden rounded-xl border border-gray-200">
+          <button
+            type="button"
+            onClick={() => setVista("lista")}
+            className={`flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold transition-colors ${
+              vista === "lista"
+                ? "bg-[#2563EB] text-white"
+                : "bg-white text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            <List className="h-4 w-4" />
+            Lista
+          </button>
+          <button
+            type="button"
+            onClick={() => setVista("matriz")}
+            className={`flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold transition-colors ${
+              vista === "matriz"
+                ? "bg-[#2563EB] text-white"
+                : "bg-white text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            <Grid3x3 className="h-4 w-4" />
+            Matriz
+          </button>
+        </div>
+
+        {vista === "lista" && (
+          <Select
+            value={agrupar || "none"}
+            onValueChange={(v) => {
+              setAgrupar(v === "none" ? null : v);
+            }}
+          >
+            <SelectTrigger className="h-9 w-auto min-w-[190px] whitespace-nowrap rounded-xl border-gray-200 font-semibold text-gray-700 [&>span]:flex [&>span]:items-center [&>span]:gap-1.5">
+              <Layers className="h-4 w-4 shrink-0 text-gray-500" />
+              <SelectValue placeholder="Agrupar" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Sin agrupar</SelectItem>
+              <SelectItem value="unidad">Unidad de negocio</SelectItem>
+              <SelectItem value="departamento">Departamento</SelectItem>
+              <SelectItem value="tipo">Tipo de registro</SelectItem>
+              <SelectItem value="estado">Estado</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
 
         <Button
           onClick={handleResetFilters}
@@ -410,35 +432,13 @@ export default function ControlAsistencia() {
 
         <div className="flex-1" />
 
-        {Array.isArray(visibleColumns) && (
+        {vista === "lista" && Array.isArray(visibleColumns) && (
           <ColumnasSelector
             columnas={COLUMNAS_ASISTENCIA}
             visibles={visibleColumns}
             onChange={setVisibleColumns}
           />
         )}
-
-        {/* Botón sutil de acciones (reportes) */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              className="rounded-xl border-gray-200 text-gray-600 hover:text-gray-900"
-              title="Acciones"
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-60">
-            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => setReporteOpen(true)}>
-              <FileBarChart2 className="mr-2 h-4 w-4" />
-              Reporte de asistencia (matriz)
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
 
       <VistasGuardadas
@@ -461,17 +461,6 @@ export default function ControlAsistencia() {
           setRangoEtiqueta(etiqueta);
           setPage(1);
         }}
-      />
-
-      <ReporteAsistenciaModal
-        open={reporteOpen}
-        onOpenChange={setReporteOpen}
-        idEmpresa={idEmpresa}
-        fechaInicio={fechaInicio}
-        fechaFin={fechaFin}
-        filtroDepartamento={filtroDepartamento}
-        filtroEmpleado={debouncedFiltroEmpleado}
-        rangoEtiqueta={rangoEtiqueta}
       />
 
       {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
