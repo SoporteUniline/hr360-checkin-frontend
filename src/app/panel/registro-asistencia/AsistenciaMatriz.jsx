@@ -325,8 +325,9 @@ export default function AsistenciaMatriz({
         </Button>
       </div>
 
-      {/* Matriz */}
-      <div className="max-h-[65vh] overflow-auto">
+      {/* Matriz — texto compacto y uniforme; días con scroll horizontal,
+          columnas Nº y Nombre fijas. */}
+      <div className="max-h-[68vh] overflow-auto">
         {cargando ? (
           <div className="flex items-center justify-center gap-2 py-16 text-gray-500">
             <Loader2 className="h-5 w-5 animate-spin" /> Cargando registros…
@@ -336,37 +337,50 @@ export default function AsistenciaMatriz({
             No hay registros en el rango y filtros seleccionados.
           </div>
         ) : (
-          <table className="w-full border-collapse text-[11px]">
+          <table className="w-max min-w-full border-collapse text-[11px] leading-none">
             <thead className="sticky top-0 z-10 bg-[#1f2937] text-white">
               <tr>
-                <th className="sticky left-0 z-20 bg-[#1f2937] px-2 py-1.5 text-center">
+                <th className="sticky left-0 z-20 w-9 min-w-9 bg-[#1f2937] px-1 py-1.5 text-center font-semibold">
                   No.
                 </th>
-                <th className="sticky left-[42px] z-20 bg-[#1f2937] px-2 py-1.5 text-left">
+                <th className="sticky left-9 z-20 w-[190px] min-w-[190px] max-w-[190px] bg-[#1f2937] px-2 py-1.5 text-left font-semibold">
                   Nombre completo
                 </th>
                 {dias.map((d) => (
                   <th
                     key={d.format("YYYY-MM-DD")}
-                    className="px-1 py-1.5 text-center font-semibold"
+                    className="w-8 min-w-8 px-0.5 py-1 text-center font-semibold"
                   >
                     <div>{d.format("DD")}</div>
-                    <div className="text-[9px] opacity-80">{LETRA_DIA[d.day()]}</div>
+                    <div className="text-[9px] font-normal opacity-70">
+                      {LETRA_DIA[d.day()]}
+                    </div>
                   </th>
                 ))}
-                <th className="px-2 py-1.5 text-center">Pres.</th>
-                <th className="px-2 py-1.5 text-center">Faltas</th>
-                <th className="px-2 py-1.5 text-center">Total</th>
-                <th className="px-2 py-1.5 text-center">% Aus.</th>
+                <th className="w-12 min-w-12 px-1 py-1.5 text-center font-semibold">
+                  Pres.
+                </th>
+                <th className="w-12 min-w-12 px-1 py-1.5 text-center font-semibold">
+                  Faltas
+                </th>
+                <th className="w-12 min-w-12 px-1 py-1.5 text-center font-semibold">
+                  Total
+                </th>
+                <th className="w-14 min-w-14 px-1 py-1.5 text-center font-semibold">
+                  % Aus.
+                </th>
               </tr>
             </thead>
             <tbody>
               {empleados.map((emp, i) => (
                 <tr key={emp.key} className="odd:bg-white even:bg-gray-50/60">
-                  <td className="sticky left-0 z-10 bg-inherit px-2 py-1 text-center text-gray-500">
+                  <td className="sticky left-0 z-10 w-9 min-w-9 bg-inherit px-1 py-0.5 text-center text-gray-500">
                     {i + 1}
                   </td>
-                  <td className="sticky left-[42px] z-10 bg-inherit whitespace-nowrap px-2 py-1 font-medium text-gray-900">
+                  <td
+                    className="sticky left-9 z-10 w-[190px] min-w-[190px] max-w-[190px] truncate bg-inherit px-2 py-0.5 font-medium text-gray-900"
+                    title={emp.nombre}
+                  >
                     {emp.nombre}
                   </td>
                   {dias.map((d) => {
@@ -374,22 +388,22 @@ export default function AsistenciaMatriz({
                     return (
                       <td
                         key={d.format("YYYY-MM-DD")}
-                        className={`px-1 py-1 text-center font-bold ${c.text} ${c.bg}`}
+                        className={`w-8 min-w-8 px-0.5 py-0.5 text-center font-bold ${c.text} ${c.bg}`}
                       >
                         {c.code}
                       </td>
                     );
                   })}
-                  <td className="px-2 py-1 text-center font-semibold text-green-700">
+                  <td className="px-1 py-0.5 text-center font-semibold text-green-700">
                     {emp.presentes}
                   </td>
-                  <td className="px-2 py-1 text-center font-bold text-red-700">
+                  <td className="px-1 py-0.5 text-center font-bold text-red-700">
                     {emp.faltas}
                   </td>
-                  <td className="px-2 py-1 text-center text-gray-700">
+                  <td className="px-1 py-0.5 text-center text-gray-700">
                     {emp.total}
                   </td>
-                  <td className="px-2 py-1 text-center font-semibold text-gray-900">
+                  <td className="px-1 py-0.5 text-center font-semibold text-gray-900">
                     {emp.pctAusencia}%
                   </td>
                 </tr>
