@@ -16,10 +16,21 @@ import {
   CalendarDays,
   ChevronDown,
   ClipboardCheck,
+  FileBarChart2,
   Layers,
+  MoreHorizontal,
   RotateCcw,
   Search,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import ReporteAsistenciaModal from "./ReporteAsistenciaModal";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -87,6 +98,7 @@ export default function ControlAsistencia() {
 
   // Nueva UX de escritorio: rango con modal, agrupación, columnas y detalle
   const [rangoOpen, setRangoOpen] = useState(false);
+  const [reporteOpen, setReporteOpen] = useState(false);
   const [rangoEtiqueta, setRangoEtiqueta] = useState("Hoy");
   const [agrupar, setAgrupar] = useState(null);
   const [visibleColumns, setVisibleColumns] = useState(null);
@@ -405,6 +417,28 @@ export default function ControlAsistencia() {
             onChange={setVisibleColumns}
           />
         )}
+
+        {/* Botón sutil de acciones (reportes) */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-xl border-gray-200 text-gray-600 hover:text-gray-900"
+              title="Acciones"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-60">
+            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => setReporteOpen(true)}>
+              <FileBarChart2 className="mr-2 h-4 w-4" />
+              Reporte de asistencia (matriz)
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <VistasGuardadas
@@ -427,6 +461,17 @@ export default function ControlAsistencia() {
           setRangoEtiqueta(etiqueta);
           setPage(1);
         }}
+      />
+
+      <ReporteAsistenciaModal
+        open={reporteOpen}
+        onOpenChange={setReporteOpen}
+        idEmpresa={idEmpresa}
+        fechaInicio={fechaInicio}
+        fechaFin={fechaFin}
+        filtroDepartamento={filtroDepartamento}
+        filtroEmpleado={debouncedFiltroEmpleado}
+        rangoEtiqueta={rangoEtiqueta}
       />
 
       {/* Accesos Rápidos - Componente reutilizable (al final de la página) */}
