@@ -100,9 +100,9 @@ export default function ContratosPage() {
     hasta,
   });
 
-  console.log(data);
   const contratos = data?.data || [];
   const total = data?.total || 0;
+  const estadisticas = data?.estadisticas;
 
   useEffect(() => {
     let isCancelled = false;
@@ -167,8 +167,19 @@ export default function ContratosPage() {
     if (page > totalPages) setPage(1);
   }, [headerFilterMeta, page, limit]);
 
-  // Alinear estadísticas con Apps Script (Vacaciones.html)
+  // Estadísticas del universo completo. Se prefieren las del servidor
+  // (`estadisticas`); el cálculo local es fallback e IMPRECISO porque solo ve
+  // la página actual (antes esto hacía que las tarjetas mostraran números mal).
   const stats = useMemo(() => {
+    const s = estadisticas;
+    if (s && (s.total || s.activos || s.porVencer || s.vencidos)) {
+      return {
+        total: s.total ?? total ?? 0,
+        activos: s.activos ?? 0,
+        porVencer: s.porVencer ?? s.por_vencer ?? 0,
+        vencidos: s.vencidos ?? 0,
+      };
+    }
     const hoy = dayjs().startOf("day");
     let activos = 0;
     let porVencer = 0;
@@ -188,7 +199,7 @@ export default function ContratosPage() {
       }
     });
     return { total: total || contratos.length, activos, porVencer, vencidos };
-  }, [contratos, total]);
+  }, [contratos, total, estadisticas]);
 
   const exportarExcel = () => {
     if (!contratos || contratos.length === 0) return;
