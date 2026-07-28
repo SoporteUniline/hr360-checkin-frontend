@@ -252,6 +252,11 @@ const menuGroups = [
             icon: CalendarDays,
           },
           {
+            title: "Planeación de vacaciones",
+            url: "/panel/vacaciones/planeacion",
+            icon: CalendarDays,
+          },
+          {
             title: "Vacaciones por ley",
             url: "/panel/vacaciones/por-ley",
             icon: BookOpen,
