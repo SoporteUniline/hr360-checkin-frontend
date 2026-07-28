@@ -13,7 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import LoadingTable from "@/components/LoadingTable";
-import { Eye, Inbox, Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, Eye, Inbox, Pencil, Plus, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDateDMY } from "@/lib/formatDate";
 import { EstadoBadge } from "@/lib/estados";
@@ -39,6 +39,8 @@ export default function PermisosTable({
   onChanged,
   onView,
   onDelete,
+  onAprobar,
+  onRechazar,
   festivosSet = new Set(),
 }) {
   const [unidadSeleccionada, setUnidadSeleccionada] = useState([]);
@@ -370,6 +372,28 @@ export default function PermisosTable({
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
+                        {row.estado === "Pendiente" && (
+                          <>
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="h-8 w-8 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                              title="Aprobar"
+                              onClick={() => onAprobar?.(row)}
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="h-8 w-8 border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                              title="Rechazar"
+                              onClick={() => onRechazar?.(row)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
                         <Button
                           size="icon"
                           variant="outline"

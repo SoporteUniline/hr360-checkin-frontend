@@ -41,6 +41,7 @@ import { fetcherWithToken } from "@/lib/fetcher";
 import { Combobox } from "@/components/Combobox";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import { permisosApi } from "@/lib/permisosApi";
+import { useSnackbar } from "notistack";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 
 /**
@@ -53,6 +54,7 @@ import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
  */
 export default function PermisosPage() {
   const { dataUser } = useAuth();
+  const { enqueueSnackbar } = useSnackbar();
   const searchParams = useSearchParams();
 
   // Lógica Multiempresa replicada
@@ -474,6 +476,33 @@ export default function PermisosPage() {
   });
   const registrosCalendario = calendarioResp?.data || [];
 
+  // Aprobar/Rechazar una solicitud Pendiente en un solo clic desde la tabla.
+  // Usa el mismo endpoint que el diálogo (permisosApi.actualizarEstado).
+  const cambiarEstadoRapido = async (row, nuevoEstado) => {
+    const id = row?.id;
+    if (!id) return;
+    try {
+      await permisosApi.actualizarEstado(
+        id,
+        nuevoEstado,
+        dataUser?.id_usuario ?? null,
+      );
+      enqueueSnackbar(
+        nuevoEstado === "Aprobado"
+          ? "Permiso aprobado"
+          : "Permiso rechazado",
+        { variant: "success" },
+      );
+      mutate();
+      mutateCalendario && mutateCalendario();
+    } catch (e) {
+      enqueueSnackbar(
+        e?.response?.data?.error || "No se pudo actualizar el permiso",
+        { variant: "error" },
+      );
+    }
+  };
+
   // Construcción del grid del calendario a partir de `registrosCalendario`
   // Estructura:
   // - empleados: lista única de empleados
@@ -713,6 +742,8 @@ export default function PermisosPage() {
               setDeleteId(row?.id ?? null);
               setOpenDelete(true);
             }}
+            onAprobar={(row) => cambiarEstadoRapido(row, "Aprobado")}
+            onRechazar={(row) => cambiarEstadoRapido(row, "Rechazado")}
           />
           {/* Paginación */}
           <TablePagination
