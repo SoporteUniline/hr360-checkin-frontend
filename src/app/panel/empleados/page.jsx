@@ -87,7 +87,9 @@ export default function RegistroEmpleados() {
   useEffect(() => {
     const idParam = searchParams.get("id");
     if (!idParam) return;
-    abrirFormulario({ id_empleado: idParam }, false, true);
+    // modo=editar abre en edición; por defecto, solo lectura.
+    const editarParam = searchParams.get("modo") === "editar";
+    abrirFormulario({ id_empleado: idParam }, editarParam, !editarParam);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 

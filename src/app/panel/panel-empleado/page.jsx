@@ -23,7 +23,9 @@ import {
   Menu,
   FolderOpen,
   UserCircle2,
+  Pencil,
 } from "lucide-react";
+import { EstadoBadge } from "@/lib/estados";
 import {
   Sheet,
   SheetContent,
@@ -197,7 +199,16 @@ export default function PanelEmpleadoPage() {
   }
 
   const estadoEmpleado = empleadoActual?.estado || "";
-  const estadoEsActivo = estadoEmpleado.toLowerCase() === "activo";
+
+  // Foto real del empleado. La app guarda `foto_perfil` como URL absoluta;
+  // si no viene (o es ruta local vieja), se muestran las iniciales.
+  const fotoPerfil = datosEmpleado?.informacion_general?.foto_perfil;
+  const fotoUrl =
+    typeof fotoPerfil === "string" && /^https?:\/\//.test(fotoPerfil)
+      ? fotoPerfil
+      : null;
+  const idEmpleadoActual =
+    datosEmpleado?.informacion_general?.id_empleado || empleadoSeleccionado;
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col bg-[#f9fafb]">
@@ -302,12 +313,24 @@ export default function PanelEmpleadoPage() {
               <div className="mb-4 rounded-[10px] border border-gray-200 bg-white p-4">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                   <div className="flex min-w-0 flex-1 items-center gap-3">
-                    {/* Avatar */}
-                    <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-accent text-lg font-bold text-white">
-                      {obtenerIniciales(
-                        datosEmpleado.informacion_general?.nombre_completo,
-                      )}
-                    </div>
+                    {/* Avatar: foto real si existe, si no iniciales */}
+                    {fotoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={fotoUrl}
+                        alt={
+                          datosEmpleado.informacion_general?.nombre_completo ||
+                          "Empleado"
+                        }
+                        className="h-14 w-14 flex-shrink-0 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-accent text-lg font-bold text-white">
+                        {obtenerIniciales(
+                          datosEmpleado.informacion_general?.nombre_completo,
+                        )}
+                      </div>
+                    )}
                     {/* Nombre y meta */}
                     <div className="min-w-0">
                       <h2 className="truncate text-lg font-extrabold tracking-tight text-gray-900">
@@ -349,16 +372,24 @@ export default function PanelEmpleadoPage() {
                       <div className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
                         Estado
                       </div>
-                      <span
-                        className={`inline-block rounded-full px-2.5 py-0.5 text-[10.5px] font-bold ${
-                          estadoEsActivo
-                            ? "border border-emerald-100 bg-emerald-50 text-emerald-700"
-                            : "border border-gray-200 bg-gray-50 text-gray-600"
-                        }`}
-                      >
-                        {estadoEmpleado || "N/A"}
-                      </span>
+                      <EstadoBadge
+                        estado={estadoEmpleado || "N/A"}
+                        className="text-[10.5px]"
+                      />
                     </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() =>
+                        router.push(
+                          `/panel/empleados?id=${idEmpleadoActual}&modo=editar`,
+                        )
+                      }
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      Editar
+                    </Button>
                   </div>
                 </div>
               </div>
