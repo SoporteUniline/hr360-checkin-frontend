@@ -30,7 +30,7 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
   return (
     <div>
       <h3 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
-        <FileText className="h-3.5 w-3.5 text-[#2563eb]" />
+        <FileText className="h-3.5 w-3.5 text-brand" />
         Contratos y documentos
       </h3>
 
@@ -56,7 +56,7 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
       )}
 
       <h4 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
-        <ClipboardList className="h-3.5 w-3.5 text-[#2563eb]" />
+        <ClipboardList className="h-3.5 w-3.5 text-brand" />
         Lista de contratos
       </h4>
 
@@ -134,7 +134,7 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
                   <div className="grid grid-cols-1 gap-4 pt-4 lg:grid-cols-2 lg:gap-6">
                     <div>
                       <h5 className="mb-3 flex items-center gap-1.5 border-b pb-2 text-[12.5px] font-bold text-gray-900">
-                        <ClipboardList className="h-3.5 w-3.5 text-[#2563eb]" />
+                        <ClipboardList className="h-3.5 w-3.5 text-brand" />
                         Información general
                       </h5>
                       <div className="space-y-2 text-sm">
@@ -161,7 +161,7 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
                     </div>
                     <div>
                       <h5 className="mb-3 flex items-center gap-1.5 border-b pb-2 text-[12.5px] font-bold text-gray-900">
-                        <Briefcase className="h-3.5 w-3.5 text-[#2563eb]" />
+                        <Briefcase className="h-3.5 w-3.5 text-brand" />
                         Datos del puesto
                       </h5>
                       <div className="space-y-2 text-sm">
@@ -179,7 +179,7 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
                     </div>
                     <div>
                       <h5 className="mb-3 flex items-center gap-1.5 border-b pb-2 text-[12.5px] font-bold text-gray-900">
-                        <CircleDollarSign className="h-3.5 w-3.5 text-[#2563eb]" />
+                        <CircleDollarSign className="h-3.5 w-3.5 text-brand" />
                         Información salarial
                       </h5>
                       <div className="space-y-2 text-sm">
@@ -200,7 +200,7 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
                     </div>
                     <div>
                       <h5 className="mb-3 flex items-center gap-1.5 border-b pb-2 text-[12.5px] font-bold text-gray-900">
-                        <Clock className="h-3.5 w-3.5 text-[#2563eb]" />
+                        <Clock className="h-3.5 w-3.5 text-brand" />
                         Jornada laboral
                       </h5>
                       <div className="space-y-2 text-sm">

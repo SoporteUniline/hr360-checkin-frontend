@@ -294,7 +294,7 @@ export default function PanelEmpleadoDocumentos({
       <div className="bg-white border border-gray-200 rounded-[10px] p-3 sm:p-4">
         {/* Título + botones siempre en la misma fila */}
         <div className="flex items-center gap-2.5">
-          <div className="bg-gradient-to-br from-[#2563eb] to-[#7c3aed] p-2 rounded-lg flex-shrink-0">
+          <div className="bg-gradient-to-br from-brand to-brand-accent p-2 rounded-lg flex-shrink-0">
             <FolderOpen className="w-4 h-4 text-white" />
           </div>
           <div className="flex-1 min-w-0">
@@ -367,7 +367,7 @@ export default function PanelEmpleadoDocumentos({
             </div>
             <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-[#2563eb] to-[#7c3aed] transition-all"
+                className="h-full rounded-full bg-gradient-to-r from-brand to-brand-accent transition-all"
                 style={{ width: `${stats.completitud_pct}%` }}
               />
             </div>
@@ -1036,8 +1036,8 @@ function ModalSubirDocumento({
               className={cn(
                 "border border-dashed rounded-[10px] p-4 text-center cursor-pointer transition-all",
                 isDragActive
-                  ? "border-[#2563eb] bg-blue-50"
-                  : "border-gray-300 hover:border-[#2563eb] hover:bg-blue-50/30",
+                  ? "border-brand bg-blue-50"
+                  : "border-gray-300 hover:border-brand hover:bg-blue-50/30",
               )}
             >
               <input {...getInputProps()} />
@@ -1052,7 +1052,7 @@ function ModalSubirDocumento({
               </p>
             </div>
           ) : (
-            <div className="flex items-center gap-3 border border-[#2563eb] rounded-[10px] p-3 bg-blue-50/30">
+            <div className="flex items-center gap-3 border border-brand rounded-[10px] p-3 bg-blue-50/30">
               <ArchivoIcono mimetype={archivo.type} size="lg" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold truncate">{archivo.name}</p>
@@ -1171,7 +1171,7 @@ function ModalSubirDocumento({
             <div className="space-y-1">
               <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-[#2563eb] to-[#7c3aed] transition-all"
+                  className="h-full rounded-full bg-gradient-to-r from-brand to-brand-accent transition-all"
                   style={{ width: `${progreso}%` }}
                 />
               </div>

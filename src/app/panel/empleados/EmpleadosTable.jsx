@@ -360,7 +360,7 @@ export default function EmpleadosTable({
         </Button>
         <Button
           onClick={() => abrirFormulario(null, false, false)}
-          className="h-9 rounded-md bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
+          className="h-9 rounded-md bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
         >
           <UserPlus className="w-4 h-4 mr-2" />
           Nuevo empleado

@@ -54,21 +54,21 @@ export default function MyAccountReclutador() {
             <TabsList className="bg-transparent h-auto p-0 w-full justify-start min-w-max">
               <TabsTrigger
                 value="cuenta"
-                className="rounded-none border-b-2 border-transparent py-3 px-4 sm:py-4 sm:px-6 text-[12.5px] font-semibold text-gray-500 data-[state=active]:bg-white data-[state=active]:border-[#2563eb] data-[state=active]:text-[#2563eb] data-[state=active]:shadow-none gap-1.5 whitespace-nowrap"
+                className="rounded-none border-b-2 border-transparent py-3 px-4 sm:py-4 sm:px-6 text-[12.5px] font-semibold text-gray-500 data-[state=active]:bg-white data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:shadow-none gap-1.5 whitespace-nowrap"
               >
                 <User className="w-4 h-4 shrink-0" />
                 Mi cuenta
               </TabsTrigger>
               <TabsTrigger
                 value="contrasenia"
-                className="rounded-none border-b-2 border-transparent py-3 px-4 sm:py-4 sm:px-6 text-[12.5px] font-semibold text-gray-500 data-[state=active]:bg-white data-[state=active]:border-[#2563eb] data-[state=active]:text-[#2563eb] data-[state=active]:shadow-none gap-1.5 whitespace-nowrap"
+                className="rounded-none border-b-2 border-transparent py-3 px-4 sm:py-4 sm:px-6 text-[12.5px] font-semibold text-gray-500 data-[state=active]:bg-white data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:shadow-none gap-1.5 whitespace-nowrap"
               >
                 <KeyRound className="w-4 h-4 shrink-0" />
                 Seguridad
               </TabsTrigger>
               <TabsTrigger
                 value="empresa"
-                className="rounded-none border-b-2 border-transparent py-3 px-4 sm:py-4 sm:px-6 text-[12.5px] font-semibold text-gray-500 data-[state=active]:bg-white data-[state=active]:border-[#2563eb] data-[state=active]:text-[#2563eb] data-[state=active]:shadow-none gap-1.5 whitespace-nowrap"
+                className="rounded-none border-b-2 border-transparent py-3 px-4 sm:py-4 sm:px-6 text-[12.5px] font-semibold text-gray-500 data-[state=active]:bg-white data-[state=active]:border-brand data-[state=active]:text-brand data-[state=active]:shadow-none gap-1.5 whitespace-nowrap"
               >
                 <Building className="w-4 h-4 shrink-0" />
                 Mi empresa

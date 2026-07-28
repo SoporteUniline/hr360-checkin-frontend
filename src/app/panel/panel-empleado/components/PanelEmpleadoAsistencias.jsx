@@ -202,7 +202,7 @@ export default function PanelEmpleadoAsistencias({ datosEmpleado }) {
   return (
     <div>
       <h3 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
-        <CalendarCheck2 className="h-3.5 w-3.5 text-[#2563eb]" />
+        <CalendarCheck2 className="h-3.5 w-3.5 text-brand" />
         Registro de asistencias
       </h3>
 
@@ -222,7 +222,7 @@ export default function PanelEmpleadoAsistencias({ datosEmpleado }) {
         </div>
         <div className="h-1.5 overflow-hidden rounded-full bg-gray-100">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-[#2563eb] to-[#7c3aed] transition-all"
+            className="h-full rounded-full bg-gradient-to-r from-brand to-brand-accent transition-all"
             style={{ width: `${porcentaje}%` }}
           />
         </div>
@@ -232,7 +232,7 @@ export default function PanelEmpleadoAsistencias({ datosEmpleado }) {
       {tiposAnalisis.length > 0 && (
         <div className="mb-4 sm:mb-6">
           <h4 className="mb-2 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900 sm:mb-3">
-            <BarChart3 className="h-3.5 w-3.5 text-[#2563eb]" />
+            <BarChart3 className="h-3.5 w-3.5 text-brand" />
             Análisis por tipo de registro
           </h4>
           <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4">

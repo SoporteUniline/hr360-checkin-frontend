@@ -99,7 +99,7 @@ export default function EntradasDetalleSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full gap-0 overflow-y-auto p-0 sm:max-w-[400px]">
         <SheetHeader className="flex-row items-center gap-3.5 space-y-0 px-6 pb-4 pt-6">
-          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-[#2563eb] to-[#7c3aed] text-[15px] font-extrabold text-white shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
+          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-brand to-brand-accent text-[15px] font-extrabold text-white shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
             {iniciales || "—"}
           </div>
           <div className="min-w-0">
@@ -113,7 +113,7 @@ export default function EntradasDetalleSheet({
             </div>
           </div>
         </SheetHeader>
-        <div className="h-[2.5px] bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
+        <div className="h-[2.5px] bg-gradient-to-r from-brand to-brand-accent" />
 
         <div className="flex-1 px-6 py-5">
           <div className="mb-2.5 text-[10px] font-bold uppercase tracking-widest text-gray-400">
@@ -122,28 +122,28 @@ export default function EntradasDetalleSheet({
           <div className="grid grid-cols-2 gap-2.5">
             <div className="rounded-xl border border-gray-100 px-3 py-3">
               <div className="flex items-center gap-1.5 text-[9.5px] font-bold uppercase tracking-wider text-gray-400">
-                <LogIn className="h-3 w-3 text-[#2563eb]" />
+                <LogIn className="h-3 w-3 text-brand" />
                 Hora entrada
               </div>
               <div className="mt-1 text-[22px] font-extrabold leading-tight tabular-nums tracking-tight text-gray-900">
                 {fmtHora(registro.entrada)}
               </div>
               {registro.entrada_corregida ? (
-                <div className="mt-0.5 text-[11px] font-semibold text-[#2563eb]">
+                <div className="mt-0.5 text-[11px] font-semibold text-brand">
                   Corregida: {fmtHora(registro.entrada_corregida)}
                 </div>
               ) : null}
             </div>
             <div className="rounded-xl border border-gray-100 px-3 py-3">
               <div className="flex items-center gap-1.5 text-[9.5px] font-bold uppercase tracking-wider text-gray-400">
-                <LogOut className="h-3 w-3 text-[#7c3aed]" />
+                <LogOut className="h-3 w-3 text-brand-accent" />
                 Hora salida
               </div>
               <div className="mt-1 text-[22px] font-extrabold leading-tight tabular-nums tracking-tight text-gray-900">
                 {fmtHora(registro.salida)}
               </div>
               {registro.salida_corregida ? (
-                <div className="mt-0.5 text-[11px] font-semibold text-[#7c3aed]">
+                <div className="mt-0.5 text-[11px] font-semibold text-brand-accent">
                   Corregida: {fmtHora(registro.salida_corregida)}
                 </div>
               ) : null}
@@ -191,7 +191,7 @@ export default function EntradasDetalleSheet({
                 onOpenChange(false);
                 onCorregir(registro);
               }}
-              className="flex-1 rounded-xl bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
+              className="flex-1 rounded-xl bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
             >
               <Pencil className="mr-2 h-4 w-4" />
               Corregir horario

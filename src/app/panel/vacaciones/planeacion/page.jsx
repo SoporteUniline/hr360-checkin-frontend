@@ -210,7 +210,7 @@ export default function PlaneacionVacacionesPage() {
   return (
     <div className="space-y-5">
       {/* Encabezado con degradado */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#2563eb] to-[#7c3aed] px-6 py-5 text-white">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand to-brand-accent px-6 py-5 text-white">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="grid h-11 w-11 place-items-center rounded-xl bg-white/15 backdrop-blur">

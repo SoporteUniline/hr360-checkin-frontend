@@ -567,7 +567,7 @@ const NewTipoActaModal = ({
                               type="button"
                               size="sm"
                               variant="outline"
-                              className="border-[#93c5fd] text-[#2563eb] hover:bg-[#dbeafe] hover:text-[#1e40af]"
+                              className="border-[#93c5fd] text-brand hover:bg-[#dbeafe] hover:text-[#1e40af]"
                               onClick={() => startEdit(tipo)}
                               disabled={isSubmitting}
                               title="Editar tipo"

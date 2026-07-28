@@ -66,7 +66,7 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
   return (
     <div>
       <h3 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
-        <Plane className="h-3.5 w-3.5 text-[#2563eb]" />
+        <Plane className="h-3.5 w-3.5 text-brand" />
         Balance de vacaciones
       </h3>
 
@@ -92,7 +92,7 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
         </div>
         <div className="h-1.5 overflow-hidden rounded-full bg-gray-100">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-[#2563eb] to-[#7c3aed] transition-all"
+            className="h-full rounded-full bg-gradient-to-r from-brand to-brand-accent transition-all"
             style={{ width: `${balance.porcentaje_usado || 0}%` }}
           />
         </div>
@@ -101,7 +101,7 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
       {/* Selector de vista */}
       <div className="mb-4 flex items-center justify-between sm:mb-6">
         <h4 className="flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
-          <CalendarDays className="h-3.5 w-3.5 text-[#2563eb]" />
+          <CalendarDays className="h-3.5 w-3.5 text-brand" />
           Historial de vacaciones
         </h4>
         <div className="flex gap-2">
@@ -269,7 +269,7 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="rounded-[10px] border border-gray-200 bg-white p-4">
           <h5 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
-            <BarChart3 className="h-3.5 w-3.5 text-[#2563eb]" />
+            <BarChart3 className="h-3.5 w-3.5 text-brand" />
             Desglose de vacaciones
           </h5>
           <div className="space-y-2 text-sm">
@@ -294,7 +294,7 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
         </div>
         <div className="rounded-[10px] border border-gray-200 bg-white p-4">
           <h5 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
-            <CalendarDays className="h-3.5 w-3.5 text-[#2563eb]" />
+            <CalendarDays className="h-3.5 w-3.5 text-brand" />
             Próximo período
           </h5>
           <div className="space-y-2 text-sm">
@@ -498,7 +498,7 @@ function CalendarioGrande({ mesAnio, diasVacaciones }) {
                   flex aspect-square items-center justify-center rounded-md text-[10px] font-semibold transition-colors sm:text-xs md:text-sm
                   ${
                     esVacacion
-                      ? "bg-gradient-to-br from-[#2563eb] to-[#7c3aed] text-white"
+                      ? "bg-gradient-to-br from-brand to-brand-accent text-white"
                       : esHoy
                         ? "border border-blue-300 bg-blue-50 font-bold text-blue-700"
                         : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
@@ -575,7 +575,7 @@ function CalendarioPequeno({
                 flex aspect-square min-h-[14px] items-center justify-center rounded-sm text-[8px] font-semibold leading-none sm:min-h-[16px] sm:text-[9px] md:min-h-[18px] md:text-[10px] lg:min-h-[20px] lg:text-[11px]
                 ${
                   esVacacion
-                    ? "bg-gradient-to-br from-[#2563eb] to-[#7c3aed] text-white"
+                    ? "bg-gradient-to-br from-brand to-brand-accent text-white"
                     : "text-gray-500"
                 }
               `}

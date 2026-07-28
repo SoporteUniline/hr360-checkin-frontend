@@ -88,7 +88,7 @@ function SeccionCard({ icono: Icono, titulo, children }) {
   return (
     <div className="rounded-[10px] border border-gray-200 bg-white p-4">
       <h4 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
-        <Icono className="h-3.5 w-3.5 text-[#2563eb]" />
+        <Icono className="h-3.5 w-3.5 text-brand" />
         {titulo}
       </h4>
       <div className="space-y-2 sm:space-y-3">{children}</div>

@@ -90,7 +90,7 @@ export default function PanelEmpleadoEntradasSalidas({ datosEmpleado }) {
   return (
     <div>
       <h3 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
-        <Clock className="h-3.5 w-3.5 text-[#2563eb]" />
+        <Clock className="h-3.5 w-3.5 text-brand" />
         Registro de entradas y salidas
       </h3>
 

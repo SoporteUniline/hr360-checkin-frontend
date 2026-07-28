@@ -97,7 +97,7 @@ export default function ResumenAsistencia({
   return (
     <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-2xl border border-gray-100 bg-white px-6 py-4 shadow-sm">
       <div className="flex items-baseline gap-3">
-        <div className="text-[38px] font-extrabold leading-none tracking-tight tabular-nums bg-gradient-to-br from-[#2563eb] to-[#7c3aed] bg-clip-text text-transparent">
+        <div className="text-[38px] font-extrabold leading-none tracking-tight tabular-nums bg-gradient-to-br from-brand to-brand-accent bg-clip-text text-transparent">
           {pct}%
         </div>
         <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500 leading-tight">
@@ -137,7 +137,7 @@ export default function ResumenAsistencia({
               onClick={s.toggle}
               className={`inline-flex items-center gap-1.5 rounded-md px-1 text-xs font-semibold transition-colors ${
                 s.activo
-                  ? "text-[#2563eb] shadow-[0_1.5px_0_0_#2563eb]"
+                  ? "text-brand shadow-[0_1.5px_0_0_#2563eb]"
                   : "text-gray-600 hover:text-gray-900"
               }`}
             >
@@ -163,11 +163,11 @@ export default function ResumenAsistencia({
             }}
             className={`inline-flex items-center gap-1.5 rounded-md px-1 text-xs font-semibold transition-colors ${
               horasExtra
-                ? "text-[#7c3aed] shadow-[0_1.5px_0_0_#7c3aed]"
+                ? "text-brand-accent shadow-[0_1.5px_0_0_#7c3aed]"
                 : "text-gray-600 hover:text-gray-900"
             }`}
           >
-            <span className="h-2 w-2 rounded-[3px] bg-[#7c3aed]" />
+            <span className="h-2 w-2 rounded-[3px] bg-brand-accent" />
             Horas extra{" "}
             <b className="font-extrabold tabular-nums text-gray-900">
               {total_con_horas_extra}

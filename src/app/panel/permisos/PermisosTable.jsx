@@ -154,7 +154,7 @@ export default function PermisosTable({
           <div className="flex justify-end">
             <Button
               onClick={onCreate}
-              className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white"
+              className="bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white"
             >
               <Plus className="h-4 w-4 mr-2" /> Nuevo permiso
             </Button>
@@ -181,7 +181,7 @@ export default function PermisosTable({
         <div className="flex justify-end">
           <Button
             onClick={onCreate}
-            className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white"
+            className="bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white"
           >
             <Plus className="h-4 w-4 mr-2" /> Nuevo permiso
           </Button>

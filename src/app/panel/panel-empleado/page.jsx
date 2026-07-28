@@ -48,7 +48,7 @@ import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 // Estilo homologado de los triggers de tabs (Adamia): texto gris → azul activo,
 // subrayado azul de 2px solo en el tab activo, sin fondos ni sombras.
 const TAB_TRIGGER_CLASS =
-  "rounded-none border-0 border-b-2 border-transparent bg-transparent px-3 py-2.5 text-[12.5px] font-semibold text-gray-500 shadow-none data-[state=active]:border-[#2563eb] data-[state=active]:bg-transparent data-[state=active]:text-[#2563eb] data-[state=active]:shadow-none";
+  "rounded-none border-0 border-b-2 border-transparent bg-transparent px-3 py-2.5 text-[12.5px] font-semibold text-gray-500 shadow-none data-[state=active]:border-brand data-[state=active]:bg-transparent data-[state=active]:text-brand data-[state=active]:shadow-none";
 
 /**
  * Página principal del Panel de Empleados
@@ -303,7 +303,7 @@ export default function PanelEmpleadoPage() {
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                   <div className="flex min-w-0 flex-1 items-center gap-3">
                     {/* Avatar */}
-                    <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#2563eb] to-[#7c3aed] text-lg font-bold text-white">
+                    <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-accent text-lg font-bold text-white">
                       {obtenerIniciales(
                         datosEmpleado.informacion_general?.nombre_completo,
                       )}
@@ -540,13 +540,13 @@ const SidebarContent = ({
               }`}
             >
               {activo && (
-                <span className="absolute bottom-1.5 left-0 top-1.5 w-[3px] rounded-full bg-gradient-to-b from-[#2563eb] to-[#7c3aed]" />
+                <span className="absolute bottom-1.5 left-0 top-1.5 w-[3px] rounded-full bg-gradient-to-b from-brand to-brand-accent" />
               )}
               <div className="flex items-center gap-2.5">
                 <div
                   className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
                     activo
-                      ? "bg-gradient-to-br from-[#2563eb] to-[#7c3aed] text-white"
+                      ? "bg-gradient-to-br from-brand to-brand-accent text-white"
                       : "bg-gray-100 text-gray-600"
                   }`}
                 >

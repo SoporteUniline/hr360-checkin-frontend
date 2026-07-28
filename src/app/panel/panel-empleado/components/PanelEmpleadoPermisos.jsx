@@ -53,7 +53,7 @@ export default function PanelEmpleadoPermisos({
   return (
     <div>
       <h3 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
-        <CalendarDays className="h-3.5 w-3.5 text-[#2563eb]" />
+        <CalendarDays className="h-3.5 w-3.5 text-brand" />
         Historial de permisos
       </h3>
 

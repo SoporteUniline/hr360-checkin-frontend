@@ -129,7 +129,7 @@ const page = () => {
           acciones={
             <Button
               onClick={() => setOpenNewActa(true)}
-              className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white"
+              className="bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white"
             >
               <PlusIcon className="w-4 h-4 mr-2" />
               Nueva acta

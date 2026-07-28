@@ -63,7 +63,7 @@ export default function ColumnasSelector({
         >
           <Columns3 className="mr-1.5 h-4 w-4" />
           Columnas
-          <span className="ml-1.5 rounded-full bg-gradient-to-br from-[#2563eb] to-[#7c3aed] px-1.5 text-[10px] font-extrabold text-white">
+          <span className="ml-1.5 rounded-full bg-gradient-to-br from-brand to-brand-accent px-1.5 text-[10px] font-extrabold text-white">
             {visibles.length}
           </span>
           <ChevronDown className="ml-1 h-3.5 w-3.5 text-gray-400" />
@@ -86,7 +86,7 @@ export default function ColumnasSelector({
         </div>
         <div className="border-t border-gray-100 bg-[#fafbfe] px-3.5 py-2.5 text-[10.5px] font-medium leading-snug text-gray-400">
           💾{" "}
-          <span className="bg-gradient-to-br from-[#2563eb] to-[#7c3aed] bg-clip-text font-bold text-transparent">
+          <span className="bg-gradient-to-br from-brand to-brand-accent bg-clip-text font-bold text-transparent">
             Se guarda automáticamente
           </span>{" "}
           — tu selección se recuerda la próxima vez que entres.

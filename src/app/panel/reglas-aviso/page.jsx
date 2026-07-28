@@ -291,7 +291,7 @@ export default function ReglasAvisoPage() {
       {/* Encabezado compacto Adamia */}
       <div>
         <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[#2563eb] to-[#7c3aed] shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
+          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-brand to-brand-accent shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
             <BellRing className="h-5 w-5 text-white" />
           </div>
           <div>
@@ -304,7 +304,7 @@ export default function ReglasAvisoPage() {
             </p>
           </div>
         </div>
-        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
+        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-brand to-brand-accent" />
       </div>
 
       {/* KPIs */}

@@ -10,8 +10,8 @@ const ACCENTS = {
   amber: { iconBg: "bg-amber-50", iconColor: "text-amber-600" },
   emerald: { iconBg: "bg-emerald-50", iconColor: "text-emerald-600" },
   red: { iconBg: "bg-red-50", iconColor: "text-red-600" },
-  violet: { iconBg: "bg-violet-50", iconColor: "text-[#7c3aed]" },
-  blue: { iconBg: "bg-blue-50", iconColor: "text-[#2563eb]" },
+  violet: { iconBg: "bg-violet-50", iconColor: "text-brand-accent" },
+  blue: { iconBg: "bg-blue-50", iconColor: "text-brand" },
 };
 
 function pickAccent(accent = "", borderColor = "") {

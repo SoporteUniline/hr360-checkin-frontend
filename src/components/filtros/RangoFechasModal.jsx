@@ -100,7 +100,7 @@ export default function RangoFechasModal({
             Seleccionar rango de fechas
           </DialogTitle>
         </DialogHeader>
-        <div className="h-[2.5px] bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
+        <div className="h-[2.5px] bg-gradient-to-r from-brand to-brand-accent" />
 
         <div className="flex flex-col sm:flex-row">
           {/* Rail de presets */}
@@ -117,7 +117,7 @@ export default function RangoFechasModal({
                   }}
                   className={`text-left text-[12.5px] rounded-lg px-3 py-2 transition-colors ${
                     activo
-                      ? "bg-gradient-to-br from-[#2563eb] to-[#4f46e5] text-white font-bold shadow-[0_5px_12px_rgba(37,99,235,0.3)]"
+                      ? "bg-gradient-to-br from-brand to-[#4f46e5] text-white font-bold shadow-[0_5px_12px_rgba(37,99,235,0.3)]"
                       : "text-gray-700 font-medium hover:bg-blue-50"
                   }`}
                 >
@@ -145,11 +145,11 @@ export default function RangoFechasModal({
             {range?.from ? (
               <>
                 Del{" "}
-                <span className="text-[#2563eb] font-bold">
+                <span className="text-brand font-bold">
                   {dayjs(range.from).format("DD/MM/YYYY")}
                 </span>{" "}
                 al{" "}
-                <span className="text-[#2563eb] font-bold">
+                <span className="text-brand font-bold">
                   {dayjs(range.to || range.from).format("DD/MM/YYYY")}
                 </span>
               </>
@@ -168,7 +168,7 @@ export default function RangoFechasModal({
             <Button
               onClick={aplicar}
               disabled={!range?.from}
-              className="rounded-xl bg-gradient-to-br from-[#2563eb] to-[#4f46e5] text-white font-semibold shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
+              className="rounded-xl bg-gradient-to-br from-brand to-[#4f46e5] text-white font-semibold shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
             >
               Aplicar
             </Button>

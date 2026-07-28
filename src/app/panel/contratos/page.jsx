@@ -290,7 +290,7 @@ export default function ContratosPage() {
         subtitulo="Gestión de contratos laborales: vigencias, vencimientos y estatus."
         acciones={
           <Button
-            className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white shadow-sm hover:opacity-95"
+            className="bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white shadow-sm hover:opacity-95"
             onClick={() => {
               setSeedItem(null);
               setEditItem(null);
