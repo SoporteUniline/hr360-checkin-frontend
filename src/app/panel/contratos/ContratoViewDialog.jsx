@@ -7,6 +7,7 @@ import timezone from "dayjs/plugin/timezone";
 import { jsPDF } from "jspdf";
 import useSWR from "swr";
 import { useAuth } from "@/context/AuthContext";
+import { EstadoBadge } from "@/lib/estados";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -166,53 +167,7 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
   }
 
   function BadgeEstatus({ estatus }) {
-    const base =
-      "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold";
-    const val = (estatus || "").toLowerCase();
-    if (val === "activo")
-      return (
-        <span
-          className={base}
-          style={{ backgroundColor: "#d1fae5", color: "#065f46" }}
-        >
-          Activo
-        </span>
-      );
-    if (val === "suspendido")
-      return (
-        <span
-          className={base}
-          style={{ backgroundColor: "#fef3c7", color: "#92400e" }}
-        >
-          Suspendido
-        </span>
-      );
-    if (val === "terminado")
-      return (
-        <span
-          className={base}
-          style={{ backgroundColor: "#fee2e2", color: "#991b1b" }}
-        >
-          Terminado
-        </span>
-      );
-    if (val === "cancelado")
-      return (
-        <span
-          className={base}
-          style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}
-        >
-          Cancelado
-        </span>
-      );
-    return (
-      <span
-        className={base}
-        style={{ backgroundColor: "#f3f4f6", color: "#6b7280" }}
-      >
-        {estatus}
-      </span>
-    );
+    return <EstadoBadge estado={estatus} />;
   }
 
   function imprimirPDF(doc, nombreArchivo) {

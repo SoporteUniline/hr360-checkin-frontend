@@ -16,6 +16,7 @@ import {
   Clock,
   Download,
 } from "lucide-react";
+import { EstadoBadge } from "@/lib/estados";
 
 /**
  * Componente para mostrar los contratos del empleado
@@ -77,10 +78,6 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
               !c.fecha_fin || c.fecha_fin === "Indefinido"
                 ? "Indefinido"
                 : formatearFecha(c.fecha_fin);
-            const estadoPill =
-              c.estatus && c.estatus.toLowerCase() === "activo"
-                ? "border border-emerald-100 bg-emerald-50 text-emerald-700"
-                : "border border-gray-200 bg-gray-50 text-gray-600";
             const tipoContratoDisplay = c.tipo_contrato
               ? c.tipo_contrato.charAt(0).toUpperCase() +
                 c.tipo_contrato.slice(1)
@@ -103,11 +100,10 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
                           <span className="text-[12.5px] font-semibold">
                             {tipoContratoDisplay}
                           </span>
-                          <span
-                            className={`inline-block rounded-full px-2.5 py-0.5 text-[10.5px] font-bold ${estadoPill}`}
-                          >
-                            {c.estatus || "N/A"}
-                          </span>
+                          <EstadoBadge
+                            estado={c.estatus || "N/A"}
+                            className="text-[10.5px]"
+                          />
                         </div>
                         <p className="text-[10.5px] text-gray-500">
                           Folio: {c.folio_contrato || "N/A"} · Vigencia:{" "}

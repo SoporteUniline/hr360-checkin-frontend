@@ -12,6 +12,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Pencil, Eye, Mail, Phone, UserPlus, Download } from "lucide-react";
 import EstadoEmpleadoDialog from "./EstadoEmpleadoDialog";
+import { EstadoBadge } from "@/lib/estados";
 import dayjs from "dayjs";
 import "dayjs/locale/es";
 import { formatDateDMY } from "@/lib/formatDate";
@@ -627,15 +628,7 @@ export default function EmpleadosTable({
                     {colVisible("estado") && (
                       <TableCell>
                         <div className="flex justify-center">
-                          <span
-                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                              emp.estado === "Activo"
-                                ? "bg-[#2563EB] text-white"
-                                : "bg-gray-200 text-gray-600"
-                            }`}
-                          >
-                            {emp.estado}
-                          </span>
+                          <EstadoBadge estado={emp.estado} />
                         </div>
                       </TableCell>
                     )}
