@@ -1,5 +1,7 @@
 "use client";
 
+import MiniKpi from "./MiniKpi";
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -96,16 +98,18 @@ export default function PanelEmpleadoEntradasSalidas({ datosEmpleado }) {
 
       {/* Mini-KPIs homologados */}
       <div className="mb-4 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
-        <MiniKpi label="Total registros" value={registrosFiltrados.length} />
+        <MiniKpi label="Total registros" value={registrosFiltrados.length} nowrap />
         <MiniKpi
           label="Entrada promedio"
           value={promedios.entrada_promedio || "00:00"}
+          nowrap
         />
         <MiniKpi
           label="Salida promedio"
           value={promedios.salida_promedio || "00:00"}
+          nowrap
         />
-        <MiniKpi label="Tiempo acumulado" value={horasAcumuladas} />
+        <MiniKpi label="Tiempo acumulado" value={horasAcumuladas} nowrap />
       </div>
 
       {/* Filtros */}
@@ -236,19 +240,6 @@ export default function PanelEmpleadoEntradasSalidas({ datosEmpleado }) {
             </Table>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function MiniKpi({ label, value }) {
-  return (
-    <div className="min-w-0 rounded-[10px] border border-gray-200 bg-white p-3">
-      <div className="truncate text-[10.5px] font-semibold uppercase tracking-wide text-gray-500">
-        {label}
-      </div>
-      <div className="whitespace-nowrap text-lg font-extrabold tabular-nums text-gray-900">
-        {value}
       </div>
     </div>
   );

@@ -17,6 +17,7 @@ import {
   Download,
 } from "lucide-react";
 import { EstadoBadge } from "@/lib/estados";
+import MiniKpi from "./MiniKpi";
 
 /**
  * Componente para mostrar los contratos del empleado
@@ -222,19 +223,6 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
           })}
         </Accordion>
       )}
-    </div>
-  );
-}
-
-function MiniKpi({ label, value }) {
-  return (
-    <div className="min-w-0 rounded-[10px] border border-gray-200 bg-white p-3">
-      <div className="truncate text-[10.5px] font-semibold uppercase tracking-wide text-gray-500">
-        {label}
-      </div>
-      <div className="text-lg font-extrabold tabular-nums text-gray-900">
-        {value}
-      </div>
     </div>
   );
 }

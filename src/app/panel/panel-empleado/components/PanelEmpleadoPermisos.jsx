@@ -1,5 +1,7 @@
 "use client";
 
+import MiniKpi from "./MiniKpi";
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState, useMemo } from "react";
@@ -202,19 +204,6 @@ export default function PanelEmpleadoPermisos({
             </Table>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function MiniKpi({ label, value }) {
-  return (
-    <div className="min-w-0 rounded-[10px] border border-gray-200 bg-white p-3">
-      <div className="truncate text-[10.5px] font-semibold uppercase tracking-wide text-gray-500">
-        {label}
-      </div>
-      <div className="text-lg font-extrabold tabular-nums text-gray-900">
-        {value}
       </div>
     </div>
   );
