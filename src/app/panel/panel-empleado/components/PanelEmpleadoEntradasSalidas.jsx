@@ -59,7 +59,10 @@ export default function PanelEmpleadoEntradasSalidas({ datosEmpleado }) {
       const [hs, ms] = salida.split(":");
       const minEntrada = parseInt(he) * 60 + parseInt(me);
       const minSalida = parseInt(hs) * 60 + parseInt(ms);
-      const diff = minSalida - minEntrada;
+      // Si la salida es "menor" que la entrada, el turno cruza medianoche
+      // (p. ej. 22:00 → 06:00). Se suma un día completo para no dar negativo.
+      let diff = minSalida - minEntrada;
+      if (diff < 0) diff += 24 * 60;
 
       const h = Math.floor(diff / 60);
       const m = diff % 60;
