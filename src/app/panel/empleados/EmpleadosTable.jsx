@@ -197,8 +197,7 @@ export default function EmpleadosTable({
         const passEstado =
           estadoSeleccionado.length === 0 ||
           estadoSeleccionado.includes(emp.estado);
-        const passEstadoTab =
-          estadoTab === "Todos" || emp.estado === estadoTab;
+        const passEstadoTab = estadoTab === "Todos" || emp.estado === estadoTab;
         return (
           passNombre &&
           passPuesto &&
@@ -229,8 +228,8 @@ export default function EmpleadosTable({
   // Cuando tenemos el dataset completo (filterOptionsRows) o hay algún filtro /
   // pestaña activa, paginamos y ordenamos en cliente para que el orden A-Z y las
   // pestañas apliquen a TODOS los empleados y no solo a la página del servidor.
-  const fullDatasetAvailable = (sourceRows?.length || 0) > 0 &&
-    (filterOptionsRows?.length || 0) > 0;
+  const fullDatasetAvailable =
+    (sourceRows?.length || 0) > 0 && (filterOptionsRows?.length || 0) > 0;
   const useClientPagination =
     hasActiveHeaderFilters || estadoTab !== "Todos" || fullDatasetAvailable;
 
@@ -251,7 +250,7 @@ export default function EmpleadosTable({
       active: useClientPagination,
       total: useClientPagination
         ? filteredRowsAll.length
-        : (empleados?.length || 0),
+        : empleados?.length || 0,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [useClientPagination, filteredRowsAll.length, empleados?.length]); // ⚠️ onHeaderFilteringMetaChange excluido: es setHeaderFilterMeta, estable, pero al ser llamado como función causa loop
@@ -294,7 +293,16 @@ export default function EmpleadosTable({
     try {
       setExportando(true);
       const ExcelJS = (await import("exceljs")).default;
-      const { saveAs } = await import("file-saver");
+
+      const fileSaverModule = await import("file-saver");
+      const saveAs =
+        fileSaverModule.saveAs ||
+        fileSaverModule.default?.saveAs ||
+        fileSaverModule.default;
+
+      if (typeof saveAs !== "function") {
+        throw new Error("No se pudo cargar la función de descarga");
+      }
       const wb = new ExcelJS.Workbook();
       const ws = wb.addWorksheet("Empleados");
       ws.columns = [

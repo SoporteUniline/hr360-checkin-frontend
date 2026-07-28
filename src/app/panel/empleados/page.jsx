@@ -18,6 +18,10 @@ import {
   Building2,
   Search,
   RotateCcw,
+  RefreshCw,
+  CheckCircle2,
+  AlertTriangle,
+  Clock3,
 } from "lucide-react";
 import ModalCapacidadAgotada from "@/components/ModalCapacidadAgotada";
 import AccesosRapidos from "@/components/AccesosRapidos";
@@ -38,6 +42,14 @@ import ColumnasSelector, {
 } from "@/components/tabla/ColumnasSelector";
 import VistasGuardadas from "@/components/tabla/VistasGuardadas";
 import { COLUMNAS_EMPLEADOS } from "./EmpleadosTable";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const LS_COLUMNAS_EMPLEADOS = "empleados-columnas-visibles";
 
@@ -51,7 +63,12 @@ export default function RegistroEmpleados() {
   const [editar, setEditar] = useState(false);
   const [soloLectura, setSoloLectura] = useState(false);
   const [values, setValues] = useState(null);
-
+  const [sincronizandoEmpleados, setSincronizandoEmpleados] = useState(false);
+  const [modalSincronizacionAbierto, setModalSincronizacionAbierto] =
+    useState(false);
+  const [modalResultadoAbierto, setModalResultadoAbierto] = useState(false);
+  const [resultadoSincronizacion, setResultadoSincronizacion] = useState(null);
+  const [errorSincronizacion, setErrorSincronizacion] = useState("");
   const searchParams = useSearchParams();
   const [filtroNombre, setFiltroNombre] = useState(
     searchParams.get("buscar") || "",
@@ -104,6 +121,56 @@ export default function RegistroEmpleados() {
 
   const idEmpresa = empresaActiva;
 
+  const abrirModalSincronizacion = () => {
+    if (!idEmpresa || idEmpresa === "all") {
+      setErrorSincronizacion(
+        "Selecciona una empresa específica antes de sincronizar los empleados.",
+      );
+      setResultadoSincronizacion(null);
+      setModalResultadoAbierto(true);
+      return;
+    }
+
+    setModalSincronizacionAbierto(true);
+  };
+
+  const sincronizarEmpleadosConReloj = async () => {
+    try {
+      setSincronizandoEmpleados(true);
+      setErrorSincronizacion("");
+      setResultadoSincronizacion(null);
+
+      const { data } = await axios.post(
+        `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados/sincronizar-empresa/${idEmpresa}`,
+      );
+
+      const resultado = data?.resultado;
+
+      if (!data?.ok || !resultado) {
+        throw new Error(
+          data?.mensaje || "No se pudo iniciar la sincronización.",
+        );
+      }
+
+      setResultadoSincronizacion(resultado);
+      setModalSincronizacionAbierto(false);
+      setModalResultadoAbierto(true);
+    } catch (error) {
+      console.error("Error al sincronizar empleados con el reloj:", error);
+
+      const mensaje =
+        error?.response?.data?.error ||
+        error?.response?.data?.mensaje ||
+        error?.message ||
+        "No se pudo sincronizar a los empleados.";
+
+      setErrorSincronizacion(mensaje);
+      setModalSincronizacionAbierto(false);
+      setModalResultadoAbierto(true);
+    } finally {
+      setSincronizandoEmpleados(false);
+    }
+  };
   // console.log(dataUser);
 
   const abrirFormulario = async (
@@ -339,6 +406,33 @@ export default function RegistroEmpleados() {
               />
             </div>
 
+            <div className="mb-4 flex justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={abrirModalSincronizacion}
+                disabled={
+                  sincronizandoEmpleados || !idEmpresa || idEmpresa === "all"
+                }
+                title={
+                  idEmpresa === "all"
+                    ? "Selecciona una empresa específica para sincronizar"
+                    : "Sincronizar empleados activos con los relojes checadores"
+                }
+                className="h-9.5 rounded-md border-indigo-200 bg-white px-4 text-[13px] font-semibold text-indigo-700 shadow-sm hover:bg-indigo-50 hover:text-indigo-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <RefreshCw
+                  className={`mr-2 h-4 w-4 ${
+                    sincronizandoEmpleados ? "animate-spin" : ""
+                  }`}
+                />
+
+                {sincronizandoEmpleados
+                  ? "Sincronizando..."
+                  : "Sincronizar con reloj"}
+              </Button>
+            </div>
+
             {/* Toolbar homologada: búsqueda, unidad, columnas y limpiar */}
             <div className="mb-6 rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
               <FiltrosGrid columnas={5}>
@@ -431,6 +525,199 @@ export default function RegistroEmpleados() {
         onClose={() => setModalCapacidadAbierto(false)}
         mensaje={mensajeCapacidad}
       />
+      <Dialog
+        open={modalSincronizacionAbierto}
+        onOpenChange={(open) => {
+          if (!sincronizandoEmpleados) {
+            setModalSincronizacionAbierto(open);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-indigo-50">
+              <RefreshCw className="h-5 w-5 text-indigo-600" />
+            </div>
+
+            <DialogTitle>Sincronizar empleados con el reloj</DialogTitle>
+
+            <DialogDescription className="text-left">
+              Se enviarán los empleados activos con NIP a los relojes checadores
+              activos de la empresa seleccionada.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3 rounded-lg border border-gray-100 bg-gray-50 p-4 text-sm">
+            <div className="flex items-start gap-3">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+              <span>Se crearán los usuarios que todavía no existan.</span>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+              <span>
+                Se actualizarán los nombres de los usuarios existentes.
+              </span>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+              <span>
+                Se conservarán las huellas, rostros, tarjetas y contraseñas.
+              </span>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+              <span>No se eliminarán usuarios existentes del dispositivo.</span>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setModalSincronizacionAbierto(false)}
+              disabled={sincronizandoEmpleados}
+            >
+              Cancelar
+            </Button>
+
+            <Button
+              type="button"
+              onClick={sincronizarEmpleadosConReloj}
+              disabled={sincronizandoEmpleados}
+              className="bg-indigo-600 hover:bg-indigo-700"
+            >
+              <RefreshCw
+                className={`mr-2 h-4 w-4 ${
+                  sincronizandoEmpleados ? "animate-spin" : ""
+                }`}
+              />
+
+              {sincronizandoEmpleados
+                ? "Sincronizando..."
+                : "Sincronizar empleados"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={modalResultadoAbierto}
+        onOpenChange={setModalResultadoAbierto}
+      >
+        <DialogContent className="sm:max-w-[500px]">
+          {errorSincronizacion ? (
+            <>
+              <DialogHeader>
+                <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-red-50">
+                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                </div>
+
+                <DialogTitle>No se pudo sincronizar</DialogTitle>
+
+                <DialogDescription className="text-left">
+                  {errorSincronizacion}
+                </DialogDescription>
+              </DialogHeader>
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  onClick={() => setModalResultadoAbierto(false)}
+                >
+                  Entendido
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-emerald-50">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                </div>
+
+                <DialogTitle>Sincronización solicitada</DialogTitle>
+
+                <DialogDescription className="text-left">
+                  Los comandos fueron enviados a la cola y el reloj comenzará a
+                  procesarlos gradualmente.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                  <p className="text-xs text-gray-500">Encontrados</p>
+                  <p className="mt-1 text-xl font-bold text-gray-900">
+                    {resultadoSincronizacion?.empleadosEncontrados ?? 0}
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                  <p className="text-xs text-gray-500">Procesados</p>
+                  <p className="mt-1 text-xl font-bold text-gray-900">
+                    {resultadoSincronizacion?.empleadosProcesados ?? 0}
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                  <p className="text-xs text-gray-500">Comandos creados</p>
+                  <p className="mt-1 text-xl font-bold text-gray-900">
+                    {resultadoSincronizacion?.comandosCreados ?? 0}
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                  <p className="text-xs text-gray-500">Sin NIP</p>
+                  <p className="mt-1 text-xl font-bold text-gray-900">
+                    {resultadoSincronizacion?.empleadosSinNip ?? 0}
+                  </p>
+                </div>
+              </div>
+
+              {(resultadoSincronizacion?.comandosOmitidos > 0 ||
+                resultadoSincronizacion?.errores?.length > 0) && (
+                <div className="space-y-2 rounded-lg border border-amber-100 bg-amber-50 p-3 text-sm text-amber-900">
+                  {resultadoSincronizacion?.comandosOmitidos > 0 && (
+                    <p>
+                      Comandos omitidos:{" "}
+                      <strong>
+                        {resultadoSincronizacion.comandosOmitidos}
+                      </strong>
+                    </p>
+                  )}
+
+                  {resultadoSincronizacion?.errores?.length > 0 && (
+                    <p>
+                      Errores registrados:{" "}
+                      <strong>{resultadoSincronizacion.errores.length}</strong>
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className="flex items-start gap-3 rounded-lg bg-blue-50 p-3 text-sm text-blue-800">
+                <Clock3 className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  El proceso continuará en segundo plano mientras el reloj
+                  permanezca conectado.
+                </span>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  onClick={() => setModalResultadoAbierto(false)}
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                >
+                  Listo
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
