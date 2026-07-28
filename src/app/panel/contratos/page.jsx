@@ -11,9 +11,11 @@ import {
   Clock,
   FileSignature,
   FileText,
+  FileSpreadsheet,
   Plus,
 } from "lucide-react";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
+import { Combobox } from "@/components/Combobox";
 import StatCard from "@/components/StatCard";
 import TablePagination from "@/components/TablePagination";
 import ContratosTable from "./ContratosTable";
@@ -202,7 +204,16 @@ export default function ContratosPage() {
   }, [contratos, total, estadisticas]);
 
   const exportarExcel = () => {
-    if (!contratos || contratos.length === 0) return;
+    // Exporta el universo completo cargado para la empresa (filterOptionsRows),
+    // no solo la página visible. Cae a la página actual si aún no cargó.
+    const filas =
+      filterOptionsRows && filterOptionsRows.length > 0
+        ? filterOptionsRows
+        : contratos;
+    if (!filas || filas.length === 0) {
+      enqueueSnackbar("No hay contratos para exportar", { variant: "info" });
+      return;
+    }
     const fmt = (d) => (d ? dayjs(d).format("YYYY-MM-DD") : "");
     const headers = [
       "Folio",
@@ -217,7 +228,7 @@ export default function ContratosPage() {
     const head = `<thead><tr>${headers
       .map((h) => `<th>${h}</th>`)
       .join("")}</tr></thead>`;
-    const body = contratos
+    const body = filas
       .map((c) => {
         const cols = [
           c.folio || c.id || "",
@@ -281,6 +292,12 @@ export default function ContratosPage() {
     }
   };
 
+  const empresas = dataUser?.empresas_detalle || [];
+  const empresaOptions = [
+    { value: "all", label: "Todas las empresas" },
+    ...empresas.map((e) => ({ value: String(e.id_empresa), label: e.nombre })),
+  ];
+
   return (
     <div className="space-y-5">
       {/* Encabezado compacto homologado Adamia */}
@@ -289,17 +306,41 @@ export default function ContratosPage() {
         titulo="Contratos"
         subtitulo="Gestión de contratos laborales: vigencias, vencimientos y estatus."
         acciones={
-          <Button
-            className="bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white shadow-sm hover:opacity-95"
-            onClick={() => {
-              setSeedItem(null);
-              setEditItem(null);
-              setOpenDialog(true);
-            }}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Nuevo contrato
-          </Button>
+          <>
+            {empresas.length > 1 && (
+              <div className="w-48">
+                <Combobox
+                  name="empresa-contratos"
+                  options={empresaOptions}
+                  value={empresaFiltro}
+                  onChange={(val) => {
+                    setEmpresaFiltro(val || "all");
+                    setPage(1);
+                  }}
+                  placeholder="Empresa"
+                />
+              </div>
+            )}
+            <Button
+              variant="outline"
+              className="font-semibold"
+              onClick={exportarExcel}
+            >
+              <FileSpreadsheet className="w-4 h-4 mr-2" />
+              Exportar
+            </Button>
+            <Button
+              className="bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white shadow-sm hover:opacity-95"
+              onClick={() => {
+                setSeedItem(null);
+                setEditItem(null);
+                setOpenDialog(true);
+              }}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Nuevo contrato
+            </Button>
+          </>
         }
       />
 
