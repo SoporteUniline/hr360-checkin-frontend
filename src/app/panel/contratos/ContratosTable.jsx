@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
-import { Eye, Pencil, Trash2, Copy } from "lucide-react";
+import { Eye, Pencil, Trash2, Copy, RefreshCcw } from "lucide-react";
 import styles from "./contratos-theme.module.css";
 import HeaderMultiFilter from "@/components/tabla/HeaderMultiFilter";
 import ActiveFilterChips from "@/components/tabla/ActiveFilterChips";
@@ -164,6 +164,7 @@ export default function ContratosTable({
   onDelete,
   onDuplicate,
   onView,
+  onCambiarEstatus,
   page = 1,
   limit = 10,
   onHeaderFilteringMetaChange,
@@ -414,7 +415,14 @@ export default function ContratosTable({
                         className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
                         title="Editar"
                       >
-                        <Pencil className="h-4 w-4 text-[#2563EB]" />
+                        <Pencil className="h-4 w-4 text-brand" />
+                      </button>
+                      <button
+                        onClick={() => onCambiarEstatus?.(c)}
+                        className="p-2 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors"
+                        title="Cambiar estatus"
+                      >
+                        <RefreshCcw className="h-4 w-4 text-amber-600" />
                       </button>
                       <button
                         onClick={() => onView?.(c)}

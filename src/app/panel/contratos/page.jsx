@@ -21,6 +21,7 @@ import TablePagination from "@/components/TablePagination";
 import ContratosTable from "./ContratosTable";
 import ContratoDialog from "./ContratoDialog";
 import ContratoViewDialog from "./ContratoViewDialog";
+import CambiarEstatusContrato from "./CambiarEstatusContrato";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -68,6 +69,8 @@ export default function ContratosPage() {
   const [seedItem, setSeedItem] = useState(null); // para duplicación
   const [openView, setOpenView] = useState(false);
   const [viewItem, setViewItem] = useState(null);
+  const [openEstatus, setOpenEstatus] = useState(false);
+  const [estatusRow, setEstatusRow] = useState(null);
 
   useEffect(() => {
     const id = searchParams.get("id");
@@ -391,6 +394,10 @@ export default function ContratosPage() {
           setViewItem(row);
           setOpenView(true);
         }}
+        onCambiarEstatus={(row) => {
+          setEstatusRow(row);
+          setOpenEstatus(true);
+        }}
       />
 
       {/* Paginación */}
@@ -421,6 +428,14 @@ export default function ContratosPage() {
         open={openView}
         setOpen={setOpenView}
         item={viewItem}
+      />
+
+      {/* Cambiar estatus (Activo / Suspendido / Terminado / Cancelado) */}
+      <CambiarEstatusContrato
+        open={openEstatus}
+        setOpen={setOpenEstatus}
+        contrato={estatusRow}
+        onSaved={mutate}
       />
 
       {/* Confirmación de eliminación - ADAMIA */}
