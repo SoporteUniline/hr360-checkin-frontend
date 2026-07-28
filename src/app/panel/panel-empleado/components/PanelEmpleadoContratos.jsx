@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { formatearFechaCorta as formatearFecha } from "@/lib/formatDate";
 import {
   Accordion,
   AccordionContent,
@@ -16,6 +17,8 @@ import {
   Clock,
   Download,
 } from "lucide-react";
+import { EstadoBadge } from "@/lib/estados";
+import MiniKpi from "./MiniKpi";
 
 /**
  * Componente para mostrar los contratos del empleado
@@ -30,7 +33,7 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
   return (
     <div>
       <h3 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
-        <FileText className="h-3.5 w-3.5 text-[#2563eb]" />
+        <FileText className="h-3.5 w-3.5 text-brand" />
         Contratos y documentos
       </h3>
 
@@ -56,7 +59,7 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
       )}
 
       <h4 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
-        <ClipboardList className="h-3.5 w-3.5 text-[#2563eb]" />
+        <ClipboardList className="h-3.5 w-3.5 text-brand" />
         Lista de contratos
       </h4>
 
@@ -77,10 +80,6 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
               !c.fecha_fin || c.fecha_fin === "Indefinido"
                 ? "Indefinido"
                 : formatearFecha(c.fecha_fin);
-            const estadoPill =
-              c.estatus && c.estatus.toLowerCase() === "activo"
-                ? "border border-emerald-100 bg-emerald-50 text-emerald-700"
-                : "border border-gray-200 bg-gray-50 text-gray-600";
             const tipoContratoDisplay = c.tipo_contrato
               ? c.tipo_contrato.charAt(0).toUpperCase() +
                 c.tipo_contrato.slice(1)
@@ -103,11 +102,10 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
                           <span className="text-[12.5px] font-semibold">
                             {tipoContratoDisplay}
                           </span>
-                          <span
-                            className={`inline-block rounded-full px-2.5 py-0.5 text-[10.5px] font-bold ${estadoPill}`}
-                          >
-                            {c.estatus || "N/A"}
-                          </span>
+                          <EstadoBadge
+                            estado={c.estatus || "N/A"}
+                            className="text-[10.5px]"
+                          />
                         </div>
                         <p className="text-[10.5px] text-gray-500">
                           Folio: {c.folio_contrato || "N/A"} · Vigencia:{" "}
@@ -134,7 +132,7 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
                   <div className="grid grid-cols-1 gap-4 pt-4 lg:grid-cols-2 lg:gap-6">
                     <div>
                       <h5 className="mb-3 flex items-center gap-1.5 border-b pb-2 text-[12.5px] font-bold text-gray-900">
-                        <ClipboardList className="h-3.5 w-3.5 text-[#2563eb]" />
+                        <ClipboardList className="h-3.5 w-3.5 text-brand" />
                         Información general
                       </h5>
                       <div className="space-y-2 text-sm">
@@ -161,7 +159,7 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
                     </div>
                     <div>
                       <h5 className="mb-3 flex items-center gap-1.5 border-b pb-2 text-[12.5px] font-bold text-gray-900">
-                        <Briefcase className="h-3.5 w-3.5 text-[#2563eb]" />
+                        <Briefcase className="h-3.5 w-3.5 text-brand" />
                         Datos del puesto
                       </h5>
                       <div className="space-y-2 text-sm">
@@ -179,7 +177,7 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
                     </div>
                     <div>
                       <h5 className="mb-3 flex items-center gap-1.5 border-b pb-2 text-[12.5px] font-bold text-gray-900">
-                        <CircleDollarSign className="h-3.5 w-3.5 text-[#2563eb]" />
+                        <CircleDollarSign className="h-3.5 w-3.5 text-brand" />
                         Información salarial
                       </h5>
                       <div className="space-y-2 text-sm">
@@ -200,7 +198,7 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
                     </div>
                     <div>
                       <h5 className="mb-3 flex items-center gap-1.5 border-b pb-2 text-[12.5px] font-bold text-gray-900">
-                        <Clock className="h-3.5 w-3.5 text-[#2563eb]" />
+                        <Clock className="h-3.5 w-3.5 text-brand" />
                         Jornada laboral
                       </h5>
                       <div className="space-y-2 text-sm">
@@ -230,19 +228,6 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
   );
 }
 
-function MiniKpi({ label, value }) {
-  return (
-    <div className="min-w-0 rounded-[10px] border border-gray-200 bg-white p-3">
-      <div className="truncate text-[10.5px] font-semibold uppercase tracking-wide text-gray-500">
-        {label}
-      </div>
-      <div className="text-lg font-extrabold tabular-nums text-gray-900">
-        {value}
-      </div>
-    </div>
-  );
-}
-
 function InfoRow({ label, value }) {
   return (
     <div className="flex justify-between">
@@ -250,20 +235,6 @@ function InfoRow({ label, value }) {
       <span className="font-semibold text-gray-900">{value || "N/A"}</span>
     </div>
   );
-}
-
-function formatearFecha(fechaISO) {
-  if (!fechaISO || fechaISO === "N/A") return "N/A";
-
-  try {
-    const fecha = new Date(fechaISO + "T00:00:00");
-    const dia = String(fecha.getDate()).padStart(2, "0");
-    const mes = String(fecha.getMonth() + 1).padStart(2, "0");
-    const anio = fecha.getFullYear();
-    return `${dia}/${mes}/${anio}`;
-  } catch (e) {
-    return fechaISO;
-  }
 }
 
 function formatearMoneda(cantidad) {

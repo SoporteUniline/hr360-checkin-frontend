@@ -5,6 +5,10 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* Marca ADAMIA: habilita utilidades bg-brand / text-brand / from-brand /
+     to-brand-accent para no repetir los hex #2563eb / #7c3aed por el código. */
+  --color-brand: var(--adamia-blue);
+  --color-brand-accent: var(--adamia-purple);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);

@@ -5,6 +5,7 @@ import MobileEmpleadosFiltersDrawer from "./MobileEmpleadosFiltersDrawer";
 import { useState, useMemo } from "react";
 import { Search, Plus, X, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { EstadoBadge } from "@/lib/estados";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
 const AVATAR_COLORS = [
@@ -45,7 +46,6 @@ function EmpleadoCard({ emp, onClick }) {
   const nombreCompleto = getNombreCompleto(emp);
   const avatarColor = getAvatarColor(nombreCompleto);
   const initials = getInitials(emp.nombre, emp.apellido_paterno);
-  const esActivo = emp.estado === "Activo";
   const subtitulo = [emp.puesto, emp.departamento].filter(Boolean).join(" · ");
 
   const getFotoPerfilUrl = (foto) => {
@@ -92,16 +92,7 @@ function EmpleadoCard({ emp, onClick }) {
       </div>
 
       <div className="shrink-0 flex flex-col items-end gap-1">
-        <span
-          className={cn(
-            "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium",
-            esActivo
-              ? "bg-blue-100 text-blue-700"
-              : "bg-gray-100 text-gray-500",
-          )}
-        >
-          {emp.estado}
-        </span>
+        <EstadoBadge estado={emp.estado} />
         {emp.nip && (
           <span className="text-[10px] text-gray-400">NIP: {emp.nip}</span>
         )}

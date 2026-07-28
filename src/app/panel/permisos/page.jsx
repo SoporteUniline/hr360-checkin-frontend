@@ -32,6 +32,7 @@ import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 import TablePagination from "@/components/TablePagination";
 import StatCard from "@/components/StatCard";
 import PermisosTable from "./PermisosTable";
+import PermisosCalendario from "./PermisosCalendario";
 import PermisoDialog from "./PermisoDialog";
 import PermisoDeleteDialog from "./PermisoDeleteDialog";
 import PermisoViewDialog from "./PermisoViewDialog";
@@ -40,6 +41,8 @@ import { fetcherWithToken } from "@/lib/fetcher";
 import { Combobox } from "@/components/Combobox";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import { permisosApi } from "@/lib/permisosApi";
+import { useSnackbar } from "notistack";
+import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 
 /**
  * Página de gestión de Permisos (solicitudes_permiso)
@@ -51,6 +54,7 @@ import { permisosApi } from "@/lib/permisosApi";
  */
 export default function PermisosPage() {
   const { dataUser } = useAuth();
+  const { enqueueSnackbar } = useSnackbar();
   const searchParams = useSearchParams();
 
   // Lógica Multiempresa replicada
@@ -464,11 +468,40 @@ export default function PermisosPage() {
     idEmpleado: "",
     idTipoPermiso: "",
     estado: "",
-    desde: rangoDesde,
-    hasta: rangoHasta,
+    // El calendario navega por mes: columnas y datos usan SIEMPRE el mes visible
+    // (antes se mezclaba con las fechas de los filtros y se desalineaba).
+    desde: desdeMes,
+    hasta: hastaMes,
     excludeCancelados: true,
   });
   const registrosCalendario = calendarioResp?.data || [];
+
+  // Aprobar/Rechazar una solicitud Pendiente en un solo clic desde la tabla.
+  // Usa el mismo endpoint que el diálogo (permisosApi.actualizarEstado).
+  const cambiarEstadoRapido = async (row, nuevoEstado) => {
+    const id = row?.id;
+    if (!id) return;
+    try {
+      await permisosApi.actualizarEstado(
+        id,
+        nuevoEstado,
+        dataUser?.id_usuario ?? null,
+      );
+      enqueueSnackbar(
+        nuevoEstado === "Aprobado"
+          ? "Permiso aprobado"
+          : "Permiso rechazado",
+        { variant: "success" },
+      );
+      mutate();
+      mutateCalendario && mutateCalendario();
+    } catch (e) {
+      enqueueSnackbar(
+        e?.response?.data?.error || "No se pudo actualizar el permiso",
+        { variant: "error" },
+      );
+    }
+  };
 
   // Construcción del grid del calendario a partir de `registrosCalendario`
   // Estructura:
@@ -555,20 +588,11 @@ export default function PermisosPage() {
     <div className={`${styles.permisosTheme} space-y-6`}>
       {/* Encabezado compacto homologado Adamia */}
       <div>
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[#2563eb] to-[#7c3aed] shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
-            <CalendarCheck2 className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-extrabold tracking-tight text-gray-900">
-              Permisos
-            </h1>
-            <p className="text-[12.5px] text-gray-500">
-              Gestión de solicitudes, estados y calendario mensual.
-            </p>
-          </div>
-        </div>
-        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
+        <EncabezadoPagina
+          icono={CalendarCheck2}
+          titulo="Permisos"
+          subtitulo="Gestión de solicitudes, estados y calendario mensual."
+        />
       </div>
 
       {/* Estadísticas rápidas */}
@@ -718,6 +742,8 @@ export default function PermisosPage() {
               setDeleteId(row?.id ?? null);
               setOpenDelete(true);
             }}
+            onAprobar={(row) => cambiarEstadoRapido(row, "Aprobado")}
+            onRechazar={(row) => cambiarEstadoRapido(row, "Rechazado")}
           />
           {/* Paginación */}
           <TablePagination
@@ -754,12 +780,7 @@ export default function PermisosPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    setMesActual((m) => m.add(1, "month"));
-                    if (scrollCalendarioRef.current) {
-                      scrollCalendarioRef.current.scrollLeft = 0;
-                    }
-                  }}
+                  onClick={() => setMesActual((m) => m.add(1, "month"))}
                   className="gap-1 border-gray-300 text-gray-700 hover:bg-gray-100"
                 >
                   Siguiente <ChevronRight className="h-4 w-4" />
@@ -767,188 +788,20 @@ export default function PermisosPage() {
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            {/* Encabezado de días */}
-            <div className="w-full overflow-x-auto" ref={scrollCalendarioRef}>
-              <table className="min-w-full border-collapse">
-                <thead>
-                  <tr>
-                    <th className="sticky left-0 z-20 bg-gray-50 text-gray-700 text-left px-3 py-2 min-w-[200px] border-r border-gray-200 text-xs font-semibold uppercase">
-                      Empleado
-                    </th>
-                    {Array.from({ length: diasEnMes }, (_, i) => i + 1).map(
-                      (dia) => {
-                        const fecha = mesActual.date(dia);
-                        const esHoy = fecha.isSame(dayjs(), "day");
-                        const esFinde = [0, 6].includes(fecha.day());
-                        return (
-                          <th
-                            key={`h-${dia}`}
-                            className={`px-2 py-2 text-center border-r border-gray-200 bg-gray-50 ${
-                              esHoy ? "ring-2 ring-[#2563EB]" : ""
-                            }`}
-                          >
-                            <div
-                              className={`text-xs font-bold ${
-                                esHoy ? "text-[#2563EB]" : "text-gray-800"
-                              }`}
-                            >
-                              {dia}
-                            </div>
-                            <div
-                              className={`text-[10px] opacity-85 ${
-                                esFinde ? "text-amber-700" : "text-gray-500"
-                              }`}
-                            >
-                              {diasSemana[fecha.day()]}
-                            </div>
-                          </th>
-                        );
-                      },
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {/* Filas por empleado */}
-                  {calendarioLoading && (
-                    <tr>
-                      <td
-                        colSpan={1 + diasEnMes}
-                        className="text-center py-6 text-muted-foreground"
-                      >
-                        Cargando calendario...
-                      </td>
-                    </tr>
-                  )}
-                  {!calendarioLoading && empleadosCalendario.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={1 + diasEnMes}
-                        className="text-center py-10 text-muted-foreground"
-                      >
-                        No hay permisos aprobados en este mes
-                      </td>
-                    </tr>
-                  )}
-                  {!calendarioLoading &&
-                    empleadosCalendario.map(([empKey, empNombre], idx) => {
-                      const bg = idx % 2 === 0 ? "bg-white" : "bg-slate-50";
-                      return (
-                        <tr key={`row-${empKey}`} className={bg}>
-                          <td className="sticky left-0 z-10 font-semibold px-3 py-2 border-r border-slate-200 bg-inherit">
-                            {empNombre}
-                          </td>
-                          {Array.from(
-                            { length: diasEnMes },
-                            (_, i) => i + 1,
-                          ).map((dia) => {
-                            const permiso =
-                              mapaPermisosCalendario?.[empKey]?.[dia];
-                            const fecha = mesActual.date(dia);
-                            const esHoy = fecha.isSame(dayjs(), "day");
-                            const esFinde = [0, 6].includes(fecha.day());
-                            const esDomingo = fecha.day() === 0;
-                            const fechaStr = fecha.format("YYYY-MM-DD");
-                            const esFestivo = festivosSet?.has(fechaStr);
-                            const nombreFestivo = esFestivo
-                              ? festivosMap.get(fechaStr)
-                              : null;
-                            if (permiso) {
-                              const c = colorDeTipo(
-                                permiso.tipo_permiso_nombre ||
-                                  permiso.tipo ||
-                                  "",
-                              );
-                              const text = String(
-                                permiso.tipo_permiso_nombre || "",
-                              ).slice(0, 8);
-                              return (
-                                <td
-                                  key={`c-${empKey}-${dia}`}
-                                  className={`px-1 py-1 min-w-[44px] max-w-[44px] text-center border-b border-slate-200 border-r ${
-                                    esHoy
-                                      ? "ring-inset ring-2 ring-[#2563EB]"
-                                      : ""
-                                  }`}
-                                >
-                                  <button
-                                    type="button"
-                                    className={`w-full ${c.bg} ${c.text} text-[10px] font-bold rounded-sm px-1 py-1 hover:ring-2 ${c.ring} transition`}
-                                    title={`${
-                                      permiso.tipo_permiso_nombre || ""
-                                    }${
-                                      permiso.motivo
-                                        ? ": " + permiso.motivo
-                                        : ""
-                                    }`}
-                                    onClick={() => {
-                                      setViewItem(permiso);
-                                      setOpenView(true);
-                                    }}
-                                  >
-                                    {text}
-                                  </button>
-                                </td>
-                              );
-                            }
-                            return (
-                              <td
-                                key={`e-${empKey}-${dia}`}
-                                className={`px-1 py-3 min-w-[44px] max-w-[44px] border-b border-slate-200 border-r ${
-                                  esHoy
-                                    ? "bg-emerald-50"
-                                    : esFestivo
-                                      ? "bg-rose-50"
-                                      : esFinde
-                                        ? "bg-slate-50"
-                                        : ""
-                                }`}
-                              >
-                                {/* Etiquetas informativas para domingos/festivos */}
-                                {esFestivo ? (
-                                  <div
-                                    className="text-[9px] leading-3 font-semibold text-rose-700 truncate"
-                                    title={nombreFestivo || "Festivo"}
-                                  >
-                                    {nombreFestivo || "Festivo"}
-                                  </div>
-                                ) : esDomingo ? (
-                                  <div
-                                    className="text-[9px] leading-3 font-medium text-slate-600 truncate"
-                                    title="Domingo"
-                                  >
-                                    Domingo
-                                  </div>
-                                ) : null}
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      );
-                    })}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Leyenda de colores */}
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-xs">
-              <div className="flex items-center gap-2">
-                <span className="w-4 h-4 rounded-sm bg-emerald-100 ring-1 ring-emerald-400" />
-                <span>Vacaciones</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-4 h-4 rounded-sm bg-blue-100 ring-1 ring-blue-400" />
-                <span>Baja médica</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-4 h-4 rounded-sm bg-amber-100 ring-1 ring-amber-400" />
-                <span>Permiso personal</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-4 h-4 rounded-sm bg-rose-100 ring-1 ring-rose-400" />
-                <span>Otros</span>
-              </div>
-            </div>
+          <CardContent className="p-3">
+            <PermisosCalendario
+              idEmpresa={idEmpresa}
+              desde={desdeMes}
+              hasta={hastaMes}
+              registros={registrosCalendario}
+              festivosSet={festivosSet}
+              festivosMap={festivosMap}
+              onVerPermiso={(p) => {
+                setViewItem(p);
+                setOpenView(true);
+              }}
+              titulo="Calendario mensual"
+            />
           </CardContent>
         </Card>
       ) : null}

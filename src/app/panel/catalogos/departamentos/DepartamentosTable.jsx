@@ -210,7 +210,7 @@ export default function DepartamentosTable({
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
         <div className="px-6 py-4 border-b border-gray-100 flex justify-end">
           <Button
-            className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white"
+            className="bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white"
             onClick={onCreate}
           >
             <Plus className="w-4 h-4 mr-2" />

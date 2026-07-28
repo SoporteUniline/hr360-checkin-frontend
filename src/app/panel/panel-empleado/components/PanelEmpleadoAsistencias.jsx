@@ -1,5 +1,8 @@
 "use client";
 
+import MiniKpi from "./MiniKpi";
+import { formatearFechaCorta as formatearFecha } from "@/lib/formatDate";
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -202,7 +205,7 @@ export default function PanelEmpleadoAsistencias({ datosEmpleado }) {
   return (
     <div>
       <h3 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
-        <CalendarCheck2 className="h-3.5 w-3.5 text-[#2563eb]" />
+        <CalendarCheck2 className="h-3.5 w-3.5 text-brand" />
         Registro de asistencias
       </h3>
 
@@ -222,7 +225,7 @@ export default function PanelEmpleadoAsistencias({ datosEmpleado }) {
         </div>
         <div className="h-1.5 overflow-hidden rounded-full bg-gray-100">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-[#2563eb] to-[#7c3aed] transition-all"
+            className="h-full rounded-full bg-gradient-to-r from-brand to-brand-accent transition-all"
             style={{ width: `${porcentaje}%` }}
           />
         </div>
@@ -232,7 +235,7 @@ export default function PanelEmpleadoAsistencias({ datosEmpleado }) {
       {tiposAnalisis.length > 0 && (
         <div className="mb-4 sm:mb-6">
           <h4 className="mb-2 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900 sm:mb-3">
-            <BarChart3 className="h-3.5 w-3.5 text-[#2563eb]" />
+            <BarChart3 className="h-3.5 w-3.5 text-brand" />
             Análisis por tipo de registro
           </h4>
           <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4">
@@ -447,19 +450,6 @@ export default function PanelEmpleadoAsistencias({ datosEmpleado }) {
             </div>
           </div>
         )}
-      </div>
-    </div>
-  );
-}
-
-function MiniKpi({ label, value }) {
-  return (
-    <div className="min-w-0 rounded-[10px] border border-gray-200 bg-white p-3">
-      <div className="truncate text-[10.5px] font-semibold uppercase tracking-wide text-gray-500">
-        {label}
-      </div>
-      <div className="text-lg font-extrabold tabular-nums text-gray-900">
-        {value}
       </div>
     </div>
   );
@@ -697,18 +687,4 @@ function RenderizarGruposAsistencias({ grupos, niveles, nivelActual }) {
       })}
     </div>
   );
-}
-
-function formatearFecha(fechaISO) {
-  if (!fechaISO || fechaISO === "N/A") return "N/A";
-
-  try {
-    const fecha = new Date(fechaISO + "T00:00:00");
-    const dia = String(fecha.getDate()).padStart(2, "0");
-    const mes = String(fecha.getMonth() + 1).padStart(2, "0");
-    const anio = fecha.getFullYear();
-    return `${dia}/${mes}/${anio}`;
-  } catch (e) {
-    return fechaISO;
-  }
 }

@@ -40,6 +40,26 @@ export function formatDateDMY(input) {
   return `${day}/${month}/${year}`;
 }
 
+/**
+ * Formatea "YYYY-MM-DD" (u otra fecha) como DD/MM/YYYY.
+ * Devuelve "N/A" cuando no hay valor o el valor ya es "N/A".
+ * Implementación unificada de la función que estaba duplicada, byte a byte,
+ * en 7 archivos del Panel de Empleado. Se conserva su comportamiento exacto.
+ */
+export function formatearFechaCorta(fechaISO) {
+  if (!fechaISO || fechaISO === "N/A") return "N/A";
+
+  try {
+    const fecha = new Date(fechaISO + "T00:00:00");
+    const dia = String(fecha.getDate()).padStart(2, "0");
+    const mes = String(fecha.getMonth() + 1).padStart(2, "0");
+    const anio = fecha.getFullYear();
+    return `${dia}/${mes}/${anio}`;
+  } catch (e) {
+    return fechaISO;
+  }
+}
+
 // Formatea fecha y hora como dd/mm/aaaa HH:mm
 // - Acepta Date, string o dayjs (objeto con .toDate())
 export function formatDateDMYTime(input) {

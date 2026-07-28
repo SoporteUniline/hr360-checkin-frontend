@@ -78,7 +78,7 @@ function EstadoVacio({ onNuevo }) {
       </div>
       <Button
         onClick={onNuevo}
-        className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white gap-2"
+        className="bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white gap-2"
       >
         <Plus className="h-4 w-4" />
         Crear primer reporte
@@ -435,7 +435,7 @@ export default function ReportesPersonalizadosPage() {
 
           <Button
             onClick={abrirNuevo}
-            className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white gap-2 flex-shrink-0"
+            className="bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white gap-2 flex-shrink-0"
             size="sm"
           >
             <Plus className="h-4 w-4" />

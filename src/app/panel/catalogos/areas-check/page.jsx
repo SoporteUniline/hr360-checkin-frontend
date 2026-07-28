@@ -291,7 +291,7 @@ export default function AreasCheckPage() {
       <div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[#2563eb] to-[#7c3aed] shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-brand to-brand-accent shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
               <MapPin className="h-5 w-5 text-white" />
             </div>
             <div>
@@ -305,13 +305,13 @@ export default function AreasCheckPage() {
           </div>
           <Button
             onClick={abrirModalNuevaArea}
-            className="h-[38px] w-full gap-2 rounded-md bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95 sm:w-auto"
+            className="h-[38px] w-full gap-2 rounded-md bg-gradient-to-br from-brand to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95 sm:w-auto"
           >
             <Plus className="h-4 w-4" />
             Nueva área
           </Button>
         </div>
-        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
+        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-brand to-brand-accent" />
       </div>
 
       {/* Filtros homologados */}
@@ -343,7 +343,7 @@ export default function AreasCheckPage() {
           <div className="flex md:justify-end">
             <Button
               onClick={abrirModalNuevaArea}
-              className="h-[38px] w-full gap-2 rounded-md bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95 md:w-auto"
+              className="h-[38px] w-full gap-2 rounded-md bg-gradient-to-br from-brand to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95 md:w-auto"
             >
               <Plus className="h-4 w-4" />
               Agregar nueva área

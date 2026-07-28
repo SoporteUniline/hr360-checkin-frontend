@@ -219,7 +219,7 @@ export default function ConfiguracionChecadorPage() {
       {/* Encabezado compacto homologado Adamia */}
       <div>
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#2563eb] to-[#7c3aed] text-white shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand to-brand-accent text-white shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
             <Clock size={20} />
           </div>
           <div>
@@ -232,7 +232,7 @@ export default function ConfiguracionChecadorPage() {
             </p>
           </div>
         </div>
-        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
+        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-brand to-brand-accent" />
       </div>
 
       {/* Alerta de resultado */}
@@ -364,7 +364,7 @@ export default function ConfiguracionChecadorPage() {
           <Button
             type="submit"
             disabled={guardando || !isDirty}
-            className="min-w-36 gap-2 bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white"
+            className="min-w-36 gap-2 bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white"
           >
             {guardando ? (
               <>

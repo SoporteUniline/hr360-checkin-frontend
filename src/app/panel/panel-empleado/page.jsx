@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { formatearFechaCorta as formatearFecha } from "@/lib/formatDate";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import usePanelEmpleadoData from "@/hooks/usePanelEmpleadoData";
@@ -23,7 +24,9 @@ import {
   Menu,
   FolderOpen,
   UserCircle2,
+  Pencil,
 } from "lucide-react";
+import { EstadoBadge } from "@/lib/estados";
 import {
   Sheet,
   SheetContent,
@@ -48,7 +51,7 @@ import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 // Estilo homologado de los triggers de tabs (Adamia): texto gris → azul activo,
 // subrayado azul de 2px solo en el tab activo, sin fondos ni sombras.
 const TAB_TRIGGER_CLASS =
-  "rounded-none border-0 border-b-2 border-transparent bg-transparent px-3 py-2.5 text-[12.5px] font-semibold text-gray-500 shadow-none data-[state=active]:border-[#2563eb] data-[state=active]:bg-transparent data-[state=active]:text-[#2563eb] data-[state=active]:shadow-none";
+  "rounded-none border-0 border-b-2 border-transparent bg-transparent px-3 py-2.5 text-[12.5px] font-semibold text-gray-500 shadow-none data-[state=active]:border-brand data-[state=active]:bg-transparent data-[state=active]:text-brand data-[state=active]:shadow-none";
 
 /**
  * Página principal del Panel de Empleados
@@ -197,7 +200,16 @@ export default function PanelEmpleadoPage() {
   }
 
   const estadoEmpleado = empleadoActual?.estado || "";
-  const estadoEsActivo = estadoEmpleado.toLowerCase() === "activo";
+
+  // Foto real del empleado. La app guarda `foto_perfil` como URL absoluta;
+  // si no viene (o es ruta local vieja), se muestran las iniciales.
+  const fotoPerfil = datosEmpleado?.informacion_general?.foto_perfil;
+  const fotoUrl =
+    typeof fotoPerfil === "string" && /^https?:\/\//.test(fotoPerfil)
+      ? fotoPerfil
+      : null;
+  const idEmpleadoActual =
+    datosEmpleado?.informacion_general?.id_empleado || empleadoSeleccionado;
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col bg-[#f9fafb]">
@@ -302,12 +314,24 @@ export default function PanelEmpleadoPage() {
               <div className="mb-4 rounded-[10px] border border-gray-200 bg-white p-4">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                   <div className="flex min-w-0 flex-1 items-center gap-3">
-                    {/* Avatar */}
-                    <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#2563eb] to-[#7c3aed] text-lg font-bold text-white">
-                      {obtenerIniciales(
-                        datosEmpleado.informacion_general?.nombre_completo,
-                      )}
-                    </div>
+                    {/* Avatar: foto real si existe, si no iniciales */}
+                    {fotoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={fotoUrl}
+                        alt={
+                          datosEmpleado.informacion_general?.nombre_completo ||
+                          "Empleado"
+                        }
+                        className="h-14 w-14 flex-shrink-0 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-accent text-lg font-bold text-white">
+                        {obtenerIniciales(
+                          datosEmpleado.informacion_general?.nombre_completo,
+                        )}
+                      </div>
+                    )}
                     {/* Nombre y meta */}
                     <div className="min-w-0">
                       <h2 className="truncate text-lg font-extrabold tracking-tight text-gray-900">
@@ -349,16 +373,24 @@ export default function PanelEmpleadoPage() {
                       <div className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
                         Estado
                       </div>
-                      <span
-                        className={`inline-block rounded-full px-2.5 py-0.5 text-[10.5px] font-bold ${
-                          estadoEsActivo
-                            ? "border border-emerald-100 bg-emerald-50 text-emerald-700"
-                            : "border border-gray-200 bg-gray-50 text-gray-600"
-                        }`}
-                      >
-                        {estadoEmpleado || "N/A"}
-                      </span>
+                      <EstadoBadge
+                        estado={estadoEmpleado || "N/A"}
+                        className="text-[10.5px]"
+                      />
                     </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() =>
+                        router.push(
+                          `/panel/empleados?id=${idEmpleadoActual}&modo=editar`,
+                        )
+                      }
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                      Editar
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -462,20 +494,6 @@ export default function PanelEmpleadoPage() {
  * Función auxiliar para formatear fechas
  * Relacionado con: src/app/panel/panel-empleado/page.jsx
  */
-function formatearFecha(fechaISO) {
-  if (!fechaISO || fechaISO === "N/A") return "N/A";
-
-  try {
-    const fecha = new Date(fechaISO + "T00:00:00");
-    const dia = String(fecha.getDate()).padStart(2, "0");
-    const mes = String(fecha.getMonth() + 1).padStart(2, "0");
-    const anio = fecha.getFullYear();
-    return `${dia}/${mes}/${anio}`;
-  } catch (e) {
-    return fechaISO;
-  }
-}
-
 // Componente del directorio (reutilizable en desktop y Sheet móvil)
 const SidebarContent = ({
   empleados,
@@ -540,13 +558,13 @@ const SidebarContent = ({
               }`}
             >
               {activo && (
-                <span className="absolute bottom-1.5 left-0 top-1.5 w-[3px] rounded-full bg-gradient-to-b from-[#2563eb] to-[#7c3aed]" />
+                <span className="absolute bottom-1.5 left-0 top-1.5 w-[3px] rounded-full bg-gradient-to-b from-brand to-brand-accent" />
               )}
               <div className="flex items-center gap-2.5">
                 <div
                   className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
                     activo
-                      ? "bg-gradient-to-br from-[#2563eb] to-[#7c3aed] text-white"
+                      ? "bg-gradient-to-br from-brand to-brand-accent text-white"
                       : "bg-gray-100 text-gray-600"
                   }`}
                 >

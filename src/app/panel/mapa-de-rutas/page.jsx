@@ -66,6 +66,7 @@ import { Combobox } from "@/components/Combobox";
 import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 import { SelectorBoton } from "@/components/filtros/CampoFiltro";
 import RangoFechasModal from "@/components/filtros/RangoFechasModal";
+import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 
 // Leaflet se carga SOLO en cliente para evitar "window is not defined" en SSR al recargar.
 // - Relación: `leaflet-maps.jsx` contiene los imports de leaflet/react-leaflet.
@@ -1595,20 +1596,11 @@ export default function PageMapaDeRutas() {
     <div className={cn(styles.mrTheme, "space-y-4")}>
       {/* Encabezado compacto homologado Adamia */}
       <div>
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[#2563eb] to-[#7c3aed] shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
-            <Route className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-extrabold tracking-tight text-gray-900">
-              Mapa de rutas
-            </h1>
-            <p className="text-[12.5px] text-gray-500">
-              Auditoría de ubicaciones y recorridos.
-            </p>
-          </div>
-        </div>
-        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
+        <EncabezadoPagina
+          icono={Route}
+          titulo="Mapa de rutas"
+          subtitulo="Auditoría de ubicaciones y recorridos."
+        />
       </div>
 
       {/* Layout principal (Días a la izquierda / Mapa a la derecha como el legacy) */}
@@ -1761,7 +1753,7 @@ export default function PageMapaDeRutas() {
               <div className="grid grid-cols-2 gap-2">
                 <Button
                   onClick={buscarMovimientos}
-                  className="h-[38px] rounded-md bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
+                  className="h-[38px] rounded-md bg-gradient-to-br from-brand to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
                 >
                   <Search className="h-4 w-4 mr-2" />
                   Buscar

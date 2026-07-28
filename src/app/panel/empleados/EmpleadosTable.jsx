@@ -12,6 +12,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Pencil, Eye, Mail, Phone, UserPlus, Download } from "lucide-react";
 import EstadoEmpleadoDialog from "./EstadoEmpleadoDialog";
+import { EstadoBadge } from "@/lib/estados";
 import dayjs from "dayjs";
 import "dayjs/locale/es";
 import { formatDateDMY } from "@/lib/formatDate";
@@ -368,7 +369,7 @@ export default function EmpleadosTable({
         </Button>
         <Button
           onClick={() => abrirFormulario(null, false, false)}
-          className="h-9 rounded-md bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
+          className="h-9 rounded-md bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
         >
           <UserPlus className="w-4 h-4 mr-2" />
           Nuevo empleado
@@ -635,15 +636,7 @@ export default function EmpleadosTable({
                     {colVisible("estado") && (
                       <TableCell>
                         <div className="flex justify-center">
-                          <span
-                            className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
-                              emp.estado === "Activo"
-                                ? "bg-[#2563EB] text-white"
-                                : "bg-gray-200 text-gray-600"
-                            }`}
-                          >
-                            {emp.estado}
-                          </span>
+                          <EstadoBadge estado={emp.estado} />
                         </div>
                       </TableCell>
                     )}

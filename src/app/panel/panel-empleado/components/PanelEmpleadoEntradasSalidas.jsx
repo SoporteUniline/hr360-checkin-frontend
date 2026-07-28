@@ -1,5 +1,8 @@
 "use client";
 
+import MiniKpi from "./MiniKpi";
+import { formatearFechaCorta as formatearFecha } from "@/lib/formatDate";
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,7 +60,10 @@ export default function PanelEmpleadoEntradasSalidas({ datosEmpleado }) {
       const [hs, ms] = salida.split(":");
       const minEntrada = parseInt(he) * 60 + parseInt(me);
       const minSalida = parseInt(hs) * 60 + parseInt(ms);
-      const diff = minSalida - minEntrada;
+      // Si la salida es "menor" que la entrada, el turno cruza medianoche
+      // (p. ej. 22:00 → 06:00). Se suma un día completo para no dar negativo.
+      let diff = minSalida - minEntrada;
+      if (diff < 0) diff += 24 * 60;
 
       const h = Math.floor(diff / 60);
       const m = diff % 60;
@@ -90,22 +96,24 @@ export default function PanelEmpleadoEntradasSalidas({ datosEmpleado }) {
   return (
     <div>
       <h3 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
-        <Clock className="h-3.5 w-3.5 text-[#2563eb]" />
+        <Clock className="h-3.5 w-3.5 text-brand" />
         Registro de entradas y salidas
       </h3>
 
       {/* Mini-KPIs homologados */}
       <div className="mb-4 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
-        <MiniKpi label="Total registros" value={registrosFiltrados.length} />
+        <MiniKpi label="Total registros" value={registrosFiltrados.length} nowrap />
         <MiniKpi
           label="Entrada promedio"
           value={promedios.entrada_promedio || "00:00"}
+          nowrap
         />
         <MiniKpi
           label="Salida promedio"
           value={promedios.salida_promedio || "00:00"}
+          nowrap
         />
-        <MiniKpi label="Tiempo acumulado" value={horasAcumuladas} />
+        <MiniKpi label="Tiempo acumulado" value={horasAcumuladas} nowrap />
       </div>
 
       {/* Filtros */}
@@ -239,31 +247,4 @@ export default function PanelEmpleadoEntradasSalidas({ datosEmpleado }) {
       </div>
     </div>
   );
-}
-
-function MiniKpi({ label, value }) {
-  return (
-    <div className="min-w-0 rounded-[10px] border border-gray-200 bg-white p-3">
-      <div className="truncate text-[10.5px] font-semibold uppercase tracking-wide text-gray-500">
-        {label}
-      </div>
-      <div className="whitespace-nowrap text-lg font-extrabold tabular-nums text-gray-900">
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function formatearFecha(fechaISO) {
-  if (!fechaISO || fechaISO === "N/A") return "N/A";
-
-  try {
-    const fecha = new Date(fechaISO + "T00:00:00");
-    const dia = String(fecha.getDate()).padStart(2, "0");
-    const mes = String(fecha.getMonth() + 1).padStart(2, "0");
-    const anio = fecha.getFullYear();
-    return `${dia}/${mes}/${anio}`;
-  } catch (e) {
-    return fechaISO;
-  }
 }

@@ -340,7 +340,7 @@ export default function MensajesSistemaPage() {
         acciones={
           <Button
             onClick={openCreate}
-            className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white hover:opacity-95"
+            className="bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white hover:opacity-95"
           >
             <Plus className="h-4 w-4 mr-2" />
             Nuevo mensaje
@@ -724,7 +724,7 @@ export default function MensajesSistemaPage() {
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white hover:opacity-95 w-full sm:w-auto"
+              className="bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white hover:opacity-95 w-full sm:w-auto"
             >
               <Save className="h-4 w-4 mr-2" />
               {saving ? "Guardando..." : "Guardar"}
@@ -892,7 +892,7 @@ export default function MensajesSistemaPage() {
             <Button
               onClick={sendWhatsApp}
               disabled={waSending || waLoadingRecipients}
-              className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white hover:opacity-95 w-full sm:w-auto"
+              className="bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white hover:opacity-95 w-full sm:w-auto"
             >
               {waSending ? "Enviando..." : "Enviar mensaje"}
             </Button>

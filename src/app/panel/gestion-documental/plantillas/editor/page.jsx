@@ -245,7 +245,7 @@ function PanelIA({ onApply, categoria, nombre }) {
       >
         <div className="flex items-center gap-2">
           <div className="bg-purple-100 p-1.5 rounded-lg">
-            <Sparkles className="w-4 h-4 text-[#7c3aed]" />
+            <Sparkles className="w-4 h-4 text-brand-accent" />
           </div>
           <div className="text-left">
             <p className="text-sm font-semibold text-gray-800">Asistente IA</p>
@@ -308,7 +308,7 @@ function PanelIA({ onApply, categoria, nombre }) {
                 type="button"
                 onClick={handleGenerar}
                 disabled={generando || !descripcion.trim()}
-                className="w-full bg-[#7c3aed] hover:bg-purple-700 text-white gap-2"
+                className="w-full bg-brand-accent hover:bg-purple-700 text-white gap-2"
               >
                 {generando
                   ? <><Loader2 className="w-4 h-4 animate-spin" /> Generando...</>

@@ -13,9 +13,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import LoadingTable from "@/components/LoadingTable";
-import { Eye, Inbox, Pencil, Plus, Trash2 } from "lucide-react";
+import { Check, Eye, Inbox, Pencil, Plus, Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatDateDMY } from "@/lib/formatDate";
+import { EstadoBadge } from "@/lib/estados";
 import { calcDiasTotalesYHabiles } from "@/lib/permisosDias";
 import HeaderMultiFilter from "@/components/tabla/HeaderMultiFilter";
 import ActiveFilterChips from "@/components/tabla/ActiveFilterChips";
@@ -38,6 +39,8 @@ export default function PermisosTable({
   onChanged,
   onView,
   onDelete,
+  onAprobar,
+  onRechazar,
   festivosSet = new Set(),
 }) {
   const [unidadSeleccionada, setUnidadSeleccionada] = useState([]);
@@ -154,7 +157,7 @@ export default function PermisosTable({
           <div className="flex justify-end">
             <Button
               onClick={onCreate}
-              className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white"
+              className="bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white"
             >
               <Plus className="h-4 w-4 mr-2" /> Nuevo permiso
             </Button>
@@ -181,7 +184,7 @@ export default function PermisosTable({
         <div className="flex justify-end">
           <Button
             onClick={onCreate}
-            className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white"
+            className="bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white"
           >
             <Plus className="h-4 w-4 mr-2" /> Nuevo permiso
           </Button>
@@ -369,6 +372,28 @@ export default function PermisosTable({
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
+                        {row.estado === "Pendiente" && (
+                          <>
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="h-8 w-8 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                              title="Aprobar"
+                              onClick={() => onAprobar?.(row)}
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              className="h-8 w-8 border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                              title="Rechazar"
+                              onClick={() => onRechazar?.(row)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
                         <Button
                           size="icon"
                           variant="outline"
@@ -419,30 +444,3 @@ export default function PermisosTable({
   );
 }
 
-function EstadoBadge({ estado }) {
-  const base =
-    "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold";
-  if (estado === "Pendiente")
-    return (
-      <span className={cn(base, "bg-amber-100 text-amber-900")}>Pendiente</span>
-    );
-  if (estado === "Aprobado")
-    return (
-      <span className={cn(base, "bg-emerald-100 text-emerald-900")}>
-        Aprobado
-      </span>
-    );
-  if (estado === "Rechazado")
-    return (
-      <span className={cn(base, "bg-red-100 text-red-900")}>Rechazado</span>
-    );
-  if (estado === "Cancelado")
-    return (
-      <span className={cn(base, "bg-zinc-200 text-zinc-700")}>Cancelado</span>
-    );
-  return (
-    <span className={cn(base, "bg-zinc-200 text-zinc-700")}>
-      {estado || "—"}
-    </span>
-  );
-}

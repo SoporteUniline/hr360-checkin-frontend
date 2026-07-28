@@ -33,6 +33,7 @@ import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import { fetchImageAsDataUrl } from "@/lib/pdfCompanyLogo";
 import { BarChart3, FileDown, FileSpreadsheet, Search } from "lucide-react";
+import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 
 function fmtDate(d) {
   const dd = new Date(d);
@@ -1051,20 +1052,11 @@ export default function ReporteHorasPage() {
     <div className="space-y-6">
       {/* Encabezado compacto con la tipografía del landing */}
       <div>
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[#2563eb] to-[#7c3aed] shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
-            <BarChart3 className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-extrabold tracking-tight text-gray-900">
-              Reporte de horas
-            </h1>
-            <p className="text-[12.5px] text-gray-500">
-              Genera reportes por empleado y periodo.
-            </p>
-          </div>
-        </div>
-        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
+        <EncabezadoPagina
+          icono={BarChart3}
+          titulo="Reporte de horas"
+          subtitulo="Genera reportes por empleado y periodo."
+        />
       </div>
 
       {/* Fila de filtros homologada */}
@@ -1150,7 +1142,7 @@ export default function ReporteHorasPage() {
             <Button
               onClick={handleGenerar}
               disabled={loading}
-              className="h-[38px] w-full rounded-md bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
+              className="h-[38px] w-full rounded-md bg-gradient-to-br from-brand to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
             >
               {loading ? "Generando…" : "Generar reporte"}
             </Button>
@@ -1209,7 +1201,7 @@ export default function ReporteHorasPage() {
             </Button>
             <Button
               onClick={handleGuardarPDF}
-              className="h-9 gap-2 rounded-md bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
+              className="h-9 gap-2 rounded-md bg-gradient-to-br from-brand to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
               disabled={exporting !== null}
             >
               <FileDown className="h-4 w-4" /> Guardar PDF
@@ -1224,7 +1216,7 @@ export default function ReporteHorasPage() {
           {!reportes || reportes.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <div className="grid h-[52px] w-[52px] place-items-center rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-violet-50">
-                <BarChart3 className="h-6 w-6 text-[#2563eb]" />
+                <BarChart3 className="h-6 w-6 text-brand" />
               </div>
               <div className="mt-3 text-sm font-bold text-gray-900">
                 Aún no hay reporte
@@ -1591,7 +1583,7 @@ export default function ReporteHorasPage() {
               del filtro.
             </DialogDescription>
           </DialogHeader>
-          <div className="h-[2.5px] bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
+          <div className="h-[2.5px] bg-gradient-to-r from-brand to-brand-accent" />
 
           <div className="p-6 space-y-4 text-sm">
             <div className="space-y-2">
@@ -1689,7 +1681,7 @@ export default function ReporteHorasPage() {
                 setEmpleadoIds(tempEmpleadoIds);
                 setOpenSelector(false);
               }}
-              className="rounded-md bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
+              className="rounded-md bg-gradient-to-br from-brand to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
             >
               Aplicar selección
             </Button>

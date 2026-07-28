@@ -1,5 +1,8 @@
 "use client";
 
+import MiniKpi from "./MiniKpi";
+import { formatearFechaCorta as formatearFecha } from "@/lib/formatDate";
+
 import { User, Briefcase, Phone, MapPin } from "lucide-react";
 
 /**
@@ -71,24 +74,11 @@ export default function PanelEmpleadoGeneral({ datosEmpleado }) {
   );
 }
 
-function MiniKpi({ label, value }) {
-  return (
-    <div className="min-w-0 rounded-[10px] border border-gray-200 bg-white p-3">
-      <div className="truncate text-[10.5px] font-semibold uppercase tracking-wide text-gray-500">
-        {label}
-      </div>
-      <div className="text-lg font-extrabold tabular-nums text-gray-900">
-        {value}
-      </div>
-    </div>
-  );
-}
-
 function SeccionCard({ icono: Icono, titulo, children }) {
   return (
     <div className="rounded-[10px] border border-gray-200 bg-white p-4">
       <h4 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
-        <Icono className="h-3.5 w-3.5 text-[#2563eb]" />
+        <Icono className="h-3.5 w-3.5 text-brand" />
         {titulo}
       </h4>
       <div className="space-y-2 sm:space-y-3">{children}</div>
@@ -105,18 +95,4 @@ function InfoRow({ label, value }) {
       </span>
     </div>
   );
-}
-
-function formatearFecha(fechaISO) {
-  if (!fechaISO || fechaISO === "N/A") return "N/A";
-
-  try {
-    const fecha = new Date(fechaISO + "T00:00:00");
-    const dia = String(fecha.getDate()).padStart(2, "0");
-    const mes = String(fecha.getMonth() + 1).padStart(2, "0");
-    const anio = fecha.getFullYear();
-    return `${dia}/${mes}/${anio}`;
-  } catch (e) {
-    return fechaISO;
-  }
 }

@@ -329,13 +329,13 @@ export default function MobileEmpleadoDetalle({
           </div>
 
           <div className="flex flex-col items-center text-center">
-            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-[#2563eb] to-[#7c3aed] flex items-center justify-center text-xl font-bold text-white mb-3 shrink-0 shadow-[0_8px_20px_rgba(37,99,235,0.32)]">
+            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-brand to-brand-accent flex items-center justify-center text-xl font-bold text-white mb-3 shrink-0 shadow-[0_8px_20px_rgba(37,99,235,0.32)]">
               {initials}
             </div>
             <h2 className="text-gray-900 text-xl font-extrabold tracking-tight leading-tight">
               {nombreCompleto}
             </h2>
-            <div className="mt-2 h-0.5 w-10 rounded-full bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
+            <div className="mt-2 h-0.5 w-10 rounded-full bg-gradient-to-r from-brand to-brand-accent" />
             <p className="text-gray-500 text-sm mt-2">
               {display.departamento}
               {empresa ? ` · ${empresa}` : ""}
@@ -548,7 +548,7 @@ export default function MobileEmpleadoDetalle({
               <button
                 onClick={handleSaveClick}
                 disabled={isSaving || isInvalid}
-                className="flex-1 min-h-[48px] py-3 rounded-xl bg-gradient-to-br from-[#2563eb] to-[#4f46e5] text-white text-sm font-semibold shadow-[0_8px_20px_rgba(37,99,235,0.32)] flex items-center justify-center gap-2 active:opacity-90 disabled:opacity-50"
+                className="flex-1 min-h-[48px] py-3 rounded-xl bg-gradient-to-br from-brand to-[#4f46e5] text-white text-sm font-semibold shadow-[0_8px_20px_rgba(37,99,235,0.32)] flex items-center justify-center gap-2 active:opacity-90 disabled:opacity-50"
               >
                 <Save className="w-4 h-4" />
                 {isSaving ? "Guardando..." : "Guardar"}
@@ -563,7 +563,7 @@ export default function MobileEmpleadoDetalle({
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="text-center min-w-11 rounded-xl border border-gray-100 bg-white shadow-sm p-2">
-                    <div className="text-lg font-extrabold leading-none tabular-nums bg-gradient-to-br from-[#2563eb] to-[#7c3aed] bg-clip-text text-transparent">
+                    <div className="text-lg font-extrabold leading-none tabular-nums bg-gradient-to-br from-brand to-brand-accent bg-clip-text text-transparent">
                       {diaNumero}
                     </div>
                     <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mt-1">
@@ -614,13 +614,13 @@ export default function MobileEmpleadoDetalle({
                     <span
                       className={cn(
                         "w-2 h-2 rounded-full",
-                        entradaFmt ? "bg-[#2563eb]" : "bg-gray-200",
+                        entradaFmt ? "bg-brand" : "bg-gray-200",
                       )}
                     />
                     <LogIn
                       className={cn(
                         "w-4 h-4",
-                        entradaFmt ? "text-[#2563eb]" : "text-gray-300",
+                        entradaFmt ? "text-brand" : "text-gray-300",
                       )}
                     />
                   </div>
@@ -637,7 +637,7 @@ export default function MobileEmpleadoDetalle({
                   </div>
                 </div>
 
-                <div className="w-6 h-0.5 rounded-full bg-gradient-to-r from-[#2563eb] to-[#7c3aed] shrink-0" />
+                <div className="w-6 h-0.5 rounded-full bg-gradient-to-r from-brand to-brand-accent shrink-0" />
 
                 <div
                   className={cn(
@@ -651,13 +651,13 @@ export default function MobileEmpleadoDetalle({
                     <span
                       className={cn(
                         "w-2 h-2 rounded-full",
-                        salidaFmt ? "bg-[#7c3aed]" : "bg-gray-200",
+                        salidaFmt ? "bg-brand-accent" : "bg-gray-200",
                       )}
                     />
                     <LogOut
                       className={cn(
                         "w-4 h-4",
-                        salidaFmt ? "text-[#7c3aed]" : "text-gray-300",
+                        salidaFmt ? "text-brand-accent" : "text-gray-300",
                       )}
                     />
                   </div>
@@ -686,7 +686,7 @@ export default function MobileEmpleadoDetalle({
                   <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
                     Horas
                   </div>
-                  <div className="text-base font-extrabold mt-0.5 tabular-nums bg-gradient-to-br from-[#2563eb] to-[#7c3aed] bg-clip-text text-transparent">
+                  <div className="text-base font-extrabold mt-0.5 tabular-nums bg-gradient-to-br from-brand to-brand-accent bg-clip-text text-transparent">
                     {horasTrabajadas || "—"}
                   </div>
                 </div>

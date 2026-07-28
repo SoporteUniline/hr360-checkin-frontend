@@ -44,7 +44,7 @@ export default function Festivos() {
         subtitulo="Catálogo por empresa (crear, editar y eliminar)."
         acciones={
           <Button
-            className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white gap-2"
+            className="bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white gap-2"
             onClick={() => {
               setEditFestivo(null);
               setOpenFormModal(true);

@@ -177,7 +177,7 @@ export default function MobileFiltersDrawer({
               <DrawerTitle className="text-xl font-extrabold tracking-tight text-gray-900">
                 Filtros
               </DrawerTitle>
-              <div className="mt-1.5 h-0.5 w-10 rounded-full bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
+              <div className="mt-1.5 h-0.5 w-10 rounded-full bg-gradient-to-r from-brand to-brand-accent" />
               <DrawerDescription className="text-sm text-gray-500 mt-1.5">
                 {totalEmpleados} empleados · {activeFiltersCount} filtros
                 activos
@@ -189,7 +189,7 @@ export default function MobileFiltersDrawer({
                 onResetFilters?.();
                 setShowAllDepts(false);
               }}
-              className="text-sm font-semibold text-[#2563eb] min-h-[44px] px-2"
+              className="text-sm font-semibold text-brand min-h-[44px] px-2"
             >
               Limpiar
             </button>
@@ -215,7 +215,7 @@ export default function MobileFiltersDrawer({
                     setPage(1);
                   }}
                   onClick={(e) => e.currentTarget.showPicker?.()}
-                  className="w-full min-h-[44px] text-sm tabular-nums border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-900 shadow-sm outline-none focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/15"
+                  className="w-full min-h-[44px] text-sm tabular-nums border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-900 shadow-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/15"
                 />
               </div>
               <div>
@@ -230,7 +230,7 @@ export default function MobileFiltersDrawer({
                     setPage(1);
                   }}
                   onClick={(e) => e.currentTarget.showPicker?.()}
-                  className="w-full min-h-[44px] text-sm tabular-nums border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-900 shadow-sm outline-none focus:border-[#2563eb] focus:ring-2 focus:ring-[#2563eb]/15"
+                  className="w-full min-h-[44px] text-sm tabular-nums border border-gray-200 rounded-xl px-3 py-2 bg-white text-gray-900 shadow-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/15"
                 />
               </div>
             </div>
@@ -242,7 +242,7 @@ export default function MobileFiltersDrawer({
                   className={cn(
                     "px-4 py-2 rounded-full text-sm font-semibold transition-colors",
                     activePreset === p.key
-                      ? "bg-gradient-to-br from-[#2563eb] to-[#4f46e5] text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)]"
+                      ? "bg-gradient-to-br from-brand to-[#4f46e5] text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)]"
                       : "bg-white border border-gray-200 text-gray-600 active:bg-gray-50",
                   )}
                 >
@@ -270,7 +270,7 @@ export default function MobileFiltersDrawer({
                     className={cn(
                       "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-colors",
                       isSelected
-                        ? "bg-gradient-to-br from-[#2563eb] to-[#4f46e5] text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)]"
+                        ? "bg-gradient-to-br from-brand to-[#4f46e5] text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)]"
                         : "bg-white border border-gray-200 text-gray-600 active:bg-gray-50",
                     )}
                   >
@@ -321,7 +321,7 @@ export default function MobileFiltersDrawer({
                       className={cn(
                         "px-4 py-2 rounded-full text-sm font-semibold transition-colors",
                         isSelected
-                          ? "bg-gradient-to-br from-[#2563eb] to-[#4f46e5] text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)]"
+                          ? "bg-gradient-to-br from-brand to-[#4f46e5] text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)]"
                           : "bg-white border border-gray-200 text-gray-600 active:bg-gray-50",
                       )}
                     >
@@ -333,7 +333,7 @@ export default function MobileFiltersDrawer({
                 {!showAllDepts && hiddenDepts > 0 && (
                   <button
                     onClick={() => setShowAllDepts(true)}
-                    className="px-4 py-2 rounded-full text-sm font-semibold bg-white border border-dashed border-gray-300 text-[#2563eb] active:bg-gray-50"
+                    className="px-4 py-2 rounded-full text-sm font-semibold bg-white border border-dashed border-gray-300 text-brand active:bg-gray-50"
                   >
                     + {hiddenDepts} más
                   </button>
@@ -371,7 +371,7 @@ export default function MobileFiltersDrawer({
         <div className="shrink-0 bg-white border-t border-gray-100 px-6 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <button
             onClick={() => onOpenChange(false)}
-            className="w-full min-h-[48px] py-3 rounded-xl bg-gradient-to-br from-[#2563eb] to-[#4f46e5] text-white text-sm font-semibold shadow-[0_8px_20px_rgba(37,99,235,0.32)] active:opacity-90"
+            className="w-full min-h-[48px] py-3 rounded-xl bg-gradient-to-br from-brand to-[#4f46e5] text-white text-sm font-semibold shadow-[0_8px_20px_rgba(37,99,235,0.32)] active:opacity-90"
           >
             Ver resultados
           </button>

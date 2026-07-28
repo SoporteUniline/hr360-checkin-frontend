@@ -11,14 +11,17 @@ import {
   Clock,
   FileSignature,
   FileText,
+  FileSpreadsheet,
   Plus,
 } from "lucide-react";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
+import { Combobox } from "@/components/Combobox";
 import StatCard from "@/components/StatCard";
 import TablePagination from "@/components/TablePagination";
 import ContratosTable from "./ContratosTable";
 import ContratoDialog from "./ContratoDialog";
 import ContratoViewDialog from "./ContratoViewDialog";
+import CambiarEstatusContrato from "./CambiarEstatusContrato";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,6 +69,8 @@ export default function ContratosPage() {
   const [seedItem, setSeedItem] = useState(null); // para duplicación
   const [openView, setOpenView] = useState(false);
   const [viewItem, setViewItem] = useState(null);
+  const [openEstatus, setOpenEstatus] = useState(false);
+  const [estatusRow, setEstatusRow] = useState(null);
 
   useEffect(() => {
     const id = searchParams.get("id");
@@ -100,9 +105,9 @@ export default function ContratosPage() {
     hasta,
   });
 
-  console.log(data);
   const contratos = data?.data || [];
   const total = data?.total || 0;
+  const estadisticas = data?.estadisticas;
 
   useEffect(() => {
     let isCancelled = false;
@@ -167,8 +172,19 @@ export default function ContratosPage() {
     if (page > totalPages) setPage(1);
   }, [headerFilterMeta, page, limit]);
 
-  // Alinear estadísticas con Apps Script (Vacaciones.html)
+  // Estadísticas del universo completo. Se prefieren las del servidor
+  // (`estadisticas`); el cálculo local es fallback e IMPRECISO porque solo ve
+  // la página actual (antes esto hacía que las tarjetas mostraran números mal).
   const stats = useMemo(() => {
+    const s = estadisticas;
+    if (s && (s.total || s.activos || s.porVencer || s.vencidos)) {
+      return {
+        total: s.total ?? total ?? 0,
+        activos: s.activos ?? 0,
+        porVencer: s.porVencer ?? s.por_vencer ?? 0,
+        vencidos: s.vencidos ?? 0,
+      };
+    }
     const hoy = dayjs().startOf("day");
     let activos = 0;
     let porVencer = 0;
@@ -188,10 +204,19 @@ export default function ContratosPage() {
       }
     });
     return { total: total || contratos.length, activos, porVencer, vencidos };
-  }, [contratos, total]);
+  }, [contratos, total, estadisticas]);
 
   const exportarExcel = () => {
-    if (!contratos || contratos.length === 0) return;
+    // Exporta el universo completo cargado para la empresa (filterOptionsRows),
+    // no solo la página visible. Cae a la página actual si aún no cargó.
+    const filas =
+      filterOptionsRows && filterOptionsRows.length > 0
+        ? filterOptionsRows
+        : contratos;
+    if (!filas || filas.length === 0) {
+      enqueueSnackbar("No hay contratos para exportar", { variant: "info" });
+      return;
+    }
     const fmt = (d) => (d ? dayjs(d).format("YYYY-MM-DD") : "");
     const headers = [
       "Folio",
@@ -206,7 +231,7 @@ export default function ContratosPage() {
     const head = `<thead><tr>${headers
       .map((h) => `<th>${h}</th>`)
       .join("")}</tr></thead>`;
-    const body = contratos
+    const body = filas
       .map((c) => {
         const cols = [
           c.folio || c.id || "",
@@ -270,6 +295,12 @@ export default function ContratosPage() {
     }
   };
 
+  const empresas = dataUser?.empresas_detalle || [];
+  const empresaOptions = [
+    { value: "all", label: "Todas las empresas" },
+    ...empresas.map((e) => ({ value: String(e.id_empresa), label: e.nombre })),
+  ];
+
   return (
     <div className="space-y-5">
       {/* Encabezado compacto homologado Adamia */}
@@ -278,17 +309,41 @@ export default function ContratosPage() {
         titulo="Contratos"
         subtitulo="Gestión de contratos laborales: vigencias, vencimientos y estatus."
         acciones={
-          <Button
-            className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white shadow-sm hover:opacity-95"
-            onClick={() => {
-              setSeedItem(null);
-              setEditItem(null);
-              setOpenDialog(true);
-            }}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Nuevo contrato
-          </Button>
+          <>
+            {empresas.length > 1 && (
+              <div className="w-48">
+                <Combobox
+                  name="empresa-contratos"
+                  options={empresaOptions}
+                  value={empresaFiltro}
+                  onChange={(val) => {
+                    setEmpresaFiltro(val || "all");
+                    setPage(1);
+                  }}
+                  placeholder="Empresa"
+                />
+              </div>
+            )}
+            <Button
+              variant="outline"
+              className="font-semibold"
+              onClick={exportarExcel}
+            >
+              <FileSpreadsheet className="w-4 h-4 mr-2" />
+              Exportar
+            </Button>
+            <Button
+              className="bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white shadow-sm hover:opacity-95"
+              onClick={() => {
+                setSeedItem(null);
+                setEditItem(null);
+                setOpenDialog(true);
+              }}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Nuevo contrato
+            </Button>
+          </>
         }
       />
 
@@ -339,6 +394,10 @@ export default function ContratosPage() {
           setViewItem(row);
           setOpenView(true);
         }}
+        onCambiarEstatus={(row) => {
+          setEstatusRow(row);
+          setOpenEstatus(true);
+        }}
       />
 
       {/* Paginación */}
@@ -369,6 +428,14 @@ export default function ContratosPage() {
         open={openView}
         setOpen={setOpenView}
         item={viewItem}
+      />
+
+      {/* Cambiar estatus (Activo / Suspendido / Terminado / Cancelado) */}
+      <CambiarEstatusContrato
+        open={openEstatus}
+        setOpen={setOpenEstatus}
+        contrato={estatusRow}
+        onSaved={mutate}
       />
 
       {/* Confirmación de eliminación - ADAMIA */}

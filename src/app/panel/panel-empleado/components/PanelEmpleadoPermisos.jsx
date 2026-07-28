@@ -1,5 +1,8 @@
 "use client";
 
+import MiniKpi from "./MiniKpi";
+import { formatearFechaCorta as formatearFecha } from "@/lib/formatDate";
+
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState, useMemo } from "react";
@@ -53,7 +56,7 @@ export default function PanelEmpleadoPermisos({
   return (
     <div>
       <h3 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
-        <CalendarDays className="h-3.5 w-3.5 text-[#2563eb]" />
+        <CalendarDays className="h-3.5 w-3.5 text-brand" />
         Historial de permisos
       </h3>
 
@@ -205,31 +208,4 @@ export default function PanelEmpleadoPermisos({
       </div>
     </div>
   );
-}
-
-function MiniKpi({ label, value }) {
-  return (
-    <div className="min-w-0 rounded-[10px] border border-gray-200 bg-white p-3">
-      <div className="truncate text-[10.5px] font-semibold uppercase tracking-wide text-gray-500">
-        {label}
-      </div>
-      <div className="text-lg font-extrabold tabular-nums text-gray-900">
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function formatearFecha(fechaISO) {
-  if (!fechaISO || fechaISO === "N/A") return "N/A";
-
-  try {
-    const fecha = new Date(fechaISO + "T00:00:00");
-    const dia = String(fecha.getDate()).padStart(2, "0");
-    const mes = String(fecha.getMonth() + 1).padStart(2, "0");
-    const anio = fecha.getFullYear();
-    return `${dia}/${mes}/${anio}`;
-  } catch (e) {
-    return fechaISO;
-  }
 }

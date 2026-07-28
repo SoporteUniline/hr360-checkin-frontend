@@ -199,7 +199,7 @@ export default function EstadoCivilTable({
         <div className="px-6 py-4 border-b border-gray-100 flex justify-end">
           <Button
             onClick={onCreate}
-            className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white"
+            className="bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white"
           >
             <Plus className="w-4 h-4 mr-2" />
             Nuevo estado civil

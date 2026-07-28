@@ -80,7 +80,7 @@ export default function CotizacionesAdminPage() {
             </div>
             <Button
               onClick={onSearch}
-              className="bg-gradient-to-br from-[#2563eb] to-[#4f46e5] font-semibold text-white hover:opacity-95"
+              className="bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white hover:opacity-95"
             >
               Buscar
             </Button>

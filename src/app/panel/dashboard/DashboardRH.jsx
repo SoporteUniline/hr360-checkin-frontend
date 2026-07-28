@@ -56,6 +56,7 @@ import SystemMessageRenderer from "@/components/system-messages/SystemMessageRen
 import AccesosRapidos from "@/components/AccesosRapidos";
 import WeeklyTrend from "./WeeklyTrend";
 import PermisosTable from "./PermisosTable";
+import PermisosCalendario from "@/app/panel/permisos/PermisosCalendario";
 import DashboardFilters from "./DashboardFilters";
 import { buildQuery, rangeFromPreset, previousRange } from "./lib/periodos";
 import {
@@ -343,6 +344,15 @@ export default function DashboardRH() {
       </div>
 
       <DashboardFilters value={filters} onChange={setFilters} />
+
+      {/* ===== Calendario de permisos — vista principal del periodo ===== */}
+      <PermisosCalendario
+        idEmpresa={idEmpresa}
+        desde={rango.fechaInicio}
+        hasta={rango.fechaFin}
+        festivosSet={new Set(festivosYmd)}
+        titulo="Permisos en el periodo"
+      />
 
       {/* ================= KPIs ================= */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">

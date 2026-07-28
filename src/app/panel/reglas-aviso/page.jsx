@@ -64,6 +64,7 @@ import AccesosRapidos from "@/components/AccesosRapidos";
 import { Combobox } from "@/components/Combobox";
 import { FiltrosGrid, CampoFiltro } from "@/components/filtros/CampoFiltro";
 import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
+import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 
 // Utilidades locales
 const diasSemanaMap = {
@@ -290,21 +291,11 @@ export default function ReglasAvisoPage() {
     <div className="space-y-6">
       {/* Encabezado compacto Adamia */}
       <div>
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[#2563eb] to-[#7c3aed] shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
-            <BellRing className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-extrabold tracking-tight text-gray-900">
-              Reglas de aviso
-            </h1>
-            <p className="text-[12.5px] text-gray-500">
-              Edita configuración, duplica reglas y activa/desactiva
-              notificaciones.
-            </p>
-          </div>
-        </div>
-        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
+        <EncabezadoPagina
+          icono={BellRing}
+          titulo="Reglas de aviso"
+          subtitulo="Edita configuración, duplica reglas y activa/desactiva notificaciones."
+        />
       </div>
 
       {/* KPIs */}

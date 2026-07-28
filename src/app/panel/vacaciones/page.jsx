@@ -52,6 +52,7 @@ import {
 } from "lucide-react";
 import { Combobox } from "@/components/Combobox";
 import { FiltrosGrid, CampoFiltro } from "@/components/filtros/CampoFiltro";
+import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 
 function numberFormat(n) {
   try {
@@ -437,20 +438,11 @@ export default function VacacionesPage() {
     <div className={`${styles.vacacionesTheme} space-y-6`}>
       {/* Encabezado compacto homologado Adamia */}
       <div>
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[#2563eb] to-[#7c3aed] shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
-            <CalendarDays className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-extrabold tracking-tight text-gray-900">
-              Panel de vacaciones
-            </h1>
-            <p className="text-[12.5px] text-gray-500">
-              Control de días cargados, tomados y disponibles por empleado.
-            </p>
-          </div>
-        </div>
-        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
+        <EncabezadoPagina
+          icono={CalendarDays}
+          titulo="Panel de vacaciones"
+          subtitulo="Control de días cargados, tomados y disponibles por empleado."
+        />
       </div>
 
       {/* KPIs */}
