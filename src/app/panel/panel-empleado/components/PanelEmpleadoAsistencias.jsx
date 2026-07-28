@@ -1,6 +1,7 @@
 "use client";
 
 import MiniKpi from "./MiniKpi";
+import { formatearFechaCorta as formatearFecha } from "@/lib/formatDate";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -686,18 +687,4 @@ function RenderizarGruposAsistencias({ grupos, niveles, nivelActual }) {
       })}
     </div>
   );
-}
-
-function formatearFecha(fechaISO) {
-  if (!fechaISO || fechaISO === "N/A") return "N/A";
-
-  try {
-    const fecha = new Date(fechaISO + "T00:00:00");
-    const dia = String(fecha.getDate()).padStart(2, "0");
-    const mes = String(fecha.getMonth() + 1).padStart(2, "0");
-    const anio = fecha.getFullYear();
-    return `${dia}/${mes}/${anio}`;
-  } catch (e) {
-    return fechaISO;
-  }
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { formatearFechaCorta as formatearFecha } from "@/lib/formatDate";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import usePanelEmpleadoData from "@/hooks/usePanelEmpleadoData";
@@ -493,20 +494,6 @@ export default function PanelEmpleadoPage() {
  * Función auxiliar para formatear fechas
  * Relacionado con: src/app/panel/panel-empleado/page.jsx
  */
-function formatearFecha(fechaISO) {
-  if (!fechaISO || fechaISO === "N/A") return "N/A";
-
-  try {
-    const fecha = new Date(fechaISO + "T00:00:00");
-    const dia = String(fecha.getDate()).padStart(2, "0");
-    const mes = String(fecha.getMonth() + 1).padStart(2, "0");
-    const anio = fecha.getFullYear();
-    return `${dia}/${mes}/${anio}`;
-  } catch (e) {
-    return fechaISO;
-  }
-}
-
 // Componente del directorio (reutilizable en desktop y Sheet móvil)
 const SidebarContent = ({
   empleados,
