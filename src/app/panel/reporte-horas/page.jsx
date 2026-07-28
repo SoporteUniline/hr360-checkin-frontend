@@ -33,6 +33,7 @@ import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import { fetchImageAsDataUrl } from "@/lib/pdfCompanyLogo";
 import { BarChart3, FileDown, FileSpreadsheet, Search } from "lucide-react";
+import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 
 function fmtDate(d) {
   const dd = new Date(d);
@@ -1051,20 +1052,11 @@ export default function ReporteHorasPage() {
     <div className="space-y-6">
       {/* Encabezado compacto con la tipografía del landing */}
       <div>
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-brand to-brand-accent shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
-            <BarChart3 className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-extrabold tracking-tight text-gray-900">
-              Reporte de horas
-            </h1>
-            <p className="text-[12.5px] text-gray-500">
-              Genera reportes por empleado y periodo.
-            </p>
-          </div>
-        </div>
-        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-brand to-brand-accent" />
+        <EncabezadoPagina
+          icono={BarChart3}
+          titulo="Reporte de horas"
+          subtitulo="Genera reportes por empleado y periodo."
+        />
       </div>
 
       {/* Fila de filtros homologada */}

@@ -60,6 +60,7 @@ import HeaderMultiFilter from "@/components/tabla/HeaderMultiFilter";
 import ActiveFilterChips from "@/components/tabla/ActiveFilterChips";
 import { Combobox } from "@/components/Combobox";
 import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
+import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 
 export default function PageAguinaldos() {
   const { dataUser } = useAuth();
@@ -1700,20 +1701,11 @@ export default function PageAguinaldos() {
     <div className={`${styles.aguTheme} space-y-6`}>
       {/* Encabezado compacto homologado (Adamia) */}
       <div>
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-brand to-brand-accent shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
-            <Calculator className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-extrabold tracking-tight text-gray-900">
-              Aguinaldos
-            </h1>
-            <p className="text-[12.5px] text-gray-500">
-              Calcula, guarda y consulta los aguinaldos del personal.
-            </p>
-          </div>
-        </div>
-        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-brand to-brand-accent" />
+        <EncabezadoPagina
+          icono={Calculator}
+          titulo="Aguinaldos"
+          subtitulo="Calcula, guarda y consulta los aguinaldos del personal."
+        />
       </div>
 
       {/* Tabs */}

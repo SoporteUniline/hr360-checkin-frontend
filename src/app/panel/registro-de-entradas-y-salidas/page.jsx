@@ -40,6 +40,7 @@ import ColumnasSelector, {
   cargarColumnasGuardadas,
 } from "@/components/tabla/ColumnasSelector";
 import { COLUMNAS_ENTRADAS } from "./EntradasSalidasTable";
+import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -178,21 +179,11 @@ export default function RegistroEntradasSalidas() {
     <div className="space-y-5">
       {/* Encabezado compacto homologado Adamia */}
       <div>
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-brand to-brand-accent shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
-            <ClockArrowUp className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-extrabold tracking-tight text-gray-900">
-              Entradas y salidas
-            </h1>
-            <p className="text-[12.5px] text-gray-500">
-              Consulta y corrige registros de reloj checador por rango de
-              fechas.
-            </p>
-          </div>
-        </div>
-        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-brand to-brand-accent" />
+        <EncabezadoPagina
+          icono={ClockArrowUp}
+          titulo="Entradas y salidas"
+          subtitulo="Consulta y corrige registros de reloj checador por rango de fechas."
+        />
       </div>
 
       <div

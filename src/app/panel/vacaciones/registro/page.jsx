@@ -35,6 +35,7 @@ import { useCallback } from "react";
 import styles from "../vacaciones-theme.module.css";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import { CalendarDays, Search } from "lucide-react";
+import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -187,20 +188,11 @@ export default function RegistroVacacionesPage() {
     <div className={`${styles.vacacionesTheme} space-y-6`}>
       {/* Encabezado compacto homologado Adamia */}
       <div>
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-brand to-brand-accent shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
-            <CalendarDays className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-extrabold tracking-tight text-gray-900">
-              Registro de vacaciones
-            </h1>
-            <p className="text-[12.5px] text-gray-500">
-              Consulta informativa de registros (solo lectura) por periodo.
-            </p>
-          </div>
-        </div>
-        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-brand to-brand-accent" />
+        <EncabezadoPagina
+          icono={CalendarDays}
+          titulo="Registro de vacaciones"
+          subtitulo="Consulta informativa de registros (solo lectura) por periodo."
+        />
       </div>
 
       {/* Fila de filtros homologada (sin filtros rápidos) */}

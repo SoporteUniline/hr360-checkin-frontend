@@ -41,6 +41,7 @@ import { fetcherWithToken } from "@/lib/fetcher";
 import { Combobox } from "@/components/Combobox";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import { permisosApi } from "@/lib/permisosApi";
+import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 
 /**
  * Página de gestión de Permisos (solicitudes_permiso)
@@ -558,20 +559,11 @@ export default function PermisosPage() {
     <div className={`${styles.permisosTheme} space-y-6`}>
       {/* Encabezado compacto homologado Adamia */}
       <div>
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-brand to-brand-accent shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
-            <CalendarCheck2 className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-extrabold tracking-tight text-gray-900">
-              Permisos
-            </h1>
-            <p className="text-[12.5px] text-gray-500">
-              Gestión de solicitudes, estados y calendario mensual.
-            </p>
-          </div>
-        </div>
-        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-brand to-brand-accent" />
+        <EncabezadoPagina
+          icono={CalendarCheck2}
+          titulo="Permisos"
+          subtitulo="Gestión de solicitudes, estados y calendario mensual."
+        />
       </div>
 
       {/* Estadísticas rápidas */}

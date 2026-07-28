@@ -14,6 +14,7 @@ import useDebounce from "@/hooks/useDebounce";
 import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 import { Combobox } from "@/components/Combobox";
 import { CampoFiltro } from "@/components/filtros/CampoFiltro";
+import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 
 export default function TiposRegistro() {
   const { dataUser } = useAuth();
@@ -50,20 +51,11 @@ export default function TiposRegistro() {
     <div className="space-y-6">
       {/* Encabezado compacto Adamia */}
       <div>
-        <div className="flex items-center gap-3">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-brand to-brand-accent shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
-            <BookOpen className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl font-extrabold tracking-tight text-gray-900">
-              Tipos de registro
-            </h1>
-            <p className="text-[12.5px] text-gray-500">
-              Catálogo para asistencias/permisos (crear, editar y eliminar).
-            </p>
-          </div>
-        </div>
-        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-brand to-brand-accent" />
+        <EncabezadoPagina
+          icono={BookOpen}
+          titulo="Tipos de registro"
+          subtitulo="Catálogo para asistencias/permisos (crear, editar y eliminar)."
+        />
       </div>
 
       {/* Filtros homologados */}
