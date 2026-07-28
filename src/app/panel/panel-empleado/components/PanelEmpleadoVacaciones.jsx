@@ -23,6 +23,21 @@ import {
 } from "@/components/ui/table";
 
 /**
+ * Días de vacaciones por antigüedad según la Ley Federal del Trabajo,
+ * Art. 76 (reforma "Vacaciones Dignas", vigente desde 2023):
+ *   1 año: 12, 2: 14, 3: 16, 4: 18, 5: 20 y +2 días por cada 5 años de
+ *   servicio a partir del sexto (6-10: 22, 11-15: 24, 16-20: 26, ...).
+ * Nota: dentro de un mismo bloque de cinco años el derecho NO aumenta,
+ * por eso "días a recibir" el próximo período puede ser igual al actual.
+ */
+function diasVacacionesLFT(anios) {
+  const a = Math.floor(Number(anios) || 0);
+  if (a <= 0) return 0;
+  if (a <= 5) return 10 + a * 2; // 1→12, 2→14, 3→16, 4→18, 5→20
+  return 20 + 2 * Math.ceil((a - 5) / 5); // 6→22, 11→24, 16→26, ...
+}
+
+/**
  * Componente para mostrar las vacaciones del empleado
  * Relacionado con: src/app/panel/panel-empleado/page.jsx
  */
@@ -306,15 +321,11 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
             />
             <InfoRow
               label="Días a recibir"
-              value={`${(balance.dias_totales || 0) + 2} días`}
+              value={`${diasVacacionesLFT((balance.anios_antiguedad || 0) + 1)} días`}
             />
             <InfoRow
               label="Antigüedad"
               value={`${balance.anios_antiguedad || 0} años`}
-            />
-            <InfoRow
-              label="Prima vacacional"
-              value={`${balance.prima_vacacional || 0}%`}
             />
           </div>
         </div>
