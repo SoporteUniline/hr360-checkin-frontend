@@ -17,6 +17,7 @@
  */
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import useSWR from "swr";
 import {
   CalendarDays,
@@ -173,6 +174,40 @@ function Empty({ children }) {
   return <div className="py-8 text-center text-sm text-zinc-400">{children}</div>;
 }
 
+/**
+ * Tarjeta de la banda "Requiere tu atención".
+ * Número grande + etiqueta + pista, con acceso directo al módulo donde se
+ * resuelve (los permisos se aprueban/rechazan en /panel/permisos).
+ */
+function AttnCard({ href, tone = "info", count, label, hint }) {
+  const text = {
+    brand: "text-violet-700",
+    warn: "text-amber-700",
+    crit: "text-rose-700",
+    info: "text-sky-700",
+  }[tone];
+  const stripe = {
+    brand: "bg-violet-500",
+    warn: "bg-amber-500",
+    crit: "bg-rose-500",
+    info: "bg-sky-500",
+  }[tone];
+  return (
+    <Link
+      href={href}
+      className="group relative flex flex-col gap-0.5 overflow-hidden rounded-xl border bg-white p-4 pl-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+    >
+      <span className={`absolute inset-y-0 left-0 w-1 ${stripe}`} />
+      <span className={`text-[32px] font-extrabold leading-none tabular-nums ${text}`}>
+        {count}
+      </span>
+      <span className="mt-1 text-[13px] font-semibold text-zinc-800">{label}</span>
+      <span className="text-[11.5px] text-zinc-500">{hint}</span>
+      <span className={`mt-1 text-[11.5px] font-bold ${text}`}>Revisar →</span>
+    </Link>
+  );
+}
+
 /** Barras horizontales genéricas: [{ name, value, color }]. */
 function HBars({ items }) {
   const max = Math.max(1, ...items.map((i) => i.value || 0));
@@ -324,7 +359,7 @@ export default function DashboardRH() {
   const rotacion = data.rotacion || null;
 
   return (
-    <div className="mx-auto w-full max-w-[1600px] px-1 py-4 space-y-4">
+    <div className="mx-auto w-full max-w-[1440px] px-4 py-5 space-y-5 sm:px-6 lg:px-8">
       <SystemMessageRenderer tipo="interna" contexto="dashboard" />
 
       <div className="flex items-start justify-between gap-3">
@@ -345,16 +380,8 @@ export default function DashboardRH() {
 
       <DashboardFilters value={filters} onChange={setFilters} />
 
-      {/* ===== Calendario de permisos — vista principal del periodo ===== */}
-      <PermisosCalendario
-        idEmpresa={idEmpresa}
-        desde={rango.fechaInicio}
-        hasta={rango.fechaFin}
-        festivosSet={new Set(festivosYmd)}
-        titulo="Permisos en el periodo"
-      />
-
-      {/* ================= KPIs ================= */}
+      {/* ================= Resumen (KPIs) ================= */}
+      <h2 className="pt-1 text-[15px] font-semibold">Resumen del periodo</h2>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         <KpiCard
           label="Total empleados" icon={UsersRound} tone="brand"
@@ -398,7 +425,50 @@ export default function DashboardRH() {
         />
       </div>
 
-      {/* ================= Tendencia + Distribución ================= */}
+      {/* ================= Requiere tu atención ================= */}
+      <h2 className="pt-2 text-[15px] font-semibold">Requiere tu atención</h2>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <AttnCard
+          href="/panel/permisos"
+          tone="brand"
+          count={permisosActivos}
+          label="Permisos activos"
+          hint="Aprobar o rechazar en Permisos"
+        />
+        <AttnCard
+          href="/panel/contratos"
+          tone="warn"
+          count={contratos.length}
+          label="Contratos por vencer"
+          hint={`${contratos.filter((c) => (c.dias_restantes ?? c.diasRestantes ?? 99) <= 7).length} vencen en ≤ 7 días`}
+        />
+        <AttnCard
+          href="/panel/gestion-documental/documentos"
+          tone="info"
+          count={documentos.length}
+          label="Documentos por vencer"
+          hint="Vigencias del expediente"
+        />
+        <AttnCard
+          href="/panel/registro-asistencia"
+          tone="crit"
+          count={pick(data.sinChecarCount, (data.sinChecar || []).length)}
+          label="Sin checar"
+          hint="Faltas por revisar"
+        />
+      </div>
+
+      {/* ===== Calendario de permisos activos ===== */}
+      <h2 className="pt-2 text-[15px] font-semibold">Calendario de permisos activos</h2>
+      <PermisosCalendario
+        idEmpresa={idEmpresa}
+        desde={rango.fechaInicio}
+        hasta={rango.fechaFin}
+        festivosSet={new Set(festivosYmd)}
+        titulo="Permisos en el periodo"
+      />
+
+      {/* ================= Comportamiento en el periodo ================= */}
       <h2 className="pt-2 text-[15px] font-semibold">Comportamiento en el periodo</h2>
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         <div className="lg:col-span-2">
