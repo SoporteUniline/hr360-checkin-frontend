@@ -63,19 +63,24 @@ export default function FacturasEmpresaTab({ empresa }) {
       : facturas.filter((f) => f.estado === estadoFiltro);
   const suscripcion = suscripcionData?.data || null;
 
-  const totalPendiente = facturas
-    .filter((f) => f.estado === "Pendiente")
-    .reduce((acc, f) => acc + Number(f.total || 0), 0);
-
   const totalPagado = facturas
     .filter(
       (f) => f.estado === "Pagada Stripe" || f.estado === "Pagada Externa",
     )
     .reduce((acc, f) => acc + Number(f.total || 0), 0);
 
-  const facturasPendientes = facturas.filter(
-    (f) => f.estado === "Pendiente",
-  ).length;
+  const tieneSaldo = (factura) =>
+    ["Pendiente", "Vencida"].includes(factura.estado);
+
+  const totalPendiente = facturas
+    .filter(tieneSaldo)
+    .reduce((acc, factura) => acc + Number(factura.total || 0), 0);
+
+  const mesesConSaldo = new Set(
+    facturas
+      .filter(tieneSaldo)
+      .map((factura) => String(factura.periodo_fin).slice(0, 7)),
+  ).size;
 
   const periodoDefault = useMemo(() => getCurrentMonthPeriod(), []);
 
@@ -332,7 +337,7 @@ export default function FacturasEmpresaTab({ empresa }) {
           value={formatMoney(totalPendiente)}
         />
         <ResumenCard title="Total pagado" value={formatMoney(totalPagado)} />
-        <ResumenCard title="Facturas pendientes" value={facturasPendientes} />
+        <ResumenCard title="Meses con saldo" value={`${mesesConSaldo} / 2`} />
       </div>
 
       <div className="mb-4 flex flex-wrap gap-2">
