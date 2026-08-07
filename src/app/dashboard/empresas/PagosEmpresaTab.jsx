@@ -60,21 +60,48 @@ export default function PagosEmpresaTab({ empresa }) {
             </thead>
 
             <tbody>
-              {pagos.map((pago) => (
-                <tr key={pago.id} className="border-t hover:bg-gray-50">
-                  <td className="px-3 py-3">{date(pago.fecha_pago)}</td>
-                  <td className="px-3 py-3 font-semibold">
-                    {money(pago.monto)}
-                  </td>
-                  <td className="px-3 py-3">{pago.metodo_pago || "-"}</td>
-                  <td className="px-3 py-3">{pago.referencia || "-"}</td>
-                  <td className="px-3 py-3">{pago.periodo_cubierto || "-"}</td>
-                  <td className="px-3 py-3">
-                    <EstadoPago estado={pago.estado} />
-                  </td>
-                  <td className="px-3 py-3">{pago.registrado_por || "-"}</td>
-                </tr>
-              ))}
+              {pagos.map((pago) => {
+                const esAjusteCobertura =
+                  pago.referencia?.startsWith("AJUSTE-COBERTURA-");
+
+                return (
+                  <tr key={pago.id} className="border-t hover:bg-gray-50">
+                    <td className="px-3 py-3">{date(pago.fecha_pago)}</td>
+
+                    <td className="px-3 py-3 font-semibold">
+                      {esAjusteCobertura ? "—" : money(pago.monto)}
+                    </td>
+
+                    <td className="px-3 py-3">
+                      {esAjusteCobertura
+                        ? "Ajuste administrativo"
+                        : pago.metodo_pago || "-"}
+                    </td>
+
+                    <td className="px-3 py-3">
+                      {esAjusteCobertura
+                        ? pago.notas || "Ajuste manual de cobertura"
+                        : pago.referencia || "-"}
+                    </td>
+
+                    <td className="px-3 py-3">
+                      {pago.periodo_cubierto || "-"}
+                    </td>
+
+                    <td className="px-3 py-3">
+                      {esAjusteCobertura ? (
+                        <span className="inline-flex rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-800">
+                          Ajuste
+                        </span>
+                      ) : (
+                        <EstadoPago estado={pago.estado} />
+                      )}
+                    </td>
+
+                    <td className="px-3 py-3">{pago.registrado_por || "-"}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

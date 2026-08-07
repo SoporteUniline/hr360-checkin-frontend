@@ -112,24 +112,37 @@ export default function SuscripcionEmpresaTab({ empresa }) {
 
   return (
     <div className="mt-4 space-y-4">
-      <div className="grid gap-3 md:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-3">
         <MetricCard
           title="Estatus financiero"
           value={resumenFinanciero?.estatus_financiero || "Al corriente"}
         />
+
         <MetricCard
           title="Saldo pendiente"
-          value={money(resumenFinanciero?.saldo_pendiente)}
+          value={money(resumenFinanciero?.saldo_pendiente || 0)}
         />
+
         <MetricCard
-          title="Total pagado"
-          value={money(resumenFinanciero?.total_pagado)}
-        />
-        <MetricCard
-          title="Facturas pendientes"
-          value={resumenFinanciero?.adeudos || 0}
+          title="Meses con saldo"
+          value={`${resumenFinanciero?.periodos_con_saldo || 0} / 2`}
         />
       </div>
+
+      {Number(resumenFinanciero?.periodos_con_saldo || 0) === 2 &&
+        empresa.estado === "Activo" && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            Esta empresa tiene dos mensualidades pendientes. Si no liquida ambas
+            antes de iniciar el siguiente periodo, será suspendida.
+          </div>
+        )}
+
+      {empresa.estado === "Suspendido" && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+          La empresa está suspendida. Debe liquidar todas las mensualidades
+          pendientes para recuperar el acceso.
+        </div>
+      )}
 
       <div className="rounded-lg border bg-white p-4">
         <h2 className="mb-3 text-base font-semibold text-slate-700">

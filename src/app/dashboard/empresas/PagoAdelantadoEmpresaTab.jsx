@@ -136,17 +136,23 @@ export default function PagoAdelantadoEmpresaTab({ empresa }) {
     <div className="mt-5 space-y-6">
       <div className="rounded-lg border bg-slate-50 p-5">
         <h2 className="text-lg font-semibold text-slate-700">
-          Cobertura actual
+          Vigencia administrativa
         </h2>
 
         <div className="mt-3 grid gap-3 text-sm md:grid-cols-2">
           <Info label="Empresa" value={empresa?.nombre_empresa} />
 
           <Info
-            label="Pagada hasta"
+            label="Fecha administrativa"
             value={suscripcion?.fecha_vencimiento || "-"}
             highlight
           />
+
+          <p className="mt-3 text-xs text-slate-500">
+            Esta fecha no sustituye el estado de las facturas. El acceso se
+            determina por las mensualidades pendientes y el estado de la
+            empresa.
+          </p>
 
           <Info
             label="Mensualidad actual"
@@ -227,13 +233,14 @@ export default function PagoAdelantadoEmpresaTab({ empresa }) {
         </h2>
 
         <p className="mt-1 text-sm text-slate-500">
-          Úsalo solo para corregir errores o definir directamente hasta qué
-          fecha está pagada la empresa.
+          Úsalo únicamente para corregir una vigencia administrativa. Este
+          ajuste no registra dinero recibido, no liquida facturas y no reduce
+          los meses con saldo.
         </p>
 
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <Field
-            label="Pagada hasta"
+            label="Nueva fecha administrativa"
             name="fecha_fin"
             type="date"
             value={formCobertura.fecha_fin}
