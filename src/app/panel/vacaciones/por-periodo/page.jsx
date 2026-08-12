@@ -158,6 +158,7 @@ export default function VacacionesPorPeriodoPage() {
           nombre: [e.nombre, e.apellido_paterno, e.apellido_materno]
             .filter(Boolean)
             .join(" "),
+          fecha_ingreso: e.fecha_ingreso,
         }));
         setEmpleados(mapped);
       } catch {
@@ -219,56 +220,70 @@ export default function VacacionesPorPeriodoPage() {
     setDialogOpen(true);
   };
 
-  // Calcular automáticamente 'anios' y 'dias'
+  // Calcular automáticamente antigüedad, periodo y días según fecha de ingreso
   useEffect(() => {
-    // 1. Solo calcular si hay fechas Y si tenemos las reglas de la ley
-    if (!form.fecha_inicio || !form.fecha_fin || vacLey.length === 0) return;
+    if (editRow) return;
+    if (!form.id_empleado) return;
 
-    // 2. EVITAR el cálculo automático si acabamos de abrir el modo edición
-    // Si los valores actuales del form coinciden exactamente con los de la fila a editar,
-    // no permitas que el cálculo automático los pise.
-    if (
-      editRow &&
-      form.fecha_inicio === editRow.fecha_inicio?.slice(0, 10) &&
-      form.fecha_fin === editRow.fecha_fin?.slice(0, 10)
-    ) {
+    const empleadoSeleccionado = empleados.find(
+      (e) => String(e.id) === String(form.id_empleado),
+    );
+
+    if (!empleadoSeleccionado?.fecha_ingreso) {
+      setWarningLey("El empleado no tiene fecha de ingreso registrada.");
       return;
     }
 
-    const parse = (v) => {
-      const d = dayjs(v, ["YYYY-MM-DD", "DD/MM/YYYY"], true);
-      return d.isValid() ? d : dayjs(v);
-    };
+    const ingreso = dayjs(
+      String(empleadoSeleccionado.fecha_ingreso).slice(0, 10),
+    ).startOf("day");
 
-    const start = parse(form.fecha_inicio).startOf("day");
-    const end = parse(form.fecha_fin).startOf("day");
-
-    if (!start.isValid() || !end.isValid() || end.isBefore(start)) {
-      setWarningLey("");
+    if (!ingreso.isValid()) {
+      setWarningLey("La fecha de ingreso del empleado no es válida.");
       return;
     }
 
-    // Calculamos la diferencia
-    const diffYears = Math.max(0, Math.floor(end.diff(start, "year", true)));
-    const regla = vacLey.find((r) => Number(r.anios) === Number(diffYears));
+    // Antigüedad real del empleado al día de hoy.
+    const hoy = dayjs().startOf("day");
+    const aniosCumplidos = Math.max(0, hoy.diff(ingreso, "year"));
+    const anioLaboralActual = aniosCumplidos + 1;
 
-    const calculatedAnios = String(diffYears);
-    const calculatedDias = regla ? String(regla.dias) : "";
+    // El periodo se construye exactamente desde el aniversario correspondiente:
+    // ingreso + N años -> ingreso + N + 1 años.
+    const fechaInicioCalculada = ingreso
+      .add(anioLaboralActual - 1, "year")
+      .format("YYYY-MM-DD");
 
-    // Solo actualizamos si el cálculo es distinto a lo que ya hay
-    if (
-      form.anios !== calculatedAnios ||
-      (regla && form.dias !== calculatedDias)
-    ) {
-      setForm((f) => ({
-        ...f,
-        anios: calculatedAnios,
-        dias: calculatedDias || f.dias,
-      }));
+    const fechaFinCalculada = ingreso
+      .add(anioLaboralActual, "year")
+      .format("YYYY-MM-DD");
+
+    // Buscar los días que correspondan según Vacaciones por ley.
+    const regla = vacLey.find(
+      (r) => Number(r.anios) === Number(anioLaboralActual),
+    );
+
+    setForm((f) => ({
+      ...f,
+      fecha_inicio: fechaInicioCalculada,
+      fecha_fin: fechaFinCalculada,
+      anios: String(anioLaboralActual),
+      dias: regla ? String(regla.total_dias ?? regla.dias) : f.dias,
+    }));
+
+    if (vacLey.length === 0) {
+      setWarningLey(
+        'No hay reglas configuradas en "Vacaciones por ley" para esta empresa. Captura los días manualmente.',
+      );
+      return;
     }
 
-    setWarningLey(regla ? "" : `No existe una regla para ${diffYears} año(s).`);
-  }, [form.fecha_inicio, form.fecha_fin, vacLey, editRow]); // Añadimos editRow a las dependencias
+    setWarningLey(
+      regla
+        ? ""
+        : `No existe una regla en "Vacaciones por ley" para ${aniosCumplidos} año(s). Captura los días manualmente.`,
+    );
+  }, [form.id_empleado, empleados, vacLey, editRow]);
 
   const proceedSave = async () => {
     const payload = {
@@ -391,7 +406,7 @@ export default function VacacionesPorPeriodoPage() {
   return (
     <div className={`${styles.vacacionesTheme} space-y-6`}>
       {/* Header ADAMIA */}
-      <div className="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+      <div className="vacaciones-periodo-header bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
         <div className="flex items-center justify-between gap-4 flex-col sm:flex-row">
           <div className="flex items-center gap-3">
             <div className="bg-[#2563EB] p-2.5 rounded-lg">
@@ -435,8 +450,11 @@ export default function VacacionesPorPeriodoPage() {
                   className="block w-full mt-1 font-medium text-slate-700 bg-transparent focus:outline-none cursor-pointer"
                 >
                   <option value="all">🌍 Todas las unidades de negocio</option>
-                  {unidadOptions.map((unidad) => (
-                    <option key={unidad.value} value={unidad.value}>
+                  {unidadOptions.map((unidad, index) => (
+                    <option
+                      key={`${unidad.value}-${index}`}
+                      value={unidad.value}
+                    >
                       {unidad.label}
                     </option>
                   ))}
@@ -447,7 +465,9 @@ export default function VacacionesPorPeriodoPage() {
               <p className="text-[10px] uppercase font-bold text-slate-500">
                 Total Periodos
               </p>
-              <p className="text-xl font-semibold text-[#37495E]">{rows.length}</p>
+              <p className="text-xl font-semibold text-[#37495E]">
+                {rows.length}
+              </p>
             </div>
           </div>
         </CardHeader>
@@ -673,7 +693,7 @@ export default function VacacionesPorPeriodoPage() {
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700">
-                  Años
+                  Años de antigüedad
                 </Label>
                 <Input
                   type="number"
@@ -720,8 +740,9 @@ export default function VacacionesPorPeriodoPage() {
                 </div>
               ) : (
                 <div className="md:col-span-2 text-xs text-slate-500">
-                  Años y días se calculan automáticamente según el rango de
-                  fechas y la tabla de Vacaciones por ley.
+                  La antigüedad y los días se calculan automáticamente según la
+                  fecha de ingreso del empleado y la tabla de Vacaciones por
+                  ley.
                 </div>
               )}
               <div className="md:col-span-2">

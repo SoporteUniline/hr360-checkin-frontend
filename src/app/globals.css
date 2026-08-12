@@ -132,8 +132,8 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI",
-      Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont,
+      "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
 
   /* Estilos globales ADAMIA */
@@ -363,6 +363,8 @@ body {
    - Se oculta el bloque visual "Header ADAMIA" repetido en módulos del panel.
    ========================================================================== */
 .panel-modules-content
-  div[class*="from-indigo-50"][class*="to-blue-50"][class*="border-indigo-100"][class*="rounded-xl"][class*="p-6"] {
+  div[class*="from-indigo-50"][class*="to-blue-50"][class*="border-indigo-100"][class*="rounded-xl"][class*="p-6"]:not(
+    .vacaciones-periodo-header
+  ) {
   display: none;
 }
