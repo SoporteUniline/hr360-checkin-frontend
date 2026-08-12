@@ -4,8 +4,18 @@
  */
 
 const MONTHS_SHORT_ES = [
-  "ene", "feb", "mar", "abr", "may", "jun",
-  "jul", "ago", "sep", "oct", "nov", "dic",
+  "ene",
+  "feb",
+  "mar",
+  "abr",
+  "may",
+  "jun",
+  "jul",
+  "ago",
+  "sep",
+  "oct",
+  "nov",
+  "dic",
 ];
 
 export function parseYMD(dateStr) {
@@ -88,4 +98,19 @@ export function getServiceYears(fechaIngreso) {
       today.getUTCDate() >= ingreso.getUTCDate());
   if (!hasAnniversaryThisYear) years -= 1;
   return Math.max(years, 0);
+}
+
+/** Años que cumple el empleado en su aniversario del año indicado. */
+export function getAnniversaryYears(fechaIngreso, referenceDate = new Date()) {
+  if (!fechaIngreso) return 0;
+
+  const ingreso = new Date(`${String(fechaIngreso).slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(ingreso.getTime())) return 0;
+
+  const year =
+    referenceDate instanceof Date
+      ? referenceDate.getUTCFullYear()
+      : new Date(referenceDate).getUTCFullYear();
+
+  return Math.max(year - ingreso.getUTCFullYear(), 0);
 }
