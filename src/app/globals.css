@@ -368,3 +368,12 @@ body {
   ) {
   display: none;
 }
+
+/* ==========================================================================
+   Leaflet - mantener mapas detrás de Dialogs / Modals
+   ========================================================================== */
+
+.leaflet-container {
+  position: relative;
+  z-index: 0 !important;
+}
