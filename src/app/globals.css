@@ -360,7 +360,7 @@ body {
    ========================================================================== */
 .panel-modules-content
   div[class*="from-indigo-50"][class*="to-blue-50"][class*="border-indigo-100"][class*="rounded-xl"][class*="p-6"]:not(
-    .vacaciones-periodo-header
+    .panel-module-header-visible
   ) {
   display: none;
 }
