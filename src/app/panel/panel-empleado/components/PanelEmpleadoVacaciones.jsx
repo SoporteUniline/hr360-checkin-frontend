@@ -321,15 +321,19 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
           <div className="space-y-2 text-sm">
             <InfoRow
               label="Inicio del período"
-              value={formatearFecha(balance.fecha_inicio_periodo)}
+              value={formatearFecha(balance.proximo_periodo?.fecha_inicio)}
             />
             <InfoRow
               label="Días a recibir"
-              value={`${diasVacacionesLFT((balance.anios_antiguedad || 0) + 1)} días`}
+              value={`${balance.proximo_periodo?.dias || 0} días`}
             />
             <InfoRow
               label="Antigüedad"
-              value={`${balance.anios_antiguedad || 0} años`}
+              value={`${balance.proximo_periodo?.anio || 0} años`}
+            />
+            <InfoRow
+              label="Prima vacacional"
+              value={`${balance.proximo_periodo?.prima_vacacional || 0}%`}
             />
           </div>
         </div>

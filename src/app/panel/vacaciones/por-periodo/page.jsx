@@ -246,28 +246,41 @@ export default function VacacionesPorPeriodoPage() {
     // Antigüedad real del empleado al día de hoy.
     const hoy = dayjs().startOf("day");
     const aniosCumplidos = Math.max(0, hoy.diff(ingreso, "year"));
-    const anioLaboralActual = aniosCumplidos + 1;
 
-    // El periodo se construye exactamente desde el aniversario correspondiente:
-    // ingreso + N años -> ingreso + N + 1 años.
+    if (aniosCumplidos < 1) {
+      setForm((f) => ({
+        ...f,
+        fecha_inicio: "",
+        fecha_fin: "",
+        anios: "",
+        dias: "",
+      }));
+
+      setWarningLey("El empleado todavía no cumple un año de antigüedad.");
+      return;
+    }
+
+    // Generar únicamente el último periodo laboral cumplido.
+    // Ejemplo: ingreso 20/06/2022, hoy 14/08/2026
+    // => año 4, periodo 20/06/2025 - 20/06/2026.
+    const anioPeriodo = aniosCumplidos;
+
     const fechaInicioCalculada = ingreso
-      .add(anioLaboralActual - 1, "year")
+      .add(anioPeriodo - 1, "year")
       .format("YYYY-MM-DD");
 
     const fechaFinCalculada = ingreso
-      .add(anioLaboralActual, "year")
+      .add(anioPeriodo, "year")
       .format("YYYY-MM-DD");
 
-    // Buscar los días que correspondan según Vacaciones por ley.
-    const regla = vacLey.find(
-      (r) => Number(r.anios) === Number(anioLaboralActual),
-    );
+    // Buscar los días correspondientes según Vacaciones por ley.
+    const regla = vacLey.find((r) => Number(r.anios) === Number(anioPeriodo));
 
     setForm((f) => ({
       ...f,
       fecha_inicio: fechaInicioCalculada,
       fecha_fin: fechaFinCalculada,
-      anios: String(anioLaboralActual),
+      anios: String(anioPeriodo),
       dias: regla ? String(regla.total_dias ?? regla.dias) : f.dias,
     }));
 
@@ -693,7 +706,7 @@ export default function VacacionesPorPeriodoPage() {
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700">
-                  Años de antigüedad
+                  Año del período vacacional
                 </Label>
                 <Input
                   type="number"
@@ -708,7 +721,9 @@ export default function VacacionesPorPeriodoPage() {
                     setForm((f) => ({
                       ...f,
                       anios: nextAnios,
-                      dias: regla ? String(regla.dias) : f.dias,
+                      dias: regla
+                        ? String(regla.total_dias ?? regla.dias)
+                        : f.dias,
                     }));
                     setWarningLey(
                       regla
@@ -720,6 +735,9 @@ export default function VacacionesPorPeriodoPage() {
                   }}
                   className="bg-white mt-2"
                 />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Corresponde al último año laboral cumplido del empleado.
+                </p>
               </div>
               <div>
                 <Label className="text-sm font-medium text-gray-700">
@@ -740,7 +758,7 @@ export default function VacacionesPorPeriodoPage() {
                 </div>
               ) : (
                 <div className="md:col-span-2 text-xs text-slate-500">
-                  La antigüedad y los días se calculan automáticamente según la
+                  El período y los días se calculan automáticamente según la
                   fecha de ingreso del empleado y la tabla de Vacaciones por
                   ley.
                 </div>
