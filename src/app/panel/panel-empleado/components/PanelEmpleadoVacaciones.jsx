@@ -64,11 +64,14 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
 
     // Ordenar
     filtradas.sort((a, b) => {
+      const fechaA = a?.fecha_inicio || "";
+      const fechaB = b?.fecha_inicio || "";
+
       if (orden === "desc") {
-        return b.fecha_inicio.localeCompare(a.fecha_inicio);
-      } else {
-        return a.fecha_inicio.localeCompare(b.fecha_inicio);
+        return fechaB.localeCompare(fechaA);
       }
+
+      return fechaA.localeCompare(fechaB);
     });
 
     return filtradas;
@@ -360,10 +363,23 @@ function VistaCalendarioVacaciones({
   }, [historial]);
 
   // Obtener meses con vacaciones
+  // const mesesConVacaciones = useMemo(() => {
+  //   const meses = Array.from(
+  //     new Set(historial.map((v) => v.fecha_inicio.substring(0, 7))),
+  //   ).sort();
+  //   return meses;
+  // }, [historial]);
+
   const mesesConVacaciones = useMemo(() => {
     const meses = Array.from(
-      new Set(historial.map((v) => v.fecha_inicio.substring(0, 7))),
+      new Set(
+        historial
+          .map((v) => v?.fecha_inicio)
+          .filter(Boolean)
+          .map((fecha) => fecha.substring(0, 7)),
+      ),
     ).sort();
+
     return meses;
   }, [historial]);
 
@@ -501,8 +517,8 @@ function CalendarioGrande({ mesAnio, diasVacaciones }) {
                     esVacacion
                       ? "bg-gradient-to-br from-brand to-brand-accent text-white"
                       : esHoy
-                        ? "border border-blue-300 bg-blue-50 font-bold text-blue-700"
-                        : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                      ? "border border-blue-300 bg-blue-50 font-bold text-blue-700"
+                      : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
                   }
                 `}
               >
