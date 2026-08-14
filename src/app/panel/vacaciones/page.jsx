@@ -52,6 +52,7 @@ import {
 } from "lucide-react";
 import { Combobox } from "@/components/Combobox";
 import { FiltrosGrid, CampoFiltro } from "@/components/filtros/CampoFiltro";
+import { enqueueSnackbar } from "notistack";
 
 function numberFormat(n) {
   try {
@@ -85,6 +86,8 @@ export default function VacacionesPage() {
   const [filterDepartamento, setFilterDepartamento] = useState("");
   const [filterEstado, setFilterEstado] = useState(""); // "" | "con" | "sin"
 
+  const [vistaPanel, setVistaPanel] = useState("resumen");
+
   // Paginación (cliente)
   // - Controla el pie de página (paginador y "Mostrar N")
   const [currentPage, setCurrentPage] = useState(1);
@@ -110,6 +113,9 @@ export default function VacacionesPage() {
   const [rowLoading, setRowLoading] = useState(false);
   const [cacheCargados, setCacheCargados] = useState({});
   const [cacheTomados, setCacheTomados] = useState({});
+
+  const [cambiosMasivos, setCambiosMasivos] = useState({});
+  const [guardandoMasivos, setGuardandoMasivos] = useState(false);
 
   // Cargar reporte principal
   useEffect(() => {
@@ -433,6 +439,78 @@ export default function VacacionesPage() {
     setUnidadActiva("all");
   };
 
+  const cambiosPendientes = useMemo(() => {
+    return Object.entries(cambiosMasivos)
+      .map(([idEmpleado, valor]) => {
+        const empleado = data.find(
+          (e) => Number(e.id_empleado) === Number(idEmpleado),
+        );
+
+        if (!empleado) return null;
+
+        const nuevo = Number(valor);
+        const anterior = Number(empleado.dias_disponibles ?? 0);
+
+        if (!Number.isInteger(nuevo) || nuevo < 0 || nuevo === anterior) {
+          return null;
+        }
+
+        return {
+          id_empleado: Number(idEmpleado),
+          dias_disponibles: nuevo,
+        };
+      })
+      .filter(Boolean);
+  }, [cambiosMasivos, data]);
+
+  const guardarCambiosMasivos = async () => {
+    if (cambiosPendientes.length === 0) return;
+
+    setGuardandoMasivos(true);
+
+    try {
+      const { data: resultado } = await axios.patch(
+        `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/vacaciones/masivas`,
+        {
+          cambios: cambiosPendientes,
+        },
+      );
+
+      const res = await axios.get(
+        `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/vacaciones/reporte`,
+        {
+          params: { empresa: empresaActiva },
+        },
+      );
+
+      setData(res.data || []);
+      setCambiosMasivos({});
+
+      const actualizados = resultado?.actualizados ?? cambiosPendientes.length;
+
+      enqueueSnackbar(
+        `${actualizados} ${
+          actualizados === 1 ? "empleado actualizado" : "empleados actualizados"
+        } correctamente`,
+        {
+          variant: "success",
+        },
+      );
+    } catch (error) {
+      console.error("Error guardando vacaciones masivas:", error);
+
+      enqueueSnackbar(
+        error?.response?.data?.error ||
+          "No se pudieron guardar los cambios de vacaciones",
+        {
+          variant: "error",
+        },
+      );
+    } finally {
+      setGuardandoMasivos(false);
+    }
+  };
+
   return (
     <div className={`${styles.vacacionesTheme} space-y-6`}>
       {/* Encabezado compacto homologado Adamia */}
@@ -453,29 +531,57 @@ export default function VacacionesPage() {
         <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-[#2563eb] to-[#7c3aed]" />
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard
-          title="Total empleados"
-          value={numberFormat(kpis.total)}
-          icon={Users}
-        />
-        <StatCard
-          title="Con vacaciones"
-          value={numberFormat(kpis.conV)}
-          icon={CheckCircle2}
-        />
-        <StatCard
-          title="Sin vacaciones"
-          value={numberFormat(kpis.sinV)}
-          icon={XCircle}
-        />
-        <StatCard
-          title="Total días disponibles"
-          value={numberFormat(kpis.totalDias)}
-          icon={ClipboardList}
-        />
+      <div className="inline-flex rounded-lg border border-blue-100 bg-blue-50 p-1">
+        <button
+          type="button"
+          onClick={() => setVistaPanel("resumen")}
+          className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
+            vistaPanel === "resumen"
+              ? "bg-white text-[#2563EB] shadow-sm"
+              : "text-gray-600 hover:bg-white/60"
+          }`}
+        >
+          Panel
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setVistaPanel("masivas")}
+          className={`px-4 py-2 text-sm font-semibold rounded-md transition-colors ${
+            vistaPanel === "masivas"
+              ? "bg-white text-[#2563EB] shadow-sm"
+              : "text-gray-600 hover:bg-white/60"
+          }`}
+        >
+          Masivas
+        </button>
       </div>
+
+      {/* KPIs */}
+      {vistaPanel === "resumen" && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <StatCard
+            title="Total empleados"
+            value={numberFormat(kpis.total)}
+            icon={Users}
+          />
+          <StatCard
+            title="Con vacaciones"
+            value={numberFormat(kpis.conV)}
+            icon={CheckCircle2}
+          />
+          <StatCard
+            title="Sin vacaciones"
+            value={numberFormat(kpis.sinV)}
+            icon={XCircle}
+          />
+          <StatCard
+            title="Total días disponibles"
+            value={numberFormat(kpis.totalDias)}
+            icon={ClipboardList}
+          />
+        </div>
+      )}
 
       {/* Fila de filtros homologada */}
       <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
@@ -598,20 +704,411 @@ export default function VacacionesPage() {
         </FiltrosGrid>
       </div>
 
-      {/* Contenido */}
-      <Card className="p-0 overflow-hidden border-gray-100">
-        {loading ? (
-          <div className="text-center text-slate-400 py-16">
-            Cargando datos...
-          </div>
-        ) : error ? (
-          <div className="text-center text-red-500 py-16">{error}</div>
-        ) : datosFiltrados.length === 0 ? (
-          <div className="text-center text-slate-400 py-16">
-            No se encontraron resultados
-          </div>
-        ) : (
-          <>
+      {vistaPanel === "resumen" ? (
+        <Card className="p-0 overflow-hidden border-gray-100">
+          {loading ? (
+            <div className="text-center text-slate-400 py-16">
+              Cargando datos...
+            </div>
+          ) : error ? (
+            <div className="text-center text-red-500 py-16">{error}</div>
+          ) : datosFiltrados.length === 0 ? (
+            <div className="text-center text-slate-400 py-16">
+              No se encontraron resultados
+            </div>
+          ) : (
+            <>
+              <div className="overflow-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                        Empleado
+                      </TableHead>
+                      <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                        Departamento
+                      </TableHead>
+                      <TableHead className="text-center text-xs font-semibold uppercase text-gray-600">
+                        Días cargados
+                      </TableHead>
+                      <TableHead className="text-center text-xs font-semibold uppercase text-gray-600">
+                        Días tomados
+                      </TableHead>
+                      <TableHead className="text-center text-xs font-semibold uppercase text-gray-600">
+                        Días disponibles
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {datosPagina.map((emp) => {
+                      const dDisp = emp?.dias_disponibles ?? 0;
+                      const badgeVariant =
+                        dDisp === 0
+                          ? "destructive"
+                          : dDisp < 5
+                          ? "secondary"
+                          : "default";
+                      return (
+                        <React.Fragment key={`emp-${emp.id_empleado}`}>
+                          <TableRow
+                            className="cursor-pointer hover:bg-slate-50"
+                            onClick={() => handleRowClick(emp.id_empleado)}
+                          >
+                            <TableCell className="font-semibold">
+                              <span
+                                className={`mr-2 inline-flex transition-transform ${
+                                  expandedRow === emp.id_empleado
+                                    ? "rotate-90"
+                                    : ""
+                                }`}
+                              >
+                                <ChevronRight className="h-4 w-4 text-gray-500" />
+                              </span>
+                              {emp.nombre_completo}
+                            </TableCell>
+                            <TableCell>{emp.departamento}</TableCell>
+                            <TableCell className="text-center">
+                              {badgeCargados(emp.dias_cargados)}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {badgeTomados(emp.dias_tomados)}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {badgeDisponibles(dDisp)}
+                            </TableCell>
+                          </TableRow>
+                          {expandedRow === emp.id_empleado ? (
+                            <TableRow>
+                              <TableCell
+                                colSpan={5}
+                                className="p-0 bg-slate-50"
+                              >
+                                <div className="border-t p-3">
+                                  {/* Tabs tipo botones */}
+                                  <div className="inline-flex rounded-lg border border-blue-100 bg-blue-50 p-1 mb-3">
+                                    <button
+                                      className={`px-3 py-1.5 text-sm font-semibold rounded ${
+                                        expandedTab === "cargados"
+                                          ? "bg-white text-[#2563EB] shadow-sm"
+                                          : "text-gray-600 hover:bg-white/60"
+                                      }`}
+                                      onClick={() => setExpandedTab("cargados")}
+                                    >
+                                      Días cargados
+                                    </button>
+                                    <button
+                                      className={`px-3 py-1.5 text-sm font-semibold rounded ${
+                                        expandedTab === "tomados"
+                                          ? "bg-white text-[#2563EB] shadow-sm"
+                                          : "text-gray-600 hover:bg-white/60"
+                                      }`}
+                                      onClick={() => setExpandedTab("tomados")}
+                                    >
+                                      Días tomados
+                                    </button>
+                                  </div>
+
+                                  {/* Resumen del empleado */}
+                                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
+                                    <Card className="p-3">
+                                      <div className="text-[11px] uppercase text-slate-500">
+                                        Días Cargados
+                                      </div>
+                                      <div className="text-xl font-extrabold">
+                                        {numberFormat(emp.dias_cargados)}
+                                      </div>
+                                    </Card>
+                                    <Card className="p-3">
+                                      <div className="text-[11px] uppercase text-slate-500">
+                                        Días Tomados
+                                      </div>
+                                      <div className="text-xl font-extrabold">
+                                        {numberFormat(emp.dias_tomados)}
+                                      </div>
+                                    </Card>
+                                    <Card className="p-3">
+                                      <div className="text-[11px] uppercase text-slate-500">
+                                        Disponibles
+                                      </div>
+                                      <div
+                                        className="text-xl font-extrabold"
+                                        style={{
+                                          color:
+                                            dDisp === 0
+                                              ? "#991b1b"
+                                              : dDisp < 5
+                                              ? "#92400e"
+                                              : "#065f46",
+                                        }}
+                                      >
+                                        {numberFormat(dDisp)}
+                                      </div>
+                                    </Card>
+                                  </div>
+
+                                  {/* Contenido */}
+                                  <div className="bg-white rounded-md border">
+                                    {rowLoading ? (
+                                      <div className="text-center text-slate-400 py-10">
+                                        Cargando...
+                                      </div>
+                                    ) : expandedTab === "cargados" ? (
+                                      <div className="overflow-auto">
+                                        {(
+                                          cacheCargados[emp.id_empleado]
+                                            ?.periodos ?? []
+                                        ).length === 0 ? (
+                                          <div className="text-center text-slate-400 py-8">
+                                            No tiene periodos registrados
+                                          </div>
+                                        ) : (
+                                          <Table>
+                                            <TableHeader>
+                                              <TableRow className="bg-gray-50">
+                                                <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                                                  Año
+                                                </TableHead>
+                                                <TableHead className="text-center text-xs font-semibold uppercase text-gray-600">
+                                                  Días
+                                                </TableHead>
+                                                <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                                                  Inicio
+                                                </TableHead>
+                                                <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                                                  Fin
+                                                </TableHead>
+                                                <TableHead className="text-center text-xs font-semibold uppercase text-gray-600">
+                                                  Estado
+                                                </TableHead>
+                                              </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                              {(
+                                                cacheCargados[emp.id_empleado]
+                                                  ?.periodos ?? []
+                                              ).map((p) => {
+                                                const activa =
+                                                  p?.estado === "Activa";
+                                                return (
+                                                  <TableRow
+                                                    key={`${p.id}-${p.anios}`}
+                                                  >
+                                                    <TableCell className="font-semibold">
+                                                      Año {p?.anios}
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                      <Badge variant="outline">
+                                                        {numberFormat(p?.dias)}{" "}
+                                                        días
+                                                      </Badge>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                      {p?.fecha_inicio
+                                                        ? formatDateDMY(
+                                                            p.fecha_inicio,
+                                                          )
+                                                        : "-"}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                      {p?.fecha_fin
+                                                        ? formatDateDMY(
+                                                            p.fecha_fin,
+                                                          )
+                                                        : "-"}
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                      <Badge
+                                                        variant={
+                                                          activa
+                                                            ? "default"
+                                                            : "secondary"
+                                                        }
+                                                      >
+                                                        {p?.estado}
+                                                      </Badge>
+                                                    </TableCell>
+                                                  </TableRow>
+                                                );
+                                              })}
+                                            </TableBody>
+                                          </Table>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <div className="p-3">
+                                        {/* Métricas simples */}
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
+                                          <Card className="p-3">
+                                            <div className="text-[11px] uppercase text-slate-500">
+                                              Total Días
+                                            </div>
+                                            <div className="text-2xl font-extrabold">
+                                              {numberFormat(
+                                                cacheTomados[emp.id_empleado]
+                                                  ?.total ??
+                                                  cacheTomados[emp.id_empleado]
+                                                    ?.vacaciones?.length ??
+                                                  0,
+                                              )}
+                                            </div>
+                                          </Card>
+                                          <Card className="p-3">
+                                            <div className="text-[11px] uppercase text-slate-500">
+                                              Período
+                                            </div>
+                                            <div className="text-base font-semibold">
+                                              {rangoVacaciones(
+                                                cacheTomados[emp.id_empleado]
+                                                  ?.vacaciones ?? [],
+                                              )}
+                                            </div>
+                                          </Card>
+                                        </div>
+
+                                        {/* Grid de días tomados (estilo ejemplo HTML) */}
+                                        {(() => {
+                                          const vacaciones =
+                                            cacheTomados[emp.id_empleado]
+                                              ?.vacaciones ?? [];
+                                          if (vacaciones.length === 0) {
+                                            return (
+                                              <div className="text-center text-slate-400 py-8">
+                                                No ha tomado vacaciones
+                                              </div>
+                                            );
+                                          }
+                                          const grupos =
+                                            groupVacacionesByYearMonth(
+                                              vacaciones,
+                                            );
+                                          return (
+                                            <div className="flex flex-col gap-5">
+                                              {grupos.map((g) => (
+                                                <div
+                                                  key={`${g.year}-${g.month}`}
+                                                  className="pl-4 border-l-4 border-slate-300"
+                                                >
+                                                  <div className="mb-3">
+                                                    <div className="text-lg font-extrabold text-slate-700">
+                                                      {g.year}
+                                                    </div>
+                                                    <div className="text-sm font-semibold text-slate-500">
+                                                      {mesesLargos[g.month]}
+                                                    </div>
+                                                  </div>
+                                                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                    {g.vacaciones.map((v) => {
+                                                      const f =
+                                                        formatSpanishDate(
+                                                          v.fecha,
+                                                        );
+                                                      return (
+                                                        <div
+                                                          key={v.id}
+                                                          className="flex items-center gap-3 rounded-md border bg-white p-3 shadow-sm transition hover:shadow-md"
+                                                        >
+                                                          <div className="w-12 h-12 rounded-md text-white flex items-center justify-center font-extrabold text-xl bg-gradient-to-br from-[#2563EB] to-[#1d4ed8]">
+                                                            {f.day}
+                                                          </div>
+                                                          <div className="min-w-0">
+                                                            <div className="mb-1">
+                                                              <span className="inline-block text-[11px] font-bold text-white rounded-full px-2 py-0.5 bg-[#2563EB]">
+                                                                {f.weekday.toUpperCase()}
+                                                              </span>
+                                                            </div>
+                                                            <div className="text-xs text-slate-600 truncate">
+                                                              {v.notas ||
+                                                                "Sin notas"}
+                                                            </div>
+                                                          </div>
+                                                        </div>
+                                                      );
+                                                    })}
+                                                  </div>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          );
+                                        })()}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ) : null}
+                        </React.Fragment>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+              {/* Pie de página: usa el mismo paginador que la página de Permisos */}
+              {true ? (
+                <TablePagination
+                  page={currentPage}
+                  limit={rowsPerPage}
+                  total={totalRegistros}
+                  onPageChange={setCurrentPage}
+                  onLimitChange={setRowsPerPage}
+                />
+              ) : (
+                // Bloque legado (se conserva por compatibilidad, no se renderiza)
+                <div className="flex flex-col sm:flex-row gap-3 sm:items-center justify-between border-t px-3 py-3 text-sm">
+                  <div className="text-slate-600">
+                    Página <span className="font-semibold">{currentPage}</span>{" "}
+                    de <span className="font-semibold">{totalPaginas}</span> —{" "}
+                    <span className="font-semibold">
+                      {numberFormat(totalRegistros)}
+                    </span>{" "}
+                    registros
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-600">Mostrar:</span>
+                      <select
+                        className="border rounded-md px-2 py-1 text-sm"
+                        value={rowsPerPage}
+                        onChange={(e) => setRowsPerPage(Number(e.target.value))}
+                      >
+                        {pageSizeOptions.map((n) => (
+                          <option key={n} value={n}>
+                            {n}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={currentPage <= 1}
+                        onClick={() =>
+                          setCurrentPage((p) => Math.max(1, p - 1))
+                        }
+                      >
+                        ◀ Anterior
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={currentPage >= totalPaginas}
+                        onClick={() =>
+                          setCurrentPage((p) => Math.min(totalPaginas, p + 1))
+                        }
+                      >
+                        Siguiente ▶
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          <Card className="p-0 overflow-hidden border-gray-100">
             <div className="overflow-auto">
               <Table>
                 <TableHeader>
@@ -619,381 +1116,84 @@ export default function VacacionesPage() {
                     <TableHead className="text-xs font-semibold uppercase text-gray-600">
                       Empleado
                     </TableHead>
+
                     <TableHead className="text-xs font-semibold uppercase text-gray-600">
                       Departamento
                     </TableHead>
-                    <TableHead className="text-center text-xs font-semibold uppercase text-gray-600">
-                      Días cargados
-                    </TableHead>
-                    <TableHead className="text-center text-xs font-semibold uppercase text-gray-600">
-                      Días tomados
-                    </TableHead>
+
                     <TableHead className="text-center text-xs font-semibold uppercase text-gray-600">
                       Días disponibles
                     </TableHead>
                   </TableRow>
                 </TableHeader>
+
                 <TableBody>
-                  {datosPagina.map((emp) => {
-                    const dDisp = emp?.dias_disponibles ?? 0;
-                    const badgeVariant =
-                      dDisp === 0
-                        ? "destructive"
-                        : dDisp < 5
-                          ? "secondary"
-                          : "default";
-                    return (
-                      <React.Fragment key={`emp-${emp.id_empleado}`}>
-                        <TableRow
-                          className="cursor-pointer hover:bg-slate-50"
-                          onClick={() => handleRowClick(emp.id_empleado)}
-                        >
-                          <TableCell className="font-semibold">
-                            <span
-                              className={`mr-2 inline-flex transition-transform ${
-                                expandedRow === emp.id_empleado
-                                  ? "rotate-90"
-                                  : ""
-                              }`}
-                            >
-                              <ChevronRight className="h-4 w-4 text-gray-500" />
-                            </span>
-                            {emp.nombre_completo}
-                          </TableCell>
-                          <TableCell>{emp.departamento}</TableCell>
-                          <TableCell className="text-center">
-                            {badgeCargados(emp.dias_cargados)}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {badgeTomados(emp.dias_tomados)}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {badgeDisponibles(dDisp)}
-                          </TableCell>
-                        </TableRow>
-                        {expandedRow === emp.id_empleado ? (
-                          <TableRow>
-                            <TableCell colSpan={5} className="p-0 bg-slate-50">
-                              <div className="border-t p-3">
-                                {/* Tabs tipo botones */}
-                                <div className="inline-flex rounded-lg border border-blue-100 bg-blue-50 p-1 mb-3">
-                                  <button
-                                    className={`px-3 py-1.5 text-sm font-semibold rounded ${
-                                      expandedTab === "cargados"
-                                        ? "bg-white text-[#2563EB] shadow-sm"
-                                        : "text-gray-600 hover:bg-white/60"
-                                    }`}
-                                    onClick={() => setExpandedTab("cargados")}
-                                  >
-                                    Días cargados
-                                  </button>
-                                  <button
-                                    className={`px-3 py-1.5 text-sm font-semibold rounded ${
-                                      expandedTab === "tomados"
-                                        ? "bg-white text-[#2563EB] shadow-sm"
-                                        : "text-gray-600 hover:bg-white/60"
-                                    }`}
-                                    onClick={() => setExpandedTab("tomados")}
-                                  >
-                                    Días tomados
-                                  </button>
-                                </div>
+                  {datosPagina.map((emp) => (
+                    <TableRow key={emp.id_empleado}>
+                      <TableCell className="font-semibold">
+                        {emp.nombre_completo}
+                      </TableCell>
 
-                                {/* Resumen del empleado */}
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-3">
-                                  <Card className="p-3">
-                                    <div className="text-[11px] uppercase text-slate-500">
-                                      Días Cargados
-                                    </div>
-                                    <div className="text-xl font-extrabold">
-                                      {numberFormat(emp.dias_cargados)}
-                                    </div>
-                                  </Card>
-                                  <Card className="p-3">
-                                    <div className="text-[11px] uppercase text-slate-500">
-                                      Días Tomados
-                                    </div>
-                                    <div className="text-xl font-extrabold">
-                                      {numberFormat(emp.dias_tomados)}
-                                    </div>
-                                  </Card>
-                                  <Card className="p-3">
-                                    <div className="text-[11px] uppercase text-slate-500">
-                                      Disponibles
-                                    </div>
-                                    <div
-                                      className="text-xl font-extrabold"
-                                      style={{
-                                        color:
-                                          dDisp === 0
-                                            ? "#991b1b"
-                                            : dDisp < 5
-                                              ? "#92400e"
-                                              : "#065f46",
-                                      }}
-                                    >
-                                      {numberFormat(dDisp)}
-                                    </div>
-                                  </Card>
-                                </div>
+                      <TableCell>{emp.departamento}</TableCell>
 
-                                {/* Contenido */}
-                                <div className="bg-white rounded-md border">
-                                  {rowLoading ? (
-                                    <div className="text-center text-slate-400 py-10">
-                                      Cargando...
-                                    </div>
-                                  ) : expandedTab === "cargados" ? (
-                                    <div className="overflow-auto">
-                                      {(
-                                        cacheCargados[emp.id_empleado]
-                                          ?.periodos ?? []
-                                      ).length === 0 ? (
-                                        <div className="text-center text-slate-400 py-8">
-                                          No tiene periodos registrados
-                                        </div>
-                                      ) : (
-                                        <Table>
-                                          <TableHeader>
-                                            <TableRow className="bg-gray-50">
-                                              <TableHead className="text-xs font-semibold uppercase text-gray-600">
-                                                Año
-                                              </TableHead>
-                                              <TableHead className="text-center text-xs font-semibold uppercase text-gray-600">
-                                                Días
-                                              </TableHead>
-                                              <TableHead className="text-xs font-semibold uppercase text-gray-600">
-                                                Inicio
-                                              </TableHead>
-                                              <TableHead className="text-xs font-semibold uppercase text-gray-600">
-                                                Fin
-                                              </TableHead>
-                                              <TableHead className="text-center text-xs font-semibold uppercase text-gray-600">
-                                                Estado
-                                              </TableHead>
-                                            </TableRow>
-                                          </TableHeader>
-                                          <TableBody>
-                                            {(
-                                              cacheCargados[emp.id_empleado]
-                                                ?.periodos ?? []
-                                            ).map((p) => {
-                                              const activa =
-                                                p?.estado === "Activa";
-                                              return (
-                                                <TableRow
-                                                  key={`${p.id}-${p.anios}`}
-                                                >
-                                                  <TableCell className="font-semibold">
-                                                    Año {p?.anios}
-                                                  </TableCell>
-                                                  <TableCell className="text-center">
-                                                    <Badge variant="outline">
-                                                      {numberFormat(p?.dias)}{" "}
-                                                      días
-                                                    </Badge>
-                                                  </TableCell>
-                                                  <TableCell>
-                                                    {p?.fecha_inicio
-                                                      ? formatDateDMY(
-                                                          p.fecha_inicio,
-                                                        )
-                                                      : "-"}
-                                                  </TableCell>
-                                                  <TableCell>
-                                                    {p?.fecha_fin
-                                                      ? formatDateDMY(
-                                                          p.fecha_fin,
-                                                        )
-                                                      : "-"}
-                                                  </TableCell>
-                                                  <TableCell className="text-center">
-                                                    <Badge
-                                                      variant={
-                                                        activa
-                                                          ? "default"
-                                                          : "secondary"
-                                                      }
-                                                    >
-                                                      {p?.estado}
-                                                    </Badge>
-                                                  </TableCell>
-                                                </TableRow>
-                                              );
-                                            })}
-                                          </TableBody>
-                                        </Table>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <div className="p-3">
-                                      {/* Métricas simples */}
-                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
-                                        <Card className="p-3">
-                                          <div className="text-[11px] uppercase text-slate-500">
-                                            Total Días
-                                          </div>
-                                          <div className="text-2xl font-extrabold">
-                                            {numberFormat(
-                                              cacheTomados[emp.id_empleado]
-                                                ?.total ??
-                                                cacheTomados[emp.id_empleado]
-                                                  ?.vacaciones?.length ??
-                                                0,
-                                            )}
-                                          </div>
-                                        </Card>
-                                        <Card className="p-3">
-                                          <div className="text-[11px] uppercase text-slate-500">
-                                            Período
-                                          </div>
-                                          <div className="text-base font-semibold">
-                                            {rangoVacaciones(
-                                              cacheTomados[emp.id_empleado]
-                                                ?.vacaciones ?? [],
-                                            )}
-                                          </div>
-                                        </Card>
-                                      </div>
+                      <TableCell className="text-center">
+                        <Input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={
+                            cambiosMasivos[emp.id_empleado] ??
+                            emp.dias_disponibles ??
+                            0
+                          }
+                          onChange={(e) => {
+                            const value = e.target.value;
 
-                                      {/* Grid de días tomados (estilo ejemplo HTML) */}
-                                      {(() => {
-                                        const vacaciones =
-                                          cacheTomados[emp.id_empleado]
-                                            ?.vacaciones ?? [];
-                                        if (vacaciones.length === 0) {
-                                          return (
-                                            <div className="text-center text-slate-400 py-8">
-                                              No ha tomado vacaciones
-                                            </div>
-                                          );
-                                        }
-                                        const grupos =
-                                          groupVacacionesByYearMonth(
-                                            vacaciones,
-                                          );
-                                        return (
-                                          <div className="flex flex-col gap-5">
-                                            {grupos.map((g) => (
-                                              <div
-                                                key={`${g.year}-${g.month}`}
-                                                className="pl-4 border-l-4 border-slate-300"
-                                              >
-                                                <div className="mb-3">
-                                                  <div className="text-lg font-extrabold text-slate-700">
-                                                    {g.year}
-                                                  </div>
-                                                  <div className="text-sm font-semibold text-slate-500">
-                                                    {mesesLargos[g.month]}
-                                                  </div>
-                                                </div>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                                                  {g.vacaciones.map((v) => {
-                                                    const f = formatSpanishDate(
-                                                      v.fecha,
-                                                    );
-                                                    return (
-                                                      <div
-                                                        key={v.id}
-                                                        className="flex items-center gap-3 rounded-md border bg-white p-3 shadow-sm transition hover:shadow-md"
-                                                      >
-                                                        <div className="w-12 h-12 rounded-md text-white flex items-center justify-center font-extrabold text-xl bg-gradient-to-br from-[#2563EB] to-[#1d4ed8]">
-                                                          {f.day}
-                                                        </div>
-                                                        <div className="min-w-0">
-                                                          <div className="mb-1">
-                                                            <span className="inline-block text-[11px] font-bold text-white rounded-full px-2 py-0.5 bg-[#2563EB]">
-                                                              {f.weekday.toUpperCase()}
-                                                            </span>
-                                                          </div>
-                                                          <div className="text-xs text-slate-600 truncate">
-                                                            {v.notas ||
-                                                              "Sin notas"}
-                                                          </div>
-                                                        </div>
-                                                      </div>
-                                                    );
-                                                  })}
-                                                </div>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        );
-                                      })()}
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ) : null}
-                      </React.Fragment>
-                    );
-                  })}
+                            setCambiosMasivos((prev) => ({
+                              ...prev,
+                              [emp.id_empleado]: value,
+                            }));
+                          }}
+                          className="mx-auto h-9 w-24 text-center"
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </div>
-            {/* Pie de página: usa el mismo paginador que la página de Permisos */}
-            {true ? (
-              <TablePagination
-                page={currentPage}
-                limit={rowsPerPage}
-                total={totalRegistros}
-                onPageChange={setCurrentPage}
-                onLimitChange={setRowsPerPage}
-              />
-            ) : (
-              // Bloque legado (se conserva por compatibilidad, no se renderiza)
-              <div className="flex flex-col sm:flex-row gap-3 sm:items-center justify-between border-t px-3 py-3 text-sm">
-                <div className="text-slate-600">
-                  Página <span className="font-semibold">{currentPage}</span> de{" "}
-                  <span className="font-semibold">{totalPaginas}</span> —{" "}
-                  <span className="font-semibold">
-                    {numberFormat(totalRegistros)}
-                  </span>{" "}
-                  registros
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-600">Mostrar:</span>
-                    <select
-                      className="border rounded-md px-2 py-1 text-sm"
-                      value={rowsPerPage}
-                      onChange={(e) => setRowsPerPage(Number(e.target.value))}
-                    >
-                      {pageSizeOptions.map((n) => (
-                        <option key={n} value={n}>
-                          {n}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={currentPage <= 1}
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    >
-                      ◀ Anterior
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={currentPage >= totalPaginas}
-                      onClick={() =>
-                        setCurrentPage((p) => Math.min(totalPaginas, p + 1))
-                      }
-                    >
-                      Siguiente ▶
-                    </Button>
-                  </div>
-                </div>
+          </Card>
+          {cambiosPendientes.length > 0 && (
+            <div className="fixed bottom-5 right-5 z-50 flex items-center gap-4 rounded-xl border border-gray-200 bg-white/95 px-4 py-3 shadow-[0_12px_35px_rgba(15,23,42,0.18)] backdrop-blur">
+              <div className="hidden sm:block min-w-[145px] text-sm text-slate-500">
+                <span className="font-bold text-[#2563EB]">
+                  {cambiosPendientes.length}
+                </span>{" "}
+                cambio{cambiosPendientes.length === 1 ? "" : "s"} pendiente
+                {cambiosPendientes.length === 1 ? "" : "s"}
               </div>
-            )}
-          </>
-        )}
-      </Card>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  disabled={guardandoMasivos}
+                  onClick={() => setCambiosMasivos({})}
+                >
+                  Descartar
+                </Button>
+
+                <Button
+                  disabled={guardandoMasivos}
+                  onClick={guardarCambiosMasivos}
+                  className="bg-[#2563EB] text-white hover:bg-[#1d4ed8]"
+                >
+                  {guardandoMasivos ? "Guardando..." : "Guardar cambios"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Diálogo de detalles */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
