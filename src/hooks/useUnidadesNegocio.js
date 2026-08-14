@@ -9,10 +9,11 @@ export default function useUnidadesNegocio() {
 
   const unidades = Array.isArray(data?.sucursales) ? data.sucursales : [];
 
-  const options = unidades.map((unidad) => ({
-    value: String(unidad.id_sucursal),
+  const options = unidades.map((unidad, index) => ({
+    value: `${unidad.id_sucursal}-${index}-`,
     label: unidad.nombre,
     id_empresa: Number(unidad.id_empresa),
+    id_sucursal: Number(unidad.id_sucursal),
     empresa_nombre: unidad.empresa_nombre,
   }));
 
