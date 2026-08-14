@@ -23,7 +23,10 @@ export default function PanelEmpleadoGeneral({ datosEmpleado }) {
           label="Asistencia"
           value={`${stats.porcentaje_asistencia || 0}%`}
         />
-        <MiniKpi label="Permisos tomados" value={resPermisos.total || 0} />
+        <MiniKpi
+          label="Solicitudes de permiso"
+          value={resPermisos.total || 0}
+        />
         <MiniKpi
           label="Días disponibles"
           value={vacaciones.dias_disponibles || 0}

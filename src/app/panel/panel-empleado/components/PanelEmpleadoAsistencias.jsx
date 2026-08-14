@@ -244,7 +244,9 @@ export default function PanelEmpleadoAsistencias({ datosEmpleado }) {
                   className="min-w-0 rounded-[10px] border border-gray-200 bg-white p-3"
                 >
                   <div className="truncate text-[10.5px] font-semibold uppercase tracking-wide text-gray-500">
-                    {tipo.nombre}
+                    {tipo.nombre === "🌴 Vacaciones"
+                      ? "🌴 Registros de vacaciones"
+                      : tipo.nombre}
                   </div>
                   <div className="mb-1.5 text-lg font-extrabold tabular-nums text-gray-900">
                     {tipo.total}
