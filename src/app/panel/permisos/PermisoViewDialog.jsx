@@ -132,6 +132,7 @@ export default function PermisoViewDialog({
     fechaInicio: item.fecha_inicio,
     fechaFin: item.fecha_fin,
     festivosSet,
+    diasTrabajo: item.dias_trabajo,
   });
 
   // Valor histórico mostrado como "Total de días" en la UI actual:
@@ -245,7 +246,8 @@ export default function PermisoViewDialog({
             // Polling defensivo para navegadores que no emiten eventos de print.
             mediaPollTimer = setInterval(() => {
               const hasFocus =
-                typeof document !== "undefined" && typeof document.hasFocus === "function"
+                typeof document !== "undefined" &&
+                typeof document.hasFocus === "function"
                   ? document.hasFocus()
                   : true;
 
@@ -375,7 +377,8 @@ export default function PermisoViewDialog({
 
     const folio = `#${String(item.id || "").padStart(3, "0")}`;
     const empleado = safe(
-      item.empleado_nombre || (item.id_empleado ? `ID ${item.id_empleado}` : "—"),
+      item.empleado_nombre ||
+        (item.id_empleado ? `ID ${item.id_empleado}` : "—"),
     );
     const noEmpleado = safe(item.no_empleado || item.id_empleado || "—");
     const departamento = safe(item.departamento || "—");
@@ -468,9 +471,14 @@ export default function PermisoViewDialog({
     doc.text(estado, marginLeft, y + 9);
     doc.setTextColor(...ADAMIA.text);
     doc.text(tipo, marginLeft + col, y + 9);
-    doc.text(`${fechaInicioLarga} — ${fechaFinLarga}`, marginLeft + col * 2, y + 9, {
-      maxWidth: col - 6,
-    });
+    doc.text(
+      `${fechaInicioLarga} — ${fechaFinLarga}`,
+      marginLeft + col * 2,
+      y + 9,
+      {
+        maxWidth: col - 6,
+      },
+    );
 
     // KPI de días: sin caja rellena ni borde; solo hairlines (arriba propia,
     // abajo la regla del bloque) con etiqueta muted y cifra azul bold.
@@ -513,15 +521,33 @@ export default function PermisoViewDialog({
     fieldPair("Dias totales", String(diasTotales || 0), marginLeft, y, c3 - 4, {
       accent: true,
     });
-    fieldPair("Dias habiles", String(diasHabiles || 0), marginLeft + c3, y, c3 - 4, {
-      accent: true,
-    });
-    fieldPair("Dias naturales", String(totalDias || 0), marginLeft + c3 * 2, y, c3 - 4, {
-      accent: true,
-    });
+    fieldPair(
+      "Dias habiles",
+      String(diasHabiles || 0),
+      marginLeft + c3,
+      y,
+      c3 - 4,
+      {
+        accent: true,
+      },
+    );
+    fieldPair(
+      "Dias naturales",
+      String(totalDias || 0),
+      marginLeft + c3 * 2,
+      y,
+      c3 - 4,
+      {
+        accent: true,
+      },
+    );
     y += 18;
 
-    const drawWrappedSectionText = ({ sectionName, textValue, emptyFallback }) => {
+    const drawWrappedSectionText = ({
+      sectionName,
+      textValue,
+      emptyFallback,
+    }) => {
       sectionTitle(sectionName);
 
       const textInsetLeft = 2;
@@ -658,7 +684,13 @@ export default function PermisoViewDialog({
 
       // Pie de página Adamia: línea degradada + marca a la izquierda,
       // fecha de generación al centro y paginación a la derecha.
-      gradientLine(doc, marginLeft, pageWidth - marginRight, pageHeight - 14, 0.35);
+      gradientLine(
+        doc,
+        marginLeft,
+        pageWidth - marginRight,
+        pageHeight - 14,
+        0.35,
+      );
       doc.setFont(FONT, "bold");
       doc.setFontSize(7.5);
       doc.setTextColor(...ADAMIA.blue);
@@ -683,9 +715,13 @@ export default function PermisoViewDialog({
       );
     }
 
-    const nombreArchivo = `Permiso_${empleado.replace(/ /g, "_")}_${dayjs().format(
-      "YYYY-MM-DD",
-    )}_${String(item.id || "").padStart(3, "0")}.pdf`;
+    const nombreArchivo = `Permiso_${empleado.replace(
+      / /g,
+      "_",
+    )}_${dayjs().format("YYYY-MM-DD")}_${String(item.id || "").padStart(
+      3,
+      "0",
+    )}.pdf`;
     return { doc, nombreArchivo };
   }
 

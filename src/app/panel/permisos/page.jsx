@@ -174,13 +174,13 @@ export default function PermisosPage() {
   const festivosSet = useMemo(() => {
     const list = festivosResp?.festivos || [];
     const set = new Set();
+
     list.forEach((f) => {
       if (f?.fecha) {
-        try {
-          set.add(dayjs(f.fecha).format("YYYY-MM-DD"));
-        } catch {}
+        set.add(String(f.fecha).slice(0, 10));
       }
     });
+
     return set;
   }, [festivosResp]);
   // Mapa fecha -> nombre festivo para rotular celdas
@@ -189,7 +189,7 @@ export default function PermisosPage() {
     const map = new Map();
     list.forEach((f) => {
       if (f?.fecha) {
-        const key = dayjs(f.fecha).format("YYYY-MM-DD");
+        const key = String(f.fecha).slice(0, 10);
         map.set(key, f.descripcion || "Festivo");
       }
     });
@@ -488,9 +488,7 @@ export default function PermisosPage() {
         dataUser?.id_usuario ?? null,
       );
       enqueueSnackbar(
-        nuevoEstado === "Aprobado"
-          ? "Permiso aprobado"
-          : "Permiso rechazado",
+        nuevoEstado === "Aprobado" ? "Permiso aprobado" : "Permiso rechazado",
         { variant: "success" },
       );
       mutate();

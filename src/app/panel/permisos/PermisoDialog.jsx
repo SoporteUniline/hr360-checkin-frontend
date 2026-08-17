@@ -100,6 +100,7 @@ export default function PermisoDialog({
           nombre: [e.nombre, e.apellido_paterno, e.apellido_materno]
             .filter(Boolean)
             .join(" "),
+          dias_trabajo: e.dias_trabajo || "",
         }));
         setEmpleados(mapped);
         // Prefill: en edición, fijar empleado; en creación, limpiar selección múltiple

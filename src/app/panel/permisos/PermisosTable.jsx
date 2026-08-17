@@ -297,6 +297,7 @@ export default function PermisosTable({
                   fechaInicio: row.fecha_inicio,
                   fechaFin: row.fecha_fin,
                   festivosSet,
+                  diasTrabajo: row.dias_trabajo,
                 });
 
                 // Columna existente "Días":
@@ -443,4 +444,3 @@ export default function PermisosTable({
     </Card>
   );
 }
-
