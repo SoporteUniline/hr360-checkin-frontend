@@ -217,6 +217,8 @@ export default function VacacionesPorPeriodoPage() {
       dias: String(r.dias),
       estado: r.estado || "Activa",
     });
+
+    setWarningLey("");
     setDialogOpen(true);
   };
 
@@ -580,6 +582,7 @@ export default function VacacionesPorPeriodoPage() {
             setEmpleados([]);
             setBusquedaEmp("");
             setEditRow(null);
+            setWarningLey("");
           }
         }}
       >
