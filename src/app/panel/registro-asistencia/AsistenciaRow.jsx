@@ -14,7 +14,7 @@ import { Pencil, Save, X, Check, X as XIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import HistorialEmpleadoDialog from "./HistorialEmpleadoDialog";
 import { useEmpresaTimezone } from "@/context/AuthContext";
-
+import { calcularResumenJornada } from "@/utils/asistenciaHoras";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -36,7 +36,6 @@ const EXTRA_COLUMN_KEYS = new Set([
   "aut_extra",
   "hrs_comida",
   "notas_extra",
-  "estado_asistencia",
 ]);
 
 export default function AsistenciaRow({
@@ -68,30 +67,12 @@ export default function AsistenciaRow({
       ? colVisible
       : (key) =>
           EXTRA_COLUMN_KEYS.has(key) ? Boolean(mostrarCamposExtras) : true;
-  const calcularHorasDebiaTrabajar = (data) => {
-    if (!data.hora_entrada_programada || !data.hora_salida_programada) return 0;
 
-    const entrada = dayjs(`2000-01-01 ${data.hora_entrada_programada}`);
-    const salida = dayjs(`2000-01-01 ${data.hora_salida_programada}`);
-
-    return Number((salida.diff(entrada, "minute") / 60).toFixed(2));
-  };
-
-  const calcularHorasTrabajadas = (data) => {
-    if (!data.entrada || !data.salida) return 0;
-
-    const entrada = dayjs.tz(data.entrada, DB_TIMEZONE).tz(userTimezone);
-    const salida = dayjs.tz(data.salida, DB_TIMEZONE).tz(userTimezone);
-    const comida = Number(data.hrs_comida || 0);
-
-    return Number((salida.diff(entrada, "minute") / 60 - comida).toFixed(2));
-  };
-
-  const horasDebiaTrabajar = calcularHorasDebiaTrabajar(currentData);
-  const horasTrabajo = calcularHorasTrabajadas(currentData);
-  const diferenciaHoras = Number(
-    (horasTrabajo - horasDebiaTrabajar).toFixed(2),
-  );
+  const {
+    horasDebia: horasDebiaTrabajar,
+    horasTrabajo,
+    diferencia: diferenciaHoras,
+  } = calcularResumenJornada(currentData, userTimezone);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleRowClick = (e) => {
@@ -125,7 +106,21 @@ export default function AsistenciaRow({
         {isEditing && !readOnly ? (
           <>
             {isColVisible("empleado") && (
-              <TableCell className="font-bold">{`${registro.nombre} ${registro.apellido_paterno}`}</TableCell>
+              <TableCell className="font-bold">
+                <div className="flex items-center gap-2">
+                  {Boolean(currentData.correccion) && (
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-full bg-amber-500"
+                      title="Asistencia corregida"
+                      aria-label="Asistencia corregida"
+                    />
+                  )}
+
+                  <span>
+                    {registro.nombre} {registro.apellido_paterno}
+                  </span>
+                </div>
+              </TableCell>
             )}
             {empresaActiva === "all" && isColVisible("unidad") && (
               <TableCell className="font-bold">
@@ -271,6 +266,29 @@ export default function AsistenciaRow({
                 />
               </TableCell>
             )}
+
+            {isColVisible("jornada") && (
+              <TableCell className="text-center whitespace-nowrap">
+                {horasDebiaTrabajar
+                  ? `${horasTrabajo} / ${horasDebiaTrabajar} Jor.`
+                  : "-"}
+              </TableCell>
+            )}
+
+            {isColVisible("hrs_diferencia") && (
+              <TableCell
+                className={`text-center font-bold ${
+                  diferenciaHoras < 0
+                    ? "text-red-600"
+                    : diferenciaHoras > 0
+                    ? "text-green-600"
+                    : "text-gray-600"
+                }`}
+              >
+                {diferenciaHoras > 0 ? `+${diferenciaHoras}` : diferenciaHoras}
+              </TableCell>
+            )}
+
             {isColVisible("autorizado_por") && (
               <TableCell className="text-center">
                 <Select
@@ -526,19 +544,7 @@ export default function AsistenciaRow({
                 />
               </TableCell>
             )}
-            {isColVisible("estado") && (
-              <TableCell className="text-center">
-                <span
-                  className={`px-2 py-1 rounded-full text-sm text-white ${
-                    currentData.estado === "Abierto"
-                      ? "bg-green-600"
-                      : "bg-gray-500"
-                  }`}
-                >
-                  {currentData.estado}
-                </span>
-              </TableCell>
-            )}
+
             {isColVisible("estado_asistencia") && (
               <TableCell className="text-center">
                 <span
@@ -546,12 +552,12 @@ export default function AsistenciaRow({
                     currentData.estadoAsistencia === "Presente"
                       ? "bg-green-600"
                       : currentData.estadoAsistencia === "Ausente"
-                        ? "bg-red-600"
-                        : currentData.estadoAsistencia === "Tardanza"
-                          ? "bg-yellow-600"
-                          : currentData.estadoAsistencia === "Permiso"
-                            ? "bg-blue-600"
-                            : "bg-gray-500"
+                      ? "bg-red-600"
+                      : currentData.estadoAsistencia === "Tardanza"
+                      ? "bg-yellow-600"
+                      : currentData.estadoAsistencia === "Permiso"
+                      ? "bg-blue-600"
+                      : "bg-gray-500"
                   }`}
                 >
                   {currentData.estadoAsistencia}
@@ -587,7 +593,21 @@ export default function AsistenciaRow({
         ) : (
           <>
             {isColVisible("empleado") && (
-              <TableCell className="font-bold">{`${registro.nombre} ${registro.apellido_paterno}`}</TableCell>
+              <TableCell className="font-bold">
+                <div className="flex items-center gap-2">
+                  {Boolean(registro.correccion) && (
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-full bg-amber-500"
+                      title="Asistencia corregida"
+                      aria-label="Asistencia corregida"
+                    />
+                  )}
+
+                  <span>
+                    {registro.nombre} {registro.apellido_paterno}
+                  </span>
+                </div>
+              </TableCell>
             )}
             {empresaActiva === "all" && isColVisible("unidad") && (
               <TableCell className="font-bold">
@@ -641,15 +661,12 @@ export default function AsistenciaRow({
                   : "-"}
               </TableCell>
             )}
-            {isColVisible("hrs_debia") && (
-              <TableCell className="text-center">
-                {horasDebiaTrabajar || "-"}
-              </TableCell>
-            )}
 
-            {isColVisible("hrs_trabajo") && (
-              <TableCell className="text-center">
-                {horasTrabajo || "-"}
+            {isColVisible("jornada") && (
+              <TableCell className="text-center whitespace-nowrap">
+                {horasDebiaTrabajar
+                  ? `${horasTrabajo} / ${horasDebiaTrabajar} Jor.`
+                  : "-"}
               </TableCell>
             )}
 
@@ -659,8 +676,8 @@ export default function AsistenciaRow({
                   diferenciaHoras < 0
                     ? "text-red-600"
                     : diferenciaHoras > 0
-                      ? "text-green-600"
-                      : "text-gray-600"
+                    ? "text-green-600"
+                    : "text-gray-600"
                 }`}
               >
                 {diferenciaHoras > 0 ? `+${diferenciaHoras}` : diferenciaHoras}
@@ -772,19 +789,6 @@ export default function AsistenciaRow({
                 {registro.notas_hrs_extra ? registro.notas_hrs_extra : "-"}
               </TableCell>
             )}
-            {isColVisible("estado") && (
-              <TableCell className="text-center">
-                <span
-                  className={`px-2 py-1 rounded-full text-sm text-white ${
-                    registro.estado === "Abierto"
-                      ? "bg-green-600"
-                      : "bg-gray-500"
-                  }`}
-                >
-                  {registro.estado}
-                </span>
-              </TableCell>
-            )}
             {isColVisible("estado_asistencia") && (
               <TableCell className="text-center">
                 <span
@@ -792,12 +796,12 @@ export default function AsistenciaRow({
                     registro.estadoAsistencia === "Presente"
                       ? "bg-green-600"
                       : registro.estadoAsistencia === "Ausente"
-                        ? "bg-red-600"
-                        : registro.estadoAsistencia === "Tardanza"
-                          ? "bg-yellow-600"
-                          : registro.estadoAsistencia === "Permiso"
-                            ? "bg-blue-600"
-                            : "bg-gray-500"
+                      ? "bg-red-600"
+                      : registro.estadoAsistencia === "Tardanza"
+                      ? "bg-yellow-600"
+                      : registro.estadoAsistencia === "Permiso"
+                      ? "bg-blue-600"
+                      : "bg-gray-500"
                   }`}
                 >
                   {registro.estadoAsistencia}

@@ -18,6 +18,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import HeaderMultiFilter from "@/components/tabla/HeaderMultiFilter";
 import ActiveFilterChips from "@/components/tabla/ActiveFilterChips";
 import { ArrowUpDown, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
+import { calcularResumenJornada } from "@/utils/asistenciaHoras";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -35,8 +36,7 @@ export const COLUMNAS_ASISTENCIA = [
   { key: "correccion", label: "Corrección", extra: true },
   { key: "entrada", label: "Entrada", extra: false },
   { key: "salida", label: "Salida", extra: false },
-  { key: "hrs_debia", label: "Hrs debía", extra: false },
-  { key: "hrs_trabajo", label: "Hrs trabajó", extra: false },
+  { key: "jornada", label: "Jornada", extra: false },
   { key: "hrs_diferencia", label: "Hrs +/-", extra: false },
   { key: "autorizado_por", label: "Autorizado", extra: true },
   { key: "asistio", label: "Asistió", extra: false },
@@ -52,8 +52,7 @@ export const COLUMNAS_ASISTENCIA = [
   { key: "hrs_comida", label: "Hrs comida", extra: true },
   { key: "notas", label: "Notas", extra: false },
   { key: "notas_extra", label: "Notas extra", extra: true },
-  { key: "estado", label: "Estado", extra: false },
-  { key: "estado_asistencia", label: "Estado asis.", extra: true },
+  { key: "estado_asistencia", label: "Estado", extra: false },
   { key: "acciones", label: "Acciones", extra: false },
 ];
 
@@ -102,12 +101,12 @@ export default function AsistenciaTable({
   const [unidadSeleccionada, setUnidadSeleccionada] = useState([]);
   const [departamentoSeleccionado, setDepartamentoSeleccionado] = useState([]);
   const [tipoSeleccionado, setTipoSeleccionado] = useState([]);
-  const [estadoSeleccionado, setEstadoSeleccionado] = useState([]);
   const [asistioSeleccionado, setAsistioSeleccionado] = useState([]);
   const [goceSeleccionado, setGoceSeleccionado] = useState([]);
   const [horasExtraSeleccionado, setHorasExtraSeleccionado] = useState([]);
   const [festivoSeleccionado, setFestivoSeleccionado] = useState([]);
   const [autorizacionSeleccionada, setAutorizacionSeleccionada] = useState([]);
+  const [correccionSeleccionada, setCorreccionSeleccionada] = useState([]);
   const [estadoAsistenciaSeleccionado, setEstadoAsistenciaSeleccionado] =
     useState([]);
   const [collapsedGroups, setCollapsedGroups] = useState(() => new Set());
@@ -144,6 +143,13 @@ export default function AsistenciaTable({
   const uniqueOptions = (values) =>
     [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
   const toYesNo = (value) => (value === 1 || value === true ? "Sí" : "No");
+  const toCorreccion = (registro) =>
+    registro.correccion === 1 || registro.correccion === true
+      ? "Corregida"
+      : "Sin corregir";
+
+  const correccionOptions = ["Corregida", "Sin corregir"];
+
   const toAutorizacion = (registro) =>
     registro.autorizado_por || registro.nombre_autorizador
       ? "Con autorización"
@@ -181,10 +187,6 @@ export default function AsistenciaTable({
       uniqueOptions(
         optionSourceRows.map((registro) => registro.tipo_registro_nombre),
       ),
-    [optionSourceRows],
-  );
-  const estadoOptions = useMemo(
-    () => uniqueOptions(optionSourceRows.map((registro) => registro.estado)),
     [optionSourceRows],
   );
   const asistioOptions = useMemo(
@@ -250,9 +252,9 @@ export default function AsistenciaTable({
         const pasaTipo =
           tipoSeleccionado.length === 0 ||
           tipoSeleccionado.includes(registro.tipo_registro_nombre);
-        const pasaEstado =
-          estadoSeleccionado.length === 0 ||
-          estadoSeleccionado.includes(registro.estado);
+        const pasaCorreccion =
+          correccionSeleccionada.length === 0 ||
+          correccionSeleccionada.includes(toCorreccion(registro));
         const pasaAsistio =
           asistioSeleccionado.length === 0 ||
           asistioSeleccionado.includes(toYesNo(registro.asistencia));
@@ -277,7 +279,7 @@ export default function AsistenciaTable({
           pasaUnidad &&
           pasaDepartamento &&
           pasaTipo &&
-          pasaEstado &&
+          pasaCorreccion &&
           pasaAsistio &&
           pasaGoce &&
           pasaHorasExtra &&
@@ -292,7 +294,7 @@ export default function AsistenciaTable({
       unidadSeleccionada,
       departamentoSeleccionado,
       tipoSeleccionado,
-      estadoSeleccionado,
+      correccionSeleccionada,
       asistioSeleccionado,
       goceSeleccionado,
       horasExtraSeleccionado,
@@ -307,7 +309,7 @@ export default function AsistenciaTable({
     unidadSeleccionada.length > 0 ||
     departamentoSeleccionado.length > 0 ||
     tipoSeleccionado.length > 0 ||
-    estadoSeleccionado.length > 0 ||
+    correccionSeleccionada.length > 0 ||
     asistioSeleccionado.length > 0 ||
     goceSeleccionado.length > 0 ||
     horasExtraSeleccionado.length > 0 ||
@@ -381,7 +383,7 @@ export default function AsistenciaTable({
     setUnidadSeleccionada([]);
     setDepartamentoSeleccionado([]);
     setTipoSeleccionado([]);
-    setEstadoSeleccionado([]);
+    setCorreccionSeleccionada([]);
     setAsistioSeleccionado([]);
     setGoceSeleccionado([]);
     setHorasExtraSeleccionado([]);
@@ -402,6 +404,8 @@ export default function AsistenciaTable({
     { header: "Corrección", key: "correccion" },
     { header: "Entrada", key: "entrada" },
     { header: "Salida", key: "salida" },
+    { header: "Jornada", key: "jornada" },
+    { header: "Hrs +/-", key: "hrs_diferencia" },
     { header: "Autorizado por", key: "autorizado_por" },
     { header: "¿Asistió?", key: "asistencia" },
     { header: "¿Goce de Sueldo?", key: "goce_sueldo" },
@@ -416,55 +420,64 @@ export default function AsistenciaTable({
     { header: "Horas de comida", key: "hrs_comida" },
     { header: "Observaciones", key: "notas" },
     { header: "Notas horas extra", key: "notas_hrs_extra" },
-    { header: "Estado", key: "estado" },
-    { header: "Estado Asistencia", key: "estadoAsistencia" },
+    { header: "Estado", key: "estadoAsistencia" },
   ];
 
   const exportData = (hasActiveHeaderFilters ? filteredRowsAll : filtrados).map(
-    (r) => ({
-      nombre: r.nombre,
-      apellido_paterno: r.apellido_paterno,
-      apellido_materno: r.apellido_materno,
-      unidad_negocio: r.unidad_negocio || r.sucursal || r.empresa_nombre,
-      nip: r.nip,
-      departamento: r.departamento,
-      tipo_registro_nombre: r.tipo_registro_nombre,
-      fecha: r.fecha
-        ? dayjs.tz(r.fecha, DB_TIMEZONE).tz(userTimezone).format("DD/MM/YYYY")
-        : "-",
+    (r) => {
+      const rowTimezone = r.zona_horaria || fallbackTimezone;
 
-      correccion: r.correcion ? "Sí" : "No",
-      entrada: r.entrada
-        ? dayjs
-            .tz(r.entrada, DB_TIMEZONE)
-            .tz(userTimezone)
-            .format("DD/MM/YYYY HH:mm:ss")
-        : "-",
+      const { jornada, diferencia } = calcularResumenJornada(r, rowTimezone);
 
-      salida: r.salida
-        ? dayjs
-            .tz(r.salida, DB_TIMEZONE)
-            .tz(userTimezone)
-            .format("DD/MM/YYYY HH:mm:ss")
-        : "-",
+      return {
+        nombre: r.nombre,
+        apellido_paterno: r.apellido_paterno,
+        apellido_materno: r.apellido_materno,
+        unidad_negocio: r.unidad_negocio || r.sucursal || r.empresa_nombre,
+        nip: r.nip,
+        departamento: r.departamento,
+        tipo_registro_nombre: r.tipo_registro_nombre,
 
-      autorizado_por: r.autorizado_por ?? "-",
-      asistencia: r.asistencia ? "Sí" : "No",
-      goce_sueldo: r.goce_sueldo ? "Sí" : "No",
-      pago_triple: r.pago_triple ? "Sí" : "No",
-      es_domingo: r.es_domingo ? "Sí" : "No",
-      prima_dominical: r.prima_dominical ?? "-",
-      es_festivo: r.es_festivo ? "Sí" : "No",
-      porcentaje_dia_festivo: r.porcentaje_dia_festivo ?? "-",
-      hrs_extra: r.hrs_extra ? "Sí" : "No",
-      forma_pago_extras: r.forma_pago_extras ?? "-",
-      extras_autorizadas_por: r.extras_autorizadas_por ?? "-",
-      hrs_comida: r.hrs_comida ?? "-",
-      notas: r.notas ?? "-",
-      notas_hrs_extra: r.notas_hrs_extra ?? "-",
-      estado: r.estado ?? "-",
-      estadoAsistencia: r.estadoAsistencia,
-    }),
+        fecha: r.fecha
+          ? dayjs.tz(r.fecha, DB_TIMEZONE).tz(rowTimezone).format("DD/MM/YYYY")
+          : "-",
+
+        correccion: r.correccion ? "Sí" : "No",
+
+        entrada: r.entrada
+          ? dayjs
+              .tz(r.entrada, DB_TIMEZONE)
+              .tz(rowTimezone)
+              .format("DD/MM/YYYY HH:mm:ss")
+          : "-",
+
+        salida: r.salida
+          ? dayjs
+              .tz(r.salida, DB_TIMEZONE)
+              .tz(rowTimezone)
+              .format("DD/MM/YYYY HH:mm:ss")
+          : "-",
+
+        jornada,
+        hrs_diferencia: diferencia,
+
+        autorizado_por: r.autorizado_por ?? "-",
+        asistencia: r.asistencia ? "Sí" : "No",
+        goce_sueldo: r.goce_sueldo ? "Sí" : "No",
+        pago_triple: r.pago_triple ? "Sí" : "No",
+        es_domingo: r.es_domingo ? "Sí" : "No",
+        prima_dominical: r.prima_dominical ?? "-",
+        es_festivo: r.es_festivo ? "Sí" : "No",
+        porcentaje_dia_festivo: r.porcentaje_dia_festivo ?? "-",
+        hrs_extra: r.hrs_extra ? "Sí" : "No",
+        forma_pago_extras: r.forma_pago_extras ?? "-",
+        extras_autorizadas_por: r.extras_autorizadas_por ?? "-",
+        hrs_comida: r.hrs_comida ?? "-",
+        notas: r.notas ?? "-",
+        notas_hrs_extra: r.notas_hrs_extra ?? "-",
+        estadoAsistencia: r.estadoAsistencia,
+      };
+    },
   );
 
   const handleSort = (sortBy) => {
@@ -584,10 +597,10 @@ export default function AsistenciaTable({
               onChange: setTipoSeleccionado,
             },
             {
-              category: "Estado",
-              values: estadoSeleccionado,
-              options: estadoOptions,
-              onChange: setEstadoSeleccionado,
+              category: "Corrección",
+              values: correccionSeleccionada,
+              options: correccionOptions,
+              onChange: setCorreccionSeleccionada,
             },
             {
               category: "Asistió",
@@ -607,6 +620,7 @@ export default function AsistenciaTable({
               options: horasExtraOptions,
               onChange: setHorasExtraSeleccionado,
             },
+
             ...(mostrarCamposExtras
               ? [
                   {
@@ -621,14 +635,14 @@ export default function AsistenciaTable({
                     options: autorizacionOptions,
                     onChange: setAutorizacionSeleccionada,
                   },
-                  {
-                    category: "Estado asis.",
-                    values: estadoAsistenciaSeleccionado,
-                    options: estadoAsistenciaOptions,
-                    onChange: setEstadoAsistenciaSeleccionado,
-                  },
                 ]
               : []),
+            {
+              category: "Estado",
+              values: estadoAsistenciaSeleccionado,
+              options: estadoAsistenciaOptions,
+              onChange: setEstadoAsistenciaSeleccionado,
+            },
           ]}
           onClearAll={clearAllTableFilters}
         />
@@ -751,7 +765,16 @@ export default function AsistenciaTable({
                   <TableHead
                     className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
                   >
-                    Corrección
+                    <div className="flex items-center justify-center gap-1">
+                      <span>CORRECCIÓN</span>
+
+                      <HeaderMultiFilter
+                        selected={correccionSeleccionada}
+                        onChange={setCorreccionSeleccionada}
+                        options={correccionOptions}
+                        placeholder=""
+                      />
+                    </div>
                   </TableHead>
                 )}
                 {colVisible("entrada") && (
@@ -776,19 +799,11 @@ export default function AsistenciaTable({
                     </div>
                   </TableHead>
                 )}
-                {colVisible("hrs_debia") && (
+                {colVisible("jornada") && (
                   <TableHead
                     className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
                   >
-                    Hrs debía
-                  </TableHead>
-                )}
-
-                {colVisible("hrs_trabajo") && (
-                  <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
-                  >
-                    Hrs trabajó
+                    Jornada
                   </TableHead>
                 )}
 
@@ -955,29 +970,7 @@ export default function AsistenciaTable({
                     Notas extra
                   </TableHead>
                 )}
-                {colVisible("estado") && (
-                  <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
-                  >
-                    <div className="flex items-center justify-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => handleSort("estado")}
-                        className="flex items-center"
-                      >
-                        ESTADO
-                        {renderSortIcon("estado")}
-                      </button>
 
-                      <HeaderMultiFilter
-                        selected={estadoSeleccionado}
-                        onChange={setEstadoSeleccionado}
-                        options={estadoOptions}
-                        placeholder=""
-                      />
-                    </div>
-                  </TableHead>
-                )}
                 {colVisible("estado_asistencia") && (
                   <TableHead
                     className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
@@ -986,7 +979,7 @@ export default function AsistenciaTable({
                       selected={estadoAsistenciaSeleccionado}
                       onChange={setEstadoAsistenciaSeleccionado}
                       options={estadoAsistenciaOptions}
-                      placeholder="Estado asis."
+                      placeholder="Estado"
                     />
                   </TableHead>
                 )}
