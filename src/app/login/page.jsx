@@ -34,7 +34,7 @@ export default function LoginPage() {
 
   const handleBack = () => router.push("/");
   const handleRecovery = () => router.push("/recuperacion");
-  const irARegistro = () => router.push("/register");
+  const irARegistro = () => router.push("/contratar-plan");
 
   const onSubmit = async (data) => {
     setLoading(true);
