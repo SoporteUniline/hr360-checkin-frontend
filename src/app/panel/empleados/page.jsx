@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import { fetcherWithToken } from "@/lib/fetcher";
@@ -69,11 +69,15 @@ export default function RegistroEmpleados() {
   const [modalResultadoAbierto, setModalResultadoAbierto] = useState(false);
   const [resultadoSincronizacion, setResultadoSincronizacion] = useState(null);
   const [errorSincronizacion, setErrorSincronizacion] = useState("");
+  const [refreshSincronizacionToken, setRefreshSincronizacionToken] =
+    useState(0);
   const searchParams = useSearchParams();
   const [filtroNombre, setFiltroNombre] = useState(
     searchParams.get("buscar") || "",
   );
   const debouncedFiltroNombre = useDebounce(filtroNombre, 450);
+
+  const refreshSincronizacionIntervalRef = useRef(null);
 
   // Columnas visibles de la tabla y señal de limpieza para los filtros de
   // encabezado (viven dentro de EmpleadosTable).
@@ -99,6 +103,14 @@ export default function RegistroEmpleados() {
       setEmpresaActiva(String(dataUser.empresas_detalle[0].id_empresa));
     }
   }, [dataUser]);
+
+  useEffect(() => {
+    return () => {
+      if (refreshSincronizacionIntervalRef.current) {
+        clearInterval(refreshSincronizacionIntervalRef.current);
+      }
+    };
+  }, []);
 
   // Abrir empleado directo si viene ?id= desde la búsqueda global
   useEffect(() => {
@@ -157,6 +169,7 @@ export default function RegistroEmpleados() {
       setResultadoSincronizacion(resultado);
       setModalSincronizacionAbierto(false);
       setModalResultadoAbierto(true);
+      iniciarRefrescoSincronizacion();
     } catch (error) {
       console.error("Error al sincronizar empleados con el reloj:", error);
 
@@ -271,6 +284,33 @@ export default function RegistroEmpleados() {
     setPage(1);
   };
 
+  const iniciarRefrescoSincronizacion = () => {
+    const refrescar = () => {
+      mutate();
+      setRefreshSincronizacionToken((token) => token + 1);
+    };
+
+    refrescar();
+
+    if (refreshSincronizacionIntervalRef.current) {
+      clearInterval(refreshSincronizacionIntervalRef.current);
+    }
+
+    let refrescosRealizados = 0;
+    const maxRefrescos = 12;
+
+    refreshSincronizacionIntervalRef.current = setInterval(() => {
+      refrescar();
+
+      refrescosRealizados += 1;
+
+      if (refrescosRealizados >= maxRefrescos) {
+        clearInterval(refreshSincronizacionIntervalRef.current);
+        refreshSincronizacionIntervalRef.current = null;
+      }
+    }, 5000);
+  };
+
   const { ui, data, mutate } = EmpleadosDataContainer({
     idEmpresa,
     page,
@@ -284,6 +324,8 @@ export default function RegistroEmpleados() {
     resetFilters,
     visibleColumns,
     limpiarFiltrosToken,
+    refreshSincronizacionToken,
+    onEmployeeChanged: iniciarRefrescoSincronizacion,
   });
 
   if (isMobile && modoFormulario) {

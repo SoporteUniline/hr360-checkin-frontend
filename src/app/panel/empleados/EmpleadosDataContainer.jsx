@@ -21,6 +21,8 @@ export default function EmpleadosDataContainer({
   resetFilters,
   visibleColumns,
   limpiarFiltrosToken,
+  refreshSincronizacionToken,
+  onEmployeeChanged,
 }) {
   const [filterOptionsRows, setFilterOptionsRows] = useState([]);
   const [headerFilterMeta, setHeaderFilterMeta] = useState({
@@ -95,7 +97,14 @@ export default function EmpleadosDataContainer({
     return () => {
       isCancelled = true;
     };
-  }, [idEmpresa, filtroNombre, departamento, estado, fechaDesde]);
+  }, [
+    idEmpresa,
+    filtroNombre,
+    departamento,
+    estado,
+    fechaDesde,
+    refreshSincronizacionToken,
+  ]);
 
   const effectiveData = data || cachedData;
 
@@ -127,6 +136,7 @@ export default function EmpleadosDataContainer({
           onHeaderFilteringMetaChange={setHeaderFilterMeta}
           visibleColumns={visibleColumns}
           limpiarFiltrosToken={limpiarFiltrosToken}
+          onEmployeeChanged={onEmployeeChanged}
         />
         <TablePagination
           page={page}

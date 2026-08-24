@@ -32,6 +32,7 @@ export const COLUMNAS_EMPLEADOS = [
   { key: "contacto", label: "Contacto" },
   { key: "ingreso", label: "Ingreso" },
   { key: "estado", label: "Estado" },
+  { key: "sincronizacion", label: "Sincronización" },
 ];
 
 const getFotoPerfilUrl = (foto) => {
@@ -65,6 +66,70 @@ const getAvatarColor = (nombreCompleto = "") => {
   ];
   const charCode = nombreCompleto.charCodeAt(0) || 0;
   return colors[charCode % colors.length];
+};
+
+const SincronizacionBadge = ({ sincronizacion }) => {
+  const estado = sincronizacion?.estado;
+
+  const config = {
+    sincronizado: {
+      label: "Sincronizado",
+      className: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    },
+    pendiente: {
+      label: "Pendiente",
+      className: "bg-amber-50 text-amber-700 border-amber-200",
+    },
+    parcial: {
+      label: "Parcial",
+      className: "bg-blue-50 text-blue-700 border-blue-200",
+    },
+    error: {
+      label: "Error",
+      className: "bg-red-50 text-red-700 border-red-200",
+    },
+    eliminado: {
+      label: "Eliminado",
+      className: "bg-gray-100 text-gray-600 border-gray-200",
+    },
+    sin_nip: {
+      label: "Sin NIP",
+      className: "bg-orange-50 text-orange-700 border-orange-200",
+    },
+    no_aplica: {
+      label: "No aplica",
+      className: "bg-gray-50 text-gray-500 border-gray-200",
+    },
+    sin_checadores: {
+      label: "Sin relojes",
+      className: "bg-gray-50 text-gray-500 border-gray-200",
+    },
+  };
+
+  const current = config[estado] || {
+    label: "Sin información",
+    className: "bg-gray-50 text-gray-500 border-gray-200",
+  };
+
+  const mostrarConteo =
+    sincronizacion?.total > 1 &&
+    ["sincronizado", "parcial", "pendiente"].includes(estado);
+
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-1 text-xs font-semibold ${current.className}`}
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+
+      {current.label}
+
+      {mostrarConteo && (
+        <span className="opacity-70">
+          {sincronizacion.sincronizados}/{sincronizacion.total}
+        </span>
+      )}
+    </span>
+  );
 };
 
 // Evita llaves duplicadas en render cuando llegan registros repetidos.
@@ -103,6 +168,7 @@ export default function EmpleadosTable({
   onHeaderFilteringMetaChange,
   visibleColumns,
   limpiarFiltrosToken,
+  onEmployeeChanged,
 }) {
   const [nombreSeleccionado, setNombreSeleccionado] = useState([]);
   const [puestoSeleccionado, setPuestoSeleccionado] = useState([]);
@@ -519,6 +585,11 @@ export default function EmpleadosTable({
                   />
                 </TableHead>
               )}
+              {colVisible("sincronizacion") && (
+                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
+                  Sincronización
+                </TableHead>
+              )}
               <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center sticky right-0 bg-gray-50 z-10">
                 Acciones
               </TableHead>
@@ -640,6 +711,13 @@ export default function EmpleadosTable({
                         </div>
                       </TableCell>
                     )}
+                    {colVisible("sincronizacion") && (
+                      <TableCell className="text-center">
+                        <SincronizacionBadge
+                          sincronizacion={emp.sincronizacion_checador}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell className="sticky right-0 bg-white z-10">
                       <div className="flex justify-center items-center gap-2">
                         <button
@@ -668,6 +746,7 @@ export default function EmpleadosTable({
                             limit={limit}
                             page={page}
                             mutate={mutate}
+                            onEmployeeChanged={onEmployeeChanged}
                           />
                         </div>
                       </div>

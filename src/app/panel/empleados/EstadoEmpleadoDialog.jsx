@@ -21,19 +21,17 @@ export default function EstadoEmpleadoDialog({
   page,
   className,
   mutate,
+  onEmployeeChanged,
 }) {
   const { enqueueSnackbar } = useSnackbar();
   const [open, setOpen] = useState(false);
   const [motivo, setMotivo] = useState("");
 
   const cambiarEstado = async () => {
-    const datosEnvio = { ...item };
-    delete datosEnvio.nombre_empresa;
     try {
       await axios.put(
         `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados/${item.id_empleado}`,
         {
-          ...datosEnvio,
           estado: item.estado === "Activo" ? "Inactivo" : "Activo",
           motivo_baja: item.estado === "Activo" ? motivo : null,
           fecha_baja: item.estado === "Activo" ? new Date() : null,
@@ -50,7 +48,8 @@ export default function EstadoEmpleadoDialog({
       setOpen(false);
       setMotivo("");
 
-      mutate();
+      await mutate();
+      onEmployeeChanged?.();
     } catch (err) {
       // Esto te dirá si el error es de Axios, de Red o de tu propio código
       console.log("Error completo:", err);
