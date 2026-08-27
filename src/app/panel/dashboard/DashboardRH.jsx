@@ -14,7 +14,6 @@ import {
   CalendarCheck2,
   CalendarDays,
   CheckCircle2,
-  Clock3,
   FileCheck2,
   FileText,
   Gift,
@@ -41,6 +40,7 @@ import { buildQuery, previousRange, rangeFromPreset } from "./lib/periodos";
 import {
   fmtDayMonthDeMX,
   formatDateDMY,
+  formatTimeMexico,
   getAnniversaryYears,
 } from "./lib/format";
 
@@ -78,6 +78,35 @@ function isActivePermission(permission) {
   );
 }
 
+function employeeName(row) {
+  return (
+    row?.nombre_empleado ||
+    [row?.nombre, row?.apellido_paterno, row?.apellido_materno]
+      .filter(Boolean)
+      .join(" ") ||
+    "Empleado"
+  );
+}
+
+function personKey(row, fallback = "") {
+  const id = row?.id_empleado ?? row?.empleado_id;
+  if (id !== undefined && id !== null) return `id:${id}`;
+  return `name:${normalizeText(employeeName(row)) || fallback}`;
+}
+
+function isVacationPermission(permission) {
+  return normalizeText(permission?.tipo).includes("vacacion");
+}
+
+function uniquePeople(rows = []) {
+  const people = new Map();
+  rows.forEach((row, index) => {
+    const key = personKey(row, index);
+    if (!people.has(key)) people.set(key, row);
+  });
+  return Array.from(people.values());
+}
+
 function Delta({ current, previous, meaning = "neutral", suffix = "" }) {
   if (
     current === undefined ||
@@ -113,58 +142,6 @@ function Delta({ current, previous, meaning = "neutral", suffix = "" }) {
       {isFlat ? "0" : `${isUp ? "+" : ""}${difference}`}
       {suffix}
     </span>
-  );
-}
-
-function KpiCard({
-  label,
-  value,
-  unit,
-  helper,
-  icon: Icon,
-  tone = "blue",
-  delta,
-}) {
-  const tones = {
-    blue: "bg-blue-50 text-blue-600 ring-blue-100",
-    emerald: "bg-emerald-50 text-emerald-600 ring-emerald-100",
-    amber: "bg-amber-50 text-amber-600 ring-amber-100",
-    rose: "bg-rose-50 text-rose-600 ring-rose-100",
-    violet: "bg-violet-50 text-violet-600 ring-violet-100",
-    slate: "bg-slate-100 text-slate-600 ring-slate-200",
-  };
-
-  return (
-    <div className="flex min-h-[82px] items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition hover:border-blue-200 hover:shadow-md sm:min-h-[112px] sm:flex-col sm:items-start sm:gap-2.5 sm:p-4 xl:min-h-[126px]">
-      <div className="flex w-full items-center gap-3 sm:justify-between">
-        <span
-          className={`grid size-9 shrink-0 place-content-center rounded-xl ring-1 ${tones[tone]}`}
-        >
-          <Icon className="size-4.5" />
-        </span>
-        <span className="min-w-0 flex-1 text-xs font-semibold text-slate-500 sm:hidden">
-          {label}
-        </span>
-        <div className="flex items-center gap-1.5 sm:ml-auto">{delta}</div>
-      </div>
-
-      <div className="ml-auto text-right sm:ml-0 sm:text-left">
-        <p className="hidden text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-400 sm:block">
-          {label}
-        </p>
-        <p className="text-2xl font-bold tracking-tight text-slate-900 tabular-nums sm:mt-1 sm:text-[28px]">
-          {value ?? "—"}
-          {unit && (
-            <span className="ml-1 text-xs font-semibold text-slate-400">
-              {unit}
-            </span>
-          )}
-        </p>
-        <p className="mt-0.5 max-w-[150px] truncate text-[10px] text-slate-400 sm:text-[11px]">
-          {helper}
-        </p>
-      </div>
-    </div>
   );
 }
 
@@ -218,6 +195,147 @@ function EmptyState({ children, positive = false }) {
     >
       {positive && <CheckCircle2 className="mr-2 size-4" />}
       {children}
+    </div>
+  );
+}
+
+function OperationalStatusStrip({ items, value, onChange }) {
+  const tones = {
+    slate: "text-slate-700",
+    emerald: "text-emerald-700",
+    amber: "text-amber-700",
+    rose: "text-rose-700",
+    violet: "text-violet-700",
+    blue: "text-blue-700",
+  };
+
+  return (
+    <div className="grid auto-cols-[132px] grid-flow-col gap-2 overflow-x-auto pb-1 sm:auto-cols-auto sm:grid-flow-row sm:grid-cols-3 xl:grid-cols-6 [scrollbar-width:thin]">
+      {items.map(({ key, label, value: count, helper, icon: Icon, tone, delta }) => (
+        <button
+          key={key}
+          type="button"
+          aria-pressed={value === key}
+          onClick={() => onChange(key)}
+          className={`min-h-[86px] rounded-2xl border bg-white p-3 text-left shadow-sm transition ${
+            value === key
+              ? "border-blue-500 ring-1 ring-blue-500"
+              : "border-slate-200 hover:border-blue-200 hover:shadow-md"
+          }`}
+        >
+          <span className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-400">
+            {label}
+            <Icon className={`size-4 ${tones[tone]}`} />
+          </span>
+          <span className={`mt-2 flex items-center gap-2 text-2xl font-bold leading-none tabular-nums ${tones[tone]}`}>
+            {count ?? "—"}
+            {delta}
+          </span>
+          <span className="mt-1 block truncate text-[10px] text-slate-400">
+            {helper}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+const PERSON_STATUS = {
+  present: {
+    label: "Presente",
+    badge: "bg-emerald-50 text-emerald-700",
+    icon: UserCheck,
+  },
+  late: {
+    label: "Tardanza",
+    badge: "bg-amber-50 text-amber-700",
+    icon: AlarmClock,
+  },
+  absent: {
+    label: "Falta",
+    badge: "bg-rose-50 text-rose-700",
+    icon: UserMinus,
+  },
+  vacation: {
+    label: "Vacaciones",
+    badge: "bg-violet-50 text-violet-700",
+    icon: CalendarDays,
+  },
+  permission: {
+    label: "Permiso",
+    badge: "bg-blue-50 text-blue-700",
+    icon: CalendarCheck2,
+  },
+};
+
+function OperationalRoster({ rows, filter, expectedCount = 0 }) {
+  const visibleRows = rows.filter((row) => {
+    if (filter === "all") return true;
+    if (filter === "present") {
+      return row.status === "present" || row.status === "late";
+    }
+    return row.status === filter;
+  });
+
+  if (!visibleRows.length) {
+    return (
+      <EmptyState positive={Number(expectedCount) === 0}>
+        {Number(expectedCount) > 0
+          ? `El resumen indica ${expectedCount} persona${Number(expectedCount) === 1 ? "" : "s"}, pero el backend no entregó el detalle de nombres.`
+          : "No hay personas en este estado."}
+      </EmptyState>
+    );
+  }
+
+  return (
+    <div className="max-h-[430px] overflow-auto [scrollbar-gutter:stable]">
+      <table className="w-full min-w-[760px] text-left text-xs">
+        <thead className="sticky top-0 z-10 bg-slate-50 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-400">
+          <tr>
+            <th className="px-3 py-2.5">Empleado</th>
+            <th className="px-3 py-2.5">Estado</th>
+            <th className="px-3 py-2.5">Entrada / inicio</th>
+            <th className="px-3 py-2.5">Salida / regreso</th>
+            <th className="px-3 py-2.5">Unidad</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100">
+          {visibleRows.map((row, index) => {
+            const status = PERSON_STATUS[row.status] || PERSON_STATUS.present;
+            const StatusIcon = status.icon;
+            return (
+              <tr key={`${row.key}-${index}`} className="bg-white hover:bg-slate-50/70">
+                <td className="px-3 py-2.5">
+                  <p className="font-semibold text-slate-700">{row.name}</p>
+                  <p className="mt-0.5 text-[10px] text-slate-400">
+                    {row.department || "Sin departamento"}
+                  </p>
+                </td>
+                <td className="px-3 py-2.5">
+                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[10px] font-bold ${status.badge}`}>
+                    <StatusIcon className="size-3" /> {status.label}
+                  </span>
+                </td>
+                <td className="px-3 py-2.5 font-semibold text-slate-700 tabular-nums">
+                  {row.start || "—"}
+                  <span className="mt-0.5 block text-[9px] font-normal text-slate-400">
+                    {row.startLabel}
+                  </span>
+                </td>
+                <td className="px-3 py-2.5 font-semibold text-slate-700 tabular-nums">
+                  {row.end || "—"}
+                  <span className="mt-0.5 block text-[9px] font-normal text-slate-400">
+                    {row.endLabel}
+                  </span>
+                </td>
+                <td className="px-3 py-2.5 text-slate-500">
+                  {row.unit || "—"}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -515,8 +633,9 @@ function DashboardSkeleton() {
 
 export default function DashboardRH() {
   const { dataUser, isAuthChecked } = useAuth();
+  const [peopleFilter, setPeopleFilter] = useState("all");
   const [filters, setFilters] = useState({
-    preset: "7d",
+    preset: "hoy",
     custom: {},
     compare: true,
     id_empresa: "all",
@@ -524,6 +643,10 @@ export default function DashboardRH() {
     id_sucursal_option: "all",
     id_departamento: "all",
   });
+  const updateFilters = (nextFilters) => {
+    setPeopleFilter("all");
+    setFilters(nextFilters);
+  };
 
   const range = useMemo(
     () => rangeFromPreset(filters.preset, filters.custom),
@@ -579,7 +702,7 @@ export default function DashboardRH() {
   if (error || responseFailed || !data) {
     return (
       <div className="mx-auto w-full max-w-[1480px] space-y-4">
-        <DashboardFilters value={filters} onChange={setFilters} />
+        <DashboardFilters value={filters} onChange={updateFilters} />
         <div className="rounded-2xl border border-rose-200 bg-white p-6 text-center shadow-sm">
           <span className="mx-auto grid size-12 place-content-center rounded-2xl bg-rose-50 text-rose-600">
             <ShieldAlert className="size-6" />
@@ -591,8 +714,8 @@ export default function DashboardRH() {
             Revisa la conexión o restablece los filtros. La unidad de negocio ahora se envía con su identificador correcto.
           </p>
           <div className="mt-4 flex justify-center gap-2">
-            <Button variant="outline" onClick={() => setFilters({
-              preset: "7d",
+            <Button variant="outline" onClick={() => updateFilters({
+              preset: "hoy",
               custom: {},
               compare: true,
               id_empresa: "all",
@@ -616,6 +739,19 @@ export default function DashboardRH() {
   const late = Number(pick(data.tardanzas, data.tardanzasHoy, 0));
   const absent = Number(pick(data.ausentes, data.ausentesHoy, 0));
   const trend = Array.isArray(data.tendenciaSemanal) ? data.tendenciaSemanal : [];
+  const presentDetails = uniquePeople(
+    Array.isArray(data.presentesDetalle) && data.presentesDetalle.length
+      ? data.presentesDetalle
+      : Array.isArray(data.asistenciasDetalle)
+        ? data.asistenciasDetalle
+        : [],
+  );
+  const absentDetails = uniquePeople(
+    Array.isArray(data.sinChecar) ? data.sinChecar : [],
+  );
+  const today = rangeFromPreset("hoy");
+  const showingToday =
+    range.fechaInicio === today.fechaInicio && range.fechaFin === today.fechaFin;
 
   const fallbackAttendancePct = (() => {
     if (totalEmployees <= 0) return null;
@@ -639,7 +775,146 @@ export default function DashboardRH() {
   const permissions = Array.isArray(data.permisosRangos) ? data.permisosRangos : [];
   const activePermissions = permissions.filter(isActivePermission);
   const pendingPermissions = permissions.filter(isPendingPermission);
+  const vacationPermissions = activePermissions.filter(isVacationPermission);
+  const otherPermissions = activePermissions.filter(
+    (permission) => !isVacationPermission(permission),
+  );
   const previousData = filters.compare !== false ? data.periodoAnterior || {} : {};
+
+  const latePeople = new Set(
+    uniquePeople(Array.isArray(data.tardanzasDetalle) ? data.tardanzasDetalle : [])
+      .map((row, index) => personKey(row, index)),
+  );
+  const operationalPeople = new Map();
+
+  activePermissions.forEach((permission, index) => {
+    const key = personKey(permission, `permission-${index}`);
+    const vacation = isVacationPermission(permission);
+    operationalPeople.set(key, {
+      key,
+      name: employeeName(permission),
+      department: permission.departamento,
+      unit: permission.nombre_empresa,
+      status: vacation ? "vacation" : "permission",
+      start: formatDateDMY(permission.inicio),
+      startLabel: "Inicio",
+      end: formatDateDMY(permission.regresa || permission.fin),
+      endLabel: permission.regresa ? "Regresa" : "Termina",
+    });
+  });
+
+  presentDetails.forEach((person, index) => {
+    const key = personKey(person, `present-${index}`);
+    if (operationalPeople.has(key)) return;
+    const latePerson = latePeople.has(key);
+    const exit = person.hora_salida || person.salida;
+    operationalPeople.set(key, {
+      key,
+      name: employeeName(person),
+      department: person.departamento,
+      unit: person.nombre_empresa || person.unidad_negocio,
+      status: latePerson ? "late" : "present",
+      start: formatTimeMexico(person.hora_entrada || person.entrada),
+      startLabel: latePerson ? "Llegó tarde" : "Entrada",
+      end: exit ? formatTimeMexico(exit) : "—",
+      endLabel: exit ? "Salida" : "Salida pendiente",
+    });
+  });
+
+  absentDetails.forEach((person, index) => {
+    const key = personKey(person, `absent-${index}`);
+    if (operationalPeople.has(key)) return;
+    operationalPeople.set(key, {
+      key,
+      name: employeeName(person),
+      department: person.departamento,
+      unit: person.nombre_empresa || person.unidad_negocio,
+      status: "absent",
+      start: "Sin registro",
+      startLabel: person.horario_entrada
+        ? `Turno ${formatTimeMexico(person.horario_entrada)}`
+        : "Entrada esperada",
+      end: "—",
+      endLabel: "Por revisar",
+    });
+  });
+
+  const operationalRows = Array.from(operationalPeople.values()).sort((a, b) => {
+    const order = { absent: 0, late: 1, vacation: 2, permission: 3, present: 4 };
+    return (order[a.status] ?? 9) - (order[b.status] ?? 9) ||
+      a.name.localeCompare(b.name, "es");
+  });
+
+  const expectedPeopleCount = {
+    all: totalEmployees,
+    present,
+    late,
+    absent,
+    vacation: vacationPermissions.length,
+    permission: otherPermissions.length,
+  }[peopleFilter];
+
+  const statusItems = [
+    {
+      key: "all",
+      label: "Plantilla",
+      value: totalEmployees,
+      helper: data.promedioHoras != null
+        ? `${data.promedioHoras} h promedio`
+        : "Personal activo",
+      icon: UsersRound,
+      tone: "slate",
+      delta: <Delta current={totalEmployees} previous={previousData.totalEmpleados} />,
+    },
+    {
+      key: "present",
+      label: "Presentes",
+      value: present,
+      helper: attendancePct != null
+        ? `${Math.round(attendancePct)}% de asistencia`
+        : "Con entrada registrada",
+      icon: UserCheck,
+      tone: "emerald",
+      delta: <Delta current={present} previous={previousData.presentes} meaning="up" />,
+    },
+    {
+      key: "late",
+      label: "Tardanzas",
+      value: late,
+      helper: "Llegaron después",
+      icon: AlarmClock,
+      tone: "amber",
+      delta: <Delta current={late} previous={previousData.tardanzas} meaning="down" />,
+    },
+    {
+      key: "absent",
+      label: "Faltaron",
+      value: absent,
+      helper: "Sin registro",
+      icon: UserMinus,
+      tone: "rose",
+      delta: <Delta current={absent} previous={previousData.ausentes} meaning="down" />,
+    },
+    {
+      key: "vacation",
+      label: "Vacaciones",
+      value: vacationPermissions.length,
+      helper: "Con descanso autorizado",
+      icon: CalendarDays,
+      tone: "violet",
+    },
+    {
+      key: "permission",
+      label: "Con permiso",
+      value: otherPermissions.length,
+      helper: pendingPermissions.length
+        ? `${pendingPermissions.length} pendiente${pendingPermissions.length === 1 ? "" : "s"}`
+        : "Sin pendientes",
+      icon: CalendarCheck2,
+      tone: "blue",
+      delta: <Delta current={otherPermissions.length} previous={previousData.permisosActivos} />,
+    },
+  ];
 
   const distribution = Array.isArray(data.distribucionAsistenciaDetallada)
     ? data.distribucionAsistenciaDetallada
@@ -757,7 +1032,7 @@ export default function DashboardRH() {
         </div>
       </header>
 
-      <DashboardFilters value={filters} onChange={setFilters} />
+      <DashboardFilters value={filters} onChange={updateFilters} />
 
       {isValidating && (
         <div className="flex items-center justify-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700">
@@ -769,64 +1044,31 @@ export default function DashboardRH() {
       <section aria-busy={isValidating} className={isValidating ? "opacity-60 transition-opacity" : "transition-opacity"}>
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
-            Indicadores principales
+            {showingToday ? "Estado del personal hoy" : "Estado del personal en el periodo"}
           </h2>
           {filters.compare !== false && hasOwn(data, "periodoAnterior") && (
             <span className="text-[10px] text-slate-400">vs. periodo anterior</span>
           )}
         </div>
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3 xl:grid-cols-6">
-          <KpiCard
-            label="Total empleados"
-            value={totalEmployees}
-            helper="Personal activo"
-            icon={UsersRound}
-            tone="blue"
-            delta={<Delta current={totalEmployees} previous={previousData.totalEmpleados} />}
-          />
-          <KpiCard
-            label="Presentes"
-            value={present}
-            helper={attendancePct != null ? `${Math.round(attendancePct)}% de asistencia` : "Periodo seleccionado"}
-            icon={UserCheck}
-            tone="emerald"
-            delta={<Delta current={present} previous={previousData.presentes} meaning="up" />}
-          />
-          <KpiCard
-            label="Tardanzas"
-            value={late}
-            helper={data.tardanzasPctSobreRegistros != null ? `${Math.round(data.tardanzasPctSobreRegistros)}% de registros` : "Incidencias del periodo"}
-            icon={AlarmClock}
-            tone="amber"
-            delta={<Delta current={late} previous={previousData.tardanzas} meaning="down" />}
-          />
-          <KpiCard
-            label="Ausencias"
-            value={absent}
-            helper={data.sinChecarPct != null ? `${Math.round(data.sinChecarPct)}% del total` : "Faltas registradas"}
-            icon={UserMinus}
-            tone="rose"
-            delta={<Delta current={absent} previous={previousData.ausentes} meaning="down" />}
-          />
-          <KpiCard
-            label="Permisos activos"
-            value={activePermissions.length}
-            helper={pendingPermissions.length ? `${pendingPermissions.length} pendientes` : "Sin solicitudes pendientes"}
-            icon={CalendarCheck2}
-            tone="violet"
-            delta={<Delta current={activePermissions.length} previous={previousData.permisosActivos} />}
-          />
-          <KpiCard
-            label="Promedio de horas"
-            value={data.promedioHoras ?? "—"}
-            unit={data.promedioHoras != null ? "h" : ""}
-            helper="Jornada efectiva"
-            icon={Clock3}
-            tone="slate"
-            delta={<Delta current={data.promedioHoras} previous={previousData.promedioHoras} />}
-          />
-        </div>
+        <OperationalStatusStrip
+          items={statusItems}
+          value={peopleFilter}
+          onChange={setPeopleFilter}
+        />
       </section>
+
+      <Section
+        title={showingToday ? "Dónde está cada persona hoy" : "Detalle operativo del personal"}
+        description="Una sola lista con estado, horario y fecha de regreso. Usa los indicadores superiores para filtrar."
+        icon={UsersRound}
+        action={<SectionLink href="/panel/registro-asistencia">Ver detalle</SectionLink>}
+      >
+        <OperationalRoster
+          rows={operationalRows}
+          filter={peopleFilter}
+          expectedCount={expectedPeopleCount}
+        />
+      </Section>
 
       <section>
         <div className="mb-2 flex items-center gap-2">
@@ -1027,7 +1269,7 @@ export default function DashboardRH() {
                     )
                   : null;
                 return (
-                  <div key={`${permission.id_permiso || index}`} className="flex items-center gap-3 rounded-xl bg-slate-50 p-2.5">
+                  <div key={`${permission.id_permiso || index}`} className="flex items-start gap-3 rounded-xl bg-slate-50 p-2.5">
                     <span className={`grid size-8 shrink-0 place-content-center rounded-lg ${
                       pending
                         ? "bg-amber-100 text-amber-700"
@@ -1045,8 +1287,19 @@ export default function DashboardRH() {
                         {permission.tipo || "Permiso"}
                         {days ? ` · ${days} día${days === 1 ? "" : "s"}` : ""}
                       </p>
+                      {(permission.inicio || permission.fin) && (
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px] font-medium text-slate-600">
+                          <span>
+                            Inicio: {formatDateDMY(permission.inicio)}
+                          </span>
+                          <ArrowRight className="size-3 text-slate-300" />
+                          <span>
+                            Fin: {formatDateDMY(permission.fin)}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    <span className={`rounded-full px-2 py-1 text-[9px] font-bold ${
+                    <span className={`mt-0.5 shrink-0 rounded-full px-2 py-1 text-[9px] font-bold ${
                       pending
                         ? "bg-amber-100 text-amber-700"
                         : active
