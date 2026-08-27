@@ -33,7 +33,7 @@ export function rangeFromPreset(preset, custom = {}) {
         fechaFin: custom.fechaFin || fmt(hoy),
       };
     default:
-      return { fechaInicio: fmt(hoy.subtract(6, "day")), fechaFin: fmt(hoy) };
+      return { fechaInicio: fmt(hoy), fechaFin: fmt(hoy) };
   }
 }
 
