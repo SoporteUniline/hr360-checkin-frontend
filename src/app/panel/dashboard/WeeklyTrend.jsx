@@ -41,8 +41,13 @@ export default function WeeklyTrend({ data = [] }) {
     const paddingX = 42;
     const top = 14;
     const baseline = 176;
-    const stepX = data.length > 14 ? 42 : 54;
-    const width = Math.max(620, paddingX * 2 + Math.max(1, data.length - 1) * stepX);
+    // La escala por día se conserva. En rangos largos la gráfica se desplaza
+    // horizontalmente en lugar de estirarse o comprimirse para llenar la tarjeta.
+    const stepX = 68;
+    const width = Math.max(
+      560,
+      paddingX * 2 + Math.max(1, data.length - 1) * stepX,
+    );
     const maxAttendance = Math.max(1, ...data.map((d) => Number(d.asistencias) || 0));
     const roundedMax = Math.max(5, Math.ceil(maxAttendance / 5) * 5);
     const y = (value) =>
@@ -108,12 +113,17 @@ export default function WeeklyTrend({ data = [] }) {
         </span>
       </div>
 
-      <div className="overflow-x-auto pb-1 [scrollbar-width:thin]">
+      {chart.width > 700 && (
+        <p className="mb-2 text-[10px] font-medium text-slate-400">
+          Desliza horizontalmente para recorrer el periodo.
+        </p>
+      )}
+      <div className="overflow-x-auto overscroll-x-contain pb-2 touch-pan-x [scrollbar-width:thin]">
         <svg
           viewBox={`0 0 ${chart.width} ${chart.height}`}
           width={chart.width}
           height={chart.height}
-          className="block min-w-full"
+          className="block max-w-none"
           role="img"
           aria-label="Tendencia de personas presentes por día"
           onPointerMove={selectFromPointer}
