@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 import useDepartamentosData from "@/hooks/useDepartamentosData";
@@ -70,6 +70,11 @@ function CompareControl({ active, onToggle }) {
 
 export default function DashboardFilters({ value, onChange }) {
   const { dataUser } = useAuth();
+  const todayRange = useMemo(() => rangeFromPreset("hoy"), []);
+  const [customDraft, setCustomDraft] = useState(() => ({
+    fechaInicio: value.custom?.fechaInicio || todayRange.fechaInicio,
+    fechaFin: value.custom?.fechaFin || todayRange.fechaFin,
+  }));
 
   const empresas = useMemo(() => {
     const list = dataUser?.empresas_detalle || [];
@@ -103,6 +108,30 @@ export default function DashboardFilters({ value, onChange }) {
   const rango = rangeFromPreset(value.preset, value.custom);
   const set = (patch) => onChange({ ...value, ...patch });
 
+  useEffect(() => {
+    if (value.custom?.fechaInicio || value.custom?.fechaFin) {
+      setCustomDraft({
+        fechaInicio: value.custom?.fechaInicio || todayRange.fechaInicio,
+        fechaFin: value.custom?.fechaFin || todayRange.fechaFin,
+      });
+    } else if (value.preset !== "custom") {
+      setCustomDraft(todayRange);
+    }
+  }, [
+    todayRange,
+    value.custom?.fechaFin,
+    value.custom?.fechaInicio,
+    value.preset,
+  ]);
+
+  const customDraftComplete =
+    /^\d{4}-\d{2}-\d{2}$/.test(customDraft.fechaInicio || "") &&
+    /^\d{4}-\d{2}-\d{2}$/.test(customDraft.fechaFin || "") &&
+    customDraft.fechaInicio <= customDraft.fechaFin;
+  const customDraftDirty =
+    customDraft.fechaInicio !== rango.fechaInicio ||
+    customDraft.fechaFin !== rango.fechaFin;
+
   const selectedUnitOption = unidadesAll.find(
     (u) => u.value === value.id_sucursal_option,
   );
@@ -110,9 +139,10 @@ export default function DashboardFilters({ value, onChange }) {
     (d) => String(d.id_departamento) === String(value.id_departamento),
   );
 
-  const reset = () =>
+  const reset = () => {
+    setCustomDraft(todayRange);
     onChange({
-      preset: "7d",
+      preset: "hoy",
       custom: {},
       compare: true,
       id_empresa: "all",
@@ -120,6 +150,22 @@ export default function DashboardFilters({ value, onChange }) {
       id_sucursal_option: "all",
       id_departamento: "all",
     });
+  };
+
+  const selectPreset = (preset) => {
+    if (preset === "custom" && value.preset !== "custom") {
+      setCustomDraft({
+        fechaInicio: value.custom?.fechaInicio || todayRange.fechaInicio,
+        fechaFin: value.custom?.fechaFin || todayRange.fechaFin,
+      });
+    }
+    set({ preset });
+  };
+
+  const applyCustomRange = () => {
+    if (!customDraftComplete) return;
+    set({ preset: "custom", custom: customDraft });
+  };
 
   const selectEmpresa = (idEmpresa) =>
     set({
@@ -160,7 +206,7 @@ export default function DashboardFilters({ value, onChange }) {
               key={p.key}
               type="button"
               aria-pressed={value.preset === p.key}
-              onClick={() => set({ preset: p.key })}
+              onClick={() => selectPreset(p.key)}
               className={`shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
                 value.preset === p.key
                   ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200"
@@ -174,18 +220,19 @@ export default function DashboardFilters({ value, onChange }) {
       </div>
 
       {value.preset === "custom" && (
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid min-w-[310px] grid-cols-2 gap-2">
           <label className="min-w-0">
             <FieldLabel>Desde</FieldLabel>
             <Input
               type="date"
               className="w-full bg-white"
-              value={value.custom?.fechaInicio || rango.fechaInicio}
-              max={value.custom?.fechaFin || undefined}
+              value={customDraft.fechaInicio}
+              max={customDraft.fechaFin || undefined}
               onChange={(e) =>
-                set({
-                  custom: { ...value.custom, fechaInicio: e.target.value },
-                })
+                setCustomDraft((current) => ({
+                  ...current,
+                  fechaInicio: e.target.value,
+                }))
               }
             />
           </label>
@@ -194,13 +241,34 @@ export default function DashboardFilters({ value, onChange }) {
             <Input
               type="date"
               className="w-full bg-white"
-              value={value.custom?.fechaFin || rango.fechaFin}
-              min={value.custom?.fechaInicio || undefined}
+              value={customDraft.fechaFin}
+              min={customDraft.fechaInicio || undefined}
               onChange={(e) =>
-                set({ custom: { ...value.custom, fechaFin: e.target.value } })
+                setCustomDraft((current) => ({
+                  ...current,
+                  fechaFin: e.target.value,
+                }))
               }
             />
           </label>
+          <div className="col-span-2 flex items-center justify-between gap-2">
+            <span className="text-[10px] text-slate-400">
+              {customDraftComplete
+                ? customDraftDirty
+                  ? "Cambios sin aplicar"
+                  : "Rango aplicado"
+                : "Completa un rango válido"}
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              onClick={applyCustomRange}
+              disabled={!customDraftComplete || !customDraftDirty}
+              className="h-8 bg-blue-600 px-3 text-xs hover:bg-blue-700"
+            >
+              Aplicar rango
+            </Button>
+          </div>
         </div>
       )}
 
