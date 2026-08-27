@@ -1,230 +1,206 @@
 "use client";
 
-// Gráfico semanal interactivo (SVG puro)
-// Props: data: Array<{ fecha: 'YYYY-MM-DD', asistencias: number, tardanzas: number }>
-
 import { useMemo, useState } from "react";
 
-export default function WeeklyTrend({ data = [] }) {
-  const [hoverIdx, setHoverIdx] = useState(null);
+const DATE_FORMATTER = new Intl.DateTimeFormat("es-MX", {
+  day: "2-digit",
+  month: "short",
+  timeZone: "UTC",
+});
 
-  const computed = useMemo(() => {
-    const maxValRaw = Math.max(
-      1,
-      ...data.map((d) =>
-        Math.max(
-          d.asistencias || 0,
-          d.tardanzas || 0,
-          d.ausentes || 0,
-          d.permisos || 0
-        )
-      )
-    );
-    const rough = maxValRaw / 5;
-    const pow10 = Math.pow(10, Math.floor(Math.log10(Math.max(1, rough))));
-    let step = pow10;
-    if (rough / pow10 > 5) step = 10 * pow10; else if (rough / pow10 > 2) step = 5 * pow10; else if (rough / pow10 > 1) step = 2 * pow10; else step = 1 * pow10;
-    const paddedMax = maxValRaw + 5;
-    const yMax = Math.max(step, Math.ceil(paddedMax / step) * step);
-    const W = 720; const H = 180; const P = 52;
-    const n = data.length || 1;
-    const stepX = n > 1 ? (W - 2 * P) / (n - 1) : 0;
-    const scaleY = (v) => H - (v / yMax) * (H - 8);
-    const pointsA = data.map((d, i) => [P + i * stepX, scaleY(d.asistencias || 0)]); // Asistencias (Presente)
-    const pointsT = data.map((d, i) => [P + i * stepX, scaleY(d.tardanzas || 0)]);   // Tardanzas
-    const pointsAus = data.map((d, i) => [P + i * stepX, scaleY(d.ausentes || 0)]);  // Ausentes
-    const pointsPerm = data.map((d, i) => [P + i * stepX, scaleY(d.permisos || 0)]); // Permisos (excluye Vacaciones)
-    const tickValues = []; tickValues.push(1); for (let v = step; v <= yMax; v += step) tickValues.push(v);
-    const yTicks = tickValues.filter((v, i, arr) => i === 0 || v !== arr[i - 1]).map((v) => ({ value: v, y: scaleY(v) }));
-    return { W, H, P, stepX, scaleY, pointsA, pointsT, pointsAus, pointsPerm, yTicks };
+function formatDay(ymd) {
+  if (!ymd) return "";
+  return DATE_FORMATTER.format(new Date(`${ymd}T00:00:00Z`)).replace(".", "");
+}
+
+function smoothPath(points) {
+  if (!points.length) return "";
+  if (points.length === 1) return `M ${points[0][0]},${points[0][1]}`;
+  if (points.length === 2) return `M ${points[0].join(",")} L ${points[1].join(",")}`;
+
+  const tension = 0.16;
+  let path = `M ${points[0][0]},${points[0][1]}`;
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const p0 = i > 0 ? points[i - 1] : points[0];
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    const p3 = i < points.length - 2 ? points[i + 2] : p2;
+    const cp1x = p1[0] + (p2[0] - p0[0]) * tension;
+    const cp1y = p1[1] + (p2[1] - p0[1]) * tension;
+    const cp2x = p2[0] - (p3[0] - p1[0]) * tension;
+    const cp2y = p2[1] - (p3[1] - p1[1]) * tension;
+    path += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2[0]},${p2[1]}`;
+  }
+  return path;
+}
+
+export default function WeeklyTrend({ data = [] }) {
+  const [activeIndex, setActiveIndex] = useState(null);
+
+  const chart = useMemo(() => {
+    const paddingX = 42;
+    const top = 14;
+    const baseline = 176;
+    const stepX = data.length > 14 ? 42 : 54;
+    const width = Math.max(620, paddingX * 2 + Math.max(1, data.length - 1) * stepX);
+    const maxAttendance = Math.max(1, ...data.map((d) => Number(d.asistencias) || 0));
+    const roundedMax = Math.max(5, Math.ceil(maxAttendance / 5) * 5);
+    const y = (value) =>
+      baseline - ((Number(value) || 0) / roundedMax) * (baseline - top);
+    const x = (index) =>
+      data.length === 1 ? width / 2 : paddingX + index * ((width - paddingX * 2) / (data.length - 1));
+    const points = data.map((d, index) => [x(index), y(d.asistencias)]);
+    const ticks = [0, 0.25, 0.5, 0.75, 1].map((ratio) => ({
+      value: Math.round(roundedMax * ratio),
+      y: baseline - ratio * (baseline - top),
+    }));
+    const labelEvery = Math.max(1, Math.ceil(data.length / 8));
+    return { width, height: 220, baseline, points, ticks, x, labelEvery };
   }, [data]);
 
-  const dayLabel = (ymd) => {
-    // Interpretar YMD como fecha "literal" en UTC para evitar desfaces.
-    const d = new Date(ymd + "T00:00:00Z");
-    const wd = d.toLocaleDateString("es-MX", { weekday: "long", timeZone: "UTC" });
-    const day = String(d.getUTCDate()).padStart(2, "0");
-    return `${wd} ${day}`;
-  };
-  const dayNumber = (ymd) => String(new Date(ymd + "T00:00:00Z").getUTCDate());
+  const totals = useMemo(
+    () =>
+      data.reduce(
+        (acc, day) => ({
+          tardanzas: acc.tardanzas + (Number(day.tardanzas) || 0),
+          ausentes: acc.ausentes + (Number(day.ausentes) || 0),
+          permisos: acc.permisos + (Number(day.permisos) || 0),
+        }),
+        { tardanzas: 0, ausentes: 0, permisos: 0 },
+      ),
+    [data],
+  );
 
-  const getIdxFromEvent = (evt) => {
-    const target = evt.currentTarget;
-    const rect = target.getBoundingClientRect();
-    const clientX = evt.clientX ?? (evt.touches && evt.touches[0]?.clientX) ?? 0;
-    const xPx = clientX - rect.left;
-    const xView = (xPx / rect.width) * computed.W;
-    const { P, stepX } = computed;
-    const xClamped = Math.max(P, Math.min(xView, computed.W - P));
-    const idx = Math.round((xClamped - P) / stepX);
-    return idx;
-  };
-  const onPointerMove = (evt) => {
-    const idx = getIdxFromEvent(evt);
-    if (idx >= 0 && idx < data.length) setHoverIdx(idx);
-  };
-  const onPointerDown = (evt) => {
-    const idx = getIdxFromEvent(evt);
-    if (idx >= 0 && idx < data.length) setHoverIdx(idx);
-  };
-  const onPointerLeave = () => setHoverIdx(null);
+  const active = activeIndex == null ? null : data[activeIndex];
+  const activeX = activeIndex == null ? null : chart.x(activeIndex);
+  const line = smoothPath(chart.points);
+  const area = chart.points.length
+    ? `${line} L ${chart.points.at(-1)[0]},${chart.baseline} L ${chart.points[0][0]},${chart.baseline} Z`
+    : "";
 
-  const active = hoverIdx != null ? data[hoverIdx] : null;
-  const xActive = hoverIdx != null ? computed.P + hoverIdx * computed.stepX : null;
-  const yActiveA = hoverIdx != null ? computed.pointsA[hoverIdx][1] : null;
-  const yActiveT = hoverIdx != null ? computed.pointsT[hoverIdx][1] : null;
-  const yActiveAus = hoverIdx != null ? computed.pointsAus[hoverIdx][1] : null;
-  const yActivePerm = hoverIdx != null ? computed.pointsPerm[hoverIdx][1] : null;
-
-  const toSmoothPath = (pts) => {
-    if (pts.length <= 2) return `M ${pts.map(p => p.join(',')).join(' L ')}`;
-    const tension = 0.2;
-    let d = `M ${pts[0][0]},${pts[0][1]}`;
-    for (let i = 0; i < pts.length - 1; i++) {
-      const p0 = i > 0 ? pts[i - 1] : pts[0];
-      const p1 = pts[i];
-      const p2 = pts[i + 1];
-      const p3 = i !== pts.length - 2 ? pts[i + 2] : p2;
-      const cp1x = p1[0] + (p2[0] - p0[0]) * tension;
-      const cp1y = p1[1] + (p2[1] - p0[1]) * tension;
-      const cp2x = p2[0] - (p3[0] - p1[0]) * tension;
-      const cp2y = p2[1] - (p3[1] - p1[1]) * tension;
-      d += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2[0]},${p2[1]}`;
-    }
-    return d;
+  const selectFromPointer = (event) => {
+    if (!data.length) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const scaledX = ((event.clientX - rect.left) / rect.width) * chart.width;
+    let nearest = 0;
+    let distance = Number.POSITIVE_INFINITY;
+    data.forEach((_, index) => {
+      const currentDistance = Math.abs(chart.x(index) - scaledX);
+      if (currentDistance < distance) {
+        nearest = index;
+        distance = currentDistance;
+      }
+    });
+    setActiveIndex(nearest);
   };
 
   return (
-    <div className="w-full overflow-x-auto">
-      <svg
-        viewBox={`0 0 ${computed.W} ${computed.H + 56}`}
-        className="w-full h-72 sm:h-64"
-        onPointerMove={onPointerMove}
-        onPointerDown={onPointerDown}
-        onPointerLeave={onPointerLeave}
-        style={{ touchAction: "pan-x" }}
-        preserveAspectRatio="none"
-      >
-        <defs>
-          <linearGradient id="fillAsist" x1="0" x2="0" y1="0" y2="1">
-            <stop offset="0%" stopColor="#10b981" stopOpacity="0.28" />
-            <stop offset="100%" stopColor="#10b981" stopOpacity="0.06" />
-          </linearGradient>
-          <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="0" dy="1" stdDeviation="1" floodOpacity="0.15" />
-          </filter>
-        </defs>
+    <div>
+      <div className="mb-3 flex flex-wrap gap-2">
+        <span className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
+          {totals.tardanzas} tardanzas
+        </span>
+        <span className="rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-semibold text-rose-700">
+          {totals.ausentes} ausencias
+        </span>
+        <span className="rounded-full bg-violet-50 px-2.5 py-1 text-[11px] font-semibold text-violet-700">
+          {totals.permisos} permisos
+        </span>
+      </div>
 
-        {computed.yTicks.map((t, i) => (
-          <line key={`gy-${i}`} x1={computed.P} x2={computed.W - computed.P} y1={t.y} y2={t.y} stroke="#e5e7eb" />
-        ))}
-        <line x1={computed.P} x2={computed.W - computed.P} y1={computed.H} y2={computed.H} stroke="#cbd5e1" />
-        {data.map((_, i) => (
-          <line key={`gx-${i}`} x1={computed.P + i * computed.stepX} x2={computed.P + i * computed.stepX} y1={0} y2={computed.H} stroke="#f1f5f9" />
-        ))}
-        {computed.yTicks.map((t, i) => (
-          <text key={`yl-${i}`} x={computed.P - 8} y={t.y + 4} textAnchor="end" fontSize="10" className="fill-zinc-500">
-            {t.value}
-          </text>
-        ))}
+      <div className="overflow-x-auto pb-1 [scrollbar-width:thin]">
+        <svg
+          viewBox={`0 0 ${chart.width} ${chart.height}`}
+          width={chart.width}
+          height={chart.height}
+          className="block min-w-full"
+          role="img"
+          aria-label="Tendencia de personas presentes por día"
+          onPointerMove={selectFromPointer}
+          onPointerDown={selectFromPointer}
+          onPointerLeave={() => setActiveIndex(null)}
+        >
+          <defs>
+            <linearGradient id="attendance-fill" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stopColor="#2563eb" stopOpacity="0.24" />
+              <stop offset="100%" stopColor="#2563eb" stopOpacity="0.02" />
+            </linearGradient>
+          </defs>
 
-        {/* Asistencias - emerald */}
-        <path d={`${toSmoothPath(computed.pointsA)} L ${computed.P + (data.length - 1) * computed.stepX},${computed.H} L ${computed.P},${computed.H} Z`} fill="url(#fillAsist)" />
-        <path d={toSmoothPath(computed.pointsA)} fill="none" stroke="#10b981" strokeWidth="2.5" filter="url(#shadow)" />
-        {computed.pointsA.map((p, i) => (
-          <g key={`a-${i}`}>
-            <circle cx={p[0]} cy={p[1]} r="4.5" fill="#ffffff" stroke="#10b981" strokeWidth="2" />
-          </g>
-        ))}
+          {chart.ticks.map((tick) => (
+            <g key={tick.value}>
+              <line
+                x1="42"
+                x2={chart.width - 24}
+                y1={tick.y}
+                y2={tick.y}
+                stroke="#e2e8f0"
+                strokeDasharray={tick.value === 0 ? "0" : "3 5"}
+              />
+              <text x="34" y={tick.y + 4} textAnchor="end" fontSize="10" fill="#94a3b8">
+                {tick.value}
+              </text>
+            </g>
+          ))}
 
-        {/* Tardanzas - amber */}
-        <path d={toSmoothPath(computed.pointsT)} fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeDasharray="6 6" />
-        {computed.pointsT.map((p, i) => (
-          <circle key={`t-${i}`} cx={p[0]} cy={p[1]} r="3.5" fill="#f59e0b" />
-        ))}
+          <path d={area} fill="url(#attendance-fill)" />
+          <path
+            d={line}
+            fill="none"
+            stroke="#2563eb"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
 
-        {/* Ausentes - rose */}
-        <path d={toSmoothPath(computed.pointsAus)} fill="none" stroke="#ef4444" strokeWidth="2.5" strokeDasharray="4 4" />
-        {computed.pointsAus.map((p, i) => (
-          <circle key={`au-${i}`} cx={p[0]} cy={p[1]} r="3" fill="#ef4444" />
-        ))}
+          {chart.points.map(([x, y], index) => (
+            <g key={`${data[index]?.fecha}-${index}`}>
+              <circle cx={x} cy={y} r="4" fill="white" stroke="#2563eb" strokeWidth="2" />
+              {(index % chart.labelEvery === 0 || index === data.length - 1) && (
+                <text x={x} y="207" textAnchor="middle" fontSize="10" fill="#64748b">
+                  {formatDay(data[index]?.fecha)}
+                </text>
+              )}
+            </g>
+          ))}
 
-        {/* Permisos - violet */}
-        <path d={toSmoothPath(computed.pointsPerm)} fill="none" stroke="#8b5cf6" strokeWidth="2.5" strokeDasharray="6 3" />
-        {computed.pointsPerm.map((p, i) => (
-          <circle key={`pe-${i}`} cx={p[0]} cy={p[1]} r="3" fill="#8b5cf6" />
-        ))}
-
-        {data.map((d, i) => (
-          <text key={`x-${i}`} x={computed.P + i * computed.stepX} y={computed.H + 30} textAnchor="middle" fontSize="11" className="fill-zinc-600">
-            {dayNumber(d.fecha)}
-          </text>
-        ))}
-
-        {active && (() => {
-          // Preparar datos del tooltip con ancho/alto dinámicos y clamp horizontal
-          const tipos = active?.permisosPorTipo ? Object.entries(active.permisosPorTipo) : [];
-          const maxShow = 5;
-          const shown = tipos.sort((a,b) => b[1]-a[1]).slice(0, maxShow);
-          const remaining = Math.max(0, tipos.length - shown.length);
-          // Estimar un ancho mínimo y ampliar según la etiqueta más larga
-          const longest = shown.reduce((m, [t]) => Math.max(m, t.length), 0);
-          const estByLen = 160 + longest * 9; // 9px aprox por carácter (más conservador)
-          const boxW = Math.max(220, Math.min(420, estByLen)); // responsivo con tope mayor
-          const lineH = 16;
-          const margin = 8;
-          // Altura exacta: base hasta 'Permisos' (línea 4) + bloque dinámico
-          const yAfterBase = 79; // última línea base (Permisos) y=79
-          const yPermHeader = yAfterBase + 17; // 96
-          const permLines = shown.length + (remaining > 0 ? 1 : 0);
-          const lastY = shown.length > 0 ? (yPermHeader + permLines * lineH) : yAfterBase;
-          const boxH = lastY + 12; // padding inferior
-          // Posición x/y asegurada dentro del SVG
-          const xTip = Math.max(margin, Math.min((xActive || 0) + 12, computed.W - boxW - margin));
-          const yTip = Math.max(margin, Math.min(8, computed.H - boxH - margin));
-          // Truncado seguro por ancho
-          const maxChars = Math.floor((boxW - 100) / 8.5); // deja espacio para viñeta y números
-          const fmtTipo = (s) => (s.length > maxChars ? (s.slice(0, Math.max(0, maxChars - 1)) + "…") : s);
-          return (
-            <g>
-              <line x1={xActive} x2={xActive} y1={0} y2={computed.H} stroke="#cbd5e1" strokeDasharray="4 4" />
-              <circle cx={xActive} cy={yActiveA} r="5" fill="#ffffff" stroke="#10b981" strokeWidth="2" />
-              <circle cx={xActive} cy={yActiveT} r="4" fill="#f59e0b" />
-              <circle cx={xActive} cy={yActiveAus} r="3.5" fill="#ef4444" />
-              <circle cx={xActive} cy={yActivePerm} r="3.5" fill="#8b5cf6" />
-              <g transform={`translate(${xTip}, ${yTip})`}>
-                <rect width={boxW} height={boxH} rx="10" fill="#ffffff" stroke="#e5e7eb" />
-                <text x="12" y="18" fontSize="12" className="fill-zinc-800 font-medium">{dayLabel(active.fecha)}</text>
-                <circle cx="14" cy="31" r="4" fill="#10b981" />
-                <text x="24" y="34" fontSize="11" className="fill-zinc-700">Asistencias: {active.asistencias}</text>
-                <circle cx="14" cy="46" r="4" fill="#f59e0b" />
-                <text x="24" y="49" fontSize="11" className="fill-zinc-700">Tardanzas: {active.tardanzas}</text>
-                <circle cx="14" cy="61" r="4" fill="#ef4444" />
-                <text x="24" y="64" fontSize="11" className="fill-zinc-700">Ausentes: {Math.max(0, active.ausentes ?? 0)}</text>
-                <circle cx="14" cy="76" r="4" fill="#8b5cf6" />
-                <text x="24" y="79" fontSize="11" className="fill-zinc-700">Permisos: {active.permisos ?? 0}</text>
-                {shown.length > 0 && (
-                  <>
-                    <text x="12" y="96" fontSize="11" className="fill-zinc-500">Permisos por tipo:</text>
-                    {shown.map(([tipo, cnt], i) => (
-                      <text key={`pt-${i}`} x="24" y={96 + (i + 1) * 16} fontSize="11" className="fill-zinc-700">
-                        • {fmtTipo(tipo)}: {cnt}
-                      </text>
-                    ))}
-                    {remaining > 0 && (
-                      <text x="24" y={96 + (shown.length + 1) * 16} fontSize="11" className="fill-zinc-500">
-                        y {remaining} más...
-                      </text>
-                    )}
-                  </>
-                )}
+          {active && (
+            <g pointerEvents="none">
+              <line
+                x1={activeX}
+                x2={activeX}
+                y1="10"
+                y2={chart.baseline}
+                stroke="#94a3b8"
+                strokeDasharray="4 4"
+              />
+              <g
+                transform={`translate(${Math.min(
+                  Math.max(8, activeX + 10),
+                  chart.width - 188,
+                )}, 10)`}
+              >
+                <rect width="180" height="94" rx="12" fill="white" stroke="#dbeafe" />
+                <text x="12" y="20" fontSize="11" fontWeight="600" fill="#0f172a">
+                  {formatDay(active.fecha)}
+                </text>
+                <text x="12" y="40" fontSize="11" fill="#2563eb">
+                  Presentes: {active.asistencias || 0}
+                </text>
+                <text x="12" y="56" fontSize="11" fill="#b45309">
+                  Tardanzas: {active.tardanzas || 0}
+                </text>
+                <text x="12" y="72" fontSize="11" fill="#be123c">
+                  Ausencias: {Math.max(0, active.ausentes || 0)}
+                </text>
+                <text x="12" y="88" fontSize="11" fill="#6d28d9">
+                  Permisos: {active.permisos || 0}
+                </text>
               </g>
             </g>
-          );
-        })()}
-      </svg>
+          )}
+        </svg>
+      </div>
     </div>
   );
 }
-
-
