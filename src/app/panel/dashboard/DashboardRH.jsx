@@ -1,279 +1,313 @@
 "use client";
 
-/**
- * Dashboard de Recursos Humanos (cliente).
- *
- * Estrategia:
- * - Filtros (periodo, empresa, unidad de negocio, departamento) controlan el estado.
- * - Cada cambio recalcula el rango de fechas y los query params, y refresca los
- *   datos con SWR (`/checador/dashboard`, `/checador/holidays`, `/checador/asistencias`).
- * - Los bloques se renderizan a partir de un shape de datos bien definido; cuando el
- *   backend todavía no entrega una sección (ej. contratos por vencer), se muestra un
- *   estado vacío en lugar de romper. Ver `docs/DASHBOARD_BACKEND.md` para el contrato.
- *
- * Nota: se corrige el bug anterior donde `id_empresa` era siempre `null` — ahora sale
- * de `dataUser.id_empresa` (o del filtro de empresa), por lo que festivos y el detalle
- * de asistencias sí cargan.
- */
-
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import {
+  AlarmClock,
+  ArrowDown,
+  ArrowRight,
+  ArrowUp,
+  BarChart3,
+  BriefcaseBusiness,
+  Building2,
+  CalendarCheck2,
   CalendarDays,
   CheckCircle2,
-  UsersRound,
-  AlarmClock,
-  XCircle,
-  Gift,
-  PartyPopper,
-  BarChart3,
-  LineChart,
-  PieChart,
-  FileText,
-  ArrowUp,
-  ArrowDown,
-  Minus,
-  AlertTriangle,
-  RefreshCw,
-  ShieldCheck,
   Clock3,
-  LayoutGrid,
+  FileCheck2,
+  FileText,
+  Gift,
+  LayoutDashboard,
+  Minus,
+  PartyPopper,
+  RefreshCw,
+  ShieldAlert,
+  Sparkles,
+  UserCheck,
+  UserMinus,
   Users,
+  UsersRound,
+  XCircle,
 } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import SystemMessageRenderer from "@/components/system-messages/SystemMessageRenderer";
-import AccesosRapidos from "@/components/AccesosRapidos";
-import WeeklyTrend from "./WeeklyTrend";
-import PermisosTable from "./PermisosTable";
-import PermisosCalendario from "@/app/panel/permisos/PermisosCalendario";
 import DashboardFilters from "./DashboardFilters";
-import { buildQuery, rangeFromPreset, previousRange } from "./lib/periodos";
+import WeeklyTrend from "./WeeklyTrend";
+import { buildQuery, previousRange, rangeFromPreset } from "./lib/periodos";
 import {
-  monthShortUpperMX,
   fmtDayMonthDeMX,
   formatDateDMY,
-  formatTimeMexico,
-  getServiceYears,
   getAnniversaryYears,
 } from "./lib/format";
 
-/* ------------------------------------------------------------------ */
-/* Helpers de presentación                                            */
-/* ------------------------------------------------------------------ */
+const hasOwn = (object, key) =>
+  Boolean(object) && Object.prototype.hasOwnProperty.call(object, key);
+const pick = (...values) =>
+  values.find((value) => value !== undefined && value !== null);
+const clamp = (value, min = 0, max = 100) =>
+  Math.min(max, Math.max(min, Number(value) || 0));
 
-const pick = (...vals) => vals.find((v) => v !== undefined && v !== null);
+function normalizeText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
 
-const BAR = {
-  emerald: "bg-emerald-500",
-  amber: "bg-amber-500",
-  rose: "bg-rose-500",
-  violet: "bg-violet-500",
-  indigo: "bg-indigo-500",
-  sky: "bg-sky-500",
-  fuchsia: "bg-fuchsia-500",
-  cyan: "bg-cyan-500",
-  teal: "bg-teal-500",
-  lime: "bg-lime-500",
-  orange: "bg-orange-500",
-};
-const CAT = [
-  "sky",
-  "teal",
-  "amber",
-  "violet",
-  "orange",
-  "fuchsia",
-  "indigo",
-  "lime",
-];
+function permissionStatus(permission) {
+  return normalizeText(permission?.estado || permission?.status?.label);
+}
 
-function Pill({ tone = "zinc", children, className = "" }) {
-  const map = {
-    zinc: "border-zinc-200 bg-zinc-50 text-zinc-700",
-    good: "border-emerald-200 bg-emerald-50 text-emerald-800",
-    warn: "border-amber-200 bg-amber-50 text-amber-800",
-    crit: "border-rose-200 bg-rose-50 text-rose-700",
-    info: "border-sky-200 bg-sky-50 text-sky-900",
-    violet: "border-violet-200 bg-violet-50 text-violet-900",
-  };
+function isPendingPermission(permission) {
+  const status = permissionStatus(permission);
+  return status.includes("pendiente") || status.includes("por aprobar");
+}
+
+function isActivePermission(permission) {
+  const status = permissionStatus(permission);
   return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium ${
-        map[tone] || map.zinc
-      } ${className}`}
-    >
-      {children}
-    </span>
+    status === "aprobado" ||
+    status === "activo" ||
+    status === "en curso" ||
+    status === "autorizado"
   );
 }
 
-/** Pill de delta vs. periodo anterior. `goodWhenDown` invierte el color (tardanzas, ausentes). */
-function Delta({ current, prev, unit = "", goodWhenDown = false }) {
+function Delta({ current, previous, meaning = "neutral", suffix = "" }) {
   if (
-    prev === undefined ||
-    prev === null ||
     current === undefined ||
-    current === null
-  )
+    current === null ||
+    previous === undefined ||
+    previous === null
+  ) {
     return null;
-  const diff = Number(current) - Number(prev);
-  const rounded = Math.round(diff * 10) / 10;
-  const isUp = rounded > 0;
-  const isFlat = rounded === 0;
-  const positive = isFlat ? null : goodWhenDown ? !isUp : isUp;
-  const tone = isFlat
-    ? "text-zinc-500 bg-zinc-100"
-    : positive
-    ? "text-emerald-700 bg-emerald-50"
-    : "text-rose-700 bg-rose-50";
+  }
+
+  const difference = Math.round((Number(current) - Number(previous)) * 10) / 10;
+  const isUp = difference > 0;
+  const isFlat = difference === 0;
+  const isGood =
+    isFlat || meaning === "neutral"
+      ? null
+      : meaning === "up"
+        ? isUp
+        : !isUp;
+  const styles = isFlat || isGood === null
+    ? "bg-slate-100 text-slate-500"
+    : isGood
+      ? "bg-emerald-50 text-emerald-700"
+      : "bg-rose-50 text-rose-700";
   const Icon = isFlat ? Minus : isUp ? ArrowUp : ArrowDown;
+
   return (
     <span
-      className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${tone}`}
+      className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold ${styles}`}
+      title="Variación contra el periodo anterior"
     >
       <Icon className="size-3" />
-      {isFlat ? "0" : `${isUp ? "+" : ""}${rounded}`}
-      {unit}
+      {isFlat ? "0" : `${isUp ? "+" : ""}${difference}`}
+      {suffix}
     </span>
   );
 }
 
-function KpiCard({ label, icon: Icon, tone, value, unit, sub, delta }) {
-  const chip = {
-    brand: "border-violet-200 bg-violet-50 text-violet-600",
-    good: "border-emerald-200 bg-emerald-50 text-emerald-600",
-    warn: "border-amber-200 bg-amber-50 text-amber-600",
-    crit: "border-rose-200 bg-rose-50 text-rose-600",
-    info: "border-sky-200 bg-sky-50 text-sky-600",
-    violet: "border-violet-200 bg-violet-50 text-violet-600",
-  }[tone];
+function KpiCard({
+  label,
+  value,
+  unit,
+  helper,
+  icon: Icon,
+  tone = "blue",
+  delta,
+}) {
+  const tones = {
+    blue: "bg-blue-50 text-blue-600 ring-blue-100",
+    emerald: "bg-emerald-50 text-emerald-600 ring-emerald-100",
+    amber: "bg-amber-50 text-amber-600 ring-amber-100",
+    rose: "bg-rose-50 text-rose-600 ring-rose-100",
+    violet: "bg-violet-50 text-violet-600 ring-violet-100",
+    slate: "bg-slate-100 text-slate-600 ring-slate-200",
+  };
+
   return (
-    <Card className="bg-white">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-[11px] font-semibold uppercase tracking-wide text-zinc-600">
-          {label}
-        </CardTitle>
-        <div
-          className={`grid size-8 place-content-center rounded-md border ${chip}`}
+    <div className="flex min-h-[82px] items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition hover:border-blue-200 hover:shadow-md sm:min-h-[112px] sm:flex-col sm:items-start sm:gap-2.5 sm:p-4 xl:min-h-[126px]">
+      <div className="flex w-full items-center gap-3 sm:justify-between">
+        <span
+          className={`grid size-9 shrink-0 place-content-center rounded-xl ring-1 ${tones[tone]}`}
         >
-          <Icon className="size-4" />
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="text-3xl sm:text-4xl font-semibold tabular-nums">
-          {value}
+          <Icon className="size-4.5" />
+        </span>
+        <span className="min-w-0 flex-1 text-xs font-semibold text-slate-500 sm:hidden">
+          {label}
+        </span>
+        <div className="flex items-center gap-1.5 sm:ml-auto">{delta}</div>
+      </div>
+
+      <div className="ml-auto text-right sm:ml-0 sm:text-left">
+        <p className="hidden text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-400 sm:block">
+          {label}
+        </p>
+        <p className="text-2xl font-bold tracking-tight text-slate-900 tabular-nums sm:mt-1 sm:text-[28px]">
+          {value ?? "—"}
           {unit && (
-            <span className="text-xl font-normal text-zinc-400"> {unit}</span>
+            <span className="ml-1 text-xs font-semibold text-slate-400">
+              {unit}
+            </span>
+          )}
+        </p>
+        <p className="mt-0.5 max-w-[150px] truncate text-[10px] text-slate-400 sm:text-[11px]">
+          {helper}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function Section({ title, description, icon: Icon, action, children, className = "" }) {
+  return (
+    <section
+      className={`overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm ${className}`}
+    >
+      <header className="flex items-start gap-3 border-b border-slate-100 px-4 py-3.5 sm:px-5">
+        {Icon && (
+          <span className="mt-0.5 grid size-8 shrink-0 place-content-center rounded-xl bg-blue-50 text-blue-600">
+            <Icon className="size-4" />
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <h2 className="text-sm font-semibold text-slate-900 sm:text-[15px]">
+            {title}
+          </h2>
+          {description && (
+            <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400 sm:text-xs">
+              {description}
+            </p>
           )}
         </div>
-        <div className="mt-1 flex items-center gap-2 text-xs text-zinc-500">
-          {delta}
-          <span>{sub}</span>
-        </div>
-      </CardContent>
-    </Card>
+        {action}
+      </header>
+      <div className="p-4 sm:p-5">{children}</div>
+    </section>
   );
 }
 
-function SectionCard({
-  title,
-  icon: Icon,
-  iconClass = "text-indigo-600",
-  right,
-  children,
-  pad = true,
-}) {
-  return (
-    <Card className="bg-white">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-base flex items-center gap-2">
-          {Icon && <Icon className={`size-4 ${iconClass}`} />} {title}
-        </CardTitle>
-        {right}
-      </CardHeader>
-      <CardContent className={pad ? "" : "p-0"}>{children}</CardContent>
-    </Card>
-  );
-}
-
-function Empty({ children }) {
-  return (
-    <div className="py-8 text-center text-sm text-zinc-400">{children}</div>
-  );
-}
-
-/**
- * Tarjeta de la banda "Requiere tu atención".
- * Número grande + etiqueta + pista, con acceso directo al módulo donde se
- * resuelve (los permisos se aprueban/rechazan en /panel/permisos).
- */
-function AttnCard({ href, tone = "info", count, label, hint }) {
-  const text = {
-    brand: "text-violet-700",
-    warn: "text-amber-700",
-    crit: "text-rose-700",
-    info: "text-sky-700",
-  }[tone];
-  const stripe = {
-    brand: "bg-violet-500",
-    warn: "bg-amber-500",
-    crit: "bg-rose-500",
-    info: "bg-sky-500",
-  }[tone];
+function SectionLink({ href, children }) {
   return (
     <Link
       href={href}
-      className="group relative flex flex-col gap-0.5 overflow-hidden rounded-xl border bg-white p-4 pl-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+      className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-blue-600 transition hover:bg-blue-50"
     >
-      <span className={`absolute inset-y-0 left-0 w-1 ${stripe}`} />
-      <span
-        className={`text-[32px] font-extrabold leading-none tabular-nums ${text}`}
-      >
-        {count}
-      </span>
-      <span className="mt-1 text-[13px] font-semibold text-zinc-800">
-        {label}
-      </span>
-      <span className="text-[11.5px] text-zinc-500">{hint}</span>
-      <span className={`mt-1 text-[11.5px] font-bold ${text}`}>Revisar →</span>
+      {children} <ArrowRight className="size-3" />
     </Link>
   );
 }
 
-/** Barras horizontales genéricas: [{ name, value, color }]. */
-function HBars({ items }) {
-  const max = Math.max(1, ...items.map((i) => i.value || 0));
-  const total = items.reduce((a, i) => a + (i.value || 0), 0) || 1;
+function EmptyState({ children, positive = false }) {
   return (
-    <div className="flex flex-col gap-3">
-      {items.map((it, idx) => (
-        <div
-          key={idx}
-          className="grid grid-cols-[110px_1fr_auto] items-center gap-3"
-        >
-          <span className="truncate text-[13px] text-zinc-600">{it.name}</span>
-          <span className="h-2.5 overflow-hidden rounded-full bg-zinc-100">
-            <span
-              className={`block h-full rounded-full ${
-                BAR[it.color] || "bg-sky-500"
-              }`}
-              style={{ width: `${((it.value || 0) / max) * 100}%` }}
-            />
+    <div
+      className={`flex min-h-24 items-center justify-center rounded-xl border border-dashed px-4 text-center text-xs ${
+        positive
+          ? "border-emerald-200 bg-emerald-50/60 text-emerald-700"
+          : "border-slate-200 bg-slate-50/60 text-slate-400"
+      }`}
+    >
+      {positive && <CheckCircle2 className="mr-2 size-4" />}
+      {children}
+    </div>
+  );
+}
+
+function AttentionCard({ item }) {
+  const styles = {
+    amber: "border-amber-200 bg-amber-50/70 text-amber-700",
+    rose: "border-rose-200 bg-rose-50/70 text-rose-700",
+    violet: "border-violet-200 bg-violet-50/70 text-violet-700",
+    blue: "border-blue-200 bg-blue-50/70 text-blue-700",
+  };
+  const Icon = item.icon;
+
+  return (
+    <Link
+      href={item.href}
+      className={`group flex min-h-[76px] items-center gap-3 rounded-2xl border p-3 transition hover:-translate-y-0.5 hover:shadow-md ${styles[item.tone]}`}
+    >
+      <span className="grid size-9 shrink-0 place-content-center rounded-xl bg-white/80">
+        <Icon className="size-4.5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-xl font-bold leading-none tabular-nums">{item.count}</p>
+        <p className="mt-1 truncate text-xs font-semibold">{item.label}</p>
+        <p className="truncate text-[10px] opacity-75">{item.hint}</p>
+      </div>
+      <ArrowRight className="size-4 shrink-0 opacity-50 transition group-hover:translate-x-0.5" />
+    </Link>
+  );
+}
+
+function HorizontalBars({ items, percent = false }) {
+  const max = percent
+    ? 100
+    : Math.max(1, ...items.map((item) => Number(item.value) || 0));
+
+  return (
+    <div className="space-y-3.5">
+      {items.slice(0, 8).map((item, index) => {
+        const value = Number(item.value) || 0;
+        const width = clamp((value / max) * 100);
+        return (
+          <div key={`${item.name}-${index}`}>
+            <div className="mb-1.5 flex items-center justify-between gap-3 text-xs">
+              <span className="truncate font-medium text-slate-600">{item.name}</span>
+              <span className="shrink-0 font-bold text-slate-800 tabular-nums">
+                {value}{percent ? "%" : ""}
+              </span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+              <div
+                className={`h-full rounded-full ${item.color || "bg-blue-500"}`}
+                style={{ width: `${width}%` }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function IncidentRanking({ items }) {
+  const ranked = items
+    .map((item) => ({
+      ...item,
+      total: (Number(item.faltas) || 0) + (Number(item.tardanzas) || 0),
+    }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 5);
+
+  return (
+    <div className="divide-y divide-slate-100">
+      {ranked.map((item, index) => (
+        <div key={`${item.departamento}-${index}`} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+          <span className={`grid size-7 shrink-0 place-content-center rounded-lg text-[11px] font-bold ${
+            index === 0 ? "bg-rose-50 text-rose-600" : "bg-slate-100 text-slate-500"
+          }`}>
+            {index + 1}
           </span>
-          <span className="min-w-[62px] text-right text-[13px] font-semibold tabular-nums">
-            {it.value} · {Math.round(((it.value || 0) / total) * 100)}%
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-semibold text-slate-700">
+              {item.departamento || item.nombre || "Sin departamento"}
+            </p>
+            <p className="mt-0.5 text-[10px] text-slate-400">
+              {item.faltas || 0} faltas · {item.tardanzas || 0} tardanzas
+            </p>
+          </div>
+          <span className="text-sm font-bold text-rose-600 tabular-nums">
+            {item.total}
           </span>
         </div>
       ))}
@@ -281,1050 +315,794 @@ function HBars({ items }) {
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Componente principal                                               */
-/* ------------------------------------------------------------------ */
+function CompactList({ rows, type }) {
+  const isDocument = type === "document";
+  return (
+    <div className="divide-y divide-slate-100">
+      {rows.slice(0, 5).map((row, index) => {
+        const days = row.dias_restantes ?? row.diasRestantes;
+        return (
+          <div key={`${row.id || row.nombre_empleado}-${index}`} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+            <span className={`grid size-8 shrink-0 place-content-center rounded-xl ${
+              days != null && days <= 7
+                ? "bg-rose-50 text-rose-600"
+                : "bg-amber-50 text-amber-600"
+            }`}>
+              {isDocument ? <FileCheck2 className="size-4" /> : <BriefcaseBusiness className="size-4" />}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold text-slate-700">
+                {row.nombre_empleado || "Empleado"}
+              </p>
+              <p className="truncate text-[10px] text-slate-400">
+                {isDocument
+                  ? row.documento || "Documento"
+                  : row.tipo_contrato || row.tipo || "Contrato"}
+                {row.fecha_vencimiento
+                  ? ` · ${formatDateDMY(row.fecha_vencimiento)}`
+                  : ""}
+              </p>
+            </div>
+            <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ${
+              days != null && days <= 7
+                ? "bg-rose-50 text-rose-700"
+                : "bg-amber-50 text-amber-700"
+            }`}>
+              {days == null ? row.estado || "Vigente" : `${days} días`}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function EventList({ rows, kind, referenceDate }) {
+  const isBirthday = kind === "birthday";
+  return (
+    <div className="divide-y divide-slate-100">
+      {rows.slice(0, 5).map((row, index) => {
+        const date = isBirthday ? row.fecha_nacimiento : row.fecha_ingreso;
+        const years = isBirthday ? null : getAnniversaryYears(date, referenceDate);
+        return (
+          <div key={`${kind}-${row.id_empleado || index}`} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+            <span className={`grid size-9 shrink-0 place-content-center rounded-xl text-xs font-bold ${
+              isBirthday
+                ? "bg-amber-50 text-amber-700"
+                : "bg-blue-50 text-blue-700"
+            }`}>
+              {String(date || "").slice(8, 10) || "—"}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold text-slate-700">
+                {row.nombre_empleado}
+              </p>
+              <p className="truncate text-[10px] text-slate-400">
+                {isBirthday
+                  ? row.nombre_empresa || fmtDayMonthDeMX(date)
+                  : `${years} año${years === 1 ? "" : "s"} · ${fmtDayMonthDeMX(date)}`}
+              </p>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function RotationSummary({ data }) {
+  const net = Number(data.plantillaNeta) || 0;
+  return (
+    <div className="grid grid-cols-2 gap-2.5">
+      <div className="rounded-xl bg-emerald-50 p-3">
+        <p className="text-[10px] font-semibold uppercase text-emerald-600">Altas</p>
+        <p className="mt-1 text-xl font-bold text-emerald-700 tabular-nums">
+          +{data.altas || 0}
+        </p>
+      </div>
+      <div className="rounded-xl bg-rose-50 p-3">
+        <p className="text-[10px] font-semibold uppercase text-rose-600">Bajas</p>
+        <p className="mt-1 text-xl font-bold text-rose-700 tabular-nums">
+          {data.bajas || 0}
+        </p>
+      </div>
+      <div className="rounded-xl bg-slate-50 p-3">
+        <p className="text-[10px] font-semibold uppercase text-slate-400">Rotación</p>
+        <p className="mt-1 text-xl font-bold text-slate-800 tabular-nums">
+          {data.rotacionPct ?? 0}%
+        </p>
+      </div>
+      <div className="rounded-xl bg-blue-50 p-3">
+        <p className="text-[10px] font-semibold uppercase text-blue-500">Plantilla neta</p>
+        <p className="mt-1 text-xl font-bold text-blue-700 tabular-nums">
+          {net >= 0 ? "+" : ""}{net}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function Heatmap({ data }) {
+  const days = data.dias || [];
+  const units = data.unidades || [];
+  const values = data.valores || [];
+  const columns = `120px repeat(${days.length}, minmax(32px, 1fr))`;
+  const color = (value) => {
+    const percentage = clamp(value);
+    if (percentage >= 90) return "bg-emerald-500 text-white";
+    if (percentage >= 80) return "bg-emerald-200 text-emerald-900";
+    if (percentage >= 65) return "bg-amber-200 text-amber-900";
+    return "bg-rose-200 text-rose-900";
+  };
+
+  return (
+    <div className="overflow-x-auto pb-1">
+      <div className="min-w-[520px] space-y-1.5">
+        <div className="grid gap-1.5" style={{ gridTemplateColumns: columns }}>
+          <span />
+          {days.map((day, index) => (
+            <span key={`${day}-${index}`} className="text-center text-[10px] font-semibold text-slate-400">
+              {day}
+            </span>
+          ))}
+        </div>
+        {units.slice(0, 8).map((unit, rowIndex) => (
+          <div key={`${unit}-${rowIndex}`} className="grid items-center gap-1.5" style={{ gridTemplateColumns: columns }}>
+            <span className="truncate text-[11px] font-medium text-slate-600" title={unit}>
+              {unit}
+            </span>
+            {days.map((_, columnIndex) => {
+              const value = values[rowIndex]?.[columnIndex] ?? 0;
+              return (
+                <span
+                  key={`${rowIndex}-${columnIndex}`}
+                  className={`grid h-7 place-content-center rounded-md text-[9px] font-bold ${color(value)}`}
+                  title={`${unit}: ${Math.round(value)}%`}
+                >
+                  {Math.round(value)}
+                </span>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const QUICK_ACTIONS = [
+  { href: "/panel/empleados", label: "Empleados", icon: UsersRound },
+  { href: "/panel/registro-asistencia", label: "Asistencia", icon: UserCheck },
+  { href: "/panel/permisos", label: "Permisos", icon: CalendarCheck2 },
+  { href: "/panel/reporte-horas", label: "Reportes", icon: BarChart3 },
+  { href: "/panel/contratos", label: "Contratos", icon: FileText },
+];
+
+function QuickActions() {
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+      {QUICK_ACTIONS.map(({ href, label, icon: Icon }) => (
+        <Link
+          key={href}
+          href={href}
+          className="group flex min-h-14 items-center gap-2.5 rounded-xl border border-slate-200 bg-white p-3 text-xs font-semibold text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+        >
+          <span className="grid size-8 shrink-0 place-content-center rounded-lg bg-slate-50 text-slate-500 transition group-hover:bg-white group-hover:text-blue-600">
+            <Icon className="size-4" />
+          </span>
+          {label}
+          <ArrowRight className="ml-auto size-3.5 opacity-30" />
+        </Link>
+      ))}
+    </div>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="mx-auto w-full max-w-[1480px] animate-pulse space-y-4">
+      <div className="h-20 rounded-2xl bg-slate-100" />
+      <div className="h-24 rounded-2xl bg-slate-100" />
+      <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <div key={index} className="h-24 rounded-2xl bg-slate-100" />
+        ))}
+      </div>
+      <div className="h-80 rounded-2xl bg-slate-100" />
+    </div>
+  );
+}
 
 export default function DashboardRH() {
-  const { dataUser } = useAuth();
-
+  const { dataUser, isAuthChecked } = useAuth();
   const [filters, setFilters] = useState({
     preset: "7d",
     custom: {},
+    compare: true,
     id_empresa: "all",
     id_sucursal: "all",
+    id_sucursal_option: "all",
     id_departamento: "all",
   });
 
-  const rango = useMemo(
+  const range = useMemo(
     () => rangeFromPreset(filters.preset, filters.custom),
     [filters.preset, filters.custom],
   );
-  const prev = useMemo(() => previousRange(rango), [rango]);
-
-  // Empresa efectiva: filtro explícito o la del usuario autenticado.
+  const previous = useMemo(() => previousRange(range), [range]);
+  const companies = dataUser?.empresas_detalle || [];
+  const canSelectAllCompanies = companies.length > 1;
   const idEmpresa =
     filters.id_empresa !== "all"
       ? filters.id_empresa
-      : dataUser?.id_empresa || null;
+      : canSelectAllCompanies
+        ? null
+        : dataUser?.id_empresa || companies[0]?.id_empresa || null;
 
-  const commonParams = {
-    fechaInicio: rango.fechaInicio,
-    fechaFin: rango.fechaFin,
+  const queryParams = {
+    fechaInicio: range.fechaInicio,
+    fechaFin: range.fechaFin,
     id_empresa: idEmpresa || "all",
     id_sucursal: filters.id_sucursal,
     id_departamento: filters.id_departamento,
+    ...(filters.compare !== false
+      ? {
+          fechaInicioPrev: previous.fechaInicioPrev,
+          fechaFinPrev: previous.fechaFinPrev,
+        }
+      : {}),
   };
 
-  const dashboardKey = `/checador/dashboard${buildQuery({
-    ...commonParams,
-    fechaInicioPrev: prev.fechaInicioPrev,
-    fechaFinPrev: prev.fechaFinPrev,
-  })}`;
-
-  const holidaysKey = idEmpresa
-    ? `/checador/holidays/${idEmpresa}?page=1&limit=5000&filter=`
-    : null;
-
+  // No se consulta hasta que el contexto autenticado determine el alcance de empresa.
+  const dashboardKey =
+    isAuthChecked && dataUser
+      ? `/checador/dashboard${buildQuery(queryParams)}`
+      : null;
   const {
-    data: dashResp,
+    data: response,
     error,
     isLoading,
     isValidating,
-  } = useSWR(
-    dashboardKey,
-    fetcherWithToken,
-    // keepPreviousData: al cambiar de filtro conserva los datos anteriores en
-    // pantalla mientras llega la nueva respuesta → evita el "flash" de recarga.
-    { ...swr_config, keepPreviousData: true },
-  );
-  const { data: holidaysResp } = useSWR(
-    holidaysKey,
-    fetcherWithToken,
-    swr_config,
-  );
+    mutate,
+  } = useSWR(dashboardKey, fetcherWithToken, {
+    ...swr_config,
+    keepPreviousData: true,
+  });
 
-  const data = dashResp?.ok ? dashResp.data : dashResp?.data || null;
+  const responseFailed = response?.ok === false;
+  const data = responseFailed
+    ? null
+    : response?.data || (response && !hasOwn(response, "ok") ? response : null);
 
-  const festivosYmd = useMemo(() => {
-    const list = holidaysResp?.festivos || [];
-    return Array.isArray(list)
-      ? list
-          .map((f) => String(f?.fecha || "").slice(0, 10))
-          .filter((s) => /^\d{4}-\d{2}-\d{2}$/.test(s))
-      : [];
-  }, [holidaysResp]);
+  if (!isAuthChecked || (isLoading && !data)) return <DashboardSkeleton />;
 
-  // El detalle de check-ins ahora viaja en la respuesta del dashboard (`presentesDetalle`).
-  const asistenciasDetalle =
-    data?.presentesDetalle || data?.asistenciasDetalle || [];
-
-  if (isLoading && !data) {
+  if (error || responseFailed || !data) {
     return (
-      <div className="mx-auto w-full max-w-[1600px] px-1 py-4 space-y-4">
+      <div className="mx-auto w-full max-w-[1480px] space-y-4">
         <DashboardFilters value={filters} onChange={setFilters} />
-        <div className="flex min-h-[50vh] items-center justify-center">
-          <div className="flex flex-col items-center gap-3 text-zinc-400">
-            <RefreshCw className="size-6 animate-spin text-violet-500" />
-            <span className="text-sm">Cargando dashboard…</span>
+        <div className="rounded-2xl border border-rose-200 bg-white p-6 text-center shadow-sm">
+          <span className="mx-auto grid size-12 place-content-center rounded-2xl bg-rose-50 text-rose-600">
+            <ShieldAlert className="size-6" />
+          </span>
+          <h1 className="mt-3 text-base font-semibold text-slate-900">
+            No fue posible actualizar el dashboard
+          </h1>
+          <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
+            Revisa la conexión o restablece los filtros. La unidad de negocio ahora se envía con su identificador correcto.
+          </p>
+          <div className="mt-4 flex justify-center gap-2">
+            <Button variant="outline" onClick={() => setFilters({
+              preset: "7d",
+              custom: {},
+              compare: true,
+              id_empresa: "all",
+              id_sucursal: "all",
+              id_sucursal_option: "all",
+              id_departamento: "all",
+            })}>
+              Restablecer filtros
+            </Button>
+            <Button onClick={() => mutate()} className="gap-1.5 bg-blue-600 hover:bg-blue-700">
+              <RefreshCw className="size-4" /> Reintentar
+            </Button>
           </div>
         </div>
       </div>
     );
   }
 
-  if (error || !data) {
-    return (
-      <div className="mx-auto w-full max-w-[1600px] px-1 py-6 space-y-4">
-        <DashboardFilters value={filters} onChange={setFilters} />
-        <div className="rounded-xl border bg-white p-6 text-sm text-rose-600">
-          No se pudo cargar el dashboard. Verifica tu conexión o los filtros
-          seleccionados.
-        </div>
-      </div>
-    );
-  }
+  const totalEmployees = Number(pick(data.totalEmpleados, 0));
+  const present = Number(pick(data.presentes, data.presentesHoy, 0));
+  const late = Number(pick(data.tardanzas, data.tardanzasHoy, 0));
+  const absent = Number(pick(data.ausentes, data.ausentesHoy, 0));
+  const trend = Array.isArray(data.tendenciaSemanal) ? data.tendenciaSemanal : [];
 
-  /* ---------- Derivados ---------- */
-  const totalEmpleados = pick(data.totalEmpleados, 0);
-  const presentes = pick(data.presentes, data.presentesHoy, 0);
-  const tardanzas = pick(data.tardanzas, data.tardanzasHoy, 0);
-  const ausentes = pick(data.ausentes, data.ausentesHoy, 0);
-  const asistenciaPct = Math.round(
-    pick(data.asistenciaPromedioPct) ??
-      (totalEmpleados > 0 ? (presentes / totalEmpleados) * 100 : 0),
-  );
+  const fallbackAttendancePct = (() => {
+    if (totalEmployees <= 0) return null;
+    if (trend.length) {
+      const validDays = trend.filter((day) => day.asistencias != null);
+      if (!validDays.length) return null;
+      return Math.round(
+        validDays.reduce(
+          (sum, day) => sum + clamp((Number(day.asistencias) / totalEmployees) * 100),
+          0,
+        ) / validDays.length,
+      );
+    }
+    if (range.fechaInicio === range.fechaFin) {
+      return Math.round(clamp((present / totalEmployees) * 100));
+    }
+    return null;
+  })();
+  const attendancePct = pick(data.asistenciaPromedioPct, fallbackAttendancePct);
 
-  const ant = data.periodoAnterior || {};
+  const permissions = Array.isArray(data.permisosRangos) ? data.permisosRangos : [];
+  const activePermissions = permissions.filter(isActivePermission);
+  const pendingPermissions = permissions.filter(isPendingPermission);
+  const previousData = filters.compare !== false ? data.periodoAnterior || {} : {};
 
-  const distribData = Array.isArray(data.distribucionAsistenciaDetallada)
+  const distribution = Array.isArray(data.distribucionAsistenciaDetallada)
     ? data.distribucionAsistenciaDetallada
-    : data.distribucionAsistencia || [];
-  const distribTotal = distribData.reduce((a, it) => a + (it.count || 0), 0);
+    : Array.isArray(data.distribucionAsistencia)
+      ? data.distribucionAsistencia
+      : [];
+  const departmentAttendance = Array.isArray(data.asistenciaPorDepartamento)
+    ? data.asistenciaPorDepartamento
+    : [];
+  const departmentIncidents = Array.isArray(data.incidenciasPorDepartamento)
+    ? data.incidenciasPorDepartamento
+    : [];
+  const headcount = Array.isArray(data.distribucionPorDepartamento)
+    ? data.distribucionPorDepartamento
+    : [];
 
-  const aniversariosMes = (data.aniversariosMes || []).filter(
-    (a) => getAnniversaryYears(a.fecha_ingreso, data.fechaFin) >= 1,
+  const contractsAvailable = hasOwn(data, "contratosPorVencer");
+  const documentsAvailable = hasOwn(data, "documentosPorVencer");
+  const rotationAvailable = hasOwn(data, "rotacion") && data.rotacion;
+  const contracts = Array.isArray(data.contratosPorVencer)
+    ? data.contratosPorVencer
+    : [];
+  const documents = Array.isArray(data.documentosPorVencer)
+    ? data.documentosPorVencer
+    : [];
+  const missingCheckinsAvailable = hasOwn(data, "sinChecarCount") || hasOwn(data, "sinChecar");
+  const missingCheckins = Number(
+    pick(data.sinChecarCount, Array.isArray(data.sinChecar) ? data.sinChecar.length : 0),
   );
 
-  const permisosActivos = (data.permisosRangos || []).filter(
-    (p) =>
-      !String(p?.status?.label || "")
-        .toLowerCase()
-        .startsWith("terminado"),
-  ).length;
+  const birthdays = Array.isArray(data.cumpleanosMes) ? data.cumpleanosMes : [];
+  const anniversaries = (Array.isArray(data.aniversariosMes) ? data.aniversariosMes : []).filter(
+    (anniversary) => getAnniversaryYears(anniversary.fecha_ingreso, range.fechaFin) >= 1,
+  );
+  const monthLabel = new Intl.DateTimeFormat("es-MX", {
+    month: "long",
+    timeZone: "UTC",
+  }).format(new Date(`${range.fechaFin}T00:00:00Z`));
 
-  const headcount = data.distribucionPorDepartamento || [];
-  const incidencias = data.incidenciasPorDepartamento || [];
-  const asistenciaDepto = data.asistenciaPorDepartamento || [];
-  const heatmap = data.heatmapUnidad || null;
-  const contratos = data.contratosPorVencer || [];
-  const documentos = data.documentosPorVencer || [];
-  const rotacion = data.rotacion || null;
+  const attentionItems = [
+    pendingPermissions.length > 0 && {
+      count: pendingPermissions.length,
+      label: "Permisos pendientes",
+      hint: "Requieren aprobación",
+      href: "/panel/permisos",
+      icon: CalendarCheck2,
+      tone: "violet",
+    },
+    contractsAvailable && contracts.length > 0 && {
+      count: contracts.length,
+      label: "Contratos por vencer",
+      hint: `${contracts.filter((contract) => (contract.dias_restantes ?? contract.diasRestantes ?? 99) <= 7).length} vencen en 7 días`,
+      href: "/panel/contratos",
+      icon: BriefcaseBusiness,
+      tone: "amber",
+    },
+    documentsAvailable && documents.length > 0 && {
+      count: documents.length,
+      label: "Documentos por vencer",
+      hint: "Revisar vigencias",
+      href: "/panel/gestion-documental/documentos",
+      icon: FileCheck2,
+      tone: "blue",
+    },
+    missingCheckinsAvailable && missingCheckins > 0 && {
+      count: missingCheckins,
+      label: "Registros sin checar",
+      hint: "Validar incidencias",
+      href: "/panel/registro-asistencia",
+      icon: XCircle,
+      tone: "rose",
+    },
+  ].filter(Boolean);
+
+  const dataSourcesAvailable = [
+    true,
+    contractsAvailable,
+    documentsAvailable,
+    missingCheckinsAvailable,
+  ].filter(Boolean).length;
 
   return (
-    <div className="mx-auto w-full max-w-[1440px] px-4 py-5 space-y-5 sm:px-6 lg:px-8">
+    <main className="mx-auto w-full max-w-[1480px] space-y-4 pb-8">
       <SystemMessageRenderer tipo="interna" contexto="dashboard" />
 
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold tracking-tight">
-            Dashboard de Recursos Humanos
-          </h1>
-          <p className="mt-0.5 text-sm text-zinc-500">
-            Asistencia, permisos y plantilla · vista consolidada con filtros
-          </p>
-        </div>
-        {isValidating && (
-          <span className="mt-1 inline-flex items-center gap-1.5 rounded-full border bg-white px-2.5 py-1 text-xs text-zinc-500 shadow-sm">
-            <RefreshCw className="size-3.5 animate-spin text-violet-500" />{" "}
-            Actualizando…
+      <header className="relative overflow-hidden rounded-2xl border border-blue-100 bg-gradient-to-br from-white via-blue-50/50 to-violet-50/70 p-4 shadow-sm sm:p-5">
+        <div className="absolute -right-16 -top-20 size-48 rounded-full bg-blue-200/25 blur-3xl" />
+        <div className="relative flex items-start gap-3">
+          <span className="hidden size-11 shrink-0 place-content-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-200 sm:grid">
+            <LayoutDashboard className="size-5" />
           </span>
-        )}
-      </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">
+                Resumen de Recursos Humanos
+              </h1>
+              <span className="rounded-full border border-blue-100 bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-blue-600">
+                ADAMIA
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-slate-500 sm:text-sm">
+              Indicadores, pendientes y comportamiento del personal en una sola vista.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => mutate()}
+            disabled={isValidating}
+            className="shrink-0 gap-1.5 bg-white/80"
+          >
+            <RefreshCw className={`size-3.5 ${isValidating ? "animate-spin" : ""}`} />
+            <span className="hidden sm:inline">Actualizar</span>
+          </Button>
+        </div>
+      </header>
 
       <DashboardFilters value={filters} onChange={setFilters} />
 
-      {/* ================= Resumen (KPIs) ================= */}
-      <h2 className="pt-1 text-[15px] font-semibold">Resumen del periodo</h2>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        <KpiCard
-          label="Total empleados"
-          icon={UsersRound}
-          tone="brand"
-          value={totalEmpleados}
-          unit={
-            data.empleadosIncluidos != null
-              ? `/ ${data.empleadosIncluidos}`
-              : ""
-          }
-          sub={
-            data.empleadosExcedentes > 0
-              ? `${data.empleadosExcedentes} excedentes`
-              : "Personal activo"
-          }
-          delta={<Delta current={totalEmpleados} prev={ant.totalEmpleados} />}
-        />
-        <KpiCard
-          label="Presentes"
-          icon={CheckCircle2}
-          tone="good"
-          value={presentes}
-          sub={`${asistenciaPct}% asistencia`}
-          delta={<Delta current={presentes} prev={ant.presentes} />}
-        />
-        <KpiCard
-          label="Tardanzas"
-          icon={AlarmClock}
-          tone="warn"
-          value={tardanzas}
-          sub={
-            data.tardanzasPctSobreRegistros != null
-              ? `${Math.round(data.tardanzasPctSobreRegistros)}% de registros`
-              : "Retrasos"
-          }
-          delta={
-            <Delta current={tardanzas} prev={ant.tardanzas} goodWhenDown />
-          }
-        />
-        <KpiCard
-          label="Ausentes"
-          icon={XCircle}
-          tone="crit"
-          value={ausentes}
-          sub={
-            data.sinChecarPct != null
-              ? `${Math.round(data.sinChecarPct)}% del total`
-              : "Faltas"
-          }
-          delta={<Delta current={ausentes} prev={ant.ausentes} goodWhenDown />}
-        />
-        <KpiCard
-          label="Permisos activos"
-          icon={FileText}
-          tone="violet"
-          value={permisosActivos}
-          sub="En el periodo"
-          delta={<Delta current={permisosActivos} prev={ant.permisosActivos} />}
-        />
-        <KpiCard
-          label="Prom. horas"
-          icon={Clock3}
-          tone="info"
-          value={pick(data.promedioHoras, "—")}
-          unit={data.promedioHoras != null ? "hrs" : ""}
-          sub="Jornada efectiva"
-          delta={
-            <Delta current={data.promedioHoras} prev={ant.promedioHoras} />
-          }
-        />
-      </div>
-
-      {/* ================= Requiere tu atención ================= */}
-      <h2 className="pt-2 text-[15px] font-semibold">Requiere tu atención</h2>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <AttnCard
-          href="/panel/permisos"
-          tone="brand"
-          count={permisosActivos}
-          label="Permisos activos"
-          hint="Aprobar o rechazar en Permisos"
-        />
-        <AttnCard
-          href="/panel/contratos"
-          tone="warn"
-          count={contratos.length}
-          label="Contratos por vencer"
-          hint={`${
-            contratos.filter(
-              (c) => (c.dias_restantes ?? c.diasRestantes ?? 99) <= 7,
-            ).length
-          } vencen en ≤ 7 días`}
-        />
-        <AttnCard
-          href="/panel/gestion-documental/documentos"
-          tone="info"
-          count={documentos.length}
-          label="Documentos por vencer"
-          hint="Vigencias del expediente"
-        />
-        <AttnCard
-          href="/panel/registro-asistencia"
-          tone="crit"
-          count={pick(data.sinChecarCount, (data.sinChecar || []).length)}
-          label="Sin checar"
-          hint="Faltas por revisar"
-        />
-      </div>
-
-      {/* ===== Calendario de permisos activos ===== */}
-      <h2 className="pt-2 text-[15px] font-semibold">
-        Calendario de permisos activos
-      </h2>
-      <PermisosCalendario
-        idEmpresa={idEmpresa}
-        desde={rango.fechaInicio}
-        hasta={rango.fechaFin}
-        festivosSet={new Set(festivosYmd)}
-        titulo="Permisos en el periodo"
-      />
-
-      {/* ================= Comportamiento en el periodo ================= */}
-      <h2 className="pt-2 text-[15px] font-semibold">
-        Comportamiento en el periodo
-      </h2>
-
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <SectionCard
-            title="Tendencia de asistencia"
-            icon={LineChart}
-            iconClass="text-sky-600"
-            right={<Pill tone="info">Prom. {asistenciaPct}% asistencia</Pill>}
-          >
-            <div className="mb-2 flex flex-wrap gap-4 text-xs text-zinc-600">
-              <span className="flex items-center gap-1.5">
-                <span className="h-0.5 w-4 rounded bg-emerald-500" />
-                Presentes
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="h-0.5 w-4 rounded bg-amber-500" />
-                Tardanzas
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="h-0.5 w-4 rounded bg-rose-500" />
-                Ausentes
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="h-0.5 w-4 rounded bg-violet-500" />
-                Permisos
-              </span>
-            </div>
-            {(data.tendenciaSemanal || []).length === 0 ? (
-              <Empty>Sin datos de tendencia para el periodo</Empty>
-            ) : (
-              <WeeklyTrend data={data.tendenciaSemanal || []} />
-            )}
-          </SectionCard>
+      {isValidating && (
+        <div className="flex items-center justify-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700">
+          <RefreshCw className="size-3.5 animate-spin" />
+          Actualizando resultados para los filtros seleccionados…
         </div>
-        <SectionCard
-          title="Distribución por tipo"
-          icon={PieChart}
-          iconClass="text-sky-600"
+      )}
+
+      <section aria-busy={isValidating} className={isValidating ? "opacity-60 transition-opacity" : "transition-opacity"}>
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+            Indicadores principales
+          </h2>
+          {filters.compare !== false && hasOwn(data, "periodoAnterior") && (
+            <span className="text-[10px] text-slate-400">vs. periodo anterior</span>
+          )}
+        </div>
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3 xl:grid-cols-6">
+          <KpiCard
+            label="Total empleados"
+            value={totalEmployees}
+            helper="Personal activo"
+            icon={UsersRound}
+            tone="blue"
+            delta={<Delta current={totalEmployees} previous={previousData.totalEmpleados} />}
+          />
+          <KpiCard
+            label="Presentes"
+            value={present}
+            helper={attendancePct != null ? `${Math.round(attendancePct)}% de asistencia` : "Periodo seleccionado"}
+            icon={UserCheck}
+            tone="emerald"
+            delta={<Delta current={present} previous={previousData.presentes} meaning="up" />}
+          />
+          <KpiCard
+            label="Tardanzas"
+            value={late}
+            helper={data.tardanzasPctSobreRegistros != null ? `${Math.round(data.tardanzasPctSobreRegistros)}% de registros` : "Incidencias del periodo"}
+            icon={AlarmClock}
+            tone="amber"
+            delta={<Delta current={late} previous={previousData.tardanzas} meaning="down" />}
+          />
+          <KpiCard
+            label="Ausencias"
+            value={absent}
+            helper={data.sinChecarPct != null ? `${Math.round(data.sinChecarPct)}% del total` : "Faltas registradas"}
+            icon={UserMinus}
+            tone="rose"
+            delta={<Delta current={absent} previous={previousData.ausentes} meaning="down" />}
+          />
+          <KpiCard
+            label="Permisos activos"
+            value={activePermissions.length}
+            helper={pendingPermissions.length ? `${pendingPermissions.length} pendientes` : "Sin solicitudes pendientes"}
+            icon={CalendarCheck2}
+            tone="violet"
+            delta={<Delta current={activePermissions.length} previous={previousData.permisosActivos} />}
+          />
+          <KpiCard
+            label="Promedio de horas"
+            value={data.promedioHoras ?? "—"}
+            unit={data.promedioHoras != null ? "h" : ""}
+            helper="Jornada efectiva"
+            icon={Clock3}
+            tone="slate"
+            delta={<Delta current={data.promedioHoras} previous={previousData.promedioHoras} />}
+          />
+        </div>
+      </section>
+
+      <section>
+        <div className="mb-2 flex items-center gap-2">
+          <Sparkles className="size-3.5 text-violet-500" />
+          <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+            Requiere atención
+          </h2>
+        </div>
+        {attentionItems.length > 0 ? (
+          <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+            {attentionItems.map((item) => (
+              <AttentionCard key={item.label} item={item} />
+            ))}
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-3 text-emerald-700">
+            <span className="grid size-9 shrink-0 place-content-center rounded-xl bg-white/80">
+              <CheckCircle2 className="size-4.5" />
+            </span>
+            <div>
+              <p className="text-xs font-semibold">Sin pendientes críticos en la información disponible</p>
+              <p className="mt-0.5 text-[10px] opacity-75">
+                {dataSourcesAvailable < 4
+                  ? "Se muestran únicamente las fuentes integradas por el backend."
+                  : "Todos los indicadores operativos están al corriente."}
+              </p>
+            </div>
+          </div>
+        )}
+      </section>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Section
+          title="Tendencia de asistencia"
+          description="Personas presentes por día; las incidencias se resumen por separado."
+          icon={BarChart3}
+          className="lg:col-span-2"
+          action={<SectionLink href="/panel/reporte-horas">Ver reporte</SectionLink>}
         >
-          {distribTotal === 0 ? (
-            <Empty>No hay registros de asistencia</Empty>
+          {trend.length ? (
+            <WeeklyTrend data={trend} />
           ) : (
-            <HBars
-              items={distribData
-                .filter((d) => d.count > 0)
-                .map((d) => ({
-                  name: d.label,
-                  value: d.count,
-                  color: d.color,
+            <EmptyState>No hay tendencia disponible para este periodo.</EmptyState>
+          )}
+        </Section>
+
+        <Section
+          title="Distribución de registros"
+          description="Composición de las incidencias capturadas."
+          icon={LayoutDashboard}
+          action={<SectionLink href="/panel/registro-asistencia">Ver detalle</SectionLink>}
+        >
+          {distribution.some((item) => Number(item.count) > 0) ? (
+            <HorizontalBars
+              items={distribution
+                .filter((item) => Number(item.count) > 0)
+                .map((item, index) => ({
+                  name: item.label || item.key,
+                  value: item.count,
+                  color: ["bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-rose-500", "bg-violet-500"][index % 5],
                 }))}
             />
+          ) : (
+            <EmptyState>No hay registros para mostrar.</EmptyState>
           )}
-        </SectionCard>
+        </Section>
       </div>
 
-      {/* ================= Depto + Heatmap ================= */}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <SectionCard
-          title="Asistencia por departamento"
-          icon={BarChart3}
-          iconClass="text-violet-600"
-          right={<Pill tone="good">Meta 90%</Pill>}
+      {(departmentAttendance.length > 0 || departmentIncidents.length > 0) && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {departmentAttendance.length > 0 && (
+            <Section
+              title="Asistencia por departamento"
+              description="Porcentaje de cumplimiento del periodo seleccionado."
+              icon={Building2}
+            >
+              <HorizontalBars
+                percent
+                items={departmentAttendance.map((department) => {
+                  const value = Math.round(department.pct ?? department.porcentaje ?? 0);
+                  return {
+                    name: department.departamento || department.nombre,
+                    value,
+                    color: value >= 90 ? "bg-emerald-500" : value >= 80 ? "bg-amber-500" : "bg-rose-500",
+                  };
+                })}
+              />
+            </Section>
+          )}
+
+          {departmentIncidents.length > 0 && (
+            <Section
+              title="Departamentos con más incidencias"
+              description="Prioriza las áreas con faltas y tardanzas acumuladas."
+              icon={ShieldAlert}
+              action={<SectionLink href="/panel/registro-asistencia">Revisar</SectionLink>}
+            >
+              <IncidentRanking items={departmentIncidents} />
+            </Section>
+          )}
+        </div>
+      )}
+
+      {data.heatmapUnidad?.unidades?.length > 0 && (
+        <Section
+          title="Asistencia por día y unidad"
+          description="Comparativo porcentual entre unidades de negocio."
+          icon={Building2}
         >
-          {asistenciaDepto.length === 0 ? (
-            <Empty>Pendiente de datos por departamento</Empty>
-          ) : (
-            <div className="flex flex-col gap-3.5">
-              {asistenciaDepto.map((d, i) => {
-                const pct = Math.round(d.pct ?? d.porcentaje ?? 0);
-                const color =
-                  pct >= 90 ? "emerald" : pct >= 85 ? "amber" : "rose";
-                const text =
-                  pct >= 90
-                    ? "text-emerald-600"
-                    : pct >= 85
-                    ? "text-amber-600"
-                    : "text-rose-600";
+          <Heatmap data={data.heatmapUnidad} />
+        </Section>
+      )}
+
+      {(headcount.length > 0 || rotationAvailable) && (
+        <div className="grid gap-4 lg:grid-cols-3">
+          {headcount.length > 0 && (
+            <Section
+              title="Distribución de la plantilla"
+              description="Personal activo por departamento."
+              icon={Users}
+              className={rotationAvailable ? "lg:col-span-2" : "lg:col-span-3"}
+              action={<SectionLink href="/panel/empleados">Ver empleados</SectionLink>}
+            >
+              <HorizontalBars
+                items={headcount.map((department, index) => ({
+                  name: department.departamento || department.nombre,
+                  value: department.count ?? department.total ?? 0,
+                  color: index % 2 ? "bg-violet-500" : "bg-blue-500",
+                }))}
+              />
+            </Section>
+          )}
+          {rotationAvailable && (
+            <Section
+              title="Movimiento de personal"
+              description="Altas, bajas y variación de plantilla."
+              icon={RefreshCw}
+            >
+              <RotationSummary data={data.rotacion} />
+            </Section>
+          )}
+        </div>
+      )}
+
+      {(contractsAvailable || documentsAvailable) && (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {contractsAvailable && (
+            <Section
+              title="Contratos próximos a vencer"
+              description="Próximos vencimientos que requieren seguimiento."
+              icon={BriefcaseBusiness}
+              action={<SectionLink href="/panel/contratos">Ver todos</SectionLink>}
+            >
+              {contracts.length ? (
+                <CompactList rows={contracts} type="contract" />
+              ) : (
+                <EmptyState positive>No hay contratos próximos a vencer.</EmptyState>
+              )}
+            </Section>
+          )}
+          {documentsAvailable && (
+            <Section
+              title="Documentos próximos a vencer"
+              description="Vigencias registradas en el expediente del personal."
+              icon={FileCheck2}
+              action={<SectionLink href="/panel/gestion-documental/documentos">Ver todos</SectionLink>}
+            >
+              {documents.length ? (
+                <CompactList rows={documents} type="document" />
+              ) : (
+                <EmptyState positive>No hay documentos próximos a vencer.</EmptyState>
+              )}
+            </Section>
+          )}
+        </div>
+      )}
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Section
+          title="Permisos del periodo"
+          description="Solicitudes activas y pendientes de resolución."
+          icon={CalendarCheck2}
+          action={<SectionLink href="/panel/permisos">Gestionar</SectionLink>}
+        >
+          {permissions.length ? (
+            <div className="space-y-2.5">
+              {permissions.slice(0, 5).map((permission, index) => {
+                const pending = isPendingPermission(permission);
+                const active = isActivePermission(permission);
+                const days = permission.inicio && permission.fin
+                  ? Math.max(
+                      1,
+                      Math.round(
+                        (new Date(`${permission.fin}T00:00:00Z`) -
+                          new Date(`${permission.inicio}T00:00:00Z`)) /
+                          86400000,
+                      ) + 1,
+                    )
+                  : null;
                 return (
-                  <div
-                    key={i}
-                    className="grid grid-cols-[110px_1fr_46px] items-center gap-3"
-                  >
-                    <span className="text-[13px] text-zinc-600">
-                      {d.departamento || d.nombre}
+                  <div key={`${permission.id_permiso || index}`} className="flex items-center gap-3 rounded-xl bg-slate-50 p-2.5">
+                    <span className={`grid size-8 shrink-0 place-content-center rounded-lg ${
+                      pending
+                        ? "bg-amber-100 text-amber-700"
+                        : active
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-slate-200 text-slate-500"
+                    }`}>
+                      <CalendarDays className="size-4" />
                     </span>
-                    <span className="h-5 overflow-hidden rounded-md bg-zinc-100">
-                      <span
-                        className={`block h-full rounded-md ${BAR[color]}`}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </span>
-                    <span
-                      className={`text-right text-[13px] font-bold tabular-nums ${text}`}
-                    >
-                      {pct}%
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-semibold text-slate-700">
+                        {permission.nombre_empleado}
+                      </p>
+                      <p className="truncate text-[10px] text-slate-400">
+                        {permission.tipo || "Permiso"}
+                        {days ? ` · ${days} día${days === 1 ? "" : "s"}` : ""}
+                      </p>
+                    </div>
+                    <span className={`rounded-full px-2 py-1 text-[9px] font-bold ${
+                      pending
+                        ? "bg-amber-100 text-amber-700"
+                        : active
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-slate-200 text-slate-600"
+                    }`}>
+                      {permission.estado || permission.status?.label || "Sin estado"}
                     </span>
                   </div>
                 );
               })}
-            </div>
-          )}
-        </SectionCard>
-
-        <SectionCard
-          title="Asistencia por día y unidad"
-          icon={LayoutGrid}
-          iconClass="text-sky-600"
-        >
-          {!heatmap ||
-          !Array.isArray(heatmap.unidades) ||
-          heatmap.unidades.length === 0 ? (
-            <Empty>Pendiente de datos por unidad de negocio</Empty>
-          ) : (
-            <Heatmap heatmap={heatmap} />
-          )}
-        </SectionCard>
-      </div>
-
-      {/* ================= Plantilla, contratos e incidencias ================= */}
-      <h2 className="pt-2 text-[15px] font-semibold">
-        Plantilla, contratos e incidencias
-      </h2>
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <SectionCard
-          title="Distribución de personal por departamento"
-          icon={Users}
-          iconClass="text-violet-600"
-          right={<Pill tone="info">{totalEmpleados} empleados</Pill>}
-        >
-          {headcount.length === 0 ? (
-            <Empty>Pendiente de datos de plantilla</Empty>
-          ) : (
-            <HBars
-              items={headcount.map((d, i) => ({
-                name: d.departamento || d.nombre,
-                value: d.count ?? d.total ?? 0,
-                color: CAT[i % CAT.length],
-              }))}
-            />
-          )}
-        </SectionCard>
-
-        <SectionCard
-          title="Departamentos con más incidencias"
-          icon={AlertTriangle}
-          iconClass="text-rose-600"
-        >
-          {incidencias.length === 0 ? (
-            <Empty>Sin incidencias registradas en el periodo</Empty>
-          ) : (
-            <RankingIncidencias items={incidencias} />
-          )}
-        </SectionCard>
-      </div>
-
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <SectionCard
-            title="Contratos por vencer"
-            icon={FileText}
-            iconClass="text-amber-600"
-            right={<Pill tone="warn">{contratos.length} próximos</Pill>}
-            pad={false}
-          >
-            {contratos.length === 0 ? (
-              <Empty>No hay contratos por vencer</Empty>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-zinc-50 text-zinc-600">
-                      <TableHead className="px-3 py-2">Empleado</TableHead>
-                      <TableHead className="px-3 py-2">Departamento</TableHead>
-                      <TableHead className="px-3 py-2">
-                        Tipo de contrato
-                      </TableHead>
-                      <TableHead className="px-3 py-2">Vence</TableHead>
-                      <TableHead className="px-3 py-2 text-center">
-                        Restan
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {contratos.map((c, i) => {
-                      const dias = c.dias_restantes ?? c.diasRestantes ?? 0;
-                      const tone =
-                        dias <= 7 ? "crit" : dias <= 21 ? "warn" : "info";
-                      return (
-                        <TableRow key={i} className="hover:bg-zinc-50">
-                          <TableCell className="px-3 py-2 font-medium">
-                            {c.nombre_empleado}
-                          </TableCell>
-                          <TableCell className="px-3 py-2 text-zinc-500">
-                            {c.departamento || "-"}
-                          </TableCell>
-                          <TableCell className="px-3 py-2">
-                            <Pill tone="violet">
-                              {c.tipo_contrato || c.tipo}
-                            </Pill>
-                          </TableCell>
-                          <TableCell className="px-3 py-2 text-zinc-500 tabular-nums">
-                            {formatDateDMY(c.fecha_vencimiento)}
-                          </TableCell>
-                          <TableCell className="px-3 py-2 text-center">
-                            <Pill tone={tone}>{dias} días</Pill>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </SectionCard>
-        </div>
-        <SectionCard
-          title="Rotación del periodo"
-          icon={RefreshCw}
-          iconClass="text-teal-600"
-        >
-          {!rotacion ? (
-            <Empty>Pendiente de datos de rotación</Empty>
-          ) : (
-            <RotacionCard rotacion={rotacion} />
-          )}
-        </SectionCard>
-      </div>
-
-      <SectionCard
-        title="Documentos por vencer"
-        icon={ShieldCheck}
-        iconClass="text-sky-600"
-        right={<Pill tone="info">Vigencias del expediente</Pill>}
-        pad={false}
-      >
-        {documentos.length === 0 ? (
-          <Empty>No hay documentos próximos a vencer</Empty>
-        ) : (
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-zinc-50 text-zinc-600">
-                  <TableHead className="px-3 py-2">Empleado</TableHead>
-                  <TableHead className="px-3 py-2">Documento</TableHead>
-                  <TableHead className="px-3 py-2">Departamento</TableHead>
-                  <TableHead className="px-3 py-2">Vence</TableHead>
-                  <TableHead className="px-3 py-2 text-center">
-                    Estado
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {documentos.map((d, i) => {
-                  const dias = d.dias_restantes ?? d.diasRestantes;
-                  const tone =
-                    dias == null
-                      ? "info"
-                      : dias <= 7
-                      ? "crit"
-                      : dias <= 21
-                      ? "warn"
-                      : "info";
-                  const estado =
-                    d.estado ||
-                    (dias != null ? `Vence en ${dias} días` : "Vigente");
-                  return (
-                    <TableRow key={i} className="hover:bg-zinc-50">
-                      <TableCell className="px-3 py-2 font-medium">
-                        {d.nombre_empleado}
-                      </TableCell>
-                      <TableCell className="px-3 py-2">{d.documento}</TableCell>
-                      <TableCell className="px-3 py-2 text-zinc-500">
-                        {d.departamento || "-"}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 text-zinc-500 tabular-nums">
-                        {formatDateDMY(d.fecha_vencimiento)}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 text-center">
-                        <Pill tone={tone}>{estado}</Pill>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </SectionCard>
-
-      {/* ================= Detalle operativo ================= */}
-      <h2 className="pt-2 text-[15px] font-semibold">Detalle operativo</h2>
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <SectionCard
-          title="Tardanzas"
-          icon={AlarmClock}
-          iconClass="text-amber-600"
-          right={
-            <Pill tone="warn">
-              {tardanzas} tardanza{tardanzas !== 1 ? "s" : ""}
-            </Pill>
-          }
-          pad={false}
-        >
-          {(data.tardanzasDetalle || []).length === 0 ? (
-            <div className="flex items-center justify-center py-8 text-sm text-emerald-700">
-              <CheckCircle2 className="mr-2 size-4 text-emerald-600" />
-              ¡Sin tardanzas en el periodo!
+              {permissions.length > 5 && (
+                <p className="text-center text-[10px] text-slate-400">
+                  +{permissions.length - 5} permisos adicionales
+                </p>
+              )}
             </div>
           ) : (
-            <div className="max-h-[22rem] overflow-y-auto [scrollbar-gutter:stable]">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-zinc-50 text-zinc-600">
-                    <TableHead className="px-3 py-2 w-10">#</TableHead>
-                    <TableHead className="px-3 py-2">Empleado</TableHead>
-                    <TableHead className="px-3 py-2">Empresa</TableHead>
-                    <TableHead className="px-3 py-2 text-right">
-                      Entrada
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(data.tardanzasDetalle || []).map((t, idx) => (
-                    <TableRow
-                      key={`t-${t.id_asistencia ?? idx}`}
-                      className="hover:bg-zinc-50"
-                    >
-                      <TableCell className="px-3 py-2 text-zinc-400">
-                        {idx + 1}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 font-medium">
-                        {t.nombre_empleado}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 text-zinc-500">
-                        {t.nombre_empresa}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 text-right text-amber-700 tabular-nums">
-                        {t.hora_entrada
-                          ? formatTimeMexico(t.hora_entrada)
-                          : "-"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <EmptyState positive>No hay permisos en el periodo.</EmptyState>
           )}
-        </SectionCard>
+        </Section>
 
-        <SectionCard
-          title="Sin checar"
-          icon={XCircle}
-          iconClass="text-rose-600"
-          right={
-            <Pill tone="crit">
-              {pick(data.sinChecarCount, (data.sinChecar || []).length)}{" "}
-              registros
-            </Pill>
-          }
-          pad={false}
-        >
-          {(data.sinChecar || []).length === 0 ? (
-            <Empty>Todos registraron movimiento</Empty>
-          ) : (
-            <div className="max-h-[22rem] overflow-y-auto [scrollbar-gutter:stable]">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-zinc-50 text-zinc-600">
-                    <TableHead className="px-3 py-2 w-10">#</TableHead>
-                    <TableHead className="px-3 py-2">Empleado</TableHead>
-                    <TableHead className="px-3 py-2">Departamento</TableHead>
-                    <TableHead className="px-3 py-2 text-right">
-                      Fecha
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(data.sinChecar || []).map((r, idx) => (
-                    <TableRow
-                      key={`sc-${r.id_asistencia ?? idx}`}
-                      className="hover:bg-zinc-50"
-                    >
-                      <TableCell className="px-3 py-2 text-zinc-400">
-                        {idx + 1}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 font-medium">
-                        {r.nombre_empleado}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 text-zinc-500">
-                        {r.departamento || "-"}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 text-right tabular-nums text-zinc-500">
-                        {formatDateDMY(r.fecha)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </SectionCard>
-      </div>
-
-      {/* Detalle de asistencias */}
-      <SectionCard
-        title="Registros de asistencia"
-        icon={CheckCircle2}
-        iconClass="text-emerald-600"
-        right={<Pill tone="good">{asistenciasDetalle.length} check-ins</Pill>}
-        pad={false}
-      >
-        {asistenciasDetalle.length === 0 ? (
-          <Empty>No hay registros de asistencia para el periodo.</Empty>
-        ) : (
-          <div className="max-h-[26rem] overflow-y-auto [scrollbar-gutter:stable]">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-zinc-50 text-zinc-600">
-                  <TableHead className="px-3 py-2">Empleado</TableHead>
-                  <TableHead className="px-3 py-2">Departamento</TableHead>
-                  <TableHead className="px-3 py-2">Unidad</TableHead>
-                  <TableHead className="px-3 py-2 text-center">Fecha</TableHead>
-                  <TableHead className="px-3 py-2 text-center">
-                    Entrada
-                  </TableHead>
-                  <TableHead className="px-3 py-2 text-center">
-                    Salida
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {asistenciasDetalle.map((r, idx) => {
-                  const salida = r.hora_salida || r.salida;
-                  return (
-                    <TableRow
-                      key={`pd-${r.id_asistencia ?? idx}`}
-                      className="hover:bg-zinc-50"
-                    >
-                      <TableCell className="px-3 py-2 font-medium">
-                        {r.nombre_empleado ||
-                          [r.nombre, r.apellido_paterno, r.apellido_materno]
-                            .filter(Boolean)
-                            .join(" ")}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 text-zinc-500">
-                        {r.departamento || "-"}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 text-zinc-500">
-                        {r.sucursal || "-"}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 text-center tabular-nums">
-                        {formatDateDMY(r.fecha)}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 text-center tabular-nums">
-                        {formatTimeMexico(r.hora_entrada || r.entrada)}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 text-center tabular-nums">
-                        {salida ? formatTimeMexico(salida) : "-"}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </SectionCard>
-
-      {/* Permisos */}
-      <SectionCard
-        title="Permisos activos"
-        icon={FileText}
-        iconClass="text-violet-600"
-        right={<Pill tone="violet">{permisosActivos} activos</Pill>}
-      >
-        <PermisosTable
-          rows={data.permisosRangos || []}
-          festivosYmd={festivosYmd}
-        />
-      </SectionCard>
-
-      {/* ================= Eventos ================= */}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <SectionCard
-          title="Cumpleaños del mes"
+        <Section
+          title={`Cumpleaños de ${monthLabel}`}
+          description="Próximas celebraciones del personal."
           icon={Gift}
-          iconClass="text-amber-600"
-          right={
-            <Pill tone="warn">{data.cumpleanosMes?.length || 0} este mes</Pill>
-          }
         >
-          {!data.cumpleanosMes || data.cumpleanosMes.length === 0 ? (
-            <Empty>No hay cumpleaños este mes</Empty>
+          {birthdays.length ? (
+            <EventList rows={birthdays} kind="birthday" referenceDate={range.fechaFin} />
           ) : (
-            <div className="max-h-64 overflow-y-auto pr-1">
-              <ul className="divide-y">
-                {data.cumpleanosMes.map((c) => (
-                  <li
-                    key={`c-${c.id_empleado}`}
-                    className="flex items-center gap-3 py-3"
-                  >
-                    <div className="grid h-12 w-12 place-content-center rounded-lg border border-amber-200 bg-amber-50 text-amber-800">
-                      <div className="text-lg font-bold leading-none">
-                        {String(
-                          new Date(
-                            c.fecha_nacimiento + "T00:00:00Z",
-                          ).getUTCDate(),
-                        ).padStart(2, "0")}
-                      </div>
-                      <div className="mt-0.5 text-[9px] font-semibold uppercase leading-none tracking-wide text-center">
-                        {monthShortUpperMX(c.fecha_nacimiento)}
-                      </div>
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-sm font-semibold leading-tight">
-                        {c.nombre_empleado}
-                      </div>
-                      <div className="text-xs text-zinc-400">
-                        {c.nombre_empresa}
-                      </div>
-                    </div>
-                    <Pill tone="warn" className="ml-auto">
-                      {fmtDayMonthDeMX(c.fecha_nacimiento)}
-                    </Pill>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <EmptyState>No hay cumpleaños registrados.</EmptyState>
           )}
-        </SectionCard>
+        </Section>
 
-        <SectionCard
-          title="Aniversarios laborales"
+        <Section
+          title={`Aniversarios de ${monthLabel}`}
+          description="Antigüedad laboral del personal."
           icon={PartyPopper}
-          iconClass="text-sky-600"
-          right={<Pill tone="info">{aniversariosMes.length} este mes</Pill>}
         >
-          {aniversariosMes.length === 0 ? (
-            <Empty>No hay aniversarios este mes</Empty>
+          {anniversaries.length ? (
+            <EventList rows={anniversaries} kind="anniversary" referenceDate={range.fechaFin} />
           ) : (
-            <div className="max-h-64 overflow-y-auto pr-1">
-              <ul className="divide-y">
-                {aniversariosMes.map((a) => {
-                  const years = getAnniversaryYears(
-                    a.fecha_ingreso,
-                    data.fechaFin,
-                  );
-                  return (
-                    <li
-                      key={`a-${a.id_empleado}`}
-                      className="flex items-center gap-3 py-3"
-                    >
-                      <div className="grid h-12 w-12 place-content-center rounded-lg border border-sky-200 bg-sky-50 text-sky-900">
-                        <div className="text-lg font-bold leading-none">
-                          {String(
-                            new Date(
-                              a.fecha_ingreso + "T00:00:00Z",
-                            ).getUTCDate(),
-                          ).padStart(2, "0")}
-                        </div>
-                        <div className="mt-0.5 text-[9px] font-semibold uppercase leading-none tracking-wide text-center">
-                          {monthShortUpperMX(a.fecha_ingreso)}
-                        </div>
-                      </div>
-                      <div className="min-w-0">
-                        <div className="text-sm font-semibold leading-tight">
-                          {a.nombre_empleado} · {years} año
-                          {years !== 1 ? "s" : ""}
-                        </div>
-                        <div className="text-xs text-zinc-400">
-                          {a.nombre_empresa}
-                        </div>
-                      </div>
-                      <Pill tone="info" className="ml-auto">
-                        {fmtDayMonthDeMX(a.fecha_ingreso)}
-                      </Pill>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
+            <EmptyState>No hay aniversarios registrados.</EmptyState>
           )}
-        </SectionCard>
+        </Section>
       </div>
 
-      <AccesosRapidos />
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Sub-bloques                                                        */
-/* ------------------------------------------------------------------ */
-
-function RankingIncidencias({ items }) {
-  const withTotal = items.map((d) => ({
-    ...d,
-    total: (d.faltas || 0) + (d.tardanzas || 0),
-  }));
-  const max = Math.max(1, ...withTotal.map((d) => d.total));
-  return (
-    <div className="flex flex-col gap-3">
-      {withTotal.map((d, i) => (
-        <div key={i} className="grid grid-cols-[24px_1fr] items-start gap-2.5">
-          <span
-            className={
-              "grid size-6 place-content-center rounded-md border text-[11px] font-bold " +
-              (i === 0
-                ? "border-rose-200 bg-rose-50 text-rose-600"
-                : "border-zinc-200 bg-zinc-50 text-zinc-500")
-            }
-          >
-            {i + 1}
-          </span>
-          <div className="min-w-0">
-            <div className="flex justify-between gap-2 text-sm font-semibold">
-              <span className="truncate">{d.departamento || d.nombre}</span>
-              <span className="text-rose-600 tabular-nums">
-                {d.total} incidencias
-              </span>
-            </div>
-            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-zinc-100">
-              <span
-                className="block h-full rounded-full bg-rose-500"
-                style={{ width: `${(d.total / max) * 100}%` }}
-              />
-            </div>
-            <div className="mt-1 text-[11px] text-zinc-400">
-              {d.faltas || 0} faltas · {d.tardanzas || 0} tardanzas
-              {d.tasaAusentismo != null && ` · ${d.tasaAusentismo}% ausentismo`}
-            </div>
-          </div>
+      <section>
+        <div className="mb-2 flex items-center gap-2">
+          <Sparkles className="size-3.5 text-blue-500" />
+          <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+            Accesos rápidos
+          </h2>
         </div>
-      ))}
-    </div>
-  );
-}
-
-function RotacionCard({ rotacion }) {
-  const stat = (k, v, cls = "") => (
-    <div className="rounded-xl border bg-zinc-50 p-3">
-      <div className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
-        {k}
-      </div>
-      <div
-        className={`mt-1 flex items-baseline gap-1.5 text-2xl font-bold tabular-nums ${cls}`}
-      >
-        {v}
-      </div>
-    </div>
-  );
-  return (
-    <div className="grid grid-cols-2 gap-2.5">
-      {stat(
-        "Altas",
-        <>
-          <ArrowUp className="size-4" />
-          {rotacion.altas ?? 0}
-        </>,
-        "text-emerald-600",
-      )}
-      {stat(
-        "Bajas",
-        <>
-          <ArrowDown className="size-4" />
-          {rotacion.bajas ?? 0}
-        </>,
-        "text-rose-600",
-      )}
-      {stat(
-        "Rotación",
-        <>
-          {rotacion.rotacionPct ?? 0}
-          <span className="text-sm font-medium">%</span>
-        </>,
-      )}
-      {stat(
-        "Antigüedad prom.",
-        <>
-          {rotacion.antiguedadPromedio ?? 0}
-          <span className="text-sm font-medium">años</span>
-        </>,
-      )}
-      <div className="col-span-2 rounded-xl border bg-zinc-50 p-3">
-        <div className="text-[10px] font-semibold uppercase tracking-wide text-zinc-400">
-          Plantilla neta
-        </div>
-        <div className="mt-1 text-2xl font-bold tabular-nums">
-          {(rotacion.plantillaNeta ?? 0) >= 0 ? "+" : ""}
-          {rotacion.plantillaNeta ?? 0}
-          {rotacion.plantillaAnterior != null && (
-            <span className="ml-2 text-sm font-medium text-zinc-500">
-              vs. periodo anterior ({rotacion.plantillaAnterior} →{" "}
-              {(rotacion.plantillaAnterior || 0) +
-                (rotacion.plantillaNeta || 0)}
-              )
-            </span>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Heatmap({ heatmap }) {
-  const dias = heatmap.dias || [];
-  const unidades = heatmap.unidades || [];
-  const valores = heatmap.valores || [];
-  const shade = (v) => {
-    const o = Math.round((((v ?? 0) / 100) * 0.85 + 0.06) * 100);
-    return `color-mix(in srgb, var(--color-emerald-500, #10b981) ${o}%, #f4f4f5)`;
-  };
-  const cols = `120px repeat(${dias.length}, minmax(0, 1fr))`;
-  return (
-    <div className="overflow-x-auto">
-      <div className="min-w-[360px] flex flex-col gap-1">
-        <div className="grid gap-1" style={{ gridTemplateColumns: cols }}>
-          <span />
-          {dias.map((d, i) => (
-            <span key={i} className="text-center text-[10px] text-zinc-400">
-              {d}
-            </span>
-          ))}
-        </div>
-        {unidades.map((u, ri) => (
-          <div
-            key={ri}
-            className="grid items-center gap-1"
-            style={{ gridTemplateColumns: cols }}
-          >
-            <span className="truncate text-[12px] text-zinc-600">{u}</span>
-            {(valores[ri] || []).map((v, ci) => (
-              <span
-                key={ci}
-                title={`${u} · ${dias[ci]}: ${Math.round(v ?? 0)}%`}
-                className="h-5 rounded"
-                style={{ background: shade(v) }}
-              />
-            ))}
-          </div>
-        ))}
-        <div className="mt-2 flex items-center justify-end gap-1 text-[11px] text-zinc-400">
-          Menos
-          {[20, 50, 80, 100].map((v) => (
-            <span
-              key={v}
-              className="h-4 w-4 rounded"
-              style={{ background: shade(v) }}
-            />
-          ))}
-          Más
-        </div>
-      </div>
-    </div>
+        <QuickActions />
+      </section>
+    </main>
   );
 }
