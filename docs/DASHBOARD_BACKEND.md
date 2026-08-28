@@ -56,6 +56,7 @@ romper. Se puede implementar por partes.
 
     // ---- Comparativo vs. periodo anterior (para los deltas de las KPIs) ----
     "periodoAnterior": {
+      "asistenciaPromedioPct": 84,
       "totalEmpleados": 245,
       "presentes": 208,
       "tardanzas": 18,

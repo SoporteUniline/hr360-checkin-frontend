@@ -204,7 +204,6 @@ function SectionLink({ href, children }) {
 const DASHBOARD_VIEWS = [
   { key: "inicio", label: "Operación de hoy", icon: Home },
   { key: "ausencias", label: "Ausencias y calendario", icon: CalendarRange },
-  { key: "kpis", label: "KPIs y análisis", icon: ChartNoAxesCombined },
 ];
 
 function DashboardViewTabs({ value, onChange }) {
@@ -240,7 +239,7 @@ function DashboardViewTabs({ value, onChange }) {
 
 function AnalyticsMetric({ label, value, helper, icon: Icon, delta, negative = false }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-400">
           {label}
@@ -250,13 +249,230 @@ function AnalyticsMetric({ label, value, helper, icon: Icon, delta, negative = f
         </span>
       </div>
       <p className="mt-2 text-2xl font-bold text-slate-900 tabular-nums">{value}</p>
-      <div className="mt-1 flex flex-wrap items-center gap-2">
-        <p className="text-[10px] text-slate-400">{helper}</p>
+      <div className="mt-1 flex min-h-5 flex-wrap items-center gap-2">
+        <p className="text-[10px] leading-relaxed text-slate-400">{helper}</p>
         {delta && (
-          <span className={`text-[10px] font-semibold ${negative ? "text-rose-600" : "text-emerald-600"}`}>
-            {delta}
-          </span>
+          typeof delta === "string" ? (
+            <span className={`text-[10px] font-semibold ${negative ? "text-rose-600" : "text-emerald-600"}`}>
+              {delta}
+            </span>
+          ) : delta
         )}
+      </div>
+    </div>
+  );
+}
+
+function AnalyticsNarrative({ stories }) {
+  return (
+    <section className="rounded-2xl bg-blue-600 p-4 text-white shadow-sm sm:p-5">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Sparkles className="size-4" />
+          <h2 className="text-sm font-semibold">La historia de este periodo</h2>
+        </div>
+        <span className="text-[10px] text-blue-100">Calculada con los filtros seleccionados</span>
+      </div>
+      <div className="grid gap-2.5 lg:grid-cols-3">
+        {stories.map((story) => (
+          <article
+            key={story.label}
+            className="rounded-xl border border-white/20 bg-white/10 p-3.5"
+          >
+            <p className="text-[9px] font-semibold uppercase tracking-[0.08em] text-blue-100">
+              {story.label}
+            </p>
+            <p className="mt-1.5 text-xs leading-relaxed text-white">{story.text}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function AttendanceDistribution({ items }) {
+  const palette = [
+    "bg-blue-600",
+    "bg-cyan-500",
+    "bg-violet-500",
+    "bg-amber-500",
+    "bg-rose-500",
+    "bg-emerald-500",
+  ];
+  const rows = items
+    .filter((item) => Number(item.count) > 0)
+    .map((item, index) => ({
+      ...item,
+      count: Number(item.count) || 0,
+      color: palette[index % palette.length],
+    }));
+  const total = rows.reduce((sum, item) => sum + item.count, 0);
+
+  if (!total) return <EmptyState>No hay registros para mostrar.</EmptyState>;
+
+  return (
+    <div>
+      <div
+        className="flex h-4 overflow-hidden rounded-full bg-slate-100"
+        role="img"
+        aria-label={`Distribución de ${total} registros`}
+      >
+        {rows.map((item) => (
+          <span
+            key={item.key || item.label}
+            className={item.color}
+            style={{ width: `${(item.count / total) * 100}%` }}
+            title={`${item.label || item.key}: ${item.count}`}
+          />
+        ))}
+      </div>
+      <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        {rows.slice(0, 8).map((item) => (
+          <div key={item.key || item.label} className="flex items-center gap-2 text-xs">
+            <span className={`size-2 shrink-0 rounded-full ${item.color}`} />
+            <span className="min-w-0 flex-1 truncate text-slate-500">
+              {item.label || item.key}
+            </span>
+            <span className="font-semibold text-slate-800 tabular-nums">{item.count}</span>
+            <span className="w-9 text-right text-[10px] text-slate-400 tabular-nums">
+              {Math.round((item.count / total) * 100)}%
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DepartmentLollipop({ items }) {
+  const rows = items
+    .map((item) => ({
+      name: item.departamento || item.nombre || "Sin departamento",
+      value: clamp(item.pct ?? item.porcentaje),
+    }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 8);
+
+  if (!rows.length) return <EmptyState>No hay datos por departamento.</EmptyState>;
+
+  return (
+    <div className="space-y-3.5">
+      {rows.map((row) => (
+        <div key={row.name} className="grid grid-cols-[minmax(88px,150px)_1fr_38px] items-center gap-3">
+          <span className="truncate text-[11px] font-medium text-slate-600" title={row.name}>
+            {row.name}
+          </span>
+          <div className="relative h-1.5 rounded-full bg-slate-100">
+            <span
+              className="absolute inset-y-0 left-0 rounded-full bg-blue-200"
+              style={{ width: `${row.value}%` }}
+            />
+            <span
+              className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-blue-600 shadow-sm"
+              style={{ left: `${Math.max(2, row.value)}%` }}
+            />
+          </div>
+          <span className="text-right text-xs font-bold text-slate-800 tabular-nums">
+            {Math.round(row.value)}%
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function WorkforceWaterfall({ data, totalEmployees }) {
+  if (!data) return <EmptyState>No hay información de altas y bajas.</EmptyState>;
+
+  const hires = Number(data.altas) || 0;
+  const exits = Number(data.bajas) || 0;
+  const net = Number.isFinite(Number(data.plantillaNeta))
+    ? Number(data.plantillaNeta)
+    : hires - exits;
+  const initial = Number(data.plantillaAnterior) || Math.max(0, totalEmployees - net);
+  const final = totalEmployees || Math.max(0, initial + net);
+  const max = Math.max(1, initial, final, hires * 4, exits * 4);
+  const height = (value, minimum = 12) => `${Math.max(minimum, (value / max) * 100)}%`;
+
+  const bars = [
+    { label: "Inicio", value: initial, visual: initial, color: "bg-blue-600" },
+    { label: "Altas", value: `+${hires}`, visual: hires * 4, color: "bg-emerald-500" },
+    { label: "Bajas", value: `−${exits}`, visual: exits * 4, color: "bg-rose-500" },
+    { label: "Cambio neto", value: `${net >= 0 ? "+" : ""}${net}`, visual: Math.abs(net) * 4, color: net >= 0 ? "bg-cyan-500" : "bg-amber-500" },
+    { label: "Cierre", value: final, visual: final, color: "bg-blue-700" },
+  ];
+
+  return (
+    <div>
+      <div className="grid h-44 grid-cols-5 items-end gap-2 border-b border-slate-200 px-1 pt-3">
+        {bars.map((bar) => (
+          <div key={bar.label} className="flex h-full min-w-0 flex-col items-center justify-end gap-1.5">
+            <span className="text-[11px] font-bold text-slate-800 tabular-nums">{bar.value}</span>
+            <span
+              className={`w-full max-w-12 rounded-t-md ${bar.color}`}
+              style={{ height: height(bar.visual) }}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-5 gap-2 px-1 pt-2 text-center text-[9px] leading-tight text-slate-400">
+        {bars.map((bar) => <span key={bar.label}>{bar.label}</span>)}
+      </div>
+    </div>
+  );
+}
+
+function ContractProjection({ rows, available }) {
+  if (!available) {
+    return <EmptyState>El servicio todavía no entregó vencimientos de contratos.</EmptyState>;
+  }
+  if (!rows.length) {
+    return <EmptyState positive>No hay contratos próximos a vencer.</EmptyState>;
+  }
+
+  const buckets = [
+    {
+      label: "Vencidos",
+      count: rows.filter((row) => (getContractDays(row) ?? 1) < 0).length,
+      color: "bg-rose-500",
+      text: "text-rose-700",
+    },
+    {
+      label: "Próximos 7 días",
+      count: rows.filter((row) => {
+        const days = getContractDays(row);
+        return days != null && days >= 0 && days <= 7;
+      }).length,
+      color: "bg-amber-500",
+      text: "text-amber-700",
+    },
+    {
+      label: "8 a 30 días",
+      count: rows.filter((row) => {
+        const days = getContractDays(row);
+        return days != null && days > 7 && days <= 30;
+      }).length,
+      color: "bg-blue-600",
+      text: "text-blue-700",
+    },
+  ];
+  const max = Math.max(1, ...buckets.map((bucket) => bucket.count));
+
+  return (
+    <div>
+      <div className="grid h-40 grid-cols-3 items-end gap-4 border-b border-slate-200 px-3 pt-2">
+        {buckets.map((bucket) => (
+          <div key={bucket.label} className="flex h-full flex-col items-center justify-end gap-2">
+            <span className={`text-lg font-bold tabular-nums ${bucket.text}`}>{bucket.count}</span>
+            <span
+              className={`w-full max-w-16 rounded-t-lg ${bucket.color}`}
+              style={{ height: `${Math.max(8, (bucket.count / max) * 78)}%` }}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="grid grid-cols-3 gap-3 px-1 pt-2 text-center text-[9px] leading-tight text-slate-400">
+        {buckets.map((bucket) => <span key={bucket.label}>{bucket.label}</span>)}
       </div>
     </div>
   );
@@ -881,15 +1097,16 @@ function DashboardSkeleton() {
   );
 }
 
-export default function DashboardRH() {
+export default function DashboardRH({ mode = "inicio" }) {
   const router = useRouter();
   const { dataUser, isAuthChecked } = useAuth();
-  const [activeView, setActiveView] = useState("inicio");
+  const analyticsPage = mode === "dashboard";
+  const [activeView, setActiveView] = useState(analyticsPage ? "kpis" : "inicio");
   const [peopleFilter, setPeopleFilter] = useState("all");
   const [filters, setFilters] = useState({
-    preset: "hoy",
+    preset: analyticsPage ? "30d" : "hoy",
     custom: {},
-    compare: false,
+    compare: analyticsPage,
     id_empresa: "all",
     id_sucursal: "all",
     id_sucursal_option: "all",
@@ -976,7 +1193,7 @@ export default function DashboardRH() {
   if (error || responseFailed || !data) {
     return (
       <div className="mx-auto w-full max-w-[1480px] space-y-4">
-        <DashboardViewTabs value={activeView} onChange={changeView} />
+        {!analyticsPage && <DashboardViewTabs value={activeView} onChange={changeView} />}
         <DashboardFilters
           value={filters}
           onChange={updateFilters}
@@ -989,7 +1206,7 @@ export default function DashboardRH() {
             <ShieldAlert className="size-6" />
           </span>
           <h1 className="mt-3 text-base font-semibold text-slate-900">
-            No fue posible actualizar Inicio
+            No fue posible actualizar {analyticsPage ? "el Dashboard" : "Inicio"}
           </h1>
           <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
             Revisa la conexión o restablece los filtros. La unidad de negocio ahora se envía con su identificador correcto.
@@ -1288,6 +1505,89 @@ export default function DashboardRH() {
   const absenteeismPct = absenteeismBase > 0
     ? Math.round(clamp((absent / absenteeismBase) * 100) * 10) / 10
     : null;
+  const previousTotal = Number(previousData.totalEmpleados) || 0;
+  const previousPresent = Number(previousData.presentes) || 0;
+  const previousLate = Number(previousData.tardanzas) || 0;
+  const previousAbsent = Number(previousData.ausentes) || 0;
+  const previousAttendancePct = pick(
+    previousData.asistenciaPromedioPct,
+    previousTotal > 0
+      ? Math.round(clamp((previousPresent / previousTotal) * 100) * 10) / 10
+      : null,
+  );
+  const previousPunctualityPct = previousPresent > 0
+    ? Math.round(clamp(((previousPresent - previousLate) / previousPresent) * 100) * 10) / 10
+    : null;
+  const previousAbsenteeismBase = previousPresent + previousAbsent;
+  const previousAbsenteeismPct = previousAbsenteeismBase > 0
+    ? Math.round(clamp((previousAbsent / previousAbsenteeismBase) * 100) * 10) / 10
+    : null;
+  const bestDepartment = departmentAttendance
+    .map((department) => ({
+      name: department.departamento || department.nombre || "Sin departamento",
+      value: clamp(department.pct ?? department.porcentaje),
+    }))
+    .sort((a, b) => b.value - a.value)[0];
+  const riskDepartment = departmentIncidents
+    .map((department) => ({
+      name: department.departamento || department.nombre || "Sin departamento",
+      incidents: (Number(department.faltas) || 0) + (Number(department.tardanzas) || 0),
+      absences: Number(department.faltas) || 0,
+      late: Number(department.tardanzas) || 0,
+    }))
+    .sort((a, b) => b.incidents - a.incidents)[0];
+  const contractsInSevenDays = contracts.filter((contract) => {
+    const days = getContractDays(contract);
+    return days != null && days >= 0 && days <= 7;
+  }).length;
+  const expiredContracts = contracts.filter((contract) => (getContractDays(contract) ?? 1) < 0).length;
+  const attendanceDifference = attendancePct != null && previousAttendancePct != null
+    ? Math.round((Number(attendancePct) - Number(previousAttendancePct)) * 10) / 10
+    : null;
+  const analyticsStories = [
+    {
+      label: attendanceDifference == null || attendanceDifference >= 0 ? "Lo que mejoró" : "Cambio principal",
+      text: attendanceDifference != null ? (
+        <>
+          La asistencia {attendanceDifference >= 0 ? "subió" : "bajó"}{" "}
+          <strong>{Math.abs(attendanceDifference)} punto{Math.abs(attendanceDifference) === 1 ? "" : "s"}</strong>{" "}
+          contra el periodo anterior.
+        </>
+      ) : attendancePct != null ? (
+        <>La asistencia acumulada del periodo es de <strong>{Math.round(Number(attendancePct) * 10) / 10}%</strong>.</>
+      ) : (
+        <>Aún no hay información suficiente para comparar la asistencia.</>
+      ),
+    },
+    {
+      label: "Atención",
+      text: riskDepartment?.incidents > 0 ? (
+        <>
+          <strong>{riskDepartment.name}</strong> concentra {riskDepartment.incidents} incidencias: {riskDepartment.absences} faltas y {riskDepartment.late} tardanzas.
+        </>
+      ) : bestDepartment ? (
+        <>
+          <strong>{bestDepartment.name}</strong> encabeza la asistencia con {Math.round(bestDepartment.value)}%.
+        </>
+      ) : (
+        <>No se detectaron concentraciones departamentales con los datos disponibles.</>
+      ),
+    },
+    {
+      label: "Próximo riesgo",
+      text: contractsAvailable ? (
+        contracts.length > 0 ? (
+          <>
+            Hay <strong>{expiredContracts} vencido{expiredContracts === 1 ? "" : "s"}</strong> y {contractsInSevenDays} contrato{contractsInSevenDays === 1 ? "" : "s"} que vence{contractsInSevenDays === 1 ? "" : "n"} durante los próximos 7 días.
+          </>
+        ) : (
+          <>No hay contratos próximos a vencer dentro del alcance seleccionado.</>
+        )
+      ) : (
+        <>La fuente de vencimientos todavía no está integrada para este alcance.</>
+      ),
+    },
+  ];
   const calendarPermissions = permissions.map((permission, index) => ({
     ...permission,
     id_empleado: permission.id_empleado ?? permission.empleado_id ?? `permiso-${index}`,
@@ -1305,19 +1605,21 @@ export default function DashboardRH() {
       <header className="rounded-2xl border border-blue-100 bg-white p-4 shadow-sm sm:p-5">
         <div className="flex items-start gap-3">
           <span className="hidden size-11 shrink-0 place-content-center rounded-2xl bg-blue-600 text-white shadow-sm sm:grid">
-            <Home className="size-5" />
+            {analyticsPage ? <ChartNoAxesCombined className="size-5" /> : <Home className="size-5" />}
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">
-                Inicio
+                {analyticsPage ? "Dashboard" : "Inicio"}
               </h1>
               <span className="rounded-full border border-blue-100 bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-blue-600">
                 ADAMIA
               </span>
             </div>
             <p className="mt-1 text-xs text-slate-500 sm:text-sm">
-              {activeView === "inicio"
+              {analyticsPage
+                ? "Histórico, tendencias y riesgos para entender cómo evoluciona tu personal."
+                : activeView === "inicio"
                 ? "Operación diaria del personal, ausencias, regresos y contratos que requieren atención."
                 : activeView === "ausencias"
                   ? "Calendario completo de vacaciones, permisos, incapacidades y regresos."
@@ -1337,7 +1639,7 @@ export default function DashboardRH() {
         </div>
       </header>
 
-      <DashboardViewTabs value={activeView} onChange={changeView} />
+      {!analyticsPage && <DashboardViewTabs value={activeView} onChange={changeView} />}
 
       <DashboardFilters
         value={filters}
@@ -1423,148 +1725,152 @@ export default function DashboardRH() {
 
       {activeView === "kpis" && (
         <>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <AnalyticsMetric
-          label="Asistencia"
-          value={attendancePct != null ? `${Math.round(Number(attendancePct) * 10) / 10}%` : "—"}
-          helper="Cumplimiento del periodo"
-          icon={UserCheck}
-          delta={hasOwn(previousData, "asistenciaPromedioPct") ? "vs. periodo anterior" : null}
-        />
-        <AnalyticsMetric
-          label="Puntualidad"
-          value={punctualityPct != null ? `${punctualityPct}%` : "—"}
-          helper="Entradas registradas a tiempo"
-          icon={AlarmClock}
-        />
-        <AnalyticsMetric
-          label="Ausentismo"
-          value={absenteeismPct != null ? `${absenteeismPct}%` : "—"}
-          helper={`${absent} falta${absent === 1 ? "" : "s"} en el periodo`}
-          icon={UserMinus}
-          negative={absenteeismPct > 5}
-        />
-        <AnalyticsMetric
-          label="Tardanzas"
-          value={late}
-          helper="Incidencias registradas"
-          icon={ShieldAlert}
-          negative={late > 0}
-        />
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Section
-          title="Tendencia de asistencia"
-          description="Personas presentes por día; las incidencias se resumen por separado."
-          icon={BarChart3}
-          className="lg:col-span-2"
-          action={<SectionLink href="/panel/reporte-horas">Ver reporte</SectionLink>}
-        >
-          {trend.length ? (
-            <WeeklyTrend data={trend} />
-          ) : (
-            <EmptyState>No hay tendencia disponible para este periodo.</EmptyState>
-          )}
-        </Section>
-
-        <Section
-          title="Distribución de registros"
-          description="Composición de las incidencias capturadas."
-          icon={LayoutDashboard}
-          action={<SectionLink href="/panel/registro-asistencia">Ver detalle</SectionLink>}
-        >
-          {distribution.some((item) => Number(item.count) > 0) ? (
-            <HorizontalBars
-              items={distribution
-                .filter((item) => Number(item.count) > 0)
-                .map((item, index) => ({
-                  name: item.label || item.key,
-                  value: item.count,
-                  color: ["bg-blue-500", "bg-emerald-500", "bg-amber-500", "bg-rose-500", "bg-violet-500"][index % 5],
-                }))}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
+            <AnalyticsMetric
+              label="Asistencia"
+              value={attendancePct != null ? `${Math.round(Number(attendancePct) * 10) / 10}%` : "—"}
+              helper="Cumplimiento promedio"
+              icon={UserCheck}
+              delta={<Delta current={attendancePct} previous={previousAttendancePct} meaning="up" suffix=" pts" />}
             />
-          ) : (
-            <EmptyState>No hay registros para mostrar.</EmptyState>
-          )}
-        </Section>
-      </div>
+            <AnalyticsMetric
+              label="Puntualidad"
+              value={punctualityPct != null ? `${punctualityPct}%` : "—"}
+              helper="Entradas a tiempo"
+              icon={AlarmClock}
+              delta={<Delta current={punctualityPct} previous={previousPunctualityPct} meaning="up" suffix=" pts" />}
+            />
+            <AnalyticsMetric
+              label="Ausentismo"
+              value={absenteeismPct != null ? `${absenteeismPct}%` : "—"}
+              helper={`${absent} falta${absent === 1 ? "" : "s"} en el periodo`}
+              icon={UserMinus}
+              delta={<Delta current={absenteeismPct} previous={previousAbsenteeismPct} meaning="down" suffix=" pts" />}
+            />
+            <AnalyticsMetric
+              label="Promedio de horas"
+              value={data.promedioHoras != null ? `${data.promedioHoras} h` : "—"}
+              helper="Jornada efectiva registrada"
+              icon={BarChart3}
+              delta={<Delta current={data.promedioHoras} previous={previousData.promedioHoras} meaning="up" suffix=" h" />}
+            />
+            <AnalyticsMetric
+              label="Personal activo"
+              value={totalEmployees}
+              helper="Plantilla del alcance"
+              icon={UsersRound}
+              delta={<Delta current={totalEmployees} previous={previousData.totalEmpleados} meaning="neutral" />}
+            />
+            <AnalyticsMetric
+              label="Rotación"
+              value={rotationAvailable ? `${data.rotacion.rotacionPct ?? 0}%` : "—"}
+              helper={rotationAvailable ? `${data.rotacion.altas || 0} altas · ${data.rotacion.bajas || 0} bajas` : "Pendiente de datos"}
+              icon={RefreshCw}
+            />
+          </div>
 
-      {(departmentAttendance.length > 0 || departmentIncidents.length > 0) && (
-        <div className="grid gap-4 lg:grid-cols-2">
-          {departmentAttendance.length > 0 && (
+          <AnalyticsNarrative stories={analyticsStories} />
+
+          <div className="grid gap-4 lg:grid-cols-3">
+            <Section
+              title="Evolución de asistencia"
+              description="Presentes por día, con faltas, retardos y permisos al consultar cada punto."
+              icon={ChartNoAxesCombined}
+              className="lg:col-span-2"
+              action={<SectionLink href="/panel/reporte-horas">Ver reporte</SectionLink>}
+            >
+              {trend.length ? (
+                <WeeklyTrend data={trend} />
+              ) : (
+                <EmptyState>No hay tendencia disponible para este periodo.</EmptyState>
+              )}
+            </Section>
+
             <Section
               title="Asistencia por departamento"
-              description="Porcentaje de cumplimiento del periodo seleccionado."
+              description="Ranking porcentual para detectar brechas entre áreas."
               icon={Building2}
             >
-              <HorizontalBars
-                percent
-                items={departmentAttendance.map((department) => {
-                  const value = Math.round(department.pct ?? department.porcentaje ?? 0);
-                  return {
-                    name: department.departamento || department.nombre,
-                    value,
-                    color: value >= 90 ? "bg-emerald-500" : value >= 80 ? "bg-amber-500" : "bg-rose-500",
-                  };
-                })}
-              />
+              <DepartmentLollipop items={departmentAttendance} />
             </Section>
-          )}
+          </div>
 
-          {departmentIncidents.length > 0 && (
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Section
+              title="Mapa de asistencia"
+              description="Cumplimiento por día y unidad de negocio; desplázate para recorrer periodos largos."
+              icon={CalendarDays}
+            >
+              {data.heatmapUnidad?.unidades?.length > 0 ? (
+                <Heatmap data={data.heatmapUnidad} />
+              ) : (
+                <EmptyState>No hay mapa de asistencia para este periodo.</EmptyState>
+              )}
+            </Section>
+
+            <Section
+              title="Composición de registros"
+              description="Qué proporción corresponde a presencia, faltas, permisos y otras incidencias."
+              icon={LayoutDashboard}
+              action={<SectionLink href="/panel/registro-asistencia">Ver detalle</SectionLink>}
+            >
+              <AttendanceDistribution items={distribution} />
+            </Section>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Section
+              title="Movimiento de plantilla"
+              description="Cómo las altas y bajas explican el cambio entre la plantilla inicial y el cierre."
+              icon={Users}
+              action={<SectionLink href="/panel/empleados">Ver empleados</SectionLink>}
+            >
+              <WorkforceWaterfall data={rotationAvailable ? data.rotacion : null} totalEmployees={totalEmployees} />
+            </Section>
+
+            <Section
+              title="Proyección de contratos"
+              description="Vencidos y próximos vencimientos agrupados por nivel de urgencia."
+              icon={BriefcaseBusiness}
+              action={<SectionLink href="/panel/contratos">Gestionar</SectionLink>}
+            >
+              <ContractProjection rows={contracts} available={contractsAvailable} />
+            </Section>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
             <Section
               title="Departamentos con más incidencias"
-              description="Prioriza las áreas con faltas y tardanzas acumuladas."
+              description="Áreas que concentran faltas y tardanzas durante el periodo."
               icon={ShieldAlert}
               action={<SectionLink href="/panel/registro-asistencia">Revisar</SectionLink>}
             >
-              <IncidentRanking items={departmentIncidents} />
+              {departmentIncidents.length > 0 ? (
+                <IncidentRanking items={departmentIncidents} />
+              ) : (
+                <EmptyState>No hay incidencias departamentales para mostrar.</EmptyState>
+              )}
             </Section>
-          )}
-        </div>
-      )}
 
-      {data.heatmapUnidad?.unidades?.length > 0 && (
-        <Section
-          title="Asistencia por día y unidad"
-          description="Comparativo porcentual entre unidades de negocio."
-          icon={Building2}
-        >
-          <Heatmap data={data.heatmapUnidad} />
-        </Section>
-      )}
-
-      {(headcount.length > 0 || rotationAvailable) && (
-        <div className="grid gap-4 lg:grid-cols-3">
-          {headcount.length > 0 && (
             <Section
               title="Distribución de la plantilla"
-              description="Personal activo por departamento."
-              icon={Users}
-              className={rotationAvailable ? "lg:col-span-2" : "lg:col-span-3"}
+              description="Personal activo por departamento en el alcance seleccionado."
+              icon={UsersRound}
               action={<SectionLink href="/panel/empleados">Ver empleados</SectionLink>}
             >
-              <HorizontalBars
-                items={headcount.map((department, index) => ({
-                  name: department.departamento || department.nombre,
-                  value: department.count ?? department.total ?? 0,
-                  color: index % 2 ? "bg-violet-500" : "bg-blue-500",
-                }))}
-              />
+              {headcount.length > 0 ? (
+                <HorizontalBars
+                  items={headcount.map((department) => ({
+                    name: department.departamento || department.nombre,
+                    value: department.count ?? department.total ?? 0,
+                    color: "bg-blue-600",
+                  }))}
+                />
+              ) : (
+                <EmptyState>No hay distribución de plantilla disponible.</EmptyState>
+              )}
             </Section>
-          )}
-          {rotationAvailable && (
-            <Section
-              title="Movimiento de personal"
-              description="Altas, bajas y variación de plantilla."
-              icon={RefreshCw}
-            >
-              <RotationSummary data={data.rotacion} />
-            </Section>
-          )}
-        </div>
-      )}
+          </div>
         </>
       )}
 

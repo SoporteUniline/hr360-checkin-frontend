@@ -103,10 +103,17 @@ const ALL_NAV_ITEMS = [
   // Recruiter — General
   {
     title: "Inicio",
-    url: "/panel/dashboard",
+    url: "/panel/inicio",
     rol: "Recruiter",
     section: "General",
     icon: LayoutDashboard,
+  },
+  {
+    title: "Dashboard",
+    url: "/panel/dashboard",
+    rol: "Recruiter",
+    section: "General",
+    icon: BarChart3,
   },
   // Gestión de personal
   {

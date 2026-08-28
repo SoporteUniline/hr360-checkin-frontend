@@ -110,9 +110,15 @@ const dashboardItems = [
   },
   {
     title: "Inicio",
-    url: "/panel/dashboard",
+    url: "/panel/inicio",
     rol: "Recruiter",
     icon: LayoutDashboard,
+  },
+  {
+    title: "Dashboard",
+    url: "/panel/dashboard",
+    rol: "Recruiter",
+    icon: BarChart3,
   },
   {
     title: "Solicitud de permisos",

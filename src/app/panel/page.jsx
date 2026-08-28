@@ -7,8 +7,8 @@ export default function PanelPage() {
   const router = useRouter();
 
   useEffect(() => {
-    router.push("/panel/dashboard");
-  }, []);
+    router.replace("/panel/inicio");
+  }, [router]);
 
   return null;
 }

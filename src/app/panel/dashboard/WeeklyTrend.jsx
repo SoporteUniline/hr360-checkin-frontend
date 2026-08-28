@@ -130,13 +130,6 @@ export default function WeeklyTrend({ data = [] }) {
           onPointerDown={selectFromPointer}
           onPointerLeave={() => setActiveIndex(null)}
         >
-          <defs>
-            <linearGradient id="attendance-fill" x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="#2563eb" stopOpacity="0.24" />
-              <stop offset="100%" stopColor="#2563eb" stopOpacity="0.02" />
-            </linearGradient>
-          </defs>
-
           {chart.ticks.map((tick) => (
             <g key={tick.value}>
               <line
@@ -153,7 +146,7 @@ export default function WeeklyTrend({ data = [] }) {
             </g>
           ))}
 
-          <path d={area} fill="url(#attendance-fill)" />
+          <path d={area} fill="#dbeafe" />
           <path
             d={line}
             fill="none"
