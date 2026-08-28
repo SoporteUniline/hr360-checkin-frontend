@@ -68,7 +68,13 @@ function CompareControl({ active, onToggle }) {
   );
 }
 
-export default function DashboardFilters({ value, onChange }) {
+export default function DashboardFilters({
+  value,
+  onChange,
+  resetPreset = "hoy",
+  resetCustom = {},
+  resetCompare = true,
+}) {
   const { dataUser } = useAuth();
   const todayRange = useMemo(() => rangeFromPreset("hoy"), []);
   const [customDraft, setCustomDraft] = useState(() => ({
@@ -140,11 +146,12 @@ export default function DashboardFilters({ value, onChange }) {
   );
 
   const reset = () => {
-    setCustomDraft(todayRange);
+    const resetRange = rangeFromPreset(resetPreset, resetCustom);
+    setCustomDraft(resetRange);
     onChange({
-      preset: "hoy",
-      custom: {},
-      compare: true,
+      preset: resetPreset,
+      custom: resetCustom,
+      compare: resetCompare,
       id_empresa: "all",
       id_sucursal: "all",
       id_sucursal_option: "all",

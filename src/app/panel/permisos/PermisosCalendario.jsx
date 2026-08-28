@@ -38,6 +38,7 @@ export default function PermisosCalendario({
   festivosMap,
   onVerPermiso,
   titulo = "Calendario de permisos",
+  headerTone = "dark",
 }) {
   const desdeStr = desde ? dayjs(desde).format("YYYY-MM-DD") : null;
   const hastaStr = hasta ? dayjs(hasta).format("YYYY-MM-DD") : null;
@@ -150,6 +151,8 @@ export default function PermisosCalendario({
     if (estado === "Rechazado") return "line-through opacity-50 grayscale";
     return ""; // Aprobado / otros: sólido
   };
+  const headerBackground = headerTone === "blue" ? "bg-blue-600" : "bg-[#1f2937]";
+  const todayRing = headerTone === "blue" ? "ring-white" : "ring-[#60a5fa]";
 
   return (
     <div className="rounded-xl border border-gray-100 bg-white shadow-sm">
@@ -188,9 +191,9 @@ export default function PermisosCalendario({
           </div>
         ) : (
           <table className="w-max min-w-full border-collapse text-[11px]">
-            <thead className="sticky top-0 z-10 bg-[#1f2937] text-white">
+            <thead className={`sticky top-0 z-10 text-white ${headerBackground}`}>
               <tr>
-                <th className="sticky left-0 z-20 w-[190px] min-w-[190px] max-w-[190px] bg-[#1f2937] px-3 py-1.5 text-left font-semibold">
+                <th className={`sticky left-0 z-20 w-[190px] min-w-[190px] max-w-[190px] px-3 py-1.5 text-left font-semibold ${headerBackground}`}>
                   Empleado
                 </th>
                 {dias.map((d) => {
@@ -203,7 +206,7 @@ export default function PermisosCalendario({
                       key={fStr}
                       title={festivo ? festivosMap?.get(fStr) || "Festivo" : ""}
                       className={`w-9 min-w-9 px-0.5 py-1 text-center font-semibold ${
-                        hoy ? "ring-2 ring-inset ring-[#60a5fa]" : ""
+                        hoy ? `ring-2 ring-inset ${todayRing}` : ""
                       }`}
                     >
                       <div>{d.format("DD")}</div>

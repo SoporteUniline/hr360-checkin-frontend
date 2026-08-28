@@ -1,7 +1,7 @@
 import DashboardRH from "./DashboardRH";
 
 /**
- * Dashboard de RH del panel.
+ * Inicio operativo de RH del panel.
  *
  * Antes era un Server Component con `id_empresa` fijo en `null` (lo que dejaba
  * sin cargar festivos y el detalle de asistencias). Ahora delega en el componente

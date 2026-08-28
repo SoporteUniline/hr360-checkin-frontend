@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import useSWR from "swr";
+import dayjs from "dayjs";
 import {
   AlarmClock,
   ArrowDown,
@@ -13,10 +15,13 @@ import {
   Building2,
   CalendarCheck2,
   CalendarDays,
+  CalendarRange,
+  ChartNoAxesCombined,
   CheckCircle2,
   FileCheck2,
   FileText,
   Gift,
+  Home,
   LayoutDashboard,
   Minus,
   PartyPopper,
@@ -36,6 +41,7 @@ import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import SystemMessageRenderer from "@/components/system-messages/SystemMessageRenderer";
 import DashboardFilters from "./DashboardFilters";
 import WeeklyTrend from "./WeeklyTrend";
+import PermisosCalendario from "../permisos/PermisosCalendario";
 import { buildQuery, previousRange, rangeFromPreset } from "./lib/periodos";
 import {
   fmtDayMonthDeMX,
@@ -76,6 +82,17 @@ function isActivePermission(permission) {
     status === "en curso" ||
     status === "autorizado"
   );
+}
+
+function isPermissionOngoing(permission, reference = dayjs()) {
+  if (!isActivePermission(permission)) return false;
+  const start = permission?.inicio || permission?.fecha_inicio;
+  const end = permission?.fin || permission?.fecha_fin || start;
+  if (!start || !end || !dayjs(start).isValid() || !dayjs(end).isValid()) {
+    return true;
+  }
+  const day = dayjs(reference).startOf("day");
+  return !day.isBefore(dayjs(start).startOf("day")) && !day.isAfter(dayjs(end).endOf("day"));
 }
 
 function employeeName(row) {
@@ -181,6 +198,239 @@ function SectionLink({ href, children }) {
     >
       {children} <ArrowRight className="size-3" />
     </Link>
+  );
+}
+
+const DASHBOARD_VIEWS = [
+  { key: "inicio", label: "Operación de hoy", icon: Home },
+  { key: "ausencias", label: "Ausencias y calendario", icon: CalendarRange },
+  { key: "kpis", label: "KPIs y análisis", icon: ChartNoAxesCombined },
+];
+
+function DashboardViewTabs({ value, onChange }) {
+  return (
+    <div
+      role="tablist"
+      aria-label="Vistas de Inicio"
+      className="flex gap-1 overflow-x-auto border-b border-slate-200 [scrollbar-width:thin]"
+    >
+      {DASHBOARD_VIEWS.map(({ key, label, icon: Icon }) => {
+        const active = value === key;
+        return (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={() => onChange(key)}
+            className={`inline-flex min-h-11 shrink-0 items-center gap-2 border-b-2 px-3 text-xs font-semibold transition sm:px-4 ${
+              active
+                ? "border-blue-600 text-blue-700"
+                : "border-transparent text-slate-500 hover:border-blue-200 hover:text-blue-600"
+            }`}
+          >
+            <Icon className="size-4" />
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function AnalyticsMetric({ label, value, helper, icon: Icon, delta, negative = false }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.06em] text-slate-400">
+          {label}
+        </p>
+        <span className="grid size-8 place-content-center rounded-xl bg-blue-50 text-blue-600">
+          <Icon className="size-4" />
+        </span>
+      </div>
+      <p className="mt-2 text-2xl font-bold text-slate-900 tabular-nums">{value}</p>
+      <div className="mt-1 flex flex-wrap items-center gap-2">
+        <p className="text-[10px] text-slate-400">{helper}</p>
+        {delta && (
+          <span className={`text-[10px] font-semibold ${negative ? "text-rose-600" : "text-emerald-600"}`}>
+            {delta}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function getContractDays(contract) {
+  const explicit = contract?.dias_restantes ?? contract?.diasRestantes;
+  if (explicit !== undefined && explicit !== null && explicit !== "") {
+    const parsed = Number(explicit);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  const expiration =
+    contract?.fecha_vencimiento || contract?.fecha_fin || contract?.fechaFin;
+  if (!expiration || !dayjs(expiration).isValid()) return null;
+  return dayjs(expiration).startOf("day").diff(dayjs().startOf("day"), "day");
+}
+
+function contractDeadlineLabel(days) {
+  if (days == null) return "Sin fecha";
+  if (days < 0) return `Vencido hace ${Math.abs(days)} día${Math.abs(days) === 1 ? "" : "s"}`;
+  if (days === 0) return "Vence hoy";
+  if (days === 1) return "Vence mañana";
+  return `Vence en ${days} días`;
+}
+
+function ContractExpiryBoard({ rows, available }) {
+  const sorted = [...rows].sort((a, b) => {
+    const daysA = getContractDays(a);
+    const daysB = getContractDays(b);
+    return (daysA ?? 99999) - (daysB ?? 99999);
+  });
+  const expired = sorted.filter((row) => (getContractDays(row) ?? 1) < 0).length;
+  const critical = sorted.filter((row) => {
+    const days = getContractDays(row);
+    return days != null && days >= 0 && days <= 7;
+  }).length;
+  const upcoming = sorted.filter((row) => {
+    const days = getContractDays(row);
+    return days != null && days > 7 && days <= 30;
+  }).length;
+
+  return (
+    <Section
+      title="Contratos por vencer"
+      description="Prioridad operativa: vencidos, próximos vencimientos y acciones antes de que se pase una fecha."
+      icon={BriefcaseBusiness}
+      action={<SectionLink href="/panel/contratos">Gestionar contratos</SectionLink>}
+    >
+      {available && sorted.length > 0 ? (
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-xl bg-rose-50 p-3">
+              <p className="text-[9px] font-semibold uppercase tracking-wide text-rose-500">Vencidos</p>
+              <p className="mt-1 text-xl font-bold text-rose-700 tabular-nums">{expired}</p>
+            </div>
+            <div className="rounded-xl bg-amber-50 p-3">
+              <p className="text-[9px] font-semibold uppercase tracking-wide text-amber-600">Próximos 7 días</p>
+              <p className="mt-1 text-xl font-bold text-amber-700 tabular-nums">{critical}</p>
+            </div>
+            <div className="rounded-xl bg-blue-50 p-3">
+              <p className="text-[9px] font-semibold uppercase tracking-wide text-blue-500">Dentro de 30 días</p>
+              <p className="mt-1 text-xl font-bold text-blue-700 tabular-nums">{upcoming}</p>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[680px] text-left text-xs">
+              <thead className="bg-slate-50 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-400">
+                <tr>
+                  <th className="px-3 py-2.5">Empleado</th>
+                  <th className="px-3 py-2.5">Contrato</th>
+                  <th className="px-3 py-2.5">Fecha de vencimiento</th>
+                  <th className="px-3 py-2.5">Urgencia</th>
+                  <th className="px-3 py-2.5 text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {sorted.slice(0, 6).map((contract, index) => {
+                  const days = getContractDays(contract);
+                  const urgent = days != null && days <= 7;
+                  const warning = days != null && days > 7 && days <= 30;
+                  return (
+                    <tr key={`${contract.id || contract.nombre_empleado}-${index}`} className="hover:bg-slate-50/70">
+                      <td className="px-3 py-3">
+                        <p className="font-semibold text-slate-700">{contract.nombre_empleado || "Empleado"}</p>
+                        <p className="mt-0.5 text-[10px] text-slate-400">{contract.departamento || "Sin departamento"}</p>
+                      </td>
+                      <td className="px-3 py-3 text-slate-600">
+                        {contract.tipo_contrato || contract.tipo || "Contrato"}
+                      </td>
+                      <td className="px-3 py-3 font-semibold text-slate-700 tabular-nums">
+                        {formatDateDMY(contract.fecha_vencimiento || contract.fecha_fin)}
+                      </td>
+                      <td className="px-3 py-3">
+                        <span className={`inline-flex rounded-full px-2 py-1 text-[10px] font-bold ${
+                          urgent
+                            ? "bg-rose-50 text-rose-700"
+                            : warning
+                              ? "bg-amber-50 text-amber-700"
+                              : "bg-blue-50 text-blue-700"
+                        }`}>
+                          {contractDeadlineLabel(days)}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-right">
+                        <Link href="/panel/contratos" className="inline-flex items-center gap-1 font-semibold text-blue-600 hover:text-blue-700">
+                          Revisar <ArrowRight className="size-3" />
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : available ? (
+        <EmptyState positive>No hay contratos próximos a vencer.</EmptyState>
+      ) : (
+        <EmptyState>El servicio todavía no entregó información de vencimientos de contratos.</EmptyState>
+      )}
+    </Section>
+  );
+}
+
+function AbsenceOverview({ rows }) {
+  const visible = rows
+    .filter((row) => isPermissionOngoing(row) || isPendingPermission(row))
+    .sort((a, b) => String(a.regresa || a.fin || "9999").localeCompare(String(b.regresa || b.fin || "9999")))
+    .slice(0, 6);
+
+  return (
+    <Section
+      title="Ausencias y próximos regresos"
+      description="Quién continúa fuera, desde cuándo y qué día debe reincorporarse."
+      icon={CalendarRange}
+      action={<SectionLink href="/panel/permisos">Ver calendario completo</SectionLink>}
+    >
+      {visible.length ? (
+        <div className="divide-y divide-slate-100">
+          {visible.map((permission, index) => {
+            const pending = isPendingPermission(permission);
+            return (
+              <div key={`${permission.id_permiso || index}`} className="grid gap-2 py-3 first:pt-0 last:pb-0 sm:grid-cols-[minmax(0,1.2fr)_minmax(150px,.8fr)_auto] sm:items-center">
+                <div className="min-w-0">
+                  <p className="truncate text-xs font-semibold text-slate-700">{employeeName(permission)}</p>
+                  <p className="mt-0.5 truncate text-[10px] text-slate-400">
+                    {permission.departamento || permission.nombre_empresa || "Sin departamento"}
+                  </p>
+                </div>
+                <div>
+                  <span className={`inline-flex rounded-full px-2 py-1 text-[10px] font-bold ${
+                    pending ? "bg-amber-50 text-amber-700" : "bg-blue-50 text-blue-700"
+                  }`}>
+                    {permission.tipo || "Permiso"}{pending ? " · Pendiente" : " · En curso"}
+                  </span>
+                  <p className="mt-1 text-[10px] text-slate-500 tabular-nums">
+                    {formatDateDMY(permission.inicio)} → {formatDateDMY(permission.fin)}
+                  </p>
+                </div>
+                <div className="sm:text-right">
+                  <p className="text-[9px] font-semibold uppercase tracking-wide text-slate-400">Regresa</p>
+                  <p className="mt-0.5 text-xs font-bold text-blue-700 tabular-nums">
+                    {permission.regresa ? formatDateDMY(permission.regresa) : "Por confirmar"}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <EmptyState positive>No hay ausencias activas ni solicitudes pendientes.</EmptyState>
+      )}
+    </Section>
   );
 }
 
@@ -632,12 +882,14 @@ function DashboardSkeleton() {
 }
 
 export default function DashboardRH() {
+  const router = useRouter();
   const { dataUser, isAuthChecked } = useAuth();
+  const [activeView, setActiveView] = useState("inicio");
   const [peopleFilter, setPeopleFilter] = useState("all");
   const [filters, setFilters] = useState({
     preset: "hoy",
     custom: {},
-    compare: true,
+    compare: false,
     id_empresa: "all",
     id_sucursal: "all",
     id_sucursal_option: "all",
@@ -646,6 +898,28 @@ export default function DashboardRH() {
   const updateFilters = (nextFilters) => {
     setPeopleFilter("all");
     setFilters(nextFilters);
+  };
+  const monthRange = {
+    fechaInicio: dayjs().startOf("month").format("YYYY-MM-DD"),
+    fechaFin: dayjs().endOf("month").format("YYYY-MM-DD"),
+  };
+  const changeView = (view) => {
+    setActiveView(view);
+    setPeopleFilter("all");
+    setFilters((current) => {
+      if (view === "inicio") {
+        return { ...current, preset: "hoy", custom: {}, compare: false };
+      }
+      if (view === "ausencias") {
+        return {
+          ...current,
+          preset: "custom",
+          custom: monthRange,
+          compare: false,
+        };
+      }
+      return { ...current, preset: "30d", custom: {}, compare: true };
+    });
   };
 
   const range = useMemo(
@@ -702,22 +976,29 @@ export default function DashboardRH() {
   if (error || responseFailed || !data) {
     return (
       <div className="mx-auto w-full max-w-[1480px] space-y-4">
-        <DashboardFilters value={filters} onChange={updateFilters} />
+        <DashboardViewTabs value={activeView} onChange={changeView} />
+        <DashboardFilters
+          value={filters}
+          onChange={updateFilters}
+          resetPreset={activeView === "inicio" ? "hoy" : activeView === "kpis" ? "30d" : "custom"}
+          resetCustom={activeView === "ausencias" ? monthRange : {}}
+          resetCompare={activeView === "kpis"}
+        />
         <div className="rounded-2xl border border-rose-200 bg-white p-6 text-center shadow-sm">
           <span className="mx-auto grid size-12 place-content-center rounded-2xl bg-rose-50 text-rose-600">
             <ShieldAlert className="size-6" />
           </span>
           <h1 className="mt-3 text-base font-semibold text-slate-900">
-            No fue posible actualizar el dashboard
+            No fue posible actualizar Inicio
           </h1>
           <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">
             Revisa la conexión o restablece los filtros. La unidad de negocio ahora se envía con su identificador correcto.
           </p>
           <div className="mt-4 flex justify-center gap-2">
             <Button variant="outline" onClick={() => updateFilters({
-              preset: "hoy",
-              custom: {},
-              compare: true,
+              preset: activeView === "inicio" ? "hoy" : activeView === "kpis" ? "30d" : "custom",
+              custom: activeView === "ausencias" ? monthRange : {},
+              compare: activeView === "kpis",
               id_empresa: "all",
               id_sucursal: "all",
               id_sucursal_option: "all",
@@ -773,10 +1054,15 @@ export default function DashboardRH() {
   const attendancePct = pick(data.asistenciaPromedioPct, fallbackAttendancePct);
 
   const permissions = Array.isArray(data.permisosRangos) ? data.permisosRangos : [];
-  const activePermissions = permissions.filter(isActivePermission);
+  const approvedPermissions = permissions.filter(isActivePermission);
+  const activePermissions = permissions.filter((permission) => isPermissionOngoing(permission));
   const pendingPermissions = permissions.filter(isPendingPermission);
   const vacationPermissions = activePermissions.filter(isVacationPermission);
   const otherPermissions = activePermissions.filter(
+    (permission) => !isVacationPermission(permission),
+  );
+  const approvedVacationPermissions = approvedPermissions.filter(isVacationPermission);
+  const approvedOtherPermissions = approvedPermissions.filter(
     (permission) => !isVacationPermission(permission),
   );
   const previousData = filters.compare !== false ? data.periodoAnterior || {} : {};
@@ -995,28 +1281,47 @@ export default function DashboardRH() {
     documentsAvailable,
     missingCheckinsAvailable,
   ].filter(Boolean).length;
+  const punctualityPct = present > 0
+    ? Math.round(clamp(((present - late) / present) * 100) * 10) / 10
+    : null;
+  const absenteeismBase = present + absent;
+  const absenteeismPct = absenteeismBase > 0
+    ? Math.round(clamp((absent / absenteeismBase) * 100) * 10) / 10
+    : null;
+  const calendarPermissions = permissions.map((permission, index) => ({
+    ...permission,
+    id_empleado: permission.id_empleado ?? permission.empleado_id ?? `permiso-${index}`,
+    empleado_nombre: employeeName(permission),
+    tipo_permiso_nombre: permission.tipo_permiso_nombre || permission.tipo || "Permiso",
+    fecha_inicio: permission.fecha_inicio || permission.inicio,
+    fecha_fin: permission.fecha_fin || permission.fin || permission.inicio,
+    estado: permission.estado || permission.status?.label || "Sin estado",
+  }));
 
   return (
     <main className="mx-auto w-full max-w-[1480px] space-y-4 pb-8">
       <SystemMessageRenderer tipo="interna" contexto="dashboard" />
 
-      <header className="relative overflow-hidden rounded-2xl border border-blue-100 bg-gradient-to-br from-white via-blue-50/50 to-violet-50/70 p-4 shadow-sm sm:p-5">
-        <div className="absolute -right-16 -top-20 size-48 rounded-full bg-blue-200/25 blur-3xl" />
-        <div className="relative flex items-start gap-3">
-          <span className="hidden size-11 shrink-0 place-content-center rounded-2xl bg-gradient-to-br from-blue-600 to-violet-600 text-white shadow-lg shadow-blue-200 sm:grid">
-            <LayoutDashboard className="size-5" />
+      <header className="rounded-2xl border border-blue-100 bg-white p-4 shadow-sm sm:p-5">
+        <div className="flex items-start gap-3">
+          <span className="hidden size-11 shrink-0 place-content-center rounded-2xl bg-blue-600 text-white shadow-sm sm:grid">
+            <Home className="size-5" />
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">
-                Resumen de Recursos Humanos
+                Inicio
               </h1>
               <span className="rounded-full border border-blue-100 bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-blue-600">
                 ADAMIA
               </span>
             </div>
             <p className="mt-1 text-xs text-slate-500 sm:text-sm">
-              Indicadores, pendientes y comportamiento del personal en una sola vista.
+              {activeView === "inicio"
+                ? "Operación diaria del personal, ausencias, regresos y contratos que requieren atención."
+                : activeView === "ausencias"
+                  ? "Calendario completo de vacaciones, permisos, incapacidades y regresos."
+                  : "Indicadores estadísticos de asistencia, puntualidad e incidencias."}
             </p>
           </div>
           <Button
@@ -1032,7 +1337,15 @@ export default function DashboardRH() {
         </div>
       </header>
 
-      <DashboardFilters value={filters} onChange={updateFilters} />
+      <DashboardViewTabs value={activeView} onChange={changeView} />
+
+      <DashboardFilters
+        value={filters}
+        onChange={updateFilters}
+        resetPreset={activeView === "inicio" ? "hoy" : activeView === "kpis" ? "30d" : "custom"}
+        resetCustom={activeView === "ausencias" ? monthRange : {}}
+        resetCompare={activeView === "kpis"}
+      />
 
       {isValidating && (
         <div className="flex items-center justify-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-medium text-blue-700">
@@ -1041,6 +1354,8 @@ export default function DashboardRH() {
         </div>
       )}
 
+      {activeView === "inicio" && (
+        <>
       <section aria-busy={isValidating} className={isValidating ? "opacity-60 transition-opacity" : "transition-opacity"}>
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
@@ -1099,6 +1414,44 @@ export default function DashboardRH() {
           </div>
         )}
       </section>
+
+      <AbsenceOverview rows={permissions} />
+
+      <ContractExpiryBoard rows={contracts} available={contractsAvailable} />
+        </>
+      )}
+
+      {activeView === "kpis" && (
+        <>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <AnalyticsMetric
+          label="Asistencia"
+          value={attendancePct != null ? `${Math.round(Number(attendancePct) * 10) / 10}%` : "—"}
+          helper="Cumplimiento del periodo"
+          icon={UserCheck}
+          delta={hasOwn(previousData, "asistenciaPromedioPct") ? "vs. periodo anterior" : null}
+        />
+        <AnalyticsMetric
+          label="Puntualidad"
+          value={punctualityPct != null ? `${punctualityPct}%` : "—"}
+          helper="Entradas registradas a tiempo"
+          icon={AlarmClock}
+        />
+        <AnalyticsMetric
+          label="Ausentismo"
+          value={absenteeismPct != null ? `${absenteeismPct}%` : "—"}
+          helper={`${absent} falta${absent === 1 ? "" : "s"} en el periodo`}
+          icon={UserMinus}
+          negative={absenteeismPct > 5}
+        />
+        <AnalyticsMetric
+          label="Tardanzas"
+          value={late}
+          helper="Incidencias registradas"
+          icon={ShieldAlert}
+          negative={late > 0}
+        />
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Section
@@ -1212,116 +1565,69 @@ export default function DashboardRH() {
           )}
         </div>
       )}
-
-      {(contractsAvailable || documentsAvailable) && (
-        <div className="grid gap-4 lg:grid-cols-2">
-          {contractsAvailable && (
-            <Section
-              title="Contratos próximos a vencer"
-              description="Próximos vencimientos que requieren seguimiento."
-              icon={BriefcaseBusiness}
-              action={<SectionLink href="/panel/contratos">Ver todos</SectionLink>}
-            >
-              {contracts.length ? (
-                <CompactList rows={contracts} type="contract" />
-              ) : (
-                <EmptyState positive>No hay contratos próximos a vencer.</EmptyState>
-              )}
-            </Section>
-          )}
-          {documentsAvailable && (
-            <Section
-              title="Documentos próximos a vencer"
-              description="Vigencias registradas en el expediente del personal."
-              icon={FileCheck2}
-              action={<SectionLink href="/panel/gestion-documental/documentos">Ver todos</SectionLink>}
-            >
-              {documents.length ? (
-                <CompactList rows={documents} type="document" />
-              ) : (
-                <EmptyState positive>No hay documentos próximos a vencer.</EmptyState>
-              )}
-            </Section>
-          )}
-        </div>
+        </>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      {activeView === "ausencias" && (
+        <>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <AnalyticsMetric
+              label="Ausencias autorizadas"
+              value={approvedPermissions.length}
+              helper="Dentro del mes consultado"
+              icon={CalendarCheck2}
+            />
+            <AnalyticsMetric
+              label="Vacaciones"
+              value={approvedVacationPermissions.length}
+              helper="Periodos aprobados"
+              icon={CalendarDays}
+            />
+            <AnalyticsMetric
+              label="Otros permisos"
+              value={approvedOtherPermissions.length}
+              helper="Permisos e incapacidades"
+              icon={CalendarRange}
+            />
+            <AnalyticsMetric
+              label="Pendientes"
+              value={pendingPermissions.length}
+              helper="Solicitudes por resolver"
+              icon={ShieldAlert}
+              negative={pendingPermissions.length > 0}
+            />
+          </div>
+
+          <PermisosCalendario
+            desde={range.fechaInicio}
+            hasta={range.fechaFin}
+            registros={calendarPermissions}
+            onVerPermiso={() => router.push("/panel/permisos")}
+            titulo="Calendario mensual de ausencias"
+            headerTone="blue"
+          />
+
+          <AbsenceOverview rows={permissions} />
+        </>
+      )}
+
+      {activeView === "inicio" && documentsAvailable && (
         <Section
-          title="Permisos del periodo"
-          description="Solicitudes activas y pendientes de resolución."
-          icon={CalendarCheck2}
-          action={<SectionLink href="/panel/permisos">Gestionar</SectionLink>}
+          title="Documentos próximos a vencer"
+          description="Vigencias registradas en el expediente del personal."
+          icon={FileCheck2}
+          action={<SectionLink href="/panel/gestion-documental/documentos">Ver todos</SectionLink>}
         >
-          {permissions.length ? (
-            <div className="space-y-2.5">
-              {permissions.slice(0, 5).map((permission, index) => {
-                const pending = isPendingPermission(permission);
-                const active = isActivePermission(permission);
-                const days = permission.inicio && permission.fin
-                  ? Math.max(
-                      1,
-                      Math.round(
-                        (new Date(`${permission.fin}T00:00:00Z`) -
-                          new Date(`${permission.inicio}T00:00:00Z`)) /
-                          86400000,
-                      ) + 1,
-                    )
-                  : null;
-                return (
-                  <div key={`${permission.id_permiso || index}`} className="flex items-start gap-3 rounded-xl bg-slate-50 p-2.5">
-                    <span className={`grid size-8 shrink-0 place-content-center rounded-lg ${
-                      pending
-                        ? "bg-amber-100 text-amber-700"
-                        : active
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-slate-200 text-slate-500"
-                    }`}>
-                      <CalendarDays className="size-4" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-semibold text-slate-700">
-                        {permission.nombre_empleado}
-                      </p>
-                      <p className="truncate text-[10px] text-slate-400">
-                        {permission.tipo || "Permiso"}
-                        {days ? ` · ${days} día${days === 1 ? "" : "s"}` : ""}
-                      </p>
-                      {(permission.inicio || permission.fin) && (
-                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[10px] font-medium text-slate-600">
-                          <span>
-                            Inicio: {formatDateDMY(permission.inicio)}
-                          </span>
-                          <ArrowRight className="size-3 text-slate-300" />
-                          <span>
-                            Fin: {formatDateDMY(permission.fin)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <span className={`mt-0.5 shrink-0 rounded-full px-2 py-1 text-[9px] font-bold ${
-                      pending
-                        ? "bg-amber-100 text-amber-700"
-                        : active
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-slate-200 text-slate-600"
-                    }`}>
-                      {permission.estado || permission.status?.label || "Sin estado"}
-                    </span>
-                  </div>
-                );
-              })}
-              {permissions.length > 5 && (
-                <p className="text-center text-[10px] text-slate-400">
-                  +{permissions.length - 5} permisos adicionales
-                </p>
-              )}
-            </div>
+          {documents.length ? (
+            <CompactList rows={documents} type="document" />
           ) : (
-            <EmptyState positive>No hay permisos en el periodo.</EmptyState>
+            <EmptyState positive>No hay documentos próximos a vencer.</EmptyState>
           )}
         </Section>
+      )}
 
+      {activeView === "inicio" && (
+      <div className="grid gap-4 lg:grid-cols-2">
         <Section
           title={`Cumpleaños de ${monthLabel}`}
           description="Próximas celebraciones del personal."
@@ -1346,7 +1652,9 @@ export default function DashboardRH() {
           )}
         </Section>
       </div>
+      )}
 
+      {activeView === "inicio" && (
       <section>
         <div className="mb-2 flex items-center gap-2">
           <Sparkles className="size-3.5 text-blue-500" />
@@ -1356,6 +1664,7 @@ export default function DashboardRH() {
         </div>
         <QuickActions />
       </section>
+      )}
     </main>
   );
 }

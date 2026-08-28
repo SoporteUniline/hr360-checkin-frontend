@@ -109,7 +109,7 @@ const dashboardItems = [
     icon: Landmark,
   },
   {
-    title: "Dashboard",
+    title: "Inicio",
     url: "/panel/dashboard",
     rol: "Recruiter",
     icon: LayoutDashboard,

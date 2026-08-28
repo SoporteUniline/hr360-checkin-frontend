@@ -102,7 +102,7 @@ const ALL_NAV_ITEMS = [
   },
   // Recruiter — General
   {
-    title: "Dashboard",
+    title: "Inicio",
     url: "/panel/dashboard",
     rol: "Recruiter",
     section: "General",
