@@ -1483,12 +1483,15 @@ export default function DashboardRH() {
     Array.isArray(data.aniversariosMes) ? data.aniversariosMes : []
   ).filter(
     (anniversary) =>
-      getAnniversaryYears(anniversary.fecha_ingreso, range.fechaFin) >= 1,
+      getAnniversaryYears(
+        anniversary.fecha_ingreso,
+        anniversary.fecha_evento,
+      ) >= 1,
   );
   const monthLabel = new Intl.DateTimeFormat("es-MX", {
     month: "long",
     timeZone: "UTC",
-  }).format(new Date(`${range.fechaFin}T00:00:00Z`));
+  }).format(new Date(`${range.fechaInicio}T00:00:00Z`));
 
   const attentionItems = [
     pendingPermissions.length > 0 && {
@@ -1971,55 +1974,29 @@ export default function DashboardRH() {
       {activeView === "inicio" && (
         <div className="grid gap-4 lg:grid-cols-2">
           <Section
-            title={
-              showingToday ? "Cumpleaños de hoy" : "Cumpleaños en el periodo"
-            }
-            description={
-              showingToday
-                ? "Celebraciones del personal para hoy."
-                : "Celebraciones del personal dentro del periodo seleccionado."
-            }
+            title={`Cumpleaños de ${monthLabel}`}
+            description={`Celebraciones del personal durante ${monthLabel}.`}
             icon={Gift}
           >
-            {birthdays.length ? (
-              <EventList
-                rows={birthdays}
-                kind="birthday"
-                referenceDate={range.fechaFin}
-              />
+            {birthdays.length > 0 ? (
+              <EventList rows={birthdays} kind="birthday" />
             ) : (
-              <EmptyState>
-                {showingToday
-                  ? "No hay cumpleaños hoy."
-                  : "No hay cumpleaños en el periodo seleccionado."}
+              <EmptyState positive>
+                No hay cumpleaños en {monthLabel}.
               </EmptyState>
             )}
           </Section>
 
           <Section
-            title={
-              showingToday
-                ? "Aniversarios de hoy"
-                : "Aniversarios en el periodo"
-            }
-            description={
-              showingToday
-                ? "Aniversarios laborales para hoy."
-                : "Aniversarios laborales dentro del periodo seleccionado."
-            }
+            title={`Aniversarios de ${monthLabel}`}
+            description={`Aniversarios laborales durante ${monthLabel}.`}
             icon={PartyPopper}
           >
-            {anniversaries.length ? (
-              <EventList
-                rows={anniversaries}
-                kind="anniversary"
-                referenceDate={range.fechaFin}
-              />
+            {anniversaries.length > 0 ? (
+              <EventList rows={anniversaries} kind="anniversary" />
             ) : (
-              <EmptyState>
-                {showingToday
-                  ? "No hay aniversarios hoy."
-                  : "No hay aniversarios en el periodo seleccionado."}
+              <EmptyState positive>
+                No hay aniversarios en {monthLabel}.
               </EmptyState>
             )}
           </Section>
