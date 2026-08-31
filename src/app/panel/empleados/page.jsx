@@ -22,6 +22,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   Clock3,
+  Upload,
 } from "lucide-react";
 import ModalCapacidadAgotada from "@/components/ModalCapacidadAgotada";
 import AccesosRapidos from "@/components/AccesosRapidos";
@@ -50,6 +51,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import ImportarEmpleadosDialog from "./ImportarEmpleadosDialog";
 
 const LS_COLUMNAS_EMPLEADOS = "empleados-columnas-visibles";
 
@@ -64,6 +66,7 @@ export default function RegistroEmpleados() {
   const [soloLectura, setSoloLectura] = useState(false);
   const [values, setValues] = useState(null);
   const [sincronizandoEmpleados, setSincronizandoEmpleados] = useState(false);
+  const [modalImportacionAbierto, setModalImportacionAbierto] = useState(false);
   const [modalSincronizacionAbierto, setModalSincronizacionAbierto] =
     useState(false);
   const [modalResultadoAbierto, setModalResultadoAbierto] = useState(false);
@@ -450,7 +453,23 @@ export default function RegistroEmpleados() {
               />
             </div>
 
-            <div className="mb-4 flex justify-end">
+            <div className="mb-4 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setModalImportacionAbierto(true)}
+                disabled={!idEmpresa || idEmpresa === "all"}
+                title={
+                  idEmpresa === "all"
+                    ? "Selecciona una empresa específica para importar empleados"
+                    : "Importar empleados desde Excel"
+                }
+                className="h-9.5 rounded-md border-emerald-200 bg-white px-4 text-[13px] font-semibold text-emerald-700 shadow-sm hover:bg-emerald-50 hover:text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Importar empleados
+              </Button>
+
               <Button
                 type="button"
                 variant="outline"
@@ -762,6 +781,16 @@ export default function RegistroEmpleados() {
           )}
         </DialogContent>
       </Dialog>
+
+      <ImportarEmpleadosDialog
+        open={modalImportacionAbierto}
+        onOpenChange={setModalImportacionAbierto}
+        idEmpresa={idEmpresa}
+        onImported={async () => {
+          await mutate();
+          setRefreshSincronizacionToken((token) => token + 1);
+        }}
+      />
     </>
   );
 }

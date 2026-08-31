@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import axios from "axios";
+import axios from "@/lib/axios";
 import {
   FormField,
   FormItem,
@@ -13,6 +13,13 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/context/AuthContext";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const DIAS_SEMANA = [
   "Lunes",
@@ -31,7 +38,13 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
   const [salidaComidaComun, setSalidaComidaComun] = useState("");
   const [regresoComidaComun, setRegresoComidaComun] = useState("");
   const [hrsSemana, setHrsSemana] = useState(0);
+  const [turnos, setTurnos] = useState([]);
+  const [cargandoTurnos, setCargandoTurnos] = useState(false);
+  const [cargandoTurnoEmpleado, setCargandoTurnoEmpleado] = useState(false);
 
+  const tipoHorario = form.watch("tipo_horario") || "personalizado";
+  const idTurno = form.watch("id_turno");
+  const idEmpresa = form.watch("id_empresa");
   const horarios = form.watch("horarios") || [];
   const { errors, isSubmitted } = form.formState;
 
@@ -137,6 +150,169 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
     form.setValue("horarios", actualizados, { shouldValidate: true });
   };
 
+  useEffect(() => {
+    if (!idEmpresa) {
+      setTurnos([]);
+      return;
+    }
+
+    let cancelado = false;
+
+    const cargarTurnos = async () => {
+      try {
+        setCargandoTurnos(true);
+
+        const { data } = await axios.get(
+          `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/turnos`,
+          {
+            params: {
+              id_empresa: idEmpresa,
+              page: 1,
+              limit: 100,
+            },
+          },
+        );
+
+        if (!cancelado) {
+          setTurnos(
+            (data?.turnos || []).filter((turno) =>
+              Boolean(Number(turno.activo)),
+            ),
+          );
+        }
+      } catch (error) {
+        console.error("Error cargando turnos:", error);
+
+        if (!cancelado) {
+          setTurnos([]);
+        }
+      } finally {
+        if (!cancelado) {
+          setCargandoTurnos(false);
+        }
+      }
+    };
+
+    cargarTurnos();
+
+    return () => {
+      cancelado = true;
+    };
+  }, [idEmpresa]);
+
+  useEffect(() => {
+    if (!empleadoId) return;
+
+    // Si el usuario ya cambió manualmente el tipo de horario
+    // durante esta edición, no pisamos su selección.
+    const tipoModificado =
+      form.formState.dirtyFields?.tipo_horario ||
+      form.formState.dirtyFields?.id_turno;
+
+    if (tipoModificado) return;
+
+    let cancelado = false;
+
+    const cargarTurnoEmpleado = async () => {
+      try {
+        setCargandoTurnoEmpleado(true);
+
+        const { data } = await axios.get(
+          `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados/${empleadoId}/turno`,
+        );
+
+        if (cancelado) return;
+
+        // Soporta tanto:
+        // { id_turno: 1, ... }
+        // como:
+        // { turno: { id_turno: 1, ... } }
+        const turno = data?.turno || data;
+        const turnoId = turno?.id_turno;
+
+        if (turnoId) {
+          form.setValue("tipo_horario", "turno", {
+            shouldDirty: false,
+            shouldValidate: false,
+          });
+
+          form.setValue("id_turno", String(turnoId), {
+            shouldDirty: false,
+            shouldValidate: false,
+          });
+        } else {
+          form.setValue("tipo_horario", "personalizado", {
+            shouldDirty: false,
+            shouldValidate: false,
+          });
+
+          form.setValue("id_turno", null, {
+            shouldDirty: false,
+            shouldValidate: false,
+          });
+        }
+      } catch (error) {
+        if (cancelado) return;
+
+        if (error?.response?.status === 404) {
+          form.setValue("tipo_horario", "personalizado", {
+            shouldDirty: false,
+            shouldValidate: false,
+          });
+
+          form.setValue("id_turno", null, {
+            shouldDirty: false,
+            shouldValidate: false,
+          });
+        } else {
+          console.error("Error cargando turno del empleado:", error);
+        }
+      } finally {
+        if (!cancelado) {
+          setCargandoTurnoEmpleado(false);
+        }
+      }
+    };
+
+    cargarTurnoEmpleado();
+
+    return () => {
+      cancelado = true;
+    };
+  }, [empleadoId, form]);
+
+  const seleccionarTurno = async (valor) => {
+    try {
+      form.setValue("id_turno", valor, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+
+      const { data } = await axios.get(
+        `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/turnos/${valor}`,
+      );
+
+      const horariosTurno = DIAS_SEMANA.map((dia) => {
+        const horario = data?.dias?.find((item) => item.dia === dia);
+
+        return {
+          dia,
+          entrada: horario?.entrada?.slice(0, 5) || "",
+          salida_comida: horario?.salida_comida?.slice(0, 5) || "",
+          regreso_comida: horario?.regreso_comida?.slice(0, 5) || "",
+          salida: horario?.salida?.slice(0, 5) || "",
+        };
+      });
+
+      form.setValue("horarios", horariosTurno, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    } catch (error) {
+      console.error("Error cargando horario del turno:", error);
+    }
+  };
+
   return (
     <section className="space-y-6">
       {/* Header de la sección */}
@@ -191,6 +367,110 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
             )}
           />
 
+          <div className="rounded-xl border bg-white p-4 shadow-sm">
+            <FormLabel className="mb-3 block text-base font-semibold">
+              Tipo de jornada
+            </FormLabel>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                disabled={soloLectura}
+                onClick={() => {
+                  form.setValue("tipo_horario", "turno", {
+                    shouldDirty: true,
+                  });
+                }}
+                className={`rounded-lg border-2 p-4 text-left transition ${
+                  tipoHorario === "turno"
+                    ? "border-indigo-500 bg-indigo-50"
+                    : "border-gray-200 bg-white hover:border-gray-300"
+                }`}
+              >
+                <div className="font-semibold text-gray-900">
+                  Turno existente
+                </div>
+
+                <div className="mt-1 text-sm text-gray-500">
+                  Utiliza un horario previamente configurado.
+                </div>
+              </button>
+
+              <button
+                type="button"
+                disabled={soloLectura}
+                onClick={() => {
+                  form.setValue("tipo_horario", "personalizado", {
+                    shouldDirty: true,
+                  });
+
+                  form.setValue("id_turno", null, {
+                    shouldDirty: true,
+                  });
+                }}
+                className={`rounded-lg border-2 p-4 text-left transition ${
+                  tipoHorario === "personalizado"
+                    ? "border-indigo-500 bg-indigo-50"
+                    : "border-gray-200 bg-white hover:border-gray-300"
+                }`}
+              >
+                <div className="font-semibold text-gray-900">
+                  Horario personalizado
+                </div>
+
+                <div className="mt-1 text-sm text-gray-500">
+                  Configura días y horarios específicos para este empleado.
+                </div>
+              </button>
+            </div>
+
+            {tipoHorario === "turno" && (
+              <div className="mt-4">
+                <FormLabel className="mb-1.5 block text-sm font-medium">
+                  Turno
+                </FormLabel>
+
+                <Select
+                  value={idTurno ? String(idTurno) : ""}
+                  onValueChange={seleccionarTurno}
+                  disabled={
+                    soloLectura ||
+                    cargandoTurnos ||
+                    cargandoTurnoEmpleado ||
+                    !idEmpresa
+                  }
+                >
+                  <SelectTrigger className="w-full sm:max-w-md">
+                    <SelectValue
+                      placeholder={
+                        cargandoTurnos
+                          ? "Cargando turnos..."
+                          : "Selecciona un turno"
+                      }
+                    />
+                  </SelectTrigger>
+
+                  <SelectContent>
+                    {turnos.map((turno) => (
+                      <SelectItem
+                        key={turno.id_turno}
+                        value={String(turno.id_turno)}
+                      >
+                        {turno.nombre}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {!cargandoTurnos && turnos.length === 0 && (
+                  <p className="mt-2 text-sm text-amber-600">
+                    No hay turnos activos registrados para esta empresa.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
           {isSubmitted && errors.horarios && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3">
               <p className="text-red-800 text-sm font-medium">
@@ -198,92 +478,102 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
               </p>
             </div>
           )}
-          {/* Asignación rápida */}
-          <div className="border rounded-xl p-4 bg-slate-50 shadow-sm space-y-4">
-            <FormLabel className="text-base font-semibold block mb-1">
-              Asignar horario a varios días
-            </FormLabel>
 
-            {/* Días seleccionables */}
-            <div className="flex flex-wrap gap-3">
-              {DIAS_SEMANA.map((dia) => (
-                <label
-                  key={dia}
-                  className={`cursor-pointer px-3 py-1 border rounded-full text-sm transition ${
-                    diasSeleccionados.includes(dia)
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100"
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    value={dia}
-                    checked={diasSeleccionados.includes(dia)}
-                    onChange={() => toggleDiaSeleccionado(dia)}
-                    disabled={soloLectura}
-                    className="hidden"
-                  />
-                  {dia.slice(0, 3)}
-                </label>
-              ))}
-            </div>
-
-            {/* Inputs de horario común */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <FormLabel className="text-sm text-gray-600">Entrada</FormLabel>
-                <Input
-                  type="time"
-                  value={entradaComun}
-                  onChange={(e) => setEntradaComun(e.target.value)}
-                  disabled={soloLectura}
-                />
-              </div>
-              <div>
-                <FormLabel className="text-sm text-gray-600">
-                  Salida comida
+          {tipoHorario === "personalizado" && (
+            <>
+              {" "}
+              {/* Asignación rápida */}
+              <div className="border rounded-xl p-4 bg-slate-50 shadow-sm space-y-4">
+                <FormLabel className="text-base font-semibold block mb-1">
+                  Asignar horario a varios días
                 </FormLabel>
-                <Input
-                  type="time"
-                  value={salidaComidaComun}
-                  onChange={(e) => setSalidaComidaComun(e.target.value)}
-                  disabled={soloLectura}
-                />
-              </div>
-              <div>
-                <FormLabel className="text-sm text-gray-600">
-                  Regreso comida
-                </FormLabel>
-                <Input
-                  type="time"
-                  value={regresoComidaComun}
-                  onChange={(e) => setRegresoComidaComun(e.target.value)}
-                  disabled={soloLectura}
-                />
-              </div>
-              <div>
-                <FormLabel className="text-sm text-gray-600">Salida</FormLabel>
-                <Input
-                  type="time"
-                  value={salidaComun}
-                  onChange={(e) => setSalidaComun(e.target.value)}
-                  disabled={soloLectura}
-                />
-              </div>
-            </div>
 
-            {/* Botón aplicar */}
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={aplicarHorarioComun}
-                className="px-4 py-2 rounded bg-blue-600 text-white text-sm font-medium shadow disabled:opacity-50"
-                disabled={soloLectura || diasSeleccionados.length === 0}
-              >
-                Aplicar horario a días seleccionados
-              </button>
-            </div>
-          </div>
+                {/* Días seleccionables */}
+                <div className="flex flex-wrap gap-3">
+                  {DIAS_SEMANA.map((dia) => (
+                    <label
+                      key={dia}
+                      className={`cursor-pointer px-3 py-1 border rounded-full text-sm transition ${
+                        diasSeleccionados.includes(dia)
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-white border-gray-300 text-gray-700 hover:bg-gray-100"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        value={dia}
+                        checked={diasSeleccionados.includes(dia)}
+                        onChange={() => toggleDiaSeleccionado(dia)}
+                        disabled={soloLectura}
+                        className="hidden"
+                      />
+                      {dia.slice(0, 3)}
+                    </label>
+                  ))}
+                </div>
+
+                {/* Inputs de horario común */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div>
+                    <FormLabel className="text-sm text-gray-600">
+                      Entrada
+                    </FormLabel>
+                    <Input
+                      type="time"
+                      value={entradaComun}
+                      onChange={(e) => setEntradaComun(e.target.value)}
+                      disabled={soloLectura}
+                    />
+                  </div>
+                  <div>
+                    <FormLabel className="text-sm text-gray-600">
+                      Salida comida
+                    </FormLabel>
+                    <Input
+                      type="time"
+                      value={salidaComidaComun}
+                      onChange={(e) => setSalidaComidaComun(e.target.value)}
+                      disabled={soloLectura}
+                    />
+                  </div>
+                  <div>
+                    <FormLabel className="text-sm text-gray-600">
+                      Regreso comida
+                    </FormLabel>
+                    <Input
+                      type="time"
+                      value={regresoComidaComun}
+                      onChange={(e) => setRegresoComidaComun(e.target.value)}
+                      disabled={soloLectura}
+                    />
+                  </div>
+                  <div>
+                    <FormLabel className="text-sm text-gray-600">
+                      Salida
+                    </FormLabel>
+                    <Input
+                      type="time"
+                      value={salidaComun}
+                      onChange={(e) => setSalidaComun(e.target.value)}
+                      disabled={soloLectura}
+                    />
+                  </div>
+                </div>
+
+                {/* Botón aplicar */}
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={aplicarHorarioComun}
+                    className="px-4 py-2 rounded bg-blue-600 text-white text-sm font-medium shadow disabled:opacity-50"
+                    disabled={soloLectura || diasSeleccionados.length === 0}
+                  >
+                    Aplicar horario a días seleccionados
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
 
           <FormLabel className="text-base font-medium mb-2 block">
             Horarios por día
@@ -311,7 +601,7 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
                         onChange={(e) =>
                           actualizarHorario(h.dia, "entrada", e.target.value)
                         }
-                        disabled={soloLectura}
+                        disabled={soloLectura || tipoHorario === "turno"}
                       />
                     </td>
                     <td className="p-2">
@@ -325,7 +615,7 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
                             e.target.value,
                           )
                         }
-                        disabled={soloLectura}
+                        disabled={soloLectura || tipoHorario === "turno"}
                       />
                     </td>
                     <td className="p-2">
@@ -339,7 +629,7 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
                             e.target.value,
                           )
                         }
-                        disabled={soloLectura}
+                        disabled={soloLectura || tipoHorario === "turno"}
                       />
                     </td>
                     <td className="p-2">
@@ -349,7 +639,7 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
                         onChange={(e) =>
                           actualizarHorario(h.dia, "salida", e.target.value)
                         }
-                        disabled={soloLectura}
+                        disabled={soloLectura || tipoHorario === "turno"}
                       />
                     </td>
                   </tr>

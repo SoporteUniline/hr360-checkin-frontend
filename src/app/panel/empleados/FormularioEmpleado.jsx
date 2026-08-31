@@ -141,6 +141,8 @@ export default function FormularioEmpleado({
       areasAsignadas: [],
       new_pass: "",
       horarios: defaultHorarios,
+      tipo_horario: "personalizado",
+      id_turno: null,
     },
   });
 
@@ -252,6 +254,12 @@ export default function FormularioEmpleado({
         autoriza_horas_extra:
           restoEmpleado.autoriza_horas_extra === 1 ? true : false,
         new_pass: "",
+
+        tipo_horario: fueDesdeLectura.current
+          ? form.getValues("tipo_horario") || "personalizado"
+          : "personalizado",
+
+        id_turno: fueDesdeLectura.current ? form.getValues("id_turno") : null,
       });
 
       if (!fueDesdeLectura.current) {
@@ -382,6 +390,9 @@ export default function FormularioEmpleado({
   };
 
   const onValidSubmit = async (data) => {
+    const tipoHorario = form.getValues("tipo_horario") || "personalizado";
+    const idTurno = form.getValues("id_turno");
+
     if (data.banco === "Otro" && data.otro_banco?.trim()) {
       data.banco = data.otro_banco.trim();
     }
@@ -451,6 +462,14 @@ export default function FormularioEmpleado({
         return;
       }
 
+      if (tipoHorario === "turno" && !idTurno) {
+        enqueueSnackbar("Debes seleccionar un turno", {
+          variant: "warning",
+        });
+        setTab("jornada");
+        return;
+      }
+
       const formData = new FormData();
 
       console.log("DATA FINAL:", data);
@@ -487,6 +506,8 @@ export default function FormularioEmpleado({
         formData.append("file", selectedFile);
       }
 
+      let idEmpleadoFinal = editar ? values.id_empleado : null;
+
       if (editar) {
         await axios.put(
           `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados/${values.id_empleado}`,
@@ -497,11 +518,10 @@ export default function FormularioEmpleado({
             },
           },
         );
-        enqueueSnackbar("Empleado actualizado", { variant: "success" });
-        setTab("personales");
-        // onClose?.();
+
+        idEmpleadoFinal = values.id_empleado;
       } else {
-        await axios.post(
+        const responseCrear = await axios.post(
           `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados`,
           formData,
           {
@@ -510,7 +530,44 @@ export default function FormularioEmpleado({
             },
           },
         );
-        enqueueSnackbar("Empleado registrado", { variant: "success" });
+
+        idEmpleadoFinal = responseCrear.data?.id;
+      }
+
+      if (!idEmpleadoFinal) {
+        throw new Error("No se pudo obtener el ID del empleado");
+      }
+
+      if (tipoHorario === "turno") {
+        await axios.post(
+          `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/turnos/${idTurno}/asignar`,
+          {
+            id_empleado: Number(idEmpleadoFinal),
+          },
+        );
+      } else if (editar) {
+        try {
+          await axios.delete(
+            `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados/${idEmpleadoFinal}/turno`,
+          );
+        } catch (errorTurno) {
+          if (errorTurno?.response?.status !== 404) {
+            throw errorTurno;
+          }
+        }
+      }
+
+      if (editar) {
+        enqueueSnackbar("Empleado actualizado", {
+          variant: "success",
+        });
+
+        setTab("personales");
+      } else {
+        enqueueSnackbar("Empleado registrado", {
+          variant: "success",
+        });
+
         setTab("personales");
         onClose?.();
         setModoFormulario(false);

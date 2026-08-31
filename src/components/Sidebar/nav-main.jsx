@@ -49,6 +49,7 @@ import {
   FolderOpen,
   SlidersHorizontal,
   ReceiptText,
+  CalendarClock,
 } from "lucide-react";
 import {
   ChevronDown,
@@ -138,6 +139,12 @@ const menuGroups = [
         url: "/panel/empleados",
         rol: "Recruiter",
         icon: UsersIcon,
+      },
+      {
+        title: "Turnos",
+        url: "/panel/turnos",
+        rol: "Recruiter",
+        icon: CalendarClock,
       },
       {
         title: "Panel empleado",
