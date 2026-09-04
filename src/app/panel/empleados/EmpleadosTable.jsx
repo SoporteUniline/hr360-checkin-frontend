@@ -178,7 +178,7 @@ export default function EmpleadosTable({
   const [departamentoSeleccionado, setDepartamentoSeleccionado] = useState([]);
   const [estadoSeleccionado, setEstadoSeleccionado] = useState([]);
   // Pestaña de estado (Todos / Activo / Inactivo / Baja) y bandera de export.
-  const [estadoTab, setEstadoTab] = useState("Todos");
+  const [estadoTab, setEstadoTab] = useState("Activo");
   const [exportando, setExportando] = useState(false);
 
   // Visibilidad de columnas: si `visibleColumns` viene (no vacío) manda;
@@ -344,7 +344,7 @@ export default function EmpleadosTable({
     ...ESTADO_ORDEN.filter((e) => estadoOptions.includes(e)),
     ...estadoOptions.filter((e) => !ESTADO_ORDEN.includes(e)),
   ];
-  const tabsEstado = ["Todos", ...estadosPresentes];
+  const tabsEstado = [...estadosPresentes, "Todos"];
   const conteoEstado = (tab) =>
     tab === "Todos"
       ? sourceRows.length

@@ -14,6 +14,7 @@ import { useState } from "react";
 import axios from "@/lib/axios";
 import { useSnackbar } from "notistack";
 import { ShieldCheck, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function EstadoEmpleadoDialog({
   item,
@@ -26,24 +27,36 @@ export default function EstadoEmpleadoDialog({
   const { enqueueSnackbar } = useSnackbar();
   const [open, setOpen] = useState(false);
   const [motivo, setMotivo] = useState("");
+  const [preguntarFiniquito, setPreguntarFiniquito] = useState(false);
+  const [accionDialog, setAccionDialog] = useState(null);
+
+  const router = useRouter();
 
   const cambiarEstado = async () => {
+    const esBaja = accionDialog === "baja";
+
     try {
       await axios.put(
         `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados/${item.id_empleado}`,
         {
-          estado: item.estado === "Activo" ? "Inactivo" : "Activo",
-          motivo_baja: item.estado === "Activo" ? motivo : null,
-          fecha_baja: item.estado === "Activo" ? new Date() : null,
+          estado: esBaja ? "Inactivo" : "Activo",
+          motivo_baja: esBaja ? motivo : null,
+          fecha_baja: esBaja ? new Date() : null,
         },
       );
 
       enqueueSnackbar(
-        item.estado === "Activo"
-          ? "Empleado inactivado"
-          : "Empleado reactivado",
-        { variant: "success" },
+        esBaja ? "Empleado dado de baja" : "Empleado reactivado",
+        {
+          variant: "success",
+        },
       );
+
+      if (esBaja) {
+        setOpen(false);
+        setPreguntarFiniquito(true);
+        return;
+      }
 
       setOpen(false);
       setMotivo("");
@@ -51,7 +64,6 @@ export default function EstadoEmpleadoDialog({
       await mutate();
       onEmployeeChanged?.();
     } catch (err) {
-      // Esto te dirá si el error es de Axios, de Red o de tu propio código
       console.log("Error completo:", err);
 
       if (err.response) {
@@ -64,8 +76,17 @@ export default function EstadoEmpleadoDialog({
 
       const msg =
         err?.response?.data?.error || "Ocurrió un error al cambiar el estado.";
+
       enqueueSnackbar(msg, { variant: "error" });
     }
+  };
+
+  const finalizarBajaSinFiniquito = async () => {
+    setPreguntarFiniquito(false);
+    setMotivo("");
+
+    await mutate();
+    onEmployeeChanged?.();
   };
 
   return (
@@ -77,10 +98,13 @@ export default function EstadoEmpleadoDialog({
             : "bg-green-50 hover:bg-green-100"
         }`}
         onClick={(e) => {
-          e.stopPropagation(); // 👈 Para que no se dispare el onClick de la fila
+          e.stopPropagation();
+
+          setAccionDialog(item.estado === "Activo" ? "baja" : "reactivar");
+
           setOpen(true);
         }}
-        title={item.estado === "Activo" ? "Eliminar" : "Reactivar"}
+        title={item.estado === "Activo" ? "Dar de baja" : "Reactivar"}
       >
         {item.estado === "Activo" ? (
           <Trash2 className="h-4 w-4 text-red-600" />
@@ -93,11 +117,12 @@ export default function EstadoEmpleadoDialog({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {item.estado === "Activo"
-                ? "¿Estás seguro de eliminar este empleado?"
+              {accionDialog === "baja"
+                ? "¿Deseas dar de baja a este empleado?"
                 : "Reactivar empleado"}
             </DialogTitle>
-            {item.estado === "Activo" && (
+
+            {accionDialog === "baja" && (
               <DialogDescription>
                 Por favor, proporciona el motivo de la baja. Esta acción puede
                 revertirse después.
@@ -105,7 +130,7 @@ export default function EstadoEmpleadoDialog({
             )}
           </DialogHeader>
 
-          {item.estado === "Activo" && (
+          {accionDialog === "baja" && (
             <div className="py-2">
               <Textarea
                 rows={4}
@@ -126,14 +151,58 @@ export default function EstadoEmpleadoDialog({
             >
               Cancelar
             </Button>
+
             <Button
-              variant={item.estado === "Activo" ? "destructive" : "default"}
+              variant={accionDialog === "baja" ? "destructive" : "default"}
               onClick={cambiarEstado}
-              disabled={item.estado === "Activo" && !motivo.trim()}
+              disabled={accionDialog === "baja" && !motivo.trim()}
             >
-              {item.estado === "Activo"
+              {accionDialog === "baja"
                 ? "Confirmar baja"
                 : "Confirmar reactivación"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={preguntarFiniquito}
+        onOpenChange={(value) => {
+          if (!value) {
+            finalizarBajaSinFiniquito();
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>¿Generar finiquito?</DialogTitle>
+
+            <DialogDescription>
+              La baja del empleado se registró correctamente. ¿Deseas generar su
+              finiquito ahora?
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="flex justify-end gap-2 pt-4">
+            <Button variant="ghost" onClick={finalizarBajaSinFiniquito}>
+              No
+            </Button>
+
+            <Button
+              onClick={() => {
+                const params = new URLSearchParams({
+                  empleado: String(item.id_empleado),
+                  empresa: String(item.id_empresa),
+                  origen: "baja",
+                  motivo,
+                });
+
+                router.push(
+                  `/panel/finiquitos-y-liquidaciones?${params.toString()}`,
+                );
+              }}
+            >
+              Sí, generar finiquito
             </Button>
           </DialogFooter>
         </DialogContent>

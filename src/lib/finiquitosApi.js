@@ -42,7 +42,7 @@ export const finiquitosApi = {
     const res = await axios.patch(
       `/checador/finiquitos/${id}/estado`,
       { estado },
-      { headers: authHeaders() }
+      { headers: authHeaders() },
     );
     return res.data;
   },
@@ -53,15 +53,18 @@ export const finiquitosApi = {
     return res.data;
   },
   async obtenerVacacionesDatos({ idEmpleado, empresa, aniosCompletos }) {
-    const res = await axios.get(`/checador/finiquitos/empleado/${idEmpleado}/vacaciones-datos`, {
-      params: { empresa, aniosCompletos },
-      headers: authHeaders(),
-    });
+    const res = await axios.get(
+      `/checador/finiquitos/empleado/${idEmpleado}/vacaciones-datos`,
+      {
+        params: { empresa, aniosCompletos },
+        headers: authHeaders(),
+      },
+    );
     return res.data;
   },
-  async empleadosActivos({ empresa, q, limit = 8 }) {
+  async empleadosActivos({ empresa, q, limit = 8, idEmpleado }) {
     const res = await axios.get(`/checador/finiquitos/empleados-activos`, {
-      params: { empresa, q, limit },
+      params: { empresa, q, limit, idEmpleado },
       headers: authHeaders(),
     });
     return res.data;
@@ -70,12 +73,13 @@ export const finiquitosApi = {
   // - Relación: endpoint `/api/checador/finiquitos/empleado/:idEmpleado/dias-no-trabajados`
   // - Cuenta registros donde asistencia = 0 o NULL en el rango de fechas
   async obtenerDiasNoTrabajados({ idEmpleado, fechaIngreso, fechaBaja }) {
-    const res = await axios.get(`/checador/finiquitos/empleado/${idEmpleado}/dias-no-trabajados`, {
-      params: { fechaIngreso, fechaBaja },
-      headers: authHeaders(),
-    });
+    const res = await axios.get(
+      `/checador/finiquitos/empleado/${idEmpleado}/dias-no-trabajados`,
+      {
+        params: { fechaIngreso, fechaBaja },
+        headers: authHeaders(),
+      },
+    );
     return res.data;
   },
 };
-
-

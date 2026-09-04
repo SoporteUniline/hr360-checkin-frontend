@@ -53,6 +53,7 @@ import ActiveFilterChips from "@/components/tabla/ActiveFilterChips";
 import { Combobox } from "@/components/Combobox";
 import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
+import { useSearchParams } from "next/navigation";
 
 // Página de Panel para "Finiquitos y liquidaciones"
 // - Relación:
@@ -283,6 +284,13 @@ export default function PageFiniquitosLiquidaciones() {
     if (page > totalPages) setPage(1);
   }, [headerFilterMeta, page, limit]);
 
+  const searchParams = useSearchParams();
+
+  const empleadoBajaId = searchParams.get("empleado");
+  const empresaBajaId = searchParams.get("empresa");
+  const origen = searchParams.get("origen");
+  const motivoBajaParam = searchParams.get("motivo");
+
   // ---------------- Calculadora ----------------
   const [idEmpleado, setIdEmpleado] = useState("");
   const [fechaBaja, setFechaBaja] = useState(dayjs().format("YYYY-MM-DD"));
@@ -325,6 +333,8 @@ export default function PageFiniquitosLiquidaciones() {
     () => empleadosSugResp?.data || [],
     [empleadosSugResp?.data],
   );
+
+  const precargaBajaProcesadaRef = useRef(false);
 
   const resetFormulario = () => {
     setIdEmpleado("");
@@ -424,6 +434,67 @@ export default function PageFiniquitosLiquidaciones() {
     setOpenEmpSug(false);
   };
 
+  useEffect(() => {
+    if (origen !== "baja") return;
+    if (!empresaBajaId) return;
+    if (!unidadOptions?.length) return;
+    if (unidadCalculo) return;
+
+    const unidadEmpleado = unidadOptions.find(
+      (unidad) => Number(unidad.id_empresa) === Number(empresaBajaId),
+    );
+
+    if (unidadEmpleado) {
+      setUnidadCalculo(unidadEmpleado.value);
+    }
+  }, [origen, empresaBajaId, unidadOptions, unidadCalculo]);
+
+  useEffect(() => {
+    if (origen !== "baja") return;
+    if (!empleadoBajaId) return;
+    if (!idEmpresaCalculo) return;
+    if (precargaBajaProcesadaRef.current) return;
+
+    const precargarEmpleadoBaja = async () => {
+      try {
+        const resp = await finiquitosApi.empleadosActivos({
+          empresa: idEmpresaCalculo,
+          idEmpleado: empleadoBajaId,
+          limit: 1,
+        });
+
+        const empleado = resp?.data?.[0];
+
+        if (!empleado) {
+          console.warn(
+            "No se encontró el empleado para precargar finiquito:",
+            empleadoBajaId,
+          );
+          return;
+        }
+
+        precargaBajaProcesadaRef.current = true;
+
+        // Ir directamente a la calculadora
+        setTab("calculadora");
+
+        // Es finiquito por defecto
+        setTipoCalculo("finiquito");
+
+        // Precargar el motivo escrito durante la baja
+        if (motivoBajaParam) {
+          setMotivoBaja(motivoBajaParam);
+        }
+
+        // Precargar empleado + salario + vacaciones + días no trabajados
+        await onPickEmpleado(empleado);
+      } catch (error) {
+        console.error("Error precargando empleado para finiquito:", error);
+      }
+    };
+
+    precargarEmpleadoBaja();
+  }, [origen, empleadoBajaId, motivoBajaParam, idEmpresaCalculo]);
   const calcular = async () => {
     if (!idEmpresaCalculo) {
       setAlertMsg("Selecciona una unidad de negocio para el cálculo");
@@ -623,7 +694,10 @@ export default function PageFiniquitosLiquidaciones() {
         .replace(/\s+/g, " ")
         .trim();
     const money = (value) =>
-      `$${Number(value || 0).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      `$${Number(value || 0).toLocaleString("es-MX", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
     const needSpace = (height) => {
       if (y + height > pageHeight - 65) {
         doc.addPage();

@@ -37,9 +37,9 @@ function getNombreCompleto(emp) {
 }
 
 const TABS = [
-  { key: "all", label: "Todos" },
   { key: "Activo", label: "Activos" },
   { key: "Inactivo", label: "Inactivos" },
+  { key: "all", label: "Todos" },
 ];
 
 function EmpleadoCard({ emp, onClick }) {
@@ -106,7 +106,7 @@ export default function MobileEmpleadosView({
   abrirFormulario,
   isLoading,
 }) {
-  const [activeTab, setActiveTab] = useState("all");
+  const [activeTab, setActiveTab] = useState("Activo");
   const [localSearch, setLocalSearch] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [puestoSeleccionado, setPuestoSeleccionado] = useState([]);
