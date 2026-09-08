@@ -106,7 +106,7 @@ export default function AsistenciaRow({
         {isEditing && !readOnly ? (
           <>
             {isColVisible("empleado") && (
-              <TableCell className="font-bold">
+              <TableCell className="font-semibold text-slate-800">
                 <div className="flex items-center gap-2">
                   {Boolean(currentData.correccion) && (
                     <span
@@ -123,7 +123,7 @@ export default function AsistenciaRow({
               </TableCell>
             )}
             {empresaActiva === "all" && isColVisible("unidad") && (
-              <TableCell className="font-bold">
+              <TableCell className="font-semibold text-slate-800">
                 {registro.unidad_negocio ||
                   registro.sucursal ||
                   registro.empresa_nombre}
@@ -548,19 +548,21 @@ export default function AsistenciaRow({
             {isColVisible("estado_asistencia") && (
               <TableCell className="text-center">
                 <span
-                  className={`px-2 py-1 rounded-full text-sm text-white ${
+                  className={`inline-flex rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${
                     currentData.estadoAsistencia === "Presente"
-                      ? "bg-green-600"
+                      ? "bg-emerald-50 text-emerald-700"
                       : currentData.estadoAsistencia === "Ausente"
-                      ? "bg-red-600"
+                      ? "bg-rose-50 text-rose-700"
                       : currentData.estadoAsistencia === "Tardanza"
-                      ? "bg-yellow-600"
+                      ? "bg-amber-50 text-amber-700"
                       : currentData.estadoAsistencia === "Permiso"
-                      ? "bg-blue-600"
-                      : "bg-gray-500"
+                      ? "bg-blue-50 text-blue-700"
+                      : currentData.estadoAsistencia === "Vacaciones"
+                      ? "bg-violet-50 text-violet-700"
+                      : "bg-slate-100 text-slate-600"
                   }`}
                 >
-                  {currentData.estadoAsistencia}
+                  {currentData.estadoAsistencia?.toUpperCase()}
                 </span>
               </TableCell>
             )}
@@ -573,18 +575,18 @@ export default function AsistenciaRow({
                   <button
                     onClick={() => handleSaveClick(registro.id)}
                     disabled={isSaving}
-                    className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
+                    className="rounded-lg p-1.5 text-slate-400 transition hover:bg-blue-50 hover:text-blue-600 disabled:opacity-50"
                     title="Guardar"
                   >
-                    <Save className="h-4 w-4 text-[#2563EB]" />
+                    <Save className="h-4 w-4" />
                   </button>
                   <button
                     onClick={handleCancelEdit}
                     disabled={isSaving}
-                    className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+                    className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
                     title="Cancelar"
                   >
-                    <X className="h-4 w-4 text-gray-700" />
+                    <X className="h-4 w-4" />
                   </button>
                 </div>
               </TableCell>
@@ -593,7 +595,7 @@ export default function AsistenciaRow({
         ) : (
           <>
             {isColVisible("empleado") && (
-              <TableCell className="font-bold">
+              <TableCell className="font-semibold text-slate-800">
                 <div className="flex items-center gap-2">
                   {Boolean(registro.correccion) && (
                     <span
@@ -610,7 +612,7 @@ export default function AsistenciaRow({
               </TableCell>
             )}
             {empresaActiva === "all" && isColVisible("unidad") && (
-              <TableCell className="font-bold">
+              <TableCell className="font-semibold text-slate-800">
                 {registro.unidad_negocio ||
                   registro.sucursal ||
                   registro.empresa_nombre}
@@ -792,19 +794,21 @@ export default function AsistenciaRow({
             {isColVisible("estado_asistencia") && (
               <TableCell className="text-center">
                 <span
-                  className={`px-2 py-1 rounded-full text-sm text-white ${
+                  className={`inline-flex rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${
                     registro.estadoAsistencia === "Presente"
-                      ? "bg-green-600"
+                      ? "bg-emerald-50 text-emerald-700"
                       : registro.estadoAsistencia === "Ausente"
-                      ? "bg-red-600"
+                      ? "bg-rose-50 text-rose-700"
                       : registro.estadoAsistencia === "Tardanza"
-                      ? "bg-yellow-600"
+                      ? "bg-amber-50 text-amber-700"
                       : registro.estadoAsistencia === "Permiso"
-                      ? "bg-blue-600"
-                      : "bg-gray-500"
+                      ? "bg-blue-50 text-blue-700"
+                      : registro.estadoAsistencia === "Vacaciones"
+                      ? "bg-violet-50 text-violet-700"
+                      : "bg-slate-100 text-slate-600"
                   }`}
                 >
-                  {registro.estadoAsistencia}
+                  {registro.estadoAsistencia?.toUpperCase()}
                 </span>
               </TableCell>
             )}
@@ -815,10 +819,10 @@ export default function AsistenciaRow({
               >
                 <button
                   onClick={() => handleEditClick(registro)}
-                  className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                  className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
                   title="Editar"
                 >
-                  <Pencil className="h-4 w-4 text-[#2563EB]" />
+                  <Pencil className="h-4 w-4" />
                 </button>
               </TableCell>
             )}

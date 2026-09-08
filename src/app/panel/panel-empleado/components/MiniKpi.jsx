@@ -12,13 +12,13 @@ import { cn } from "@/lib/utils";
  */
 export default function MiniKpi({ label, value, nowrap = false }) {
   return (
-    <div className="min-w-0 rounded-[10px] border border-gray-200 bg-white p-3">
-      <div className="truncate text-[10.5px] font-semibold uppercase tracking-wide text-gray-500">
+    <div className="min-w-0 rounded-[10px] border border-slate-200 bg-white p-3">
+      <div className="truncate text-[10.5px] font-semibold uppercase tracking-wide text-slate-500">
         {label}
       </div>
       <div
         className={cn(
-          "text-lg font-extrabold tabular-nums text-gray-900",
+          "text-lg font-extrabold tabular-nums text-slate-900",
           nowrap && "whitespace-nowrap",
         )}
       >

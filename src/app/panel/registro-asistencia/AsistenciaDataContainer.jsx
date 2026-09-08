@@ -297,19 +297,22 @@ export default function AsistenciaDataContainer({
           setPage={setPage}
           agrupar={agrupar}
           visibleColumns={visibleColumns}
+          footer={
+            mostrarPaginacion && registros.length > 0 ? (
+              <TablePagination
+                page={currentPage}
+                limit={limit}
+                total={
+                  headerFilterMeta.active
+                    ? headerFilterMeta.total
+                    : totalRegistros
+                }
+                onPageChange={onPageChange}
+                onLimitChange={onLimitChange}
+              />
+            ) : null
+          }
         />
-
-        {mostrarPaginacion && registros.length > 0 && (
-          <TablePagination
-            page={currentPage}
-            limit={limit}
-            total={
-              headerFilterMeta.active ? headerFilterMeta.total : totalRegistros
-            }
-            onPageChange={onPageChange}
-            onLimitChange={onLimitChange}
-          />
-        )}
 
         {!mostrarPaginacion && registros.length > 0 && (
           <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded text-center">

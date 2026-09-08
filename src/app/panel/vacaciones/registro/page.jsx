@@ -58,7 +58,7 @@ export default function RegistroVacacionesPage() {
     dayjs().tz("America/Mexico_City").format("YYYY-MM-DD"),
   );
 
-  // Filtro homologado de rango de fechas (modal + etiqueta del botón).
+
   // Las fechas iniciales (hoy → hoy) corresponden al preset "Hoy".
   const [rangoOpen, setRangoOpen] = useState(false);
   const [rangoEtiqueta, setRangoEtiqueta] = useState("Hoy");
@@ -186,7 +186,7 @@ export default function RegistroVacacionesPage() {
 
   return (
     <div className={`${styles.vacacionesTheme} space-y-6`}>
-      {/* Encabezado compacto homologado Adamia */}
+
       <div>
         <EncabezadoPagina
           icono={CalendarDays}
@@ -195,7 +195,7 @@ export default function RegistroVacacionesPage() {
         />
       </div>
 
-      {/* Fila de filtros homologada (sin filtros rápidos) */}
+
       <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
         <FiltrosGrid columnas={5}>
           <CampoFiltro etiqueta="Unidad de negocio">
@@ -305,7 +305,7 @@ export default function RegistroVacacionesPage() {
         </FiltrosGrid>
       </div>
 
-      {/* Modal de rango de fechas homologado */}
+
       <RangoFechasModal
         open={rangoOpen}
         onOpenChange={setRangoOpen}

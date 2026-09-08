@@ -56,6 +56,7 @@ import TablePagination from "@/components/TablePagination";
 import { useSnackbar } from "notistack";
 import axiosWithBase from "@/lib/axios";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import Cookies from "js-cookie";
 import styles from "../vacaciones-theme.module.css";
 import {
@@ -420,30 +421,23 @@ export default function VacacionesPorPeriodoPage() {
 
   return (
     <div className={`${styles.vacacionesTheme} space-y-6`}>
-      {/* Header ADAMIA */}
-      <div className="panel-module-header-visible bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
-        <div className="flex items-center justify-between gap-4 flex-col sm:flex-row">
-          <div className="flex items-center gap-3">
-            <div className="bg-[#2563EB] p-2.5 rounded-lg">
-              <CalendarDays className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-gray-900">
-                Vacaciones por periodo
-              </h1>
-              <p className="text-sm text-gray-600">
-                Gestiona periodos de vacaciones por empleado.
-              </p>
-            </div>
-          </div>
-          <Button
-            onClick={openCreate}
-            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white w-full sm:w-auto gap-2"
-          >
-            <Plus className="h-4 w-4" />
-            Nuevo
-          </Button>
-        </div>
+
+      <div>
+        <EncabezadoPagina
+          icono={CalendarDays}
+          titulo="Vacaciones por periodo"
+          subtitulo="Gestiona periodos de vacaciones por empleado."
+        />
+      </div>
+
+      <div className="flex justify-end">
+        <Button
+          onClick={openCreate}
+          className="rounded-xl bg-blue-600 font-semibold text-white shadow-sm hover:bg-blue-700"
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Nuevo
+        </Button>
       </div>
 
       <Card className="p-0 overflow-hidden border-gray-100">
@@ -497,26 +491,26 @@ export default function VacacionesPorPeriodoPage() {
             <div className="overflow-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50">
-                    <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                  <TableRow className="bg-slate-50/80">
+                    <TableHead className="text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                       Empleado
                     </TableHead>
-                    <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                    <TableHead className="text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                       Departamento
                     </TableHead>
-                    <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                    <TableHead className="text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                       Periodo
                     </TableHead>
-                    <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                    <TableHead className="text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                       Años
                     </TableHead>
-                    <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                    <TableHead className="text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                       Días
                     </TableHead>
-                    <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                    <TableHead className="text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                       Estado
                     </TableHead>
-                    <TableHead className="text-right text-xs font-semibold uppercase text-gray-600">
+                    <TableHead className="sticky right-0 z-20 bg-slate-50/95 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                       Acciones
                     </TableHead>
                   </TableRow>
@@ -538,21 +532,21 @@ export default function VacacionesPorPeriodoPage() {
                       <TableCell>
                         <EstadoBadge estado={r.estado} />
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end items-center gap-2">
+                      <TableCell className="sticky right-0 z-10 bg-white text-right">
+                        <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => openEdit(r)}
-                            className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                            className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
                             title="Editar"
                           >
-                            <Pencil className="h-4 w-4 text-[#2563EB]" />
+                            <Pencil className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => setDeleteRow(r)}
-                            className="p-2 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                            className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
                             title="Eliminar"
                           >
-                            <Trash2 className="h-4 w-4 text-red-600" />
+                            <Trash2 className="h-4 w-4" />
                           </button>
                         </div>
                       </TableCell>

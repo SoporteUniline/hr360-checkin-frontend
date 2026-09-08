@@ -61,7 +61,7 @@ const EXTRA_COLUMN_KEYS = new Set(
 );
 
 // Clases base para los th (header sticky dentro del contenedor con scroll)
-const TH_STICKY = "sticky top-0 z-10 bg-gray-50";
+const TH_STICKY = "sticky top-0 z-10 h-10 whitespace-nowrap bg-slate-50 align-middle text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500";
 
 export default function AsistenciaTable({
   filtrados,
@@ -92,6 +92,7 @@ export default function AsistenciaTable({
   visibleColumns,
   onRowClick,
   agrupar = null,
+  footer = null,
 }) {
   // Para el Excel usamos la zona de la primera empresa visible (o la activa como fallback)
   const fallbackTimezone = useEmpresaTimezone(empresaActiva);
@@ -527,10 +528,10 @@ export default function AsistenciaTable({
 
   return (
     <>
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         {!readOnly ? (
-          <div className="px-6 py-4 border-b border-gray-100 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex flex-col sm:flex-row gap-2 w-full lg:w-auto">
+          <div className="flex flex-col gap-3 border-b border-slate-100 px-4 py-3 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
               <Button
                 onClick={() =>
                   exportToExcel(exportData, columns, "Reporte_Asistencias", {
@@ -539,7 +540,7 @@ export default function AsistenciaTable({
                   })
                 }
                 variant="outline"
-                className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                className="rounded-xl border-slate-200 text-slate-600 shadow-none hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
               >
                 <FileSpreadsheet className="h-4 w-4 mr-2" />
                 Exportar Excel
@@ -547,7 +548,7 @@ export default function AsistenciaTable({
 
               <Button
                 onClick={abrirFormulario}
-                className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-md"
+                className="rounded-xl bg-blue-600 text-white shadow-sm hover:bg-blue-700"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Registrar asistencia masiva
@@ -556,7 +557,7 @@ export default function AsistenciaTable({
               {/* <Button
                 onClick={onResetFilters}
                 variant="outline"
-                className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                className="rounded-xl border-slate-200 text-slate-600 shadow-none hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
               >
                 <RotateCcw className="h-4 w-4 mr-2" />
                 Limpiar
@@ -564,7 +565,7 @@ export default function AsistenciaTable({
             </div>
           </div>
         ) : (
-          <div className="px-6 py-4 border-b border-gray-100"></div>
+          <div className="border-b border-slate-100 px-4 py-3 sm:px-5"></div>
         )}
         <ActiveFilterChips
           groups={[
@@ -647,13 +648,13 @@ export default function AsistenciaTable({
           onClearAll={clearAllTableFilters}
         />
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto [scrollbar-color:#cbd5e1_transparent] [scrollbar-width:thin]">
           <Table>
             <TableHeader>
-              <TableRow className="bg-gray-50 hover:bg-gray-50">
+              <TableRow className="bg-slate-50 hover:bg-slate-50 [&_th]:text-[10px] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-[0.05em] [&_th]:text-slate-500 [&_th_button]:text-[10px] [&_th_button]:font-semibold [&_th_button]:uppercase [&_th_button]:tracking-[0.05em]">
                 {colVisible("empleado") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500`}
                   >
                     <div className="flex items-center gap-1">
                       <button
@@ -676,7 +677,7 @@ export default function AsistenciaTable({
                 )}
                 {empresaActiva === "all" && colVisible("unidad") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500`}
                   >
                     <div className="flex items-center gap-1">
                       <button
@@ -699,14 +700,14 @@ export default function AsistenciaTable({
                 )}
                 {colVisible("codigo") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500`}
                   >
                     Código
                   </TableHead>
                 )}
                 {colVisible("departamento") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500`}
                   >
                     <div className="flex items-center gap-1">
                       <button
@@ -729,7 +730,7 @@ export default function AsistenciaTable({
                 )}
                 {colVisible("tipo") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500`}
                   >
                     <div className="flex items-center gap-1">
                       <button
@@ -753,7 +754,7 @@ export default function AsistenciaTable({
                 {colVisible("fecha") && (
                   <TableHead
                     onClick={() => handleSort("fecha")}
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center cursor-pointer select-none`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center cursor-pointer select-none`}
                   >
                     <div className="flex items-center justify-center">
                       Fecha
@@ -763,7 +764,7 @@ export default function AsistenciaTable({
                 )}
                 {colVisible("correccion") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
                     <div className="flex items-center justify-center gap-1">
                       <span>CORRECCIÓN</span>
@@ -780,7 +781,7 @@ export default function AsistenciaTable({
                 {colVisible("entrada") && (
                   <TableHead
                     onClick={() => handleSort("entrada")}
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center cursor-pointer select-none`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center cursor-pointer select-none`}
                   >
                     <div className="flex items-center justify-center">
                       Entrada
@@ -791,7 +792,7 @@ export default function AsistenciaTable({
                 {colVisible("salida") && (
                   <TableHead
                     onClick={() => handleSort("salida")}
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center cursor-pointer select-none`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center cursor-pointer select-none`}
                   >
                     <div className="flex items-center justify-center">
                       Salida
@@ -801,7 +802,7 @@ export default function AsistenciaTable({
                 )}
                 {colVisible("jornada") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
                     Jornada
                   </TableHead>
@@ -809,14 +810,14 @@ export default function AsistenciaTable({
 
                 {colVisible("hrs_diferencia") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
                     Hrs +/-
                   </TableHead>
                 )}
                 {colVisible("autorizado_por") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
                     <HeaderMultiFilter
                       selected={autorizacionSeleccionada}
@@ -828,7 +829,7 @@ export default function AsistenciaTable({
                 )}
                 {colVisible("asistio") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
                     <div className="flex items-center justify-center gap-1">
                       <button
@@ -851,7 +852,7 @@ export default function AsistenciaTable({
                 )}
                 {colVisible("goce") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
                     <div className="flex items-center justify-center gap-1">
                       <button
@@ -874,28 +875,28 @@ export default function AsistenciaTable({
                 )}
                 {colVisible("pago_triple") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
                     Pago triple
                   </TableHead>
                 )}
                 {colVisible("domingo") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
                     Domingo
                   </TableHead>
                 )}
                 {colVisible("prima_dominical") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
                     Prima dom.
                   </TableHead>
                 )}
                 {colVisible("festivo") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
                     <HeaderMultiFilter
                       selected={festivoSeleccionado}
@@ -907,14 +908,14 @@ export default function AsistenciaTable({
                 )}
                 {colVisible("porcentaje_festivo") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
                     % festivo
                   </TableHead>
                 )}
                 {colVisible("hrs_extra") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
                     <div className="flex items-center justify-center gap-1">
                       <button
@@ -937,35 +938,35 @@ export default function AsistenciaTable({
                 )}
                 {colVisible("forma_pago") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
                     Forma pago
                   </TableHead>
                 )}
                 {colVisible("aut_extra") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
                     Aut. extra
                   </TableHead>
                 )}
                 {colVisible("hrs_comida") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
                     Hrs comida
                   </TableHead>
                 )}
                 {colVisible("notas") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
                     Notas
                   </TableHead>
                 )}
                 {colVisible("notas_extra") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
                     Notas extra
                   </TableHead>
@@ -973,7 +974,7 @@ export default function AsistenciaTable({
 
                 {colVisible("estado_asistencia") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
                     <HeaderMultiFilter
                       selected={estadoAsistenciaSeleccionado}
@@ -984,7 +985,7 @@ export default function AsistenciaTable({
                   </TableHead>
                 )}
                 {!readOnly && colVisible("acciones") && (
-                  <TableHead className="sticky right-0 top-0 bg-gray-50 z-20 text-center font-semibold text-gray-700 uppercase text-xs">
+                  <TableHead className="sticky right-0 top-0 z-20 h-10 whitespace-nowrap bg-slate-50 text-center align-middle text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                     Acciones
                   </TableHead>
                 )}
@@ -995,7 +996,7 @@ export default function AsistenciaTable({
                 <TableRow>
                   <TableCell
                     colSpan={visibleColumnCount}
-                    className="text-center py-10 text-gray-500"
+                    className="py-12 text-center text-sm text-slate-400"
                   >
                     No hay registros para los filtros seleccionados.
                   </TableCell>
@@ -1016,7 +1017,7 @@ export default function AsistenciaTable({
                     <Fragment key={groupName}>
                       <TableRow
                         onClick={() => toggleGroup(groupName)}
-                        className="bg-[#f4f7fd] hover:bg-[#f4f7fd] cursor-pointer select-none border-b border-gray-100"
+                        className="cursor-pointer select-none border-b border-slate-100 bg-blue-50/40 hover:bg-blue-50/60"
                       >
                         <TableCell
                           colSpan={visibleColumnCount}
@@ -1024,19 +1025,19 @@ export default function AsistenciaTable({
                         >
                           <div className="flex items-center gap-2">
                             <ChevronDown
-                              className={`h-4 w-4 shrink-0 text-gray-500 transition-transform duration-200 ${
+                              className={`h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 ${
                                 isCollapsed ? "-rotate-90" : ""
                               }`}
                             />
-                            <span className="font-semibold text-[13px] text-gray-900">
+                            <span className="text-[13px] font-semibold text-slate-800">
                               {groupName}
                             </span>
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-slate-400">
                               · {rows.length} empleado
                               {rows.length === 1 ? "" : "s"}
                             </span>
                             {agrupar !== "estado" && (
-                              <span className="ml-auto text-xs text-[#2563EB] font-bold">
+                              <span className="ml-auto text-xs font-bold text-blue-600">
                                 {porcentajeAsistencia}% asistencia
                               </span>
                             )}
@@ -1053,6 +1054,12 @@ export default function AsistenciaTable({
             </TableBody>
           </Table>
         </div>
+
+        {footer && (
+          <div className="border-t border-slate-100 bg-white">
+            {footer}
+          </div>
+        )}
       </div>
     </>
   );

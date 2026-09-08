@@ -28,13 +28,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
-// Pills de estado homologadas (Adamia)
+
 const PILL_SUCCESS = "border border-emerald-100 bg-emerald-50 text-emerald-700";
 const PILL_WARNING = "border border-amber-100 bg-amber-50 text-amber-700";
-const PILL_DANGER = "border border-red-100 bg-red-50 text-red-700";
-const PILL_NEUTRAL = "border border-gray-200 bg-gray-50 text-gray-600";
+const PILL_DANGER = "border border-red-100 bg-rose-50 text-rose-700";
+const PILL_NEUTRAL = "border border-slate-200 bg-slate-50 text-slate-600";
 const PILL_BASE =
-  "inline-block rounded-full px-2.5 py-0.5 text-[10.5px] font-bold";
+  "inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide";
 
 function pillEstadoAsistencia(estado, esFalta) {
   if (estado === "Completo") return PILL_SUCCESS;
@@ -204,12 +204,12 @@ export default function PanelEmpleadoAsistencias({ datosEmpleado }) {
 
   return (
     <div>
-      <h3 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
+      <h3 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-slate-900">
         <CalendarCheck2 className="h-3.5 w-3.5 text-brand" />
         Registro de asistencias
       </h3>
 
-      {/* Mini-KPIs homologados */}
+
       <div className="mb-4 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
         <MiniKpi label="% Asistencia" value={`${porcentaje}%`} />
         <MiniKpi label="Días trabajados" value={trabajados} />
@@ -218,12 +218,12 @@ export default function PanelEmpleadoAsistencias({ datosEmpleado }) {
       </div>
 
       {/* Barra de progreso */}
-      <div className="mb-4 rounded-[10px] border border-gray-200 bg-white p-3 sm:p-4">
+      <div className="mb-4 rounded-[10px] border border-slate-200 bg-white p-3 sm:p-4">
         <div className="mb-2 flex justify-between text-xs font-semibold sm:text-sm">
           <span>Asistencia del período</span>
           <span className="tabular-nums">{porcentaje}%</span>
         </div>
-        <div className="h-1.5 overflow-hidden rounded-full bg-gray-100">
+        <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
           <div
             className="h-full rounded-full bg-gradient-to-r from-brand to-brand-accent transition-all"
             style={{ width: `${porcentaje}%` }}
@@ -234,7 +234,7 @@ export default function PanelEmpleadoAsistencias({ datosEmpleado }) {
       {/* Análisis por tipo */}
       {tiposAnalisis.length > 0 && (
         <div className="mb-4 sm:mb-6">
-          <h4 className="mb-2 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900 sm:mb-3">
+          <h4 className="mb-2 flex items-center gap-1.5 text-[12.5px] font-bold text-slate-900 sm:mb-3">
             <BarChart3 className="h-3.5 w-3.5 text-brand" />
             Análisis por tipo de registro
           </h4>
@@ -244,14 +244,14 @@ export default function PanelEmpleadoAsistencias({ datosEmpleado }) {
               return (
                 <div
                   key={tipo.id}
-                  className="min-w-0 rounded-[10px] border border-gray-200 bg-white p-3"
+                  className="min-w-0 rounded-[10px] border border-slate-200 bg-white p-3"
                 >
-                  <div className="truncate text-[10.5px] font-semibold uppercase tracking-wide text-gray-500">
+                  <div className="truncate text-[10.5px] font-semibold uppercase tracking-wide text-slate-500">
                     {tipo.nombre === "🌴 Vacaciones"
                       ? "🌴 Registros de vacaciones"
                       : tipo.nombre}
                   </div>
-                  <div className="mb-1.5 text-lg font-extrabold tabular-nums text-gray-900">
+                  <div className="mb-1.5 text-lg font-extrabold tabular-nums text-slate-900">
                     {tipo.total}
                   </div>
                   <span
@@ -268,94 +268,106 @@ export default function PanelEmpleadoAsistencias({ datosEmpleado }) {
         </div>
       )}
 
-      {/* Filtros */}
-      <div className="mb-3 rounded-[10px] border border-gray-200 bg-white p-3 sm:mb-4 sm:p-4">
-        <div className="mb-3 grid grid-cols-1 gap-3 sm:mb-4 sm:grid-cols-2 sm:gap-4 lg:grid-cols-5">
-          <div>
-            <label className="mb-1 block text-xs font-bold text-gray-500">
-              AGRUPAR 1:
-            </label>
-            <Select
-              value={agrupar1 || "sin-agrupar"}
-              onValueChange={(v) => setAgrupar1(v === "sin-agrupar" ? "" : v)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Sin agrupar" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="sin-agrupar">Sin agrupar</SelectItem>
-                <SelectItem value="anio">Año</SelectItem>
-                <SelectItem value="mes">Mes</SelectItem>
-                <SelectItem value="tipo">Tipo de Registro</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-bold text-gray-500">
-              AGRUPAR 2:
-            </label>
-            <Select
-              value={agrupar2 || "ninguno"}
-              onValueChange={(v) => setAgrupar2(v === "ninguno" ? "" : v)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Ninguno" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ninguno">Ninguno</SelectItem>
-                <SelectItem value="anio">Año</SelectItem>
-                <SelectItem value="mes">Mes</SelectItem>
-                <SelectItem value="tipo">Tipo de Registro</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-bold text-gray-500">
-              AGRUPAR 3:
-            </label>
-            <Select
-              value={agrupar3 || "ninguno"}
-              onValueChange={(v) => setAgrupar3(v === "ninguno" ? "" : v)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Ninguno" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ninguno">Ninguno</SelectItem>
-                <SelectItem value="anio">Año</SelectItem>
-                <SelectItem value="mes">Mes</SelectItem>
-                <SelectItem value="tipo">Tipo de Registro</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-bold text-gray-500">
-              DESDE:
-            </label>
-            <Input
-              type="date"
-              value={filtroDesde}
-              onChange={(e) => setFiltroDesde(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-bold text-gray-500">
-              HASTA:
-            </label>
-            <Input
-              type="date"
-              value={filtroHasta}
-              onChange={(e) => setFiltroHasta(e.target.value)}
-            />
+
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 bg-slate-50/40 px-4 py-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-6">
+            <div>
+              <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                Agrupar 1
+              </label>
+              <Select
+                value={agrupar1 || "sin-agrupar"}
+                onValueChange={(v) => setAgrupar1(v === "sin-agrupar" ? "" : v)}
+              >
+                <SelectTrigger className="h-9 rounded-xl border-slate-200 bg-white text-sm shadow-none">
+                  <SelectValue placeholder="Sin agrupar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sin-agrupar">Sin agrupar</SelectItem>
+                  <SelectItem value="anio">Año</SelectItem>
+                  <SelectItem value="mes">Mes</SelectItem>
+                  <SelectItem value="tipo">Tipo de Registro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                Agrupar 2
+              </label>
+              <Select
+                value={agrupar2 || "ninguno"}
+                onValueChange={(v) => setAgrupar2(v === "ninguno" ? "" : v)}
+              >
+                <SelectTrigger className="h-9 rounded-xl border-slate-200 bg-white text-sm shadow-none">
+                  <SelectValue placeholder="Ninguno" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ninguno">Ninguno</SelectItem>
+                  <SelectItem value="anio">Año</SelectItem>
+                  <SelectItem value="mes">Mes</SelectItem>
+                  <SelectItem value="tipo">Tipo de Registro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                Agrupar 3
+              </label>
+              <Select
+                value={agrupar3 || "ninguno"}
+                onValueChange={(v) => setAgrupar3(v === "ninguno" ? "" : v)}
+              >
+                <SelectTrigger className="h-9 rounded-xl border-slate-200 bg-white text-sm shadow-none">
+                  <SelectValue placeholder="Ninguno" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ninguno">Ninguno</SelectItem>
+                  <SelectItem value="anio">Año</SelectItem>
+                  <SelectItem value="mes">Mes</SelectItem>
+                  <SelectItem value="tipo">Tipo de Registro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                Desde
+              </label>
+              <Input
+                type="date"
+                value={filtroDesde}
+                onChange={(e) => setFiltroDesde(e.target.value)}
+                className="h-9 rounded-xl border-slate-200 bg-white text-sm shadow-none"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                Hasta
+              </label>
+              <Input
+                type="date"
+                value={filtroHasta}
+                onChange={(e) => setFiltroHasta(e.target.value)}
+                className="h-9 rounded-xl border-slate-200 bg-white text-sm shadow-none"
+              />
+            </div>
+
+            <div className="flex items-end">
+              <Button
+                onClick={limpiarFiltros}
+                variant="outline"
+                size="sm"
+                className="h-9 w-full rounded-xl border-slate-200 bg-white px-4 font-semibold text-slate-600 shadow-none hover:bg-slate-50"
+              >
+                Limpiar
+              </Button>
+            </div>
           </div>
         </div>
-        <Button onClick={limpiarFiltros} variant="outline" size="sm">
-          Limpiar Filtros
-        </Button>
-      </div>
-
-      {/* Tabla */}
-      <div className="overflow-hidden rounded-[10px] border border-gray-200 bg-white">
         {datosAgrupados ? (
           <RenderizarGruposAsistencias
             grupos={datosAgrupados}
@@ -368,22 +380,22 @@ export default function PanelEmpleadoAsistencias({ datosEmpleado }) {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                    <TableHead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                       Fecha
                     </TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                    <TableHead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                       Tipo de Registro
                     </TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                    <TableHead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                       Entrada
                     </TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                    <TableHead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                       Salida
                     </TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                    <TableHead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                       Horas Trabajadas
                     </TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                    <TableHead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                       Estado
                     </TableHead>
                   </TableRow>
@@ -393,7 +405,7 @@ export default function PanelEmpleadoAsistencias({ datosEmpleado }) {
                     <TableRow>
                       <TableCell
                         colSpan={6}
-                        className="py-8 text-center text-gray-500"
+                        className="py-8 text-center text-slate-500"
                       >
                         No hay registros en el período seleccionado
                       </TableCell>
@@ -404,7 +416,7 @@ export default function PanelEmpleadoAsistencias({ datosEmpleado }) {
                         a.id_tipo_permiso === 1 || a.id_tipo_permiso === 3;
 
                       return (
-                        <TableRow key={a.id}>
+                        <TableRow key={a.id} className="transition-colors hover:bg-slate-50/70">
                           <TableCell className="text-xs sm:text-sm">
                             {formatearFecha(a.fecha)}
                           </TableCell>
@@ -418,7 +430,7 @@ export default function PanelEmpleadoAsistencias({ datosEmpleado }) {
                               <TableCell className="text-xs font-semibold text-emerald-700 sm:text-sm">
                                 {a.hora_entrada}
                               </TableCell>
-                              <TableCell className="text-xs font-semibold text-red-600 sm:text-sm">
+                              <TableCell className="text-xs font-semibold text-rose-600 sm:text-sm">
                                 {a.hora_salida}
                               </TableCell>
                               <TableCell className="text-xs sm:text-sm">
@@ -428,7 +440,7 @@ export default function PanelEmpleadoAsistencias({ datosEmpleado }) {
                           ) : (
                             <TableCell
                               colSpan={3}
-                              className="text-center text-xs text-gray-500 sm:text-sm"
+                              className="text-center text-xs text-slate-500 sm:text-sm"
                             >
                               Sin registro
                             </TableCell>
@@ -470,14 +482,14 @@ function RenderizarGruposAsistencias({ grupos, niveles, nivelActual }) {
 
   const claves = Object.keys(grupos).sort();
 
-  // Header por nivel: fondos grises hairline (sin gradientes slate)
+
   const getHeaderClass = (nivel) => {
     if (nivel === 0) {
-      return "bg-gray-50 text-gray-800";
+      return "bg-slate-50 text-slate-800";
     } else if (nivel === 1) {
-      return "bg-gray-50/60 text-gray-700";
+      return "bg-slate-50/60 text-slate-700";
     } else {
-      return "bg-white text-gray-600";
+      return "bg-white text-slate-600";
     }
   };
 
@@ -534,7 +546,7 @@ function RenderizarGruposAsistencias({ grupos, niveles, nivelActual }) {
               <CollapsibleTrigger
                 className={`w-full ${getHeaderClass(
                   nivelActual,
-                )} flex cursor-pointer items-center justify-between border-b border-gray-200 px-4 py-2.5 transition-colors hover:bg-gray-100`}
+                )} flex cursor-pointer items-center justify-between border-b border-slate-100 px-4 py-2.5 transition-colors hover:bg-slate-100`}
               >
                 <div className="flex items-center gap-2 sm:gap-3">
                   <ChevronRight
@@ -542,9 +554,9 @@ function RenderizarGruposAsistencias({ grupos, niveles, nivelActual }) {
                       estaAbierto ? "rotate-90" : ""
                     }`}
                   />
-                  <span className="text-[12.5px] font-bold">{clave}</span>
+                  <span className="text-[12px] font-semibold text-slate-700">{clave}</span>
                 </div>
-                <div className="flex items-center gap-2 text-[10.5px] text-gray-500 sm:gap-4">
+                <div className="flex items-center gap-2 text-[10px] font-medium text-slate-400 sm:gap-4">
                   <span>{contenido.length} registros</span>
                   <span>·</span>
                   <span>{trabajados} trabajados</span>
@@ -560,22 +572,22 @@ function RenderizarGruposAsistencias({ grupos, niveles, nivelActual }) {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                          <TableHead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                             Fecha
                           </TableHead>
-                          <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                          <TableHead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                             Tipo
                           </TableHead>
-                          <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                          <TableHead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                             Entrada
                           </TableHead>
-                          <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                          <TableHead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                             Salida
                           </TableHead>
-                          <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                          <TableHead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                             Horas
                           </TableHead>
-                          <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                          <TableHead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                             Estado
                           </TableHead>
                         </TableRow>
@@ -586,7 +598,7 @@ function RenderizarGruposAsistencias({ grupos, niveles, nivelActual }) {
                             a.id_tipo_permiso === 1 || a.id_tipo_permiso === 3;
 
                           return (
-                            <TableRow key={a.id}>
+                            <TableRow key={a.id} className="transition-colors hover:bg-slate-50/70">
                               <TableCell className="text-xs sm:text-sm">
                                 {formatearFecha(a.fecha)}
                               </TableCell>
@@ -602,7 +614,7 @@ function RenderizarGruposAsistencias({ grupos, niveles, nivelActual }) {
                                   <TableCell className="text-xs font-semibold text-emerald-700 sm:text-sm">
                                     {a.hora_entrada}
                                   </TableCell>
-                                  <TableCell className="text-xs font-semibold text-red-600 sm:text-sm">
+                                  <TableCell className="text-xs font-semibold text-rose-600 sm:text-sm">
                                     {a.hora_salida}
                                   </TableCell>
                                   <TableCell className="text-xs sm:text-sm">
@@ -612,7 +624,7 @@ function RenderizarGruposAsistencias({ grupos, niveles, nivelActual }) {
                               ) : (
                                 <TableCell
                                   colSpan={3}
-                                  className="text-center text-xs text-gray-500 sm:text-sm"
+                                  className="text-center text-xs text-slate-500 sm:text-sm"
                                 >
                                   Sin registro
                                 </TableCell>
@@ -656,7 +668,7 @@ function RenderizarGruposAsistencias({ grupos, niveles, nivelActual }) {
               <CollapsibleTrigger
                 className={`w-full ${getHeaderClass(
                   nivelActual,
-                )} flex cursor-pointer items-center justify-between border-b border-gray-200 px-4 py-2.5 transition-colors hover:bg-gray-100`}
+                )} flex cursor-pointer items-center justify-between border-b border-slate-100 px-4 py-2.5 transition-colors hover:bg-slate-100`}
               >
                 <div className="flex items-center gap-2 sm:gap-3">
                   <ChevronRight
@@ -664,9 +676,9 @@ function RenderizarGruposAsistencias({ grupos, niveles, nivelActual }) {
                       estaAbierto ? "rotate-90" : ""
                     }`}
                   />
-                  <span className="text-[12.5px] font-bold">{clave}</span>
+                  <span className="text-[12px] font-semibold text-slate-700">{clave}</span>
                 </div>
-                <div className="flex items-center gap-2 text-[10.5px] text-gray-500 sm:gap-4">
+                <div className="flex items-center gap-2 text-[10px] font-medium text-slate-400 sm:gap-4">
                   <span>{todosRegistros} registros</span>
                   <span>·</span>
                   <span>{trabajados} trabajados</span>

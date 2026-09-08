@@ -396,10 +396,10 @@ export default function EntradasSalidasTable({
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="bg-gray-50 hover:bg-gray-50">
+              <TableRow className="bg-slate-50/80 hover:bg-slate-50/80 [&_th]:text-[10px] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-[0.05em] [&_th]:text-slate-500 [&_button]:text-[10px] [&_button]:font-semibold [&_button]:uppercase [&_button]:tracking-[0.05em]">
                 {colVisible("empleado") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500`}
                   >
                     <div className="flex items-center gap-1">
                       <button
@@ -422,7 +422,7 @@ export default function EntradasSalidasTable({
                 )}
                 {empresaActiva === "all" && colVisible("unidad") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500`}
                   >
                     <HeaderMultiFilter
                       selected={unidadSeleccionada}
@@ -434,7 +434,7 @@ export default function EntradasSalidasTable({
                 )}
                 {colVisible("departamento") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500`}
                   >
                     <div className="flex items-center gap-1">
                       <button
@@ -459,7 +459,7 @@ export default function EntradasSalidasTable({
                 {colVisible("fecha_entrada") && (
                   <TableHead
                     onClick={() => handleSort("fechaEntrada")}
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center cursor-pointer select-none`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center cursor-pointer select-none`}
                   >
                     <div className="flex items-center justify-center">
                       Fecha de entrada
@@ -470,7 +470,7 @@ export default function EntradasSalidasTable({
                 {colVisible("hora_entrada") && (
                   <TableHead
                     onClick={() => handleSort("horaEntrada")}
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center cursor-pointer select-none`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center cursor-pointer select-none`}
                   >
                     <div className="flex items-center justify-center">
                       Hora entrada
@@ -481,7 +481,7 @@ export default function EntradasSalidasTable({
                 {colVisible("hora_salida") && (
                   <TableHead
                     onClick={() => handleSort("horaSalida")}
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center cursor-pointer select-none`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center cursor-pointer select-none`}
                   >
                     <div className="flex items-center justify-center">
                       Hora salida
@@ -491,14 +491,14 @@ export default function EntradasSalidasTable({
                 )}
                 {colVisible("entrada_corregida") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
                     Entrada corregida
                   </TableHead>
                 )}
                 {colVisible("salida_corregida") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
                     Salida corregida
                   </TableHead>
@@ -506,7 +506,7 @@ export default function EntradasSalidasTable({
                 {colVisible("hrs_registro") && (
                   <TableHead
                     onClick={() => handleSort("horasRegistro")}
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center cursor-pointer select-none`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center cursor-pointer select-none`}
                   >
                     <div className="flex items-center justify-center">
                       Hrs registro
@@ -516,7 +516,7 @@ export default function EntradasSalidasTable({
                 )}
                 {colVisible("estado") && (
                   <TableHead
-                    className={`${TH_STICKY} font-semibold text-gray-700 uppercase text-xs text-center`}
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
                     <HeaderMultiFilter
                       selected={estadoSeleccionado}
@@ -526,7 +526,7 @@ export default function EntradasSalidasTable({
                     />
                   </TableHead>
                 )}
-                <TableHead className="sticky right-0 top-0 bg-gray-50 z-20 text-center font-semibold text-gray-700 uppercase text-xs">
+                <TableHead className="sticky right-0 top-0 z-20 bg-slate-50/95 text-center text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                   Acciones
                 </TableHead>
               </TableRow>
@@ -536,7 +536,7 @@ export default function EntradasSalidasTable({
                 <TableRow>
                   <TableCell
                     colSpan={visibleColumnCount}
-                    className="text-center py-10 text-gray-500"
+                    className="py-10 text-center text-[13px] text-slate-400"
                   >
                     No hay registros para los filtros seleccionados.
                   </TableCell>
@@ -548,7 +548,7 @@ export default function EntradasSalidasTable({
                     <Fragment key={groupName}>
                       <TableRow
                         onClick={() => toggleGroup(groupName)}
-                        className="bg-[#f4f7fd] hover:bg-[#f4f7fd] cursor-pointer select-none border-b border-gray-100"
+                        className="cursor-pointer select-none border-b border-slate-100 bg-slate-50/60 hover:bg-slate-100/70"
                       >
                         <TableCell
                           colSpan={visibleColumnCount}
@@ -556,14 +556,14 @@ export default function EntradasSalidasTable({
                         >
                           <div className="flex items-center gap-2">
                             <ChevronDown
-                              className={`h-4 w-4 shrink-0 text-gray-500 transition-transform duration-200 ${
+                              className={`h-4 w-4 shrink-0 text-slate-500 transition-transform duration-200 ${
                                 isCollapsed ? "-rotate-90" : ""
                               }`}
                             />
-                            <span className="font-semibold text-[13px] text-gray-900">
+                            <span className="font-semibold text-[13px] text-slate-900">
                               {groupName}
                             </span>
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-slate-500">
                               · {rows.length} registro
                               {rows.length === 1 ? "" : "s"}
                             </span>

@@ -358,28 +358,28 @@ const FacialRecognitionPanel = ({
   return (
     <div
       className="
-  p-0 
-  bg-transparent 
-  rounded-none 
+  p-0
+  bg-transparent
+  rounded-none
   shadow-none
-  md:p-4 
-  md:bg-white 
-  md:rounded-2xl 
-  md:shadow-xl 
+  md:p-4
+  md:bg-white
+  md:rounded-2xl
+  md:shadow-xl
   space-y-4
 "
     >
       {!isOpen ? (
-        <div className="flex flex-col items-center justify-center py-16 px-4 border-2 border-dashed border-gray-300 rounded-xl bg-gray-50">
+        <div className="flex flex-col items-center justify-center py-16 px-4 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
           <div className="bg-blue-100 rounded-full p-6 mb-4">
             <Camera className="h-12 w-12 text-blue-600" />
           </div>
 
-          <h3 className="text-xl font-semibold mb-2 text-gray-800">
+          <h3 className="mb-2 text-xl font-semibold text-slate-900">
             Cámara apagada
           </h3>
 
-          <p className="text-gray-600 text-center mb-6 max-w-md">
+          <p className="mb-6 max-w-md text-center text-slate-600">
             Para iniciar el reconocimiento facial presiona el botón de encender
             cámara y colócate frente a la misma para registrar entrada o salida
           </p>
@@ -389,7 +389,7 @@ const FacialRecognitionPanel = ({
               cleanupAll();
               onOpen();
             }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition"
+            className="rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700"
           >
             Encender cámara
           </Button>
@@ -397,7 +397,7 @@ const FacialRecognitionPanel = ({
       ) : (
         <>
           <div className="hidden md:flex justify-between items-center px-4 bg-white z-10">
-            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900">
               <Camera className="w-5 h-5" />
               Reconocimiento Facial
             </h2>
@@ -409,7 +409,7 @@ const FacialRecognitionPanel = ({
                   )
                 }
                 variant="outline"
-                className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                className="border-slate-200 text-slate-700 hover:bg-slate-50"
               >
                 Cambiar cámara
               </Button>

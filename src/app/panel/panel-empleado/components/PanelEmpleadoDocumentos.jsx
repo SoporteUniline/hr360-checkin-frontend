@@ -95,7 +95,7 @@ const ESTATUS_BADGE = {
   },
   NO_VENCE: {
     label: "Sin venc.",
-    cls: "bg-gray-50 text-gray-600 border-gray-200",
+    cls: "bg-slate-50 text-slate-600 border-slate-200",
   },
   POR_VENCER: {
     label: "Por vencer",
@@ -291,17 +291,17 @@ export default function PanelEmpleadoDocumentos({
       )}
 
       {/* ── Header del módulo ── */}
-      <div className="bg-white border border-gray-200 rounded-[10px] p-3 sm:p-4">
+      <div className="bg-white border border-slate-200 rounded-[10px] p-3 sm:p-4">
         {/* Título + botones siempre en la misma fila */}
         <div className="flex items-center gap-2.5">
           <div className="bg-gradient-to-br from-brand to-brand-accent p-2 rounded-lg flex-shrink-0">
             <FolderOpen className="w-4 h-4 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-[12.5px] font-bold text-gray-900 leading-tight">
+            <h3 className="text-[12.5px] font-bold text-slate-900 leading-tight">
               Expediente digital
             </h3>
-            <p className="text-[11px] text-gray-400 hidden sm:block">
+            <p className="text-[11px] text-slate-400 hidden sm:block">
               Documentos del empleado
             </p>
           </div>
@@ -321,7 +321,7 @@ export default function PanelEmpleadoDocumentos({
               type="button"
               size="sm"
               onClick={() => setModalSubir(true)}
-              className="h-8 w-8 sm:w-auto sm:px-3 p-0 sm:gap-1.5 bg-[#2563EB] hover:bg-[#1d4ed8] text-white"
+              className="h-8 w-8 sm:w-auto sm:px-3 p-0 sm:gap-1.5 bg-blue-600 hover:bg-blue-700 text-white"
             >
               <Plus className="w-3.5 h-3.5" />
               <span className="hidden sm:inline text-xs">Cargar</span>
@@ -342,12 +342,12 @@ export default function PanelEmpleadoDocumentos({
               ].map(({ label, value }) => (
                 <div
                   key={label}
-                  className="min-w-[72px] sm:min-w-0 flex-shrink-0 bg-white rounded-[10px] border border-gray-200 px-2 py-2"
+                  className="min-w-[72px] sm:min-w-0 flex-shrink-0 bg-white rounded-[10px] border border-slate-200 px-2 py-2"
                 >
-                  <div className="text-[10.5px] text-gray-500 uppercase font-semibold tracking-wide leading-tight truncate">
+                  <div className="text-[10.5px] text-slate-500 uppercase font-semibold tracking-wide leading-tight truncate">
                     {label}
                   </div>
-                  <div className="text-lg font-extrabold tabular-nums text-gray-900 leading-tight">
+                  <div className="text-lg font-extrabold tabular-nums text-slate-900 leading-tight">
                     {value}
                   </div>
                 </div>
@@ -359,13 +359,13 @@ export default function PanelEmpleadoDocumentos({
         {/* ── Barra de completitud ── */}
         {stats && stats.obligatorios > 0 && (
           <div className="mt-3">
-            <div className="flex justify-between text-xs text-gray-500 mb-1">
+            <div className="flex justify-between text-xs text-slate-500 mb-1">
               <span>Completitud</span>
-              <span className="font-semibold text-gray-700">
+              <span className="font-semibold text-slate-700">
                 {stats.completitud_pct}%
               </span>
             </div>
-            <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+            <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
               <div
                 className="h-full rounded-full bg-gradient-to-r from-brand to-brand-accent transition-all"
                 style={{ width: `${stats.completitud_pct}%` }}
@@ -404,8 +404,8 @@ export default function PanelEmpleadoDocumentos({
             className={cn(
               "px-3 py-1 rounded-full text-xs font-medium border transition-colors whitespace-nowrap",
               tabFiltro === "todos"
-                ? "bg-[#2563EB] text-white border-[#2563EB]"
-                : "border-gray-200 text-gray-600 hover:border-[#2563EB] hover:text-[#2563EB]",
+                ? "bg-blue-600 text-white border-[#2563EB]"
+                : "border-slate-200 text-slate-600 hover:border-[#2563EB] hover:text-blue-600",
             )}
           >
             Todos ({documentos.length})
@@ -438,7 +438,7 @@ export default function PanelEmpleadoDocumentos({
                   "px-3 py-1 rounded-full text-xs font-medium border transition-colors whitespace-nowrap",
                   tabFiltro === String(cat.id)
                     ? "text-white border-transparent"
-                    : "border-gray-200 text-gray-600 hover:opacity-80",
+                    : "border-slate-200 text-slate-600 hover:opacity-80",
                 )}
                 style={
                   tabFiltro === String(cat.id)
@@ -457,7 +457,7 @@ export default function PanelEmpleadoDocumentos({
       <div className="flex flex-col gap-2">
         {/* Búsqueda (fila completa siempre) */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <Input
             placeholder="Buscar documento..."
             value={busqueda}
@@ -493,19 +493,19 @@ export default function PanelEmpleadoDocumentos({
       </div>
 
       {/* ── Lista de documentos ── */}
-      <div className="bg-white border border-gray-200 rounded-[10px] overflow-hidden">
+      <div className="bg-white border border-slate-200 rounded-[10px] overflow-hidden">
         <div className="p-0">
           {cargando ? (
             <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-6 h-6 animate-spin text-[#2563EB]" />
+              <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
             </div>
           ) : documentosFiltrados.length === 0 ? (
             <div className="text-center py-16">
               <FolderOpen className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-              <p className="text-sm font-medium text-gray-500">
+              <p className="text-sm font-medium text-slate-500">
                 No hay documentos
               </p>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-slate-400 mt-1">
                 {busqueda || estatusFiltro !== "TODOS" || tabFiltro !== "todos"
                   ? "Prueba con otros filtros"
                   : 'Sube el primer documento con el botón "Cargar"'}
@@ -529,7 +529,7 @@ export default function PanelEmpleadoDocumentos({
                     {/* Fila 1: icono + nombre + botones */}
                     <div className="flex items-center gap-2">
                       <ArchivoIcono mimetype={doc.archivo_mime} />
-                      <p className="flex-1 min-w-0 font-semibold text-sm text-gray-900 truncate">
+                      <p className="flex-1 min-w-0 font-semibold text-sm text-slate-900 truncate">
                         {doc.nombre_documento}
                         {doc.obligatorio && (
                           <Shield
@@ -543,7 +543,7 @@ export default function PanelEmpleadoDocumentos({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="w-9 h-9 text-gray-400 active:text-[#2563EB]"
+                          className="w-9 h-9 text-slate-400 active:text-blue-600"
                           onClick={() => verDocumento(doc)}
                         >
                           <ExternalLink className="w-4 h-4" />
@@ -552,7 +552,7 @@ export default function PanelEmpleadoDocumentos({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="w-9 h-9 text-gray-400 active:text-gray-700"
+                          className="w-9 h-9 text-slate-400 active:text-slate-700"
                           onClick={() => verBitacora(doc)}
                         >
                           <History className="w-4 h-4" />
@@ -561,7 +561,7 @@ export default function PanelEmpleadoDocumentos({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="w-9 h-9 text-gray-400 active:text-red-500"
+                          className="w-9 h-9 text-slate-400 active:text-red-500"
                           onClick={() => setDocAEliminar(doc)}
                         >
                           <Trash2 className="w-4 h-4" />
@@ -587,11 +587,11 @@ export default function PanelEmpleadoDocumentos({
                       >
                         {ESTATUS_BADGE[doc.estatus]?.label}
                       </span>
-                      <span className="text-[11px] text-gray-400">
+                      <span className="text-[11px] text-slate-400">
                         Cargado {dayjs(doc.created_at).format("DD/MM/YY")}
                       </span>
                       {doc.vence && doc.fecha_vencimiento && (
-                        <span className="text-[11px] text-gray-400">
+                        <span className="text-[11px] text-slate-400">
                           · Vence{" "}
                           {dayjs(doc.fecha_vencimiento).format("DD/MM/YY")}
                         </span>
@@ -605,7 +605,7 @@ export default function PanelEmpleadoDocumentos({
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-gray-100 bg-gray-50">
+                    <tr className="border-b border-slate-100 bg-slate-50">
                       {[
                         "Documento",
                         "Categoría",
@@ -617,7 +617,7 @@ export default function PanelEmpleadoDocumentos({
                       ].map((col) => (
                         <th
                           key={col}
-                          className="px-3 py-2.5 text-left text-[10px] font-bold text-gray-500 uppercase tracking-wide whitespace-nowrap"
+                          className="px-3 py-2.5 text-left text-[10px] font-bold text-slate-500 uppercase tracking-wide whitespace-nowrap"
                         >
                           {col}
                         </th>
@@ -634,7 +634,7 @@ export default function PanelEmpleadoDocumentos({
                           doc.estatus === "POR_VENCER" && "bg-yellow-50/50",
                         )}
                       >
-                        <td className="px-3 py-2.5 font-medium text-gray-900 max-w-[180px] truncate">
+                        <td className="px-3 py-2.5 font-medium text-slate-900 max-w-[180px] truncate">
                           {doc.nombre_documento}
                           {doc.obligatorio && (
                             <Shield
@@ -657,19 +657,19 @@ export default function PanelEmpleadoDocumentos({
                         <td className="px-3 py-2.5">
                           <div className="flex items-center gap-1.5">
                             <ArchivoIcono mimetype={doc.archivo_mime} />
-                            <span className="text-xs text-gray-500 truncate max-w-[100px]">
+                            <span className="text-xs text-slate-500 truncate max-w-[100px]">
                               {doc.archivo_nombre_original || "archivo"}
                             </span>
                           </div>
                         </td>
-                        <td className="px-3 py-2.5 text-xs text-gray-500 whitespace-nowrap">
+                        <td className="px-3 py-2.5 text-xs text-slate-500 whitespace-nowrap">
                           {dayjs(doc.created_at).format("DD/MM/YY")}
                         </td>
                         <td className="px-3 py-2.5 text-xs whitespace-nowrap">
                           {doc.vence && doc.fecha_vencimiento ? (
                             dayjs(doc.fecha_vencimiento).format("DD/MM/YYYY")
                           ) : (
-                            <span className="text-gray-400">—</span>
+                            <span className="text-slate-400">—</span>
                           )}
                         </td>
                         <td className="px-3 py-2.5">
@@ -688,7 +688,7 @@ export default function PanelEmpleadoDocumentos({
                               type="button"
                               variant="ghost"
                               size="icon"
-                              className="w-7 h-7 text-gray-400 hover:text-[#2563EB]"
+                              className="w-7 h-7 text-slate-400 hover:text-blue-600"
                               title="Ver documento"
                               onClick={() => verDocumento(doc)}
                             >
@@ -698,7 +698,7 @@ export default function PanelEmpleadoDocumentos({
                               type="button"
                               variant="ghost"
                               size="icon"
-                              className="w-7 h-7 text-gray-400 hover:text-gray-700"
+                              className="w-7 h-7 text-slate-400 hover:text-slate-700"
                               title="Bitácora"
                               onClick={() => verBitacora(doc)}
                             >
@@ -708,7 +708,7 @@ export default function PanelEmpleadoDocumentos({
                               type="button"
                               variant="ghost"
                               size="icon"
-                              className="w-7 h-7 text-gray-400 hover:text-red-500"
+                              className="w-7 h-7 text-slate-400 hover:text-red-500"
                               title="Eliminar"
                               onClick={() => setDocAEliminar(doc)}
                             >
@@ -768,7 +768,7 @@ export default function PanelEmpleadoDocumentos({
           </DialogHeader>
           <div className="max-h-72 sm:max-h-80 overflow-y-auto space-y-2 text-sm">
             {bitacoraData === null ? (
-              <p className="text-gray-400 text-center py-8 animate-pulse">
+              <p className="text-slate-400 text-center py-8 animate-pulse">
                 Cargando...
               </p>
             ) : bitacoraData === false ? (
@@ -776,7 +776,7 @@ export default function PanelEmpleadoDocumentos({
                 <p className="text-red-500 text-xs font-medium">
                   Error al cargar la bitácora
                 </p>
-                <p className="text-gray-400 text-xs mt-1">
+                <p className="text-slate-400 text-xs mt-1">
                   Revisa la consola del backend
                 </p>
                 <button
@@ -788,7 +788,7 @@ export default function PanelEmpleadoDocumentos({
                 </button>
               </div>
             ) : bitacoraData.length === 0 ? (
-              <p className="text-gray-400 text-center py-8">Sin registros</p>
+              <p className="text-slate-400 text-center py-8">Sin registros</p>
             ) : (
               bitacoraData.map((b) => (
                 <div
@@ -801,7 +801,7 @@ export default function PanelEmpleadoDocumentos({
                       b.accion === "CARGADO" && "bg-blue-100 text-blue-700",
                       b.accion === "ELIMINADO" && "bg-red-100 text-red-700",
                       b.accion === "EDITADO" && "bg-yellow-100 text-yellow-700",
-                      b.accion === "VISUALIZADO" && "bg-gray-100 text-gray-600",
+                      b.accion === "VISUALIZADO" && "bg-slate-100 text-slate-600",
                       b.accion === "DESCARGADO" &&
                         "bg-green-100 text-green-700",
                     )}
@@ -809,8 +809,8 @@ export default function PanelEmpleadoDocumentos({
                     {b.accion}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs text-gray-700">{b.detalle || "—"}</p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">
+                    <p className="text-xs text-slate-700">{b.detalle || "—"}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">
                       {b.usuario_nombre || "Sistema"} ·{" "}
                       {dayjs(b.created_at).format("DD/MM/YY HH:mm")}
                     </p>
@@ -998,7 +998,7 @@ function ModalSubirDocumento({
     >
       <DialogContent className="w-[calc(100vw-1rem)] sm:max-w-lg max-h-[92dvh] flex flex-col p-0 gap-0">
         {/* Cabecera fija */}
-        <DialogHeader className="px-4 pt-4 pb-3 border-b border-gray-100 flex-shrink-0">
+        <DialogHeader className="px-4 pt-4 pb-3 border-b border-slate-100 flex-shrink-0">
           <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
             <UploadCloud className="w-4 h-4 flex-shrink-0" /> Cargar documento
           </DialogTitle>
@@ -1037,17 +1037,17 @@ function ModalSubirDocumento({
                 "border border-dashed rounded-[10px] p-4 text-center cursor-pointer transition-all",
                 isDragActive
                   ? "border-brand bg-blue-50"
-                  : "border-gray-300 hover:border-brand hover:bg-blue-50/30",
+                  : "border-slate-300 hover:border-brand hover:bg-blue-50/30",
               )}
             >
               <input {...getInputProps()} />
-              <UploadCloud className="w-7 h-7 mx-auto mb-1.5 text-gray-400" />
-              <p className="text-sm text-gray-600 font-medium">
+              <UploadCloud className="w-7 h-7 mx-auto mb-1.5 text-slate-400" />
+              <p className="text-sm text-slate-600 font-medium">
                 {isDragActive
                   ? "Suelta el archivo aquí"
                   : "Toca para seleccionar archivo"}
               </p>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="text-xs text-slate-400 mt-1">
                 PDF, JPG, PNG, WEBP, DOC, DOCX · máx. 10 MB
               </p>
             </div>
@@ -1056,7 +1056,7 @@ function ModalSubirDocumento({
               <ArchivoIcono mimetype={archivo.type} size="lg" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold truncate">{archivo.name}</p>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-slate-400">
                   {formatTamano(archivo.size)}
                 </p>
               </div>
@@ -1073,7 +1073,7 @@ function ModalSubirDocumento({
 
           {/* Categoría */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold uppercase text-gray-600">
+            <Label className="text-xs font-semibold uppercase text-slate-600">
               Categoría <span className="text-red-500">*</span>
             </Label>
             <Select
@@ -1104,7 +1104,7 @@ function ModalSubirDocumento({
 
           {/* Nombre */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold uppercase text-gray-600">
+            <Label className="text-xs font-semibold uppercase text-slate-600">
               Nombre del documento <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -1130,7 +1130,7 @@ function ModalSubirDocumento({
           {tieneVencimiento && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold uppercase text-gray-600">
+                <Label className="text-xs font-semibold uppercase text-slate-600">
                   Fecha vencimiento <span className="text-red-500">*</span>
                 </Label>
                 <Input
@@ -1140,7 +1140,7 @@ function ModalSubirDocumento({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold uppercase text-gray-600">
+                <Label className="text-xs font-semibold uppercase text-slate-600">
                   Fecha emisión
                 </Label>
                 <Input
@@ -1154,7 +1154,7 @@ function ModalSubirDocumento({
 
           {/* Notas */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold uppercase text-gray-600">
+            <Label className="text-xs font-semibold uppercase text-slate-600">
               Notas
             </Label>
             <Textarea
@@ -1169,19 +1169,19 @@ function ModalSubirDocumento({
           {/* Progreso de subida */}
           {subiendo && (
             <div className="space-y-1">
-              <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+              <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
                 <div
                   className="h-full rounded-full bg-gradient-to-r from-brand to-brand-accent transition-all"
                   style={{ width: `${progreso}%` }}
                 />
               </div>
-              <p className="text-xs text-right text-gray-500">{progreso}%</p>
+              <p className="text-xs text-right text-slate-500">{progreso}%</p>
             </div>
           )}
         </div>
 
         {/* Footer fijo al fondo del modal */}
-        <div className="flex-shrink-0 border-t border-gray-100 px-4 py-3 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+        <div className="flex-shrink-0 border-t border-slate-100 px-4 py-3 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
           <Button
             type="button"
             variant="outline"
@@ -1198,7 +1198,7 @@ function ModalSubirDocumento({
             type="button"
             onClick={handleSubir}
             disabled={subiendo || !archivo}
-            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white w-full sm:w-auto"
+            className="bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto"
           >
             {subiendo ? (
               <>
@@ -1291,13 +1291,13 @@ function ModalCategorias({ open, onClose, idEmpresa, onSuccess, onError }) {
         <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
           {cargando ? (
             <div className="flex justify-center py-6">
-              <Loader2 className="w-5 h-5 animate-spin text-[#2563EB]" />
+              <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
             </div>
           ) : (
             categorias.map((cat) => (
               <div
                 key={cat.id}
-                className="flex items-center gap-3 p-2.5 rounded-lg border border-gray-100 bg-gray-50"
+                className="flex items-center gap-3 p-2.5 rounded-lg border border-slate-100 bg-slate-50"
               >
                 <span
                   className="w-3 h-3 rounded-full flex-shrink-0"
@@ -1308,7 +1308,7 @@ function ModalCategorias({ open, onClose, idEmpresa, onSuccess, onError }) {
                     {cat.nombre}
                   </span>
                   {cat.es_sistema && (
-                    <span className="text-[10px] text-gray-400">
+                    <span className="text-[10px] text-slate-400">
                       Sistema (no eliminable)
                     </span>
                   )}
@@ -1321,7 +1321,7 @@ function ModalCategorias({ open, onClose, idEmpresa, onSuccess, onError }) {
                       "text-xs px-2 py-0.5 rounded-full font-medium transition-colors",
                       cat.activo
                         ? "bg-green-100 text-green-700 hover:bg-green-200"
-                        : "bg-gray-100 text-gray-500 hover:bg-gray-200",
+                        : "bg-slate-100 text-slate-500 hover:bg-gray-200",
                     )}
                   >
                     {cat.activo ? "Activa" : "Inactiva"}
@@ -1331,7 +1331,7 @@ function ModalCategorias({ open, onClose, idEmpresa, onSuccess, onError }) {
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="w-6 h-6 text-gray-400 hover:text-red-500"
+                      className="w-6 h-6 text-slate-400 hover:text-red-500"
                       onClick={() => handleEliminar(cat)}
                     >
                       <X className="w-3 h-3" />
@@ -1344,8 +1344,8 @@ function ModalCategorias({ open, onClose, idEmpresa, onSuccess, onError }) {
         </div>
 
         {/* Formulario nueva categoría */}
-        <div className="border-t border-gray-100 pt-4 space-y-3">
-          <p className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+        <div className="border-t border-slate-100 pt-4 space-y-3">
+          <p className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
             <Plus className="w-4 h-4" /> Nueva categoría
           </p>
           <div className="flex gap-2">
@@ -1363,7 +1363,7 @@ function ModalCategorias({ open, onClose, idEmpresa, onSuccess, onError }) {
                 type="color"
                 value={nueva.color}
                 onChange={(e) => setNueva({ ...nueva, color: e.target.value })}
-                className="w-12 h-9 rounded-md cursor-pointer border border-gray-200 p-0.5"
+                className="w-12 h-9 rounded-md cursor-pointer border border-slate-200 p-0.5"
               />
             </div>
           </div>
@@ -1379,7 +1379,7 @@ function ModalCategorias({ open, onClose, idEmpresa, onSuccess, onError }) {
             onClick={handleCrear}
             disabled={creando}
             size="sm"
-            className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white w-full"
+            className="bg-blue-600 hover:bg-blue-700 text-white w-full"
           >
             {creando ? (
               <Loader2 className="w-4 h-4 animate-spin mr-1" />

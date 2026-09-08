@@ -63,7 +63,7 @@ export default function EmployeeInput({
                   });
               }
             }}
-            className="w-full pl-12 pr-4 h-full text-center text-lg font-bold border-2 border-slate-200 rounded-2xl focus-visible:ring-0 focus-visible:border-slate-600 bg-slate-50/50 transition-all"
+            className="w-full pl-12 pr-4 h-full text-center text-lg font-bold border-2 border-slate-200 rounded-2xl focus-visible:ring-0 focus-visible:border-blue-500 bg-slate-50/50 transition-all"
           />
         </div>
 
@@ -85,7 +85,7 @@ export default function EmployeeInput({
           <Button
             key={num}
             onClick={() => handleDigit(num.toString())}
-            className="py-6 text-2xl font-bold rounded-2xl text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 shadow-sm"
+            className="py-6 text-2xl font-bold rounded-2xl text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 shadow-sm"
           >
             {num}
           </Button>
@@ -94,7 +94,7 @@ export default function EmployeeInput({
         <Button
           onClick={handleClear}
           variant="outline"
-          className="py-6 text-md font-bold rounded-2xl border-gray-300 text-gray-700 hover:bg-gray-100 flex justify-center items-center space-x-2"
+          className="py-6 text-md font-bold rounded-2xl border-slate-300 text-slate-700 hover:bg-slate-100 flex justify-center items-center space-x-2"
         >
           <Eraser className="w-5 h-5 mr-2" />
           <span>Limpiar</span>
@@ -102,7 +102,7 @@ export default function EmployeeInput({
 
         <Button
           onClick={() => handleDigit("0")}
-          className="py-6 text-2xl font-bold rounded-2xl text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 shadow-sm"
+          className="py-6 text-2xl font-bold rounded-2xl text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 shadow-sm"
         >
           0
         </Button>
@@ -118,7 +118,7 @@ export default function EmployeeInput({
       <Button
         onClick={() => handleRegistrar()}
         disabled={registrando || !codigo.trim()}
-        className="w-full py-4 bg-[#2563EB] hover:bg-[#1d4ed8] text-white font-bold text-lg rounded-2xl shadow-md disabled:opacity-50"
+        className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg rounded-2xl shadow-md disabled:opacity-50"
       >
         {registrando ? (
           <div className="flex items-center justify-center space-x-2">

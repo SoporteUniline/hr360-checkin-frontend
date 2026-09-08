@@ -177,7 +177,7 @@ export default function RegistroEntradasSalidas() {
 
   return (
     <div className="space-y-5">
-      {/* Encabezado compacto homologado Adamia */}
+
       <div>
         <EncabezadoPagina
           icono={ClockArrowUp}
@@ -219,7 +219,7 @@ export default function RegistroEntradasSalidas() {
         )}
       </div>
 
-      {/* Fila de filtros homologada */}
+
       <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
         <FiltrosGrid columnas={5}>
           <CampoFiltro etiqueta="Empleado">

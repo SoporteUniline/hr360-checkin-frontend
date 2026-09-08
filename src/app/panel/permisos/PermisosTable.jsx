@@ -42,6 +42,7 @@ export default function PermisosTable({
   onAprobar,
   onRechazar,
   festivosSet = new Set(),
+  footer,
 }) {
   const [unidadSeleccionada, setUnidadSeleccionada] = useState([]);
   const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState([]);
@@ -179,8 +180,8 @@ export default function PermisosTable({
   }
 
   return (
-    <Card className="overflow-hidden border-gray-100">
-      <CardHeader className="border-b border-gray-100 bg-white pb-4">
+    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-slate-100 bg-white px-4 py-3">
         <div className="flex justify-end">
           <Button
             onClick={onCreate}
@@ -189,7 +190,7 @@ export default function PermisosTable({
             <Plus className="h-4 w-4 mr-2" /> Nuevo permiso
           </Button>
         </div>
-      </CardHeader>
+      </div>
       <ActiveFilterChips
         groups={[
           {
@@ -219,15 +220,15 @@ export default function PermisosTable({
         ]}
         onClearAll={clearAllHeaderFilters}
       />
-      <CardContent className="p-0">
+      <div className="p-0">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="bg-gray-50">
-                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
+              <TableRow className="bg-slate-50/80 [&_th]:text-[10px] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-[0.05em] [&_th]:text-slate-500 [&_button]:text-[10px] [&_button]:font-semibold [&_button]:uppercase [&_button]:tracking-[0.05em]">
+                <TableHead className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                   #
                 </TableHead>
-                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
+                <TableHead className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                   <HeaderMultiFilter
                     selected={unidadSeleccionada}
                     onChange={setUnidadSeleccionada}
@@ -235,7 +236,7 @@ export default function PermisosTable({
                     placeholder="Unidad de negocio"
                   />
                 </TableHead>
-                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
+                <TableHead className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                   <HeaderMultiFilter
                     selected={empleadoSeleccionado}
                     onChange={setEmpleadoSeleccionado}
@@ -243,7 +244,7 @@ export default function PermisosTable({
                     placeholder="Empleado"
                   />
                 </TableHead>
-                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
+                <TableHead className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                   <HeaderMultiFilter
                     selected={tipoSeleccionado}
                     onChange={setTipoSeleccionado}
@@ -251,19 +252,19 @@ export default function PermisosTable({
                     placeholder="Tipo"
                   />
                 </TableHead>
-                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
+                <TableHead className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                   Fecha inicio
                 </TableHead>
-                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
+                <TableHead className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                   Fecha fin
                 </TableHead>
-                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
+                <TableHead className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                   Días totales
                 </TableHead>
-                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
+                <TableHead className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                   Días hábiles
                 </TableHead>
-                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
+                <TableHead className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                   <HeaderMultiFilter
                     selected={estadoSeleccionado}
                     onChange={setEstadoSeleccionado}
@@ -271,10 +272,10 @@ export default function PermisosTable({
                     placeholder="Estado"
                   />
                 </TableHead>
-                <TableHead className="whitespace-nowrap text-xs font-semibold uppercase text-gray-600">
+                <TableHead className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                   Solicitado
                 </TableHead>
-                <TableHead className="whitespace-nowrap text-right text-xs font-semibold uppercase text-gray-600">
+                <TableHead className="sticky right-0 z-20 whitespace-nowrap bg-slate-50/95 text-right text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                   Acciones
                 </TableHead>
               </TableRow>
@@ -371,14 +372,14 @@ export default function PermisosTable({
                         ? formatDateDMY(dayjs(row.marca_tiempo))
                         : "-"}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
+                    <TableCell className="sticky right-0 z-10 bg-white text-right">
+                      <div className="flex justify-end gap-1">
                         {row.estado === "Pendiente" && (
                           <>
                             <Button
                               size="icon"
                               variant="outline"
-                              className="h-8 w-8 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                              className="h-8 w-8 rounded-lg border-transparent bg-transparent text-slate-400 shadow-none hover:bg-emerald-50 hover:text-emerald-600"
                               title="Aprobar"
                               onClick={() => onAprobar?.(row)}
                             >
@@ -387,7 +388,7 @@ export default function PermisosTable({
                             <Button
                               size="icon"
                               variant="outline"
-                              className="h-8 w-8 border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                              className="h-8 w-8 rounded-lg border-transparent bg-transparent text-slate-400 shadow-none hover:bg-rose-50 hover:text-rose-600"
                               title="Rechazar"
                               onClick={() => onRechazar?.(row)}
                             >
@@ -398,7 +399,7 @@ export default function PermisosTable({
                         <Button
                           size="icon"
                           variant="outline"
-                          className="h-8 w-8 border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                          className="h-8 w-8 rounded-lg border-transparent bg-transparent text-slate-400 shadow-none hover:bg-blue-50 hover:text-blue-600"
                           title="Editar"
                           onClick={() => onEdit?.(row)}
                         >
@@ -407,7 +408,7 @@ export default function PermisosTable({
                         <Button
                           size="icon"
                           variant="outline"
-                          className="h-8 w-8 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                          className="h-8 w-8 rounded-lg border-transparent bg-transparent text-slate-400 shadow-none hover:bg-emerald-50 hover:text-emerald-600"
                           title="Ver"
                           onClick={() => onView?.(row)}
                         >
@@ -416,7 +417,7 @@ export default function PermisosTable({
                         <Button
                           size="icon"
                           variant="outline"
-                          className="h-8 w-8 border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                          className="h-8 w-8 rounded-lg border-transparent bg-transparent text-slate-400 shadow-none hover:bg-rose-50 hover:text-rose-600"
                           title="Eliminar"
                           onClick={() => onDelete?.(row)}
                         >
@@ -440,7 +441,8 @@ export default function PermisosTable({
             </TableBody>
           </Table>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    {footer}
+    </div>
   );
 }

@@ -51,26 +51,28 @@ export default function TablePagination({
     // - flex-col en móviles para apilar información, selector y navegación.
     // - sm:flex-row para mantener el layout horizontal en pantallas medianas+.
     // - gap para espaciar elementos cuando se apilan.
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 py-2">
-      <div className="text-sm text-muted-foreground sm:flex-1 text-center sm:text-left">
-        Página <span className="font-medium">{page}</span> de{" "}
-        <span className="font-medium">{totalPages}</span> — {total} registros
+    <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+      <div className="text-center text-xs text-slate-500 sm:flex-1 sm:text-left">
+        Página <span className="font-semibold text-slate-700">{page}</span> de{" "}
+        <span className="font-semibold text-slate-700">{totalPages}</span>
+        <span className="mx-1.5 text-slate-300">·</span>
+        <span>{total} registros</span>
       </div>
 
-      <div className="flex items-center gap-4 flex-wrap justify-center sm:justify-end">
+      <div className="flex flex-wrap items-center justify-center gap-3 sm:justify-end">
         {/* Mostrar selector solo si onLimitChange fue proporcionado */}
         {showLimitSelector && (
           <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Mostrar:</span>
+            <span className="text-xs text-slate-400">Mostrar</span>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex items-center gap-1"
+                  className="h-8 gap-1 rounded-lg border-slate-200 px-2.5 text-xs font-semibold text-slate-600 shadow-none"
                 >
                   {limit === 1000000 ? "Todos" : limit}
-                  <ChevronDown className="w-4 h-4" />
+                  <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -101,10 +103,10 @@ export default function TablePagination({
               <Button
                 size="sm"
                 variant="ghost"
-                className={page === 1 ? "pointer-events-none opacity-50" : ""}
+                className={`h-8 rounded-lg px-2 text-xs text-slate-500 hover:bg-slate-50 hover:text-slate-900 ${page === 1 ? "pointer-events-none opacity-40" : ""}`}
                 onClick={handlePrevious}
               >
-                <ChevronLeft className="w-4 h-4 mr-1" />
+                <ChevronLeft className="mr-1 h-3.5 w-3.5" />
                 Anterior
               </Button>
             </PaginationItem>
@@ -112,13 +114,11 @@ export default function TablePagination({
               <Button
                 size="sm"
                 variant="ghost"
-                className={
-                  page === totalPages ? "pointer-events-none opacity-50" : ""
-                }
+                className={`h-8 rounded-lg px-2 text-xs text-slate-500 hover:bg-slate-50 hover:text-slate-900 ${page === totalPages ? "pointer-events-none opacity-40" : ""}`}
                 onClick={handleNext}
               >
                 Siguiente
-                <ChevronRight className="w-4 h-4 ml-1" />
+                <ChevronRight className="ml-1 h-3.5 w-3.5" />
               </Button>
             </PaginationItem>
           </PaginationContent>

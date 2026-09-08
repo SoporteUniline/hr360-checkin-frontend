@@ -51,7 +51,7 @@ import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 // Estilo homologado de los triggers de tabs (Adamia): texto gris → azul activo,
 // subrayado azul de 2px solo en el tab activo, sin fondos ni sombras.
 const TAB_TRIGGER_CLASS =
-  "rounded-none border-0 border-b-2 border-transparent bg-transparent px-3 py-2.5 text-[12.5px] font-semibold text-gray-500 shadow-none data-[state=active]:border-brand data-[state=active]:bg-transparent data-[state=active]:text-brand data-[state=active]:shadow-none";
+  "rounded-none border-0 border-b-2 border-transparent bg-transparent px-3 py-2.5 text-[12.5px] font-semibold text-slate-500 shadow-none data-[state=active]:border-brand data-[state=active]:bg-transparent data-[state=active]:text-brand data-[state=active]:shadow-none";
 
 /**
  * Página principal del Panel de Empleados
@@ -212,7 +212,7 @@ export default function PanelEmpleadoPage() {
     datosEmpleado?.informacion_general?.id_empleado || empleadoSeleccionado;
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col bg-[#f9fafb]">
+    <div className="flex h-[calc(100vh-4rem)] flex-col bg-slate-50">
       {/* Encabezado estándar Adamia; el hamburger móvil vive en `acciones` */}
       <div className="px-3 pt-3 sm:px-4 sm:pt-4 lg:px-6">
         <EncabezadoPagina
@@ -269,7 +269,7 @@ export default function PanelEmpleadoPage() {
       {/* Layout principal */}
       <div className="mt-3 flex flex-1 overflow-hidden sm:mt-4">
         {/* Directorio desktop - oculto en móvil */}
-        <aside className="hidden w-64 flex-col border-r border-t border-gray-200 bg-white lg:flex">
+        <aside className="hidden w-64 flex-col border-r border-t border-slate-200 bg-white lg:flex">
           <SidebarContent
             empleados={empleados}
             empleadosFiltrados={empleadosFiltrados}
@@ -301,17 +301,17 @@ export default function PanelEmpleadoPage() {
           ) : !datosEmpleado ? (
             <div className="flex h-full flex-col items-center justify-center text-center">
               <Users className="mb-3 h-10 w-10 text-gray-300" />
-              <h3 className="mb-1 text-sm font-bold text-gray-900">
+              <h3 className="mb-1 text-sm font-bold text-slate-900">
                 Selecciona un empleado
               </h3>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-slate-500">
                 Elige un empleado del directorio para ver su expediente completo
               </p>
             </div>
           ) : (
             <>
               {/* Header del empleado */}
-              <div className="mb-4 rounded-[10px] border border-gray-200 bg-white p-4">
+              <div className="mb-4 rounded-[10px] border border-slate-200 bg-white p-4">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                   <div className="flex min-w-0 flex-1 items-center gap-3">
                     {/* Avatar: foto real si existe, si no iniciales */}
@@ -334,10 +334,10 @@ export default function PanelEmpleadoPage() {
                     )}
                     {/* Nombre y meta */}
                     <div className="min-w-0">
-                      <h2 className="truncate text-lg font-extrabold tracking-tight text-gray-900">
+                      <h2 className="truncate text-lg font-extrabold tracking-tight text-slate-900">
                         {datosEmpleado.informacion_general?.nombre_completo}
                       </h2>
-                      <p className="truncate text-[12.5px] text-gray-500">
+                      <p className="truncate text-[12.5px] text-slate-500">
                         {datosEmpleado.informacion_general?.puesto ||
                           "Sin asignar"}{" "}
                         ·{" "}
@@ -349,10 +349,10 @@ export default function PanelEmpleadoPage() {
                   {/* Quick facts */}
                   <div className="flex flex-shrink-0 items-center gap-5 sm:gap-6">
                     <div>
-                      <div className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
+                      <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
                         Núm
                       </div>
-                      <div className="text-[12.5px] font-semibold text-gray-900">
+                      <div className="text-[12.5px] font-semibold text-slate-900">
                         EMP-
                         {String(
                           datosEmpleado.informacion_general?.id_empleado || 0,
@@ -360,17 +360,17 @@ export default function PanelEmpleadoPage() {
                       </div>
                     </div>
                     <div>
-                      <div className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
+                      <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
                         Ingreso
                       </div>
-                      <div className="text-[12.5px] font-semibold text-gray-900">
+                      <div className="text-[12.5px] font-semibold text-slate-900">
                         {formatearFecha(
                           datosEmpleado.informacion_general?.fecha_ingreso,
                         )}
                       </div>
                     </div>
                     <div>
-                      <div className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
+                      <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
                         Estado
                       </div>
                       <EstadoBadge
@@ -396,9 +396,9 @@ export default function PanelEmpleadoPage() {
               </div>
 
               {/* Tabs */}
-              <div className="rounded-[10px] border border-gray-200 bg-white">
+              <div className="rounded-[10px] border border-slate-200 bg-white">
                 <Tabs value={tabActivo} onValueChange={setTabActivo}>
-                  <div className="overflow-x-auto rounded-t-[10px] border-b border-gray-200 bg-white">
+                  <div className="overflow-x-auto rounded-t-[10px] border-b border-slate-200 bg-white">
                     <TabsList className="h-auto min-w-max rounded-none bg-transparent p-0">
                       <TabsTrigger
                         value="general"
@@ -510,12 +510,12 @@ const SidebarContent = ({
 }) => (
   <>
     {/* Header */}
-    <div className="border-b border-gray-200 bg-white px-3 py-3">
+    <div className="border-b border-slate-200 bg-white px-3 py-3">
       <div className="mb-2 flex items-baseline justify-between">
-        <span className="text-[11px] font-bold uppercase tracking-wide text-gray-500">
+        <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">
           Directorio
         </span>
-        <span className="text-[11px] text-gray-400">{empleados.length}</span>
+        <span className="text-[11px] text-slate-400">{empleados.length}</span>
       </div>
 
       <div className="flex flex-col gap-2">
@@ -529,7 +529,7 @@ const SidebarContent = ({
         </div>
 
         <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+          <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
           <Input
             placeholder="Buscar empleado..."
             value={busqueda}
@@ -554,7 +554,7 @@ const SidebarContent = ({
                 closeSidebar?.();
               }}
               className={`relative mb-0.5 cursor-pointer rounded-lg px-2.5 py-2 ${
-                activo ? "bg-[#f0f5ff]" : "hover:bg-gray-50"
+                activo ? "bg-[#f0f5ff]" : "hover:bg-slate-50"
               }`}
             >
               {activo && (
@@ -565,7 +565,7 @@ const SidebarContent = ({
                   className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
                     activo
                       ? "bg-gradient-to-br from-brand to-brand-accent text-white"
-                      : "bg-gray-100 text-gray-600"
+                      : "bg-slate-100 text-slate-600"
                   }`}
                 >
                   {obtenerIniciales(emp.nombre_completo)}
@@ -573,12 +573,12 @@ const SidebarContent = ({
                 <div className="min-w-0">
                   <div
                     className={`truncate text-[12.5px] font-semibold ${
-                      activo ? "text-[#1d4ed8]" : "text-gray-800"
+                      activo ? "text-[#1d4ed8]" : "text-slate-800"
                     }`}
                   >
                     {emp.nombre_completo}
                   </div>
-                  <div className="truncate text-[10.5px] text-gray-400">
+                  <div className="truncate text-[10.5px] text-slate-400">
                     {emp.puesto || "Sin asignar"}
                   </div>
                 </div>

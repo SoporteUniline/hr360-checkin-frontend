@@ -32,7 +32,7 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
 
   return (
     <div>
-      <h3 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
+      <h3 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-slate-900">
         <FileText className="h-3.5 w-3.5 text-brand" />
         Contratos y documentos
       </h3>
@@ -58,13 +58,13 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
         </div>
       )}
 
-      <h4 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
+      <h4 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-slate-900">
         <ClipboardList className="h-3.5 w-3.5 text-brand" />
         Lista de contratos
       </h4>
 
       {contratos.length === 0 ? (
-        <div className="rounded-[10px] border border-gray-200 bg-white p-8 text-center text-gray-500">
+        <div className="rounded-[10px] border border-slate-200 bg-white p-8 text-center text-slate-500">
           No hay contratos registrados para este empleado.
         </div>
       ) : (
@@ -89,12 +89,12 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
               <AccordionItem
                 key={c.id_contrato || index}
                 value={`item-${index}`}
-                className="rounded-[10px] border border-gray-200 bg-white px-4"
+                className="rounded-[10px] border border-slate-200 bg-white px-4"
               >
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex w-full items-center justify-between pr-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-500">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
                         <FileText className="h-4 w-4" />
                       </div>
                       <div className="text-left">
@@ -107,7 +107,7 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
                             className="text-[10.5px]"
                           />
                         </div>
-                        <p className="text-[10.5px] text-gray-500">
+                        <p className="text-[10.5px] text-slate-500">
                           Folio: {c.folio_contrato || "N/A"} · Vigencia:{" "}
                           {fechaInicio} - {fechaFin}
                         </p>
@@ -131,7 +131,7 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
                 <AccordionContent>
                   <div className="grid grid-cols-1 gap-4 pt-4 lg:grid-cols-2 lg:gap-6">
                     <div>
-                      <h5 className="mb-3 flex items-center gap-1.5 border-b pb-2 text-[12.5px] font-bold text-gray-900">
+                      <h5 className="mb-3 flex items-center gap-1.5 border-b pb-2 text-[12.5px] font-bold text-slate-900">
                         <ClipboardList className="h-3.5 w-3.5 text-brand" />
                         Información general
                       </h5>
@@ -158,7 +158,7 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
                       </div>
                     </div>
                     <div>
-                      <h5 className="mb-3 flex items-center gap-1.5 border-b pb-2 text-[12.5px] font-bold text-gray-900">
+                      <h5 className="mb-3 flex items-center gap-1.5 border-b pb-2 text-[12.5px] font-bold text-slate-900">
                         <Briefcase className="h-3.5 w-3.5 text-brand" />
                         Datos del puesto
                       </h5>
@@ -176,7 +176,7 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
                       </div>
                     </div>
                     <div>
-                      <h5 className="mb-3 flex items-center gap-1.5 border-b pb-2 text-[12.5px] font-bold text-gray-900">
+                      <h5 className="mb-3 flex items-center gap-1.5 border-b pb-2 text-[12.5px] font-bold text-slate-900">
                         <CircleDollarSign className="h-3.5 w-3.5 text-brand" />
                         Información salarial
                       </h5>
@@ -197,7 +197,7 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
                       </div>
                     </div>
                     <div>
-                      <h5 className="mb-3 flex items-center gap-1.5 border-b pb-2 text-[12.5px] font-bold text-gray-900">
+                      <h5 className="mb-3 flex items-center gap-1.5 border-b pb-2 text-[12.5px] font-bold text-slate-900">
                         <Clock className="h-3.5 w-3.5 text-brand" />
                         Jornada laboral
                       </h5>
@@ -231,8 +231,8 @@ export default function PanelEmpleadoContratos({ datosEmpleado }) {
 function InfoRow({ label, value }) {
   return (
     <div className="flex justify-between">
-      <span className="text-gray-600">{label}:</span>
-      <span className="font-semibold text-gray-900">{value || "N/A"}</span>
+      <span className="text-slate-600">{label}:</span>
+      <span className="font-semibold text-slate-900">{value || "N/A"}</span>
     </div>
   );
 }

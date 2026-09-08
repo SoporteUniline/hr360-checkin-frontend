@@ -82,8 +82,8 @@ export default function PanelEmpleadoGeneral({ datosEmpleado }) {
 
 function SeccionCard({ icono: Icono, titulo, children }) {
   return (
-    <div className="rounded-[10px] border border-gray-200 bg-white p-4">
-      <h4 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
+    <div className="rounded-[10px] border border-slate-200 bg-white p-4">
+      <h4 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-slate-900">
         <Icono className="h-3.5 w-3.5 text-brand" />
         {titulo}
       </h4>
@@ -94,9 +94,9 @@ function SeccionCard({ icono: Icono, titulo, children }) {
 
 function InfoRow({ label, value }) {
   return (
-    <div className="flex flex-col gap-1 border-b border-gray-100 py-1.5 last:border-0 sm:flex-row sm:items-center sm:justify-between sm:gap-0 sm:py-2">
-      <span className="text-xs text-gray-600 sm:text-sm">{label}:</span>
-      <span className="break-words text-right text-xs font-semibold text-gray-900 sm:break-all sm:text-left sm:text-sm">
+    <div className="flex flex-col gap-1 border-b border-slate-100 py-1.5 last:border-0 sm:flex-row sm:items-center sm:justify-between sm:gap-0 sm:py-2">
+      <span className="text-xs text-slate-600 sm:text-sm">{label}:</span>
+      <span className="break-words text-right text-xs font-semibold text-slate-900 sm:break-all sm:text-left sm:text-sm">
         {value || "N/A"}
       </span>
     </div>

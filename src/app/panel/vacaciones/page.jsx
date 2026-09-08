@@ -368,7 +368,7 @@ export default function VacacionesPage() {
   // Badges de colores según guía (días cargados/tomados/disponibles)
   const BadgeNum = ({ bg, text, children }) => (
     <span
-      className="inline-block px-2 py-1 rounded-md font-bold text-sm"
+      className="inline-flex min-w-7 justify-center rounded-lg px-2 py-1 text-xs font-semibold"
       style={{ backgroundColor: bg, color: text }}
     >
       {children}
@@ -514,7 +514,7 @@ export default function VacacionesPage() {
 
   return (
     <div className={`${styles.vacacionesTheme} space-y-6`}>
-      {/* Encabezado compacto homologado Adamia */}
+
       <div>
         <EncabezadoPagina
           icono={CalendarDays}
@@ -575,7 +575,7 @@ export default function VacacionesPage() {
         </div>
       )}
 
-      {/* Fila de filtros homologada */}
+
       <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
         <FiltrosGrid columnas={5}>
           <CampoFiltro etiqueta="Unidad de negocio">
@@ -713,20 +713,20 @@ export default function VacacionesPage() {
               <div className="overflow-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-gray-50">
-                      <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                    <TableRow className="bg-slate-50/80">
+                      <TableHead className="text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                         Empleado
                       </TableHead>
-                      <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                      <TableHead className="text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                         Departamento
                       </TableHead>
-                      <TableHead className="text-center text-xs font-semibold uppercase text-gray-600">
+                      <TableHead className="text-center text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                         Días cargados
                       </TableHead>
-                      <TableHead className="text-center text-xs font-semibold uppercase text-gray-600">
+                      <TableHead className="text-center text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                         Días tomados
                       </TableHead>
-                      <TableHead className="text-center text-xs font-semibold uppercase text-gray-600">
+                      <TableHead className="text-center text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                         Días disponibles
                       </TableHead>
                     </TableRow>
@@ -856,20 +856,20 @@ export default function VacacionesPage() {
                                         ) : (
                                           <Table>
                                             <TableHeader>
-                                              <TableRow className="bg-gray-50">
-                                                <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                                              <TableRow className="bg-slate-50/80">
+                                                <TableHead className="text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                                                   Año
                                                 </TableHead>
-                                                <TableHead className="text-center text-xs font-semibold uppercase text-gray-600">
+                                                <TableHead className="text-center text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                                                   Días
                                                 </TableHead>
-                                                <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                                                <TableHead className="text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                                                   Inicio
                                                 </TableHead>
-                                                <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                                                <TableHead className="text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                                                   Fin
                                                 </TableHead>
-                                                <TableHead className="text-center text-xs font-semibold uppercase text-gray-600">
+                                                <TableHead className="text-center text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                                                   Estado
                                                 </TableHead>
                                               </TableRow>
@@ -1104,16 +1104,16 @@ export default function VacacionesPage() {
             <div className="overflow-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50">
-                    <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                  <TableRow className="bg-slate-50/80">
+                    <TableHead className="text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                       Empleado
                     </TableHead>
 
-                    <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                    <TableHead className="text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                       Departamento
                     </TableHead>
 
-                    <TableHead className="text-center text-xs font-semibold uppercase text-gray-600">
+                    <TableHead className="text-center text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                       Días disponibles
                     </TableHead>
                   </TableRow>
@@ -1300,11 +1300,11 @@ export default function VacacionesPage() {
                   <div className="max-h-[400px] overflow-auto">
                     <Table>
                       <TableHeader>
-                        <TableRow className="bg-gray-50">
-                          <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                        <TableRow className="bg-slate-50/80">
+                          <TableHead className="text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                             Fecha
                           </TableHead>
-                          <TableHead className="text-xs font-semibold uppercase text-gray-600">
+                          <TableHead className="text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                             Notas
                           </TableHead>
                         </TableRow>

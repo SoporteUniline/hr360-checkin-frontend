@@ -307,7 +307,7 @@ export default function ControlAsistencia() {
   // toolbar unificada (búsqueda + rango modal + agrupar + columnas) y vistas.
   return (
     <div className="space-y-5">
-      {/* Encabezado compacto con la tipografía del landing */}
+
       <div>
         <EncabezadoPagina
           icono={ClipboardCheck}
@@ -338,7 +338,7 @@ export default function ControlAsistencia() {
         setPage={setPage}
       />
 
-      {/* Toolbar unificada */}
+
       <div className="flex flex-wrap items-center gap-2.5">
         <div className="relative min-w-[220px] max-w-[340px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />

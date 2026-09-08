@@ -86,20 +86,20 @@ export default function EntradasSalidasRow({
       onClick={handleRowClick}
       className={
         !isEditing && onRowClick
-          ? "cursor-pointer border-b border-gray-100 hover:bg-gray-50"
-          : "border-b border-gray-100 hover:bg-gray-50"
+          ? "cursor-pointer border-b border-slate-100 hover:bg-slate-50/60"
+          : "border-b border-slate-100 hover:bg-slate-50/60"
       }
     >
       {!isEditing && (
         <>
           {isColVisible("empleado") && (
             <TableCell>
-              <p className="font-bold">{`${registro.nombre} ${registro.apellido_paterno}`}</p>
-              <p className="text-xs text-gray-500">Puesto: {registro.puesto}</p>
+              <p className="font-semibold text-slate-800">{`${registro.nombre} ${registro.apellido_paterno}`}</p>
+              <p className="text-xs text-slate-500">Puesto: {registro.puesto}</p>
             </TableCell>
           )}
           {empresaActiva === "all" && isColVisible("unidad") && (
-            <TableCell className="font-bold text-gray-500">
+            <TableCell className="font-semibold text-slate-600">
               {registro.unidad_negocio ||
                 registro.sucursal ||
                 registro.nombre_empresa}
@@ -107,10 +107,10 @@ export default function EntradasSalidasRow({
           )}
           {isColVisible("departamento") && (
             <TableCell>
-              <p className="font-semibold text-gray-700">
+              <p className="font-semibold text-slate-700">
                 {registro.departamento}
               </p>
-              <p className="text-xs text-gray-500">{registro.sucursal}</p>
+              <p className="text-xs text-slate-500">{registro.sucursal}</p>
             </TableCell>
           )}
           {/* Mostrar siempre fecha de entrada (aunque sea un solo día) */}
@@ -151,17 +151,17 @@ export default function EntradasSalidasRow({
           {isColVisible("estado") && (
             <TableCell className="text-center">
               <span
-                className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${
                   registro.estado === "Abierto"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-gray-100 text-gray-700"
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "bg-gray-100 text-slate-700"
                 }`}
               >
                 {registro.estado}
               </span>
             </TableCell>
           )}
-          <TableCell className="sticky right-0 bg-background z-10 text-center">
+          <TableCell className="sticky right-0 z-10 bg-white text-center">
             <button
               onClick={() => handleEditMovimientoClick(registro)}
               className="p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
@@ -177,12 +177,12 @@ export default function EntradasSalidasRow({
         <>
           {isColVisible("empleado") && (
             <TableCell>
-              <p className="font-bold">{`${registro.nombre} ${registro.apellido_paterno}`}</p>
+              <p className="font-semibold text-slate-800">{`${registro.nombre} ${registro.apellido_paterno}`}</p>
               <p className="text-xs">Puesto: {registro.puesto}</p>
             </TableCell>
           )}
           {empresaActiva === "all" && isColVisible("unidad") && (
-            <TableCell className="font-bold text-gray-500">
+            <TableCell className="font-semibold text-slate-600">
               {registro.unidad_negocio ||
                 registro.sucursal ||
                 registro.nombre_empresa}
@@ -190,10 +190,10 @@ export default function EntradasSalidasRow({
           )}
           {isColVisible("departamento") && (
             <TableCell>
-              <p className="font-semibold text-gray-700">
+              <p className="font-semibold text-slate-700">
                 {registro.departamento}
               </p>
-              <p className="text-xs text-gray-500">{registro.sucursal}</p>
+              <p className="text-xs text-slate-500">{registro.sucursal}</p>
             </TableCell>
           )}
 
@@ -300,17 +300,17 @@ export default function EntradasSalidasRow({
           {isColVisible("estado") && (
             <TableCell className="text-center">
               <span
-                className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${
                   currentData.estado === "Abierto"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-gray-100 text-gray-700"
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "bg-gray-100 text-slate-700"
                 }`}
               >
                 {currentData.estado}
               </span>
             </TableCell>
           )}
-          <TableCell className="sticky right-0 bg-background z-10 text-center p-0">
+          <TableCell className="sticky right-0 z-10 bg-white p-0 text-center">
             <div className="flex items-center justify-center gap-2 h-full px-2">
               <button
                 onClick={handleSaveMovimientoClick}
@@ -326,7 +326,7 @@ export default function EntradasSalidasRow({
                 className="p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
                 title="Cancelar"
               >
-                <X className="h-4 w-4 text-gray-700" />
+                <X className="h-4 w-4 text-slate-700" />
               </button>
             </div>
           </TableCell>

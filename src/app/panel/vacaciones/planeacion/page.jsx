@@ -25,6 +25,7 @@ import usePermisosData from "@/hooks/usePermisosData";
 import RangoFechasModal, {
   etiquetaDeRango,
 } from "@/components/filtros/RangoFechasModal";
+import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -209,39 +210,36 @@ export default function PlaneacionVacacionesPage() {
 
   return (
     <div className="space-y-5">
-      {/* Encabezado con degradado */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand to-brand-accent px-6 py-5 text-white">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <div className="grid h-11 w-11 place-items-center rounded-xl bg-white/15 backdrop-blur">
-              <CalendarRange className="h-5 w-5" />
+
+      <div>
+        <EncabezadoPagina
+          icono={CalendarRange}
+          titulo="Planeación de vacaciones"
+          subtitulo="Solicitados, planeados, aprobados y rechazados a lo largo del año."
+        />
+      </div>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[
+          { k: "sol", n: kpis.sol, l: "Solicitados", dot: "bg-amber-400" },
+          { k: "plan", n: kpis.plan, l: "Planeados", dot: "bg-violet-400" },
+          { k: "apr", n: kpis.apr, l: "Aprobados", dot: "bg-emerald-400" },
+          { k: "rej", n: kpis.rej, l: "Rechazados", dot: "bg-rose-400" },
+        ].map((x) => (
+          <div
+            key={x.k}
+            className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm"
+          >
+            <div className="text-2xl font-bold tabular-nums text-slate-900">
+              {x.n}
             </div>
-            <div>
-              <h1 className="text-xl font-extrabold tracking-tight">Planeación de vacaciones</h1>
-              <p className="text-[12.5px] text-white/80">
-                Solicitados, planeados, aprobados y rechazados a lo largo del año
-              </p>
+            <div className="mt-1.5 flex items-center gap-2 text-[12px] font-semibold text-slate-500">
+              <span className={`h-2 w-2 rounded-full ${x.dot}`} />
+              {x.l}
             </div>
           </div>
-        </div>
-
-        {/* KPIs */}
-        <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {[
-            { k: "sol", n: kpis.sol, l: "Solicitados", c: "#fbbf24" },
-            { k: "plan", n: kpis.plan, l: "Planeados", c: "#c4b5fd" },
-            { k: "apr", n: kpis.apr, l: "Aprobados", c: "#6ee7b7" },
-            { k: "rej", n: kpis.rej, l: "Rechazados", c: "#fb7185" },
-          ].map((x) => (
-            <div key={x.k} className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur">
-              <div className="text-3xl font-extrabold tabular-nums leading-none">{x.n}</div>
-              <div className="mt-2 flex items-center gap-2 text-[12.5px] font-semibold">
-                <span className="h-2.5 w-2.5 rounded" style={{ background: x.c }} />
-                {x.l}
-              </div>
-            </div>
-          ))}
-        </div>
+        ))}
       </div>
 
       {/* Filtros */}

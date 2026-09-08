@@ -742,15 +742,17 @@ export default function PermisosPage() {
             }}
             onAprobar={(row) => cambiarEstadoRapido(row, "Aprobado")}
             onRechazar={(row) => cambiarEstadoRapido(row, "Rechazado")}
+            footer={
+              <TablePagination
+                page={page}
+                limit={limit}
+                total={headerFilterMeta.active ? headerFilterMeta.total : total}
+                onPageChange={setPage}
+                onLimitChange={setLimit}
+              />
+            }
           />
-          {/* Paginación */}
-          <TablePagination
-            page={page}
-            limit={limit}
-            total={headerFilterMeta.active ? headerFilterMeta.total : total}
-            onPageChange={setPage}
-            onLimitChange={setLimit}
-          />
+
         </>
       ) : null}
 

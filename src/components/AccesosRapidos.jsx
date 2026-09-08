@@ -1,87 +1,71 @@
 "use client";
 
-/**
- * Componente reutilizable de Accesos Rápidos
- * - Muestra 5 accesos rápidos: Reloj Checador, Empleados, Reportes, Permisos, Configuración
- * - Diseño responsivo que se adapta a diferentes tamaños de pantalla
- * - Relacionado con: src/app/panel/dashboard/page.jsx (implementación original)
- */
-
 import Link from "next/link";
-import { Clock, Users, BarChart3, FileCheck, Settings } from "lucide-react";
+import {
+  ArrowRight,
+  BarChart3,
+  Clock,
+  FileCheck,
+  Settings,
+  Sparkles,
+  Users,
+} from "lucide-react";
+
+const ACCESOS = [
+  {
+    href: "/panel/configuracion-checador",
+    label: "Reloj Checador",
+    icon: Clock,
+  },
+  {
+    href: "/panel/empleados",
+    label: "Empleados",
+    icon: Users,
+  },
+  {
+    href: "/panel/reporte-horas",
+    label: "Reportes",
+    icon: BarChart3,
+  },
+  {
+    href: "/panel/permisos",
+    label: "Permisos",
+    icon: FileCheck,
+  },
+  {
+    href: "/panel/cuenta",
+    label: "Configuración",
+    icon: Settings,
+  },
+];
 
 export default function AccesosRapidos() {
   return (
-    <div className="mt-6 sm:mt-8 lg:mt-10">
-      <div className="mb-3 sm:mb-4 flex items-center gap-2">
-        <span className="text-base sm:text-lg font-semibold">Accesos Rápidos</span>
+    <section className="mt-6">
+      <div className="mb-2 flex items-center gap-2">
+        <Sparkles className="size-3.5 text-blue-500" />
+        <h2 className="text-xs font-semibold uppercase tracking-[0.08em] text-slate-400">
+          Accesos rápidos
+        </h2>
       </div>
-      {/* Grid responsivo: 2 columnas en móvil, 3 en tablet, 5 en desktop, 6 en pantallas grandes */}
-      {/* Ajustado para evitar que los elementos toquen los bordes en pantallas pequeñas */}
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-        <Link
-          href="/"
-          className="group rounded-xl border bg-white p-3 sm:p-4 md:p-5 lg:p-6 text-center hover:shadow-sm transition"
-        >
-          <div className="mx-auto mb-2 sm:mb-3 grid size-10 sm:size-11 md:size-12 place-content-center rounded-full border border-sky-200 bg-sky-50">
-            <Clock className="size-4 sm:size-5 md:size-6 text-sky-600" />
-          </div>
-          <div className="font-medium text-xs sm:text-sm md:text-base">Reloj Checador</div>
-          <div className="text-[10px] sm:text-[11px] md:text-xs text-zinc-500 mt-0.5 sm:mt-1">
-            Registros de entrada y salida
-          </div>
-        </Link>
-        <Link
-          href="/panel/empleados"
-          className="group rounded-xl border bg-white p-3 sm:p-4 md:p-5 lg:p-6 text-center hover:shadow-sm transition"
-        >
-          <div className="mx-auto mb-2 sm:mb-3 grid size-10 sm:size-11 md:size-12 place-content-center rounded-full border border-violet-200 bg-violet-50">
-            <Users className="size-4 sm:size-5 md:size-6 text-violet-600" />
-          </div>
-          <div className="font-medium text-xs sm:text-sm md:text-base">Empleados</div>
-          <div className="text-[10px] sm:text-[11px] md:text-xs text-zinc-500 mt-0.5 sm:mt-1">
-            Gestión de personal
-          </div>
-        </Link>
-        <Link
-          href="/panel/reporte-horas"
-          className="group rounded-xl border bg-white p-3 sm:p-4 md:p-5 lg:p-6 text-center hover:shadow-sm transition"
-        >
-          <div className="mx-auto mb-2 sm:mb-3 grid size-10 sm:size-11 md:size-12 place-content-center rounded-full border border-indigo-200 bg-indigo-50">
-            <BarChart3 className="size-4 sm:size-5 md:size-6 text-indigo-600" />
-          </div>
-          <div className="font-medium text-xs sm:text-sm md:text-base">Reportes</div>
-          <div className="text-[10px] sm:text-[11px] md:text-xs text-zinc-500 mt-0.5 sm:mt-1">
-            Análisis y estadísticas
-          </div>
-        </Link>
-        <Link
-          href="/panel/permisos"
-          className="group rounded-xl border bg-white p-3 sm:p-4 md:p-5 lg:p-6 text-center hover:shadow-sm transition"
-          title="Ir a Permisos"
-        >
-          <div className="mx-auto mb-2 sm:mb-3 grid size-10 sm:size-11 md:size-12 place-content-center rounded-full border border-rose-200 bg-rose-50">
-            <FileCheck className="size-4 sm:size-5 md:size-6 text-rose-600" />
-          </div>
-          <div className="font-medium text-xs sm:text-sm md:text-base">Permisos</div>
-          <div className="text-[10px] sm:text-[11px] md:text-xs text-zinc-500 mt-0.5 sm:mt-1">
-            Solicitudes y ausencias
-          </div>
-        </Link>
-        <Link
-          href="/panel/cuenta"
-          className="group rounded-xl border bg-white p-3 sm:p-4 md:p-5 lg:p-6 text-center hover:shadow-sm transition"
-        >
-          <div className="mx-auto mb-2 sm:mb-3 grid size-10 sm:size-11 md:size-12 place-content-center rounded-full border border-zinc-200 bg-zinc-50">
-            <Settings className="size-4 sm:size-5 md:size-6 text-zinc-700" />
-          </div>
-          <div className="font-medium text-xs sm:text-sm md:text-base">Configuración</div>
-          <div className="text-[10px] sm:text-[11px] md:text-xs text-zinc-500 mt-0.5 sm:mt-1">
-            Ajustes del sistema
-          </div>
-        </Link>
+
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+        {ACCESOS.map(({ href, label, icon: Icon }) => (
+          <Link
+            key={href}
+            href={href}
+            className="group flex min-h-14 items-center gap-2.5 rounded-xl border border-slate-200 bg-white p-3 text-xs font-semibold text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+          >
+            <span className="grid size-8 shrink-0 place-content-center rounded-lg bg-slate-50 text-slate-500 transition group-hover:bg-white group-hover:text-blue-600">
+              <Icon className="size-4" />
+            </span>
+
+            <span className="min-w-0 truncate">{label}</span>
+
+            <ArrowRight className="ml-auto size-3.5 shrink-0 opacity-30 transition group-hover:translate-x-0.5 group-hover:opacity-60" />
+          </Link>
+        ))}
       </div>
-    </div>
+    </section>
   );
 }
-

@@ -86,12 +86,12 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
 
   return (
     <div>
-      <h3 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
+      <h3 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-slate-900">
         <Plane className="h-3.5 w-3.5 text-brand" />
         Balance de vacaciones
       </h3>
 
-      {/* Mini-KPIs homologados */}
+
       <div className="mb-4 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
         <MiniKpi label="Días totales" value={balance.dias_totales || 0} />
         <MiniKpi label="Días tomados" value={balance.dias_tomados || 0} />
@@ -103,7 +103,7 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
       </div>
 
       {/* Barra de progreso */}
-      <div className="mb-6 rounded-[10px] border border-gray-200 bg-white p-4">
+      <div className="mb-6 rounded-[10px] border border-slate-200 bg-white p-4">
         <div className="mb-2 flex justify-between text-sm font-semibold">
           <span>Vacaciones utilizadas</span>
           <span className="tabular-nums">
@@ -111,7 +111,7 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
             {balance.porcentaje_usado || 0}%)
           </span>
         </div>
-        <div className="h-1.5 overflow-hidden rounded-full bg-gray-100">
+        <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
           <div
             className="h-full rounded-full bg-gradient-to-r from-brand to-brand-accent transition-all"
             style={{ width: `${balance.porcentaje_usado || 0}%` }}
@@ -121,7 +121,7 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
 
       {/* Selector de vista */}
       <div className="mb-4 flex items-center justify-between sm:mb-6">
-        <h4 className="flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
+        <h4 className="flex items-center gap-1.5 text-[12.5px] font-bold text-slate-900">
           <CalendarDays className="h-3.5 w-3.5 text-brand" />
           Historial de vacaciones
         </h4>
@@ -159,12 +159,12 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
       {/* Vista Tabla */}
       {vista === "tabla" && (
         <>
-          {/* Filtros */}
-          <div className="mb-3 rounded-[10px] border border-gray-200 bg-white p-3 sm:mb-4 sm:p-4">
-            <div className="mb-3 grid grid-cols-1 gap-3 sm:mb-4 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+
+          <div className="overflow-hidden rounded-[10px] border border-slate-200 bg-white">
+            <div className="grid grid-cols-1 gap-3 border-b border-slate-100 p-3 sm:grid-cols-2 sm:p-4 lg:grid-cols-[1fr_1.25fr_1fr_1fr_auto] lg:items-end">
               <div>
-                <label className="mb-1 block text-xs font-bold text-gray-500">
-                  AGRUPAR POR:
+                <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-400">
+                  Agrupar por
                 </label>
                 <Select
                   value={agrupar || "sin-agrupar"}
@@ -172,7 +172,7 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
                     setAgrupar(v === "sin-agrupar" ? "" : v)
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="rounded-xl border-slate-200 bg-white shadow-none">
                     <SelectValue placeholder="Sin agrupar" />
                   </SelectTrigger>
                   <SelectContent>
@@ -181,12 +181,13 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
                   </SelectContent>
                 </Select>
               </div>
+
               <div>
-                <label className="mb-1 block text-xs font-bold text-gray-500">
-                  ORDENAR:
+                <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-400">
+                  Ordenar
                 </label>
                 <Select value={orden} onValueChange={setOrden}>
-                  <SelectTrigger>
+                  <SelectTrigger className="rounded-xl border-slate-200 bg-white shadow-none">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -195,45 +196,51 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
                   </SelectContent>
                 </Select>
               </div>
+
               <div>
-                <label className="mb-1 block text-xs font-bold text-gray-500">
-                  DESDE:
+                <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-400">
+                  Desde
                 </label>
                 <Input
                   type="date"
                   value={filtroDesde}
                   onChange={(e) => setFiltroDesde(e.target.value)}
+                  className="rounded-xl border-slate-200 bg-white shadow-none"
                 />
               </div>
+
               <div>
-                <label className="mb-1 block text-xs font-bold text-gray-500">
-                  HASTA:
+                <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-400">
+                  Hasta
                 </label>
                 <Input
                   type="date"
                   value={filtroHasta}
                   onChange={(e) => setFiltroHasta(e.target.value)}
+                  className="rounded-xl border-slate-200 bg-white shadow-none"
                 />
               </div>
-            </div>
-            <Button onClick={limpiarFiltros} variant="outline" size="sm">
-              Limpiar Filtros
-            </Button>
-          </div>
 
-          {/* Tabla */}
-          <div className="rounded-[10px] border border-gray-200 bg-white">
-            <div className="-mx-2 overflow-x-auto sm:-mx-4 md:mx-0">
+              <Button
+                onClick={limpiarFiltros}
+                variant="outline"
+                className="rounded-xl border-slate-200 bg-white font-medium text-slate-600 shadow-none hover:bg-slate-50"
+              >
+                Limpiar
+              </Button>
+            </div>
+
+            <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                    <TableHead className="bg-slate-50/80 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                       Fecha
                     </TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                    <TableHead className="bg-slate-50/80 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                       Día
                     </TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                    <TableHead className="bg-slate-50/80 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                       Estado
                     </TableHead>
                   </TableRow>
@@ -243,7 +250,7 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
                     <TableRow>
                       <TableCell
                         colSpan={3}
-                        className="py-8 text-center text-gray-500"
+                        className="py-8 text-center text-slate-500"
                       >
                         No hay vacaciones en el período seleccionado
                       </TableCell>
@@ -271,7 +278,7 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
                             {diaSemana}
                           </TableCell>
                           <TableCell>
-                            <span className="inline-block rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-0.5 text-[10.5px] font-bold text-emerald-700">
+                            <span className="inline-flex rounded-full border border-emerald-100 bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
                               {v.estado}
                             </span>
                           </TableCell>
@@ -288,8 +295,8 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
 
       {/* Información adicional */}
       <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div className="rounded-[10px] border border-gray-200 bg-white p-4">
-          <h5 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
+        <div className="rounded-[10px] border border-slate-200 bg-white p-4">
+          <h5 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-slate-900">
             <BarChart3 className="h-3.5 w-3.5 text-brand" />
             Desglose de vacaciones
           </h5>
@@ -313,8 +320,8 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
             />
           </div>
         </div>
-        <div className="rounded-[10px] border border-gray-200 bg-white p-4">
-          <h5 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
+        <div className="rounded-[10px] border border-slate-200 bg-white p-4">
+          <h5 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-slate-900">
             <CalendarDays className="h-3.5 w-3.5 text-brand" />
             Próximo período
           </h5>
@@ -344,9 +351,9 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
 
 function InfoRow({ label, value }) {
   return (
-    <div className="flex justify-between border-b border-gray-100 py-1 last:border-0">
-      <span className="text-gray-600">{label}:</span>
-      <span className="font-semibold text-gray-900">{value || "N/A"}</span>
+    <div className="flex justify-between border-b border-slate-100 py-1 last:border-0">
+      <span className="text-slate-600">{label}:</span>
+      <span className="font-semibold text-slate-900">{value || "N/A"}</span>
     </div>
   );
 }
@@ -423,8 +430,8 @@ function VistaCalendarioVacaciones({
 
   if (historial.length === 0) {
     return (
-      <div className="rounded-[10px] border border-gray-200 bg-white p-6 text-center">
-        <p className="text-gray-500">
+      <div className="rounded-[10px] border border-slate-200 bg-white p-6 text-center">
+        <p className="text-slate-500">
           No hay vacaciones registradas para mostrar en el calendario.
         </p>
       </div>
@@ -435,7 +442,7 @@ function VistaCalendarioVacaciones({
     <div className="space-y-4 sm:space-y-6">
       {/* Calendarios pequeños */}
       {todosLosMeses.length > 0 && (
-        <div className="rounded-[10px] border border-gray-200 bg-white p-2 sm:p-3 md:p-4 lg:p-5">
+        <div className="rounded-[10px] border border-slate-200 bg-white p-2 sm:p-3 md:p-4 lg:p-5">
           {/* Grid responsivo que se adapta mejor cuando el sidebar está abierto */}
           <div className="grid grid-cols-2 gap-2 sm:gap-2.5 md:gap-3 lg:gap-4 xl:grid-cols-3 2xl:grid-cols-4">
             {todosLosMeses.map((mesAnio) => (
@@ -481,7 +488,7 @@ function CalendarioGrande({ mesAnio, diasVacaciones }) {
 
   return (
     <div className="w-full overflow-x-auto">
-      <h3 className="mb-3 text-center text-lg font-bold text-gray-900 sm:mb-4">
+      <h3 className="mb-3 text-center text-lg font-bold text-slate-900 sm:mb-4">
         {nombresMeses[mes - 1]} {anio}
       </h3>
 
@@ -492,7 +499,7 @@ function CalendarioGrande({ mesAnio, diasVacaciones }) {
           {["DOM", "LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB"].map((dia) => (
             <div
               key={dia}
-              className="py-1.5 text-center text-[9px] font-extrabold uppercase tracking-wide text-gray-600 sm:py-2 sm:text-[10px] md:text-xs"
+              className="py-1.5 text-center text-[9px] font-extrabold uppercase tracking-wide text-slate-600 sm:py-2 sm:text-[10px] md:text-xs"
             >
               {dia}
             </div>
@@ -522,7 +529,7 @@ function CalendarioGrande({ mesAnio, diasVacaciones }) {
                       ? "bg-gradient-to-br from-brand to-brand-accent text-white"
                       : esHoy
                       ? "border border-blue-300 bg-blue-50 font-bold text-blue-700"
-                      : "border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                      : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50/70"
                   }
                 `}
               >
@@ -567,9 +574,9 @@ function CalendarioPequeno({
   return (
     <div
       onClick={onClick}
-      className="w-full rounded-[10px] border border-gray-200 bg-white p-2 transition-colors hover:border-gray-300 sm:p-2.5 md:p-3 lg:p-4"
+      className="w-full rounded-[10px] border border-slate-200 bg-white p-2 transition-colors hover:border-slate-300 sm:p-2.5 md:p-3 lg:p-4"
     >
-      <div className="mb-2 text-center text-xs font-bold text-gray-900 sm:mb-2.5 sm:text-sm md:mb-3">
+      <div className="mb-2 text-center text-xs font-bold text-slate-900 sm:mb-2.5 sm:text-sm md:mb-3">
         {nombresMeses[mes - 1]} {anio}
       </div>
       <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
@@ -597,7 +604,7 @@ function CalendarioPequeno({
                 ${
                   esVacacion
                     ? "bg-gradient-to-br from-brand to-brand-accent text-white"
-                    : "text-gray-500"
+                    : "text-slate-500"
                 }
               `}
             >

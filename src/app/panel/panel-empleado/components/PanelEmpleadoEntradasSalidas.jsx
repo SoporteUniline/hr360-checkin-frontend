@@ -95,7 +95,7 @@ export default function PanelEmpleadoEntradasSalidas({ datosEmpleado }) {
 
   return (
     <div>
-      <h3 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
+      <h3 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-slate-900">
         <Clock className="h-3.5 w-3.5 text-brand" />
         Registro de entradas y salidas
       </h3>
@@ -116,80 +116,89 @@ export default function PanelEmpleadoEntradasSalidas({ datosEmpleado }) {
         <MiniKpi label="Tiempo acumulado" value={horasAcumuladas} nowrap />
       </div>
 
-      {/* Filtros */}
-      <div className="mb-3 rounded-[10px] border border-gray-200 bg-white p-3 sm:mb-4 sm:p-4">
-        <div className="mb-3 grid grid-cols-1 gap-3 sm:mb-4 sm:grid-cols-3 sm:gap-4">
-          <div>
-            <label className="mb-1 block text-xs font-bold text-gray-500">
-              AGRUPAR POR:
-            </label>
-            <Select
-              value={agrupar || "sin-agrupar"}
-              onValueChange={(v) => setAgrupar(v === "sin-agrupar" ? "" : v)}
+      {/* Superficie operacional: filtros + tabla */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 bg-slate-50/40 px-4 py-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+            <div className="w-full lg:w-[220px]">
+              <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                Agrupar por
+              </label>
+              <Select
+                value={agrupar || "sin-agrupar"}
+                onValueChange={(v) => setAgrupar(v === "sin-agrupar" ? "" : v)}
+              >
+                <SelectTrigger className="h-9 rounded-xl border-slate-200 bg-white text-sm shadow-none">
+                  <SelectValue placeholder="Sin agrupar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sin-agrupar">Sin agrupar</SelectItem>
+                  <SelectItem value="anio">Año</SelectItem>
+                  <SelectItem value="mes">Mes</SelectItem>
+                  <SelectItem value="anio-mes">Año + Mes</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="w-full lg:w-[210px]">
+              <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                Desde
+              </label>
+              <Input
+                type="date"
+                value={filtroDesde}
+                onChange={(e) => setFiltroDesde(e.target.value)}
+                className="h-9 rounded-xl border-slate-200 bg-white text-sm shadow-none"
+              />
+            </div>
+
+            <div className="w-full lg:w-[210px]">
+              <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                Hasta
+              </label>
+              <Input
+                type="date"
+                value={filtroHasta}
+                onChange={(e) => setFiltroHasta(e.target.value)}
+                className="h-9 rounded-xl border-slate-200 bg-white text-sm shadow-none"
+              />
+            </div>
+
+            <Button
+              onClick={limpiarFiltros}
+              variant="outline"
+              size="sm"
+              className="h-9 rounded-xl border-slate-200 bg-white px-4 font-semibold text-slate-600 shadow-none hover:bg-slate-50"
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Sin agrupar" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="sin-agrupar">Sin agrupar</SelectItem>
-                <SelectItem value="anio">Año</SelectItem>
-                <SelectItem value="mes">Mes</SelectItem>
-                <SelectItem value="anio-mes">Año + Mes</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-bold text-gray-500">
-              DESDE:
-            </label>
-            <Input
-              type="date"
-              value={filtroDesde}
-              onChange={(e) => setFiltroDesde(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-bold text-gray-500">
-              HASTA:
-            </label>
-            <Input
-              type="date"
-              value={filtroHasta}
-              onChange={(e) => setFiltroHasta(e.target.value)}
-            />
+              Limpiar
+            </Button>
           </div>
         </div>
-        <Button onClick={limpiarFiltros} variant="outline" size="sm">
-          Limpiar Filtros
-        </Button>
-      </div>
 
-      {/* Tabla */}
-      <div className="rounded-[10px] border border-gray-200 bg-white">
         <div className="-mx-2 overflow-x-auto sm:-mx-4 md:mx-0">
           <div className="min-w-[800px] sm:min-w-0">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                  <TableHead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                     Fecha
                   </TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                  <TableHead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                     Hora Entrada
                   </TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                  <TableHead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                     Hora Salida
                   </TableHead>
-                  <TableHead className="hidden text-[10px] font-bold uppercase sm:table-cell sm:text-xs">
+                  <TableHead className="hidden bg-slate-50/70 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 sm:table-cell">
                     Entrada Corregida
                   </TableHead>
-                  <TableHead className="hidden text-[10px] font-bold uppercase sm:table-cell sm:text-xs">
+                  <TableHead className="hidden bg-slate-50/70 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 sm:table-cell">
                     Salida Corregida
                   </TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                  <TableHead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                     Tiempo Trabajado
                   </TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                  <TableHead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                     Estado
                   </TableHead>
                 </TableRow>
@@ -199,7 +208,7 @@ export default function PanelEmpleadoEntradasSalidas({ datosEmpleado }) {
                   <TableRow>
                     <TableCell
                       colSpan={7}
-                      className="py-8 text-center text-gray-500"
+                      className="py-8 text-center text-slate-500"
                     >
                       No hay registros en el período seleccionado
                     </TableCell>
@@ -212,14 +221,14 @@ export default function PanelEmpleadoEntradasSalidas({ datosEmpleado }) {
                     );
 
                     return (
-                      <TableRow key={r.id}>
+                      <TableRow key={r.id} className="transition-colors hover:bg-slate-50/70">
                         <TableCell className="text-xs font-semibold sm:text-sm">
                           {formatearFecha(r.fecha)}
                         </TableCell>
                         <TableCell className="text-xs font-semibold text-emerald-700 sm:text-sm">
                           {r.hora_entrada}
                         </TableCell>
-                        <TableCell className="text-xs font-semibold text-red-600 sm:text-sm">
+                        <TableCell className="text-xs font-semibold text-rose-600 sm:text-sm">
                           {r.hora_salida}
                         </TableCell>
                         <TableCell className="hidden text-xs sm:table-cell sm:text-sm">
@@ -232,7 +241,7 @@ export default function PanelEmpleadoEntradasSalidas({ datosEmpleado }) {
                           {tiempoTrabajado}
                         </TableCell>
                         <TableCell>
-                          <span className="inline-block rounded-full border border-gray-200 bg-gray-50 px-2.5 py-0.5 text-[10.5px] font-bold text-gray-600">
+                          <span className="inline-flex rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
                             {r.estado}
                           </span>
                         </TableCell>

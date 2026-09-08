@@ -21,7 +21,7 @@ import { calcDiasTotalesYHabiles } from "@/lib/permisosDias";
 const PILL_ESTADO = {
   Aprobado: "border border-emerald-100 bg-emerald-50 text-emerald-700",
   Pendiente: "border border-amber-100 bg-amber-50 text-amber-700",
-  default: "border border-red-100 bg-red-50 text-red-700",
+  default: "border border-red-100 bg-rose-50 text-rose-700",
 };
 
 /**
@@ -55,7 +55,7 @@ export default function PanelEmpleadoPermisos({
 
   return (
     <div>
-      <h3 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-gray-900">
+      <h3 className="mb-3 flex items-center gap-1.5 text-[12.5px] font-bold text-slate-900">
         <CalendarDays className="h-3.5 w-3.5 text-brand" />
         Historial de permisos
       </h3>
@@ -79,63 +79,69 @@ export default function PanelEmpleadoPermisos({
         </div>
       )}
 
-      {/* Filtros */}
-      <div className="mb-3 rounded-[10px] border border-gray-200 bg-white p-3 sm:mb-4 sm:p-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-          <div>
-            <label className="mb-1 block text-xs font-bold text-gray-500">
-              DESDE:
-            </label>
-            <Input
-              type="date"
-              value={filtroDesde}
-              onChange={(e) => setFiltroDesde(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-bold text-gray-500">
-              HASTA:
-            </label>
-            <Input
-              type="date"
-              value={filtroHasta}
-              onChange={(e) => setFiltroHasta(e.target.value)}
-            />
-          </div>
-          <div className="flex items-end">
-            <Button onClick={limpiarFiltros} variant="outline" size="sm">
+      {/* Superficie operacional: filtros + tabla */}
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 bg-slate-50/40 px-4 py-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="w-full sm:w-[210px]">
+              <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                Desde
+              </label>
+              <Input
+                type="date"
+                value={filtroDesde}
+                onChange={(e) => setFiltroDesde(e.target.value)}
+                className="h-9 rounded-xl border-slate-200 bg-white text-sm shadow-none"
+              />
+            </div>
+
+            <div className="w-full sm:w-[210px]">
+              <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">
+                Hasta
+              </label>
+              <Input
+                type="date"
+                value={filtroHasta}
+                onChange={(e) => setFiltroHasta(e.target.value)}
+                className="h-9 rounded-xl border-slate-200 bg-white text-sm shadow-none"
+              />
+            </div>
+
+            <Button
+              onClick={limpiarFiltros}
+              variant="outline"
+              size="sm"
+              className="h-9 rounded-xl border-slate-200 bg-white px-4 font-semibold text-slate-600 shadow-none hover:bg-slate-50"
+            >
               Limpiar
             </Button>
           </div>
         </div>
-      </div>
 
-      {/* Tabla */}
-      <div className="rounded-[10px] border border-gray-200 bg-white">
         <div className="-mx-2 overflow-x-auto sm:-mx-4 md:mx-0">
           <div className="min-w-[600px] sm:min-w-0">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                  <TableHead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                     Tipo de Permiso
                   </TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                  <TableHead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                     Fecha Inicio
                   </TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                  <TableHead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                     Fecha Fin
                   </TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                  <TableHead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                     Días totales
                   </TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                  <TableHead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                     Días hábiles
                   </TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                  <TableHead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                     Motivo
                   </TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase sm:text-xs">
+                  <TableHead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
                     Estado
                   </TableHead>
                 </TableRow>
@@ -145,7 +151,7 @@ export default function PanelEmpleadoPermisos({
                   <TableRow>
                     <TableCell
                       colSpan={7}
-                      className="py-8 text-center text-gray-500"
+                      className="py-8 text-center text-slate-500"
                     >
                       No hay permisos registrados
                     </TableCell>
@@ -192,7 +198,7 @@ export default function PanelEmpleadoPermisos({
                         </TableCell>
                         <TableCell>
                           <span
-                            className={`inline-block rounded-full px-2.5 py-0.5 text-[10.5px] font-bold ${pillClass}`}
+                            className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${pillClass}`}
                           >
                             {p.estado}
                           </span>

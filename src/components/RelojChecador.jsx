@@ -348,18 +348,18 @@ export default function RelojChecador({
 
   return (
     <>
-      <main className="min-h-screen bg-[#F9FAFB] p-4">
-        <div className="max-w-7xl mx-auto space-y-6">
-          <div className="bg-linear-to-r from-indigo-50 to-blue-50 border border-indigo-100 rounded-xl p-6">
+      <main className="min-h-screen bg-slate-50 p-4">
+        <div className="mx-auto max-w-7xl space-y-6">
+          <div className="rounded-xl border border-blue-100 bg-linear-to-r from-indigo-50 to-blue-50 p-6">
             <div className="flex items-center gap-3">
-              <div className="bg-[#2563EB] p-2.5 rounded-lg">
+              <div className="rounded-lg bg-blue-600 p-2.5">
                 <Clock4 className="w-5 h-5 text-white" />
               </div>
               <div className="min-w-0">
-                <h1 className="text-lg font-bold text-gray-900">
+                <h1 className="text-lg font-bold text-slate-900">
                   Reloj checador
                 </h1>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-slate-600">
                   Registro de entradas y salidas con validación por código, QR y
                   reconocimiento facial.
                 </p>
@@ -369,7 +369,7 @@ export default function RelojChecador({
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
             <div className="hidden md:block lg:col-span-4 md:col-span-5 space-y-6">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 text-center">
+              <div className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">
                 <ClockDisplay
                   horaActual={horaActual}
                   fechaActual={fechaActual}
