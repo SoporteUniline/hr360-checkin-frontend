@@ -25,6 +25,9 @@ import {
   FolderOpen,
   UserCircle2,
   Pencil,
+  ReceiptText,
+  FileWarning,
+  Gift,
 } from "lucide-react";
 import { EstadoBadge } from "@/lib/estados";
 import {
@@ -41,6 +44,9 @@ import PanelEmpleadoEntradasSalidas from "./components/PanelEmpleadoEntradasSali
 import PanelEmpleadoContratos from "./components/PanelEmpleadoContratos";
 import PanelEmpleadoVacaciones from "./components/PanelEmpleadoVacaciones";
 import PanelEmpleadoDocumentos from "./components/PanelEmpleadoDocumentos";
+import PanelEmpleadoFiniquitos from "./components/PanelEmpleadoFiniquitos";
+import PanelEmpleadoActas from "./components/PanelEmpleadoActas";
+import PanelEmpleadoAguinaldos from "./components/PanelEmpleadoAguinaldos";
 import useSWR from "swr";
 import dayjs from "dayjs";
 import { fetcherWithToken } from "@/lib/fetcher";
@@ -449,6 +455,30 @@ export default function PanelEmpleadoPage() {
                         <FolderOpen className="mr-1.5 h-3.5 w-3.5 flex-shrink-0" />
                         Documentos
                       </TabsTrigger>
+
+                      <TabsTrigger
+                        value="finiquitos"
+                        className={TAB_TRIGGER_CLASS}
+                      >
+                        <ReceiptText className="mr-1.5 h-3.5 w-3.5 flex-shrink-0" />
+                        Finiquitos
+                      </TabsTrigger>
+
+                      <TabsTrigger
+                        value="actas"
+                        className={TAB_TRIGGER_CLASS}
+                      >
+                        <FileWarning className="mr-1.5 h-3.5 w-3.5 flex-shrink-0" />
+                        Actas
+                      </TabsTrigger>
+
+                      <TabsTrigger
+                        value="aguinaldos"
+                        className={TAB_TRIGGER_CLASS}
+                      >
+                        <Gift className="mr-1.5 h-3.5 w-3.5 flex-shrink-0" />
+                        Aguinaldos
+                      </TabsTrigger>
                     </TabsList>
                   </div>
 
@@ -478,6 +508,27 @@ export default function PanelEmpleadoPage() {
                     </TabsContent>
                     <TabsContent value="documentos" className="mt-0">
                       <PanelEmpleadoDocumentos datosEmpleado={datosEmpleado} />
+                    </TabsContent>
+
+                    <TabsContent value="finiquitos" className="mt-0">
+                      <PanelEmpleadoFiniquitos
+                        idEmpleado={idEmpleadoActual}
+                        idEmpresa={idEmpresa}
+                      />
+                    </TabsContent>
+
+                    <TabsContent value="actas" className="mt-0">
+                      <PanelEmpleadoActas
+                        idEmpleado={idEmpleadoActual}
+                        idEmpresa={idEmpresa}
+                      />
+                    </TabsContent>
+
+                    <TabsContent value="aguinaldos" className="mt-0">
+                      <PanelEmpleadoAguinaldos
+                        idEmpleado={idEmpleadoActual}
+                        idEmpresa={idEmpresa}
+                      />
                     </TabsContent>
                   </div>
                 </Tabs>
