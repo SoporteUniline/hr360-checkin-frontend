@@ -106,7 +106,7 @@ export default function PlaneacionVacacionesPage() {
 
   const [depto, setDepto] = useState("todos");
   const [empsSel, setEmpsSel] = useState(() => new Set());
-  const [vista, setVista] = useState("anio");
+  const [vista, setVista] = useState("mes");
   const [mesSel, setMesSel] = useState(hoy.month());
 
   const anioBase = dayjs(rango.inicio).year();
