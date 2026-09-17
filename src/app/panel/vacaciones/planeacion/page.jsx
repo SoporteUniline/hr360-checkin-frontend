@@ -497,9 +497,9 @@ function VistaMes({ anio, mes, setMes, registros, tipoDe, nombreEmp }) {
           <div className="py-14 text-center text-gray-400">Sin vacaciones en este mes para los filtros.</div>
         ) : (
           <table className="w-max min-w-full border-collapse text-[11px]">
-            <thead className="sticky top-0 z-10 bg-[#1f2937] text-white">
+            <thead className="sticky top-0 z-30 bg-[#1f2937] text-white">
               <tr>
-                <th className="sticky left-0 z-20 w-[190px] min-w-[190px] bg-[#1f2937] px-3 py-1.5 text-left font-semibold">Empleado</th>
+                <th className="sticky left-0 z-40 w-[190px] min-w-[190px] bg-[#1f2937] px-3 py-1.5 text-left font-semibold">Empleado</th>
                 {dias.map((d) => {
                   const wd = new Date(anio, mes, d).getDay();
                   const we = wd === 0 || wd === 6;
@@ -514,14 +514,22 @@ function VistaMes({ anio, mes, setMes, registros, tipoDe, nombreEmp }) {
             </thead>
             <tbody>
               {empleados.map((emp, ri) => (
-                <tr key={emp.key} className={ri % 2 ? "bg-gray-50/60" : "bg-white"}>
-                  <td className="sticky left-0 z-10 w-[190px] min-w-[190px] max-w-[190px] truncate bg-inherit px-3 py-1 font-medium text-gray-900" title={emp.nombre}>
+                <tr
+                  key={emp.key}
+                  className={`h-11 ${ri % 2 ? "bg-gray-50/60" : "bg-white"}`}
+                >
+                  <td
+                    className={`sticky left-0 z-20 h-11 w-[190px] min-w-[190px] max-w-[190px] truncate px-3 py-2 font-medium text-gray-900 ${
+                      ri % 2 ? "bg-gray-50" : "bg-white"
+                    }`}
+                    title={emp.nombre}
+                  >
                     {emp.nombre}
                   </td>
                   {plan(emp.dias).map((cell, ci) =>
                     cell.tipo === "bar" ? (
-                      <td key={ci} colSpan={cell.span} className="px-0.5 py-1">
-                        <div className={`flex h-5 items-center justify-center truncate rounded px-1 text-[9px] font-bold text-white ${CELDA[cell.t].bar}`}>
+                      <td key={ci} colSpan={cell.span} className="h-11 px-0.5 py-2">
+                        <div className={`flex h-7 items-center justify-center truncate rounded px-1 text-[9px] font-bold text-white ${CELDA[cell.t].bar}`}>
                           {cell.span > 2 ? CELDA[cell.t].label : ""}
                         </div>
                       </td>
@@ -529,7 +537,7 @@ function VistaMes({ anio, mes, setMes, registros, tipoDe, nombreEmp }) {
                       (() => {
                         const wd = new Date(anio, mes, cell.d).getDay();
                         const we = wd === 0 || wd === 6;
-                        return <td key={ci} className={`w-9 min-w-9 border-b border-gray-100 px-0.5 py-1 ${we ? "bg-slate-50" : ""}`} />;
+                        return <td key={ci} className={`h-11 w-9 min-w-9 border-b border-gray-100 px-0.5 py-2 ${we ? "bg-slate-50" : ""}`} />;
                       })()
                     ),
                   )}

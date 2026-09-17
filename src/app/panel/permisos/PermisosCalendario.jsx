@@ -191,9 +191,9 @@ export default function PermisosCalendario({
           </div>
         ) : (
           <table className="w-max min-w-full border-collapse text-[11px]">
-            <thead className={`sticky top-0 z-10 text-white ${headerBackground}`}>
+            <thead className={`sticky top-0 z-30 text-white ${headerBackground}`}>
               <tr>
-                <th className={`sticky left-0 z-20 w-[190px] min-w-[190px] max-w-[190px] px-3 py-1.5 text-left font-semibold ${headerBackground}`}>
+                <th className={`sticky left-0 z-40 w-[190px] min-w-[190px] max-w-[190px] px-3 py-1.5 text-left font-semibold ${headerBackground}`}>
                   Empleado
                 </th>
                 {dias.map((d) => {
@@ -228,9 +228,11 @@ export default function PermisosCalendario({
             </thead>
             <tbody>
               {filas.map((emp, ri) => (
-                <tr key={emp.key} className={ri % 2 ? "bg-gray-50/60" : "bg-white"}>
+                <tr key={emp.key} className={`h-11 ${ri % 2 ? "bg-gray-50/60" : "bg-white"}`}>
                   <td
-                    className="sticky left-0 z-10 w-[190px] min-w-[190px] max-w-[190px] truncate bg-inherit px-3 py-1 font-medium text-gray-900"
+                    className={`sticky left-0 z-20 h-11 w-[190px] min-w-[190px] max-w-[190px] truncate px-3 py-2 font-medium text-gray-900 ${
+                      ri % 2 ? "bg-gray-50" : "bg-white"
+                    }`}
                     title={emp.nombre}
                   >
                     {emp.nombre}
@@ -243,7 +245,7 @@ export default function PermisosCalendario({
                         <td
                           key={`b-${ci}`}
                           colSpan={cell.span}
-                          className="px-0.5 py-1"
+                          className="h-11 px-0.5 py-2"
                         >
                           <button
                             type="button"
@@ -268,7 +270,7 @@ export default function PermisosCalendario({
                     return (
                       <td
                         key={`e-${ci}`}
-                        className={`w-9 min-w-9 border-b border-gray-100 px-0.5 py-1 ${
+                        className={`h-11 w-9 min-w-9 border-b border-gray-100 px-0.5 py-2 ${
                           festivo ? "bg-rose-50" : finde ? "bg-slate-50" : ""
                         }`}
                       />
