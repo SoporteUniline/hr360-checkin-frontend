@@ -452,7 +452,7 @@ export default function VacacionesPage() {
         const nuevo = Number(valor);
         const anterior = Number(empleado.dias_disponibles ?? 0);
 
-        if (!Number.isInteger(nuevo) || nuevo < 0 || nuevo === anterior) {
+        if (!Number.isInteger(nuevo) || nuevo === anterior) {
           return null;
         }
 
@@ -1131,7 +1131,6 @@ export default function VacacionesPage() {
                       <TableCell className="text-center">
                         <Input
                           type="number"
-                          min="0"
                           step="1"
                           value={
                             cambiosMasivos[emp.id_empleado] ??
