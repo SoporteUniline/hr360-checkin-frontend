@@ -20,6 +20,7 @@ import { ADAMIA, gradientLine, applyAdamiaFont } from "@/lib/pdfAdamiaTheme";
 import { useEffect, useState } from "react";
 import { useSnackbar } from "notistack";
 import { administrativeMinutesApi } from "@/lib/administrativeMinutesApi";
+import { firmaDigitalAdminApi } from "@/lib/firmaDigitalApi";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +44,10 @@ import {
   Download,
   Loader2,
   Printer,
+  FileSignature,
+  CheckCircle2,
+  Copy,
+  ExternalLink,
 } from "lucide-react";
 
 dayjs.locale("es");
@@ -58,7 +63,6 @@ export const AdministrativeDetailsModal = ({
   onEstatusUpdated,
 }) => {
   const { dataUser } = useAuth();
-  console.log(dataUser);
   const { enqueueSnackbar } = useSnackbar();
   const idEmpresa = acta?.id_empresa;
 
@@ -117,11 +121,63 @@ export const AdministrativeDetailsModal = ({
   const [savingEstatus, setSavingEstatus] = useState(false);
   const [isPreparingPrint, setIsPreparingPrint] = useState(false);
 
+  const [solicitudFirma, setSolicitudFirma] = useState(null);
+  const [estadoFirma, setEstadoFirma] = useState(null);
+  const [consultandoFirma, setConsultandoFirma] = useState(false);
+  const [solicitandoFirma, setSolicitandoFirma] = useState(false);
+  const [abriendoDocumentoFirmado, setAbriendoDocumentoFirmado] =
+    useState(false);
+  const [errorFirma, setErrorFirma] = useState("");
+  const [enlaceCopiado, setEnlaceCopiado] = useState(false);
+
   useEffect(() => {
     // Cuando cambia el acta (por abrir otra), sincronizamos estado local.
     setEstatusLocal(acta?.estatus);
     setEstatusNuevo(String(acta?.estatus || "").toLowerCase());
+
+    setSolicitudFirma(null);
+    setEstadoFirma(null);
+    setErrorFirma("");
+    setEnlaceCopiado(false);
   }, [acta?.id_acta, acta?.estatus]);
+
+  useEffect(() => {
+    let alive = true;
+
+    const consultarEstadoFirma = async () => {
+      if (!open || !acta?.id_acta || !acta?.id_empresa) return;
+
+      setConsultandoFirma(true);
+      setErrorFirma("");
+
+      try {
+        const respuesta = await firmaDigitalAdminApi.obtenerEstadoDocumento({
+          idEmpresa: acta.id_empresa,
+          tipoDocumento: "ACTA_ADMINISTRATIVA",
+          referenciaId: acta.id_acta,
+        });
+
+        if (alive) {
+          setEstadoFirma(respuesta?.solicitud || null);
+        }
+      } catch (error) {
+        if (alive) {
+          setErrorFirma(
+            error?.response?.data?.error ||
+              "No se pudo consultar el estado de la firma.",
+          );
+        }
+      } finally {
+        if (alive) setConsultandoFirma(false);
+      }
+    };
+
+    consultarEstadoFirma();
+
+    return () => {
+      alive = false;
+    };
+  }, [open, acta?.id_acta, acta?.id_empresa]);
 
   // Mantener el guard clause DESPUÉS de TODOS los hooks (para no romper el orden).
   if (!acta) return null;
@@ -197,7 +253,12 @@ export const AdministrativeDetailsModal = ({
    * - Relación: lo reutilizamos para descargar e imprimir.
    */
   const buildActaPdfFormatoPermisos = async () => {
-    const doc = new jsPDF("p", "mm", "a4");
+    const doc = new jsPDF({
+      orientation: "p",
+      unit: "mm",
+      format: "a4",
+      compress: true,
+    });
     // Tipografía corporativa Adamia (Poppins con fallback a Helvetica).
     const FONT = await applyAdamiaFont(doc);
     const pageWidth = 210;
@@ -664,6 +725,111 @@ export const AdministrativeDetailsModal = ({
     doc.save(nombreArchivo);
   };
 
+  const abrirDocumentoFirmado = async () => {
+    if (!estadoFirma?.id || !acta?.id_empresa) return;
+
+    setAbriendoDocumentoFirmado(true);
+    setErrorFirma("");
+
+    try {
+      const respuesta = await firmaDigitalAdminApi.obtenerDocumentoFirmado({
+        idSolicitud: estadoFirma.id,
+        idEmpresa: acta.id_empresa,
+      });
+
+      if (!respuesta?.documento_url) {
+        throw new Error("No se recibió la URL del documento firmado.");
+      }
+
+      window.open(respuesta.documento_url, "_blank", "noopener,noreferrer");
+    } catch (error) {
+      setErrorFirma(
+        error?.response?.data?.error ||
+          error?.message ||
+          "No se pudo abrir el documento firmado.",
+      );
+    } finally {
+      setAbriendoDocumentoFirmado(false);
+    }
+  };
+
+  const solicitarFirma = async () => {
+    if (!acta?.id_empresa || !acta?.id_empleado || !acta?.id_acta) {
+      setErrorFirma(
+        "No se encontraron los datos necesarios del acta para solicitar la firma.",
+      );
+      return;
+    }
+
+    setSolicitandoFirma(true);
+    setErrorFirma("");
+    setEnlaceCopiado(false);
+
+    try {
+      const { doc, nombreArchivo } = await buildActaPdfFormatoPermisos();
+      const documento = doc.output("blob");
+
+      const solicitud = await firmaDigitalAdminApi.crearSolicitud({
+        idEmpresa: acta.id_empresa,
+        idEmpleado: acta.id_empleado,
+        tipoDocumento: "ACTA_ADMINISTRATIVA",
+        referenciaId: acta.id_acta,
+        documento,
+        nombreArchivo,
+        expiracionHoras: 72,
+      });
+
+      const urlFirmaCompleta = solicitud?.url
+        ? new URL(solicitud.url, window.location.origin).toString()
+        : solicitud?.token
+          ? `${window.location.origin}/firmar/${encodeURIComponent(
+              solicitud.token,
+            )}`
+          : null;
+
+      const solicitudLocal = {
+        ...solicitud,
+        url_firma_completa: urlFirmaCompleta,
+      };
+
+      setSolicitudFirma(solicitudLocal);
+      setEstadoFirma({
+        id: solicitud?.id,
+        estatus: "pendiente",
+        nombre_firmante:
+          solicitud?.firmante?.nombre ||
+          `${acta.nombre_empleado || ""} ${
+            acta.apellido_paterno_empleado || ""
+          } ${acta.apellido_materno_empleado || ""}`.trim(),
+        tiene_documento_firmado: false,
+      });
+
+      enqueueSnackbar("Solicitud de firma creada correctamente", {
+        variant: "success",
+      });
+    } catch (error) {
+      setErrorFirma(
+        error?.response?.data?.error ||
+          error?.message ||
+          "No se pudo crear la solicitud de firma.",
+      );
+    } finally {
+      setSolicitandoFirma(false);
+    }
+  };
+
+  const copiarEnlaceFirma = async () => {
+    if (!solicitudFirma?.url_firma_completa) return;
+
+    try {
+      await navigator.clipboard.writeText(solicitudFirma.url_firma_completa);
+      setEnlaceCopiado(true);
+      setTimeout(() => setEnlaceCopiado(false), 2000);
+    } catch {
+      setErrorFirma("No se pudo copiar el enlace de firma.");
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent
@@ -828,6 +994,101 @@ export const AdministrativeDetailsModal = ({
           </CardCompact>
         </div>
 
+        {/* Estado y acciones de firma digital */}
+        {(consultandoFirma ||
+          errorFirma ||
+          estadoFirma ||
+          solicitudFirma) && (
+          <div className="px-6 pb-4">
+            {consultandoFirma ? (
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600 flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Consultando estado de firma...
+              </div>
+            ) : estadoFirma?.estatus === "firmado" ? (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="font-semibold text-emerald-800">
+                        Documento firmado
+                      </p>
+                      <p className="text-sm text-emerald-700">
+                        {estadoFirma.nombre_firmante || "El empleado"} completó
+                        la firma de esta acta.
+                      </p>
+                    </div>
+                  </div>
+
+                  {estadoFirma.tiene_documento_firmado && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={abrirDocumentoFirmado}
+                      disabled={abriendoDocumentoFirmado}
+                      className="w-full sm:w-auto border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                    >
+                      {abriendoDocumentoFirmado ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                      )}
+                      {abriendoDocumentoFirmado
+                        ? "Abriendo..."
+                        : "Ver PDF firmado"}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ) : ["pendiente", "abierto"].includes(estadoFirma?.estatus) ? (
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                <div className="flex items-start gap-3">
+                  <FileSignature className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-blue-800">
+                      Firma pendiente
+                    </p>
+                    <p className="text-sm text-blue-700">
+                      La solicitud está pendiente de firma por{" "}
+                      {estadoFirma.nombre_firmante || "el empleado"}.
+                    </p>
+
+                    {solicitudFirma?.url_firma_completa && (
+                      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                        <input
+                          type="text"
+                          readOnly
+                          value={solicitudFirma.url_firma_completa}
+                          className="h-9 min-w-0 flex-1 rounded-md border border-blue-200 bg-white px-3 text-xs text-gray-700 outline-none"
+                        />
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={copiarEnlaceFirma}
+                          className="w-full sm:w-auto border-blue-300 text-blue-700 hover:bg-blue-100"
+                        >
+                          {enlaceCopiado ? (
+                            <CheckCircle2 className="h-4 w-4 mr-2" />
+                          ) : (
+                            <Copy className="h-4 w-4 mr-2" />
+                          )}
+                          {enlaceCopiado ? "Copiado" : "Copiar enlace"}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : errorFirma ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                {errorFirma}
+              </div>
+            ) : null}
+          </div>
+        )}
+
         {/* Footer de acciones: cerrar + descargar PDF.
             Relación: patrón igual a `PermisoViewDialog` y `FiniquitoViewDialog`. */}
         <div className="bg-gray-50 p-4 flex flex-col-reverse sm:flex-row justify-end gap-2 rounded-b-lg">
@@ -847,6 +1108,26 @@ export const AdministrativeDetailsModal = ({
           >
             Cerrar
           </Button>
+          {!consultandoFirma &&
+            !errorFirma &&
+            !["pendiente", "abierto", "firmado"].includes(
+              estadoFirma?.estatus,
+            ) && (
+              <Button
+                type="button"
+                onClick={solicitarFirma}
+                disabled={solicitandoFirma || isPreparingPrint}
+                className="w-full sm:w-auto bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm"
+              >
+                {solicitandoFirma ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <FileSignature className="h-4 w-4 mr-2" />
+                )}
+                {solicitandoFirma ? "Generando..." : "Solicitar firma"}
+              </Button>
+            )}
+
           <Button
             onClick={descargarPDFActaFormatoPermisos}
             disabled={isPreparingPrint}
