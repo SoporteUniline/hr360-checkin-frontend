@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import useSWR, { mutate } from "swr";
 import { useAuth } from "@/context/AuthContext";
 import { fetcherWithToken } from "@/lib/fetcher";
 import { docGeneradosApi } from "@/lib/gestionDocumentalApi";
+import { firmaDigitalAdminApi } from "@/lib/firmaDigitalApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -41,6 +42,11 @@ import {
   Plus,
   User,
   Calendar,
+  FileSignature,
+  CheckCircle2,
+  Copy,
+  ExternalLink,
+  Loader2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -132,6 +138,15 @@ export default function DocumentosPage() {
   const [viewingDoc, setViewingDoc] = useState(null);
   const [deletingDoc, setDeletingDoc] = useState(null);
 
+  const [solicitudFirma, setSolicitudFirma] = useState(null);
+  const [estadoFirma, setEstadoFirma] = useState(null);
+  const [consultandoFirma, setConsultandoFirma] = useState(false);
+  const [solicitandoFirma, setSolicitandoFirma] = useState(false);
+  const [abriendoDocumentoFirmado, setAbriendoDocumentoFirmado] =
+    useState(false);
+  const [errorFirma, setErrorFirma] = useState("");
+  const [enlaceCopiado, setEnlaceCopiado] = useState(false);
+
   const swrKey = `/checador/gestion-documental/documentos?empresa=${empresa}&search=${search}&estatus=${estatus === "todos" ? "" : estatus}&page=${page}&limit=${limit}`;
 
   const { data, isLoading, error } = useSWR(swrKey, fetcherWithToken, {
@@ -151,6 +166,50 @@ export default function DocumentosPage() {
       enqueueSnackbar("Error al cargar el documento", { variant: "error" });
     }
   };
+
+  useEffect(() => {
+    setSolicitudFirma(null);
+    setEstadoFirma(null);
+    setErrorFirma("");
+    setEnlaceCopiado(false);
+
+    if (!viewingDoc?.id_documento || !viewingDoc?.id_empresa) return;
+
+    let alive = true;
+
+    const consultarEstadoFirma = async () => {
+      setConsultandoFirma(true);
+
+      try {
+        const respuesta = await firmaDigitalAdminApi.obtenerEstadoDocumento({
+          idEmpresa: viewingDoc.id_empresa,
+          tipoDocumento: "DOCUMENTO_GENERADO",
+          referenciaId: viewingDoc.id_documento,
+        });
+
+        if (alive) {
+          setEstadoFirma(respuesta?.solicitud || null);
+        }
+      } catch (error) {
+        if (alive) {
+          setErrorFirma(
+            error?.response?.data?.error ||
+              "No se pudo consultar el estado de la firma.",
+          );
+        }
+      } finally {
+        if (alive) {
+          setConsultandoFirma(false);
+        }
+      }
+    };
+
+    consultarEstadoFirma();
+
+    return () => {
+      alive = false;
+    };
+  }, [viewingDoc?.id_documento, viewingDoc?.id_empresa]);
 
   /* ─── Eliminar ─── */
   const confirmDelete = async () => {
@@ -176,6 +235,116 @@ export default function DocumentosPage() {
     } catch (err) {
       console.error("PDF error:", err);
       enqueueSnackbar("Error al generar el PDF", { variant: "error" });
+    }
+  };
+
+  const abrirDocumentoFirmado = async () => {
+    if (!estadoFirma?.id || !viewingDoc?.id_empresa) return;
+
+    setAbriendoDocumentoFirmado(true);
+    setErrorFirma("");
+
+    try {
+      const respuesta = await firmaDigitalAdminApi.obtenerDocumentoFirmado({
+        idSolicitud: estadoFirma.id,
+        idEmpresa: viewingDoc.id_empresa,
+      });
+
+      if (!respuesta?.documento_url) {
+        throw new Error("No se recibió la URL del documento firmado.");
+      }
+
+      window.open(respuesta.documento_url, "_blank", "noopener,noreferrer");
+    } catch (error) {
+      setErrorFirma(
+        error?.response?.data?.error ||
+          error?.message ||
+          "No se pudo abrir el documento firmado.",
+      );
+    } finally {
+      setAbriendoDocumentoFirmado(false);
+    }
+  };
+
+  const solicitarFirma = async () => {
+    if (
+      !viewingDoc?.id_empresa ||
+      !viewingDoc?.id_empleado ||
+      !viewingDoc?.id_documento ||
+      !viewingDoc?.contenido_html
+    ) {
+      setErrorFirma(
+        "No se encontraron los datos necesarios del documento para solicitar la firma.",
+      );
+      return;
+    }
+
+    setSolicitandoFirma(true);
+    setErrorFirma("");
+    setEnlaceCopiado(false);
+
+    try {
+      const nombreArchivo = viewingDoc.nombre_documento || "documento";
+      const documento = await htmlToPdf(
+        viewingDoc.contenido_html,
+        nombreArchivo,
+        { download: false },
+      );
+
+      const solicitud = await firmaDigitalAdminApi.crearSolicitud({
+        idEmpresa: viewingDoc.id_empresa,
+        idEmpleado: viewingDoc.id_empleado,
+        tipoDocumento: "DOCUMENTO_GENERADO",
+        referenciaId: viewingDoc.id_documento,
+        documento,
+        nombreArchivo: `${nombreArchivo}.pdf`,
+        expiracionHoras: 72,
+      });
+
+      const urlFirmaCompleta = solicitud?.url
+        ? new URL(solicitud.url, window.location.origin).toString()
+        : solicitud?.token
+          ? `${window.location.origin}/firmar/${encodeURIComponent(
+              solicitud.token,
+            )}`
+          : null;
+
+      setSolicitudFirma({
+        ...solicitud,
+        url_firma_completa: urlFirmaCompleta,
+      });
+
+      setEstadoFirma({
+        id: solicitud?.id,
+        estatus: "pendiente",
+        nombre_firmante:
+          solicitud?.firmante?.nombre || viewingDoc.nombre_empleado || "",
+        tiene_documento_firmado: false,
+      });
+
+      enqueueSnackbar("Solicitud de firma creada correctamente", {
+        variant: "success",
+      });
+    } catch (error) {
+      setErrorFirma(
+        error?.response?.data?.error ||
+          error?.message ||
+          "No se pudo crear la solicitud de firma.",
+      );
+    } finally {
+      setSolicitandoFirma(false);
+    }
+  };
+
+  const copiarEnlaceFirma = async () => {
+    if (!solicitudFirma?.url_firma_completa) return;
+
+    try {
+      await navigator.clipboard.writeText(solicitudFirma.url_firma_completa);
+      setEnlaceCopiado(true);
+      setTimeout(() => setEnlaceCopiado(false), 2000);
+    } catch {
+      setErrorFirma("No se pudo copiar el enlace de firma.");
     }
   };
 
@@ -318,9 +487,128 @@ export default function DocumentosPage() {
               dangerouslySetInnerHTML={{ __html: viewingDoc?.contenido_html || "" }}
             />
           </div>
+          {(consultandoFirma ||
+            estadoFirma ||
+            errorFirma) && (
+            <div>
+              {consultandoFirma ? (
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600 flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Consultando estado de firma...
+                </div>
+              ) : estadoFirma?.estatus === "firmado" ? (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-start gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-emerald-600 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="font-semibold text-emerald-800">
+                          Documento firmado
+                        </p>
+                        <p className="text-sm text-emerald-700">
+                          {estadoFirma.nombre_firmante || "El empleado"} completó
+                          la firma de este documento.
+                        </p>
+                      </div>
+                    </div>
+
+                    {estadoFirma.tiene_documento_firmado && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={abrirDocumentoFirmado}
+                        disabled={abriendoDocumentoFirmado}
+                        className="w-full sm:w-auto border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+                      >
+                        {abriendoDocumentoFirmado ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                        )}
+                        {abriendoDocumentoFirmado
+                          ? "Abriendo..."
+                          : "Ver PDF firmado"}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ) : ["pendiente", "abierto"].includes(estadoFirma?.estatus) ? (
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                  <div className="flex items-start gap-3">
+                    <FileSignature className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-blue-800">
+                        Firma pendiente
+                      </p>
+                      <p className="text-sm text-blue-700">
+                        La solicitud está pendiente de firma por{" "}
+                        {estadoFirma.nombre_firmante || "el empleado"}.
+                      </p>
+
+                      {solicitudFirma?.url_firma_completa && (
+                        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                          <input
+                            type="text"
+                            readOnly
+                            value={solicitudFirma.url_firma_completa}
+                            className="h-9 min-w-0 flex-1 rounded-md border border-blue-200 bg-white px-3 text-xs text-gray-700 outline-none"
+                          />
+
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={copiarEnlaceFirma}
+                            className="w-full sm:w-auto border-blue-300 text-blue-700 hover:bg-blue-100"
+                          >
+                            {enlaceCopiado ? (
+                              <CheckCircle2 className="h-4 w-4 mr-2" />
+                            ) : (
+                              <Copy className="h-4 w-4 mr-2" />
+                            )}
+                            {enlaceCopiado ? "Copiado" : "Copiar enlace"}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : errorFirma ? (
+                <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                  {errorFirma}
+                </div>
+              ) : null}
+            </div>
+          )}
+
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setViewingDoc(null)}>Cerrar</Button>
-            <Button className="bg-[#2563EB] hover:bg-blue-700 text-white gap-2" onClick={handleDescargar}>
+            <Button variant="outline" onClick={() => setViewingDoc(null)}>
+              Cerrar
+            </Button>
+
+            {!consultandoFirma &&
+              !errorFirma &&
+              !["pendiente", "abierto", "firmado"].includes(
+                estadoFirma?.estatus,
+              ) && (
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={solicitarFirma}
+                  disabled={solicitandoFirma}
+                >
+                  {solicitandoFirma ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <FileSignature className="w-4 h-4" />
+                  )}
+                  {solicitandoFirma ? "Preparando..." : "Solicitar firma"}
+                </Button>
+              )}
+
+            <Button
+              className="bg-[#2563EB] hover:bg-blue-700 text-white gap-2"
+              onClick={handleDescargar}
+            >
               <Download className="w-4 h-4" /> Descargar PDF
             </Button>
           </div>

@@ -23,7 +23,11 @@ import {
   loadAdamiaLogo,
 } from "@/lib/pdfAdamiaTheme";
 
-export async function htmlToPdf(html, filename = "documento") {
+export async function htmlToPdf(
+  html,
+  filename = "documento",
+  { download = true } = {},
+) {
   const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
     import("html2canvas"),
     import("jspdf"),
@@ -216,8 +220,13 @@ export async function htmlToPdf(html, filename = "documento") {
           drawFooter(page + 1);
         }
 
-        pdf.save(`${filename}.pdf`);
-        resolve();
+        const blob = pdf.output("blob");
+
+        if (download) {
+          pdf.save(`${filename}.pdf`);
+        }
+
+        resolve(blob);
       } catch (err) {
         reject(err);
       } finally {
