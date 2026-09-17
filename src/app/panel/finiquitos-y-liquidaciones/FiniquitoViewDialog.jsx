@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { finiquitosApi } from "@/lib/finiquitosApi";
+import { firmaDigitalAdminApi } from "@/lib/firmaDigitalApi";
 import styles from "./finiquitos-theme.module.css";
 import { jsPDF } from "jspdf";
 import dayjs from "dayjs";
@@ -19,7 +20,15 @@ import useSWR from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { fetchImageAsDataUrl } from "@/lib/pdfCompanyLogo";
 import { ADAMIA, gradientLine, applyAdamiaFont } from "@/lib/pdfAdamiaTheme";
-import { Download, FileText, Loader2, Printer } from "lucide-react";
+import {
+  Check,
+  Copy,
+  Download,
+  FileSignature,
+  FileText,
+  Loader2,
+  Printer,
+} from "lucide-react";
 
 export default function FiniquitoViewDialog({ open, setOpen, id }) {
   const { dataUser } = useAuth();
@@ -60,12 +69,27 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
   const [det, setDet] = useState(null);
   const [loading, setLoading] = useState(false);
   const [isPreparingPrint, setIsPreparingPrint] = useState(false);
+  const [solicitandoFirma, setSolicitandoFirma] = useState(false);
+  const [solicitudFirma, setSolicitudFirma] = useState(null);
+  const [estadoFirma, setEstadoFirma] = useState(null);
+  const [consultandoFirma, setConsultandoFirma] = useState(false);
+  const [abriendoDocumentoFirmado, setAbriendoDocumentoFirmado] =
+    useState(false);
+  const [errorFirma, setErrorFirma] = useState("");
+  const [enlaceCopiado, setEnlaceCopiado] = useState(false);
 
   useEffect(() => {
     let active = true;
     const load = async () => {
       if (!open || !id) return;
+
+      setDet(null);
+      setSolicitudFirma(null);
+      setEstadoFirma(null);
+      setErrorFirma("");
+      setEnlaceCopiado(false);
       setLoading(true);
+
       try {
         const data = await finiquitosApi.detalle(id);
         if (active) setDet(data);
@@ -88,7 +112,12 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
   const buildPdfFormatoNuevo = async () => {
     if (!det) return;
 
-    const doc = new jsPDF("p", "mm", "a4");
+    const doc = new jsPDF({
+      orientation: "p",
+      unit: "mm",
+      format: "a4",
+      compress: true,
+    });
     // Tipografía corporativa Adamia (Poppins con fallback Helvetica).
     const FONT = await applyAdamiaFont(doc);
     const pageWidth = 210;
@@ -391,6 +420,7 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
     const nombreArchivo = `${
       det.es_liquidacion ? "LIQUIDACION" : "FINIQUITO"
     }_${String(det.nombre_completo || "Empleado").replace(/\s+/g, "_")}.pdf`;
+
     return { doc, nombreArchivo };
   };
 
@@ -522,6 +552,151 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
     const built = await buildPdfFormatoNuevo();
     if (!built) return;
     built.doc.save(built.nombreArchivo);
+  };
+
+  useEffect(() => {
+    let active = true;
+
+    const consultarEstadoFirma = async () => {
+      if (!open || !id || !idEmpresa || !det?.id_empleado) return;
+
+      setConsultandoFirma(true);
+
+      try {
+        const respuesta = await firmaDigitalAdminApi.obtenerEstadoDocumento({
+          idEmpresa,
+          tipoDocumento: "FINIQUITO",
+          referenciaId: id,
+        });
+
+        if (active) {
+          setEstadoFirma(respuesta?.solicitud || null);
+        }
+      } catch (error) {
+        if (active) {
+          setEstadoFirma(null);
+          setErrorFirma(
+            error?.response?.data?.error ||
+              "No fue posible consultar el estado de la firma.",
+          );
+        }
+      } finally {
+        if (active) {
+          setConsultandoFirma(false);
+        }
+      }
+    };
+
+    consultarEstadoFirma();
+
+    return () => {
+      active = false;
+    };
+  }, [open, id, idEmpresa, det?.id_empleado]);
+
+  const abrirDocumentoFirmado = async () => {
+    if (!estadoFirma?.id || !idEmpresa) return;
+
+    setAbriendoDocumentoFirmado(true);
+    setErrorFirma("");
+
+    try {
+      const respuesta = await firmaDigitalAdminApi.obtenerDocumentoFirmado({
+        idSolicitud: estadoFirma.id,
+        idEmpresa,
+      });
+
+      if (!respuesta?.documento_url) {
+        throw new Error("No se recibió el acceso al documento firmado.");
+      }
+
+      window.open(respuesta.documento_url, "_blank", "noopener,noreferrer");
+    } catch (error) {
+      setErrorFirma(
+        error?.response?.data?.error ||
+          error?.message ||
+          "No fue posible abrir el documento firmado.",
+      );
+    } finally {
+      setAbriendoDocumentoFirmado(false);
+    }
+  };
+
+  const solicitarFirma = async () => {
+    if (!det || !idEmpresa || !det.id_empleado || !id) return;
+
+    setSolicitandoFirma(true);
+    setErrorFirma("");
+    setSolicitudFirma(null);
+    setEnlaceCopiado(false);
+
+    try {
+      const built = await buildPdfFormatoNuevo();
+
+      if (!built) {
+        throw new Error("No fue posible generar el PDF del finiquito.");
+      }
+
+      const documento = built.doc.output("blob");
+
+      const solicitud = await firmaDigitalAdminApi.crearSolicitud({
+        idEmpresa,
+        idEmpleado: det.id_empleado,
+        tipoDocumento: "FINIQUITO",
+        referenciaId: id,
+        documento,
+        nombreArchivo: built.nombreArchivo,
+        expiracionHoras: 72,
+      });
+
+      const urlFirma = new URL(
+        solicitud.url_firma,
+        window.location.origin,
+      ).toString();
+
+      setSolicitudFirma({
+        ...solicitud,
+        url_firma_completa: urlFirma,
+      });
+
+      setEstadoFirma({
+        id: solicitud.id_solicitud,
+        tipo_documento: "FINIQUITO",
+        referencia_id: id,
+        nombre_documento: built.nombreArchivo,
+        nombre_firmante: solicitud.firmante?.nombre || det.nombre_completo,
+        estatus: "pendiente",
+        expires_at: solicitud.expires_at,
+        opened_at: null,
+        signed_at: null,
+        tiene_documento_firmado: false,
+      });
+    } catch (error) {
+      setErrorFirma(
+        error?.response?.data?.error ||
+          error?.message ||
+          "No fue posible crear la solicitud de firma.",
+      );
+    } finally {
+      setSolicitandoFirma(false);
+    }
+  };
+
+  const copiarEnlaceFirma = async () => {
+    if (!solicitudFirma?.url_firma_completa) return;
+
+    try {
+      await navigator.clipboard.writeText(
+        solicitudFirma.url_firma_completa,
+      );
+      setEnlaceCopiado(true);
+
+      setTimeout(() => {
+        setEnlaceCopiado(false);
+      }, 2000);
+    } catch {
+      setErrorFirma("No fue posible copiar el enlace.");
+    }
   };
 
   return (
@@ -777,6 +952,104 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
           )}
         </div>
 
+        {(consultandoFirma ||
+          estadoFirma ||
+          solicitudFirma ||
+          errorFirma) && (
+          <div className="mx-6 mb-4">
+            {consultandoFirma ? (
+              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Consultando estado de firma...
+                </div>
+              </div>
+            ) : estadoFirma?.estatus === "firmado" ? (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+                <div className="flex items-start gap-3">
+                  <Check className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-emerald-900">
+                      Documento firmado
+                    </p>
+                    <p className="mt-1 text-sm text-emerald-700">
+                      {estadoFirma.nombre_firmante || "El empleado"} completó
+                      la firma de este documento.
+                    </p>
+
+                    {estadoFirma.tiene_documento_firmado && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={abrirDocumentoFirmado}
+                        disabled={abriendoDocumentoFirmado}
+                        className="mt-3 border-emerald-300 bg-white"
+                      >
+                        {abriendoDocumentoFirmado ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Download className="mr-2 h-4 w-4" />
+                        )}
+                        {abriendoDocumentoFirmado
+                          ? "Abriendo..."
+                          : "Ver PDF firmado"}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : ["pendiente", "abierto"].includes(estadoFirma?.estatus) ? (
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                <div className="flex items-start gap-3">
+                  <FileSignature className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-blue-900">
+                      Pendiente de firma
+                    </p>
+                    <p className="mt-1 text-sm text-blue-700">
+                      La solicitud ya fue creada y está esperando la firma de{" "}
+                      {estadoFirma.nombre_firmante || "el empleado"}.
+                    </p>
+
+                    {solicitudFirma?.url_firma_completa && (
+                      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                        <input
+                          readOnly
+                          value={solicitudFirma.url_firma_completa}
+                          className="min-w-0 flex-1 rounded-md border border-blue-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none"
+                        />
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={copiarEnlaceFirma}
+                          className="shrink-0 border-blue-300 bg-white"
+                        >
+                          {enlaceCopiado ? (
+                            <>
+                              <Check className="mr-2 h-4 w-4" />
+                              Copiado
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="mr-2 h-4 w-4" />
+                              Copiar enlace
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : errorFirma ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {errorFirma}
+              </div>
+            ) : null}
+          </div>
+        )}
+
         {/* Footer con acciones (similar al patrón de Aguinaldos/Permisos): cerrar + descargar PDF */}
         <DialogFooter className="bg-gray-50 p-4 flex flex-col-reverse sm:flex-row justify-end gap-2 rounded-b-lg">
           {isPreparingPrint ? (
@@ -795,6 +1068,31 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
           >
             Cerrar
           </Button>
+          {!["pendiente", "abierto", "firmado"].includes(
+            estadoFirma?.estatus,
+          ) && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={solicitarFirma}
+              disabled={
+                !det ||
+                !idEmpresa ||
+                !det?.id_empleado ||
+                solicitandoFirma ||
+                consultandoFirma ||
+                isPreparingPrint
+              }
+              className="w-full sm:w-auto border-blue-200 text-blue-700 hover:bg-blue-50"
+            >
+              {solicitandoFirma ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <FileSignature className="h-4 w-4 mr-2" />
+              )}
+              {solicitandoFirma ? "Generando..." : "Solicitar firma"}
+            </Button>
+          )}
           <Button
             onClick={descargarPDFFormatoNuevo}
             disabled={!det || isPreparingPrint}
