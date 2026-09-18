@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
-import timezone from "dayjs/plugin/timezone";
+import timezone from "dayjs/plugin/timezone";\nimport "dayjs/locale/es";
 import {
   AlertTriangle,
   BarChart3,
@@ -223,13 +223,13 @@ function limpiarPayload(registro) {
   data.porcentaje_dia_festivo = Number(data.porcentaje_dia_festivo || 0);
   data.prima_dominical = Number(data.prima_dominical || 0);
 
-  data.asistencia = data.asistencia ? 1 : 0;
-  data.goce_sueldo = data.goce_sueldo ? 1 : 0;
-  data.pago_triple = data.pago_triple ? 1 : 0;
-  data.correccion = data.correccion ? 1 : 0;
-  data.es_domingo = data.es_domingo ? 1 : 0;
-  data.es_festivo = data.es_festivo ? 1 : 0;
-  data.hrs_extra = data.hrs_extra ? 1 : 0;
+  data.asistencia = esVerdadero(data.asistencia) ? 1 : 0;
+  data.goce_sueldo = esVerdadero(data.goce_sueldo) ? 1 : 0;
+  data.pago_triple = esVerdadero(data.pago_triple) ? 1 : 0;
+  data.correccion = esVerdadero(data.correccion) ? 1 : 0;
+  data.es_domingo = esVerdadero(data.es_domingo) ? 1 : 0;
+  data.es_festivo = esVerdadero(data.es_festivo) ? 1 : 0;
+  data.hrs_extra = esVerdadero(data.hrs_extra) ? 1 : 0;
 
   return data;
 }
@@ -996,7 +996,7 @@ export default function CentroIncidenciasPage() {
                 {visibles.map((emp) => {
                   const open = expandido === emp.key;
                   return (
-                    <>
+                    <Fragment key={emp.key}>
                       <tr
                         key={emp.key}
                         className={
@@ -1232,8 +1232,7 @@ export default function CentroIncidenciasPage() {
                                               Autorizar
                                             </Button>
                                           )}
-                                          {(inc.accion === "corregir" ||
-                                            inc.tipo === "Falta") && (
+                                          {inc.accion === "corregir" && (
                                             <Button
                                               type="button"
                                               disabled={guardandoId === registro.id}
@@ -1269,7 +1268,7 @@ export default function CentroIncidenciasPage() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   );
                 })}
               </tbody>
