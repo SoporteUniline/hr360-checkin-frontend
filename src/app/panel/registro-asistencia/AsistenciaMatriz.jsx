@@ -337,7 +337,7 @@ export default function AsistenciaMatriz({
             No hay registros en el rango y filtros seleccionados.
           </div>
         ) : (
-          <table className="w-max min-w-full border-collapse text-[11px] leading-none">
+          <table className="w-max min-w-full border-collapse text-sm">
             <thead className="sticky top-0 z-30 bg-[#1f2937] text-white">
               <tr>
                 <th className="sticky left-0 z-40 w-9 min-w-9 bg-[#1f2937] px-1 py-1.5 text-center font-semibold">
@@ -373,16 +373,16 @@ export default function AsistenciaMatriz({
             </thead>
             <tbody>
               {empleados.map((emp, i) => (
-                <tr key={emp.key} className="h-11 odd:bg-white even:bg-gray-50/60">
+                <tr key={emp.key} className="odd:bg-white even:bg-gray-50/60">
                   <td
-                    className={`sticky left-0 z-20 h-11 w-9 min-w-9 px-1 py-2 text-center text-gray-500 ${
+                    className={`sticky left-0 z-20 w-9 min-w-9 px-1 py-2 align-middle text-center leading-5 text-gray-500 ${
                       i % 2 ? "bg-gray-50" : "bg-white"
                     }`}
                   >
                     {i + 1}
                   </td>
                   <td
-                    className={`sticky left-9 z-20 h-11 w-[190px] min-w-[190px] max-w-[190px] truncate px-2 py-2 font-medium text-gray-900 ${
+                    className={`sticky left-9 z-20 w-[190px] min-w-[190px] max-w-[190px] truncate px-2 py-2 align-middle font-medium leading-5 text-gray-900 ${
                       i % 2 ? "bg-gray-50" : "bg-white"
                     }`}
                     title={emp.nombre}
@@ -394,22 +394,22 @@ export default function AsistenciaMatriz({
                     return (
                       <td
                         key={d.format("YYYY-MM-DD")}
-                        className={`h-11 w-8 min-w-8 px-0.5 py-2 text-center font-bold ${c.text} ${c.bg}`}
+                        className={`w-8 min-w-8 px-0.5 py-2 align-middle text-center font-bold leading-5 ${c.text} ${c.bg}`}
                       >
                         {c.code}
                       </td>
                     );
                   })}
-                  <td className="h-11 px-1 py-2 text-center font-semibold text-green-700">
+                  <td className="px-1 py-2 align-middle text-center font-semibold leading-5 text-green-700">
                     {emp.presentes}
                   </td>
-                  <td className="h-11 px-1 py-2 text-center font-bold text-red-700">
+                  <td className="px-1 py-2 align-middle text-center font-bold leading-5 text-red-700">
                     {emp.faltas}
                   </td>
-                  <td className="h-11 px-1 py-2 text-center text-gray-700">
+                  <td className="px-1 py-2 align-middle text-center leading-5 text-gray-700">
                     {emp.total}
                   </td>
-                  <td className="h-11 px-1 py-2 text-center font-semibold text-gray-900">
+                  <td className="px-1 py-2 align-middle text-center font-semibold leading-5 text-gray-900">
                     {emp.pctAusencia}%
                   </td>
                 </tr>
