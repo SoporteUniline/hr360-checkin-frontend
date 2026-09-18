@@ -50,6 +50,7 @@ import {
   SlidersHorizontal,
   ReceiptText,
   CalendarClock,
+  TriangleAlert,
 } from "lucide-react";
 import {
   ChevronDown,
@@ -229,6 +230,12 @@ const menuGroups = [
         url: "/seleccionar-reloj",
         rol: "Recruiter",
         icon: ClockIcon,
+      },
+      {
+        title: "Centro de incidencias",
+        url: "/panel/incidencias",
+        rol: "Recruiter",
+        icon: TriangleAlert,
       },
       {
         title: "Reporte de horas",
