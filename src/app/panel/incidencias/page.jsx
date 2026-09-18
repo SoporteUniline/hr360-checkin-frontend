@@ -4,7 +4,8 @@ import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
-import timezone from "dayjs/plugin/timezone";\nimport "dayjs/locale/es";
+import timezone from "dayjs/plugin/timezone";
+import "dayjs/locale/es";
 import {
   AlertTriangle,
   CalendarDays,
