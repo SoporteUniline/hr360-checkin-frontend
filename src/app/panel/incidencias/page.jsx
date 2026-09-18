@@ -256,10 +256,12 @@ export default function CentroIncidenciasPage() {
   const [autorizandoMasivo, setAutorizandoMasivo] = useState(false);
   const [drafts, setDrafts] = useState({});
 
+  const unidadSeleccionada =
+    unidadActiva === "all" ? null : unidadById?.[unidadActiva] || null;
   const idEmpresa =
     unidadActiva === "all"
       ? "all"
-      : String(unidadById?.[unidadActiva]?.id_empresa || "all");
+      : String(unidadSeleccionada?.id_empresa || "all");
   const fallbackTimezone = useEmpresaTimezone(idEmpresa);
 
   const cargar = useCallback(async () => {
@@ -337,6 +339,7 @@ export default function CentroIncidenciasPage() {
             r?.sucursal ||
             r?.empresa_nombre ||
             "Sin unidad",
+          idSucursal: r?.id_sucursal ?? r?.sucursal_id ?? null,
           registros: [],
         });
       }
@@ -420,7 +423,14 @@ export default function CentroIncidenciasPage() {
         emp.departamento.toLowerCase().includes(q) ||
         emp.unidad.toLowerCase().includes(q);
 
-      if (!matchQ) return false;
+      const matchUnidad =
+        !unidadSeleccionada ||
+        (emp.idSucursal != null &&
+          String(emp.idSucursal) === String(unidadSeleccionada.id_sucursal)) ||
+        emp.unidad.toLowerCase() ===
+          String(unidadSeleccionada.label || "").toLowerCase();
+
+      if (!matchQ || !matchUnidad) return false;
       if (filtro === "review") return emp.estado !== "ready";
       if (filtro === "faults") return emp.faltas > 0;
       if (filtro === "late") return emp.retardos > 0;
@@ -431,7 +441,7 @@ export default function CentroIncidenciasPage() {
       if (filtro === "ready") return emp.estado === "ready";
       return true;
     });
-  }, [empleados, busqueda, filtro]);
+  }, [empleados, busqueda, filtro, unidadSeleccionada]);
 
   const totalIncidencias = useMemo(
     () => empleados.reduce((acc, emp) => acc + emp.incidencias.length, 0),
