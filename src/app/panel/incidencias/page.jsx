@@ -7,7 +7,6 @@ import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";\nimport "dayjs/locale/es";
 import {
   AlertTriangle,
-  BarChart3,
   CalendarDays,
   CheckCircle2,
   ChevronDown,
