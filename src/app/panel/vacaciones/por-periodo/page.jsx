@@ -64,7 +64,9 @@ import {
   CalendarDays,
   Pencil,
   Plus,
+  RotateCcw,
   Save,
+  Search,
   Trash2,
 } from "lucide-react";
 
@@ -83,13 +85,131 @@ export default function VacacionesPorPeriodoPage() {
   const [error, setError] = useState(null);
   const [rows, setRows] = useState([]);
 
+  // Filtros rápidos de la tabla
+  const [filtroColaborador, setFiltroColaborador] = useState("");
+  const [filtroDepartamento, setFiltroDepartamento] = useState("all");
+  const [filtroEstado, setFiltroEstado] = useState("all");
+  const [filtroAnio, setFiltroAnio] = useState("all");
+  const [soloRevision, setSoloRevision] = useState(false);
+
+  const requiereRevision = (row, allRows = rows) => {
+    const inicio = row?.fecha_inicio ? dayjs(String(row.fecha_inicio).slice(0, 10)) : null;
+    const fin = row?.fecha_fin ? dayjs(String(row.fecha_fin).slice(0, 10)) : null;
+
+    if (!inicio?.isValid?.() || !fin?.isValid?.()) return true;
+    if (inicio.isAfter(fin, "day")) return true;
+    if (Number(row?.dias || 0) <= 0) return true;
+    if (Number(row?.anios || 0) < 0) return true;
+
+    // Un periodo activo cuya fecha final ya pasó requiere atención.
+    if (
+      String(row?.estado || "").toLowerCase() === "activa" &&
+      fin.isBefore(dayjs().startOf("day"), "day")
+    ) {
+      return true;
+    }
+
+    // Detectar periodos superpuestos para el mismo colaborador.
+    return allRows.some((other) => {
+      if (!other || String(other.id) === String(row.id)) return false;
+      if (String(other.id_empleado) !== String(row.id_empleado)) return false;
+
+      const otherInicio = other.fecha_inicio
+        ? dayjs(String(other.fecha_inicio).slice(0, 10))
+        : null;
+      const otherFin = other.fecha_fin
+        ? dayjs(String(other.fecha_fin).slice(0, 10))
+        : null;
+
+      if (!otherInicio?.isValid?.() || !otherFin?.isValid?.()) return false;
+
+      return (
+        !inicio.isAfter(otherFin, "day") &&
+        !fin.isBefore(otherInicio, "day")
+      );
+    });
+  };
+
+  const departamentosFiltro = useMemo(
+    () =>
+      Array.from(
+        new Set(rows.map((r) => r?.departamento).filter(Boolean)),
+      ).sort((a, b) => a.localeCompare(b, "es")),
+    [rows],
+  );
+
+  const aniosFiltro = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          rows
+            .map((r) => Number(r?.anios))
+            .filter((n) => Number.isFinite(n)),
+        ),
+      ).sort((a, b) => a - b),
+    [rows],
+  );
+
+  const rowsFiltradas = useMemo(() => {
+    const q = filtroColaborador.trim().toLowerCase();
+
+    return rows.filter((r) => {
+      const nombre = `${r.nombre || ""} ${r.apellido_paterno || ""} ${
+        r.apellido_materno || ""
+      }`
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase();
+
+      if (q && !nombre.includes(q)) return false;
+      if (
+        filtroDepartamento !== "all" &&
+        String(r.departamento || "") !== filtroDepartamento
+      ) {
+        return false;
+      }
+      if (
+        filtroEstado !== "all" &&
+        String(r.estado || "") !== filtroEstado
+      ) {
+        return false;
+      }
+      if (
+        filtroAnio !== "all" &&
+        String(r.anios) !== String(filtroAnio)
+      ) {
+        return false;
+      }
+      if (soloRevision && !requiereRevision(r, rows)) return false;
+
+      return true;
+    });
+  }, [
+    rows,
+    filtroColaborador,
+    filtroDepartamento,
+    filtroEstado,
+    filtroAnio,
+    soloRevision,
+  ]);
+
+  const resumenPeriodos = useMemo(
+    () => ({
+      total: rows.length,
+      activas: rows.filter((r) => r.estado === "Activa").length,
+      vencidas: rows.filter((r) => r.estado === "Vencida").length,
+      revision: rows.filter((r) => requiereRevision(r, rows)).length,
+    }),
+    [rows],
+  );
+
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const total = rows.length;
+  const total = rowsFiltradas.length;
   const pageRows = useMemo(() => {
     const start = (page - 1) * limit;
-    return rows.slice(start, start + limit);
-  }, [rows, page, limit]);
+    return rowsFiltradas.slice(start, start + limit);
+  }, [rowsFiltradas, page, limit]);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editRow, setEditRow] = useState(null);
@@ -131,6 +251,25 @@ export default function VacacionesPorPeriodoPage() {
   useEffect(() => {
     fetchRows();
   }, [empresaActiva]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [
+    filtroColaborador,
+    filtroDepartamento,
+    filtroEstado,
+    filtroAnio,
+    soloRevision,
+  ]);
+
+  const limpiarFiltrosTabla = () => {
+    setFiltroColaborador("");
+    setFiltroDepartamento("all");
+    setFiltroEstado("all");
+    setFiltroAnio("all");
+    setSoloRevision(false);
+    setPage(1);
+  };
 
   // Formatear fecha a dd/mm/yyyy
   const formatDMY = (iso) => {
@@ -442,41 +581,156 @@ export default function VacacionesPorPeriodoPage() {
 
       <Card className="p-0 overflow-hidden border-gray-100">
         <CardHeader className="border-b border-gray-100 bg-white py-4">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-slate-100 rounded-lg">🏢</div>
-              <div>
-                <p className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
-                  Unidad de negocio
-                </p>
-                <select
-                  value={unidadActiva}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setUnidadActiva(val);
-                    setPage(1);
-                  }}
-                  className="block w-full mt-1 font-medium text-slate-700 bg-transparent focus:outline-none cursor-pointer"
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-slate-100 p-2">🏢</div>
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    Unidad de negocio
+                  </p>
+                  <select
+                    value={unidadActiva}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setUnidadActiva(val);
+                      setPage(1);
+                    }}
+                    className="mt-1 block w-full cursor-pointer bg-transparent font-medium text-slate-700 focus:outline-none"
+                  >
+                    <option value="all">🌍 Todas las unidades de negocio</option>
+                    {unidadOptions.map((unidad, index) => (
+                      <option
+                        key={`${unidad.value}-${index}`}
+                        value={unidad.value}
+                      >
+                        {unidad.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                    Periodos
+                  </span>
+                  <span className="ml-2 text-sm font-extrabold text-slate-800">
+                    {resumenPeriodos.total}
+                  </span>
+                </div>
+                <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-emerald-600">
+                    Activos
+                  </span>
+                  <span className="ml-2 text-sm font-extrabold text-emerald-700">
+                    {resumenPeriodos.activas}
+                  </span>
+                </div>
+                <div className="rounded-xl border border-rose-100 bg-rose-50 px-3 py-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-rose-500">
+                    Vencidos
+                  </span>
+                  <span className="ml-2 text-sm font-extrabold text-rose-700">
+                    {resumenPeriodos.vencidas}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSoloRevision((v) => !v)}
+                  className={`rounded-xl border px-3 py-2 transition ${
+                    soloRevision
+                      ? "border-amber-300 bg-amber-100"
+                      : "border-amber-100 bg-amber-50 hover:border-amber-200"
+                  }`}
                 >
-                  <option value="all">🌍 Todas las unidades de negocio</option>
-                  {unidadOptions.map((unidad, index) => (
-                    <option
-                      key={`${unidad.value}-${index}`}
-                      value={unidad.value}
-                    >
-                      {unidad.label}
-                    </option>
-                  ))}
-                </select>
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-amber-600">
+                    Requieren revisión
+                  </span>
+                  <span className="ml-2 text-sm font-extrabold text-amber-700">
+                    {resumenPeriodos.revision}
+                  </span>
+                </button>
               </div>
             </div>
-            <div className="text-right">
-              <p className="text-[10px] uppercase font-bold text-slate-500">
-                Total Periodos
-              </p>
-              <p className="text-xl font-semibold text-[#37495E]">
-                {rows.length}
-              </p>
+
+            <div className="grid gap-2 border-t border-slate-100 pt-4 md:grid-cols-2 xl:grid-cols-[minmax(260px,1.4fr)_1fr_1fr_1fr_auto_auto]">
+              <label className="relative min-w-0">
+                <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                <Input
+                  value={filtroColaborador}
+                  onChange={(e) => setFiltroColaborador(e.target.value)}
+                  placeholder="Buscar colaborador por nombre..."
+                  className="h-10 rounded-xl border-slate-200 bg-slate-50 pl-9 text-sm focus:bg-white"
+                />
+              </label>
+
+              <select
+                value={filtroDepartamento}
+                onChange={(e) => setFiltroDepartamento(e.target.value)}
+                className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:border-blue-300"
+              >
+                <option value="all">Todos los departamentos</option>
+                {departamentosFiltro.map((departamento) => (
+                  <option key={departamento} value={departamento}>
+                    {departamento}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={filtroEstado}
+                onChange={(e) => setFiltroEstado(e.target.value)}
+                className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:border-blue-300"
+              >
+                <option value="all">Todos los estados</option>
+                <option value="Activa">Activa</option>
+                <option value="Vencida">Vencida</option>
+                <option value="Usada">Usada</option>
+              </select>
+
+              <select
+                value={filtroAnio}
+                onChange={(e) => setFiltroAnio(e.target.value)}
+                className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:border-blue-300"
+              >
+                <option value="all">Todos los años</option>
+                {aniosFiltro.map((anio) => (
+                  <option key={anio} value={String(anio)}>
+                    Año {anio}
+                  </option>
+                ))}
+              </select>
+
+              <button
+                type="button"
+                onClick={() => setSoloRevision((v) => !v)}
+                className={`h-10 whitespace-nowrap rounded-xl border px-3 text-xs font-bold transition ${
+                  soloRevision
+                    ? "border-amber-300 bg-amber-100 text-amber-800"
+                    : "border-slate-200 bg-white text-slate-600 hover:border-amber-200 hover:text-amber-700"
+                }`}
+              >
+                <AlertTriangle className="mr-1.5 inline h-4 w-4" />
+                Requiere revisión
+              </button>
+
+              <Button
+                type="button"
+                variant="outline"
+                onClick={limpiarFiltrosTabla}
+                className="h-10 rounded-xl border-slate-200"
+              >
+                <RotateCcw className="mr-1.5 h-4 w-4" />
+                Limpiar
+              </Button>
+            </div>
+
+            <div className="text-xs text-slate-500">
+              {rowsFiltradas.length === rows.length
+                ? `${rows.length} periodos`
+                : `${rowsFiltradas.length} de ${rows.length} periodos encontrados`}
             </div>
           </div>
         </CardHeader>
@@ -485,7 +739,21 @@ export default function VacacionesPorPeriodoPage() {
         ) : error ? (
           <div className="text-center text-red-500 py-16">{error}</div>
         ) : rows.length === 0 ? (
-          <div className="text-center text-slate-400 py-16">Sin registros</div>
+          <div className="py-16 text-center text-slate-400">Sin registros</div>
+        ) : rowsFiltradas.length === 0 ? (
+          <div className="py-16 text-center">
+            <Search className="mx-auto h-8 w-8 text-slate-300" />
+            <p className="mt-3 font-semibold text-slate-600">
+              No encontramos periodos con estos filtros
+            </p>
+            <button
+              type="button"
+              onClick={limpiarFiltrosTabla}
+              className="mt-2 text-sm font-semibold text-blue-600 hover:text-blue-700"
+            >
+              Limpiar filtros
+            </button>
+          </div>
         ) : (
           <>
             <div className="overflow-auto">
@@ -516,12 +784,27 @@ export default function VacacionesPorPeriodoPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {pageRows.map((r) => (
-                    <TableRow key={r.id}>
+                  {pageRows.map((r) => {
+                    const revisar = requiereRevision(r, rows);
+                    return (
+                    <TableRow
+                      key={r.id}
+                      onClick={() => openEdit(r)}
+                      className="cursor-pointer hover:bg-slate-50/80"
+                    >
                       <TableCell className="font-semibold">
-                        {`${r.nombre} ${r.apellido_paterno || ""} ${
-                          r.apellido_materno || ""
-                        }`.trim()}
+                        <div className="flex items-center gap-2">
+                          <span>
+                            {`${r.nombre} ${r.apellido_paterno || ""} ${
+                              r.apellido_materno || ""
+                            }`.trim()}
+                          </span>
+                          {revisar && (
+                            <span className="inline-flex rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                              Revisar
+                            </span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>{r.departamento || "-"}</TableCell>
                       <TableCell>{`${formatDMY(r.fecha_inicio)} → ${formatDMY(
@@ -535,14 +818,20 @@ export default function VacacionesPorPeriodoPage() {
                       <TableCell className="sticky right-0 z-10 bg-white text-right">
                         <div className="flex items-center justify-end gap-1">
                           <button
-                            onClick={() => openEdit(r)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEdit(r);
+                            }}
                             className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
                             title="Editar"
                           >
                             <Pencil className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => setDeleteRow(r)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteRow(r);
+                            }}
                             className="rounded-lg p-2 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
                             title="Eliminar"
                           >
@@ -551,7 +840,8 @@ export default function VacacionesPorPeriodoPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>
