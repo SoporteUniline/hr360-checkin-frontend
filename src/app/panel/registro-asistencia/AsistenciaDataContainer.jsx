@@ -138,50 +138,48 @@ export default function AsistenciaDataContainer({
       }
 
       try {
-        const pageSize = 500;
-        const baseParams = new URLSearchParams({
+        const countParams = new URLSearchParams({
           empresa: String(idEmpresa),
           fechaInicio: fechaInicio || "",
           fechaFin: fechaFin || "",
-          limit: String(pageSize),
+          page: "1",
+          limit: "1",
         });
 
-        appendIf(baseParams, "filtroEmpleado", debouncedFiltroEmpleado);
-        appendIf(baseParams, "filtroDepartamento", filtroDepartamento);
-        appendIf(baseParams, "filtroTipoRegistro", filtroTipoRegistro);
-        appendIf(baseParams, "filtroEstadoAsistencia", filtroEstadoAsistencia);
-        if (soloPresentes) baseParams.append("soloPresentes", "1");
-        if (soloAusentes) baseParams.append("soloAusentes", "1");
-        if (horasExtra) baseParams.append("horasExtra", "1");
-        if (sinGoceDeSueldo) baseParams.append("sinGoceDeSueldo", "0");
-        if (diasFestivos) baseParams.append("diasFestivos", "1");
+        appendIf(countParams, "filtroEmpleado", debouncedFiltroEmpleado);
+        appendIf(countParams, "filtroDepartamento", filtroDepartamento);
+        appendIf(countParams, "filtroTipoRegistro", filtroTipoRegistro);
+        appendIf(countParams, "filtroEstadoAsistencia", filtroEstadoAsistencia);
+        if (soloPresentes) countParams.append("soloPresentes", "1");
+        if (soloAusentes) countParams.append("soloAusentes", "1");
+        if (horasExtra) countParams.append("horasExtra", "1");
+        if (sinGoceDeSueldo) countParams.append("sinGoceDeSueldo", "0");
+        if (diasFestivos) countParams.append("diasFestivos", "1");
         if (requiereAutorizacion)
-          baseParams.append("requiereAutorizacion", "1");
+          countParams.append("requiereAutorizacion", "1");
 
-        const firstParams = new URLSearchParams(baseParams);
-        firstParams.set("page", "1");
-        const firstData = await fetcherWithToken(
-          `/checador/asistencias?${firstParams.toString()}`,
+        const countData = await fetcherWithToken(
+          `/checador/asistencias?${countParams.toString()}`,
         );
 
-        let allRows = Array.isArray(firstData?.registros)
-          ? firstData.registros
-          : [];
-        const totalPages = Number(firstData?.totalPages || 1);
+        const total = Number(countData?.total || 0);
 
-        for (let currentPage = 2; currentPage <= totalPages; currentPage += 1) {
-          const pageParams = new URLSearchParams(baseParams);
-          pageParams.set("page", String(currentPage));
-          const pageData = await fetcherWithToken(
-            `/checador/asistencias?${pageParams.toString()}`,
-          );
-          if (Array.isArray(pageData?.registros)) {
-            allRows = [...allRows, ...pageData.registros];
-          }
+        if (total === 0) {
+          if (!isCancelled) setFilterOptionsRows([]);
+          return;
         }
 
+        const allParams = new URLSearchParams(countParams);
+        allParams.set("limit", String(total));
+
+        const allData = await fetcherWithToken(
+          `/checador/asistencias?${allParams.toString()}`,
+        );
+
         if (!isCancelled) {
-          setFilterOptionsRows(allRows);
+          setFilterOptionsRows(
+            Array.isArray(allData?.registros) ? allData.registros : [],
+          );
         }
       } catch (fetchError) {
         if (!isCancelled) {

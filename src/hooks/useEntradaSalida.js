@@ -1,5 +1,5 @@
 import { useState } from "react";
-import axios from "axios";
+import axios from "@/lib/axios";
 import { useSnackbar } from "notistack";
 import dayjs from "dayjs"; // Importa dayjs para formatear las fechas/horas
 
@@ -65,7 +65,7 @@ export default function useEntradaSalida(mutateTable) {
           ? null
           : dayjs(editingMovimientoData.entrada_corregida).isValid()
           ? dayjs(editingMovimientoData.entrada_corregida).format(
-              "YYYY-MM-DD HH:mm:ss"
+              "YYYY-MM-DD HH:mm:ss",
             )
           : null,
       salida_corregida:
@@ -73,7 +73,7 @@ export default function useEntradaSalida(mutateTable) {
           ? null
           : dayjs(editingMovimientoData.salida_corregida).isValid()
           ? dayjs(editingMovimientoData.salida_corregida).format(
-              "YYYY-MM-DD HH:mm:ss"
+              "YYYY-MM-DD HH:mm:ss",
             )
           : null,
     };
@@ -98,9 +98,8 @@ export default function useEntradaSalida(mutateTable) {
         {
           headers: {
             "Content-Type": "application/json",
-            // "Authorization": `Bearer ${tuTokenDeAuth}`, // Asegúrate de incluir tu token si es necesario
           },
-        }
+        },
       );
 
       enqueueSnackbar("Movimiento de checador actualizado correctamente.", {
@@ -115,7 +114,7 @@ export default function useEntradaSalida(mutateTable) {
         `Error al actualizar movimiento: ${
           error.response?.data?.error || error.message
         }`,
-        { variant: "error" }
+        { variant: "error" },
       );
     } finally {
       setIsSavingMovimiento(false);

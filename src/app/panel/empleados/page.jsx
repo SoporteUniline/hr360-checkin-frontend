@@ -94,7 +94,11 @@ export default function RegistroEmpleados() {
     );
   }, []);
 
+  // Al cambiar entre escritorio y móvil cambia el tamaño de página.
+  // Reiniciar la paginación evita conservar una página que ya no corresponde
+  // al nuevo límite.
   useEffect(() => {
+    setPage(1);
     setLimit(isMobile ? 500 : 10);
   }, [isMobile]);
 

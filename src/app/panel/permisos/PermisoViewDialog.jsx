@@ -43,15 +43,20 @@ export default function PermisoViewDialog({
   festivosSet = new Set(),
 }) {
   const { dataUser } = useAuth();
-  const idEmpresa = dataUser?.id_empresa;
+
+  // El PDF debe usar la empresa del permiso, no la empresa global de la sesión.
+  // En multiempresa, el permiso visualizado puede pertenecer a otra empresa.
+  const idEmpresaPermiso =
+    Number(item?.id_empresa) || Number(dataUser?.id_empresa) || null;
 
   /**
    * Datos de empresa (nombre + url_imagen).
    * - Relación: el logo se sube/edita en `src/app/panel/cuenta/Empresa/ImagenEmpresa.jsx`.
-   * - Usamos el mismo endpoint ya utilizado en Cuenta/Empresa: `/empresas/:id`.
+   * - Se consulta la empresa del permiso para que nombre y logo sean correctos
+   *   también en usuarios multiempresa.
    */
   const { data: empresaData } = useSWR(
-    idEmpresa ? `/empresas/${idEmpresa}` : null,
+    idEmpresaPermiso ? `/empresas/${idEmpresaPermiso}` : null,
     fetcherWithToken,
     swr_config,
   );
@@ -405,8 +410,12 @@ export default function PermisoViewDialog({
     const actualizadoLarga = formatDateTime(item.fecha_actualizacion);
 
     const empresaNombre =
-      safe(empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa) ||
-      "ADAMIA Human Resources";
+      safe(
+        empresaData?.nombre_empresa ||
+          item.nombre_empresa ||
+          item.empresa_nombre ||
+          dataUser?.empresa?.nombre_empresa,
+      ) || "ADAMIA Human Resources";
 
     const hasLogo = tryAddCompanyMarkToPdf(
       doc,
@@ -533,7 +542,7 @@ export default function PermisoViewDialog({
     );
     fieldPair(
       "Dias naturales",
-      String(totalDias || 0),
+      String(diasTotales || 0),
       marginLeft + c3 * 2,
       y,
       c3 - 4,

@@ -501,6 +501,18 @@ export default function PageFiniquitosLiquidaciones() {
       return;
     }
 
+    if (
+      empleadoInfo?.fecha_ingreso &&
+      dayjs(fechaBaja).isBefore(dayjs(empleadoInfo.fecha_ingreso), "day")
+    ) {
+      setAlertMsg(
+        `La fecha de baja no puede ser anterior a la fecha de ingreso (${dayjs(
+          empleadoInfo.fecha_ingreso,
+        ).format("DD/MM/YYYY")}).`,
+      );
+      return;
+    }
+
     setResultado(null);
     setGuardable(false);
     setAlertMsg("");
@@ -590,13 +602,16 @@ export default function PageFiniquitosLiquidaciones() {
         await finiquitosApi.actualizar(editingFiniquitoId, payload);
       } else {
         const res = await finiquitosApi.guardar(payload);
-        // Actualizar estado a "Pagado" inmediatamente después de crear
-        try {
-          const nuevoId = res?.id_finiquito || res?.id || null;
-          if (nuevoId) {
-            await finiquitosApi.actualizarEstado(nuevoId, "Pagado");
-          }
-        } catch (_) {}
+        const nuevoId = res?.id_finiquito || res?.id || null;
+
+        if (!nuevoId) {
+          throw new Error(
+            "El finiquito fue creado, pero no se recibió su ID para marcarlo como Pagado.",
+          );
+        }
+
+        await finiquitosApi.actualizarEstado(nuevoId, "Pagado");
+
         setAlertMsg(
           "✅ Guardado correctamente y marcado como Pagado. Puedes ver el registro en la pestaña de 'Finiquitos Guardados'.",
         );
@@ -1513,6 +1528,11 @@ export default function PageFiniquitosLiquidaciones() {
                     type="date"
                     className="h-[38px] rounded-md border-gray-200 text-[13px]"
                     value={fechaBaja}
+                    min={
+                      empleadoInfo?.fecha_ingreso
+                        ? dayjs(empleadoInfo.fecha_ingreso).format("YYYY-MM-DD")
+                        : undefined
+                    }
                     onChange={(e) => setFechaBaja(e.target.value)}
                   />
                 </div>

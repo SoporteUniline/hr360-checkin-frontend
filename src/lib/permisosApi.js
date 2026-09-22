@@ -14,6 +14,18 @@ export const permisosApi = {
     return res.data;
   },
 
+  async crearMasivo(payload) {
+    const token = Cookies.get("token");
+    const res = await axios.post(
+      "/checador/solicitudes-permiso/masivo",
+      payload,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    );
+    return res.data;
+  },
+
   async actualizar(id, payload) {
     const token = Cookies.get("token");
     const res = await axios.put(`/checador/solicitudes-permiso/${id}`, payload, {

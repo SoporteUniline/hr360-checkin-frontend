@@ -1,6 +1,6 @@
 // src/hooks/useAsistenciaActions.js
 import { useState } from "react";
-import axios from "axios";
+import axios from "@/lib/axios";
 import { useSnackbar } from "notistack";
 
 export default function useAsistenciaActions(mutateTable, onSaveSuccess) {

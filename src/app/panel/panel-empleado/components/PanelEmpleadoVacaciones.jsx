@@ -91,7 +91,6 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
         Balance de vacaciones
       </h3>
 
-
       <div className="mb-4 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
         <MiniKpi label="Días totales" value={balance.dias_totales || 0} />
         <MiniKpi label="Días tomados" value={balance.dias_tomados || 0} />
@@ -159,7 +158,6 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
       {/* Vista Tabla */}
       {vista === "tabla" && (
         <>
-
           <div className="overflow-hidden rounded-[10px] border border-slate-200 bg-white">
             <div className="grid grid-cols-1 gap-3 border-b border-slate-100 p-3 sm:grid-cols-2 sm:p-4 lg:grid-cols-[1fr_1.25fr_1fr_1fr_auto] lg:items-end">
               <div>
@@ -569,7 +567,7 @@ function CalendarioPequeno({
   const primerDia = new Date(anio, mes - 1, 1);
   const ultimoDia = new Date(anio, mes, 0);
   const diasEnMes = ultimoDia.getDate();
-  const primerDiaSemana = primerDia.getDay();
+  const primerDiaSemana = (primerDia.getDay() + 6) % 7;
 
   return (
     <div
@@ -580,7 +578,14 @@ function CalendarioPequeno({
         {nombresMeses[mes - 1]} {anio}
       </div>
       <div className="grid grid-cols-7 gap-0.5 sm:gap-1">
-        {/* Espacios vacíos antes del primer día */}
+        {["L", "M", "M", "J", "V", "S", "D"].map((dia, i) => (
+          <div
+            key={`${dia}-${i}`}
+            className="pb-1 text-center text-[7px] font-bold text-slate-400 sm:text-[8px] md:text-[9px]"
+          >
+            {dia}
+          </div>
+        ))}
         {Array.from({ length: primerDiaSemana }).map((_, i) => (
           <div
             key={`empty-${i}`}

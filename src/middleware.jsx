@@ -54,8 +54,7 @@ export async function middleware(request) {
     response.headers.set("x-pathname", pathname);
     return response;
   } catch (err) {
-    // Borrar cookie expirado y dejar que el frontend maneje la redirección
-    const response = NextResponse.next();
+    const response = NextResponse.redirect(new URL("/login", request.url));
     response.cookies.delete("token");
     return response;
   }

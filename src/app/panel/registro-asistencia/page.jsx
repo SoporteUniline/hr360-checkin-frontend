@@ -116,10 +116,12 @@ export default function ControlAsistencia() {
     }
   }, [dataUser, empresaActiva]);
 
-  // Use a larger limit on mobile to load all employees for client-side grouping
+  // Al cambiar entre escritorio y móvil cambia el tamaño de página.
+  // Reiniciar la paginación evita conservar una página que ya no corresponde
+  // al nuevo límite.
   useEffect(() => {
-    if (isMobile) setLimit(500);
-    else setLimit(10);
+    setPage(1);
+    setLimit(isMobile ? 500 : 10);
   }, [isMobile]);
 
   const [modoFormulario, setModoFormulario] = useState(false);

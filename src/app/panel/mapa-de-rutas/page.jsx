@@ -354,13 +354,16 @@ export default function PageMapaDeRutas() {
     run();
   }, [unidadFiltro, empresaFiltro, idEmpresa]);
 
-  const limpiarTodo = () => {
+  const limpiarTodo = ({ conservarMensaje = false } = {}) => {
     setMovimientos([]);
     setDiasAgrupados([]);
     setDiaSeleccionado(null);
     setAnimacionActiva(false);
     setIndicePunto(0);
-    setErrorMsg("");
+
+    if (!conservarMensaje) {
+      setErrorMsg("");
+    }
   };
 
   const buscarMovimientos = async () => {
@@ -396,8 +399,7 @@ export default function PageMapaDeRutas() {
       const data = resp?.data || [];
       if (data.length === 0) {
         setErrorMsg("ℹ️ No se encontraron movimientos para este período.");
-        limpiarTodo();
-        setLoading(false);
+        limpiarTodo({ conservarMensaje: true });
         return;
       }
 

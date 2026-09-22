@@ -348,6 +348,12 @@ export default function ContratoDialog({
     if (!form.fecha_inicio) errs.push("La fecha de inicio es obligatoria.");
     if (requiereFechaFin && !form.fecha_fin)
       errs.push("La fecha de fin es obligatoria para este tipo.");
+    if (
+      form.fecha_inicio &&
+      form.fecha_fin &&
+      form.fecha_fin < form.fecha_inicio
+    )
+      errs.push("La fecha de fin no puede ser anterior a la fecha de inicio.");
     if (!form.salario_base || Number(form.salario_base) < 0)
       errs.push("Ingresa un salario base válido.");
     if (!form.periodicidad_pago)
@@ -680,6 +686,7 @@ export default function ContratoDialog({
                   <Label>Fecha de Fin</Label>
                   <Input
                     type="date"
+                    min={form.fecha_inicio || undefined}
                     value={form.fecha_fin}
                     onChange={(e) =>
                       setForm((f) => ({ ...f, fecha_fin: e.target.value }))

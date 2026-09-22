@@ -222,34 +222,17 @@ export default function PermisoDialog({
           variant: "success",
         });
       } else {
-        const payloads = idsTarget.map((id) => ({
-          id_empleado: Number(id),
+        await permisosApi.crearMasivo({
+          ids_empleados: idsTarget.map(Number),
           id_tipo_permiso: Number(form.id_tipo_permiso),
           fecha_inicio: form.fecha_inicio,
           fecha_fin: form.fecha_fin || null,
           motivo: form.motivo || null,
-          id_empresa: Number(idEmpresaSeleccionada || idEmpresa),
+        });
 
-          // Evita doble correo: creación + aprobación automática
-          omitir_correo_creacion: true,
-        }));
-        const created = await Promise.all(
-          payloads.map((p) => permisosApi.crear(p)),
-        );
-        // Aprobar automáticamente todos los creados
-        const createdIds = created
-          .map((r) => r?.id)
-          .filter((x) => typeof x === "number" || typeof x === "string");
-        if (createdIds.length > 0) {
-          await Promise.all(
-            createdIds.map((permId) =>
-              permisosApi.actualizarEstado(permId, "Aprobado"),
-            ),
-          );
-          enqueueSnackbar("Permiso(s) creado(s) correctamente.", {
-            variant: "success",
-          });
-        }
+        enqueueSnackbar("Permiso(s) creado(s) correctamente.", {
+          variant: "success",
+        });
       }
       onSaved?.();
       setOpen(false);

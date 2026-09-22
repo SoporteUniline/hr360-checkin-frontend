@@ -420,6 +420,7 @@ export default function FormularioEmpleado({
             curp: data.curp,
             nss: data.nss,
             rfc: data.rfc,
+            nip: data.nip,
             id_empresa: data.id_empresa,
             id_empleado: editar ? values.id_empleado : null,
           },
@@ -538,7 +539,10 @@ export default function FormularioEmpleado({
         throw new Error("No se pudo obtener el ID del empleado");
       }
 
-      if (tipoHorario === "turno") {
+      // En creación, el turno se asigna dentro del mismo POST /empleados
+      // para que empleado + turno sean una sola transacción en backend.
+      // En edición se conserva el endpoint independiente.
+      if (editar && tipoHorario === "turno") {
         await axios.post(
           `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/turnos/${idTurno}/asignar`,
           {

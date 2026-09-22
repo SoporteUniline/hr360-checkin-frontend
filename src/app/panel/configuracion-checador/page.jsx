@@ -29,6 +29,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -98,7 +105,7 @@ function ReglaCard({ icon: Icon, titulo, descripcion, children }) {
 ───────────────────────────────────────────── */
 export default function ConfiguracionChecadorPage() {
   const { dataUser } = useAuth();
-  const idEmpresa = dataUser?.id_empresa;
+  const [idEmpresa, setIdEmpresa] = useState("");
 
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
@@ -122,9 +129,33 @@ export default function ConfiguracionChecadorPage() {
     },
   });
 
-  /* Carga inicial de configuración */
+  useEffect(() => {
+    const empresas = dataUser?.empresas_detalle || [];
+
+    if (empresas.length === 0) {
+      setIdEmpresa("");
+      setCargando(false);
+      return;
+    }
+
+    setIdEmpresa((actual) => {
+      const sigueAutorizada = empresas.some(
+        (empresa) => String(empresa.id_empresa) === String(actual),
+      );
+
+      return sigueAutorizada
+        ? actual
+        : String(empresas[0].id_empresa);
+    });
+  }, [dataUser]);
+
+  /* Cargar configuración de la empresa seleccionada */
   useEffect(() => {
     if (!idEmpresa) return;
+
+    setCargando(true);
+    setAlerta(null);
+    setResultadoAplicacion(null);
 
     const cargar = async () => {
       try {
@@ -234,6 +265,31 @@ export default function ConfiguracionChecadorPage() {
         </div>
         <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-brand to-brand-accent" />
       </div>
+
+      {dataUser?.empresas_detalle?.length > 1 && (
+        <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+          <Label>Empresa</Label>
+          <Select
+            value={String(idEmpresa)}
+            onValueChange={(value) => setIdEmpresa(value)}
+          >
+            <SelectTrigger className="mt-1 h-[38px] w-full rounded-md border-gray-200 text-[13px] font-medium">
+              <SelectValue placeholder="Selecciona una empresa" />
+            </SelectTrigger>
+
+            <SelectContent>
+              {dataUser.empresas_detalle.map((empresa) => (
+                <SelectItem
+                  key={String(empresa.id_empresa)}
+                  value={String(empresa.id_empresa)}
+                >
+                  {empresa.nombre}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {/* Alerta de resultado */}
       {alerta && (

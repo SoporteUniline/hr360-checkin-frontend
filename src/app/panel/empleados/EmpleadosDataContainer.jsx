@@ -55,38 +55,40 @@ export default function EmpleadosDataContainer({
       }
 
       try {
-        const pageSize = 500;
-        const baseParams = new URLSearchParams({
+        const countParams = new URLSearchParams({
           empresa: String(idEmpresa),
           page: "1",
-          limit: String(pageSize),
+          limit: "1",
         });
 
-        if (filtroNombre) baseParams.append("nombre", filtroNombre);
-        if (departamento) baseParams.append("departamento", departamento);
-        if (estado) baseParams.append("estado", estado);
-        if (fechaDesde) baseParams.append("fechaDesde", fechaDesde);
+        if (filtroNombre) countParams.append("nombre", filtroNombre);
+        if (departamento) countParams.append("departamento", departamento);
+        if (estado) countParams.append("estado", estado);
+        if (fechaDesde) countParams.append("fechaDesde", fechaDesde);
 
-        const firstData = await fetcherWithToken(
-          `/checador/empleados?${baseParams.toString()}`,
+        const countData = await fetcherWithToken(
+          `/checador/empleados?${countParams.toString()}`,
         );
 
-        let allRows = Array.isArray(firstData?.data) ? firstData.data : [];
-        const total = Number(firstData?.total || allRows.length);
-        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        const total = Number(countData?.total || 0);
 
-        for (let currentPage = 2; currentPage <= totalPages; currentPage += 1) {
-          const pageParams = new URLSearchParams(baseParams);
-          pageParams.set("page", String(currentPage));
-          const pageData = await fetcherWithToken(
-            `/checador/empleados?${pageParams.toString()}`,
-          );
-          if (Array.isArray(pageData?.data)) {
-            allRows = [...allRows, ...pageData.data];
-          }
+        if (total === 0) {
+          if (!isCancelled) setFilterOptionsRows([]);
+          return;
         }
 
-        if (!isCancelled) setFilterOptionsRows(allRows);
+        const allParams = new URLSearchParams(countParams);
+        allParams.set("limit", String(total));
+
+        const allData = await fetcherWithToken(
+          `/checador/empleados?${allParams.toString()}`,
+        );
+
+        if (!isCancelled) {
+          setFilterOptionsRows(
+            Array.isArray(allData?.data) ? allData.data : [],
+          );
+        }
       } catch (fetchError) {
         if (!isCancelled) setFilterOptionsRows([]);
       }

@@ -151,18 +151,56 @@ export default function ReporteHorasPage() {
           headers: { Authorization: `Bearer ${Cookies.get("token") || ""}` },
         };
 
-        const [eRes, pRes] = await Promise.all([
-          axios.get(
-            `/checador/empleados?empresa=${empresaActiva}&page=1&limit=1000&estado=Activo`,
-            auth,
-          ),
+        const EMPLEADOS_PAGE_SIZE = 500;
+
+        const cargarTodosEmpleados = async () => {
+          const primeraPagina = await axios.get("/checador/empleados", {
+            params: {
+              empresa: empresaActiva,
+              page: 1,
+              limit: EMPLEADOS_PAGE_SIZE,
+              estado: "Activo",
+            },
+            ...auth,
+          });
+
+          const primeraData = Array.isArray(primeraPagina.data?.data)
+            ? primeraPagina.data.data
+            : [];
+          const total = Number(primeraPagina.data?.total) || primeraData.length;
+          const totalPaginas = Math.ceil(total / EMPLEADOS_PAGE_SIZE);
+
+          if (totalPaginas <= 1) return primeraData;
+
+          const paginasRestantes = await Promise.all(
+            Array.from({ length: totalPaginas - 1 }, (_, index) =>
+              axios.get("/checador/empleados", {
+                params: {
+                  empresa: empresaActiva,
+                  page: index + 2,
+                  limit: EMPLEADOS_PAGE_SIZE,
+                  estado: "Activo",
+                },
+                ...auth,
+              }),
+            ),
+          );
+
+          return [
+            ...primeraData,
+            ...paginasRestantes.flatMap((response) =>
+              Array.isArray(response.data?.data) ? response.data.data : [],
+            ),
+          ];
+        };
+
+        const [emps, pRes] = await Promise.all([
+          cargarTodosEmpleados(),
           axios.get(
             `/checador/empleados/puestos?empresa=${empresaActiva}`,
             auth,
           ),
         ]);
-
-        const emps = Array.isArray(eRes.data?.data) ? eRes.data.data : [];
         const empleadosMapped = emps.map((e) => ({
           id_empleado: e.id_empleado,
           nombre_empleado: [e.nombre, e.apellido_paterno, e.apellido_materno]
@@ -284,14 +322,37 @@ export default function ReporteHorasPage() {
           ...auth,
         }),
       );
-      const results = await Promise.all(requests);
-      const okReports = results
-        .map((r) => r.data)
-        .filter((d) => d?.ok)
-        .map((d) => d.data);
+      const results = await Promise.allSettled(requests);
+
+      const exitosos = results.filter(
+        (result) => result.status === "fulfilled",
+      );
+      const fallidos = results.filter(
+        (result) => result.status === "rejected",
+      );
+
+      const okReports = exitosos
+        .map((result) => result.value.data)
+        .filter((data) => data?.ok)
+        .map((data) => data.data);
+
       setReportes(okReports);
-      if (okReports.length === 0)
-        enqueueSnackbar("Sin datos en el periodo", { variant: "info" });
+
+      if (okReports.length === 0) {
+        if (fallidos.length > 0) {
+          enqueueSnackbar(
+            `No se pudo generar el reporte para ${fallidos.length} empleado(s).`,
+            { variant: "error" },
+          );
+        } else {
+          enqueueSnackbar("Sin datos en el periodo", { variant: "info" });
+        }
+      } else if (fallidos.length > 0) {
+        enqueueSnackbar(
+          `Reporte generado parcialmente: ${okReports.length} correcto(s) y ${fallidos.length} con error.`,
+          { variant: "warning" },
+        );
+      }
     } catch (err) {
       enqueueSnackbar("No se pudo generar el reporte", { variant: "error" });
     } finally {
@@ -1035,7 +1096,26 @@ export default function ReporteHorasPage() {
   }
 
   useEffect(() => {
-    if (!multi && empleadosFiltrados.length > 0) {
+    if (multi) {
+      // Al cambiar cargo, periodo o unidad, descartar empleados seleccionados
+      // que ya no pertenecen al conjunto visible del filtro.
+      const idsVisibles = new Set(
+        empleadosFiltrados.map((e) => String(e.id_empleado)),
+      );
+
+      setEmpleadoIds((prev) => {
+        const siguientes = prev.filter((id) => idsVisibles.has(String(id)));
+
+        return siguientes.length === prev.length &&
+          siguientes.every((id, index) => id === prev[index])
+          ? prev
+          : siguientes;
+      });
+
+      return;
+    }
+
+    if (empleadosFiltrados.length > 0) {
       const esValido = empleadosFiltrados.some(
         (e) => String(e.id_empleado) === empleadoId,
       );
@@ -1043,10 +1123,10 @@ export default function ReporteHorasPage() {
       if (!esValido) {
         setEmpleadoId(String(empleadosFiltrados[0].id_empleado));
       }
-    } else if (!multi && empleadosFiltrados.length === 0) {
+    } else {
       setEmpleadoId("");
     }
-  }, [cargo, empleadosFiltrados, multi]);
+  }, [empleadosFiltrados, empleadoId, multi]);
 
   return (
     <div className="space-y-6">
