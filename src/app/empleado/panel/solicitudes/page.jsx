@@ -53,6 +53,17 @@ const SolicitudesPage = () => {
   const { data, total, mutate } = usePermisosEmpleado(page, limit);
 
   const {
+    data: saldoVacaciones,
+    isLoading: cargandoSaldoVacaciones,
+    mutate: mutateSaldoVacaciones,
+  } = useSWR(
+    dataUser?.tipo_usuario === "Empleado"
+      ? "/checador/vacaciones/mi-saldo"
+      : null,
+    fetcherWithToken,
+  );
+
+  const {
     data: dataAutorizar,
     total: totalAutorizar,
     mutate: mutateAutorizar,
@@ -86,6 +97,68 @@ const SolicitudesPage = () => {
         mode={mode}
         selected={selected}
       />
+
+      {dataUser?.tipo_usuario === "Empleado" && (
+        <div className="mt-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-500">
+                Vacaciones disponibles
+              </p>
+
+              {cargandoSaldoVacaciones ? (
+                <p className="mt-1 text-sm text-gray-400">
+                  Consultando saldo...
+                </p>
+              ) : saldoVacaciones ? (
+                <>
+                  <div className="mt-1 flex items-baseline gap-2">
+                    <span className="text-3xl font-bold text-gray-900">
+                      {saldoVacaciones.dias_disponibles}
+                    </span>
+                    <span className="text-sm text-gray-500">
+                      {Number(saldoVacaciones.dias_disponibles) === 1
+                        ? "día"
+                        : "días"}
+                    </span>
+                  </div>
+
+                  <p className="mt-1 text-sm text-gray-500">
+                    De {saldoVacaciones.dias_cargados} días ·{" "}
+                    {saldoVacaciones.dias_tomados} utilizados
+                  </p>
+                </>
+              ) : (
+                <p className="mt-1 text-sm text-gray-400">
+                  No se pudo consultar el saldo de vacaciones.
+                </p>
+              )}
+            </div>
+
+            {saldoVacaciones && (
+              <div className="flex gap-6 sm:text-right">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-gray-400">
+                    Asignados
+                  </p>
+                  <p className="mt-1 font-semibold text-gray-700">
+                    {saldoVacaciones.dias_cargados}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-gray-400">
+                    Utilizados
+                  </p>
+                  <p className="mt-1 font-semibold text-gray-700">
+                    {saldoVacaciones.dias_tomados}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="mt-6 flex flex-wrap gap-2">
         <Button
@@ -167,6 +240,7 @@ const SolicitudesPage = () => {
             mutate={() => {
               mutateAutorizar?.();
               mutate?.();
+              mutateSaldoVacaciones?.();
             }}
           />
 
