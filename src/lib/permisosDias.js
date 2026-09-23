@@ -47,15 +47,6 @@ export function calcDiasTotalesYHabiles({
     const esDiaLaboral =
       diasLaborales.size > 0 ? diasLaborales.has(nombreDia) : d.day() !== 0;
 
-    console.log({
-      fecha: d.format("YYYY-MM-DD"),
-      diaSemana: d.day(),
-      esSabado: d.day() === 6,
-      esDomingo: d.day() === 0,
-      esFestivo,
-      diasTrabajo,
-    });
-
     if (esDiaLaboral && !esFestivo) {
       diasHabiles++;
     }

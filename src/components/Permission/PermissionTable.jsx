@@ -12,6 +12,7 @@ import { Check, Eye, Pencil, X } from "lucide-react";
 import { permisosApi } from "@/lib/permisosApi";
 import { useSnackbar } from "notistack";
 import { cn } from "@/lib/utils";
+import { calcDiasTotalesYHabiles } from "@/lib/permisosDias";
 
 const formatDateOnly = (value) => {
   if (!value) return "-";
@@ -23,15 +24,6 @@ const formatDateOnly = (value) => {
   return `${day}/${month}/${year}`;
 };
 
-const diffDaysInclusive = (start, end) => {
-  if (!start || !end) return 1;
-
-  const startDate = new Date(`${String(start).slice(0, 10)}T12:00:00`);
-  const endDate = new Date(`${String(end).slice(0, 10)}T12:00:00`);
-
-  return Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
-};
-
 export const PermissionTable = ({
   data,
   setOpen,
@@ -39,6 +31,7 @@ export const PermissionTable = ({
   setSelected,
   modoAutorizar = false,
   mutate,
+  festivosSet = new Set(),
 }) => {
   const { enqueueSnackbar } = useSnackbar();
 
@@ -94,6 +87,20 @@ export const PermissionTable = ({
             const fechaInicio = formatDateOnly(row.fecha_inicio);
             const fechaFin = formatDateOnly(row.fecha_fin);
 
+            const { diasTotales, diasHabiles } = calcDiasTotalesYHabiles({
+              fechaInicio: row.fecha_inicio,
+              fechaFin: row.fecha_fin,
+              festivosSet,
+              diasTrabajo: row.dias_trabajo,
+            });
+
+            const descuentaVacaciones =
+              Number(row.descuenta_vacaciones) === 1;
+
+            const diasMostrados = descuentaVacaciones
+              ? diasHabiles
+              : diasTotales;
+
             return (
               <TableRow key={row.id} className="hover:bg-zinc-50">
                 {modoAutorizar && (
@@ -106,7 +113,7 @@ export const PermissionTable = ({
                 <TableCell>{fechaInicio}</TableCell>
                 <TableCell>{fechaFin}</TableCell>
                 <TableCell>
-                  {diffDaysInclusive(row.fecha_inicio, row.fecha_fin)}
+                  {diasMostrados}
                 </TableCell>
                 <TableCell>
                   <EstadoBadge estado={row.estado} />
