@@ -1,40 +1,91 @@
 "use client";
 
-import {
-  use,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { use, useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
+import dynamic from "next/dynamic";
 import {
   AlertCircle,
+  ArrowLeft,
+  ArrowRight,
   Camera,
+  Check,
   CheckCircle2,
-  Clock3,
   Eraser,
+  FileCheck2,
   FileSignature,
   FileText,
   Loader2,
   LockKeyhole,
   ShieldCheck,
   UserRound,
-  Video,
 } from "lucide-react";
-
 import { firmaDigitalApi } from "@/lib/firmaDigitalApi";
+import styles from "./firma.module.css";
 
-function EstadoError({ titulo, mensaje }) {
+const DocumentoReader = dynamic(() => import("./DocumentoReader"), {
+  ssr: false,
+  loading: () => (
+    <div className={styles.readerLoading}>
+      <Loader2 className={styles.spin} />
+      Preparando el documento…
+    </div>
+  ),
+});
+
+const PASOS = [
+  { titulo: "Cámara", descripcion: "Prepara tu fotografía", icono: Camera },
+  { titulo: "Documento", descripcion: "Revisa cada detalle", icono: FileText },
+  { titulo: "Firma", descripcion: "Confirma y termina", icono: FileSignature },
+];
+const TITULOS = [
+  "Comencemos con tu cámara",
+  "Revisa tu documento",
+  "Tu firma, el último paso",
+];
+const DESCRIPCIONES = [
+  "Al terminar tomaremos una fotografía como evidencia de tu firma.",
+  "Lee con calma. Puedes ampliar el texto y recorrer todas las páginas.",
+  "Dibuja tu firma como aparece en tus documentos.",
+];
+
+function Marca() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
-      <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-        <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
-          <AlertCircle className="h-7 w-7 text-red-600" />
+    <span className={styles.logoFrame}>
+      <Image
+        src="/assets/adamia.png"
+        alt="ADAMIA"
+        width={2160}
+        height={1000}
+        priority
+        className={styles.logo}
+      />
+    </span>
+  );
+}
+
+function EstadoFinal({ titulo, mensaje, exito = false, children }) {
+  const Icono = exito ? CheckCircle2 : AlertCircle;
+  return (
+    <main className={styles.page}>
+      <header className={styles.header}>
+        <div className={styles.headerInner}>
+          <Marca />
+          <span className={styles.headerLabel}>Firma de documentos</span>
         </div>
-
-        <h1 className="text-xl font-semibold text-slate-900">{titulo}</h1>
-
-        <p className="mt-3 text-sm leading-6 text-slate-600">{mensaje}</p>
+      </header>
+      <div className={styles.resultWrap}>
+        <div className={styles.resultCard}>
+          <span
+            className={`${styles.resultIcon} ${
+              exito ? styles.resultSuccess : styles.resultError
+            }`}
+          >
+            <Icono size={32} />
+          </span>
+          <h1>{titulo}</h1>
+          <p>{mensaje}</p>
+          {children}
+        </div>
       </div>
     </main>
   );
@@ -42,618 +93,663 @@ function EstadoError({ titulo, mensaje }) {
 
 export default function FirmarDocumentoPage({ params }) {
   const { token } = use(params);
-
   const canvasRef = useRef(null);
   const videoRef = useRef(null);
   const streamRef = useRef(null);
-  const dibujandoRef = useRef(false);
-  const ultimoPuntoRef = useRef(null);
-
+  const cameraRequestRef = useRef(0);
+  const mountedRef = useRef(false);
+  const strokesRef = useRef([]);
+  const drawingRef = useRef(null);
+  const headingRef = useRef(null);
   const [solicitud, setSolicitud] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState(null);
-
+  const [paso, setPaso] = useState(0);
+  const [ultimoPaso, setUltimoPaso] = useState(0);
   const [consentimiento, setConsentimiento] = useState(false);
   const [tieneFirma, setTieneFirma] = useState(false);
   const [camaraActiva, setCamaraActiva] = useState(false);
+  const [activandoCamara, setActivandoCamara] = useState(false);
   const [errorCamara, setErrorCamara] = useState("");
+  const [errorEnvio, setErrorEnvio] = useState("");
+  const [documentoListo, setDocumentoListo] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [firmado, setFirmado] = useState(false);
 
   const detenerCamara = useCallback(() => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-
+    cameraRequestRef.current += 1;
+    const stream = streamRef.current;
+    streamRef.current = null;
+    stream?.getTracks().forEach((track) => {
+      track.onended = null;
+      track.stop();
+    });
+    if (videoRef.current) videoRef.current.srcObject = null;
     setCamaraActiva(false);
   }, []);
 
   useEffect(() => {
+    mountedRef.current = true;
     let activo = true;
-
     async function cargarSolicitud() {
       try {
         setCargando(true);
         setError(null);
-
         const data = await firmaDigitalApi.obtenerSolicitudPublica(token);
-
-        if (activo) {
-          setSolicitud(data.solicitud);
-        }
+        if (activo) setSolicitud(data.solicitud);
       } catch (err) {
         if (!activo) return;
-
-        const status = err?.response?.status;
-        const mensajeBackend = err?.response?.data?.error;
-
-        if (status === 404) {
-          setError({
-            titulo: "Enlace no válido",
-            mensaje:
-              mensajeBackend ||
-              "No encontramos una solicitud de firma asociada a este enlace.",
-          });
-        } else if (status === 410) {
-          setError({
-            titulo: "Este enlace ya no está disponible",
-            mensaje:
-              mensajeBackend ||
-              "La solicitud de firma expiró o fue cancelada.",
-          });
-        } else if (status === 409) {
-          setError({
-            titulo: "Documento ya firmado",
-            mensaje:
-              mensajeBackend ||
-              "Este documento ya fue firmado y el enlace no puede volver a utilizarse.",
-          });
-        } else {
-          setError({
-            titulo: "No pudimos cargar el documento",
-            mensaje:
-              mensajeBackend ||
-              "Ocurrió un problema al consultar la solicitud. Intenta nuevamente.",
-          });
-        }
+        const estados = {
+          404: [
+            "Enlace no válido",
+            "No encontramos una solicitud de firma asociada a este enlace.",
+          ],
+          410: [
+            "Este enlace ya no está disponible",
+            "La solicitud de firma expiró o fue cancelada.",
+          ],
+          409: [
+            "Documento ya firmado",
+            "Este documento ya fue firmado y el enlace no puede volver a utilizarse.",
+          ],
+        };
+        const [titulo, mensaje] = estados[err?.response?.status] || [
+          "No pudimos cargar el documento",
+          "Intenta abrir el enlace nuevamente en unos momentos.",
+        ];
+        setError({ titulo, mensaje: err?.response?.data?.error || mensaje });
       } finally {
-        if (activo) {
-          setCargando(false);
-        }
+        if (activo) setCargando(false);
       }
     }
-
-    if (token) {
-      cargarSolicitud();
-    }
-
+    if (token) cargarSolicitud();
     return () => {
       activo = false;
-
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-        streamRef.current = null;
-      }
+      mountedRef.current = false;
+      cameraRequestRef.current += 1;
+      streamRef.current?.getTracks().forEach((track) => {
+        track.onended = null;
+        track.stop();
+      });
+      streamRef.current = null;
     };
   }, [token]);
 
-  const prepararCanvas = useCallback(() => {
+  // Store strokes in relative coordinates so rotation and step navigation preserve the signature.
+  const repintarFirma = useCallback(() => {
     const canvas = canvasRef.current;
-
     if (!canvas) return;
-
-    const rect = canvas.getBoundingClientRect();
-
-    if (!rect.width || !rect.height) return;
-
-    const dpr = window.devicePixelRatio || 1;
-
-    canvas.width = Math.round(rect.width * dpr);
-    canvas.height = Math.round(rect.height * dpr);
-
+    const { width, height } = canvas.getBoundingClientRect();
+    if (!width || !height) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
     const ctx = canvas.getContext("2d");
-
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, width, height);
+    ctx.strokeStyle = "#172554";
+    ctx.lineWidth = 2.3;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
-    ctx.lineWidth = 2.25;
-    ctx.strokeStyle = "#0f172a";
-
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, rect.width, rect.height);
-
-    setTieneFirma(false);
+    for (const trazo of strokesRef.current) {
+      if (trazo.length < 2) continue;
+      ctx.beginPath();
+      ctx.moveTo(trazo[0].x * width, trazo[0].y * height);
+      trazo
+        .slice(1)
+        .forEach((punto) => ctx.lineTo(punto.x * width, punto.y * height));
+      ctx.stroke();
+    }
   }, []);
 
   useEffect(() => {
-    if (!solicitud || firmado) return;
+    if (paso !== 2 || !solicitud || firmado) return;
+    repintarFirma();
+    const observer = new ResizeObserver(repintarFirma);
+    if (canvasRef.current) observer.observe(canvasRef.current);
+    return () => observer.disconnect();
+  }, [paso, solicitud, firmado, repintarFirma]);
 
-    prepararCanvas();
-
-    const handleResize = () => {
-      prepararCanvas();
-    };
-
-    window.addEventListener("resize", handleResize);
-
-    return () => {
-      window.removeEventListener("resize", handleResize);
-    };
-  }, [solicitud, firmado, prepararCanvas]);
+  const cambiarPaso = (siguiente) => {
+    if (enviando || siguiente > ultimoPaso + 1) return;
+    if (siguiente > 0 && !camaraActiva) return;
+    if (siguiente === 2 && !documentoListo) return;
+    drawingRef.current = null;
+    setPaso(siguiente);
+    setUltimoPaso((anterior) => Math.max(anterior, siguiente));
+    requestAnimationFrame(() => {
+      headingRef.current?.focus({ preventScroll: true });
+      window.scrollTo({ top: 0, behavior: "instant" });
+    });
+  };
 
   const obtenerPunto = (event) => {
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-
+    const rect = canvasRef.current.getBoundingClientRect();
     return {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top,
+      x: (event.clientX - rect.left) / rect.width,
+      y: (event.clientY - rect.top) / rect.height,
     };
   };
-
   const iniciarTrazo = (event) => {
-    if (enviando) return;
-
-    event.preventDefault();
-
-    const canvas = canvasRef.current;
-
-    canvas.setPointerCapture?.(event.pointerId);
-
-    dibujandoRef.current = true;
-    ultimoPuntoRef.current = obtenerPunto(event);
-  };
-
-  const dibujar = (event) => {
-    if (!dibujandoRef.current || enviando) return;
-
-    event.preventDefault();
-
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext("2d");
-
-    const actual = obtenerPunto(event);
-    const anterior = ultimoPuntoRef.current;
-
-    if (!anterior) {
-      ultimoPuntoRef.current = actual;
+    if (
+      enviando ||
+      !event.isPrimary ||
+      (event.pointerType === "mouse" && event.button !== 0)
+    )
       return;
-    }
-
-    ctx.beginPath();
-    ctx.moveTo(anterior.x, anterior.y);
-    ctx.lineTo(actual.x, actual.y);
-    ctx.stroke();
-
-    ultimoPuntoRef.current = actual;
-    setTieneFirma(true);
-  };
-
-  const terminarTrazo = (event) => {
-    if (!dibujandoRef.current) return;
-
     event.preventDefault();
-
-    canvasRef.current?.releasePointerCapture?.(event.pointerId);
-
-    dibujandoRef.current = false;
-    ultimoPuntoRef.current = null;
+    canvasRef.current.setPointerCapture(event.pointerId);
+    drawingRef.current = event.pointerId;
+    strokesRef.current.push([obtenerPunto(event)]);
   };
-
+  const dibujar = (event) => {
+    if (drawingRef.current !== event.pointerId || enviando) return;
+    event.preventDefault();
+    const trazo = strokesRef.current.at(-1);
+    const punto = obtenerPunto(event);
+    const ultimo = trazo.at(-1);
+    if (Math.hypot(punto.x - ultimo.x, punto.y - ultimo.y) < 0.002) return;
+    trazo.push(punto);
+    setTieneFirma(true);
+    repintarFirma();
+  };
+  const terminarTrazo = (event) => {
+    if (drawingRef.current !== event.pointerId) return;
+    if (canvasRef.current?.hasPointerCapture(event.pointerId))
+      canvasRef.current.releasePointerCapture(event.pointerId);
+    drawingRef.current = null;
+  };
   const limpiarFirma = () => {
-    prepararCanvas();
+    strokesRef.current = [];
+    drawingRef.current = null;
+    setTieneFirma(false);
+    repintarFirma();
   };
 
   const activarCamara = async () => {
+    if (activandoCamara || enviando) return;
+    detenerCamara();
+    const requestId = cameraRequestRef.current;
+    setActivandoCamara(true);
+    setErrorCamara("");
     try {
-      setErrorCamara("");
-
-      if (!navigator.mediaDevices?.getUserMedia) {
+      if (!navigator.mediaDevices?.getUserMedia)
         throw new Error("CAMARA_NO_DISPONIBLE");
-      }
-
-      detenerCamara();
-
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: "user",
-        },
+        video: { facingMode: "user" },
         audio: false,
       });
-
-      streamRef.current = stream;
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+      if (!mountedRef.current || requestId !== cameraRequestRef.current) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
       }
-
+      streamRef.current = stream;
+      const video = videoRef.current;
+      if (!video) throw new Error("CAMARA_NO_DISPONIBLE");
+      video.srcObject = stream;
+      await video.play();
+      if (!mountedRef.current || requestId !== cameraRequestRef.current) return;
+      stream.getVideoTracks().forEach((track) => {
+        track.onended = () => {
+          detenerCamara();
+          setErrorCamara(
+            "La cámara se desconectó. Actívala nuevamente para continuar."
+          );
+        };
+      });
       setCamaraActiva(true);
     } catch (err) {
+      if (!mountedRef.current || requestId !== cameraRequestRef.current) return;
       detenerCamara();
-
-      if (
-        err?.name === "NotAllowedError" ||
-        err?.name === "PermissionDeniedError"
-      ) {
-        setErrorCamara(
-          "Necesitamos permiso para usar la cámara como evidencia de la firma.",
-        );
-      } else {
-        setErrorCamara(
-          "No fue posible iniciar la cámara. Revisa que esté disponible y vuelve a intentarlo.",
-        );
-      }
+      setErrorCamara(
+        ["NotAllowedError", "PermissionDeniedError"].includes(err?.name)
+          ? "Permite el acceso a la cámara en tu navegador y vuelve a intentarlo. Si abriste el enlace dentro de otra app, ábrelo en Safari o Chrome."
+          : "No pudimos iniciar la cámara. Revisa que esté disponible y vuelve a intentarlo."
+      );
+    } finally {
+      if (mountedRef.current) setActivandoCamara(false);
     }
   };
 
   const canvasABlob = (canvas, tipo, calidad) =>
     new Promise((resolve, reject) => {
       canvas.toBlob(
-        (blob) => {
-          if (blob) {
-            resolve(blob);
-          } else {
-            reject(new Error("No fue posible generar la imagen."));
-          }
-        },
+        (blob) =>
+          blob
+            ? resolve(blob)
+            : reject(new Error("No fue posible generar la imagen.")),
         tipo,
-        calidad,
+        calidad
       );
     });
-
-  const capturarEvidencia = async () => {
-    const video = videoRef.current;
-
-    if (
-      !video ||
-      !camaraActiva ||
-      video.readyState < 2 ||
-      !video.videoWidth ||
-      !video.videoHeight
-    ) {
-      throw new Error("La cámara todavía no está lista.");
-    }
-
-    const canvas = document.createElement("canvas");
-
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    const ctx = canvas.getContext("2d");
-
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    return canvasABlob(canvas, "image/jpeg", 0.88);
-  };
-
   const firmarDocumento = async () => {
-    if (!consentimiento || !tieneFirma || !camaraActiva || enviando) {
+    if (
+      !consentimiento ||
+      !tieneFirma ||
+      !camaraActiva ||
+      !documentoListo ||
+      !solicitud?.documento_url ||
+      enviando
+    )
       return;
-    }
-
     try {
       setEnviando(true);
-      setErrorCamara("");
-
-      const firma = await canvasABlob(
-        canvasRef.current,
-        "image/png",
-      );
-
-      const evidencia = await capturarEvidencia();
-
+      setErrorEnvio("");
+      const video = videoRef.current;
+      if (
+        !video ||
+        video.readyState < 2 ||
+        !video.videoWidth ||
+        !streamRef.current
+          ?.getVideoTracks()
+          .some((track) => track.readyState === "live")
+      ) {
+        throw new Error(
+          "La cámara no está lista. Actívala nuevamente antes de firmar."
+        );
+      }
+      const firma = await canvasABlob(canvasRef.current, "image/png");
+      const foto = document.createElement("canvas");
+      foto.width = video.videoWidth;
+      foto.height = video.videoHeight;
+      foto.getContext("2d").drawImage(video, 0, 0);
+      const evidencia = await canvasABlob(foto, "image/jpeg", 0.88);
       detenerCamara();
-
-      await firmaDigitalApi.firmarSolicitud(token, {
-        firma,
-        evidencia,
-      });
-
+      await firmaDigitalApi.firmarSolicitud(token, { firma, evidencia });
       setFirmado(true);
     } catch (err) {
       detenerCamara();
-
-      const mensajeBackend = err?.response?.data?.error;
-
-      setErrorCamara(
-        mensajeBackend ||
+      setErrorEnvio(
+        err?.response?.data?.error ||
           err?.message ||
-          "No fue posible completar la firma. Intenta nuevamente.",
+          "No fue posible completar la firma. Intenta nuevamente."
       );
     } finally {
       setEnviando(false);
     }
   };
 
-  if (cargando) {
+  if (cargando)
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-        <div className="text-center">
-          <Loader2 className="mx-auto h-8 w-8 animate-spin text-slate-700" />
-          <p className="mt-4 text-sm text-slate-600">
-            Preparando tu documento...
-          </p>
-        </div>
-      </main>
+      <EstadoFinal
+        titulo="Preparando tu documento"
+        mensaje="En un momento podrás comenzar."
+      >
+        <Loader2 className={styles.spin} />
+      </EstadoFinal>
     );
-  }
-
-  if (error) {
-    return <EstadoError titulo={error.titulo} mensaje={error.mensaje} />;
-  }
-
-  if (!solicitud) {
+  if (error)
+    return <EstadoFinal titulo={error.titulo} mensaje={error.mensaje} />;
+  if (!solicitud)
     return (
-      <EstadoError
+      <EstadoFinal
         titulo="Documento no disponible"
         mensaje="No fue posible obtener la información de esta solicitud."
       />
     );
-  }
-
-  if (firmado) {
+  if (firmado)
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
-        <div className="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-          <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50">
-            <CheckCircle2 className="h-8 w-8 text-emerald-600" />
-          </div>
-
-          <h1 className="text-2xl font-semibold text-slate-900">
-            Documento firmado
-          </h1>
-
-          <p className="mt-3 text-sm leading-6 text-slate-600">
-            Tu firma fue registrada correctamente. Ya puedes cerrar esta
-            ventana.
-          </p>
-
-          <div className="mt-6 flex items-center justify-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-xs text-slate-500">
-            <ShieldCheck className="h-4 w-4" />
-            La evidencia de la firma quedó registrada de forma privada.
-          </div>
+      <EstadoFinal
+        exito
+        titulo="Tu documento está firmado"
+        mensaje="La firma y la fotografía se registraron correctamente. Ya puedes cerrar esta ventana."
+      >
+        <div className={styles.signedDocument}>
+          <FileCheck2 />
+          <span>{solicitud.nombre_documento}</span>
+          <CheckCircle2 size={18} />
         </div>
-      </main>
+        <span className={styles.privateNote}>
+          <LockKeyhole size={14} />
+          Proceso completado
+        </span>
+      </EstadoFinal>
     );
-  }
 
+  const nombre = solicitud.nombre_firmante || "Empleado";
   const puedeFirmar =
-    consentimiento && tieneFirma && camaraActiva && !enviando;
+    consentimiento && tieneFirma && camaraActiva && documentoListo && !enviando;
+  const puedeContinuar =
+    paso === 0
+      ? !activandoCamara
+      : paso === 1
+      ? documentoListo && camaraActiva
+      : puedeFirmar;
+  const accionPrincipal =
+    paso === 0
+      ? camaraActiva
+        ? () => cambiarPaso(1)
+        : activarCamara
+      : paso === 1
+      ? () => cambiarPaso(2)
+      : firmarDocumento;
+  const textoAccion = activandoCamara
+    ? "Activando cámara…"
+    : enviando
+    ? "Registrando firma…"
+    : paso === 0
+    ? camaraActiva
+      ? "Ver documento"
+      : "Activar cámara"
+    : paso === 1
+    ? "Continuar a la firma"
+    : "Firmar documento";
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-          <img
-            src="/assets/adamia.png"
-            alt="ADAMIA"
-            className="h-9 w-auto object-contain"
-          />
-
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
-            <LockKeyhole className="h-4 w-4" />
-            Acceso seguro
-          </div>
+    <main className={styles.page}>
+      <header className={styles.header}>
+        <div className={styles.headerInner}>
+          <Marca />
+          <span className={styles.headerLabel}>
+            <LockKeyhole size={14} />
+            Firma de documentos
+          </span>
         </div>
       </header>
-
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-        <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+      <div className={styles.layout}>
+        <aside className={styles.sidebar}>
+          <div className={styles.introduction}>
+            <span className={styles.eyebrow}>
+              UN ÚLTIMO PASO PARA COMPLETARLO
+            </span>
+            <h1>
+              Revisa.
+              <br />
+              Firma.
+              <br />
+              <span>Listo.</span>
+            </h1>
+            <p>
+              Tu documento, sin impresiones
+              <br className={styles.desktopOnly} /> y desde donde estés.
+            </p>
+          </div>
+          <nav aria-label="Pasos para firmar" className={styles.steps}>
+            {PASOS.map(({ titulo, descripcion }, index) => (
+              <button
+                key={titulo}
+                type="button"
+                onClick={() => cambiarPaso(index)}
+                disabled={
+                  enviando ||
+                  index > ultimoPaso ||
+                  (index > 0 && !camaraActiva) ||
+                  (index === 2 && !documentoListo)
+                }
+                aria-current={paso === index ? "step" : undefined}
+                className={`${styles.step} ${
+                  paso === index ? styles.stepActive : ""
+                } ${index < paso ? styles.stepDone : ""}`}
+              >
+                <span className={styles.stepNumber}>
+                  {index < paso ? <Check size={16} /> : `0${index + 1}`}
+                </span>
+                <span>
+                  <strong>{titulo}</strong>
+                  <small>{descripcion}</small>
+                </span>
+              </button>
+            ))}
+          </nav>
+          <div className={styles.recipient}>
+            <span className={styles.recipientIcon}>
+              <UserRound size={18} />
+            </span>
             <div>
-              <div className="mb-2 flex items-center gap-2 text-sm font-medium text-slate-500">
-                <FileText className="h-4 w-4" />
-                Documento pendiente de firma
-              </div>
-
-              <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">
-                {solicitud.nombre_documento}
-              </h1>
-
-              <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-600">
-                <div className="flex items-center gap-2">
-                  <UserRound className="h-4 w-4" />
-                  <span>
-                    Firmante:{" "}
-                    <strong className="font-medium text-slate-900">
-                      {solicitud.nombre_firmante || "Empleado"}
-                    </strong>
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Clock3 className="h-4 w-4" />
-                  Enlace temporal protegido
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 self-start rounded-full bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700 lg:self-auto">
-              <CheckCircle2 className="h-4 w-4" />
-              Listo para revisar
+              <small>DOCUMENTO PARA</small>
+              <strong>{nombre}</strong>
             </div>
           </div>
-        </section>
+          <p className={styles.sidebarNote}>
+            <ShieldCheck size={17} />
+            <span>
+              Este enlace es personal.
+              <br />
+              No lo compartas con otras personas.
+            </span>
+          </p>
+        </aside>
 
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-200 px-5 py-4">
-            <h2 className="font-semibold text-slate-900">
-              1. Revisa tu documento
+        <section className={styles.stage} aria-labelledby="paso-titulo">
+          <div className={styles.stageHeading}>
+            <div className={styles.stageTopline}>
+              <span className={styles.eyebrow}>PASO {paso + 1} DE 3</span>
+              {camaraActiva && (
+                <span className={styles.liveBadge}>
+                  <span />
+                  Cámara activa
+                </span>
+              )}
+            </div>
+            <h2 ref={headingRef} tabIndex={-1} id="paso-titulo">
+              {TITULOS[paso]}
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
-              Verifica su contenido antes de continuar con la firma.
-            </p>
+            <p>{DESCRIPCIONES[paso]}</p>
           </div>
 
-          {solicitud.documento_url ? (
-            <iframe
-              src={solicitud.documento_url}
-              title={solicitud.nombre_documento}
-              className="h-[65vh] min-h-[500px] w-full bg-slate-100"
-            />
-          ) : (
-            <div className="flex min-h-[400px] items-center justify-center px-6 text-center">
-              <p className="text-sm text-slate-600">
-                El documento no está disponible para visualizarse.
-              </p>
-            </div>
-          )}
-        </section>
-
-        <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-            <div className="mb-5">
-              <div className="flex items-center gap-2">
-                <FileSignature className="h-5 w-5 text-slate-700" />
-                <h2 className="font-semibold text-slate-900">
-                  2. Firma el documento
-                </h2>
-              </div>
-
-              <p className="mt-1 text-sm text-slate-500">
-                Dibuja tu firma dentro del recuadro.
-              </p>
-            </div>
-
-            <div className="overflow-hidden rounded-xl border border-slate-300 bg-white">
-              <canvas
-                ref={canvasRef}
-                className="h-52 w-full touch-none cursor-crosshair"
-                onPointerDown={iniciarTrazo}
-                onPointerMove={dibujar}
-                onPointerUp={terminarTrazo}
-                onPointerCancel={terminarTrazo}
-              />
-            </div>
-
-            <button
-              type="button"
-              onClick={limpiarFirma}
-              disabled={enviando}
-              className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 disabled:opacity-50"
+          {/* The same video stays mounted and playing throughout the three steps. */}
+          <div
+            className={
+              paso === 0 ? styles.cameraStage : styles.cameraBackground
+            }
+            aria-hidden={paso !== 0}
+          >
+            <div
+              className={`${styles.cameraPreview} ${
+                camaraActiva ? styles.cameraPreviewLive : ""
+              }`}
             >
-              <Eraser className="h-4 w-4" />
-              Limpiar firma
-            </button>
-          </section>
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-            <div className="flex items-center gap-2">
-              <Camera className="h-5 w-5 text-slate-700" />
-              <h2 className="font-semibold text-slate-900">
-                3. Verifica tu identidad
-              </h2>
-            </div>
-
-            <p className="mt-1 text-sm leading-6 text-slate-500">
-              Para registrar evidencia de quién realiza la firma, necesitamos
-              acceso temporal a tu cámara.
-            </p>
-
-            <div className="relative mt-4 overflow-hidden rounded-xl bg-slate-950">
               <video
                 ref={videoRef}
                 autoPlay
                 muted
                 playsInline
-                className={`aspect-video w-full object-cover ${
-                  camaraActiva ? "block" : "invisible"
-                }`}
+                aria-label="Vista previa de tu cámara"
+                className={camaraActiva ? styles.video : styles.videoHidden}
               />
-
-              {!camaraActiva && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center text-slate-400">
-                    <Video className="mx-auto h-8 w-8" />
-                    <p className="mt-2 text-xs">Cámara desactivada</p>
-                  </div>
+              {camaraActiva ? (
+                <>
+                  <div className={styles.faceGuide} />
+                  <span className={styles.cameraCaption}>
+                    <span />
+                    Cámara lista
+                  </span>
+                </>
+              ) : (
+                <div className={styles.cameraPlaceholder}>
+                  <span className={styles.cameraIllustration}>
+                    <UserRound strokeWidth={1.2} size={66} />
+                    <span className={styles.cameraIllustrationBadge}>
+                      <Camera size={18} />
+                    </span>
+                  </span>
+                  <strong>Coloca tu rostro dentro del recuadro</strong>
+                  <p>Busca un lugar con buena iluminación.</p>
                 </div>
               )}
             </div>
+            <div className={styles.cameraExplanation}>
+              <ShieldCheck size={20} />
+              <p>
+                <strong>Solo una fotografía. Sin grabar audio ni video.</strong>
+                <span>
+                  Se tomará cuando pulses “Firmar documento”. La cámara
+                  permanecerá activa mientras revisas.
+                </span>
+              </p>
+            </div>
+          </div>
 
-            {!camaraActiva && (
-              <button
-                type="button"
-                onClick={activarCamara}
-                disabled={enviando}
-                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <Camera className="h-4 w-4" />
-                Habilitar cámara
-              </button>
-            )}
-
-            {camaraActiva && (
-              <div className="mt-3 flex items-center gap-2 text-xs font-medium text-emerald-700">
-                <CheckCircle2 className="h-4 w-4" />
-                Cámara lista. La evidencia se capturará al confirmar.
+          {paso === 1 && (
+            <div className={styles.documentStage}>
+              <div className={styles.documentName}>
+                <FileText size={18} />
+                <span>{solicitud.nombre_documento}</span>
               </div>
-            )}
-          </section>
-        </div>
-
-        <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <label className="flex cursor-pointer items-start gap-3">
-            <input
-              type="checkbox"
-              checked={consentimiento}
-              onChange={(event) =>
-                setConsentimiento(event.target.checked)
-              }
-              disabled={enviando}
-              className="mt-1 h-4 w-4 rounded border-slate-300"
-            />
-
-            <span className="text-sm leading-6 text-slate-600">
-              Confirmo que revisé el documento, que la firma dibujada me
-              pertenece y autorizo la captura de una fotografía como evidencia
-              asociada a este proceso de firma.
-            </span>
-          </label>
-
-          {errorCamara && (
-            <div className="mt-4 flex items-start gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{errorCamara}</span>
+              {solicitud.documento_url ? (
+                <DocumentoReader
+                  url={solicitud.documento_url}
+                  nombre={solicitud.nombre_documento}
+                  onReady={setDocumentoListo}
+                />
+              ) : (
+                <div className={styles.inlineError} role="alert">
+                  <AlertCircle size={20} />
+                  <span>
+                    El documento no está disponible. Solicita un nuevo enlace
+                    antes de firmar.
+                  </span>
+                </div>
+              )}
+              <p className={styles.readHint}>
+                Comprueba tus datos y el contenido antes de continuar.
+              </p>
             </div>
           )}
 
-          <button
-            type="button"
-            onClick={firmarDocumento}
-            disabled={!puedeFirmar}
-            className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-          >
-            {enviando ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Registrando firma...
-              </>
-            ) : (
-              <>
-                <FileSignature className="h-4 w-4" />
-                Firmar documento
-              </>
-            )}
-          </button>
+          {paso === 2 && (
+            <div className={styles.signatureStage}>
+              <div className={styles.signingFor}>
+                <FileText size={20} />
+                <div>
+                  <small>VAS A FIRMAR</small>
+                  <strong>{solicitud.nombre_documento}</strong>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => cambiarPaso(1)}
+                  disabled={enviando}
+                >
+                  Revisar
+                </button>
+              </div>
+              <div className={styles.signatureLabel}>
+                <label htmlFor="firma-manuscrita">Tu firma</label>
+                <button
+                  type="button"
+                  onClick={limpiarFirma}
+                  disabled={!tieneFirma || enviando}
+                >
+                  <Eraser size={15} />
+                  Borrar
+                </button>
+              </div>
+              <div className={styles.signatureBox}>
+                <canvas
+                  id="firma-manuscrita"
+                  ref={canvasRef}
+                  aria-label="Dibuja tu firma con el dedo o el mouse"
+                  onPointerDown={iniciarTrazo}
+                  onPointerMove={dibujar}
+                  onPointerUp={terminarTrazo}
+                  onPointerCancel={terminarTrazo}
+                  onLostPointerCapture={() => {
+                    drawingRef.current = null;
+                  }}
+                />
+                {!tieneFirma && (
+                  <span className={styles.signaturePlaceholder}>
+                    <FileSignature size={27} strokeWidth={1.4} />
+                    Firma aquí con tu dedo o mouse
+                  </span>
+                )}
+                <span className={styles.signatureLine} />
+              </div>
+              <span className={styles.signatureOwner}>{nombre}</span>
+              <label className={styles.consent}>
+                <input
+                  type="checkbox"
+                  checked={consentimiento}
+                  onChange={(event) => setConsentimiento(event.target.checked)}
+                  disabled={enviando}
+                />
+                <span>
+                  Confirmo que revisé el documento, que la firma me pertenece y
+                  autorizo una fotografía como evidencia de este proceso.
+                </span>
+              </label>
+              <div className={styles.photoReminder}>
+                <Camera size={18} />
+                <span>
+                  Mira a la cámara al confirmar. Tu fotografía se tomará en ese
+                  momento.
+                </span>
+              </div>
+            </div>
+          )}
 
-          <p className="mt-3 text-center text-xs leading-5 text-slate-500">
-            La cámara se utiliza únicamente durante este proceso y se detiene
-            después de capturar la evidencia.
-          </p>
+          {(errorCamara || errorEnvio) && (
+            <div className={styles.inlineError} role="alert">
+              <AlertCircle size={19} />
+              <span>{errorEnvio || errorCamara}</span>
+            </div>
+          )}
+          {paso > 0 && !camaraActiva && !enviando && (
+            <button
+              type="button"
+              className={styles.reactivate}
+              onClick={activarCamara}
+              disabled={activandoCamara}
+            >
+              <Camera size={17} />
+              {activandoCamara
+                ? "Activando cámara…"
+                : "Reactivar cámara para continuar"}
+            </button>
+          )}
+
+          <div className={styles.actions}>
+            <div className={styles.actionCopy}>
+              <LockKeyhole size={14} />
+              <span>
+                {paso === 0
+                  ? "Tú decides cuándo firmar"
+                  : paso === 1
+                  ? "Aún no has firmado"
+                  : "Firma y fotografía en un solo paso"}
+              </span>
+            </div>
+            <div className={styles.actionButtons}>
+              {paso > 0 && (
+                <button
+                  type="button"
+                  className={styles.backButton}
+                  onClick={() => cambiarPaso(paso - 1)}
+                  disabled={enviando}
+                  aria-label="Volver al paso anterior"
+                >
+                  <ArrowLeft size={19} />
+                  <span>Anterior</span>
+                </button>
+              )}
+              <button
+                type="button"
+                className={styles.primaryButton}
+                onClick={accionPrincipal}
+                disabled={!puedeContinuar || enviando}
+              >
+                {activandoCamara || enviando ? (
+                  <Loader2 size={18} className={styles.spin} />
+                ) : paso === 0 && !camaraActiva ? (
+                  <Camera size={18} />
+                ) : paso === 2 ? (
+                  <FileSignature size={18} />
+                ) : null}
+                {textoAccion}
+                {paso < 2 &&
+                  !activandoCamara &&
+                  (paso !== 0 || camaraActiva) && <ArrowRight size={18} />}
+              </button>
+            </div>
+          </div>
         </section>
-
-        <p className="mx-auto mt-5 max-w-2xl text-center text-xs leading-5 text-slate-500">
-          Este enlace es personal y temporal. No lo compartas con otras
-          personas.
-        </p>
       </div>
+      <footer className={styles.footer}>
+        ADAMIA
+        <span />
+        Personas, procesos y confianza.
+      </footer>
     </main>
   );
 }
