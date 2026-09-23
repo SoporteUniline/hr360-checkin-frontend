@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { finiquitosApi } from "@/lib/finiquitosApi";
 import { firmaDigitalAdminApi } from "@/lib/firmaDigitalApi";
 import styles from "./finiquitos-theme.module.css";
+import FiniquitoResumen, { money } from "./FiniquitoResumen";
 import { jsPDF } from "jspdf";
 import dayjs from "dayjs";
 import { useAuth } from "@/context/AuthContext";
@@ -25,14 +26,49 @@ import {
   Copy,
   Download,
   FileSignature,
-  FileText,
+  RefreshCw,
   Loader2,
   Printer,
 } from "lucide-react";
 
-export default function FiniquitoViewDialog({ open, setOpen, id }) {
+// Keep newly created links while this page is open, even when the status endpoint
+// omits the URL. Match the request ID to avoid reusing a replaced or expired link.
+const signatureLinks = new Map();
+
+function signatureLink(source) {
+  const raw =
+    source?.url_firma_completa ||
+    source?.url_firma ||
+    source?.url ||
+    (source?.token ? `/firmar/${encodeURIComponent(source.token)}` : null);
+  if (!raw) return null;
+  try {
+    const url = new URL(raw, window.location.origin);
+    return ["https:", "http:"].includes(url.protocol) ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+export default function FiniquitoViewDialog({
+  open,
+  setOpen,
+  id,
+  justSaved = false,
+  onUpdated,
+}) {
   const { dataUser } = useAuth();
-  const idEmpresa = dataUser?.id_empresa;
+  const [det, setDet] = useState(null);
+  // Use the saved record's company, including when viewing another business unit.
+  const idEmpresa = det?.id_empresa;
+  const [loadError, setLoadError] = useState("");
+  const [reloadDetail, setReloadDetail] = useState(0);
+  const [refreshFirma, setRefreshFirma] = useState(0);
+  const [estadoConsultado, setEstadoConsultado] = useState(false);
+  const [errorConsulta, setErrorConsulta] = useState("");
+  const [confirmPayment, setConfirmPayment] = useState(false);
+  const [savingPayment, setSavingPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
 
   /**
    * Datos de empresa para marca/imagen en el PDF (formato unificado).
@@ -41,7 +77,7 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
   const { data: empresaData } = useSWR(
     idEmpresa ? `/empresas/${idEmpresa}` : null,
     fetcherWithToken,
-    swr_config,
+    swr_config
   );
 
   /**
@@ -66,8 +102,7 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
     };
   }, [empresaData?.url_imagen]);
 
-  const [det, setDet] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [isPreparingPrint, setIsPreparingPrint] = useState(false);
   const [solicitandoFirma, setSolicitandoFirma] = useState(false);
   const [solicitudFirma, setSolicitudFirma] = useState(null);
@@ -84,6 +119,8 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
       if (!open || !id) return;
 
       setDet(null);
+      setLoadError("");
+      setEstadoConsultado(false);
       setSolicitudFirma(null);
       setEstadoFirma(null);
       setErrorFirma("");
@@ -93,6 +130,12 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
       try {
         const data = await finiquitosApi.detalle(id);
         if (active) setDet(data);
+      } catch (error) {
+        if (active)
+          setLoadError(
+            error?.response?.data?.error ||
+              "No se pudo cargar el finiquito. Inténtalo de nuevo."
+          );
       } finally {
         if (active) setLoading(false);
       }
@@ -101,7 +144,7 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
     return () => {
       active = false;
     };
-  }, [open, id]);
+  }, [open, id, reloadDetail]);
 
   /**
    * PDF unificado (formato nuevo) - Detalle de Finiquito/Liquidación (desde modal Ver).
@@ -133,7 +176,10 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
         .replace(/\s+/g, " ")
         .trim();
     const money = (value) =>
-      `$${Number(value || 0).toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      `$${Number(value || 0).toLocaleString("es-MX", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })}`;
     const needSpace = (height) => {
       if (y + height > pageHeight - 65) {
         doc.addPage();
@@ -169,7 +215,11 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
       doc.setLineWidth(0.2);
       doc.line(x, yPos + 7, x + width, yPos + 7);
     };
-    const drawWrappedSectionText = ({ sectionName, textValue, emptyFallback }) => {
+    const drawWrappedSectionText = ({
+      sectionName,
+      textValue,
+      emptyFallback,
+    }) => {
       sectionTitle(sectionName);
       const textInsetLeft = 2;
       const textInsetRight = 8;
@@ -192,9 +242,11 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
         }
         const breakableParagraph = cleanedParagraph.replace(
           /(\S{24})(?=\S)/g,
-          "$1 ",
+          "$1 "
         );
-        safeLines.push(...doc.splitTextToSize(breakableParagraph, maxTextWidth));
+        safeLines.push(
+          ...doc.splitTextToSize(breakableParagraph, maxTextWidth)
+        );
       }
       for (const line of safeLines) {
         needSpace(lineHeight + 2);
@@ -225,11 +277,21 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
     };
 
     const companyName =
-      safe(empresaData?.nombre_empresa || dataUser?.empresa?.nombre_empresa) ||
-      "ADAMIA Human Resources";
+      safe(
+        empresaData?.nombre_empresa ||
+          det?.nombre_empresa ||
+          (Number(dataUser?.id_empresa) === Number(idEmpresa)
+            ? dataUser?.empresa?.nombre_empresa
+            : "")
+      ) || "ADAMIA Human Resources";
     const tipoDocumento = det.es_liquidacion ? "LIQUIDACION" : "FINIQUITO";
-    const folio = String(det.id_finiquito || det.id || id || "").padStart(3, "0");
-    const fechaBaja = det.fecha_baja ? dayjs(det.fecha_baja).format("DD/MM/YYYY") : "—";
+    const folio = String(det.id_finiquito || det.id || id || "").padStart(
+      3,
+      "0"
+    );
+    const fechaBaja = det.fecha_baja
+      ? dayjs(det.fecha_baja).format("DD/MM/YYYY")
+      : "—";
     const empleadoName = safe(det.nombre_completo || "—");
     const totalPagar = money(det.total_pagar);
 
@@ -292,14 +354,19 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
     sectionTitle("Datos del empleado");
     needSpace(20);
     fieldPair("Nombre completo", empleadoName, marginLeft, y);
-    fieldPair("Puesto", det.puesto || "—", marginLeft + contentWidth / 2 + 4, y);
+    fieldPair(
+      "Puesto",
+      det.puesto || "—",
+      marginLeft + contentWidth / 2 + 4,
+      y
+    );
     y += 16;
     fieldPair("Departamento", det.departamento || "—", marginLeft, y);
     fieldPair(
       "Fecha ingreso",
       det.fecha_ingreso ? dayjs(det.fecha_ingreso).format("DD/MM/YYYY") : "—",
       marginLeft + contentWidth / 2 + 4,
-      y,
+      y
     );
     y += 16;
     fieldPair("Anios trabajados", `${det.años_trabajados || 0}`, marginLeft, y);
@@ -307,7 +374,7 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
       "Salario diario",
       money(det.salario_diario),
       marginLeft + contentWidth / 2 + 4,
-      y,
+      y
     );
     y += 18;
 
@@ -375,7 +442,7 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
           pageWidth - marginRight - 75,
           yFirmas,
           pageWidth - marginRight - 5,
-          yFirmas,
+          yFirmas
         );
         doc.setFont(FONT, "normal");
         doc.setFontSize(7);
@@ -384,14 +451,19 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
           "REPRESENTANTE DE LA EMPRESA",
           pageWidth - marginRight - 40,
           yFirmas + 5,
-          { align: "center", charSpace: 0.5 },
+          { align: "center", charSpace: 0.5 }
         );
         doc.setFont(FONT, "normal");
         doc.setFontSize(7.5);
         doc.setTextColor(...ADAMIA.text2);
-        doc.text(companyName.slice(0, 40), pageWidth - marginRight - 40, yFirmas + 10, {
-          align: "center",
-        });
+        doc.text(
+          companyName.slice(0, 40),
+          pageWidth - marginRight - 40,
+          yFirmas + 10,
+          {
+            align: "center",
+          }
+        );
       }
       const lineY = pageHeight - 14;
       const footerTextY = pageHeight - 9;
@@ -403,18 +475,27 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
       const brandW = doc.getTextWidth("Adamia");
       doc.setFont(FONT, "normal");
       doc.setTextColor(...ADAMIA.muted);
-      doc.text(" · Finiquitos y Liquidaciones", marginLeft + brandW, footerTextY);
+      doc.text(
+        " · Finiquitos y Liquidaciones",
+        marginLeft + brandW,
+        footerTextY
+      );
       doc.setFontSize(6.5);
       doc.text(
         `Generado el ${fechaGenerado} a las ${horaGenerado} · Folio #${folio}`,
         pageWidth / 2 + 12,
         footerTextY,
-        { align: "center" },
+        { align: "center" }
       );
       doc.setFontSize(7.5);
-      doc.text(`Página ${p} de ${totalPages}`, pageWidth - marginRight, footerTextY, {
-        align: "right",
-      });
+      doc.text(
+        `Página ${p} de ${totalPages}`,
+        pageWidth - marginRight,
+        footerTextY,
+        {
+          align: "right",
+        }
+      );
     }
 
     const nombreArchivo = `${
@@ -556,53 +637,90 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
 
   useEffect(() => {
     let active = true;
-
-    const consultarEstadoFirma = async () => {
-      if (!open || !id || !idEmpresa || !det?.id_empleado) return;
-
+    let inFlight = false;
+    const consultar = async () => {
+      if (!open || !id || !idEmpresa || !det?.id_empleado || inFlight) return;
+      inFlight = true;
       setConsultandoFirma(true);
-
       try {
         const respuesta = await firmaDigitalAdminApi.obtenerEstadoDocumento({
           idEmpresa,
           tipoDocumento: "FINIQUITO",
           referenciaId: id,
         });
-
-        if (active) {
-          setEstadoFirma(respuesta?.solicitud || null);
-        }
+        if (!active) return;
+        const solicitud = respuesta?.solicitud || null;
+        setEstadoFirma(solicitud);
+        const cacheKey = `${idEmpresa}:${id}`;
+        const requestId = solicitud?.id || solicitud?.id_solicitud;
+        const cached = signatureLinks.get(cacheKey);
+        const isPending = ["pendiente", "abierto"].includes(solicitud?.estatus);
+        const link =
+          signatureLink(solicitud) ||
+          signatureLink(respuesta) ||
+          (requestId && String(cached?.id) === String(requestId)
+            ? cached.url
+            : null);
+        if (isPending && link && requestId)
+          signatureLinks.set(cacheKey, { id: requestId, url: link });
+        if (!isPending) signatureLinks.delete(cacheKey);
+        setSolicitudFirma(
+          isPending && link ? { ...solicitud, url_firma_completa: link } : null
+        );
+        setEstadoConsultado(true);
+        setErrorConsulta("");
       } catch (error) {
-        if (active) {
-          setEstadoFirma(null);
-          setErrorFirma(
+        if (active)
+          setErrorConsulta(
             error?.response?.data?.error ||
-              "No fue posible consultar el estado de la firma.",
+              "No se pudo actualizar el estado de la firma."
           );
-        }
       } finally {
-        if (active) {
-          setConsultandoFirma(false);
-        }
+        inFlight = false;
+        if (active) setConsultandoFirma(false);
       }
     };
-
-    consultarEstadoFirma();
-
+    consultar();
+    const refreshVisible = () => {
+      if (!document.hidden) consultar();
+    };
+    const timer = setInterval(refreshVisible, 15000);
+    window.addEventListener("focus", refreshVisible);
     return () => {
       active = false;
+      clearInterval(timer);
+      window.removeEventListener("focus", refreshVisible);
     };
-  }, [open, id, idEmpresa, det?.id_empleado]);
+  }, [open, id, idEmpresa, det?.id_empleado, refreshFirma]);
+
+  const marcarPagado = async () => {
+    if (savingPayment || !det) return;
+    setSavingPayment(true);
+    setPaymentError("");
+    try {
+      await finiquitosApi.actualizarEstado(id, "Pagado");
+      setDet((current) => ({ ...current, estado: "Pagado" }));
+      setConfirmPayment(false);
+      onUpdated?.();
+    } catch (error) {
+      setPaymentError(
+        error?.response?.data?.error ||
+          "No se pudo actualizar el estado del pago."
+      );
+    } finally {
+      setSavingPayment(false);
+    }
+  };
 
   const abrirDocumentoFirmado = async () => {
-    if (!estadoFirma?.id || !idEmpresa) return;
+    if (!(estadoFirma?.id || estadoFirma?.id_solicitud) || !idEmpresa) return;
 
     setAbriendoDocumentoFirmado(true);
     setErrorFirma("");
 
     try {
       const respuesta = await firmaDigitalAdminApi.obtenerDocumentoFirmado({
-        idSolicitud: estadoFirma.id,
+        idSolicitud: estadoFirma.id || estadoFirma.id_solicitud,
         idEmpresa,
       });
 
@@ -615,7 +733,7 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
       setErrorFirma(
         error?.response?.data?.error ||
           error?.message ||
-          "No fue posible abrir el documento firmado.",
+          "No fue posible abrir el documento firmado."
       );
     } finally {
       setAbriendoDocumentoFirmado(false);
@@ -623,7 +741,16 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
   };
 
   const solicitarFirma = async () => {
-    if (!det || !idEmpresa || !det.id_empleado || !id) return;
+    if (
+      !det ||
+      !idEmpresa ||
+      !det.id_empleado ||
+      !id ||
+      solicitandoFirma ||
+      !estadoConsultado ||
+      errorConsulta
+    )
+      return;
 
     setSolicitandoFirma(true);
     setErrorFirma("");
@@ -649,33 +776,29 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
         expiracionHoras: 72,
       });
 
-      const urlFirma = new URL(
-        solicitud.url_firma,
-        window.location.origin,
-      ).toString();
-
-      setSolicitudFirma({
-        ...solicitud,
-        url_firma_completa: urlFirma,
-      });
-
+      const created = solicitud?.solicitud || solicitud;
+      const urlFirma = signatureLink(created) || signatureLink(solicitud);
+      setSolicitudFirma({ ...created, url_firma_completa: urlFirma });
+      const requestId = created.id_solicitud || created.id;
+      if (urlFirma && requestId)
+        signatureLinks.set(`${idEmpresa}:${id}`, {
+          id: requestId,
+          url: urlFirma,
+        });
       setEstadoFirma({
-        id: solicitud.id_solicitud,
+        ...created,
+        id: created.id_solicitud || created.id,
         tipo_documento: "FINIQUITO",
         referencia_id: id,
         nombre_documento: built.nombreArchivo,
-        nombre_firmante: solicitud.firmante?.nombre || det.nombre_completo,
-        estatus: "pendiente",
-        expires_at: solicitud.expires_at,
-        opened_at: null,
-        signed_at: null,
-        tiene_documento_firmado: false,
+        nombre_firmante: created.firmante?.nombre || det.nombre_completo,
+        estatus: created.estatus || "pendiente",
       });
     } catch (error) {
       setErrorFirma(
         error?.response?.data?.error ||
           error?.message ||
-          "No fue posible crear la solicitud de firma.",
+          "No fue posible crear la solicitud de firma."
       );
     } finally {
       setSolicitandoFirma(false);
@@ -686,9 +809,7 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
     if (!solicitudFirma?.url_firma_completa) return;
 
     try {
-      await navigator.clipboard.writeText(
-        solicitudFirma.url_firma_completa,
-      );
+      await navigator.clipboard.writeText(solicitudFirma.url_firma_completa);
       setEnlaceCopiado(true);
 
       setTimeout(() => {
@@ -699,429 +820,380 @@ export default function FiniquitoViewDialog({ open, setOpen, id }) {
     }
   };
 
+  const signed = estadoFirma?.estatus === "firmado";
+  const pending = ["pendiente", "abierto"].includes(estadoFirma?.estatus);
+  const paid = det?.estado?.toLowerCase() === "pagado";
+  const expired = ["expirado", "vencido"].includes(estadoFirma?.estatus);
+  const busy = solicitandoFirma || savingPayment || isPreparingPrint;
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-[95vw] sm:max-w-2xl md:max-w-4xl xl:max-w-5xl max-h-[85vh] overflow-y-auto p-0">
-        <DialogHeader className="p-0">
-          <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white p-6">
-            <div className="flex items-center gap-3">
-              <div className="bg-white/20 p-3 rounded-lg backdrop-blur-sm">
-                <FileText className="h-6 w-6 text-white" />
-              </div>
-              <div className="min-w-0">
-                <DialogTitle className="text-white text-xl font-bold truncate">
-                  {det?.es_liquidacion
-                    ? "Detalle de liquidación"
-                    : "Detalle de finiquito"}
-                </DialogTitle>
-                <DialogDescription className="text-sm text-indigo-100 truncate">
-                  {det?.nombre_completo
-                    ? `Empleado: ${det.nombre_completo}`
-                    : ""}
-                </DialogDescription>
-              </div>
-            </div>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!busy) setOpen(next);
+      }}
+    >
+      <DialogContent
+        className={`${styles.detailDialog} p-0 gap-0 w-[calc(100%-2rem)] sm:max-w-[1040px] max-h-[92dvh] overflow-y-auto`}
+      >
+        <DialogHeader className={styles.dialogHeading}>
+          <div className={styles.eyebrow}>
+            {det?.es_liquidacion ? "Liquidación" : "Finiquito"}{" "}
+            <span>#{id}</span>
           </div>
+          <DialogTitle className="text-xl font-semibold text-slate-900 leading-tight">
+            {det?.nombre_completo || "Detalle del finiquito"}
+          </DialogTitle>
+          <DialogDescription>
+            {justSaved
+              ? "Guardado correctamente. Continúa con la firma del documento."
+              : "Consulta el documento, su firma y el estado del pago."}
+          </DialogDescription>
         </DialogHeader>
 
-        <div className="p-6 space-y-4">
-          {loading ? (
-            <div className="py-6 text-sm text-muted-foreground">
-              Cargando...
-            </div>
-          ) : det ? (
-            <div className="space-y-4 text-sm">
-              <div className={styles.resultsPanel}>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                  <div className={styles.metricCard}>
-                    <div className={styles.metricLabel}>Empleado</div>
-                    <div className={`${styles.metricValue} break-words`}>
-                      {det.nombre_completo}
-                    </div>
-                  </div>
-                  <div className={styles.metricCard}>
-                    <div className={styles.metricLabel}>Días trabajados</div>
-                    <div className={styles.metricValue}>
-                      {det.dias_trabajados}
-                    </div>
-                  </div>
-                  <div className={styles.metricCard}>
-                    <div className={styles.metricLabel}>Años trabajados</div>
-                    <div className={styles.metricValue}>
-                      {det.años_trabajados}
-                    </div>
-                  </div>
-                  <div className={styles.metricCard}>
-                    <div className={styles.metricLabel}>Salario diario</div>
-                    <div className={styles.metricValue}>
-                      $
-                      {Number(det.salario_diario).toLocaleString("es-MX", {
-                        minimumFractionDigits: 2,
-                      })}
-                    </div>
-                  </div>
+        {loading ? (
+          <div className={styles.dialogLoading} role="status">
+            <Loader2 className="animate-spin" /> Cargando finiquito…
+          </div>
+        ) : loadError || !det ? (
+          <div className="p-6">
+            <p role="alert" className={styles.errorNotice}>
+              {loadError || "No se encontró el finiquito."}
+            </p>
+            <Button
+              variant="outline"
+              className="mt-3"
+              onClick={() => setReloadDetail((v) => v + 1)}
+            >
+              Reintentar
+            </Button>
+          </div>
+        ) : (
+          <div className={styles.dialogGrid}>
+            <section
+              className={styles.documentColumn}
+              aria-label="Documento guardado"
+            >
+              <div className={styles.documentMeta}>
+                <div>
+                  <span>Fecha de baja</span>
+                  <strong>
+                    {det.fecha_baja
+                      ? dayjs(det.fecha_baja).format("DD/MM/YYYY")
+                      : "—"}
+                  </strong>
                 </div>
-
-                <div className={styles.sectionTitle}>
-                  Conceptos de finiquito
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mt-2">
-                  <div className={styles.conceptCard}>
-                    <div className={styles.conceptTitle}>Salario Pendiente</div>
-                    <div className={styles.conceptAmount}>
-                      $
-                      {Number(det.monto_salario_pendiente).toLocaleString(
-                        "es-MX",
-                        { minimumFractionDigits: 2 },
-                      )}
-                    </div>
-                    <div className={styles.conceptBox}>
-                      <div className={styles.row}>
-                        <span className={styles.rowLabel}>Días</span>
-                        <span className={styles.rowValue}>
-                          {Number(det.dias_salario_pendiente).toFixed(2)} días
-                        </span>
-                      </div>
-                      <div className={styles.row}>
-                        <span className={styles.rowLabel}>Salario diario</span>
-                        <span className={styles.rowValue}>
-                          $
-                          {Number(det.salario_diario).toLocaleString("es-MX", {
-                            minimumFractionDigits: 2,
-                          })}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className={styles.conceptCard}>
-                    <div className={styles.conceptTitle}>
-                      Aguinaldo Proporcional
-                    </div>
-                    <div className={styles.conceptAmount}>
-                      $
-                      {Number(det.monto_aguinaldo_proporcional).toLocaleString(
-                        "es-MX",
-                        { minimumFractionDigits: 2 },
-                      )}
-                    </div>
-                    <div className={styles.conceptBox}>
-                      <div className={styles.row}>
-                        <span className={styles.rowLabel}>Proporcional</span>
-                        <span className={styles.rowValue}>
-                          {det.dias_aguinaldo_proporcional} días
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className={styles.conceptCard}>
-                    <div className={styles.conceptTitle}>
-                      Vacaciones No Gozadas
-                    </div>
-                    <div className={styles.conceptAmount}>
-                      $
-                      {Number(det.monto_vacaciones_no_gozadas).toLocaleString(
-                        "es-MX",
-                        { minimumFractionDigits: 2 },
-                      )}
-                    </div>
-                    <div className={styles.conceptBox}>
-                      <div className={styles.row}>
-                        <span className={styles.rowLabel}>Totales</span>
-                        <span className={styles.rowValue}>
-                          {det.dias_vacaciones_totales} días
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className={styles.conceptCard}>
-                    <div className={styles.conceptTitle}>Prima Vacacional</div>
-                    <div className={styles.conceptAmount}>
-                      $
-                      {Number(det.monto_prima_vacacional).toLocaleString(
-                        "es-MX",
-                        { minimumFractionDigits: 2 },
-                      )}
-                    </div>
-                    <div className={styles.conceptBox}>
-                      <div className={styles.row}>
-                        <span className={styles.rowLabel}>Porcentaje</span>
-                        <span className={styles.rowValue}>
-                          {Number(det.prima_vacacional_porcentaje).toFixed(0)}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className={styles.subtotalBar}>
-                  <div className="flex items-center justify-between">
-                    <div className={styles.subtotalLabel}>
-                      Subtotal Finiquito
-                    </div>
-                    <div className={styles.subtotalValue}>
-                      $
-                      {Number(det.subtotal_finiquito).toLocaleString("es-MX", {
-                        minimumFractionDigits: 2,
-                      })}
-                    </div>
-                  </div>
-                </div>
-
-                {det.es_liquidacion ? (
-                  <div className="space-y-3 mt-3">
-                    <div className="text-sm font-semibold text-red-700">
-                      ⚖️ Conceptos de Liquidación
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <div className={styles.conceptCard}>
-                        <div className={styles.conceptTitle}>
-                          Prima de Antigüedad
-                        </div>
-                        <div className={styles.conceptAmount}>
-                          $
-                          {Number(det.monto_prima_antiguedad).toLocaleString(
-                            "es-MX",
-                            { minimumFractionDigits: 2 },
-                          )}
-                        </div>
-                      </div>
-                      <div className={styles.conceptCard}>
-                        <div className={styles.conceptTitle}>
-                          Indemnización Constitucional
-                        </div>
-                        <div className={styles.conceptAmount}>
-                          $
-                          {Number(
-                            det.monto_indemnizacion_constitucional,
-                          ).toLocaleString("es-MX", {
-                            minimumFractionDigits: 2,
-                          })}
-                        </div>
-                      </div>
-                      <div className={styles.conceptCard}>
-                        <div className={styles.conceptTitle}>
-                          Salarios Vencidos
-                        </div>
-                        <div className={styles.conceptAmount}>
-                          $
-                          {Number(det.monto_salarios_vencidos).toLocaleString(
-                            "es-MX",
-                            { minimumFractionDigits: 2 },
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className={styles.subtotalBar}>
-                      <div className="flex items-center justify-between">
-                        <div className={styles.subtotalLabel}>
-                          Subtotal Liquidación
-                        </div>
-                        <div className={styles.subtotalValue}>
-                          $
-                          {Number(det.subtotal_liquidacion).toLocaleString(
-                            "es-MX",
-                            { minimumFractionDigits: 2 },
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
-
-                <div className={styles.totalBar + " mt-3"}>
-                  <div className="flex items-center justify-between">
-                    <div className={styles.totalLabel}>TOTAL A PAGAR</div>
-                    <div className={styles.totalAmount}>
-                      $
-                      {Number(det.total_pagar).toLocaleString("es-MX", {
-                        minimumFractionDigits: 2,
-                      })}{" "}
-                      MXN
-                    </div>
-                  </div>
+                <div>
+                  <span>Terminación</span>
+                  <strong>{det.tipo_terminacion || "—"}</strong>
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="py-6 text-sm text-muted-foreground">
-              Sin información.
-            </div>
-          )}
-        </div>
-
-        {(consultandoFirma ||
-          estadoFirma ||
-          solicitudFirma ||
-          errorFirma) && (
-          <div className="mx-6 mb-4">
-            {consultandoFirma ? (
-              <div className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600">
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Consultando estado de firma...
-                </div>
+              <h3 className={styles.smallHeading}>Desglose del documento</h3>
+              <FiniquitoResumen data={det} />
+              {det.motivo_baja && (
+                <details className={styles.disclosure}>
+                  <summary>Motivo de baja</summary>
+                  <p className={styles.reasonText}>{det.motivo_baja}</p>
+                </details>
+              )}
+              <div className={styles.documentActions}>
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      await descargarPDFFormatoNuevo();
+                    } catch {
+                      setErrorFirma(
+                        "No se pudo generar el PDF. Inténtalo de nuevo."
+                      );
+                    }
+                  }}
+                  disabled={busy}
+                >
+                  <Download size={16} /> Descargar PDF
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={busy}
+                  onClick={async () => {
+                    setIsPreparingPrint(true);
+                    try {
+                      const built = await buildPdfFormatoNuevo();
+                      if (built)
+                        await imprimirPDF(built.doc, built.nombreArchivo);
+                    } catch {
+                      setErrorFirma("No se pudo preparar la impresión.");
+                    } finally {
+                      setIsPreparingPrint(false);
+                    }
+                  }}
+                >
+                  {isPreparingPrint ? (
+                    <Loader2 className="animate-spin" size={16} />
+                  ) : (
+                    <Printer size={16} />
+                  )}
+                  {isPreparingPrint ? "Preparando…" : "Imprimir"}
+                </Button>
               </div>
-            ) : estadoFirma?.estatus === "firmado" ? (
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
-                <div className="flex items-start gap-3">
-                  <Check className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-emerald-900">
+              {signed && (
+                <p className={styles.helpText}>
+                  Estas opciones generan el documento original. La versión con
+                  firma está en «Ver PDF firmado».
+                </p>
+              )}
+            </section>
+
+            <aside className={styles.signatureColumn} aria-label="Firma y pago">
+              <section className={styles.signaturePanel}>
+                <div className={styles.signatureIcon}>
+                  {signed ? <Check size={22} /> : <FileSignature size={22} />}
+                </div>
+                <div className={styles.summaryHeading}>
+                  <h3>Firma del documento</h3>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="Actualizar estado de firma"
+                    title="Actualizar estado de firma"
+                    disabled={consultandoFirma || solicitandoFirma}
+                    onClick={() => setRefreshFirma((v) => v + 1)}
+                  >
+                    <RefreshCw
+                      size={16}
+                      className={consultandoFirma ? "animate-spin" : ""}
+                    />
+                  </Button>
+                </div>
+                {!estadoConsultado ? (
+                  <p className={styles.helpText}>
+                    {errorConsulta
+                      ? "Estado de firma sin confirmar."
+                      : "Consultando estado de firma…"}
+                  </p>
+                ) : signed ? (
+                  <>
+                    <span className={styles.successBadge}>
                       Documento firmado
+                    </span>
+                    <p className={styles.signatureDescription}>
+                      {estadoFirma.nombre_firmante || det.nombre_completo}{" "}
+                      completó la firma
+                      {estadoFirma.signed_at
+                        ? ` el ${dayjs(estadoFirma.signed_at).format(
+                            "DD/MM/YYYY HH:mm"
+                          )}`
+                        : ""}
+                      .
                     </p>
-                    <p className="mt-1 text-sm text-emerald-700">
-                      {estadoFirma.nombre_firmante || "El empleado"} completó
-                      la firma de este documento.
+                    <Button
+                      className={styles.primaryButton}
+                      onClick={abrirDocumentoFirmado}
+                      disabled={
+                        abriendoDocumentoFirmado ||
+                        !(estadoFirma.id || estadoFirma.id_solicitud)
+                      }
+                    >
+                      {abriendoDocumentoFirmado ? (
+                        <Loader2 size={16} className="animate-spin" />
+                      ) : (
+                        <Download size={16} />
+                      )}
+                      {abriendoDocumentoFirmado
+                        ? "Abriendo…"
+                        : "Ver PDF firmado"}
+                    </Button>
+                  </>
+                ) : pending ? (
+                  <>
+                    <span className={styles.pendingBadge}>
+                      {estadoFirma.estatus === "abierto"
+                        ? "Enlace abierto · por firmar"
+                        : "Pendiente de firma"}
+                    </span>
+                    <p className={styles.signatureDescription}>
+                      Comparte el enlace con{" "}
+                      {estadoFirma.nombre_firmante || det.nombre_completo} para
+                      revisar y firmar el documento.
                     </p>
-
-                    {estadoFirma.tiene_documento_firmado && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={abrirDocumentoFirmado}
-                        disabled={abriendoDocumentoFirmado}
-                        className="mt-3 border-emerald-300 bg-white"
-                      >
-                        {abriendoDocumentoFirmado ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Download className="mr-2 h-4 w-4" />
-                        )}
-                        {abriendoDocumentoFirmado
-                          ? "Abriendo..."
-                          : "Ver PDF firmado"}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ) : ["pendiente", "abierto"].includes(estadoFirma?.estatus) ? (
-              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-                <div className="flex items-start gap-3">
-                  <FileSignature className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-blue-900">
-                      Pendiente de firma
-                    </p>
-                    <p className="mt-1 text-sm text-blue-700">
-                      La solicitud ya fue creada y está esperando la firma de{" "}
-                      {estadoFirma.nombre_firmante || "el empleado"}.
-                    </p>
-
-                    {solicitudFirma?.url_firma_completa && (
-                      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                        <input
-                          readOnly
-                          value={solicitudFirma.url_firma_completa}
-                          className="min-w-0 flex-1 rounded-md border border-blue-200 bg-white px-3 py-2 text-sm text-gray-700 outline-none"
-                        />
-
+                    {solicitudFirma?.url_firma_completa ? (
+                      <div className={styles.linkActions}>
+                        <label className={styles.field}>
+                          <span>Enlace de firma</span>
+                          <input
+                            readOnly
+                            value={solicitudFirma.url_firma_completa}
+                            onFocus={(event) => event.target.select()}
+                          />
+                        </label>
                         <Button
-                          type="button"
-                          variant="outline"
+                          className={styles.primaryButton}
                           onClick={copiarEnlaceFirma}
-                          className="shrink-0 border-blue-300 bg-white"
                         >
                           {enlaceCopiado ? (
-                            <>
-                              <Check className="mr-2 h-4 w-4" />
-                              Copiado
-                            </>
+                            <Check size={16} />
                           ) : (
-                            <>
-                              <Copy className="mr-2 h-4 w-4" />
-                              Copiar enlace
-                            </>
+                            <Copy size={16} />
                           )}
+                          {enlaceCopiado
+                            ? "Enlace copiado"
+                            : "Copiar enlace de firma"}
+                        </Button>
+                        <a
+                          className={styles.textLink}
+                          href={solicitudFirma.url_firma_completa}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Abrir página de firma
+                        </a>
+                      </div>
+                    ) : (
+                      <p className={styles.helpText}>
+                        La solicitud está vigente. El enlace no está disponible
+                        en esta consulta; utiliza el enlace compartido al
+                        crearla.
+                      </p>
+                    )}
+                    {estadoFirma.expires_at && (
+                      <p className={styles.helpText}>
+                        Vence:{" "}
+                        {dayjs(estadoFirma.expires_at).format(
+                          "DD/MM/YYYY HH:mm"
+                        )}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <span className={styles.neutralBadge}>
+                      {expired ? "Enlace vencido" : "Sin solicitud de firma"}
+                    </span>
+                    <p className={styles.signatureDescription}>
+                      {expired
+                        ? "Genera un nuevo enlace para que el empleado pueda firmar."
+                        : "El documento está listo. Genera el enlace para que el empleado active su cámara, lo revise y firme."}
+                    </p>
+                    <Button
+                      className={styles.primaryButton}
+                      onClick={solicitarFirma}
+                      disabled={
+                        !idEmpresa ||
+                        !det.id_empleado ||
+                        solicitandoFirma ||
+                        consultandoFirma ||
+                        !!errorConsulta ||
+                        isPreparingPrint
+                      }
+                    >
+                      {solicitandoFirma ? (
+                        <Loader2 size={17} className="animate-spin" />
+                      ) : (
+                        <FileSignature size={17} />
+                      )}
+                      {solicitandoFirma
+                        ? "Generando enlace…"
+                        : expired
+                        ? "Generar nuevo enlace"
+                        : "Solicitar firma"}
+                    </Button>
+                    <p className={styles.nextStep}>
+                      El enlace tiene una vigencia de 72 horas.
+                    </p>
+                  </>
+                )}
+                {!idEmpresa && (
+                  <p className={styles.errorNotice}>
+                    El registro no incluye la empresa. No es posible solicitar
+                    la firma.
+                  </p>
+                )}
+                {errorConsulta && (
+                  <div role="alert" className={styles.errorNotice}>
+                    {errorConsulta}
+                    <button
+                      className={styles.retryLink}
+                      onClick={() => setRefreshFirma((v) => v + 1)}
+                      disabled={consultandoFirma}
+                    >
+                      Reintentar consulta
+                    </button>
+                  </div>
+                )}
+                {errorFirma && (
+                  <p role="alert" className={styles.errorNotice}>
+                    {errorFirma}
+                  </p>
+                )}
+              </section>
+
+              <section
+                className={styles.paymentPanel}
+                aria-label="Estado del pago"
+              >
+                <div className={styles.summaryHeading}>
+                  <h3>Estado del pago</h3>
+                  <span
+                    className={paid ? styles.successBadge : styles.neutralBadge}
+                  >
+                    {det.estado || "Pendiente"}
+                  </span>
+                </div>
+                <p className={styles.helpText}>
+                  {paid
+                    ? "El pago está registrado."
+                    : "Registra el pago cuando se haya realizado."}
+                </p>
+                {!paid &&
+                  (confirmPayment ? (
+                    <div className={styles.paymentConfirmation}>
+                      <p>
+                        ¿Confirmas que se realizó el pago de{" "}
+                        <strong>{money(det.total_pagar)}</strong>?
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          size="sm"
+                          onClick={marcarPagado}
+                          disabled={savingPayment}
+                        >
+                          {savingPayment ? "Guardando…" : "Confirmar pago"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={savingPayment}
+                          onClick={() => setConfirmPayment(false)}
+                        >
+                          Cancelar
                         </Button>
                       </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ) : errorFirma ? (
-              <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                {errorFirma}
-              </div>
-            ) : null}
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() => setConfirmPayment(true)}
+                    >
+                      Marcar como pagado
+                    </Button>
+                  ))}
+                {paymentError && (
+                  <p role="alert" className={styles.errorNotice}>
+                    {paymentError}
+                  </p>
+                )}
+              </section>
+            </aside>
           </div>
         )}
-
-        {/* Footer con acciones (similar al patrón de Aguinaldos/Permisos): cerrar + descargar PDF */}
-        <DialogFooter className="bg-gray-50 p-4 flex flex-col-reverse sm:flex-row justify-end gap-2 rounded-b-lg">
-          {isPreparingPrint ? (
-            <div className="text-sm text-blue-700 flex items-center gap-2 sm:mr-auto">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Preparando impresión...
-            </div>
-          ) : (
-            <div className="sm:mr-auto" />
-          )}
+        <DialogFooter className={styles.dialogFooter}>
           <Button
             variant="outline"
+            disabled={busy}
             onClick={() => setOpen(false)}
-            disabled={isPreparingPrint}
-            className="w-full sm:w-auto border-gray-300"
           >
             Cerrar
-          </Button>
-          {!["pendiente", "abierto", "firmado"].includes(
-            estadoFirma?.estatus,
-          ) && (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={solicitarFirma}
-              disabled={
-                !det ||
-                !idEmpresa ||
-                !det?.id_empleado ||
-                solicitandoFirma ||
-                consultandoFirma ||
-                isPreparingPrint
-              }
-              className="w-full sm:w-auto border-blue-200 text-blue-700 hover:bg-blue-50"
-            >
-              {solicitandoFirma ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <FileSignature className="h-4 w-4 mr-2" />
-              )}
-              {solicitandoFirma ? "Generando..." : "Solicitar firma"}
-            </Button>
-          )}
-          <Button
-            onClick={descargarPDFFormatoNuevo}
-            disabled={!det || isPreparingPrint}
-            className="w-full sm:w-auto bg-[#2563EB] hover:bg-[#1d4ed8] text-white shadow-sm disabled:opacity-50"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Descargar PDF
-          </Button>
-          <Button
-            onClick={async () => {
-              setIsPreparingPrint(true);
-              try {
-                await new Promise((resolve) => setTimeout(resolve, 0));
-                const built = await buildPdfFormatoNuevo();
-                if (!built) return;
-                await imprimirPDF(built.doc, built.nombreArchivo);
-              } finally {
-                setIsPreparingPrint(false);
-              }
-            }}
-            disabled={!det || isPreparingPrint}
-            className="w-full sm:w-auto bg-[#1e3a8a] hover:bg-[#1d4ed8] text-white shadow-sm disabled:opacity-50"
-          >
-            {isPreparingPrint ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Printer className="h-4 w-4 mr-2" />
-            )}
-            {isPreparingPrint ? "Preparando..." : "Imprimir"}
           </Button>
         </DialogFooter>
       </DialogContent>
