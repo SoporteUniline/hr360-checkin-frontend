@@ -598,6 +598,8 @@ export default function PageFiniquitosLiquidaciones() {
     };
     setLoading(true);
     try {
+      let finiquitoCreadoId = null;
+
       if (editingFiniquitoId) {
         await finiquitosApi.actualizar(editingFiniquitoId, payload);
       } else {
@@ -611,18 +613,24 @@ export default function PageFiniquitosLiquidaciones() {
         }
 
         await finiquitosApi.actualizarEstado(nuevoId, "Pagado");
+        finiquitoCreadoId = nuevoId;
 
-        setAlertMsg(
-          "✅ Guardado correctamente y marcado como Pagado. Puedes ver el registro en la pestaña de 'Finiquitos Guardados'.",
-        );
+        setAlertMsg("✅ Guardado correctamente y marcado como Pagado.");
       }
+
       setGuardable(false);
       await mutate();
+
       if (editingFiniquitoId) {
         setAlertMsg("✅ Cambios guardados correctamente.");
       }
+
       setTab("tabla");
       resetFormulario();
+
+      if (finiquitoCreadoId) {
+        setViewRow({ id_finiquito: finiquitoCreadoId });
+      }
     } finally {
       setLoading(false);
     }
