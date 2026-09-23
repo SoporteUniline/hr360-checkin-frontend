@@ -8,7 +8,10 @@ import {
   usePermisosPorAutorizar,
 } from "@/hooks/usePermisoPorEmpleado";
 import { Plus } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import useSWR from "swr";
+import { useAuth } from "@/context/AuthContext";
+import { fetcherWithToken } from "@/lib/fetcher";
 
 const SolicitudesPage = () => {
   const [open, setOpen] = useState(false);
@@ -19,6 +22,33 @@ const SolicitudesPage = () => {
   const [pageAutorizar, setPageAutorizar] = useState(1);
   const [limitAutorizar, setLimitAutorizar] = useState(10);
   const [tab, setTab] = useState("mis");
+
+  const { dataUser } = useAuth();
+
+  const idEmpresa =
+    dataUser?.id_empresa ||
+    dataUser?.empresas_detalle?.[0]?.id_empresa ||
+    dataUser?.empresas?.[0] ||
+    null;
+
+  const { data: festivosResp } = useSWR(
+    idEmpresa
+      ? `/checador/holidays/${idEmpresa}?page=1&limit=5000&filter=`
+      : null,
+    fetcherWithToken,
+  );
+
+  const festivosSet = useMemo(() => {
+    const set = new Set();
+
+    (festivosResp?.festivos || []).forEach((festivo) => {
+      if (festivo?.fecha) {
+        set.add(String(festivo.fecha).slice(0, 10));
+      }
+    });
+
+    return set;
+  }, [festivosResp]);
 
   const { data, total, mutate } = usePermisosEmpleado(page, limit);
 
@@ -112,6 +142,7 @@ const SolicitudesPage = () => {
             setOpen={setOpen}
             setMode={setMode}
             setSelected={setSelected}
+            festivosSet={festivosSet}
           />
 
           <TablePagination
@@ -132,6 +163,7 @@ const SolicitudesPage = () => {
             setMode={setMode}
             setSelected={setSelected}
             modoAutorizar
+            festivosSet={festivosSet}
             mutate={() => {
               mutateAutorizar?.();
               mutate?.();
