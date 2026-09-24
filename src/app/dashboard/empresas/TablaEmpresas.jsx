@@ -18,7 +18,7 @@ import { enqueueSnackbar } from "notistack";
 import Cookies from "js-cookie";
 import NuevaEmpresa from "./NuevaEmpresa";
 import RechazarEmpresa from "./RechazarEmpresa";
-import { fetcherWithToken } from "@/lib/fetcher";
+import { COMPANY_DIRECTORY_KEY } from "./directorioEmpresas";
 import {
   fetchCompanySummary,
   numberOrNull,
@@ -35,7 +35,7 @@ const summaryOptions = {
   focusThrottleInterval: 60000,
 };
 
-export default function TablaEmpresas({ data, setSelected, limit, page }) {
+export default function TablaEmpresas({ data, setSelected, hasFilters, clearFilters }) {
   return (
     <Table className={styles.table} aria-label="Empresas, personal y cobranza">
       <TableHeader>
@@ -56,7 +56,8 @@ export default function TablaEmpresas({ data, setSelected, limit, page }) {
           <TableRow>
             <TableCell colSpan={7}>
               <div className={styles.empty}>
-                No hay empresas que coincidan con los filtros en esta página.
+                {hasFilters ? "No encontramos empresas con estos filtros." : "Todavía no hay empresas registradas."}
+                {hasFilters && <button className={styles.resetFilters} onClick={clearFilters}>Ver todas las empresas</button>}
               </div>
             </TableCell>
           </TableRow>
@@ -66,8 +67,6 @@ export default function TablaEmpresas({ data, setSelected, limit, page }) {
             key={item.id_empresa}
             item={item}
             setSelected={setSelected}
-            limit={limit}
-            page={page}
           />
         ))}
       </TableBody>
@@ -93,7 +92,7 @@ function PendingValue({ loading, error, retry, missing = "Sin dato" }) {
   return <span className={styles.missing}>{missing}</span>;
 }
 
-function EmpresaRow({ item, setSelected, limit, page }) {
+function EmpresaRow({ item, setSelected }) {
   const subscription = useSWR(
     `/empresas/${item.id_empresa}/suscripcion`,
     fetchCompanySummary,
@@ -237,7 +236,7 @@ function EmpresaRow({ item, setSelected, limit, page }) {
           {item.estado === "Rechazado" ? (
             <EstatusRechazado item={item} />
           ) : (
-            <EstatusSwitch item={item} limit={limit} page={page} />
+            <EstatusSwitch item={item} />
           )}
         </div>
       </TableCell>
@@ -253,7 +252,7 @@ function EmpresaRow({ item, setSelected, limit, page }) {
             <Eye size={17} className="text-blue-600" />
           </Button>
           {item.estado !== "Rechazado" && (
-            <NuevaEmpresa editar values={item} limit={limit} page={page} />
+            <NuevaEmpresa editar values={item} />
           )}
         </div>
       </TableCell>
@@ -261,7 +260,7 @@ function EmpresaRow({ item, setSelected, limit, page }) {
   );
 }
 
-const EstatusSwitch = ({ item, limit, page }) => {
+const EstatusSwitch = ({ item }) => {
   const isActive = status[item.estado];
   const isNew = item.estado === "Nuevo";
   const [loading, setLoading] = useState(false);
@@ -279,9 +278,9 @@ const EstatusSwitch = ({ item, limit, page }) => {
           },
         }
       );
-      await mutate(`/empresas?page=${page}&limit=${limit}`, () =>
-        fetcherWithToken(`/empresas?page=${page}&limit=${limit}`)
-      );
+      await mutate(COMPANY_DIRECTORY_KEY).catch(() => {
+        enqueueSnackbar("El cambio se guardó, pero falta actualizar el directorio.", { variant: "warning" });
+      });
       setLoading(false);
       enqueueSnackbar("Se cambió el estado correctamente", {
         variant: "success",
@@ -297,8 +296,8 @@ const EstatusSwitch = ({ item, limit, page }) => {
 
   return isNew ? (
     <div className="flex justify-center gap-1">
-      <EstatusAceptar item={item} limit={limit} page={page} />
-      <RechazarEmpresa item={item} limit={limit} page={page} />
+      <EstatusAceptar item={item} />
+      <RechazarEmpresa item={item} />
     </div>
   ) : (
     <Switch
@@ -309,7 +308,7 @@ const EstatusSwitch = ({ item, limit, page }) => {
     />
   );
 };
-const EstatusAceptar = ({ item, limit, page }) => {
+const EstatusAceptar = ({ item }) => {
   const [loading, setLoading] = useState(false);
   const token = Cookies.get("token");
 
@@ -334,9 +333,9 @@ const EstatusAceptar = ({ item, limit, page }) => {
           },
         }
       );
-      await mutate(`/empresas?page=${page}&limit=${limit}`, () =>
-        fetcherWithToken(`/empresas?page=${page}&limit=${limit}`)
-      );
+      await mutate(COMPANY_DIRECTORY_KEY).catch(() => {
+        enqueueSnackbar("El cambio se guardó, pero falta actualizar el directorio.", { variant: "warning" });
+      });
       setLoading(false);
       enqueueSnackbar("Se activó correctamente", {
         variant: "success",
@@ -360,7 +359,7 @@ const EstatusAceptar = ({ item, limit, page }) => {
     />
   );
 };
-const EstatusRechazado = ({ item, limit, page }) => {
+const EstatusRechazado = ({ item }) => {
   return (
     <div>
       <p className="text-red-500 font-semibold text-sm">{item.estado}</p>

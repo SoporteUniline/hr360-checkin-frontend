@@ -17,9 +17,9 @@ import Cookies from "js-cookie";
 import { XIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import axiosInstance from "@/lib/axios";
-import { fetcherWithToken } from "@/lib/fetcher";
+import { COMPANY_DIRECTORY_KEY } from "./directorioEmpresas";
 
-export default function RechazarEmpresa({ item, limit, page }) {
+export default function RechazarEmpresa({ item }) {
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [motivo, setMotivo] = React.useState("");
@@ -43,11 +43,12 @@ export default function RechazarEmpresa({ item, limit, page }) {
           },
         }
       );
-      await mutate(`/empresas?page=${page}&limit=${limit}`, () =>
-        fetcherWithToken(`/empresas?page=${page}&limit=${limit}`)
-      );
+      await mutate(COMPANY_DIRECTORY_KEY).catch(() => {
+        enqueueSnackbar("El cambio se guardó, pero falta actualizar el directorio.", { variant: "warning" });
+      });
+      setOpen(false);
       setLoading(false);
-      enqueueSnackbar("Se esta empresa correctamente", {
+      enqueueSnackbar("Se rechazó la empresa correctamente", {
         variant: "success",
       });
     } catch (error) {
@@ -72,6 +73,7 @@ export default function RechazarEmpresa({ item, limit, page }) {
         <Button
           className="h-7 bg-red-400"
           startIcon={<XIcon />}
+          aria-label={`Rechazar empresa ${item.nombre_empresa}`}
           onClick={handleEditAction}
         />
       </DialogTrigger>
