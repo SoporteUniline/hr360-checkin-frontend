@@ -1,7 +1,7 @@
 import axios from "@/lib/axios";
 
-// Read only the visible companies, with a small shared pool so changing pages
-// cannot launch all subscription and balance requests at once.
+// Share a small request pool across the directory, date views and detail screens.
+// Financial balances are requested only for visible companies.
 const waiting = [];
 let running = 0;
 const maxConcurrent = 4;

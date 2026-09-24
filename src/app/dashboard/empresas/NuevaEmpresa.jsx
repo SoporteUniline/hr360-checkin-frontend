@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import {
   Sheet,
   SheetContent,
+  SheetDescription,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
@@ -28,6 +29,7 @@ import axios from "@/lib/axios";
 import { Edit, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { mutate } from "swr";
+import design from "./detalleEmpresa.module.css";
 import { COMPANY_DIRECTORY_KEY } from "./directorioEmpresas";
 import Cookies from "js-cookie";
 import ImageForm from "@/app/(public)/alta-empresas/ImageForm";
@@ -62,7 +64,7 @@ function splitPhoneValue(value) {
 
   if (raw.startsWith("+")) {
     const matched = COUNTRY_CODES.find((country) =>
-      raw.startsWith(country.code),
+      raw.startsWith(country.code)
     );
     if (matched) {
       return {
@@ -79,6 +81,7 @@ export default function NuevaEmpresa({
   editar = false,
   values,
   setFilter,
+  triggerLabel,
 }) {
   const [open, setOpen] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
@@ -147,7 +150,7 @@ export default function NuevaEmpresa({
 
     try {
       const celularCompleto = `${normalizeCountryCode(
-        data.codigo_pais,
+        data.codigo_pais
       )}${onlyPhoneDigits(data.celular)}`;
 
       if (editar) {
@@ -166,7 +169,7 @@ export default function NuevaEmpresa({
         await axios.put(
           `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/empresas/${data.id_empresa}`,
           datosParaActualizar,
-          headers,
+          headers
         );
       } else {
         const formData = new FormData();
@@ -190,7 +193,7 @@ export default function NuevaEmpresa({
         await axios.post(
           `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/empresas/createEmpresaByAdmin`,
           formData,
-          headers,
+          headers
         );
       }
 
@@ -203,7 +206,10 @@ export default function NuevaEmpresa({
       setLoading(false);
       if (setFilter) setFilter({ search: "", status: "Todos" });
       await mutate(COMPANY_DIRECTORY_KEY).catch(() => {
-        enqueueSnackbar("La empresa se guardó, pero falta actualizar el directorio.", { variant: "warning" });
+        enqueueSnackbar(
+          "La empresa se guardó, pero falta actualizar el directorio.",
+          { variant: "warning" }
+        );
       });
       setOpen(false);
     } catch (error) {
@@ -281,7 +287,9 @@ export default function NuevaEmpresa({
             aria-label={`Editar empresa ${values?.nombre_empresa || ""}`}
             onClick={handleEditAction}
             startIcon={<Edit />}
-          />
+          >
+            {triggerLabel}
+          </Button>
         ) : (
           <Button
             startIcon={<Plus size={18} />}
@@ -294,16 +302,19 @@ export default function NuevaEmpresa({
       </SheetTrigger>
 
       <SheetContent
-        className="min-w-[100vw] md:min-w-[60vw] lg:min-w-[50vw]"
+        className={design.sheet}
         onClick={(e) => e.stopPropagation()}
       >
-        <SheetHeader>
+        <SheetHeader className={design.sheetHeader}>
           <SheetTitle className="font-extrabold text-xl text-slate-700">
             {editar ? "Editar empresa" : "Crear nueva empresa"}
           </SheetTitle>
+          <SheetDescription>
+            Datos de contacto y configuración de la empresa.
+          </SheetDescription>
         </SheetHeader>
 
-        <div className="mt-3 h-[85vh] overflow-y-auto pr-2">
+        <div className={design.sheetBody}>
           <Form {...form}>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="flex flex-col gap-2">
@@ -324,7 +335,10 @@ export default function NuevaEmpresa({
                 )}
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
+              <h3 className={design.formSectionTitle}>
+                Información y contacto
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="flex flex-col gap-3">
                   <FormItem>
                     <FormLabel>
@@ -433,6 +447,7 @@ export default function NuevaEmpresa({
                 <FormMessage>{errors.direccion?.message}</FormMessage>
               </FormItem>
 
+              <h3 className={design.formSectionTitle}>Redes y sitio web</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 <FormItem>
                   <FormLabel>Facebook</FormLabel>
@@ -566,7 +581,7 @@ export default function NuevaEmpresa({
                 </div>
               )}
 
-              <div className="flex justify-center my-8">
+              <div className={design.sheetSave}>
                 <Button
                   type="submit"
                   className="bg-slate-700 w-full md:w-64"

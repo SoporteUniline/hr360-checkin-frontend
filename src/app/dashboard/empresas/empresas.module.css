@@ -488,3 +488,159 @@
     width: 100%;
   }
 }
+
+.viewScroll {
+  overflow-x: auto;
+  border-bottom: 1px solid #e3eaf4;
+  background: #fcfdff;
+}
+.viewTabs {
+  width: max-content;
+  min-width: 100%;
+  height: auto;
+  justify-content: flex-start;
+  gap: 4px;
+  padding: 0 16px;
+  border-radius: 0;
+  background: transparent;
+}
+.viewTabs .viewTab {
+  flex: none;
+  padding: 18px 13px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: #7a89a0;
+  background: transparent;
+  box-shadow: none;
+  gap: 8px;
+}
+.viewTabs .viewTab[data-state="active"] {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+  background: transparent;
+  box-shadow: none;
+}
+.viewTab span {
+  font-size: 10px;
+  background: #edf1f6;
+  color: #8090a6;
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.viewTab[data-state="active"] span {
+  color: #2563eb;
+  background: #eaf2ff;
+}
+.viewContent {
+  min-width: 0;
+}
+.viewDescription {
+  padding: 14px 20px 0;
+  font-size: 12px;
+  color: #8090a6;
+}
+.tablePanel > [data-slot="tabs"] {
+  gap: 0;
+}
+@media (max-width: 700px) {
+  .tablePanel {
+    background: #f8fafd;
+  }
+  .toolbar,
+  .viewDescription,
+  .resultsBar {
+    background: white;
+  }
+  .viewTabs {
+    padding: 0 6px;
+  }
+  .viewTabs .viewTab {
+    padding: 16px 12px;
+  }
+  .table {
+    min-width: 0;
+    display: block;
+    padding: 12px;
+  }
+  .table thead {
+    display: none;
+  }
+  .table tbody {
+    display: block;
+  }
+  .table tbody tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 18px 12px;
+    border: 1px solid #e1e8f2;
+    border-radius: 12px;
+    background: white;
+    margin-bottom: 12px;
+    padding: 18px;
+  }
+  .table tbody tr:last-child {
+    margin-bottom: 0;
+  }
+  .table td {
+    display: block;
+    padding: 0;
+    border: 0;
+    white-space: normal;
+    min-width: 0;
+    max-width: none;
+  }
+  .table td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 10px;
+    color: #8090a6;
+    margin-bottom: 5px;
+  }
+  .table td[data-label="Empresa"],
+  .table td[data-label="Acciones"],
+  .table td[colspan] {
+    grid-column: 1 / -1;
+  }
+  .table td[data-label="Empresa"]::before,
+  .table td[data-label="Acciones"]::before {
+    display: none;
+  }
+  .table td[data-label="Empresa"] {
+    padding-bottom: 14px;
+    border-bottom: 1px solid #edf1f7;
+  }
+  .companyName {
+    font-size: 15px;
+  }
+  .contact {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  .access {
+    flex-wrap: wrap;
+    font-size: 12px;
+    gap: 6px;
+  }
+  .actions {
+    justify-content: flex-end;
+  }
+  .table td[data-label="Acciones"] {
+    border-top: 1px solid #edf1f7;
+    padding-top: 10px;
+  }
+  .table td[data-label="Acciones"] .actions button {
+    height: 38px;
+    min-width: 38px;
+  }
+  .pagination {
+    background: white;
+  }
+  .viewDescription {
+    line-height: 1.6;
+    padding-inline: 16px;
+  }
+}

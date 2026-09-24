@@ -35,7 +35,12 @@ const summaryOptions = {
   focusThrottleInterval: 60000,
 };
 
-export default function TablaEmpresas({ data, setSelected, hasFilters, clearFilters }) {
+export default function TablaEmpresas({
+  data,
+  setSelected,
+  hasFilters,
+  clearFilters,
+}) {
   return (
     <Table className={styles.table} aria-label="Empresas, personal y cobranza">
       <TableHeader>
@@ -56,8 +61,17 @@ export default function TablaEmpresas({ data, setSelected, hasFilters, clearFilt
           <TableRow>
             <TableCell colSpan={7}>
               <div className={styles.empty}>
-                {hasFilters ? "No encontramos empresas con estos filtros." : "Todavía no hay empresas registradas."}
-                {hasFilters && <button className={styles.resetFilters} onClick={clearFilters}>Ver todas las empresas</button>}
+                {hasFilters
+                  ? "No encontramos empresas con estos filtros."
+                  : "Todavía no hay empresas registradas."}
+                {hasFilters && (
+                  <button
+                    className={styles.resetFilters}
+                    onClick={clearFilters}
+                  >
+                    Ver todas las empresas
+                  </button>
+                )}
               </div>
             </TableCell>
           </TableRow>
@@ -127,7 +141,7 @@ function EmpresaRow({ item, setSelected }) {
       : "Saldo a favor");
   return (
     <TableRow>
-      <TableCell className={styles.company}>
+      <TableCell data-label="Empresa" className={styles.company}>
         <button
           className={styles.companyName}
           onClick={() => setSelected(item, "datos")}
@@ -158,7 +172,7 @@ function EmpresaRow({ item, setSelected }) {
           )}
         </div>
       </TableCell>
-      <TableCell>
+      <TableCell data-label="Empleados activos">
         {subscription.error || employees === null ? (
           subPending
         ) : (
@@ -169,14 +183,14 @@ function EmpresaRow({ item, setSelected }) {
           </>
         )}
       </TableCell>
-      <TableCell>
+      <TableCell data-label="Mensualidad">
         {subscription.error || monthly === null ? (
           subPending
         ) : (
           <span className={styles.number}>{money(monthly)}</span>
         )}
       </TableCell>
-      <TableCell>
+      <TableCell data-label="Saldo pendiente">
         {financial.error || balance === null ? (
           <PendingValue
             loading={financial.isLoading}
@@ -206,7 +220,7 @@ function EmpresaRow({ item, setSelected }) {
           </>
         )}
       </TableCell>
-      <TableCell>
+      <TableCell data-label="Vigencia">
         {subscription.isLoading || subscription.error ? (
           subPending
         ) : !sub ? (
@@ -220,7 +234,7 @@ function EmpresaRow({ item, setSelected }) {
           <span className={styles.missing}>Sin fecha registrada</span>
         )}
       </TableCell>
-      <TableCell>
+      <TableCell data-label="Acceso">
         <div
           className={`${styles.access} ${
             item.estado === "Activo"
@@ -240,7 +254,7 @@ function EmpresaRow({ item, setSelected }) {
           )}
         </div>
       </TableCell>
-      <TableCell>
+      <TableCell data-label="Acciones">
         <div className={styles.actions}>
           <Button
             variant="ghost"
@@ -251,9 +265,7 @@ function EmpresaRow({ item, setSelected }) {
           >
             <Eye size={17} className="text-blue-600" />
           </Button>
-          {item.estado !== "Rechazado" && (
-            <NuevaEmpresa editar values={item} />
-          )}
+          {item.estado !== "Rechazado" && <NuevaEmpresa editar values={item} />}
         </div>
       </TableCell>
     </TableRow>
@@ -279,7 +291,10 @@ const EstatusSwitch = ({ item }) => {
         }
       );
       await mutate(COMPANY_DIRECTORY_KEY).catch(() => {
-        enqueueSnackbar("El cambio se guardó, pero falta actualizar el directorio.", { variant: "warning" });
+        enqueueSnackbar(
+          "El cambio se guardó, pero falta actualizar el directorio.",
+          { variant: "warning" }
+        );
       });
       setLoading(false);
       enqueueSnackbar("Se cambió el estado correctamente", {
@@ -334,7 +349,10 @@ const EstatusAceptar = ({ item }) => {
         }
       );
       await mutate(COMPANY_DIRECTORY_KEY).catch(() => {
-        enqueueSnackbar("El cambio se guardó, pero falta actualizar el directorio.", { variant: "warning" });
+        enqueueSnackbar(
+          "El cambio se guardó, pero falta actualizar el directorio.",
+          { variant: "warning" }
+        );
       });
       setLoading(false);
       enqueueSnackbar("Se activó correctamente", {

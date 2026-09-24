@@ -7,14 +7,15 @@ import { fetcherWithToken } from "@/lib/fetcher";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSnackbar } from "notistack";
+import styles from "./detalleEmpresa.module.css";
 
 export default function PagoAdelantadoEmpresaTab({ empresa }) {
   const { enqueueSnackbar } = useSnackbar();
   const empresaId = empresa?.id_empresa;
 
-  const { data } = useSWR(
+  const { data, error, isLoading } = useSWR(
     empresaId ? `/empresas/${empresaId}/suscripcion` : null,
-    fetcherWithToken,
+    fetcherWithToken
   );
 
   const suscripcion = data?.data;
@@ -88,7 +89,7 @@ export default function PagoAdelantadoEmpresaTab({ empresa }) {
     } catch (error) {
       enqueueSnackbar(
         error.response?.data?.error || "No se pudo registrar el pago.",
-        { variant: "error" },
+        { variant: "error" }
       );
     } finally {
       setLoadingPago(false);
@@ -125,7 +126,7 @@ export default function PagoAdelantadoEmpresaTab({ empresa }) {
     } catch (error) {
       enqueueSnackbar(
         error.response?.data?.error || "No se pudo ajustar la cobertura.",
-        { variant: "error" },
+        { variant: "error" }
       );
     } finally {
       setLoadingCobertura(false);
@@ -133,8 +134,8 @@ export default function PagoAdelantadoEmpresaTab({ empresa }) {
   };
 
   return (
-    <div className="mt-5 space-y-6">
-      <div className="rounded-lg border bg-slate-50 p-5">
+    <div className={styles.content}>
+      <div className={`${styles.panel} ${styles.coverageHeader}`}>
         <h2 className="text-lg font-semibold text-slate-700">
           Vigencia administrativa
         </h2>
@@ -144,7 +145,13 @@ export default function PagoAdelantadoEmpresaTab({ empresa }) {
 
           <Info
             label="Fecha administrativa"
-            value={suscripcion?.fecha_vencimiento || "-"}
+            value={
+              error
+                ? "No disponible"
+                : isLoading
+                ? "…"
+                : suscripcion?.fecha_vencimiento || "Sin fecha"
+            }
             highlight
           />
 
@@ -156,7 +163,15 @@ export default function PagoAdelantadoEmpresaTab({ empresa }) {
 
           <Info
             label="Mensualidad actual"
-            value={money(suscripcion?.mensualidad_actual)}
+            value={
+              error
+                ? "No disponible"
+                : isLoading
+                ? "…"
+                : suscripcion?.mensualidad_actual == null
+                ? "Sin dato"
+                : money(suscripcion.mensualidad_actual)
+            }
           />
 
           <Info
@@ -166,103 +181,105 @@ export default function PagoAdelantadoEmpresaTab({ empresa }) {
         </div>
       </div>
 
-      <div className="rounded-lg border bg-white p-5">
-        <h2 className="text-lg font-semibold text-slate-700">
-          Registrar pago adelantado
-        </h2>
+      <div className={styles.advanceLayout}>
+        <section className={styles.panel}>
+          <h2 className="text-lg font-semibold text-slate-700">
+            Registrar pago adelantado
+          </h2>
 
-        <p className="mt-1 text-sm text-slate-500">
-          Registra un pago recibido y extiende automáticamente la fecha pagada
-          de la empresa.
-        </p>
+          <p className="mt-1 text-sm text-slate-500">
+            Registra un pago recibido y extiende automáticamente la fecha pagada
+            de la empresa.
+          </p>
 
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <Field
-            label="Meses cubiertos"
-            name="meses"
-            type="number"
-            min="1"
-            value={formPago.meses}
-            onChange={handlePagoChange}
-          />
+          <div className={styles.fields}>
+            <Field
+              label="Meses cubiertos"
+              name="meses"
+              type="number"
+              min="1"
+              value={formPago.meses}
+              onChange={handlePagoChange}
+            />
 
-          <Field
-            label="Monto recibido"
-            name="monto"
-            type="number"
-            min="1"
-            step="0.01"
-            value={formPago.monto}
-            onChange={handlePagoChange}
-          />
+            <Field
+              label="Monto recibido"
+              name="monto"
+              type="number"
+              min="1"
+              step="0.01"
+              value={formPago.monto}
+              onChange={handlePagoChange}
+            />
 
-          <Field
-            label="Método de pago"
-            name="metodo_pago"
-            value={formPago.metodo_pago}
-            onChange={handlePagoChange}
-          />
+            <Field
+              label="Método de pago"
+              name="metodo_pago"
+              value={formPago.metodo_pago}
+              onChange={handlePagoChange}
+            />
 
-          <Field
-            label="Referencia"
-            name="referencia"
-            value={formPago.referencia}
-            onChange={handlePagoChange}
-          />
-        </div>
-
-        <Textarea
-          label="Notas"
-          name="notas"
-          value={formPago.notas}
-          onChange={handlePagoChange}
-        />
-
-        <Button
-          className="mt-5"
-          onClick={registrarPagoAdelantado}
-          disabled={loadingPago}
-        >
-          {loadingPago ? "Guardando..." : "Registrar pago adelantado"}
-        </Button>
-      </div>
-
-      <div className="rounded-lg border bg-white p-5">
-        <h2 className="text-lg font-semibold text-slate-700">
-          Ajustar cobertura manualmente
-        </h2>
-
-        <p className="mt-1 text-sm text-slate-500">
-          Úsalo únicamente para corregir una vigencia administrativa. Este
-          ajuste no registra dinero recibido, no liquida facturas y no reduce
-          los meses con saldo.
-        </p>
-
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <Field
-            label="Nueva fecha administrativa"
-            name="fecha_fin"
-            type="date"
-            value={formCobertura.fecha_fin}
-            onChange={handleCoberturaChange}
-          />
+            <Field
+              label="Referencia"
+              name="referencia"
+              value={formPago.referencia}
+              onChange={handlePagoChange}
+            />
+          </div>
 
           <Textarea
-            label="Motivo del ajuste"
-            name="motivo"
-            value={formCobertura.motivo}
-            onChange={handleCoberturaChange}
+            label="Notas"
+            name="notas"
+            value={formPago.notas}
+            onChange={handlePagoChange}
           />
-        </div>
 
-        <Button
-          className="mt-5"
-          variant="outline"
-          onClick={ajustarCobertura}
-          disabled={loadingCobertura}
-        >
-          {loadingCobertura ? "Guardando..." : "Actualizar cobertura"}
-        </Button>
+          <Button
+            className="mt-5"
+            onClick={registrarPagoAdelantado}
+            disabled={loadingPago}
+          >
+            {loadingPago ? "Guardando..." : "Registrar pago adelantado"}
+          </Button>
+        </section>
+
+        <section className={styles.panel}>
+          <h2 className="text-lg font-semibold text-slate-700">
+            Ajustar cobertura manualmente
+          </h2>
+
+          <p className="mt-1 text-sm text-slate-500">
+            Úsalo únicamente para corregir una vigencia administrativa. Este
+            ajuste no registra dinero recibido, no liquida facturas y no reduce
+            los meses con saldo.
+          </p>
+
+          <div className={styles.fields}>
+            <Field
+              label="Nueva fecha administrativa"
+              name="fecha_fin"
+              type="date"
+              value={formCobertura.fecha_fin}
+              onChange={handleCoberturaChange}
+            />
+
+            <Textarea
+              label="Motivo del ajuste"
+              name="motivo"
+              value={formCobertura.motivo}
+              onChange={handleCoberturaChange}
+            />
+          </div>
+
+          <Button
+            className="mt-5"
+            variant="outline"
+            onClick={ajustarCobertura}
+            disabled={loadingCobertura}
+          >
+            {loadingCobertura ? "Guardando..." : "Actualizar cobertura"}
+          </Button>
+        </section>
       </div>
     </div>
   );
@@ -270,34 +287,30 @@ export default function PagoAdelantadoEmpresaTab({ empresa }) {
 
 function Field({ label, ...props }) {
   return (
-    <div>
-      <label className="text-xs font-medium uppercase text-gray-500">
-        {label}
-      </label>
-      <Input className="mt-1" {...props} />
-    </div>
+    <label className={styles.field}>
+      <span>{label}</span>
+      <Input {...props} />
+    </label>
   );
 }
 
 function Textarea({ label, ...props }) {
   return (
-    <div>
-      <label className="text-xs font-medium uppercase text-gray-500">
-        {label}
-      </label>
+    <label className={`${styles.field} mt-4`}>
+      <span>{label}</span>
       <textarea
         rows={3}
         className="mt-1 w-full rounded-md border p-3 text-sm"
         {...props}
       />
-    </div>
+    </label>
   );
 }
 
 function Info({ label, value, highlight = false }) {
   return (
     <div>
-      <p className="text-xs font-medium uppercase text-gray-500">{label}</p>
+      <p className={styles.infoLabel}>{label}</p>
       <p
         className={`mt-1 text-sm font-semibold ${
           highlight ? "text-blue-700" : "text-slate-800"

@@ -7,6 +7,7 @@ import axiosInstance from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { enqueueSnackbar } from "notistack";
+import styles from "./detalleEmpresa.module.css";
 
 const money = (value) =>
   Number(value || 0).toLocaleString("es-MX", {
@@ -139,7 +140,7 @@ export default function SuscripcionEmpresaTab({ empresa }) {
   }
 
   return (
-    <div className="mt-4 space-y-4">
+    <div className={styles.content}>
       {financialError && (
         <div
           role="alert"
@@ -155,7 +156,7 @@ export default function SuscripcionEmpresaTab({ empresa }) {
           </Button>
         </div>
       )}
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className={styles.metrics}>
         <MetricCard
           title="Estatus financiero"
           value={
@@ -209,120 +210,130 @@ export default function SuscripcionEmpresaTab({ empresa }) {
         </div>
       )}
 
-      <div className="rounded-lg border bg-white p-4">
-        <h2 className="mb-3 text-base font-semibold text-slate-700">
-          Suscripción
-        </h2>
+      <div className={styles.billingLayout}>
+        <section className={`${styles.panel} ${styles.contract}`}>
+          <h2 className="mb-3 text-base font-semibold text-slate-700">
+            Suscripción
+          </h2>
 
-        <div className="grid gap-3 md:grid-cols-2">
-          <Info label="Contrato" value={suscripcion.contrato_id} />
-          <Info label="Estado contrato" value={suscripcion.estado_contrato} />
-          <Info
-            label="Estado suscripción"
-            value={suscripcion.estado_suscripcion}
-          />
-          <Info label="Origen" value={suscripcion.origen} />
-          <Info label="Fecha inicio" value={date(suscripcion.fecha_inicio)} />
-          <Info label="Fecha fin" value={date(suscripcion.fecha_fin)} />
-          <Info
-            label="Tipo de cobro"
-            value={
-              suscripcion.tipo_cobro === "base_mas_excedente"
-                ? "Base + empleados excedentes"
-                : suscripcion.tipo_cobro === "plan_legacy"
-                ? "Plan legacy"
-                : "-"
-            }
-          />
-          <Info
-            label="Mensualidad actual"
-            value={money(suscripcion.mensualidad_actual)}
-          />
-          <Info
-            label="Empleados activos"
-            value={suscripcion.empleados_activos}
-          />
-          <Info label="Empleados al contratar" value={suscripcion.empleados} />
-          <Info
-            label="Stripe Customer"
-            value={suscripcion.stripe_customer_id || "-"}
-          />
-          <Info
-            label="Stripe Subscription"
-            value={suscripcion.stripe_subscription_id || "-"}
-          />
-        </div>
-      </div>
-
-      <div className="rounded-lg border bg-white p-4">
-        <h2 className="text-base font-semibold text-slate-700">
-          Configuración comercial
-        </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Define el precio especial de esta empresa. Si no capturas base ni
-          incluidos, se cobrará por empleado activo con el costo excedente.
-        </p>
-
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <div>
-            <label className="text-xs font-medium uppercase text-gray-500">
-              Precio base mensual
-            </label>
-            <Input
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.precio_base_mensual}
-              onChange={set("precio_base_mensual")}
-              className="mt-1"
+          <div className={styles.infoGrid}>
+            <Info label="Contrato" value={suscripcion.contrato_id} />
+            <Info label="Estado contrato" value={suscripcion.estado_contrato} />
+            <Info
+              label="Estado suscripción"
+              value={suscripcion.estado_suscripcion}
+            />
+            <Info label="Origen" value={suscripcion.origen} />
+            <Info label="Fecha inicio" value={date(suscripcion.fecha_inicio)} />
+            <Info label="Fecha fin" value={date(suscripcion.fecha_fin)} />
+            <Info
+              label="Tipo de cobro"
+              value={
+                suscripcion.tipo_cobro === "base_mas_excedente"
+                  ? "Base + empleados excedentes"
+                  : suscripcion.tipo_cobro === "plan_legacy"
+                  ? "Plan legacy"
+                  : "-"
+              }
+            />
+            <Info
+              label="Mensualidad actual"
+              value={money(suscripcion.mensualidad_actual)}
+            />
+            <Info
+              label="Empleados activos"
+              value={suscripcion.empleados_activos}
+            />
+            <Info
+              label="Empleados al contratar"
+              value={suscripcion.empleados}
             />
           </div>
+          <details className={styles.technical}>
+            <summary>Referencias de Stripe</summary>
+            <div>
+              {" "}
+              <Info
+                label="Stripe Customer"
+                value={suscripcion.stripe_customer_id || "-"}
+              />
+              <Info
+                label="Stripe Subscription"
+                value={suscripcion.stripe_subscription_id || "-"}
+              />
+            </div>
+          </details>
+        </section>
 
-          <div>
-            <label className="text-xs font-medium uppercase text-gray-500">
-              Empleados incluidos
-            </label>
-            <Input
-              type="number"
-              min="0"
-              step="1"
-              value={form.empleados_incluidos}
-              onChange={set("empleados_incluidos")}
-              className="mt-1"
-            />
+        <section className={`${styles.panel} ${styles.commercial}`}>
+          <h2 className="text-base font-semibold text-slate-700">
+            Configuración comercial
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Define el precio especial de esta empresa. Si no capturas base ni
+            incluidos, se cobrará por empleado activo con el costo excedente.
+          </p>
+
+          <div className={styles.fields}>
+            <div>
+              <label className={styles.infoLabel}>Precio base mensual</label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                aria-label={"Precio base mensual"}
+                value={form.precio_base_mensual}
+                onChange={set("precio_base_mensual")}
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <label className={styles.infoLabel}>Empleados incluidos</label>
+              <Input
+                type="number"
+                min="0"
+                step="1"
+                aria-label={"Empleados incluidos"}
+                value={form.empleados_incluidos}
+                onChange={set("empleados_incluidos")}
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <label className={styles.infoLabel}>
+                Costo por empleado excedente
+              </label>
+              <Input
+                type="number"
+                min="0.01"
+                step="0.01"
+                aria-label={"Costo por empleado excedente"}
+                value={form.precio_empleado_extra}
+                onChange={set("precio_empleado_extra")}
+                className="mt-1"
+              />
+            </div>
           </div>
 
-          <div>
-            <label className="text-xs font-medium uppercase text-gray-500">
-              Costo por empleado excedente
-            </label>
-            <Input
-              type="number"
-              min="0.01"
-              step="0.01"
-              value={form.precio_empleado_extra}
-              onChange={set("precio_empleado_extra")}
-              className="mt-1"
-            />
+          <div className={styles.preview}>
+            <p className="font-semibold">Vista previa próximo cobro</p>
+            <div>
+              <Info label="Activos" value={preview.activos} />
+              <Info label="Incluidos" value={preview.incluidos} />
+              <Info label="Excedentes" value={preview.excedentes} />
+              <Info label="Costo excedente" value={money(preview.extra)} />
+              <Info label="Total estimado" value={money(preview.total)} />
+            </div>
           </div>
-        </div>
 
-        <div className="mt-4 rounded-lg bg-slate-50 p-4 text-sm text-slate-700">
-          <p className="font-semibold">Vista previa próximo cobro</p>
-          <div className="mt-2 grid gap-2 md:grid-cols-5">
-            <Info label="Activos" value={preview.activos} />
-            <Info label="Incluidos" value={preview.incluidos} />
-            <Info label="Excedentes" value={preview.excedentes} />
-            <Info label="Costo excedente" value={money(preview.extra)} />
-            <Info label="Total estimado" value={money(preview.total)} />
+          <div className={styles.formFooter}>
+            <Button onClick={guardarConfiguracion} disabled={saving}>
+              {saving ? "Guardando..." : "Guardar configuración"}
+            </Button>
           </div>
-        </div>
-
-        <div className="mt-4 flex justify-end">
-          <Button onClick={guardarConfiguracion} disabled={saving}>
-            {saving ? "Guardando..." : "Guardar configuración"}
-          </Button>
-        </div>
+        </section>
       </div>
     </div>
   );
@@ -330,8 +341,8 @@ export default function SuscripcionEmpresaTab({ empresa }) {
 
 function MetricCard({ title, value }) {
   return (
-    <div className="rounded-lg border bg-white p-4">
-      <p className="text-xs font-medium uppercase text-gray-500">{title}</p>
+    <div className={styles.metric}>
+      <p className={styles.infoLabel}>{title}</p>
       <p className="mt-1 text-lg font-semibold text-slate-800">{value}</p>
     </div>
   );
@@ -340,8 +351,8 @@ function MetricCard({ title, value }) {
 function Info({ label, value }) {
   return (
     <div>
-      <p className="text-xs font-medium uppercase text-gray-500">{label}</p>
-      <p className="mt-1 text-sm font-medium text-slate-800">{value ?? "-"}</p>
+      <p className={styles.infoLabel}>{label}</p>
+      <p className={styles.infoValue}>{value ?? "-"}</p>
     </div>
   );
 }
