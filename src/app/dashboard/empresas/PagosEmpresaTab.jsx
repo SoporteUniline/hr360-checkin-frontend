@@ -2,6 +2,9 @@
 
 import React from "react";
 import useSWR from "swr";
+import { Wallet } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import styles from "./detalleEmpresa.module.css";
 import { fetcherWithToken } from "@/lib/fetcher";
 
 const money = (value) =>
@@ -20,32 +23,49 @@ const date = (value) => {
 export default function PagosEmpresaTab({ empresa }) {
   const empresaId = empresa?.id_empresa;
 
-  const { data, isLoading } = useSWR(
+  const { data, error, isLoading, mutate } = useSWR(
     empresaId ? `/empresas/${empresaId}/pagos` : null,
-    fetcherWithToken,
+    fetcherWithToken
   );
 
   const pagos = data?.data || [];
+
+  if (error)
+    return (
+      <div className={styles.empty} role="alert">
+        <Wallet size={28} />
+        <p>No se pudieron consultar los pagos.</p>
+        <Button variant="outline" onClick={() => mutate().catch(() => {})}>
+          Reintentar pagos
+        </Button>
+      </div>
+    );
 
   if (isLoading) {
     return <p className="mt-4 text-sm text-gray-500">Cargando pagos...</p>;
   }
 
   return (
-    <div className="mt-4">
-      <div className="mb-4">
-        <h2 className="text-base font-semibold text-slate-700">Pagos</h2>
-        <p className="text-sm text-gray-500">
-          Historial de pagos registrados para esta empresa.
-        </p>
+    <div className={styles.content}>
+      <div className={styles.contentHeading}>
+        <div>
+          <h2 className="text-base font-semibold text-slate-700">
+            Historial de pagos
+          </h2>
+          <p className="text-sm text-gray-500">
+            Consulta los pagos y ajustes registrados para esta empresa.
+          </p>
+        </div>
+        <span className={styles.status}>{pagos.length} movimientos</span>
       </div>
 
       {pagos.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-6 text-center text-sm text-gray-500">
+        <div className={styles.empty}>
+          <Wallet size={28} />
           Esta empresa todavía no tiene pagos registrados.
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
+        <div className={styles.ledger}>
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-xs uppercase text-gray-600">
               <tr>
@@ -66,29 +86,31 @@ export default function PagosEmpresaTab({ empresa }) {
 
                 return (
                   <tr key={pago.id} className="border-t hover:bg-gray-50">
-                    <td className="px-3 py-3">{date(pago.fecha_pago)}</td>
+                    <td data-label="Fecha" className="px-3 py-3">
+                      {date(pago.fecha_pago)}
+                    </td>
 
-                    <td className="px-3 py-3 font-semibold">
+                    <td data-label="Monto" className="px-3 py-3 font-semibold">
                       {esAjusteCobertura ? "—" : money(pago.monto)}
                     </td>
 
-                    <td className="px-3 py-3">
+                    <td data-label="Método" className="px-3 py-3">
                       {esAjusteCobertura
                         ? "Ajuste administrativo"
                         : pago.metodo_pago || "-"}
                     </td>
 
-                    <td className="px-3 py-3">
+                    <td data-label="Referencia" className="px-3 py-3">
                       {esAjusteCobertura
                         ? pago.notas || "Ajuste manual de cobertura"
                         : pago.referencia || "-"}
                     </td>
 
-                    <td className="px-3 py-3">
+                    <td data-label="Periodo" className="px-3 py-3">
                       {pago.periodo_cubierto || "-"}
                     </td>
 
-                    <td className="px-3 py-3">
+                    <td data-label="Estado" className="px-3 py-3">
                       {esAjusteCobertura ? (
                         <span className="inline-flex rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-800">
                           Ajuste
@@ -98,7 +120,9 @@ export default function PagosEmpresaTab({ empresa }) {
                       )}
                     </td>
 
-                    <td className="px-3 py-3">{pago.registrado_por || "-"}</td>
+                    <td data-label="Registrado por" className="px-3 py-3">
+                      {pago.registrado_por || "-"}
+                    </td>
                   </tr>
                 );
               })}

@@ -45,27 +45,6 @@ export default function Filters({ filter, setFilter, order, setOrder }) {
         </div>
       </div>
       <label>
-        Estado de acceso
-        <select
-          aria-label="Estado de acceso"
-          value={filter.status}
-          onChange={(event) =>
-            setFilter((current) => ({ ...current, status: event.target.value }))
-          }
-        >
-          {[
-            "Todos",
-            "Activo",
-            "Inactivo",
-            "Suspendido",
-            "Nuevo",
-            "Rechazado",
-          ].map((status) => (
-            <option key={status}>{status}</option>
-          ))}
-        </select>
-      </label>
-      <label>
         Ordenar por
         <select
           aria-label="Ordenar por"
