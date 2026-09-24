@@ -277,6 +277,7 @@ export default function NuevaEmpresa({
         {editar ? (
           <Button
             variant="ghost"
+            aria-label={`Editar empresa ${values?.nombre_empresa || ""}`}
             onClick={handleEditAction}
             startIcon={<Edit />}
           />

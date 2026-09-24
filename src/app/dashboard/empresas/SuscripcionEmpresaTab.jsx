@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import useSWR from "swr";
-import { fetcherWithToken } from "@/lib/fetcher";
+import { fetchCompanySummary } from "./empresaResumen";
 import axiosInstance from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,14 +23,24 @@ const date = (value) => {
 export default function SuscripcionEmpresaTab({ empresa }) {
   const empresaId = empresa?.id_empresa;
 
-  const { data, isLoading, mutate } = useSWR(
+  const {
+    data,
+    error: subscriptionError,
+    isLoading,
+    mutate,
+  } = useSWR(
     empresaId ? `/empresas/${empresaId}/suscripcion` : null,
-    fetcherWithToken,
+    fetchCompanySummary
   );
 
-  const { data: resumenFinancieroData } = useSWR(
+  const {
+    data: resumenFinancieroData,
+    error: financialError,
+    isLoading: financialLoading,
+    mutate: refreshFinancial,
+  } = useSWR(
     empresaId ? `/empresas/${empresaId}/resumen-financiero` : null,
-    fetcherWithToken,
+    fetchCompanySummary
   );
 
   const suscripcion = data?.data;
@@ -89,7 +99,7 @@ export default function SuscripcionEmpresaTab({ empresa }) {
       enqueueSnackbar(
         error.response?.data?.error ||
           "No se pudo actualizar la configuración comercial.",
-        { variant: "error" },
+        { variant: "error" }
       );
     } finally {
       setSaving(false);
@@ -99,6 +109,24 @@ export default function SuscripcionEmpresaTab({ empresa }) {
   if (isLoading) {
     return (
       <p className="mt-4 text-sm text-gray-500">Cargando suscripción...</p>
+    );
+  }
+
+  if (subscriptionError) {
+    return (
+      <div
+        role="alert"
+        className="mt-4 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+      >
+        No se pudo consultar la suscripción.
+        <Button
+          variant="outline"
+          className="ml-3"
+          onClick={() => mutate().catch(() => {})}
+        >
+          Reintentar suscripción
+        </Button>
+      </div>
     );
   }
 
@@ -112,20 +140,57 @@ export default function SuscripcionEmpresaTab({ empresa }) {
 
   return (
     <div className="mt-4 space-y-4">
+      {financialError && (
+        <div
+          role="alert"
+          className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+        >
+          No se pudo consultar el saldo de esta empresa.
+          <Button
+            variant="outline"
+            className="ml-3"
+            onClick={() => refreshFinancial().catch(() => {})}
+          >
+            Reintentar saldo
+          </Button>
+        </div>
+      )}
       <div className="grid gap-3 md:grid-cols-3">
         <MetricCard
           title="Estatus financiero"
-          value={resumenFinanciero?.estatus_financiero || "Al corriente"}
+          value={
+            financialError
+              ? "No disponible"
+              : financialLoading
+              ? "Cargando…"
+              : resumenFinanciero?.estatus_financiero || "Sin dato"
+          }
         />
 
         <MetricCard
           title="Saldo pendiente"
-          value={money(resumenFinanciero?.saldo_pendiente || 0)}
+          value={
+            financialError
+              ? "No disponible"
+              : financialLoading
+              ? "Cargando…"
+              : resumenFinanciero?.saldo_pendiente == null
+              ? "Sin dato"
+              : money(resumenFinanciero.saldo_pendiente)
+          }
         />
 
         <MetricCard
           title="Meses con saldo"
-          value={`${resumenFinanciero?.periodos_con_saldo || 0} / 2`}
+          value={
+            financialError
+              ? "No disponible"
+              : financialLoading
+              ? "Cargando…"
+              : resumenFinanciero?.periodos_con_saldo == null
+              ? "Sin dato"
+              : `${resumenFinanciero.periodos_con_saldo} / 2`
+          }
         />
       </div>
 
