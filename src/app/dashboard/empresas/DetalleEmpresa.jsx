@@ -8,13 +8,18 @@ import SuscripcionEmpresaTab from "./SuscripcionEmpresaTab";
 import PagosEmpresaTab from "./PagosEmpresaTab";
 import PagoAdelantadoEmpresaTab from "./PagoAdelantadoEmpresaTab";
 
-export default function DetalleEmpresa({ item, setSelected }) {
-  const [tab, setTab] = useState("datos");
+export default function DetalleEmpresa({
+  item,
+  setSelected,
+  initialTab = "datos",
+}) {
+  const [tab, setTab] = useState(initialTab);
 
   return (
     <section>
       <div className="flex gap-3">
         <Button
+          aria-label="Volver a empresas"
           variant="ghost"
           startIcon={<ArrowLeft />}
           onClick={() => setSelected(null)}

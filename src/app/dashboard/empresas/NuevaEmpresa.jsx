@@ -28,6 +28,7 @@ import axios from "@/lib/axios";
 import { Edit, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { mutate } from "swr";
+import { COMPANY_DIRECTORY_KEY } from "./directorioEmpresas";
 import Cookies from "js-cookie";
 import ImageForm from "@/app/(public)/alta-empresas/ImageForm";
 import ImageEmpresa from "@/app/panel/cuenta/Empresa/ImagenEmpresa";
@@ -77,8 +78,6 @@ function splitPhoneValue(value) {
 export default function NuevaEmpresa({
   editar = false,
   values,
-  limit,
-  page,
   setFilter,
 }) {
   const [open, setOpen] = React.useState(false);
@@ -140,7 +139,6 @@ export default function NuevaEmpresa({
       return;
     }
 
-    if (setFilter) setFilter({ search: "", status: "Todos" });
     setLoading(true);
 
     const headers = {
@@ -203,7 +201,10 @@ export default function NuevaEmpresa({
       setImagePreview(null);
       setSelectedFile(null);
       setLoading(false);
-      await mutate(`/empresas?page=${page}&limit=${limit}`);
+      if (setFilter) setFilter({ search: "", status: "Todos" });
+      await mutate(COMPANY_DIRECTORY_KEY).catch(() => {
+        enqueueSnackbar("La empresa se guardó, pero falta actualizar el directorio.", { variant: "warning" });
+      });
       setOpen(false);
     } catch (error) {
       setLoading(false);
@@ -277,6 +278,7 @@ export default function NuevaEmpresa({
         {editar ? (
           <Button
             variant="ghost"
+            aria-label={`Editar empresa ${values?.nombre_empresa || ""}`}
             onClick={handleEditAction}
             startIcon={<Edit />}
           />
