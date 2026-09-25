@@ -67,23 +67,40 @@ export default function DocumentoReader({ url, nombre, onReady }) {
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
+
+    let frame = null;
+
     const resize = () => {
-      const css = getComputedStyle(viewport);
-      setAncho(
-        Math.min(
+      if (frame) cancelAnimationFrame(frame);
+
+      frame = requestAnimationFrame(() => {
+        const css = getComputedStyle(viewport);
+        const nuevoAncho = Math.min(
           1000,
           Math.floor(
             viewport.clientWidth -
               parseFloat(css.paddingLeft) -
               parseFloat(css.paddingRight)
           )
-        )
-      );
+        );
+
+        if (nuevoAncho <= 0) return;
+
+        setAncho((anterior) =>
+          Math.abs(anterior - nuevoAncho) >= 2 ? nuevoAncho : anterior
+        );
+      });
     };
+
     resize();
+
     const observer = new ResizeObserver(resize);
     observer.observe(viewport);
-    return () => observer.disconnect();
+
+    return () => {
+      observer.disconnect();
+      if (frame) cancelAnimationFrame(frame);
+    };
   }, [error]);
 
   useEffect(() => {

@@ -530,10 +530,22 @@ export default function FirmarDocumentoPage({ params }) {
 
           {/* The same video stays mounted and playing throughout the three steps. */}
           <div
-            className={
-              paso === 0 ? styles.cameraStage : styles.cameraBackground
-            }
+            className={styles.cameraStage}
             aria-hidden={paso !== 0}
+            style={
+              paso === 0
+                ? undefined
+                : {
+                    position: "fixed",
+                    width: "1px",
+                    height: "1px",
+                    overflow: "hidden",
+                    opacity: 0,
+                    pointerEvents: "none",
+                    left: "-10000px",
+                    top: 0,
+                  }
+            }
           >
             <div
               className={`${styles.cameraPreview} ${
