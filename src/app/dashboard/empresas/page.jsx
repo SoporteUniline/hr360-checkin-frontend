@@ -1,101 +1,456 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
+import useSWR, { useSWRConfig } from "swr";
+import {
+  Building2,
+  Wallet,
+  FileWarning,
+  Ban,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
 import TablaEmpresas from "./TablaEmpresas";
 import Filters from "./Filters";
-import useSWR, { mutate } from "swr";
-import { fetcherWithToken, swr_config } from "@/lib/fetcher";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import VistasEmpresas, {
+  COMPANY_VIEWS,
+  isDateView,
+  matchesView,
+  useCompanyValidity,
+  ValidityObserver,
+} from "./VistasEmpresas";
+import axios from "@/lib/axios";
 import LoadingTable from "@/components/LoadingTable";
-import ErrorPage from "@/components/ErrorPage";
 import NuevaEmpresa from "./NuevaEmpresa";
 import DetalleEmpresa from "./DetalleEmpresa";
-import TablePagination from "@/components/TablePagination";
+import { Button } from "@/components/ui/button";
+import { fetchCompanySummary, money, numberOrNull } from "./empresaResumen";
+import styles from "./empresas.module.css";
+import {
+  COMPANY_DIRECTORY_KEY,
+  loadCompanyDirectory,
+  indexCompanies,
+  searchCompanies,
+} from "./directorioEmpresas";
+
+const EMPTY_ROWS = [];
+const fetchDirectory = () =>
+  loadCompanyDirectory(async (url) => {
+    const response = await axios.get(url, { timeout: 15000 });
+    return response.data;
+  });
 
 export default function Empresas() {
-  const limit = 10;
+  const [limit, setLimit] = useState(10);
+  const [order, setOrder] = useState("asc");
   const [page, setPage] = useState(1);
+  const { mutate } = useSWRConfig();
   const {
     data,
     error,
     isLoading,
+    isValidating,
     mutate: revalidate,
-  } = useSWR(
-    `/empresas?page=${page}&limit=${limit}`,
-    fetcherWithToken,
-    swr_config,
-  );
-  const [filter, setFilter] = React.useState({ search: "", status: "Todos" });
-  const [selected, setSelected] = React.useState(null);
-
-  const usuariosFiltrados = data?.data.filter((item) => {
-    const nombreMatch = item.nombre_empresa
-      ?.toLowerCase()
-      ?.includes(filter.search.toLowerCase());
-    const empresaMatch = item.nombre_duenio
-      ?.toLowerCase()
-      ?.includes(filter.search.toLowerCase());
-    const estadoMatch =
-      filter.status === "Todos" || item.estado === filter.status;
-    return (nombreMatch || empresaMatch) && estadoMatch;
+  } = useSWR(COMPANY_DIRECTORY_KEY, fetchDirectory, {
+    shouldRetryOnError: false,
+    dedupingInterval: 15000,
+    focusThrottleInterval: 60000,
   });
+  const financial = useSWR(
+    "/stripe/dashboard-financiero",
+    fetchCompanySummary,
+    { shouldRetryOnError: false, focusThrottleInterval: 60000 }
+  );
+  const [filter, updateFilter] = useState({ search: "", status: "Todos" });
+  const setFilter = (value) => {
+    updateFilter(value);
+    setPage(1);
+  };
+  const [selected, setSelected] = useState(null);
+  const [initialTab, setInitialTab] = useState("datos");
+  const [refreshing, setRefreshing] = useState(false);
+  const rows = data?.data ?? EMPTY_ROWS;
+  const index = useMemo(() => indexCompanies(rows), [rows]);
+  const { entries: validityEntries, report: reportValidity } =
+    useCompanyValidity();
+  const searchedRows = useMemo(
+    () =>
+      searchCompanies(index, { search: filter.search, status: "Todos" }, order),
+    [index, filter.search, order]
+  );
+  const filteredRows = searchedRows.filter((company) =>
+    matchesView(company, filter.status, validityEntries[company.id_empresa])
+  );
+  const pendingDates = searchedRows.filter(
+    (company) =>
+      !validityEntries[company.id_empresa] ||
+      validityEntries[company.id_empresa].pending
+  ).length;
+  const failedDates = searchedRows.filter(
+    (company) => validityEntries[company.id_empresa]?.error
+  );
+  const datesLoading = isDateView(filter.status) && pendingDates > 0;
+  const activeView = COMPANY_VIEWS.find((view) => view.value === filter.status);
+  const totalPages = Math.max(1, Math.ceil(filteredRows.length / limit));
+  const currentPage = Math.min(page, totalPages);
+  const visibleRows = filteredRows.slice(
+    (currentPage - 1) * limit,
+    currentPage * limit
+  );
+  const hasFilters = Boolean(filter.search.trim()) || filter.status !== "Todos";
+  const clearFilters = () => setFilter({ search: "", status: "Todos" });
+  const resumen = financial.data?.resumen;
 
-  const onPageChange = async (value) => {
-    setPage(value);
-    await mutate(`/empresas?page=${value}&limit=${limit}`);
+  const refresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      await Promise.allSettled([
+        revalidate(),
+        financial.mutate(),
+        ...rows.map((item) =>
+          mutate(`/empresas/${item.id_empresa}/suscripcion`)
+        ),
+        ...visibleRows.flatMap((item) => [
+          mutate(`/empresas/${item.id_empresa}/resumen-financiero`),
+        ]),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+  const selectCompany = (item, tab = "datos") => {
+    setInitialTab(tab);
+    setSelected(item);
+    if (!item) refresh();
+  };
+  const financialMetric = (value, asMoney = false) => {
+    if (financial.error) return "No disponible";
+    if (financial.isLoading) return "…";
+    const parsed = numberOrNull(value);
+    return parsed === null
+      ? "Sin dato"
+      : asMoney
+      ? money(parsed)
+      : parsed.toLocaleString("es-MX");
   };
 
   return (
-    <div>
+    <div className={styles.page}>
       {selected ? (
-        <DetalleEmpresa item={selected} setSelected={setSelected} />
+        <DetalleEmpresa
+          key={selected.id_empresa}
+          item={
+            rows.find(
+              (company) => company.id_empresa === selected.id_empresa
+            ) || selected
+          }
+          setSelected={selectCompany}
+          initialTab={initialTab}
+        />
       ) : (
         <>
-          <div className="flex gap-3">
-            <Filters setFilter={setFilter} />
-            <NuevaEmpresa
-              limit={limit}
-              page={page}
-              revalidate={revalidate}
-              setFilter={setFilter}
+          <div className={styles.heading}>
+            <div className={styles.titleGroup}>
+              <span className={styles.titleIcon}>
+                <Building2 size={22} />
+              </span>
+              <div>
+                <h1>Empresas</h1>
+                <p>Personal, cobranza y vigencia en una sola vista.</p>
+              </div>
+            </div>
+            <div className={styles.headingActions}>
+              <Button
+                variant="outline"
+                onClick={refresh}
+                disabled={refreshing || isValidating}
+                aria-label="Actualizar empresas y saldos"
+              >
+                <RefreshCw
+                  size={16}
+                  className={refreshing ? "animate-spin" : ""}
+                />
+                <span className="hidden sm:inline">Actualizar</span>
+              </Button>
+              <NuevaEmpresa setFilter={setFilter} />
+            </div>
+          </div>
+          <div
+            className={styles.metrics}
+            aria-label="Resumen general de todas las empresas"
+          >
+            <Metric
+              label="Empresas registradas"
+              value={
+                isLoading
+                  ? "…"
+                  : error
+                  ? "No disponible"
+                  : numberOrNull(data?.total)?.toLocaleString("es-MX") ??
+                    "Sin dato"
+              }
+              note="Todas las empresas"
+              icon={Building2}
+            />
+            <Metric
+              label="Saldo pendiente total"
+              value={financialMetric(resumen?.saldo_pendiente, true)}
+              note="Cobranza general · MXN"
+              icon={Wallet}
+              featured
+            />
+            <Metric
+              label="Facturas vencidas"
+              value={financialMetric(resumen?.facturas_vencidas)}
+              note="Todas las empresas"
+              icon={FileWarning}
+            />
+            <Metric
+              label="Empresas suspendidas"
+              value={financialMetric(resumen?.empresas_suspendidas)}
+              note="Resumen financiero general"
+              icon={Ban}
             />
           </div>
-          <TableContainer
-            error={error}
-            isLoading={isLoading}
-            data={usuariosFiltrados}
-            setSelected={setSelected}
-            limit={limit}
-            page={page}
-          />
-          <TablePagination
-            page={page}
-            limit={limit}
-            total={data?.total || 0}
-            onPageChange={onPageChange}
-          />
+          {financial.error && (
+            <div className={styles.error} role="alert">
+              No se pudo cargar el resumen financiero general.
+              <button onClick={() => financial.mutate().catch(() => {})}>
+                Reintentar resumen
+              </button>
+            </div>
+          )}
+          <section
+            className={styles.tablePanel}
+            aria-label="Listado de empresas"
+          >
+            <Tabs
+              value={filter.status}
+              onValueChange={(status) =>
+                setFilter((current) => ({ ...current, status }))
+              }
+            >
+              <VistasEmpresas
+                companies={searchedRows}
+                entries={validityEntries}
+                loading={!data}
+              />
+              <TabsContent value={filter.status} className={styles.viewContent}>
+                <div className={styles.toolbar}>
+                  <Filters
+                    filter={filter}
+                    setFilter={setFilter}
+                    order={order}
+                    setOrder={(value) => {
+                      setOrder(value);
+                      setPage(1);
+                    }}
+                  />
+                </div>
+                <p className={styles.viewDescription}>
+                  {activeView?.description}
+                </p>
+                {isDateView(filter.status) && failedDates.length > 0 && (
+                  <div className={styles.error} role="alert">
+                    No se pudo consultar la vigencia de {failedDates.length}{" "}
+                    empresas. El listado y el conteo de esta pestaña están
+                    incompletos.
+                    <button
+                      onClick={() =>
+                        Promise.allSettled(
+                          failedDates.map((company) =>
+                            mutate(
+                              `/empresas/${company.id_empresa}/suscripcion`
+                            )
+                          )
+                        )
+                      }
+                    >
+                      Reintentar vigencias
+                    </button>
+                  </div>
+                )}
+                {error && (
+                  <div className={styles.error} role="alert">
+                    {data
+                      ? "No se pudo actualizar el directorio. Mostramos la última consulta completa."
+                      : "No se pudo cargar el directorio completo. Reintenta para buscar en todas las empresas."}
+                    <button
+                      disabled={isValidating}
+                      onClick={() => revalidate().catch(() => {})}
+                    >
+                      Reintentar empresas
+                    </button>
+                  </div>
+                )}
+                <div className={styles.resultsBar}>
+                  <p role="status" aria-live="polite" aria-atomic="true">
+                    {datesLoading ? (
+                      `Consultando vigencias · ${pendingDates} pendientes…`
+                    ) : !data ? (
+                      isLoading || isValidating ? (
+                        "Cargando todas las empresas…"
+                      ) : (
+                        "Directorio no disponible"
+                      )
+                    ) : (
+                      <>
+                        <strong>
+                          {filteredRows.length.toLocaleString("es-MX")}
+                        </strong>
+                        {hasFilters
+                          ? ` de ${rows.length.toLocaleString(
+                              "es-MX"
+                            )} empresas`
+                          : " empresas"}
+                        {isValidating
+                          ? " · Actualizando…"
+                          : " · En todo el directorio"}
+                      </>
+                    )}
+                  </p>
+                  {hasFilters && (
+                    <button
+                      className={styles.resetFilters}
+                      onClick={clearFilters}
+                    >
+                      Limpiar filtros
+                    </button>
+                  )}
+                </div>
+                {datesLoading || (!data && (isLoading || isValidating)) ? (
+                  <LoadingTable rows={5} />
+                ) : data ? (
+                  <TablaEmpresas
+                    data={visibleRows}
+                    setSelected={selectCompany}
+                    hasFilters={hasFilters}
+                    clearFilters={clearFilters}
+                  />
+                ) : null}
+                {data && !datesLoading && (
+                  <DirectoryPagination
+                    page={currentPage}
+                    limit={limit}
+                    total={filteredRows.length}
+                    onPageChange={setPage}
+                    onLimitChange={(value) => {
+                      setLimit(value);
+                      setPage(1);
+                    }}
+                  />
+                )}
+                <p className={styles.footer}>
+                  La vigencia es la fecha administrativa registrada. Consulta
+                  «Acceso» para ver si la empresa está activa. Los saldos
+                  corresponden a la cobranza registrada.
+                </p>
+              </TabsContent>
+            </Tabs>
+          </section>
         </>
       )}
+      {rows.map((company) => (
+        <ValidityObserver
+          key={company.id_empresa}
+          companyId={company.id_empresa}
+          report={reportValidity}
+        />
+      ))}
     </div>
   );
 }
 
-const TableContainer = ({
-  error,
-  isLoading,
-  data,
-  setSelected,
-  limit,
-  page,
-}) => {
-  if (isLoading) return <LoadingTable rows={10} />;
-  if (error) return <ErrorPage message={error?.message} />;
-
+function Metric({ label, value, note, icon: Icon, featured }) {
   return (
-    <TablaEmpresas
-      data={data}
-      setSelected={setSelected}
-      limit={limit}
-      page={page}
-    />
+    <div className={`${styles.metric} ${featured ? styles.metricDebt : ""}`}>
+      <div className={styles.metricLabel}>
+        <span>{label}</span>
+        <Icon size={17} />
+      </div>
+      <strong>{value}</strong>
+      <small>{note}</small>
+    </div>
   );
-};
+}
+
+function DirectoryPagination({
+  page,
+  limit,
+  total,
+  onPageChange,
+  onLimitChange,
+}) {
+  const pages = Math.max(1, Math.ceil(total / limit));
+  const from = total ? (page - 1) * limit + 1 : 0;
+  const to = Math.min(page * limit, total);
+  return (
+    <div className={styles.pagination}>
+      <span>
+        {from}–{to} de {total} empresas
+      </span>
+      <div className={styles.pageControls}>
+        <label>
+          Por página
+          <select
+            aria-label="Por página"
+            value={limit}
+            onChange={(event) => onLimitChange(Number(event.target.value))}
+          >
+            {[10, 25, 50].map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+        </label>
+        <nav aria-label="Páginas de empresas">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Primera página"
+            disabled={page === 1}
+            onClick={() => onPageChange(1)}
+          >
+            <ChevronsLeft size={16} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Página anterior"
+            disabled={page === 1}
+            onClick={() => onPageChange(page - 1)}
+          >
+            <ChevronLeft size={16} />
+          </Button>
+          <span>
+            Página {page} de {pages}
+          </span>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Página siguiente"
+            disabled={page === pages}
+            onClick={() => onPageChange(page + 1)}
+          >
+            <ChevronRight size={16} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Última página"
+            disabled={page === pages}
+            onClick={() => onPageChange(pages)}
+          >
+            <ChevronsRight size={16} />
+          </Button>
+        </nav>
+      </div>
+    </div>
+  );
+}

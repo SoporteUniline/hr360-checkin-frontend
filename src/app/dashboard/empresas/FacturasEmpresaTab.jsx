@@ -4,9 +4,16 @@ import React, { useMemo, useState } from "react";
 import useSWR from "swr";
 import { fetcherWithToken } from "@/lib/fetcher";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, FileText, Plus, X } from "lucide-react";
+import { ExternalLink, FileText, Plus } from "lucide-react";
 import axiosInstance from "@/lib/axios";
 import Cookies from "js-cookie";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import styles from "./detalleEmpresa.module.css";
 import { enqueueSnackbar } from "notistack";
 
 const formatMoney = (value) =>
@@ -46,14 +53,14 @@ export default function FacturasEmpresaTab({ empresa }) {
   });
   const [estadoFiltro, setEstadoFiltro] = useState("Todos");
 
-  const { data, isLoading, mutate } = useSWR(
+  const { data, error, isLoading, mutate } = useSWR(
     empresaId ? `/empresas/${empresaId}/facturas` : null,
-    fetcherWithToken,
+    fetcherWithToken
   );
 
   const { data: suscripcionData } = useSWR(
     empresaId ? `/empresas/${empresaId}/suscripcion` : null,
-    fetcherWithToken,
+    fetcherWithToken
   );
 
   const facturas = data?.data || [];
@@ -65,7 +72,7 @@ export default function FacturasEmpresaTab({ empresa }) {
 
   const totalPagado = facturas
     .filter(
-      (f) => f.estado === "Pagada Stripe" || f.estado === "Pagada Externa",
+      (f) => f.estado === "Pagada Stripe" || f.estado === "Pagada Externa"
     )
     .reduce((acc, f) => acc + Number(f.total || 0), 0);
 
@@ -79,7 +86,7 @@ export default function FacturasEmpresaTab({ empresa }) {
   const mesesConSaldo = new Set(
     facturas
       .filter(tieneSaldo)
-      .map((factura) => String(factura.periodo_fin).slice(0, 7)),
+      .map((factura) => String(factura.periodo_fin).slice(0, 7))
   ).size;
 
   const periodoDefault = useMemo(() => getCurrentMonthPeriod(), []);
@@ -103,8 +110,8 @@ export default function FacturasEmpresaTab({ empresa }) {
             suscripcion.precio_por_mes ||
               suscripcion.precio_base ||
               suscripcion.monto_total ||
-              0,
-          ),
+              0
+          )
         ),
       concepto:
         prev.concepto ||
@@ -151,7 +158,7 @@ export default function FacturasEmpresaTab({ empresa }) {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        },
+        }
       );
 
       enqueueSnackbar("Factura marcada como pagada externa", {
@@ -163,7 +170,7 @@ export default function FacturasEmpresaTab({ empresa }) {
     } catch (error) {
       enqueueSnackbar(
         error?.response?.data?.message || "Error al marcar factura",
-        { variant: "error" },
+        { variant: "error" }
       );
     } finally {
       setPaying(false);
@@ -204,7 +211,7 @@ export default function FacturasEmpresaTab({ empresa }) {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        },
+        }
       );
 
       enqueueSnackbar("Factura creada correctamente", {
@@ -216,20 +223,31 @@ export default function FacturasEmpresaTab({ empresa }) {
     } catch (error) {
       enqueueSnackbar(
         error?.response?.data?.message || "Error al crear factura",
-        { variant: "error" },
+        { variant: "error" }
       );
     } finally {
       setCreating(false);
     }
   };
 
+  if (error)
+    return (
+      <div className={styles.empty} role="alert">
+        <FileText size={28} />
+        <p>No se pudieron consultar las facturas.</p>
+        <Button variant="outline" onClick={() => mutate().catch(() => {})}>
+          Reintentar facturas
+        </Button>
+      </div>
+    );
+
   if (isLoading) {
     return <p className="text-sm text-gray-500">Cargando facturas...</p>;
   }
 
   return (
-    <div className="mt-4">
-      <div className="mb-4 flex items-center justify-between gap-3">
+    <div className={styles.content}>
+      <div className={styles.contentHeading}>
         <div>
           <h2 className="text-base font-semibold text-slate-700">Facturas</h2>
           <p className="text-sm text-gray-500">
@@ -249,15 +267,12 @@ export default function FacturasEmpresaTab({ empresa }) {
       </div>
 
       {showNuevaFactura && (
-        <form
-          onSubmit={crearFactura}
-          className="mb-4 rounded-lg border bg-white p-4"
-        >
+        <form onSubmit={crearFactura} className={styles.panel}>
           <h3 className="mb-3 text-sm font-semibold text-slate-700">
             Crear factura manual
           </h3>
 
-          <div className="grid gap-3 md:grid-cols-4">
+          <div className={styles.fields}>
             <Field label="Periodo inicio">
               <input
                 type="date"
@@ -311,7 +326,7 @@ export default function FacturasEmpresaTab({ empresa }) {
             </Field>
           </div>
 
-          <div className="mt-4 flex justify-end gap-2">
+          <div className={styles.formFooter}>
             <Button
               type="button"
               variant="outline"
@@ -331,7 +346,7 @@ export default function FacturasEmpresaTab({ empresa }) {
         </form>
       )}
 
-      <div className="mb-4 grid gap-3 md:grid-cols-3">
+      <div className={styles.metrics}>
         <ResumenCard
           title="Saldo pendiente"
           value={formatMoney(totalPendiente)}
@@ -340,7 +355,7 @@ export default function FacturasEmpresaTab({ empresa }) {
         <ResumenCard title="Meses con saldo" value={`${mesesConSaldo} / 2`} />
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className={styles.pills}>
         {[
           "Todos",
           "Pendiente",
@@ -355,6 +370,7 @@ export default function FacturasEmpresaTab({ empresa }) {
             size="sm"
             variant={estadoFiltro === estado ? "default" : "outline"}
             onClick={() => setEstadoFiltro(estado)}
+            aria-pressed={estadoFiltro === estado}
             className={
               estadoFiltro === estado
                 ? "bg-slate-900 text-white hover:bg-slate-800"
@@ -367,11 +383,11 @@ export default function FacturasEmpresaTab({ empresa }) {
       </div>
 
       {facturasFiltradas.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-6 text-center text-sm text-gray-500">
+        <div className={styles.empty}>
           Esta empresa todavía no tiene facturas registradas.
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
+        <div className={styles.ledger}>
           <table className="w-full text-sm">
             <thead className="bg-gray-50 text-xs uppercase text-gray-600">
               <tr>
@@ -387,7 +403,7 @@ export default function FacturasEmpresaTab({ empresa }) {
             <tbody>
               {facturasFiltradas.map((factura) => (
                 <tr key={factura.id} className="border-t hover:bg-gray-50">
-                  <td className="px-3 py-3">
+                  <td data-label="Factura" className="px-3 py-3">
                     <div className="font-medium text-slate-800">
                       {factura.numero_factura ||
                         factura.stripe_invoice_id ||
@@ -398,22 +414,24 @@ export default function FacturasEmpresaTab({ empresa }) {
                     </div>
                   </td>
 
-                  <td className="px-3 py-3">
+                  <td data-label="Periodo" className="px-3 py-3">
                     {formatDate(factura.periodo_inicio)} -{" "}
                     {formatDate(factura.periodo_fin)}
                   </td>
 
-                  <td className="px-3 py-3 font-semibold">
+                  <td data-label="Total" className="px-3 py-3 font-semibold">
                     {formatMoney(factura.total)}
                   </td>
 
-                  <td className="px-3 py-3">
+                  <td data-label="Estado" className="px-3 py-3">
                     <EstadoFactura estado={factura.estado} />
                   </td>
 
-                  <td className="px-3 py-3">{factura.metodo_pago || "-"}</td>
+                  <td data-label="Método" className="px-3 py-3">
+                    {factura.metodo_pago || "-"}
+                  </td>
 
-                  <td className="px-3 py-3">
+                  <td data-label="Acciones" className="px-3 py-3">
                     <div className="flex justify-end gap-2">
                       {factura.invoice_pdf && (
                         <Button
@@ -463,30 +481,19 @@ export default function FacturasEmpresaTab({ empresa }) {
       )}
 
       {facturaPago && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="w-full max-w-lg rounded-xl bg-white shadow-xl">
-            <div className="flex items-start justify-between border-b px-5 py-4">
-              <div>
-                <h3 className="text-base font-semibold text-slate-800">
-                  Marcar factura como pagada
-                </h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Confirma el pago externo de esta factura.
-                </p>
-              </div>
-
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={cerrarPagoExterno}
-                disabled={paying}
-                className="h-8 w-8"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+        <Dialog
+          open={Boolean(facturaPago)}
+          onOpenChange={(open) => {
+            if (!open) cerrarPagoExterno();
+          }}
+        >
+          <DialogContent className={`${styles.modal} ${styles.content}`}>
+            <div className={styles.modalHeader}>
+              <DialogTitle>Marcar factura como pagada</DialogTitle>
+              <DialogDescription>
+                Confirma el pago externo de esta factura.
+              </DialogDescription>
             </div>
-
             <form onSubmit={confirmarPagoExterno} className="px-5 py-4">
               <div className="mb-4 rounded-lg bg-gray-50 p-4">
                 <div className="grid gap-3 sm:grid-cols-2">
@@ -501,7 +508,7 @@ export default function FacturasEmpresaTab({ empresa }) {
                   <InfoPago
                     label="Periodo"
                     value={`${formatDate(
-                      facturaPago.periodo_inicio,
+                      facturaPago.periodo_inicio
                     )} - ${formatDate(facturaPago.periodo_fin)}`}
                   />
                   <InfoPago
@@ -514,6 +521,7 @@ export default function FacturasEmpresaTab({ empresa }) {
               <div className="grid gap-3">
                 <Field label="Método de pago">
                   <select
+                    aria-label="Método de pago"
                     className="w-full rounded-md border px-3 py-2 text-sm"
                     value={pagoForm.metodo_pago}
                     onChange={(e) =>
@@ -566,7 +574,7 @@ export default function FacturasEmpresaTab({ empresa }) {
                 historial de pagos.
               </div>
 
-              <div className="mt-5 flex justify-end gap-2">
+              <div className={styles.formFooter}>
                 <Button
                   type="button"
                   variant="outline"
@@ -585,8 +593,8 @@ export default function FacturasEmpresaTab({ empresa }) {
                 </Button>
               </div>
             </form>
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
@@ -594,10 +602,8 @@ export default function FacturasEmpresaTab({ empresa }) {
 
 function Field({ label, children }) {
   return (
-    <label className="block">
-      <span className="mb-1 block text-xs font-medium uppercase text-gray-500">
-        {label}
-      </span>
+    <label className={styles.field}>
+      <span className={styles.infoLabel}>{label}</span>
       {children}
     </label>
   );
@@ -616,7 +622,7 @@ function InfoPago({ label, value }) {
 
 function ResumenCard({ title, value }) {
   return (
-    <div className="rounded-lg border bg-white p-4">
+    <div className={styles.metric}>
       <p className="text-xs font-medium uppercase text-gray-500">{title}</p>
       <p className="mt-1 text-lg font-semibold text-slate-800">{value}</p>
     </div>
