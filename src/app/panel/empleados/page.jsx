@@ -2,8 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import useSWR from "swr";
-import { fetcherWithToken } from "@/lib/fetcher";
 import { useAuth } from "@/context/AuthContext";
 import useDebounce from "@/hooks/useDebounce";
 import EmpleadosDataContainer from "./EmpleadosDataContainer";
@@ -129,17 +127,6 @@ export default function RegistroEmpleados() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  const empresaId =
-    empresaActiva && empresaActiva !== "all" ? empresaActiva : null;
-  const { data: capacidadData } = useSWR(
-    empresaId
-      ? `/checador/empleados-capacidad/check-capacidad?empresa_id=${empresaId}`
-      : null, // null = no fetches
-    fetcherWithToken,
-    { revalidateOnFocus: false, shouldRetryOnError: false },
-  );
-  const limiteEmpleados = capacidadData?.limite ?? null;
-
   const idEmpresa = empresaActiva;
 
   const abrirModalSincronizacion = () => {
@@ -207,21 +194,6 @@ export default function RegistroEmpleados() {
         );
         setModalCapacidadAbierto(true);
         return;
-      }
-      try {
-        const { data } = await axios.get(
-          `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados-capacidad/check-capacidad?empresa_id=${idEmpresa}`,
-        );
-
-        // console.log(data);
-
-        if (!data.permitido) {
-          setMensajeCapacidad(data.message);
-          setModalCapacidadAbierto(true);
-          return;
-        }
-      } catch (error) {
-        console.error("Error al validar capacidad:", error);
       }
     }
 
@@ -422,26 +394,6 @@ export default function RegistroEmpleados() {
               <StatCard
                 title="Activos"
                 value={data?.estadisticas?.empleados_activos || 0}
-                sub={
-                  limiteEmpleados != null
-                    ? `/ ${limiteEmpleados} · ${
-                        limiteEmpleados -
-                        (data?.estadisticas?.empleados_activos || 0)
-                      } lugar${
-                        limiteEmpleados -
-                          (data?.estadisticas?.empleados_activos || 0) ===
-                        1
-                          ? ""
-                          : "es"
-                      } disponible${
-                        limiteEmpleados -
-                          (data?.estadisticas?.empleados_activos || 0) ===
-                        1
-                          ? ""
-                          : "s"
-                      }`
-                    : undefined
-                }
                 icon={UsersRound}
               />
               <StatCard
