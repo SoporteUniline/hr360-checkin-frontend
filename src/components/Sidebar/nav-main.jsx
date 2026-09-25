@@ -60,7 +60,10 @@ import {
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { RECRUITMENT_NAV, isRecruitmentNavActive } from "@/components/reclutamiento/navigation";
+import {
+  RECRUITMENT_NAV,
+  isRecruitmentNavActive,
+} from "@/components/reclutamiento/navigation";
 
 const dashboardItems = [
   {
@@ -153,6 +156,12 @@ const menuGroups = [
         rol: "Recruiter",
         icon: UsersIcon,
       },
+      // {
+      //   title: "Reclutamiento",
+      //   url: "/panel/reclutamiento",
+      //   rol: "Recruiter",
+      //   icon: BriefcaseBusiness,
+      // },
       {
         title: "Turnos",
         url: "/panel/turnos",
@@ -450,7 +459,11 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
       {it.icon ? (
         <it.icon
           size={15}
-          className={isRecruitmentNavActive(path, it) ? "text-[#2563EB]" : "text-gray-400"}
+          className={
+            isRecruitmentNavActive(path, it)
+              ? "text-[#2563EB]"
+              : "text-gray-400"
+          }
         />
       ) : null}
       <span>{it.title}</span>
@@ -674,7 +687,9 @@ export function NavMain() {
                   tooltip={item.title}
                   onClick={() => handleClick(item.url)}
                   className={`${
-                    isRecruitmentNavActive(path, item) ? ITEM_ACTIVO : ITEM_NORMAL
+                    isRecruitmentNavActive(path, item)
+                      ? ITEM_ACTIVO
+                      : ITEM_NORMAL
                   } cursor-pointer flex justify-between`}
                 >
                   <div className="flex items-center gap-2">
@@ -737,7 +752,9 @@ export function NavMain() {
                               }
                             }}
                             className={`${
-                              isRecruitmentNavActive(path, item) ? ITEM_ACTIVO : ITEM_NORMAL
+                              isRecruitmentNavActive(path, item)
+                                ? ITEM_ACTIVO
+                                : ITEM_NORMAL
                             } cursor-pointer flex justify-between`}
                           >
                             <div className="flex items-center gap-2">
