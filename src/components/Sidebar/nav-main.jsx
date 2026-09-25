@@ -142,6 +142,12 @@ const menuGroups = [
         icon: UsersIcon,
       },
       {
+        title: "Reclutamiento",
+        url: "/panel/reclutamiento",
+        rol: "Recruiter",
+        icon: BriefcaseBusiness,
+      },
+      {
         title: "Turnos",
         url: "/panel/turnos",
         rol: "Recruiter",

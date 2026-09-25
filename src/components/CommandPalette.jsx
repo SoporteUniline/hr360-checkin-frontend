@@ -117,6 +117,13 @@ const ALL_NAV_ITEMS = [
     icon: Users,
   },
   {
+    title: "Reclutamiento",
+    url: "/panel/reclutamiento",
+    rol: "Recruiter",
+    section: "Gestión de Personal",
+    icon: BriefcaseBusiness,
+  },
+  {
     title: "Panel empleado",
     url: "/panel/panel-empleado",
     rol: "Recruiter",
