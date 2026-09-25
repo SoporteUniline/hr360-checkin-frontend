@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 export default function GlobalThirdPartyScripts() {
   const pathname = usePathname();
 
-  if (pathname?.startsWith("/firmar/")) {
+  if (pathname?.startsWith("/firmar/") || pathname?.startsWith("/reclutamiento-demo/")) {
     return null;
   }
 
