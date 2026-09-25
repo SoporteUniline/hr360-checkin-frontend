@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Command } from "cmdk";
 import axiosInstance from "@/lib/axios";
 import { useAuth } from "@/context/AuthContext";
+import { RECRUITMENT_NAV } from "@/components/reclutamiento/navigation";
 import {
   Users,
   Building2,
@@ -116,13 +117,13 @@ const ALL_NAV_ITEMS = [
     section: "Gestión de Personal",
     icon: Users,
   },
-  {
-    title: "Reclutamiento",
-    url: "/panel/reclutamiento",
+  ...RECRUITMENT_NAV.map((item) => ({
+    title: `${item.label} · Reclutamiento`,
+    url: item.href,
     rol: "Recruiter",
-    section: "Gestión de Personal",
-    icon: BriefcaseBusiness,
-  },
+    section: "Reclutamiento y selección",
+    icon: item.icon,
+  })),
   {
     title: "Panel empleado",
     url: "/panel/panel-empleado",

@@ -153,6 +153,9 @@ export function questionErrors(questions) {
 }
 export function makeSeed() {
   const now = new Date();
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(10, 30, 0, 0);
   const ago = (days) => new Date(now.getTime() - days * 86400000).toISOString();
   const first = {
     ...newVacancy(),
@@ -277,7 +280,28 @@ export function makeSeed() {
     ],
     vacancies,
     candidates,
+    interviews: [
+      {
+        id: "entrevista-daniel",
+        candidateId: "daniel",
+        startsAt: tomorrow.toISOString(),
+        duration: 30,
+        location: "Videollamada",
+        interviewer: "Equipo de talento",
+        notes: "Conocer su experiencia y resolver dudas del puesto.",
+        status: "scheduled",
+      },
+    ],
   };
+}
+export const formatDateTime = (value) =>
+  new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" }).format(
+    new Date(value)
+  );
+export function interviewStatus(interview) {
+  return interview.status === "scheduled" && new Date(interview.startsAt).getTime() < Date.now()
+    ? "pending"
+    : interview.status;
 }
 export function downloadCsv(filename, headers, rows) {
   const cell = (value) => {

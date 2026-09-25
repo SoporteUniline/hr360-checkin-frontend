@@ -13,12 +13,28 @@ export default function CandidatesView({
   onOpen,
   hiring = false,
   initialStage = "all",
+  filters: externalFilters,
+  onFiltersChange,
 }) {
-  const [search, setSearch] = useState("");
-  const [stage, setStage] = useState(initialStage);
-  const [vacancy, setVacancy] = useState("all");
-  const [page, setPage] = useState(1);
-  const [sort, setSort] = useState("recent");
+  const [localFilters, setLocalFilters] = useState({
+    search: "",
+    stage: initialStage,
+    vacancy: "all",
+    page: 1,
+    sort: "recent",
+    days: "all",
+  });
+  const { search, stage, vacancy, page, sort, days = "all" } = externalFilters || localFilters;
+  const setFilters = onFiltersChange || setLocalFilters;
+  const setField = (key) => (value) => setFilters((current) => ({ ...current, [key]: value }));
+  const setSearch = setField("search"),
+    setStage = setField("stage"),
+    setVacancy = setField("vacancy"),
+    setPage = setField("page"),
+    setSort = setField("sort");
+  const since = new Date();
+  since.setDate(since.getDate() - Number(days) + 1);
+  since.setHours(0, 0, 0, 0);
   const vacancyById = useMemo(
     () => new Map(data.vacancies.map((item) => [item.id, item])),
     [data.vacancies]
@@ -26,7 +42,11 @@ export default function CandidatesView({
   const all = data.candidates.filter(
     (candidate) =>
       (!vacancyId || candidate.vacancyId === vacancyId) &&
-      (!hiring || ["offer", "hired"].includes(candidate.stage))
+      (!hiring || ["offer", "hired"].includes(candidate.stage)) &&
+      (days === "all" ||
+        new Date(
+          hiring ? candidate.hiring.completedAt || candidate.submittedAt : candidate.submittedAt
+        ) >= since)
   );
   const filtered = all
     .filter(
@@ -70,6 +90,26 @@ export default function CandidatesView({
     );
   return (
     <div className={s.stack}>
+      <div className={s.between}>
+        <span className={s.small}>
+          {hiring ? "Ofertas e incorporaciones" : "Expedientes y respuestas"} · {all.length}{" "}
+          registros
+        </span>
+        <select
+          aria-label="Periodo de candidatos"
+          className={s.select}
+          style={{ width: "auto" }}
+          value={days}
+          onChange={(event) =>
+            setFilters((current) => ({ ...current, days: event.target.value, page: 1 }))
+          }
+        >
+          <option value="all">Todas las fechas</option>
+          <option value="7">Últimos 7 días</option>
+          <option value="30">Últimos 30 días</option>
+          <option value="90">Últimos 90 días</option>
+        </select>
+      </div>
       {hiring && (
         <div className={s.formHint}>
           <strong>De la oferta al primer día.</strong> Aquí aparecen las personas en Oferta y las

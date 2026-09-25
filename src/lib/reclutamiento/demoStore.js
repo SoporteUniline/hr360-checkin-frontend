@@ -35,7 +35,8 @@ export function readDemo(id) {
     !Array.isArray(data.modalities)
   )
     throw new Error("Esta prueba pertenece a otra versión. No se sobrescribió.");
-  return data;
+  // Extensión compatible: conserva pruebas e historial anteriores sin inventar citas.
+  return { ...data, interviews: Array.isArray(data.interviews) ? data.interviews : [] };
 }
 export function writeDemo(id, data) {
   localStorage.setItem(demoKey(id), JSON.stringify(data));

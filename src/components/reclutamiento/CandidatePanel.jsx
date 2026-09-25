@@ -5,7 +5,7 @@ import { CalendarDays, FileText, MessageSquare, UserCheck, CheckCircle2, Plus } 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { STAGES, uid, formatDate } from "@/lib/reclutamiento/model";
-import { Badge, Field, Modal } from "./RecruitmentUI";
+import { Badge, Field, Modal, PageSurface } from "./RecruitmentUI";
 import s from "./reclutamiento.module.css";
 
 const CHECKLIST = [
@@ -20,7 +20,10 @@ export default function CandidatePanel({
   onChange,
   onClose,
   initialTab = "profile",
+  embedded = false,
+  onScheduleInterview,
 }) {
+  const Surface = embedded ? PageSurface : Modal;
   const [tab, setTab] = useState(initialTab);
   const [note, setNote] = useState("");
   const [interview, setInterview] = useState("");
@@ -57,7 +60,7 @@ export default function CandidatePanel({
     hiring.startDate && hiring.branchId && CHECKLIST.every(([id]) => hiring.checklist.includes(id));
   const hasOffer = candidate.stage === "offer";
   return (
-    <Modal
+    <Surface
       title="Expediente del candidato"
       description={`${vacancy?.title || "Vacante"} · ${candidate.source}`}
       onClose={close}
@@ -78,7 +81,7 @@ export default function CandidatePanel({
           <>
             <span className={s.small}>Prueba local · no se envían notificaciones</span>
             <Button variant="outline" onClick={close}>
-              Cerrar
+              {embedded ? "Volver a candidatos" : "Cerrar"}
             </Button>
           </>
         )
@@ -249,21 +252,23 @@ export default function CandidatePanel({
                       setError("La entrevista debe ser en una fecha y hora futuras.");
                       return;
                     }
-                    const dateText = new Intl.DateTimeFormat("es-MX", {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    }).format(new Date(interview));
                     if (
-                      save(
-                        { ...(candidate.stage !== "hired" ? { stage: "interview" } : {}) },
-                        `Entrevista programada: ${dateText}${
-                          location.trim() ? ` · ${location.trim()}` : ""
-                        } (sin invitación enviada)`
-                      )
+                      onScheduleInterview?.({
+                        candidateId: candidate.id,
+                        startsAt: new Date(interview).toISOString(),
+                        duration: 30,
+                        location: location.trim(),
+                        interviewer: "Equipo de talento",
+                        notes: "",
+                      })
                     ) {
                       setInterview("");
                       setLocation("");
-                    }
+                      setError("");
+                    } else
+                      setError(
+                        "No se pudo guardar la entrevista. Revisa los datos y vuelve a intentar."
+                      );
                   }}
                 >
                   <div className={s.formGrid}>
@@ -291,7 +296,11 @@ export default function CandidatePanel({
                     </Field>
                   </div>
                   <div className={s.row}>
-                    <Button type="submit" variant="outline" disabled={candidate.stage === "hired"}>
+                    <Button
+                      type="submit"
+                      variant="outline"
+                      disabled={["hired", "rejected"].includes(candidate.stage)}
+                    >
                       Guardar entrevista
                     </Button>
                     <span className={s.small}>
@@ -426,6 +435,6 @@ export default function CandidatePanel({
           </TabsContent>
         </Tabs>
       </div>
-    </Modal>
+    </Surface>
   );
 }

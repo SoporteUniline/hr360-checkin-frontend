@@ -12,6 +12,22 @@ import {
 } from "@/components/ui/dialog";
 import { VACANCY_STATUSES, STAGES } from "@/lib/reclutamiento/model";
 import s from "./reclutamiento.module.css";
+import m from "./module.module.css";
+
+export function PageSurface({ title, description, children, footer }) {
+  return (
+    <section role="region" aria-label={title} className={m.pageSurface}>
+      <div className={s.panelHead}>
+        <div>
+          <h2>{title}</h2>
+          <p className={s.muted}>{description}</p>
+        </div>
+      </div>
+      <div className={m.pageBody}>{children}</div>
+      {footer && <div className={m.pageFooter}>{footer}</div>}
+    </section>
+  );
+}
 
 export function DemoBanner({ publicView = false }) {
   return (

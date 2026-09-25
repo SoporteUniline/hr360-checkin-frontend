@@ -121,6 +121,16 @@ async function main() {
     .getByRole("button", { name: "Nueva vacante", exact: true })
     .waitFor({ timeout: 60000 });
   await noOverflow();
+  await page.getByRole("heading", { name: "Dashboard de reclutamiento", exact: true }).waitFor();
+  await page.getByText("RECLUTAMIENTO Y SELECCIÓN", { exact: true }).waitFor();
+  await screenshot("dashboard-desktop");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await noOverflow();
+  await screenshot("dashboard-mobile");
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.getByRole("button", { name: "Vacantes", exact: true }).click();
+  await page.waitForURL("**/reclutamiento/vacantes");
+  await page.getByRole("button", { name: "Auxiliar administrativo", exact: true }).waitFor();
   await screenshot("vacancies-desktop");
   assert.equal(await page.locator("article").count(), 5);
   console.log("PASS first render, protected navigation and desktop layout");
@@ -175,6 +185,7 @@ async function main() {
   await dialog.getByRole("button", { name: "Publicar prueba", exact: true }).click();
   await dialog.waitFor({ state: "hidden" });
   await page.getByRole("heading", { name: "Coordinador de talento", exact: true }).waitFor();
+  const vacancyUrl = page.url();
   const publicPath = await page
     .getByRole("link", { name: "Abrir vista pública", exact: true })
     .getAttribute("href");
@@ -218,36 +229,38 @@ async function main() {
     .waitFor();
   await page.getByRole("tab", { name: /^Candidatos/ }).click();
   await page.getByRole("button", { name: /Elena Prueba/ }).click();
-  await dialog.getByText("En dos semanas", { exact: true }).waitFor();
+  const record = page.getByRole("region", { name: "Expediente del candidato", exact: true });
+  await record.getByText("En dos semanas", { exact: true }).waitFor();
   await noOverflow();
   await screenshot("candidate-mobile");
-  await dialog.getByRole("tab", { name: "Seguimiento", exact: true }).click();
-  await dialog
+  await record.getByRole("tab", { name: "Seguimiento", exact: true }).click();
+  await record
     .getByLabel("Agregar una nota", { exact: true })
     .fill("Perfil revisado en la demostración.");
-  await dialog.getByRole("button", { name: "Guardar nota", exact: true }).click();
-  await dialog.getByText("Perfil revisado en la demostración.", { exact: false }).waitFor();
-  await dialog.getByLabel("Etapa del proceso", { exact: true }).selectOption("offer");
-  await dialog.getByRole("tab", { name: "Contratar", exact: true }).click();
-  await dialog.getByLabel("Fecha de ingreso *", { exact: true }).fill("2027-01-10");
-  await dialog.getByLabel("Sucursal de alta *", { exact: true }).selectOption("centro");
+  await record.getByRole("button", { name: "Guardar nota", exact: true }).click();
+  await record.getByText("Perfil revisado en la demostración.", { exact: false }).waitFor();
+  await record.getByLabel("Etapa del proceso", { exact: true }).selectOption("offer");
+  await record.getByRole("tab", { name: "Contratar", exact: true }).click();
+  await record.getByLabel("Fecha de ingreso *", { exact: true }).fill("2027-01-10");
+  await record.getByLabel("Sucursal de alta *", { exact: true }).selectOption("centro");
   for (const label of [
     "Datos del candidato revisados",
     "Oferta aceptada",
     "Documentación verificada",
   ])
-    await dialog.getByLabel(label, { exact: true }).check();
+    await record.getByLabel(label, { exact: true }).check();
   await screenshot("hiring-mobile");
-  await dialog
+  await record
     .getByRole("button", { name: "Completar contratación de prueba", exact: true })
     .click();
-  await dialog.getByText("Contratación de ejemplo completada", { exact: true }).waitFor();
-  await dialog.getByRole("button", { name: "Cerrar", exact: true }).click();
+  await record.getByText("Contratación de ejemplo completada", { exact: true }).waitFor();
+  await record.getByRole("button", { name: "Volver a candidatos", exact: true }).click();
   console.log(
     "PASS public application -> candidate answers -> note -> offer -> hiring, cross-tab synchronization"
   );
 
   await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto(vacancyUrl);
   await page
     .getByRole("button", { name: "Acciones de Coordinador de talento", exact: true })
     .click();
@@ -281,11 +294,103 @@ async function main() {
   );
   await page.reload();
   await page.getByRole("button", { name: "Coordinador de talento", exact: true }).waitFor();
-  await page.getByRole("tab", { name: "Contrataciones", exact: true }).click();
+  await page.getByRole("button", { name: "Contrataciones", exact: true }).click();
   await page
     .getByRole("button", { name: "Abrir expediente de Elena Prueba", exact: true })
     .waitFor();
   await screenshot("hiring-desktop");
+  // Standalone module views: shared records, dashboard links and agenda.
+  await page.getByRole("button", { name: "Dashboard", exact: true }).click();
+  await page
+    .getByLabel("Vacante del dashboard", { exact: true })
+    .selectOption("auxiliar-administrativo");
+  await page.getByRole("link", { name: /Candidatos por revisar/ }).click();
+  await page.waitForURL("**/candidatos?etapa=new&vacante=auxiliar-administrativo");
+  await page.getByRole("button", { name: "Abrir expediente de Ana García", exact: true }).waitFor();
+  assert.equal(await page.locator("tbody tr").count(), 1);
+  await page.getByRole("button", { name: "Entrevistas", exact: true }).click();
+  await page.getByRole("button", { name: "Agendar entrevista", exact: true }).click();
+  await dialog.getByLabel("Candidato *", { exact: true }).selectOption("ana");
+  const future = new Date(Date.now() + 2 * 86400000).toISOString().slice(0, 16);
+  await dialog.getByLabel("Fecha y hora *", { exact: true }).fill(future);
+  await dialog.getByLabel("Lugar o medio *", { exact: true }).fill("Sucursal Centro");
+  await dialog.getByLabel("Entrevistador", { exact: true }).fill("Equipo de prueba");
+  await dialog.getByRole("button", { name: "Guardar entrevista", exact: true }).click();
+  await dialog.waitFor({ state: "hidden" });
+  const interviewCard = page
+    .locator("article")
+    .filter({ has: page.getByRole("button", { name: "Ana García", exact: true }) });
+  await interviewCard.waitFor();
+  await screenshot("interviews-desktop");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await noOverflow();
+  await screenshot("interviews-mobile");
+  await interviewCard.getByRole("button", { name: "Reprogramar", exact: true }).click();
+  await dialog
+    .getByLabel("Fecha y hora *", { exact: true })
+    .fill(new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 16));
+  await dialog.getByRole("button", { name: "Guardar entrevista", exact: true }).click();
+  await dialog.waitFor({ state: "hidden" });
+  await interviewCard.getByRole("button", { name: "Marcar realizada", exact: true }).click();
+  await page.getByRole("button", { name: /^Realizadas/ }).click();
+  await interviewCard.waitFor();
+  await interviewCard.getByRole("button", { name: "Ana García", exact: true }).click();
+  await page.waitForURL("**/candidatos/ana?seccion=activity");
+  await page.getByText(/Entrevista reprogramada:/).waitFor();
+  await page.getByText(/realizada \(prueba\)/).waitFor();
+  await page.reload();
+  await record.getByRole("heading", { name: "Ana García", exact: true }).waitFor();
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.getByRole("button", { name: "Selección", exact: true }).click();
+  const board = page.locator('[aria-label="Tablero de selección"]');
+  await board.getByRole("combobox", { name: "Etapa de Ana García", exact: true }).waitFor();
+  const handle2 = board.getByRole("button", { name: "Mover a Ana García", exact: true });
+  const target2 = board.getByRole("region", { name: "Etapa En revisión", exact: true });
+  await handle2.scrollIntoViewIfNeeded();
+  const from = await handle2.boundingBox(),
+    to = await target2.boundingBox();
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(to.x + to.width / 2, to.y + 40, { steps: 15 });
+  await page.mouse.up();
+  await page.waitForFunction(
+    () =>
+      document.querySelector(
+        '[aria-label="Tablero de selección"] select[aria-label="Etapa de Ana García"]'
+      ).value === "review"
+  );
+  await screenshot("selection-desktop");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await noOverflow();
+  await screenshot("selection-mobile");
+  await page
+    .getByRole("combobox", { name: "Etapa de Luis Hernández", exact: true })
+    .selectOption("offer");
+  await page
+    .getByRole("combobox", { name: "Etapa de Luis Hernández", exact: true })
+    .selectOption("hired");
+  await page.waitForURL("**/candidatos/luis?seccion=hiring");
+  assert(
+    await record
+      .getByRole("button", { name: "Completar contratación de prueba", exact: true })
+      .isDisabled()
+  );
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.getByRole("button", { name: "Catálogos", exact: true }).click();
+  await page.getByLabel("Agregar modalidad de prueba", { exact: true }).fill("En campo");
+  await page.getByRole("button", { name: "Agregar modalidad", exact: true }).click();
+  await page.getByText("En campo", { exact: true }).waitFor();
+  await screenshot("catalogs-desktop");
+  await page.setViewportSize({ width: 390, height: 844 });
+  await noOverflow();
+  await screenshot("catalogs-mobile");
+  await page.getByRole("button", { name: "Nueva vacante", exact: true }).click();
+  await dialog.getByLabel("Modalidad *", { exact: true }).selectOption({ label: "En campo" });
+  await dialog.getByRole("button", { name: "Cancelar", exact: true }).click();
+  await dialog.getByRole("button", { name: "Salir sin guardar", exact: true }).click();
+  console.log(
+    "PASS dashboard filters -> standalone lists, interview create/reschedule/complete/history, selection drag and mobile control, hiring guard, shared catalogs"
+  );
   assert.deepEqual(writes, [], "Demo must never send API mutations");
   assert.deepEqual(errors, [], "Browser errors");
   console.log(

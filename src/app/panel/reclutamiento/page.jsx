@@ -1,7 +1,7 @@
-import RecruitmentModule from "@/components/reclutamiento/RecruitmentModule";
+import RecruitmentDashboard from "@/components/reclutamiento/RecruitmentDashboard";
 
 export const metadata = { title: "Reclutamiento | ADAMIA" };
 
 export default function RecruitmentPage() {
-  return <RecruitmentModule />;
+  return <RecruitmentDashboard />;
 }

@@ -4,25 +4,28 @@ import { useState } from "react";
 import { Plus, MapPin, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { uid, normalize } from "@/lib/reclutamiento/model";
-import { Field, Modal } from "./RecruitmentUI";
+import { Field, Modal, PageSurface } from "./RecruitmentUI";
 import s from "./reclutamiento.module.css";
 
-export default function CatalogDialog({ data, onSave, onClose }) {
+export default function CatalogDialog({ data, onSave, onClose, embedded = false }) {
+  const Surface = embedded ? PageSurface : Modal;
   const [name, setName] = useState("");
   const [requiresBranch, setRequiresBranch] = useState(true);
   const [error, setError] = useState("");
   return (
-    <Modal
+    <Surface
       title="Catálogos de la vacante"
       description="Ubicación y modalidad son datos independientes."
       onClose={onClose}
       footer={
-        <>
-          <span className={s.small}>Catálogos de ejemplo</span>
-          <Button variant="outline" onClick={onClose}>
-            Listo
-          </Button>
-        </>
+        embedded ? null : (
+          <>
+            <span className={s.small}>Catálogos de ejemplo</span>
+            <Button variant="outline" onClick={onClose}>
+              Listo
+            </Button>
+          </>
+        )
       }
     >
       <div className={s.formGrid}>
@@ -107,6 +110,6 @@ export default function CatalogDialog({ data, onSave, onClose }) {
           </form>
         </section>
       </div>
-    </Modal>
+    </Surface>
   );
 }

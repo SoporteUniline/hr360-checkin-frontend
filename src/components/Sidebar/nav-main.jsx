@@ -60,6 +60,7 @@ import {
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { RECRUITMENT_NAV, isRecruitmentNavActive } from "@/components/reclutamiento/navigation";
 
 const dashboardItems = [
   {
@@ -132,6 +133,17 @@ const dashboardItems = [
 
 const menuGroups = [
   {
+    group: "RECLUTAMIENTO Y SELECCIÓN",
+    groupIcon: BriefcaseBusiness,
+    items: RECRUITMENT_NAV.map((item) => ({
+      title: item.label,
+      url: item.href,
+      icon: item.icon,
+      rol: "Recruiter",
+      matchPrefix: item.matchPrefix,
+    })),
+  },
+  {
     group: "GESTIÓN DE PERSONAL",
     groupIcon: UsersIcon,
     items: [
@@ -140,12 +152,6 @@ const menuGroups = [
         url: "/panel/empleados",
         rol: "Recruiter",
         icon: UsersIcon,
-      },
-      {
-        title: "Reclutamiento",
-        url: "/panel/reclutamiento",
-        rol: "Recruiter",
-        icon: BriefcaseBusiness,
       },
       {
         title: "Turnos",
@@ -421,10 +427,11 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
     cierreRef.current = setTimeout(() => setOpen(false), 140);
   };
 
-  const urls = items.flatMap((i) =>
-    i.children ? i.children.map((c) => c.url) : [i.url],
+  const moduloActivo = items.some((item) =>
+    item.children
+      ? item.children.some((child) => isRecruitmentNavActive(path, child))
+      : isRecruitmentNavActive(path, item),
   );
-  const moduloActivo = urls.includes(path);
 
   const enlace = (it) => (
     <button
@@ -435,7 +442,7 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
         onNavigate(it.url);
       }}
       className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[12.5px] font-medium transition-colors ${
-        path === it.url
+        isRecruitmentNavActive(path, it)
           ? "bg-[#f0f5ff] font-semibold text-[#1d4ed8]"
           : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
       }`}
@@ -443,7 +450,7 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
       {it.icon ? (
         <it.icon
           size={15}
-          className={path === it.url ? "text-[#2563EB]" : "text-gray-400"}
+          className={isRecruitmentNavActive(path, it) ? "text-[#2563EB]" : "text-gray-400"}
         />
       ) : null}
       <span>{it.title}</span>
@@ -667,7 +674,7 @@ export function NavMain() {
                   tooltip={item.title}
                   onClick={() => handleClick(item.url)}
                   className={`${
-                    path === item.url ? ITEM_ACTIVO : ITEM_NORMAL
+                    isRecruitmentNavActive(path, item) ? ITEM_ACTIVO : ITEM_NORMAL
                   } cursor-pointer flex justify-between`}
                 >
                   <div className="flex items-center gap-2">
@@ -730,7 +737,7 @@ export function NavMain() {
                               }
                             }}
                             className={`${
-                              path === item.url ? ITEM_ACTIVO : ITEM_NORMAL
+                              isRecruitmentNavActive(path, item) ? ITEM_ACTIVO : ITEM_NORMAL
                             } cursor-pointer flex justify-between`}
                           >
                             <div className="flex items-center gap-2">
@@ -762,7 +769,7 @@ export function NavMain() {
                                       tooltip={child.title}
                                       onClick={() => handleClick(child.url)}
                                       className={`${
-                                        path === child.url
+                                        isRecruitmentNavActive(path, child)
                                           ? ITEM_ACTIVO
                                           : ITEM_NORMAL
                                       } cursor-pointer flex items-center gap-2 text-sm`}

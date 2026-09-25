@@ -1,0 +1,542 @@
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 11px;
+  color: #8b98aa;
+}
+.breadcrumb a {
+  color: #5574ae;
+}
+.mobileNav {
+  display: none;
+}
+.dashboardIntro {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 10px 0 4px;
+}
+.dashboardIntro h2 {
+  font-size: 25px;
+  font-weight: 650;
+  letter-spacing: -0.04em;
+  color: #243d60;
+  margin: 7px 0;
+}
+.dashboardIntro select {
+  width: auto;
+  max-width: 250px;
+}
+.dashboardGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(300px, 1fr);
+  gap: 20px;
+}
+.textLink {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  color: #4165c5;
+  font-size: 12px;
+  font-weight: 550;
+  white-space: nowrap;
+}
+.stageSummary {
+  display: flex;
+  flex-direction: column;
+  gap: 19px;
+}
+.stageRow {
+  display: grid;
+  grid-template-columns: 110px 1fr 24px 14px;
+  align-items: center;
+  gap: 12px;
+}
+.stageRow strong {
+  color: #344d71;
+  text-align: right;
+}
+.stageRow > svg {
+  color: #90a0b6;
+}
+.stageTrack {
+  height: 7px;
+  background: #f0f3f9;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.stageTrack span {
+  height: 100%;
+  display: block;
+  border-radius: 10px;
+  background: #7899ed;
+}
+.stageTrack span[data-tone="violet"] {
+  background: #a08bcf;
+}
+.stageTrack span[data-tone="amber"] {
+  background: #dbb96f;
+}
+.stageTrack span[data-tone="green"] {
+  background: #73b59d;
+}
+.stageTrack span[data-tone="neutral"] {
+  background: #a1aaba;
+}
+.attention {
+  background: #fafcff;
+}
+.liveDot {
+  height: 8px;
+  width: 8px;
+  border-radius: 50%;
+  background: #6ea38e;
+  box-shadow: 0 0 0 5px #edf5f1;
+}
+.task {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  border-bottom: 1px solid #e9eef7;
+  padding-bottom: 17px;
+}
+.task:last-of-type {
+  border: 0;
+  padding-bottom: 0;
+}
+.task > div {
+  flex: 1;
+  min-width: 0;
+}
+.task strong {
+  color: #354d6e;
+  font-size: 13px;
+  font-weight: 600;
+}
+.task p {
+  color: #8491a6;
+  font-size: 12px;
+  margin-top: 5px;
+}
+.task > svg {
+  color: #869fcb;
+}
+.taskIcon {
+  display: grid;
+  place-items: center;
+  height: 40px;
+  width: 40px;
+  border: 1px solid #e2eafa;
+  border-radius: 11px;
+  background: #fff;
+  color: #6d8cca;
+  flex-shrink: 0;
+}
+.chartTotal {
+  font-size: 24px;
+  color: #4264a3;
+}
+.chartTotal small {
+  font-size: 11px;
+  font-weight: 400;
+  color: #8a98ac;
+}
+.barChart {
+  display: flex;
+  height: 135px;
+  gap: 4px;
+  align-items: flex-end;
+  border-bottom: 1px solid #e6edf7;
+  background: repeating-linear-gradient(
+    to top,
+    transparent 0px,
+    transparent 43px,
+    #f3f6fb 44px,
+    #f3f6fb 45px
+  );
+}
+.barColumn {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  min-width: 1px;
+}
+.barColumn span {
+  width: 100%;
+  max-width: 45px;
+  margin: auto auto 0;
+  background: #7d9beb;
+  border-radius: 4px 4px 0 0;
+}
+.barColumn span[data-empty="true"] {
+  background: #dce5f6;
+}
+.chartData {
+  margin-top: 16px;
+  font-size: 11px;
+  color: #6880a6;
+}
+.chartData summary {
+  cursor: pointer;
+}
+.chartDataGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 20px;
+  margin-top: 14px;
+  max-height: 180px;
+  overflow: auto;
+}
+.chartDataGrid span {
+  display: flex;
+  justify-content: space-between;
+}
+.agendaItem {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.agendaItem > div:last-child {
+  min-width: 0;
+}
+.agendaItem strong {
+  color: #334c70;
+  font-size: 13px;
+  font-weight: 600;
+}
+.agendaItem p {
+  color: #7e8ca3;
+  font-size: 12px;
+  margin: 4px 0;
+}
+.agendaItem span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #93a0b4;
+  flex-wrap: wrap;
+}
+.dateTile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 58px;
+  width: 52px;
+  border: 1px solid #e2e9f5;
+  border-radius: 12px;
+  background: #f7f9fe;
+  flex-shrink: 0;
+}
+.dateTile strong {
+  font-size: 22px;
+  color: #5776b4;
+}
+.dateTile span {
+  font-size: 10px;
+  text-transform: uppercase;
+}
+.vacancySummary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #edf1f7;
+  padding-bottom: 17px;
+}
+.vacancySummary:last-child {
+  border: 0;
+  padding-bottom: 0;
+}
+.vacancySummary > div {
+  flex: 1;
+}
+.vacancySummary strong {
+  font-size: 13px;
+  font-weight: 600;
+  color: #354d6d;
+}
+.vacancySummary p {
+  color: #8b98ab;
+  font-size: 11px;
+  margin-top: 5px;
+}
+.vacancySummary > span {
+  color: #476baf;
+  font-weight: 600;
+}
+.vacancySummary small {
+  font-size: 10px;
+  font-weight: 400;
+}
+.pageSurface {
+  border: 1px solid #e4eaf3;
+  border-radius: 14px;
+  background: #fff;
+}
+.pageBody {
+  padding: 26px;
+}
+.pageFooter {
+  padding: 18px 26px;
+  border-top: 1px solid #e6edf5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.board {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(235px, 1fr));
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 14px;
+  min-height: 340px;
+  align-items: start;
+}
+.boardColumn {
+  background: #f5f7fc;
+  border: 1px solid #e7edf6;
+  border-radius: 12px;
+  padding: 12px;
+  min-height: 285px;
+}
+.boardColumn[data-over="true"] {
+  background: #eaf1ff;
+  border-color: #88a7f0;
+}
+.boardHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 2px 0 15px;
+}
+.boardHead strong {
+  font-size: 12px;
+  color: #687c9d;
+}
+.candidateCard {
+  padding: 15px;
+  border: 1px solid #e1e8f3;
+  background: white;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+  box-shadow: 0 2px 4px #34507d05;
+}
+.candidateCard[data-dragging="true"] {
+  opacity: 0.4;
+}
+.candidateCard button {
+  text-align: left;
+}
+.candidateCard select {
+  font-size: 11px !important;
+  padding: 7px !important;
+  min-height: 34px !important;
+}
+.candidateCard .cardRole {
+  font-size: 12px;
+  color: #7e8ea7;
+}
+.candidateCard .cardDate {
+  font-size: 10px;
+  color: #8a9ab1;
+}
+.cardHandle {
+  padding: 6px;
+  cursor: grab;
+  touch-action: none;
+  color: #8ea3c5;
+}
+.boardEmpty {
+  font-size: 12px;
+  color: #93a1b8;
+  text-align: center;
+  padding: 35px 8px;
+}
+.interviewCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 22px;
+  border: 1px solid #e2e8f2;
+  border-radius: 12px;
+  background: #fff;
+}
+.interviewInfo {
+  flex: 1;
+  min-width: 0;
+}
+.interviewInfo h3 {
+  font-size: 16px;
+  color: #314b70;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+.interviewMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  color: #7c8ba3;
+  font-size: 12px;
+  margin-top: 14px;
+}
+.interviewMeta span {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.interviewActions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+}
+.interviewStatus {
+  font-size: 11px;
+  border-radius: 6px;
+  padding: 4px 8px;
+  background: #eef3ff;
+  color: #5275ba;
+}
+.interviewStatus[data-status="pending"] {
+  color: #a57522;
+  background: #fff5df;
+}
+.interviewStatus[data-status="completed"] {
+  color: #39876b;
+  background: #eef9f2;
+}
+.interviewStatus[data-status="cancelled"] {
+  color: #8290a4;
+  background: #f1f3f6;
+}
+.sectionToolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.selectionMobile {
+  display: none;
+}
+@media (max-width: 1200px) {
+  .dashboardGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .dashboardIntro > div:last-child {
+    width: 100%;
+  }
+  .interviewCard {
+    flex-wrap: wrap;
+  }
+  .interviewActions {
+    flex-direction: row;
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+}
+@media (max-width: 767px) {
+  .mobileNav {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 0 0 8px;
+    scrollbar-width: thin;
+  }
+  .mobileNav a {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 12px;
+    white-space: nowrap;
+    border-radius: 8px;
+    border: 1px solid #e4eaf5;
+    color: #7e8ea7;
+    font-size: 12px;
+  }
+  .mobileNav a[aria-current="page"] {
+    border-color: #d9e3fc;
+    background: #edf3ff;
+    color: #3c65c9;
+  }
+  .dashboardIntro h2 {
+    font-size: 22px;
+  }
+  .dashboardIntro select {
+    max-width: 100%;
+    width: 100%;
+  }
+  .dashboardIntro > div:last-child {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 145px;
+    gap: 8px;
+  }
+  .dashboardGrid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .stageRow {
+    grid-template-columns: 108px 1fr 20px 12px;
+    gap: 8px;
+  }
+  .chartTotal {
+    font-size: 20px;
+  }
+  .chartTotal small {
+    display: block;
+  }
+  .chartDataGrid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .pageBody {
+    padding: 18px;
+  }
+  .pageFooter {
+    padding: 16px 18px;
+  }
+  .pageFooter > div {
+    width: 100%;
+  }
+  .board {
+    display: none;
+  }
+  .selectionMobile {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .candidateCard {
+    margin-top: 0;
+  }
+  .interviewCard {
+    padding: 17px;
+    gap: 14px;
+  }
+  .interviewInfo {
+    flex-basis: calc(100% - 68px);
+  }
+  .interviewActions {
+    justify-content: flex-start;
+  }
+  .interviewActions button {
+    flex: 1;
+  }
+  .breadcrumb {
+    font-size: 10px;
+  }
+  .vacancySummary small {
+    display: block;
+  }
+}
