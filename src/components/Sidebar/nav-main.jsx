@@ -134,18 +134,25 @@ const dashboardItems = [
   },
 ];
 
+const recruitmentEnabled =
+  process.env.NEXT_PUBLIC_RECRUITMENT_ENABLED === "true";
+
 const menuGroups = [
-  {
-    group: "RECLUTAMIENTO Y SELECCIÓN",
-    groupIcon: BriefcaseBusiness,
-    items: RECRUITMENT_NAV.map((item) => ({
-      title: item.label,
-      url: item.href,
-      icon: item.icon,
-      rol: "Recruiter",
-      matchPrefix: item.matchPrefix,
-    })),
-  },
+  ...(recruitmentEnabled
+    ? [
+        {
+          group: "RECLUTAMIENTO Y SELECCIÓN",
+          groupIcon: BriefcaseBusiness,
+          items: RECRUITMENT_NAV.map((item) => ({
+            title: item.label,
+            url: item.href,
+            icon: item.icon,
+            rol: "Recruiter",
+            matchPrefix: item.matchPrefix,
+          })),
+        },
+      ]
+    : []),
   {
     group: "GESTIÓN DE PERSONAL",
     groupIcon: UsersIcon,
