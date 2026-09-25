@@ -141,12 +141,12 @@ const menuGroups = [
         rol: "Recruiter",
         icon: UsersIcon,
       },
-      {
-        title: "Reclutamiento",
-        url: "/panel/reclutamiento",
-        rol: "Recruiter",
-        icon: BriefcaseBusiness,
-      },
+      // {
+      //   title: "Reclutamiento",
+      //   url: "/panel/reclutamiento",
+      //   rol: "Recruiter",
+      //   icon: BriefcaseBusiness,
+      // },
       {
         title: "Turnos",
         url: "/panel/turnos",
