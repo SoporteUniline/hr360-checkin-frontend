@@ -42,12 +42,12 @@ for b in range(nb):
         p=lp(p,.06)
         add(p,st,pan=rng.uniform(-.4,.4))
     # bass
-    if st>=3.7-0.01:
+    if st>=6.6-0.01:
         for k in range(8):
-            if st+k*beat/2<23.4 or st+k*beat/2>=24.4:
+            if st+k*beat/2<25.05 or st+k*beat/2>=26.05:
                 add(tone(mid(root-12),beat/2*.9,'saw',a=.005)*np.exp(-np.arange(int(beat/2*.9*sr))/sr*5)*.18, st+k*beat/2)
     # arp
-    if st>=9.7 and not (22.4<=st<24.4):
+    if st>=14.2 and not (24.05<=st<26.05):
         seq=ch+[ch[1]+12,ch[2]+12,ch[1]+12,ch[0]+12,ch[2]]
         for k in range(8):
             add(tone(mid(seq[k]+12),beat/2,'sine',a=.003)*np.exp(-np.arange(int(beat/2*sr))/sr*9)*.09, st+k*beat/2, pan=(-.5 if k%2 else .5))
@@ -55,32 +55,32 @@ for b in range(nb):
 for k in range(int(T/beat)):
     tt=k*beat
     if tt>=33: break
-    if 22.4<=tt<24.4: continue
-    if tt>=3.7: add(kick(),tt,gain=.8)
-    if tt>=9.7 and k%2==1: add(clap(),tt)
+    if 25.05<=tt<26.05: continue
+    if tt>=6.6: add(kick(),tt,gain=.8)
+    if tt>=14.2 and k%2==1: add(clap(),tt)
     add(hat(),tt+beat/2,pan=.3)
-    if tt>=14.9: add(hat(),tt+beat/4,pan=-.3,gain=.6); add(hat(),tt+3*beat/4,pan=-.3,gain=.6)
+    if tt>=18.25: add(hat(),tt+beat/4,pan=-.3,gain=.6); add(hat(),tt+3*beat/4,pan=-.3,gain=.6)
 # whooshes on transitions
 def whoosh(d=.7):
     n=int(d*sr); x=rng.standard_normal(n); x=lp(x,.15)
     e=np.sin(np.pi*np.arange(n)/n)**2; return x*e*.5
-for ts in (3.7,9.7,14.9,20.1,30.0): add(whoosh(),ts-.45,pan=0)
+for ts in (6.6,14.2,18.25,21.45,24.7,29.45): add(whoosh(),ts-.45,pan=0,gain=.6)
 # riser into offer
 n=int(2*sr); x=np.arange(n)/sr
 rise=np.sin(2*np.pi*np.cumsum(200+1400*(x/2)**2)/sr)*.08*(x/2)**2 + lp(rng.standard_normal(n),.3)*.25*(x/2)**3
-add(rise,22.4)
+add(rise,24.05)
 # snare roll
 for k in range(16):
-    add(clap(),23.4+k*(1/16),gain=.25+.5*k/16)
+    add(clap(),25.05+k*(1/16),gain=.25+.5*k/16)
 # impact
 n=int(1.8*sr); x=np.arange(n)/sr
 imp=np.sin(2*np.pi*np.cumsum(35+80*np.exp(-x*10))/sr)*np.exp(-x*2.2)*1.0+lp(rng.standard_normal(n),.2)*np.exp(-x*4)*.4
-add(imp,24.4)
+add(imp,26.05)
 # ding on success sounds
-for ts in (6.7,18.3):
+for ts in (9.3,20.45):
     for m,dt in ((84,0),(91,.08)): add(tone(mid(m),.5,'sine',a=.002)*np.exp(-np.arange(int(.5*sr))/sr*6)*.12,ts+dt)
 mix=np.stack([L,R],1)
-fade=np.ones(N); fs=int(32.5*sr); fade[fs:]=np.linspace(1,0,N-fs); mix*=fade[:,None]
+fade=np.ones(N); fs=int(32.6*sr); fade[fs:]=np.linspace(1,0,N-fs); mix*=fade[:,None]
 mix/=np.abs(mix).max()/0.89
 mix=np.tanh(mix*1.3)/np.tanh(1.3)*0.9
 w=wave.open('music.wav','wb'); w.setnchannels(2); w.setsampwidth(2); w.setframerate(sr)
