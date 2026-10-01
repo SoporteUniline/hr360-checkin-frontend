@@ -1,8 +1,10 @@
 import numpy as np, wave
-sr=44100; T=33.5; N=int(sr*T); L=np.zeros(N); R=np.zeros(N)
+sr=44100; T=37.5; N=int(sr*T); L=np.zeros(N); R=np.zeros(N)
 mid=lambda m:440*2**((m-69)/12)
 def add(sig,st,pan=0,g=1):
-    i=int(st*sr); j=min(N,i+len(sig)); s=sig[:j-i]*g; L[i:j]+=s*(1-pan); R[i:j]+=s*(1+pan)
+    i=int(st*sr)
+    if i>=N: return
+    j=min(N,i+len(sig)); s=sig[:j-i]*g; L[i:j]+=s*(1-pan); R[i:j]+=s*(1+pan)
 def pad(f,d):
     x=np.arange(int(d*sr))/sr
     w=sum(np.sin(2*np.pi*f*k*x*(1+0.0015*(k%2)))/(k**1.6) for k in range(1,6))
