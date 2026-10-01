@@ -44,6 +44,20 @@ import {
 // ─── Nav items estáticos (espejo del sidebar) ────────────────────────────────
 // rol: "Admin" | "Recruiter" (User también mapea a Recruiter)
 const ALL_NAV_ITEMS = [
+  {
+    title: "Solicitudes de mi equipo",
+    url: "/panel/solicitudes-equipo",
+    rol: "Recruiter",
+    section: "Ausencias y Permisos",
+    icon: ClipboardCheck,
+  },
+  {
+    title: "Solicitudes de mi equipo",
+    url: "/empleado/panel/solicitudes-equipo",
+    rol: "Empleado",
+    section: "Mi equipo",
+    icon: ClipboardCheck,
+  },
   // Admin
   {
     title: "Empresas",

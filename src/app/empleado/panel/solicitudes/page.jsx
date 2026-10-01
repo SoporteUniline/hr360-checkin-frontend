@@ -3,12 +3,10 @@ import { PermissionDialog } from "@/components/Permission/PermissionDialog";
 import { PermissionTable } from "@/components/Permission/PermissionTable";
 import TablePagination from "@/components/TablePagination";
 import { Button } from "@/components/ui/button";
-import {
-  usePermisosEmpleado,
-  usePermisosPorAutorizar,
-} from "@/hooks/usePermisoPorEmpleado";
+import { usePermisosEmpleado } from "@/hooks/usePermisoPorEmpleado";
+import Link from "next/link";
 import { Plus } from "lucide-react";
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import useSWR from "swr";
 import { useAuth } from "@/context/AuthContext";
 import { fetcherWithToken } from "@/lib/fetcher";
@@ -19,9 +17,6 @@ const SolicitudesPage = () => {
   const [selected, setSelected] = useState(null);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const [pageAutorizar, setPageAutorizar] = useState(1);
-  const [limitAutorizar, setLimitAutorizar] = useState(10);
-  const [tab, setTab] = useState("mis");
 
   const { dataUser } = useAuth();
 
@@ -52,28 +47,12 @@ const SolicitudesPage = () => {
 
   const { data, total, mutate } = usePermisosEmpleado(page, limit);
 
-  const {
-    data: saldoVacaciones,
-    isLoading: cargandoSaldoVacaciones,
-    mutate: mutateSaldoVacaciones,
-  } = useSWR(
+  const { data: saldoVacaciones, isLoading: cargandoSaldoVacaciones } = useSWR(
     dataUser?.tipo_usuario === "Empleado"
       ? "/checador/vacaciones/mi-saldo"
       : null,
     fetcherWithToken,
   );
-
-  const {
-    data: dataAutorizar,
-    total: totalAutorizar,
-    mutate: mutateAutorizar,
-  } = usePermisosPorAutorizar(pageAutorizar, limitAutorizar);
-
-  useEffect(() => {
-    if (tab === "autorizar" && totalAutorizar === 0) {
-      setTab("mis");
-    }
-  }, [tab, totalAutorizar]);
 
   return (
     <>
@@ -160,55 +139,21 @@ const SolicitudesPage = () => {
         </div>
       )}
 
-      <div className="mt-6 flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant={tab === "mis" ? "default" : "outline"}
-          className={
-            tab === "mis"
-              ? "bg-[#2563EB] text-white hover:bg-[#1d4ed8]"
-              : "bg-white"
-          }
-          onClick={() => setTab("mis")}
-        >
-          Mis solicitudes
-          <span
-            className={
-              tab === "mis"
-                ? "ml-2 rounded-full bg-white/20 px-2 py-0.5 text-xs"
-                : "ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700"
-            }
-          >
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-base font-semibold text-gray-900">
+          Mis solicitudes{" "}
+          <span className="ml-2 text-sm font-normal text-gray-500">
             {total}
           </span>
+        </h2>
+        <Button asChild variant="outline">
+          <Link href="/empleado/panel/solicitudes-equipo">
+            Solicitudes de mi equipo
+          </Link>
         </Button>
-
-        {totalAutorizar > 0 && (
-          <Button
-            type="button"
-            variant={tab === "autorizar" ? "default" : "outline"}
-            className={
-              tab === "autorizar"
-                ? "bg-[#2563EB] text-white hover:bg-[#1d4ed8]"
-                : "bg-white"
-            }
-            onClick={() => setTab("autorizar")}
-          >
-            Por autorizar
-            <span
-              className={
-                tab === "autorizar"
-                  ? "ml-2 rounded-full bg-white/20 px-2 py-0.5 text-xs"
-                  : "ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700"
-              }
-            >
-              {totalAutorizar}
-            </span>
-          </Button>
-        )}
       </div>
 
-      {tab === "mis" && data.length > 0 && (
+      {data.length > 0 && (
         <>
           <PermissionTable
             data={data}
@@ -228,33 +173,7 @@ const SolicitudesPage = () => {
         </>
       )}
 
-      {tab === "autorizar" && totalAutorizar > 0 && (
-        <>
-          <PermissionTable
-            data={dataAutorizar}
-            setOpen={setOpen}
-            setMode={setMode}
-            setSelected={setSelected}
-            modoAutorizar
-            festivosSet={festivosSet}
-            mutate={() => {
-              mutateAutorizar?.();
-              mutate?.();
-              mutateSaldoVacaciones?.();
-            }}
-          />
-
-          <TablePagination
-            page={pageAutorizar}
-            limit={limitAutorizar}
-            total={totalAutorizar}
-            onPageChange={(newPage) => setPageAutorizar(newPage)}
-            onLimitChange={(newLimit) => setLimitAutorizar(newLimit)}
-          />
-        </>
-      )}
-
-      {tab === "mis" && data.length === 0 && (
+      {data.length === 0 && (
         <div className="mt-4 rounded-lg border border-dashed p-8 text-center text-gray-500">
           No tienes solicitudes registradas.
         </div>

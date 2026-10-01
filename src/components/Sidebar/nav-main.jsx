@@ -67,6 +67,12 @@ import {
 
 const dashboardItems = [
   {
+    title: "Solicitudes de mi equipo",
+    url: "/empleado/panel/solicitudes-equipo",
+    rol: "Empleado",
+    icon: ClipboardCheck,
+  },
+  {
     title: "Empresas",
     url: "/dashboard/empresas",
     rol: "Admin",
@@ -283,6 +289,12 @@ const menuGroups = [
     group: "AUSENCIAS Y PERMISOS",
     groupIcon: CalendarDays,
     items: [
+      {
+        title: "Solicitudes de mi equipo",
+        url: "/panel/solicitudes-equipo",
+        rol: "Recruiter",
+        icon: ClipboardCheck,
+      },
       {
         title: "Vacaciones",
         rol: "Recruiter",
