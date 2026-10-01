@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Adamia Lanzamiento</title>
+<style>
+@font-face{font-family:P;font-weight:400;src:url(node_modules/@fontsource/poppins/files/poppins-latin-400-normal.woff2)}
+@font-face{font-family:P;font-weight:600;src:url(node_modules/@fontsource/poppins/files/poppins-latin-600-normal.woff2)}
+@font-face{font-family:P;font-weight:700;src:url(node_modules/@fontsource/poppins/files/poppins-latin-700-normal.woff2)}
+@font-face{font-family:P;font-weight:800;src:url(node_modules/@fontsource/poppins/files/poppins-latin-800-normal.woff2)}
+@font-face{font-family:M;font-weight:500;src:url(node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-500-normal.woff2)}
+:root{
+  --cyan:#2BBAFF;--blue:#3B6BF6;--violet:#6C59FF;--deep:#4141D6;
+  --bg:#060A1C;--ink:#0F172A;--muted:#64748B;--line:#E7EAF3;
+  --ok:#16A34A;--okbg:#DCFCE7;--warn:#B45309;--warnbg:#FEF3C7;--bad:#DC2626;--badbg:#FEE2E2;--info:#2563EB;--infobg:#DBEAFE;
+  --grad:linear-gradient(95deg,#2BBAFF 0%,#4F7BFF 45%,#7C5CFF 100%);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1080px;height:1920px;overflow:hidden;background:var(--bg);font-family:P,sans-serif;color:#fff}
+#stage{position:relative;width:1080px;height:1920px;overflow:hidden;background:var(--bg)}
+.blob{position:absolute;border-radius:50%;filter:blur(120px);opacity:.55;will-change:transform}
+#b1{width:900px;height:900px;background:#1F7BFF;left:-300px;top:-200px}
+#b2{width:800px;height:800px;background:#6C3BFF;right:-320px;top:700px}
+#b3{width:700px;height:700px;background:#14B8FF;left:-200px;bottom:-250px;opacity:.35}
+#grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:90px 90px;mask-image:radial-gradient(ellipse at 50% 45%,#000 30%,transparent 80%)}
+#noise{position:absolute;inset:0;opacity:.06;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+#brand{position:absolute;left:90px;top:150px;display:flex;align-items:center;gap:18px;z-index:5}
+#brand img{height:58px}
+.wm{font-weight:600;letter-spacing:.2em;font-size:30px;color:#fff}
+.scene{position:absolute;inset:0;padding:250px 90px 330px;display:none;flex-direction:column;justify-content:center;z-index:2}
+.eyebrow{font-family:M;font-weight:500;font-size:26px;letter-spacing:.14em;color:#8FB4FF;text-transform:uppercase;margin-bottom:26px;display:flex;align-items:center;gap:14px}
+.eyebrow:before{content:"";width:12px;height:12px;border-radius:50%;background:var(--cyan);box-shadow:0 0 18px var(--cyan)}
+h1{font-weight:800;font-size:112px;line-height:1.02;letter-spacing:-.04em}
+h1 .l{display:block;overflow:hidden;padding-bottom:10px;margin-bottom:-10px}
+h1 .l>span{display:inline-block}
+.g{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-size:36px;line-height:1.4;color:#B8C4E6;margin-top:28px;max-width:860px}
+
+/* chips */
+.chips{display:flex;flex-wrap:wrap;gap:16px;margin-top:40px}
+.chip{display:flex;align-items:center;gap:12px;padding:16px 26px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);font-size:28px;font-weight:600}
+.chip i{width:14px;height:14px;border-radius:50%;background:var(--grad);display:block}
+
+/* pains */
+.pains{margin-top:80px;display:flex;flex-direction:column;gap:26px}
+.pain{position:relative;display:flex;align-items:center;gap:28px;padding:40px 40px;border-radius:30px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);font-size:44px;font-weight:600}
+.pain .x{width:64px;height:64px;border-radius:18px;background:rgba(239,68,68,.16);display:grid;place-items:center;flex:none}
+.pain .strike{position:absolute;left:30px;right:30px;top:50%;height:6px;border-radius:6px;background:var(--grad);transform-origin:left center;box-shadow:0 0 24px rgba(76,123,255,.8)}
+
+/* cards */
+.card{background:#fff;border-radius:34px;color:var(--ink);box-shadow:0 40px 120px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.08);overflow:hidden}
+.chrome{height:64px;display:flex;align-items:center;gap:12px;padding:0 28px;border-bottom:1px solid var(--line);background:#F8FAFC}
+.chrome b{width:14px;height:14px;border-radius:50%;background:#D5DAE5;display:block}
+.chrome span{font-family:M;font-size:22px;color:#94A3B8;margin-left:14px}
+.cbody{padding:34px 40px 40px}
+.ct{font-size:36px;font-weight:700;letter-spacing:-.02em}
+.cs{font-size:22px;color:var(--muted);margin-top:4px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:26px 0 22px}
+.kpi{border-radius:22px;padding:20px 22px;border:1px solid var(--line)}
+.kpi .n{font-size:60px;font-weight:800;letter-spacing:-.03em;line-height:1.1}
+.kpi .k{font-size:21px;color:var(--muted);font-weight:600}
+.row{display:flex;align-items:center;gap:20px;padding:18px 0;border-top:1px solid var(--line)}
+.av{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:22px;color:#fff;flex:none}
+.rn{font-size:27px;font-weight:600;line-height:1.2}
+.ra{font-size:20px;color:var(--muted)}
+.rt{margin-left:auto;font-family:M;font-size:24px;color:#334155}
+.badge{font-size:19px;font-weight:700;padding:8px 16px;border-radius:999px;min-width:150px;text-align:center}
+.b-ok{background:var(--okbg);color:var(--ok)}.b-warn{background:var(--warnbg);color:var(--warn)}.b-bad{background:var(--badbg);color:var(--bad)}.b-info{background:var(--infobg);color:var(--info)}
+
+/* phone */
+.phone{position:relative;width:450px;height:790px;border-radius:70px;background:#0B1022;border:12px solid #1C2340;box-shadow:0 50px 140px rgba(0,0,0,.6),0 0 0 2px rgba(255,255,255,.08),0 0 120px rgba(59,107,246,.35);overflow:hidden}
+.notch{position:absolute;top:18px;left:50%;width:130px;height:34px;margin-left:-65px;border-radius:20px;background:#000;z-index:4}
+.cam{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 40%,#2A3352 0%,#121830 60%,#0A0E1F 100%)}
+.phead{position:absolute;top:80px;left:0;right:0;text-align:center;font-size:22px;color:#C9D4F2;font-weight:600;z-index:3}
+.phead small{display:block;font-family:M;font-size:17px;color:#7C8DB8;font-weight:500;margin-top:4px}
+.frame{position:absolute;left:60px;right:60px;top:180px;height:400px}
+.frame .c{position:absolute;width:70px;height:70px;border:7px solid var(--cyan);filter:drop-shadow(0 0 10px var(--cyan))}
+.frame .c1{left:0;top:0;border-right:0;border-bottom:0;border-radius:26px 0 0 0}
+.frame .c2{right:0;top:0;border-left:0;border-bottom:0;border-radius:0 26px 0 0}
+.frame .c3{left:0;bottom:0;border-right:0;border-top:0;border-radius:0 0 0 26px}
+.frame .c4{right:0;bottom:0;border-left:0;border-top:0;border-radius:0 0 26px 0}
+.scan{position:absolute;left:10px;right:10px;height:4px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);box-shadow:0 0 30px 8px rgba(43,186,255,.55)}
+.sheet{position:absolute;left:18px;right:18px;bottom:18px;border-radius:40px;background:#fff;color:var(--ink);padding:30px 30px 34px;z-index:3}
+.ok-ic{width:70px;height:70px;border-radius:50%;background:var(--ok);display:grid;place-items:center;box-shadow:0 0 0 10px var(--okbg)}
+.sheet .t{font-size:30px;font-weight:800;margin-top:20px;letter-spacing:-.02em}
+.sheet .m{font-family:M;font-size:21px;color:#334155;margin-top:6px}
+.gps{display:flex;align-items:center;gap:10px;margin-top:18px;padding:12px 16px;border-radius:16px;background:var(--infobg);color:var(--info);font-size:20px;font-weight:700}
+
+/* calendar */
+.vhead{display:flex;align-items:center;gap:20px}
+.big{display:flex;align-items:flex-end;justify-content:space-between;margin:26px 0 8px}
+.big .n{font-size:110px;font-weight:800;letter-spacing:-.05em;line-height:.9}
+.bar{height:14px;border-radius:10px;background:#EEF1F7;overflow:hidden;margin-bottom:26px}
+.bar i{display:block;height:100%;background:var(--grad);border-radius:10px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;text-align:center}
+.cal .h{font-size:18px;font-weight:700;color:#94A3B8;padding-bottom:4px}
+.cal .d{height:62px;border-radius:16px;display:grid;place-items:center;font-size:24px;font-weight:600;color:#334155;position:relative}
+.cal .d .hl{position:absolute;inset:0;border-radius:16px;background:var(--grad)}
+.cal .d span{position:relative}
+.cal .we{color:#CBD5E1}
+.toast{position:absolute;display:flex;align-items:center;gap:20px;padding:24px 30px;border-radius:28px;background:#0F172A;color:#fff;box-shadow:0 30px 80px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,.1)}
+.toast .ok-ic{width:56px;height:56px;box-shadow:none}
+.toast b{display:block;font-size:28px}
+.toast span{font-size:21px;color:#94A3B8}
+
+/* tiles */
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:70px}
+.tile{border-radius:34px;padding:36px 34px 38px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.13);min-height:330px}
+.tile .ic{width:84px;height:84px;border-radius:24px;background:var(--grad);display:grid;place-items:center;box-shadow:0 14px 40px rgba(79,123,255,.45)}
+.tile h3{font-size:38px;font-weight:700;margin-top:34px;letter-spacing:-.02em}
+.tile p{font-size:25px;color:#AAB6D8;margin-top:10px;line-height:1.35}
+
+/* offer */
+.price{display:flex;align-items:flex-start;line-height:.82;margin-top:10px}
+.price .cur{font-size:250px;font-weight:800;letter-spacing:-.06em}
+.price .num{font-size:400px;font-weight:800;letter-spacing:-.07em}
+.price .mxn{font-size:56px;font-weight:700;align-self:flex-end;margin:0 0 50px 18px}
+.solo{font-size:56px;font-weight:800;letter-spacing:.02em}
+.before{align-self:flex-start;font-size:40px;color:#7C8BB5;font-weight:600;position:relative;display:inline-block;margin-top:24px}
+.before:after{content:"";position:absolute;left:-6px;right:-6px;top:52%;height:5px;background:#EF4444;transform-origin:left;transform:scaleX(var(--s,0))}
+.pill{display:inline-flex;align-items:center;gap:16px;margin-top:40px;padding:26px 44px;border-radius:999px;background:var(--grad);font-size:46px;font-weight:800;box-shadow:0 20px 70px rgba(79,123,255,.6)}
+.fine{position:absolute;left:90px;right:90px;bottom:300px;font-size:24px;color:#8090BB}
+.glow{position:absolute;width:900px;height:900px;left:90px;top:480px;border-radius:50%;background:radial-gradient(circle,rgba(91,111,255,.55),transparent 65%);pointer-events:none}
+
+/* cta */
+.cta{display:flex;flex-direction:column;align-items:center;text-align:center}
+.cta .mk{height:250px}
+.cta .wmb{font-weight:600;font-size:76px;letter-spacing:.24em;margin:40px 0 0 .24em}
+.cta h1{margin-top:110px;font-size:120px}
+.btn{margin-top:56px;padding:34px 70px;border-radius:999px;background:var(--grad);font-size:50px;font-weight:800;box-shadow:0 24px 80px rgba(79,123,255,.6)}
+.wa{margin-top:36px;font-size:34px;color:#B8C4E6;font-weight:600;display:flex;align-items:center;gap:14px}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="blob" id="b1"></div><div class="blob" id="b2"></div><div class="blob" id="b3"></div>
+  <div id="grid"></div>
+  <div id="brand"><img src="mark.png"><span class="wm">ADAMIA</span></div>
+
+  <!-- 1 HOOK -->
+  <section class="scene" data-s="0" data-e="3.7">
+    <div class="eyebrow" data-in="0.1">Recursos humanos</div>
+    <h1><span class="l"><span data-in="0.2" data-a="mask">¿Quién checó</span></span><span class="l"><span class="g" data-in="0.4" data-a="mask">por quién?</span></span></h1>
+    <div class="pains">
+      <div class="pain" data-in="0.8" data-a="left"><div class="x"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="3.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>Checadas “por un compañero”<div class="strike" data-in="2.3" data-a="strike"></div></div>
+      <div class="pain" data-in="1.0" data-a="left"><div class="x"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="3.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>Retardos que nadie registra<div class="strike" data-in="2.45" data-a="strike"></div></div>
+      <div class="pain" data-in="1.2" data-a="left"><div class="x"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="3.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>Vacaciones en un Excel<div class="strike" data-in="2.6" data-a="strike"></div></div>
+    </div>
+    <div data-in="2.7" data-a="pop" style="font-size:76px;font-weight:800;letter-spacing:-.03em;margin-top:70px" class="g">Eso se acabó.</div>
+  </section>
+
+  <!-- 2 BIOMETRICO -->
+  <section class="scene" data-s="3.7" data-e="9.7">
+    <div class="eyebrow" data-in="0.1">Biométrico en la nube</div>
+    <h1 style="font-size:100px"><span class="l"><span data-in="0.15" data-a="mask">Checa con tu cara.</span></span><span class="l"><span class="g" data-in="0.35" data-a="mask">Desde el celular.</span></span></h1>
+    <div style="display:flex;justify-content:center;margin-top:44px">
+      <div class="phone" data-in="0.5" data-a="pop">
+        <div class="notch"></div>
+        <div class="cam"></div>
+        <div class="phead">Checar entrada<small>Sucursal Centro · 08:57</small></div>
+        <svg style="position:absolute;left:-15px;top:130px" width="456" height="560" viewBox="0 0 456 560">
+          <defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5A6894"/><stop offset="1" stop-color="#2A3458"/></linearGradient></defs>
+          <ellipse cx="228" cy="230" rx="112" ry="140" fill="url(#sk)"/>
+          <path d="M40 560 C60 430 140 395 228 395 C316 395 396 430 416 560Z" fill="url(#sk)"/>
+          <g id="mesh" stroke="#2BBAFF" stroke-width="1.6" fill="none" opacity="0"></g>
+          <g id="dots" fill="#7DD3FC"></g>
+        </svg>
+        <div class="frame"><div class="c c1"></div><div class="c c2"></div><div class="c c3"></div><div class="c c4"></div><div class="scan" id="scan"></div></div>
+        <div class="sheet" data-in="3.2" data-a="sheet">
+          <div class="ok-ic"><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+          <div class="t">Entrada registrada</div>
+          <div class="m">Ana Martínez · 08:57 a.m.</div>
+          <div class="gps"><svg width="24" height="24" viewBox="0 0 24 24" fill="#2563EB"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>Ubicación GPS verificada</div>
+        </div>
+      </div>
+    </div>
+    <div class="chips" style="justify-content:center;margin-top:36px">
+      <div class="chip" data-in="1.0" data-a="pop"><i></i>Reconocimiento facial</div>
+      <div class="chip" data-in="1.15" data-a="pop"><i></i>GPS</div>
+      <div class="chip" data-in="1.3" data-a="pop"><i></i>Sin relojes checadores</div>
+    </div>
+  </section>
+
+  <!-- 3 TIEMPO REAL -->
+  <section class="scene" data-s="9.7" data-e="14.9">
+    <div class="eyebrow" data-in="0.1">Asistencia en tiempo real</div>
+    <h1><span class="l"><span data-in="0.15" data-a="mask">Todo tu equipo.</span></span><span class="l"><span class="g" data-in="0.35" data-a="mask">Una pantalla.</span></span></h1>
+    <div class="card" style="margin-top:64px" data-in="0.5" data-a="up">
+      <div class="chrome"><b></b><b></b><b></b><span>adamia.mx/asistencia</span></div>
+      <div class="cbody">
+        <div class="ct">Asistencia de hoy</div>
+        <div class="cs">Jueves 1 de octubre · 52 empleados</div>
+        <div class="kpis">
+          <div class="kpi"><div class="n" style="color:var(--ok)" data-count="48" data-in="0.9">0</div><div class="k">Presentes</div></div>
+          <div class="kpi"><div class="n" style="color:var(--warn)" data-count="3" data-in="1.0">0</div><div class="k">Retardos</div></div>
+          <div class="kpi"><div class="n" style="color:var(--bad)" data-count="1" data-in="1.1">0</div><div class="k">Faltas</div></div>
+        </div>
+        <div class="row" data-in="1.4" data-a="up"><div class="av" style="background:#3B6BF6">AM</div><div><div class="rn">Ana Martínez</div><div class="ra">Ventas</div></div><div class="rt">08:57</div><div class="badge b-ok">A tiempo</div></div>
+        <div class="row" data-in="1.55" data-a="up"><div class="av" style="background:#7C5CFF">CR</div><div><div class="rn">Carlos Ruiz</div><div class="ra">Almacén</div></div><div class="rt">09:14</div><div class="badge b-warn">Retardo</div></div>
+        <div class="row" data-in="1.7" data-a="up"><div class="av" style="background:#0EA5E9">JP</div><div><div class="rn">Jorge Pérez</div><div class="ra">Ruta Norte · GPS</div></div><div class="rt">08:49</div><div class="badge b-ok">A tiempo</div></div>
+        <div class="row" data-in="1.85" data-a="up"><div class="av" style="background:#4141D6">LG</div><div><div class="rn">Lucía Gómez</div><div class="ra">Oficina</div></div><div class="rt">—</div><div class="badge b-bad">Falta</div></div>
+        <div class="row" data-in="2.0" data-a="up"><div class="av" style="background:#2BBAFF">ST</div><div><div class="rn">Sofía Torres</div><div class="ra">Sucursal Sur</div></div><div class="rt">—</div><div class="badge b-info">Vacaciones</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 VACACIONES -->
+  <section class="scene" data-s="14.9" data-e="20.1">
+    <div class="eyebrow" data-in="0.1">Vacaciones · Ley Federal del Trabajo</div>
+    <h1><span class="l"><span data-in="0.15" data-a="mask">Vacaciones</span></span><span class="l"><span class="g" data-in="0.35" data-a="mask">sin Excel.</span></span></h1>
+    <div class="sub" data-in="0.55">Los días se calculan solos, según la antigüedad.</div>
+    <div style="position:relative;margin-top:50px"><div class="card" data-in="0.6" data-a="up">
+      <div class="chrome"><b></b><b></b><b></b><span>adamia.mx/vacaciones</span></div>
+      <div class="cbody">
+        <div class="vhead"><div class="av" style="background:#3B6BF6">AM</div><div><div class="rn">Ana Martínez</div><div class="ra">Antigüedad: 3 años</div></div></div>
+        <div class="big"><div><div class="cs" style="font-weight:600">Días disponibles</div><div class="n" id="vdays">16</div></div><div class="cs" style="font-weight:600;padding-bottom:10px">de 16 por ley</div></div>
+        <div class="bar"><i id="vbar"></i></div>
+        <div class="cs" style="font-weight:700;color:var(--ink);font-size:26px;margin-bottom:14px">Octubre 2026</div>
+        <div class="cal" id="cal"></div>
+      </div>
+    </div>
+    <div class="toast" style="left:60px;right:60px;bottom:-70px" data-in="3.4" data-a="pop">
+      <div class="ok-ic"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+      <div><b>Vacaciones aprobadas</b><span>5 días · 19 al 23 de octubre</span></div>
+    </div></div>
+  </section>
+
+  <!-- 5 CONTROL -->
+  <section class="scene" data-s="20.1" data-e="24.4">
+    <div class="eyebrow" data-in="0.1">Control total de RH</div>
+    <h1><span class="l"><span data-in="0.15" data-a="mask">Permisos y reportes.</span></span><span class="l"><span class="g" data-in="0.35" data-a="mask">En un clic.</span></span></h1>
+    <div class="tiles">
+      <div class="tile" data-in="0.6" data-a="pop"><div class="ic"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 12l3 3 5-6"/></svg></div><h3>Permisos</h3><p>Se piden y se aprueban desde el celular.</p></div>
+      <div class="tile" data-in="0.75" data-a="pop"><div class="ic"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><h3>Retardos</h3><p>Detectados automáticamente, sin revisar a mano.</p></div>
+      <div class="tile" data-in="0.9" data-a="pop"><div class="ic"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></div><h3>Reportes</h3><p>Horas trabajadas listas para la nómina.</p></div>
+      <div class="tile" data-in="1.05" data-a="pop"><div class="ic"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4 4-6 8-6s7 2 8 6"/></svg></div><h3>Expediente 360</h3><p>Documentos y contratos de cada empleado.</p></div>
+    </div>
+  </section>
+
+  <!-- 6 OFERTA -->
+  <section class="scene" data-s="24.4" data-e="30.0">
+    <div class="glow" id="oglow"></div>
+    <div class="eyebrow" data-in="0.1">Precio de lanzamiento</div>
+    <div class="solo" data-in="0.2" data-a="up">SOLO</div>
+    <div class="price" data-in="0.3" data-a="pop"><span class="cur g">$</span><span class="num" id="pnum">60</span><span class="mxn">MXN</span></div>
+    <h1 style="font-size:84px;margin-top:10px"><span class="l"><span data-in="0.5" data-a="mask">por empleado al mes.</span></span></h1>
+    <div class="before" id="before" data-in="1.4">Precio normal: $60</div>
+    <div><div class="pill" data-in="2.0" data-a="pop"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Durante 2 meses</div></div>
+    <div class="sub" data-in="2.5" style="font-size:34px">Todos los módulos incluidos.</div>
+    <div class="fine" data-in="2.8">*Promoción de lanzamiento por tiempo limitado. Aplica para nuevas empresas.</div>
+  </section>
+
+  <!-- 7 CTA -->
+  <section class="scene" data-s="30.0" data-e="99">
+    <div class="cta">
+      <img class="mk" src="mark.png" data-in="0.1" data-a="pop">
+      <div class="wmb" data-in="0.3" data-a="up">ADAMIA</div>
+      <h1><span class="l"><span data-in="0.6" data-a="mask">Empieza <span class="g">hoy.</span></span></span></h1>
+      <div class="sub" data-in="0.9" style="text-align:center">Prueba gratis 7 días. Sin tarjeta.</div>
+      <div class="btn" data-in="1.2" data-a="pop">adamia.mx</div>
+      <div class="wa" data-in="1.5"><svg width="38" height="38" viewBox="0 0 24 24" fill="#25D366"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.3 0 .5l-.4.6-.3.3c-.1.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.1 1.3 2.4 1.5.3.1.5.1.6-.1l.9-1.1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.7-.1 1.2z"/></svg>WhatsApp 317 128 8029</div>
+    </div>
+  </section>
+</div>
+
+<script>
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const eOut=x=>1-Math.pow(1-x,3);
+const eExpo=x=>x>=1?1:1-Math.pow(2,-10*x);
+const eBack=x=>{const c=1.70158,c3=c+1;return 1+c3*Math.pow(x-1,3)+c*Math.pow(x-1,2)};
+const eInOut=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+
+// calendar
+const cal=document.getElementById('cal');
+['L','M','M','J','V','S','D'].forEach(d=>cal.insertAdjacentHTML('beforeend',`<div class="h">${d}</div>`));
+for(let i=0;i<3;i++)cal.insertAdjacentHTML('beforeend','<div></div>');
+for(let d=1;d<=25;d++){const dow=(d+2)%7;const we=dow===5||dow===6;
+  cal.insertAdjacentHTML('beforeend',`<div class="d${we?' we':''}" data-day="${d}">${d>=19&&d<=23?'<i class="hl"></i>':''}<span>${d}</span></div>`);}
+
+// face mesh
+const pts=[[228,120],[170,150],[286,150],[140,215],[316,215],[185,205],[271,205],[228,245],[200,300],[256,300],[228,315],[150,290],[306,290],[228,365],[180,345],[276,345],[205,200],[251,200]];
+const dotsG=document.getElementById('dots'),meshG=document.getElementById('mesh');
+pts.forEach(p=>dotsG.insertAdjacentHTML('beforeend',`<circle cx="${p[0]}" cy="${p[1]}" r="5"/>`));
+[[0,1],[0,2],[1,3],[2,4],[1,5],[2,6],[5,7],[6,7],[7,8],[7,9],[8,10],[9,10],[3,11],[4,12],[11,14],[12,15],[14,13],[15,13],[8,14],[9,15],[5,16],[6,17],[16,7],[17,7],[3,5],[4,6]].forEach(([a,b])=>meshG.insertAdjacentHTML('beforeend',`<line x1="${pts[a][0]}" y1="${pts[a][1]}" x2="${pts[b][0]}" y2="${pts[b][1]}"/>`));
+
+const scenes=[...document.querySelectorAll('.scene')];
+function anim(el,p,type){
+  let o=clamp(p*1.6),tf='';
+  switch(type){
+    case 'mask': tf=`translateY(${(1-eOut(p))*110}%)`;o=1;break;
+    case 'left': tf=`translateX(${(1-eOut(p))*-120}px)`;break;
+    case 'pop': {const s=.6+.4*eBack(clamp(p));tf=`scale(${s})`;break;}
+    case 'sheet': tf=`translateY(${(1-eBack(p))*420}px)`;o=p>0?1:0;break;
+    case 'strike': tf=`scaleX(${eInOut(p)})`;o=p>0?1:0;break;
+    default: tf=`translateY(${(1-eOut(p))*70}px)`;
+  }
+  el.style.opacity=o;el.style.transform=tf;
+}
+function render(t){
+  // background drift
+  b1.style.transform=`translate(${Math.sin(t*.35)*120}px,${Math.cos(t*.27)*90}px)`;
+  b2.style.transform=`translate(${Math.cos(t*.3)*-140}px,${Math.sin(t*.22)*160}px)`;
+  b3.style.transform=`translate(${Math.sin(t*.25+1)*160}px,${Math.cos(t*.4)*60}px)`;
+  brand.style.opacity=t<30.0?clamp(t/0.4):clamp(1-(t-30)/0.3);
+  for(const sc of scenes){
+    const s=+sc.dataset.s,e=+sc.dataset.e;
+    if(t<s||t>=e){sc.style.display='none';continue}
+    sc.style.display='flex';
+    const lt=t-s, out=clamp((t-(e-0.4))/0.4);
+    sc.style.opacity=1-eOut(out);
+    sc.style.transform=`translateY(${-60*eInOut(out)}px) scale(${1-0.04*out})`;
+    sc.style.filter=out>0?`blur(${out*14}px)`:'none';
+    sc.querySelectorAll('[data-in]').forEach(el=>{
+      const d=+el.dataset.in, dur=+(el.dataset.d||(el.dataset.a==='strike'?0.35:0.7));
+      const p=clamp((lt-d)/dur);
+      if(el.dataset.count){el.textContent=Math.round(+el.dataset.count*eOut(p));el.style.opacity=clamp(p*4);return}
+      anim(el,p,el.dataset.a);
+    });
+    hooks[scenes.indexOf(sc)]?.(lt,sc);
+  }
+}
+const hooks={
+  0:(lt,sc)=>{const p=clamp((lt-2.3)/0.6);sc.querySelectorAll('.pain').forEach(el=>{if(p>0)el.style.opacity=Math.min(+el.style.opacity,1-0.45*p)})},
+  1:(lt)=>{
+    const scanning=lt>0.9&&lt<3.1, done=lt>=3.0;
+    scan.style.opacity=scanning?1:0;
+    scan.style.top=(((lt-0.9)%1.1)/1.1*400)+'px';
+    dotsG.querySelectorAll('circle').forEach((c,i)=>c.setAttribute('opacity',clamp((lt-1.2-i*0.06)/0.2)));
+    meshG.setAttribute('opacity',clamp((lt-1.8)/0.5)*0.75);
+    const col=done?'#22C55E':'#2BBAFF';
+    document.querySelectorAll('.frame .c').forEach(c=>{c.style.borderColor=col;c.style.filter=`drop-shadow(0 0 10px ${col})`});
+    const k=done?1+0.06*Math.sin(clamp((lt-3)/0.3)*Math.PI):1;
+    document.querySelector('.frame').style.transform=`scale(${k})`;
+  },
+  3:(lt)=>{
+    document.querySelectorAll('#cal .hl').forEach((h,i)=>{const p=clamp((lt-2.0-i*0.16)/0.25);h.style.opacity=p;h.style.transform=`scale(${.5+.5*eBack(p)})`;h.nextElementSibling.style.color=p>.5?'#fff':''});
+    const p=clamp((lt-3.4)/0.6);vdays.textContent=Math.round(16-5*eOut(p));
+    vbar.style.width=(100*(16-5*eOut(p))/16)+'%';
+  },
+  5:(lt)=>{
+    const p=clamp((lt-0.6)/1.0);
+    pnum.textContent=Math.round(60-50*eExpo(p));
+    const pulse=lt>1.6?1+0.05*Math.sin(clamp((lt-1.6)/0.35)*Math.PI):1;
+    pnum.parentElement.style.transform=`scale(${pulse*(.6+.4*eBack(clamp((lt-0.3)/0.7)))})`;
+    before.style.setProperty('--s',eInOut(clamp((lt-1.8)/0.35)));
+    oglow.style.opacity=clamp((lt-1.5)/0.5)*(0.8+0.2*Math.sin(lt*3));
+  },
+};
+window.render=render;
+render(0);
+</script>
+</body>
+</html>
