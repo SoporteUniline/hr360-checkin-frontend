@@ -66,7 +66,9 @@ function normalizeText(value) {
 }
 
 function permissionStatus(permission) {
-  return normalizeText(permission?.estado || permission?.status?.label);
+  return normalizeText(
+    permission?.estado ?? permission?.estadoBase ?? permission?.status?.label,
+  );
 }
 
 function isPendingPermission(permission) {
