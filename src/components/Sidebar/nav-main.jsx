@@ -103,6 +103,12 @@ const dashboardItems = [
     icon: ReceiptText,
   },
   {
+    title: "Cupones",
+    url: "/dashboard/cupones",
+    rol: "Admin",
+    icon: Gift,
+  },
+  {
     title: "Mensajes sistema",
     url: "/dashboard/mensajes-sistema",
     rol: "Admin",

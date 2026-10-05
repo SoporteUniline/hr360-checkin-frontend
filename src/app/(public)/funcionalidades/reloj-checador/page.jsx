@@ -160,7 +160,7 @@ export default function RelojChecadorPage() {
               rel="noreferrer"
               className="inline-flex items-center justify-center rounded-xl bg-white px-10 py-4 text-lg font-bold text-[var(--adamia-blue)] shadow-xl transition hover:-translate-y-1"
             >
-              Comenzar prueba gratis <ArrowRight className="ml-2 h-5 w-5" />
+              Contratar ahora <ArrowRight className="ml-2 h-5 w-5" />
             </a>
             <a
               href="/funcionalidades"
@@ -310,12 +310,12 @@ export default function RelojChecadorPage() {
             ⚡ Control Total de Asistencias
           </div>
           <h2 className="mt-6 text-4xl font-black md:text-5xl">
-            Prueba el Reloj Checador
+            Empieza con el Reloj Checador
             <br />
-            <span className="text-cyan-200">gratis por 7 dias</span>
+            <span className="text-cyan-200">para tu equipo</span>
           </h2>
           <p className="mx-auto mt-5 max-w-3xl text-xl text-white/90">
-            Sin tarjeta, sin compromiso, todas las funciones incluidas.
+            Configura tu cuenta y comienza a registrar asistencias.
           </p>
           <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
             <a

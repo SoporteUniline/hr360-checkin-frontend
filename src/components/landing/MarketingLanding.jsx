@@ -42,7 +42,7 @@ export default function MarketingLanding() {
             <div className="text-center lg:text-left">
               <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur md:text-[14px]">
                 <span className="text-lg">⚡</span>
-                <span>7 días de prueba GRATIS • Sin tarjeta</span>
+                <span>Contrata ADAMIA en línea</span>
                 <span className="rounded-full bg-white px-3 py-1 text-[11px] font-extrabold tracking-wide text-[var(--adamia-blue)]">
                   NUEVO
                 </span>
@@ -79,7 +79,7 @@ export default function MarketingLanding() {
                   className="h-12 rounded-xl bg-white px-7 text-base font-semibold text-[var(--adamia-blue)] shadow-[0_10px_30px_rgba(0,0,0,0.15)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.2)]"
                 >
                   <a href="/contratar-plan" target="_blank" rel="noreferrer">
-                    Comenzar prueba gratis{" "}
+                    Contratar ahora{" "}
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </a>
                 </Button>
@@ -401,13 +401,13 @@ export default function MarketingLanding() {
           <div className="mx-auto max-w-3xl text-center">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/15 px-4 py-2 text-sm font-semibold backdrop-blur">
               <span>💎</span>
-              <span>PRUEBA SIN COMPROMISO</span>
+              <span>EMPIEZA CON ADAMIA</span>
             </div>
             <h2 className="mt-6 text-4xl font-bold md:text-5xl">
-              Empieza con 7 días gratis
+              Empieza hoy con ADAMIA
             </h2>
             <p className="mt-4 text-xl text-white/90">
-              Sin tarjeta • Sin compromiso • Cancela cuando quieras
+              Elige tu plan • Configura tu cuenta • Comienza en línea
             </p>
           </div>
 
@@ -416,10 +416,10 @@ export default function MarketingLanding() {
               <div className="text-center">
                 <div className="text-6xl adamia-pulse mb-6">🎁</div>
                 <h3 className="text-3xl font-bold">
-                  Prueba completa de 7 días
+                  ADAMIA para todo tu equipo
                 </h3>
                 <p className="mt-2 text-xl text-[var(--adamia-text-secondary)]">
-                  Acceso total sin restricciones
+                  Centraliza la gestión de tu empresa
                 </p>
               </div>
 
@@ -453,10 +453,10 @@ export default function MarketingLanding() {
                   rel="noreferrer"
                   className="inline-flex items-center justify-center rounded-xl bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] px-12 py-5 text-xl font-semibold text-white shadow-2xl transition hover:scale-[1.03]"
                 >
-                  Comenzar prueba gratis <span className="ml-2">→</span>
+                  Contratar ahora <span className="ml-2">→</span>
                 </a>
                 <p className="mt-4 text-sm text-[var(--adamia-text-secondary)]">
-                  💳 No pedimos tarjeta • ⚡ Setup en 5 minutos
+                  ⚡ Configuración rápida • Soporte incluido
                 </p>
               </div>
             </div>
@@ -490,14 +490,14 @@ export default function MarketingLanding() {
               rel="noreferrer"
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-12 py-6 text-2xl font-semibold text-[var(--adamia-blue)] shadow-2xl ring-1 ring-black/5 transition hover:-translate-y-0.5"
             >
-              Comenzar prueba gratis <span className="text-3xl">→</span>
+              Contratar ahora <span className="text-3xl">→</span>
             </a>
           </div>
 
           <div className="mt-12 flex flex-wrap justify-center gap-8 text-lg text-[var(--adamia-text-secondary)]">
             {[
-              "7 días gratis",
-              "Sin tarjeta",
+              "Contratación en línea",
+              "Planes para tu empresa",
               "Setup 5 min",
               "Soporte incluido",
             ].map((t) => (

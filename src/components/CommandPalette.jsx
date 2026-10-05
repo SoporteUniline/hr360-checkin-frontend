@@ -95,6 +95,13 @@ const ALL_NAV_ITEMS = [
     icon: ReceiptText,
   },
   {
+    title: "Cupones",
+    url: "/dashboard/cupones",
+    rol: "Admin",
+    section: "Admin",
+    icon: Gift,
+  },
+  {
     title: "Mensajes sistema",
     url: "/dashboard/mensajes-sistema",
     rol: "Admin",

@@ -381,7 +381,7 @@ function buildBotReply(userText, ctx) {
     return {
       nextCtx: ctx,
       reply:
-        "Puedes iniciar tu prueba gratis aquí:\nhttps://planes.hr360.mx/contratar-plan\n\nSi me dices cuántos empleados tienes, te doy una referencia rápida.",
+        "Puedes contratar ADAMIA aquí:\nhttps://planes.hr360.mx/contratar-plan\n\nSi me dices cuántos empleados tienes, te doy una referencia rápida.",
     };
   }
 
