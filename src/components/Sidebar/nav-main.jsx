@@ -66,6 +66,7 @@ import {
 } from "@/components/reclutamiento/navigation";
 
 const dashboardItems = [
+  { title: "Evaluación de desempeño", url: "/empleado/panel/evaluaciones", rol: "Empleado", icon: ClipboardCheck, matchPrefix: "/empleado/panel/evaluaciones" },
   {
     title: "Solicitudes de mi equipo",
     url: "/empleado/panel/solicitudes-equipo",
@@ -144,6 +145,12 @@ const recruitmentEnabled =
   process.env.NEXT_PUBLIC_RECRUITMENT_ENABLED === "true";
 
 const menuGroups = [
+  { group: "EVALUACIÓN DE DESEMPEÑO", groupIcon: BarChart3, items: [
+    {title:"Resumen de evaluaciones",url:"/panel/evaluaciones",rol:"Recruiter",icon:LayoutDashboard},
+    {title:"Campañas",url:"/panel/evaluaciones/campanas",rol:"Recruiter",icon:ClipboardCheck,matchPrefix:"/panel/evaluaciones/campanas"},
+    {title:"Plantillas de evaluación",url:"/panel/evaluaciones/plantillas",rol:"Recruiter",icon:LayoutTemplate,matchPrefix:"/panel/evaluaciones/plantillas"},
+    {title:"Tablero de desempeño",url:"/panel/evaluaciones/tablero",rol:"Recruiter",icon:BarChart3},
+  ]},
   ...(recruitmentEnabled
     ? [
         {

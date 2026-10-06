@@ -44,6 +44,10 @@ import {
 // ─── Nav items estáticos (espejo del sidebar) ────────────────────────────────
 // rol: "Admin" | "Recruiter" (User también mapea a Recruiter)
 const ALL_NAV_ITEMS = [
+  {title:"Evaluación de desempeño",url:"/panel/evaluaciones",rol:"Recruiter",section:"Evaluaciones",icon:ClipboardCheck},
+  {title:"Campañas de evaluación",url:"/panel/evaluaciones/campanas",rol:"Recruiter",section:"Evaluaciones",icon:ClipboardCheck},
+  {title:"Plantillas de evaluación",url:"/panel/evaluaciones/plantillas",rol:"Recruiter",section:"Evaluaciones",icon:ClipboardCheck},
+  {title:"Mis evaluaciones",url:"/empleado/panel/evaluaciones",rol:"Empleado",section:"Evaluaciones",icon:ClipboardCheck},
   {
     title: "Solicitudes de mi equipo",
     url: "/panel/solicitudes-equipo",
