@@ -35,41 +35,6 @@ function getLabelFromRow(row, fallback) {
   );
 }
 
-function parseFlexibleNumber(value) {
-  if (typeof value === "number") return Number.isFinite(value) ? value : null;
-  if (typeof value !== "string") return null;
-  const cleaned = value.replace(/[^\d,.-]/g, "");
-  if (!cleaned) return null;
-  if (cleaned.includes(",") && cleaned.includes(".")) {
-    const normalized = cleaned.replace(/,/g, "");
-    const n = Number.parseFloat(normalized);
-    return Number.isFinite(n) ? n : null;
-  }
-  const normalized =
-    cleaned.includes(",") && !cleaned.includes(".")
-      ? cleaned.replace(",", ".")
-      : cleaned;
-  const n = Number.parseFloat(normalized);
-  return Number.isFinite(n) ? n : null;
-}
-
-function buildDescuentosMap(rows = []) {
-  const defaults = { 1: 0, 6: 10, 12: 20 };
-  if (!rows.length) return defaults;
-
-  const result = { ...defaults };
-  rows.forEach((row) => {
-    const meses = Number(row?.meses);
-    const descuento = parseFlexibleNumber(
-      row?.descuento_porcentaje ?? row?.descuento ?? null,
-    );
-    if ([1, 6, 12].includes(meses) && Number.isFinite(descuento)) {
-      result[meses] = descuento;
-    }
-  });
-  return result;
-}
-
 function formatCurrencyMXN(value) {
   return new Intl.NumberFormat("es-MX", {
     style: "currency",
@@ -106,31 +71,28 @@ export default function ContratarPlanContent() {
     meses_contratados: "1",
     metodo_pago_id: "",
     notas: "",
-    demo: "Si",
-    tipo_contratacion: "Prueba",
+    codigo_cupon: "",
+    demo: "No",
+    tipo_contratacion: "Normal",
     contrasenia: "",
     confirmar_contrasenia: "",
   };
 
-  const [catalogos, setCatalogos] = useState({
-    metodos_pago: [],
-    planes_duracion: [],
-  });
-  const [descuentos, setDescuentos] = useState({ 1: 0, 6: 10, 12: 20 });
-  const [loadingCatalogos, setLoadingCatalogos] = useState(true);
-  const [errorCatalogos, setErrorCatalogos] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState("");
   const [stripeLink, setStripeLink] = useState("");
+  const [cuponValidando, setCuponValidando] = useState(false);
+  const [cuponAplicado, setCuponAplicado] = useState(null);
+  const [cuponMensaje, setCuponMensaje] = useState("");
+  const [mostrarContrasenia, setMostrarContrasenia] = useState(false);
+  const [mostrarConfirmacion, setMostrarConfirmacion] = useState(false);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [successModalData, setSuccessModalData] = useState({
     folio: "",
     correo: "",
     contrasenia: "",
-    esPrueba: false,
-    fechaFin: "",
   });
 
   const searchParams = useSearchParams();
@@ -168,88 +130,27 @@ export default function ContratarPlanContent() {
     return () => window.clearInterval(interval);
   }, [otpCountdown]);
 
-  useEffect(() => {
-    let mounted = true;
-    const loadCatalogos = async () => {
-      setLoadingCatalogos(true);
-      setErrorCatalogos("");
-      try {
-        const response = await axios.get("/checador/contrataciones/catalogos");
-        if (!mounted) return;
-        setCatalogos({
-          metodos_pago: response?.data?.metodos_pago ?? [],
-          planes_duracion: response?.data?.planes_duracion ?? [],
-        });
-        setDescuentos(
-          buildDescuentosMap(response?.data?.planes_duracion ?? []),
-        );
-      } catch (_error) {
-        if (!mounted) return;
-        setErrorCatalogos(
-          "No fue posible cargar los catálogos. Intenta nuevamente.",
-        );
-      } finally {
-        if (mounted) setLoadingCatalogos(false);
-      }
-    };
-
-    loadCatalogos();
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   const estimado = useMemo(() => {
-    const months = Number(form.meses_contratados);
     const employees = Number(form.empleados);
-    const monthlyBase = employees * COSTO_POR_USUARIO_DEFAULT;
-    if (!monthlyBase || ![1, 6, 12].includes(months)) return null;
-    const descuento = descuentos[months] ?? 0;
-    const subtotal = monthlyBase * months;
-    const total = subtotal - subtotal * (descuento / 100);
-    return {
-      monthlyBase,
-      monthlyFinal: total / months,
-      subtotal,
-      descuento,
-      total,
-    };
-  }, [form.meses_contratados, form.empleados, descuentos]);
 
-  const modalidadCards = useMemo(
-    () => [
-      {
-        months: 1,
-        title: "Mensual",
-        badge: "Sin compromiso",
-        discount: descuentos[1] ?? 0,
-      },
-      {
-        months: 6,
-        title: "Semestral",
-        badge: "Más popular",
-        discount: descuentos[6] ?? 0,
-      },
-      {
-        months: 12,
-        title: "Anual",
-        badge: "Mejor ahorro",
-        discount: descuentos[12] ?? 0,
-      },
-    ],
-    [descuentos],
-  );
+    if (!Number.isFinite(employees) || employees < 1) return null;
+
+    const monthlyNormal = employees * COSTO_POR_USUARIO_DEFAULT;
+    const monthlyPromo = cuponAplicado
+      ? employees * cuponAplicado.precio_por_empleado
+      : null;
+
+    return {
+      employees,
+      monthlyNormal,
+      monthlyPromo,
+    };
+  }, [form.empleados, cuponAplicado]);
 
   const onChange = (event) => {
     const { name, value } = event.target;
-    if (name === "tipo_contratacion") {
-      setForm((prev) => ({
-        ...prev,
-        tipo_contratacion: value,
-        demo: value === "Prueba" ? "Si" : "No",
-      }));
-      return;
-    }
+
     if (name === "telefono" || name === "codigo_pais") {
       setOtpSent(false);
       setOtpVerified(false);
@@ -258,6 +159,11 @@ export default function ContratarPlanContent() {
       setOtpMessage("");
       setOtpCountdown(0);
     }
+    if (name === "codigo_cupon") {
+      setCuponAplicado(null);
+      setCuponMensaje("");
+    }
+
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -345,14 +251,63 @@ export default function ContratarPlanContent() {
     }
   };
 
+  const validarCupon = async () => {
+    const codigo = String(form.codigo_cupon || "").trim();
+
+    setCuponMensaje("");
+    setCuponAplicado(null);
+
+    if (!codigo) {
+      setCuponMensaje("Ingresa un código de cupón.");
+      return;
+    }
+
+    try {
+      setCuponValidando(true);
+
+      const response = await axios.post(
+        "/checador/contrataciones/validar-cupon",
+        { codigo },
+      );
+
+      const data = response?.data;
+
+      if (!data?.valido) {
+        setCuponMensaje("El cupón no es válido.");
+        return;
+      }
+
+      setForm((prev) => ({
+        ...prev,
+        codigo_cupon: data.codigo || codigo.toUpperCase(),
+      }));
+
+      setCuponAplicado({
+        codigo: data.codigo,
+        precio_por_empleado: Number(data.precio_por_empleado),
+        meses_duracion: Number(data.meses_duracion),
+      });
+
+      setCuponMensaje(
+        `Cupón aplicado: ${formatCurrencyMXN(
+          Number(data.precio_por_empleado),
+        )} por empleado durante ${Number(data.meses_duracion)} ${
+          Number(data.meses_duracion) === 1 ? "mes" : "meses"
+        }.`,
+      );
+    } catch (error) {
+      setCuponMensaje(
+        error?.response?.data?.message || "No fue posible validar el cupón.",
+      );
+    } finally {
+      setCuponValidando(false);
+    }
+  };
+
   const changeEmployees = (delta) => {
     const current = Number(form.empleados) || 1;
     const next = Math.max(1, current + delta);
     setForm((prev) => ({ ...prev, empleados: String(next) }));
-  };
-
-  const selectMonths = (months) => {
-    setForm((prev) => ({ ...prev, meses_contratados: String(months) }));
   };
 
   const onSubmit = async (event) => {
@@ -410,15 +365,14 @@ export default function ContratarPlanContent() {
       };
       const payload = {
         ...form,
+        codigo_cupon: cuponAplicado ? cuponAplicado.codigo : null,
         telefono: fullPhone,
         telefono_verificacion_token: phoneVerificationToken,
         empleados: Number(form.empleados),
         tipo_plan_id: null,
-        meses_contratados: Number(form.meses_contratados),
-        metodo_pago_id: form.metodo_pago_id
-          ? Number(form.metodo_pago_id)
-          : null,
-        precio_por_mes: estimado?.monthlyBase ?? null,
+        meses_contratados: 1,
+        metodo_pago_id: null,
+        precio_por_mes: estimado?.monthlyNormal ?? null,
         precio_empleado_extra: COSTO_POR_USUARIO_DEFAULT,
       };
       const response = await axios.post(
@@ -427,27 +381,23 @@ export default function ContratarPlanContent() {
       );
       const data = response?.data?.data;
       const folio = data?.contrato_id ?? "";
-      const esPrueba = data?.demo === "Si";
-      const fechaFinPrueba = data?.fecha_fin ?? "";
       const stripeUrl = data?.enlace_pago_stripe;
 
-      if (!esPrueba && stripeUrl) {
+      if (stripeUrl) {
         window.location.href = stripeUrl;
         return;
       }
 
-      setSubmitSuccess(
-        `¡Registro exitoso! Folio ${folio}. Tu prueba de 7 días está activa.`,
-      );
+      setSubmitSuccess(`¡Registro exitoso! Folio ${folio}.`);
       setSuccessModalData({
         folio,
         correo: credentialsToShow.correo,
         contrasenia: credentialsToShow.contrasenia,
-        esPrueba,
-        fechaFin: fechaFinPrueba,
       });
       setSuccessModalOpen(true);
       setForm(initialForm);
+      setCuponAplicado(null);
+      setCuponMensaje("");
       setOtpCode("");
       setOtpSent(false);
       setOtpVerified(false);
@@ -490,12 +440,6 @@ export default function ContratarPlanContent() {
             <p>
               <strong>Contraseña:</strong> {successModalData.contrasenia}
             </p>
-            {successModalData.esPrueba ? (
-              <p className="rounded-lg bg-[var(--adamia-blue)]/10 px-3 py-2 font-semibold text-[var(--adamia-blue)]">
-                Tu prueba de 7 días está activa hasta{" "}
-                {successModalData.fechaFin}.
-              </p>
-            ) : null}
           </div>
 
           <div className="flex justify-end gap-2">
@@ -516,8 +460,8 @@ export default function ContratarPlanContent() {
             Activa ADAMIA para tu empresa
           </h1>
           <p className="mx-auto mt-3 max-w-3xl text-sm text-white/90 md:text-base">
-            Selecciona el tamaño de tu equipo, elige modalidad y registra tu
-            contratación.
+            Comienza con los empleados que tienes hoy. La facturación se ajusta
+            según los empleados activos de tu empresa.
           </p>
         </div>
       </section>
@@ -527,10 +471,11 @@ export default function ContratarPlanContent() {
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="text-lg font-black md:text-xl">
-                ¿Cuántos empleados tiene tu empresa?
+                ¿Con cuántos empleados comenzarás?
               </h2>
               <p className="text-sm text-[var(--adamia-text-secondary)]">
-                La mensualidad se calcula automáticamente por empleado.
+                Este número estima tu primer cobro. Después, la facturación se
+                ajusta según los empleados activos de tu empresa.
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -560,65 +505,34 @@ export default function ContratarPlanContent() {
           </div>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
-          {modalidadCards.map((card) => {
-            const monthlyBase =
-              Number(form.empleados || 0) * COSTO_POR_USUARIO_DEFAULT;
-            const subtotal = (monthlyBase || 0) * card.months;
-            const total = subtotal - subtotal * (card.discount / 100);
-            const monthlyFinal =
-              monthlyBase && card.months ? total / card.months : null;
-            const active = Number(form.meses_contratados) === card.months;
-            return (
-              <article
-                key={card.months}
-                className={`rounded-2xl border bg-white p-5 shadow-sm transition ${
-                  active
-                    ? "border-[var(--adamia-blue)] ring-2 ring-[var(--adamia-blue)]/20"
-                    : "border-slate-200"
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xl font-black">{card.title}</h3>
-                  <span className="rounded-full bg-[var(--adamia-blue)]/10 px-3 py-1 text-xs font-bold text-[var(--adamia-blue)]">
-                    {card.badge}
-                  </span>
-                </div>
-                <p className="mt-2 text-xs font-bold uppercase tracking-wide text-[var(--adamia-text-secondary)]">
-                  {card.discount}% de descuento
-                </p>
-                <p className="mt-4 text-3xl font-black text-[var(--adamia-blue)]">
-                  {monthlyFinal ? formatCurrencyMXN(monthlyFinal) : "—"}
-                  <span className="text-sm font-semibold text-[var(--adamia-text-secondary)]">
-                    /mes
-                  </span>
-                </p>
-                {monthlyBase && card.discount > 0 ? (
-                  <p className="mt-1 text-xs text-[var(--adamia-text-secondary)]">
-                    Precio mensual base:{" "}
-                    <strong>{formatCurrencyMXN(monthlyBase)}</strong>
-                  </p>
-                ) : null}
-                <p className="mt-1 text-sm text-[var(--adamia-text-secondary)]">
-                  Total {card.months} {card.months === 1 ? "mes" : "meses"}:{" "}
-                  <strong>
-                    {monthlyBase ? formatCurrencyMXN(total) : "—"}
-                  </strong>
-                </p>
-                <button
-                  type="button"
-                  onClick={() => selectMonths(card.months)}
-                  className={`mt-4 w-full rounded-xl px-4 py-2.5 text-sm font-bold ${
-                    active
-                      ? "bg-[var(--adamia-blue)] text-white"
-                      : "border border-[var(--adamia-blue)]/30 bg-white text-[var(--adamia-blue)]"
-                  }`}
-                >
-                  {active ? "Modalidad seleccionada" : "Seleccionar modalidad"}
-                </button>
-              </article>
-            );
-          })}
+        <div className="mt-6 rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-5 shadow-sm md:p-6">
+          <div className="grid gap-5 md:grid-cols-[0.8fr_1.2fr] md:items-center">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-[var(--adamia-blue)]">
+                Facturación mensual
+              </p>
+              <p className="mt-2 text-3xl font-black text-[var(--adamia-blue)]">
+                {formatCurrencyMXN(COSTO_POR_USUARIO_DEFAULT)}
+                <span className="text-sm font-semibold text-[var(--adamia-text-secondary)]">
+                  {" "}
+                  por empleado / mes
+                </span>
+              </p>
+            </div>
+
+            <div className="text-sm text-[var(--adamia-text-secondary)]">
+              <p>
+                Pagas según los empleados activos de tu empresa. Si agregas
+                empleados durante el mes, se calcula el ajuste proporcional
+                correspondiente.
+              </p>
+              <p className="mt-2 font-semibold text-[var(--adamia-text-primary)]">
+                Con {Number(form.empleados || 0)} empleados, tu mensualidad
+                normal estimada es{" "}
+                {estimado ? formatCurrencyMXN(estimado.monthlyNormal) : "—"}.
+              </p>
+            </div>
+          </div>
         </div>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[1.25fr_0.75fr]">
@@ -626,9 +540,9 @@ export default function ContratarPlanContent() {
             onSubmit={onSubmit}
             className="rounded-2xl border border-[var(--adamia-blue)]/15 bg-white p-5 shadow-sm md:p-7"
           >
-            <h2 className="text-2xl font-black">Completa tus datos</h2>
+            <h2 className="text-2xl font-black">Crea tu cuenta</h2>
             <p className="mt-1 text-sm text-[var(--adamia-text-secondary)]">
-              Registro directo en la tabla <strong>Contrataciones</strong>.
+              Ingresa tus datos para comenzar con ADAMIA.
             </p>
 
             <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -637,6 +551,8 @@ export default function ContratarPlanContent() {
                 name="nombre_cliente"
                 value={form.nombre_cliente}
                 onChange={onChange}
+                placeholder="Ingresa tu nombre completo"
+                autoComplete="name"
                 required
               />
               <Field
@@ -644,6 +560,8 @@ export default function ContratarPlanContent() {
                 name="empresa_nombre"
                 value={form.empresa_nombre}
                 onChange={onChange}
+                placeholder="Ingresa el nombre de tu empresa"
+                autoComplete="organization"
               />
               <div>
                 <label className="mb-2 block text-sm font-semibold">
@@ -668,8 +586,9 @@ export default function ContratarPlanContent() {
                     value={form.telefono}
                     onChange={onChange}
                     required
-                    inputMode="numeric"
-                    placeholder="Número de WhatsApp"
+                    inputMode="tel"
+                    autoComplete="tel-national"
+                    placeholder="Ingresa tu número de WhatsApp"
                     className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 outline-none ring-[var(--adamia-blue)]/20 focus:ring-2"
                   />
                 </div>
@@ -749,77 +668,113 @@ export default function ContratarPlanContent() {
                 type="email"
                 value={form.correo}
                 onChange={onChange}
+                placeholder="Ingresa tu correo electrónico"
+                autoComplete="email"
                 required
               />
-              <Field
-                label="RFC"
-                name="rfc"
-                value={form.rfc}
-                onChange={onChange}
-              />
-              <Field
-                label="Contraseña de acceso"
+              <div className="md:col-span-2">
+                <Field
+                  label="RFC (opcional)"
+                  name="rfc"
+                  value={form.rfc}
+                  onChange={onChange}
+                  placeholder="Ingresa el RFC de tu empresa"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+              </div>
+              <PasswordField
+                label="Contraseña"
                 name="contrasenia"
-                type="password"
                 value={form.contrasenia}
                 onChange={onChange}
+                visible={mostrarContrasenia}
+                onToggle={() => setMostrarContrasenia((prev) => !prev)}
+                placeholder="Al menos 8 caracteres"
+                autoComplete="new-password"
                 required
               />
-              <Field
+              <PasswordField
                 label="Confirmar contraseña"
                 name="confirmar_contrasenia"
-                type="password"
                 value={form.confirmar_contrasenia}
                 onChange={onChange}
+                visible={mostrarConfirmacion}
+                onToggle={() => setMostrarConfirmacion((prev) => !prev)}
+                placeholder="Vuelve a ingresar tu contraseña"
+                autoComplete="new-password"
                 required
               />
-              <div>
-                <label className="mb-2 block text-sm font-semibold">
-                  Tipo de contratación
-                </label>
-                <select
-                  name="tipo_contratacion"
-                  value={form.tipo_contratacion}
-                  onChange={onChange}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 outline-none ring-[var(--adamia-blue)]/20 focus:ring-2"
-                >
-                  <option value="Prueba">Prueba (7 días)</option>
-                  <option value="Normal">Normal</option>
-                </select>
-              </div>
-              <div>
-                <label className="mb-2 block text-sm font-semibold">
-                  Método de pago
-                </label>
-                <select
-                  name="metodo_pago_id"
-                  value={form.metodo_pago_id}
-                  onChange={onChange}
-                  disabled={loadingCatalogos}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 outline-none ring-[var(--adamia-blue)]/20 focus:ring-2 disabled:opacity-60"
-                >
-                  <option value="">Selecciona (opcional)</option>
-                  {catalogos.metodos_pago.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {getLabelFromRow(item, `Método ${item.id}`)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="md:col-span-2 rounded-lg bg-[var(--adamia-bg-light)] px-3 py-2 text-xs text-[var(--adamia-text-secondary)]">
-                Esta contraseña será la que use el cliente para iniciar sesión
-                en ADAMIA.
-              </div>
+
               <div className="md:col-span-2">
                 <label className="mb-2 block text-sm font-semibold">
-                  Notas
+                  Código de cupón (opcional)
+                </label>
+
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <input
+                    name="codigo_cupon"
+                    value={form.codigo_cupon}
+                    onChange={onChange}
+                    placeholder="Ingresa tu código de cupón"
+                    autoComplete="off"
+                    spellCheck={false}
+                    className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 outline-none ring-[var(--adamia-blue)]/20 focus:ring-2"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={validarCupon}
+                    disabled={cuponValidando || !form.codigo_cupon.trim()}
+                    className="rounded-xl border border-[var(--adamia-blue)]/30 bg-white px-5 py-2.5 text-sm font-bold text-[var(--adamia-blue)] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {cuponValidando ? "Validando..." : "Aplicar cupón"}
+                  </button>
+                </div>
+
+                {cuponMensaje ? (
+                  <p
+                    className={`mt-2 rounded-lg px-3 py-2 text-sm font-semibold ${
+                      cuponAplicado
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "bg-red-50 text-red-700"
+                    }`}
+                  >
+                    {cuponMensaje}
+                  </p>
+                ) : null}
+
+                {cuponAplicado ? (
+                  <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                    <p className="text-sm font-black text-emerald-800">
+                      Promoción aplicada
+                    </p>
+                    <p className="mt-1 text-2xl font-black text-emerald-700">
+                      {formatCurrencyMXN(cuponAplicado.precio_por_empleado)}
+                      <span className="text-sm font-semibold">
+                        {" "}
+                        / empleado / mes
+                      </span>
+                    </p>
+                    <p className="mt-1 text-sm text-emerald-700">
+                      Durante {cuponAplicado.meses_duracion}{" "}
+                      {cuponAplicado.meses_duracion === 1 ? "mes" : "meses"}.
+                      Después se aplicará el precio normal de tu contratación.
+                    </p>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="mb-2 block text-sm font-semibold">
+                  Notas (opcional)
                 </label>
                 <textarea
                   name="notas"
                   value={form.notas}
                   onChange={onChange}
                   rows={3}
-                  placeholder="Cuéntanos detalles para el alta"
+                  placeholder="Agrega información adicional"
                   className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 outline-none ring-[var(--adamia-blue)]/20 focus:ring-2"
                 />
               </div>
@@ -850,10 +805,10 @@ export default function ContratarPlanContent() {
             <div className="mt-5 flex flex-wrap gap-3">
               <button
                 type="submit"
-                disabled={submitting || loadingCatalogos}
+                disabled={submitting}
                 className="rounded-xl bg-[var(--adamia-blue)] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
               >
-                {submitting ? "Guardando..." : "Registrar contratación"}
+                {submitting ? "Procesando..." : "Continuar al pago"}
               </button>
               <Link
                 href="/cotiza"
@@ -867,53 +822,71 @@ export default function ContratarPlanContent() {
           <aside className="space-y-5">
             <article className="rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-5 shadow-sm">
               <p className="text-xs font-bold uppercase tracking-wide text-[var(--adamia-blue)]">
-                Cobro automático
+                Cobro por uso
               </p>
-              <h3 className="mt-1 text-xl font-black">Por empleado</h3>
-              <p className="mt-2 text-sm text-[var(--adamia-text-secondary)]">
-                {Number(form.empleados || 0)} empleados ×{" "}
-                {formatCurrencyMXN(COSTO_POR_USUARIO_DEFAULT)}
-              </p>
-            </article>
+              <h3 className="mt-1 text-xl font-black">
+                Resumen mensual estimado
+              </h3>
 
-            <article className="rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-5 shadow-sm">
-              <h3 className="text-xl font-black">Resumen estimado</h3>
               {estimado ? (
                 <div className="mt-3 space-y-2 text-sm">
                   <SummaryRow
-                    label="Precio por mes (con descuento)"
-                    value={formatCurrencyMXN(estimado.monthlyFinal)}
+                    label="Empleados iniciales"
+                    value={String(estimado.employees)}
                   />
-                  {estimado.descuento > 0 ? (
-                    <SummaryRow
-                      label="Precio mensual base"
-                      value={formatCurrencyMXN(estimado.monthlyBase)}
-                    />
+                  <SummaryRow
+                    label="Precio normal por empleado"
+                    value={formatCurrencyMXN(COSTO_POR_USUARIO_DEFAULT)}
+                  />
+                  <SummaryRow
+                    label="Mensualidad normal estimada"
+                    value={formatCurrencyMXN(estimado.monthlyNormal)}
+                    highlight={!cuponAplicado}
+                  />
+
+                  {cuponAplicado ? (
+                    <div className="mt-4 space-y-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                      <p className="font-black text-emerald-800">
+                        Cupón {cuponAplicado.codigo}
+                      </p>
+
+                      <SummaryRow
+                        label="Precio promocional por empleado"
+                        value={formatCurrencyMXN(
+                          cuponAplicado.precio_por_empleado,
+                        )}
+                      />
+
+                      <SummaryRow
+                        label="Mensualidad promocional estimada"
+                        value={formatCurrencyMXN(estimado.monthlyPromo)}
+                        highlight
+                      />
+
+                      <SummaryRow
+                        label="Duración"
+                        value={`${cuponAplicado.meses_duracion} ${
+                          cuponAplicado.meses_duracion === 1 ? "mes" : "meses"
+                        }`}
+                      />
+
+                      <p className="pt-2 text-xs font-semibold text-emerald-800">
+                        Al terminar la promoción se aplicará el precio normal
+                        por empleado activo.
+                      </p>
+                    </div>
                   ) : null}
-                  <SummaryRow
-                    label="Subtotal"
-                    value={formatCurrencyMXN(estimado.subtotal)}
-                  />
-                  <SummaryRow
-                    label="Descuento"
-                    value={`${estimado.descuento}%`}
-                  />
-                  <SummaryRow
-                    label="Total"
-                    value={formatCurrencyMXN(estimado.total)}
-                    highlight
-                  />
+
+                  <p className="pt-3 text-xs text-[var(--adamia-text-secondary)]">
+                    El importe puede ajustarse si cambia la cantidad de
+                    empleados activos durante el periodo.
+                  </p>
                 </div>
               ) : (
                 <p className="mt-2 text-sm text-[var(--adamia-text-secondary)]">
-                  Ajusta empleados para calcular precio.
+                  Indica con cuántos empleados comenzarás.
                 </p>
               )}
-              {form.tipo_contratacion === "Prueba" ? (
-                <p className="mt-3 rounded-lg bg-[var(--adamia-blue)]/10 px-3 py-2 text-sm font-semibold text-[var(--adamia-blue)]">
-                  Incluye 7 días de prueba al registrarte.
-                </p>
-              ) : null}
             </article>
 
             <article className="rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-5 shadow-sm">
@@ -926,11 +899,6 @@ export default function ContratarPlanContent() {
               </div>
             </article>
 
-            {errorCatalogos ? (
-              <article className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                {errorCatalogos}
-              </article>
-            ) : null}
           </aside>
         </div>
       </section>
@@ -947,6 +915,30 @@ function Field({ label, value, ...props }) {
         value={value ?? ""}
         className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 outline-none ring-[var(--adamia-blue)]/20 focus:ring-2"
       />
+    </div>
+  );
+}
+
+function PasswordField({ label, visible, onToggle, value, ...props }) {
+  return (
+    <div>
+      <label className="mb-2 block text-sm font-semibold">{label}</label>
+      <div className="relative">
+        <input
+          {...props}
+          type={visible ? "text" : "password"}
+          value={value ?? ""}
+          className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 pr-20 outline-none ring-[var(--adamia-blue)]/20 focus:ring-2"
+        />
+        <button
+          type="button"
+          onClick={onToggle}
+          className="absolute inset-y-0 right-0 px-4 text-xs font-bold text-[var(--adamia-blue)]"
+          aria-label={visible ? "Ocultar contraseña" : "Mostrar contraseña"}
+        >
+          {visible ? "Ocultar" : "Mostrar"}
+        </button>
+      </div>
     </div>
   );
 }

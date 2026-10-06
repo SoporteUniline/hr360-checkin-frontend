@@ -74,7 +74,7 @@ export default function LandingHeader() {
               )}
             >
               <a href="/contratar-plan">
-                Prueba gratis <ArrowRight className="ml-2 h-4 w-4" />
+                Contratar <ArrowRight className="ml-2 h-4 w-4" />
               </a>
             </Button>
           </nav>
@@ -130,7 +130,7 @@ export default function LandingHeader() {
                 <div className="mt-6">
                   <Button asChild className="w-full rounded-xl">
                     <a href="/contratar-plan">
-                      Comenzar prueba gratis
+                      Contratar ahora
                     </a>
                   </Button>
                 </div>

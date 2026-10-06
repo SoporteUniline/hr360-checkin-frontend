@@ -106,7 +106,7 @@ export default function ContratosPage() {
               rel="noreferrer"
               className="inline-flex items-center rounded-xl bg-white px-10 py-5 text-xl font-bold text-[var(--adamia-blue)] shadow-2xl transition hover:-translate-y-1"
             >
-              Comenzar prueba gratis <ArrowRight className="ml-2 h-5 w-5" />
+              Contratar ahora <ArrowRight className="ml-2 h-5 w-5" />
             </a>
             <a
               href="/funcionalidades"
@@ -290,7 +290,7 @@ export default function ContratosPage() {
             rel="noreferrer"
             className="mt-10 inline-flex items-center rounded-xl bg-white px-12 py-6 text-2xl font-bold text-[var(--adamia-blue)] shadow-2xl transition hover:-translate-y-1"
           >
-            Comenzar prueba gratis <ArrowRight className="ml-2 h-6 w-6" />
+            Contratar ahora <ArrowRight className="ml-2 h-6 w-6" />
           </a>
         </div>
       </section>
@@ -321,12 +321,12 @@ export default function ContratosPage() {
             📄 Gestion Contractual Profesional
           </div>
           <h2 className="mt-6 text-5xl font-black md:text-6xl">
-            Prueba el modulo de Contratos
+            Empieza con el modulo de Contratos
             <br />
-            <span className="text-cyan-200">gratis por 7 dias</span>
+            <span className="text-cyan-200">para tu empresa</span>
           </h2>
           <p className="mx-auto mt-4 max-w-3xl text-2xl text-white/90">
-            Sin tarjeta, sin compromiso y con todas las funciones incluidas.
+            Configura tu cuenta y comienza a gestionar tus contratos.
           </p>
           <div className="mt-10 flex flex-col justify-center gap-4 sm:flex-row">
             <a

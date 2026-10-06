@@ -72,7 +72,7 @@ export default function DashboardEmpleadosPage() {
             rel="noreferrer"
             className="mt-10 inline-flex items-center rounded-2xl bg-white px-10 py-5 text-xl font-black text-[var(--adamia-blue)] shadow-2xl transition hover:-translate-y-1"
           >
-            Probar gratis 7 dias <ArrowRight className="ml-2 h-5 w-5" />
+            Contratar ahora <ArrowRight className="ml-2 h-5 w-5" />
           </a>
         </div>
       </section>
@@ -269,7 +269,7 @@ export default function DashboardEmpleadosPage() {
               rel="noreferrer"
               className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-[var(--adamia-blue)] to-[var(--adamia-purple)] px-12 py-5 text-2xl font-black text-white shadow-2xl transition hover:-translate-y-1"
             >
-              Comenzar prueba gratis <ArrowRight className="ml-2 h-6 w-6" />
+              Contratar ahora <ArrowRight className="ml-2 h-6 w-6" />
             </a>
             <a
               href="/funcionalidades"
@@ -280,7 +280,7 @@ export default function DashboardEmpleadosPage() {
           </div>
 
           <div className="mt-10 flex flex-wrap justify-center gap-8 text-lg text-[var(--adamia-text-secondary)]">
-            {["7 dias gratis", "Sin tarjeta", "Setup en 5 min", "Soporte incluido"].map((item) => (
+            {["Contratación en línea", "Setup en 5 min", "Soporte incluido"].map((item) => (
               <div key={item} className="inline-flex items-center gap-2 font-semibold">
                 <CheckDot /> {item}
               </div>

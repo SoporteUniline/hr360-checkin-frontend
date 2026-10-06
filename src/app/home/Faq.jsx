@@ -9,9 +9,9 @@ import {
 const faqs = [
   {
     value: "faq-1",
-    pregunta: "¿ADAMIA tiene prueba gratis?",
+    pregunta: "¿Cómo puedo contratar ADAMIA?",
     respuesta:
-      "Si. Puedes iniciar una prueba gratis de 7 dias para evaluar funciones clave como control de asistencia, reportes y gestion de personal sin compromiso.",
+      "Puedes contratar ADAMIA en linea y elegir el plan que mejor se adapte al numero de empleados de tu empresa.",
   },
   {
     value: "faq-2",

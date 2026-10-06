@@ -5,7 +5,7 @@ ADAMIA es un sistema de Recursos Humanos en la nube.
 Contacto comercial: sistema@adamia.mx y WhatsApp +52 317 128 8029.
 Funciones clave: reloj checador facial + GPS, gestion de empleados, asistencias, vacaciones y permisos, reportes, contratos digitales, actas, notificaciones y portal web empresarial.
 Planes: mensual (0%), semestral (10% off), anual (20% off).
-Prueba: 7 dias gratis.
+Contratacion: disponible en linea.
 Enlaces: contratar https://planes.hr360.mx/contratar-plan y cotizar https://planes.hr360.mx/cotiza.
 `;
 

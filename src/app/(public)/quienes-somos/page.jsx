@@ -219,10 +219,10 @@ export default function QuienesSomosPage() {
               href="/contratar-plan"
               className="inline-flex items-center rounded-xl bg-white px-8 py-4 text-lg font-black text-[var(--adamia-blue)] shadow-xl transition hover:-translate-y-0.5"
             >
-              Comenzar prueba gratis de 7 días →
+              Contratar ADAMIA →
             </Link>
             <p className="mt-3 text-sm text-white/80">
-              Sin tarjeta de crédito • Sin compromiso
+              Configura tu cuenta • Comienza en línea
             </p>
           </div>
         </div>
