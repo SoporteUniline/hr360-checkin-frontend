@@ -287,7 +287,7 @@ export default function PlantillasPage() {
           <TabsTrigger value="adamia">Plantillas ADAMIA</TabsTrigger>
           <TabsTrigger value="empresa">Mis plantillas</TabsTrigger>
         </TabsList>
-        <TabsContent value="adamia"><CatalogoAdamia /></TabsContent>
+        <TabsContent value="adamia"><CatalogoAdamia empresa={empresa} /></TabsContent>
         <TabsContent value="empresa" className="space-y-5">
           {empresas.length > 1 ? (
             <Select value={empresa} onValueChange={setEmpresaElegida}>

@@ -110,7 +110,7 @@ export async function prepararPlantillaPoliticas(empresa, datos) {
 }
 
 /** Reutiliza solo una copia idéntica, nunca sobrescribe una personalización. */
-export async function guardarCopiaPoliticas(api, empresa, payload) {
+export async function guardarCopiaPlantilla(api, empresa, payload) {
   const buscar = async () => {
     const respuesta = await api.listar({ empresa, search: payload.codigo });
     const filas = Array.isArray(respuesta) ? respuesta : respuesta?.data || [];
@@ -139,3 +139,6 @@ export async function guardarCopiaPoliticas(api, empresa, payload) {
   if (!guardada) throw new Error("No se pudo confirmar la copia guardada. Revisa Mis plantillas antes de volver a intentar.");
   return guardada;
 }
+
+// Compatibilidad con el formulario de acuse existente.
+export const guardarCopiaPoliticas = guardarCopiaPlantilla;

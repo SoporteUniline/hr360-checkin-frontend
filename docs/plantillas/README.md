@@ -43,3 +43,7 @@ También se verificó en navegador con una API simulada: catálogo → copia en 
 ## Publicación
 
 El workflow existente `.github/workflows/deploy-prod.yml` despliega `main` y se inicia manualmente mediante `workflow_dispatch`. Subir el commit a `main` no ejecuta por sí solo ese despliegue. No se cambia este mecanismo ni se omiten sus validaciones.
+
+## Catálogo adicional
+
+El paquete de veinte formatos RH se documenta en [catalogo-rh.md](catalogo-rh.md). El acuse de políticas conserva su formulario y contenido.
