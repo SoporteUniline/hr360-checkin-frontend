@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useCallback, useEffect } from "react";
+import { Suspense, useState, useMemo, useRef, useCallback, useEffect } from "react";
 import useSWR from "swr";
 import { useAuth } from "@/context/AuthContext";
 import { fetcherWithToken } from "@/lib/fetcher";
@@ -32,12 +32,14 @@ import {
   Building2,
   Search,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSnackbar } from "notistack";
 import { motion, AnimatePresence } from "framer-motion";
 import { htmlToPdf } from "@/lib/htmlToPdf";
 import { Combobox } from "@/components/Combobox";
 import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
+import CatalogoAdamia from "@/components/documentos/CatalogoAdamia";
+import { empresasDocumentales, escapeDocumentText } from "@/lib/plantillasAdamia";
 
 /* ─── Constantes ─── */
 const PASOS = ["Plantilla", "Empleado", "Vista previa", "Listo"];
@@ -151,7 +153,7 @@ function resolveTemplate(html, vars) {
   const resolved = source.replace(/\{\{([^}]+)\}\}/g, (_, key) => {
     const v = vars[key.trim()];
     // Si el valor existe y no es vacío, usarlo; de lo contrario, cadena vacía (no placeholder)
-    return v !== undefined && v !== null && v !== "" ? v : "";
+    return v !== undefined && v !== null && v !== "" ? escapeDocumentText(v) : "";
   });
   return limpiarCamposVacios(resolved);
 }
@@ -186,21 +188,38 @@ function Stepper({ paso }) {
 
 /* ─── Página ─── */
 export default function GenerarDocumentoPage() {
+  return <Suspense fallback={<p className="p-5 text-sm text-slate-500">Cargando generador...</p>}><GeneradorPorEmpresa /></Suspense>;
+}
+
+function GeneradorPorEmpresa() {
   const { dataUser } = useAuth();
+  const params = useSearchParams();
+  const empresas = empresasDocumentales(dataUser);
+  const [elegida, setElegida] = useState("");
+  const solicitada = elegida || params.get("empresa");
+  const empresa = solicitada || empresas[0]?.id;
+  if (!dataUser) return <p className="p-5 text-sm text-slate-500">Cargando sesión...</p>;
+  if (!empresas.some((e) => e.id === empresa)) return <p role="alert" className="p-5 text-sm text-red-700">La empresa solicitada no está disponible en tu sesión.</p>;
+  return <div className="space-y-5">
+    {empresas.length > 1 ? <div className="max-w-sm space-y-1.5"><Label htmlFor="empresa-generador">Empresa del documento</Label><select id="empresa-generador" className="h-10 w-full rounded-md border bg-white px-3 text-sm" value={empresa} onChange={(e) => setElegida(e.target.value)}>{empresas.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</select></div> : null}
+    <GenerarDocumentoContent key={empresa} empresa={empresa} plantillaInicial={!elegida ? params.get("plantilla") || "" : ""} codigoInicial={!elegida ? params.get("codigo") || "" : ""} />
+  </div>;
+}
+
+function GenerarDocumentoContent({ empresa, plantillaInicial, codigoInicial }) {
   const { enqueueSnackbar } = useSnackbar();
   const router = useRouter();
   const previewRef = useRef(null);
 
   const { options: unidadOptions, byId: unidadById } = useUnidadesNegocio();
 
-  const empresa = dataUser?.empresas?.[0] || "all";
   const [paso, setPaso] = useState(0);
   const [unidadCalculo, setUnidadCalculo] = useState("");
   const [generating, setGenerating] = useState(false);
   const [docGuardado, setDocGuardado] = useState(null);
 
   /* Selecciones */
-  const [plantillaId, setPlantillaId] = useState("");
+  const [plantillaId, setPlantillaId] = useState(plantillaInicial);
   const [plantillaCompleta, setPlantillaCompleta] = useState(null);
   const [cargandoPlantilla, setCargandoPlantilla] = useState(false);
   const [empleadoId, setEmpleadoId] = useState("");
@@ -208,55 +227,68 @@ export default function GenerarDocumentoPage() {
   const [empresaData, setEmpresaData] = useState(null);
   const [searchEmp, setSearchEmp] = useState("");
   const [notas, setNotas] = useState("");
+  const [codigoFiltro, setCodigoFiltro] = useState(codigoInicial);
+  const [erroresDatos, setErroresDatos] = useState({});
+  const errorDatos = Object.values(erroresDatos).filter(Boolean).join(" ");
+  const generandoRef = useRef(false);
 
   /* SWR — plantillas activas (lista sin contenido_html para no sobrecargar) */
-  const { data: plantillasData } = useSWR(
-    `/checador/gestion-documental/plantillas?empresa=${empresa}&activo=1`,
+  const { data: plantillasData, error: errorPlantillas } = useSWR(
+    `/checador/gestion-documental/plantillas?${new URLSearchParams({ empresa, activo: "1", ...(codigoFiltro ? { search: codigoFiltro } : {}) })}`,
     fetcherWithToken,
     { revalidateOnFocus: false },
   );
   const plantillas = plantillasData?.data || [];
   const plantillaResumen = plantillas.find((p) => String(p.id_plantilla) === String(plantillaId));
+  const idPlantillaDisponible = plantillaResumen?.id_plantilla;
 
   /* Cargar plantilla completa (con contenido_html) al seleccionar */
   useEffect(() => {
-    if (!plantillaId) {
-      setPlantillaCompleta(null);
+    let vigente = true;
+    setPlantillaCompleta(null);
+    setErroresDatos((prev) => ({ ...prev, plantilla: "" }));
+    if (!idPlantillaDisponible) {
+      setCargandoPlantilla(false);
       return;
     }
     setCargandoPlantilla(true);
-    plantillasApi.getById(plantillaId)
-      .then((data) => setPlantillaCompleta(data))
-      .catch(() => setPlantillaCompleta(null))
-      .finally(() => setCargandoPlantilla(false));
-  }, [plantillaId]);
+    plantillasApi.getById(idPlantillaDisponible)
+      .then((data) => {
+        if (!vigente) return;
+        if (data.id_empresa != null && String(data.id_empresa) !== empresa) throw new Error("La plantilla pertenece a otra empresa.");
+        setPlantillaCompleta(data);
+      })
+      .catch(() => { if (vigente) setErroresDatos((prev) => ({ ...prev, plantilla: "No se pudo cargar la plantilla. Vuelve a seleccionarla o recarga la página." })); })
+      .finally(() => { if (vigente) setCargandoPlantilla(false); });
+    return () => { vigente = false; };
+  }, [idPlantillaDisponible, empresa]);
 
   const plantillaSeleccionada = plantillaCompleta || plantillaResumen;
 
   /* Cargar empleado completo (con nómina: sueldo, etc.) al seleccionar */
   useEffect(() => {
-    if (!empleadoId) {
-      setEmpleadoCompleto(null);
-      return;
-    }
+    let vigente = true;
+    setEmpleadoCompleto(null);
+    setErroresDatos((prev) => ({ ...prev, empleado: "" }));
+    if (!empleadoId) return;
     axios.get(`/checador/empleados/${empleadoId}`)
-      .then((res) => setEmpleadoCompleto(res.data))
-      .catch(() => setEmpleadoCompleto(null));
-  }, [empleadoId]);
+      .then((res) => {
+        if (!vigente) return;
+        if (res.data.id_empresa != null && String(res.data.id_empresa) !== empresa) throw new Error("El empleado pertenece a otra empresa.");
+        setEmpleadoCompleto(res.data);
+      })
+      .catch(() => { if (vigente) setErroresDatos((prev) => ({ ...prev, empleado: "No se pudieron cargar los datos del empleado. Vuelve a seleccionarlo o recarga la página." })); });
+    return () => { vigente = false; };
+  }, [empleadoId, empresa]);
 
-  /* Cargar datos de empresa según la unidad de negocio seleccionada,
-     o la primera empresa del token si no hay unidad elegida */
+  /* La empresa del documento es la misma que la de la plantilla y el empleado. */
   useEffect(() => {
-    const idEmpresa = unidadCalculo
-      ? unidadById[unidadCalculo]?.id_empresa
-      : empresa !== "all"
-        ? empresa
-        : dataUser?.empresas?.[0];
-    if (!idEmpresa) return;
-    axios.get(`/empresas/${idEmpresa}`)
-      .then((res) => setEmpresaData(res.data))
-      .catch(() => setEmpresaData(null));
-  }, [unidadCalculo, unidadById, empresa, dataUser]);
+    let vigente = true;
+    axios.get(`/empresas/${empresa}`)
+      .then((res) => { if (vigente) setEmpresaData(res.data); })
+      .catch(() => { if (vigente) setErroresDatos((prev) => ({ ...prev, empresa: "No se pudieron cargar los datos de la empresa. Recarga la página antes de generar el documento." })); });
+    return () => { vigente = false; };
+  }, [empresa]);
 
   /* SWR — empleados */
   const { data: empData } = useSWR(
@@ -264,13 +296,13 @@ export default function GenerarDocumentoPage() {
     fetcherWithToken,
     { revalidateOnFocus: false },
   );
-  const empleados = empData?.data || empData || [];
+  const empleados = useMemo(() => Array.isArray(empData?.data) ? empData.data : Array.isArray(empData) ? empData : [], [empData]);
   const empleadosFiltrados = useMemo(() => {
     if (!searchEmp.trim()) return empleados;
     const q = searchEmp.toLowerCase();
     return empleados.filter((e) =>
       `${e.nombre} ${e.apellido_paterno} ${e.apellido_materno || ""}`.toLowerCase().includes(q) ||
-      (e.codigo_empleado || "").toLowerCase().includes(q),
+      String(e.codigo_empleado || "").toLowerCase().includes(q),
     );
   }, [empleados, searchEmp]);
   // empleadoSel: datos del listado (para mostrar nombre/puesto en la UI)
@@ -283,28 +315,28 @@ export default function GenerarDocumentoPage() {
     if (!plantillaSeleccionada || !empleadoFinal) return "";
     const contenido = plantillaSeleccionada.contenido_html || "";
     if (!contenido.trim()) return "<p style='color:#9ca3af;'>Esta plantilla no tiene contenido.</p>";
-    // empresaFinal: datos completos de empresa (fallback a empresas_detalle del token)
-    const empresaFinal = empresaData || dataUser?.empresas_detalle?.[0];
+    // Usar exclusivamente los datos cargados de la empresa seleccionada.
+    const empresaFinal = empresaData;
     const vars = buildVariables(empleadoFinal, empresaFinal);
     return resolveTemplate(contenido, vars);
-  }, [plantillaSeleccionada, empleadoFinal, empresaData, dataUser]);
+  }, [plantillaSeleccionada, empleadoFinal, empresaData]);
 
   /* ─── Guardar documento ─── */
   const handleGenerar = useCallback(async () => {
-    if (!plantillaId || !empleadoId) return;
+    if (generandoRef.current || !plantillaCompleta || !empleadoCompleto || !empresaData) return;
+    generandoRef.current = true;
     setGenerating(true);
     try {
-      const empresaFinal = empresaData || dataUser?.empresas_detalle?.[0];
+      const empresaFinal = empresaData;
       const vars = buildVariables(empleadoFinal, empresaFinal);
       const contenido_html = resolveTemplate(plantillaSeleccionada.contenido_html || "", vars);
       const nombre_documento = `${plantillaSeleccionada.nombre} — ${vars["empleado.nombre"]}`;
 
-      const empresaId = empresa !== "all" ? empresa : dataUser?.empresas?.[0];
       const result = await docGeneradosApi.crear(
-        { empresa: empresaId },
+        { empresa },
         { id_plantilla: plantillaId, id_empleado: empleadoId, nombre_documento, contenido_html, variables_usadas: vars, notas },
       );
-      setDocGuardado({ ...result, nombre_documento });
+      setDocGuardado({ ...result, nombre_documento, contenido_html });
       setPaso(3);
       enqueueSnackbar("Documento generado correctamente", { variant: "success" });
     } catch (err) {
@@ -312,15 +344,16 @@ export default function GenerarDocumentoPage() {
       enqueueSnackbar(msg, { variant: "error" });
     } finally {
       setGenerating(false);
+      generandoRef.current = false;
     }
-  }, [plantillaId, empleadoId, plantillaSeleccionada, empleadoFinal, empresaData, dataUser, empresa, notas, enqueueSnackbar]);
+  }, [plantillaId, empleadoId, plantillaSeleccionada, plantillaCompleta, empleadoCompleto, empleadoFinal, empresaData, empresa, notas, enqueueSnackbar]);
 
   /* ─── Descargar PDF ─── */
   const handleDescargarPDF = useCallback(async () => {
     if (!htmlPreview) return;
     const nombreArchivo = docGuardado?.nombre_documento || plantillaSeleccionada?.nombre || "documento";
     try {
-      await htmlToPdf(htmlPreview, nombreArchivo);
+      await htmlToPdf(docGuardado?.contenido_html || htmlPreview, nombreArchivo);
       enqueueSnackbar("PDF descargado correctamente", { variant: "success" });
     } catch (err) {
       console.error("PDF error:", err);
@@ -354,14 +387,17 @@ export default function GenerarDocumentoPage() {
         </div>
         <Stepper paso={paso} />
       </div>
+      {(errorDatos || errorPlantillas) && <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{errorDatos || "No se pudieron cargar las plantillas de la empresa."}</p>}
 
       <AnimatePresence mode="wait">
         {/* ─── PASO 0: Seleccionar plantilla ─── */}
         {paso === 0 && (
           <motion.div key="paso0" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}>
+            <div className="mb-6"><CatalogoAdamia /></div>
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
               <h2 className="text-base font-semibold text-gray-800 mb-1">Selecciona una plantilla</h2>
               <p className="text-xs text-gray-400 mb-5">Elige la plantilla que deseas usar para generar el documento</p>
+              {codigoFiltro ? <Button variant="ghost" className="mb-3 text-blue-700" onClick={() => { setCodigoFiltro(""); setPlantillaId(""); }}>Ver todas mis plantillas</Button> : null}
 
               {plantillas.length === 0 ? (
                 <div className="flex flex-col items-center py-12 gap-4">
@@ -415,7 +451,7 @@ export default function GenerarDocumentoPage() {
             <div className="flex justify-end mt-4">
               <Button
                 className="bg-[#2563EB] hover:bg-blue-700 text-white gap-2"
-                disabled={!plantillaId}
+                disabled={!plantillaCompleta || cargandoPlantilla}
                 onClick={() => setPaso(1)}
               >
                 Siguiente <ArrowRight className="w-4 h-4" />
@@ -440,7 +476,7 @@ export default function GenerarDocumentoPage() {
                   Unidad de negocio
                 </Label>
                 <Combobox
-                  options={unidadOptions}
+                  options={unidadOptions.filter((item) => String(item.id_empresa) === empresa)}
                   value={unidadCalculo}
                   onChange={(val) => {
                     setUnidadCalculo(val);
@@ -573,7 +609,7 @@ export default function GenerarDocumentoPage() {
               <Button
                 className="bg-[#2563EB] hover:bg-blue-700 text-white gap-2"
                 onClick={handleGenerar}
-                disabled={generating}
+                disabled={generating || !plantillaCompleta || !empleadoCompleto || !empresaData}
               >
                 {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
                 Generar documento
@@ -607,7 +643,7 @@ export default function GenerarDocumentoPage() {
                 ref={previewRef}
                 className="p-10 text-sm text-gray-800 leading-relaxed prose prose-sm max-w-none max-h-96 overflow-y-auto"
                 style={{ fontFamily: "Georgia, serif" }}
-                dangerouslySetInnerHTML={{ __html: htmlPreview }}
+                dangerouslySetInnerHTML={{ __html: docGuardado.contenido_html }}
               />
             </div>
 
@@ -626,7 +662,7 @@ export default function GenerarDocumentoPage() {
               <Button
                 variant="outline"
                 className="gap-2"
-                onClick={() => router.push("/panel/gestion-documental/documentos")}
+                onClick={() => router.push(`/panel/gestion-documental/documentos?empresa=${encodeURIComponent(empresa)}`)}
               >
                 Ver todos los documentos
               </Button>
@@ -640,6 +676,8 @@ export default function GenerarDocumentoPage() {
                   setNotas("");
                   setDocGuardado(null);
                   setUnidadCalculo("");
+                  setCodigoFiltro("");
+                  setErroresDatos({});
                 }}
               >
                 <RefreshCw className="w-4 h-4" />

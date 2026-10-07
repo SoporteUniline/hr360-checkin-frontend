@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import useSWR, { mutate } from "swr";
 import { useAuth } from "@/context/AuthContext";
 import { fetcherWithToken } from "@/lib/fetcher";
@@ -49,9 +49,10 @@ import {
   Loader2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSnackbar } from "notistack";
 import { htmlToPdf } from "@/lib/htmlToPdf";
+import { empresasDocumentales } from "@/lib/plantillasAdamia";
 
 /* ─── Constantes ─── */
 const ESTATUSES = [
@@ -125,11 +126,27 @@ function DocRow({ doc, onView, onDelete }) {
 
 /* ─── Página ─── */
 export default function DocumentosPage() {
+  return <Suspense fallback={<p className="p-5 text-sm text-slate-500">Cargando documentos...</p>}><DocumentosPorEmpresa /></Suspense>;
+}
+
+function DocumentosPorEmpresa() {
   const { dataUser } = useAuth();
+  const params = useSearchParams();
+  const empresas = empresasDocumentales(dataUser);
+  const [elegida, setElegida] = useState("");
+  const empresa = elegida || params.get("empresa") || empresas[0]?.id;
+  if (!dataUser) return <p className="p-5 text-sm text-slate-500">Cargando sesión...</p>;
+  if (!empresas.some((e) => e.id === empresa)) return <p role="alert" className="p-5 text-sm text-red-700">La empresa solicitada no está disponible en tu sesión.</p>;
+  return <div className="space-y-5">
+    {empresas.length > 1 ? <select aria-label="Empresa de los documentos" className="h-10 w-full rounded-md border bg-white px-3 text-sm sm:max-w-sm" value={empresa} onChange={(e) => setElegida(e.target.value)}>{empresas.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</select> : null}
+    <DocumentosContent key={empresa} empresa={empresa} />
+  </div>;
+}
+
+function DocumentosContent({ empresa }) {
   const { enqueueSnackbar } = useSnackbar();
   const router = useRouter();
 
-  const empresa = dataUser?.empresas?.[0] || "all";
   const [search, setSearch] = useState("");
   const [estatus, setEstatus] = useState("todos");
   const [page, setPage] = useState(1);
