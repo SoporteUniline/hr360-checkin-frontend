@@ -42,6 +42,9 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useSnackbar } from "notistack";
+import CatalogoAdamia from "@/components/documentos/CatalogoAdamia";
+import { empresasDocumentales } from "@/lib/plantillasAdamia";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 /* ─── Constantes ─── */
 const CATEGORIAS = [
@@ -198,11 +201,11 @@ export default function PlantillasPage() {
   const [categoria, setCategoria] = useState("todas");
   const [deletingItem, setDeletingItem] = useState(null);
 
-  const empresa = dataUser?.empresas?.[0] || "all";
+  const empresas = empresasDocumentales(dataUser);
+  const [empresaElegida, setEmpresaElegida] = useState("");
+  const empresa = empresas.some((e) => e.id === empresaElegida) ? empresaElegida : empresas[0]?.id;
 
-  const swrKey = `/checador/gestion-documental/plantillas?empresa=${empresa}&search=${search}&categoria=${
-    categoria === "todas" ? "" : categoria
-  }`;
+  const swrKey = empresa ? `/checador/gestion-documental/plantillas?${new URLSearchParams({ empresa, search, categoria: categoria === "todas" ? "" : categoria })}` : null;
 
   const { data, isLoading, error } = useSWR(swrKey, fetcherWithToken, {
     revalidateOnFocus: false,
@@ -279,6 +282,19 @@ export default function PlantillasPage() {
         </Button>
       </div>
 
+      <Tabs defaultValue="adamia" className="space-y-5">
+        <TabsList aria-label="Origen de las plantillas">
+          <TabsTrigger value="adamia">Plantillas ADAMIA</TabsTrigger>
+          <TabsTrigger value="empresa">Mis plantillas</TabsTrigger>
+        </TabsList>
+        <TabsContent value="adamia"><CatalogoAdamia /></TabsContent>
+        <TabsContent value="empresa" className="space-y-5">
+          {empresas.length > 1 ? (
+            <Select value={empresa} onValueChange={setEmpresaElegida}>
+              <SelectTrigger aria-label="Empresa de las plantillas" className="w-full sm:w-72"><SelectValue placeholder="Selecciona una empresa" /></SelectTrigger>
+              <SelectContent>{empresas.map((e) => <SelectItem key={e.id} value={e.id}>{e.nombre}</SelectItem>)}</SelectContent>
+            </Select>
+          ) : null}
       {/* ── Stats ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
@@ -399,6 +415,8 @@ export default function PlantillasPage() {
           </div>
         </AnimatePresence>
       )}
+        </TabsContent>
+      </Tabs>
 
       {/* ── Confirmación eliminar ── */}
       <AlertDialog
