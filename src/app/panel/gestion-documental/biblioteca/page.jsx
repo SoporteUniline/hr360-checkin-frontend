@@ -498,7 +498,7 @@ export default function BibliotecaDocumentalPage() {
         </TabsContent>
 
         <TabsContent value="formatos-puesto">
-          <FormatosPuestoPanel idEmpresa={idEmpresa} />
+          <FormatosPuestoPanel idEmpresa={idEmpresa} dataUser={dataUser} />
         </TabsContent>
       </Tabs>
 
