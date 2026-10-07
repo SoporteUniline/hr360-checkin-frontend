@@ -13,6 +13,8 @@ import UploadDocumentModal from "@/components/biblioteca/UploadDocumentModal";
 import NewVersionModal from "@/components/biblioteca/NewVersionModal";
 import VersionsHistoryModal from "@/components/biblioteca/VersionsHistoryModal";
 import CategoryModal from "@/components/biblioteca/CategoryModal";
+import FormatosPuestoPanel from "@/components/biblioteca/FormatosPuestoPanel";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const initialUploadForm = {
   id_categoria: "",
@@ -461,31 +463,44 @@ export default function BibliotecaDocumentalPage() {
         onOpenUpload={() => setOpenUpload(true)}
       />
 
-      <DocumentFilters
-        filters={filters}
-        setFilters={setFilters}
-        categorias={categorias}
-        totalDocumentos={totalDocumentos}
-        limpiarFiltros={limpiarFiltros}
-      />
+      <Tabs defaultValue="documentos" className="gap-5">
+        <TabsList className="h-auto flex-wrap justify-start">
+          <TabsTrigger value="documentos">Documentos cargados</TabsTrigger>
+          <TabsTrigger value="formatos-puesto">Formatos por puesto</TabsTrigger>
+        </TabsList>
 
-      <DocumentsList
-        loading={loading}
-        documentos={documentos}
-        totalDocumentos={totalDocumentos}
-        openMenuId={openMenuId}
-        setOpenMenuId={setOpenMenuId}
-        deletingId={deletingId}
-        getDocumentoUrl={getDocumentoUrl}
-        openEditDocument={openEditDocument}
-        openNewVersionModal={openNewVersionModal}
-        openVersionsHistoryModal={openVersionsHistoryModal}
-        onDeleteClick={(doc) => {
-          setDocumentToDelete(doc);
-          setShowDeleteModal(true);
-          setOpenMenuId(null);
-        }}
-      />
+        <TabsContent value="documentos" className="space-y-5">
+          <DocumentFilters
+            filters={filters}
+            setFilters={setFilters}
+            categorias={categorias}
+            totalDocumentos={totalDocumentos}
+            limpiarFiltros={limpiarFiltros}
+          />
+
+          <DocumentsList
+            loading={loading}
+            documentos={documentos}
+            totalDocumentos={totalDocumentos}
+            openMenuId={openMenuId}
+            setOpenMenuId={setOpenMenuId}
+            deletingId={deletingId}
+            getDocumentoUrl={getDocumentoUrl}
+            openEditDocument={openEditDocument}
+            openNewVersionModal={openNewVersionModal}
+            openVersionsHistoryModal={openVersionsHistoryModal}
+            onDeleteClick={(doc) => {
+              setDocumentToDelete(doc);
+              setShowDeleteModal(true);
+              setOpenMenuId(null);
+            }}
+          />
+        </TabsContent>
+
+        <TabsContent value="formatos-puesto">
+          <FormatosPuestoPanel idEmpresa={idEmpresa} />
+        </TabsContent>
+      </Tabs>
 
       <UploadDocumentModal
         open={openUpload}
