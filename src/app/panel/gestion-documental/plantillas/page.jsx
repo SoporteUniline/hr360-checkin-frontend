@@ -45,11 +45,36 @@ import { useSnackbar } from "notistack";
 
 /* ─── Constantes ─── */
 const CATEGORIAS = [
-  { value: "Laboral",        label: "Laboral",        icon: Briefcase,  color: "bg-blue-100 text-blue-700" },
-  { value: "Administrativo", label: "Administrativo", icon: FileStack,  color: "bg-amber-100 text-amber-700" },
-  { value: "Legal",          label: "Legal",           icon: Gavel,      color: "bg-red-100 text-red-700" },
-  { value: "RRHH",           label: "RRHH",            icon: Users,      color: "bg-purple-100 text-purple-700" },
-  { value: "Otro",           label: "Otro",            icon: FolderOpen, color: "bg-gray-100 text-gray-700" },
+  {
+    value: "Laboral",
+    label: "Laboral",
+    icon: Briefcase,
+    color: "bg-blue-100 text-blue-700",
+  },
+  {
+    value: "Administrativo",
+    label: "Administrativo",
+    icon: FileStack,
+    color: "bg-amber-100 text-amber-700",
+  },
+  {
+    value: "Legal",
+    label: "Legal",
+    icon: Gavel,
+    color: "bg-red-100 text-red-700",
+  },
+  {
+    value: "RRHH",
+    label: "RRHH",
+    icon: Users,
+    color: "bg-purple-100 text-purple-700",
+  },
+  {
+    value: "Otro",
+    label: "Otro",
+    icon: FolderOpen,
+    color: "bg-gray-100 text-gray-700",
+  },
 ];
 
 function getCategoriaInfo(cat) {
@@ -76,8 +101,12 @@ function PlantillaCard({ plantilla, onEdit, onDelete, onToggle }) {
             <FileText className="w-5 h-5 text-[#2563EB]" />
           </div>
           <div className="min-w-0">
-            <p className="font-semibold text-gray-900 truncate">{plantilla.nombre}</p>
-            <p className="text-xs text-gray-400 font-mono">{plantilla.codigo}</p>
+            <p className="font-semibold text-gray-900 truncate">
+              {plantilla.nombre}
+            </p>
+            <p className="text-xs text-gray-400 font-mono">
+              {plantilla.codigo}
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
@@ -104,26 +133,37 @@ function PlantillaCard({ plantilla, onEdit, onDelete, onToggle }) {
             onClick={() => onToggle(plantilla)}
             title={plantilla.activo ? "Desactivar" : "Activar"}
           >
-            {plantilla.activo
-              ? <ToggleRight className="w-4 h-4 text-green-500" />
-              : <ToggleLeft className="w-4 h-4" />
-            }
+            {plantilla.activo ? (
+              <ToggleRight className="w-4 h-4 text-green-500" />
+            ) : (
+              <ToggleLeft className="w-4 h-4" />
+            )}
           </Button>
         </div>
       </div>
 
       {/* Descripción */}
       {plantilla.descripcion && (
-        <p className="text-sm text-gray-500 line-clamp-2">{plantilla.descripcion}</p>
+        <p className="text-sm text-gray-500 line-clamp-2">
+          {plantilla.descripcion}
+        </p>
       )}
 
       {/* Footer */}
       <div className="flex items-center justify-between mt-auto pt-1 border-t border-gray-50">
-        <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${cat.color}`}>
+        <span
+          className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full ${cat.color}`}
+        >
           <CatIcon className="w-3 h-3" />
           {cat.label}
         </span>
-        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${plantilla.activo ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+        <span
+          className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+            plantilla.activo
+              ? "bg-green-50 text-green-700"
+              : "bg-gray-100 text-gray-500"
+          }`}
+        >
           {plantilla.activo ? "Activa" : "Inactiva"}
         </span>
       </div>
@@ -160,7 +200,9 @@ export default function PlantillasPage() {
 
   const empresa = dataUser?.empresas?.[0] || "all";
 
-  const swrKey = `/checador/gestion-documental/plantillas?empresa=${empresa}&search=${search}&categoria=${categoria === "todas" ? "" : categoria}`;
+  const swrKey = `/checador/gestion-documental/plantillas?empresa=${empresa}&search=${search}&categoria=${
+    categoria === "todas" ? "" : categoria
+  }`;
 
   const { data, isLoading, error } = useSWR(swrKey, fetcherWithToken, {
     revalidateOnFocus: false,
@@ -169,9 +211,14 @@ export default function PlantillasPage() {
   const plantillas = data?.data || [];
 
   /* ─── Acciones ─── */
-  const handleEdit = useCallback((plantilla) => {
-    router.push(`/panel/gestion-documental/plantillas/editor?id=${plantilla.id_plantilla}`);
-  }, [router]);
+  const handleEdit = useCallback(
+    (plantilla) => {
+      router.push(
+        `/panel/gestion-documental/plantillas/editor?id=${plantilla.id_plantilla}`,
+      );
+    },
+    [router],
+  );
 
   const handleDelete = useCallback((plantilla) => {
     setDeletingItem(plantilla);
@@ -183,39 +230,49 @@ export default function PlantillasPage() {
       await plantillasApi.eliminar(deletingItem.id_plantilla);
       enqueueSnackbar("Plantilla eliminada", { variant: "success" });
       mutate(swrKey);
-    } catch {
-      enqueueSnackbar("Error al eliminar la plantilla", { variant: "error" });
+    } catch (error) {
+      enqueueSnackbar(
+        error.response?.data?.error || "Error al eliminar la plantilla",
+        { variant: "error" },
+      );
     } finally {
       setDeletingItem(null);
     }
   }, [deletingItem, enqueueSnackbar, swrKey]);
 
-  const handleToggle = useCallback(async (plantilla) => {
-    try {
-      await plantillasApi.toggle(plantilla.id_plantilla, !plantilla.activo);
-      enqueueSnackbar(
-        plantilla.activo ? "Plantilla desactivada" : "Plantilla activada",
-        { variant: "info" },
-      );
-      mutate(swrKey);
-    } catch {
-      enqueueSnackbar("Error al actualizar estatus", { variant: "error" });
-    }
-  }, [enqueueSnackbar, swrKey]);
+  const handleToggle = useCallback(
+    async (plantilla) => {
+      try {
+        await plantillasApi.toggle(plantilla.id_plantilla, !plantilla.activo);
+        enqueueSnackbar(
+          plantilla.activo ? "Plantilla desactivada" : "Plantilla activada",
+          { variant: "info" },
+        );
+        mutate(swrKey);
+      } catch {
+        enqueueSnackbar("Error al actualizar estatus", { variant: "error" });
+      }
+    },
+    [enqueueSnackbar, swrKey],
+  );
 
   return (
     <div className="flex flex-col gap-6">
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Plantillas de documentos</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Plantillas de documentos
+          </h1>
           <p className="text-sm text-gray-500 mt-0.5">
             Crea y gestiona las plantillas con variables dinámicas
           </p>
         </div>
         <Button
           className="bg-[#2563EB] hover:bg-blue-700 text-white gap-2 self-start sm:self-auto"
-          onClick={() => router.push("/panel/gestion-documental/plantillas/editor")}
+          onClick={() =>
+            router.push("/panel/gestion-documental/plantillas/editor")
+          }
         >
           <Plus className="w-4 h-4" />
           Nueva plantilla
@@ -225,14 +282,37 @@ export default function PlantillasPage() {
       {/* ── Stats ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Total plantillas", value: data?.total ?? "—", color: "bg-blue-50 text-[#2563EB]" },
-          { label: "Activas", value: plantillas.filter(p => p.activo).length, color: "bg-green-50 text-green-600" },
-          { label: "Inactivas", value: plantillas.filter(p => !p.activo).length, color: "bg-gray-50 text-gray-500" },
-          { label: "Categorías", value: CATEGORIAS.length, color: "bg-purple-50 text-purple-600" },
-        ].map(stat => (
-          <div key={stat.label} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
-            <p className="text-xs text-gray-500 font-medium mb-1">{stat.label}</p>
-            <p className={`text-2xl font-bold ${stat.color.split(" ")[1]}`}>{stat.value}</p>
+          {
+            label: "Total plantillas",
+            value: data?.total ?? "—",
+            color: "bg-blue-50 text-[#2563EB]",
+          },
+          {
+            label: "Activas",
+            value: plantillas.filter((p) => p.activo).length,
+            color: "bg-green-50 text-green-600",
+          },
+          {
+            label: "Inactivas",
+            value: plantillas.filter((p) => !p.activo).length,
+            color: "bg-gray-50 text-gray-500",
+          },
+          {
+            label: "Categorías",
+            value: CATEGORIAS.length,
+            color: "bg-purple-50 text-purple-600",
+          },
+        ].map((stat) => (
+          <div
+            key={stat.label}
+            className="bg-white rounded-xl border border-gray-100 shadow-sm p-4"
+          >
+            <p className="text-xs text-gray-500 font-medium mb-1">
+              {stat.label}
+            </p>
+            <p className={`text-2xl font-bold ${stat.color.split(" ")[1]}`}>
+              {stat.value}
+            </p>
           </div>
         ))}
       </div>
@@ -255,7 +335,9 @@ export default function PlantillasPage() {
           <SelectContent>
             <SelectItem value="todas">Todas las categorías</SelectItem>
             {CATEGORIAS.map((c) => (
-              <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+              <SelectItem key={c.value} value={c.value}>
+                {c.label}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -270,7 +352,9 @@ export default function PlantillasPage() {
 
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
+          {Array.from({ length: 6 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
         </div>
       ) : plantillas.length === 0 ? (
         <motion.div
@@ -282,13 +366,19 @@ export default function PlantillasPage() {
             <FileText className="w-10 h-10 text-[#2563EB]" />
           </div>
           <div className="text-center">
-            <p className="text-gray-700 font-semibold">No hay plantillas todavía</p>
-            <p className="text-sm text-gray-400 mt-1">Crea tu primera plantilla para comenzar</p>
+            <p className="text-gray-700 font-semibold">
+              No hay plantillas todavía
+            </p>
+            <p className="text-sm text-gray-400 mt-1">
+              Crea tu primera plantilla para comenzar
+            </p>
           </div>
           <Button
             variant="outline"
             className="gap-2 border-[#2563EB] text-[#2563EB] hover:bg-blue-50"
-            onClick={() => router.push("/panel/gestion-documental/plantillas/editor")}
+            onClick={() =>
+              router.push("/panel/gestion-documental/plantillas/editor")
+            }
           >
             <Plus className="w-4 h-4" />
             Crear plantilla
@@ -311,13 +401,17 @@ export default function PlantillasPage() {
       )}
 
       {/* ── Confirmación eliminar ── */}
-      <AlertDialog open={!!deletingItem} onOpenChange={(open) => !open && setDeletingItem(null)}>
+      <AlertDialog
+        open={!!deletingItem}
+        onOpenChange={(open) => !open && setDeletingItem(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>¿Eliminar plantilla?</AlertDialogTitle>
             <AlertDialogDescription>
-              La plantilla <strong>{deletingItem?.nombre}</strong> será eliminada de forma permanente.
-              Los documentos generados con esta plantilla no se verán afectados.
+              La plantilla <strong>{deletingItem?.nombre}</strong> será
+              eliminada de forma permanente. Los documentos generados con esta
+              plantilla no se verán afectados.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
