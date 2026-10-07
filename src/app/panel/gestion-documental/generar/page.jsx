@@ -39,7 +39,9 @@ import { htmlToPdf } from "@/lib/htmlToPdf";
 import { Combobox } from "@/components/Combobox";
 import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 import CatalogoAdamia from "@/components/documentos/CatalogoAdamia";
-import { empresasDocumentales, escapeDocumentText } from "@/lib/plantillasAdamia";
+import FormularioFormatoRRHH from "@/components/documentos/FormularioFormatoRRHH";
+import { obtenerFormatoRRHH, detectarFormatoBase, completarDatosFormato, validarDatosFormato, renderFormatoRRHH, prepararBaseFormato } from "@/lib/documentos/formatosRRHH";
+import { empresasDocumentales, escapeDocumentText, guardarCopiaPlantilla } from "@/lib/plantillasAdamia";
 
 /* ─── Constantes ─── */
 const PASOS = ["Plantilla", "Empleado", "Vista previa", "Listo"];
@@ -83,7 +85,7 @@ function buildVariables(empleado, empresa, hoy) {
     : "";
 
   return {
-    "empleado.nombre":        `${empleado.nombre} ${empleado.apellido_paterno} ${empleado.apellido_materno || ""}`.trim(),
+    "empleado.nombre":        [empleado.nombre, empleado.apellido_paterno, empleado.apellido_materno].filter(Boolean).join(" "),
     "empleado.codigo":        empleado.codigo_empleado || String(empleado.id_empleado || ""),
     "empleado.puesto":        empleado.puesto || empleado.nombre_puesto || "",
     "empleado.departamento":  empleado.departamento || "",
@@ -161,10 +163,10 @@ function resolveTemplate(html, vars) {
 /* ─── Stepper ─── */
 function Stepper({ paso }) {
   return (
-    <div className="flex items-center gap-0">
+    <div className="flex flex-wrap items-center gap-y-2">
       {PASOS.map((label, i) => (
         <div key={label} className="flex items-center">
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+          <div className={`flex items-center gap-1.5 px-2 py-1.5 rounded-full text-xs font-medium transition-all ${
             i === paso
               ? "bg-[#2563EB] text-white shadow-sm"
               : i < paso
@@ -178,7 +180,7 @@ function Stepper({ paso }) {
             {label}
           </div>
           {i < PASOS.length - 1 && (
-            <div className={`w-6 h-px mx-1 ${i < paso ? "bg-green-300" : "bg-gray-200"}`} />
+            <div className={`w-2 sm:w-6 h-px mx-1 ${i < paso ? "bg-green-300" : "bg-gray-200"}`} />
           )}
         </div>
       ))}
@@ -202,18 +204,23 @@ function GeneradorPorEmpresa() {
   if (!empresas.some((e) => e.id === empresa)) return <p role="alert" className="p-5 text-sm text-red-700">La empresa solicitada no está disponible en tu sesión.</p>;
   return <div className="space-y-5">
     {empresas.length > 1 ? <div className="max-w-sm space-y-1.5"><Label htmlFor="empresa-generador">Empresa del documento</Label><select id="empresa-generador" className="h-10 w-full rounded-md border bg-white px-3 text-sm" value={empresa} onChange={(e) => setElegida(e.target.value)}>{empresas.map((item) => <option key={item.id} value={item.id}>{item.nombre}</option>)}</select></div> : null}
-    <GenerarDocumentoContent key={empresa} empresa={empresa} plantillaInicial={!elegida ? params.get("plantilla") || "" : ""} codigoInicial={!elegida ? params.get("codigo") || "" : ""} />
+    <GenerarDocumentoContent key={`${empresa}-${params.get("formato") || ""}`} empresa={empresa} formatoInicial={params.get("formato") || ""} plantillaInicial={!elegida ? params.get("plantilla") || "" : ""} codigoInicial={!elegida ? params.get("codigo") || "" : ""} />
   </div>;
 }
 
-function GenerarDocumentoContent({ empresa, plantillaInicial, codigoInicial }) {
+function GenerarDocumentoContent({ empresa, plantillaInicial, codigoInicial, formatoInicial }) {
   const { enqueueSnackbar } = useSnackbar();
   const router = useRouter();
   const previewRef = useRef(null);
 
   const { options: unidadOptions, byId: unidadById } = useUnidadesNegocio();
 
-  const [paso, setPaso] = useState(0);
+  const [paso, setPaso] = useState(formatoInicial ? 1 : 0);
+  const formatoCatalogo = obtenerFormatoRRHH(formatoInicial);
+  const [datosFormato, setDatosFormato] = useState({});
+  const [sinAlta, setSinAlta] = useState(false);
+  const [nombreCandidato, setNombreCandidato] = useState("");
+  const [errorFormato, setErrorFormato] = useState("");
   const [unidadCalculo, setUnidadCalculo] = useState("");
   const [generating, setGenerating] = useState(false);
   const [docGuardado, setDocGuardado] = useState(null);
@@ -226,6 +233,8 @@ function GenerarDocumentoContent({ empresa, plantillaInicial, codigoInicial }) {
   const [empleadoCompleto, setEmpleadoCompleto] = useState(null);
   const [empresaData, setEmpresaData] = useState(null);
   const [searchEmp, setSearchEmp] = useState("");
+  const [busquedaEmpleados, setBusquedaEmpleados] = useState("");
+  const [paginaEmpleados, setPaginaEmpleados] = useState(1);
   const [notas, setNotas] = useState("");
   const [codigoFiltro, setCodigoFiltro] = useState(codigoInicial);
   const [erroresDatos, setErroresDatos] = useState({});
@@ -234,7 +243,7 @@ function GenerarDocumentoContent({ empresa, plantillaInicial, codigoInicial }) {
 
   /* SWR — plantillas activas (lista sin contenido_html para no sobrecargar) */
   const { data: plantillasData, error: errorPlantillas } = useSWR(
-    `/checador/gestion-documental/plantillas?${new URLSearchParams({ empresa, activo: "1", ...(codigoFiltro ? { search: codigoFiltro } : {}) })}`,
+    formatoInicial ? null : `/checador/gestion-documental/plantillas?${new URLSearchParams({ empresa, activo: "1", ...(codigoFiltro ? { search: codigoFiltro } : {}) })}`,
     fetcherWithToken,
     { revalidateOnFocus: false },
   );
@@ -263,7 +272,10 @@ function GenerarDocumentoContent({ empresa, plantillaInicial, codigoInicial }) {
     return () => { vigente = false; };
   }, [idPlantillaDisponible, empresa]);
 
-  const plantillaSeleccionada = plantillaCompleta || plantillaResumen;
+  const formato = formatoCatalogo || detectarFormatoBase(plantillaCompleta);
+  const plantillaSeleccionada = formato || plantillaCompleta || plantillaResumen;
+  const baseAlterada = !formato && Boolean(plantillaCompleta?.contenido_html?.includes("<!-- ADAMIA:rh:"));
+  const esCandidato = Boolean(formato?.candidato && sinAlta);
 
   /* Cargar empleado completo (con nómina: sueldo, etc.) al seleccionar */
   useEffect(() => {
@@ -290,63 +302,74 @@ function GenerarDocumentoContent({ empresa, plantillaInicial, codigoInicial }) {
     return () => { vigente = false; };
   }, [empresa]);
 
-  /* SWR — empleados */
-  const { data: empData } = useSWR(
-    `/checador/empleados?empresa=${empresa}&limit=200`,
+  // Búsqueda y paginación de servidor: incluye empleados fuera de las primeras filas.
+  useEffect(() => {
+    const timer = setTimeout(() => { setBusquedaEmpleados(searchEmp.trim()); setPaginaEmpleados(1); }, 250);
+    return () => clearTimeout(timer);
+  }, [searchEmp]);
+  const { data: empData, error: errorEmpleados, isLoading: cargandoEmpleados } = useSWR(
+    `/checador/empleados?${new URLSearchParams({ empresa, limit: "50", page: String(paginaEmpleados), ...(busquedaEmpleados ? { nombre: busquedaEmpleados } : {}) })}`,
     fetcherWithToken,
     { revalidateOnFocus: false },
   );
   const empleados = useMemo(() => Array.isArray(empData?.data) ? empData.data : Array.isArray(empData) ? empData : [], [empData]);
-  const empleadosFiltrados = useMemo(() => {
-    if (!searchEmp.trim()) return empleados;
-    const q = searchEmp.toLowerCase();
-    return empleados.filter((e) =>
-      `${e.nombre} ${e.apellido_paterno} ${e.apellido_materno || ""}`.toLowerCase().includes(q) ||
-      String(e.codigo_empleado || "").toLowerCase().includes(q),
-    );
-  }, [empleados, searchEmp]);
   // empleadoSel: datos del listado (para mostrar nombre/puesto en la UI)
   const empleadoSel = empleados.find((e) => String(e.id_empleado) === String(empleadoId));
   // empleadoFinal: datos completos con nómina para resolver variables
-  const empleadoFinal = empleadoCompleto || empleadoSel;
+  const empleadoFinal = useMemo(() => esCandidato ? { nombre: nombreCandidato.trim() } : empleadoCompleto || empleadoSel, [esCandidato, nombreCandidato, empleadoCompleto, empleadoSel]);
+  const variables = useMemo(() => empleadoFinal ? buildVariables(empleadoFinal, empresaData) : {}, [empleadoFinal, empresaData]);
+  const datosCompletos = useMemo(() => formato ? completarDatosFormato(formato, datosFormato, variables) : {}, [formato, datosFormato, variables]);
+  const contextoListo = Boolean((formato || plantillaCompleta) && !baseAlterada && (esCandidato ? nombreCandidato.trim() : empleadoCompleto) && empresaData);
+  const cambiarEmpleado = (id) => { setEmpleadoId(id); setDatosFormato({}); setErrorFormato(""); setNotas(""); };
 
   /* ─── Vista previa del documento ─── */
   const htmlPreview = useMemo(() => {
     if (!plantillaSeleccionada || !empleadoFinal) return "";
+    if (formato) return renderFormatoRRHH(formato, datosCompletos, variables);
     const contenido = plantillaSeleccionada.contenido_html || "";
     if (!contenido.trim()) return "<p style='color:#9ca3af;'>Esta plantilla no tiene contenido.</p>";
     // Usar exclusivamente los datos cargados de la empresa seleccionada.
     const empresaFinal = empresaData;
     const vars = buildVariables(empleadoFinal, empresaFinal);
     return resolveTemplate(contenido, vars);
-  }, [plantillaSeleccionada, empleadoFinal, empresaData]);
+  }, [plantillaSeleccionada, empleadoFinal, empresaData, formato, datosCompletos, variables]);
 
   /* ─── Guardar documento ─── */
   const handleGenerar = useCallback(async () => {
-    if (generandoRef.current || !plantillaCompleta || !empleadoCompleto || !empresaData) return;
+    if (generandoRef.current || !contextoListo) return;
+    const invalid = formato ? validarDatosFormato(formato, datosCompletos) : "";
+    if (invalid || !variables["empresa.nombre"] || !variables["empleado.nombre"]) {
+      setErrorFormato(invalid || "Revisa el nombre de la empresa y de la persona destinataria.");
+      return;
+    }
     generandoRef.current = true;
     setGenerating(true);
+    setErrorFormato("");
     try {
-      const empresaFinal = empresaData;
-      const vars = buildVariables(empleadoFinal, empresaFinal);
-      const contenido_html = resolveTemplate(plantillaSeleccionada.contenido_html || "", vars);
-      const nombre_documento = `${plantillaSeleccionada.nombre} — ${vars["empleado.nombre"]}`;
-
-      const result = await docGeneradosApi.crear(
-        { empresa },
-        { id_plantilla: plantillaId, id_empleado: empleadoId, nombre_documento, contenido_html, variables_usadas: vars, notas },
-      );
-      setDocGuardado({ ...result, nombre_documento, contenido_html });
+      const contenido_html = formato ? renderFormatoRRHH(formato, datosCompletos, variables) : resolveTemplate(plantillaSeleccionada.contenido_html || "", variables);
+      const nombre_documento = `${plantillaSeleccionada.nombre} — ${variables["empleado.nombre"]}`;
+      if (esCandidato) {
+        setDocGuardado({ nombre_documento, contenido_html, soloPDF: true });
+      } else {
+        // La plantilla compartida no contiene beneficiarios, series ni datos del documento individual.
+        const idBase = formato ? (await guardarCopiaPlantilla(plantillasApi, empresa, prepararBaseFormato(formato))).id_plantilla : plantillaId;
+        const result = await docGeneradosApi.crear(
+          { empresa },
+          { id_plantilla: idBase, id_empleado: empleadoId, nombre_documento, contenido_html, variables_usadas: variables, notas },
+        );
+        setDocGuardado({ ...result, nombre_documento, contenido_html });
+      }
       setPaso(3);
-      enqueueSnackbar("Documento generado correctamente", { variant: "success" });
+      enqueueSnackbar(esCandidato ? "Documento preparado para descargar" : "Documento generado correctamente", { variant: "success" });
     } catch (err) {
-      const msg = err?.response?.data?.error || "Error al generar el documento";
+      const msg = err?.response?.data?.error || err.message || "Error al generar el documento";
+      setErrorFormato(msg);
       enqueueSnackbar(msg, { variant: "error" });
     } finally {
       setGenerating(false);
       generandoRef.current = false;
     }
-  }, [plantillaId, empleadoId, plantillaSeleccionada, plantillaCompleta, empleadoCompleto, empleadoFinal, empresaData, empresa, notas, enqueueSnackbar]);
+  }, [contextoListo, formato, datosCompletos, variables, plantillaSeleccionada, esCandidato, plantillaId, empleadoId, empresa, notas, enqueueSnackbar]);
 
   /* ─── Descargar PDF ─── */
   const handleDescargarPDF = useCallback(async () => {
@@ -363,23 +386,18 @@ function GenerarDocumentoContent({ empresa, plantillaInicial, codigoInicial }) {
 
   const handleImprimir = () => window.print();
 
-  const puedeAvanzar = [
-    Boolean(plantillaId),
-    Boolean(empleadoId),
-    true,
-    true,
-  ];
+  if (formatoInicial && !formatoCatalogo) return <p role="alert" className="rounded-lg border p-5 text-sm text-red-700">El formato solicitado no existe. Vuelve al catálogo de Plantillas ADAMIA.</p>;
 
   return (
-    <div className="flex flex-col gap-6 max-w-5xl mx-auto">
+    <div className="flex flex-col gap-6 w-full min-w-0 max-w-7xl mx-auto">
       {/* ── Header ── */}
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => router.back()}>
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Generar documento</h1>
+            <h1 className="text-xl font-bold text-gray-900">{formato?.nombre || "Generar documento"}</h1>
             <p className="text-xs text-gray-400 mt-0.5">
               Completa los pasos para generar y descargar el documento
             </p>
@@ -389,11 +407,13 @@ function GenerarDocumentoContent({ empresa, plantillaInicial, codigoInicial }) {
       </div>
       {(errorDatos || errorPlantillas) && <p role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{errorDatos || "No se pudieron cargar las plantillas de la empresa."}</p>}
 
+      {baseAlterada && <p role="alert" className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Esta base ADAMIA fue modificada. Revisa su contenido en Mis plantillas y restaura la base antes de usar el formulario guiado. Para crear un formato propio, utiliza una nueva plantilla sin el marcador de base ADAMIA.</p>}
+      {formato && paso < 3 && <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-4 text-xs leading-5 text-slate-600"><p>{formato.aviso || "Revisa el contenido y las condiciones específicas antes de generar y solicitar las firmas."}</p><p>La firma digital del sistema corresponde al empleado. {formato.firmas === "empresa" ? "Este documento requiere la firma del responsable de la empresa; la firma del empleado no la sustituye." : "Completa también la firma del representante de la empresa"}{formato.firmaExtra ? " y de quien recibe el puesto." : formato.firmas !== "empresa" ? "." : ""}</p></div>}
       <AnimatePresence mode="wait">
         {/* ─── PASO 0: Seleccionar plantilla ─── */}
         {paso === 0 && (
           <motion.div key="paso0" initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }}>
-            <div className="mb-6"><CatalogoAdamia /></div>
+            <div className="mb-6"><CatalogoAdamia compact empresa={empresa} /></div>
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
               <h2 className="text-base font-semibold text-gray-800 mb-1">Selecciona una plantilla</h2>
               <p className="text-xs text-gray-400 mb-5">Elige la plantilla que deseas usar para generar el documento</p>
@@ -422,7 +442,7 @@ function GenerarDocumentoContent({ empresa, plantillaInicial, codigoInicial }) {
                     <button
                       key={p.id_plantilla}
                       type="button"
-                      onClick={() => setPlantillaId(String(p.id_plantilla))}
+                      onClick={() => { setPlantillaId(String(p.id_plantilla)); setDatosFormato({}); setErrorFormato(""); setSinAlta(false); }}
                       className={`text-left rounded-xl border-2 p-4 transition-all duration-150 hover:shadow-md ${
                         plantillaId === String(p.id_plantilla)
                           ? "border-[#2563EB] bg-blue-50 shadow-md"
@@ -451,7 +471,7 @@ function GenerarDocumentoContent({ empresa, plantillaInicial, codigoInicial }) {
             <div className="flex justify-end mt-4">
               <Button
                 className="bg-[#2563EB] hover:bg-blue-700 text-white gap-2"
-                disabled={!plantillaCompleta || cargandoPlantilla}
+                disabled={!plantillaCompleta || cargandoPlantilla || baseAlterada}
                 onClick={() => setPaso(1)}
               >
                 Siguiente <ArrowRight className="w-4 h-4" />
@@ -469,6 +489,9 @@ function GenerarDocumentoContent({ empresa, plantillaInicial, codigoInicial }) {
                 Las variables del documento se llenarán con los datos de este empleado
               </p>
 
+              {formato?.candidato && <div className="mb-5 space-y-3"><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={sinAlta} onChange={(e) => { setSinAlta(e.target.checked); cambiarEmpleado(""); setNombreCandidato(""); }} /> Candidato sin alta en ADAMIA</label>{esCandidato && <div className="space-y-2"><Label htmlFor="nombre-candidato">Nombre completo del candidato</Label><Input id="nombre-candidato" value={nombreCandidato} maxLength={200} onChange={(e) => setNombreCandidato(e.target.value)} /><p className="text-xs leading-5 text-slate-500">Podrás descargar el PDF. Para guardarlo en un expediente y solicitar firma digital, primero registra a la persona como empleado.</p></div>}</div>}
+              {!esCandidato && <>
+              {!formato && <>
               {/* Unidad de negocio */}
               <div className="mb-4 space-y-1">
                 <Label className="text-xs font-medium text-gray-600 flex items-center gap-1.5">
@@ -490,23 +513,25 @@ function GenerarDocumentoContent({ empresa, plantillaInicial, codigoInicial }) {
                 )}
               </div>
 
+              </>}
               {/* Buscar */}
               <div className="relative mb-4">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
                   className="pl-9"
-                  placeholder="Buscar empleado por nombre o código..."
+                  placeholder="Buscar empleado por nombre..."
+                  aria-label="Buscar empleado por nombre"
                   value={searchEmp}
                   onChange={(e) => setSearchEmp(e.target.value)}
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
-                {empleadosFiltrados.map((emp) => (
+                {empleados.map((emp) => (
                   <button
                     key={emp.id_empleado}
                     type="button"
-                    onClick={() => setEmpleadoId(String(emp.id_empleado))}
+                    onClick={() => cambiarEmpleado(String(emp.id_empleado))}
                     className={`text-left flex items-center gap-3 rounded-lg border-2 p-3 transition-all ${
                       empleadoId === String(emp.id_empleado)
                         ? "border-[#2563EB] bg-blue-50"
@@ -526,13 +551,16 @@ function GenerarDocumentoContent({ empresa, plantillaInicial, codigoInicial }) {
                     </div>
                   </button>
                 ))}
-                {empleadosFiltrados.length === 0 && (
-                  <div className="col-span-2 py-8 text-center text-gray-400 text-sm">
-                    No se encontraron empleados
+                {empleados.length === 0 && (
+                  <div className="col-span-full py-8 text-center text-gray-400 text-sm">
+                    {cargandoEmpleados ? "Buscando empleados…" : errorEmpleados ? "No se pudieron cargar los empleados. Intenta de nuevo." : "No se encontraron empleados"}
                   </div>
                 )}
               </div>
 
+              {empleadoCompleto && <p className="mt-3 text-xs text-blue-700">Seleccionado: {variables["empleado.nombre"]}</p>}
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500"><span>Página {paginaEmpleados}</span><div className="flex gap-2"><Button type="button" variant="ghost" size="sm" disabled={paginaEmpleados <= 1 || cargandoEmpleados} onClick={() => setPaginaEmpleados((p) => p - 1)}>Página anterior</Button><Button type="button" variant="ghost" size="sm" disabled={empleados.length < 50 || cargandoEmpleados} onClick={() => setPaginaEmpleados((p) => p + 1)}>Página siguiente</Button></div></div>
+              </>}
               {/* Notas */}
               <div className="mt-5 space-y-1">
                 <Label className="text-xs text-gray-600">Notas adicionales (opcional)</Label>
@@ -547,12 +575,12 @@ function GenerarDocumentoContent({ empresa, plantillaInicial, codigoInicial }) {
             </div>
 
             <div className="flex justify-between mt-4">
-              <Button variant="outline" onClick={() => setPaso(0)} className="gap-2">
+              <Button variant="outline" onClick={() => formatoInicial ? router.push("/panel/gestion-documental/plantillas") : setPaso(0)} className="gap-2">
                 <ArrowLeft className="w-4 h-4" /> Anterior
               </Button>
               <Button
                 className="bg-[#2563EB] hover:bg-blue-700 text-white gap-2"
-                disabled={!empleadoId || cargandoPlantilla}
+                disabled={!contextoListo || cargandoPlantilla}
                 onClick={() => setPaso(2)}
               >
                 {cargandoPlantilla
@@ -576,12 +604,14 @@ function GenerarDocumentoContent({ empresa, plantillaInicial, codigoInicial }) {
               <Separator orientation="vertical" className="h-4" />
               <div className="flex items-center gap-2 text-sm text-blue-800">
                 <User className="w-4 h-4" />
-                <span>{empleadoSel?.nombre} {empleadoSel?.apellido_paterno}</span>
+                <span>{variables["empleado.nombre"]}</span>
               </div>
             </div>
 
+            <div className={formato ? "grid items-start gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]" : ""}>
+            {formato && <FormularioFormatoRRHH formato={formato} datos={datosCompletos} disabled={generating} onChange={(key, value) => { setDatosFormato((prev) => ({ ...prev, [key]: value })); setErrorFormato(""); }} />}
             {/* Documento */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="min-w-0 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden xl:sticky xl:top-5">
               <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50/60">
                 <span className="text-xs font-medium text-gray-500">Vista previa del documento</span>
                 <Badge variant="secondary" className="text-[10px] bg-amber-50 text-amber-700 border-amber-200">
@@ -595,24 +625,26 @@ function GenerarDocumentoContent({ empresa, plantillaInicial, codigoInicial }) {
                 </div>
               ) : (
                 <div
-                  className="p-10 text-sm text-gray-800 leading-relaxed min-h-[500px] max-h-[600px] overflow-y-auto prose prose-sm max-w-none"
+                  className="p-4 sm:p-8 text-sm text-gray-800 leading-relaxed min-h-[300px] max-h-[720px] overflow-auto prose prose-sm max-w-none"
                   style={{ fontFamily: "Georgia, serif" }}
                   dangerouslySetInnerHTML={{ __html: htmlPreview }}
                 />
               )}
             </div>
 
-            <div className="flex justify-between mt-4">
-              <Button variant="outline" onClick={() => setPaso(1)} className="gap-2">
+            </div>
+            {errorFormato && <p role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{errorFormato}</p>}
+            <div className="flex flex-wrap justify-between gap-3 mt-4">
+              <Button disabled={generating} variant="outline" onClick={() => setPaso(1)} className="gap-2">
                 <ArrowLeft className="w-4 h-4" /> Anterior
               </Button>
               <Button
                 className="bg-[#2563EB] hover:bg-blue-700 text-white gap-2"
                 onClick={handleGenerar}
-                disabled={generating || !plantillaCompleta || !empleadoCompleto || !empresaData}
+                disabled={generating || !contextoListo}
               >
                 {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                Generar documento
+                {esCandidato ? "Preparar documento" : "Generar documento"}
               </Button>
             </div>
           </motion.div>
@@ -630,18 +662,17 @@ function GenerarDocumentoContent({ empresa, plantillaInicial, codigoInicial }) {
               <CheckCircle2 className="w-12 h-12 text-green-500" />
             </div>
             <div className="text-center">
-              <h2 className="text-xl font-bold text-gray-900">¡Documento generado!</h2>
+              <h2 className="text-xl font-bold text-gray-900">{docGuardado.soloPDF ? "Documento preparado" : "¡Documento generado!"}</h2>
               <p className="text-sm text-gray-500 mt-1">{docGuardado.nombre_documento}</p>
-              <Badge variant="outline" className="mt-2 font-mono text-xs border-gray-300">
-                {docGuardado.folio}
-              </Badge>
+              {docGuardado.folio && <Badge variant="outline" className="mt-2 font-mono text-xs border-gray-300">{docGuardado.folio}</Badge>}
+              {docGuardado.soloPDF && <p className="mt-2 max-w-xl text-sm text-amber-800">Descarga el PDF antes de salir. Esta propuesta no se ha guardado en un expediente porque el candidato aún no es empleado registrado.</p>}
             </div>
 
             {/* Documento para descargar */}
             <div className="w-full max-w-2xl bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
               <div
                 ref={previewRef}
-                className="p-10 text-sm text-gray-800 leading-relaxed prose prose-sm max-w-none max-h-96 overflow-y-auto"
+                className="p-4 sm:p-10 text-sm text-gray-800 leading-relaxed prose prose-sm max-w-none max-h-96 overflow-auto"
                 style={{ fontFamily: "Georgia, serif" }}
                 dangerouslySetInnerHTML={{ __html: docGuardado.contenido_html }}
               />
@@ -659,18 +690,16 @@ function GenerarDocumentoContent({ empresa, plantillaInicial, codigoInicial }) {
                 <Printer className="w-4 h-4" />
                 Imprimir
               </Button>
-              <Button
-                variant="outline"
-                className="gap-2"
-                onClick={() => router.push(`/panel/gestion-documental/documentos?empresa=${encodeURIComponent(empresa)}`)}
-              >
-                Ver todos los documentos
-              </Button>
+              {!docGuardado.soloPDF && <Button variant="outline" className="gap-2" onClick={() => router.push(`/panel/gestion-documental/documentos?empresa=${encodeURIComponent(empresa)}`)}>Ver todos los documentos</Button>}
               <Button
                 variant="ghost"
                 className="gap-2 text-gray-500"
                 onClick={() => {
-                  setPaso(0);
+                  setPaso(formatoInicial ? 1 : 0);
+                  setDatosFormato({});
+                  setErrorFormato("");
+                  setSinAlta(false);
+                  setNombreCandidato("");
                   setPlantillaId("");
                   setEmpleadoId("");
                   setNotas("");

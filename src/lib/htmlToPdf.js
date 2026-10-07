@@ -15,6 +15,8 @@
  * @param {string} filename   - Nombre del archivo sin extensión
  */
 
+import { calcularPaginasPdf } from "@/lib/documentos/paginacionPdf";
+
 import {
   ADAMIA,
   ADAMIA_LOGO_RATIO,
@@ -134,8 +136,7 @@ export async function htmlToPdf(
         });
 
         // ── 3. Generar PDF con paginación + marco corporativo Adamia ──
-        const imgData = canvas.toDataURL("image/png");
-        const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+        const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
         const FONT = await applyAdamiaFont(pdf);
         const logo = await loadAdamiaLogo(); // DataURL o null (fallback texto)
 
@@ -148,8 +149,31 @@ export async function htmlToPdf(
         const contentH = pageH - headerBand - footerBand; // alto útil por página
 
         const imgW = pageW - margin * 2;
-        const imgH = (canvas.height * imgW) / canvas.width;
-        const totalPages = Math.max(1, Math.ceil(imgH / contentH));
+        const pxPorMm = canvas.width / imgW;
+        const escala = canvas.width / 794;
+        const origen = body.getBoundingClientRect().top;
+        const region = (rect) => [Math.max(0, Math.floor((rect.top - origen) * escala) - 2), Math.ceil((rect.bottom - origen) * escala) + 2];
+        // html2canvas no aplica break-inside. Respetamos bloques y líneas al cortar el canvas.
+        const bloques = [...body.querySelectorAll("p, tr, h1, h2, h3, [style*='break-inside:avoid']")].map((elemento) => {
+          const rect = elemento.getBoundingClientRect();
+          if (/^H[1-3]$/.test(elemento.tagName) && elemento.nextElementSibling) {
+            const siguiente = elemento.nextElementSibling.getBoundingClientRect();
+            return region({ top: rect.top, bottom: Math.min(siguiente.bottom, siguiente.top + 24) });
+          }
+          return region(rect);
+        });
+        const lineas = [];
+        const walker = iframeDoc.createTreeWalker(body, 4); // NodeFilter.SHOW_TEXT
+        let nodo;
+        while ((nodo = walker.nextNode())) {
+          if (!nodo.textContent.trim()) continue;
+          const rango = iframeDoc.createRange();
+          rango.selectNodeContents(nodo);
+          for (const rect of rango.getClientRects()) if (rect.height) lineas.push(region(rect));
+        }
+        for (const elemento of body.querySelectorAll("img, svg")) lineas.push(region(elemento.getBoundingClientRect()));
+        const paginas = calcularPaginasPdf(canvas.height, Math.floor(contentH * pxPorMm), bloques, lineas);
+        const totalPages = paginas.length;
 
         // Título del documento en el encabezado (recortado si es muy largo)
         const fitTitle = (text, maxW) => {
@@ -205,16 +229,13 @@ export async function htmlToPdf(
         for (let page = 0; page < totalPages; page++) {
           if (page > 0) pdf.addPage();
 
-          // La imagen completa se desplaza hacia arriba `contentH` por página;
-          // la franja visible de esta página queda entre contentTop y
-          // pageH - footerBand.
-          pdf.addImage(imgData, "PNG", margin, contentTop - page * contentH, imgW, imgH);
-
-          // Enmascarar el sangrado de la imagen dentro de las bandas
-          // reservadas antes de dibujar el marco vectorial encima.
-          pdf.setFillColor(255, 255, 255);
-          pdf.rect(0, 0, pageW, headerBand, "F");
-          pdf.rect(0, pageH - footerBand, pageW, footerBand, "F");
+          const { inicio, fin } = paginas[page];
+          const recorte = document.createElement("canvas");
+          recorte.width = canvas.width;
+          recorte.height = fin - inicio;
+          recorte.getContext("2d").drawImage(canvas, 0, inicio, canvas.width, fin - inicio, 0, 0, canvas.width, fin - inicio);
+          pdf.addImage(recorte.toDataURL("image/png"), "PNG", margin, contentTop, imgW, (fin - inicio) / pxPorMm, undefined, "FAST");
+          recorte.width = recorte.height = 0;
 
           drawHeader();
           drawFooter(page + 1);
