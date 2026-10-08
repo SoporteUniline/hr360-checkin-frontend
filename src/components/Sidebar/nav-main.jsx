@@ -65,6 +65,9 @@ import {
   isRecruitmentNavActive,
 } from "@/components/reclutamiento/navigation";
 
+const recruitmentEnabled =
+  process.env.NEXT_PUBLIC_RECRUITMENT_ENABLED === "true";
+
 const dashboardItems = [
   ...(recruitmentEnabled ? [{ title: "Evaluación de desempeño", url: "/empleado/panel/evaluaciones", rol: "Empleado", icon: ClipboardCheck, matchPrefix: "/empleado/panel/evaluaciones" },] : []),
   {
@@ -147,8 +150,7 @@ const dashboardItems = [
   },
 ];
 
-const recruitmentEnabled =
-  process.env.NEXT_PUBLIC_RECRUITMENT_ENABLED === "true";
+
 
 const menuGroups = [
   ...(recruitmentEnabled ? [
