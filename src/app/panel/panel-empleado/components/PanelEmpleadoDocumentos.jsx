@@ -64,6 +64,7 @@ import {
 import { cn } from "@/lib/utils";
 import dayjs from "dayjs";
 import { categoriasApi, documentosApi } from "@/lib/expedienteApi";
+import { docGeneradosApi } from "@/lib/gestionDocumentalApi";
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const TIPOS_ACEPTADOS = {
@@ -104,6 +105,35 @@ const ESTATUS_BADGE = {
   VENCIDO: { label: "Vencido", cls: "bg-red-50 text-red-700 border-red-100" },
 };
 
+const FIRMA_BADGE = {
+  PENDIENTE: {
+    label: "Pendiente de firma",
+    cls: "bg-amber-50 text-amber-700 border-amber-200",
+  },
+  FIRMADO: {
+    label: "Firmado",
+    cls: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  },
+};
+
+function EstadoFirma({ doc }) {
+  if (doc.origen !== "GENERADO") return null;
+
+  const estado = FIRMA_BADGE[doc.estatus_firma];
+  if (!estado) return null;
+
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full border px-2 py-0.5 text-[10.5px] font-semibold whitespace-nowrap",
+        estado.cls
+      )}
+    >
+      {estado.label}
+    </span>
+  );
+}
+
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function PanelEmpleadoDocumentos({
   datosEmpleado,
@@ -129,6 +159,7 @@ export default function PanelEmpleadoDocumentos({
   const [eliminando, setEliminando] = useState(false);
   const [notif, setNotif] = useState(null);
   const [errorCarga, setErrorCarga] = useState(null);
+  const [documentoPreview, setDocumentoPreview] = useState(null);
 
   // ── Notificación flotante ──
   const mostrarNotif = useCallback((tipo, mensaje) => {
@@ -219,11 +250,44 @@ export default function PanelEmpleadoDocumentos({
 
   // ── Ver documento (registra VISUALIZADO en bitácora) ──
   const verDocumento = async (doc) => {
-    window.open(doc.archivo_url, "_blank", "noopener,noreferrer");
+    if (doc.origen === "GENERADO" && !doc.archivo_url) {
+      try {
+        if (!doc.doc_generado_id) {
+          mostrarNotif("error", "Documento sin referencia");
+          return;
+        }
+
+        const generado = await docGeneradosApi.getById(doc.doc_generado_id);
+
+        if (!generado?.contenido_html) {
+          mostrarNotif("error", "No hay contenido disponible");
+          return;
+        }
+
+        setDocumentoPreview({
+          nombre: generado.nombre_documento || doc.nombre_documento,
+          html: generado.contenido_html,
+        });
+
+        await documentosApi.obtener(doc.id).catch(() => {});
+      } catch {
+        mostrarNotif("error", "No fue posible abrir el documento");
+      }
+      return;
+    }
+
     try {
-      await documentosApi.obtener(doc.id);
+      const detalle = await documentosApi.obtener(doc.id);
+      const url = detalle?.documento?.archivo_url || doc.archivo_url;
+
+      if (!url) {
+        mostrarNotif("error", "No hay archivo disponible");
+        return;
+      }
+
+      window.open(url, "_blank", "noopener,noreferrer");
     } catch {
-      /* silencioso */
+      mostrarNotif("error", "No fue posible abrir el documento");
     }
   };
 
@@ -557,7 +621,8 @@ export default function PanelEmpleadoDocumentos({
                         >
                           <History className="w-4 h-4" />
                         </Button>
-                        <Button
+                        {doc.origen !== "GENERADO" && (
+<Button
                           type="button"
                           variant="ghost"
                           size="icon"
@@ -566,6 +631,7 @@ export default function PanelEmpleadoDocumentos({
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
+)}
                       </div>
                     </div>
                     {/* Fila 2: categoría + estatus + fechas */}
@@ -579,6 +645,7 @@ export default function PanelEmpleadoDocumentos({
                       >
                         {doc.categoria_nombre}
                       </span>
+                      <EstadoFirma doc={doc} />
                       <span
                         className={cn(
                           "text-[10.5px] font-bold px-2.5 py-0.5 rounded-full border",
@@ -681,6 +748,7 @@ export default function PanelEmpleadoDocumentos({
                           >
                             {ESTATUS_BADGE[doc.estatus]?.label}
                           </span>
+                          <EstadoFirma doc={doc} />
                         </td>
                         <td className="px-3 py-2.5">
                           <div className="flex items-center gap-0.5">
@@ -704,7 +772,8 @@ export default function PanelEmpleadoDocumentos({
                             >
                               <History className="w-3.5 h-3.5" />
                             </Button>
-                            <Button
+                            {doc.origen !== "GENERADO" && (
+<Button
                               type="button"
                               variant="ghost"
                               size="icon"
@@ -714,6 +783,7 @@ export default function PanelEmpleadoDocumentos({
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </Button>
+)}
                           </div>
                         </td>
                       </tr>
@@ -725,6 +795,27 @@ export default function PanelEmpleadoDocumentos({
           )}
         </div>
       </div>
+
+      {/* ── Visor de documentos generados ── */}
+      <Dialog
+        open={Boolean(documentoPreview)}
+        onOpenChange={(abierto) => {
+          if (!abierto) setDocumentoPreview(null);
+        }}
+      >
+        <DialogContent className="w-[95vw] max-w-5xl h-[85vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>{documentoPreview?.nombre}</DialogTitle>
+          </DialogHeader>
+          <iframe
+            title={documentoPreview?.nombre || "Documento generado"}
+            sandbox=""
+            referrerPolicy="no-referrer"
+            srcDoc={documentoPreview?.html || ""}
+            className="w-full flex-1 min-h-0 rounded-md border bg-white"
+          />
+        </DialogContent>
+      </Dialog>
 
       {/* ── Modal de subida ── */}
       <ModalSubirDocumento
