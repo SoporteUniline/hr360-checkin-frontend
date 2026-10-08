@@ -277,8 +277,8 @@ export default function PanelEmpleadoDocumentos({
     }
 
     try {
-      const detalle = await documentosApi.obtener(doc.id);
-      const url = detalle?.documento?.archivo_url || doc.archivo_url;
+      const resultado = await documentosApi.obtenerUrlTemporal(doc.id);
+      const url = resultado?.url;
 
       if (!url) {
         mostrarNotif("error", "No hay archivo disponible");

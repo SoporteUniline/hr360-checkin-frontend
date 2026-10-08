@@ -67,6 +67,8 @@ export const documentosApi = {
   obtener: (id) =>
     axios.get(`/checador/expediente/documentos/doc/${id}`, { headers: h() }).then((r) => r.data),
 
+  obtenerUrlTemporal: (id) =>
+    axios.get(`/checador/expediente/documentos/doc/${id}/url-temporal`, { headers: h() }).then((r) => r.data),
   editar: (id, body) =>
     axios.put(`/checador/expediente/documentos/doc/${id}`, body, { headers: h() }).then((r) => r.data),
 
