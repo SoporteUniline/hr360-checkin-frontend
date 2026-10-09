@@ -8,6 +8,12 @@ BIGINT. No requiere cambiar el backend existente para guardar inventario.
 
 ## Rutas
 
+Los handlers viven en `src/app/api/control-activos`. Las pantallas consumen
+`/internal/control-activos` (y `/mis-recursos`) mediante una reescritura interna
+de Next. En dev, el proxy envía `/api/*` al backend anterior y devolvía
+`Cannot GET /api/control-activos`; el alias evita ese conflicto sin cambiar
+el proxy ni exponer credenciales. Ambas rutas conservan la misma autorización.
+
 | Ruta                                           | Método | Uso                                             |
 | ---------------------------------------------- | ------ | ----------------------------------------------- |
 | `/api/control-activos?empresa=ID`              | GET    | Estado del módulo autorizado para RH            |

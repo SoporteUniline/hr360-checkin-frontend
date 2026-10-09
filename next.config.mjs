@@ -1,6 +1,16 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
+  // El proxy de dev reserva /api/* para el backend anterior. Este alias llega
+  // a Next y conserva los handlers y su autenticación en src/app/api.
+  async rewrites() {
+    return [
+      {
+        source: "/internal/control-activos/:path*",
+        destination: "/api/control-activos/:path*",
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {

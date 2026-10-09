@@ -1,5 +1,5 @@
 export function createApiRepository(companyId, self = false) {
-  const url = `/api/control-activos${self ? "/mis-recursos" : ""}?empresa=${encodeURIComponent(companyId)}`;
+  const url = `/internal/control-activos${self ? "/mis-recursos" : ""}?empresa=${encodeURIComponent(companyId)}`;
   const pending = new Map();
   async function request(options = {}) {
     const response = await fetch(url, {
