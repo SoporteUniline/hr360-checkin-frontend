@@ -47,7 +47,7 @@ jobs:
         env:
           MYSQL_ROOT_PASSWORD: cau_ci_test_only
         ports:
-          - 33306:3306
+          - 3306/tcp
         options: >-
           --health-cmd="mysqladmin ping -h localhost -pcau_ci_test_only"
           --health-interval=5s
@@ -74,7 +74,7 @@ jobs:
       - name: Control de Activos — integración MySQL
         env:
           CAU_TEST_HOST: 127.0.0.1
-          CAU_TEST_PORT: 33306
+          CAU_TEST_PORT: ${{ job.services.activos-mysql.ports[3306] }}
           CAU_TEST_PASSWORD: cau_ci_test_only
         run: node --test scripts/test-activos-modules.mjs scripts/test-activos-api.mjs
 

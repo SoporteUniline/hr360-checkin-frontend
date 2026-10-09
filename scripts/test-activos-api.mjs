@@ -11,13 +11,14 @@ import { snapshot } from "../src/lib/activos/server/read.mjs";
 import { validateCommand } from "../src/lib/activos/server/validation.mjs";
 const socketPath = process.env.CAU_TEST_SOCKET;
 const testHost = process.env.CAU_TEST_HOST;
+const testPort = Number(process.env.CAU_TEST_PORT);
 assert.ok(
   socketPath?.startsWith("/") ||
-    (testHost === "127.0.0.1" && process.env.CAU_TEST_PORT === "33306"),
+    (testHost === "127.0.0.1" && (testPort === 33306 || (process.env.GITHUB_ACTIONS === "true" && Number.isInteger(testPort) && testPort >= 1024 && testPort <= 65535))),
   "Use an isolated local test socket or CAU_TEST_HOST=127.0.0.1 CAU_TEST_PORT=33306."
 );
 const connectionOptions = {
-  ...(socketPath ? { socketPath } : { host: testHost, port: 33306 }),
+  ...(socketPath ? { socketPath } : { host: testHost, port: testPort }),
   user: "root",
   password: process.env.CAU_TEST_PASSWORD || "",
 };
