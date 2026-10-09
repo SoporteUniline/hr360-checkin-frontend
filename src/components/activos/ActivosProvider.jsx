@@ -9,7 +9,8 @@ import {
   useCallback,
 } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { moduleState, resourceHref } from "@/lib/activos/module.mjs";
 import { useSnackbar } from "notistack";
 import { companiesFor } from "@/lib/activos/model.mjs";
 import { createApiRepository } from "@/lib/activos/apiRepository";
@@ -26,6 +27,14 @@ export function ActivosProvider({
 }) {
   const { dataUser, isAuthChecked } = useAuth();
   const search = useSearchParams();
+  const pathname = usePathname();
+  const resourceType =
+    compact || self
+      ? null
+      : pathname.startsWith("/panel/control-uniformes") ||
+        pathname.startsWith("/panel/control-activos/uniformes")
+      ? "uniform"
+      : "asset";
   const router = useRouter();
   const companies = companiesFor(dataUser);
   const [selected, setSelected] = useState("");
@@ -61,7 +70,8 @@ export function ActivosProvider({
     );
   return (
     <CompanyProvider
-      key={`${userId}:${company.id}`}
+      key={`${userId}:${company.id}:${resourceType}`}
+      resourceType={resourceType}
       userId={userId}
       company={company}
       actor={
@@ -73,7 +83,10 @@ export function ActivosProvider({
       {!compact && (
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div className="flex items-center gap-2 text-xs text-slate-500">
-            <Package size={16} /> Control de Activos y Uniformes
+            <Package size={16} />{" "}
+            {resourceType === "uniform"
+              ? "Control de Uniformes"
+              : "Control de Activos"}
           </div>
           <label className="grid gap-1 text-xs text-slate-500">
             Empresa
@@ -83,7 +96,7 @@ export function ActivosProvider({
               onChange={(e) => {
                 setSelected(e.target.value);
                 router.push(
-                  `${self ? "/empleado/panel/mis-recursos" : "/panel/control-activos"}?empresa=${e.target.value}`,
+                  resourceHref(resourceType, "", e.target.value, self)
                 );
               }}
             >
@@ -100,17 +113,29 @@ export function ActivosProvider({
     </CompanyProvider>
   );
 }
-function CompanyProvider({ children, userId, company, actor, compact, self }) {
+function CompanyProvider({
+  children,
+  userId,
+  company,
+  actor,
+  compact,
+  self,
+  resourceType,
+}) {
   const { enqueueSnackbar } = useSnackbar();
   const [state, setState] = useState(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   const repository = useMemo(
     () => createApiRepository(company.id, self),
-    [company.id, self],
+    [company.id, self]
   );
   const lock = useRef(false),
     alive = useRef(true);
+  const visibleState = useMemo(
+    () => moduleState(state, resourceType),
+    [state, resourceType]
+  );
   const refresh = useCallback(async () => {
     try {
       const next = await repository.read();
@@ -141,21 +166,21 @@ function CompanyProvider({ children, userId, company, actor, compact, self }) {
         throw new Error("Actualiza el inventario antes de guardar.");
       const result = await repository.execute(
         { type, payload },
-        state.revision,
+        state.revision
       );
       const refreshed = await refresh();
       enqueueSnackbar(
         refreshed
           ? "Movimiento guardado."
           : "El movimiento se guardó. Actualiza para consultar el inventario.",
-        { variant: refreshed ? "success" : "warning" },
+        { variant: refreshed ? "success" : "warning" }
       );
       return result;
     } catch (e) {
       enqueueSnackbar(
         e.message ||
           "No se pudo confirmar el movimiento. Reintenta la misma solicitud.",
-        { variant: "error" },
+        { variant: "error" }
       );
       if (e.status === 409) await refresh();
       return null;
@@ -167,7 +192,10 @@ function CompanyProvider({ children, userId, company, actor, compact, self }) {
   return (
     <Context.Provider
       value={{
-        state,
+        state: visibleState,
+        allState: state,
+        resourceType,
+        href: (to) => resourceHref(resourceType, to, company.id, self),
         execute,
         company: state?.company || company,
         actor,

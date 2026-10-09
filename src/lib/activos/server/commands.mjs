@@ -7,7 +7,9 @@ import {
   id as idSchema,
 } from "./validation.mjs";
 import { productView, requestLabels } from "./read.mjs";
+import { normalizePhoto } from "./photos.mjs";
 const types = {
+  "category.save": "articulo_guardar",
   "location.save": "articulo_guardar",
   "product.save": "articulo_guardar",
   "product.archive": "articulo_archivar",
@@ -29,32 +31,33 @@ export async function executeCommand(scope, input, key, expectedRevision) {
   ensure(
     typeof key === "string" && /^[A-Za-z0-9:_-]{16,128}$/.test(key),
     "Falta una clave de operación válida.",
-    400,
+    400
   );
   ensure(
     /^\d+$/.test(String(expectedRevision)),
     "Actualiza la pantalla antes de guardar.",
-    409,
+    409
   );
   if (scope.self)
     ensure(
       ["delivery.ack", "request.create", "employee.sizes"].includes(type),
       "Esta operación corresponde a Recursos Humanos.",
-      403,
+      403
     );
   else
     ensure(
       type !== "delivery.ack",
       "El acuse debe registrarlo el empleado desde su cuenta.",
-      403,
+      403
     );
   if (scope.self && type !== "delivery.ack")
     ensure(
       String(p.employeeId || p.id) === scope.employeeId,
       "Solo puedes modificar tus propios recursos.",
-      403,
+      403
     );
   const hash = commandHash(command),
+    photo = type === "product.save" ? await normalizePhoto(p.photo) : undefined,
     c = await scope.pool.getConnection();
   try {
     await c.query("SET time_zone = '+00:00'");
@@ -63,38 +66,39 @@ export async function executeCommand(scope, input, key, expectedRevision) {
     // que afectan varios articulos. Otras empresas pueden operar en paralelo.
     const [company] = await c.execute(
       "SELECT id_empresa FROM empresas WHERE id_empresa=? AND estado='Activo' FOR UPDATE",
-      [scope.companyId],
+      [scope.companyId]
     );
     ensure(company.length, "Empresa no disponible.", 403);
     const [prior] = await c.execute(
       "SELECT * FROM cau_operaciones WHERE id_empresa=? AND idempotency_key=?",
-      [scope.companyId, key],
+      [scope.companyId, key]
     );
     if (prior.length) {
       ensure(
         prior[0].request_hash === hash &&
           String(prior[0].created_by) === scope.actorId,
         "La clave ya se utilizó para otra operación.",
-        409,
+        409
       );
       ensure(
         prior[0].estado === "completada",
         "La operación aún no está confirmada.",
-        409,
+        409
       );
       await c.commit();
       return parseJson(prior[0].resultado_json);
     }
     const [rev] = await c.execute(
       "SELECT COALESCE(MAX(id),0) AS revision FROM cau_operaciones WHERE id_empresa=? AND estado='completada'",
-      [scope.companyId],
+      [scope.companyId]
     );
     ensure(
       String(rev[0].revision) === String(expectedRevision),
       "El inventario cambió. Actualiza y revisa los datos antes de guardar.",
-      409,
+      409
     );
     const tx = new Transaction(c, scope);
+    tx.photo = photo;
     tx.operation = await tx.insert("operaciones", {
       tipo: types[type] || p.operation,
       idempotency_key: key,
@@ -109,7 +113,7 @@ export async function executeCommand(scope, input, key, expectedRevision) {
     };
     await c.execute(
       "UPDATE cau_operaciones SET estado='completada',resultado_json=?,http_status=200,completed_at=UTC_TIMESTAMP(6) WHERE id_empresa=? AND id=?",
-      [JSON.stringify(response), scope.companyId, tx.operation],
+      [JSON.stringify(response), scope.companyId, tx.operation]
     );
     await c.commit();
     return response;
@@ -118,12 +122,12 @@ export async function executeCommand(scope, input, key, expectedRevision) {
     if (e.code === "ER_DUP_ENTRY")
       throw new ActivosError(
         "Ya existe un registro con ese código, serie o nombre.",
-        409,
+        409
       );
     if (["ER_LOCK_DEADLOCK", "ER_LOCK_WAIT_TIMEOUT"].includes(e.code))
       throw new ActivosError(
         "Otra operación está en curso. Reintenta con la misma solicitud.",
-        409,
+        409
       );
     throw e;
   } finally {
@@ -144,7 +148,7 @@ class Transaction {
     ensure(idSchema.safeParse(id).success, "Identificador no válido.", 400);
     const rows = await this.rows(
       `SELECT * FROM cau_${table} WHERE id_empresa=? AND id=? FOR UPDATE`,
-      [id],
+      [id]
     );
     ensure(rows.length, "Registro no encontrado en esta empresa.", 404);
     return rows[0];
@@ -157,16 +161,20 @@ class Transaction {
     };
     const cols = Object.keys(row);
     const [r] = await this.c.execute(
-      `INSERT INTO cau_${table} (${cols.join(",")}) VALUES (${cols.map(() => "?").join(",")})`,
-      Object.values(row),
+      `INSERT INTO cau_${table} (${cols.join(",")}) VALUES (${cols
+        .map(() => "?")
+        .join(",")})`,
+      Object.values(row)
     );
     return String(r.insertId);
   }
   async update(table, id, data) {
     const cols = Object.keys(data);
     await this.c.execute(
-      `UPDATE cau_${table} SET ${cols.map((k) => `${k}=?`).join(",")},version=version+1,updated_by=? WHERE id_empresa=? AND id=?`,
-      [...Object.values(data), this.s.actorId, this.s.companyId, id],
+      `UPDATE cau_${table} SET ${cols
+        .map((k) => `${k}=?`)
+        .join(",")},version=version+1,updated_by=? WHERE id_empresa=? AND id=?`,
+      [...Object.values(data), this.s.actorId, this.s.companyId, id]
     );
   }
   employee(id, active = false) {
@@ -190,22 +198,22 @@ class Transaction {
     if (requested) return this.location(requested);
     const rows = await this.rows(
       "SELECT id_ubicacion FROM cau_existencias WHERE id_empresa=? AND id_articulo=? AND cantidad_disponible>=? ORDER BY id_ubicacion",
-      [productId, qty],
+      [productId, qty]
     );
     ensure(
       rows.length,
-      "No hay existencia suficiente en una ubicación. Selecciona otra cantidad.",
+      "No hay existencia suficiente en una ubicación. Selecciona otra cantidad."
     );
     return this.location(String(rows[0].id_ubicacion));
   }
   async balance(productId, locationId, bucket, delta) {
     ensure(
       ["disponible", "revision", "baja"].includes(bucket),
-      "Estado de inventario no válido.",
+      "Estado de inventario no válido."
     );
     let rows = await this.rows(
       "SELECT * FROM cau_existencias WHERE id_empresa=? AND id_articulo=? AND id_ubicacion=? FOR UPDATE",
-      [productId, locationId],
+      [productId, locationId]
     );
     if (!rows.length) {
       ensure(delta >= 0, "Existencias insuficientes.", 409);
@@ -215,7 +223,7 @@ class Transaction {
       });
       rows = await this.rows(
         "SELECT * FROM cau_existencias WHERE id_empresa=? AND id_articulo=? AND id_ubicacion=? FOR UPDATE",
-        [productId, locationId],
+        [productId, locationId]
       );
     }
     const row = rows[0],
@@ -224,7 +232,7 @@ class Transaction {
     ensure(
       Number.isSafeInteger(value) && value >= 0 && value <= 4294967295,
       "Existencias insuficientes o cantidad fuera de rango.",
-      409,
+      409
     );
     await this.update("existencias", row.id, { [field]: value });
   }
@@ -237,7 +245,7 @@ class Transaction {
     origin,
     destination,
     note,
-    extra = {},
+    extra = {}
   ) {
     return this.insert("movimientos", {
       id_operacion: this.operation,
@@ -256,14 +264,14 @@ class Transaction {
   async pending(line) {
     const rows = await this.rows(
       "SELECT COALESCE(SUM(cantidad),0) AS total FROM cau_devolucion_detalle WHERE id_empresa=? AND id_entrega_detalle=?",
-      [String(line.id)],
+      [String(line.id)]
     );
     return Number(line.cantidad) - Number(rows[0].total);
   }
   async assigned(productId) {
     const rows = await this.rows(
       `SELECT COALESCE(SUM(d.cantidad-COALESCE(r.qty,0)),0) total FROM cau_entrega_detalle d JOIN cau_entregas e ON e.id_empresa=d.id_empresa AND e.id=d.id_entrega LEFT JOIN (SELECT id_empresa,id_entrega_detalle,SUM(cantidad) qty FROM cau_devolucion_detalle GROUP BY id_empresa,id_entrega_detalle) r ON r.id_empresa=d.id_empresa AND r.id_entrega_detalle=d.id WHERE d.id_empresa=? AND d.id_articulo=? AND e.estado='confirmada'`,
-      [productId],
+      [productId]
     );
     return Number(rows[0].total);
   }
@@ -272,11 +280,11 @@ async function createDelivery(tx, p) {
   const employee = tx.employee(p.employeeId, true);
   ensure(
     p.mode !== "Préstamo" || p.due,
-    "Indica la fecha prevista de devolución.",
+    "Indica la fecha prevista de devolución."
   );
   ensure(
     new Set(p.lines.map((l) => l.productId)).size === p.lines.length,
-    "No repitas artículos en una entrega.",
+    "No repitas artículos en una entrega."
   );
   const delivery = await tx.insert("entregas", {
     folio: `ENT-${tx.s.companyId}-${tx.operation}`,
@@ -295,18 +303,18 @@ async function createDelivery(tx, p) {
     const product = await tx.product(line.productId);
     ensure(
       product.tipo !== "activo" || line.qty === 1,
-      "Un activo individual se entrega de uno en uno.",
+      "Un activo individual se entrega de uno en uno."
     );
     if (product.tipo === "activo")
       ensure(
         (await tx.assigned(line.productId)) === 0,
         "El activo ya está asignado.",
-        409,
+        409
       );
     const location = await tx.chooseLocation(
       line.productId,
       line.locationId,
-      line.qty,
+      line.qty
     );
     await tx.balance(line.productId, location, "disponible", -line.qty);
     const detail = await tx.insert("entrega_detalle", {
@@ -325,7 +333,7 @@ async function createDelivery(tx, p) {
       location,
       null,
       p.note,
-      { id_empleado: employee.id, id_entrega_detalle: detail },
+      { id_empleado: employee.id, id_entrega_detalle: detail }
     );
   }
   return { id: delivery };
@@ -334,7 +342,7 @@ async function returnDelivery(tx, p) {
   tx.employee(p.employeeId);
   ensure(
     new Set(p.lines.map((l) => l.lineId)).size === p.lines.length,
-    "No repitas partidas en una devolución.",
+    "No repitas partidas en una devolución."
   );
   const returned = await tx.insert("devoluciones", {
     folio: `DEV-${tx.s.companyId}-${tx.operation}`,
@@ -349,27 +357,27 @@ async function returnDelivery(tx, p) {
       String(delivery.id) === line.deliveryId &&
         String(delivery.id_empleado) === p.employeeId &&
         delivery.estado === "confirmada",
-      "La partida no corresponde a una entrega vigente del empleado.",
+      "La partida no corresponde a una entrega vigente del empleado."
     );
     ensure(
       parseJson(original.snapshot_articulo).returnable,
-      "El artículo no requiere devolución.",
+      "El artículo no requiere devolución."
     );
     ensure(
       line.qty <= (await tx.pending(original)),
       "La cantidad supera lo pendiente por devolver.",
-      409,
+      409
     );
     ensure(
       line.condition === "good" || p.note.trim(),
-      "Indica el motivo del daño o pérdida.",
+      "Indica el motivo del daño o pérdida."
     );
     const productId = String(original.id_articulo),
       location =
         line.condition === "lost"
           ? String(original.id_ubicacion_origen)
           : await tx.location(
-              line.locationId || String(original.id_ubicacion_origen),
+              line.locationId || String(original.id_ubicacion_origen)
             );
     const condition = { good: "bueno", review: "revision", lost: "perdido" }[
       line.condition
@@ -409,18 +417,56 @@ async function returnDelivery(tx, p) {
       null,
       location,
       p.note,
-      extra,
+      extra
     );
   }
   return { id: returned };
 }
+async function savePhoto(tx, productId) {
+  if (tx.photo === undefined) return;
+  const rows = await tx.rows(
+    "SELECT id FROM cau_articulo_fotos WHERE id_empresa=? AND id_articulo=? FOR UPDATE",
+    [productId]
+  );
+  const data = {
+    contenido: tx.photo,
+    mime: "image/webp",
+    bytes: tx.photo?.length || 0,
+  };
+  if (rows.length) await tx.update("articulo_fotos", String(rows[0].id), data);
+  else if (tx.photo)
+    await tx.insert("articulo_fotos", { id_articulo: productId, ...data });
+}
 async function run(tx, type, p) {
   switch (type) {
+    case "category.save": {
+      const data = {
+        tipo: p.type === "asset" ? "activo" : "uniforme",
+        nombre: p.name,
+        descripcion: p.description || null,
+        activo: p.active ? 1 : 0,
+      };
+      if (p.id) {
+        const before = await tx.get("categorias", p.id);
+        ensure(
+          before.tipo === data.tipo,
+          "No se puede cambiar el módulo de una categoría."
+        );
+        ensure(
+          p.version === before.version,
+          "La categoría cambió. Actualiza antes de editar.",
+          409
+        );
+        await tx.update("categorias", p.id, data);
+        return { id: p.id };
+      }
+      return { id: await tx.insert("categorias", data) };
+    }
     case "location.save": {
       if (p.branchId)
         ensure(
           tx.s.branches.some((b) => b.id === p.branchId),
-          "La sucursal no pertenece a esta empresa.",
+          "La sucursal no pertenece a esta empresa."
         );
       const data = {
         nombre: p.name,
@@ -435,11 +481,40 @@ async function run(tx, type, p) {
       return { id: await tx.insert("ubicaciones", data) };
     }
     case "product.save": {
+      let category;
+      if (!p.categoryId) {
+        try {
+          const matches = await tx.rows(
+            "SELECT * FROM cau_categorias WHERE id_empresa=? AND tipo=? AND nombre=?",
+            [p.type === "asset" ? "activo" : "uniforme", p.category]
+          );
+          ensure(matches.length, "Selecciona una categoría del catálogo.");
+          p.categoryId = String(matches[0].id);
+        } catch (error) {
+          if (error.code !== "ER_NO_SUCH_TABLE") throw error;
+        }
+      }
+      if (p.categoryId) {
+        category = await tx.get("categorias", p.categoryId);
+        ensure(
+          category.tipo === (p.type === "asset" ? "activo" : "uniforme"),
+          "La categoría pertenece al otro módulo."
+        );
+        if (!category.activo) {
+          const prior = p.id ? await tx.get("articulos", p.id) : null;
+          ensure(
+            prior && String(prior.id_categoria) === p.categoryId,
+            "Selecciona una categoría activa."
+          );
+        }
+      }
+      ensure(category || p.category, "Selecciona una categoría.");
       const data = {
         tipo: p.type === "asset" ? "activo" : "uniforme",
         nombre: p.name,
         codigo: p.code,
-        categoria: p.category,
+        categoria: category?.nombre || p.category,
+        ...(category ? { id_categoria: p.categoryId } : {}),
         numero_serie: p.serial || null,
         modelo: p.variant || null,
         talla: p.size || null,
@@ -454,23 +529,25 @@ async function run(tx, type, p) {
         const before = await tx.get("articulos", p.id);
         ensure(
           before.tipo === data.tipo,
-          "No se puede cambiar el tipo de un artículo.",
+          "No se puede cambiar el tipo de un artículo."
         );
         ensure(
           p.version === before.version,
           "El artículo cambió. Actualiza antes de editar.",
-          409,
+          409
         );
         await tx.update("articulos", p.id, data);
+        await savePhoto(tx, p.id);
         return { id: p.id };
       }
       ensure(p.locationId, "Selecciona una ubicación de inventario.");
       const location = await tx.location(p.locationId);
       ensure(
         p.type !== "asset" || p.stock === 1,
-        "Registra cada activo físico con su propio código.",
+        "Registra cada activo físico con su propio código."
       );
       const product = await tx.insert("articulos", data);
+      await savePhoto(tx, product);
       if (p.stock) {
         await tx.balance(product, location, "disponible", p.stock);
         await tx.movement(
@@ -481,7 +558,7 @@ async function run(tx, type, p) {
           "disponible",
           null,
           location,
-          "Inventario inicial",
+          "Inventario inicial"
         );
       }
       return { id: product };
@@ -490,11 +567,11 @@ async function run(tx, type, p) {
       const product = await tx.get("articulos", p.id);
       const rows = await tx.rows(
         "SELECT COALESCE(SUM(cantidad_disponible+cantidad_revision),0) total FROM cau_existencias WHERE id_empresa=? AND id_articulo=?",
-        [p.id],
+        [p.id]
       );
       ensure(
         !Number(rows[0].total) && !(await tx.assigned(p.id)),
-        "El artículo tiene existencias, revisión o asignaciones pendientes.",
+        "El artículo tiene existencias, revisión o asignaciones pendientes."
       );
       await tx.update("articulos", p.id, { activo: product.activo ? 0 : 1 });
       return { id: p.id };
@@ -505,7 +582,7 @@ async function run(tx, type, p) {
       if (p.operation === "entrada") {
         ensure(
           product.tipo === "uniforme",
-          "Registra cada nuevo activo con su propio código.",
+          "Registra cada nuevo activo con su propio código."
         );
         await tx.balance(p.id, location, "disponible", p.qty);
         await tx.movement(
@@ -516,14 +593,14 @@ async function run(tx, type, p) {
           "disponible",
           null,
           location,
-          p.note,
+          p.note
         );
       } else {
         await tx.balance(p.id, location, "disponible", -p.qty);
         if (p.operation === "traslado") {
           ensure(
             p.destinationId && p.destinationId !== location,
-            "Selecciona una ubicación de destino distinta.",
+            "Selecciona una ubicación de destino distinta."
           );
           const target = await tx.location(p.destinationId);
           await tx.balance(p.id, target, "disponible", p.qty);
@@ -535,7 +612,7 @@ async function run(tx, type, p) {
             "disponible",
             location,
             target,
-            p.note,
+            p.note
           );
         } else {
           await tx.balance(p.id, location, "baja", p.qty);
@@ -547,7 +624,7 @@ async function run(tx, type, p) {
             "baja",
             location,
             location,
-            p.note,
+            p.note
           );
         }
       }
@@ -563,16 +640,16 @@ async function run(tx, type, p) {
       ensure(
         String(line.id_entrega) === p.deliveryId &&
           parseJson(line.snapshot_articulo).type === "uniform",
-        "Selecciona una entrega de uniforme.",
+        "Selecciona una entrega de uniforme."
       );
       ensure(
         String(line.id_articulo) !== p.productId,
-        "Selecciona una variante distinta.",
+        "Selecciona una variante distinta."
       );
       const product = await tx.product(p.productId);
       ensure(
         product.tipo === "uniforme",
-        "Selecciona un uniforme como reemplazo.",
+        "Selecciona un uniforme como reemplazo."
       );
       await returnDelivery(tx, {
         employeeId: String(delivery.id_empleado),
@@ -601,36 +678,36 @@ async function run(tx, type, p) {
       ensure(
         delivery.estado === "confirmada",
         "La entrega ya está revertida.",
-        409,
+        409
       );
       const a = await tx.rows(
         "SELECT id FROM cau_acuses WHERE id_empresa=? AND id_entrega=?",
-        [p.id],
+        [p.id]
       );
       ensure(
         !a.length,
         "La entrega ya tiene un acuse y no puede revertirse.",
-        409,
+        409
       );
       const lines = await tx.rows(
         "SELECT * FROM cau_entrega_detalle WHERE id_empresa=? AND id_entrega=?",
-        [p.id],
+        [p.id]
       );
       for (const line of lines) {
         ensure(
           (await tx.pending(line)) === Number(line.cantidad),
           "La entrega ya tiene devoluciones o pérdidas.",
-          409,
+          409
         );
         await tx.balance(
           String(line.id_articulo),
           String(line.id_ubicacion_origen),
           "disponible",
-          line.cantidad,
+          line.cantidad
         );
         const originals = await tx.rows(
           "SELECT id FROM cau_movimientos WHERE id_empresa=? AND id_entrega_detalle=? AND tipo='entrega'",
-          [String(line.id)],
+          [String(line.id)]
         );
         await tx.movement(
           String(line.id_articulo),
@@ -645,7 +722,7 @@ async function run(tx, type, p) {
             id_empleado: String(delivery.id_empleado),
             id_entrega_detalle: String(line.id),
             id_movimiento_revertido: originals[0]?.id || null,
-          },
+          }
         );
       }
       await tx.update("entregas", p.id, {
@@ -662,21 +739,21 @@ async function run(tx, type, p) {
       ensure(
         String(delivery.id_empleado) === tx.s.employeeId,
         "Solo el empleado receptor puede confirmar esta entrega.",
-        403,
+        403
       );
       ensure(
         delivery.estado === "confirmada",
         "La entrega está revertida.",
-        409,
+        409
       );
       const a = await tx.rows(
         "SELECT id FROM cau_acuses WHERE id_empresa=? AND id_entrega=?",
-        [p.id],
+        [p.id]
       );
       ensure(!a.length, "La entrega ya tiene acuse.", 409);
       ensure(
         p.status === "accepted" || p.note,
-        "Describe la diferencia encontrada.",
+        "Describe la diferencia encontrada."
       );
       await tx.insert("acuses", {
         id_entrega: p.id,
@@ -693,7 +770,7 @@ async function run(tx, type, p) {
       const location = await tx.chooseLocation(
         p.productId,
         p.locationId,
-        p.qty,
+        p.qty
       );
       await tx.balance(p.productId, location, "disponible", -p.qty);
       await tx.balance(p.productId, location, "revision", p.qty);
@@ -715,7 +792,7 @@ async function run(tx, type, p) {
         location,
         location,
         p.reason,
-        { id_mantenimiento: maintenance },
+        { id_mantenimiento: maintenance }
       );
       return { id: maintenance };
     }
@@ -727,13 +804,13 @@ async function run(tx, type, p) {
         String(m.id_articulo),
         String(m.id_ubicacion),
         "revision",
-        -m.cantidad,
+        -m.cantidad
       );
       await tx.balance(
         String(m.id_articulo),
         String(m.id_ubicacion),
         bucket,
-        m.cantidad,
+        m.cantidad
       );
       await tx.update("mantenimientos", p.id, {
         estado: p.outcome === "repaired" ? "reparado" : "baja",
@@ -752,7 +829,7 @@ async function run(tx, type, p) {
         String(m.id_ubicacion),
         String(m.id_ubicacion),
         p.note,
-        { id_mantenimiento: p.id },
+        { id_mantenimiento: p.id }
       );
       return { id: p.id };
     }
@@ -760,7 +837,7 @@ async function run(tx, type, p) {
       tx.employee(p.id);
       const rows = await tx.rows(
         "SELECT id FROM cau_empleado_tallas WHERE id_empresa=? AND id_empleado=?",
-        [p.id],
+        [p.id]
       );
       const data = {
         talla_superior: p.size || null,
@@ -777,11 +854,11 @@ async function run(tx, type, p) {
       if (p.roleId)
         ensure(
           tx.s.roles.some((r) => r.id === p.roleId),
-          "Selecciona un puesto de esta empresa.",
+          "Selecciona un puesto de esta empresa."
         );
       ensure(
         new Set(p.lines.map((l) => l.productId)).size === p.lines.length,
-        "No repitas artículos en el paquete.",
+        "No repitas artículos en el paquete."
       );
       for (const l of p.lines) await tx.product(l.productId);
       const data = { nombre: p.name, id_puesto: p.roleId || null };
@@ -791,7 +868,7 @@ async function run(tx, type, p) {
         await tx.update("paquetes", kit, data);
         await tx.c.execute(
           "DELETE FROM cau_paquete_detalle WHERE id_empresa=? AND id_paquete=?",
-          [tx.s.companyId, kit],
+          [tx.s.companyId, kit]
         );
       } else kit = await tx.insert("paquetes", data);
       for (const l of p.lines)
@@ -810,7 +887,7 @@ async function run(tx, type, p) {
         ensure(
           String(delivery.id_empleado) === p.employeeId,
           "La asignación no pertenece al empleado.",
-          403,
+          403
         );
       }
       return {
@@ -818,7 +895,7 @@ async function run(tx, type, p) {
           id_empleado: p.employeeId,
           id_entrega_detalle: p.lineId || null,
           tipo: Object.keys(requestLabels).find(
-            (k) => requestLabels[k] === p.kind,
+            (k) => requestLabels[k] === p.kind
           ),
           descripcion: p.note,
         }),
@@ -829,7 +906,7 @@ async function run(tx, type, p) {
       ensure(
         ["pendiente", "en_proceso"].includes(r.estado),
         "La solicitud ya fue resuelta.",
-        409,
+        409
       );
       await tx.update("solicitudes", p.id, {
         estado: "resuelta",

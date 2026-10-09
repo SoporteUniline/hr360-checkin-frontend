@@ -6,13 +6,18 @@ import { Input } from "@/components/ui/input";
 import { Search, Package } from "lucide-react";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import { useActivos } from "./ActivosProvider";
+import { resourceHref } from "@/lib/activos/module.mjs";
 export const ROOT = "/panel/control-activos";
-export function ResourceLink({ to = "", children, ...props }) {
+export function ResourceLink({ to = "", moduleType, children, ...props }) {
   const ctx = useActivos();
-  const separator = to.includes("?") ? "&" : "?";
   return (
     <Link
-      href={`${ctx?.self ? "/empleado/panel/mis-recursos" : ROOT}${ctx?.self && to === "/resguardos" ? "" : to}${separator}empresa=${ctx?.company.id || ""}`}
+      href={resourceHref(
+        moduleType || ctx?.resourceType,
+        to,
+        ctx?.company.id || "",
+        ctx?.self
+      )}
       {...props}
     >
       {children}
@@ -214,7 +219,7 @@ export function downloadCsv(name, rows) {
     '"';
   const blob = new Blob(
     ["\uFEFF" + rows.map((r) => r.map(cell).join(",")).join("\r\n")],
-    { type: "text/csv;charset=utf-8" },
+    { type: "text/csv;charset=utf-8" }
   );
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

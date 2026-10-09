@@ -34,7 +34,7 @@ export function Movements() {
   const rows = state.movements.filter(
     (m) =>
       (!type || m.type === type) &&
-      matches(q, m.productName, m.employeeName, m.actor, m.note),
+      matches(q, m.productName, m.employeeName, m.actor, m.note)
   );
   return (
     <>
@@ -139,14 +139,14 @@ export function Maintenance() {
     [form, setForm] = useState({});
   const product = (id) => state.products.find((p) => p.id === id);
   const rows = state.maintenance.filter((m) =>
-    matches(q, product(m.productId)?.name, m.reason, m.supplier),
+    matches(q, product(m.productId)?.name, m.reason, m.supplier)
   );
   const set = (k, v) => setForm({ ...form, [k]: v });
   async function submit(e) {
     e.preventDefault();
     const result = await execute(
       modal === "new" ? "maintenance.open" : "maintenance.close",
-      modal === "new" ? form : { ...form, id: modal },
+      modal === "new" ? form : { ...form, id: modal }
     );
     if (result) setModal(null);
   }
@@ -220,15 +220,15 @@ export function Maintenance() {
                       m.status === "open"
                         ? "amber"
                         : m.status === "repaired"
-                          ? "green"
-                          : "gray"
+                        ? "green"
+                        : "gray"
                     }
                   >
                     {m.status === "open"
                       ? "En revisión"
                       : m.status === "repaired"
-                        ? "Reparado"
-                        : "Baja definitiva"}
+                      ? "Reparado"
+                      : "Baja definitiva"}
                   </Badge>
                   <p className="mt-1 text-xs text-slate-500">{money(m.cost)}</p>
                 </td>
@@ -368,7 +368,7 @@ export function Kits() {
     [productId, setProductId] = useState("");
   function open(kit) {
     setForm(
-      kit ? JSON.parse(JSON.stringify(kit)) : { name: "", role: "", lines: [] },
+      kit ? JSON.parse(JSON.stringify(kit)) : { name: "", role: "", lines: [] }
     );
     setEditing(kit?.id || "new");
   }
@@ -384,6 +384,21 @@ export function Kits() {
       >
         <Button onClick={() => open(null)}>Crear paquete</Button>
       </Heading>
+      {!!state.mixedKits?.length && (
+        <Panel title="Paquetes mixtos anteriores">
+          <div className="p-4 text-sm text-slate-600">
+            <p>
+              Estos paquetes conservan equipos y uniformes. Crea una dotación
+              separada en cada módulo para nuevas entregas.
+            </p>
+            <ul className="mt-2 list-disc pl-5">
+              {state.mixedKits.map((k) => (
+                <li key={k.id}>{k.name}</li>
+              ))}
+            </ul>
+          </div>
+        </Panel>
+      )}
       {editing ? (
         <form onSubmit={save}>
           <Panel title={editing === "new" ? "Nuevo paquete" : "Editar paquete"}>
@@ -437,7 +452,7 @@ export function Kits() {
                         setForm({
                           ...form,
                           lines: form.lines.map((a, i) =>
-                            i === n ? { ...a, qty: Number(e.target.value) } : a,
+                            i === n ? { ...a, qty: Number(e.target.value) } : a
                           ),
                         })
                       }
@@ -472,7 +487,7 @@ export function Kits() {
                       .filter(
                         (p) =>
                           p.active &&
-                          !form.lines.some((l) => l.productId === p.id),
+                          !form.lines.some((l) => l.productId === p.id)
                       )
                       .map((p) => (
                         <option key={p.id} value={p.id}>
@@ -540,7 +555,7 @@ export function Kits() {
 }
 
 export function Requests() {
-  const { state, execute, self } = useActivos();
+  const { state, execute, self, resourceType } = useActivos();
   const [dialog, setDialog] = useState(null),
     [form, setForm] = useState({});
   async function submit(e) {
@@ -563,7 +578,10 @@ export function Requests() {
           onClick={() => {
             setForm({
               employeeId: self ? state.employeeId : state.employees[0]?.id,
-              kind: "Falla de equipo",
+              kind:
+                resourceType === "uniform"
+                  ? "Cambio de talla"
+                  : "Falla de equipo",
               note: "",
             });
             setDialog("new");
@@ -664,9 +682,18 @@ export function Requests() {
                       "Cambio de talla",
                       "Reposición",
                       "Otro",
-                    ].map((t) => (
-                      <option key={t}>{t}</option>
-                    ))}
+                    ]
+                      .filter(
+                        (t) =>
+                          !resourceType ||
+                          t === "Otro" ||
+                          (resourceType === "uniform"
+                            ? t !== "Falla de equipo"
+                            : t === "Falla de equipo")
+                      )
+                      .map((t) => (
+                        <option key={t}>{t}</option>
+                      ))}
                   </Select>
                 </Field>
               </>

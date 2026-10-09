@@ -12,9 +12,9 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, Download } from "lucide-react";
 import { useActivos } from "./ActivosProvider";
+import { ProductPhoto, PhotoField } from "./ProductPhoto";
 import { assigned } from "@/lib/activos/model.mjs";
 import {
-  ROOT,
   Heading,
   Panel,
   Field,
@@ -39,39 +39,41 @@ function ProductStatus({ p, state }) {
         !p.active
           ? "gray"
           : p.repair
-            ? "amber"
-            : p.stock < p.minimum
-              ? "amber"
-              : p.stock
-                ? "green"
-                : "blue"
+          ? "amber"
+          : p.stock < p.minimum
+          ? "amber"
+          : p.stock
+          ? "green"
+          : "blue"
       }
     >
       {!p.active
         ? "Archivado"
         : p.repair
-          ? "En revisión"
-          : p.stock < p.minimum
-            ? "Existencia baja"
-            : p.stock
-              ? "Disponible"
-              : assigned(state, p.id)
-                ? "Asignado"
-                : "Sin existencias"}
+        ? "En revisión"
+        : p.stock < p.minimum
+        ? "Existencia baja"
+        : p.stock
+        ? "Disponible"
+        : assigned(state, p.id)
+        ? "Asignado"
+        : "Sin existencias"}
     </Badge>
   );
 }
 export default function Inventory({ type }) {
   const { state } = useActivos();
   const [q, setQ] = useState(""),
-    [status, setStatus] = useState("active");
+    [status, setStatus] = useState("active"),
+    [category, setCategory] = useState("");
   const rows = state.products.filter(
     (p) =>
       p.type === type &&
+      (!category || p.categoryId === category || p.category === category) &&
       (status === "all" ||
         (status === "active" && p.active) ||
         (status === "low" && p.active && p.stock < p.minimum)) &&
-      matches(q, p.name, p.code, p.serial, p.variant, p.location),
+      matches(q, p.name, p.code, p.serial, p.variant, p.location)
   );
   return (
     <>
@@ -140,6 +142,20 @@ export default function Inventory({ type }) {
           </Select>
         </div>
       </div>
+      <div className="mb-4 max-w-xs">
+        <Select
+          aria-label="Categoría del inventario"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+        >
+          <option value="">Todas las categorías</option>
+          {state.categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </Select>
+      </div>
       <Panel>
         <Table
           headers={[
@@ -158,7 +174,13 @@ export default function Inventory({ type }) {
             render={(p) => (
               <tr key={p.id}>
                 <td>
-                  <div className="font-semibold">{p.name}</div>
+                  <div className="flex items-center gap-3">
+                    <ProductPhoto product={p} />
+                    <div>
+                      <div className="font-semibold">{p.name}</div>
+                      <p className="text-xs text-slate-500">{p.category}</p>
+                    </div>
+                  </div>
                   <p className="text-xs text-slate-500">
                     {type === "asset" ? p.variant : p.code}
                   </p>
@@ -193,7 +215,7 @@ export default function Inventory({ type }) {
 }
 
 export function ProductForm({ type, id }) {
-  const { state, execute, company } = useActivos();
+  const { state, execute, href } = useActivos();
   const existing = state.products.find((p) => p.id === id);
   const router = useRouter();
   const [form, setForm] = useState(
@@ -203,7 +225,8 @@ export function ProductForm({ type, id }) {
       code: "",
       serial: "",
       variant: "",
-      category: type === "asset" ? "Computación" : "Uniforme",
+      category: "",
+      categoryId: "",
       locationId: state.locations[0]?.id || "",
       size: "",
       color: "",
@@ -212,17 +235,17 @@ export function ProductForm({ type, id }) {
       cost: 0,
       renewalMonths: 0,
       returnable: true,
-    },
+    }
   );
   const [saving, setSaving] = useState(false);
+  const [photoBusy, setPhotoBusy] = useState(false);
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
   if (id && !existing) return <Empty>Artículo no encontrado.</Empty>;
   async function submit(e) {
     e.preventDefault();
     setSaving(true);
     const r = await execute("product.save", form);
-    if (r)
-      router.push(`${ROOT}/${section(type)}/${r.id}?empresa=${company.id}`);
+    if (r) router.push(href(`/${section(type)}/${r.id}`));
     else setSaving(false);
   }
   return (
@@ -232,8 +255,8 @@ export function ProductForm({ type, id }) {
           id
             ? "Editar artículo"
             : type === "asset"
-              ? "Registrar activo"
-              : "Registrar uniforme"
+            ? "Registrar activo"
+            : "Registrar uniforme"
         }
         subtitle="Información del catálogo de la empresa."
       />
@@ -285,11 +308,42 @@ export function ProductForm({ type, id }) {
               />
             </Field>
             <Field label="Categoría">
-              <Input
-                value={form.category}
-                maxLength={70}
-                onChange={(e) => set("category", e.target.value)}
-              />
+              {state.catalogReady ? (
+                <Select
+                  required
+                  value={form.categoryId || ""}
+                  onChange={(e) => {
+                    set("categoryId", e.target.value);
+                    set(
+                      "category",
+                      state.categories.find((c) => c.id === e.target.value)
+                        ?.name || ""
+                    );
+                  }}
+                >
+                  <option value="">Selecciona una categoría…</option>
+                  {state.categories
+                    .filter((c) => c.active || c.id === form.categoryId)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                        {!c.active ? " (archivada)" : ""}
+                      </option>
+                    ))}
+                </Select>
+              ) : (
+                <Input
+                  required
+                  value={form.category}
+                  maxLength={100}
+                  onChange={(e) => set("category", e.target.value)}
+                />
+              )}
+              {state.catalogReady && (
+                <ResourceLink to="/categorias" className="text-blue-700">
+                  Administrar categorías
+                </ResourceLink>
+              )}
             </Field>
             <Field
               label={
@@ -391,6 +445,11 @@ export function ProductForm({ type, id }) {
                 onChange={(e) => set("cost", e.target.value)}
               />
             </Field>
+            <PhotoField
+              form={form}
+              onChange={(value) => set("photo", value)}
+              onBusy={setPhotoBusy}
+            />
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -404,7 +463,7 @@ export function ProductForm({ type, id }) {
             <Button variant="outline" asChild>
               <ResourceLink to={`/${section(type)}`}>Cancelar</ResourceLink>
             </Button>
-            <Button disabled={saving} type="submit">
+            <Button disabled={saving || photoBusy} type="submit">
               Guardar artículo
             </Button>
           </div>
@@ -428,14 +487,14 @@ export function ProductDetail({ id }) {
     .flatMap((d) =>
       d.lines
         .filter((l) => l.productId === p.id && l.qty > l.returned + l.lost)
-        .map((l) => ({ d, l })),
+        .map((l) => ({ d, l }))
     );
   const movements = state.movements.filter((m) => m.productId === p.id);
   function open(type) {
     setDialog(type);
     if (type === "traslado")
       setLocation(
-        state.locations.find((l) => l.active && l.id !== source)?.id || "",
+        state.locations.find((l) => l.active && l.id !== source)?.id || ""
       );
     setNote("");
     setQty(1);
@@ -485,8 +544,12 @@ export function ProductDetail({ id }) {
           title="Ficha del artículo"
           actions={<ProductStatus p={p} state={state} />}
         >
+          <div className="p-5 pb-0">
+            <ProductPhoto product={p} className="h-44 w-full" />
+          </div>
           <dl className="grid grid-cols-2 gap-5 p-5">
             {[
+              ["Categoría", p.category],
               ["Ubicación", p.location],
               ["Serie", p.serial || "No aplica"],
               ["Disponible", p.stock],
@@ -660,7 +723,7 @@ export function ProductDetail({ id }) {
                       <option key={l.id} value={l.id}>
                         {l.name} ·{" "}
                         {state.balances.find(
-                          (b) => b.productId === p.id && b.locationId === l.id,
+                          (b) => b.productId === p.id && b.locationId === l.id
                         )?.stock || 0}{" "}
                         disponibles
                       </option>
@@ -678,8 +741,7 @@ export function ProductDetail({ id }) {
                     dialog === "entrada"
                       ? undefined
                       : state.balances.find(
-                          (b) =>
-                            b.productId === p.id && b.locationId === source,
+                          (b) => b.productId === p.id && b.locationId === source
                         )?.stock || 0
                   }
                   step={1}

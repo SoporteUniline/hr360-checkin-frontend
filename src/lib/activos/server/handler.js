@@ -13,7 +13,7 @@ export async function handleRead(request, self = false) {
     const scope = await loadCatalogs(await getScope(request, self));
     return Response.json(
       { state: await snapshot(scope) },
-      { headers: noStore },
+      { headers: noStore }
     );
   } catch (e) {
     return errorResponse(e);
@@ -23,12 +23,12 @@ export async function handleWrite(request, self = false) {
   try {
     checkOrigin(request);
     ensure(
-      Number(request.headers.get("content-length") || 0) <= 100000,
+      Number(request.headers.get("content-length") || 0) <= 800000,
       "La solicitud es demasiado grande.",
-      413,
+      413
     );
     const raw = await request.text();
-    ensure(raw.length <= 100000, "La solicitud es demasiado grande.", 413);
+    ensure(raw.length <= 800000, "La solicitud es demasiado grande.", 413);
     let body;
     try {
       body = JSON.parse(raw);
@@ -40,7 +40,7 @@ export async function handleWrite(request, self = false) {
       scope,
       body.command,
       request.headers.get("idempotency-key"),
-      body.revision,
+      body.revision
     );
     // La escritura ya está confirmada. Una falla de refresco no debe presentarse
     // como escritura fallida ni provocar una segunda entrega con otra clave.

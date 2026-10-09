@@ -21,7 +21,7 @@ const normalizeRow = (row) =>
       (k === "id" || k.startsWith("id_") || k.endsWith("_by")) && v !== null
         ? String(v)
         : v,
-    ]),
+    ])
   );
 export async function readState(scope, connection) {
   const { companyId, self, employeeId } = scope;
@@ -32,6 +32,43 @@ export async function readState(scope, connection) {
         }).format(new Date(String(value).replace(" ", "T") + "Z"))
       : "";
   const all = {};
+  let categories = [],
+    photos = [],
+    catalogReady = false;
+  if (!self) {
+    try {
+      const [cats] = await connection.execute(
+        "SELECT * FROM cau_categorias WHERE id_empresa=? ORDER BY nombre LIMIT 10001",
+        [companyId]
+      );
+      const [pics] = await connection.execute(
+        "SELECT id_articulo,version FROM cau_articulo_fotos WHERE id_empresa=? AND contenido IS NOT NULL LIMIT 10001",
+        [companyId]
+      );
+      await connection.execute(
+        "SELECT id_categoria FROM cau_articulos WHERE id_empresa=? LIMIT 1",
+        [companyId]
+      );
+      ensure(
+        cats.length <= 10000 && pics.length <= 10000,
+        "El catálogo excede el tamaño de consulta.",
+        413
+      );
+      categories = cats.map((c) => ({
+        id: String(c.id),
+        type: c.tipo === "activo" ? "asset" : "uniform",
+        name: c.nombre,
+        description: c.descripcion || "",
+        active: !!c.activo,
+        version: c.version,
+      }));
+      photos = pics;
+      catalogReady = true;
+    } catch (error) {
+      if (!["ER_NO_SUCH_TABLE", "ER_BAD_FIELD_ERROR"].includes(error.code))
+        throw error;
+    }
+  }
   for (const name of names) {
     if (
       self &&
@@ -69,18 +106,18 @@ export async function readState(scope, connection) {
              AND o.id=m.id_operacion AND o.created_by=m.created_by
            WHERE m.id_empresa=? ORDER BY m.id DESC LIMIT 10001`
         : `SELECT * FROM cau_${name} WHERE id_empresa=?${filter} ORDER BY id DESC LIMIT 10001`,
-      params,
+      params
     );
     ensure(
       rows.length <= 10000,
       "El historial excede el tamaño de consulta del módulo. Solicita paginación del servidor antes de continuar.",
-      413,
+      413
     );
     all[name] = rows.map(normalizeRow);
   }
   const [revision] = await connection.execute(
     "SELECT COALESCE(MAX(id),0) AS revision FROM cau_operaciones WHERE id_empresa=? AND estado='completada'",
-    [companyId],
+    [companyId]
   );
   const locations = all.ubicaciones.map((l) => ({
     id: l.id,
@@ -98,9 +135,14 @@ export async function readState(scope, connection) {
     repair: e.cantidad_revision,
     retired: e.cantidad_baja,
   }));
-  const products = all.articulos.map((p) =>
-    productView(p, balances, locations),
-  );
+  const products = all.articulos.map((p) => ({
+    ...productView(p, balances, locations),
+    category:
+      categories.find((c) => c.id === String(p.id_categoria))?.name ||
+      p.categoria,
+    photoVersion:
+      photos.find((f) => String(f.id_articulo) === p.id)?.version || null,
+  }));
   const employeeMap = new Map(scope.employees.map((e) => [e.id, e]));
   const employees = scope.employees.map((e) => {
     const t = all.empleado_tallas.find((t) => t.id_empleado === e.id);
@@ -170,6 +212,8 @@ export async function readState(scope, connection) {
     locations,
     balances,
     products,
+    categories,
+    catalogReady,
     deliveries,
     movements: all.movimientos.map((m) => ({
       id: m.id,
@@ -178,7 +222,8 @@ export async function readState(scope, connection) {
       productId: m.id_articulo,
       productName: products.find((p) => p.id === m.id_articulo)?.name || "",
       qty: m.cantidad,
-      actor: parseJson(m.operacion_resultado).actor || `Usuario ${m.created_by}`,
+      actor:
+        parseJson(m.operacion_resultado)?.actor || `Usuario ${m.created_by}`,
       note: m.motivo,
       employeeId: m.id_empleado,
       employeeName: employeeMap.get(m.id_empleado)?.name || "",
@@ -258,6 +303,7 @@ export function productView(p, balances = [], locations = []) {
     name: p.nombre,
     code: p.codigo,
     category: p.categoria,
+    categoryId: p.id_categoria ? String(p.id_categoria) : "",
     serial: p.numero_serie || "",
     variant:
       p.tipo === "activo"

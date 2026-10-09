@@ -173,51 +173,50 @@ const dashboardItems = [
 
 const menuGroups = [
   {
-    group: "CONTROL DE ACTIVOS Y UNIFORMES",
-    groupIcon: Package,
+    group: "CONTROL DE ACTIVOS",
+    groupIcon: Monitor,
     items: [
       {
-        title: "Resumen de recursos",
+        title: "Resumen de activos",
         url: "/panel/control-activos",
         rol: "Recruiter",
         icon: LayoutDashboard,
       },
       {
-        title: "Activos",
+        title: "Inventario de activos",
         url: "/panel/control-activos/activos",
         matchPrefix: "/panel/control-activos/activos",
         rol: "Recruiter",
         icon: Monitor,
       },
       {
-        title: "Uniformes",
-        url: "/panel/control-activos/uniformes",
-        matchPrefix: "/panel/control-activos/uniformes",
+        title: "Categorías de activos",
+        url: "/panel/control-activos/categorias",
         rol: "Recruiter",
-        icon: Shirt,
+        icon: Package,
       },
       {
-        title: "Entregas",
+        title: "Asignaciones y préstamos",
         url: "/panel/control-activos/entregas",
         matchPrefix: "/panel/control-activos/entregas",
         rol: "Recruiter",
         icon: Package,
       },
       {
-        title: "Devoluciones",
+        title: "Devoluciones de activos",
         url: "/panel/control-activos/devoluciones",
         rol: "Recruiter",
         icon: ArrowLeftRight,
       },
       {
-        title: "Recursos por empleado",
+        title: "Activos por empleado",
         url: "/panel/control-activos/empleados",
         matchPrefix: "/panel/control-activos/empleados",
         rol: "Recruiter",
         icon: UsersIcon,
       },
       {
-        title: "Resguardos",
+        title: "Resguardos de activos",
         url: "/panel/control-activos/resguardos",
         matchPrefix: "/panel/control-activos/resguardos",
         rol: "Recruiter",
@@ -230,26 +229,108 @@ const menuGroups = [
         icon: Wrench,
       },
       {
-        title: "Solicitudes e incidencias",
+        title: "Incidencias de activos",
         url: "/panel/control-activos/solicitudes",
         rol: "Recruiter",
         icon: TriangleAlert,
       },
       {
-        title: "Paquetes por puesto",
+        title: "Paquetes de equipo",
         url: "/panel/control-activos/paquetes",
         rol: "Recruiter",
         icon: BriefcaseBusiness,
       },
       {
-        title: "Ubicaciones",
+        title: "Ubicaciones de activos",
         url: "/panel/control-activos/ubicaciones",
         rol: "Recruiter",
         icon: Building,
       },
       {
-        title: "Movimientos",
+        title: "Movimientos de activos",
         url: "/panel/control-activos/movimientos",
+        rol: "Recruiter",
+        icon: BookOpen,
+      },
+    ],
+  },
+  {
+    group: "CONTROL DE UNIFORMES",
+    groupIcon: Shirt,
+    items: [
+      {
+        title: "Resumen de uniformes",
+        url: "/panel/control-uniformes",
+        rol: "Recruiter",
+        icon: LayoutDashboard,
+      },
+      {
+        title: "Prendas y existencias",
+        url: "/panel/control-uniformes/prendas",
+        matchPrefix: "/panel/control-uniformes/prendas",
+        rol: "Recruiter",
+        icon: Shirt,
+      },
+      {
+        title: "Categorías de uniformes",
+        url: "/panel/control-uniformes/categorias",
+        rol: "Recruiter",
+        icon: Package,
+      },
+      {
+        title: "Entregas de uniformes",
+        url: "/panel/control-uniformes/entregas",
+        matchPrefix: "/panel/control-uniformes/entregas",
+        rol: "Recruiter",
+        icon: Package,
+      },
+      {
+        title: "Devoluciones y cambios",
+        url: "/panel/control-uniformes/devoluciones",
+        rol: "Recruiter",
+        icon: ArrowLeftRight,
+      },
+      {
+        title: "Uniformes por empleado",
+        url: "/panel/control-uniformes/empleados",
+        matchPrefix: "/panel/control-uniformes/empleados",
+        rol: "Recruiter",
+        icon: UsersIcon,
+      },
+      {
+        title: "Comprobantes de entrega",
+        url: "/panel/control-uniformes/resguardos",
+        matchPrefix: "/panel/control-uniformes/resguardos",
+        rol: "Recruiter",
+        icon: FileText,
+      },
+      {
+        title: "Prendas en revisión",
+        url: "/panel/control-uniformes/mantenimiento",
+        rol: "Recruiter",
+        icon: Wrench,
+      },
+      {
+        title: "Solicitudes de uniformes",
+        url: "/panel/control-uniformes/solicitudes",
+        rol: "Recruiter",
+        icon: TriangleAlert,
+      },
+      {
+        title: "Dotaciones por puesto",
+        url: "/panel/control-uniformes/paquetes",
+        rol: "Recruiter",
+        icon: BriefcaseBusiness,
+      },
+      {
+        title: "Ubicaciones de uniformes",
+        url: "/panel/control-uniformes/ubicaciones",
+        rol: "Recruiter",
+        icon: Building,
+      },
+      {
+        title: "Movimientos de uniformes",
+        url: "/panel/control-uniformes/movimientos",
         rol: "Recruiter",
         icon: BookOpen,
       },
@@ -605,7 +686,7 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
   const moduloActivo = items.some((item) =>
     item.children
       ? item.children.some((child) => isRecruitmentNavActive(path, child))
-      : isRecruitmentNavActive(path, item),
+      : isRecruitmentNavActive(path, item)
   );
 
   const enlace = (it) => (
@@ -677,7 +758,7 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
               </div>
             ) : (
               enlace(item)
-            ),
+            )
           )}
         </div>
       </PopoverContent>
@@ -720,13 +801,13 @@ export function NavMain() {
       persistirGrupos({
         ...prev,
         [nombre]: prev[nombre] === false ? true : false,
-      }),
+      })
     );
   };
 
   // ¿Hay al menos un módulo contraído? (para alternar expandir/contraer todo)
   const hayContraidos = menuGroups.some(
-    (g) => gruposAbiertos[g.group] === false,
+    (g) => gruposAbiertos[g.group] === false
   );
 
   const toggleTodos = () => {
@@ -772,7 +853,7 @@ export function NavMain() {
             .map((g) => ({
               ...g,
               items: g.items.filter(
-                (item) => !item.rol || item.rol === effectiveRole,
+                (item) => !item.rol || item.rol === effectiveRole
               ),
             }))
             .filter((g) => g.items.length > 0)
@@ -874,9 +955,9 @@ export function NavMain() {
                 : false;
               const itemsVisibles = filtrarItems(
                 group.items.filter(
-                  (item) => !item.rol || item.rol === effectiveRole,
+                  (item) => !item.rol || item.rol === effectiveRole
                 ),
-                grupoCoincide,
+                grupoCoincide
               );
               if (itemsVisibles.length === 0) return null;
 
@@ -911,7 +992,7 @@ export function NavMain() {
                             onClick={() => {
                               if (item.children) {
                                 setOpen(
-                                  open === item.title ? null : item.title,
+                                  open === item.title ? null : item.title
                                 );
                               } else {
                                 handleClick(item.url);
@@ -944,7 +1025,7 @@ export function NavMain() {
                                       !buscando ||
                                       grupoCoincide ||
                                       normalizar(item.title).includes(q) ||
-                                      normalizar(child.title).includes(q),
+                                      normalizar(child.title).includes(q)
                                   )
                                   .map((child) => (
                                     <SidebarMenuButton

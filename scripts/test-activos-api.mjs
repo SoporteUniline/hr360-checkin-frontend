@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import mysql from "mysql2/promise";
+import sharp from "sharp";
 import { executeCommand } from "../src/lib/activos/server/commands.mjs";
 import { snapshot } from "../src/lib/activos/server/read.mjs";
 import { validateCommand } from "../src/lib/activos/server/validation.mjs";
@@ -13,7 +14,7 @@ const testHost = process.env.CAU_TEST_HOST;
 assert.ok(
   socketPath?.startsWith("/") ||
     (testHost === "127.0.0.1" && process.env.CAU_TEST_PORT === "33306"),
-  "Use an isolated local test socket or CAU_TEST_HOST=127.0.0.1 CAU_TEST_PORT=33306.",
+  "Use an isolated local test socket or CAU_TEST_HOST=127.0.0.1 CAU_TEST_PORT=33306."
 );
 const connectionOptions = {
   ...(socketPath ? { socketPath } : { host: testHost, port: 33306 }),
@@ -31,16 +32,34 @@ before(async () => {
   });
   await admin.query(`CREATE DATABASE ${database}`);
   await admin.query(
-    `USE ${database}; CREATE TABLE empresas(id_empresa INT PRIMARY KEY, id_usuario INT NOT NULL, estado VARCHAR(20) NOT NULL) ENGINE=InnoDB;`,
+    `USE ${database}; CREATE TABLE empresas(id_empresa INT PRIMARY KEY, id_usuario INT NOT NULL, estado VARCHAR(20) NOT NULL) ENGINE=InnoDB;`
   );
   const schema = await readFile(
     new URL(
       "../docs/015_control_activos_uniformes_adamia_dev.sql",
-      import.meta.url,
+      import.meta.url
     ),
-    "utf8",
+    "utf8"
   );
   await admin.query(schema.replace("USE `adamia_dev`;", ""));
+  await admin.query(
+    "INSERT INTO empresas VALUES (999,1,'Activo'); INSERT INTO cau_articulos(id_empresa,tipo,nombre,codigo,categoria,created_by) VALUES (999,'activo','Equipo previo','PREVIO','Computación',1)"
+  );
+  const migration = (
+    await readFile(
+      new URL("../docs/016_cau_categorias_fotografias.sql", import.meta.url),
+      "utf8"
+    )
+  ).replace("USE `adamia_dev`;", "");
+  await admin.query(migration);
+  await admin.query(migration);
+  const [legacy] = await admin.query(
+    "SELECT a.nombre,c.nombre categoria FROM cau_articulos a JOIN cau_categorias c ON c.id_empresa=a.id_empresa AND c.id=a.id_categoria WHERE a.id_empresa=999"
+  );
+  assert.deepEqual(
+    legacy.map((r) => ({ ...r })),
+    [{ nombre: "Equipo previo", categoria: "Computación" }]
+  );
   pool = mysql.createPool({
     ...connectionOptions,
     database,
@@ -92,8 +111,10 @@ async function fixture() {
       s,
       { type, payload },
       key,
-      revision ?? (await snapshot(s)).revision,
+      revision ?? (await snapshot(s)).revision
     );
+  for (const type of ["asset", "uniform"])
+    await s.command("category.save", { type, name: "Prueba" });
   s.location = (
     await s.command("location.save", { name: "Principal", branchId: "1" })
   ).id;
@@ -133,19 +154,19 @@ test("validación: cantidades, fechas, IDs y comandos no permitidos", () => {
         note: "x",
         locationId: "1",
       },
-    }),
+    })
   );
   assert.throws(() =>
     validateCommand({
       type: "delivery.create",
       payload: { employeeId: "demo-1", mode: "Asignación", lines: [] },
-    }),
+    })
   );
   assert.throws(() =>
     validateCommand({
       type: "maintenance.open",
       payload: { productId: "1", qty: 1, reason: "x", due: "2026-02-31" },
-    }),
+    })
   );
 });
 test("inventario, entrega, expediente y snapshots inmutables", async () => {
@@ -162,7 +183,7 @@ test("inventario, entrega, expediente y snapshots inmutables", async () => {
   assert.equal(state.products[0].name, "Nombre cambiado");
   assert.equal(
     state.deliveries.find((x) => x.id === d).lines[0].snapshot.name,
-    "Artículo",
+    "Artículo"
   );
 });
 test("movimientos: fecha civil local y nombre histórico del responsable", async () => {
@@ -171,15 +192,20 @@ test("movimientos: fecha civil local y nombre histórico del responsable", async
   // MySQL entrega DATETIME(6) como cadena; la tabla espera YYYY-MM-DD.
   await pool.execute(
     "UPDATE cau_movimientos SET fecha='2026-10-10 02:35:47.123456' WHERE id_empresa=?",
-    [s.companyId],
+    [s.companyId]
   );
   s.actor = "Nombre actual diferente";
   const state = await snapshot(s);
   assert.equal(state.movements.length, 1);
   assert.equal(state.movements[0].date, "2026-10-09");
-  assert.ok(Number.isFinite(new Date(state.movements[0].date + "T12:00:00").getTime()));
+  assert.ok(
+    Number.isFinite(new Date(state.movements[0].date + "T12:00:00").getTime())
+  );
   assert.equal(state.movements[0].actor, "RH de prueba");
-  const otherZone = await snapshot({ ...s, user: { zona_horaria: "Asia/Tokyo" } });
+  const otherZone = await snapshot({
+    ...s,
+    user: { zona_horaria: "Asia/Tokyo" },
+  });
   assert.equal(otherZone.movements[0].date, "2026-10-10");
 });
 test("idempotencia devuelve misma entrega y rechaza payload/actor diferente", async () => {
@@ -204,13 +230,13 @@ test("idempotencia devuelve misma entrega y rechaza payload/actor diferente", as
       s,
       { ...command, payload: { ...command.payload, employeeId: "11" } },
       key,
-      revision,
+      revision
     ),
-    (e) => e.status === 409,
+    (e) => e.status === 409
   );
   await assert.rejects(
     executeCommand({ ...s, actorId: "2" }, command, key, revision),
-    (e) => e.status === 409,
+    (e) => e.status === 409
   );
 });
 test("entregas simultáneas: una unidad nunca se asigna dos veces", async () => {
@@ -223,9 +249,9 @@ test("entregas simultáneas: una unidad nunca se asigna dos veces", async () => 
         "delivery.create",
         { employeeId, mode: "Asignación", lines: [{ productId: p, qty: 1 }] },
         randomUUID(),
-        revision,
-      ),
-    ),
+        revision
+      )
+    )
   );
   assert.equal(outcomes.filter((x) => x.status === "fulfilled").length, 1);
   const state = await snapshot(s);
@@ -268,7 +294,7 @@ test("devoluciones parciales, revisión, pérdida y rechazo de exceso", async ()
       cost: 20,
       note: "Reparado",
     }),
-    (e) => e.status === 409,
+    (e) => e.status === 409
   );
   assert.equal((await snapshot(s)).products[0].stock, 8);
 });
@@ -346,7 +372,7 @@ test("reversión conserva historial y restaura stock; acuse solo del receptor", 
   const next = await s.delivery(p, 2);
   await assert.rejects(
     s.command("delivery.ack", { id: next, status: "accepted" }),
-    (e) => e.status === 403,
+    (e) => e.status === 403
   );
   const self = { ...s, self: true, employeeId: "10" };
   await assert.rejects(
@@ -354,24 +380,28 @@ test("reversión conserva historial y restaura stock; acuse solo del receptor", 
       { ...self, employeeId: "11" },
       { type: "delivery.ack", payload: { id: next, status: "accepted" } },
       randomUUID(),
-      (await snapshot(s)).revision,
+      (
+        await snapshot(s)
+      ).revision
     ),
-    (e) => e.status === 403,
+    (e) => e.status === 403
   );
   await executeCommand(
     self,
     { type: "delivery.ack", payload: { id: next, status: "accepted" } },
     randomUUID(),
-    (await snapshot(s)).revision,
+    (
+      await snapshot(s)
+    ).revision
   );
   await assert.rejects(
     s.command("delivery.cancel", { id: next, note: "Error" }),
-    (e) => e.status === 409,
+    (e) => e.status === 409
   );
   state = await snapshot(s);
   assert.equal(
     state.deliveries.find((x) => x.id === next).acknowledgement,
-    "accepted",
+    "accepted"
   );
 });
 test("aislamiento de empresa, empleado y lectura del autoservicio", async () => {
@@ -406,9 +436,9 @@ test("aislamiento de empresa, empleado y lectura del autoservicio", async () => 
         },
       },
       randomUUID(),
-      state.revision,
+      state.revision
     ),
-    (e) => e.status === 403,
+    (e) => e.status === 403
   );
   await assert.rejects(a.delivery(p, 1, "12"));
 });
@@ -452,4 +482,99 @@ test("paquetes, tallas, solicitudes y archivo sin pérdidas de inventario", asyn
   await s.command("product.archive", { id: p });
   state = await snapshot(s);
   assert.equal(state.products[0].active, false);
+});
+
+test("categorías: empresa, tipo, nombres únicos y archivo reversible", async () => {
+  const s = await fixture(),
+    other = await fixture();
+  const category = (
+    await s.command("category.save", { type: "asset", name: "Cómputo" })
+  ).id;
+  await assert.rejects(
+    s.command("category.save", { type: "asset", name: "Cómputo" })
+  );
+  const payload = {
+    type: "asset",
+    name: "Equipo",
+    code: "PC",
+    categoryId: category,
+    returnable: true,
+    locationId: s.location,
+  };
+  await assert.rejects(
+    other.command("product.save", { ...payload, locationId: other.location })
+  );
+  await assert.rejects(
+    s.command("product.save", { ...payload, type: "uniform", size: "M" })
+  );
+  const product = (await s.command("product.save", payload)).id;
+  let c = (await snapshot(s)).categories.find((c) => c.id === category);
+  await s.command("category.save", {
+    ...c,
+    name: "Computadoras",
+    active: false,
+  });
+  let state = await snapshot(s);
+  assert.equal(
+    state.products.find((p) => p.id === product).category,
+    "Computadoras"
+  );
+  await assert.rejects(s.command("product.save", { ...payload, code: "PC-2" }));
+  const existing = state.products.find((p) => p.id === product);
+  await s.command("product.save", { ...existing, name: "Equipo actualizado" });
+  c = (await snapshot(s)).categories.find((c) => c.id === category);
+  await s.command("category.save", { ...c, active: true });
+  assert.equal(
+    (await snapshot(s)).categories.find((c) => c.id === category).active,
+    true
+  );
+});
+
+test("fotografía: guardado atómico, optimización, aislamiento y retiro", async () => {
+  const s = await fixture(),
+    other = await fixture();
+  const bytes = await sharp({
+    create: { width: 30, height: 20, channels: 3, background: "white" },
+  })
+    .png()
+    .toBuffer();
+  const photo = `data:image/png;base64,${bytes.toString("base64")}`;
+  const p = (
+    await s.command("product.save", {
+      type: "asset",
+      name: "Con foto",
+      code: "FOTO",
+      category: "Prueba",
+      returnable: true,
+      locationId: s.location,
+      photo,
+    })
+  ).id;
+  let state = await snapshot(s),
+    product = state.products.find((x) => x.id === p);
+  assert.equal(product.photoVersion, 1);
+  const [rows] = await pool.execute(
+    "SELECT contenido,mime FROM cau_articulo_fotos WHERE id_empresa=? AND id_articulo=?",
+    [s.companyId, p]
+  );
+  assert.equal(rows[0].mime, "image/webp");
+  assert.equal((await sharp(rows[0].contenido).metadata()).format, "webp");
+  assert.equal(
+    (await snapshot(other)).products.some((x) => x.id === p),
+    false
+  );
+  await assert.rejects(
+    s.command("product.save", {
+      ...product,
+      name: "No guardar",
+      photo: "data:image/png;base64,YmFk",
+    })
+  );
+  assert.equal(
+    (await snapshot(s)).products.find((x) => x.id === p).name,
+    "Con foto"
+  );
+  await s.command("product.save", { ...product, photo: null });
+  state = await snapshot(s);
+  assert.equal(state.products.find((x) => x.id === p).photoVersion, null);
 });

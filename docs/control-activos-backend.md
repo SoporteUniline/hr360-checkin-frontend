@@ -6,6 +6,37 @@ inserta datos ficticios al iniciar. Los IDs de empresa, empleado y usuario son
 INT; los IDs internos de inventario se transportan como cadenas para preservar
 BIGINT. No requiere cambiar el backend existente para guardar inventario.
 
+## Separación por módulo y actualización 016
+
+- Activos: `/panel/control-activos` (inventario, asignaciones, devoluciones,
+  resguardos, mantenimiento, categorías y movimientos).
+- Uniformes: `/panel/control-uniformes` (prendas, tallas, existencias, entregas,
+  cambios, dotaciones, categorías y movimientos).
+- Ambos reutilizan identidad, empleados y ubicaciones. Expediente 360 mantiene
+  ambas secciones. Los documentos históricos mixtos se conservan completos;
+  sus partidas se filtran en listados y contadores de cada módulo.
+
+Ejecutar `docs/016_cau_categorias_fotografias.sql` en `adamia_dev` para activar
+categorías y fotografías. No se ejecuta DDL desde la aplicación. El SQL es
+repetible y conserva artículos, IDs y existencias; convierte las categorías
+de texto existentes en registros por empresa y tipo.
+
+Agrega `cau_categorias`, `cau_articulo_fotos` y `cau_articulos.id_categoria`.
+El usuario de la aplicación necesita SELECT/INSERT/UPDATE en las dos tablas
+nuevas. Mientras falta esta actualización, inventario y movimientos siguen
+funcionando; los catálogos y la carga de fotografías indican activación pendiente.
+
+`category.save` permite crear, editar, archivar y reactivar categorías.
+`product.save` recibe `categoryId` y opcionalmente `photo` (data URL JPG/PNG/WebP,
+máximo 512 KiB decodificados; `null` retira la foto, omitido la conserva).
+Artículo y fotografía se confirman en la misma transacción. El servidor verifica
+el formato real, elimina metadatos y optimiza la foto a WebP hasta 1200 px/512 KiB.
+Se almacena una foto principal por artículo en MySQL; para grandes volúmenes se
+podrá migrar el binario al almacenamiento de objetos sin cambiar la interfaz.
+GET `/internal/control-activos/fotos/:id?empresa=ID` sirve el binario solo a RH
+autorizado en esa empresa, con respuesta privada y sin caché pública. Las listas
+solo cargan metadatos; nunca incluyen binarios. No se requieren claves AWS nuevas.
+
 ## Rutas
 
 Los handlers viven en `src/app/api/control-activos`. Las pantallas consumen

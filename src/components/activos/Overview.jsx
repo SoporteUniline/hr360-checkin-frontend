@@ -1,66 +1,69 @@
 "use client";
 import { useActivos } from "./ActivosProvider";
-import {
-  ROOT,
-  Heading,
-  Panel,
-  Stats,
-  Badge,
-  ResourceLink,
-  Table,
-  Empty,
-} from "./ui";
+import { Heading, Panel, Stats, Badge, ResourceLink, Table, Empty } from "./ui";
 import { assigned, outstanding, today } from "@/lib/activos/model.mjs";
 import { ArrowUpRight } from "lucide-react";
 export default function Overview() {
-  const { state } = useActivos();
+  const { state, resourceType } = useActivos();
+  const uniform = resourceType === "uniform";
+  const inventory = uniform ? "/uniformes" : "/activos";
   const low = state.products.filter((p) => p.active && p.stock < p.minimum);
   const overdue = state.deliveries.filter(
     (d) =>
       d.status === "confirmed" &&
       d.due &&
       d.due < today() &&
-      d.lines.some((l) => outstanding(l) > 0),
+      d.lines.some((l) => outstanding(l) > 0)
   );
   return (
     <>
       <Heading
-        title="Control de Activos y Uniformes"
-        subtitle="Inventario, entregas y devoluciones conectados al expediente del empleado."
+        title={uniform ? "Control de Uniformes" : "Control de Activos"}
+        subtitle={
+          uniform
+            ? "Prendas, tallas, entregas y reposiciones del personal."
+            : "Equipos, responsables, préstamos y mantenimiento."
+        }
       />
       <Stats
         items={[
           [
-            "Activos disponibles",
-            state.products
-              .filter((p) => p.type === "asset")
-              .reduce((s, p) => s + p.stock, 0),
+            uniform ? "Prendas disponibles" : "Activos disponibles",
+            state.products.reduce((s, p) => s + p.stock, 0),
           ],
           [
-            "Activos asignados",
-            state.products
-              .filter((p) => p.type === "asset")
-              .reduce((s, p) => s + assigned(state, p.id), 0),
+            uniform ? "Prendas entregadas" : "Activos asignados",
+            state.products.reduce((s, p) => s + assigned(state, p.id), 0),
           ],
           [
-            "Uniformes disponibles",
-            state.products
-              .filter((p) => p.type === "uniform")
-              .reduce((s, p) => s + p.stock, 0),
+            uniform ? "Prendas por reponer" : "En mantenimiento",
+            uniform
+              ? low.length
+              : state.maintenance.filter((m) => m.status === "open").length,
           ],
-          ["Préstamos vencidos", overdue.length],
+          ["Devoluciones vencidas", overdue.length],
         ]}
       />
       <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
-          ["Activos", "Equipos, herramientas y accesorios", "/activos"],
-          ["Uniformes", "Prendas, tallas y existencias", "/uniformes"],
           [
-            "Entregas y devoluciones",
-            "Responsables y recepción parcial",
-            "/entregas",
+            uniform ? "Prendas y existencias" : "Inventario de activos",
+            uniform
+              ? "Tallas, colores y cantidades"
+              : "Equipos, herramientas y números de serie",
+            inventory,
           ],
-          ["Paquetes por puesto", "Prepara una dotación completa", "/paquetes"],
+          [
+            "Nueva entrega",
+            "Selecciona al empleado y los artículos",
+            "/entregas/nueva",
+          ],
+          [
+            uniform ? "Dotaciones por puesto" : "Paquetes de equipo",
+            "Prepara la entrega por puesto",
+            "/paquetes",
+          ],
+          ["Categorías", "Organiza el catálogo de la empresa", "/categorias"],
         ].map(([name, description, url]) => (
           <ResourceLink
             to={url}
@@ -83,12 +86,12 @@ export default function Overview() {
                 "Acuses por confirmar",
                 state.deliveries.filter(
                   (d) =>
-                    d.status === "confirmed" && d.acknowledgement === "pending",
+                    d.status === "confirmed" && d.acknowledgement === "pending"
                 ).length,
                 "/resguardos",
               ],
               [
-                "En revisión o mantenimiento",
+                uniform ? "Prendas en revisión" : "En revisión o mantenimiento",
                 state.maintenance.filter((m) => m.status === "open").length,
                 "/mantenimiento",
               ],
@@ -110,13 +113,15 @@ export default function Overview() {
             ))}
           </div>
         </Panel>
-        <Panel title="Uniformes por reponer">
-          <Table headers={["Prenda / variante", "Disponible", "Mínimo"]}>
+        <Panel
+          title={uniform ? "Uniformes por reponer" : "Existencias por reponer"}
+        >
+          <Table headers={["Artículo", "Disponible", "Mínimo"]}>
             {low.map((p) => (
               <tr key={p.id}>
                 <td>
                   <ResourceLink
-                    to={`/uniformes/${p.id}`}
+                    to={`${inventory}/${p.id}`}
                     className="font-medium text-blue-700"
                   >
                     {p.name}
@@ -134,7 +139,11 @@ export default function Overview() {
         </Panel>
       </div>
       <div className="mt-5 flex flex-wrap gap-4 text-sm text-blue-700">
-        <ResourceLink to="/empleados">Ver recursos por empleado →</ResourceLink>
+        <ResourceLink to="/empleados">
+          {uniform
+            ? "Ver uniformes por empleado →"
+            : "Ver activos por empleado →"}
+        </ResourceLink>
         <ResourceLink to="/movimientos">Consultar movimientos →</ResourceLink>
       </div>
     </>

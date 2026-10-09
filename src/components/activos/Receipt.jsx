@@ -23,7 +23,7 @@ import {
 } from "./ui";
 import { DeliveryStatus } from "./Deliveries";
 export default function Receipt({ id }) {
-  const { state, company, execute, self } = useActivos();
+  const { allState: state, company, execute, self } = useActivos();
   const { enqueueSnackbar } = useSnackbar();
   const [dialog, setDialog] = useState(""),
     [note, setNote] = useState(""),
@@ -53,7 +53,11 @@ export default function Receipt({ id }) {
     <>
       <Heading
         title={`Resguardo ${d.folio}`}
-        subtitle="Documento de entrega con información conservada al momento de registrar."
+        subtitle={
+          new Set(d.lines.map((l) => l.snapshot.type)).size > 1
+            ? "Resguardo mixto anterior: se conserva el documento completo de equipos y uniformes."
+            : "Documento de entrega con información conservada al momento de registrar."
+        }
       >
         <Button variant="outline" asChild>
           <ResourceLink to="/resguardos">Volver</ResourceLink>
@@ -219,8 +223,8 @@ export default function Receipt({ id }) {
               {dialog === "cancel"
                 ? "Revertir entrega"
                 : dialog === "difference"
-                  ? "Reportar diferencia en recepción"
-                  : "Confirmar recepción de artículos"}
+                ? "Reportar diferencia en recepción"
+                : "Confirmar recepción de artículos"}
             </DialogTitle>
             <DialogDescription>
               {dialog === "cancel"

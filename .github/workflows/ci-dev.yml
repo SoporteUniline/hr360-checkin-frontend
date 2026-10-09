@@ -76,7 +76,7 @@ jobs:
           CAU_TEST_HOST: 127.0.0.1
           CAU_TEST_PORT: 33306
           CAU_TEST_PASSWORD: cau_ci_test_only
-        run: node scripts/test-activos-api.mjs
+        run: node --test scripts/test-activos-modules.mjs scripts/test-activos-api.mjs
 
   # ─────────────────────────────────────────────
   # 3. BUILD — Validar que el build compila

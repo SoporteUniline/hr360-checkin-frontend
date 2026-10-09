@@ -13,7 +13,6 @@ import {
   today,
 } from "@/lib/activos/model.mjs";
 import {
-  ROOT,
   Heading,
   Panel,
   Field,
@@ -35,17 +34,17 @@ export function DeliveryStatus({ d }) {
         d.status === "cancelled"
           ? "gray"
           : d.acknowledgement === "accepted"
-            ? "green"
-            : "amber"
+          ? "green"
+          : "amber"
       }
     >
       {d.status === "cancelled"
         ? "Revertida"
         : d.acknowledgement === "accepted"
-          ? "Recibido"
-          : d.acknowledgement === "difference"
-            ? "Con diferencia"
-            : "Pendiente de acuse"}
+        ? "Recibido"
+        : d.acknowledgement === "difference"
+        ? "Con diferencia"
+        : "Pendiente de acuse"}
     </Badge>
   );
 }
@@ -53,7 +52,7 @@ export default function Deliveries({ receipts = false }) {
   const { state } = useActivos();
   const [q, setQ] = useState("");
   const rows = state.deliveries.filter((d) =>
-    matches(q, d.folio, d.employee.name, d.employee.role),
+    matches(q, d.folio, d.employee.name, d.employee.role)
   );
   return (
     <>
@@ -136,16 +135,16 @@ export default function Deliveries({ receipts = false }) {
 }
 
 export function DeliveryForm() {
-  const { state, execute, company } = useActivos();
+  const { state, execute, href, resourceType } = useActivos();
   const search = useSearchParams(),
     router = useRouter(),
     { enqueueSnackbar } = useSnackbar();
   const [employeeId, setEmployeeId] = useState(
-    search.get("empleado") || state.employees[0]?.id || "",
+    search.get("empleado") || state.employees.find((e) => e.active)?.id || ""
   );
   const [lines, setLines] = useState(() => {
     const p = state.products.find(
-      (p) => p.id === search.get("articulo") && p.stock > 0 && p.active,
+      (p) => p.id === search.get("articulo") && p.stock > 0 && p.active
     );
     return p ? [{ productId: p.id, qty: 1 }] : [];
   });
@@ -157,7 +156,7 @@ export function DeliveryForm() {
     [saving, setSaving] = useState(false);
   const employee = state.employees.find((e) => e.id === employeeId);
   const available = state.products.filter(
-    (p) => p.active && p.stock > 0 && !lines.some((l) => l.productId === p.id),
+    (p) => p.active && p.stock > 0 && !lines.some((l) => l.productId === p.id)
   );
   function add() {
     const id = productId || available[0]?.id;
@@ -176,14 +175,18 @@ export function DeliveryForm() {
       note,
       lines,
     });
-    if (r) router.push(`${ROOT}/resguardos/${r.id}?empresa=${company.id}`);
+    if (r) router.push(href(`/resguardos/${r.id}`));
     else setSaving(false);
   }
   return (
     <>
       <Heading
         title="Nueva entrega"
-        subtitle="Equipos y uniformes en un mismo resguardo, separados en el expediente."
+        subtitle={
+          resourceType === "uniform"
+            ? "Entrega de prendas, tallas y cantidades al empleado."
+            : "Asignación de equipos y herramientas a su responsable."
+        }
       />
       <form onSubmit={submit}>
         <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_260px]">
@@ -263,7 +266,7 @@ export function DeliveryForm() {
                       list.length
                         ? "Se agregaron solo los artículos disponibles que le faltan. Revisa cantidades y tallas."
                         : "El empleado ya tiene la dotación o no hay existencias disponibles.",
-                      { variant: "info" },
+                      { variant: "info" }
                     );
                   }}
                 >
@@ -303,8 +306,8 @@ export function DeliveryForm() {
                                       ...a,
                                       locationId: e.target.value || undefined,
                                     }
-                                  : a,
-                              ),
+                                  : a
+                              )
                             )
                           }
                         >
@@ -315,7 +318,7 @@ export function DeliveryForm() {
                               <option key={b.id} value={b.locationId}>
                                 {
                                   state.locations.find(
-                                    (v) => v.id === b.locationId,
+                                    (v) => v.id === b.locationId
                                   )?.name
                                 }{" "}
                                 · {b.stock}
@@ -339,8 +342,8 @@ export function DeliveryForm() {
                               lines.map((a, i) =>
                                 i === n
                                   ? { ...a, qty: Number(e.target.value) }
-                                  : a,
-                              ),
+                                  : a
+                              )
                             )
                           }
                         />
@@ -444,12 +447,12 @@ export function ReturnForm() {
   const { state, execute } = useActivos();
   const search = useSearchParams();
   const [employeeId, setEmployeeId] = useState(
-    search.get("empleado") || state.employees[0]?.id || "",
+    search.get("empleado") || state.employees.find((e) => e.active)?.id || ""
   );
   const [selected, setSelected] = useState({}),
     [note, setNote] = useState("");
   const rows = employeeLines(state, employeeId).filter(
-    (l) => l.pending > 0 && l.snapshot.returnable,
+    (l) => l.pending > 0 && l.snapshot.returnable
   );
   function change(id, key, value) {
     setSelected((prev) => ({

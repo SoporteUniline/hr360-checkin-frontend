@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { resourceHref } from "@/lib/activos/module.mjs";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,6 @@ import {
   outstanding,
 } from "@/lib/activos/model.mjs";
 import {
-  ROOT,
   Heading,
   Panel,
   Field,
@@ -34,13 +34,17 @@ import {
 } from "./ui";
 
 export default function Employees() {
-  const { state } = useActivos();
+  const { state, resourceType } = useActivos();
   const [q, setQ] = useState("");
   return (
     <>
       <Heading
-        title="Recursos por empleado"
-        subtitle="Activos y uniformes separados, con el historial completo de entregas."
+        title={
+          resourceType === "uniform"
+            ? "Uniformes por empleado"
+            : "Activos por empleado"
+        }
+        subtitle="Responsables e historial de entregas de este módulo."
       ></Heading>
       <div className="mb-4">
         <SearchBox
@@ -54,8 +58,9 @@ export default function Employees() {
           headers={[
             "Empleado",
             "Puesto",
-            "Activos a cargo",
-            "Uniformes entregados",
+            resourceType === "uniform"
+              ? "Prendas entregadas"
+              : "Activos a cargo",
             "Expediente",
           ]}
         >
@@ -69,15 +74,9 @@ export default function Employees() {
                 </td>
                 <td>{e.role}</td>
                 <td>
-                  {employeeLines(state, e.id, "asset").reduce(
+                  {employeeLines(state, e.id, resourceType).reduce(
                     (n, l) => n + l.pending,
-                    0,
-                  )}
-                </td>
-                <td>
-                  {employeeLines(state, e.id, "uniform").reduce(
-                    (n, l) => n + l.pending,
-                    0,
+                    0
                   )}
                 </td>
                 <td>
@@ -118,7 +117,7 @@ export function EmployeeResources({ employeeId, type, showHistory = true }) {
     });
     if (r) {
       setExchange(null);
-      router.push(`${ROOT}/resguardos/${r.id}?empresa=${company.id}`);
+      router.push(resourceHref(type, `/resguardos/${r.id}`, company.id, self));
     }
   }
   return (
@@ -259,7 +258,7 @@ export function EmployeeResources({ employeeId, type, showHistory = true }) {
                         p.type === "uniform" &&
                         p.active &&
                         p.stock > 0 &&
-                        p.id !== exchange.productId,
+                        p.id !== exchange.productId
                     )
                     .map((p) => (
                       <option key={p.id} value={p.id}>
@@ -312,7 +311,7 @@ export function EmployeeResources({ employeeId, type, showHistory = true }) {
 }
 
 export function EmployeeDetail({ id }) {
-  const { state, execute } = useActivos();
+  const { state, execute, resourceType } = useActivos();
   const employee = state.employees.find((e) => e.id === id);
   const [editing, setEditing] = useState(false),
     [form, setForm] = useState(employee || {});
@@ -338,14 +337,18 @@ export function EmployeeDetail({ id }) {
           </ResourceLink>
         </Button>
         <Button asChild>
-          <ResourceLink to={`/entregas/nueva?empleado=${id}`}>
+          <ResourceLink moduleType={resourceType} to={`/entregas/nueva?empleado=${id}`}>
             Nueva entrega
           </ResourceLink>
         </Button>
       </Heading>
       <div className="space-y-5">
-        <EmployeeResources employeeId={id} type="asset" />
-        <EmployeeResources employeeId={id} type="uniform" />
+        {resourceType !== "uniform" && (
+          <EmployeeResources employeeId={id} type="asset" />
+        )}
+        {resourceType !== "asset" && (
+          <EmployeeResources employeeId={id} type="uniform" />
+        )}
       </div>
       <Dialog open={editing} onOpenChange={setEditing}>
         <DialogContent>
@@ -437,7 +440,7 @@ function ExpedienteInner({ employee, type }) {
           Entregas e historial del empleado en esta empresa.
         </p>
         <Button variant="outline" asChild>
-          <ResourceLink to={`/entregas/nueva?empleado=${id}`}>
+          <ResourceLink moduleType={type} to={`/entregas/nueva?empleado=${id}`}>
             Nueva entrega
           </ResourceLink>
         </Button>

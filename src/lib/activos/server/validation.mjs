@@ -15,7 +15,7 @@ export const id = z
   .pipe(z.string().regex(/^[1-9]\d{0,18}$/));
 const optionalId = z.preprocess(
   (v) => (v === "" || v === null ? undefined : v),
-  id.optional(),
+  id.optional()
 );
 const text = (max = 1500) => z.string().trim().max(max);
 const required = (max = 1500) => text(max).min(1);
@@ -29,7 +29,7 @@ const date = z
       (/^\d{4}-\d{2}-\d{2}$/.test(v) &&
         Number.isFinite(Date.parse(v + "T12:00:00Z")) &&
         new Date(v + "T12:00:00Z").toISOString().slice(0, 10) === v),
-    "Fecha no válida.",
+    "Fecha no válida."
   )
   .optional();
 const line = z.object({ productId: id, qty, locationId: optionalId });
@@ -41,6 +41,14 @@ const returns = z.object({
   locationId: optionalId,
 });
 export const schemas = {
+  "category.save": z.object({
+    id: optionalId,
+    type: z.enum(["asset", "uniform"]),
+    name: required(100),
+    description: text(500).default(""),
+    active: z.boolean().default(true),
+    version: nonnegative.optional(),
+  }),
   "location.save": z.object({
     id: optionalId,
     name: required(150),
@@ -53,7 +61,9 @@ export const schemas = {
     type: z.enum(["asset", "uniform"]),
     name: required(180),
     code: required(80),
-    category: required(100),
+    category: text(100).default(""),
+    categoryId: optionalId,
+    photo: z.string().max(700000).nullable().optional(),
     serial: text(120).optional(),
     variant: text(150).optional(),
     size: text(30).optional(),
@@ -149,7 +159,7 @@ export function validateCommand(command) {
       : parsed.error.issues
           .map((e) => `${e.path.join(".")}: ${e.message}`)
           .join("; "),
-    422,
+    422
   );
   return { type: command.type, payload: parsed.data };
 }
@@ -159,7 +169,7 @@ function canonical(x) {
     return Object.fromEntries(
       Object.keys(x)
         .sort()
-        .map((k) => [k, canonical(x[k])]),
+        .map((k) => [k, canonical(x[k])])
     );
   return x;
 }
