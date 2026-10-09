@@ -56,7 +56,7 @@ implícito al inventario de otras empresas.
 
 Catálogos consultados con el token verificado y la empresa autorizada:
 
-- `/checador/empleados/panel-empleado/lista?empresa=ID&includeInactivos=1`
+- `/checador/empleados?empresa=ID` (todas las páginas; incluye estado laboral)
 - `/checador/puestos?id_empresa=ID` (todas las páginas)
 - `/checador/sucursales?id_empresa=ID` (todas las páginas)
 - `/empresas/ID` (nombre, RFC y logo)

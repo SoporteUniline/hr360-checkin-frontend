@@ -169,15 +169,15 @@ export async function loadCatalogs(scope) {
     };
     return scope;
   }
-  const result = await api(
-    `/checador/empleados/panel-empleado/lista?empresa=${companyId}&includeInactivos=1`,
+  // La lista ligera del expediente no garantiza estado laboral en dev.
+  // Se usa el mismo catálogo paginado que Personal para autorizar entregas.
+  const employeeRows = await catalogPages(
+    api,
+    `/checador/empleados?empresa=${companyId}`,
+    "data",
+    "id_empleado",
   );
-  ensure(
-    Array.isArray(result.lista_empleados),
-    "No se pudo cargar el catálogo completo de empleados.",
-    502,
-  );
-  const employees = result.lista_empleados
+  const employees = employeeRows
     .filter((e) => !e.id_empresa || String(e.id_empresa) === companyId)
     .map((e) => ({
       id: String(e.id_empleado),
