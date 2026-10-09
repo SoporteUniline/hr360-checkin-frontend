@@ -1,23 +1,29 @@
 "use client";
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useRef,
+  useMemo,
+  useCallback,
+} from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSnackbar } from "notistack";
 import { companiesFor } from "@/lib/activos/model.mjs";
-import { createDemoRepository } from "@/lib/activos/demoRepository";
+import { createApiRepository } from "@/lib/activos/apiRepository";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, Package } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 const Context = createContext(null);
 export const useActivos = () => useContext(Context);
 
-export function ActivosProvider({ children, fixedCompany, compact = false }) {
+export function ActivosProvider({
+  children,
+  fixedCompany,
+  compact = false,
+  self = false,
+}) {
   const { dataUser, isAuthChecked } = useAuth();
   const search = useSearchParams();
   const router = useRouter();
@@ -45,7 +51,11 @@ export function ActivosProvider({ children, fixedCompany, compact = false }) {
         Selecciona una empresa válida para consultar sus activos y uniformes.
       </p>
     );
-  if (!["Recruiter", "Admin", "User"].includes(dataUser?.tipo_usuario))
+  if (
+    !(
+      self ? ["Empleado", "Recruiter", "User"] : ["Recruiter", "User"]
+    ).includes(dataUser?.tipo_usuario)
+  )
     return (
       <p className="p-6">Este módulo está disponible para Recursos Humanos.</p>
     );
@@ -58,6 +68,7 @@ export function ActivosProvider({ children, fixedCompany, compact = false }) {
         dataUser?.nombre_completo || dataUser?.nombre || "Recursos Humanos"
       }
       compact={compact}
+      self={self}
     >
       {!compact && (
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
@@ -71,7 +82,9 @@ export function ActivosProvider({ children, fixedCompany, compact = false }) {
               value={company.id}
               onChange={(e) => {
                 setSelected(e.target.value);
-                router.push(`/panel/control-activos?empresa=${e.target.value}`);
+                router.push(
+                  `${self ? "/empleado/panel/mis-recursos" : "/panel/control-activos"}?empresa=${e.target.value}`,
+                );
               }}
             >
               {companies.map((c) => (
@@ -87,131 +100,118 @@ export function ActivosProvider({ children, fixedCompany, compact = false }) {
     </CompanyProvider>
   );
 }
-function CompanyProvider({ children, userId, company, actor, compact }) {
+function CompanyProvider({ children, userId, company, actor, compact, self }) {
   const { enqueueSnackbar } = useSnackbar();
-  const [repo, setRepo] = useState(null),
-    [state, setState] = useState(null),
+  const [state, setState] = useState(null),
     [error, setError] = useState(""),
-    [resetOpen, setResetOpen] = useState(false);
-  useEffect(() => {
-    let repository;
-    const read = () => {
-      try {
-        setState(repository.read());
+    [busy, setBusy] = useState(false);
+  const repository = useMemo(
+    () => createApiRepository(company.id, self),
+    [company.id, self],
+  );
+  const lock = useRef(false),
+    alive = useRef(true);
+  const refresh = useCallback(async () => {
+    try {
+      const next = await repository.read();
+      if (alive.current) {
+        setState(next);
         setError("");
-      } catch (e) {
-        setError(
-          e.message || "No se puede leer el almacenamiento de demostración."
-        );
       }
-    };
-    try {
-      repository = createDemoRepository(userId, company.id);
-      setRepo(repository);
-      read();
+      return next;
     } catch (e) {
-      setError("El navegador no permite guardar esta demostración.");
+      if (alive.current)
+        setError(e.message || "No se pudo cargar el inventario.");
+      return null;
     }
-    const sync = (e) => {
-      if (
-        repository &&
-        (e.key === repository.key || e.detail === repository.key)
-      )
-        read();
-    };
-    window.addEventListener("storage", sync);
-    window.addEventListener("adamia-activos-demo", sync);
+  }, [repository]);
+  useEffect(() => {
+    alive.current = true;
+    refresh();
     return () => {
-      window.removeEventListener("storage", sync);
-      window.removeEventListener("adamia-activos-demo", sync);
+      alive.current = false;
     };
-  }, [userId, company.id]);
-  function execute(type, payload) {
+  }, [refresh]);
+  async function execute(type, payload) {
+    if (lock.current) return null;
+    lock.current = true;
+    setBusy(true);
     try {
-      if (!repo || !state || error)
-        throw new Error("La demostración no está disponible.");
-      const result = repo.execute({ type, payload }, state.revision, actor);
-      setState(result.state);
-      enqueueSnackbar("Movimiento guardado en la demostración.", {
-        variant: "success",
-      });
+      if (!state || error)
+        throw new Error("Actualiza el inventario antes de guardar.");
+      const result = await repository.execute(
+        { type, payload },
+        state.revision,
+      );
+      const refreshed = await refresh();
+      enqueueSnackbar(
+        refreshed
+          ? "Movimiento guardado."
+          : "El movimiento se guardó. Actualiza para consultar el inventario.",
+        { variant: refreshed ? "success" : "warning" },
+      );
       return result;
     } catch (e) {
       enqueueSnackbar(
-        e.message || "No se pudo guardar. Revisa el espacio de tu navegador.",
-        { variant: "error" }
+        e.message ||
+          "No se pudo confirmar el movimiento. Reintenta la misma solicitud.",
+        { variant: "error" },
       );
+      if (e.status === 409) await refresh();
       return null;
+    } finally {
+      lock.current = false;
+      if (alive.current) setBusy(false);
     }
   }
   return (
     <Context.Provider
-      value={{ state, execute, company, actor, ready: !!state && !error }}
+      value={{
+        state,
+        execute,
+        company: state?.company || company,
+        actor,
+        ready: !!state && !error,
+        busy,
+        refresh,
+        self,
+      }}
     >
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-800">
-        <div>
-          <strong>Demostración con datos ficticios</strong>
-          <span className="ml-2">
-            Los movimientos solo se guardan en este navegador y usuario. Backend
-            pendiente.
-          </span>
-        </div>
-        {!compact && (
-          <Button variant="ghost" size="sm" onClick={() => setResetOpen(true)}>
-            <RotateCcw className="mr-1 h-3.5 w-3.5" />
-            Restablecer demo
-          </Button>
-        )}
-      </div>
       {error ? (
         <div
           role="alert"
           className="rounded-lg border border-amber-200 bg-amber-50 p-5"
         >
           <p>{error}</p>
-          <Button
-            className="mt-3"
-            variant="outline"
-            onClick={() => setResetOpen(true)}
-          >
-            Restablecer datos ficticios
+          <Button className="mt-3" variant="outline" onClick={refresh}>
+            Volver a intentar
           </Button>
         </div>
       ) : !state ? (
-        <p className="p-5">Cargando demostración…</p>
+        <p className="p-5">Cargando inventario…</p>
       ) : (
-        children
+        <>
+          {!compact && (
+            <div className="mb-4 flex items-center justify-end gap-3 text-xs text-slate-500">
+              <span aria-live="polite">
+                {busy ? "Guardando movimiento…" : "Datos de la empresa"}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={busy}
+                onClick={refresh}
+              >
+                <RotateCcw size={14} />
+                Actualizar
+              </Button>
+            </div>
+          )}
+          <fieldset disabled={busy} className="min-w-0 border-0 p-0 m-0">
+            {children}
+          </fieldset>
+        </>
       )}
-      <Dialog open={resetOpen} onOpenChange={setResetOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Restablecer esta demostración</DialogTitle>
-            <DialogDescription>
-              Se eliminarán únicamente los movimientos ficticios de esta empresa
-              y usuario en este navegador.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setResetOpen(false)}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={() => {
-                try {
-                  if (!repo) throw new Error("Almacenamiento no disponible.");
-                  setState(repo.reset());
-                  setError("");
-                  setResetOpen(false);
-                } catch (e) {
-                  enqueueSnackbar(e.message, { variant: "error" });
-                }
-              }}
-            >
-              Restablecer
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </Context.Provider>
   );
 }

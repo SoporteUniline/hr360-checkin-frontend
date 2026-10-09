@@ -34,7 +34,7 @@ export function Movements() {
   const rows = state.movements.filter(
     (m) =>
       (!type || m.type === type) &&
-      matches(q, m.productName, m.employeeName, m.actor, m.note)
+      matches(q, m.productName, m.employeeName, m.actor, m.note),
   );
   return (
     <>
@@ -45,7 +45,7 @@ export function Movements() {
         <Button
           variant="outline"
           onClick={() =>
-            downloadCsv("movimientos-demo.csv", [
+            downloadCsv("movimientos.csv", [
               [
                 "Fecha",
                 "Movimiento",
@@ -139,14 +139,14 @@ export function Maintenance() {
     [form, setForm] = useState({});
   const product = (id) => state.products.find((p) => p.id === id);
   const rows = state.maintenance.filter((m) =>
-    matches(q, product(m.productId)?.name, m.reason, m.supplier)
+    matches(q, product(m.productId)?.name, m.reason, m.supplier),
   );
   const set = (k, v) => setForm({ ...form, [k]: v });
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault();
-    const result = execute(
+    const result = await execute(
       modal === "new" ? "maintenance.open" : "maintenance.close",
-      modal === "new" ? form : { ...form, id: modal }
+      modal === "new" ? form : { ...form, id: modal },
     );
     if (result) setModal(null);
   }
@@ -220,15 +220,15 @@ export function Maintenance() {
                       m.status === "open"
                         ? "amber"
                         : m.status === "repaired"
-                        ? "green"
-                        : "gray"
+                          ? "green"
+                          : "gray"
                     }
                   >
                     {m.status === "open"
                       ? "En revisión"
                       : m.status === "repaired"
-                      ? "Reparado"
-                      : "Baja definitiva"}
+                        ? "Reparado"
+                        : "Baja definitiva"}
                   </Badge>
                   <p className="mt-1 text-xs text-slate-500">{money(m.cost)}</p>
                 </td>
@@ -368,13 +368,13 @@ export function Kits() {
     [productId, setProductId] = useState("");
   function open(kit) {
     setForm(
-      kit ? JSON.parse(JSON.stringify(kit)) : { name: "", role: "", lines: [] }
+      kit ? JSON.parse(JSON.stringify(kit)) : { name: "", role: "", lines: [] },
     );
     setEditing(kit?.id || "new");
   }
-  function save(e) {
+  async function save(e) {
     e.preventDefault();
-    if (execute("kit.save", form)) setEditing(null);
+    if (await execute("kit.save", form)) setEditing(null);
   }
   return (
     <>
@@ -396,13 +396,20 @@ export function Kits() {
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                 />
               </Field>
-              <Field label="Puesto de ejemplo">
-                <Input
-                  required
-                  value={form.role}
-                  maxLength={100}
-                  onChange={(e) => setForm({ ...form, role: e.target.value })}
-                />
+              <Field label="Puesto">
+                <Select
+                  value={form.roleId || ""}
+                  onChange={(e) =>
+                    setForm({ ...form, roleId: e.target.value || undefined })
+                  }
+                >
+                  <option value="">Todos los puestos</option>
+                  {state.roles.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))}
+                </Select>
               </Field>
             </div>
             <Table headers={["Artículo", "Cantidad", "Acción"]}>
@@ -430,7 +437,7 @@ export function Kits() {
                         setForm({
                           ...form,
                           lines: form.lines.map((a, i) =>
-                            i === n ? { ...a, qty: Number(e.target.value) } : a
+                            i === n ? { ...a, qty: Number(e.target.value) } : a,
                           ),
                         })
                       }
@@ -465,7 +472,7 @@ export function Kits() {
                       .filter(
                         (p) =>
                           p.active &&
-                          !form.lines.some((l) => l.productId === p.id)
+                          !form.lines.some((l) => l.productId === p.id),
                       )
                       .map((p) => (
                         <option key={p.id} value={p.id}>
@@ -533,15 +540,15 @@ export function Kits() {
 }
 
 export function Requests() {
-  const { state, execute } = useActivos();
+  const { state, execute, self } = useActivos();
   const [dialog, setDialog] = useState(null),
     [form, setForm] = useState({});
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault();
     if (
-      execute(dialog === "new" ? "request.create" : "request.resolve", {
+      await execute(dialog === "new" ? "request.create" : "request.resolve", {
         ...form,
-        ...(dialog !== "new" ? { id: dialog } : {}),
+        ...(dialog !== "new" ? { id: dialog, resolution: form.note } : {}),
       })
     )
       setDialog(null);
@@ -555,14 +562,14 @@ export function Requests() {
         <Button
           onClick={() => {
             setForm({
-              employeeId: state.employees[0]?.id,
+              employeeId: self ? state.employeeId : state.employees[0]?.id,
               kind: "Falla de equipo",
               note: "",
             });
             setDialog("new");
           }}
         >
-          Registrar solicitud de ejemplo
+          Registrar solicitud
         </Button>
       </Heading>
       <Panel>
@@ -597,7 +604,7 @@ export function Requests() {
                   </Badge>
                 </td>
                 <td>
-                  {r.status === "pending" ? (
+                  {r.status === "pending" && !self ? (
                     <Button
                       size="sm"
                       variant="outline"
@@ -622,7 +629,7 @@ export function Requests() {
           <DialogHeader>
             <DialogTitle>
               {dialog === "new"
-                ? "Solicitud de demostración"
+                ? "Solicitud del empleado"
                 : "Responder solicitud"}
             </DialogTitle>
             <DialogDescription>

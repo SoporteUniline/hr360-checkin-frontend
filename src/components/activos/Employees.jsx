@@ -16,7 +16,6 @@ import {
   companiesFor,
   employeeLines,
   outstanding,
-  uid,
 } from "@/lib/activos/model.mjs";
 import {
   ROOT,
@@ -35,34 +34,14 @@ import {
 } from "./ui";
 
 export default function Employees() {
-  const { state, execute } = useActivos();
-  const [q, setQ] = useState(""),
-    [form, setForm] = useState(null);
-  function submit(e) {
-    e.preventDefault();
-    if (execute("employee.upsert", form)) setForm(null);
-  }
+  const { state } = useActivos();
+  const [q, setQ] = useState("");
   return (
     <>
       <Heading
         title="Recursos por empleado"
         subtitle="Activos y uniformes separados, con el historial completo de entregas."
-      >
-        <Button
-          onClick={() =>
-            setForm({
-              id: `demo-${uid()}`,
-              name: "",
-              role: "",
-              department: "",
-              size: "",
-              shoeSize: "",
-            })
-          }
-        >
-          Agregar empleado ficticio
-        </Button>
-      </Heading>
+      ></Heading>
       <div className="mb-4">
         <SearchBox
           value={q}
@@ -86,23 +65,19 @@ export default function Employees() {
               <tr key={e.id}>
                 <td>
                   <div className="font-semibold">{e.name}</div>
-                  <Badge tone="gray">
-                    {e.demo
-                      ? "Persona ficticia"
-                      : "Prueba vinculada al expediente"}
-                  </Badge>
+                  <Badge tone="gray">{e.active ? "Activo" : "Inactivo"}</Badge>
                 </td>
                 <td>{e.role}</td>
                 <td>
                   {employeeLines(state, e.id, "asset").reduce(
                     (n, l) => n + l.pending,
-                    0
+                    0,
                   )}
                 </td>
                 <td>
                   {employeeLines(state, e.id, "uniform").reduce(
                     (n, l) => n + l.pending,
-                    0
+                    0,
                   )}
                 </td>
                 <td>
@@ -117,41 +92,6 @@ export default function Employees() {
             ))}
         </Table>
       </Panel>
-      <Dialog open={!!form} onOpenChange={(v) => !v && setForm(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Empleado ficticio</DialogTitle>
-            <DialogDescription>
-              Solo se agrega al catálogo local de esta demostración.
-            </DialogDescription>
-          </DialogHeader>
-          {form && (
-            <form onSubmit={submit} className="space-y-4">
-              {[
-                ["Nombre", "name"],
-                ["Puesto", "role"],
-                ["Departamento", "department"],
-                ["Talla de uniforme", "size"],
-                ["Talla de calzado", "shoeSize"],
-              ].map(([label, key]) => (
-                <Field key={key} label={label}>
-                  <Input
-                    maxLength={100}
-                    required={key === "name"}
-                    value={form[key]}
-                    onChange={(e) =>
-                      setForm({ ...form, [key]: e.target.value })
-                    }
-                  />
-                </Field>
-              ))}
-              <Button type="submit" className="w-full">
-                Guardar empleado ficticio
-              </Button>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
     </>
   );
 }
@@ -163,15 +103,15 @@ function renewal(line) {
   return dateLabel(d.toISOString().slice(0, 10));
 }
 export function EmployeeResources({ employeeId, type, showHistory = true }) {
-  const { state, execute, company } = useActivos();
+  const { state, execute, company, self } = useActivos();
   const router = useRouter();
   const [exchange, setExchange] = useState(null),
     [form, setForm] = useState({});
   const lines = employeeLines(state, employeeId, type);
   const active = lines.filter((l) => l.pending > 0);
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault();
-    const r = execute("uniform.exchange", {
+    const r = await execute("uniform.exchange", {
       ...form,
       deliveryId: exchange.delivery.id,
       lineId: exchange.id,
@@ -240,7 +180,7 @@ export function EmployeeResources({ employeeId, type, showHistory = true }) {
                   >
                     {l.delivery.folio}
                   </ResourceLink>
-                  {type === "uniform" && l.snapshot.returnable && (
+                  {!self && type === "uniform" && l.snapshot.returnable && (
                     <Button
                       variant="ghost"
                       size="sm"
@@ -266,7 +206,7 @@ export function EmployeeResources({ employeeId, type, showHistory = true }) {
           <Empty>
             Sin{" "}
             {type === "asset" ? "activos asignados" : "uniformes entregados"} en
-            esta demostración.
+            el inventario de la empresa.
           </Empty>
         )}
       </Panel>
@@ -319,7 +259,7 @@ export function EmployeeResources({ employeeId, type, showHistory = true }) {
                         p.type === "uniform" &&
                         p.active &&
                         p.stock > 0 &&
-                        p.id !== exchange.productId
+                        p.id !== exchange.productId,
                     )
                     .map((p) => (
                       <option key={p.id} value={p.id}>
@@ -376,13 +316,12 @@ export function EmployeeDetail({ id }) {
   const employee = state.employees.find((e) => e.id === id);
   const [editing, setEditing] = useState(false),
     [form, setForm] = useState(employee || {});
-  if (!employee)
-    return <Empty>Empleado no encontrado en esta demostración.</Empty>;
+  if (!employee) return <Empty>Empleado no encontrado en esta empresa.</Empty>;
   return (
     <>
       <Heading
         title={employee.name}
-        subtitle={`${employee.role} · ${employee.department} · Expediente de demostración`}
+        subtitle={`${employee.role} · ${employee.department} · Recursos del empleado`}
       >
         <Button
           variant="outline"
@@ -413,13 +352,13 @@ export function EmployeeDetail({ id }) {
           <DialogHeader>
             <DialogTitle>Tallas del empleado</DialogTitle>
             <DialogDescription>
-              Preferencias locales de la demostración.
+              Tallas registradas para preparar sus entregas.
             </DialogDescription>
           </DialogHeader>
           <form
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
-              if (execute("employee.upsert", form)) setEditing(false);
+              if (await execute("employee.sizes", form)) setEditing(false);
             }}
             className="space-y-4"
           >
@@ -429,6 +368,28 @@ export function EmployeeDetail({ id }) {
                 maxLength={25}
                 onChange={(e) => setForm({ ...form, size: e.target.value })}
               />
+            </Field>
+            <Field label="Talla de pantalón">
+              <Input
+                value={form.pantsSize || ""}
+                maxLength={30}
+                onChange={(e) =>
+                  setForm({ ...form, pantsSize: e.target.value })
+                }
+              />
+            </Field>
+            <Field label="Sistema de calzado">
+              <Select
+                value={form.shoeSystem || ""}
+                onChange={(e) =>
+                  setForm({ ...form, shoeSystem: e.target.value })
+                }
+              >
+                <option value="">Sin especificar</option>
+                {["MX", "US", "EU", "CM"].map((v) => (
+                  <option key={v}>{v}</option>
+                ))}
+              </Select>
             </Field>
             <Field label="Calzado">
               <Input
@@ -445,13 +406,14 @@ export function EmployeeDetail({ id }) {
   );
 }
 
-// Inserción en el expediente real: no se crean entregas ficticias automáticamente.
+// Consulta las mismas asignaciones que el módulo de RH.
 export function ExpedienteResources({ employee, companyId, type }) {
   const { dataUser } = useAuth();
   const companies = companiesFor(dataUser);
   const resolved = employee?.id_empresa || companyId;
-  const valid = companies.find((c) => c.id === String(resolved));
-  const scope = valid?.id || (companies.length === 1 ? companies[0].id : null);
+  const company = companies.find((c) => c.id === String(resolved));
+  const scope =
+    company?.id || (companies.length === 1 ? companies[0].id : null);
   if (!scope)
     return (
       <Empty>
@@ -466,34 +428,18 @@ export function ExpedienteResources({ employee, companyId, type }) {
   );
 }
 function ExpedienteInner({ employee, type }) {
-  const { execute, state, company } = useActivos();
-  const router = useRouter();
-  const id = employee?.id_empleado ? `real-${employee.id_empleado}` : null;
-  const profile = state.employees.find((e) => e.id === id);
+  const id = employee?.id_empleado ? String(employee.id_empleado) : null;
   if (!id) return <Empty>No se pudo identificar al empleado.</Empty>;
-  function prepare() {
-    const r = execute("employee.upsert", {
-      id,
-      name: employee.nombre_completo || "Empleado",
-      role: employee.puesto || "Sin puesto",
-      department: employee.departamento || "",
-      size: profile?.size || "",
-      shoeSize: profile?.shoeSize || "",
-    });
-    if (r)
-      router.push(
-        `${ROOT}/entregas/nueva?empresa=${company.id}&empleado=${id}`
-      );
-  }
   return (
     <>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-xl text-xs text-slate-500">
-          Aquí aparecerán las asignaciones de esta persona. Por ahora solo se
-          muestran pruebas locales creadas explícitamente desde su expediente.
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <p className="text-xs text-slate-500">
+          Entregas e historial del empleado en esta empresa.
         </p>
-        <Button variant="outline" onClick={prepare}>
-          Preparar entrega ficticia
+        <Button variant="outline" asChild>
+          <ResourceLink to={`/entregas/nueva?empleado=${id}`}>
+            Nueva entrega
+          </ResourceLink>
         </Button>
       </div>
       <EmployeeResources employeeId={id} type={type} />

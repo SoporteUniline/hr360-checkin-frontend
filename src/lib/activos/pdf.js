@@ -1,17 +1,37 @@
-export async function downloadReceipt(delivery, companyName) {
+export async function downloadReceipt(delivery, company) {
   const { jsPDF } = await import("jspdf");
   const { default: autoTable } = await import("jspdf-autotable");
   const doc = new jsPDF({ unit: "mm", format: "letter" });
   doc.setFontSize(10);
   doc.setTextColor(100);
-  doc.text("ADAMIA · DEMOSTRACIÓN · SIN VALIDEZ DE ENTREGA REAL", 15, 15);
+  doc.text("ADAMIA · CONTROL DE ACTIVOS Y UNIFORMES", 15, 15);
+  if (company.logo) {
+    const { fetchImageAsDataUrl } = await import("@/lib/pdfCompanyLogo");
+    const data = await fetchImageAsDataUrl(company.logo);
+    if (data) {
+      try {
+        const info = doc.getImageProperties(data);
+        const scale = Math.min(30 / info.width, 10 / info.height);
+        doc.addImage(
+          data,
+          info.fileType,
+          170,
+          8,
+          info.width * scale,
+          info.height * scale,
+        );
+      } catch {
+        /* El texto de empresa permanece si no se puede cargar la imagen. */
+      }
+    }
+  }
   doc.setFontSize(17);
   doc.setTextColor(30, 64, 130);
   doc.text("Resguardo de activos y uniformes", 15, 27);
   autoTable(doc, {
     startY: 34,
     head: [["Empresa", "Resguardo", "Fecha"]],
-    body: [[companyName, delivery.folio, delivery.date]],
+    body: [[company.name, delivery.folio, delivery.date]],
     theme: "grid",
     styles: { fontSize: 9, cellPadding: 3 },
     headStyles: { fillColor: [236, 243, 253], textColor: [40, 70, 120] },
@@ -50,16 +70,16 @@ export async function downloadReceipt(delivery, companyName) {
           delivery.status === "cancelled"
             ? "Entrega revertida"
             : delivery.acknowledgement === "accepted"
-            ? "Acuse simulado registrado"
-            : delivery.acknowledgement === "difference"
-            ? "Diferencia reportada"
-            : "Pendiente de acuse"
+              ? "Recepción confirmada por el empleado"
+              : delivery.acknowledgement === "difference"
+                ? "Diferencia reportada"
+                : "Pendiente de acuse"
         }`,
       ],
       [
         delivery.ackNote ||
           delivery.cancelReason ||
-          "Documento de ejemplo para revisión del módulo.",
+          "Sin observaciones adicionales.",
       ],
     ],
     styles: { fontSize: 9, cellPadding: 3 },
@@ -83,7 +103,7 @@ export async function downloadReceipt(delivery, companyName) {
     doc.setPage(n);
     doc.setFontSize(8);
     doc.setTextColor(130);
-    doc.text(`${delivery.folio} · Demostración · ${n} / ${pages}`, 15, 270);
+    doc.text(`${delivery.folio} · ${n} / ${pages}`, 15, 270);
   }
-  doc.save(`${delivery.folio}-demo.pdf`);
+  doc.save(`${delivery.folio}.pdf`);
 }

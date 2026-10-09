@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, Download } from "lucide-react";
 import { useActivos } from "./ActivosProvider";
-import { assigned, LOCATIONS } from "@/lib/activos/model.mjs";
+import { assigned } from "@/lib/activos/model.mjs";
 import {
   ROOT,
   Heading,
@@ -39,25 +39,25 @@ function ProductStatus({ p, state }) {
         !p.active
           ? "gray"
           : p.repair
-          ? "amber"
-          : p.stock < p.minimum
-          ? "amber"
-          : p.stock
-          ? "green"
-          : "blue"
+            ? "amber"
+            : p.stock < p.minimum
+              ? "amber"
+              : p.stock
+                ? "green"
+                : "blue"
       }
     >
       {!p.active
         ? "Archivado"
         : p.repair
-        ? "En revisión"
-        : p.stock < p.minimum
-        ? "Existencia baja"
-        : p.stock
-        ? "Disponible"
-        : assigned(state, p.id)
-        ? "Asignado"
-        : "Sin existencias"}
+          ? "En revisión"
+          : p.stock < p.minimum
+            ? "Existencia baja"
+            : p.stock
+              ? "Disponible"
+              : assigned(state, p.id)
+                ? "Asignado"
+                : "Sin existencias"}
     </Badge>
   );
 }
@@ -71,7 +71,7 @@ export default function Inventory({ type }) {
       (status === "all" ||
         (status === "active" && p.active) ||
         (status === "low" && p.active && p.stock < p.minimum)) &&
-      matches(q, p.name, p.code, p.serial, p.variant, p.location)
+      matches(q, p.name, p.code, p.serial, p.variant, p.location),
   );
   return (
     <>
@@ -86,7 +86,7 @@ export default function Inventory({ type }) {
         <Button
           variant="outline"
           onClick={() =>
-            downloadCsv(`${section(type)}-demo.csv`, [
+            downloadCsv(`${section(type)}.csv`, [
               [
                 "Código",
                 "Artículo",
@@ -204,7 +204,7 @@ export function ProductForm({ type, id }) {
       serial: "",
       variant: "",
       category: type === "asset" ? "Computación" : "Uniforme",
-      location: LOCATIONS[0],
+      locationId: state.locations[0]?.id || "",
       size: "",
       color: "",
       stock: 1,
@@ -212,15 +212,15 @@ export function ProductForm({ type, id }) {
       cost: 0,
       renewalMonths: 0,
       returnable: true,
-    }
+    },
   );
   const [saving, setSaving] = useState(false);
   const set = (key, value) => setForm((f) => ({ ...f, [key]: value }));
   if (id && !existing) return <Empty>Artículo no encontrado.</Empty>;
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault();
     setSaving(true);
-    const r = execute("product.save", form);
+    const r = await execute("product.save", form);
     if (r)
       router.push(`${ROOT}/${section(type)}/${r.id}?empresa=${company.id}`);
     else setSaving(false);
@@ -232,11 +232,39 @@ export function ProductForm({ type, id }) {
           id
             ? "Editar artículo"
             : type === "asset"
-            ? "Registrar activo"
-            : "Registrar uniforme"
+              ? "Registrar activo"
+              : "Registrar uniforme"
         }
-        subtitle="Información del catálogo de demostración."
+        subtitle="Información del catálogo de la empresa."
       />
+      {!state.locations.length && (
+        <p className="mb-4 text-sm text-amber-700">
+          Primero{" "}
+          <ResourceLink to="/ubicaciones" className="underline">
+            registra una ubicación de inventario
+          </ResourceLink>
+          .
+        </p>
+      )}
+      {existing && form.version !== existing.version && (
+        <div
+          role="alert"
+          className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm"
+        >
+          <p>
+            Este artículo cambió desde que abriste el formulario. Carga la
+            versión actual para revisar los cambios.
+          </p>
+          <Button
+            type="button"
+            className="mt-2"
+            variant="outline"
+            onClick={() => setForm(existing)}
+          >
+            Cargar versión actual
+          </Button>
+        </div>
+      )}
       <form onSubmit={submit}>
         <Panel title="Datos del artículo">
           <div className="grid gap-4 p-5 sm:grid-cols-2">
@@ -263,14 +291,26 @@ export function ProductForm({ type, id }) {
                 onChange={(e) => set("category", e.target.value)}
               />
             </Field>
-            <Field label="Ubicación">
+            <Field
+              label={
+                id
+                  ? "Ubicación de referencia (usa Trasladar para mover stock)"
+                  : "Ubicación"
+              }
+            >
               <Select
-                value={form.location}
-                onChange={(e) => set("location", e.target.value)}
+                disabled={!!id}
+                value={form.locationId}
+                onChange={(e) => set("locationId", e.target.value)}
               >
-                {LOCATIONS.map((l) => (
-                  <option key={l}>{l}</option>
-                ))}
+                <option value="">Selecciona una ubicación…</option>
+                {state.locations
+                  .filter((l) => l.active)
+                  .map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.name}
+                    </option>
+                  ))}
               </Select>
             </Field>
             {type === "asset" ? (
@@ -380,38 +420,46 @@ export function ProductDetail({ id }) {
   const [dialog, setDialog] = useState(""),
     [qty, setQty] = useState(1),
     [note, setNote] = useState(""),
-    [location, setLocation] = useState(LOCATIONS[1]);
+    [location, setLocation] = useState(state.locations[0]?.id || ""),
+    [source, setSource] = useState(p?.locationId || "");
   if (!p) return <Empty>Artículo no encontrado.</Empty>;
   const assignments = state.deliveries
     .filter((d) => d.status === "confirmed")
     .flatMap((d) =>
       d.lines
         .filter((l) => l.productId === p.id && l.qty > l.returned + l.lost)
-        .map((l) => ({ d, l }))
+        .map((l) => ({ d, l })),
     );
   const movements = state.movements.filter((m) => m.productId === p.id);
   function open(type) {
     setDialog(type);
+    if (type === "traslado")
+      setLocation(
+        state.locations.find((l) => l.active && l.id !== source)?.id || "",
+      );
     setNote("");
     setQty(1);
   }
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault();
     let result;
-    if (dialog === "archive") result = execute("product.archive", { id: p.id });
+    if (dialog === "archive")
+      result = await execute("product.archive", { id: p.id });
     else if (dialog === "maintenance")
-      result = execute("maintenance.open", {
+      result = await execute("maintenance.open", {
         productId: p.id,
         qty,
         reason: note,
+        locationId: source,
       });
     else
-      result = execute("stock.move", {
+      result = await execute("stock.move", {
         id: p.id,
         operation: dialog,
         qty,
         note,
-        location,
+        locationId: source,
+        destinationId: location,
       });
     if (result) setDialog("");
   }
@@ -492,7 +540,7 @@ export function ProductDetail({ id }) {
                 <Button
                   size="sm"
                   variant="outline"
-                  disabled={!p.stock || !!assigned(state, p.id) || !!p.repair}
+                  disabled={!p.stock}
                   onClick={() => open("traslado")}
                 >
                   Trasladar
@@ -537,6 +585,24 @@ export function ProductDetail({ id }) {
         </Panel>
       </div>
       <div className="mt-5">
+        <Panel title="Existencias por ubicación">
+          <Table headers={["Ubicación", "Disponible", "En revisión", "Bajas"]}>
+            {state.balances
+              .filter((b) => b.productId === p.id)
+              .map((b) => (
+                <tr key={b.id}>
+                  <td>
+                    {state.locations.find((l) => l.id === b.locationId)?.name}
+                  </td>
+                  <td>{b.stock}</td>
+                  <td>{b.repair}</td>
+                  <td>{b.retired}</td>
+                </tr>
+              ))}
+          </Table>
+        </Panel>
+      </div>
+      <div className="mt-5">
         <Panel title="Historial del artículo">
           <Table
             headers={["Fecha", "Movimiento", "Cantidad", "Responsable / nota"]}
@@ -567,7 +633,7 @@ export function ProductDetail({ id }) {
                 {
                   entrada: "Registrar entrada",
                   ajuste: "Baja de existencias",
-                  traslado: "Trasladar registro",
+                  traslado: "Trasladar existencias",
                   maintenance: "Enviar a revisión",
                   archive: p.active
                     ? "Archivar artículo"
@@ -576,17 +642,46 @@ export function ProductDetail({ id }) {
               }
             </DialogTitle>
             <DialogDescription>
-              {p.name} · {p.code}. Movimiento de demostración.
+              {p.name} · {p.code}. Movimiento de inventario.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={submit} className="space-y-4">
-            {!["archive", "traslado"].includes(dialog) && (
+            {dialog !== "archive" && (
+              <Field label="Ubicación de origen">
+                <Select
+                  required
+                  value={source}
+                  onChange={(e) => setSource(e.target.value)}
+                >
+                  <option value="">Selecciona…</option>
+                  {state.locations
+                    .filter((l) => l.active)
+                    .map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.name} ·{" "}
+                        {state.balances.find(
+                          (b) => b.productId === p.id && b.locationId === l.id,
+                        )?.stock || 0}{" "}
+                        disponibles
+                      </option>
+                    ))}
+                </Select>
+              </Field>
+            )}
+            {dialog !== "archive" && (
               <Field label="Cantidad">
                 <Input
                   required
                   type="number"
                   min={1}
-                  max={dialog === "entrada" ? undefined : p.stock}
+                  max={
+                    dialog === "entrada"
+                      ? undefined
+                      : state.balances.find(
+                          (b) =>
+                            b.productId === p.id && b.locationId === source,
+                        )?.stock || 0
+                  }
                   step={1}
                   value={qty}
                   onChange={(e) => setQty(e.target.value)}
@@ -594,14 +689,19 @@ export function ProductDetail({ id }) {
               </Field>
             )}
             {dialog === "traslado" && (
-              <Field label="Destino (todas las existencias del registro)">
+              <Field label="Ubicación de destino">
                 <Select
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                 >
-                  {LOCATIONS.filter((l) => l !== p.location).map((l) => (
-                    <option key={l}>{l}</option>
-                  ))}
+                  <option value="">Selecciona…</option>
+                  {state.locations
+                    .filter((l) => l.active && l.id !== source)
+                    .map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.name}
+                      </option>
+                    ))}
                 </Select>
               </Field>
             )}

@@ -35,17 +35,17 @@ export function DeliveryStatus({ d }) {
         d.status === "cancelled"
           ? "gray"
           : d.acknowledgement === "accepted"
-          ? "green"
-          : "amber"
+            ? "green"
+            : "amber"
       }
     >
       {d.status === "cancelled"
         ? "Revertida"
         : d.acknowledgement === "accepted"
-        ? "Recibido"
-        : d.acknowledgement === "difference"
-        ? "Con diferencia"
-        : "Pendiente de acuse"}
+          ? "Recibido"
+          : d.acknowledgement === "difference"
+            ? "Con diferencia"
+            : "Pendiente de acuse"}
     </Badge>
   );
 }
@@ -53,7 +53,7 @@ export default function Deliveries({ receipts = false }) {
   const { state } = useActivos();
   const [q, setQ] = useState("");
   const rows = state.deliveries.filter((d) =>
-    matches(q, d.folio, d.employee.name, d.employee.role)
+    matches(q, d.folio, d.employee.name, d.employee.role),
   );
   return (
     <>
@@ -141,11 +141,11 @@ export function DeliveryForm() {
     router = useRouter(),
     { enqueueSnackbar } = useSnackbar();
   const [employeeId, setEmployeeId] = useState(
-    search.get("empleado") || state.employees[0]?.id || ""
+    search.get("empleado") || state.employees[0]?.id || "",
   );
   const [lines, setLines] = useState(() => {
     const p = state.products.find(
-      (p) => p.id === search.get("articulo") && p.stock > 0 && p.active
+      (p) => p.id === search.get("articulo") && p.stock > 0 && p.active,
     );
     return p ? [{ productId: p.id, qty: 1 }] : [];
   });
@@ -157,7 +157,7 @@ export function DeliveryForm() {
     [saving, setSaving] = useState(false);
   const employee = state.employees.find((e) => e.id === employeeId);
   const available = state.products.filter(
-    (p) => p.active && p.stock > 0 && !lines.some((l) => l.productId === p.id)
+    (p) => p.active && p.stock > 0 && !lines.some((l) => l.productId === p.id),
   );
   function add() {
     const id = productId || available[0]?.id;
@@ -166,10 +166,10 @@ export function DeliveryForm() {
       setProductId("");
     }
   }
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault();
     setSaving(true);
-    const r = execute("delivery.create", {
+    const r = await execute("delivery.create", {
       employeeId,
       mode,
       due,
@@ -200,12 +200,14 @@ export function DeliveryForm() {
                     }}
                   >
                     <option value="">Selecciona…</option>
-                    {state.employees.map((e) => (
-                      <option key={e.id} value={e.id}>
-                        {e.name}
-                        {e.demo ? " · Demo" : " · Prueba local"}
-                      </option>
-                    ))}
+                    {state.employees
+                      .filter((e) => e.active)
+                      .map((e) => (
+                        <option key={e.id} value={e.id}>
+                          {e.name}
+                          {!e.active ? " · Inactivo" : ""}
+                        </option>
+                      ))}
                   </Select>
                 </Field>
                 <Field label="Modalidad">
@@ -261,14 +263,21 @@ export function DeliveryForm() {
                       list.length
                         ? "Se agregaron solo los artículos disponibles que le faltan. Revisa cantidades y tallas."
                         : "El empleado ya tiene la dotación o no hay existencias disponibles.",
-                      { variant: "info" }
+                      { variant: "info" },
                     );
                   }}
                 >
                   Cargar paquete
                 </Button>
               </div>
-              <Table headers={["Artículo", "Disponible", "Cantidad", "Quitar"]}>
+              <Table
+                headers={[
+                  "Artículo",
+                  "Origen / disponible",
+                  "Cantidad",
+                  "Quitar",
+                ]}
+              >
                 {lines.map((l, n) => {
                   const p = state.products.find((p) => p.id === l.productId);
                   return (
@@ -282,7 +291,38 @@ export function DeliveryForm() {
                           {p.returnable ? "Retornable" : "Sin devolución"}
                         </p>
                       </td>
-                      <td>{p.stock}</td>
+                      <td>
+                        <Select
+                          aria-label={`Ubicación de ${p.name}`}
+                          value={l.locationId || ""}
+                          onChange={(e) =>
+                            setLines(
+                              lines.map((a, i) =>
+                                i === n
+                                  ? {
+                                      ...a,
+                                      locationId: e.target.value || undefined,
+                                    }
+                                  : a,
+                              ),
+                            )
+                          }
+                        >
+                          <option value="">Seleccionar automáticamente</option>
+                          {state.balances
+                            .filter((b) => b.productId === p.id && b.stock > 0)
+                            .map((b) => (
+                              <option key={b.id} value={b.locationId}>
+                                {
+                                  state.locations.find(
+                                    (v) => v.id === b.locationId,
+                                  )?.name
+                                }{" "}
+                                · {b.stock}
+                              </option>
+                            ))}
+                        </Select>
+                      </td>
                       <td>
                         <Input
                           aria-label={`Cantidad de ${p.name}`}
@@ -299,8 +339,8 @@ export function DeliveryForm() {
                               lines.map((a, i) =>
                                 i === n
                                   ? { ...a, qty: Number(e.target.value) }
-                                  : a
-                              )
+                                  : a,
+                              ),
                             )
                           }
                         />
@@ -380,8 +420,8 @@ export function DeliveryForm() {
             <p className="text-xs text-slate-500">{employee?.role}</p>
             <div className="my-4 border-t" />
             <p className="text-xs text-slate-500">
-              Al confirmar se descontará la existencia de la demo y se generará
-              el resguardo.
+              Al confirmar se descontará la existencia y se generará el
+              resguardo.
             </p>
             <Button
               className="mt-5 w-full"
@@ -404,12 +444,12 @@ export function ReturnForm() {
   const { state, execute } = useActivos();
   const search = useSearchParams();
   const [employeeId, setEmployeeId] = useState(
-    search.get("empleado") || state.employees[0]?.id || ""
+    search.get("empleado") || state.employees[0]?.id || "",
   );
   const [selected, setSelected] = useState({}),
     [note, setNote] = useState("");
   const rows = employeeLines(state, employeeId).filter(
-    (l) => l.pending > 0 && l.snapshot.returnable
+    (l) => l.pending > 0 && l.snapshot.returnable,
   );
   function change(id, key, value) {
     setSelected((prev) => ({
@@ -417,7 +457,7 @@ export function ReturnForm() {
       [id]: { qty: 0, condition: "good", ...prev[id], [key]: value },
     }));
   }
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault();
     const lines = rows
       .filter((l) => Number(selected[l.id]?.qty) > 0)
@@ -427,7 +467,7 @@ export function ReturnForm() {
         ...selected[l.id],
         qty: Number(selected[l.id].qty),
       }));
-    if (execute("delivery.return", { employeeId, lines, note })) {
+    if (await execute("delivery.return", { employeeId, lines, note })) {
       setSelected({});
       setNote("");
     }

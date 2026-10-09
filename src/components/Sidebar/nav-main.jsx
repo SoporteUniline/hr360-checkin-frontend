@@ -73,6 +73,13 @@ const recruitmentEnabled =
   process.env.NEXT_PUBLIC_RECRUITMENT_ENABLED === "true";
 
 const dashboardItems = [
+  {
+    title: "Mis activos y uniformes",
+    url: "/empleado/panel/mis-recursos",
+    rol: "Empleado",
+    icon: Package,
+    matchPrefix: "/empleado/panel/mis-recursos",
+  },
   ...(recruitmentEnabled
     ? [
         {
@@ -233,6 +240,12 @@ const menuGroups = [
         url: "/panel/control-activos/paquetes",
         rol: "Recruiter",
         icon: BriefcaseBusiness,
+      },
+      {
+        title: "Ubicaciones",
+        url: "/panel/control-activos/ubicaciones",
+        rol: "Recruiter",
+        icon: Building,
       },
       {
         title: "Movimientos",
@@ -592,7 +605,7 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
   const moduloActivo = items.some((item) =>
     item.children
       ? item.children.some((child) => isRecruitmentNavActive(path, child))
-      : isRecruitmentNavActive(path, item)
+      : isRecruitmentNavActive(path, item),
   );
 
   const enlace = (it) => (
@@ -664,7 +677,7 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
               </div>
             ) : (
               enlace(item)
-            )
+            ),
           )}
         </div>
       </PopoverContent>
@@ -707,13 +720,13 @@ export function NavMain() {
       persistirGrupos({
         ...prev,
         [nombre]: prev[nombre] === false ? true : false,
-      })
+      }),
     );
   };
 
   // ¿Hay al menos un módulo contraído? (para alternar expandir/contraer todo)
   const hayContraidos = menuGroups.some(
-    (g) => gruposAbiertos[g.group] === false
+    (g) => gruposAbiertos[g.group] === false,
   );
 
   const toggleTodos = () => {
@@ -759,7 +772,7 @@ export function NavMain() {
             .map((g) => ({
               ...g,
               items: g.items.filter(
-                (item) => !item.rol || item.rol === effectiveRole
+                (item) => !item.rol || item.rol === effectiveRole,
               ),
             }))
             .filter((g) => g.items.length > 0)
@@ -861,9 +874,9 @@ export function NavMain() {
                 : false;
               const itemsVisibles = filtrarItems(
                 group.items.filter(
-                  (item) => !item.rol || item.rol === effectiveRole
+                  (item) => !item.rol || item.rol === effectiveRole,
                 ),
-                grupoCoincide
+                grupoCoincide,
               );
               if (itemsVisibles.length === 0) return null;
 
@@ -898,7 +911,7 @@ export function NavMain() {
                             onClick={() => {
                               if (item.children) {
                                 setOpen(
-                                  open === item.title ? null : item.title
+                                  open === item.title ? null : item.title,
                                 );
                               } else {
                                 handleClick(item.url);
@@ -931,7 +944,7 @@ export function NavMain() {
                                       !buscando ||
                                       grupoCoincide ||
                                       normalizar(item.title).includes(q) ||
-                                      normalizar(child.title).includes(q)
+                                      normalizar(child.title).includes(q),
                                   )
                                   .map((child) => (
                                     <SidebarMenuButton

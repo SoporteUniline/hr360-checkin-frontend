@@ -1,116 +1,106 @@
-# Control de Activos y Uniformes — integración para Cano
+# Control de Activos y Uniformes — integración real en Next.js
 
-## Estado de esta entrega
+El módulo utiliza las 15 tablas `cau_*` del archivo recibido de Cano
+`docs/015_control_activos_uniformes_adamia_dev.sql`. No ejecuta migraciones ni
+inserta datos ficticios al iniciar. Los IDs de empresa, empleado y usuario son
+INT; los IDs internos de inventario se transportan como cadenas para preservar
+BIGINT. No requiere cambiar el backend existente para guardar inventario.
 
-Frontend completo de demostración en `/panel/control-activos`. No crea tablas, rutas API ni movimientos reales. Navegación propia en el sidebar, páginas de activos/uniformes, altas y edición, entregas, devoluciones parciales, cambios de talla, mantenimiento, solicitudes, paquetes por puesto, resguardos/PDF y movimientos. El Panel de empleado (Expediente 360°) incorpora dos apartados: Activos asignados y Uniformes entregados.
+## Rutas
 
-La demo usa `localStorage` por usuario autenticado y empresa, versión 1. No es almacenamiento compartido ni control de seguridad de producción. Cuenta con aviso permanente y restablecimiento explícito. Los empleados ficticios tienen ID `demo-*`; una prueba explícita iniciada desde un expediente real usa `real-{id_empleado}` exclusivamente como referencia local. No hay escrituras a las APIs existentes. No migrar automáticamente estos datos a producción.
+| Ruta                                           | Método | Uso                                             |
+| ---------------------------------------------- | ------ | ----------------------------------------------- |
+| `/api/control-activos?empresa=ID`              | GET    | Estado del módulo autorizado para RH            |
+| `/api/control-activos?empresa=ID`              | POST   | Ejecutar un comando de RH                       |
+| `/api/control-activos/mis-recursos?empresa=ID` | GET    | Recursos y solicitudes del empleado autenticado |
+| `/api/control-activos/mis-recursos?empresa=ID` | POST   | Acuse, solicitud o tallas del propio empleado   |
 
-## Archivos y separación de responsabilidades
+POST recibe `{command:{type,payload},revision}` y cabecera `Idempotency-Key`.
+Devuelve `{result:{id,operationId,actor}}` únicamente después de COMMIT. El cliente
+hace GET después de guardar; un fallo de refresco se informa como tal, sin fingir
+que falló la escritura. GET devuelve `{state}` y `revision` como cadena.
 
-- `src/lib/activos/model.mjs`: entidades, datos de ejemplo, consultas y comandos puros. Sirve de referencia de reglas, no de sustituto de validación en servidor.
-- `src/lib/activos/demoRepository.js`: adaptador `read()` y `execute(command, expectedRevision, actor)`. Reemplazarlo por cliente HTTP; convertir las operaciones de UI a asíncronas, estados de carga y errores. No volver a demo automáticamente cuando una API falle.
-- `src/components/activos/ActivosProvider.jsx`: selección de empresa, sesión, estado y confirmación de operaciones.
-- `src/components/activos/*`: pantallas, formularios y expediente reutilizable.
-- `src/lib/activos/pdf.js`: PDF de demostración, siempre marcado como ficticio.
-- `scripts/test-activos.mjs`: reglas y transacciones de referencia.
+Comandos soportados:
+`location.save`, `product.save`, `product.archive`, `stock.move`,
+`delivery.create`, `delivery.return`, `uniform.exchange`, `delivery.cancel`,
+`delivery.ack`, `maintenance.open`, `maintenance.close`, `employee.sizes`,
+`kit.save`, `request.create`, `request.resolve`.
 
-## Datos necesarios
+Los payloads exactos y límites están en `src/lib/activos/server/validation.mjs`.
+`location.save` usa el tipo de operación `articulo_guardar` ya disponible en el
+ENUM recibido; la huella conserva el nombre de comando para distinguirlo. No se
+alteró el esquema para agregar un valor nuevo.
 
-Todas las entidades deben llevar `id_empresa`. Las FK también deben impedir relaciones entre empresas.
+## Configuración de servidor
 
-| Entidad                  | Campos principales                                                                                                                                                                                            |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Artículo / variante      | id, empresa, tipo asset/uniform, nombre, código único por empresa, categoría, marca/modelo o talla/color, serie única cuando aplique, retornable, mínimo, costo referencia, meses reposición, activo, versión |
-| Existencia por ubicación | artículo, ubicación, disponible, revisión, baja; para activos, una unidad física con identificador propio                                                                                                     |
-| Entrega                  | id, folio único, empresa, empleado real, modalidad, fecha, devolución prevista, observaciones, usuario que entrega, estado, versión                                                                           |
-| Partida de entrega       | artículo/unidad, cantidad, devuelto, perdido, snapshot del nombre/código/serie/talla/retornable al entregar                                                                                                   |
-| Acuse                    | entrega, empleado autenticado, recibido/diferencia, observaciones, fecha servidor, evidencia opcional; diferenciar acuse simple de firma electrónica                                                          |
-| Movimiento               | empresa, artículo, ubicación origen/destino, cantidad, tipo, referencia, empleado, responsable autenticado, fecha servidor, motivo, idempotency key                                                           |
-| Mantenimiento            | artículo, cantidad, motivo, proveedor/responsable, ingreso, fecha prevista, cierre, resultado, costo, resolución                                                                                              |
-| Paquete por puesto       | empresa, puesto del catálogo, artículos/variantes y cantidades                                                                                                                                                |
-| Preferencias de empleado | empleado real, talla uniforme, calzado; no duplicar nombre/puesto/departamento como catálogo independiente                                                                                                    |
-| Solicitud                | empleado, tipo, descripción, estado, respuesta, responsable y fechas; relación opcional con asignación                                                                                                        |
+Se reutilizan `DB_HOST`, `DB_PORT` (3306 por defecto), `DB_USER`, `DB_PASSWORD`,
+`DB_NAME` y `NEXT_PUBLIC_RUTA_BACKEND`. En dev, `DB_NAME` debe apuntar a la base
+que recibió las tablas (`adamia_dev`). No exponer variables DB con prefijo
+NEXT*PUBLIC. El usuario MySQL debe tener SELECT/INSERT/UPDATE sobre `cau*\*`,
+DELETE exclusivamente sobre `cau_paquete_detalle`para editar dotaciones, y
+SELECT sobre`empresas`y`usuarios_empresas`. No necesita permisos DDL.
 
-Consumibles se representan como artículos no retornables. El historial de entrega se conserva aunque no se espere devolución. No sumar consumibles al indicador de artículos que deben recuperarse al dar de baja a la persona.
+## Identidad, catálogos y permisos
 
-## API propuesta (nombres a acordar)
+La cookie se verifica en `/users/verify/token` en cada petición. Para RH se
+reutiliza la relación vigente de propietario o `usuarios_empresas` activos.
+No se aceptan actor, permisos ni snapshots suministrados por el navegador.
+El perfil Admin sigue con las rutas de dashboard existentes; no se agrega acceso
+implícito al inventario de otras empresas.
 
-Base: `/checador/control-activos`. Alternativamente, Route Handlers de Next.js pueden delegar en el backend; no requieren un segundo modelo de datos. La UI no necesita acceso directo a credenciales de base de datos.
+Catálogos consultados con el token verificado y la empresa autorizada:
 
-| Método y ruta                       | Uso                                                                              |
-| ----------------------------------- | -------------------------------------------------------------------------------- |
-| GET `/resumen?empresa=`             | Indicadores y pendientes                                                         |
-| GET/POST `/articulos`               | Catálogo paginado, filtros tipo/texto/ubicación/estado; alta                     |
-| GET/PATCH `/articulos/:id`          | Detalle y edición con versión                                                    |
-| POST `/articulos/:id/archivo`       | Archivar/reactivar sin borrar historial                                          |
-| POST `/entradas`                    | Registrar compra/entrada de uniformes                                            |
-| POST `/ajustes`                     | Baja con motivo y permiso explícito                                              |
-| POST `/traslados`                   | Traslado por cantidad entre ubicaciones en una transacción                       |
-| GET/POST `/entregas`                | Historial y entrega transaccional con sus partidas                               |
-| GET `/entregas/:id`                 | Resguardo, snapshots y estado de devolución                                      |
-| POST `/entregas/:id/reversion`      | Revertir entrega pendiente de acuse y sin devoluciones, dejando contramovimiento |
-| POST `/entregas/:id/acuse`          | Recibido/diferencia por el propio empleado                                       |
-| POST `/devoluciones`                | Recepción parcial de partidas: disponible / revisión / pérdida                   |
-| POST `/cambios-uniforme`            | Recepción y nueva entrega atómicas; no aceptar solo la mitad del cambio          |
-| GET `/empleados/:id/recursos?tipo=` | Activos, uniformes e historial del Expediente 360°                               |
-| PATCH `/empleados/:id/tallas`       | Preferencias de talla                                                            |
-| GET/POST/PATCH `/paquetes`          | Dotaciones relacionadas con puestos existentes                                   |
-| GET/POST `/mantenimientos`          | Registro y consulta                                                              |
-| POST `/mantenimientos/:id/cierre`   | Reparado disponible o baja definitiva                                            |
-| GET/POST `/solicitudes`             | Incidencias y peticiones del empleado                                            |
-| POST `/solicitudes/:id/respuesta`   | Resolución por RH sin cambiar stock automáticamente                              |
-| GET `/movimientos`                  | Auditoría paginada y exportación filtrada                                        |
+- `/checador/empleados/panel-empleado/lista?empresa=ID&includeInactivos=1`
+- `/checador/puestos?id_empresa=ID` (todas las páginas)
+- `/checador/sucursales?id_empresa=ID` (todas las páginas)
+- `/empresas/ID` (nombre, RFC y logo)
 
-Lecturas: `{ data, meta: { page, limit, total } }`. Escrituras: `{ data, version }`. Errores: `{ error: { code, message, fields? } }`, HTTP 400/401/403/404/409/422. Una escritura debe devolver el estado confirmado, no un éxito anticipado.
+El autoservicio obtiene el vínculo de empleado de la sesión verificada para esa
+empresa, o de `/checador/empleados/por-correo` usando el correo de esa sesión.
+No carga ni expone el directorio de otros empleados. RH no puede confirmar un
+acuse en nombre de una persona.
 
-Ejemplo de entrega (IDs reales al integrar):
+Pantalla del empleado: `/empleado/panel/mis-recursos`.
+Expediente 360 consulta las mismas entregas; no crea empleados duplicados ni usa
+los identificadores ficticios `real-*` / `demo-*`.
 
-```json
-{
-  "empresa": 123,
-  "employeeId": 456,
-  "mode": "Préstamo",
-  "due": "2026-11-15",
-  "note": "Equipo en buen estado",
-  "lines": [{ "productId": 789, "qty": 1 }]
-}
-```
+## Integridad
 
-Ejemplo de devolución:
+- Las escrituras serializan por empresa con `SELECT ... FOR UPDATE` sobre su fila
+  y se confirman en una transacción breve. Empresas distintas operan en paralelo.
+- Todos los SELECT/UPDATE/DELETE de recursos están acotados por `id_empresa`.
+- La revisión global evita sobreescribir una edición concurrente. Un conflicto
+  devuelve 409 y la pantalla actualiza antes de permitir otro intento.
+- Reintentar una clave ya confirmada devuelve el resultado previo. Se comprueba
+  actor y huella del payload; usar la misma clave con otro contenido devuelve 409.
+- Entrega, devolución, cambio de talla, revisión, baja y reversión conservan
+  movimientos. Una operación que falla hace rollback de todos sus efectos.
+- Los activos físicos se registran uno por uno. Uniformes admiten cantidades,
+  existencias por ubicación y traslados parciales.
+- Devoluciones y pérdidas se acumulan desde sus partidas; no hay contadores
+  duplicados editables. No se permite exceder lo pendiente.
+- Los resguardos conservan snapshots de empresa, empleado y artículo. El PDF usa
+  esos snapshots y refleja acuses/reversiones. El logo conserva la URL de entrega:
+  la conservación binaria de logos históricos depende del almacenamiento existente.
+- No se realizan descuentos automáticos por pérdidas ni se presenta el acuse
+  simple como una firma electrónica certificada.
+- No hay fallback a localStorage ni datos demo cuando falla una API.
 
-```json
-{
-  "employeeId": 456,
-  "note": "Cargador pendiente; equipo recibido sin golpes",
-  "lines": [{ "deliveryId": 101, "lineId": 102, "qty": 1, "condition": "good" }]
-}
-```
+## Verificación y límites
 
-`condition`: `good` regresa a disponible; `review` crea revisión y no queda disponible; `lost` cierra responsabilidad por pérdida con registro de baja y motivo, sin descuentos automáticos.
+`scripts/test-activos-api.mjs` usa una base temporal aleatoria `cau_test_*` en
+MySQL local/CI, crea las tablas EXACTAS recibidas y prueba entrega, edición de
+snapshots, reintentos, concurrencia, devoluciones, pérdidas, mantenimiento,
+cambios de talla, traslados, reversión, acuses, paquetes, tallas, solicitudes y
+separación entre empresas/empleados. No usa variables DB\_\* ni apunta a ADAMIA.
+Se integra al job Validate de dev, antes de compilar y desplegar.
 
-## Reglas de servidor y permisos
+La API devuelve el estado completo que requiere la interfaz actual. Cada tabla
+tiene un límite explícito de 10 000 filas por empresa; no devuelve inventario
+parcial al superarlo. Antes de ese volumen se debe migrar a consultas paginadas
+por pantalla. La cola de escritura por empresa prioriza integridad para uso de RH;
+para mayor concurrencia puede refinarse a bloqueos por artículo.
 
-1. Reutilizar sesión actual; verificar identidad en servidor. `empresa`, empleado y actor enviados por cliente nunca bastan para autorizar.
-2. RH/almacén según permisos puede gestionar sus empresas/ubicaciones. El empleado únicamente consulta sus recursos, registra solicitudes y confirma sus propias entregas. Ocultar botones no es autorización.
-3. Cada activo individual tiene máximo una unidad activa. Series y códigos únicos por empresa. Entregar únicamente existencia disponible, nunca en revisión, archivada o asignada.
-4. Entrega, devolución, reversión y cambio de talla deben ejecutarse en transacción con bloqueo/actualización condicional de existencias. Cero stock negativo y cero doble asignación bajo concurrencia.
-5. `Idempotency-Key` en escrituras; la repetición después de timeout devuelve el mismo resultado, sin duplicar movimientos. Conflictos de versión devuelven 409.
-6. Fechas/actor/folios generados o verificados por servidor. Devoluciones nunca superiores a lo pendiente. Cantidades enteras positivas y sin partidas duplicadas.
-7. Snapshots de resguardos inmutables. Editar nombre, talla o costo en catálogo no modifica documentos anteriores.
-8. Las correcciones conservan trazabilidad; no borrar movimientos ni resguardos. No revertir entregas con acuse o devoluciones; usar operación administrativa auditada si más adelante se requiere.
-9. Al cambiar de empresa, invalidar caché y descartar selecciones anteriores. Nunca consultar con empresa `all` una escritura.
-10. Reutilizar catálogos reales de empleados, puestos, departamentos, empresas y unidades. Bloquear nuevas entregas a empleados dados de baja y mostrar pendientes durante su salida.
-11. Evidencias futuras: almacenamiento privado, límites de formato/tamaño, URLs temporales autorizadas; no guardar binarios en la tabla ni aceptar URLs públicas arbitrarias.
-
-## Alcance de la demo y pasos para conectar
-
-La demo muestra PDFs descargables, acuses simulados, preferencias de talla, búsqueda/exportación y paquetes con variantes explícitas. No manda notificaciones ni captura firmas reales. Los traslados de demo mueven el registro completo disponible y sin asignaciones; la API real debe modelar existencias por ubicación para permitir traslados parciales de uniformes.
-
-1. Crear esquema/migraciones y endpoints con permisos/transacciones.
-2. Proporcionar contrato final y ejemplos de respuestas y errores.
-3. Sustituir adaptador, añadir carga/paginación de servidor y conectar los catálogos reales.
-4. Eliminar simulación de acuse de la interfaz RH; implementar confirmación desde cuenta de empleado.
-5. Habilitar logo real de empresa en resguardos/PDF, almacenamiento privado para evidencias y plantillas legales revisadas si se requieren firmas.
-6. Validar dev con dos empresas, usuarios de RH y empleados: doble entrega concurrente, devolución parcial repetida, cambio de talla sin stock, acceso ajeno, documentos históricos y baja de empleado.
-7. Retirar el aviso demo únicamente después de conectar y verificar todos los flujos. No reutilizar datos ficticios como inventario inicial.
+Validar en dev con cuentas reales: contratos de los catálogos existentes,
+configuración DB, visibilidad por empresa, PDF/logo, acuse del empleado y flujo
+completo de una entrega. La comprobación de CI no sustituye esa validación.

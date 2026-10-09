@@ -23,7 +23,7 @@ import {
 } from "./ui";
 import { DeliveryStatus } from "./Deliveries";
 export default function Receipt({ id }) {
-  const { state, company, execute } = useActivos();
+  const { state, company, execute, self } = useActivos();
   const { enqueueSnackbar } = useSnackbar();
   const [dialog, setDialog] = useState(""),
     [note, setNote] = useState(""),
@@ -34,19 +34,19 @@ export default function Receipt({ id }) {
     setBusy(true);
     try {
       const { downloadReceipt } = await import("@/lib/activos/pdf");
-      await downloadReceipt(d, company.name);
+      await downloadReceipt(d, d.company || company);
     } catch {
       enqueueSnackbar("No fue posible generar el PDF.", { variant: "error" });
     } finally {
       setBusy(false);
     }
   }
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault();
     const result =
       dialog === "cancel"
-        ? execute("delivery.cancel", { id, note })
-        : execute("delivery.ack", { id, status: dialog, note });
+        ? await execute("delivery.cancel", { id, note })
+        : await execute("delivery.ack", { id, status: dialog, note });
     if (result) setDialog("");
   }
   return (
@@ -61,40 +61,43 @@ export default function Receipt({ id }) {
         <Button variant="outline" disabled={busy} onClick={pdf}>
           {busy ? "Generando…" : "Descargar PDF"}
         </Button>
-        {d.status === "confirmed" && d.acknowledgement === "pending" && (
-          <>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setDialog("difference");
-                setNote("");
-              }}
-            >
-              Simular diferencia
-            </Button>
-            <Button
-              onClick={() => {
-                setDialog("accepted");
-                setNote("");
-              }}
-            >
-              Simular acuse
-            </Button>
-          </>
-        )}
+        {self &&
+          d.status === "confirmed" &&
+          d.acknowledgement === "pending" && (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setDialog("difference");
+                  setNote("");
+                }}
+              >
+                Reportar diferencia
+              </Button>
+              <Button
+                onClick={() => {
+                  setDialog("accepted");
+                  setNote("");
+                }}
+              >
+                Confirmar recepción
+              </Button>
+            </>
+          )}
       </Heading>
       <article className="mx-auto max-w-4xl space-y-6 rounded-xl border border-slate-200 bg-white p-5 sm:p-9">
         <header className="flex flex-wrap items-start justify-between gap-5 border-b-2 border-blue-600 pb-6">
           <div>
             <Image
-              src="/assets/logo.png"
-              alt="ADAMIA"
+              src={d.company?.logo || "/assets/logo.png"}
+              unoptimized
+              alt={d.company?.name || "ADAMIA"}
               width={125}
               height={45}
               className="mb-4 h-auto"
             />
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-              {company.name} · Demostración
+              {d.company?.name || company.name}
             </p>
             <h2 className="mt-2 text-xl font-semibold">
               Resguardo de activos y uniformes
@@ -183,29 +186,32 @@ export default function Receipt({ id }) {
             <strong>{d.employee.name}</strong>
             <p className="text-xs text-slate-500">
               {d.acknowledgement === "accepted"
-                ? "Acuse simulado registrado"
+                ? "Recepción confirmada por el empleado"
                 : "Recibe · Pendiente de confirmación"}
             </p>
           </div>
         </div>
         <p className="text-center text-xs text-slate-400">
-          Documento ficticio para revisar el módulo. No representa una entrega
-          real ni una firma electrónica.
+          Registro de entrega y acuse de recepción. Conserva este documento para
+          consultar los artículos recibidos.
         </p>
       </article>
-      {d.status === "confirmed" && d.acknowledgement === "pending" && (
-        <div className="mt-4 text-right">
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setDialog("cancel");
-              setNote("");
-            }}
-          >
-            Revertir entrega por error
-          </Button>
-        </div>
-      )}
+      {!self &&
+        d.status === "confirmed" &&
+        d.acknowledgement === "pending" &&
+        !d.lines.some((l) => l.returned || l.lost) && (
+          <div className="mt-4 text-right">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setDialog("cancel");
+                setNote("");
+              }}
+            >
+              Revertir entrega por error
+            </Button>
+          </div>
+        )}
       <Dialog open={!!dialog} onOpenChange={(v) => !v && setDialog("")}>
         <DialogContent>
           <DialogHeader>
@@ -213,13 +219,13 @@ export default function Receipt({ id }) {
               {dialog === "cancel"
                 ? "Revertir entrega"
                 : dialog === "difference"
-                ? "Simular diferencia en recepción"
-                : "Simular confirmación del empleado"}
+                  ? "Reportar diferencia en recepción"
+                  : "Confirmar recepción de artículos"}
             </DialogTitle>
             <DialogDescription>
               {dialog === "cancel"
                 ? "Se devolverán las existencias al inventario y se conservará el historial."
-                : "En el módulo conectado esta acción corresponderá al empleado autenticado. Aquí es una demostración."}
+                : "La confirmación quedará registrada con tu cuenta y la fecha del servidor."}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={submit} className="space-y-4">

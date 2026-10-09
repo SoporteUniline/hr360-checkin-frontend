@@ -12,7 +12,7 @@ export function ResourceLink({ to = "", children, ...props }) {
   const separator = to.includes("?") ? "&" : "?";
   return (
     <Link
-      href={`${ROOT}${to}${separator}empresa=${ctx?.company.id || ""}`}
+      href={`${ctx?.self ? "/empleado/panel/mis-recursos" : ROOT}${ctx?.self && to === "/resguardos" ? "" : to}${separator}empresa=${ctx?.company.id || ""}`}
       {...props}
     >
       {children}
@@ -214,7 +214,7 @@ export function downloadCsv(name, rows) {
     '"';
   const blob = new Blob(
     ["\uFEFF" + rows.map((r) => r.map(cell).join(",")).join("\r\n")],
-    { type: "text/csv;charset=utf-8" }
+    { type: "text/csv;charset=utf-8" },
   );
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

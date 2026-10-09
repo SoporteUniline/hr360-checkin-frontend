@@ -20,7 +20,7 @@ export default function Overview() {
       d.status === "confirmed" &&
       d.due &&
       d.due < today() &&
-      d.lines.some((l) => outstanding(l) > 0)
+      d.lines.some((l) => outstanding(l) > 0),
   );
   return (
     <>
@@ -83,7 +83,7 @@ export default function Overview() {
                 "Acuses por confirmar",
                 state.deliveries.filter(
                   (d) =>
-                    d.status === "confirmed" && d.acknowledgement === "pending"
+                    d.status === "confirmed" && d.acknowledgement === "pending",
                 ).length,
                 "/resguardos",
               ],
@@ -134,9 +134,7 @@ export default function Overview() {
         </Panel>
       </div>
       <div className="mt-5 flex flex-wrap gap-4 text-sm text-blue-700">
-        <ResourceLink to="/empleados">
-          Ver expedientes de demostración →
-        </ResourceLink>
+        <ResourceLink to="/empleados">Ver recursos por empleado →</ResourceLink>
         <ResourceLink to="/movimientos">Consultar movimientos →</ResourceLink>
       </div>
     </>
