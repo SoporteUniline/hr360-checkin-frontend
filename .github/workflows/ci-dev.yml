@@ -43,7 +43,7 @@ jobs:
     needs: prepare
     services:
       activos-mysql:
-        image: mysql:8.0
+        image: public.ecr.aws/docker/library/mysql:8.0
         env:
           MYSQL_ROOT_PASSWORD: cau_ci_test_only
         ports:
