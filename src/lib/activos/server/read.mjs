@@ -62,7 +62,13 @@ export async function readState(scope, connection) {
       params.push(employeeId);
     }
     const [rows] = await connection.execute(
-      `SELECT * FROM cau_${name} WHERE id_empresa=?${filter} ORDER BY id DESC LIMIT 10001`,
+      name === "movimientos"
+        ? `SELECT m.*, o.resultado_json AS operacion_resultado
+           FROM cau_movimientos m
+           LEFT JOIN cau_operaciones o ON o.id_empresa=m.id_empresa
+             AND o.id=m.id_operacion AND o.created_by=m.created_by
+           WHERE m.id_empresa=? ORDER BY m.id DESC LIMIT 10001`
+        : `SELECT * FROM cau_${name} WHERE id_empresa=?${filter} ORDER BY id DESC LIMIT 10001`,
       params,
     );
     ensure(
@@ -167,12 +173,12 @@ export async function readState(scope, connection) {
     deliveries,
     movements: all.movimientos.map((m) => ({
       id: m.id,
-      date: m.fecha,
+      date: localDay(m.fecha),
       type: movementLabels[m.tipo] || m.tipo,
       productId: m.id_articulo,
       productName: products.find((p) => p.id === m.id_articulo)?.name || "",
       qty: m.cantidad,
-      actor: `Usuario ${m.created_by}`,
+      actor: parseJson(m.operacion_resultado).actor || `Usuario ${m.created_by}`,
       note: m.motivo,
       employeeId: m.id_empleado,
       employeeName: employeeMap.get(m.id_empleado)?.name || "",

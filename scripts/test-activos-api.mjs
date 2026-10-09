@@ -165,6 +165,23 @@ test("inventario, entrega, expediente y snapshots inmutables", async () => {
     "Artículo",
   );
 });
+test("movimientos: fecha civil local y nombre histórico del responsable", async () => {
+  const s = await fixture();
+  await s.product("asset", 1);
+  // MySQL entrega DATETIME(6) como cadena; la tabla espera YYYY-MM-DD.
+  await pool.execute(
+    "UPDATE cau_movimientos SET fecha='2026-10-10 02:35:47.123456' WHERE id_empresa=?",
+    [s.companyId],
+  );
+  s.actor = "Nombre actual diferente";
+  const state = await snapshot(s);
+  assert.equal(state.movements.length, 1);
+  assert.equal(state.movements[0].date, "2026-10-09");
+  assert.ok(Number.isFinite(new Date(state.movements[0].date + "T12:00:00").getTime()));
+  assert.equal(state.movements[0].actor, "RH de prueba");
+  const otherZone = await snapshot({ ...s, user: { zona_horaria: "Asia/Tokyo" } });
+  assert.equal(otherZone.movements[0].date, "2026-10-10");
+});
 test("idempotencia devuelve misma entrega y rechaza payload/actor diferente", async () => {
   const s = await fixture(),
     p = await s.product(),
