@@ -38,6 +38,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import PanelEmpleadoGeneral from "./components/PanelEmpleadoGeneral";
+import { ExpedienteResources } from "@/components/activos/Employees";
 import PanelEmpleadoPermisos from "./components/PanelEmpleadoPermisos";
 import PanelEmpleadoAsistencias from "./components/PanelEmpleadoAsistencias";
 import PanelEmpleadoEntradasSalidas from "./components/PanelEmpleadoEntradasSalidas";
@@ -97,7 +98,7 @@ export default function PanelEmpleadoPage() {
   const { data, error, isLoading } = usePanelEmpleadoData(
     idEmpresa,
     dataUser?.empresas || [],
-    sucursalFiltro,
+    sucursalFiltro
   );
 
   const [empleadoSeleccionado, setEmpleadoSeleccionado] = useState(null);
@@ -112,7 +113,7 @@ export default function PanelEmpleadoPage() {
     idEmpresa
       ? `/checador/holidays/${idEmpresa}?page=1&limit=5000&filter=`
       : null,
-    fetcherWithToken,
+    fetcherWithToken
   );
   const festivosSet = useMemo(() => {
     const list = festivosResp?.festivos || [];
@@ -175,7 +176,7 @@ export default function PanelEmpleadoPage() {
 
   // Empleado seleccionado dentro de la lista ligera (para el estado del header)
   const empleadoActual = empleados.find(
-    (e) => e.id_empleado === empleadoSeleccionado,
+    (e) => e.id_empleado === empleadoSeleccionado
   );
 
   // Función para obtener iniciales
@@ -334,7 +335,7 @@ export default function PanelEmpleadoPage() {
                     ) : (
                       <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-accent text-lg font-bold text-white">
                         {obtenerIniciales(
-                          datosEmpleado.informacion_general?.nombre_completo,
+                          datosEmpleado.informacion_general?.nombre_completo
                         )}
                       </div>
                     )}
@@ -361,7 +362,7 @@ export default function PanelEmpleadoPage() {
                       <div className="text-[12.5px] font-semibold text-slate-900">
                         EMP-
                         {String(
-                          datosEmpleado.informacion_general?.id_empleado || 0,
+                          datosEmpleado.informacion_general?.id_empleado || 0
                         ).padStart(3, "0")}
                       </div>
                     </div>
@@ -371,7 +372,7 @@ export default function PanelEmpleadoPage() {
                       </div>
                       <div className="text-[12.5px] font-semibold text-slate-900">
                         {formatearFecha(
-                          datosEmpleado.informacion_general?.fecha_ingreso,
+                          datosEmpleado.informacion_general?.fecha_ingreso
                         )}
                       </div>
                     </div>
@@ -390,7 +391,7 @@ export default function PanelEmpleadoPage() {
                       className="gap-1.5"
                       onClick={() =>
                         router.push(
-                          `/panel/empleados?id=${idEmpleadoActual}&modo=editar`,
+                          `/panel/empleados?id=${idEmpleadoActual}&modo=editar`
                         )
                       }
                     >
@@ -464,10 +465,7 @@ export default function PanelEmpleadoPage() {
                         Finiquitos
                       </TabsTrigger>
 
-                      <TabsTrigger
-                        value="actas"
-                        className={TAB_TRIGGER_CLASS}
-                      >
+                      <TabsTrigger value="actas" className={TAB_TRIGGER_CLASS}>
                         <FileWarning className="mr-1.5 h-3.5 w-3.5 flex-shrink-0" />
                         Actas
                       </TabsTrigger>
@@ -479,10 +477,44 @@ export default function PanelEmpleadoPage() {
                         <Gift className="mr-1.5 h-3.5 w-3.5 flex-shrink-0" />
                         Aguinaldos
                       </TabsTrigger>
+                      <TabsTrigger
+                        value="activos"
+                        className={TAB_TRIGGER_CLASS}
+                      >
+                        Activos asignados
+                      </TabsTrigger>
+                      <TabsTrigger
+                        value="uniformes"
+                        className={TAB_TRIGGER_CLASS}
+                      >
+                        Uniformes entregados
+                      </TabsTrigger>
                     </TabsList>
                   </div>
 
                   <div className="p-3 sm:p-4 lg:p-5">
+                    <TabsContent value="activos" className="mt-0">
+                      <ExpedienteResources
+                        key={`activos-${idEmpleadoActual}`}
+                        employee={{
+                          ...datosEmpleado?.informacion_general,
+                          id_empleado: idEmpleadoActual,
+                        }}
+                        companyId={empleadoActual?.id_empresa || idEmpresa}
+                        type="asset"
+                      />
+                    </TabsContent>
+                    <TabsContent value="uniformes" className="mt-0">
+                      <ExpedienteResources
+                        key={`uniformes-${idEmpleadoActual}`}
+                        employee={{
+                          ...datosEmpleado?.informacion_general,
+                          id_empleado: idEmpleadoActual,
+                        }}
+                        companyId={empleadoActual?.id_empresa || idEmpresa}
+                        type="uniform"
+                      />
+                    </TabsContent>
                     <TabsContent value="general" className="mt-0">
                       <PanelEmpleadoGeneral datosEmpleado={datosEmpleado} />
                     </TabsContent>

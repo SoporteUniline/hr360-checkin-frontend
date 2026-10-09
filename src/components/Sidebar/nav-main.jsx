@@ -51,6 +51,10 @@ import {
   ReceiptText,
   CalendarClock,
   TriangleAlert,
+  Package,
+  Shirt,
+  Wrench,
+  ArrowLeftRight,
 } from "lucide-react";
 import {
   ChevronDown,
@@ -69,7 +73,17 @@ const recruitmentEnabled =
   process.env.NEXT_PUBLIC_RECRUITMENT_ENABLED === "true";
 
 const dashboardItems = [
-  ...(recruitmentEnabled ? [{ title: "Evaluación de desempeño", url: "/empleado/panel/evaluaciones", rol: "Empleado", icon: ClipboardCheck, matchPrefix: "/empleado/panel/evaluaciones" },] : []),
+  ...(recruitmentEnabled
+    ? [
+        {
+          title: "Evaluación de desempeño",
+          url: "/empleado/panel/evaluaciones",
+          rol: "Empleado",
+          icon: ClipboardCheck,
+          matchPrefix: "/empleado/panel/evaluaciones",
+        },
+      ]
+    : []),
   {
     title: "Solicitudes de mi equipo",
     url: "/empleado/panel/solicitudes-equipo",
@@ -150,17 +164,120 @@ const dashboardItems = [
   },
 ];
 
-
-
 const menuGroups = [
-  ...(recruitmentEnabled ? [
-  { group: "EVALUACIÓN DE DESEMPEÑO", groupIcon: BarChart3, items: [
-    {title:"Resumen de evaluaciones",url:"/panel/evaluaciones",rol:"Recruiter",icon:LayoutDashboard},
-    {title:"Campañas",url:"/panel/evaluaciones/campanas",rol:"Recruiter",icon:ClipboardCheck,matchPrefix:"/panel/evaluaciones/campanas"},
-    {title:"Plantillas de evaluación",url:"/panel/evaluaciones/plantillas",rol:"Recruiter",icon:LayoutTemplate,matchPrefix:"/panel/evaluaciones/plantillas"},
-    {title:"Tablero de desempeño",url:"/panel/evaluaciones/tablero",rol:"Recruiter",icon:BarChart3},
-  ]}
-  ] : []),
+  {
+    group: "CONTROL DE ACTIVOS Y UNIFORMES",
+    groupIcon: Package,
+    items: [
+      {
+        title: "Resumen de recursos",
+        url: "/panel/control-activos",
+        rol: "Recruiter",
+        icon: LayoutDashboard,
+      },
+      {
+        title: "Activos",
+        url: "/panel/control-activos/activos",
+        matchPrefix: "/panel/control-activos/activos",
+        rol: "Recruiter",
+        icon: Monitor,
+      },
+      {
+        title: "Uniformes",
+        url: "/panel/control-activos/uniformes",
+        matchPrefix: "/panel/control-activos/uniformes",
+        rol: "Recruiter",
+        icon: Shirt,
+      },
+      {
+        title: "Entregas",
+        url: "/panel/control-activos/entregas",
+        matchPrefix: "/panel/control-activos/entregas",
+        rol: "Recruiter",
+        icon: Package,
+      },
+      {
+        title: "Devoluciones",
+        url: "/panel/control-activos/devoluciones",
+        rol: "Recruiter",
+        icon: ArrowLeftRight,
+      },
+      {
+        title: "Recursos por empleado",
+        url: "/panel/control-activos/empleados",
+        matchPrefix: "/panel/control-activos/empleados",
+        rol: "Recruiter",
+        icon: UsersIcon,
+      },
+      {
+        title: "Resguardos",
+        url: "/panel/control-activos/resguardos",
+        matchPrefix: "/panel/control-activos/resguardos",
+        rol: "Recruiter",
+        icon: FileText,
+      },
+      {
+        title: "Mantenimiento",
+        url: "/panel/control-activos/mantenimiento",
+        rol: "Recruiter",
+        icon: Wrench,
+      },
+      {
+        title: "Solicitudes e incidencias",
+        url: "/panel/control-activos/solicitudes",
+        rol: "Recruiter",
+        icon: TriangleAlert,
+      },
+      {
+        title: "Paquetes por puesto",
+        url: "/panel/control-activos/paquetes",
+        rol: "Recruiter",
+        icon: BriefcaseBusiness,
+      },
+      {
+        title: "Movimientos",
+        url: "/panel/control-activos/movimientos",
+        rol: "Recruiter",
+        icon: BookOpen,
+      },
+    ],
+  },
+  ...(recruitmentEnabled
+    ? [
+        {
+          group: "EVALUACIÓN DE DESEMPEÑO",
+          groupIcon: BarChart3,
+          items: [
+            {
+              title: "Resumen de evaluaciones",
+              url: "/panel/evaluaciones",
+              rol: "Recruiter",
+              icon: LayoutDashboard,
+            },
+            {
+              title: "Campañas",
+              url: "/panel/evaluaciones/campanas",
+              rol: "Recruiter",
+              icon: ClipboardCheck,
+              matchPrefix: "/panel/evaluaciones/campanas",
+            },
+            {
+              title: "Plantillas de evaluación",
+              url: "/panel/evaluaciones/plantillas",
+              rol: "Recruiter",
+              icon: LayoutTemplate,
+              matchPrefix: "/panel/evaluaciones/plantillas",
+            },
+            {
+              title: "Tablero de desempeño",
+              url: "/panel/evaluaciones/tablero",
+              rol: "Recruiter",
+              icon: BarChart3,
+            },
+          ],
+        },
+      ]
+    : []),
   ...(recruitmentEnabled
     ? [
         {
@@ -475,7 +592,7 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
   const moduloActivo = items.some((item) =>
     item.children
       ? item.children.some((child) => isRecruitmentNavActive(path, child))
-      : isRecruitmentNavActive(path, item),
+      : isRecruitmentNavActive(path, item)
   );
 
   const enlace = (it) => (
@@ -547,7 +664,7 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
               </div>
             ) : (
               enlace(item)
-            ),
+            )
           )}
         </div>
       </PopoverContent>
@@ -590,13 +707,13 @@ export function NavMain() {
       persistirGrupos({
         ...prev,
         [nombre]: prev[nombre] === false ? true : false,
-      }),
+      })
     );
   };
 
   // ¿Hay al menos un módulo contraído? (para alternar expandir/contraer todo)
   const hayContraidos = menuGroups.some(
-    (g) => gruposAbiertos[g.group] === false,
+    (g) => gruposAbiertos[g.group] === false
   );
 
   const toggleTodos = () => {
@@ -642,7 +759,7 @@ export function NavMain() {
             .map((g) => ({
               ...g,
               items: g.items.filter(
-                (item) => !item.rol || item.rol === effectiveRole,
+                (item) => !item.rol || item.rol === effectiveRole
               ),
             }))
             .filter((g) => g.items.length > 0)
@@ -744,9 +861,9 @@ export function NavMain() {
                 : false;
               const itemsVisibles = filtrarItems(
                 group.items.filter(
-                  (item) => !item.rol || item.rol === effectiveRole,
+                  (item) => !item.rol || item.rol === effectiveRole
                 ),
-                grupoCoincide,
+                grupoCoincide
               );
               if (itemsVisibles.length === 0) return null;
 
@@ -781,7 +898,7 @@ export function NavMain() {
                             onClick={() => {
                               if (item.children) {
                                 setOpen(
-                                  open === item.title ? null : item.title,
+                                  open === item.title ? null : item.title
                                 );
                               } else {
                                 handleClick(item.url);
@@ -814,7 +931,7 @@ export function NavMain() {
                                       !buscando ||
                                       grupoCoincide ||
                                       normalizar(item.title).includes(q) ||
-                                      normalizar(child.title).includes(q),
+                                      normalizar(child.title).includes(q)
                                   )
                                   .map((child) => (
                                     <SidebarMenuButton
