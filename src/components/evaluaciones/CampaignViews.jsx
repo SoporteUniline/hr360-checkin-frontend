@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Plus, Copy, Send, Users, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { useEvaluations } from "./EvaluationContext";
 import {
   Heading,
@@ -11,18 +11,14 @@ import {
   Textarea,
   Toggle,
   Badge,
-  Status,
   Button,
   ActionLink,
   DataTable,
   SearchInput,
-  Segments,
   Empty,
   Notice,
   Errors,
-  Progress,
   Confirm,
-  Modal,
   Person,
 } from "./ui";
 import {
@@ -30,155 +26,10 @@ import {
   PERSPECTIVES,
   copy,
   uid,
-  makeAssignments,
-  validateCampaign,
   normalize,
-  dateText,
-  candidateEvaluators,
-  personResult,
-  scoreText,
   civilToday,
-  campaignStatus,
 } from "@/lib/evaluaciones/model.mjs";
 import { useUnsavedGuard } from "./ResponseView";
-export function CampaignTable({ campaigns }) {
-  const { state } = useEvaluations();
-  return (
-    <DataTable
-      rows={campaigns}
-      columns={[
-        {
-          key: "name",
-          label: "Campaña",
-          render: (c) => (
-            <>
-              <strong>{c.name}</strong>
-              <small>
-                {dateText(c.periodStart)} — {dateText(c.periodEnd)}
-              </small>
-            </>
-          ),
-        },
-        {
-          key: "model",
-          label: "Modelo",
-          render: (c) => (
-            <Badge tone="blue">
-              {PRESETS[c.model]?.label || "Personalizada"}
-            </Badge>
-          ),
-        },
-        {
-          key: "subjectIds",
-          label: "Colaboradores",
-          render: (c) => c.subjectIds.length,
-        },
-        {
-          key: "progress",
-          label: "Avance",
-          render: (c) => {
-            const list = state.assignments.filter((a) => a.campaignId === c.id),
-              done = list.filter((a) => a.status === "submitted").length;
-            return (
-              <Progress
-                value={list.length ? (done / list.length) * 100 : 0}
-                label={`${done}/${list.length} respuestas`}
-              />
-            );
-          },
-        },
-        {
-          key: "dueOn",
-          label: "Fecha límite",
-          render: (c) => dateText(c.dueOn),
-        },
-        {
-          key: "status",
-          label: "Estado",
-          render: (c) => <Status value={campaignStatus(c)} />,
-        },
-        {
-          key: "action",
-          label: "",
-          render: (c) => (
-            <ActionLink to={`campanas/${c.id}`}>Ver campaña</ActionLink>
-          ),
-        },
-      ]}
-    />
-  );
-}
-export function Campaigns() {
-  const { state, actor } = useEvaluations(),
-    [search, setSearch] = useState(""),
-    [tab, setTab] = useState("all"),
-    [period, setPeriod] = useState("all");
-  if (!["hr", "direction"].includes(actor.role))
-    return <Empty title="Vista de RH y dirección" />;
-  const campaigns = state.campaigns.filter(
-    (c) =>
-      normalize(c.name).includes(normalize(search)) &&
-      (tab === "all" || campaignStatus(c) === tab) &&
-      (period === "all" || c.periodStart.slice(0, 7) === period),
-  );
-  return (
-    <>
-      <Heading
-        title="Campañas de evaluación"
-        description="Organiza cada periodo y consulta su avance en un solo lugar."
-        actions={
-          actor.role === "hr" && (
-            <ActionLink to="campanas/nueva" primary>
-              <Plus size={15} /> Nueva evaluación
-            </ActionLink>
-          )
-        }
-      />
-      <Panel>
-        <Segments
-          value={tab}
-          onChange={setTab}
-          items={[
-            ["all", "Todas"],
-            ["active", "Activas"],
-            ["scheduled", "Programadas"],
-            ["draft", "Borradores"],
-            ["overdue", "Vencidas"],
-            ["closed", "Cerradas"],
-          ].map(([value, label]) => ({
-            value,
-            label,
-            count: state.campaigns.filter(
-              (c) => value === "all" || campaignStatus(c) === value,
-            ).length,
-          }))}
-        />
-        <div className="ev-filters">
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder="Buscar en todas las campañas…"
-          />
-          <Select
-            label="Periodo"
-            value={period}
-            onChange={(e) => setPeriod(e.target.value)}
-          >
-            <option value="all">Todos los periodos</option>
-            {[...new Set(state.campaigns.map((c) => c.periodStart.slice(0, 7)))]
-              .filter(Boolean)
-              .sort()
-              .reverse()
-              .map((p) => (
-                <option key={p}>{p}</option>
-              ))}
-          </Select>
-        </div>
-        <CampaignTable campaigns={campaigns} />
-      </Panel>
-    </>
-  );
-}
 function blankCampaign(state) {
   const today = civilToday();
   return {
@@ -205,13 +56,14 @@ function blankCampaign(state) {
   };
 }
 export function CampaignWizard({ id }) {
-  const { state, actor, run, navigate } = useEvaluations(),
+  const { state, actor, run, navigate, api, perform, busy, capabilities } =
+      useEvaluations(),
     original = state.campaigns.find((c) => c.id === id);
   const [campaign, setCampaign] = useState(() =>
-      copy(original || blankCampaign(state)),
+      copy(original || blankCampaign(state))
     ),
     [assignments, setAssignments] = useState(() =>
-      copy(state.assignments.filter((a) => a.campaignId === id)),
+      copy(state.assignments.filter((a) => a.campaignId === id))
     ),
     [step, setStep] = useState(0),
     [errors, setErrors] = useState([]),
@@ -247,26 +99,23 @@ export function CampaignWizard({ id }) {
     const next = { ...campaign, ...patch };
     setCampaign(next);
     setDirty(true);
-    if (reassign)
-      setAssignments(makeAssignments(next, state.people, state.templates));
+    if (reassign) setAssignments([]);
   };
   const updateGroup = (key, patch) =>
     change(
       {
         groups: campaign.groups.map((g) =>
-          g.key === key ? { ...g, ...patch } : g,
+          g.key === key ? { ...g, ...patch } : g
         ),
       },
-      Object.hasOwn(patch, "templateId"),
+      Object.hasOwn(patch, "templateId")
     );
   const visible = state.people.filter(
     (p) =>
       p.active &&
       (area === "all" || p.area === area) &&
       (position === "all" || p.position === position) &&
-      normalize(`${p.name} ${p.position} ${p.area}`).includes(
-        normalize(search),
-      ),
+      normalize(`${p.name} ${p.position} ${p.area}`).includes(normalize(search))
   );
   const togglePerson = (id) =>
     change(
@@ -275,38 +124,102 @@ export function CampaignWizard({ id }) {
           ? campaign.subjectIds.filter((x) => x !== id)
           : [...campaign.subjectIds, id],
       },
-      true,
+      true
     );
-  const save = (launch = false) => {
-    const issues = launch
-      ? validateCampaign(campaign, assignments, state.people, state.templates)
-      : campaign.name.trim()
-        ? []
-        : ["Escribe el nombre de la campaña."];
-    setErrors(issues);
-    if (issues.length) {
-      setConfirm(false);
-      return;
+  const persist = async () => {
+    const saved = await run({ type: "campaign.save", campaign });
+    if (saved) {
+      setCampaign(saved);
+      setDirty(false);
     }
-    if (!run({ type: "campaign.save", campaign, assignments })) return;
-    if (
-      launch &&
-      !run(
-        { type: "campaign.launch", campaignId: campaign.id },
-        "Campaña iniciada en la demostración",
-      )
-    )
-      return;
-    setDirty(false);
-    navigate(`campanas/${campaign.id}`);
+    return saved;
   };
-  const total = campaign.groups.reduce((s, g) => s + Number(g.weight || 0), 0),
-    issues = validateCampaign(
-      campaign,
-      assignments,
-      state.people,
-      state.templates,
+  const preview = async () => {
+    const saved = await persist();
+    if (!saved) return;
+    const result = await perform(() =>
+      api.mutate("POST", `/campaigns/${saved.id}/preview-assignments`, {})
     );
+    if (result) {
+      setAssignments(
+        (Array.isArray(result) ? result : result.assignments || []).map(
+          (a, index) => ({
+            ...a,
+            id: String(a.id ?? `preview-${index}`),
+            subjectId: String(a.subjectId),
+            evaluatorId:
+              a.evaluatorEmployeeId != null
+                ? String(a.evaluatorEmployeeId)
+                : `user:${a.evaluatorUserId}`,
+          })
+        )
+      );
+      setDirty(true);
+    }
+  };
+  const save = async (launch = false) => {
+    setErrors([]);
+    const saved = await persist();
+    if (!saved) return;
+    let assignmentsStored = false;
+    const done = await perform(
+      async () => {
+        await api.mutate(
+          "PUT",
+          `/campaigns/${saved.id}/assignments`,
+          {
+            assignments: assignments.map((a) => ({
+              subjectId: Number(a.subjectId),
+              perspective: a.perspective,
+              evaluatorEmployeeId:
+                a.evaluatorEmployeeId == null
+                  ? null
+                  : Number(a.evaluatorEmployeeId),
+              evaluatorUserId:
+                a.evaluatorUserId == null ? null : Number(a.evaluatorUserId),
+            })),
+          },
+          { version: saved.revision }
+        );
+        assignmentsStored = true;
+        if (launch) {
+          const validation = await api.mutate(
+            "POST",
+            `/campaigns/${saved.id}/validate`,
+            {}
+          );
+          if (validation?.valid === false || validation?.errors?.length)
+            throw new Error(
+              (validation.errors || ["Revisa la configuración de la campaña."])
+                .map((e) => (typeof e === "string" ? e : e.message))
+                .join(" ")
+            );
+          await api.mutate(
+            "POST",
+            `/campaigns/${saved.id}/launch`,
+            {},
+            { idempotent: true }
+          );
+        }
+        return true;
+      },
+      launch ? "Campaña iniciada" : "Borrador guardado"
+    );
+    if (done) {
+      setDirty(false);
+      navigate(`campanas/${saved.id}`);
+    } else if (assignmentsStored) {
+      // The assignment save may have succeeded before validation/launch failed.
+      // Keep edited fields and assignments; only refresh the concurrency snapshot.
+      await run({ type: "campaign.refresh", id: saved.id });
+      setDirty(true);
+    }
+  };
+  const total = campaign.groups.reduce(
+    (sum, g) => sum + Number(g.weight || 0),
+    0
+  );
+  const issues = [];
   return (
     <>
       <Heading
@@ -314,7 +227,7 @@ export function CampaignWizard({ id }) {
         description="Cuatro pasos para preparar una evaluación clara y bien organizada."
         back="campanas"
         actions={
-          <Button variant="outline" onClick={() => save(false)}>
+          <Button variant="outline" disabled={busy} onClick={() => save(false)}>
             Guardar borrador
           </Button>
         }
@@ -346,7 +259,7 @@ export function CampaignWizard({ id }) {
                 <Input
                   label="Nombre de campaña"
                   value={campaign.name}
-                  maxLength={160}
+                  maxLength={capabilities.limits?.templateName || 160}
                   placeholder="Ej. Desempeño · Cuarto trimestre 2026"
                   onChange={(e) => change({ name: e.target.value })}
                 />
@@ -371,7 +284,7 @@ export function CampaignWizard({ id }) {
                           templateId: e.target.value,
                         })),
                       },
-                      true,
+                      true
                     )
                   }
                 >
@@ -430,10 +343,10 @@ export function CampaignWizard({ id }) {
                                 key,
                                 weight,
                                 templateId: campaign.templateId,
-                              }),
+                              })
                             ),
                           },
-                          true,
+                          true
                         )
                       }
                     >
@@ -467,7 +380,7 @@ export function CampaignWizard({ id }) {
                                   ]
                                 : campaign.groups.filter((g) => g.key !== key),
                             },
-                            true,
+                            true
                           )
                         }
                       />
@@ -514,7 +427,7 @@ export function CampaignWizard({ id }) {
             </Panel>
             <Panel
               title="Selecciona a las personas evaluadas"
-              description={`${campaign.subjectIds.length} seleccionadas. Busca en todas las personas de la demostración.`}
+              description={`${campaign.subjectIds.length} seleccionadas. Busca en todas las personas de la empresa.`}
             >
               <div className="ev-filters">
                 <SearchInput
@@ -541,7 +454,7 @@ export function CampaignWizard({ id }) {
                   {[...new Set(state.people.map((p) => p.position))].map(
                     (a) => (
                       <option key={a}>{a}</option>
-                    ),
+                    )
                   )}
                 </Select>
                 <Button
@@ -557,7 +470,7 @@ export function CampaignWizard({ id }) {
                           ]),
                         ],
                       },
-                      true,
+                      true
                     )
                   }
                 >
@@ -604,12 +517,17 @@ export function CampaignWizard({ id }) {
         {step === 2 && (
           <>
             <Notice>
-              Las relaciones se proponen desde el organigrama ficticio. Puedes
-              quitar o agregar evaluadores compatibles. Al cambiar participantes
-              o plantillas se vuelven a generar estas asignaciones.
+              Solicita la propuesta del organigrama real y revisa las
+              asignaciones. Si cambias participantes o perspectivas, vuelve a
+              generar la propuesta.
             </Notice>
             <Panel
               title="Matriz de asignaciones"
+              actions={
+                <Button disabled={busy} onClick={preview}>
+                  Proponer asignaciones
+                </Button>
+              }
               description={`${campaign.subjectIds.length} evaluados · ${assignments.length} evaluaciones por responder`}
             >
               <div className="ev-filters">
@@ -631,7 +549,7 @@ export function CampaignWizard({ id }) {
               <DataTable
                 rows={assignments.filter(
                   (a) =>
-                    subjectFilter === "all" || a.subjectId === subjectFilter,
+                    subjectFilter === "all" || a.subjectId === subjectFilter
                 )}
                 columns={[
                   {
@@ -644,7 +562,9 @@ export function CampaignWizard({ id }) {
                     key: "evaluatorId",
                     label: "Evaluador",
                     render: (a) =>
-                      state.people.find((p) => p.id === a.evaluatorId)?.name,
+                      a.evaluatorName ||
+                      state.people.find((p) => p.id === a.evaluatorId)?.name ||
+                      a.evaluatorId,
                   },
                   {
                     key: "perspective",
@@ -661,7 +581,7 @@ export function CampaignWizard({ id }) {
                         aria-label={`Quitar asignación ${a.id}`}
                         onClick={() => {
                           setAssignments(
-                            assignments.filter((x) => x.id !== a.id),
+                            assignments.filter((x) => x.id !== a.id)
                           );
                           setDirty(true);
                         }}
@@ -672,73 +592,15 @@ export function CampaignWizard({ id }) {
                   },
                 ]}
               />
-              <div className="ev-pad ev-stack">
-                {campaign.subjectIds
-                  .filter(
-                    (id) => subjectFilter === "all" || id === subjectFilter,
-                  )
-                  .map((id) => {
-                    const person = state.people.find((p) => p.id === id);
-                    return (
-                      <div key={id}>
-                        <strong>{person.name}</strong>
-                        {campaign.groups.map((g) => {
-                          const missing = candidateEvaluators(
-                            state.people,
-                            person,
-                            g.key,
-                          ).filter(
-                            (p) =>
-                              !assignments.some(
-                                (a) =>
-                                  a.subjectId === id &&
-                                  a.evaluatorId === p.id &&
-                                  a.perspective === g.key,
-                              ),
-                          );
-                          return (
-                            <div className="ev-category-row" key={g.key}>
-                              <span>{PERSPECTIVES[g.key]}</span>
-                              <Select
-                                label={`Agregar ${g.key} para ${person.name}`}
-                                value=""
-                                disabled={!missing.length}
-                                style={{ maxWidth: 280 }}
-                                onChange={(e) => {
-                                  if (!e.target.value) return;
-                                  const fresh = makeAssignments(
-                                    {
-                                      ...campaign,
-                                      subjectIds: [id],
-                                      groups: [g],
-                                    },
-                                    state.people,
-                                    state.templates,
-                                  ).find(
-                                    (a) => a.evaluatorId === e.target.value,
-                                  );
-                                  setAssignments([...assignments, fresh]);
-                                  setDirty(true);
-                                }}
-                              >
-                                <option value="">
-                                  {missing.length
-                                    ? "Agregar evaluador…"
-                                    : "Todos los elegibles asignados"}
-                                </option>
-                                {missing.map((p) => (
-                                  <option key={p.id} value={p.id}>
-                                    {p.name}
-                                  </option>
-                                ))}
-                              </Select>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  })}
-              </div>
+              <AssignmentAdder
+                campaign={campaign}
+                people={state.people}
+                assignments={assignments}
+                onAdd={(a) => {
+                  setAssignments((v) => [...v, a]);
+                  setDirty(true);
+                }}
+              />
             </Panel>
             <Panel title="Confidencialidad de la campaña">
               <div className="ev-pad">
@@ -849,14 +711,13 @@ export function CampaignWizard({ id }) {
                     >
                       <option value="none">No repetir</option>
                       <option value="quarterly">Cada trimestre</option>
-                      <option value="semiannual">Cada semestre</option>
-                      <option value="annual">Cada año</option>
+                      <option value="monthly">Cada mes</option>
+                      <option value="yearly">Cada año</option>
                     </Select>
                   </Field>
                   <Notice>
-                    En esta demostración se guarda la configuración. Los correos
-                    y la creación recurrente de campañas se conectarán con el
-                    backend.
+                    Los recordatorios y las campañas recurrentes se programan en
+                    el servidor.
                   </Notice>
                 </div>
               </Panel>
@@ -910,8 +771,8 @@ export function CampaignWizard({ id }) {
                 <Errors errors={issues} />
               ) : (
                 <Notice tone="green">
-                  Todo listo: participantes, pesos, plantillas y fechas
-                  completos.
+                  Al guardar se validarán participantes, pesos, plantillas,
+                  fechas y asignaciones en el servidor.
                 </Notice>
               )}
             </div>
@@ -934,7 +795,7 @@ export function CampaignWizard({ id }) {
             </Button>
           ) : (
             <Button
-              disabled={!!issues.length}
+              disabled={busy || !assignments.length}
               className="bg-blue-600 hover:bg-blue-700"
               onClick={() => setConfirm(true)}
             >
@@ -946,370 +807,116 @@ export function CampaignWizard({ id }) {
       <Confirm
         open={confirm}
         onOpenChange={setConfirm}
-        title="Iniciar campaña de demostración"
-        description="Se fijarán las plantillas, los pesos y las asignaciones. Las fechas futuras quedarán programadas. No se enviarán correos reales."
+        title="Iniciar campaña"
+        description="Se fijarán las plantillas, los pesos y las asignaciones. Las fechas futuras quedarán programadas. El servidor programará los avisos correspondientes."
         action="Iniciar campaña"
         onConfirm={() => save(true)}
       />
     </>
   );
 }
-export function CampaignDetail({ id }) {
-  const { state, actor, run, navigate, notify } = useEvaluations(),
-    c = state.campaigns.find((c) => c.id === id),
-    [tab, setTab] = useState("participants"),
-    [search, setSearch] = useState(""),
-    [status, setStatus] = useState("all"),
-    [close, setClose] = useState(false),
-    [extend, setExtend] = useState(false),
-    [due, setDue] = useState(c?.dueOn || "");
-  if (!c || !["hr", "direction"].includes(actor.role))
-    return (
-      <Empty
-        title="Campaña no disponible"
-        action={<ActionLink to="campanas">Ver campañas</ActionLink>}
-      />
+
+function AssignmentAdder({ campaign, people, assignments, onAdd }) {
+  const [subjectId, setSubjectId] = useState(""),
+    [perspective, setPerspective] = useState(""),
+    [employeeId, setEmployeeId] = useState(""),
+    [userId, setUserId] = useState("");
+  const canAdd =
+    subjectId &&
+    perspective &&
+    !!employeeId !== !!userId &&
+    !assignments.some(
+      (a) =>
+        String(a.subjectId) === subjectId &&
+        a.perspective === perspective &&
+        (employeeId
+          ? String(a.evaluatorEmployeeId) === employeeId
+          : String(a.evaluatorUserId) === userId)
     );
-  const list = state.assignments.filter((a) => a.campaignId === id),
-    done = list.filter((a) => a.status === "submitted").length;
-  const duplicate = () => {
-    const item = {
-      ...copy(c),
-      id: uid("camp"),
-      name: `${c.name} · Copia`,
-      status: "draft",
-    };
-    delete item.launchedAt;
-    delete item.closedAt;
-    item.groups.forEach((g) => delete g.templateSnapshot);
-    if (
-      run(
-        {
-          type: "campaign.save",
-          campaign: item,
-          assignments: makeAssignments(item, state.people, state.templates),
-        },
-        "Campaña duplicada como borrador",
-      )
-    )
-      navigate(`campanas/${item.id}/editar`);
-  };
   return (
-    <>
-      <Heading
-        title={c.name}
-        description={`${dateText(c.periodStart)} — ${dateText(c.periodEnd)} · Cierre de respuestas: ${dateText(c.dueOn)}`}
-        back="campanas"
-        actions={
-          <>
-            <Status value={campaignStatus(c)} />
-            {actor.role === "hr" && (
-              <>
-                <Button variant="outline" onClick={duplicate}>
-                  <Copy size={14} /> Duplicar
-                </Button>
-                {c.status === "draft" ? (
-                  <ActionLink to={`campanas/${id}/editar`} primary>
-                    Continuar configuración
-                  </ActionLink>
-                ) : (
-                  ["active", "scheduled"].includes(c.status) && (
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        if (run({ type: "campaign.remind", campaignId: id }))
-                          notify(
-                            "Recordatorio simulado. No se enviaron correos.",
-                          );
-                      }}
-                    >
-                      <Send size={14} /> Recordar pendientes
-                    </Button>
-                  )
-                )}
-              </>
-            )}
-          </>
-        }
-      />
-      <div className="ev-metrics">
-        <div className="ev-metric">
-          <span>Colaboradores</span>
-          <strong>{c.subjectIds.length}</strong>
-          <small>{PRESETS[c.model]?.label}</small>
-        </div>
-        <div className="ev-metric">
-          <span>Respuestas recibidas</span>
-          <strong>
-            {done} <small>/ {list.length}</small>
-          </strong>
-          <Progress value={list.length ? (done / list.length) * 100 : 0} />
-        </div>
-        <div className="ev-metric">
-          <span>Por completar</span>
-          <strong>{list.length - done}</strong>
-          <small>Incluye borradores</small>
-        </div>
-        <div className="ev-metric">
-          <span>Resultados publicados</span>
-          <strong>
-            {
-              state.publications.filter(
-                (p) => p.campaignId === id && p.publishedAt,
-              ).length
-            }
-          </strong>
-          <small>Visibles según permisos</small>
-        </div>
-      </div>
-      <Panel>
-        <Segments
-          value={tab}
-          onChange={setTab}
-          items={[
-            { value: "participants", label: "Colaboradores" },
-            { value: "assignments", label: "Asignaciones" },
-            { value: "settings", label: "Configuración" },
-          ]}
-        />
-        {tab !== "settings" && (
-          <div className="ev-filters">
-            <SearchInput
-              value={search}
-              onChange={setSearch}
-              placeholder="Buscar colaborador o evaluador…"
-            />
-            {tab === "assignments" && (
-              <Select
-                label="Estado de respuesta"
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-              >
-                <option value="all">Todos los estados</option>
-                <option value="pending">Pendientes</option>
-                <option value="draft">En proceso</option>
-                <option value="submitted">Completadas</option>
-              </Select>
-            )}
-          </div>
-        )}
-        {tab === "participants" && (
-          <DataTable
-            rows={state.people.filter(
-              (p) =>
-                c.subjectIds.includes(p.id) &&
-                normalize(`${p.name} ${p.area}`).includes(normalize(search)),
-            )}
-            columns={[
-              {
-                key: "name",
-                label: "Colaborador",
-                render: (p) => <Person person={p} />,
-              },
-              {
-                key: "progress",
-                label: "Avance",
-                render: (p) => {
-                  const r = personResult(state, c, p.id);
-                  return (
-                    <Progress
-                      value={r.total ? (r.done / r.total) * 100 : 0}
-                      label={`${r.done}/${r.total} respuestas`}
-                    />
-                  );
-                },
-              },
-              {
-                key: "result",
-                label: "Resultado",
-                render: (p) => scoreText(personResult(state, c, p.id).score),
-              },
-              {
-                key: "visibility",
-                label: "Publicación",
-                render: (p) => (
-                  <Badge
-                    tone={
-                      personResult(state, c, p.id).publication?.publishedAt
-                        ? "green"
-                        : "gray"
-                    }
-                  >
-                    {personResult(state, c, p.id).publication?.publishedAt
-                      ? "Publicado"
-                      : "En revisión"}
-                  </Badge>
-                ),
-              },
-              {
-                key: "action",
-                label: "",
-                render: (p) => (
-                  <ActionLink to={`resultados/${id}/${p.id}`}>
-                    Ver resultado
-                  </ActionLink>
-                ),
-              },
-            ]}
-          />
-        )}{" "}
-        {tab === "assignments" && (
-          <DataTable
-            rows={list.filter(
-              (a) =>
-                (status === "all" || a.status === status) &&
-                normalize(
-                  `${state.people.find((p) => p.id === a.subjectId)?.name} ${state.people.find((p) => p.id === a.evaluatorId)?.name}`,
-                ).includes(normalize(search)),
-            )}
-            columns={[
-              {
-                key: "subjectId",
-                label: "Evaluado",
-                render: (a) =>
-                  state.people.find((p) => p.id === a.subjectId)?.name,
-              },
-              {
-                key: "evaluatorId",
-                label: "Evaluador asignado",
-                render: (a) =>
-                  state.people.find((p) => p.id === a.evaluatorId)?.name,
-              },
-              {
-                key: "perspective",
-                label: "Perspectiva",
-                render: (a) => PERSPECTIVES[a.perspective],
-              },
-              {
-                key: "status",
-                label: "Respuesta",
-                render: (a) => (
-                  <Status
-                    value={a.status === "draft" ? "in_progress" : a.status}
-                  />
-                ),
-              },
-            ]}
-          />
-        )}{" "}
-        {tab === "settings" && (
-          <div className="ev-pad ev-stack">
-            <div className="ev-grid">
-              <div>
-                <h3>Perspectivas y pesos</h3>
-                {c.groups.map((g) => (
-                  <div key={g.key} className="ev-category-row">
-                    <span>
-                      {PERSPECTIVES[g.key]}
-                      <small className="block">
-                        {
-                          (
-                            g.templateSnapshot ||
-                            state.templates.find((t) => t.id === g.templateId)
-                          )?.name
-                        }
-                      </small>
-                    </span>
-                    <Badge>{g.weight}%</Badge>
-                  </div>
-                ))}
-              </div>
-              <div className="ev-stack">
-                <h3>Reglas de la campaña</h3>
-                <p>
-                  Apertura: {dateText(c.opensOn)}
-                  <br />
-                  Zona: {c.timezone || "America/Mexico_City"}
-                  <br />
-                  Recordatorios:{" "}
-                  {c.reminders
-                    .map((n) => (n === 0 ? "al cierre" : `${n} días antes`))
-                    .join(", ") || "Sin recordatorios"}
-                  <br />
-                  Recurrencia:{" "}
-                  {
-                    {
-                      none: "No repetir",
-                      quarterly: "Trimestral",
-                      semiannual: "Semestral",
-                      annual: "Anual",
-                    }[c.recurrence]
-                  }
-                </p>
-                <p>
-                  Aprobación previa: {c.settings.requireApproval ? "Sí" : "No"}
-                  <br />
-                  Mínimo agrupado: {c.settings.minimumResponses} respuestas
-                  <br />
-                  Pares agrupados: {c.settings.anonymousPeers ? "Sí" : "No"}
-                  <br />
-                  Ascendentes agrupados:{" "}
-                  {c.settings.anonymousAscending ? "Sí" : "No"}
-                </p>
-              </div>
-            </div>
-            <Notice>
-              Las reglas se fijaron para esta campaña. Cambiar los valores
-              predeterminados no modifica evaluaciones anteriores.
-            </Notice>
-            {actor.role === "hr" &&
-              ["active", "scheduled"].includes(c.status) && (
-                <div className="ev-actions">
-                  <Button variant="outline" onClick={() => setExtend(true)}>
-                    Ampliar fecha límite
-                  </Button>
-                  <Button variant="outline" onClick={() => setClose(true)}>
-                    Cerrar campaña
-                  </Button>
-                </div>
-              )}
-          </div>
-        )}
-      </Panel>
-      <Confirm
-        open={close}
-        onOpenChange={setClose}
-        title="Cerrar campaña"
-        description={`Quedan ${list.length - done} respuestas por completar. Al cerrar ya no se podrán enviar; los resultados incompletos permanecerán sin promedio final.`}
-        action="Cerrar campaña"
-        onConfirm={() => {
-          if (
-            run({ type: "campaign.close", campaignId: id }, "Campaña cerrada")
-          )
-            setClose(false);
-        }}
-      />
-      <Modal
-        open={extend}
-        onOpenChange={setExtend}
-        title="Ampliar fecha límite"
-        description="Conserva las respuestas y permite más tiempo para completar la campaña."
-        footer={
-          <Button
-            onClick={() => {
-              if (
-                run(
-                  { type: "campaign.extend", campaignId: id, dueOn: due },
-                  "Fecha actualizada",
-                )
-              )
-                setExtend(false);
+    <div className="ev-pad ev-stack">
+      <h3>Agregar evaluador</h3>
+      <div className="ev-grid">
+        <Field label="Colaborador evaluado">
+          <Select
+            value={subjectId}
+            onChange={(e) => setSubjectId(e.target.value)}
+          >
+            <option value="">Selecciona</option>
+            {people
+              .filter((p) => campaign.subjectIds.includes(p.id))
+              .map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+          </Select>
+        </Field>
+        <Field label="Perspectiva">
+          <Select
+            value={perspective}
+            onChange={(e) => setPerspective(e.target.value)}
+          >
+            <option value="">Selecciona</option>
+            {campaign.groups.map((g) => (
+              <option key={g.key} value={g.key}>
+                {PERSPECTIVES[g.key]}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Evaluador empleado">
+          <Select
+            value={employeeId}
+            onChange={(e) => {
+              setEmployeeId(e.target.value);
+              setUserId("");
             }}
           >
-            Guardar fecha
-          </Button>
-        }
-      >
-        <Field label="Nueva fecha límite">
-          <Input
-            type="date"
-            label="Nueva fecha límite"
-            min={c.dueOn}
-            value={due}
-            onChange={(e) => setDue(e.target.value)}
-          />
+            <option value="">Selecciona</option>
+            {people.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </Select>
         </Field>
-      </Modal>
-    </>
+        {perspective === "hr" && (
+          <Field label="O usuario de RH (ID)">
+            <Input
+              type="number"
+              min={1}
+              value={userId}
+              onChange={(e) => {
+                setUserId(e.target.value);
+                setEmployeeId("");
+              }}
+            />
+          </Field>
+        )}
+      </div>
+      <Button
+        variant="outline"
+        disabled={!canAdd}
+        onClick={() => {
+          onAdd({
+            id: uid("assignment"),
+            subjectId,
+            perspective,
+            evaluatorEmployeeId: employeeId ? Number(employeeId) : null,
+            evaluatorUserId: userId ? Number(userId) : null,
+            evaluatorId: employeeId || `user:${userId}`,
+            evaluatorName:
+              people.find((p) => p.id === employeeId)?.name ||
+              `Usuario RH ${userId}`,
+          });
+          setEmployeeId("");
+          setUserId("");
+        }}
+      >
+        Agregar asignación
+      </Button>
+      <small>El servidor validará la relación y el acceso del evaluador.</small>
+    </div>
   );
 }

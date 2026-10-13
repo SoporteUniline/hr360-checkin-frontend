@@ -1,55 +1,41 @@
-# Evaluación de desempeño · Entrega frontend
+# Evaluación de desempeño · Integración con API
 
-Módulo autónomo de ADAMIA con demostración funcional persistente. Sin integración backend, correos reales, archivos privados ni firma verificable todavía.
+Las rutas de RH (`/panel/evaluaciones`) y del empleado (`/empleado/panel/evaluaciones`) consumen la API real mediante el cliente Axios y el JWT existentes. No leen ni migran el estado ficticio de `localStorage`.
 
-## Documentos para Cristian Cano
+## Contrato vigente
 
-- [Contrato de backend, reglas, API y decisiones pendientes](./CRISTIAN_CANO_BACKEND.md).
-- [Esquema MySQL propuesto, sin ejecutar](./schema-propuesto.sql).
-- [Verificación realizada](./VERIFICACION.md).
+[Guía de conexión entregada por backend](./CRISTIAN_CANO_FRONTEND_CONEXION.md).
 
-## Pantallas
+Base: `NEXT_PUBLIC_RUTA_BACKEND` + `/api/checador/evaluaciones-desempeno`. Si la variable ya termina en `/api`, el cliente evita duplicarlo. La empresa se envía en todas las solicitudes. Para cuentas con varias empresas se ofrece un selector que reinicia el estado del módulo al cambiar.
 
-Base RH: `/panel/evaluaciones`. Base empleado: `/empleado/panel/evaluaciones`.
+El servidor determina el perfil, scopes, límites y configuración. Las rutas también comprueban los scopes; no existe selector de identidad ficticia.
 
-| Ruta relativa                           | Vista                                                                                       |
-| --------------------------------------- | ------------------------------------------------------------------------------------------- |
-| `/`                                     | Resumen RH/dirección; equipo para jefe; pendientes para colaborador                         |
-| `/plantillas`                           | Disponibles / archivadas, búsqueda, duplicar y restaurar                                    |
-| `/plantillas/nueva` y `/plantillas/:id` | Contenido, orden, pesos, escala, semáforo y vista previa                                    |
-| `/campanas`                             | Activas, programadas, borradores, vencidas y cerradas                                       |
-| `/campanas/nueva`                       | Asistente de cuatro pasos                                                                   |
-| `/campanas/:id`                         | Avance por persona, matriz, configuración, recordatorios simulados, ampliar/cerrar/duplicar |
-| `/campanas/:id/editar`                  | Edición de borrador                                                                         |
-| `/mis-pendientes`                       | Evaluaciones asignadas al perfil seleccionado                                               |
-| `/responder/:assignmentId`              | Respuesta por secciones, borrador y envío                                                   |
-| `/equipo`                               | Alcance del jefe, progreso y resultados publicados                                          |
-| `/resultados`                           | Resultados, revisión y publicación                                                          |
-| `/resultados/:campaignId/:subjectId`    | Promedio, categorías, perspectivas, comentarios, planes, historial, acuse, CSV e impresión  |
-| `/tablero`                              | Dirección: áreas, distribución, competencias, destacados, seguimiento y comparativo         |
-| `/mis-evaluaciones`                     | Resultados propios publicados según permisos                                                |
-| `/seguimiento`                          | Acciones, responsables, fechas, avances y enlaces de evidencia                              |
-| `/configuracion`                        | Predeterminados por perfil, confidencialidad, actividad y restablecimiento local            |
+## Conectado
 
-## Prueba manual corta
+- Plantillas: listado paginado, categorías y preguntas, versiones, duplicación y archivo/restauración. Áreas y puestos reales. La campaña guarda identificadores de versión, nunca el ID de plantilla como sustituto.
+- Campañas: listado/detalle, alta/edición de borradores, propuesta de asignaciones del servidor, ajuste manual de evaluador empleado o usuario RH, guardado, validación, lanzamiento, duplicación, ampliación y cierre con motivo, recordatorios.
+- Respuestas: detalle congelado, borrador y envío; conserva `false` y `0`; no permite editar sin capacidad concedida por la API.
+- Resultados: listas, detalle, aprobación/publicación, historial y acuse con el texto fijo del servidor. No se recalculan resultados ni se reconstruyen campos omitidos por privacidad.
+- Tablero: indicadores devueltos por `/dashboard`.
+- Planes: alta/edición, avances independientes y hasta diez enlaces de evidencia nuevos por avance.
+- Configuración: diez preferencias con versión, niveles y asignación a personas, permisos explícitos de RH/Dirección.
+- CSV: creación de exportación y descarga autenticada con token temporal. Sin PDF, carga de archivos, auditoría simulada ni OTP.
 
-1. Entrar al módulo y seleccionar el perfil ficticio RH Daniela Flores.
-2. Crear o duplicar una plantilla; cambiar orden, tipos y pesos. Verificar que no se guarda un total distinto de 100%.
-3. Crear campaña, seleccionar modelo y personas. Revisar la matriz; no permite iniciar relaciones vacías ni grupos confidenciales insuficientes.
-4. Cambiar al perfil del evaluador asignado. Guardar un borrador, salir y volver; enviar completo.
-5. Volver a RH, revisar resultado, aprobar y publicar.
-6. Como colaborador, consultar solo lo habilitado, confirmar recibido con observaciones y actualizar el plan del que es responsable.
-7. Cambiar a dirección o jefe para revisar su alcance.
-8. Restablecer datos ficticios desde Configuración → Demostración cuando se quiera reiniciar.
+Las operaciones de edición mandan `version`. Lanzamiento, envío, publicación y recordatorios mandan `Idempotency-Key`. El cliente bloquea operaciones simultáneas y muestra los mensajes de error del servidor; ante `VERSION` ofrece recargar sin sobrescribir silenciosamente.
 
-Las campañas de ejemplo corresponden a 2026. Para probar después de su fecha límite, RH puede ampliar el plazo o crear una campaña con fechas vigentes. La fecha efectiva se calcula en la zona de cada campaña.
+`demoStore.mjs`, el cálculo de resultados del modelo y las pruebas originales se conservan como fixtures históricos; no son fuentes de datos del módulo conectado. `VERIFICACION.md` documenta la entrega anterior de demostración, no evidencia una prueba de esta integración.
 
-## Implementación
+## Verificación de esta entrega
 
-- JSX y componentes existentes de ADAMIA; sin dependencias nuevas de producción.
-- Reglas puras en `src/lib/evaluaciones/model.mjs` y comandos en `demoStore.mjs`.
-- Estado local separado por empresa/usuario; versión de esquema; detección de cambios de otra pestaña y errores de almacenamiento.
-- Flujos con datos ficticios solamente. El selector de perfil no sustituye la autorización del servidor.
-- Tablas con búsqueda sobre el conjunto completo antes de paginar; en móvil los registros se convierten en fichas.
-- Navegación incorporada al sidebar y buscador de páginas. No cambia la lógica de vacaciones, asistencia, nómina, reclutamiento ni permisos existentes.
-- La conexión futura debe retirar el selector ficticio y aplicar capabilities reales desde el backend.
+- `node scripts/test-evaluaciones-api.mjs`: ruta base, empresa, versiones, claves únicas, paginación completa de selectores, errores, descarga CSV e identificadores.
+- `node scripts/test-evaluaciones.mjs`: diez pruebas existentes del modelo/validación.
+- `npm run build`: compilación de producción.
+- `CHROMIUM_EXECUTABLE_PATH=/ruta/a/chromium node scripts/verify-evaluaciones-api.cjs`: prueba de navegador con fixtures del contrato. Usa Playwright instalado en el entorno o `PLAYWRIGHT_MODULE_PATH`; no necesita incorporarlo a dependencias de producción.
+
+La prueba de navegador usa un JWT de prueba y solicitudes interceptadas: comprueba lista sin demo, versiones de plantilla, propuesta/guardado de asignaciones, borrador booleano `false`, envío, aprobación/publicación scopes de colaborador, creación/avance de planes con evidencia, preferencias versionadas y acuse del empleado, sin errores de ejecución. No constituye una prueba del servidor, MySQL, trabajadores de correo ni datos reales.
+
+## Pendiente de verificar en el entorno real
+
+No se dispuso de acceso al repositorio del backend ni de sesión/dirección de API de desarrollo en esta ejecución. Se debe comprobar el flujo completo contra el despliegue, especialmente los campos del detalle de plantilla (`versionId` o `templateVersionId`), los indicadores de `/dashboard` y los nombres/resúmenes de listados, que no tienen un ejemplo completo en la guía.
+
+La guía requiere aplicar `hr360-checkin-backend/migrations/20261013_produccion_evaluaciones_desempeno_completo.sql` antes de usar producción. No se ejecutó ninguna migración ni se activaron los trabajadores de correo. La rama de esta entrega es `ChatGPT`; no se modifica `main`.

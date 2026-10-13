@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { Plus, Copy, Archive, Trash2, Eye } from "lucide-react";
+import { Plus, Trash2, Eye } from "lucide-react";
 import { useEvaluations } from "./EvaluationContext";
 import {
   Heading,
@@ -13,15 +13,12 @@ import {
   Badge,
   Button,
   ActionLink,
-  DataTable,
-  SearchInput,
   Segments,
   Empty,
   Notice,
   Errors,
   Reorder,
   moveItem,
-  Confirm,
 } from "./ui";
 import {
   TYPES,
@@ -31,157 +28,14 @@ import {
   newQuestion,
   validateTemplate,
   questions,
-  normalize,
   isScored,
 } from "@/lib/evaluaciones/model.mjs";
 import { AnswerControl, useUnsavedGuard } from "./ResponseView";
-export function Templates() {
-  const { state, actor, run, navigate } = useEvaluations(),
-    [search, setSearch] = useState(""),
-    [archived, setArchived] = useState("active"),
-    [confirm, setConfirm] = useState(null);
-  if (actor.role !== "hr")
-    return (
-      <Empty
-        title="Administración de plantillas"
-        description="Esta vista está disponible para el perfil de RH."
-      />
-    );
-  const rows = state.templates.filter(
-    (t) =>
-      (archived === "archived" ? t.archived : !t.archived) &&
-      normalize(`${t.name} ${t.area} ${t.position}`).includes(
-        normalize(search),
-      ),
-  );
-  const duplicate = (t) => {
-    const clone = copy(t);
-    clone.id = uid("tpl");
-    clone.name = `${t.name} · Copia`;
-    clone.archived = false;
-    if (run({ type: "template.save", template: clone }, "Plantilla duplicada"))
-      navigate(`plantillas/${clone.id}`);
-  };
-  return (
-    <>
-      <Heading
-        title="Plantillas de evaluación"
-        description="Define qué evaluar y reutiliza tus formatos en cada campaña."
-        actions={
-          <ActionLink to="plantillas/nueva" primary>
-            <Plus size={15} /> Nueva plantilla
-          </ActionLink>
-        }
-      />
-      <Panel>
-        <Segments
-          value={archived}
-          onChange={setArchived}
-          items={[
-            {
-              value: "active",
-              label: "Disponibles",
-              count: state.templates.filter((t) => !t.archived).length,
-            },
-            { value: "archived", label: "Archivadas" },
-          ]}
-        />
-        <div className="ev-filters">
-          <SearchInput
-            value={search}
-            onChange={setSearch}
-            placeholder="Buscar plantilla, área o puesto…"
-          />
-        </div>
-        <DataTable
-          rows={rows}
-          columns={[
-            {
-              key: "name",
-              label: "Plantilla",
-              render: (t) => (
-                <>
-                  <strong>{t.name}</strong>
-                  <small>{t.description}</small>
-                </>
-              ),
-            },
-            {
-              key: "area",
-              label: "Dirigida a",
-              render: (t) => (
-                <>
-                  {t.area}
-                  <small>{t.position}</small>
-                </>
-              ),
-            },
-            {
-              key: "questions",
-              label: "Contenido",
-              render: (t) => (
-                <>
-                  {t.categories.length} categorías
-                  <small>{questions(t).length} preguntas</small>
-                </>
-              ),
-            },
-            {
-              key: "version",
-              label: "Versión",
-              render: (t) => <Badge>v{t.version}</Badge>,
-            },
-            {
-              key: "actions",
-              label: "Acciones",
-              render: (t) => (
-                <div className="ev-actions">
-                  <ActionLink to={`plantillas/${t.id}`}>Editar</ActionLink>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    aria-label={`Duplicar ${t.name}`}
-                    onClick={() => duplicate(t)}
-                  >
-                    <Copy size={15} />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    aria-label={`${t.archived ? "Restaurar" : "Archivar"} ${t.name}`}
-                    onClick={() => setConfirm(t)}
-                  >
-                    <Archive size={15} />
-                  </Button>
-                </div>
-              ),
-            },
-          ]}
-        />
-      </Panel>
-      <Confirm
-        open={!!confirm}
-        onOpenChange={() => setConfirm(null)}
-        title={confirm?.archived ? "Restaurar plantilla" : "Archivar plantilla"}
-        description="Las evaluaciones ya iniciadas conservarán su versión y sus resultados."
-        onConfirm={() => {
-          if (
-            run(
-              { type: "template.archive", id: confirm.id },
-              "Plantilla actualizada",
-            )
-          )
-            setConfirm(null);
-        }}
-      />
-    </>
-  );
-}
 export function TemplateEditor({ id }) {
-  const { state, actor, run, navigate } = useEvaluations();
+  const { state, actor, run, navigate, busy, capabilities } = useEvaluations();
   const original = state.templates.find((t) => t.id === id);
   const [template, setTemplate] = useState(() =>
-      copy(original || newTemplate()),
+      copy(original || newTemplate())
     ),
     [tab, setTab] = useState("content"),
     [errors, setErrors] = useState([]),
@@ -203,32 +57,27 @@ export function TemplateEditor({ id }) {
   const category = (index, patch) =>
     change({
       categories: template.categories.map((c, i) =>
-        i === index ? { ...c, ...patch } : c,
+        i === index ? { ...c, ...patch } : c
       ),
     });
   const question = (ci, qi, patch) =>
     category(ci, {
       questions: template.categories[ci].questions.map((q, i) =>
-        i === qi ? { ...q, ...patch } : q,
+        i === qi ? { ...q, ...patch } : q
       ),
     });
-  const save = () => {
+  const save = async () => {
     const issues = validateTemplate(template);
     setErrors(issues);
     if (issues.length) return;
-    if (
-      run(
-        { type: "template.save", template },
-        "Plantilla guardada en esta demostración",
-      )
-    ) {
+    if (await run({ type: "template.save", template }, "Plantilla guardada")) {
       setDirty(false);
       navigate("plantillas");
     }
   };
   const total = template.categories.reduce(
     (s, c) => s + Number(c.weight || 0),
-    0,
+    0
   );
   return (
     <>
@@ -241,7 +90,11 @@ export function TemplateEditor({ id }) {
             <Badge tone={dirty ? "amber" : "gray"}>
               {dirty ? "Cambios sin guardar" : `Versión ${template.version}`}
             </Badge>
-            <Button onClick={save} className="bg-blue-600 hover:bg-blue-700">
+            <Button
+              disabled={busy}
+              onClick={save}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
               Guardar plantilla
             </Button>
           </>
@@ -269,7 +122,7 @@ export function TemplateEditor({ id }) {
                       value={template.name}
                       onChange={(e) => change({ name: e.target.value })}
                       placeholder="Ej. Evaluación trimestral de desempeño"
-                      maxLength={160}
+                      maxLength={capabilities.limits?.templateName || 160}
                     />
                   </Field>
                   <Field label="Descripción">
@@ -283,23 +136,34 @@ export function TemplateEditor({ id }) {
                     <Field label="Área objetivo">
                       <Select
                         label="Área objetivo"
-                        value={template.area}
-                        onChange={(e) => change({ area: e.target.value })}
+                        value={template.areaId || ""}
+                        onChange={(e) =>
+                          change({ areaId: e.target.value || null })
+                        }
                       >
-                        {[
-                          "Todas",
-                          ...new Set(state.people.map((p) => p.area)),
-                        ].map((a) => (
-                          <option key={a}>{a}</option>
+                        <option value="">Todas</option>
+                        {(state.catalogs.areas || []).map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.name || a.nombre}
+                          </option>
                         ))}
                       </Select>
                     </Field>
                     <Field label="Puesto objetivo">
-                      <Input
+                      <Select
                         label="Puesto objetivo"
-                        value={template.position}
-                        onChange={(e) => change({ position: e.target.value })}
-                      />
+                        value={template.positionId || ""}
+                        onChange={(e) =>
+                          change({ positionId: e.target.value || null })
+                        }
+                      >
+                        <option value="">Todos</option>
+                        {(state.catalogs.positions || []).map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name || p.nombre}
+                          </option>
+                        ))}
+                      </Select>
                     </Field>
                   </div>
                 </div>
@@ -364,11 +228,13 @@ export function TemplateEditor({ id }) {
                             <Button
                               variant="ghost"
                               size="sm"
-                              aria-label={`Eliminar pregunta ${ci + 1}.${qi + 1}`}
+                              aria-label={`Eliminar pregunta ${ci + 1}.${
+                                qi + 1
+                              }`}
                               onClick={() =>
                                 category(ci, {
                                   questions: c.questions.filter(
-                                    (x) => x.id !== q.id,
+                                    (x) => x.id !== q.id
                                   ),
                                 })
                               }
@@ -458,7 +324,9 @@ export function TemplateEditor({ id }) {
                             {["yesScore", "noScore"].map((k) => (
                               <Field
                                 key={k}
-                                label={`Puntos para ${k === "yesScore" ? "Sí" : "No"} (1–5)`}
+                                label={`Puntos para ${
+                                  k === "yesScore" ? "Sí" : "No"
+                                } (1–5)`}
                               >
                                 <Input
                                   type="number"
@@ -491,7 +359,7 @@ export function TemplateEditor({ id }) {
                                       options: q.options.map((x) =>
                                         x.id === o.id
                                           ? { ...x, label: e.target.value }
-                                          : x,
+                                          : x
                                       ),
                                     })
                                   }
@@ -510,7 +378,7 @@ export function TemplateEditor({ id }) {
                                         options: q.options.map((x) =>
                                           x.id === o.id
                                             ? { ...x, score: e.target.value }
-                                            : x,
+                                            : x
                                         ),
                                       })
                                     }
@@ -522,7 +390,7 @@ export function TemplateEditor({ id }) {
                                   onClick={() =>
                                     question(ci, qi, {
                                       options: q.options.filter(
-                                        (x) => x.id !== o.id,
+                                        (x) => x.id !== o.id
                                       ),
                                     })
                                   }
@@ -565,7 +433,7 @@ export function TemplateEditor({ id }) {
                         onClick={() =>
                           change({
                             categories: template.categories.filter(
-                              (x) => x.id !== c.id,
+                              (x) => x.id !== c.id
                             ),
                           })
                         }
@@ -685,7 +553,7 @@ export function TemplateEditor({ id }) {
                                 question(
                                   ci,
                                   c.questions.findIndex((x) => x.id === q.id),
-                                  { weight: e.target.value },
+                                  { weight: e.target.value }
                                 )
                               }
                             />
@@ -697,7 +565,7 @@ export function TemplateEditor({ id }) {
                               .filter(isScored)
                               .reduce(
                                 (s, q) => s + Number(q.weight || 0),
-                                0,
+                                0
                               ) === 100
                               ? "green"
                               : "amber"
@@ -728,7 +596,7 @@ export function TemplateEditor({ id }) {
                         onChange={(e) =>
                           change({
                             scale: template.scale.map((x, j) =>
-                              j === i ? { ...x, label: e.target.value } : x,
+                              j === i ? { ...x, label: e.target.value } : x
                             ),
                           })
                         }
@@ -743,7 +611,7 @@ export function TemplateEditor({ id }) {
                             scale: template.scale.map((x, j) =>
                               j === i
                                 ? { ...x, description: e.target.value }
-                                : x,
+                                : x
                             ),
                           })
                         }
@@ -767,7 +635,7 @@ export function TemplateEditor({ id }) {
                         onChange={(e) =>
                           change({
                             bands: template.bands.map((x, j) =>
-                              j === i ? { ...x, label: e.target.value } : x,
+                              j === i ? { ...x, label: e.target.value } : x
                             ),
                           })
                         }
@@ -783,7 +651,7 @@ export function TemplateEditor({ id }) {
                           onChange={(e) =>
                             change({
                               bands: template.bands.map((x, j) =>
-                                j === i ? { ...x, min: e.target.value } : x,
+                                j === i ? { ...x, min: e.target.value } : x
                               ),
                             })
                           }
@@ -798,7 +666,7 @@ export function TemplateEditor({ id }) {
                           onChange={(e) =>
                             change({
                               bands: template.bands.map((x, j) =>
-                                j === i ? { ...x, max: e.target.value } : x,
+                                j === i ? { ...x, max: e.target.value } : x
                               ),
                             })
                           }

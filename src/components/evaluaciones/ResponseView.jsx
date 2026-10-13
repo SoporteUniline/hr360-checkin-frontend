@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useState } from "react";
-import { useEvaluations } from "./EvaluationContext";
+import { useEvaluations, useEvaluationQuery } from "./EvaluationContext";
+import { QueryState } from "./ApiViews";
+import { normalizeTemplate } from "@/lib/evaluaciones/api.mjs";
 import {
   Heading,
   Panel,
@@ -8,7 +10,6 @@ import {
   Input,
   Textarea,
   Button,
-  ActionLink,
   Badge,
   Progress,
   Empty,
@@ -23,7 +24,6 @@ import {
   questions,
   validateAnswers,
   dateText,
-  campaignStatus,
 } from "@/lib/evaluaciones/model.mjs";
 export function useUnsavedGuard(dirty) {
   useEffect(() => {
@@ -34,13 +34,13 @@ export function useUnsavedGuard(dirty) {
     };
     const click = (e) => {
       const target = e.target.closest(
-        'a[href], [data-slot="sidebar-menu-button"]',
+        'a[href], [data-slot="sidebar-menu-button"]'
       );
       if (
         target &&
         !target.hasAttribute("download") &&
         !window.confirm(
-          "Tienes cambios sin guardar. ¿Quieres salir de esta pantalla?",
+          "Tienes cambios sin guardar. ¿Quieres salir de esta pantalla?"
         )
       ) {
         e.preventDefault();
@@ -50,7 +50,7 @@ export function useUnsavedGuard(dirty) {
     const internal = (e) => {
       if (
         !window.confirm(
-          "Tienes cambios sin guardar. ¿Quieres cambiar de perfil?",
+          "Tienes cambios sin guardar. ¿Quieres cambiar de perfil?"
         )
       )
         e.preventDefault();
@@ -140,38 +140,56 @@ export function AnswerControl({
   );
 }
 export function ResponseView({ id }) {
-  const { state, actor, run, navigate } = useEvaluations(),
-    assignment = state.assignments.find((a) => a.id === id);
+  const query = useEvaluationQuery(`/assignments/${id}`);
+  return (
+    <QueryState query={query}>
+      {query.data && (
+        <ResponseEditor
+          key={`${id}:${query.data.revision}`}
+          id={id}
+          assignment={{
+            ...query.data,
+            template: normalizeTemplate(query.data.template),
+          }}
+        />
+      )}
+    </QueryState>
+  );
+}
+function ResponseEditor({ id, assignment }) {
+  const { api, perform, busy, navigate } = useEvaluations();
   const [answers, setAnswers] = useState(assignment?.answers || {}),
     [comment, setComment] = useState(assignment?.comment || ""),
     [privateNote, setPrivateNote] = useState(assignment?.privateNote || ""),
     [categoryComments, setCategoryComments] = useState(
-      assignment?.categoryComments || {},
+      assignment?.categoryComments || {}
     ),
     [section, setSection] = useState(0),
     [dirty, setDirty] = useState(false),
     [errors, setErrors] = useState([]),
     [confirm, setConfirm] = useState(false);
   useUnsavedGuard(dirty);
-  if (!assignment || assignment.evaluatorId !== actor.id)
-    return (
-      <Empty
-        title="Esta evaluación no está asignada a tu perfil"
-        action={
-          <ActionLink to="mis-pendientes">
-            Mis evaluaciones pendientes
-          </ActionLink>
-        }
-      />
-    );
-  const campaign = state.campaigns.find((c) => c.id === assignment.campaignId),
-    person = state.people.find((p) => p.id === assignment.subjectId),
-    template = assignment.template;
+  const campaign = assignment.campaign || {
+    name: assignment.campaignName,
+    periodStart: assignment.periodStart,
+    periodEnd: assignment.periodEnd,
+    dueOn: assignment.dueOn,
+  };
+  const person = assignment.subject || {
+    name: assignment.subjectName || "Colaborador",
+    area: assignment.area,
+    position: assignment.position,
+  };
+  const template = assignment.template;
+  const flags = assignment.capabilities || {};
   const sent = assignment.status === "submitted",
     category = template.categories[section],
     count = progress({ ...assignment, answers });
-  const locked = sent || campaignStatus(campaign) !== "active";
-  const save = (submit) => {
+  if (!category)
+    return <Empty title="La plantilla no tiene preguntas disponibles" />;
+  const locked =
+    sent || !(flags.canEdit ?? flags.canRespond ?? flags.canSaveDraft ?? false);
+  const save = async (submit) => {
     const issues = validateAnswers(template, answers, submit);
     setErrors(issues);
     if (issues.length) {
@@ -179,24 +197,38 @@ export function ResponseView({ id }) {
       const first = template.categories.findIndex(
         (c) =>
           validateAnswers({ ...template, categories: [c] }, answers, submit)
-            .length,
+            .length
       );
       if (first >= 0) setSection(first);
       return;
     }
     if (
-      run(
-        {
-          type: submit ? "response.submit" : "response.save",
-          id,
-          answers,
-          comment,
-          privateNote,
-          categoryComments,
-        },
-        submit
-          ? "Evaluación enviada en la demostración"
-          : "Borrador guardado en este navegador",
+      await perform(
+        () =>
+          api.mutate(
+            submit ? "POST" : "PUT",
+            `/assignments/${id}/${submit ? "submit" : "draft"}`,
+            {
+              answers: Object.fromEntries(
+                Object.entries(answers).map(([key, value]) => {
+                  const q = questions(template).find(
+                    (q) => String(q.id) === key
+                  );
+                  return [
+                    key,
+                    q?.type === "number" && value !== "" && value != null
+                      ? Number(value)
+                      : value,
+                  ];
+                })
+              ),
+              comment,
+              privateNote,
+              categoryComments,
+            },
+            { version: assignment.revision, idempotent: submit }
+          ),
+        submit ? "Evaluación enviada" : "Borrador guardado"
       )
     ) {
       setDirty(false);
@@ -210,7 +242,7 @@ export function ResponseView({ id }) {
         title={
           sent
             ? "Evaluación completada"
-            : `Evaluar a ${person.name.split(" ")[0]}`
+            : `Evaluar a ${(person.name || "Colaborador").split(" ")[0]}`
         }
         description={campaign.name}
         back="mis-pendientes"
@@ -265,7 +297,7 @@ export function ResponseView({ id }) {
                     question={q}
                     scale={template.scale}
                     value={answers[q.id]}
-                    disabled={locked}
+                    disabled={locked || busy}
                     onChange={(value) => {
                       setAnswers({ ...answers, [q.id]: value });
                       setDirty(true);
@@ -275,7 +307,7 @@ export function ResponseView({ id }) {
                     <button
                       type="button"
                       className="ev-link mt-2 text-xs"
-                      disabled={locked}
+                      disabled={locked || busy}
                       onClick={() => {
                         const next = { ...answers };
                         delete next[q.id];
@@ -292,7 +324,7 @@ export function ResponseView({ id }) {
                 <Textarea
                   label="Comentarios de categoría"
                   value={categoryComments[category.id] || ""}
-                  disabled={locked}
+                  disabled={locked || busy}
                   onChange={(e) => {
                     setCategoryComments({
                       ...categoryComments,
@@ -314,7 +346,7 @@ export function ResponseView({ id }) {
                   <Textarea
                     label="Comentarios finales"
                     value={comment}
-                    disabled={locked}
+                    disabled={locked || busy}
                     onChange={(e) => {
                       setComment(e.target.value);
                       setDirty(true);
@@ -328,7 +360,7 @@ export function ResponseView({ id }) {
                   <Textarea
                     label="Nota privada para RH"
                     value={privateNote}
-                    disabled={locked}
+                    disabled={locked || busy}
                     onChange={(e) => {
                       setPrivateNote(e.target.value);
                       setDirty(true);
@@ -348,7 +380,11 @@ export function ResponseView({ id }) {
             </Button>
             <div className="ev-actions">
               {!locked && (
-                <Button variant="outline" onClick={() => save(false)}>
+                <Button
+                  disabled={busy}
+                  variant="outline"
+                  onClick={() => save(false)}
+                >
                   Guardar borrador
                 </Button>
               )}
@@ -359,6 +395,7 @@ export function ResponseView({ id }) {
               ) : (
                 !locked && (
                   <Button
+                    disabled={busy || flags.canSubmit === false}
                     className="bg-blue-600 hover:bg-blue-700"
                     onClick={() => {
                       const issues = validateAnswers(template, answers, true);
@@ -381,13 +418,15 @@ export function ResponseView({ id }) {
                   ...template,
                   categories: [c],
                 }).filter(
-                  (q) => answers[q.id] !== undefined && answers[q.id] !== "",
+                  (q) => answers[q.id] !== undefined && answers[q.id] !== ""
                 ).length;
                 return (
                   <button
                     type="button"
                     key={c.id}
-                    className={`ev-category-row ${section === i ? "ev-link" : ""}`}
+                    className={`ev-category-row ${
+                      section === i ? "ev-link" : ""
+                    }`}
                     onClick={() => setSection(i)}
                     aria-current={section === i ? "step" : undefined}
                   >
@@ -418,8 +457,8 @@ export function ResponseView({ id }) {
             {dirty
               ? "Tienes cambios sin guardar. Guarda el borrador antes de salir."
               : sent
-                ? "Evaluación enviada."
-                : "Puedes guardar un borrador y continuar después."}
+              ? "Evaluación enviada."
+              : "Puedes guardar un borrador y continuar después."}
           </Notice>
           {["peer", "ascending"].includes(assignment.perspective) && (
             <small>
