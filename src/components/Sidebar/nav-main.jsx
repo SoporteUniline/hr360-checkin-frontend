@@ -1,5 +1,4 @@
 "use client";
-
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -68,10 +67,8 @@ import {
   RECRUITMENT_NAV,
   isRecruitmentNavActive,
 } from "@/components/reclutamiento/navigation";
-
 const recruitmentEnabled =
   process.env.NEXT_PUBLIC_RECRUITMENT_ENABLED === "true";
-
 const dashboardItems = [
   {
     title: "Mis activos y uniformes",
@@ -80,17 +77,13 @@ const dashboardItems = [
     icon: Package,
     matchPrefix: "/empleado/panel/mis-recursos",
   },
-  ...(recruitmentEnabled
-    ? [
-        {
-          title: "Evaluación de desempeño",
-          url: "/empleado/panel/evaluaciones",
-          rol: "Empleado",
-          icon: ClipboardCheck,
-          matchPrefix: "/empleado/panel/evaluaciones",
-        },
-      ]
-    : []),
+  {
+    title: "Evaluación de desempeño",
+    url: "/empleado/panel/evaluaciones",
+    rol: "Empleado",
+    icon: ClipboardCheck,
+    matchPrefix: "/empleado/panel/evaluaciones",
+  },
   {
     title: "Solicitudes de mi equipo",
     url: "/empleado/panel/solicitudes-equipo",
@@ -170,7 +163,6 @@ const dashboardItems = [
     icon: ClockIcon,
   },
 ];
-
 const menuGroups = [
   {
     group: "CONTROL DE ACTIVOS",
@@ -336,42 +328,38 @@ const menuGroups = [
       },
     ],
   },
-  ...(recruitmentEnabled
-    ? [
-        {
-          group: "EVALUACIÓN DE DESEMPEÑO",
-          groupIcon: BarChart3,
-          items: [
-            {
-              title: "Resumen de evaluaciones",
-              url: "/panel/evaluaciones",
-              rol: "Recruiter",
-              icon: LayoutDashboard,
-            },
-            {
-              title: "Campañas",
-              url: "/panel/evaluaciones/campanas",
-              rol: "Recruiter",
-              icon: ClipboardCheck,
-              matchPrefix: "/panel/evaluaciones/campanas",
-            },
-            {
-              title: "Plantillas de evaluación",
-              url: "/panel/evaluaciones/plantillas",
-              rol: "Recruiter",
-              icon: LayoutTemplate,
-              matchPrefix: "/panel/evaluaciones/plantillas",
-            },
-            {
-              title: "Tablero de desempeño",
-              url: "/panel/evaluaciones/tablero",
-              rol: "Recruiter",
-              icon: BarChart3,
-            },
-          ],
-        },
-      ]
-    : []),
+  {
+    group: "EVALUACIÓN DE DESEMPEÑO",
+    groupIcon: BarChart3,
+    items: [
+      {
+        title: "Resumen de evaluaciones",
+        url: "/panel/evaluaciones",
+        rol: "Recruiter",
+        icon: LayoutDashboard,
+      },
+      {
+        title: "Campañas",
+        url: "/panel/evaluaciones/campanas",
+        rol: "Recruiter",
+        icon: ClipboardCheck,
+        matchPrefix: "/panel/evaluaciones/campanas",
+      },
+      {
+        title: "Plantillas de evaluación",
+        url: "/panel/evaluaciones/plantillas",
+        rol: "Recruiter",
+        icon: LayoutTemplate,
+        matchPrefix: "/panel/evaluaciones/plantillas",
+      },
+      {
+        title: "Tablero de desempeño",
+        url: "/panel/evaluaciones/tablero",
+        rol: "Recruiter",
+        icon: BarChart3,
+      },
+    ],
+  },
   ...(recruitmentEnabled
     ? [
         {
@@ -654,23 +642,19 @@ const menuGroups = [
     ],
   },
 ];
-
 // Normaliza para el buscador: minúsculas y sin acentos ("Días" -> "dias")
 const normalizar = (s) =>
   String(s || "")
     .toLowerCase()
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "");
-
 const GRUPOS_ABIERTOS_KEY = "sidebar-grupos-abiertos";
-
 // Estilos del item activo: fondo azul suave + barrita redondeada a la
 // izquierda (sin sombras), iconos en gris tenue que se encienden en azul.
 const ITEM_ACTIVO =
   "bg-[#f0f5ff] text-[#1d4ed8] font-semibold relative before:absolute before:left-[3px] before:top-2 before:bottom-2 before:w-[3px] before:rounded-full before:bg-[#2563EB] [&_svg]:text-[#2563EB]";
 const ITEM_NORMAL =
   "text-gray-700 [&_svg]:text-gray-400 hover:[&_svg]:text-[#2563EB]";
-
 // Módulo del rail contraído: icono + panel flotante con todos sus items.
 function RailModule({ icon: Icon, title, items, path, onNavigate }) {
   const [open, setOpen] = useState(false);
@@ -682,13 +666,11 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
   const cerrar = () => {
     cierreRef.current = setTimeout(() => setOpen(false), 140);
   };
-
   const moduloActivo = items.some((item) =>
     item.children
       ? item.children.some((child) => isRecruitmentNavActive(path, child))
-      : isRecruitmentNavActive(path, item)
+      : isRecruitmentNavActive(path, item),
   );
-
   const enlace = (it) => (
     <button
       key={it.title}
@@ -716,7 +698,6 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
       <span>{it.title}</span>
     </button>
   );
-
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -758,14 +739,13 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
               </div>
             ) : (
               enlace(item)
-            )
+            ),
           )}
         </div>
       </PopoverContent>
     </Popover>
   );
 }
-
 export function NavMain() {
   const router = useRouter();
   const path = usePathname();
@@ -777,7 +757,6 @@ export function NavMain() {
   const [gruposAbiertos, setGruposAbiertos] = useState({});
   const effectiveRole =
     dataUser?.tipo_usuario === "User" ? "Recruiter" : dataUser?.tipo_usuario;
-
   useEffect(() => {
     try {
       const guardado = window.localStorage.getItem(GRUPOS_ABIERTOS_KEY);
@@ -786,7 +765,6 @@ export function NavMain() {
       // si falla la lectura se quedan todos abiertos
     }
   }, []);
-
   const persistirGrupos = (next) => {
     try {
       window.localStorage.setItem(GRUPOS_ABIERTOS_KEY, JSON.stringify(next));
@@ -795,21 +773,18 @@ export function NavMain() {
     }
     return next;
   };
-
   const toggleGrupo = (nombre) => {
     setGruposAbiertos((prev) =>
       persistirGrupos({
         ...prev,
         [nombre]: prev[nombre] === false ? true : false,
-      })
+      }),
     );
   };
-
   // ¿Hay al menos un módulo contraído? (para alternar expandir/contraer todo)
   const hayContraidos = menuGroups.some(
-    (g) => gruposAbiertos[g.group] === false
+    (g) => gruposAbiertos[g.group] === false,
   );
-
   const toggleTodos = () => {
     const next = {};
     menuGroups.forEach((g) => {
@@ -817,10 +792,8 @@ export function NavMain() {
     });
     setGruposAbiertos(persistirGrupos(next));
   };
-
   const q = normalizar(busqueda.trim());
   const buscando = q.length > 0;
-
   // Un item coincide si su título (o el del grupo) contiene la búsqueda;
   // en items con submenú también cuentan los títulos de los hijos.
   const filtrarItems = (items, grupoCoincide) =>
@@ -832,19 +805,15 @@ export function NavMain() {
       }
       return false;
     });
-
   const handleClick = (href) => {
     router.push(href);
   };
-
   let perfilRoute = "/home/cuenta";
-
   if (effectiveRole === "Recruiter") {
     perfilRoute = "/panel/cuenta";
   } else if (effectiveRole === "Admin") {
     perfilRoute = "/dashboard/empresas";
   }
-
   // ——— Modo rail: contraído en escritorio, un icono por módulo con flyout ———
   if (sidebarState === "collapsed" && !isMobile) {
     const gruposVisibles =
@@ -853,12 +822,11 @@ export function NavMain() {
             .map((g) => ({
               ...g,
               items: g.items.filter(
-                (item) => !item.rol || item.rol === effectiveRole
+                (item) => !item.rol || item.rol === effectiveRole,
               ),
             }))
             .filter((g) => g.items.length > 0)
         : [];
-
     return (
       <SidebarGroup>
         <SidebarGroupContent className="flex flex-col items-center gap-1 pt-1">
@@ -891,7 +859,6 @@ export function NavMain() {
       </SidebarGroup>
     );
   }
-
   return (
     <SidebarGroup>
       <SidebarGroupContent className="flex flex-col gap-2">
@@ -927,7 +894,6 @@ export function NavMain() {
           {dashboardItems.map((item) => {
             if (item.rol && item.rol !== effectiveRole) return null;
             if (buscando && !normalizar(item.title).includes(q)) return null;
-
             return (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton
@@ -947,7 +913,6 @@ export function NavMain() {
               </SidebarMenuItem>
             );
           })}
-
           {effectiveRole !== "Admin" &&
             menuGroups.map((group) => {
               const grupoCoincide = buscando
@@ -955,17 +920,15 @@ export function NavMain() {
                 : false;
               const itemsVisibles = filtrarItems(
                 group.items.filter(
-                  (item) => !item.rol || item.rol === effectiveRole
+                  (item) => !item.rol || item.rol === effectiveRole,
                 ),
-                grupoCoincide
+                grupoCoincide,
               );
               if (itemsVisibles.length === 0) return null;
-
               // Al buscar siempre se muestra expandido; si no, manda el usuario.
               const abierto = buscando
                 ? true
                 : gruposAbiertos[group.group] !== false;
-
               return (
                 <div key={group.group} className="mt-3">
                   <button
@@ -982,7 +945,6 @@ export function NavMain() {
                       }`}
                     />
                   </button>
-
                   {abierto &&
                     itemsVisibles.map((item) => {
                       return (
@@ -992,7 +954,7 @@ export function NavMain() {
                             onClick={() => {
                               if (item.children) {
                                 setOpen(
-                                  open === item.title ? null : item.title
+                                  open === item.title ? null : item.title,
                                 );
                               } else {
                                 handleClick(item.url);
@@ -1008,14 +970,12 @@ export function NavMain() {
                               {item.icon && <item.icon size={16} />}
                               <span>{item.title}</span>
                             </div>
-
                             {item.children && (
                               <span className="text-xs">
                                 {open === item.title ? "▲" : "▼"}
                               </span>
                             )}
                           </SidebarMenuButton>
-
                           {item.children &&
                             (open === item.title || buscando) && (
                               <div className="ml-6 mt-1 flex flex-col gap-1">
@@ -1025,7 +985,7 @@ export function NavMain() {
                                       !buscando ||
                                       grupoCoincide ||
                                       normalizar(item.title).includes(q) ||
-                                      normalizar(child.title).includes(q)
+                                      normalizar(child.title).includes(q),
                                   )
                                   .map((child) => (
                                     <SidebarMenuButton
