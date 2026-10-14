@@ -100,7 +100,7 @@ export default function SucursalesTable({
             <TableBody>
               {sucursales.map((suc) => (
                 <TableRow
-                  key={suc.id_sucursal}
+                  key={suc.id_unidad}
                   className="hover:bg-gray-50 border-b border-gray-100"
                 >
                   <TableCell className="flex gap-2 items-center font-medium text-gray-900">
@@ -133,7 +133,7 @@ export default function SucursalesTable({
                         <Pencil className="h-4 w-4 text-[#2563EB]" />
                       </button>
                       <button
-                        onClick={() => onDelete(suc.id_sucursal, key)}
+                        onClick={() => onDelete(suc.id_unidad, key)}
                         className="p-2 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
                         title="Eliminar"
                       >
