@@ -97,19 +97,7 @@ export async function session() {
   );
   if (!company)
     throw new TeamError("Tu cuenta no tiene una empresa asignada.", 403);
-  let employeeId = id(user.id_empleado);
-  if (!employeeId && (user.correo || user.email)) {
-    const found = await api(
-      `/checador/empleados/por-correo?${new URLSearchParams({ empresa: company, correo: user.correo || user.email })}`,
-    );
-    employeeId = id(found.id_empleado);
-  }
-  if (!employeeId)
-    throw new TeamError(
-      "Vincula tu cuenta con tu registro de empleado para consultar tu equipo.",
-      403,
-    );
-  return { api, user, company, employeeId };
+  return { api, user, company, employeeId: id(user.id_empleado) };
 }
 function arrayResponse(data, key) {
   const value = Array.isArray(data) ? data : data?.[key];
@@ -165,8 +153,38 @@ export async function scope() {
     (person) =>
       !person.id_empresa || String(person.id_empresa) === current.company,
   );
+  // Una empresa sin empleados todavía no tiene solicitudes de equipo.
+  if (!companyStaff.length) {
+    return { ...current, team: [] };
+  }
+
+  let employeeId = current.employeeId;
+  if (!employeeId && (current.user.correo || current.user.email)) {
+    try {
+      const found = await current.api(
+        `/checador/empleados/por-correo?${new URLSearchParams({
+          empresa: current.company,
+          correo: current.user.correo || current.user.email,
+        })}`,
+      );
+      employeeId = id(found.id_empleado);
+    } catch (error) {
+      // La ausencia de coincidencia se informa como un problema de vinculación.
+      // Otros errores del servicio deben propagarse.
+      if (!(error instanceof TeamError) || error.status !== 404) {
+        throw error;
+      }
+    }
+  }
+
+  if (!employeeId)
+    throw new TeamError(
+      "Vincula tu cuenta con tu registro de empleado para consultar tu equipo.",
+      403,
+    );
+
   const self = companyStaff.find(
-    (person) => String(person.id_empleado) === current.employeeId,
+    (person) => String(person.id_empleado) === employeeId,
   );
   if (!self)
     throw new TeamError(
@@ -175,12 +193,12 @@ export async function scope() {
     );
   const team = companyStaff.filter(
     (person) =>
-      String(person.id_empleado) !== current.employeeId &&
+      String(person.id_empleado) !== employeeId &&
       [person.id_autoriza_vacaciones, person.id_autoriza_permisos].some(
-        (value) => value && String(value) === current.employeeId,
+        (value) => value && String(value) === employeeId,
       ),
   );
-  return { ...current, team };
+  return { ...current, employeeId, team };
 }
 function requestView(row, employee) {
   return {
