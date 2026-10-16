@@ -17,7 +17,7 @@ facial + validación por GPS) integrado con un **sistema completo de gestión de
   técnico/legacy **HR360** (`hr360.mx`, `planes.hr360.mx`). *Nota estratégica: hay una
   transición de marca HR360 → ADAMIA; conviene unificar el discurso comercial.*
 - **Contacto comercial actual:** `sistema@adamia.mx` · WhatsApp **+52 317 128 8029**.
-- **App móvil:** existe app Android (Capacitor, `Checkin Adamia`, `com.hr360.checkin`)
+- **App móvil:** app móvil (Capacitor, `ADAMIA`, `mx.com.adamia.app`)
   para el reloj checador en campo, además del portal web empresarial.
 
 ### Frase de una línea

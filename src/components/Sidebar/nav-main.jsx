@@ -15,6 +15,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useAuth } from "@/context/AuthContext";
+import { Capacitor } from "@capacitor/core";
 import {
   UsersIcon,
   ClipboardCheck,
@@ -775,8 +776,18 @@ export function NavMain() {
   const [busqueda, setBusqueda] = useState("");
   // Colapso por módulo: todos abiertos por defecto; se recuerda en localStorage.
   const [gruposAbiertos, setGruposAbiertos] = useState({});
+  const [isNative, setIsNative] = useState(false);
   const effectiveRole =
     dataUser?.tipo_usuario === "User" ? "Recruiter" : dataUser?.tipo_usuario;
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsNative(
+        Capacitor.isNativePlatform() ||
+          navigator.userAgent.includes("AdamiaAppNative"),
+      );
+    }
+  }, []);
 
   useEffect(() => {
     try {
@@ -853,7 +864,9 @@ export function NavMain() {
             .map((g) => ({
               ...g,
               items: g.items.filter(
-                (item) => !item.rol || item.rol === effectiveRole
+                (item) =>
+                  (!item.rol || item.rol === effectiveRole) &&
+                  (!isNative || item.url !== "/panel/mi-suscripcion")
               ),
             }))
             .filter((g) => g.items.length > 0)
@@ -955,7 +968,9 @@ export function NavMain() {
                 : false;
               const itemsVisibles = filtrarItems(
                 group.items.filter(
-                  (item) => !item.rol || item.rol === effectiveRole
+                  (item) =>
+                    (!item.rol || item.rol === effectiveRole) &&
+                    (!isNative || item.url !== "/panel/mi-suscripcion")
                 ),
                 grupoCoincide
               );
