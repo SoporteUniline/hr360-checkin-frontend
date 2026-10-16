@@ -101,11 +101,12 @@ export function Select({ label, children, ...props }) {
   );
 }
 export function Textarea({ label, ...props }) {
+  const context = useEvaluations();
   return (
     <textarea
       aria-label={label}
       className="ev-input ev-textarea"
-      maxLength={4000}
+      maxLength={context?.capabilities?.limits?.comment || 4000}
       {...props}
     />
   );
@@ -259,10 +260,14 @@ export function DataTable({
   rows,
   empty = "No hay registros para estos filtros.",
   pageSize = 8,
+  serverPaginated = false,
 }) {
   const [page, setPage] = useState(1);
   const pages = Math.max(1, Math.ceil(rows.length / pageSize)),
     current = Math.min(page, pages);
+  const visible = serverPaginated
+    ? rows
+    : rows.slice((current - 1) * pageSize, current * pageSize);
   return (
     <>
       <div className="ev-table-scroll">
@@ -277,23 +282,21 @@ export function DataTable({
             </tr>
           </thead>
           <tbody>
-            {rows
-              .slice((current - 1) * pageSize, current * pageSize)
-              .map((row) => (
-                <tr key={row.id}>
-                  {columns.map((c) => (
-                    <td key={c.key} data-label={c.label}>
-                      {c.render ? c.render(row) : row[c.key]}
-                    </td>
-                  ))}
-                </tr>
-              ))}
+            {visible.map((row) => (
+              <tr key={row.id}>
+                {columns.map((c) => (
+                  <td key={c.key} data-label={c.label}>
+                    {c.render ? c.render(row) : row[c.key]}
+                  </td>
+                ))}
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
       {!rows.length ? (
         <Empty description={empty} />
-      ) : (
+      ) : !serverPaginated ? (
         <div className="ev-pagination">
           <span>
             {rows.length} registros · Página {current} de {pages}
@@ -319,7 +322,7 @@ export function DataTable({
             </Button>
           </div>
         </div>
-      )}
+      ) : null}
     </>
   );
 }
@@ -363,8 +366,9 @@ export function Confirm({
   action = "Confirmar",
   onConfirm,
 }) {
+  const context = useEvaluations();
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={context?.busy ? undefined : onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
@@ -374,7 +378,9 @@ export function Confirm({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={onConfirm}>{action}</Button>
+          <Button disabled={context?.busy} onClick={onConfirm}>
+            {context?.busy ? "Guardando…" : action}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -434,7 +440,7 @@ export function moveItem(items, from, to) {
 }
 export function downloadCsv(name, content) {
   const url = URL.createObjectURL(
-    new Blob([content], { type: "text/csv;charset=utf-8" }),
+    new Blob([content], { type: "text/csv;charset=utf-8" })
   );
   const a = document.createElement("a");
   a.href = url;

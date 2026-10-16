@@ -61,7 +61,7 @@ export default function EmpresaForm({ idEmpresa }) {
         const giro = await getOptionGiros(data.giro);
         reset({
           ...data,
-          giro,
+          giro: giro ?? data.giro,
           zona_horaria: data.zona_horaria || DEFAULT_COMPANY_TIMEZONE,
           cron_asistencias_activo: data.cron_asistencias_activo ?? 1,
         });
@@ -101,7 +101,10 @@ export default function EmpresaForm({ idEmpresa }) {
 
       await axios.put(
         `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/empresas/${data.id_empresa}`,
-        { ...input, giro: giro.value },
+        {
+            ...input,
+            giro: typeof giro === "string" ? giro : giro?.value,
+          },
         headers
       );
       enqueueSnackbar("Se guardaron los cambios exitosamente!", {

@@ -1,258 +1,355 @@
 "use client";
 import { useState } from "react";
-import { useEvaluations } from "./EvaluationContext";
+import { useEvaluations, useEvaluationQuery } from "./EvaluationContext";
 import {
   Heading,
   Panel,
   Field,
   Input,
+  Select,
   Toggle,
   Button,
-  Segments,
-  Notice,
-  Empty,
-  Confirm,
   DataTable,
-  Badge,
+  Notice,
+  Confirm,
 } from "./ui";
-import { copy } from "@/lib/evaluaciones/model.mjs";
-import { useUnsavedGuard } from "./ResponseView";
+import { QueryState, Pagination } from "./ApiViews";
 const labels = {
-  "template.save": "Plantilla guardada",
-  "template.archive": "Estado de plantilla actualizado",
-  "campaign.save": "Borrador de campaña guardado",
-  "campaign.launch": "Campaña iniciada",
-  "campaign.close": "Campaña cerrada",
-  "campaign.extend": "Fecha límite ampliada",
-  "campaign.remind": "Recordatorio simulado",
-  "response.save": "Borrador de respuesta guardado",
-  "response.submit": "Evaluación enviada",
-  "result.approve": "Resultado aprobado",
-  "result.publish": "Resultado publicado",
-  "receipt.sign": "Recepción confirmada",
-  "plan.save": "Plan guardado",
-  "plan.progress": "Seguimiento actualizado",
-  "settings.save": "Preferencias guardadas",
+  employeeScore: "Colaborador puede ver su puntaje",
+  employeeCategories: "Colaborador puede ver categorías",
+  employeeComments: "Colaborador puede ver comentarios",
+  employeePlan: "Colaborador puede ver su plan",
+  managerResults: "Jefe puede ver resultados publicados",
+  requireApproval: "Exigir aprobación antes de publicar",
+  requireReceipt: "Solicitar confirmación de recibido",
+  anonymousPeers: "Respuestas de pares anónimas",
+  anonymousAscending: "Respuestas ascendentes anónimas",
 };
 export function SettingsView() {
-  const { state, actor, run, reset } = useEvaluations(),
-    [settings, setSettings] = useState(() => copy(state.settings)),
-    [tab, setTab] = useState("access"),
-    [dirty, setDirty] = useState(false),
-    [confirm, setConfirm] = useState(false);
-  useUnsavedGuard(dirty);
-  if (actor.role !== "hr")
-    return <Empty title="Configuración exclusiva de RH" />;
-  const update = (key, value) => {
-    setSettings({ ...settings, [key]: value });
-    setDirty(true);
-  };
+  const query = useEvaluationQuery("/settings");
   return (
     <>
       <Heading
         title="Configuración de evaluaciones"
-        description="Define los valores iniciales para campañas nuevas. Cada campaña conserva sus propias reglas."
-        actions={
-          tab === "access" && (
-            <Button
-              className="bg-blue-600 hover:bg-blue-700"
-              onClick={() => {
-                if (
-                  run(
-                    { type: "settings.save", settings },
-                    "Preferencias guardadas",
-                  )
-                )
-                  setDirty(false);
-              }}
-            >
-              Guardar preferencias
-            </Button>
-          )
-        }
+        description="Valores iniciales para nuevas campañas, niveles y acceso al módulo."
       />
-      <div className="ev-stack">
-        <Segments
-          value={tab}
-          onChange={setTab}
-          items={[
-            { value: "access", label: "Permisos y confidencialidad" },
-            { value: "activity", label: "Actividad" },
-            { value: "demo", label: "Demostración" },
-          ]}
-        />
-        {tab === "access" && (
-          <>
-            <div className="ev-grid">
-              <Panel title="Recursos Humanos">
-                <div className="ev-pad ev-stack">
-                  <Badge tone="blue">Administración del módulo</Badge>
-                  <p>
-                    Configura plantillas, campañas y asignaciones. Revisa
-                    avances y resultados de la empresa, aprueba publicaciones y
-                    administra planes.
-                  </p>
-                  <Notice>
-                    Las notas privadas se reservan a RH. Las perspectivas
-                    agrupadas nunca muestran calificaciones individuales ni
-                    autores de comentarios.
-                  </Notice>
-                </div>
-              </Panel>
-              <Panel title="Jefe directo">
-                <div className="ev-pad">
-                  <p>
-                    Responde las evaluaciones asignadas y consulta el avance de
-                    sus colaboradores directos.
-                  </p>
-                  <Toggle
-                    label="Consultar resultados de su equipo"
-                    hint="Solo después de que RH publique cada resultado."
-                    checked={settings.managerResults}
-                    onChange={(v) => update("managerResults", v)}
-                  />
-                </div>
-              </Panel>
-            </div>
-            <Panel
-              title="Vista del colaborador"
-              description="Se aplica únicamente a resultados publicados de la propia persona."
-            >
-              <div className="ev-pad">
-                {[
-                  ["employeeScore", "Ver calificación final y perspectivas"],
-                  ["employeeCategories", "Ver calificaciones por categoría"],
-                  ["employeeComments", "Ver comentarios compartidos"],
-                  ["employeePlan", "Ver plan de mejora y seguimiento"],
-                  ["requireReceipt", "Solicitar confirmación de recibido"],
-                ].map(([key, label]) => (
-                  <Toggle
-                    key={key}
-                    label={label}
-                    checked={settings[key]}
-                    onChange={(v) => update(key, v)}
-                  />
-                ))}
-              </div>
-            </Panel>
-            <div className="ev-grid">
-              <Panel title="Publicación y dirección">
-                <div className="ev-pad">
-                  <Toggle
-                    label="Requerir aprobación de RH antes de publicar"
-                    checked={settings.requireApproval}
-                    onChange={(v) => update("requireApproval", v)}
-                  />
-                  <p className="mt-4">
-                    Dirección consulta el tablero, resultados y planes de la
-                    empresa. No cambia respuestas ni ve notas privadas de RH.
-                  </p>
-                </div>
-              </Panel>
-              <Panel title="Confidencialidad por perspectiva">
-                <div className="ev-pad ev-stack">
-                  <Toggle
-                    label="Agrupar respuestas horizontales (pares)"
-                    checked={settings.anonymousPeers}
-                    onChange={(v) => update("anonymousPeers", v)}
-                  />
-                  <Toggle
-                    label="Agrupar respuestas ascendentes"
-                    checked={settings.anonymousAscending}
-                    onChange={(v) => update("anonymousAscending", v)}
-                  />
-                  <Field
-                    label="Mínimo de respuestas por grupo"
-                    hint="Si no se alcanza, el resultado del grupo no se muestra. Mínimo permitido: 3."
-                  >
-                    <Input
-                      type="number"
-                      min={3}
-                      max={20}
-                      label="Mínimo de respuestas"
-                      value={settings.minimumResponses}
-                      onChange={(e) =>
-                        update("minimumResponses", Number(e.target.value))
-                      }
-                    />
-                  </Field>
-                </div>
-              </Panel>
-            </div>
-          </>
+      <QueryState query={query}>
+        {query.data && (
+          <SettingsEditor key={query.data.version} initial={query.data} />
         )}
-        {tab === "activity" && (
-          <Panel
-            title="Actividad de la demostración"
-            description="Se conserva un máximo de 500 eventos locales. La bitácora definitiva vivirá en el servidor."
-          >
+      </QueryState>
+      <Levels />
+      <Permissions />
+    </>
+  );
+}
+function SettingsEditor({ initial }) {
+  const { api, perform, busy } = useEvaluations(),
+    [config, setConfig] = useState(initial.config);
+  return (
+    <Panel title="Permisos y confidencialidad">
+      <div className="ev-pad ev-stack">
+        {Object.entries(labels).map(([key, label]) => (
+          <Toggle
+            key={key}
+            label={label}
+            checked={config[key]}
+            onChange={(value) => setConfig((c) => ({ ...c, [key]: value }))}
+          />
+        ))}
+        <Field label="Mínimo de respuestas para perspectivas anónimas">
+          <Input
+            type="number"
+            min={3}
+            max={20}
+            value={config.minimumResponses}
+            onChange={(e) =>
+              setConfig((c) => ({
+                ...c,
+                minimumResponses: Number(e.target.value),
+              }))
+            }
+          />
+        </Field>
+        <Notice>
+          Una campaña existente conserva su configuración. Estos valores se
+          aplican a campañas nuevas.
+        </Notice>
+        <Button
+          disabled={busy}
+          onClick={() =>
+            perform(
+              () =>
+                api.mutate("PATCH", "/settings", config, {
+                  version: initial.version,
+                }),
+              "Preferencias guardadas"
+            )
+          }
+        >
+          Guardar preferencias
+        </Button>
+      </div>
+    </Panel>
+  );
+}
+function Levels() {
+  const { api, perform, busy } = useEvaluations(),
+    query = useEvaluationQuery("/levels");
+  const [edit, setEdit] = useState({ nombre: "", orden: 1 }),
+    [page, setPage] = useState(1),
+    [q, setQ] = useState(""),
+    [remove, setRemove] = useState(null);
+  const people = useEvaluationQuery("/people", { page, pageSize: 25, q });
+  async function save() {
+    if (
+      await perform(
+        () =>
+          api.mutate(
+            edit.id ? "PATCH" : "POST",
+            edit.id ? `/levels/${edit.id}` : "/levels",
+            { nombre: edit.nombre, orden: Number(edit.orden) }
+          ),
+        "Nivel guardado"
+      )
+    )
+      setEdit({ nombre: "", orden: 1 });
+  }
+  return (
+    <>
+      <Panel title="Niveles jerárquicos">
+        <div className="ev-pad ev-stack">
+          <QueryState query={query}>
             <DataTable
-              rows={state.events}
+              serverPaginated
+              rows={query.data || []}
               columns={[
                 {
-                  key: "type",
-                  label: "Acción",
-                  render: (e) => labels[e.type] || e.type,
+                  key: "name",
+                  label: "Nivel",
+                  render: (l) => l.name || l.nombre,
                 },
                 {
-                  key: "actorId",
-                  label: "Perfil ficticio",
-                  render: (e) =>
-                    state.people.find((p) => p.id === e.actorId)?.name,
+                  key: "order",
+                  label: "Orden",
+                  render: (l) => l.order ?? l.orden,
                 },
                 {
-                  key: "at",
-                  label: "Fecha",
-                  render: (e) =>
-                    new Intl.DateTimeFormat("es-MX", {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                      timeZone: "America/Mexico_City",
-                    }).format(new Date(e.at)),
+                  key: "actions",
+                  label: "",
+                  render: (l) => (
+                    <div className="ev-actions">
+                      <Button
+                        variant="outline"
+                        onClick={() =>
+                          setEdit({
+                            id: l.id,
+                            nombre: l.name || l.nombre,
+                            orden: l.order ?? l.orden,
+                          })
+                        }
+                      >
+                        Editar
+                      </Button>
+                      <Button variant="ghost" onClick={() => setRemove(l)}>
+                        Eliminar
+                      </Button>
+                    </div>
+                  ),
                 },
               ]}
-              empty="Todavía no se han realizado acciones en este navegador."
             />
-          </Panel>
-        )}
-        {tab === "demo" && (
-          <Panel title="Datos de demostración">
-            <div className="ev-pad ev-stack">
-              <p>
-                Todos los nombres, campañas y resultados de este módulo son
-                ficticios. Los cambios se guardan por usuario y empresa en este
-                navegador.
-              </p>
-              <Notice>
-                Esta versión permite validar el flujo completo. No envía
-                correos, no crea campañas automáticamente en el futuro y no
-                emite una firma digital verificable.
-              </Notice>
-              <p>
-                Restablecer elimina solamente los cambios de esta demostración
-                para la sesión actual. No modifica los demás módulos de ADAMIA.
-              </p>
-              <div>
-                <Button variant="outline" onClick={() => setConfirm(true)}>
-                  Restablecer demostración
-                </Button>
-              </div>
-            </div>
-          </Panel>
-        )}
-      </div>
+          </QueryState>
+          <Field label={edit.id ? "Editar nivel" : "Nuevo nivel"}>
+            <Input
+              value={edit.nombre}
+              onChange={(e) =>
+                setEdit((v) => ({ ...v, nombre: e.target.value }))
+              }
+            />
+          </Field>
+          <Field label="Orden">
+            <Input
+              type="number"
+              value={edit.orden}
+              onChange={(e) =>
+                setEdit((v) => ({ ...v, orden: e.target.value }))
+              }
+            />
+          </Field>
+          <Button disabled={busy || !edit.nombre.trim()} onClick={save}>
+            Guardar nivel
+          </Button>
+          {edit.id && (
+            <Button
+              variant="ghost"
+              onClick={() => setEdit({ nombre: "", orden: 1 })}
+            >
+              Cancelar edición
+            </Button>
+          )}
+        </div>
+      </Panel>
+      <Panel title="Asignar nivel a colaboradores">
+        <div className="ev-pad">
+          <Input
+            label="Buscar colaborador"
+            placeholder="Buscar colaborador"
+            value={q}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setPage(1);
+            }}
+          />
+        </div>
+        <QueryState query={people}>
+          <DataTable
+            serverPaginated
+            rows={people.data || []}
+            columns={[
+              { key: "name", label: "Colaborador" },
+              {
+                key: "levelId",
+                label: "Nivel",
+                render: (p) => (
+                  <Select
+                    label={`Nivel de ${p.name}`}
+                    disabled={busy}
+                    value={p.levelId ?? ""}
+                    onChange={(e) =>
+                      perform(
+                        () =>
+                          api.mutate("PUT", `/people/${p.id}/level`, {
+                            levelId: e.target.value
+                              ? Number(e.target.value)
+                              : null,
+                          }),
+                        "Nivel asignado"
+                      )
+                    }
+                  >
+                    <option value="">Sin nivel</option>
+                    {(query.data || []).map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.name || l.nombre}
+                      </option>
+                    ))}
+                  </Select>
+                ),
+              },
+            ]}
+          />
+          <Pagination query={people} page={page} setPage={setPage} />
+        </QueryState>
+      </Panel>
       <Confirm
-        open={confirm}
-        onOpenChange={setConfirm}
-        title="Restablecer datos de demostración"
-        description="Se borrarán tus plantillas, respuestas y cambios locales de esta demostración. Los demás módulos no se modifican."
-        action="Restablecer"
-        onConfirm={() => {
-          reset();
-          setConfirm(false);
-          setDirty(false);
+        open={!!remove}
+        onOpenChange={() => setRemove(null)}
+        title="Eliminar nivel"
+        description="Solo se puede eliminar si no tiene colaboradores asignados."
+        onConfirm={async () => {
+          if (
+            await perform(
+              () => api.mutate("DELETE", `/levels/${remove.id}`),
+              "Nivel eliminado"
+            )
+          )
+            setRemove(null);
         }}
       />
     </>
+  );
+}
+function Permissions() {
+  const { api, perform, busy, capabilities } = useEvaluations(),
+    query = useEvaluationQuery("/permissions");
+  const [perfil, setPerfil] = useState("rh"),
+    [type, setType] = useState("idUsuario"),
+    [id, setId] = useState(""),
+    [remove, setRemove] = useState(null);
+  return (
+    <Panel title="Acceso de RH y Dirección">
+      <div className="ev-pad ev-stack">
+        <Notice>
+          Tu perfil actual: {capabilities.profile}. El servidor verifica todos
+          los accesos.
+        </Notice>
+        <QueryState query={query}>
+          <DataTable
+            serverPaginated
+            rows={query.data || []}
+            columns={[
+              { key: "perfil", label: "Perfil" },
+              { key: "idUsuario", label: "Usuario" },
+              { key: "idEmpleado", label: "Empleado" },
+              {
+                key: "action",
+                label: "",
+                render: (p) => (
+                  <Button variant="ghost" onClick={() => setRemove(p)}>
+                    Revocar
+                  </Button>
+                ),
+              },
+            ]}
+          />
+        </QueryState>
+        <div className="ev-grid">
+          <Field label="Perfil">
+            <Select value={perfil} onChange={(e) => setPerfil(e.target.value)}>
+              <option value="rh">Recursos Humanos</option>
+              <option value="direccion">Dirección</option>
+            </Select>
+          </Field>
+          <Field label="Tipo de cuenta">
+            <Select value={type} onChange={(e) => setType(e.target.value)}>
+              <option value="idUsuario">Usuario de panel</option>
+              <option value="idEmpleado">Empleado</option>
+            </Select>
+          </Field>
+          <Field label="Identificador de la cuenta">
+            <Input
+              type="number"
+              min={1}
+              value={id}
+              onChange={(e) => setId(e.target.value)}
+            />
+          </Field>
+        </div>
+        <Button
+          disabled={busy || !(Number(id) > 0)}
+          onClick={async () => {
+            if (
+              await perform(
+                () =>
+                  api.mutate("POST", "/permissions", {
+                    perfil,
+                    [type]: Number(id),
+                  }),
+                "Permiso asignado"
+              )
+            )
+              setId("");
+          }}
+        >
+          Asignar permiso
+        </Button>
+      </div>
+      <Confirm
+        open={!!remove}
+        onOpenChange={() => setRemove(null)}
+        title="Revocar permiso"
+        description="Se retirará este acceso explícito al módulo."
+        onConfirm={async () => {
+          if (
+            await perform(
+              () => api.mutate("DELETE", `/permissions/${remove.id}`),
+              "Permiso revocado"
+            )
+          )
+            setRemove(null);
+        }}
+      />
+    </Panel>
   );
 }

@@ -1,61 +1,40 @@
 "use client";
 import Link from "next/link";
-import { useEvaluations } from "./EvaluationContext";
-import { Select, Empty, ActionLink } from "./ui";
-import { Templates, TemplateEditor } from "./TemplateViews";
-import { Campaigns, CampaignDetail, CampaignWizard } from "./CampaignViews";
-import { Assignments, Team } from "./TaskViews";
+import { useEvaluations, EditorData } from "./EvaluationContext";
+import { Empty, ActionLink } from "./ui";
+import { TemplateEditor } from "./TemplateViews";
+import { CampaignWizard } from "./CampaignViews";
+import {
+  Templates,
+  Campaigns,
+  CampaignDetail,
+  Assignments,
+  Team,
+} from "./ApiViews";
 import { ResponseView } from "./ResponseView";
 import { Overview, Results, ResultDetail } from "./ResultViews";
 import { PlanList } from "./PlanViews";
 import { SettingsView } from "./SettingsView";
 import "./evaluaciones.css";
-const roleLabels = {
-  hr: "RH",
-  direction: "Dirección",
-  manager: "Jefe",
-  employee: "Colaborador",
-};
 export const EVALUATION_NAV = [
-  { label: "Resumen", path: "", roles: ["hr", "direction"] },
-  { label: "Campañas", path: "campanas", roles: ["hr", "direction"] },
-  { label: "Plantillas", path: "plantillas", roles: ["hr"] },
-  { label: "Mis pendientes", path: "mis-pendientes" },
-  { label: "Mi equipo", path: "equipo", roles: ["hr", "direction", "manager"] },
-  {
-    label: "Resultados",
-    path: "resultados",
-    roles: ["hr", "direction", "manager"],
-  },
-  { label: "Tablero", path: "tablero", roles: ["hr", "direction"] },
-  { label: "Mis evaluaciones", path: "mis-evaluaciones" },
-  { label: "Seguimiento", path: "seguimiento" },
-  { label: "Configuración", path: "configuracion", roles: ["hr"] },
+  { label: "Resumen", path: "", scope: "dashboard" },
+  { label: "Campañas", path: "campanas", scope: "campaigns" },
+  { label: "Plantillas", path: "plantillas", scope: "templates" },
+  { label: "Mis pendientes", path: "mis-pendientes", scope: "assignments" },
+  { label: "Mi equipo", path: "equipo", scope: "team" },
+  { label: "Resultados", path: "resultados", scope: "results" },
+  { label: "Tablero", path: "tablero", scope: "dashboard" },
+  { label: "Mis evaluaciones", path: "mis-evaluaciones", scope: "results" },
+  { label: "Seguimiento", path: "seguimiento", scope: "plans" },
+  { label: "Configuración", path: "configuracion", scope: "settings" },
 ];
 export function EvaluationShell({ children }) {
-  const { state, actor, setActor, href, section } = useEvaluations();
+  const { capabilities, href, section } = useEvaluations();
   return (
     <div className="ev-module">
-      <div className="ev-demo">
-        <span>
-          <strong>Demostración del módulo</strong> · Datos ficticios. Los
-          cambios se guardan en este navegador.
-        </span>
-        <Select
-          label="Probar como perfil ficticio"
-          value={actor.id}
-          onChange={(e) => setActor(e.target.value)}
-        >
-          {state.people.map((p) => (
-            <option key={p.id} value={p.id}>
-              {roleLabels[p.role]} · {p.name}
-            </option>
-          ))}
-        </Select>
-      </div>
       <nav className="ev-nav" aria-label="Evaluación de desempeño">
-        {EVALUATION_NAV.filter(
-          (n) => !n.roles || n.roles.includes(actor.role),
+        {EVALUATION_NAV.filter((n) =>
+          capabilities.scopes.includes(n.scope)
         ).map((n) => (
           <Link
             key={n.path}
@@ -70,31 +49,50 @@ export function EvaluationShell({ children }) {
           </Link>
         ))}
       </nav>
-      <div key={actor.id}>{children}</div>
+      {children}
     </div>
   );
 }
 export default function EvaluationModule({ segments = [] }) {
-  const { actor } = useEvaluations();
-  const [view, id, third] = segments;
-  const route = segments.join("/");
+  const { capabilities } = useEvaluations(),
+    [view, id, third] = segments;
+  const scope =
+    EVALUATION_NAV.find((n) => n.path === view)?.scope ||
+    (view === "responder" ? "assignments" : null);
+  if (scope && !capabilities.scopes.includes(scope))
+    return (
+      <Empty
+        title="No tienes acceso a esta sección"
+        action={<ActionLink to="">Volver</ActionLink>}
+      />
+    );
   let page;
   if (!view)
-    page = ["hr", "direction"].includes(actor.role) ? (
+    page = capabilities.scopes.includes("dashboard") ? (
       <Overview />
-    ) : actor.role === "manager" ? (
+    ) : capabilities.scopes.includes("team") ? (
       <Team />
     ) : (
       <Assignments />
     );
   else if (view === "plantillas")
-    page = id ? <TemplateEditor id={id} /> : <Templates />;
+    page = id ? (
+      <EditorData key={`template:${id}`} kind="template" id={id}>
+        <TemplateEditor id={id} />
+      </EditorData>
+    ) : (
+      <Templates />
+    );
   else if (view === "campanas")
     page =
-      id === "nueva" ? (
-        <CampaignWizard />
-      ) : third === "editar" ? (
-        <CampaignWizard id={id} />
+      id === "nueva" || third === "editar" ? (
+        <EditorData
+          key={`campaign:${id}`}
+          kind="campaign"
+          id={id === "nueva" ? undefined : id}
+        >
+          <CampaignWizard id={id === "nueva" ? undefined : id} />
+        </EditorData>
       ) : id ? (
         <CampaignDetail id={id} />
       ) : (
@@ -114,12 +112,6 @@ export default function EvaluationModule({ segments = [] }) {
   else if (view === "tablero") page = <Overview executive />;
   else if (view === "seguimiento") page = <PlanList />;
   else if (view === "configuracion") page = <SettingsView />;
-  else
-    page = (
-      <Empty
-        title="Vista no encontrada"
-        action={<ActionLink to="">Volver al módulo</ActionLink>}
-      />
-    );
-  return <div key={`${actor.id}:${route}`}>{page}</div>;
+  else page = <Empty title="Vista no encontrada" />;
+  return <div key={segments.join("/")}>{page}</div>;
 }
