@@ -34,6 +34,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ComboboxSucursal } from "@/components/ComboboxSucursal";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { schemaEmpleado } from "@/schemas/schemaEmpleado";
+import TabContactosEmergencia from "./tabs/TabContactosEmergencia";
 import TabPersonales from "./tabs/TabPersonales";
 import TabLaborales from "./tabs/TabLaborales";
 import TabJornada from "./tabs/TabJornada";
@@ -83,6 +84,7 @@ export default function FormularioEmpleado({
     [DIAS_SEMANA],
   );
 
+  const [contactosEmergencia, setContactosEmergencia] = useState([]);
   const [tab, setTab] = useState("personales");
   const fueDesdeLectura = useRef(false);
   const nombreInputRef = useRef(null);
@@ -539,6 +541,44 @@ export default function FormularioEmpleado({
         throw new Error("No se pudo obtener el ID del empleado");
       }
 
+      // CONTACTOS_EMERGENCIA_POST_CREACION
+      // El empleado ya existe: un error aquí no debe provocar
+      // que el usuario intente crearlo nuevamente.
+      if (!editar && contactosEmergencia.length > 0) {
+        const urlContactos =
+          `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados/${idEmpleadoFinal}/contactos-emergencia`;
+
+        let guardados = 0;
+        let fallidos = 0;
+
+        // Primero los secundarios, al final el principal.
+        const ordenados = [...contactosEmergencia].sort(
+          (a, b) => Number(a.es_principal) - Number(b.es_principal)
+        );
+
+        for (const contacto of ordenados) {
+          try {
+            await axios.post(urlContactos, contacto);
+            guardados++;
+          } catch (errorContacto) {
+            console.error(
+              "Error al guardar contacto de emergencia:",
+              errorContacto
+            );
+            fallidos++;
+          }
+        }
+
+        if (fallidos > 0) {
+          enqueueSnackbar(
+            `Empleado creado. Contactos guardados: ${guardados}. Contactos pendientes: ${fallidos}. Puedes agregarlos desde su expediente.`,
+            { variant: "warning", autoHideDuration: 10000 }
+          );
+        }
+
+        setContactosEmergencia([]);
+      }
+
       // En creación, el turno se asigna dentro del mismo POST /empleados
       // para que empleado + turno sean una sola transacción en backend.
       // En edición se conserva el endpoint independiente.
@@ -822,6 +862,13 @@ export default function FormularioEmpleado({
                       <span className="hidden sm:inline">Datos personales</span>
                     </TabsTrigger>
                     <TabsTrigger
+                      value="emergencia"
+                      className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-6 font-medium"
+                    >
+                      <Icon icon="mdi:account-alert-outline" className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Contactos de emergencia</span>
+                    </TabsTrigger>
+                    <TabsTrigger
                       value="laborales"
                       className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-6 font-medium"
                     >
@@ -892,6 +939,14 @@ export default function FormularioEmpleado({
                         <TabPersonales form={form} soloLectura={soloLectura} />
                       )}
 
+                      {tab === "emergencia" && (
+                        <TabContactosEmergencia
+                          empleadoId={values?.id_empleado}
+                          soloLectura={soloLectura}
+                          borradores={contactosEmergencia}
+                          setBorradores={setContactosEmergencia}
+                        />
+                      )}
                       {tab === "laborales" && (
                         <TabLaborales
                           form={form}
