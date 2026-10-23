@@ -61,25 +61,31 @@ jobs:
         run: |
           set -e
 
-          if ! command -v mysql >/dev/null 2>&1; then
-            echo "MySQL no está instalado en el runner"
+          sudo systemctl start mysql
+
+          echo "Configurando MySQL..."
+
+          MYSQL_ADMIN_FILE="/etc/mysql/debian.cnf"
+
+          if [ ! -f "$MYSQL_ADMIN_FILE" ]; then
+            echo "No existe el archivo de credenciales administrativas"
             exit 1
           fi
 
-          sudo systemctl start mysql
-
-          sudo mysql -e "
+          sudo mysql --defaults-file="$MYSQL_ADMIN_FILE" -e "
             ALTER USER 'root'@'localhost'
             IDENTIFIED WITH caching_sha2_password
             BY 'cau_ci_test_only';
           "
+
+          echo "Verificando conexión MySQL..."
 
           mysqladmin ping \
             -h 127.0.0.1 \
             -uroot \
             -pcau_ci_test_only
 
-          echo "MySQL disponible para las pruebas"
+          echo "MySQL listo para pruebas"
 
       - name: Lint (errores = falla | warnings = OK)
         run: npm run lint
