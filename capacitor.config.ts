@@ -1,13 +1,15 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: "com.hr360.checkin",
-  appName: "Checkin Adamia",
-  webDir: ".next",
+  appId: "mx.com.adamia.app",
+  appName: "ADAMIA",
+  webDir: "public",
   server: {
-    url: "https://hr360checkindev.netlify.app/",
-    cleartext: true,
+    url: "https://www.adamia.com.mx/login",
+    cleartext: false,
+    androidScheme: "https",
   },
+  appendUserAgent: "AdamiaAppNative",
 };
 
 export default config;
