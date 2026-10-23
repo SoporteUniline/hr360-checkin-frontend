@@ -19,12 +19,24 @@ import EllipsisLoader from "@/components/loading/EllipsisLoader";
 import { useAuth } from "@/context/AuthContext";
 import Image from "next/image";
 import { CircleArrowLeftIcon } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
 
 export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
   const { enqueueSnackbar } = useSnackbar();
   const [loading, setLoading] = useState(false);
+  const [isNative, setIsNative] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsNative(
+        Capacitor.isNativePlatform() ||
+          navigator.userAgent.includes("AdamiaAppNative"),
+      );
+    }
+  }, []);
+
   const form = useForm({
     defaultValues: {
       correo: "",
@@ -98,16 +110,18 @@ export default function LoginPage() {
         </section>
       </div>
       <div className="flex flex-col">
-        <nav className="flex justify-end p-3">
-          <Button
-            variant="ghost"
-            className="text-[var(--adamia-text-primary)] hover:bg-[var(--adamia-blue)]/10"
-            startIcon={<CircleArrowLeftIcon />}
-            onClick={handleBack}
-          >
-            Página principal
-          </Button>
-        </nav>
+        {!isNative && (
+          <nav className="flex justify-end p-3">
+            <Button
+              variant="ghost"
+              className="text-[var(--adamia-text-primary)] hover:bg-[var(--adamia-blue)]/10"
+              startIcon={<CircleArrowLeftIcon />}
+              onClick={handleBack}
+            >
+              Página principal
+            </Button>
+          </nav>
+        )}
         <div className="flex flex-col justify-center items-center flex-1">
           <h1 className="text-[var(--adamia-text-primary)] text-4xl font-bold self-center">
             Iniciar sesión
@@ -173,14 +187,16 @@ export default function LoginPage() {
                   >
                     Olvidé mi contraseña
                   </Button>
-                  <Button
-                    onClick={irARegistro}
-                    type="button"
-                    variant="ghost"
-                    className="w-full cursor-pointer text-[var(--adamia-text-primary)] hover:bg-[var(--adamia-blue)]/10"
-                  >
-                    Registrarme
-                  </Button>
+                  {!isNative && (
+                    <Button
+                      onClick={irARegistro}
+                      type="button"
+                      variant="ghost"
+                      className="w-full cursor-pointer text-[var(--adamia-text-primary)] hover:bg-[var(--adamia-blue)]/10"
+                    >
+                      Registrarme
+                    </Button>
+                  )}
                 </div>
               </form>
             </Form>

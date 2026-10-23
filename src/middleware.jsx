@@ -20,6 +20,25 @@ const defaultRedirects = {
 export async function middleware(request) {
   const token = request.cookies.get("token")?.value;
   const pathname = request.nextUrl.pathname;
+  const userAgent = request.headers.get("user-agent") || "";
+  const isNativeApp = userAgent.includes("AdamiaAppNative");
+
+  // Reglas de restricción para la app nativa (evita landing, planes y compras en la tienda)
+  if (isNativeApp) {
+    if (pathname === "/") {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+    if (
+      pathname.startsWith("/contratar-plan") ||
+      pathname.startsWith("/cotiza") ||
+      pathname.startsWith("/alta-empresas")
+    ) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+    if (pathname.startsWith("/panel/mi-suscripcion")) {
+      return NextResponse.redirect(new URL("/panel", request.url));
+    }
+  }
 
   if (!token) {
     const protectedRoutes = ["/dashboard", "/panel", "/home", "/empleado"].some(
@@ -38,7 +57,8 @@ export async function middleware(request) {
     // console.log("🧠 Tipo de usuario detectado:", tipoUsuario);
 
     if (pathname === "/login" || pathname === "/register") {
-      const redirectTo = defaultRedirects[tipoUsuario] || "/";
+      const redirectTo =
+        defaultRedirects[tipoUsuario] || (isNativeApp ? "/panel" : "/");
       return NextResponse.redirect(new URL(redirectTo, request.url));
     }
 
@@ -46,7 +66,8 @@ export async function middleware(request) {
     const isAllowed = allowedPaths.some((path) => pathname.startsWith(path));
 
     if (!isAllowed) {
-      const redirectTo = defaultRedirects[tipoUsuario] || "/";
+      const redirectTo =
+        defaultRedirects[tipoUsuario] || (isNativeApp ? "/panel" : "/");
       return NextResponse.redirect(new URL(redirectTo, request.url));
     }
 
@@ -62,11 +83,15 @@ export async function middleware(request) {
 
 export const config = {
   matcher: [
+    "/",
     "/dashboard/:path*",
     "/panel/:path*",
     "/home/:path*",
     "/empleado/:path*",
     "/login",
     "/register",
+    "/contratar-plan/:path*",
+    "/cotiza/:path*",
+    "/alta-empresas/:path*",
   ],
 };
