@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import RelojChecador from "@/components/RelojChecador";
 import Navbar from "@/components/Navbar";
+import Link from "next/link";
 
 export default function EmpleadoInicioPage() {
   const { dataUser, isLoggedIn } = useAuth();
@@ -76,6 +77,7 @@ export default function EmpleadoInicioPage() {
       <>
         <Navbar />
         <div className="pt-14">
+          <Link href="/empleado/panel/inicio" className="flex min-h-12 items-center bg-white px-5 font-semibold text-blue-700">← Volver a mi inicio</Link>
           <RelojChecador
             idEmpresa={dataUser.id_empresa}
             modoEmpleado={true}
