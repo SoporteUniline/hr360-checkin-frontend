@@ -127,7 +127,7 @@ export default function SucursalFormDialog({
       const config = { headers: { "Content-Type": "multipart/form-data" } };
 
       if (editSuc)
-        await axios.put(`${url}/${editSuc.id_sucursal}`, formData, config);
+        await axios.put(`${url}/${editSuc.id_unidad}`, formData, config);
       else await axios.post(url, formData, config);
 
       enqueueSnackbar("Guardado correctamente", { variant: "success" });
