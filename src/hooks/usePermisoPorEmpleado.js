@@ -1,34 +1,11 @@
 import { useAuth } from "@/context/AuthContext";
 import { fetcherWithToken } from "@/lib/fetcher";
 import useSWR from "swr";
+import useEmpleadoSesion from "./useEmpleadoSesion";
 
 export const usePermisosEmpleado = (page = 1, limit = 10) => {
-  const { dataUser } = useAuth();
-  const correoSesion = String(dataUser?.correo || dataUser?.email || "").trim();
-  const empresaSesion =
-    dataUser?.id_empresa ||
-    dataUser?.empresas_detalle?.[0]?.id_empresa ||
-    dataUser?.empresas?.[0] ||
-    null;
-
-  const idEmpleadoSesion = Number(dataUser?.id_empleado || 0);
-
-  // Fallback: cuando el token no trae id_empleado, resolverlo por correo + empresa.
-  const { data: empleadoPorCorreo } = useSWR(
-    !idEmpleadoSesion && correoSesion && empresaSesion
-      ? `/checador/empleados/por-correo?empresa=${empresaSesion}&correo=${encodeURIComponent(
-          correoSesion,
-        )}`
-      : null,
-    fetcherWithToken,
-    {
-      revalidateOnFocus: false,
-      keepPreviousData: true,
-    },
-  );
-
-  const idEmpleadoResuelto =
-    idEmpleadoSesion || Number(empleadoPorCorreo?.id_empleado || 0);
+  const session = useEmpleadoSesion();
+  const idEmpleadoResuelto = session.id;
   const shouldFetch = Boolean(idEmpleadoResuelto);
 
   const {
@@ -45,7 +22,7 @@ export const usePermisosEmpleado = (page = 1, limit = 10) => {
       // Refresca automáticamente para reflejar cambios de estado (ej. Aprobado/Rechazado)
       refreshInterval: 15000,
       revalidateOnFocus: true,
-      keepPreviousData: true,
+      keepPreviousData: false,
     },
   );
 
@@ -58,8 +35,8 @@ export const usePermisosEmpleado = (page = 1, limit = 10) => {
   return {
     data: normalizedData,
     total: Number(data?.total || normalizedData.length || 0),
-    error,
-    isLoading: isLoadingPermisos && shouldFetch,
+    error: session.error || error,
+    isLoading: session.isLoading || (isLoadingPermisos && shouldFetch),
     mutate,
   };
 };
@@ -76,7 +53,7 @@ export const usePermisosPorAutorizar = (page = 1, limit = 10) => {
     {
       refreshInterval: 15000,
       revalidateOnFocus: true,
-      keepPreviousData: true,
+      keepPreviousData: false,
     },
   );
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Dialog,
   DialogFooter,
@@ -39,6 +39,8 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
 
   const [form, setForm] = useState(initialForm);
   const [errors, setErrors] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
 
   const isReadOnly = mode === "ver";
   const isEdit = mode === "editar";
@@ -65,7 +67,7 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
     }
   }, [open, mode, selected]);
 
-  const { data: tiposPermisoResponse } = useTiposPermisoData();
+  const { data: tiposPermisoResponse, error: tiposError, isLoading: tiposLoading } = useTiposPermisoData();
 
   const arrayTiposPermiso = tiposPermisoResponse?.tiposPermiso;
 
@@ -131,6 +133,7 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
   };
 
   const handleSave = async () => {
+    if (savingRef.current) return;
     const validationErrors = validateForm();
     if (validationErrors.length > 0) {
       setErrors(validationErrors);
@@ -138,6 +141,9 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
       return;
     }
 
+    savingRef.current = true;
+    setSaving(true);
+    setErrors([]);
     try {
       const token = Cookies.get("token");
       const empleadoId = await resolveEmpleadoId();
@@ -174,10 +180,14 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
         error?.response?.data?.error || "No se pudo crear la solicitud",
         { variant: "error" },
       );
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
   };
 
   const handleUpdate = async () => {
+    if (savingRef.current) return;
     const validationErrors = validateForm();
     if (validationErrors.length > 0) {
       setErrors(validationErrors);
@@ -185,6 +195,9 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
       return;
     }
 
+    savingRef.current = true;
+    setSaving(true);
+    setErrors([]);
     try {
       const token = Cookies.get("token");
       const empleadoId = await resolveEmpleadoId();
@@ -224,17 +237,20 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
         error?.response?.data?.error || "No se pudo actualizar la solicitud",
         { variant: "error" },
       );
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
   };
 
   const arrayFiltered = arrayTiposPermiso?.filter((permiso) => {
-    return permiso.es_permiso === 1;
+    return Number(permiso.es_permiso) === 1 || Number(permiso.descuenta_vacaciones) === 1;
   });
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="p-0 overflow-hidden max-w-[95vw] sm:max-w-xl">
-        <DialogHeader className="p-5 bg-linear-to-r from-indigo-600 to-blue-600 text-white">
+    <Dialog open={open} onOpenChange={(value) => { if (!savingRef.current) setOpen(value); }}>
+      <DialogContent className="flex max-h-[calc(100dvh-2rem)] flex-col gap-0 p-0 overflow-hidden max-w-[95vw] sm:max-w-xl [&_input]:min-h-11 [&_input]:text-base [&_textarea]:text-base [&_button]:min-h-11">
+        <DialogHeader className="shrink-0 p-5 bg-blue-600 text-white">
           <DialogTitle className="flex items-center gap-2 text-base font-bold">
             <span className="grid size-9 place-items-center rounded-lg bg-white/15">
               <CalendarCheck2 className="size-5 text-white" />
@@ -252,10 +268,13 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
           </p>
         </DialogHeader>
 
-        <div className="max-h-[70vh] overflow-y-auto p-5 space-y-4">
+        <div className="min-h-0 flex-1 overflow-y-auto p-5 space-y-4">
+          {tiposLoading && <p role="status" className="text-sm text-slate-500">Cargando tipos de permiso…</p>}
+          {tiposError && <p role="alert" className="text-sm text-red-700">No pudimos cargar los tipos de permiso. Cierra e intenta de nuevo.</p>}
+          {isReadOnly && <p className="text-sm font-medium">Estado: {selected?.estado} · {selected?.tipo_permiso_nombre}</p>}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Tipo de permiso</Label>
+              <Label htmlFor="request-type">Tipo de permiso</Label>
               <Select
                 value={form.id_tipo_permiso}
                 onValueChange={(val) =>
@@ -264,9 +283,9 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
                     id_tipo_permiso: val,
                   }))
                 }
-                disabled={isReadOnly}
+                disabled={isReadOnly || saving}
               >
-                <SelectTrigger className="bg-white">
+                <SelectTrigger id="request-type" className="w-full min-h-11 bg-white text-base">
                   <SelectValue placeholder="Selecciona un tipo de permiso" />
                 </SelectTrigger>
 
@@ -281,8 +300,9 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
             </div>
 
             <div className="space-y-2">
-              <Label>Fecha inicial</Label>
+              <Label htmlFor="request-start">Fecha inicial</Label>
               <Input
+                id="request-start"
                 type="date"
                 value={form.fecha_inicio}
                 onChange={(e) =>
@@ -291,13 +311,14 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
                     fecha_inicio: e.target.value,
                   }))
                 }
-                disabled={isReadOnly}
+                disabled={isReadOnly || saving}
               ></Input>
             </div>
 
             <div className="space-y-2">
-              <Label>Fecha final</Label>
+              <Label htmlFor="request-end">Fecha final</Label>
               <Input
+                id="request-end"
                 type="date"
                 value={form.fecha_fin}
                 min={form.fecha_inicio || undefined}
@@ -307,14 +328,15 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
                     fecha_fin: e.target.value,
                   }))
                 }
-                disabled={isReadOnly}
+                disabled={isReadOnly || saving}
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label>Motivo</Label>
+            <Label htmlFor="request-reason">Motivo</Label>
             <Textarea
+              id="request-reason"
               rows={4}
               placeholder="Describe el motivo del permiso..."
               value={form.motivo ?? ""}
@@ -324,7 +346,7 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
                   motivo: e.target.value,
                 }))
               }
-              disabled={isReadOnly}
+              disabled={isReadOnly || saving}
             />
           </div>
 
@@ -342,28 +364,30 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
           ) : null}
         </div>
 
-        <DialogFooter className="bg-gray-50 border-t border-gray-100 p-4 flex gap-2 sm:justify-end">
-          <Button variant="secondary" onClick={() => setOpen(false)}>
-            Cancelar
+        <DialogFooter className="shrink-0 bg-gray-50 border-t border-gray-100 p-4 flex gap-2 sm:justify-end">
+          <Button disabled={saving} variant="secondary" onClick={() => setOpen(false)}>
+            {isReadOnly ? "Cerrar" : "Cancelar"}
           </Button>
 
           {mode === "crear" && (
             <Button
+              disabled={saving || tiposLoading || Boolean(tiposError)}
               onClick={handleSave}
               className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-2"
             >
               <Save className="h-4 w-4" />
-              Guardar
+              {saving ? "Enviando…" : "Enviar solicitud"}
             </Button>
           )}
 
           {mode === "editar" && (
             <Button
+              disabled={saving || tiposLoading || Boolean(tiposError)}
               onClick={handleUpdate}
               className="bg-[#2563EB] hover:bg-[#1d4ed8] text-white gap-2"
             >
               <Save className="h-4 w-4" />
-              Actualizar
+              {saving ? "Guardando…" : "Guardar cambios"}
             </Button>
           )}
         </DialogFooter>

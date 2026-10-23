@@ -14,10 +14,10 @@ export default function usePanelEmpleadoDetalle(idEmpleado) {
     ? `/checador/empleados/panel-empleado/${idEmpleado}/detalle`
     : null;
 
-  const { data, error, isLoading } = useSWR(url, fetcherWithToken, {
+  const { data, error, isLoading, mutate } = useSWR(url, fetcherWithToken, {
     shouldRetryOnError: false,
     revalidateOnFocus: false,
   });
 
-  return { datosEmpleado: data || null, error, isLoading };
+  return { datosEmpleado: data || null, error, isLoading, mutate };
 }
