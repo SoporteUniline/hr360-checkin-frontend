@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import axios from "@/lib/axios";
 import { useSnackbar } from "notistack";
 import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+import {
   Plus, Pencil, Trash2, Phone, Mail, Star,
   ChevronLeft, ChevronRight, X, Save, Loader2,
 } from "lucide-react";
@@ -45,6 +49,8 @@ export default function TabContactosEmergencia({
   const [guardando, setGuardando] = useState(false);
   const [editando, setEditando] = useState(null);
   const [formulario, setFormulario] = useState(null);
+  const [contactoAEliminar, setContactoAEliminar] = useState(null);
+  const [eliminando, setEliminando] = useState(false);
 
   const esNuevo = !empleadoId;
   const limite = 20;
@@ -167,20 +173,24 @@ export default function TabContactosEmergencia({
     }
   }
 
-  async function eliminar(contacto, indice) {
-    if (!window.confirm(`¿Eliminar a ${contacto.nombre}?`)) return;
+  async function eliminar() {
+    if (!contactoAEliminar || eliminando || soloLectura) return;
+    const { contacto, indice } = contactoAEliminar;
 
     if (esNuevo) {
       setBorradores((actual) => actual.filter((_, i) => i !== indice));
+      setContactoAEliminar(null);
       return;
     }
 
+    setEliminando(true);
     try {
       await axios.delete(
         `${base}/${empleadoId}/contactos-emergencia/${contacto.id_contacto}`
       );
 
       enqueueSnackbar("Contacto eliminado", { variant: "success" });
+      setContactoAEliminar(null);
       const nuevaPagina =
         contactos.length === 1 && pagina > 1 ? pagina - 1 : pagina;
       setPagina(nuevaPagina);
@@ -190,11 +200,49 @@ export default function TabContactosEmergencia({
         error.response?.data?.error || "No se pudo eliminar",
         { variant: "error" }
       );
+    } finally {
+      setEliminando(false);
     }
   }
 
   return (
     <div className="space-y-5">
+      <AlertDialog
+        open={Boolean(contactoAEliminar) && !soloLectura}
+        onOpenChange={(open) => {
+          if (!open && !eliminando) setContactoAEliminar(null);
+        }}
+      >
+        <AlertDialogContent className="rounded-2xl bg-white sm:max-w-md">
+          <AlertDialogHeader className="items-center text-center sm:text-center">
+            <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-red-50 text-red-600">
+              <Trash2 size={24} aria-hidden="true" />
+            </div>
+            <AlertDialogTitle>¿Eliminar contacto de emergencia?</AlertDialogTitle>
+            <AlertDialogDescription className="break-words text-gray-500">
+              Vas a eliminar a <strong className="font-semibold text-gray-900">{contactoAEliminar?.contacto.nombre}</strong> de los contactos de emergencia.
+              Esta acción no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-2">
+            <AlertDialogCancel disabled={eliminando} className="rounded-xl">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={eliminando}
+              onClick={(event) => {
+                event.preventDefault();
+                eliminar();
+              }}
+              className="rounded-xl bg-red-600 text-white hover:bg-red-700"
+            >
+              {eliminando && <Loader2 size={16} className="animate-spin" />}
+              {eliminando ? "Eliminando..." : "Eliminar contacto"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">
@@ -339,7 +387,7 @@ export default function TabContactosEmergencia({
                     </button>
                     <button
                       type="button"
-                      onClick={() => eliminar(contacto, indice)}
+                      onClick={() => setContactoAEliminar({ contacto, indice })}
                       className="rounded-lg p-2 text-red-600 hover:bg-red-50"
                       title="Eliminar"
                     >
