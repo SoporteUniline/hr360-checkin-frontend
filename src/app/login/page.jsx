@@ -14,7 +14,7 @@ import { useSnackbar } from "notistack";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import EllipsisLoader from "@/components/loading/EllipsisLoader";
 import { useAuth } from "@/context/AuthContext";
 import Image from "next/image";
