@@ -34,3 +34,11 @@ El usuario aprobó el mockup de tres vistas y autorizó implementar/subir a Chat
 - Reutilización: sesión y aislamiento existentes, formato de fechas y cálculo de siguiente jornada existentes, StatusBadge, DataState, formulario de solicitudes y sus operaciones.
 - Alcance: tres rutas del colaborador. No se modifican backend, BD, autenticación ni checador. Continúa pendiente validar permisos y cobertura del backend real, dispositivos físicos, teclado nativo y lector de pantalla. Sin calificación numérica de UX ni afirmación de conformidad WCAG.
 - Pruebas: `scripts/test-employee-presentation.mjs` cubre cruce de año, febrero bisiesto, festivos, jornada ausente, clasificaciones y páginas posteriores. `scripts/verify-employee-mobile.cjs` cubre rutas, filtros, estados, creación/detalle y errores con respuestas controladas a 320/390/768/1280 px.
+
+### Fidelidad al mockup aprobado (24 octubre 2026)
+
+Inicio, Asistencias y Solicitudes siguen la referencia «Rediseño premium del portal ADAMIA»: fondo blanco, encabezados azul marino, controles azules, navegación inferior, jornada y acción de checado en una tarjeta, saldo compacto, solicitudes con icono y acciones al pie, y filas de asistencia con día/estado/entrada/salida alineados. Se conserva el logotipo original del repositorio.
+
+Los nombres, saldos, jornadas, fechas, estados y contadores proceden de las consultas existentes. No se insertan los datos ilustrativos del mockup ni se generan ausencias por días sin registros. Se mantienen carga, error, vacío, paginación, detalle, edición y creación. El motivo se consulta en el detalle; una solicitud rechazada ofrece «Ver motivo».
+
+Validación: `node scripts/test-employee-presentation.mjs`, `npm run build` y `scripts/verify-employee-mobile.cjs` con respuestas simuladas, sin modificar empleados reales. Las capturas de las pruebas son evidencia visual con datos simulados, no validación contra producción.

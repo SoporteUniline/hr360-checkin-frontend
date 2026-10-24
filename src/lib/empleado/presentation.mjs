@@ -42,11 +42,19 @@ export function attendanceRows(detail) {
   for (const row of attendance) if (!punchDates.has(isoDate(row.fecha))) result.push({ ...row, attendanceStatus: attendanceStatus(row) });
   return result;
 }
+// Compact Spanish labels keep real dates readable in narrow request cards.
+export function compactRequestDate(value, { year = true, month = true } = {}) {
+  const date = isoDate(value);
+  if (!date) return '';
+  const parts = new Intl.DateTimeFormat('es-MX', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).formatToParts(new Date(`${date}T12:00:00Z`));
+  const part = type => parts.find(item => item.type === type)?.value.replace(/\./g, '') || '';
+  const weekday = part('weekday');
+  return `${weekday.charAt(0).toUpperCase()}${weekday.slice(1)} ${part('day')}${month ? ` ${part('month')}` : ''}${year ? ` ${part('year')}` : ''}`;
+}
 export function requestDates(row, holidays = null) {
   const from = isoDate(row.fecha_inicio), to = isoDate(row.fecha_fin || row.fecha_inicio);
   if (!from || !to || to < from) return { range: 'Fechas no disponibles', duration: null, back: null };
-  const dateOptions = { weekday: 'short' };
-  const range = from === to ? formatDate(from, dateOptions) : `${formatDate(from, dateOptions)} – ${formatDate(to, dateOptions)}`;
+  const range = from === to ? compactRequestDate(from) : `${compactRequestDate(from, { year: from.slice(0,4) !== to.slice(0,4), month: from.slice(0,7) !== to.slice(0,7) })} – ${compactRequestDate(to)}`;
   const days = Math.round((new Date(`${to}T12:00:00Z`) - new Date(`${from}T12:00:00Z`)) / 86400000) + 1;
   const weekdays = ['domingo','lunes','martes','miercoles','jueves','viernes','sabado'];
   const working = new Set(String(row.dias_trabajo || '').split(',').map(normalize).filter(day => weekdays.includes(day)));
@@ -61,7 +69,7 @@ export function requestDates(row, holidays = null) {
   }
   const duration = `${count} ${count === 1 ? 'día' : 'días'} ${business ? (count === 1 ? 'hábil' : 'hábiles') : 'naturales'}`;
   const back = isVacation(row) && normalize(row.estado) === 'aprobado' && working.size && holidays !== null ? nextWorkday(row, holidays, true) : null;
-  return { range, duration, back: back ? formatDate(back, dateOptions) : null };
+  return { range, duration, back: back ? compactRequestDate(back, { year: back.slice(0,4) !== to.slice(0,4) }) : null };
 }
 export async function fetchAllRequests(fetcher, employeeId) {
   const rows = [], ids = new Set();

@@ -24,19 +24,19 @@ export default function EmployeeShell({ children }) {
   if (dataUser?.tipo_usuario !== "Empleado") return <div className="p-8">Este espacio es para colaboradores. <Link className="text-blue-600 underline" href="/dashboard">Volver a mi panel</Link></div>;
   return (
     <SWRConfig key={`${dataUser.id_usuario}:${dataUser.id_empleado}:${dataUser.id_empresa}`} value={{ provider: () => new Map() }}>
-    <div className="min-h-dvh bg-slate-50 text-slate-900">
-      <header className="border-b border-slate-100 bg-white pt-[env(safe-area-inset-top)]">
-        <div className="mx-auto flex h-16 max-w-3xl items-center justify-between px-5">
+    <div className="min-h-dvh bg-white text-[#080d36]">
+      <header className="bg-white pt-[env(safe-area-inset-top)]">
+        <div className="mx-auto flex h-20 max-w-3xl items-center justify-between px-5">
           <Link href={`${root}/inicio`} aria-label="ADAMIA, inicio"><img src="/assets/logo.png" alt="ADAMIA" className="h-8 w-auto" /></Link>
           <Link href={`${root}/mi-espacio`} aria-label="Mi perfil" className="grid size-11 place-items-center rounded-full bg-blue-50 font-semibold text-blue-700">{(dataUser?.nombre || "Mi").slice(0, 2).toUpperCase()}</Link>
         </div>
       </header>
-      <main className="mx-auto w-full min-w-0 max-w-3xl px-4 pt-6 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6">{children}</main>
+      <main className="mx-auto w-full min-w-0 max-w-3xl px-5 pt-3 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6">{children}</main>
       <nav aria-label="Navegación del colaborador" className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)]">
         <div className="mx-auto grid max-w-3xl grid-cols-4">
           {items.map(([label, href, Icon], i) => {
             const active = pathname === href || (i === 3 && !items.slice(0, 3).some(([, path]) => pathname === path));
-            return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={`flex min-h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium ${active ? "text-blue-700" : "text-slate-500"}`}><Icon className="size-5" /><span>{label}</span></Link>;
+            return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={`flex min-h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium ${active ? "text-blue-700" : "text-slate-500"}`}><Icon className={`size-5 ${active ? "fill-blue-600 stroke-white" : ""}`} /><span>{label}</span></Link>;
           })}
         </div>
       </nav>

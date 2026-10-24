@@ -30,11 +30,11 @@ export default function SolicitudesPage() {
   const openRequest = (row, nextMode) => { setSelected(row); setMode(nextMode); setOpen(true); };
   return <div className="space-y-5"><h1 className="text-3xl font-bold tracking-tight">Mis solicitudes</h1>
     <button className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 font-semibold text-white" onClick={() => openRequest(null, "crear")}><Plus className="size-5" />Nueva solicitud</button>
-    <VacationBalance />
+    <VacationBalance compact />
     <PermissionDialog open={open} setOpen={setOpen} mutate={() => { setPage(1); mutate(); }} mode={mode} selected={selected} />
     <DataState loading={isLoading} error={error} retry={mutate}>
-      <div aria-label="Estado de solicitudes" className="flex gap-4 overflow-x-auto border-b">{tabs.map(([value, label]) => <button key={value} aria-pressed={status === value} onClick={() => { setStatus(value); setPage(1); }} className={`min-h-12 shrink-0 border-b-2 text-sm font-medium ${status === value ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500'}`}>{label} <span className="ml-1 rounded-full bg-slate-100 px-1.5 text-xs">{value === "Todas" ? all.length : all.filter(row => row.estado === value).length}</span></button>)}</div>
-      <p className="text-sm text-slate-500" aria-live="polite">{total} solicitudes{status !== "Todas" ? " en este estado" : ""}</p>
+      <div aria-label="Estado de solicitudes" className="flex justify-between gap-1 overflow-x-auto border-b border-slate-200">{tabs.map(([value, label]) => <button key={value} aria-pressed={status === value} onClick={() => { setStatus(value); setPage(1); }} className={`min-h-12 shrink-0 border-b-2 text-[11px] font-medium tracking-normal ${status === value ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500'}`}>{label} <span className="ml-0.5 rounded-full bg-slate-100 px-1 text-[10px]">{value === "Todas" ? all.length : all.filter(row => row.estado === value).length}</span></button>)}</div>
+      <p className="sr-only" aria-live="polite">{total} solicitudes{status !== "Todas" ? " en este estado" : ""}</p>
       {data.length ? <RequestCards data={data} onOpen={openRequest} /> : <p className="rounded-xl border border-dashed p-6 text-center text-slate-500">No hay solicitudes para este estado.</p>}
       {total > limit && <div className="flex items-center justify-between gap-2"><button disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)} className="min-h-11 rounded-xl border bg-white px-4 disabled:opacity-40">Anterior</button><span className="text-sm">{currentPage} de {Math.ceil(total / limit)}</span><button disabled={currentPage * limit >= total} onClick={() => setPage(currentPage + 1)} className="min-h-11 rounded-xl border bg-white px-4 disabled:opacity-40">Siguiente</button></div>}
     </DataState>

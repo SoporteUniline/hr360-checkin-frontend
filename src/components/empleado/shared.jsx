@@ -10,6 +10,6 @@ export function MenuLink({ href, icon: Icon, title, description }) {
   return <Link href={href} className="flex min-h-16 items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 hover:bg-blue-50"><span className="rounded-xl bg-blue-50 p-2 text-blue-600"><Icon className="size-5" /></span><span className="min-w-0 flex-1"><span className="block font-semibold">{title}</span>{description && <span className="block text-sm text-slate-500">{description}</span>}</span><ChevronRight className="size-4 shrink-0 text-slate-400" /></Link>;
 }
 export function StatusBadge({ status }) {
-  const color = /aprobado|a tiempo|abierto|presente/i.test(status) ? "bg-emerald-50 text-emerald-700" : /rechazado|falta|ausente/i.test(status) ? "bg-red-50 text-red-700" : /pendiente|retardo|tardanza/i.test(status) ? "bg-amber-50 text-amber-800" : "bg-slate-100 text-slate-600";
-  return <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-medium ${color}`}>{status || "Sin estado"}</span>;
+  const color = /aprobado|a tiempo|abierto|presente/i.test(status) ? "bg-green-100 text-green-800" : /rechazado|falta|ausente/i.test(status) ? "bg-red-100 text-red-700" : /pendiente|retardo|tardanza/i.test(status) ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-600";
+  return <span className={`inline-block whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-medium ${color}`}>{({ Aprobado: "Aprobada", Rechazado: "Rechazada", Cancelado: "Cancelada" })[status] || status || "Sin estado"}</span>;
 }

@@ -8,9 +8,10 @@ export function attendanceTime(value, timezone) {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? "—" : new Intl.DateTimeFormat("es-MX", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: timezone }).format(date);
 }
-export default function AttendanceCard({ row, timezone, today = false }) {
+export default function AttendanceCard({ row, timezone, today = false, compact = false }) {
   const entry = row.entrada_corregida && row.entrada_corregida !== "-" ? row.entrada_corregida : row.hora_entrada || row.entrada;
   const exit = row.salida_corregida && row.salida_corregida !== "-" ? row.salida_corregida : row.hora_salida || row.salida;
+  if (compact) return <div><div className="flex items-center justify-between gap-2"><div className="flex gap-6 text-sm"><span className="text-slate-500">Entrada <strong className="block text-base text-slate-900">{attendanceTime(entry, timezone)}</strong></span><span className="text-slate-500">Salida <strong className="block text-base text-slate-900">{attendanceTime(exit, timezone)}</strong></span></div><StatusBadge status={row.estado} /></div></div>;
   return <article className={cardClass}>
     <div className="mb-4 flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold">{today ? "Mi jornada de hoy" : formatDate(row.fecha)}</h2><StatusBadge status={row.estado} /></div>
     <div className="grid grid-cols-2 gap-3">

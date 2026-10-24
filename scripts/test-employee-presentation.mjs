@@ -13,6 +13,8 @@ assert.equal(requestDates({...request,fecha_fin:'2026-10-01'},[]).duration,null)
 assert.equal(attendanceRows({entradas_salidas:{registros:[{fecha:'2026-10-23',estado:'Cerrado'}]}})[0].attendanceStatus,'Sin clasificar');
 const joined=attendanceRows({entradas_salidas:{registros:[{fecha:'2026-10-23',estado:'Cerrado'}]},asistencias:{historial:[{fecha:'2026-10-23',estado:'Retardo'},{fecha:'2026-10-22',estado:'Ausente'}]}});
 assert.deepEqual(joined.map(row=>row.attendanceStatus),['Tardanza','Ausente']);
+assert.equal(requestDates({fecha_inicio:'2026-10-26',fecha_fin:'2026-10-28'},[]).range, 'Lun 26 – Mié 28 oct 2026');
+assert.equal(requestDates({fecha_inicio:'2026-12-31',fecha_fin:'2027-01-02'},[]).range, 'Jue 31 dic 2026 – Sáb 2 ene 2027');
 let pages=0;
 const data=await fetchAllRequests(async()=>({results:[{id:++pages}],total:3}),101);
 assert.equal(data.length,3);
