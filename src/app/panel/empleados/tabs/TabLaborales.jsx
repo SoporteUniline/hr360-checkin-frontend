@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import axios from "@/lib/axios";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { FormLabelWithAsterisk } from "@/components/FormLabelWithAsterisk";
 import { Switch } from "@/components/ui/switch";
 import { useEffect, useState } from "react";
@@ -479,12 +480,9 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
               control={form.control}
               render={({ field }) => (
                 <FormItem>
-                  <FormLabelWithAsterisk required={true}>
-                    Contraseña
-                  </FormLabelWithAsterisk>
+                  <FormLabel>Contraseña</FormLabel>
                   <FormControl>
-                    <Input
-                      type="password"
+                    <PasswordInput
                       placeholder="Nueva contraseña"
                       name="new_pass_laboral"
                       autoComplete="new-password"
@@ -496,6 +494,30 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
                   <FormDescription>
                     Deja vacío si no deseas cambiar la contraseña.
                   </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="col-span-1 sm:col-span-2">
+            <FormField
+              name="confirm_pass"
+              control={form.control}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Confirmar contraseña</FormLabel>
+                  <FormControl>
+                    <PasswordInput
+                      {...field}
+                      value={field.value ?? ""}
+                      placeholder="Repite la nueva contraseña"
+                      autoComplete="new-password"
+                      visibilityLabel="confirmación de contraseña"
+                      disabled={soloLectura}
+                    />
+                  </FormControl>
+                  <FormDescription>Repite la contraseña si ingresaste una nueva.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

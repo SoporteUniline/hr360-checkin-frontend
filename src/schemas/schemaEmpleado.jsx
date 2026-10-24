@@ -49,6 +49,7 @@ export const schemaEmpleado = z
 
     // Laborales - OPCIONALES
     new_pass: z.string().optional().or(z.literal("")),
+    confirm_pass: z.string().optional(),
     departamento: z.string().optional(),
     nombre_empresa: z.string().optional(),
     fecha_ingreso: z.string().optional(),
@@ -167,6 +168,16 @@ export const schemaEmpleado = z
       }),
   })
   .superRefine((data, ctx) => {
+    if ((data.new_pass ?? "") !== (data.confirm_pass ?? "")) {
+      ctx.addIssue({
+        path: ["confirm_pass"],
+        code: z.ZodIssueCode.custom,
+        message: data.confirm_pass
+          ? "Las contraseñas no coinciden"
+          : "Repite la nueva contraseña para confirmarla",
+      });
+    }
+
     if (
       data.banco === "Otro" &&
       (!data.otro_banco || data.otro_banco.trim() === "")

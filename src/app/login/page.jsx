@@ -1,5 +1,6 @@
 "use client";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -160,8 +161,8 @@ export default function LoginPage() {
                     <FormItem>
                       <FormLabel className="text-sm">Contraseña</FormLabel>
                       <FormControl>
-                        <Input
-                          type="password"
+                        <PasswordInput
+                          autoComplete="current-password"
                           className="w-full py-2.5 text-base "
                           placeholder="Ingrese su contraseña"
                           {...field}

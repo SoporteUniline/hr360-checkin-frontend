@@ -142,6 +142,7 @@ export default function FormularioEmpleado({
       cierre_turno: "Automático",
       areasAsignadas: [],
       new_pass: "",
+      confirm_pass: "",
       horarios: defaultHorarios,
       tipo_horario: "personalizado",
       id_turno: null,
@@ -256,6 +257,7 @@ export default function FormularioEmpleado({
         autoriza_horas_extra:
           restoEmpleado.autoriza_horas_extra === 1 ? true : false,
         new_pass: "",
+        confirm_pass: "",
 
         tipo_horario: fueDesdeLectura.current
           ? form.getValues("tipo_horario") || "personalizado"
@@ -326,7 +328,6 @@ export default function FormularioEmpleado({
 
   const onInvalidSubmit = (errors) => {
     console.log("ERRORES DE VALIDACIÓN:", errors);
-    console.log("VALORES ACTUALES DEL FORM:", form.getValues());
     const obtenerPrimerMensajeError = (errorObj) => {
       if (!errorObj) return null;
 
@@ -368,7 +369,7 @@ export default function FormularioEmpleado({
         "telefono",
         "rfc",
       ],
-      laborales: ["puesto", "sucursal"],
+      laborales: ["puesto", "sucursal", "new_pass", "confirm_pass"],
       jornada: ["hrs_por_dia", "hrs_de_comida", "horarios"],
       nomina: [
         "periodo_pago",
@@ -391,7 +392,7 @@ export default function FormularioEmpleado({
     form.setFocus(firstErrorKey);
   };
 
-  const onValidSubmit = async (data) => {
+  const onValidSubmit = async ({ confirm_pass, ...data }) => {
     const tipoHorario = form.getValues("tipo_horario") || "personalizado";
     const idTurno = form.getValues("id_turno");
 
@@ -474,8 +475,6 @@ export default function FormularioEmpleado({
       }
 
       const formData = new FormData();
-
-      console.log("DATA FINAL:", data);
 
       delete data.nombre_empresa;
 
