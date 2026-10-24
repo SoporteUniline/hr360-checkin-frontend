@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   # ─────────────────────────────────────────────
-  # 1. PREPARE — Validar que el install funciona
+  # 1. PREPARE — Validar instalación
   # ─────────────────────────────────────────────
   prepare:
     name: Prepare
@@ -35,24 +35,13 @@ jobs:
           key: node-modules-${{ github.sha }}-${{ hashFiles('package-lock.json') }}
 
   # ─────────────────────────────────────────────
-  # 2. VALIDATE — Lint (errores bloquean, warnings no)
+  # 2. VALIDATE — Lint e integración MySQL
   # ─────────────────────────────────────────────
   validate:
     name: Validate
     runs-on: ubuntu-latest
     needs: prepare
-    services:
-      activos-mysql:
-        image: public.ecr.aws/docker/library/mysql:8.0
-        env:
-          MYSQL_ROOT_PASSWORD: cau_ci_test_only
-        ports:
-          - 3306/tcp
-        options: >-
-          --health-cmd="mysqladmin ping -h localhost -pcau_ci_test_only"
-          --health-interval=5s
-          --health-timeout=5s
-          --health-retries=20
+
     steps:
       - uses: actions/checkout@v4
 
@@ -68,18 +57,48 @@ jobs:
           path: node_modules
           key: node-modules-${{ github.sha }}-${{ hashFiles('package-lock.json') }}
 
+      - name: Start MySQL for integration tests
+        run: |
+          set -e
+
+          sudo systemctl start mysql
+
+          echo "Configurando MySQL..."
+
+          MYSQL_ADMIN_FILE="/etc/mysql/debian.cnf"
+
+          if [ ! -f "$MYSQL_ADMIN_FILE" ]; then
+            echo "No existe el archivo de credenciales administrativas"
+            exit 1
+          fi
+
+          sudo mysql --defaults-file="$MYSQL_ADMIN_FILE" -e "
+            ALTER USER 'root'@'localhost'
+            IDENTIFIED WITH caching_sha2_password
+            BY 'cau_ci_test_only';
+          "
+
+          echo "Verificando conexión MySQL..."
+
+          mysqladmin ping \
+            -h 127.0.0.1 \
+            -uroot \
+            -pcau_ci_test_only
+
+          echo "MySQL listo para pruebas"
+
       - name: Lint (errores = falla | warnings = OK)
         run: npm run lint
 
       - name: Control de Activos — integración MySQL
         env:
           CAU_TEST_HOST: 127.0.0.1
-          CAU_TEST_PORT: ${{ job.services.activos-mysql.ports[3306] }}
+          CAU_TEST_PORT: "3306"
           CAU_TEST_PASSWORD: cau_ci_test_only
         run: node --test scripts/test-activos-modules.mjs scripts/test-activos-api.mjs
 
   # ─────────────────────────────────────────────
-  # 3. BUILD — Validar que el build compila
+  # 3. BUILD — Validar compilación
   # ─────────────────────────────────────────────
   build:
     name: Build
@@ -110,7 +129,7 @@ jobs:
         run: npm run build
 
   # ─────────────────────────────────────────────
-  # 4. UPLOAD — SSH a Lightsail y ejecutar deploy-dev.sh
+  # 4. UPLOAD — Despliegue a Lightsail
   # ─────────────────────────────────────────────
   upload:
     name: Upload & Deploy
@@ -134,7 +153,7 @@ jobs:
             echo "✅ deploy-dev.sh completado"
 
   # ─────────────────────────────────────────────
-  # 5. DEPLOY — Validar que la app responde tras el deploy
+  # 5. DEPLOY — Health check
   # ─────────────────────────────────────────────
   deploy:
     name: Deploy — Health Check

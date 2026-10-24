@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import RequestDates from "@/components/empleado/RequestDates";
 import useSWR from "swr";
 import { Clock3, FilePlus2 } from "lucide-react";
 import useEmpleadoSesion from "@/hooks/useEmpleadoSesion";
@@ -24,7 +25,7 @@ export default function EmployeeHome() {
     </DataState>
     <Link href="/empleado/reloj-checador" className="flex min-h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 font-semibold text-white hover:bg-blue-700"><Clock3 className="size-5" />Checar entrada o salida</Link>
     <VacationBalance />
-    <section className="space-y-3"><h2 className="font-semibold">Mis solicitudes recientes</h2><DataState loading={requests.isLoading} error={requests.error} retry={requests.mutate}>{requests.data.length ? requests.data.map(row => <Link href="/empleado/panel/solicitudes" key={row.id} className="flex min-h-16 flex-wrap items-center justify-between gap-2 rounded-xl border bg-white p-4"><span className="text-sm font-medium">{row.tipo_permiso_nombre}</span><StatusBadge status={row.estado} /></Link>) : <p className="text-sm text-slate-500">Aún no tienes solicitudes.</p>}</DataState></section>
+    <section className="space-y-3"><h2 className="font-semibold">Mis solicitudes recientes</h2><DataState loading={requests.isLoading} error={requests.error} retry={requests.mutate}>{requests.data.length ? requests.data.map(row => <Link href="/empleado/panel/solicitudes" key={row.id} className="block rounded-xl border bg-white p-4"><div className="flex flex-wrap items-center justify-between gap-2"><span className="text-sm font-medium">{row.tipo_permiso_nombre}</span><StatusBadge status={row.estado} /></div><RequestDates row={row} /></Link>) : <p className="text-sm text-slate-500">Aún no tienes solicitudes.</p>}</DataState></section>
     <section className="space-y-3"><h2 className="font-semibold">Accesos rápidos</h2><MenuLink href="/empleado/panel/solicitudes?nueva=1" icon={FilePlus2} title="Solicitar permiso o vacaciones" /><MenuLink href="/empleado/panel/asistencias" icon={Clock3} title="Mis asistencias" description="Consulta tus entradas y salidas" /></section>
   </div>;
 }

@@ -24,3 +24,13 @@ El checador conserva los mecanismos existentes de rostro, QR, código y ubicaci�
 `PLAYWRIGHT_MODULE_PATH=/ruta/a/playwright CHROMIUM_EXECUTABLE_PATH=/ruta/a/chromium node scripts/verify-employee-mobile.cjs`
 
 El script inicia el servidor local, usa JWT y respuestas controladas, y prueba anchos de 360 y 390 px. No escribe en cuentas reales. Comprobar además en Android/iPhone reales: cámara, GPS, teclado, permisos del sistema y autorización del historial con perfil de empleado.
+
+## Propuesta 02 aprobada · 2026-10-24
+
+El usuario aprobó el mockup de tres vistas y autorizó implementar/subir a ChatGPT.
+- Inicio y solicitudes comparten `RequestDates`: fecha con día de semana, duración natural o hábil según datos disponibles. Regreso únicamente en vacaciones aprobadas con jornada reconocida y festivos disponibles. Sin esos datos no se infieren días hábiles ni regreso. Usa las utilidades civiles existentes; no cambia saldos ni reglas del backend.
+- Asistencias: lista compacta con expansión, selección de semana/mes/año, fecha ancla, navegación anterior/siguiente y estados. `asistencias.historial` aporta clasificación; `entradas_salidas.registros` aporta checadas. Cerrado/Abierto nunca se convierten en Presente. Estados desconocidos/conflictivos se muestran Sin clasificar. No se fabrican ausencias por fechas vacías. Resúmenes cuentan fechas distintas por estado dentro del conjunto disponible, no garantizan cobertura histórica del backend.
+- Solicitudes: pestañas con conteos globales, incluida Canceladas cuando existe. El contrato conocido no documenta filtros por estado: se recuperan páginas de 100 secuencialmente, se deduplican IDs y se rechaza una respuesta incompleta; luego se filtra y pagina la vista. Sin polling de todo el historial. Límite de 200 páginas con error explícito, no resultados parciales. Futura mejora para gran volumen: filtrado y agregados autenticados en servidor.
+- Reutilización: sesión y aislamiento existentes, formato de fechas y cálculo de siguiente jornada existentes, StatusBadge, DataState, formulario de solicitudes y sus operaciones.
+- Alcance: tres rutas del colaborador. No se modifican backend, BD, autenticación ni checador. Continúa pendiente validar permisos y cobertura del backend real, dispositivos físicos, teclado nativo y lector de pantalla. Sin calificación numérica de UX ni afirmación de conformidad WCAG.
+- Pruebas: `scripts/test-employee-presentation.mjs` cubre cruce de año, febrero bisiesto, festivos, jornada ausente, clasificaciones y páginas posteriores. `scripts/verify-employee-mobile.cjs` cubre rutas, filtros, estados, creación/detalle y errores con respuestas controladas a 320/390/768/1280 px.

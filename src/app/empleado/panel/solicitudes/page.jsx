@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
 import { PermissionDialog } from "@/components/Permission/PermissionDialog";
-import { usePermisosEmpleado } from "@/hooks/usePermisoPorEmpleado";
+import useEmployeeRequests from "@/hooks/useEmployeeRequests";
 import VacationBalance from "@/components/empleado/VacationBalance";
 import RequestCards from "@/components/empleado/RequestCards";
 import { DataState } from "@/components/empleado/shared";
@@ -13,7 +13,14 @@ export default function SolicitudesPage() {
   const [selected, setSelected] = useState(null);
   const [page, setPage] = useState(1);
   const limit = 10;
-  const { data, total, mutate, error, isLoading } = usePermisosEmpleado(page, limit);
+  const [status, setStatus] = useState("Todas");
+  const { data: all, mutate, error, isLoading } = useEmployeeRequests();
+  const filtered = all.filter(row => status === "Todas" || row.estado === status);
+  const total = filtered.length;
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(total / limit)));
+  const data = filtered.slice((currentPage - 1) * limit, currentPage * limit);
+  const tabs = [["Todas","Todas"],["Pendiente","Pendientes"],["Aprobado","Aprobadas"],["Rechazado","Rechazadas"]];
+  if (all.some(row => row.estado === "Cancelado")) tabs.push(["Cancelado","Canceladas"]);
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("nueva") === "1") {
       setOpen(true);
@@ -26,9 +33,10 @@ export default function SolicitudesPage() {
     <VacationBalance />
     <PermissionDialog open={open} setOpen={setOpen} mutate={() => { setPage(1); mutate(); }} mode={mode} selected={selected} />
     <DataState loading={isLoading} error={error} retry={mutate}>
-      <p className="text-sm text-slate-500">{total} solicitudes</p>
-      {data.length ? <RequestCards data={data} onOpen={openRequest} /> : <p className="rounded-xl border border-dashed p-6 text-center text-slate-500">Aún no tienes solicitudes. Crea una con el botón de arriba.</p>}
-      {total > limit && <div className="flex items-center justify-between gap-2"><button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="min-h-11 rounded-xl border bg-white px-4 disabled:opacity-40">Anterior</button><span className="text-sm">{page} de {Math.ceil(total / limit)}</span><button disabled={page * limit >= total} onClick={() => setPage(p => p + 1)} className="min-h-11 rounded-xl border bg-white px-4 disabled:opacity-40">Siguiente</button></div>}
+      <div aria-label="Estado de solicitudes" className="flex gap-4 overflow-x-auto border-b">{tabs.map(([value, label]) => <button key={value} aria-pressed={status === value} onClick={() => { setStatus(value); setPage(1); }} className={`min-h-12 shrink-0 border-b-2 text-sm font-medium ${status === value ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500'}`}>{label} <span className="ml-1 rounded-full bg-slate-100 px-1.5 text-xs">{value === "Todas" ? all.length : all.filter(row => row.estado === value).length}</span></button>)}</div>
+      <p className="text-sm text-slate-500" aria-live="polite">{total} solicitudes{status !== "Todas" ? " en este estado" : ""}</p>
+      {data.length ? <RequestCards data={data} onOpen={openRequest} /> : <p className="rounded-xl border border-dashed p-6 text-center text-slate-500">No hay solicitudes para este estado.</p>}
+      {total > limit && <div className="flex items-center justify-between gap-2"><button disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)} className="min-h-11 rounded-xl border bg-white px-4 disabled:opacity-40">Anterior</button><span className="text-sm">{currentPage} de {Math.ceil(total / limit)}</span><button disabled={currentPage * limit >= total} onClick={() => setPage(currentPage + 1)} className="min-h-11 rounded-xl border bg-white px-4 disabled:opacity-40">Siguiente</button></div>}
     </DataState>
   </div>;
 }

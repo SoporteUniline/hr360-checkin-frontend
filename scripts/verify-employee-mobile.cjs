@@ -16,11 +16,12 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:4491';
   }
   const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROMIUM_EXECUTABLE_PATH, args: ['--no-sandbox'] });
   try {
-    for (const width of [360, 390]) {
+    for (const width of [320, 390, 768, 1280]) {
       const context = await browser.newContext({ viewport: { width, height: 780 }, isMobile: true, deviceScaleFactor: 1 });
       await context.addCookies([{ name: 'token', value: token, url: base }]);
       let posts = 0, failHistory = false;
-      const requests = [{ id: 1, id_empleado: 101, id_tipo_permiso: 2, tipo_permiso_nombre: 'Vacaciones', fecha_inicio: '2026-11-02', fecha_fin: '2026-11-04', estado: 'Pendiente', motivo: 'Descanso' }];
+      const requests = [{ id: 1, id_empleado: 101, id_tipo_permiso: 2, tipo_permiso_nombre: 'Vacaciones', fecha_inicio: '2026-11-02', fecha_fin: '2026-11-04', estado: 'Pendiente', motivo: 'Descanso', dias_trabajo: 'Lunes,Martes,Miércoles,Jueves,Viernes', descuenta_vacaciones: 1 }];
+      for (let i=2;i<=13;i++) requests.push({ ...requests[0], id:i, estado:i===13?'Rechazado':'Aprobado', motivo:'Solicitud anterior '+i });
       await context.route('**/*', async route => {
         const p = new URL(route.request().url()).pathname;
         const json = data => route.fulfill({ json: data });
@@ -28,10 +29,11 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:4491';
         if (p.endsWith('/registros-del-dia-empleado')) return json({ registrosHoy: [{ id: 3, entrada: '2026-10-23T15:00:00Z', salida: null, estado: 'Abierto' }], zona_horaria: 'America/Mexico_City' });
         if (p.endsWith('/panel-empleado/101/detalle')) {
           if (failHistory) return route.fulfill({ status: 403, json: { error: 'Sin acceso' } });
-          return json({ entradas_salidas: { registros: [{ id: 1, fecha: '2026-10-22', hora_entrada: '08:58', hora_salida: '18:02', estado: 'A tiempo' }, { id: 2, fecha: '2026-10-21', hora_entrada: '09:12', hora_salida: '-', estado: 'Retardo' }] } });
+          return json({ asistencias: { historial: [{fecha:'2026-10-22',estado:'Presente'}, {fecha:'2026-10-21',estado:'Retardo'}] }, entradas_salidas: { registros: [{ id: 1, fecha: '2026-10-22', hora_entrada: '08:58', hora_salida: '18:02', estado: 'A tiempo' }, { id: 2, fecha: '2026-10-21', hora_entrada: '09:12', hora_salida: '-', estado: 'Retardo' }] } });
         }
         if (p.endsWith('/vacaciones/mi-saldo')) return json({ dias_disponibles: 8, dias_cargados: 12, dias_tomados: 4 });
-        if (p.includes('/solicitudes-permiso/empleado/101')) return json({ results: requests, total: requests.length });
+        if (p.includes('/solicitudes-permiso/empleado/101')) { const pageNo=Number(new URL(route.request().url()).searchParams.get('page') || 1); return json({results:requests.slice((pageNo-1)*5,pageNo*5),total:requests.length}); }
+        if(p.includes('/holidays/')) return json({festivos:[]});
         if (p.endsWith('/tiposPermiso')) return json({ tiposPermiso: [{ id: 2, nombre: 'Vacaciones', es_permiso: 0, descuenta_vacaciones: 1 }] });
         if (p.endsWith('/solicitudes-permiso') && route.request().method() === 'POST') {
           posts++;
@@ -39,7 +41,7 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:4491';
           assert.equal(payload.id_empleado, 101); assert.equal(payload.id_tipo_permiso, 2);
           assert.equal(payload.fecha_inicio, '2026-11-09'); assert.equal(payload.fecha_fin, '2026-11-10');
           await new Promise(resolve => setTimeout(resolve, 400));
-          requests.unshift({ ...payload, id: 2, tipo_permiso_nombre: 'Vacaciones' });
+          requests.unshift({ ...payload, id: 99, tipo_permiso_nombre: 'Vacaciones' });
           return json({ id: 2 });
         }
         if (!route.request().url().startsWith(base)) return route.abort();
@@ -54,14 +56,29 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:4491';
       await page.screenshot({ path: `/tmp/employee-home-${width}.png`, fullPage: true });
       await noOverflow();
       await page.getByRole('link', { name: 'Asistencia', exact: true }).click();
+      await page.getByLabel('Ir a fecha').fill('2026-10-22');
       await page.getByText('08:58', { exact: true }).waitFor();
-      await page.getByText('Ver detalle', { exact: true }).first().click();
+      await page.getByLabel('Estado de asistencia').selectOption('Tardanza');
+      assert.equal(await page.getByText('08:58', {exact:true}).count(),0);
+      await page.getByText('09:12',{exact:true}).waitFor();
+      await page.getByLabel('Estado de asistencia').selectOption('Todos');
+      await page.locator('summary').first().click();
       await page.getByText('Entrada original: 08:58').waitFor();
-      await page.getByLabel('Filtrar por mes').fill('2026-09');
-      await page.getByText('No hay registros disponibles para este período.').waitFor();
-      await page.getByRole('button', { name: 'Mostrar todos los registros' }).click();
+      await page.getByRole('button',{name:'Mes',exact:true}).click();
+      await page.getByRole('button',{name:'Año',exact:true}).click();
+      await page.getByRole('button',{name:'Semana',exact:true}).click();
+      await page.getByLabel('Ir a fecha').fill('2026-09-01');
+      await page.getByText('No hay registros para estos filtros.').waitFor();
+      await page.getByLabel('Ir a fecha').fill('2026-10-22');
+      await page.screenshot({path:`/tmp/employee-attendance-v2-${width}.png`,fullPage:true});
       await noOverflow();
       await page.getByRole('link', { name: 'Solicitudes', exact: true }).click();
+      await page.getByRole('button', { name: 'Rechazadas 1',exact:true }).click();
+      await page.getByText('Solicitud anterior 13',{exact:true}).waitFor();
+      assert.equal(await page.getByText('Descanso',{exact:true}).count(),0);
+      await page.getByRole('button', { name: 'Todas 13',exact:true }).click();
+      await page.getByText('3 días hábiles').first().waitFor();
+      await page.screenshot({path:`/tmp/employee-requests-v2-${width}.png`,fullPage:true});
       await page.getByRole('button', { name: 'Nueva solicitud' }).click();
       await page.getByLabel('Tipo de permiso').click();
       await page.getByRole('option', { name: 'Vacaciones' }).click();
@@ -86,7 +103,7 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:4491';
       failHistory = true;
       await page.goto(`${base}/empleado/panel/asistencias`);
       await page.getByRole('alert').filter({ hasText: 'No pudimos consultar esta información' }).waitFor();
-      assert.equal(await page.getByText('No hay registros disponibles para este período.').count(), 0);
+      assert.equal(await page.getByText('No hay registros para estos filtros.').count(), 0);
       assert.deepEqual(errors, []);
       await page.screenshot({ path: `/tmp/employee-mobile-${width}.png`, fullPage: true });
       await context.close();
