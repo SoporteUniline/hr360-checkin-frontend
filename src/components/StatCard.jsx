@@ -56,14 +56,14 @@ const StatCard = ({ title, value, sub, icon: Icon, accent, borderColor }) => {
         <p className="truncate text-[11px] font-semibold text-gray-500">
           {title}
         </p>
-        <p className="text-[22px] font-extrabold leading-tight tracking-tight text-gray-900 [font-variant-numeric:tabular-nums]">
+        <div className="text-[22px] font-extrabold leading-tight tracking-tight text-gray-900 [font-variant-numeric:tabular-nums]">
           {value}
           {sub ? (
             <span className="ml-1.5 text-[11px] font-semibold text-gray-400">
               {sub}
             </span>
           ) : null}
-        </p>
+        </div>
       </div>
     </div>
   );

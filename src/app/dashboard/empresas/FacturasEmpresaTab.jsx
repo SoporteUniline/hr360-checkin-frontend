@@ -107,10 +107,7 @@ export default function FacturasEmpresaTab({ empresa }) {
         prev.total ||
         String(
           Number(
-            suscripcion.precio_por_mes ||
-              suscripcion.precio_base ||
-              suscripcion.monto_total ||
-              0
+            suscripcion.mensualidad_actual ?? 0
           )
         ),
       concepto:

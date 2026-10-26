@@ -229,7 +229,9 @@ export default function SuscripcionEmpresaTab({ empresa }) {
             <Info
               label="Tipo de cobro"
               value={
-                suscripcion.tipo_cobro === "base_mas_excedente"
+                suscripcion.tipo_cobro === "por_usuario"
+                  ? "$60 por activo / $15 por archivado"
+                  : suscripcion.tipo_cobro === "base_mas_excedente"
                   ? "Base + empleados excedentes"
                   : suscripcion.tipo_cobro === "plan_legacy"
                   ? "Plan legacy"

@@ -27,8 +27,6 @@ const COUNTRY_CODES = [
   { code: "+34", label: "ES (+34)" },
 ];
 
-const COSTO_POR_USUARIO_DEFAULT = 60;
-
 function getLabelFromRow(row, fallback) {
   return (
     row?.nombre || row?.descripcion || row?.titulo || row?.tipo || fallback
@@ -67,7 +65,6 @@ export default function ContratarPlanContent() {
     telefono: "",
     empresa_nombre: "",
     rfc: "",
-    empleados: "15",
     meses_contratados: "1",
     metodo_pago_id: "",
     notas: "",
@@ -130,23 +127,6 @@ export default function ContratarPlanContent() {
     return () => window.clearInterval(interval);
   }, [otpCountdown]);
 
-
-  const estimado = useMemo(() => {
-    const employees = Number(form.empleados);
-
-    if (!Number.isFinite(employees) || employees < 1) return null;
-
-    const monthlyNormal = employees * COSTO_POR_USUARIO_DEFAULT;
-    const monthlyPromo = cuponAplicado
-      ? employees * cuponAplicado.precio_por_empleado
-      : null;
-
-    return {
-      employees,
-      monthlyNormal,
-      monthlyPromo,
-    };
-  }, [form.empleados, cuponAplicado]);
 
   const onChange = (event) => {
     const { name, value } = event.target;
@@ -304,12 +284,6 @@ export default function ContratarPlanContent() {
     }
   };
 
-  const changeEmployees = (delta) => {
-    const current = Number(form.empleados) || 1;
-    const next = Math.max(1, current + delta);
-    setForm((prev) => ({ ...prev, empleados: String(next) }));
-  };
-
   const onSubmit = async (event) => {
     event.preventDefault();
     setSubmitError("");
@@ -352,10 +326,6 @@ export default function ContratarPlanContent() {
       setSubmitError("Las contraseñas no coinciden.");
       return;
     }
-    if (!form.empleados || Number(form.empleados) < 1) {
-      setSubmitError("Ingresa un número de empleados válido.");
-      return;
-    }
 
     try {
       setSubmitting(true);
@@ -368,12 +338,9 @@ export default function ContratarPlanContent() {
         codigo_cupon: cuponAplicado ? cuponAplicado.codigo : null,
         telefono: fullPhone,
         telefono_verificacion_token: phoneVerificationToken,
-        empleados: Number(form.empleados),
         tipo_plan_id: null,
         meses_contratados: 1,
         metodo_pago_id: null,
-        precio_por_mes: estimado?.monthlyNormal ?? null,
-        precio_empleado_extra: COSTO_POR_USUARIO_DEFAULT,
       };
       const response = await axios.post(
         "/checador/contrataciones/publica",
@@ -460,79 +427,24 @@ export default function ContratarPlanContent() {
             Activa ADAMIA para tu empresa
           </h1>
           <p className="mx-auto mt-3 max-w-3xl text-sm text-white/90 md:text-base">
-            Comienza con los empleados que tienes hoy. La facturación se ajusta
-            según los empleados activos de tu empresa.
+            El cobro mensual depende de los empleados realmente registrados
+            en tu empresa y de su estado.
           </p>
         </div>
       </section>
 
       <section className="mx-auto w-full max-w-7xl px-4 py-8 md:px-6">
-        <div className="rounded-2xl border border-[var(--adamia-blue)]/15 bg-white p-4 shadow-sm md:p-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h2 className="text-lg font-black md:text-xl">
-                ¿Con cuántos empleados comenzarás?
-              </h2>
-              <p className="text-sm text-[var(--adamia-text-secondary)]">
-                Este número estima tu primer cobro. Después, la facturación se
-                ajusta según los empleados activos de tu empresa.
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => changeEmployees(-1)}
-                className="h-11 w-11 rounded-xl bg-[var(--adamia-blue)] text-2xl font-bold text-white"
-              >
-                -
-              </button>
-              <input
-                name="empleados"
-                type="number"
-                min={1}
-                value={form.empleados}
-                onChange={onChange}
-                className="h-12 w-28 rounded-xl border-2 border-[var(--adamia-blue)] px-3 text-center text-2xl font-black text-[var(--adamia-blue)] outline-none"
-              />
-              <button
-                type="button"
-                onClick={() => changeEmployees(1)}
-                className="h-11 w-11 rounded-xl bg-[var(--adamia-blue)] text-2xl font-bold text-white"
-              >
-                +
-              </button>
-            </div>
+        <div className="rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-5 shadow-sm md:p-6">
+          <h2 className="text-lg font-black md:text-xl">Tarifas mensuales</h2>
+          <div className="mt-3 space-y-2 text-sm">
+            <SummaryRow label="Empleado Activo" value="$60 MXN / mes" />
+            <SummaryRow label="Empleado Inactivo o Baja" value="$15 MXN / mes" />
           </div>
-        </div>
-
-        <div className="mt-6 rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-5 shadow-sm md:p-6">
-          <div className="grid gap-5 md:grid-cols-[0.8fr_1.2fr] md:items-center">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-wide text-[var(--adamia-blue)]">
-                Facturación mensual
-              </p>
-              <p className="mt-2 text-3xl font-black text-[var(--adamia-blue)]">
-                {formatCurrencyMXN(COSTO_POR_USUARIO_DEFAULT)}
-                <span className="text-sm font-semibold text-[var(--adamia-text-secondary)]">
-                  {" "}
-                  por empleado / mes
-                </span>
-              </p>
-            </div>
-
-            <div className="text-sm text-[var(--adamia-text-secondary)]">
-              <p>
-                Pagas según los empleados activos de tu empresa. Si agregas
-                empleados durante el mes, se calcula el ajuste proporcional
-                correspondiente.
-              </p>
-              <p className="mt-2 font-semibold text-[var(--adamia-text-primary)]">
-                Con {Number(form.empleados || 0)} empleados, tu mensualidad
-                normal estimada es{" "}
-                {estimado ? formatCurrencyMXN(estimado.monthlyNormal) : "—"}.
-              </p>
-            </div>
-          </div>
+          <p className="mt-3 text-sm text-[var(--adamia-text-secondary)]">
+            Sin cuota base. El cobro utiliza exclusivamente los empleados realmente
+            registrados y conserva los ajustes proporcionales del periodo.
+            Si tu empresa no tiene empleados registrados, el importe es $0.
+          </p>
         </div>
 
         <div className="mt-8 grid gap-8 lg:grid-cols-[1.25fr_0.75fr]">
@@ -820,75 +732,6 @@ export default function ContratarPlanContent() {
           </form>
 
           <aside className="space-y-5">
-            <article className="rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-5 shadow-sm">
-              <p className="text-xs font-bold uppercase tracking-wide text-[var(--adamia-blue)]">
-                Cobro por uso
-              </p>
-              <h3 className="mt-1 text-xl font-black">
-                Resumen mensual estimado
-              </h3>
-
-              {estimado ? (
-                <div className="mt-3 space-y-2 text-sm">
-                  <SummaryRow
-                    label="Empleados iniciales"
-                    value={String(estimado.employees)}
-                  />
-                  <SummaryRow
-                    label="Precio normal por empleado"
-                    value={formatCurrencyMXN(COSTO_POR_USUARIO_DEFAULT)}
-                  />
-                  <SummaryRow
-                    label="Mensualidad normal estimada"
-                    value={formatCurrencyMXN(estimado.monthlyNormal)}
-                    highlight={!cuponAplicado}
-                  />
-
-                  {cuponAplicado ? (
-                    <div className="mt-4 space-y-2 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                      <p className="font-black text-emerald-800">
-                        Cupón {cuponAplicado.codigo}
-                      </p>
-
-                      <SummaryRow
-                        label="Precio promocional por empleado"
-                        value={formatCurrencyMXN(
-                          cuponAplicado.precio_por_empleado,
-                        )}
-                      />
-
-                      <SummaryRow
-                        label="Mensualidad promocional estimada"
-                        value={formatCurrencyMXN(estimado.monthlyPromo)}
-                        highlight
-                      />
-
-                      <SummaryRow
-                        label="Duración"
-                        value={`${cuponAplicado.meses_duracion} ${
-                          cuponAplicado.meses_duracion === 1 ? "mes" : "meses"
-                        }`}
-                      />
-
-                      <p className="pt-2 text-xs font-semibold text-emerald-800">
-                        Al terminar la promoción se aplicará el precio normal
-                        por empleado activo.
-                      </p>
-                    </div>
-                  ) : null}
-
-                  <p className="pt-3 text-xs text-[var(--adamia-text-secondary)]">
-                    El importe puede ajustarse si cambia la cantidad de
-                    empleados activos durante el periodo.
-                  </p>
-                </div>
-              ) : (
-                <p className="mt-2 text-sm text-[var(--adamia-text-secondary)]">
-                  Indica con cuántos empleados comenzarás.
-                </p>
-              )}
-            </article>
-
             <article className="rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-5 shadow-sm">
               <h3 className="text-xl font-black">Beneficios del software</h3>
               <div className="mt-3 space-y-2 text-sm text-[var(--adamia-text-secondary)]">
