@@ -28,6 +28,7 @@ import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import StatCard from "@/components/StatCard";
 
 function formatMXN(value) {
+  if (value == null || value === "") return "—";
   return new Intl.NumberFormat("es-MX", {
     style: "currency",
     currency: "MXN",
@@ -163,24 +164,20 @@ export default function MiSuscripcionPage() {
             value={formatDate(suscripcion.fecha_vencimiento)}
           />
           <Info
-            label="Empleados activos"
-            value={suscripcion.empleados_activos ?? 0}
+            label="Empleados Activos"
+            value={suscripcion.empleados_activos}
           />
           <Info
-            label="Empleados facturables"
-            value={suscripcion.empleados_facturables ?? suscripcion.empleados}
+            label="Empleados archivados (Inactivo y Baja)"
+            value={suscripcion.empleados_archivados}
           />
           <Info
-            label="Precio por empleado excedente"
-            value={formatMXN(suscripcion.precio_empleado_extra)}
+            label="Tarifa mensual por Activo"
+            value={formatMXN(suscripcion.precio_empleado_activo)}
           />
           <Info
-            label="Precio base mensual"
-            value={formatMXN(suscripcion.precio_base_mensual)}
-          />
-          <Info
-            label="Empleados incluidos"
-            value={suscripcion.empleados_incluidos ?? 0}
+            label="Tarifa mensual por archivado"
+            value={formatMXN(suscripcion.precio_empleado_archivado)}
           />
           <Info label="Origen" value={suscripcion.origen || "—"} />
         </CardContent>
@@ -359,7 +356,7 @@ function Info({ label, value }) {
     <div className="rounded-lg border p-4">
       <p className="text-xs font-medium uppercase text-slate-500">{label}</p>
       <div className="mt-1 text-sm font-medium text-slate-800">
-        {value || "—"}
+        {value ?? "—"}
       </div>
     </div>
   );
