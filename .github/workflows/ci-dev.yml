@@ -130,6 +130,8 @@ jobs:
           NEXT_PUBLIC_AWS_URL: https://hr360-redlab.s3.us-west-1.amazonaws.com
         run: |
           set -euo pipefail
+          test "${NEXT_PUBLIC_RUTA_BACKEND%/}" = "https://dev.adamia.com.mx/api"
+          test "${NEXT_PUBLIC_RUTA_DOMAIN%/}" = "https://dev.adamia.com.mx"
           docker build \
             --build-arg NEXT_PUBLIC_RUTA_BACKEND \
             --build-arg NEXT_PUBLIC_RUTA_DOMAIN \
