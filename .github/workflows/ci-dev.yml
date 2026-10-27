@@ -123,8 +123,8 @@ jobs:
 
       - name: Build frontend image on GitHub runner
         env:
-          NEXT_PUBLIC_RUTA_BACKEND: ${{ secrets.NEXT_PUBLIC_RUTA_BACKEND }}
-          NEXT_PUBLIC_RUTA_DOMAIN: ${{ secrets.NEXT_PUBLIC_RUTA_DOMAIN }}
+          NEXT_PUBLIC_RUTA_BACKEND: https://dev.adamia.com.mx/api
+          NEXT_PUBLIC_RUTA_DOMAIN: https://dev.adamia.com.mx
           NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}
           NEXT_PUBLIC_RECRUITMENT_ENABLED: "true"
           NEXT_PUBLIC_AWS_URL: https://hr360-redlab.s3.us-west-1.amazonaws.com
