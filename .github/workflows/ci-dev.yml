@@ -104,6 +104,7 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     needs: validate
+    environment: dev
     steps:
       - uses: actions/checkout@v4
 
@@ -119,14 +120,33 @@ jobs:
           path: node_modules
           key: node-modules-${{ github.sha }}-${{ hashFiles('package-lock.json') }}
 
-      - name: Build
+
+      - name: Build frontend image on GitHub runner
         env:
           NEXT_PUBLIC_RUTA_BACKEND: ${{ secrets.NEXT_PUBLIC_RUTA_BACKEND }}
           NEXT_PUBLIC_RUTA_DOMAIN: ${{ secrets.NEXT_PUBLIC_RUTA_DOMAIN }}
           NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}
-          NEXT_PUBLIC_TINYMCE_KEY: ${{ secrets.NEXT_PUBLIC_TINYMCE_KEY }}
-          NEXT_PUBLIC_USERNAME_GEONAMES: ${{ secrets.NEXT_PUBLIC_USERNAME_GEONAMES }}
-        run: npm run build
+          NEXT_PUBLIC_RECRUITMENT_ENABLED: "true"
+          NEXT_PUBLIC_AWS_URL: https://hr360-redlab.s3.us-west-1.amazonaws.com
+        run: |
+          set -euo pipefail
+          docker build \
+            --build-arg NEXT_PUBLIC_RUTA_BACKEND \
+            --build-arg NEXT_PUBLIC_RUTA_DOMAIN \
+            --build-arg NEXT_PUBLIC_GOOGLE_MAPS_API_KEY \
+            --build-arg NEXT_PUBLIC_RECRUITMENT_ENABLED \
+            --build-arg NEXT_PUBLIC_AWS_URL \
+            --label "org.opencontainers.image.revision=${{ github.sha }}" \
+            --tag "adamia-frontend-dev:${{ github.sha }}" .
+          docker save "adamia-frontend-dev:${{ github.sha }}" | gzip > frontend-image.tar.gz
+
+      - name: Store frontend image
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dev-${{ github.sha }}
+          path: frontend-image.tar.gz
+          compression-level: 0
+          retention-days: 3
 
   # ─────────────────────────────────────────────
   # 4. UPLOAD — Despliegue a Lightsail
@@ -139,7 +159,22 @@ jobs:
     outputs:
       deploy_sha: ${{ github.sha }}
     steps:
-      - name: Ejecutar deploy-dev.sh en Lightsail
+      - name: Download prebuilt frontend image
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dev-${{ github.sha }}
+
+      - name: Transfer frontend image to Lightsail
+        uses: appleboy/scp-action@v1
+        with:
+          host: ${{ secrets.LIGHTSAIL_HOST }}
+          username: ${{ secrets.LIGHTSAIL_USER }}
+          key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          source: frontend-image.tar.gz
+          target: /home/${{ secrets.LIGHTSAIL_USER }}/adamia/releases/frontend-dev-${{ github.sha }}
+          command_timeout: 10m
+
+      - name: Activate prebuilt frontend image on Lightsail
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.LIGHTSAIL_HOST }}
@@ -149,8 +184,19 @@ jobs:
           script: |
             set -e
             echo "🚀 Iniciando deploy — SHA: ${{ github.sha }}"
-            bash ~/adamia/deploy-dev.sh
-            echo "✅ deploy-dev.sh completado"
+            cd ~/adamia/frontend-dev
+            test "$(git branch --show-current)" = "dev"
+            git fetch origin dev
+            git merge --ff-only "${{ github.sha }}"
+            test "$(git rev-parse HEAD)" = "${{ github.sha }}"
+            cd ~/adamia
+            previous_image=$(docker inspect --format='{{.Image}}' adamia_frontend_dev)
+            docker tag "$previous_image" "adamia-frontend-dev:rollback-${{ github.sha }}"
+            docker load --input "releases/frontend-dev-${{ github.sha }}/frontend-image.tar.gz"
+            test "$(docker inspect --format='{{index .Config.Labels "org.opencontainers.image.revision"}}' adamia-frontend-dev:${{ github.sha }})" = "${{ github.sha }}"
+            docker tag "adamia-frontend-dev:${{ github.sha }}" adamia-frontend-dev:latest
+            docker compose up -d --no-build --no-deps frontend-dev
+            echo "✅ Imagen precompilada de dev activada"
 
   # ─────────────────────────────────────────────
   # 5. DEPLOY — Health check
