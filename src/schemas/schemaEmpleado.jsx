@@ -10,6 +10,7 @@ const horarioSchema = z.object({
 
 export const schemaEmpleado = z
   .object({
+    campos_personalizados: z.record(z.string()).optional(),
     nombre: z.string().min(1, "El nombre del empleado es obligatorio"),
     apellido_paterno: z.string().min(1, "El apellido paterno es obligatorio"),
     apellido_materno: z.string().min(1, "El apellido materno es obligatorio"),

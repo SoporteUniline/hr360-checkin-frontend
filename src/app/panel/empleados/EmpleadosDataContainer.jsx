@@ -8,7 +8,11 @@ import ErrorPage from "@/components/ErrorPage";
 import { useEffect, useState } from "react";
 import { fetcherWithToken } from "@/lib/fetcher";
 
+const EMPTY_FILTERS = {};
+
 export default function EmpleadosDataContainer({
+  camposConfigurados = [],
+  camposFiltros = EMPTY_FILTERS,
   idEmpresa,
   page,
   limit,
@@ -39,6 +43,7 @@ export default function EmpleadosDataContainer({
     departamento,
     estado,
     fechaDesde,
+    camposFiltros,
   );
 
   useEffect(() => {
@@ -65,6 +70,8 @@ export default function EmpleadosDataContainer({
         if (departamento) countParams.append("departamento", departamento);
         if (estado) countParams.append("estado", estado);
         if (fechaDesde) countParams.append("fechaDesde", fechaDesde);
+
+        if (Object.keys(camposFiltros).length) countParams.append("campos", JSON.stringify(camposFiltros));
 
         const countData = await fetcherWithToken(
           `/checador/empleados?${countParams.toString()}`,
@@ -106,6 +113,7 @@ export default function EmpleadosDataContainer({
     estado,
     fechaDesde,
     refreshSincronizacionToken,
+    camposFiltros,
   ]);
 
   const effectiveData = data || cachedData;
@@ -128,6 +136,7 @@ export default function EmpleadosDataContainer({
     ui: (
       <>
         <EmpleadosTable
+          camposConfigurados={camposConfigurados}
           empleados={empleados}
           filterOptionsRows={filterOptionsRows}
           abrirFormulario={abrirFormulario} // 🔑

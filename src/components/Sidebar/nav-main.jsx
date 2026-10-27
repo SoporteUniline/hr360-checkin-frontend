@@ -48,6 +48,7 @@ import {
   FilePlus2,
   FolderOpen,
   SlidersHorizontal,
+  ListPlus,
   ReceiptText,
   CalendarClock,
   TriangleAlert,
@@ -621,6 +622,12 @@ const menuGroups = [
         url: "/panel/reglas-aviso",
         rol: "Recruiter",
         icon: BellRing,
+      },
+      {
+        title: "Campos personalizados",
+        url: "/panel/campos-personalizados",
+        rol: "Recruiter",
+        icon: ListPlus,
       },
       {
         title: "Config. checador",

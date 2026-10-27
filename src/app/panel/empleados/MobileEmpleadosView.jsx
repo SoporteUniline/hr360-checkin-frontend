@@ -1,4 +1,5 @@
 "use client";
+import { coincideCampos } from "@/lib/camposPersonalizados.mjs";
 
 import { ListFilter } from "lucide-react";
 import MobileEmpleadosFiltersDrawer from "./MobileEmpleadosFiltersDrawer";
@@ -102,6 +103,10 @@ function EmpleadoCard({ emp, onClick }) {
 }
 
 export default function MobileEmpleadosView({
+  camposFiltros = {},
+  filtrosCamposUI,
+  limpiarCampos,
+  cantidadCamposFiltros = 0,
   empleados = [],
   abrirFormulario,
   isLoading,
@@ -141,13 +146,14 @@ export default function MobileEmpleadosView({
   );
 
   const activeFiltersCount =
+    cantidadCamposFiltros +
     puestoSeleccionado.length +
     unidadNegocioSeleccionada.length +
     departamentoSeleccionado.length +
     estadoSeleccionado.length;
 
   const baseFiltered = useMemo(() => {
-    let rows = empleados;
+    let rows = empleados.filter(employee => coincideCampos(employee, camposFiltros));
 
     if (puestoSeleccionado.length > 0) {
       rows = rows.filter((e) => puestoSeleccionado.includes(e.puesto));
@@ -189,6 +195,7 @@ export default function MobileEmpleadosView({
     return rows;
   }, [
     empleados,
+    camposFiltros,
     localSearch,
     puestoSeleccionado,
     unidadNegocioSeleccionada,
@@ -307,11 +314,7 @@ export default function MobileEmpleadosView({
           </div>
         ) : (
           filtered.map((emp) => (
-            <EmpleadoCard
-              key={emp.id_empleado}
-              emp={emp}
-              onClick={(e) => abrirFormulario(e, false, true)}
-            />
+            <EmpleadoCard key={emp.id_empleado} emp={emp} onClick={(e) => abrirFormulario(e, false, true)} />
           ))
         )}
       </div>
@@ -330,6 +333,9 @@ export default function MobileEmpleadosView({
         )}
       </div>
       <MobileEmpleadosFiltersDrawer
+        filtrosCamposUI={filtrosCamposUI}
+        limpiarCampos={limpiarCampos}
+        cantidadCamposFiltros={cantidadCamposFiltros}
         open={showFilters}
         onOpenChange={setShowFilters}
         puestoOptions={puestoOptions}

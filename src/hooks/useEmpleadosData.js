@@ -8,7 +8,8 @@ export default function useEmpleadosData(
   filtroNombre,
   departamento,
   estado,
-  fechaDesde
+  fechaDesde,
+  camposFiltros = {}
 ) {
   let url = null;
 
@@ -19,6 +20,7 @@ export default function useEmpleadosData(
       (departamento ? `&departamento=${departamento}` : "") +
       (estado ? `&estado=${estado}` : "") +
       (fechaDesde ? `&fechaDesde=${fechaDesde}` : "") +
+      (Object.keys(camposFiltros).length ? `&campos=${encodeURIComponent(JSON.stringify(camposFiltros))}` : "") +
       `&page=${page}&limit=${limit}`;
   }
 

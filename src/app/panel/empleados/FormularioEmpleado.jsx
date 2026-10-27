@@ -1,5 +1,8 @@
 "use client";
 
+import useCamposPersonalizados from "@/hooks/useCamposPersonalizados";
+import { CamposEmpleado } from "@/components/CamposEmpleado";
+import { parseCampos } from "@/lib/camposPersonalizados.mjs";
 import React, { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import {
@@ -103,6 +106,7 @@ export default function FormularioEmpleado({
   const form = useForm({
     resolver: zodResolver(schemaEmpleado),
     defaultValues: {
+      campos_personalizados: {},
       apellido_materno: "",
       apellido_paterno: "",
       correo: "",
@@ -148,6 +152,16 @@ export default function FormularioEmpleado({
       id_turno: null,
     },
   });
+
+  const empresaCampos = form.watch("id_empresa");
+  const { campos: camposConfigurados, error: errorCampos, isLoading: cargandoCampos } = useCamposPersonalizados(empresaCampos);
+  const empresaCamposAnterior = useRef(null);
+  useEffect(() => {
+    if (empresaCamposAnterior.current && empresaCamposAnterior.current !== String(empresaCampos)) {
+      form.setValue("campos_personalizados", {});
+    }
+    empresaCamposAnterior.current = empresaCampos ? String(empresaCampos) : null;
+  }, [empresaCampos, form]);
 
   const nipActual = form.watch("nip");
 
@@ -214,6 +228,7 @@ export default function FormularioEmpleado({
 
       form.reset({
         ...restoEmpleado,
+        campos_personalizados: parseCampos(restoEmpleado.campos_personalizados),
 
         nip: restoEmpleado.nip ?? "",
         periodo_pago: restoEmpleado.periodo_pago ?? "sin-seleccion",
@@ -474,6 +489,10 @@ export default function FormularioEmpleado({
         return;
       }
 
+      if (errorCampos || cargandoCampos) {
+        enqueueSnackbar("Espera a que se carguen los campos personalizados antes de guardar.", { variant: "warning" });
+        return;
+      }
       const formData = new FormData();
 
       delete data.nombre_empresa;
@@ -910,7 +929,7 @@ export default function FormularioEmpleado({
                       />
                       <span className="hidden sm:inline">Escanear rostro</span>
                     </TabsTrigger>
-                    {values?.id_empleado && (
+                    {(values?.id_empleado || camposConfigurados.some(c => c.activo && c.formulario && c.pestana === "documentos")) && (
                       <TabsTrigger
                         value="documentos"
                         className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-6 font-medium"
@@ -947,11 +966,7 @@ export default function FormularioEmpleado({
                         />
                       )}
                       {tab === "laborales" && (
-                        <TabLaborales
-                          form={form}
-                          soloLectura={soloLectura}
-                          dataUser={dataUser}
-                        />
+                        <TabLaborales form={form} soloLectura={soloLectura} dataUser={dataUser} />
                       )}
 
                       {tab === "jornada" && (
@@ -990,6 +1005,9 @@ export default function FormularioEmpleado({
                           idEmpresa={values.id_empresa}
                         />
                       )}
+                      {errorCampos && <p role="alert" className="mt-4 text-sm text-red-600">No se pudieron cargar los campos personalizados.</p>}
+                      {cargandoCampos && <p className="mt-4 text-sm">Cargando campos personalizados…</p>}
+                      <CamposEmpleado form={form} campos={camposConfigurados} soloLectura={soloLectura} pestana={tab} />
                     </motion.div>
                   </AnimatePresence>
                 </motion.div>

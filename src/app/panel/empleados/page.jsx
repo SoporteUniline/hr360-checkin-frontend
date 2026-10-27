@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import useCamposPersonalizados from "@/hooks/useCamposPersonalizados";
+import { FiltrosCamposEmpleado } from "@/components/CamposEmpleado";
+import { camposVisibles, registroColumnasCampos } from "@/lib/camposPersonalizados.mjs";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import useDebounce from "@/hooks/useDebounce";
@@ -85,13 +88,6 @@ export default function RegistroEmpleados() {
   const [visibleColumns, setVisibleColumns] = useState(null);
   const [limpiarFiltrosToken, setLimpiarFiltrosToken] = useState(0);
 
-  // Las columnas guardadas se cargan en cliente (localStorage no existe en SSR)
-  useEffect(() => {
-    setVisibleColumns(
-      cargarColumnasGuardadas(COLUMNAS_EMPLEADOS, LS_COLUMNAS_EMPLEADOS),
-    );
-  }, []);
-
   // Al cambiar entre escritorio y móvil cambia el tamaño de página.
   // Reiniciar la paginación evita conservar una página que ya no corresponde
   // al nuevo límite.
@@ -128,6 +124,19 @@ export default function RegistroEmpleados() {
   }, [searchParams]);
 
   const idEmpresa = empresaActiva;
+  const [camposFiltros, setCamposFiltros] = useState({});
+  const { campos: camposConfigurados, error: errorCampos } = useCamposPersonalizados(idEmpresa, dataUser?.empresas_detalle || []);
+  const columnasEmpleados = useMemo(() => [...COLUMNAS_EMPLEADOS, ...registroColumnasCampos(camposConfigurados)], [camposConfigurados]);
+  useEffect(() => {
+    setVisibleColumns(cargarColumnasGuardadas(columnasEmpleados, LS_COLUMNAS_EMPLEADOS));
+  }, [columnasEmpleados]);
+  const filtrosCamposVigentes = useMemo(() => {
+    const permitidos = new Set(camposVisibles(camposConfigurados, "filtros").map(c => c.id));
+    return Object.fromEntries(Object.entries(camposFiltros).filter(([id]) => permitidos.has(id)));
+  }, [camposConfigurados, camposFiltros]);
+  const cambiarFiltrosCampos = (next) => { setCamposFiltros(next); setPage(1); };
+  useEffect(() => { setCamposFiltros({}); setPage(1); }, [idEmpresa]);
+
 
   const abrirModalSincronizacion = () => {
     if (!idEmpresa || idEmpresa === "all") {
@@ -218,6 +227,7 @@ export default function RegistroEmpleados() {
   };
 
   const resetFilters = () => {
+    setCamposFiltros({});
     setEmpresaActiva("all");
     setPage(1);
   };
@@ -226,6 +236,7 @@ export default function RegistroEmpleados() {
 
   // Limpiar del toolbar: búsqueda + empresa + filtros de encabezado (vía token).
   const limpiarFiltros = () => {
+    setCamposFiltros({});
     setFiltroNombre("");
     if (esMultiEmpresa) setEmpresaActiva("all");
     setPage(1);
@@ -292,6 +303,7 @@ export default function RegistroEmpleados() {
 
   const { ui, data, mutate } = EmpleadosDataContainer({
     idEmpresa,
+    camposConfigurados,
     page,
     limit,
     filtroNombre: debouncedFiltroNombre,
@@ -306,6 +318,11 @@ export default function RegistroEmpleados() {
     refreshSincronizacionToken,
     onEmployeeChanged: iniciarRefrescoSincronizacion,
   });
+
+  const filtrosCamposUI = <>
+    {errorCampos && <p role="alert" className="text-sm text-red-600">No se pudieron cargar los filtros personalizados.</p>}
+    <FiltrosCamposEmpleado campos={camposConfigurados} empleados={data?.data || []} value={filtrosCamposVigentes} onChange={cambiarFiltrosCampos} />
+  </>;
 
   if (isMobile && modoFormulario) {
     return (
@@ -344,6 +361,10 @@ export default function RegistroEmpleados() {
             isLoading={false}
           /> */}
           <MobileEmpleadosView
+            camposFiltros={filtrosCamposVigentes}
+            filtrosCamposUI={filtrosCamposUI}
+            limpiarCampos={() => cambiarFiltrosCampos({})}
+            cantidadCamposFiltros={Object.keys(filtrosCamposVigentes).length}
             empleados={data?.data || []}
             abrirFormulario={abrirFormulario}
             isLoading={!data}
@@ -501,7 +522,8 @@ export default function RegistroEmpleados() {
                   <div className="[&_button]:h-[38px] [&_button]:w-full [&_button]:rounded-md [&_button]:border-gray-200 [&_button]:text-[13px] [&_button]:font-medium">
                     {Array.isArray(visibleColumns) ? (
                       <ColumnasSelector
-                        columnas={COLUMNAS_EMPLEADOS}
+                        ordenable
+                        columnas={columnasEmpleados}
                         visibles={visibleColumns}
                         onChange={setVisibleColumns}
                         storageKey={LS_COLUMNAS_EMPLEADOS}

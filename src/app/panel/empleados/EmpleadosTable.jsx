@@ -1,5 +1,7 @@
 "use client";
 
+import { ordenarColumnasVisibles } from "@/lib/columnasTabla.mjs";
+import { claveColumnaCampo, columnasCampos, parseCampos, opcionesCampo, coincideCampos } from "@/lib/camposPersonalizados.mjs";
 import {
   Table,
   TableBody,
@@ -158,6 +160,7 @@ const dedupeEmployeesById = (rows = []) => {
 };
 
 export default function EmpleadosTable({
+  camposConfigurados = [],
   empleados,
   filterOptionsRows,
   abrirFormulario,
@@ -170,6 +173,7 @@ export default function EmpleadosTable({
   limpiarFiltrosToken,
   onEmployeeChanged,
 }) {
+  const [camposSeleccionados, setCamposSeleccionados] = useState({});
   const [nombreSeleccionado, setNombreSeleccionado] = useState([]);
   const [puestoSeleccionado, setPuestoSeleccionado] = useState([]);
   const [unidadNegocioSeleccionada, setUnidadNegocioSeleccionada] = useState(
@@ -183,15 +187,17 @@ export default function EmpleadosTable({
 
   // Visibilidad de columnas: si `visibleColumns` viene (no vacío) manda;
   // si no, todas las columnas del registro se muestran (comportamiento previo).
-  const visibleSet =
-    Array.isArray(visibleColumns) && visibleColumns.length > 0
-      ? new Set(visibleColumns)
-      : null;
-  const colVisible = (key) => (visibleSet ? visibleSet.has(key) : true);
-
-  // "Acciones" siempre visible: +1 al conteo para el colSpan del estado vacío.
+  const camposDisponibles = columnasCampos(camposConfigurados);
+  const columnasOrdenadas = ordenarColumnasVisibles([
+    ...COLUMNAS_EMPLEADOS.map(c => c.key), ...camposDisponibles.map(c => claveColumnaCampo(c.id)),
+  ], visibleColumns);
+  const camposFiltrables = columnasCampos(camposConfigurados).filter(c => c.filtros);
+  const filtrosCamposVigentes = Object.fromEntries(Object.entries(camposSeleccionados).filter(([id]) => camposFiltrables.some(c => c.id === id)));
+  const cambiarCampoFiltro = (id, values) => setCamposSeleccionados(previous => {
+    const next = { ...previous }; if (values.length) next[id] = values; else delete next[id]; return next;
+  });
   const visibleColumnCount =
-    COLUMNAS_EMPLEADOS.filter((c) => colVisible(c.key)).length + 1;
+    columnasOrdenadas.length + 1;
 
   const sourceRows = useMemo(() => {
     const baseRows =
@@ -271,7 +277,8 @@ export default function EmpleadosTable({
           passUnidadNegocio &&
           passDepartamento &&
           passEstado &&
-          passEstadoTab
+          passEstadoTab &&
+          coincideCampos(emp, Object.fromEntries(Object.entries(camposSeleccionados).filter(([id]) => camposConfigurados.some(c => c.id === id && c.activo && c.filtros))))
         );
       }),
     [
@@ -282,10 +289,13 @@ export default function EmpleadosTable({
       departamentoSeleccionado,
       estadoSeleccionado,
       estadoTab,
+      camposSeleccionados,
+      camposConfigurados,
     ],
   );
 
   const hasActiveHeaderFilters =
+    Object.values(filtrosCamposVigentes).some(values => values.length > 0) ||
     nombreSeleccionado.length > 0 ||
     puestoSeleccionado.length > 0 ||
     unidadNegocioSeleccionada.length > 0 ||
@@ -323,6 +333,7 @@ export default function EmpleadosTable({
   }, [useClientPagination, filteredRowsAll.length, empleados?.length]); // ⚠️ onHeaderFilteringMetaChange excluido: es setHeaderFilterMeta, estable, pero al ser llamado como función causa loop
 
   const clearAllHeaderFilters = () => {
+    setCamposSeleccionados({});
     setNombreSeleccionado([]);
     setPuestoSeleccionado([]);
     setUnidadNegocioSeleccionada([]);
@@ -444,6 +455,195 @@ export default function EmpleadosTable({
     </div>
   );
 
+  function renderEncabezado(key) {
+    switch (key) {
+      case "empleado": return (
+          <TableHead key={key} className="font-semibold text-gray-700 uppercase text-xs">
+            <HeaderMultiFilter
+              selected={nombreSeleccionado}
+              onChange={setNombreSeleccionado}
+              options={nombreOptions}
+              placeholder="Nombre"
+            />
+          </TableHead>
+      );
+      case "puesto": return (
+          <TableHead key={key} className="font-semibold text-gray-700 uppercase text-xs">
+            <HeaderMultiFilter
+              selected={puestoSeleccionado}
+              onChange={setPuestoSeleccionado}
+              options={puestoOptions}
+              placeholder="Puesto"
+            />
+          </TableHead>
+      );
+      case "unidad": return (
+          <TableHead key={key} className="font-semibold text-gray-700 uppercase text-xs text-center">
+            <HeaderMultiFilter
+              selected={unidadNegocioSeleccionada}
+              onChange={setUnidadNegocioSeleccionada}
+              options={unidadNegocioOptions}
+              placeholder="Unidad de negocio"
+            />
+          </TableHead>
+      );
+      case "departamento": return (
+          <TableHead key={key} className="font-semibold text-gray-700 uppercase text-xs text-center">
+            <HeaderMultiFilter
+              selected={departamentoSeleccionado}
+              onChange={setDepartamentoSeleccionado}
+              options={departamentoOptions}
+              placeholder="Depto."
+            />
+          </TableHead>
+      );
+      case "contacto": return (
+          <TableHead key={key} className="font-semibold text-gray-700 uppercase text-xs">
+            Contacto
+          </TableHead>
+      );
+      case "ingreso": return (
+          <TableHead key={key} className="font-semibold text-gray-700 uppercase text-xs">
+            Ingreso
+          </TableHead>
+      );
+      case "estado": return (
+          <TableHead key={key} className="font-semibold text-gray-700 uppercase text-xs text-center">
+            <HeaderMultiFilter
+              selected={estadoSeleccionado}
+              onChange={setEstadoSeleccionado}
+              options={estadoOptions}
+              placeholder="Estado"
+            />
+          </TableHead>
+      );
+      case "sincronizacion": return (
+          <TableHead key={key} className="font-semibold text-gray-700 uppercase text-xs text-center">
+            Sincronización
+          </TableHead>
+      );
+      default: {
+        const c = camposDisponibles.find(c => claveColumnaCampo(c.id) === key);
+        if (!c) return null;
+        return <TableHead key={key} className="font-semibold text-gray-700 uppercase text-xs">
+          {c.filtros ? <HeaderMultiFilter placeholder={c.nombre} options={opcionesCampo(c, sourceRows)} selected={filtrosCamposVigentes[c.id] || []} onChange={values => cambiarCampoFiltro(c.id, values)} /> : c.nombre}
+        </TableHead>;
+      }
+    }
+  }
+  function renderCelda(key, emp, nombreCompleto) {
+    switch (key) {
+      case "empleado": return (
+          <TableCell key={key} className="py-4">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-10 w-10 ring-2 ring-gray-100">
+                {getFotoPerfilUrl(emp.foto_perfil) ? (
+                  <AvatarImage
+                    src={getFotoPerfilUrl(emp.foto_perfil)}
+                    alt={nombreCompleto}
+                  />
+                ) : null}
+                <AvatarFallback
+                  className={`${getAvatarColor(
+                    nombreCompleto,
+                  )} text-white font-semibold text-sm`}
+                >
+                  {getInitials(nombreCompleto)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex flex-col">
+                <span className="font-medium text-gray-900">
+                  {nombreCompleto}
+                </span>
+                {emp?.nip ? (
+                  <span className="text-xs text-gray-500">
+                    Código: {emp.nip}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          </TableCell>
+      );
+      case "puesto": return (
+          <TableCell key={key} className="text-gray-700 font-medium">
+            {emp.puesto}
+          </TableCell>
+      );
+      case "unidad": return (
+          <TableCell key={key} className="text-center">
+            {emp.unidad_negocio || emp.sucursal ? (
+              <span className="text-sm text-gray-700">
+                {emp.unidad_negocio || emp.sucursal}
+              </span>
+            ) : (
+              <span className="text-gray-400 text-sm">-</span>
+            )}
+          </TableCell>
+      );
+      case "departamento": return (
+          <TableCell key={key} className="text-center">
+            {emp.departamento ? (
+              <span className="text-sm text-gray-700">
+                {emp.departamento}
+              </span>
+            ) : (
+              <span className="text-gray-400 text-sm">-</span>
+            )}
+          </TableCell>
+      );
+      case "contacto": return (
+          <TableCell key={key}>
+            <div className="flex flex-col gap-1.5">
+              {emp?.correo ? (
+                <div className="flex items-center gap-2 text-sm">
+                  <Mail className="w-4 h-4 text-[#2563EB] flex-shrink-0" />
+                  <a
+                    href={`mailto:${emp.correo}`}
+                    className="text-[#2563EB] hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {emp.correo}
+                  </a>
+                </div>
+              ) : null}
+              {emp?.telefono ? (
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <Phone className="w-4 h-4 text-gray-500 flex-shrink-0" />
+                  <span>{emp.telefono}</span>
+                </div>
+              ) : null}
+            </div>
+          </TableCell>
+      );
+      case "ingreso": return (
+          <TableCell key={key} className="text-gray-700">
+            {emp.fecha_ingreso
+              ? formatDateDMY(dayjs(emp.fecha_ingreso))
+              : "-"}
+          </TableCell>
+      );
+      case "estado": return (
+          <TableCell key={key}>
+            <div className="flex justify-center">
+              <EstadoBadge estado={emp.estado} />
+            </div>
+          </TableCell>
+      );
+      case "sincronizacion": return (
+          <TableCell key={key} className="text-center">
+            <SincronizacionBadge
+              sincronizacion={emp.sincronizacion_checador}
+            />
+          </TableCell>
+      );
+      default: {
+        const c = camposDisponibles.find(c => claveColumnaCampo(c.id) === key);
+        if (!c) return null;
+        return <TableCell key={key}>{Number(c.id_empresa) === Number(emp.id_empresa) ? String(parseCampos(emp.campos_personalizados)[c.id] ?? "") || "Sin asignar" : "—"}</TableCell>;
+      }
+    }
+  }
+
   if (!empleados || empleados.length === 0) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-6">
@@ -486,6 +686,7 @@ export default function EmpleadosTable({
 
       <ActiveFilterChips
         groups={[
+          ...camposFiltrables.map(c => ({ category: c.nombre, values: filtrosCamposVigentes[c.id] || [], options: opcionesCampo(c, sourceRows), onChange: values => cambiarCampoFiltro(c.id, values) })),
           {
             category: "Nombre",
             values: nombreSeleccionado,
@@ -525,71 +726,7 @@ export default function EmpleadosTable({
         <Table>
           <TableHeader>
             <TableRow className="bg-gray-50 hover:bg-gray-50">
-              {colVisible("empleado") && (
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                  <HeaderMultiFilter
-                    selected={nombreSeleccionado}
-                    onChange={setNombreSeleccionado}
-                    options={nombreOptions}
-                    placeholder="Nombre"
-                  />
-                </TableHead>
-              )}
-              {colVisible("puesto") && (
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                  <HeaderMultiFilter
-                    selected={puestoSeleccionado}
-                    onChange={setPuestoSeleccionado}
-                    options={puestoOptions}
-                    placeholder="Puesto"
-                  />
-                </TableHead>
-              )}
-              {colVisible("unidad") && (
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  <HeaderMultiFilter
-                    selected={unidadNegocioSeleccionada}
-                    onChange={setUnidadNegocioSeleccionada}
-                    options={unidadNegocioOptions}
-                    placeholder="Unidad de negocio"
-                  />
-                </TableHead>
-              )}
-              {colVisible("departamento") && (
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  <HeaderMultiFilter
-                    selected={departamentoSeleccionado}
-                    onChange={setDepartamentoSeleccionado}
-                    options={departamentoOptions}
-                    placeholder="Depto."
-                  />
-                </TableHead>
-              )}
-              {colVisible("contacto") && (
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                  Contacto
-                </TableHead>
-              )}
-              {colVisible("ingreso") && (
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs">
-                  Ingreso
-                </TableHead>
-              )}
-              {colVisible("estado") && (
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  <HeaderMultiFilter
-                    selected={estadoSeleccionado}
-                    onChange={setEstadoSeleccionado}
-                    options={estadoOptions}
-                    placeholder="Estado"
-                  />
-                </TableHead>
-              )}
-              {colVisible("sincronizacion") && (
-                <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center">
-                  Sincronización
-                </TableHead>
-              )}
+              {columnasOrdenadas.map(renderEncabezado)}
               <TableHead className="font-semibold text-gray-700 uppercase text-xs text-center sticky right-0 bg-gray-50 z-10">
                 Acciones
               </TableHead>
@@ -615,109 +752,7 @@ export default function EmpleadosTable({
                     key={emp.id_empleado}
                     onClick={() => abrirFormulario(emp, false, true)}
                   >
-                    {colVisible("empleado") && (
-                      <TableCell className="py-4">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10 ring-2 ring-gray-100">
-                            {getFotoPerfilUrl(emp.foto_perfil) ? (
-                              <AvatarImage
-                                src={getFotoPerfilUrl(emp.foto_perfil)}
-                                alt={nombreCompleto}
-                              />
-                            ) : null}
-                            <AvatarFallback
-                              className={`${getAvatarColor(
-                                nombreCompleto,
-                              )} text-white font-semibold text-sm`}
-                            >
-                              {getInitials(nombreCompleto)}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex flex-col">
-                            <span className="font-medium text-gray-900">
-                              {nombreCompleto}
-                            </span>
-                            {emp?.nip ? (
-                              <span className="text-xs text-gray-500">
-                                Código: {emp.nip}
-                              </span>
-                            ) : null}
-                          </div>
-                        </div>
-                      </TableCell>
-                    )}
-                    {colVisible("puesto") && (
-                      <TableCell className="text-gray-700 font-medium">
-                        {emp.puesto}
-                      </TableCell>
-                    )}
-                    {colVisible("unidad") && (
-                      <TableCell className="text-center">
-                        {emp.unidad_negocio || emp.sucursal ? (
-                          <span className="text-sm text-gray-700">
-                            {emp.unidad_negocio || emp.sucursal}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400 text-sm">-</span>
-                        )}
-                      </TableCell>
-                    )}
-                    {colVisible("departamento") && (
-                      <TableCell className="text-center">
-                        {emp.departamento ? (
-                          <span className="text-sm text-gray-700">
-                            {emp.departamento}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400 text-sm">-</span>
-                        )}
-                      </TableCell>
-                    )}
-                    {colVisible("contacto") && (
-                      <TableCell>
-                        <div className="flex flex-col gap-1.5">
-                          {emp?.correo ? (
-                            <div className="flex items-center gap-2 text-sm">
-                              <Mail className="w-4 h-4 text-[#2563EB] flex-shrink-0" />
-                              <a
-                                href={`mailto:${emp.correo}`}
-                                className="text-[#2563EB] hover:underline"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                {emp.correo}
-                              </a>
-                            </div>
-                          ) : null}
-                          {emp?.telefono ? (
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                              <Phone className="w-4 h-4 text-gray-500 flex-shrink-0" />
-                              <span>{emp.telefono}</span>
-                            </div>
-                          ) : null}
-                        </div>
-                      </TableCell>
-                    )}
-                    {colVisible("ingreso") && (
-                      <TableCell className="text-gray-700">
-                        {emp.fecha_ingreso
-                          ? formatDateDMY(dayjs(emp.fecha_ingreso))
-                          : "-"}
-                      </TableCell>
-                    )}
-                    {colVisible("estado") && (
-                      <TableCell>
-                        <div className="flex justify-center">
-                          <EstadoBadge estado={emp.estado} />
-                        </div>
-                      </TableCell>
-                    )}
-                    {colVisible("sincronizacion") && (
-                      <TableCell className="text-center">
-                        <SincronizacionBadge
-                          sincronizacion={emp.sincronizacion_checador}
-                        />
-                      </TableCell>
-                    )}
+                    {columnasOrdenadas.map(key => renderCelda(key, emp, nombreCompleto))}
                     <TableCell className="sticky right-0 bg-white z-10">
                       <div className="flex justify-center items-center gap-2">
                         <button

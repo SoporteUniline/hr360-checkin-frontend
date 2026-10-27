@@ -46,6 +46,9 @@ function FilterSection({ title, options, selected, onChange }) {
 }
 
 export default function MobileEmpleadosFiltersDrawer({
+  filtrosCamposUI,
+  limpiarCampos,
+  cantidadCamposFiltros = 0,
   open,
   onOpenChange,
   puestoOptions,
@@ -62,12 +65,14 @@ export default function MobileEmpleadosFiltersDrawer({
   setEstadoSeleccionado,
 }) {
   const activeFiltersCount =
+    cantidadCamposFiltros +
     puestoSeleccionado.length +
     unidadNegocioSeleccionada.length +
     departamentoSeleccionado.length +
     estadoSeleccionado.length;
 
   const clearAll = () => {
+    limpiarCampos?.();
     setPuestoSeleccionado([]);
     setUnidadNegocioSeleccionada([]);
     setDepartamentoSeleccionado([]);
@@ -100,6 +105,7 @@ export default function MobileEmpleadosFiltersDrawer({
         </div>
 
         <div className="overflow-y-auto flex-1 px-6 pb-10">
+          <div className="space-y-3 mt-4">{filtrosCamposUI}</div>
           <FilterSection
             title="Estado"
             options={estadoOptions}
