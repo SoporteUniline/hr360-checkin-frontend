@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { Combobox } from "@/components/Combobox";
 import { ComboboxEstadoCivil } from "@/components/ComboboxEstadoCivil";
 import { FormLabelWithAsterisk } from "@/components/FormLabelWithAsterisk";
@@ -20,7 +21,7 @@ import { useEffect, useState } from "react";
 import { CreatableCombobox } from "@/components/CreatableCombobox";
 import axios from "@/lib/axios";
 
-export default function TabPersonales({ form, soloLectura }) {
+export default function TabPersonales({ renderCampos = () => null, form, soloLectura }) {
   const idEmpresa = form.watch("id_empresa");
   const [estadosCiviles, setEstadosCiviles] = useState([]);
   const [loadingEstadosCiviles, setLoadingEstadosCiviles] = useState(false);
@@ -90,7 +91,8 @@ export default function TabPersonales({ form, soloLectura }) {
             Información personal
           </h3>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="employee-fields">
+          {renderCampos("inicio")}
           <FormField
             name="nombre"
             control={form.control}
@@ -114,6 +116,7 @@ export default function TabPersonales({ form, soloLectura }) {
               </FormItem>
             )}
           />
+          {renderCampos("nombre")}
 
           {[
             {
@@ -141,7 +144,7 @@ export default function TabPersonales({ form, soloLectura }) {
               required: false,
             },
           ].map(({ name, label, type = "text", required = false }) => (
-            <FormField
+            <Fragment key={name}><FormField
               key={name}
               name={name}
               control={form.control}
@@ -161,7 +164,7 @@ export default function TabPersonales({ form, soloLectura }) {
                   <FormMessage />
                 </FormItem>
               )}
-            />
+            />{renderCampos(name)}</Fragment>
           ))}
 
           <FormField
@@ -184,6 +187,7 @@ export default function TabPersonales({ form, soloLectura }) {
               </FormItem>
             )}
           />
+          {renderCampos("curp")}
           <FormField
             name="rfc"
             control={form.control}
@@ -204,6 +208,7 @@ export default function TabPersonales({ form, soloLectura }) {
               </FormItem>
             )}
           />
+          {renderCampos("rfc")}
 
           <FormField
             name="nss"
@@ -223,6 +228,7 @@ export default function TabPersonales({ form, soloLectura }) {
               </FormItem>
             )}
           />
+          {renderCampos("nss")}
 
           <FormField
             name="sexo"
@@ -255,6 +261,7 @@ export default function TabPersonales({ form, soloLectura }) {
               </FormItem>
             )}
           />
+          {renderCampos("sexo")}
 
           <FormField
             name="estado_civil"
@@ -296,6 +303,7 @@ export default function TabPersonales({ form, soloLectura }) {
               </FormItem>
             )}
           />
+          {renderCampos("estado_civil")}
 
           <FormField
             name="direccion"
@@ -316,6 +324,7 @@ export default function TabPersonales({ form, soloLectura }) {
               </FormItem>
             )}
           />
+          {renderCampos("direccion")}
         </div>
       </div>
 
@@ -341,7 +350,7 @@ export default function TabPersonales({ form, soloLectura }) {
             Documentos oficiales
           </h3>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="employee-fields">
           <FormField
             name="curp"
             control={form.control}
@@ -363,6 +372,7 @@ export default function TabPersonales({ form, soloLectura }) {
               </FormItem>
             )}
           />
+          {renderCampos("documento_curp")}
           <FormField
             name="rfc"
             control={form.control}
@@ -384,6 +394,7 @@ export default function TabPersonales({ form, soloLectura }) {
               </FormItem>
             )}
           />
+          {renderCampos("documento_rfc")}
 
           <FormField
             name="nss"
@@ -400,6 +411,8 @@ export default function TabPersonales({ form, soloLectura }) {
               </FormItem>
             )}
           />
+          {renderCampos("documento_nss")}
+          {renderCampos("fin")}
         </div>
       </div>
     </section>

@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { camposEnPosicion, posicionesCampo, vistaOrdenCampo } from "../src/lib/camposPersonalizados.mjs";
 import { parseCampos, camposVisibles, columnasCampos, opcionesCampo, coincideCampos, camposEnPestana, registroColumnasCampos } from "../src/lib/camposPersonalizados.mjs";
 test("lee valores JSON, objetos y empleados anteriores sin campos", () => {
   assert.deepEqual(parseCampos(null), {});
@@ -71,4 +72,41 @@ test("los desplegables respetan el orden configurado y añaden históricos al fi
   const field = { id: "a", id_empresa: 1, tipo: "seleccion", opciones: ["C", "A", "B"] };
   const employees = [{ id_empresa: 1, campos_personalizados: { a: "Anterior" } }];
   assert.deepEqual(opcionesCampo(field, employees), ["C", "A", "B", "Anterior"]);
+});
+
+test("ubica después del campo elegido y ordena sin mezclar pestañas ni campos ocultos", () => {
+  const base = { activo: true, formulario: true, pestana: "personales", despues_de: "nombre" };
+  const fields = [
+    { ...base, id: "segundo", orden: 2 },
+    { ...base, id: "primero", orden: 1 },
+    { ...base, id: "oculto", activo: false },
+    { ...base, id: "filtro", formulario: false },
+    { ...base, id: "otra", pestana: "nomina" },
+    { ...base, id: "correo", despues_de: "correo" },
+  ];
+  assert.deepEqual(camposEnPosicion(fields, "personales", "nombre").map(f => f.id), ["primero", "segundo"]);
+  assert.deepEqual(camposEnPosicion(fields, "personales", "correo").map(f => f.id), ["correo"]);
+  assert.deepEqual(fields.slice(0, 2).map(f => f.id), ["segundo", "primero"]);
+});
+
+test("campos antiguos o con referencia retirada siguen visibles al final", () => {
+  const fields = [
+    { id: "antiguo", activo: true, formulario: true },
+    { id: "retirado", activo: true, formulario: true, despues_de: "ya_no_existe" },
+  ];
+  assert.deepEqual(camposEnPosicion(fields, "laborales", "fin").map(f => f.id), ["antiguo", "retirado"]);
+  assert.ok(posicionesCampo("personales").some(p => p.value === "nombre"));
+  assert.ok(!posicionesCampo("nomina").some(p => p.value === "nombre"));
+});
+
+test("la vista previa conserva el orden y permite subir o bajar sin números", () => {
+  const base = { activo: true, formulario: true, id_empresa: 5, pestana: "personales", despues_de: "nombre" };
+  const fields = [{ ...base, id: "a", nombre: "A", orden: 0 }, { ...base, id: "b", nombre: "B", orden: 1 }, { ...base, id: "c", nombre: "C", orden: 2 }];
+  const draft = { ...base, nombre: "B editado" };
+  assert.deepEqual(vistaOrdenCampo(fields, draft, "b").map(f => f.id), ["a", "b", "c"]);
+  assert.deepEqual(vistaOrdenCampo(fields, draft, "b", "a").map(f => f.id), ["b", "a", "c"]);
+  assert.deepEqual(vistaOrdenCampo(fields, draft, "b", null).map(f => f.id), ["a", "c", "b"]);
+  assert.deepEqual(vistaOrdenCampo(fields, draft, null).map(f => f.id), ["a", "b", "c", "__actual__"]);
+  assert.deepEqual(vistaOrdenCampo(fields, { ...draft, despues_de: "correo" }, "b").map(f => f.id), ["b"]);
+  assert.deepEqual(vistaOrdenCampo(fields, { ...draft, id_empresa: 9 }, null).map(f => f.id), ["__actual__"]);
 });

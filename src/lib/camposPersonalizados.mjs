@@ -1,3 +1,5 @@
+import posiciones from "./posicionesCampos.json" with { type: "json" };
+
 export function parseCampos(value) {
   if (!value) return {};
   if (typeof value === "object" && !Array.isArray(value)) return value;
@@ -49,4 +51,34 @@ export function camposEnPestana(fields, pestana) {
 export const claveColumnaCampo = id => `campo:${id}`;
 export function registroColumnasCampos(fields) {
   return columnasCampos(fields).map(f => ({ key: claveColumnaCampo(f.id), label: f.nombre, extra: true }));
+}
+
+export function posicionesCampo(pestana) {
+  return [
+    { value: "inicio", label: "Al inicio" },
+    ...(posiciones[pestana] || []).map(([value, label]) => ({ value, label: `Después de ${label}` })),
+    { value: "fin", label: "Al final" },
+  ];
+}
+export function camposEnPosicion(fields, pestana, despuesDe = "fin") {
+  const valid = posicionesCampo(pestana).map(p => p.value);
+  return camposEnPestana(fields, pestana)
+    .filter(f => (valid.includes(f.despues_de) ? f.despues_de : "fin") === despuesDe)
+    .sort((a, b) => (Number(a.orden) || 0) - (Number(b.orden) || 0));
+}
+
+export function vistaOrdenCampo(fields, draft, editingId, antesDe) {
+  const peers = camposEnPosicion(fields, draft.pestana, draft.despues_de)
+    .filter(f => f.id !== editingId && Number(f.id_empresa) === Number(draft.id_empresa));
+  const current = { ...draft, id: editingId || "__actual__", actual: true };
+  let index = peers.length;
+  if (antesDe !== undefined) {
+    const target = peers.findIndex(f => f.id === antesDe);
+    if (target >= 0) index = target;
+  } else if (editingId) {
+    const existing = camposEnPosicion(fields, draft.pestana, draft.despues_de);
+    const previousIndex = existing.findIndex(f => f.id === editingId);
+    if (previousIndex >= 0) index = existing.slice(0, previousIndex).filter(f => peers.some(p => p.id === f.id)).length;
+  }
+  return [...peers.slice(0, index), current, ...peers.slice(index)];
 }

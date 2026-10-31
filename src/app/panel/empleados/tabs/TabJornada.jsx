@@ -31,7 +31,7 @@ const DIAS_SEMANA = [
   "Domingo",
 ];
 
-export default function TabJornada({ form, soloLectura, empleadoId }) {
+export default function TabJornada({ renderCampos = () => null, form, soloLectura, empleadoId }) {
   const [diasSeleccionados, setDiasSeleccionados] = useState([]);
   const [entradaComun, setEntradaComun] = useState("");
   const [salidaComun, setSalidaComun] = useState("");
@@ -342,6 +342,7 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
         </div>
 
         <div className="space-y-6">
+          {renderCampos("inicio", true)}
           <FormField
             name="autoriza_horas_extra"
             control={form.control}
@@ -366,6 +367,7 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
               </FormItem>
             )}
           />
+          {renderCampos("autoriza_horas_extra", true)}
 
           <div className="rounded-xl border bg-white p-4 shadow-sm">
             <FormLabel className="mb-3 block text-base font-semibold">
@@ -470,6 +472,8 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
               </div>
             )}
           </div>
+
+          {renderCampos("tipo_horario", true)}
 
           {isSubmitted && errors.horarios && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3">
@@ -648,8 +652,10 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
             </table>
           </div>
 
+          {renderCampos("horarios", true)}
+
           {/* Resumen de horas */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+          <div className="employee-fields employee-fields-three mt-6">
             <FormField
               name="hrs_por_dia"
               control={form.control}
@@ -664,6 +670,7 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
                 </FormItem>
               )}
             />
+          {renderCampos("hrs_por_dia")}
             <FormField
               name="hrs_de_comida"
               control={form.control}
@@ -678,6 +685,7 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
                 </FormItem>
               )}
             />
+          {renderCampos("hrs_de_comida")}
 
             <FormItem>
               <FormLabel className="text-sm font-medium text-gray-700">
@@ -687,7 +695,9 @@ export default function TabJornada({ form, soloLectura, empleadoId }) {
                 {hrsSemana} hrs
               </div>
             </FormItem>
+            {renderCampos("hrs_semana")}
           </div>
+          {renderCampos("fin", true)}
         </div>
       </div>
     </section>

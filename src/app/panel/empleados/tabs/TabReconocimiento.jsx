@@ -5,6 +5,7 @@ import { faceapi, loadFaceApiModels, isFaceApiReady } from "@/lib/faceapi";
 import { useSnackbar } from "notistack";
 
 export default function TabReconocimiento({
+  renderCampos = () => null,
   setDescriptor,
   soloLectura,
   active,
@@ -300,6 +301,7 @@ export default function TabReconocimiento({
 
   return (
     <div className="flex flex-col items-center gap-6 py-4">
+      {renderCampos("inicio", true)}
       {loadingModels ? (
         <div className="flex flex-col items-center gap-3 py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2563EB]"></div>
@@ -324,6 +326,8 @@ export default function TabReconocimiento({
             </div>
           </div>
 
+          {renderCampos("instrucciones", true)}
+
           {/* Video con marco mejorado */}
           <div className="relative">
             <div className="absolute -inset-4 bg-gradient-to-r from-blue-400 to-purple-400 rounded-2xl blur opacity-20"></div>
@@ -345,6 +349,8 @@ export default function TabReconocimiento({
               </div>
             </div>
           </div>
+
+          {renderCampos("camara", true)}
 
           {/* Estado de guía con colores */}
           <div className={`px-4 py-2 rounded-lg font-medium text-sm ${
@@ -384,6 +390,8 @@ export default function TabReconocimiento({
             </div>
           )}
 
+          {renderCampos("controles", true)}
+
           {/* Indicador de éxito */}
           {descriptorReady && (
             <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
@@ -397,6 +405,7 @@ export default function TabReconocimiento({
           )}
         </>
       )}
+      {renderCampos("fin", true)}
     </div>
   );
 }

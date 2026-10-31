@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import useSWR from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import {
@@ -29,7 +30,7 @@ import { Combobox } from "@/components/Combobox";
 import { useEmpresaDependencias } from "@/hooks/useEmpresaDependencias";
 import { CreatableCombobox } from "@/components/CreatableCombobox";
 
-export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
+export default function TabLaborales({ renderCampos = () => null, form, soloLectura, dataUser, editar }) {
   const { enqueueSnackbar } = useSnackbar();
   const [areas, setAreas] = useState([]);
   const [areasAsignadas, setAreasAsignadas] = useState([]);
@@ -195,7 +196,8 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
             Información laboral
           </h3>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="employee-fields">
+          {renderCampos("inicio")}
           <FormField
             name="id_empresa"
             control={form.control}
@@ -227,6 +229,7 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
               </FormItem>
             )}
           />
+          {renderCampos("id_empresa")}
 
           <FormField
             name="sucursal"
@@ -272,6 +275,7 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
               </FormItem>
             )}
           />
+          {renderCampos("sucursal")}
 
           <FormField
             name="puesto"
@@ -321,6 +325,7 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
               </FormItem>
             )}
           />
+          {renderCampos("puesto")}
 
           <FormField
             name="departamento"
@@ -371,6 +376,7 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
               </FormItem>
             )}
           />
+          {renderCampos("departamento")}
 
           {[
             {
@@ -380,7 +386,7 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
               required: false,
             },
           ].map(({ name, label, type = "text", required = false }) => (
-            <FormField
+            <Fragment key={name}><FormField
               key={name}
               name={name}
               control={form.control}
@@ -400,7 +406,7 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
                   <FormMessage />
                 </FormItem>
               )}
-            />
+            />{renderCampos(name)}</Fragment>
           ))}
 
           <div className="col-span-1 sm:col-span-2">
@@ -437,6 +443,7 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
               )}
             />
           </div>
+          {renderCampos("metodo_chequeo")}
 
           <div className="col-span-1 sm:col-span-2">
             <FormField
@@ -473,6 +480,8 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
               )}
             />
           </div>
+          {renderCampos("cierre_turno")}
+
 
           <div className="col-span-1 sm:col-span-2">
             <FormField
@@ -499,6 +508,7 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
               )}
             />
           </div>
+          {renderCampos("new_pass")}
 
           <div className="col-span-1 sm:col-span-2">
             <FormField
@@ -523,10 +533,11 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
               )}
             />
           </div>
+          {renderCampos("confirm_pass")}
 
           {[{ name: "nip", label: "Código de empleado", required: false }].map(
             ({ name, label, type = "text", required = false }) => (
-              <div key={name}>
+              <Fragment key={name}><div key={name}>
                 <FormField
                   name={name}
                   control={form.control}
@@ -547,12 +558,12 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
                     </FormItem>
                   )}
                 />{" "}
-              </div>
+              </div>{renderCampos(name)}</Fragment>
             ),
           )}
 
           {responsables.map(({ name, label }) => (
-            <FormField
+            <Fragment key={name}><FormField
               key={name}
               name={name}
               control={form.control}
@@ -573,7 +584,7 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
                   <FormMessage />
                 </FormItem>
               )}
-            />
+            />{renderCampos(name)}</Fragment>
           ))}
 
           <FormField
@@ -594,6 +605,7 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
               </FormItem>
             )}
           />
+          {renderCampos("cc_vacaciones")}
 
           <FormField
             name="cc_permisos"
@@ -613,6 +625,7 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
               </FormItem>
             )}
           />
+          {renderCampos("cc_permisos")}
 
           <FormField
             name="checar_gps"
@@ -635,6 +648,7 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
               </FormItem>
             )}
           />
+          {renderCampos("checar_gps")}
 
           <FormField
             name="enviar_asistencia_automatica"
@@ -661,6 +675,7 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
               </FormItem>
             )}
           />
+          {renderCampos("enviar_asistencia_automatica")}
 
           {form.watch("checar_gps") && idEmpresa && (
             <Button
@@ -674,8 +689,8 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
           )}
 
           {/* 🔹 Áreas permitidas (solo si usar_reloj_checador = true) */}
-          <div className="col-span-1 sm:col-span-2">
-            {form.watch("checar_gps") && (
+          {form.watch("checar_gps") && (
+            <div className="col-span-1 sm:col-span-2">
               <div className="border rounded-xl p-4 bg-slate-50 shadow-sm">
                 <FormLabel className="text-base font-semibold block mb-3">
                   Áreas donde el empleado puede checar
@@ -686,7 +701,7 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
                     ⚠️ No hay áreas registradas todavía. Crea una en el sistema.
                   </p>
                 ) : (
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="employee-fields">
                     {areas.map((area, index) => {
                       const asignada = areasAsignadas.includes(area.id_area);
                       return (
@@ -716,9 +731,10 @@ export default function TabLaborales({ form, soloLectura, dataUser, editar }) {
                   </div>
                 )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
+        {renderCampos("fin", true)}
         <ModalArea
           isOpen={mostrarModalArea}
           onClose={() => setMostrarModalArea(false)}

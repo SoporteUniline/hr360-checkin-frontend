@@ -136,6 +136,7 @@ function EstadoFirma({ doc }) {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export default function PanelEmpleadoDocumentos({
+  renderCampos = () => null,
   datosEmpleado,
   idEmpleado: idProp,
   idEmpresa: idEmpresaProp,
@@ -308,6 +309,7 @@ export default function PanelEmpleadoDocumentos({
 
   return (
     <div className="space-y-4">
+      {renderCampos("inicio", true)}
       {/* ── Notificación flotante ── */}
       {notif && (
         <div
@@ -439,6 +441,8 @@ export default function PanelEmpleadoDocumentos({
         )}
       </div>
 
+      {renderCampos("encabezado", true)}
+
       {/* ── Banners de alerta ── */}
       {stats?.vencidos > 0 && (
         <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-800 px-3 py-2.5 rounded-lg text-sm font-medium">
@@ -555,6 +559,8 @@ export default function PanelEmpleadoDocumentos({
           </Button>
         </div>
       </div>
+
+      {renderCampos("filtros", true)}
 
       {/* ── Lista de documentos ── */}
       <div className="bg-white border border-slate-200 rounded-[10px] overflow-hidden">
@@ -795,6 +801,9 @@ export default function PanelEmpleadoDocumentos({
           )}
         </div>
       </div>
+
+      {renderCampos("documentos", true)}
+      {renderCampos("fin", true)}
 
       {/* ── Visor de documentos generados ── */}
       <Dialog

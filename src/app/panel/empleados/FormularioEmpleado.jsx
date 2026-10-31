@@ -3,7 +3,7 @@
 import useCamposPersonalizados from "@/hooks/useCamposPersonalizados";
 import { CamposEmpleado } from "@/components/CamposEmpleado";
 import { parseCampos } from "@/lib/camposPersonalizados.mjs";
-import React, { useEffect, useRef, useState } from "react";
+import React, { Fragment, useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import {
   Form,
@@ -688,6 +688,17 @@ export default function FormularioEmpleado({
 
   if (error) return <ErrorPage message={error?.message} />;
 
+  const renderCampos = (despuesDe, agrupar = false) => (
+    <CamposEmpleado
+      form={form}
+      campos={camposConfigurados}
+      soloLectura={soloLectura}
+      pestana={tab}
+      despuesDe={despuesDe}
+      agrupar={agrupar}
+    />
+  );
+
   return (
     <Form {...form}>
       {/* Contenedor principal: columna fija en mobile, flujo normal en desktop */}
@@ -954,11 +965,12 @@ export default function FormularioEmpleado({
                       className="relative w-full overflow-hidden"
                     >
                       {tab === "personales" && (
-                        <TabPersonales form={form} soloLectura={soloLectura} />
+                        <TabPersonales renderCampos={renderCampos} form={form} soloLectura={soloLectura} />
                       )}
 
                       {tab === "emergencia" && (
                         <TabContactosEmergencia
+                          renderCampos={renderCampos}
                           empleadoId={values?.id_empleado}
                           soloLectura={soloLectura}
                           borradores={contactosEmergencia}
@@ -966,11 +978,12 @@ export default function FormularioEmpleado({
                         />
                       )}
                       {tab === "laborales" && (
-                        <TabLaborales form={form} soloLectura={soloLectura} dataUser={dataUser} />
+                        <TabLaborales renderCampos={renderCampos} form={form} soloLectura={soloLectura} dataUser={dataUser} />
                       )}
 
                       {tab === "jornada" && (
                         <TabJornada
+                          renderCampos={renderCampos}
                           form={form}
                           soloLectura={soloLectura}
                           empleadoId={values?.id_empleado}
@@ -978,11 +991,12 @@ export default function FormularioEmpleado({
                       )}
 
                       {tab === "nomina" && (
-                        <TabNomina form={form} soloLectura={soloLectura} />
+                        <TabNomina renderCampos={renderCampos} form={form} soloLectura={soloLectura} />
                       )}
 
                       {tab === "cuentas" && (
                         <TabCuentasBancarias
+                          renderCampos={renderCampos}
                           form={form}
                           soloLectura={soloLectura}
                         />
@@ -990,6 +1004,7 @@ export default function FormularioEmpleado({
 
                       {tab === "reconocimiento" && (
                         <TabReconocimiento
+                          renderCampos={renderCampos}
                           form={form}
                           soloLectura={soloLectura}
                           active={tab === "reconocimiento"}
@@ -1001,13 +1016,14 @@ export default function FormularioEmpleado({
 
                       {tab === "documentos" && values?.id_empleado && (
                         <PanelEmpleadoDocumentos
+                          renderCampos={renderCampos}
                           idEmpleado={values.id_empleado}
                           idEmpresa={values.id_empresa}
                         />
                       )}
                       {errorCampos && <p role="alert" className="mt-4 text-sm text-red-600">No se pudieron cargar los campos personalizados.</p>}
                       {cargandoCampos && <p className="mt-4 text-sm">Cargando campos personalizados…</p>}
-                      <CamposEmpleado form={form} campos={camposConfigurados} soloLectura={soloLectura} pestana={tab} />
+                      {tab === "documentos" && !values?.id_empleado && ["inicio", "encabezado", "filtros", "documentos", "fin"].map(posicion => <Fragment key={posicion}>{renderCampos(posicion, true)}</Fragment>)}
                     </motion.div>
                   </AnimatePresence>
                 </motion.div>

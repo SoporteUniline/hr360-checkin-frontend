@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { useEffect, useState } from "react";
 
-export default function TabCuentasBancarias({ form, soloLectura }) {
+export default function TabCuentasBancarias({ renderCampos = () => null, form, soloLectura }) {
   console.log(form.getValues());
   const [bancoEsOtro, setBancoEsOtro] = useState(false);
 
@@ -49,6 +49,7 @@ export default function TabCuentasBancarias({ form, soloLectura }) {
 
         <div className="space-y-6">
       {/* Tipo de cuenta */}
+      {renderCampos("inicio", true)}
       <FormField
         name="tipo_cuenta"
         control={form.control}
@@ -74,6 +75,7 @@ export default function TabCuentasBancarias({ form, soloLectura }) {
           </FormItem>
         )}
       />
+          {renderCampos("tipo_cuenta", true)}
 
       {/* Banco */}
       <FormField
@@ -113,6 +115,7 @@ export default function TabCuentasBancarias({ form, soloLectura }) {
           </FormItem>
         )}
       />
+          {renderCampos("banco", true)}
 
       {/* Campo para escribir otro banco si elige "Otro" */}
       {bancoEsOtro && (
@@ -134,6 +137,7 @@ export default function TabCuentasBancarias({ form, soloLectura }) {
           )}
         />
       )}
+          {renderCampos("otro_banco", true)}
 
       {/* Número de cuenta o CLABE */}
       <FormField
@@ -166,6 +170,8 @@ export default function TabCuentasBancarias({ form, soloLectura }) {
           </FormItem>
         )}
       />
+          {renderCampos("numero_cuenta", true)}
+          {renderCampos("fin", true)}
         </div>
       </div>
     </section>

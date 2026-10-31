@@ -1,0 +1,74 @@
+{
+  "personales": [
+    ["nombre", "Nombre(s)"],
+    ["apellido_paterno", "Apellido paterno"],
+    ["apellido_materno", "Apellido materno"],
+    ["fecha_nacimiento", "Fecha de nacimiento"],
+    ["telefono", "Teléfono"],
+    ["correo", "Correo"],
+    ["correo_notificaciones", "Correo notificaciones"],
+    ["curp", "CURP"],
+    ["rfc", "RFC"],
+    ["nss", "NSS"],
+    ["sexo", "Sexo"],
+    ["estado_civil", "Estado civil"],
+    ["direccion", "Dirección"],
+    ["documento_curp", "CURP · Documentos oficiales"],
+    ["documento_rfc", "RFC · Documentos oficiales"],
+    ["documento_nss", "NSS · Documentos oficiales"]
+  ],
+  "laborales": [
+    ["id_empresa", "Empresa"],
+    ["sucursal", "Sucursal"],
+    ["puesto", "Puesto"],
+    ["departamento", "Departamento"],
+    ["fecha_ingreso", "Fecha de ingreso"],
+    ["metodo_chequeo", "Método de chequeo"],
+    ["cierre_turno", "Cierre de turno"],
+    ["new_pass", "Contraseña"],
+    ["confirm_pass", "Confirmar contraseña"],
+    ["nip", "Código de empleado"],
+    ["id_jefe_inmediato", "Jefe inmediato"],
+    ["id_autoriza_vacaciones", "Autoriza vacaciones"],
+    ["id_autoriza_permisos", "Autoriza permisos"],
+    ["cc_vacaciones", "CC vacaciones"],
+    ["cc_permisos", "CC permisos"],
+    ["checar_gps", "Checar GPS"],
+    ["enviar_asistencia_automatica", "Asistencia automática"]
+  ],
+  "nomina": [
+    ["periodo_pago", "Periodo de pago"],
+    ["forma_pago", "Forma de pago"],
+    ["forma_calculo", "Forma de cálculo"],
+    ["sueldo", "Sueldo"],
+    ["porcentaje", "Porcentaje"]
+  ],
+  "cuentas": [
+    ["tipo_cuenta", "Tipo de cuenta"],
+    ["banco", "Banco"],
+    ["otro_banco", "Otro banco"],
+    ["numero_cuenta", "Número de cuenta"]
+  ],
+  "jornada": [
+    ["autoriza_horas_extra", "Autorizar horas extra"],
+    ["tipo_horario", "Tipo de jornada / turno"],
+    ["horarios", "Horarios semanales"],
+    ["hrs_por_dia", "Horas por día"],
+    ["hrs_de_comida", "Horas de comida"],
+    ["hrs_semana", "Horas totales por semana"]
+  ],
+  "emergencia": [
+    ["encabezado", "Encabezado de contactos"],
+    ["contactos", "Lista de contactos"]
+  ],
+  "reconocimiento": [
+    ["instrucciones", "Instrucciones"],
+    ["camara", "Cámara"],
+    ["controles", "Controles de captura"]
+  ],
+  "documentos": [
+    ["encabezado", "Resumen del expediente"],
+    ["filtros", "Filtros de documentos"],
+    ["documentos", "Lista de documentos"]
+  ]
+}

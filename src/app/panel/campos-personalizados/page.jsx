@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowUpRight, Building2, Check, Hash, ListChecks, ListPlus, Loader2, Pencil, Plus, Search, TextCursorInput } from "lucide-react";
+import { ArrowUpRight, Building2, Check, Hash, ListChecks, ListPlus, Loader2, Pencil, Plus, Search, TextCursorInput, Trash2 } from "lucide-react";
 import { useSnackbar } from "notistack";
 import { useAuth } from "@/context/AuthContext";
 import useCamposPersonalizados from "@/hooks/useCamposPersonalizados";
 import axios from "@/lib/axios";
 import OpcionesCampoEditor from "@/components/OpcionesCampoEditor";
-import { TIPOS_CAMPO, PESTANAS_CAMPO } from "@/lib/camposPersonalizados.mjs";
+import OrdenCamposEditor from "@/components/OrdenCamposEditor";
+import EliminarCampoDialog from "@/components/EliminarCampoDialog";
+import { TIPOS_CAMPO, PESTANAS_CAMPO, posicionesCampo, vistaOrdenCampo } from "@/lib/camposPersonalizados.mjs";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,12 +19,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
-const initialForm = () => ({ nombre: "", tipo: "seleccion", opciones: ["", ""], formulario: true, filtros: true, pestana: "laborales", activo: true });
+const initialForm = () => ({ nombre: "", tipo: "seleccion", opciones: ["", ""], formulario: true, filtros: true, pestana: "laborales", despues_de: "fin", activo: true });
 const icons = { seleccion: ListChecks, texto: TextCursorInput, numero: Hash };
-const locations = [
-  { key: "formulario", title: "Formulario del empleado", description: "Captura y consulta en la pestaña que elijas." },
-  { key: "filtros", title: "Filtro en la tabla", description: "Permite filtrar desde el encabezado de la columna." },
-];
+
 
 export default function CamposPersonalizadosPage() {
   const { dataUser } = useAuth();
@@ -37,17 +36,17 @@ export default function CamposPersonalizadosPage() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState("");
   const [editorKey, setEditorKey] = useState(0);
+  const [antesDe, setAntesDe] = useState(undefined);
+  const [campoEliminar, setCampoEliminar] = useState(null);
+  const ordenCampos = vistaOrdenCampo(campos, { ...form, id_empresa: empresa }, editing?.id, antesDe);
 
   function openForm(field) {
     setEditorKey(key => key + 1);
     setEditing(field || null);
-    setForm(field ? { ...field, tipo: field.tipo || "seleccion", pestana: field.pestana || "laborales", opciones: [...field.opciones] } : initialForm());
+    setAntesDe(undefined);
+    setForm(field ? { ...field, tipo: field.tipo || "seleccion", pestana: field.pestana || "laborales", despues_de: field.despues_de || "fin", formulario: true, opciones: [...field.opciones] } : initialForm());
     setFormError("");
     setOpen(true);
-  }
-
-  function setLocation(key, checked) {
-    setForm(previous => ({ ...previous, [key]: checked }));
   }
 
   async function submit(event) {
@@ -62,7 +61,11 @@ export default function CamposPersonalizadosPage() {
     setSaving(true); setFormError("");
     try {
       const payload = { nombre: form.nombre.trim(), tipo: form.tipo, opciones,
-        formulario: form.formulario, filtros: form.filtros, pestana: form.pestana, activo: form.activo };
+        formulario: true, filtros: form.filtros, pestana: form.pestana, despues_de: form.despues_de, activo: form.activo };
+      if (form.activo && ordenCampos.length > 1) {
+        const index = ordenCampos.findIndex(c => c.actual);
+        payload.antes_de = ordenCampos[index + 1]?.id ?? null;
+      }
       const url = `/checador/campos-personalizados${editing ? `/${editing.id}` : ""}?empresa=${empresa}`;
       if (editing) await axios.put(url, payload); else await axios.post(url, payload);
       setOpen(false);
@@ -98,13 +101,14 @@ export default function CamposPersonalizadosPage() {
               <TableCell className="px-5 py-4"><div className="flex items-center gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-gray-100 bg-gray-50 text-gray-500"><Icon className="h-4 w-4" /></span><span className="font-semibold text-gray-900">{c.nombre}</span></div></TableCell>
               <TableCell className="px-5 text-gray-600">{TIPOS_CAMPO.find(t => t.value === tipo)?.label}</TableCell>
               <TableCell className="max-w-64 px-5"><div className="flex flex-wrap gap-1.5">{tipo === "seleccion" ? <>{c.opciones.slice(0, 3).map(o => <span key={o} className="max-w-28 truncate rounded-md border border-gray-200 bg-gray-50 px-2 py-0.5 text-xs text-gray-600" title={o}>{o}</span>)}{c.opciones.length > 3 && <span className="text-xs text-gray-400">+{c.opciones.length - 3}</span>}</> : <span className="text-xs text-gray-400">{tipo === "numero" ? "Enteros y decimales" : "Captura libre"}</span>}</div></TableCell>
-              <TableCell className="px-5"><div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">{[[c.formulario, PESTANAS_CAMPO.find(p => p.value === (c.pestana || "laborales"))?.label], [c.filtros, "Filtro"]].filter(([shown]) => shown).map(([, label]) => <span key={label} className="inline-flex items-center gap-1"><Check className="h-3 w-3 text-blue-500" />{label}</span>)}</div></TableCell>
+              <TableCell className="px-5"><div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-gray-500">{[[c.formulario, PESTANAS_CAMPO.find(p => p.value === (c.pestana || "laborales"))?.label], [c.filtros, "Filtro"]].filter(([shown]) => shown).map(([, label]) => <span key={label} className="inline-flex items-center gap-1"><Check className="h-3 w-3 text-blue-500" />{label}</span>)}{c.formulario && <span className="basis-full">{posicionesCampo(c.pestana || "laborales").find(p => p.value === (c.despues_de || "fin"))?.label}</span>}</div></TableCell>
               <TableCell className="px-5"><span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${c.activo ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500"}`}><span className={`h-1.5 w-1.5 rounded-full ${c.activo ? "bg-emerald-500" : "bg-gray-400"}`} />{c.activo ? "Activo" : "Inactivo"}</span></TableCell>
-              <TableCell className="px-5 text-right"><Button variant="ghost" size="sm" className="gap-1.5 text-gray-600" onClick={() => openForm(c)}><Pencil className="h-3.5 w-3.5" />Editar<span className="sr-only"> {c.nombre}</span></Button></TableCell>
+              <TableCell className="px-5 text-right"><div className="flex justify-end gap-1"><Button variant="ghost" size="sm" className="gap-1.5 text-gray-600" onClick={() => openForm(c)}><Pencil className="h-3.5 w-3.5" />Editar<span className="sr-only"> {c.nombre}</span></Button><Button variant="ghost" size="sm" className="gap-1.5 text-red-600 hover:bg-red-50 hover:text-red-700" onClick={() => setCampoEliminar(c)}><Trash2 className="h-3.5 w-3.5" />Eliminar<span className="sr-only"> {c.nombre}</span></Button></div></TableCell>
             </TableRow>;
           })}</TableBody></Table>}
       </section>
 
+      <EliminarCampoDialog key={campoEliminar?.id || "closed"} campo={campoEliminar} empresa={empresa} onClose={() => setCampoEliminar(null)} onComplete={() => mutate()} />
       <Dialog open={open} onOpenChange={next => { if (!saving) setOpen(next); }}>
         <DialogContent className="max-h-[90dvh] gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-xl">
           <DialogHeader className="border-b border-gray-100 px-6 py-5 text-left"><DialogTitle>{editing ? "Editar campo" : "Nuevo campo personalizado"}</DialogTitle><DialogDescription>Define qué información se captura y dónde estará disponible.</DialogDescription></DialogHeader>
@@ -117,12 +121,25 @@ export default function CamposPersonalizadosPage() {
                 {editing && <p className="text-xs text-gray-500">Las asignaciones de opciones retiradas se conservan.</p>}
               </fieldset>}
               <div className="space-y-2"><label htmlFor="campo-pestana" className="text-sm font-medium text-gray-700">Pestaña del formulario</label>
-                <Select value={form.pestana} disabled={saving || !form.formulario} onValueChange={pestana => setForm({ ...form, pestana })}>
+                <Select value={form.pestana} disabled={saving} onValueChange={pestana => { setForm({ ...form, pestana, despues_de: "fin" }); setAntesDe(null); }}>
                   <SelectTrigger id="campo-pestana" className="h-10 rounded-lg border-gray-200 shadow-none"><SelectValue /></SelectTrigger>
                   <SelectContent>{PESTANAS_CAMPO.map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <fieldset disabled={saving} className="space-y-0 rounded-xl border border-gray-200"><legend className="ml-3 px-2 text-sm font-medium text-gray-700">Dónde se muestra</legend>{locations.map((location, index) => <label key={location.key} className={`flex cursor-pointer items-center justify-between gap-4 px-4 py-3 ${index ? "border-t border-gray-100" : ""}`}><span><span className="block text-sm font-medium text-gray-700">{location.title}</span><span className="mt-0.5 block text-xs text-gray-500">{location.description}</span></span><Switch checked={form[location.key]} onCheckedChange={checked => setLocation(location.key, checked)} /></label>)}</fieldset>
+              <div className="space-y-2">
+                <label htmlFor="campo-posicion" className="text-sm font-medium text-gray-700">Posición dentro de la pestaña</label>
+                <Select value={form.despues_de} disabled={saving} onValueChange={despues_de => { setForm({ ...form, despues_de }); setAntesDe(null); }}>
+                  <SelectTrigger id="campo-posicion"><SelectValue /></SelectTrigger>
+                  <SelectContent>{posicionesCampo(form.pestana).map(p => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}</SelectContent>
+                </Select>
+                <p className="text-xs text-gray-500">Se integra junto a los campos existentes. En pestañas con listas, elige el bloque de referencia.</p>
+              </div>
+              {form.activo && <OrdenCamposEditor campos={ordenCampos} disabled={saving} onChange={setAntesDe} />}
+              <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-gray-200 p-4">
+                <span><span className="block text-sm font-medium text-gray-700">Permitir filtrar por este campo</span><span className="mt-1 block text-xs text-gray-500">Disponible en los filtros de la tabla de empleados.</span></span>
+                <Switch disabled={saving} checked={form.filtros} onCheckedChange={filtros => setForm(previous => ({ ...previous, filtros }))} />
+              </label>
+              <p className="text-xs text-gray-500">Los campos activos aparecen en la pestaña y posición elegidas del formulario del empleado.</p>
               <p className="rounded-lg bg-blue-50 px-3 py-2.5 text-xs leading-relaxed text-blue-700">La visibilidad en el listado se elige desde <span className="font-semibold">Empleados → Columnas</span>.</p>
               <label className="flex cursor-pointer items-center justify-between gap-4"><span><span className="block text-sm font-medium text-gray-700">Campo activo</span><span className="mt-1 block text-xs text-gray-500">Al desactivarlo se oculta, pero conserva sus datos.</span></span><Switch disabled={saving} checked={form.activo} onCheckedChange={activo => setForm({ ...form, activo })} /></label>
               {formError && <p role="alert" className="rounded-lg border border-red-100 bg-red-50 px-3 py-2 text-sm text-red-600">{formError}</p>}

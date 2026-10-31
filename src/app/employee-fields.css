@@ -1,0 +1,37 @@
+/* Fill each row without changing the configured field order. */
+.employee-fields {
+  --employee-fields-columns: 2;
+  --employee-fields-gap: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--employee-fields-gap);
+  width: 100%;
+}
+
+.employee-fields > * {
+  flex: 1 1 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.employee-fields-compact {
+  --employee-fields-gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .employee-fields > * {
+    flex-basis: calc(
+      (100% - (var(--employee-fields-columns) - 1) * var(--employee-fields-gap)) /
+        var(--employee-fields-columns)
+    );
+  }
+
+  .employee-fields-three {
+    --employee-fields-columns: 3;
+  }
+
+  .employee-fields > [class~="sm:col-span-2"] {
+    flex-basis: 100%;
+  }
+}

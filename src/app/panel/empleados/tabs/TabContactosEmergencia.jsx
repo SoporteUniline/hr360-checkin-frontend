@@ -36,6 +36,7 @@ const CAMPOS = [
 const base = `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/empleados`;
 
 export default function TabContactosEmergencia({
+  renderCampos = () => null,
   empleadoId,
   soloLectura = false,
   borradores = [],
@@ -207,6 +208,7 @@ export default function TabContactosEmergencia({
 
   return (
     <div className="space-y-5">
+      {renderCampos("inicio", true)}
       <AlertDialog
         open={Boolean(contactoAEliminar) && !soloLectura}
         onOpenChange={(open) => {
@@ -267,6 +269,8 @@ export default function TabContactosEmergencia({
         )}
       </div>
 
+      {renderCampos("encabezado", true)}
+
       {formulario && !soloLectura && (
         <div className="rounded-2xl border border-blue-200 bg-blue-50/50 p-4 sm:p-5 space-y-4">
           <div className="flex items-center justify-between">
@@ -278,7 +282,7 @@ export default function TabContactosEmergencia({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="employee-fields">
             {CAMPOS.map(([campo, etiqueta, obligatorio]) => (
               <label
                 key={campo}
@@ -351,7 +355,7 @@ export default function TabContactosEmergencia({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <div className="employee-fields employee-fields-compact">
           {lista.map((contacto, indice) => (
             <div
               key={contacto.id_contacto || indice}
@@ -424,6 +428,8 @@ export default function TabContactosEmergencia({
         </div>
       )}
 
+      {renderCampos("contactos", true)}
+
       {!esNuevo && total > limite && (
         <div className="flex items-center justify-center gap-4">
           <button
@@ -453,6 +459,7 @@ export default function TabContactosEmergencia({
           </button>
         </div>
       )}
+      {renderCampos("fin", true)}
     </div>
   );
 }

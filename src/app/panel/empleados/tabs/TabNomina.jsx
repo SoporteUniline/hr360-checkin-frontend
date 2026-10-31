@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { FormLabelWithAsterisk } from "@/components/FormLabelWithAsterisk";
 
-export default function TabNomina({ form, soloLectura }) {
+export default function TabNomina({ renderCampos = () => null, form, soloLectura }) {
   const periodoPago = form.watch("periodo_pago");
 
   const sueldoLabel =
@@ -56,6 +56,7 @@ export default function TabNomina({ form, soloLectura }) {
         </div>
 
         <div className="space-y-6">
+          {renderCampos("inicio", true)}
           <FormField
             name="periodo_pago"
             control={form.control}
@@ -96,6 +97,7 @@ export default function TabNomina({ form, soloLectura }) {
               </FormItem>
             )}
           />
+          {renderCampos("periodo_pago", true)}
 
           <FormField
             name="forma_pago"
@@ -130,6 +132,7 @@ export default function TabNomina({ form, soloLectura }) {
               </FormItem>
             )}
           />
+          {renderCampos("forma_pago", true)}
 
           <FormField
             name="forma_calculo"
@@ -164,6 +167,7 @@ export default function TabNomina({ form, soloLectura }) {
               </FormItem>
             )}
           />
+          {renderCampos("forma_calculo", true)}
 
           {["$", "Ambos"].includes(form.watch("forma_calculo")) && (
             <FormField
@@ -193,6 +197,7 @@ export default function TabNomina({ form, soloLectura }) {
               )}
             />
           )}
+          {renderCampos("sueldo", true)}
 
           {["%", "Ambos"].includes(form.watch("forma_calculo")) && (
             <FormField
@@ -222,6 +227,8 @@ export default function TabNomina({ form, soloLectura }) {
               )}
             />
           )}
+          {renderCampos("porcentaje", true)}
+          {renderCampos("fin", true)}
         </div>
       </div>
     </section>
