@@ -167,6 +167,242 @@ const dashboardItems = [
 ];
 const menuGroups = [
   {
+    group: "CONTROL DE TIEMPO",
+    groupIcon: ClockIcon,
+    items: [
+      {
+        title: "Asistencias",
+        url: "/panel/registro-asistencia",
+        rol: "Recruiter",
+        icon: ClipboardCheck,
+      },
+      {
+        title: "Entradas y salidas",
+        url: "/panel/registro-de-entradas-y-salidas",
+        rol: "Recruiter",
+        icon: ClockArrowUp,
+      },
+      {
+        title: "Reloj Checador",
+        url: "/seleccionar-reloj",
+        rol: "Recruiter",
+        icon: ClockIcon,
+      },
+      {
+        title: "Centro de incidencias",
+        url: "/panel/incidencias",
+        rol: "Recruiter",
+        icon: TriangleAlert,
+      },
+      {
+        title: "Reporte de horas",
+        url: "/panel/reporte-horas",
+        rol: "Recruiter",
+        icon: BarChart3,
+      },
+      {
+        title: "Reportes personalizados",
+        url: "/panel/reportes-personalizados",
+        rol: "Recruiter",
+        icon: FileBarChart2,
+      },
+    ],
+  },
+  {
+    group: "GESTIÓN DE PERSONAL",
+    groupIcon: UsersIcon,
+    items: [
+      {
+        title: "Empleados",
+        url: "/panel/empleados",
+        rol: "Recruiter",
+        icon: UsersIcon,
+      },
+      // {
+      //   title: "Reclutamiento",
+      //   url: "/panel/reclutamiento",
+      //   rol: "Recruiter",
+      //   icon: BriefcaseBusiness,
+      // },
+      {
+        title: "Turnos",
+        url: "/panel/turnos",
+        rol: "Recruiter",
+        icon: CalendarClock,
+      },
+      {
+        title: "Panel empleado",
+        url: "/panel/panel-empleado",
+        rol: "Recruiter",
+        icon: UserRound,
+      },
+      {
+        title: "Perfil",
+        url: "/panel/cuenta",
+        rol: "Recruiter",
+        icon: CircleUserRoundIcon,
+      },
+      {
+        title: "Departamentos",
+        url: "/panel/catalogos/departamentos",
+        rol: "Recruiter",
+        icon: Building,
+      },
+      {
+        title: "Puestos",
+        url: "/panel/catalogos/puestos",
+        rol: "Recruiter",
+        icon: BriefcaseBusiness,
+      },
+      {
+        title: "Estado civil",
+        url: "/panel/catalogos/estado-civil",
+        rol: "Recruiter",
+        icon: HeartHandshake,
+      },
+      {
+        title: "Contratos",
+        url: "/panel/contratos",
+        rol: "Recruiter",
+        icon: FileText,
+      },
+      {
+        title: "Actas administrativas",
+        url: "/panel/actas-administrativas",
+        rol: "Recruiter",
+        icon: FolderClosed,
+      },
+      {
+        title: "Finiquitos y liquidaciones",
+        url: "/panel/finiquitos-y-liquidaciones",
+        rol: "Recruiter",
+        icon: HandCoins,
+      },
+      {
+        title: "Aguinaldos",
+        url: "/panel/aguinaldos",
+        rol: "Recruiter",
+        icon: Gift,
+      },
+      {
+        title: "Mapa de rutas",
+        url: "/panel/mapa-de-rutas",
+        rol: "Recruiter",
+        icon: Route,
+      },
+    ],
+  },
+  {
+    group: "AUSENCIAS Y PERMISOS",
+    groupIcon: CalendarDays,
+    items: [
+      {
+        title: "Solicitudes de mi equipo",
+        url: "/panel/solicitudes-equipo",
+        rol: "Recruiter",
+        icon: ClipboardCheck,
+      },
+      {
+        title: "Vacaciones",
+        rol: "Recruiter",
+        icon: CalendarDays,
+        children: [
+          {
+            title: "Panel vacaciones",
+            url: "/panel/vacaciones",
+            icon: CalendarDays,
+          },
+          {
+            title: "Planeación de vacaciones",
+            url: "/panel/vacaciones/planeacion",
+            icon: CalendarDays,
+          },
+          {
+            title: "Vacaciones por ley",
+            url: "/panel/vacaciones/por-ley",
+            icon: BookOpen,
+          },
+          {
+            title: "Vacaciones por periodo",
+            url: "/panel/vacaciones/por-periodo",
+            icon: CalendarDays,
+          },
+          {
+            title: "Registro de vacaciones",
+            url: "/panel/vacaciones/registro",
+            icon: CalendarDays,
+          },
+        ],
+      },
+      {
+        title: "Permisos",
+        url: "/panel/permisos",
+        rol: "Recruiter",
+        icon: CalendarCheck2,
+      },
+      {
+        title: "Días festivos",
+        url: "/panel/festivos",
+        rol: "Recruiter",
+        icon: CalendarDays,
+      },
+    ],
+  },
+  {
+    group: "CATÁLOGOS BASE",
+    groupIcon: BookOpen,
+    items: [
+      {
+        title: "Áreas de Check",
+        url: "/panel/catalogos/areas-check",
+        icon: MapPin,
+        rol: "Recruiter",
+      },
+      {
+        title: "Unidades de negocio",
+        url: "/panel/catalogos/unidades-de-negocio",
+        icon: Store,
+        rol: "Recruiter",
+      },
+      {
+        title: "Tipos de registro",
+        url: "/panel/catalogos/tipos-registro",
+        icon: BookOpen,
+        rol: "Recruiter",
+      },
+    ],
+  },
+  {
+    group: "GESTIÓN DOCUMENTAL",
+    groupIcon: FolderOpen,
+    items: [
+      {
+        title: "Biblioteca documental",
+        url: "/panel/gestion-documental/biblioteca",
+        rol: "Recruiter",
+        icon: FolderOpen,
+      },
+      {
+        title: "Plantillas",
+        url: "/panel/gestion-documental/plantillas",
+        rol: "Recruiter",
+        icon: LayoutTemplate,
+      },
+      {
+        title: "Generar documento",
+        url: "/panel/gestion-documental/generar",
+        rol: "Recruiter",
+        icon: FilePlus2,
+      },
+      {
+        title: "Documentos emitidos",
+        url: "/panel/gestion-documental/documentos",
+        rol: "Recruiter",
+        icon: FolderOpen,
+      },
+    ],
+  },
+  {
     group: "CONTROL DE ACTIVOS",
     groupIcon: Monitor,
     items: [
@@ -377,242 +613,6 @@ const menuGroups = [
         },
       ]
     : []),
-  {
-    group: "GESTIÓN DE PERSONAL",
-    groupIcon: UsersIcon,
-    items: [
-      {
-        title: "Empleados",
-        url: "/panel/empleados",
-        rol: "Recruiter",
-        icon: UsersIcon,
-      },
-      // {
-      //   title: "Reclutamiento",
-      //   url: "/panel/reclutamiento",
-      //   rol: "Recruiter",
-      //   icon: BriefcaseBusiness,
-      // },
-      {
-        title: "Turnos",
-        url: "/panel/turnos",
-        rol: "Recruiter",
-        icon: CalendarClock,
-      },
-      {
-        title: "Panel empleado",
-        url: "/panel/panel-empleado",
-        rol: "Recruiter",
-        icon: UserRound,
-      },
-      {
-        title: "Perfil",
-        url: "/panel/cuenta",
-        rol: "Recruiter",
-        icon: CircleUserRoundIcon,
-      },
-      {
-        title: "Departamentos",
-        url: "/panel/catalogos/departamentos",
-        rol: "Recruiter",
-        icon: Building,
-      },
-      {
-        title: "Puestos",
-        url: "/panel/catalogos/puestos",
-        rol: "Recruiter",
-        icon: BriefcaseBusiness,
-      },
-      {
-        title: "Estado civil",
-        url: "/panel/catalogos/estado-civil",
-        rol: "Recruiter",
-        icon: HeartHandshake,
-      },
-      {
-        title: "Contratos",
-        url: "/panel/contratos",
-        rol: "Recruiter",
-        icon: FileText,
-      },
-      {
-        title: "Actas administrativas",
-        url: "/panel/actas-administrativas",
-        rol: "Recruiter",
-        icon: FolderClosed,
-      },
-      {
-        title: "Finiquitos y liquidaciones",
-        url: "/panel/finiquitos-y-liquidaciones",
-        rol: "Recruiter",
-        icon: HandCoins,
-      },
-      {
-        title: "Aguinaldos",
-        url: "/panel/aguinaldos",
-        rol: "Recruiter",
-        icon: Gift,
-      },
-      {
-        title: "Mapa de rutas",
-        url: "/panel/mapa-de-rutas",
-        rol: "Recruiter",
-        icon: Route,
-      },
-    ],
-  },
-  {
-    group: "CONTROL DE TIEMPO",
-    groupIcon: ClockIcon,
-    items: [
-      {
-        title: "Asistencias",
-        url: "/panel/registro-asistencia",
-        rol: "Recruiter",
-        icon: ClipboardCheck,
-      },
-      {
-        title: "Entradas y salidas",
-        url: "/panel/registro-de-entradas-y-salidas",
-        rol: "Recruiter",
-        icon: ClockArrowUp,
-      },
-      {
-        title: "Reloj Checador",
-        url: "/seleccionar-reloj",
-        rol: "Recruiter",
-        icon: ClockIcon,
-      },
-      {
-        title: "Centro de incidencias",
-        url: "/panel/incidencias",
-        rol: "Recruiter",
-        icon: TriangleAlert,
-      },
-      {
-        title: "Reporte de horas",
-        url: "/panel/reporte-horas",
-        rol: "Recruiter",
-        icon: BarChart3,
-      },
-      {
-        title: "Reportes personalizados",
-        url: "/panel/reportes-personalizados",
-        rol: "Recruiter",
-        icon: FileBarChart2,
-      },
-    ],
-  },
-  {
-    group: "AUSENCIAS Y PERMISOS",
-    groupIcon: CalendarDays,
-    items: [
-      {
-        title: "Solicitudes de mi equipo",
-        url: "/panel/solicitudes-equipo",
-        rol: "Recruiter",
-        icon: ClipboardCheck,
-      },
-      {
-        title: "Vacaciones",
-        rol: "Recruiter",
-        icon: CalendarDays,
-        children: [
-          {
-            title: "Panel vacaciones",
-            url: "/panel/vacaciones",
-            icon: CalendarDays,
-          },
-          {
-            title: "Planeación de vacaciones",
-            url: "/panel/vacaciones/planeacion",
-            icon: CalendarDays,
-          },
-          {
-            title: "Vacaciones por ley",
-            url: "/panel/vacaciones/por-ley",
-            icon: BookOpen,
-          },
-          {
-            title: "Vacaciones por periodo",
-            url: "/panel/vacaciones/por-periodo",
-            icon: CalendarDays,
-          },
-          {
-            title: "Registro de vacaciones",
-            url: "/panel/vacaciones/registro",
-            icon: CalendarDays,
-          },
-        ],
-      },
-      {
-        title: "Permisos",
-        url: "/panel/permisos",
-        rol: "Recruiter",
-        icon: CalendarCheck2,
-      },
-      {
-        title: "Días festivos",
-        url: "/panel/festivos",
-        rol: "Recruiter",
-        icon: CalendarDays,
-      },
-    ],
-  },
-  {
-    group: "CATÁLOGOS BASE",
-    groupIcon: BookOpen,
-    items: [
-      {
-        title: "Áreas de Check",
-        url: "/panel/catalogos/areas-check",
-        icon: MapPin,
-        rol: "Recruiter",
-      },
-      {
-        title: "Unidades de negocio",
-        url: "/panel/catalogos/unidades-de-negocio",
-        icon: Store,
-        rol: "Recruiter",
-      },
-      {
-        title: "Tipos de registro",
-        url: "/panel/catalogos/tipos-registro",
-        icon: BookOpen,
-        rol: "Recruiter",
-      },
-    ],
-  },
-  {
-    group: "GESTIÓN DOCUMENTAL",
-    groupIcon: FolderOpen,
-    items: [
-      {
-        title: "Biblioteca documental",
-        url: "/panel/gestion-documental/biblioteca",
-        rol: "Recruiter",
-        icon: FolderOpen,
-      },
-      {
-        title: "Plantillas",
-        url: "/panel/gestion-documental/plantillas",
-        rol: "Recruiter",
-        icon: LayoutTemplate,
-      },
-      {
-        title: "Generar documento",
-        url: "/panel/gestion-documental/generar",
-        rol: "Recruiter",
-        icon: FilePlus2,
-      },
-      {
-        title: "Documentos emitidos",
-        url: "/panel/gestion-documental/documentos",
-        rol: "Recruiter",
-        icon: FolderOpen,
-      },
-    ],
-  },
   {
     group: "AJUSTES",
     groupIcon: SlidersHorizontal,
