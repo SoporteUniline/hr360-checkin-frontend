@@ -111,22 +111,29 @@ const FacialRecognitionPanel = ({
   // Start GPS alongside recognition and reuse only a recent result.
   const getLocation = () => {
     const cached = locationRef.current;
-    if (cached && (!cached.position || Date.now() - cached.position.timestamp <= GPS_MAX_AGE)) {
+    if (cached && (cached.position
+      ? Date.now() - cached.position.timestamp <= GPS_MAX_AGE
+      : !cached.failedAt || Date.now() - cached.failedAt < MIN_INTERVAL)) {
       return cached.promise;
     }
     const entry = {};
-    entry.promise = new Promise((resolve) => {
-      if (!navigator.geolocation) return resolve({ error: true });
-      navigator.geolocation.getCurrentPosition(
-        (position) => { entry.position = position; resolve({ position }); },
-        () => {
-          if (locationRef.current === entry) locationRef.current = null;
-          resolve({ error: true });
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: GPS_MAX_AGE },
-      );
-    });
     locationRef.current = entry;
+    entry.promise = new Promise((resolve) => {
+      const fail = () => {
+        entry.failedAt = Date.now();
+        resolve({ error: true });
+      };
+      if (!navigator.geolocation) return fail();
+      try {
+        navigator.geolocation.getCurrentPosition(
+          (position) => { entry.position = position; resolve({ position }); },
+          fail,
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: GPS_MAX_AGE },
+        );
+      } catch {
+        fail();
+      }
+    });
     return entry.promise;
   };
 
@@ -206,7 +213,10 @@ const FacialRecognitionPanel = ({
           await captureAndRecognize(detection, session);
         }
       } catch (err) {
-        if (session === sessionRef.current) setError("Error al detectar el rostro. Intente de nuevo.");
+        if (session === sessionRef.current) {
+          lastCheckTimeRef.current = Date.now();
+          setError("Error al detectar el rostro. Intente de nuevo.");
+        }
       } finally {
         isDetectingRef.current = false;
       }
@@ -224,19 +234,14 @@ const FacialRecognitionPanel = ({
     if (errorCriticalRef.current) return;
 
     setIsLoading(true);
-    setError("");
 
     try {
-      const { position, error: locationError } = await getLocation();
+      const { position } = await getLocation();
       if (session !== sessionRef.current) return;
-      if (locationError) {
-        enqueueSnackbar("No se pudo obtener la ubicaci\u00f3n. Activa el GPS.", { variant: "error" });
-        setIsLoading(false);
-        isProcessingRef.current = false;
-        return;
-      }
-      const latitud_actual = position.coords.latitude;
-      const longitud_actual = position.coords.longitude;
+      // The server identifies the employee and enforces their GPS policy.
+      // Missing location must not block employees who do not require GPS.
+      const latitud_actual = position?.coords.latitude ?? null;
+      const longitud_actual = position?.coords.longitude ?? null;
 
       const descriptor = Array.from(detection.descriptor);
       const { data } = await axiosInstance.post(
@@ -250,7 +255,7 @@ const FacialRecognitionPanel = ({
       );
 
       if (session !== sessionRef.current) return;
-      lastCheckTimeRef.current = Date.now();
+      setError("");
       setShowSuccessMessage(true);
       onSuccess(data);
       shutdownCamera();
@@ -258,14 +263,19 @@ const FacialRecognitionPanel = ({
 
     } catch (err) {
       if (session !== sessionRef.current) return;
-      console.log(err);
       const message =
         err.response?.data?.error || "Error en reconocimiento facial";
 
-      setError(message);
-      enqueueSnackbar(message, { variant: "error" });
-      setIsLoading(false);
-      isProcessingRef.current = false;
+      // Keep one stable message by the camera while automatic retries continue.
+      setError(message === "Faltan coordenadas de ubicaci\u00f3n"
+        ? "Este empleado requiere ubicaci\u00f3n. Permite el acceso y activa el GPS."
+        : message);
+    } finally {
+      if (session === sessionRef.current) {
+        lastCheckTimeRef.current = Date.now();
+        setIsLoading(false);
+        isProcessingRef.current = false;
+      }
     }
   };
 
