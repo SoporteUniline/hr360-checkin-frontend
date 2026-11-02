@@ -1,32 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { Geolocation } from "@capacitor/geolocation";
-import { App } from "@capacitor/app";
 
 export function useGPS() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // ⬅️ Pedir permisos de forma correcta al iniciar
-  useEffect(() => {
-    const askPermissions = async () => {
-      if (!Capacitor.isNativePlatform()) return;
-
-      const perm = await Geolocation.checkPermissions();
-
-      if (perm.location === "granted") return;
-
-      if (perm.location === "denied") {
-        console.warn("GPS denegado permanentemente");
-        // Aquí podrías mostrar botón para abrir settings
-        return;
-      }
-
-      await Geolocation.requestPermissions();
-    };
-
-    askPermissions();
-  }, []);
+  // Native permissions are requested on demand by getCurrentLocation.
 
   const getCurrentLocation = async () => {
     setLoading(true);

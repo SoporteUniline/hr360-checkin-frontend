@@ -17,7 +17,7 @@ const { code } = babel.transformSync(source, {
 });
 const tick = () => new Promise(setImmediate);
 
-function setup({ gpsFails = false, gpsUnavailable = false, postError = null } = {}) {
+function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, postError = null } = {}) {
   const slots = [];
   let cursor = 0;
   let effects = [];
@@ -33,6 +33,7 @@ function setup({ gpsFails = false, gpsUnavailable = false, postError = null } = 
   let texts = [];
   let resolveModels;
   let resolveDetection;
+  let resolveLocation;
   const models = new Promise((resolve) => { resolveModels = resolve; });
   const result = new Promise((resolve) => { resolveDetection = resolve; });
   const timers = new Set();
@@ -71,7 +72,10 @@ function setup({ gpsFails = false, gpsUnavailable = false, postError = null } = 
       posts++;
       requests.push({ url, body });
       const error = typeof postError === "function" ? postError(body) : postError;
-      if (error) throw { response: { data: { error } } };
+      if (error) throw { response: {
+        status: error === "Faltan coordenadas de ubicaci\u00f3n" ? 400 : 404,
+        data: { error },
+      } };
       return { data: {} };
     } },
     navigator: {
@@ -82,7 +86,10 @@ function setup({ gpsFails = false, gpsUnavailable = false, postError = null } = 
       geolocation: gpsUnavailable ? undefined : { getCurrentPosition(resolve, reject) {
         gpsCalls++;
         if (gpsFails) reject({ code: 1 });
-        else resolve({ timestamp: now, coords: { latitude: 1, longitude: 2 } });
+        else {
+          resolveLocation = () => resolve({ timestamp: now, coords: { latitude: 1, longitude: 2 } });
+          if (!gpsPending) resolveLocation();
+        }
       } },
     },
     window: { faceapi: { detectSingleFace() {
@@ -106,15 +113,16 @@ function setup({ gpsFails = false, gpsUnavailable = false, postError = null } = 
     advance(ms) { now += ms; },
     setGpsFails(value) { gpsFails = value; },
     setPostError(value) { postError = value; },
+    resolveLocation: () => resolveLocation(),
     counts: () => ({ cameraCalls, gpsCalls, detections, posts, stops, successes }) };
 }
 
-test("camera and GPS start before models; model readiness does not reopen the camera", async () => {
+test("camera starts before models without requesting GPS; model readiness does not reopen the camera", async () => {
   const env = setup();
   env.render();
   await tick();
   assert.equal(env.counts().cameraCalls, 1);
-  assert.equal(env.counts().gpsCalls, 1);
+  assert.equal(env.counts().gpsCalls, 0);
   env.video.onloadeddata();
   env.render();
   assert.equal(env.counts().detections, 0);
@@ -181,6 +189,7 @@ test("missing or denied GPS does not block employees without a GPS requirement",
     await startRecognition(env);
     assert.equal(env.counts().posts, 1);
     assert.equal(env.counts().successes, 1);
+    assert.equal(env.counts().gpsCalls, 0, "GPS is not requested for employees who do not need it");
     assert.equal(env.requests[0].body.latitud_actual, null);
     assert.equal(env.requests[0].body.longitud_actual, null);
     assert.equal(env.notifications.length, 0);
@@ -196,7 +205,7 @@ test("nonmatching faces retry with a stable inline error, no snackbar flood, and
     for (const fn of env.timers) fn();
     await tick();
     assert.equal(env.counts().posts, attempt + 1, "wait before submitting another frame");
-    env.advance(3000);
+    env.advance(500);
     for (const fn of env.timers) fn();
     env.render();
     assert.ok(env.texts().includes(message), "previous message stays visible during retry");
@@ -205,9 +214,10 @@ test("nonmatching faces retry with a stable inline error, no snackbar flood, and
     assert.equal(env.counts().posts, attempt + 2);
   }
   assert.equal(env.notifications.length, 0);
+  assert.equal(env.counts().gpsCalls, 0, "unknown faces never trigger a location prompt");
   assert.equal(env.counts().successes, 0);
   env.setPostError(null);
-  env.advance(3000);
+  env.advance(500);
   for (const fn of env.timers) fn();
   await tick();
   assert.equal(env.counts().successes, 1, "automatic retries can still succeed");
@@ -226,8 +236,42 @@ test("GPS-required server rejection stays visible and recovers automatically aft
   for (const fn of env.timers) fn();
   await tick();
   assert.equal(env.counts().gpsCalls, 2);
-  assert.equal(env.requests[1].body.latitud_actual, 1);
-  assert.equal(env.requests[1].body.longitud_actual, 2);
+  assert.equal(env.requests[1].body.latitud_actual, null, "identify before asking for GPS again");
+  assert.equal(env.requests[2].body.latitud_actual, 1);
+  assert.equal(env.requests[2].body.longitud_actual, 2);
   assert.equal(env.counts().successes, 1);
+  assert.equal(env.notifications.length, 0);
+});
+
+test("closing while required GPS is pending prevents a later registration", async () => {
+  const env = setup({ gpsPending: true,
+    postError: (body) => body.latitud_actual === null ? "Faltan coordenadas de ubicaci\u00f3n" : null,
+  });
+  await startRecognition(env);
+  assert.equal(env.counts().posts, 1);
+  assert.equal(env.counts().gpsCalls, 1);
+  env.render(false);
+  env.resolveLocation();
+  await tick();
+  assert.equal(env.counts().posts, 1);
+  assert.equal(env.counts().successes, 0);
+});
+
+test("GPS is requested after identification and recent coordinates are reused on retry", async () => {
+  const env = setup({
+    postError: (body) => body.latitud_actual === null
+      ? "Faltan coordenadas de ubicaci\u00f3n" : "Fuera del \u00e1rea permitida",
+  });
+  await startRecognition(env);
+  assert.equal(env.requests.length, 2);
+  assert.equal(env.requests[0].body.latitud_actual, null);
+  assert.equal(env.requests[1].body.latitud_actual, 1);
+  assert.equal(env.counts().gpsCalls, 1);
+  env.advance(3000);
+  for (const fn of env.timers) fn();
+  await tick();
+  assert.equal(env.requests.length, 3);
+  assert.equal(env.requests[2].body.latitud_actual, 1);
+  assert.equal(env.counts().gpsCalls, 1);
   assert.equal(env.notifications.length, 0);
 });

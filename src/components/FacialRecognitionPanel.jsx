@@ -32,7 +32,9 @@ const FacialRecognitionPanel = ({
   const isProcessingRef = useRef(false);
   const isDetectingRef = useRef(false);
   const lastCheckTimeRef = useRef(0);
-  const MIN_INTERVAL = 3000;
+  const retryIntervalRef = useRef(500);
+  const MIN_INTERVAL = 500;
+  const ERROR_INTERVAL = 3000;
   const GPS_MAX_AGE = 30000;
 
   const shutdownCamera = () => {
@@ -108,12 +110,12 @@ const FacialRecognitionPanel = ({
     return () => { active = false; };
   }, []);
 
-  // Start GPS alongside recognition and reuse only a recent result.
+  // Request GPS only after the server identifies an employee who requires it.
   const getLocation = () => {
     const cached = locationRef.current;
     if (cached && (cached.position
       ? Date.now() - cached.position.timestamp <= GPS_MAX_AGE
-      : !cached.failedAt || Date.now() - cached.failedAt < MIN_INTERVAL)) {
+      : !cached.failedAt || Date.now() - cached.failedAt < ERROR_INTERVAL)) {
       return cached.promise;
     }
     const entry = {};
@@ -142,7 +144,6 @@ const FacialRecognitionPanel = ({
       if (!isOpen) return;
 
       const session = sessionRef.current;
-      getLocation();
       try {
         const mediaStream = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -174,7 +175,7 @@ const FacialRecognitionPanel = ({
     return () => shutdownCamera();
   }, [isOpen, cameraFacing]);
 
-  // Camera, GPS, and model initialization run concurrently. Recognition starts
+  // Camera and model initialization run concurrently. Recognition starts
   // once both the video and models are ready, without reopening the camera.
   useEffect(() => {
     if (!isOpen || !faceApiLoaded || !cameraReady) return;
@@ -193,7 +194,7 @@ const FacialRecognitionPanel = ({
     const session = sessionRef.current;
     const detect = async () => {
       if (session !== sessionRef.current || isDetectingRef.current || isProcessingRef.current) return;
-      if (Date.now() - lastCheckTimeRef.current < MIN_INTERVAL) return;
+      if (Date.now() - lastCheckTimeRef.current < retryIntervalRef.current) return;
       const canvas = canvasRef.current;
       const video = videoRef.current;
       if (!canvas || !video || video.readyState < 2) return;
@@ -214,6 +215,7 @@ const FacialRecognitionPanel = ({
         }
       } catch (err) {
         if (session === sessionRef.current) {
+          retryIntervalRef.current = ERROR_INTERVAL;
           lastCheckTimeRef.current = Date.now();
           setError("Error al detectar el rostro. Intente de nuevo.");
         }
@@ -234,25 +236,39 @@ const FacialRecognitionPanel = ({
     if (errorCriticalRef.current) return;
 
     setIsLoading(true);
+    retryIntervalRef.current = MIN_INTERVAL;
 
     try {
-      const { position } = await getLocation();
-      if (session !== sessionRef.current) return;
-      // The server identifies the employee and enforces their GPS policy.
-      // Missing location must not block employees who do not require GPS.
-      const latitud_actual = position?.coords.latitude ?? null;
-      const longitud_actual = position?.coords.longitude ?? null;
-
+      const cachedPosition = locationRef.current?.position;
+      const position = cachedPosition && Date.now() - cachedPosition.timestamp <= GPS_MAX_AGE
+        ? cachedPosition : null;
       const descriptor = Array.from(detection.descriptor);
-      const { data } = await axiosInstance.post(
-        `/checador/reloj/registrar-facial`,
-        {
-          descriptor_facial: descriptor,
-          id_empresa: idEmpresa,
-          latitud_actual,
-          longitud_actual,
-        },
-      );
+      const payload = {
+        descriptor_facial: descriptor,
+        id_empresa: idEmpresa,
+        latitud_actual: position?.coords.latitude ?? null,
+        longitud_actual: position?.coords.longitude ?? null,
+      };
+      const submit = (body) => axiosInstance.post("/checador/reloj/registrar-facial", body);
+      let response;
+      try {
+        response = await submit(payload);
+      } catch (err) {
+        if (session !== sessionRef.current) return;
+        // This response is returned before any attendance record is written.
+        // All other failures must keep their original handling.
+        if (err.response?.status !== 400 ||
+          err.response?.data?.error !== "Faltan coordenadas de ubicaci\u00f3n") throw err;
+        const { position: requiredPosition } = await getLocation();
+        if (session !== sessionRef.current) return;
+        if (!requiredPosition) throw err;
+        response = await submit({
+          ...payload,
+          latitud_actual: requiredPosition.coords.latitude,
+          longitud_actual: requiredPosition.coords.longitude,
+        });
+      }
+      const { data } = response;
 
       if (session !== sessionRef.current) return;
       setError("");
@@ -265,6 +281,8 @@ const FacialRecognitionPanel = ({
       if (session !== sessionRef.current) return;
       const message =
         err.response?.data?.error || "Error en reconocimiento facial";
+      retryIntervalRef.current = message === "No se encontr\u00f3 coincidencia facial"
+        ? MIN_INTERVAL : ERROR_INTERVAL;
 
       // Keep one stable message by the camera while automatic retries continue.
       setError(message === "Faltan coordenadas de ubicaci\u00f3n"
