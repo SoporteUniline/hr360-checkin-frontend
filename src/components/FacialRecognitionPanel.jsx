@@ -1,8 +1,9 @@
 import React, { useRef, useEffect, useState } from "react";
-import { Camera, Loader, CheckCircle, Power, RotateCcw } from "lucide-react";
+import { Camera, Power, RotateCcw } from "lucide-react";
 import { enqueueSnackbar } from "notistack";
 import axiosInstance from "@/lib/axios";
 import { Button } from "./ui/button";
+import { loadBrowserFaceApi } from "@/lib/faceapi-browser";
 
 const FacialRecognitionPanel = ({
   isOpen,
@@ -15,6 +16,7 @@ const FacialRecognitionPanel = ({
   const [cameraFacing, setCameraFacing] = useState("user");
   const [error, setError] = useState("");
   const [faceApiLoaded, setFaceApiLoaded] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
@@ -24,29 +26,23 @@ const FacialRecognitionPanel = ({
   const canvasRef = useRef(null);
   const videoRef = useRef(null);
   const detectionIntervalRef = useRef(null);
-  const countdownTimeoutRef = useRef(null);
+  const sessionRef = useRef(0);
+  const locationRef = useRef(null);
 
   const isProcessingRef = useRef(false);
   const isDetectingRef = useRef(false);
   const lastCheckTimeRef = useRef(0);
   const MIN_INTERVAL = 3000;
-  // Tiempo de espera tras detectar el rostro antes de capturar. Antes eran
-  // 1000 ms fijos; se reduce para que cada checada sea más ágil.
-  const CAPTURE_DELAY = 300;
-  // Edad máxima aceptada del fix de GPS (ms). Antes era 0 (fix nuevo siempre),
-  // lo que añadía segundos por checada. Se permite reusar un fix reciente.
   const GPS_MAX_AGE = 30000;
 
   const shutdownCamera = () => {
+    sessionRef.current += 1;
+    locationRef.current = null;
+    setCameraReady(false);
     try {
       if (detectionIntervalRef.current) {
         clearInterval(detectionIntervalRef.current);
         detectionIntervalRef.current = null;
-      }
-
-      if (countdownTimeoutRef.current) {
-        clearTimeout(countdownTimeoutRef.current);
-        countdownTimeoutRef.current = null;
       }
 
       if (streamRef.current) {
@@ -105,54 +101,42 @@ const FacialRecognitionPanel = ({
   };
 
   useEffect(() => {
-    const loadFaceApi = async () => {
-      if (!window.faceapi) {
-        const script = document.createElement("script");
-        script.src =
-          "https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js";
-
-        script.onload = async () => {
-          await window.faceapi.nets.ssdMobilenetv1.loadFromUri("/models");
-          await window.faceapi.nets.faceLandmark68Net.loadFromUri("/models");
-          await window.faceapi.nets.faceRecognitionNet.loadFromUri("/models");
-          await warmupFaceApi();
-          setFaceApiLoaded(true);
-        };
-
-        document.head.appendChild(script);
-      } else {
-        await warmupFaceApi();
-        setFaceApiLoaded(true);
-      }
-    };
-
-    loadFaceApi();
+    let active = true;
+    loadBrowserFaceApi()
+      .then(() => active && setFaceApiLoaded(true))
+      .catch(() => active && setError("No se pudieron cargar los modelos faciales. Recargue la p\u00e1gina."));
+    return () => { active = false; };
   }, []);
 
-  // Warmup: corre una inferencia en blanco para compilar shaders y que el
-  // primer reconocimiento real no salga lento (best-effort, no bloquea).
-  const warmupFaceApi = async () => {
-    try {
-      if (!window.faceapi) return;
-      const warm = document.createElement("canvas");
-      warm.width = 160;
-      warm.height = 160;
-      await window.faceapi.detectSingleFace(warm);
-    } catch {
-      // el warmup es opcional; si falla, el flujo sigue normal
+  // Start GPS alongside recognition and reuse only a recent result.
+  const getLocation = () => {
+    const cached = locationRef.current;
+    if (cached && (!cached.position || Date.now() - cached.position.timestamp <= GPS_MAX_AGE)) {
+      return cached.promise;
     }
+    const entry = {};
+    entry.promise = new Promise((resolve) => {
+      if (!navigator.geolocation) return resolve({ error: true });
+      navigator.geolocation.getCurrentPosition(
+        (position) => { entry.position = position; resolve({ position }); },
+        () => {
+          if (locationRef.current === entry) locationRef.current = null;
+          resolve({ error: true });
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: GPS_MAX_AGE },
+      );
+    });
+    locationRef.current = entry;
+    return entry.promise;
   };
 
   useEffect(() => {
     const startCamera = async () => {
-      if (!isOpen || !faceApiLoaded) return;
+      if (!isOpen) return;
 
+      const session = sessionRef.current;
+      getLocation();
       try {
-        if (streamRef.current) {
-          shutdownCamera();
-          await new Promise((resolve) => setTimeout(resolve, 100));
-        }
-
         const mediaStream = await navigator.mediaDevices.getUserMedia({
           video: {
             width: { ideal: 640 },
@@ -161,24 +145,15 @@ const FacialRecognitionPanel = ({
           },
         });
 
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            // console.log("Permiso de GPS concedido", pos.coords);
-          },
-          (err) => {
-            console.warn("No se pudo obtener ubicación al inicio:", err);
-          },
-          { enableHighAccuracy: true, timeout: 5000 },
-        );
-
-        if (videoRef.current && isOpen) {
+        if (videoRef.current && isOpen && session === sessionRef.current) {
           videoRef.current.srcObject = mediaStream;
           streamRef.current = mediaStream;
-          videoRef.current.onloadedmetadata = () => {
-            setTimeout(() => isOpen && startFaceDetection(), 800);
+          videoRef.current.onloadeddata = () => {
+            if (session === sessionRef.current) setCameraReady(true);
           };
         } else mediaStream.getTracks().forEach((t) => t.stop());
       } catch (err) {
+        if (session !== sessionRef.current) return;
         console.log(err);
         setError("No se pudo acceder a la cámara");
         enqueueSnackbar("No se pudo acceder a la cámara", {
@@ -190,61 +165,59 @@ const FacialRecognitionPanel = ({
 
     startCamera();
     return () => shutdownCamera();
-  }, [isOpen, faceApiLoaded, cameraFacing]);
+  }, [isOpen, cameraFacing]);
+
+  // Camera, GPS, and model initialization run concurrently. Recognition starts
+  // once both the video and models are ready, without reopening the camera.
+  useEffect(() => {
+    if (!isOpen || !faceApiLoaded || !cameraReady) return;
+    startFaceDetection();
+    return () => {
+      clearInterval(detectionIntervalRef.current);
+      detectionIntervalRef.current = null;
+    };
+  }, [isOpen, faceApiLoaded, cameraReady, cameraFacing]);
 
   useEffect(() => () => cleanupAll(), []);
 
   const startFaceDetection = () => {
     if (!videoRef.current || !canvasRef.current || !isOpen) return;
-
-    detectionIntervalRef.current = setInterval(async () => {
-      // Guardia de reentrada: si la inferencia anterior aún no termina (equipos
-      // lentos), no encimamos otra detección en paralelo.
-      if (isDetectingRef.current) return;
-
+    if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
+    const session = sessionRef.current;
+    const detect = async () => {
+      if (session !== sessionRef.current || isDetectingRef.current || isProcessingRef.current) return;
+      if (Date.now() - lastCheckTimeRef.current < MIN_INTERVAL) return;
       const canvas = canvasRef.current;
       const video = videoRef.current;
-      if (!canvas || !video || video.readyState !== 4) return;
+      if (!canvas || !video || video.readyState < 2) return;
 
       isDetectingRef.current = true;
       try {
-        canvas.width = video.videoWidth || 640;
-        canvas.height = video.videoHeight || 480;
-        const ctx = canvas.getContext("2d", { willReadFrequently: true });
-        ctx.drawImage(video, 0, 0);
-
-        const detection = await window.faceapi.detectSingleFace(canvas);
-
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext("2d").drawImage(video, 0, 0);
+        // One frame and one detector pass for both presence and recognition.
+        const detection = await window.faceapi.detectSingleFace(canvas)
+          .withFaceLandmarks().withFaceDescriptor();
+        if (session !== sessionRef.current) return;
+        setFaceDetected(!!detection);
         if (detection) {
-          setFaceDetected(true);
-          if (!isProcessingRef.current) {
-            isProcessingRef.current = true;
-            startDelay();
-          }
-        } else {
-          setFaceDetected(false);
+          isProcessingRef.current = true;
+          await captureAndRecognize(detection, session);
         }
+      } catch (err) {
+        if (session === sessionRef.current) setError("Error al detectar el rostro. Intente de nuevo.");
       } finally {
         isDetectingRef.current = false;
       }
-    }, 300);
-  };
-
-  const startDelay = () => {
-    const now = Date.now();
-    if (now - lastCheckTimeRef.current < MIN_INTERVAL) {
-      isProcessingRef.current = false;
-      return;
-    }
-
-    countdownTimeoutRef.current = setTimeout(() => {
-      captureAndRecognize();
-    }, CAPTURE_DELAY);
+    };
+    detectionIntervalRef.current = setInterval(detect, 100);
+    void detect();
   };
 
   const errorCriticalRef = useRef(false);
 
-  const captureAndRecognize = async () => {
+  const captureAndRecognize = async (detection, session) => {
     if (!videoRef.current || !canvasRef.current || !faceApiLoaded || !isOpen)
       return;
 
@@ -254,45 +227,16 @@ const FacialRecognitionPanel = ({
     setError("");
 
     try {
-      const canvas = canvasRef.current;
-      const ctx = canvas.getContext("2d");
-      canvas.width = videoRef.current.videoWidth;
-      canvas.height = videoRef.current.videoHeight;
-      ctx.drawImage(videoRef.current, 0, 0);
-
-      const detection = await window.faceapi
-        .detectSingleFace(canvas)
-        .withFaceLandmarks()
-        .withFaceDescriptor();
-
-      if (!detection) {
-        setError("No se detectó rostro en la captura. Inténtelo de nuevo.");
+      const { position, error: locationError } = await getLocation();
+      if (session !== sessionRef.current) return;
+      if (locationError) {
+        enqueueSnackbar("No se pudo obtener la ubicaci\u00f3n. Activa el GPS.", { variant: "error" });
         setIsLoading(false);
         isProcessingRef.current = false;
         return;
       }
-
-      let latitud_actual = null;
-      let longitud_actual = null;
-
-      try {
-        const position = await new Promise((resolve, reject) =>
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: GPS_MAX_AGE,
-          }),
-        );
-        latitud_actual = position.coords.latitude;
-        longitud_actual = position.coords.longitude;
-      } catch (geoError) {
-        enqueueSnackbar("No se pudo obtener la ubicación. Activa el GPS.", {
-          variant: "error",
-        });
-        setIsLoading(false);
-        isProcessingRef.current = false;
-        return;
-      }
+      const latitud_actual = position.coords.latitude;
+      const longitud_actual = position.coords.longitude;
 
       const descriptor = Array.from(detection.descriptor);
       const { data } = await axiosInstance.post(
@@ -305,20 +249,15 @@ const FacialRecognitionPanel = ({
         },
       );
 
+      if (session !== sessionRef.current) return;
       lastCheckTimeRef.current = Date.now();
       setShowSuccessMessage(true);
       onSuccess(data);
       shutdownCamera();
       handleClose();
 
-      setTimeout(() => {
-        setShowSuccessMessage(false);
-        setIsLoading(false);
-        setFaceDetected(false);
-        setError("");
-        isProcessingRef.current = false;
-      }, 500);
     } catch (err) {
+      if (session !== sessionRef.current) return;
       console.log(err);
       const message =
         err.response?.data?.error || "Error en reconocimiento facial";
@@ -338,6 +277,9 @@ const FacialRecognitionPanel = ({
   };
 
   const getStatusMessage = () => {
+    if (error) return { text: error, color: "bg-red-600" };
+    if (!faceApiLoaded)
+      return { text: "Preparando reconocimiento facial...", color: "bg-gray-700" };
     if (isLoading)
       return { text: "Procesando reconocimiento...", color: "bg-gray-700" };
     if (showSuccessMessage)
@@ -345,8 +287,6 @@ const FacialRecognitionPanel = ({
         text: "¡Listo! Esperando siguiente empleado...",
         color: "bg-green-600",
       };
-    if (error) return { text: error, color: "bg-red-600" };
-
     if (countdown > 0)
       return { text: "Preparando captura...", color: "bg-gray-700" };
     if (faceDetected)

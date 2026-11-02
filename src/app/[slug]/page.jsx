@@ -3,6 +3,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import axiosInstance from "@/lib/axios";
 import RelojChecador from "@/components/RelojChecador";
+import { loadBrowserFaceApi } from "@/lib/faceapi-browser";
 
 function RedirectingPage({ message }) {
   const router = useRouter();
@@ -71,7 +72,11 @@ export default function ChecadorPage() {
       }
     };
 
-    if (slug) fetchAndValidate();
+    if (slug) {
+      // Download models during access validation, without requesting devices.
+      loadBrowserFaceApi().catch(() => {});
+      fetchAndValidate();
+    }
   }, [slug]);
 
   if (loading)

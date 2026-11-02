@@ -27,6 +27,14 @@ const nextConfig = {
   async headers() {
     return [
       {
+        source: "/vendor/face-api/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
+      },
+      {
+        source: "/models/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=86400" }],
+      },
+      {
         source: "/firmar/:path*",
         headers: [
           {

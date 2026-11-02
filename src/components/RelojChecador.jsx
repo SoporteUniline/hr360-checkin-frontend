@@ -15,6 +15,7 @@ import ErrorPage from "@/components/ErrorPage";
 import { useSnackbar } from "notistack";
 import axiosInstance from "@/lib/axios";
 import FacialRecognitionPanel from "./FacialRecognitionPanel";
+import { loadBrowserFaceApi } from "@/lib/faceapi-browser";
 import ClockDisplay from "./Clock/ClockDisplay";
 import EmployeeInput from "./Clock/EmployeeInput";
 import StatsCards from "./Clock/StatsCards";
@@ -53,6 +54,12 @@ export default function RelojChecador({
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const [subscriptionActive, setSubscriptionActive] = useState(false);
   const { getCurrentLocation, loading: loadingGPS, error: gpsError } = useGPS();
+
+  // Prepare recognition while subscription and clock data are being checked.
+  // Camera and GPS permissions are requested only by the visible facial panel.
+  useEffect(() => {
+    loadBrowserFaceApi().catch(() => {});
+  }, []);
 
   const formatearHora = (fechaString) => {
     if (!fechaString) return "-";
