@@ -2,6 +2,7 @@
 
 import { AuthProvider } from "@/context/AuthContext";
 import { CommandPalette } from "@/components/CommandPalette";
+import FaceApiPreloader from "@/components/FaceApiPreloader";
 import { useNativeBackButton } from "@/hooks/Capacitor/useNativeBackButton";
 
 export function ClientProviders({ children }) {
@@ -9,6 +10,7 @@ export function ClientProviders({ children }) {
 
   return (
     <AuthProvider>
+      <FaceApiPreloader />
       {children}
       <CommandPalette />
     </AuthProvider>
