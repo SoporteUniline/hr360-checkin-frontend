@@ -12,6 +12,7 @@ const FacialRecognitionPanel = ({
   onSuccess,
   idEmpresa,
   handleOpenFacialModal,
+  submitMovement,
 }) => {
   const [cameraFacing, setCameraFacing] = useState("user");
   const [error, setError] = useState("");
@@ -244,12 +245,13 @@ const FacialRecognitionPanel = ({
         ? cachedPosition : null;
       const descriptor = Array.from(detection.descriptor);
       const payload = {
+        captured_at: new Date().toISOString(),
         descriptor_facial: descriptor,
         id_empresa: idEmpresa,
         latitud_actual: position?.coords.latitude ?? null,
         longitud_actual: position?.coords.longitude ?? null,
       };
-      const submit = (body) => axiosInstance.post("/checador/reloj/registrar-facial", body);
+      const submit = (body) => submitMovement ? submitMovement(body) : axiosInstance.post("/checador/reloj/registrar-facial", body);
       let response;
       try {
         response = await submit(payload);

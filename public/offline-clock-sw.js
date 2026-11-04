@@ -1,41 +1,95 @@
-const CACHE = 'adamia-clock-shell-v2';
+const CACHE = 'adamia-clock-shell-v3';
+const RUNTIME = 'adamia-runtime-assets-v1';
+const MAX_AGE = 7 * 86400000;
 const ASSETS = [
+  '/app-offline.html', '/offline-clock/app-cache.mjs',
   '/reloj-offline.html', '/offline-clock/app.mjs', '/offline-clock/store.mjs', '/offline-clock/style.css',
   '/vendor/face-api/face-api-0.22.2.min.js',
   '/models/face_landmark_68_model-weights_manifest.json', '/models/face_landmark_68_model-shard1',
   '/models/face_recognition_model-weights_manifest.json', '/models/face_recognition_model-shard1', '/models/face_recognition_model-shard2',
   '/models/ssd_mobilenetv1_model-weights_manifest.json', '/models/ssd_mobilenetv1_model-shard1', '/models/ssd_mobilenetv1_model-shard2',
 ];
+const staticAsset = url => url.origin === self.location.origin && (url.pathname.startsWith('/_next/static/') || url.pathname.startsWith('/assets/') || (url.pathname === '/_next/image' && url.searchParams.get('url')?.startsWith('/assets/')));
+async function digest(value) {
+  return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))), byte => byte.toString(16).padStart(2, '0')).join('');
+}
+async function key(kind, input, variant = '') {
+  const url = new URL(input); url.searchParams.delete('_rsc');
+  return new Request(`${self.location.origin}/__offline/${kind}/${await digest(url.href + '|' + variant)}`);
+}
+const appCache = owner => caches.open(`adamia-app-v1-${owner}`);
+async function save(owner, kind, request, response, variant = '') {
+  if (!/^[a-f0-9]{64}$/.test(owner || '') || !response.ok || response.redirected) return;
+  const headers = new Headers(response.headers); headers.set('x-adamia-saved-at', String(Date.now())); headers.delete('set-cookie');
+  await (await appCache(owner)).put(await key(kind, request.url, variant), new Response(await response.clone().arrayBuffer(), { status: response.status, headers }));
+}
+async function read(owner, kind, request, variant = '') {
+  if (!/^[a-f0-9]{64}$/.test(owner || '')) return null;
+  const response = await (await appCache(owner)).match(await key(kind, request.url, variant));
+  return response && Date.now() - Number(response.headers.get('x-adamia-saved-at') || 0) < MAX_AGE ? response : null;
+}
+async function companyInfo(path) {
+  const response = await (await caches.open(RUNTIME)).match(`${self.location.origin}/__offline/company${path.replace(/\/$/, '')}`);
+  return response && response.json();
+}
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', event => {
-  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('adamia-clock-shell-') && key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim()));
+  event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(name => name.startsWith('adamia-clock-shell-') && name !== CACHE).map(name => caches.delete(name)))).then(() => self.clients.claim()));
+});
+self.addEventListener('message', event => {
+  const data = event.data;
+  if (data?.type === 'WARM_ASSETS') event.waitUntil((async () => {
+    const cache = await caches.open(RUNTIME);
+    await Promise.allSettled((data.urls || []).slice(0, 300).map(async value => {
+      const url = new URL(value, self.location.origin);
+      if (staticAsset(url) && !await cache.match(url.href)) await cache.add(url.href);
+    }));
+  })());
+  if (data?.type === 'WARM_COMPANY') event.waitUntil((async () => {
+    if (typeof data.slug !== 'string' || !/^[\w-]{1,150}$/.test(data.slug) || !Number.isInteger(data.company)) return;
+    const path = '/' + encodeURIComponent(data.slug);
+    const response = await fetch(path);
+    if (!response.ok || response.redirected || !response.headers.get('content-type')?.includes('text/html')) return;
+    const owner = await digest(`company:${data.company}:${data.slug}`);
+    await save(owner, 'page', new Request(self.location.origin + path), response);
+    await (await caches.open(RUNTIME)).put(`${self.location.origin}/__offline/company${path}`, new Response(JSON.stringify({ owner })));
+  })());
 });
 self.addEventListener('fetch', event => {
-  const url = new URL(event.request.url);
-  if (event.request.method !== 'GET' || url.origin !== self.location.origin) return;
+  const request = event.request;
+  const url = new URL(request.url);
+  if (request.method !== 'GET' || url.origin !== self.location.origin) return;
   if (ASSETS.includes(url.pathname) && !url.search) {
-    event.respondWith(caches.open(CACHE).then(async cache => (await cache.match(event.request)) || fetch(event.request)));
-  } else if (event.request.mode === 'navigate') {
-    // Private HTML/API responses are never cached.
-    event.respondWith(fetch(event.request).catch(async () => {
-      if (url.pathname === '/login' || url.pathname === '/empleado' || url.pathname.startsWith('/empleado/') || url.pathname === '/seleccionar-reloj') return caches.match('/reloj-offline.html');
-      const profile = await new Promise(resolve => {
-        const request = indexedDB.open('adamia-offline-clock-v1', 1);
-        // An unprepared navigation must not create an empty version-1 database.
-        request.onupgradeneeded = () => request.transaction.abort();
-        request.onerror = () => resolve(null);
-        request.onsuccess = () => {
-          const db = request.result;
-          if (!db.objectStoreNames.contains('config')) { db.close(); return resolve(null); }
-          const read = db.transaction('config').objectStore('config').get('profile');
-          read.onsuccess = () => { db.close(); resolve(read.result); };
-          read.onerror = () => { db.close(); resolve(null); };
-        };
-      });
-      if (profile?.scope === 'company' && (url.pathname === '/reloj-publico' || url.pathname.replace(/\/$/, '') === '/' + encodeURIComponent(profile.slug))) return caches.match('/reloj-offline.html');
-      return Response.error();
-    }));
+    event.respondWith(caches.open(CACHE).then(async cache => (await cache.match(request)) || fetch(request)));
+    return;
   }
+  if (staticAsset(url)) {
+    event.respondWith((async () => {
+      const cache = await caches.open(RUNTIME);
+      const cached = await cache.match(request); if (cached) return cached;
+      const response = await fetch(request);
+      if (response.ok) await cache.put(request, response.clone()).catch(() => {});
+      return response;
+    })());
+    return;
+  }
+  const rsc = request.headers.get('rsc') === '1';
+  if (rsc || request.mode === 'navigate') event.respondWith((async () => {
+    const kind = rsc ? 'rsc' : 'page';
+    const variant = rsc ? ['rsc', 'next-router-state-tree', 'next-router-prefetch', 'next-router-segment-prefetch'].map(name => request.headers.get(name) || '').join('|') : '';
+    try {
+      const response = await fetch(request);
+      await save(response.headers.get('x-adamia-session'), kind, request, response, variant).catch(() => {});
+      return response;
+    } catch {
+      if (rsc) return (await read(request.headers.get('x-adamia-session'), kind, request, variant)) || Response.error();
+      const info = await companyInfo(url.pathname);
+      const company = info && await read(info.owner, 'page', request);
+      if (company) return company;
+      // The generic gate reads the actual cookie before opening a private cache.
+      return (await caches.match('/app-offline.html')) || Response.error();
+    }
+  })());
 });

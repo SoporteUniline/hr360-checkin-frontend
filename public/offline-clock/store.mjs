@@ -32,6 +32,9 @@ export async function transaction(store, mode, operation) {
 export const getConfig = () => transaction('config', 'readonly', store => store.get('profile'));
 export const setConfig = config => transaction('config', 'readwrite', store => store.put(config, 'profile'));
 export const clearConfig = () => transaction('config', 'readwrite', store => store.delete('profile'));
+export const getValue = key => transaction('config', 'readonly', store => store.get(key));
+export const setValue = (key, value) => transaction('config', 'readwrite', store => store.put(value, key));
+export const allValues = () => transaction('config', 'readonly', store => store.getAll());
 export const listEvents = () => transaction('events', 'readonly', store => store.getAll());
 export const saveEvent = event => transaction('events', 'readwrite', store => store.put(event));
 
@@ -52,11 +55,16 @@ export function ownEvents(events, profile) {
 
 // Stop at the first unconfirmed event: later exits must never overtake an entry.
 export async function syncEvents(events, send, persist) {
-  for (const event of events.filter(event => event.status !== 'synced')) {
+  for (const event of events.filter(event => event.status !== 'synced' && event.status !== 'rejected')) {
     try {
+      if (event.status === 'decision') break;
       const receipt = await send(event);
+      if (receipt?.requiereDecision) {
+        await persist({ ...event, status: 'decision', employeeName: receipt.empleado?.nombre || event.employeeName, error: 'Elige salida temporal o cerrar turno para enviar esta checada.' });
+        break;
+      }
       if (receipt?.id !== event.id || receipt?.status !== 'synced') throw new Error('El servidor no confirmó esta checada. Se conservará pendiente.');
-      await persist({ ...event, employeeName: receipt.employee?.nombre || event.employeeName, status: 'synced', error: '', code: undefined, descriptor: undefined, grant: undefined });
+      await persist({ ...event, resolvedAction: receipt.action || event.resolvedAction, employeeName: receipt.employee?.nombre || event.employeeName, status: 'synced', error: '', code: undefined, descriptor: undefined, grant: undefined });
     } catch (error) {
       await persist({ ...event, error: error.message });
       break;

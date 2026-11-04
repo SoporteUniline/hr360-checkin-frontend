@@ -73,6 +73,9 @@ export async function middleware(request) {
 
     const response = NextResponse.next();
     response.headers.set("x-pathname", pathname);
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
+    response.headers.set('x-adamia-session', Array.from(new Uint8Array(digest), value => value.toString(16).padStart(2, '0')).join(''));
+    response.headers.set('Cache-Control', 'private, no-store');
     return response;
   } catch (err) {
     const response = NextResponse.redirect(new URL("/login", request.url));

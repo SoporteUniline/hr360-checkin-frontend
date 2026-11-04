@@ -46,6 +46,15 @@ test('a response without the matching confirmation cannot clear a pending event'
   assert.equal(saved[0].code, entry.code);
 });
 
+test('manual closure decisions retain the original ID and time and stop later events', async () => {
+  const saved = [], sent = [];
+  await syncEvents([entry, exit], async event => { sent.push(event.id); return { requiereDecision: true, empleado: { nombre: 'Empleado' } }; }, async event => saved.push(event));
+  assert.deepEqual(sent, ['entry']);
+  assert.equal(saved[0].status, 'decision');
+  assert.equal(saved[0].id, entry.id);
+  assert.equal(saved[0].captured_at, entry.captured_at);
+});
+
 test('company queues isolate other companies and personal employee queues', () => {
   const companyEvent = { ...entry, scope: 'company' };
   assert.deepEqual(ownEvents([companyEvent, entry, { ...companyEvent, company: 11 }], { scope: 'company', id_empresa: 10 }), [companyEvent]);

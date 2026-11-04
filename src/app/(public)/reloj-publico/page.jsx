@@ -39,6 +39,7 @@ import axiosInstance from "@/lib/axios";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import OfflineClockSetup from '@/components/Clock/OfflineClockSetup';
+import { registerClockMovement } from '@/lib/offline-clock';
 
 export default function Home() {
   const { dataUser, isLoggedIn, isAuthChecked } = useAuth();
@@ -142,18 +143,18 @@ export default function Home() {
         return;
       }
 
-      const { data } = await axiosInstance.post(
-        `/checador/reloj/registrar`,
+      const { data } = await registerClockMovement(
         {
           codigo,
           id_empresa: dataUser.id_empresa,
         },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
+        { company: dataUser.id_empresa, slug: offlineCompany?.slug },
       );
+
+      if (data.requiereDecision) {
+        enqueueSnackbar('Selecciona salida temporal o cerrar turno en las checadas pendientes.', { variant: 'info' });
+        return;
+      }
 
       const { movimiento, empleado } = data;
 
@@ -213,7 +214,7 @@ export default function Home() {
 
   return (
     <>
-      {offlineCompany?.slug && <OfflineClockSetup companySlug={offlineCompany.slug} />}
+      {offlineCompany?.slug && <OfflineClockSetup companySlug={offlineCompany.slug} companyId={dataUser.id_empresa} />}
       <main className="min-h-screen bg-linear-to-br from-slate-50 via-gray-50 to-slate-100 p-4">
         {!isLoggedIn ? (
           <div className="max-w-md mx-auto">

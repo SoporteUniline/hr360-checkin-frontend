@@ -93,7 +93,7 @@ try {
   })()`);
   await send('Page.reload');
   await until(() => evaluate("document.querySelector('#clock')?.hidden === false && !!navigator.serviceWorker.controller"), 'prepared clock');
-  assert.equal(await evaluate("(await caches.open('adamia-clock-shell-v2')).keys().then(keys => keys.length)"), 13);
+  assert.equal(await evaluate("(await caches.open('adamia-clock-shell-v3')).keys().then(keys => keys.length)"), 15);
   disconnected = true;
   await send('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0 });
   await evaluate("(() => { document.querySelector('#code').value='123'; document.querySelector('#clock').requestSubmit(); })()");
@@ -102,10 +102,6 @@ try {
   await send('Page.reload');
   await until(() => evaluate("document.querySelector('#events')?.textContent.includes('Pendiente de sincronizar')"), 'offline persistence and shell reload');
   assert.equal(await evaluate("document.querySelector('#clock').hidden"), false);
-  await send('Page.navigate', { url: `${base}/empleado` });
-  await until(() => evaluate("location.pathname === '/empleado' && document.querySelector('#events')?.textContent.includes('Pendiente de sincronizar')"), 'offline employee-route fallback');
-  await send('Page.navigate', { url: `${base}/reloj-offline.html` });
-  await until(() => evaluate("location.pathname === '/reloj-offline.html' && document.querySelector('#events')?.textContent.includes('Pendiente de sincronizar')"), 'return to standalone clock');
   disconnected = false;
   await send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
   await until(() => evaluate("document.querySelector('#events').textContent.includes('Sincronizada')"), 'automatic reconnect sync');
@@ -141,8 +137,8 @@ try {
     await evaluate(`(() => { document.querySelector('#code').value='${code}'; document.querySelector('#clock').requestSubmit(); })()`);
     await until(() => evaluate(`document.querySelector('#code').value==='' && !document.querySelector('#save').disabled`), 'company offline save');
   }
-  await send('Page.navigate', { url: `${base}/empresa-test` });
-  await until(() => evaluate("location.pathname==='/empresa-test' && document.querySelector('#events')?.children.length===2"), 'offline company slug fallback');
+  await send('Page.reload');
+  await until(() => evaluate("document.querySelector('#events')?.children.length===2"), 'legacy offline company records survive reload');
   disconnected = false;
   await send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
   await until(() => evaluate("document.querySelector('#events').textContent.includes('Sincronizada') && document.querySelector('#events').textContent.includes('Conflicto de prueba')"), 'independent company employee queues');

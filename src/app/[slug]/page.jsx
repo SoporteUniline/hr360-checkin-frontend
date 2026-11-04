@@ -5,6 +5,7 @@ import axiosInstance from "@/lib/axios";
 import RelojChecador from "@/components/RelojChecador";
 import OfflineClockSetup from '@/components/Clock/OfflineClockSetup';
 import { loadBrowserFaceApi } from "@/lib/faceapi-browser";
+import { clockStore } from '@/lib/offline-clock';
 
 function RedirectingPage({ message }) {
   const router = useRouter();
@@ -66,7 +67,11 @@ export default function ChecadorPage() {
         if (err.response?.status === 404) {
           setError("Empresa no encontrada");
         } else {
-          setError("Error de conexión");
+          const store = await clockStore();
+          const profiles = await store.allValues();
+          const saved = profiles.find(profile => profile?.scope === 'company' && profile.slug === slug && Date.now() - Date.parse(profile.prepared_at) < 7 * 86400000);
+          if (saved && !err.response) setIdEmpresa(saved.id_empresa);
+          else setError("Error de conexión");
         }
       } finally {
         setLoading(false);
@@ -98,5 +103,5 @@ export default function ChecadorPage() {
     return <RedirectingPage message={error || "Empresa no encontrada"} />;
   }
 
-  return <><OfflineClockSetup companySlug={slug} /><RelojChecador idEmpresa={idEmpresa} /></>;
+  return <><OfflineClockSetup companySlug={slug} companyId={idEmpresa} /><RelojChecador idEmpresa={idEmpresa} companySlug={slug} /></>;
 }

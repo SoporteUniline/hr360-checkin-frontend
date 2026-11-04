@@ -13,7 +13,6 @@ import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import ErrorPage from "@/components/ErrorPage";
 import { useSnackbar } from "notistack";
-import axiosInstance from "@/lib/axios";
 import FacialRecognitionPanel from "./FacialRecognitionPanel";
 import { loadBrowserFaceApi } from "@/lib/faceapi-browser";
 import ClockDisplay from "./Clock/ClockDisplay";
@@ -27,6 +26,7 @@ import timezone from "dayjs/plugin/timezone";
 import { useAuth } from "@/context/AuthContext";
 import QRScanner from "./QRScanner";
 import { Button } from "./ui/button";
+import { initializeClock, registerClockMovement } from '@/lib/offline-clock';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -35,8 +35,18 @@ export default function RelojChecador({
   idEmpresa,
   modoEmpleado = false,
   idEmpleado = null,
+  companySlug = null,
 }) {
   const [metodo, setMetodo] = useState("facial");
+  const [offline, setOffline] = useState(false);
+  useEffect(() => {
+    const update = event => setOffline(event.detail?.offline ?? !navigator.onLine);
+    update({});
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+    window.addEventListener('adamia-network', update);
+    return () => { window.removeEventListener('online', update); window.removeEventListener('offline', update); window.removeEventListener('adamia-network', update); };
+  }, []);
   const [isMobile, setIsMobile] = useState(false);
   const [mostrarModalTurno, setMostrarModalTurno] = useState(false);
   const [pendiente, setPendiente] = useState(null);
@@ -54,6 +64,10 @@ export default function RelojChecador({
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const [subscriptionActive, setSubscriptionActive] = useState(false);
   const { getCurrentLocation, loading: loadingGPS, error: gpsError } = useGPS();
+  const submitMovement = payload => registerClockMovement(payload, { company: idEmpresa, employee: modoEmpleado ? idEmpleado : null, slug: companySlug });
+  useEffect(() => {
+    void initializeClock({ company: idEmpresa, employee: modoEmpleado ? idEmpleado : null, slug: companySlug }).catch(() => {});
+  }, [idEmpresa, idEmpleado, modoEmpleado, companySlug]);
 
   // Prepare recognition while subscription and clock data are being checked.
   // Camera and GPS permissions are requested only by the visible facial panel.
@@ -143,12 +157,9 @@ export default function RelojChecador({
   }, [metodo]);
 
   const registrarMovimiento = async (codigoManual) => {
-    if (gpsError) {
-      enqueueSnackbar(gpsError, { variant: "error" });
-      return;
-    }
     if (registrando) return;
     setRegistrando(true);
+    const captured_at = new Date().toISOString();
 
     const rawCodigo =
       typeof codigoManual === "string" || typeof codigoManual === "number"
@@ -170,23 +181,18 @@ export default function RelojChecador({
       if (pos) {
         latitud_actual = pos.lat;
         longitud_actual = pos.lng;
-      } else {
-        enqueueSnackbar("No se pudo obtener la ubicación.", {
-          variant: "error",
-        });
-        setRegistrando(false);
-        return;
       }
 
-      const { data } = await axiosInstance.post(`/checador/reloj/registrar`, {
+      const { data } = await submitMovement({
         codigo,
         id_empresa: idEmpresa,
         latitud_actual,
         longitud_actual,
+        captured_at,
       });
 
       if (data.requiereDecision) {
-        setPendiente({ tipo: "codigo", codigo });
+        setPendiente({ tipo: "codigo", codigo, offline_event: data.offline_event });
         setMostrarModalTurno(true);
         setRegistrando(false);
         return;
@@ -222,18 +228,18 @@ export default function RelojChecador({
       const payload = {
         id_empresa: idEmpresa,
         accion,
+        offline_event: pendiente.offline_event,
         latitud_actual: pos?.lat,
         longitud_actual: pos?.lng,
       };
 
       if (pendiente.tipo === "facial") {
-        const { data } = await axiosInstance.post(
-          "/checador/reloj/registrar-facial",
+        const { data } = await submitMovement(
           { ...payload, descriptor_facial: pendiente.descriptor_facial },
         );
         dataResponse = data;
       } else {
-        const { data } = await axiosInstance.post("/checador/reloj/registrar", {
+        const { data } = await submitMovement({
           ...payload,
           codigo: pendiente.codigo,
         });
@@ -265,6 +271,7 @@ export default function RelojChecador({
       setPendiente({
         tipo: "facial",
         descriptor_facial: data.descriptor_facial,
+        offline_event: data.offline_event,
       });
       setMostrarModalTurno(true);
     } else {
@@ -309,14 +316,17 @@ export default function RelojChecador({
         setSubscriptionActive(Boolean(data.hasActivePlan));
       } catch (error) {
         console.error("Error validando suscripción:", error);
-        setSubscriptionActive(false);
+        try {
+          const profile = await initializeClock({ company: idEmpresa, employee: modoEmpleado ? idEmpleado : null, slug: companySlug });
+          setSubscriptionActive(Date.now() - Date.parse(profile.prepared_at) < 7 * 86400000);
+        } catch { setSubscriptionActive(false); }
       } finally {
         setSubscriptionLoading(false);
       }
     };
 
     validarSuscripcion();
-  }, [idEmpresa, modoEmpleado]);
+  }, [idEmpresa, modoEmpleado, idEmpleado, companySlug]);
 
   if (subscriptionLoading) {
     return (
@@ -350,7 +360,7 @@ export default function RelojChecador({
     );
   }
 
-  if (error)
+  if (error && !offline)
     return <ErrorPage message="No se pudieron cargar los registros." />;
 
   return (
@@ -468,6 +478,7 @@ export default function RelojChecador({
                       onClose={() => setMostrarCamara(false)}
                       onSuccess={handleFacialResponse}
                       idEmpresa={idEmpresa}
+                      submitMovement={submitMovement}
                       handleOpenFacialModal={() => setMostrarCamara(false)}
                     />
                   </div>
