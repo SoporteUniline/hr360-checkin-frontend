@@ -23,6 +23,8 @@ self.addEventListener('fetch', event => {
       if (url.pathname === '/login' || url.pathname === '/empleado' || url.pathname.startsWith('/empleado/') || url.pathname === '/seleccionar-reloj') return caches.match('/reloj-offline.html');
       const profile = await new Promise(resolve => {
         const request = indexedDB.open('adamia-offline-clock-v1', 1);
+        // An unprepared navigation must not create an empty version-1 database.
+        request.onupgradeneeded = () => request.transaction.abort();
         request.onerror = () => resolve(null);
         request.onsuccess = () => {
           const db = request.result;
