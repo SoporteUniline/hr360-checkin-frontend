@@ -6,7 +6,7 @@ let registrationLoading;
 let synchronizing = false;
 const initializing = new Map();
 const warmed = new Set();
-export const clockStore = () => storeLoading ||= import(/* webpackIgnore: true */ '/offline-clock/store.mjs');
+export const clockStore = () => storeLoading ||= import(/* webpackIgnore: true */ '/offline-clock/store.mjs?v=4');
 const notify = () => window.dispatchEvent(new Event('adamia-queue'));
 const profileKey = (company, employee) => employee ? `clock:employee:${company}:${employee}` : `clock:company:${company}`;
 
@@ -117,8 +117,11 @@ export async function registerClockMovement(payload, { company, employee = null,
     return { data: { ...data, empleado: { nombre: data.employee?.nombre || event.alias, apellido_paterno: '' }, movimiento: data.action === 'entrada' ? 'Entrada registrada' : 'Salida registrada' } };
   } catch (error) {
     if (!error.response || error.response.status >= 500) return queued();
-    const rejected = [400, 403, 422].includes(error.response.status);
-    await store.saveEvent({ ...event, status: rejected ? 'rejected' : 'pending', ...(rejected ? { code: undefined, descriptor: undefined, grant: undefined } : {}), error: error.response.data?.error || error.message });
+    // Immediate denials are already visible in the active form/camera. Do not
+    // turn automatic facial retries into a growing list of "pending" captures.
+    // Previously queued captures retain their evidence and enter manual review.
+    const immediateDenial = !old && [400, 403, 404, 422].includes(error.response.status);
+    await store.saveEvent(immediateDenial ? { ...event, status: 'rejected', code: undefined, descriptor: undefined, grant: undefined, errorCode: error.response.data?.code, error: error.response.data?.error || error.message } : store.syncFailure(event, error));
     notify();
     throw error;
   }
@@ -160,6 +163,12 @@ export async function synchronizeClockQueue() {
 export async function resolveClockDecision(event, action) {
   const store = await clockStore();
   await store.saveEvent({ ...event, action, status: 'pending', error: '' });
+  notify();
+  await synchronizeClockQueue();
+}
+export async function retryClockEvent(event) {
+  const store = await clockStore();
+  await store.saveEvent({ ...event, status: 'pending', error: '' });
   notify();
   await synchronizeClockQueue();
 }

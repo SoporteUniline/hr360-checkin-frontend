@@ -66,7 +66,7 @@ export function AuthProvider({ children }) {
   const logout = () => {
     const previousToken = Cookies.get('token');
     void ensureOfflineCache().then(cache => cache?.clearSession(previousToken)).catch(() => {});
-    import(/* webpackIgnore: true */ '/offline-clock/store.mjs')
+    import(/* webpackIgnore: true */ '/offline-clock/store.mjs?v=4')
       .then(store => store.clearConfig()).catch(() => {});
     Cookies.remove("token");
     setAuthToken(null);

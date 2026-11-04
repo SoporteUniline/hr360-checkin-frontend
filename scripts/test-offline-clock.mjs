@@ -75,3 +75,32 @@ test('a rejected employee does not block other company codes, but cannot be over
   assert.equal(saved[2].status, 'synced');
   assert.equal(saved[2].employeeName, 'Empleado B');
 });
+
+test('facial 403 preserves evidence for review and displays the server reason rather than a generic HTTP error', async () => {
+  const face = { ...entry, method: 'facial', code: undefined, descriptor: [0.1, 0.2], grant: 'original-grant', identity: 'facial' };
+  const saved = [];
+  const denied = Object.assign(new Error('Request failed with status code 403'), { response: { status: 403, data: { error: 'No se encontró coincidencia facial', code: 'FACE_NOT_MATCHED' } } });
+  await syncEvents([face], async () => { throw denied; }, async event => saved.push(event));
+  assert.equal(saved[0].status, 'review');
+  assert.equal(saved[0].error, 'No se encontró coincidencia facial');
+  assert.equal(saved[0].errorCode, 'FACE_NOT_MATCHED');
+  assert.deepEqual(saved[0].descriptor, face.descriptor);
+  assert.equal(saved[0].id, face.id);
+  assert.equal(saved[0].captured_at, face.captured_at);
+  assert.equal(saved[0].grant, face.grant);
+});
+
+test('an unrecognized face does not block a later valid face or a code check-in', async () => {
+  const first = { ...entry, id: 'face1', identity: 'facial', method: 'facial' };
+  const next = { ...exit, id: 'face2', identity: 'facial', method: 'facial' };
+  const saved = [], sent = [];
+  await syncCompanyEvents([first, next, { ...entry, id: 'code', identity: 'code:123' }], async event => {
+    sent.push(event.id);
+    if (event.id === 'face1') throw Object.assign(new Error('403'), { response: { status: 403, data: { error: 'Rostro no reconocido', code: 'FACE_NOT_MATCHED' } } });
+    return { id: event.id, status: 'synced' };
+  }, async event => saved.push(event));
+  assert.deepEqual(sent, ['face1', 'face2', 'code']);
+  assert.equal(saved[0].status, 'review');
+  assert.equal(saved[1].status, 'synced');
+  assert.equal(saved[2].status, 'synced');
+});

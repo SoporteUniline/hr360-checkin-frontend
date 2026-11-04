@@ -58,3 +58,13 @@ No borrar los datos del navegador/app ni desinstalar mientras existan pendientes
 7. Probar turno manual, GPS obligatorio concedido/denegado, vencimiento y cambio de sesión. Tras logout, otra cuenta no debe ver los datos guardados de la anterior.
 
 Pendiente de validación física: Android/Capacitor, iPhone si aplica, cámara real, precisión GPS sin datos móviles y arranque completo de la WebView. Guardar dispositivo, hora de captura/reconexión y mensaje de error si ocurre un fallo.
+
+## Corrección de navegación en Safari y rechazo facial
+
+El menú RH usa botones con `router.push`, no enlaces. Sin conexión ahora fuerza la apertura de la pantalla completa guardada; la capa de fetch también recupera las navegaciones programáticas para no entregar un parche RSC fallido a React. Las instantáneas comprueban que sus recursos JS/CSS se hayan descargado y no reutilizan cabeceras de compresión de un cuerpo ya decodificado. Los assets públicos ignoran variaciones de cabeceras de transporte al recuperar la misma URL.
+
+Los rechazos definitivos de validación se conservan con estado `review`, motivo del servidor y código de causa; no se cuentan como pendientes de envío ni como asistencias aceptadas. Se mantiene UUID, hora y evidencia para revisión o reintento explícito. Un rostro no reconocido no bloquea otras capturas faciales válidas ni los códigos. No se redujo el umbral de coincidencia facial. El servidor informa por separado rostro sin coincidencia, método permitido, GPS obligatorio/fuera de área y autorización vencida.
+
+`scripts/verify-offline-webkit.cjs` verifica el menú real de RH en WebKit con perfil iPhone, ambas tablas con registros y un rechazo facial 403 con su motivo visible. Usa un servidor de APIs sintéticas en loopback; para construir ese fixture se utiliza `NEXT_PUBLIC_RUTA_BACKEND=http://127.0.0.1:4561/api` únicamente en el entorno del comando de build. Playwright se resuelve mediante `PLAYWRIGHT_MODULE_PATH` o una instalación de pruebas; no se requiere como dependencia del producto. WebKit automatizado no sustituye la comprobación en el iPhone físico.
+
+Después de actualizar dev, recargar Safari con conexión y abrir Asistencias y Entradas y salidas una vez antes de repetir la navegación offline. No borrar datos de Safari: los registros pendientes/rechazados se conservan durante esta actualización.

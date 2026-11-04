@@ -1,4 +1,4 @@
-const CACHE = 'adamia-clock-shell-v3';
+const CACHE = 'adamia-clock-shell-v4';
 const RUNTIME = 'adamia-runtime-assets-v1';
 const MAX_AGE = 7 * 86400000;
 const ASSETS = [
@@ -21,12 +21,16 @@ const appCache = owner => caches.open(`adamia-app-v1-${owner}`);
 async function save(owner, kind, request, response, variant = '') {
   if (!/^[a-f0-9]{64}$/.test(owner || '') || !response.ok || response.redirected) return;
   const headers = new Headers(response.headers); headers.set('x-adamia-saved-at', String(Date.now())); headers.delete('set-cookie');
+  for (const name of ['content-encoding', 'content-length', 'transfer-encoding']) headers.delete(name);
   await (await appCache(owner)).put(await key(kind, request.url, variant), new Response(await response.clone().arrayBuffer(), { status: response.status, headers }));
 }
 async function read(owner, kind, request, variant = '') {
   if (!/^[a-f0-9]{64}$/.test(owner || '')) return null;
   const response = await (await appCache(owner)).match(await key(kind, request.url, variant));
-  return response && Date.now() - Number(response.headers.get('x-adamia-saved-at') || 0) < MAX_AGE ? response : null;
+  if (!response || Date.now() - Number(response.headers.get('x-adamia-saved-at') || 0) >= MAX_AGE) return null;
+  const headers = new Headers(response.headers);
+  for (const name of ['content-encoding', 'content-length', 'transfer-encoding']) headers.delete(name);
+  return new Response(await response.arrayBuffer(), { status: response.status, headers });
 }
 async function companyInfo(path) {
   const response = await (await caches.open(RUNTIME)).match(`${self.location.origin}/__offline/company${path.replace(/\/$/, '')}`);
@@ -61,15 +65,20 @@ self.addEventListener('fetch', event => {
   const request = event.request;
   const url = new URL(request.url);
   if (request.method !== 'GET' || url.origin !== self.location.origin) return;
-  if (ASSETS.includes(url.pathname) && !url.search) {
-    event.respondWith(caches.open(CACHE).then(async cache => (await cache.match(request)) || fetch(request)));
+  if (ASSETS.includes(url.pathname) && (!url.search || url.searchParams.get('v') === '4')) {
+    event.respondWith(caches.open(CACHE).then(async cache => (await cache.match(url.origin + url.pathname, { ignoreVary: true })) || fetch(request)));
     return;
   }
   if (staticAsset(url)) {
     event.respondWith((async () => {
       const cache = await caches.open(RUNTIME);
-      const cached = await cache.match(request); if (cached) return cached;
-      const response = await fetch(request);
+      const cached = await cache.match(request, { ignoreVary: true }); if (cached) return cached;
+      let response;
+      try { response = await fetch(request); }
+      catch (error) {
+        if (request.destination === 'image' || url.pathname === '/_next/image') return new Response('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>', { headers: { 'content-type': 'image/svg+xml' } });
+        throw error;
+      }
       if (response.ok) await cache.put(request, response.clone()).catch(() => {});
       return response;
     })());

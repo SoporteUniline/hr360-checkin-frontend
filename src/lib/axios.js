@@ -4,7 +4,7 @@ import Cookies from "js-cookie";
 let offlineReady;
 export function ensureOfflineCache() {
   if (typeof window === 'undefined') return Promise.resolve();
-  if (!offlineReady) offlineReady = import(/* webpackIgnore: true */ '/offline-clock/app-cache.mjs')
+  if (!offlineReady) offlineReady = import(/* webpackIgnore: true */ '/offline-clock/app-cache.mjs?v=4')
     .then(module => { module.installOfflineFetch(process.env.NEXT_PUBLIC_RUTA_BACKEND); return module; })
     .catch(() => { offlineReady = null; });
   return offlineReady;

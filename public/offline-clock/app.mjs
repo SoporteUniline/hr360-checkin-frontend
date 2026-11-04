@@ -1,4 +1,4 @@
-import { getConfig, listEvents, saveEvent, readToken, fingerprint, ownEvents, syncEvents, syncCompanyEvents } from './store.mjs';
+import { getConfig, listEvents, saveEvent, readToken, fingerprint, ownEvents, syncEvents, syncCompanyEvents } from './store.mjs?v=4';
 
 const $ = id => document.getElementById(id);
 const labels = { entrada: 'Entrada', salida: 'Salida', salida_temporal: 'Salida temporal', cerrar_turno: 'Cerrar turno' };
@@ -42,7 +42,7 @@ async function request(path, body) {
     signal: AbortSignal.timeout(20000),
   });
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error || 'No se pudo sincronizar');
+  if (!response.ok) throw Object.assign(new Error(data.error || 'No se pudo sincronizar'), { response: { status: response.status, data } });
   return data;
 }
 

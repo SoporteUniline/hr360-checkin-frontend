@@ -53,11 +53,25 @@ export function ownEvents(events, profile) {
     .sort((a, b) => a.captured_at.localeCompare(b.captured_at) || a.id.localeCompare(b.id));
 }
 
+export function syncFailure(event, error) {
+  const status = error.response?.status;
+  const code = error.response?.data?.code;
+  const reason = error.response?.data?.error;
+  const review = [400, 403, 404, 409, 422].includes(status);
+  const unmatched = code === 'FACE_NOT_MATCHED';
+  return { ...event, status: review ? 'review' : 'pending', httpStatus: status, errorCode: code,
+    blocksFollowing: !unmatched,
+    ...(unmatched ? { alias: 'Rostro no reconocido' } : {}),
+    error: typeof reason === 'string' ? reason : error.message || 'No se pudo enviar la checada',
+  };
+}
+
 // Stop at the first unconfirmed event: later exits must never overtake an entry.
 export async function syncEvents(events, send, persist) {
   for (const event of events.filter(event => event.status !== 'synced' && event.status !== 'rejected')) {
     try {
       if (event.status === 'decision') break;
+      if (event.status === 'review') { if (event.blocksFollowing !== false) break; else continue; }
       const receipt = await send(event);
       if (receipt?.requiereDecision) {
         await persist({ ...event, status: 'decision', employeeName: receipt.empleado?.nombre || event.employeeName, error: 'Elige salida temporal o cerrar turno para enviar esta checada.' });
@@ -66,7 +80,9 @@ export async function syncEvents(events, send, persist) {
       if (receipt?.id !== event.id || receipt?.status !== 'synced') throw new Error('El servidor no confirmó esta checada. Se conservará pendiente.');
       await persist({ ...event, resolvedAction: receipt.action || event.resolvedAction, employeeName: receipt.employee?.nombre || event.employeeName, status: 'synced', error: '', code: undefined, descriptor: undefined, grant: undefined });
     } catch (error) {
-      await persist({ ...event, error: error.message });
+      const failure = syncFailure(event, error);
+      await persist(failure);
+      if (failure.status === 'review' && failure.blocksFollowing === false) continue;
       break;
     }
   }

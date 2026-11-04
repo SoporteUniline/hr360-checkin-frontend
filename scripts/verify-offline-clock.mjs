@@ -83,7 +83,7 @@ try {
     else callback.resolve(message.result);
   };
   await send('Network.enable');
-  await until(() => evaluate("document.readyState === 'complete'"), 'initial page');
+  await until(() => evaluate(`location.origin === ${JSON.stringify(base)} && document.readyState === 'complete'`), 'initial page');
   await evaluate(`(async () => {
     document.cookie = 'token=fixture-only; path=/';
     const store = await import('/offline-clock/store.mjs');
@@ -93,7 +93,7 @@ try {
   })()`);
   await send('Page.reload');
   await until(() => evaluate("document.querySelector('#clock')?.hidden === false && !!navigator.serviceWorker.controller"), 'prepared clock');
-  assert.equal(await evaluate("(await caches.open('adamia-clock-shell-v3')).keys().then(keys => keys.length)"), 15);
+  assert.equal(await evaluate("(await caches.open('adamia-clock-shell-v4')).keys().then(keys => keys.length)"), 15);
   disconnected = true;
   await send('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0 });
   await evaluate("(() => { document.querySelector('#code').value='123'; document.querySelector('#clock').requestSubmit(); })()");

@@ -30,7 +30,7 @@ globalThis.window = { caches: globalThis.caches, dispatchEvent() {}, fetch: asyn
 const cache = await import('../public/offline-clock/app-cache.mjs');
 cache.installOfflineFetch(origin + '/api');
 const token = account => `fixture.${Buffer.from(JSON.stringify({ sub: account, exp: Math.floor(Date.now() / 1000) + 3600 })).toString('base64url')}.fixture`;
-const login = account => { document.cookie = `token=${token(account)}`; offline = false; deny = false; fail = false; };
+const login = account => { document.cookie = `token=${token(account)}`; offline = false; deny = false; fail = false; window.__adamiaOffline = false; };
 
 test('cached API reads are partitioned by the current token and never persist authorization headers', async () => {
   login('A');
@@ -96,4 +96,42 @@ test('stored reads expire after seven days', async () => {
   await store.put(await cache.cacheKey('api', url), new Response('{}', { headers: { 'x-adamia-saved-at': String(Date.now() - 8 * 86400000) } }));
   offline = true;
   await assert.rejects(() => window.fetch(url));
+});
+
+test('offline programmatic navigation opens the complete stored page instead of rejecting an RSC patch', async () => {
+  login('G'); offline = true;
+  const targets = [];
+  location.assign = value => targets.push(value);
+  void window.fetch(origin + '/panel/registro-asistencia?_rsc=nonce', { headers: { rsc: '1' } });
+  await new Promise(resolve => setTimeout(resolve, 15));
+  assert.deepEqual(targets, [origin + '/panel/registro-asistencia']);
+  await assert.rejects(() => window.fetch(origin + '/panel/registro-asistencia?_rsc=prefetch', { headers: { rsc: '1', 'next-router-prefetch': '1' } }));
+  assert.equal(targets.length, 1, 'background prefetch must not change the visible page');
+  delete location.assign;
+});
+
+test('decoded cached bodies do not replay compressed transport headers on Safari', async () => {
+  login('H');
+  const owner = await cache.ownerKey();
+  const url = origin + '/api/decoded-response';
+  await cache.saveResponse(owner, 'api', url, new Response('{"ok":true}', { headers: { 'content-encoding': 'gzip', 'content-length': '3' } }));
+  const read = await cache.readResponse(owner, 'api', url);
+  assert.equal(read.headers.get('content-encoding'), null);
+  assert.equal(read.headers.get('content-length'), null);
+  assert.equal((await read.json()).ok, true);
+});
+
+test('incomplete page downloads do not boot a React tree with missing JavaScript', async () => {
+  login('I');
+  await window.fetch(origin + '/api/users/verify/token');
+  const owner = await cache.ownerKey();
+  await (await caches.open(cache.cacheName(owner))).put(origin + '/__offline/last-page', new Response(JSON.stringify({ path: location.pathname, at: Date.now(), api: origin + '/api' })));
+  await cache.saveResponse(owner, 'page', location.href, new Response('<html><script src="/_next/static/missing.js"></script></html>'));
+  let writes = 0;
+  document.open = () => {}; document.close = () => {}; document.write = () => writes++;
+  assert.equal(await cache.restorePage(), false);
+  assert.equal(writes, 0);
+  await (await caches.open('adamia-runtime-assets-v1')).put(origin + '/_next/static/missing.js', new Response('/* downloaded */'));
+  assert.equal(await cache.restorePage(), true);
+  assert.equal(writes, 1);
 });
