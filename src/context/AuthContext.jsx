@@ -64,6 +64,8 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
+    import(/* webpackIgnore: true */ '/offline-clock/store.mjs')
+      .then(store => store.clearConfig()).catch(() => {});
     Cookies.remove("token");
     setAuthToken(null);
     setIsLoggedIn(false);
