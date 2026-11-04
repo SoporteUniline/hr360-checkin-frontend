@@ -1,4 +1,4 @@
-const CACHE = 'adamia-clock-shell-v4';
+const CACHE = 'adamia-clock-shell-v5';
 const RUNTIME = 'adamia-runtime-assets-v1';
 const MAX_AGE = 7 * 86400000;
 const ASSETS = [
