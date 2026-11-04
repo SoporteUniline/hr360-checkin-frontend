@@ -5,14 +5,14 @@ import axios from '@/lib/axios';
 import Cookies from 'js-cookie';
 import { useAuth } from '@/context/AuthContext';
 
-export default function OfflineClockSetup() {
+export default function OfflineClockSetup({ companySlug = null }) {
   const { dataUser } = useAuth();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('Prepara este celular con internet antes de usar el reloj sin conexión.');
   const [pendingMessage, setPendingMessage] = useState('');
 
   useEffect(() => {
-    if (!dataUser?.id_empleado || !dataUser?.id_empresa) return;
+    if (!companySlug && (!dataUser?.id_empleado || !dataUser?.id_empresa)) return;
     let disposed = false;
     let syncing = false;
     const sync = async () => {
@@ -20,17 +20,21 @@ export default function OfflineClockSetup() {
       syncing = true;
       try {
         const store = await import(/* webpackIgnore: true */ '/offline-clock/store.mjs');
-        const profile = { id_empleado: Number(dataUser.id_empleado), id_empresa: Number(dataUser.id_empresa) };
+        const profile = companySlug ? await store.getConfig() : { id_empleado: Number(dataUser.id_empleado), id_empresa: Number(dataUser.id_empresa) };
+        if (companySlug && (profile?.scope !== 'company' || profile.slug !== companySlug)) return;
         const events = store.ownEvents(await store.listEvents(), profile);
         if (disposed || !events.some(event => event.status !== 'synced')) return;
-        const { data: current } = await axios.get('/checador/reloj/offline/perfil');
-        if (current.id_empleado !== profile.id_empleado || current.id_empresa !== profile.id_empresa) return;
-        await store.syncEvents(events, async event => {
+        if (!companySlug) {
+          const { data: current } = await axios.get('/checador/reloj/offline/perfil');
+          if (current.id_empleado !== profile.id_empleado || current.id_empresa !== profile.id_empresa) return;
+        }
+        await (companySlug ? store.syncCompanyEvents : store.syncEvents)(events, async event => {
           if (disposed) throw new Error('Sincronización pausada');
-          const { data } = await axios.post('/checador/reloj/offline/sincronizar', {
+          const { data } = await axios.post(companySlug ? '/checador/reloj/offline/empresa/sincronizar' : '/checador/reloj/offline/sincronizar', {
             id: event.id, action: event.action, captured_at: event.captured_at,
             method: event.method, code: event.code, descriptor: event.descriptor,
             latitude: event.latitude, longitude: event.longitude,
+            ...(companySlug ? { grant: event.grant || profile.grant } : {}),
           }, { timeout: 20000 });
           return data;
         }, store.saveEvent);
@@ -51,13 +55,13 @@ export default function OfflineClockSetup() {
       window.removeEventListener('online', sync);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [dataUser?.id_empleado, dataUser?.id_empresa]);
+  }, [dataUser?.id_empleado, dataUser?.id_empresa, companySlug]);
 
   const prepare = async () => {
     setBusy(true);
     try {
       if (!('serviceWorker' in navigator) || !window.isSecureContext) throw new Error('Este dispositivo requiere HTTPS y soporte de almacenamiento offline.');
-      const { data: profile } = await axios.get('/checador/reloj/offline/perfil');
+      const { data: profile } = await axios.get(companySlug ? `/checador/reloj/offline/empresa/perfil?slug=${encodeURIComponent(companySlug)}` : '/checador/reloj/offline/perfil');
       const registration = await navigator.serviceWorker.register('/offline-clock-sw.js', { scope: '/' });
       // Wait for this worker, not an unrelated registration's ready promise.
       await registration.update();
@@ -78,7 +82,7 @@ export default function OfflineClockSetup() {
       });
       const store = await import(/* webpackIgnore: true */ '/offline-clock/store.mjs');
       const session = await store.fingerprint(Cookies.get('token'));
-      if (!session) throw new Error('Inicia sesión nuevamente para preparar el reloj.');
+      if (!session && !companySlug) throw new Error('Inicia sesión nuevamente para preparar el reloj.');
       const api = new URL(process.env.NEXT_PUBLIC_RUTA_BACKEND, window.location.origin).href.replace(/\/$/, '');
       await store.setConfig({ ...profile, api, session });
       await navigator.storage?.persist?.();

@@ -21,12 +21,12 @@ const server = createServer(async (req, res) => {
     res.setHeader('Content-Type', 'application/json');
     return res.end(JSON.stringify(profile));
   }
-  if (path === '/checador/reloj/offline/sincronizar') {
+  if (path === '/checador/reloj/offline/sincronizar' || path === '/checador/reloj/offline/empresa/sincronizar') {
     let body = '';
     for await (const chunk of req) body += chunk;
     const event = JSON.parse(body);
     res.setHeader('Content-Type', 'application/json');
-    if (rejectSync) { res.statusCode = 409; return res.end(JSON.stringify({ error: 'Conflicto de prueba: requiere revisión de RH' })); }
+    if (rejectSync || event.code === '111') { res.statusCode = 409; return res.end(JSON.stringify({ error: 'Conflicto de prueba: requiere revisión de RH' })); }
     received.set(event.id, event);
     return res.end(JSON.stringify({ id: event.id, status: 'synced' }));
   }
@@ -93,7 +93,7 @@ try {
   })()`);
   await send('Page.reload');
   await until(() => evaluate("document.querySelector('#clock')?.hidden === false && !!navigator.serviceWorker.controller"), 'prepared clock');
-  assert.equal(await evaluate("(await caches.open('adamia-clock-shell-v1')).keys().then(keys => keys.length)"), 13);
+  assert.equal(await evaluate("(await caches.open('adamia-clock-shell-v2')).keys().then(keys => keys.length)"), 13);
   disconnected = true;
   await send('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0 });
   await evaluate("(() => { document.querySelector('#code').value='123'; document.querySelector('#clock').requestSubmit(); })()");
@@ -127,6 +127,26 @@ try {
   assert.equal(await evaluate("document.querySelector('#clock').hidden"), true);
   assert.equal(await evaluate("document.querySelector('#events').children.length"), 0);
   assert.equal(await evaluate("(await (await import('/offline-clock/store.mjs')).listEvents()).length"), 2);
+  rejectSync = false;
+  await evaluate(`(async () => {
+    document.cookie='token=; Max-Age=0; path=/';
+    await (await import('/offline-clock/store.mjs')).setConfig({scope:'company',id_empresa:10,nombre:'Empresa de prueba',slug:'empresa-test',grant:'fixture',api:location.origin,prepared_at:new Date().toISOString()});
+  })()`);
+  await send('Page.reload');
+  await until(() => evaluate("document.querySelector('#clock')?.hidden === false"), 'company clock without login');
+  disconnected = true;
+  await send('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0 });
+  await evaluate("Object.defineProperty(navigator,'geolocation',{value:{getCurrentPosition(ok,fail){fail({code:1,message:'Denied'})}}})");
+  for (const code of ['111', '222']) {
+    await evaluate(`(() => { document.querySelector('#code').value='${code}'; document.querySelector('#clock').requestSubmit(); })()`);
+    await until(() => evaluate(`document.querySelector('#code').value==='' && !document.querySelector('#save').disabled`), 'company offline save');
+  }
+  await send('Page.navigate', { url: `${base}/empresa-test` });
+  await until(() => evaluate("location.pathname==='/empresa-test' && document.querySelector('#events')?.children.length===2"), 'offline company slug fallback');
+  disconnected = false;
+  await send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+  await until(() => evaluate("document.querySelector('#events').textContent.includes('Sincronizada') && document.querySelector('#events').textContent.includes('Conflicto de prueba')"), 'independent company employee queues');
+  assert.equal(received.size, 2);
   console.log('PASS: real Chrome service worker installation, cached facial assets, offline save/reload, reconnect sync, evidence cleanup, persistent conflicts and session isolation.');
 } finally {
   socket?.close();

@@ -2,7 +2,13 @@
 
 ## Alcance
 
-Desde `/empleado/reloj-checador`, **Preparar reloj offline** descarga una pantalla independiente y los modelos faciales (aproximadamente 13 MB). **Abrir reloj offline** permite registrar entradas, salidas y, cuando corresponde, salidas temporales o cierres de turno. Es para la cuenta individual del empleado; el reloj público y los kioscos compartidos conservan su funcionamiento actual.
+Desde `/empleado/reloj-checador` o desde el **enlace del reloj de empresa** (`/[slug]`), **Preparar reloj offline** descarga una pantalla independiente y los modelos faciales (aproximadamente 13 MB). **Abrir reloj offline** permite registrar entradas, salidas y, cuando corresponde, salidas temporales o cierres de turno.
+
+En modo empresa pueden checar varios empleados desde un mismo celular, sin iniciar sesión individual. La preparación usa el enlace de la empresa activa y entrega una autorización limitada a checadas de esa empresa. Cada empleado se identifica por código o rostro al sincronizar; el servidor nunca confía en un ID de empleado enviado por el dispositivo. No se descargan códigos ni el padrón facial. No requiere otra migración: reutiliza `checadas_offline`.
+
+Los pendientes de empresa están separados de los personales y de otras empresas. Un código rechazado detiene los movimientos de ese código, pero permite enviar los de otros empleados. Los rostros se procesan en orden y se detienen ante un rechazo, porque su identidad solo se conoce al llegar al servidor. Cambiar de empresa no borra pendientes: preparar de nuevo la empresa original permite recuperarlos.
+
+El reloj de empresa ofrece Entrada, Salida, Salida temporal y Cerrar turno. Cada empleado debe elegir la acción correspondiente a su configuración. Se intenta obtener GPS en todas las capturas de empresa; si no está disponible, se conserva la captura y el servidor rechazará los empleados que sí lo requieren. Esa captura no cuenta como asistencia hasta ser validada.
 
 La captura se conserva en IndexedDB y solo se marca sincronizada después de recibir una confirmación del mismo identificador. Se reintenta al recuperar conexión, al volver a la pantalla y cada 30 segundos mientras esté abierta. El reloj en línea también intenta enviar los pendientes de la cuenta activa. No se promete sincronización con la aplicación cerrada.
 
@@ -15,13 +21,13 @@ Se reutiliza el método de checado configurado, la exigencia de GPS y el tipo de
 1. Migración autorizada por el usuario el 2026-11-04 para **dev**: `hr360-checkin-backend/migrations/20261103_offline_clock_events.sql`.
 2. Aplicarla dentro del contenedor `adamia_backend_dev` mediante `node scripts/apply-offline-clock-dev.cjs --apply-dev`. El script exige `DB_NAME=adamia_dev` y verifica la identidad del servidor. No usa el `.env` local, que apunta a producción. Sin la tabla, el servidor devuelve un error temporal y las checadas permanecen en el celular.
 3. Publicar frontend/backend únicamente con autorización. Los archivos de `public/offline-clock/`, `/reloj-offline.html` y `/offline-clock-sw.js` deben servirse en el mismo dominio HTTPS que la aplicación; el servidor debe servir `.mjs` como JavaScript.
-4. En cada dispositivo, iniciar sesión como empleado, entrar al reloj y pulsar **Preparar reloj offline** con internet. Esperar a que confirme la descarga.
+4. En cada dispositivo, abrir el enlace del reloj de empresa (o iniciar sesión y abrir el reloj del empleado), y pulsar **Preparar reloj offline** con internet. Esperar a que confirme la descarga.
 
-La preparación dura siete días y se vincula a la sesión actual. Cambiar sesión o cerrar sesión exige prepararlo nuevamente. Cerrar sesión desactiva la configuración local, conservando las checadas; iniciar sesión nuevamente con la cuenta original permite enviarlas desde el reloj en línea. No borrar datos del navegador/app ni desinstalar con pendientes.
+La preparación dura siete días. En modo empleado se vincula a la sesión actual; en modo empresa se vincula al enlace de empresa y no exige una sesión individual. Cerrar sesión desactiva la configuración local, conservando las checadas; preparar nuevamente la cuenta o empresa original permite enviarlas. No borrar datos del navegador/app ni desinstalar con pendientes.
 
 ## Integridad y conflictos
 
-`GET /checador/reloj/offline/perfil` y `POST /checador/reloj/offline/sincronizar` requieren el middleware de autenticación existente y una cuenta `Empleado`. El cliente no decide qué empleado recibirá la asistencia: se toma del token verificado.
+`GET /checador/reloj/offline/perfil` y `POST /checador/reloj/offline/sincronizar` requieren el middleware de autenticación existente y una cuenta `Empleado`. El cliente no decide qué empleado recibirá la asistencia: se toma del token verificado. El modo empresa usa `GET /checador/reloj/offline/empresa/perfil?slug=...` y `POST /checador/reloj/offline/empresa/sincronizar`, con una autorización firmada de propósito exclusivo `offline-company`, y resuelve al empleado dentro de esa empresa por código o rostro antes de reutilizar la misma transacción.
 
 Cada evento tiene UUID, movimiento explícito y fecha UTC. La fecha se convierte a `America/Mexico_City`, como el flujo actual de movimientos. Se admite hasta siete días de antigüedad y dos minutos de tolerancia futura. La hora del teléfono y sus coordenadas son evidencia reportada por el dispositivo; no constituyen prueba inviolable de la presencia o del tiempo real.
 
@@ -52,9 +58,9 @@ En cambios futuros de la pantalla o modelos, incrementar la versión de caché e
 
 ## Prueba concreta en el celular
 
-Usar una cuenta de empleado de pruebas en **https://dev.adamia.com.mx**, con asistencia automática desactivada, código conocido y sin una entrada abierta previa. Para la primera prueba usar código y GPS opcional. No cambiar la hora del celular.
+Abrir el enlace del **reloj de empresa en https://dev.adamia.com.mx** y usar dos empleados de pruebas de esa empresa, con asistencia automática desactivada, códigos conocidos y sin entradas abiertas previas. Para la primera prueba usar código y GPS opcional. No cambiar la hora del celular. Los mismos pasos también sirven para la cuenta individual de empleado.
 
-1. Entrar a `/empleado/reloj-checador`, pulsar **Preparar reloj offline** y esperar la confirmación de descarga. Abrir **Reloj offline**.
+1. Entrar al enlace habitual de la empresa (`/[slug]`), pulsar **Preparar reloj offline** encima del reloj y esperar la confirmación de descarga. Abrir **Reloj offline**.
 2. Activar modo avión y comprobar que Wi-Fi también esté apagado. Seleccionar **Entrada**, escribir el código y guardar. Debe indicar **Pendiente de sincronizar**.
 3. Esperar al menos un minuto; seleccionar **Salida** y guardar. Deben aparecer dos pendientes con sus horas originales. Si el turno es manual, elegir **Cerrar turno**.
 4. Recargar la página sin conexión. Deben seguir los dos pendientes y el formulario debe abrir. Cerrar completamente la app/navegador y volver a abrir sin internet: comprobar el mismo resultado; esta comprobación es especialmente importante en Capacitor.

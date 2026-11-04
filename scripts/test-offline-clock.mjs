@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ownEvents, syncEvents } from '../public/offline-clock/store.mjs';
+import { ownEvents, syncEvents, syncCompanyEvents } from '../public/offline-clock/store.mjs';
 
 const profile = { id_empleado: 1, id_empresa: 10 };
-const entry = { id: 'entry', employee: 1, company: 10, captured_at: '2026-11-03T14:00:00.000Z', status: 'pending', code: '123' };
+const entry = { id: 'entry', employee: 1, company: 10, captured_at: '2026-11-03T14:00:00.000Z', status: 'pending', method: 'codigo', code: '123' };
 const exit = { ...entry, id: 'exit', captured_at: '2026-11-03T20:00:00.000Z' };
 
 test('isolates employee/company queues and preserves chronological order', () => {
@@ -44,4 +44,25 @@ test('a response without the matching confirmation cannot clear a pending event'
   await syncEvents([entry], async () => ({ id: 'another-event', status: 'synced' }), async event => saved.push(event));
   assert.equal(saved[0].status, 'pending');
   assert.equal(saved[0].code, entry.code);
+});
+
+test('company queues isolate other companies and personal employee queues', () => {
+  const companyEvent = { ...entry, scope: 'company' };
+  assert.deepEqual(ownEvents([companyEvent, entry, { ...companyEvent, company: 11 }], { scope: 'company', id_empresa: 10 }), [companyEvent]);
+  assert.deepEqual(ownEvents([companyEvent, entry], profile), [entry]);
+});
+
+test('a rejected employee does not block other company codes, but cannot be overtaken by its own exit', async () => {
+  const a = { ...entry, id: 'a1', code: '111' }, a2 = { ...exit, id: 'a2', code: '111' };
+  const b = { ...entry, id: 'b1', code: '222' }, b2 = { ...exit, id: 'b2', code: '222' };
+  const sent = [], saved = [];
+  await syncCompanyEvents([a, b, a2, b2], async event => {
+    sent.push(event.id);
+    if (event.code === '111') throw Error('Código rechazado');
+    return { id: event.id, status: 'synced', employee: { nombre: 'Empleado B' } };
+  }, async event => saved.push(event));
+  assert.deepEqual(sent, ['a1', 'b1', 'b2']);
+  assert.equal(saved[0].status, 'pending');
+  assert.equal(saved[2].status, 'synced');
+  assert.equal(saved[2].employeeName, 'Empleado B');
 });

@@ -1,4 +1,4 @@
-import { getConfig, listEvents, saveEvent, readToken, fingerprint, ownEvents, syncEvents } from './store.mjs';
+import { getConfig, listEvents, saveEvent, readToken, fingerprint, ownEvents, syncEvents, syncCompanyEvents } from './store.mjs';
 
 const $ = id => document.getElementById(id);
 const labels = { entrada: 'Entrada', salida: 'Salida', salida_temporal: 'Salida temporal', cerrar_turno: 'Cerrar turno' };
@@ -20,24 +20,24 @@ async function render() {
   const records = profile ? ownEvents(await listEvents(), profile) : [];
   $('events').replaceChildren(...records.map(event => {
     const item = document.createElement('li');
-    item.textContent = `${labels[event.action]} · ${new Date(event.captured_at).toLocaleString('es-MX')} · ${event.status === 'synced' ? 'Sincronizada' : 'Pendiente de sincronizar'}${event.error ? ` — ${event.error}` : ''}`;
+    item.textContent = `${event.employeeName || event.alias || ''} ${labels[event.action]} · ${new Date(event.captured_at).toLocaleString('es-MX')} · ${event.status === 'synced' ? 'Sincronizada' : 'Pendiente de sincronizar'}${event.error ? ` — ${event.error}` : ''}`;
     return item;
   }));
   $('sync').disabled = syncing || !profile || !navigator.onLine;
 }
 
 async function currentSession() {
-  if (!profile || Date.now() - Date.parse(profile.prepared_at) > 7 * 86400000 || profile.session !== await fingerprint(readToken())) {
+  if (!profile || Date.now() - Date.parse(profile.prepared_at) > 7 * 86400000 || (profile.scope !== 'company' && profile.session !== await fingerprint(readToken()))) {
     throw new Error('Conéctate e inicia sesión con tu cuenta para preparar nuevamente el reloj offline. Tus pendientes se conservan.');
   }
 }
 
 async function request(path, body) {
   const token = readToken();
-  if (!token) throw new Error('Inicia sesión nuevamente para sincronizar. Tus checadas siguen guardadas.');
+  if (!token && profile.scope !== 'company') throw new Error('Inicia sesión nuevamente para sincronizar. Tus checadas siguen guardadas.');
   const response = await fetch(`${profile.api}${path}`, {
     method: body ? 'POST' : 'GET', cache: 'no-store',
-    headers: { Authorization: `Bearer ${decodeURIComponent(token)}`, 'Content-Type': 'application/json' },
+    headers: { ...(token ? { Authorization: `Bearer ${decodeURIComponent(token)}` } : {}), 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,
     signal: AbortSignal.timeout(20000),
   });
@@ -54,12 +54,16 @@ async function sync() {
     const records = ownEvents(await listEvents(), profile);
     if (!records.some(event => event.status !== 'synced')) return;
     // Validate the live account before sending stored credentials or biometrics.
-    const account = await request('/checador/reloj/offline/perfil');
-    if (account.id_empleado !== profile.id_empleado || account.id_empresa !== profile.id_empresa) throw new Error('Inicia sesión con la cuenta que creó estas checadas para sincronizarlas.');
-    await syncEvents(records, event => request('/checador/reloj/offline/sincronizar', {
+    const company = profile.scope === 'company';
+    if (!company) {
+      const account = await request('/checador/reloj/offline/perfil');
+      if (account.id_empleado !== profile.id_empleado || account.id_empresa !== profile.id_empresa) throw new Error('Inicia sesión con la cuenta que creó estas checadas para sincronizarlas.');
+    }
+    await (company ? syncCompanyEvents : syncEvents)(records, event => request(company ? '/checador/reloj/offline/empresa/sincronizar' : '/checador/reloj/offline/sincronizar', {
       id: event.id, action: event.action, captured_at: event.captured_at,
       method: event.method, code: event.code, descriptor: event.descriptor,
       latitude: event.latitude, longitude: event.longitude,
+      ...(company ? { grant: event.grant || profile.grant } : {}),
     }), saveEvent);
   } catch (error) {
     message(error.message || 'No hay conexión con el servidor. Los pendientes se conservan.');
@@ -124,13 +128,18 @@ $('clock').onsubmit = async event => {
     }
     let latitude = null;
     let longitude = null;
-    if (profile.checar_gps) {
+    if (profile.checar_gps || profile.scope === 'company') {
       message('Obteniendo ubicación…');
-      const position = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }));
-      latitude = position.coords.latitude;
-      longitude = position.coords.longitude;
+      try {
+        const position = await new Promise((resolve, reject) => navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }));
+        latitude = position.coords.latitude;
+        longitude = position.coords.longitude;
+      } catch (error) {
+        if (profile.scope !== 'company') throw error;
+        message('Sin ubicación: los empleados que requieren GPS deberán validarse al sincronizar.');
+      }
     }
-    await saveEvent({ id: crypto.randomUUID(), employee: profile.id_empleado, company: profile.id_empresa, action: $('action').value, captured_at, method, code: method === 'codigo' ? code : undefined, descriptor, latitude, longitude, status: 'pending', error: '' });
+    await saveEvent({ id: crypto.randomUUID(), employee: profile.id_empleado, company: profile.id_empresa, scope: profile.scope, alias: profile.scope === 'company' ? (method === 'codigo' ? `Código •••${code.slice(-3)}` : 'Rostro por validar') : '', identity: method === 'codigo' ? await fingerprint(code) : 'facial', grant: profile.scope === 'company' ? profile.grant : undefined, action: $('action').value, captured_at, method, code: method === 'codigo' ? code : undefined, descriptor, latitude, longitude, status: 'pending', error: '' });
     $('code').value = '';
     stopCamera();
     message('Checada guardada en este celular. Pendiente de validación y sincronización.');
@@ -156,10 +165,10 @@ setInterval(() => { void sync(); }, 30000);
 
 try {
   profile = await getConfig();
-  if (!profile) throw new Error('Primero abre el reloj en línea con tu cuenta de empleado y pulsa “Preparar reloj offline”.');
+  if (!profile) throw new Error('Primero abre el reloj de empresa o el del empleado con internet y pulsa “Preparar reloj offline”.');
   await currentSession();
   $('employee').textContent = profile.nombre;
-  const actions = profile.cierre_turno === 'Manual' ? ['entrada', 'salida_temporal', 'cerrar_turno'] : ['entrada', 'salida'];
+  const actions = profile.scope === 'company' ? ['entrada', 'salida', 'salida_temporal', 'cerrar_turno'] : profile.cierre_turno === 'Manual' ? ['entrada', 'salida_temporal', 'cerrar_turno'] : ['entrada', 'salida'];
   for (const action of actions) $('action').add(new Option(labels[action], action));
   const methods = profile.metodo === 'codigo' ? ['codigo'] : profile.metodo === 'facial' ? ['facial'] : ['codigo', 'facial'];
   for (const method of methods) $('method').add(new Option(method === 'codigo' ? 'Código / contenido numérico del QR' : 'Reconocimiento facial', method));

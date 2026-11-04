@@ -38,6 +38,7 @@ import Cookies from "js-cookie";
 import axiosInstance from "@/lib/axios";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import OfflineClockSetup from '@/components/Clock/OfflineClockSetup';
 
 export default function Home() {
   const { dataUser, isLoggedIn, isAuthChecked } = useAuth();
@@ -49,6 +50,7 @@ export default function Home() {
   const { enqueueSnackbar } = useSnackbar();
   const [popupInfo, setPopupInfo] = useState(null);
   const [registrando, setRegistrando] = useState(false);
+  const { data: offlineCompany } = useSWR(dataUser?.id_empresa ? `/empresas/id/${dataUser.id_empresa}/slug` : null, fetcherWithToken);
 
   const formatearHora = (fechaString) => {
     if (!fechaString) return "-";
@@ -211,6 +213,7 @@ export default function Home() {
 
   return (
     <>
+      {offlineCompany?.slug && <OfflineClockSetup companySlug={offlineCompany.slug} />}
       <main className="min-h-screen bg-linear-to-br from-slate-50 via-gray-50 to-slate-100 p-4">
         {!isLoggedIn ? (
           <div className="max-w-md mx-auto">

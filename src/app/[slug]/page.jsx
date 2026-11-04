@@ -3,6 +3,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import axiosInstance from "@/lib/axios";
 import RelojChecador from "@/components/RelojChecador";
+import OfflineClockSetup from '@/components/Clock/OfflineClockSetup';
 import { loadBrowserFaceApi } from "@/lib/faceapi-browser";
 
 function RedirectingPage({ message }) {
@@ -97,5 +98,5 @@ export default function ChecadorPage() {
     return <RedirectingPage message={error || "Empresa no encontrada"} />;
   }
 
-  return <RelojChecador idEmpresa={idEmpresa} />;
+  return <><OfflineClockSetup companySlug={slug} /><RelojChecador idEmpresa={idEmpresa} /></>;
 }

@@ -46,7 +46,7 @@ export async function fingerprint(token) {
 }
 
 export function ownEvents(events, profile) {
-  return events.filter(event => event.employee === profile.id_empleado && event.company === profile.id_empresa)
+  return events.filter(event => event.company === profile.id_empresa && (profile.scope === 'company' ? event.scope === 'company' : event.scope !== 'company' && event.employee === profile.id_empleado))
     .sort((a, b) => a.captured_at.localeCompare(b.captured_at) || a.id.localeCompare(b.id));
 }
 
@@ -56,10 +56,22 @@ export async function syncEvents(events, send, persist) {
     try {
       const receipt = await send(event);
       if (receipt?.id !== event.id || receipt?.status !== 'synced') throw new Error('El servidor no confirmó esta checada. Se conservará pendiente.');
-      await persist({ ...event, status: 'synced', error: '', code: undefined, descriptor: undefined });
+      await persist({ ...event, employeeName: receipt.employee?.nombre || event.employeeName, status: 'synced', error: '', code: undefined, descriptor: undefined, grant: undefined });
     } catch (error) {
       await persist({ ...event, error: error.message });
       break;
     }
   }
+}
+
+// A rejected code must not block other employees using the same company clock.
+// Facial events remain ordered as a group until the server identifies each face.
+export async function syncCompanyEvents(events, send, persist) {
+  const groups = new Map();
+  for (const event of events.filter(event => event.status !== 'synced')) {
+    const key = event.identity || (event.method === 'codigo' ? `code:${event.code}` : 'facial');
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(event);
+  }
+  for (const group of groups.values()) await syncEvents(group, send, persist);
 }
