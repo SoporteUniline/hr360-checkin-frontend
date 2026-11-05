@@ -40,6 +40,7 @@ import { schemaEmpleado } from "@/schemas/schemaEmpleado";
 import TabContactosEmergencia from "./tabs/TabContactosEmergencia";
 import TabPersonales from "./tabs/TabPersonales";
 import TabLaborales from "./tabs/TabLaborales";
+import BajaEmpleadoInfo from "@/components/BajaEmpleadoInfo";
 import TabJornada from "./tabs/TabJornada";
 import TabNomina from "./tabs/TabNomina";
 import TabCuentasBancarias from "./tabs/TabCuentasBancarias";
@@ -978,7 +979,10 @@ export default function FormularioEmpleado({
                         />
                       )}
                       {tab === "laborales" && (
+                        <>
+                        <BajaEmpleadoInfo empleado={values} />
                         <TabLaborales renderCampos={renderCampos} form={form} soloLectura={soloLectura} dataUser={dataUser} />
+                        </>
                       )}
 
                       {tab === "jornada" && (

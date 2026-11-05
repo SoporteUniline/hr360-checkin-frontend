@@ -1,6 +1,7 @@
 "use client";
 
 import MiniKpi from "./MiniKpi";
+import BajaEmpleadoInfo from "@/components/BajaEmpleadoInfo";
 import { formatearFechaCorta as formatearFecha } from "@/lib/formatDate";
 
 import { User, Briefcase, Phone, MapPin } from "lucide-react";
@@ -20,6 +21,7 @@ export default function PanelEmpleadoGeneral({ datosEmpleado }) {
 
   return (
     <div>
+      <BajaEmpleadoInfo empleado={emp} />
       {/* Mini-KPIs homologados */}
       <div className="mb-4 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
         <MiniKpi
