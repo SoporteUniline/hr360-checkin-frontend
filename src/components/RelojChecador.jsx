@@ -202,7 +202,8 @@ export default function RelojChecador({
         nombre: `${data.empleado.nombre} ${data.empleado.apellido_paterno}`,
         foto_perfil: data.empleado.foto_perfil || "/assets/user.png",
         movimiento: data.movimiento || data.message,
-        success: true,
+        pending: Boolean(data.pending),
+        success: !data.pending,
       });
 
       setTimeout(() => setPopupInfo(null), 3000);
@@ -250,7 +251,8 @@ export default function RelojChecador({
         nombre: `${dataResponse.empleado.nombre} ${dataResponse.empleado.apellido_paterno}`,
         foto_perfil: dataResponse.empleado.foto_perfil || "/assets/user.png",
         movimiento: dataResponse.movimiento || dataResponse.message,
-        success: true,
+        pending: Boolean(dataResponse.pending),
+        success: !dataResponse.pending,
       });
       setTimeout(() => setPopupInfo(null), 3000);
       setMostrarModalTurno(false);
@@ -279,7 +281,8 @@ export default function RelojChecador({
         nombre: `${data.empleado.nombre} ${data.empleado.apellido_paterno}`,
         foto_perfil: data.empleado.foto_perfil || "/assets/user.png",
         movimiento: data.movimiento || data.message,
-        success: true,
+        pending: Boolean(data.pending),
+        success: !data.pending,
       });
       setTimeout(() => setPopupInfo(null), 3000);
       mutate();
@@ -563,10 +566,12 @@ export default function RelojChecador({
                 />
                 <div
                   className={`absolute bottom-0 right-1/4 w-10 h-10 rounded-full flex items-center justify-center shadow-lg border-4 border-white ${
-                    popupInfo.success ? "bg-green-500" : "bg-red-500"
+                    popupInfo.pending ? "bg-amber-500" : popupInfo.success ? "bg-green-500" : "bg-red-500"
                   }`}
                 >
-                  {popupInfo.success ? (
+                  {popupInfo.pending ? (
+                    <Clock4 className="w-5 h-5 text-white" />
+                  ) : popupInfo.success ? (
                     <CheckCircle className="w-5 h-5 text-white" />
                   ) : (
                     <XCircle className="w-5 h-5 text-white" />
@@ -581,13 +586,15 @@ export default function RelojChecador({
               </p>
               <div
                 className={`py-3 px-6 rounded-2xl inline-flex items-center gap-2 ${
-                  popupInfo.success
+                  popupInfo.pending
+                    ? "bg-amber-50 text-amber-800"
+                    : popupInfo.success
                     ? "bg-green-50 text-green-600"
                     : "bg-red-50 text-red-600"
                 }`}
               >
-                <CheckCircle className="w-5 h-5" />
-                <span className="font-black text-sm uppercase">¡Éxito!</span>
+                {popupInfo.pending ? <Clock4 className="w-5 h-5" /> : <CheckCircle className="w-5 h-5" />}
+                <span className="font-black text-sm uppercase">{popupInfo.pending ? 'Guardado · Aún sin validar' : '¡Éxito!'}</span>
               </div>
             </div>
           </div>

@@ -13,6 +13,14 @@ export default function OfflineExperience() {
   const [compact, setCompact] = useState(false);
   const [corner, setCorner] = useState(0);
   const [actionError, setActionError] = useState('');
+  const [syncing, setSyncing] = useState(false);
+  const syncNow = async () => {
+    setActionError('');
+    setSyncing(true);
+    try { await synchronizeClockQueue(); }
+    catch { setActionError('No se pudo completar la sincronización. Las capturas siguen guardadas en este dispositivo.'); }
+    finally { setSyncing(false); }
+  };
   const positions = ['bottom-24 right-3', 'top-20 right-3', 'top-20 left-3', 'bottom-24 left-3'];
   const discard = async event => {
     setActionError('');
@@ -93,7 +101,8 @@ export default function OfflineExperience() {
     {!compact && <>
     <p className="font-semibold">{offline ? 'Sin conexión · Usando información guardada en este celular' : reviews ? 'Hay checadas que necesitan revisión' : 'Con conexión · Checadas pendientes de validar'}</p>
     {offline && <p className="mt-1 text-xs">Puedes consultar lo ya descargado y registrar checadas. Los demás cambios necesitan conexión.</p>}
-    {!!events.length && <details className="mt-2"><summary className="cursor-pointer">{events.length - reviews} pendiente(s){reviews ? ` · ${reviews} para revisión` : ''}</summary><ul className="max-h-52 space-y-2 overflow-y-auto pt-2">
+    {!!events.length && <button type="button" disabled={offline || syncing} onClick={() => { void syncNow(); }} className="mt-2 rounded border border-amber-400 px-2 py-1 disabled:opacity-50">{syncing ? 'Comprobando pendientes...' : 'Sincronizar ahora'}</button>}
+    {!!events.length && <details className="mt-2"><summary className="cursor-pointer">{events.length - reviews} pendiente(s){reviews ? ` · ${reviews} para revisión` : ''}</summary><p className="mt-1 text-xs">Guardadas en este dispositivo. Todavía no son asistencias confirmadas. Las decisiones de turno aparecen aquí.</p><ul className="max-h-52 space-y-2 overflow-y-auto pt-2">
       {events.slice(0, 30).map(event => <li key={event.id} className="border-t border-amber-200 pt-2"><p>{event.employeeName || event.alias || 'Checada'} · {new Date(event.captured_at).toLocaleString('es-MX')}</p>{event.status === 'review' && <p className="font-semibold">No aceptada · Se conserva para revisión</p>}<p className="text-xs">{event.error || 'Se enviará automáticamente al recuperar conexión.'}</p>{event.status === 'review' && <button type="button" disabled={offline} onClick={() => { void retryClockEvent(event).catch(() => {}); }} className="mt-1 rounded border border-amber-400 px-2 py-1 disabled:opacity-50">Reintentar validación</button>}{event.status === 'review' && event.method === 'facial' && event.errorCode === 'FACE_NOT_MATCHED' && <button type="button" onClick={() => { void discard(event); }} className="mt-1 ml-2 rounded border border-amber-400 px-2 py-1">Descartar captura</button>}{event.status === 'decision' && <div className="mt-1 flex gap-2">{[['salida_temporal', 'Salida temporal'], ['cerrar_turno', 'Cerrar turno']].map(([action, label]) => <button key={action} type="button" onClick={() => { void resolveClockDecision(event, action).catch(() => {}); }} className="rounded border border-amber-400 px-2 py-1">{label}</button>)}</div>}</li>)}
     </ul></details>}
     <p className="mt-2 text-xs">Las capturas descartadas no registran asistencia.</p>

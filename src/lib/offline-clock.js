@@ -103,6 +103,7 @@ export async function registerClockMovement(payload, { company, employee = null,
     await synchronizeClockQueue().catch(() => {});
     const current = (await store.listEvents()).find(other => other.id === event.id);
     if (current?.status === 'synced') return { data: { empleado: { nombre: current.employeeName || event.alias, apellido_paterno: '' }, movimiento: current.resolvedAction === 'entrada' ? 'Entrada registrada' : 'Salida registrada' } };
+    if (current?.status === 'review') throw Object.assign(new Error(current.error), { response: { status: current.httpStatus || 422, data: { error: current.error, code: current.errorCode } } });
     if (current?.status === 'decision') return { data: { requiereDecision: true, offline_event: event, descriptor_facial: event.descriptor } };
     return queued();
   }
@@ -116,7 +117,11 @@ export async function registerClockMovement(payload, { company, employee = null,
     notify();
     return { data: { ...data, empleado: { nombre: data.employee?.nombre || event.alias, apellido_paterno: '' }, movimiento: data.action === 'entrada' ? 'Entrada registrada' : 'Salida registrada' } };
   } catch (error) {
-    if (!error.response || error.response.status >= 500) return queued();
+    if (!error.response || error.response.status >= 500) {
+      await store.saveEvent(store.syncFailure(event, error));
+      notify();
+      return queued();
+    }
     // Immediate denials are already visible in the active form/camera. Do not
     // turn automatic facial retries into a growing list of "pending" captures.
     // Previously queued captures retain their evidence and enter manual review.
