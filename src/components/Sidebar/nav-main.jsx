@@ -824,11 +824,6 @@ export function NavMain() {
       return false;
     });
   const handleClick = (href) => {
-    // These items are buttons, so the global offline link handler cannot see them.
-    if (!navigator.onLine || window.__adamiaOffline === true) {
-      window.location.assign(href);
-      return;
-    }
     router.push(href);
   };
   let perfilRoute = "/home/cuenta";

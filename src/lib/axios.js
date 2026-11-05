@@ -1,25 +1,11 @@
 import axios from "axios";
 import Cookies from "js-cookie";
 
-let offlineReady;
-export function ensureOfflineCache() {
-  if (typeof window === 'undefined') return Promise.resolve();
-  if (!offlineReady) offlineReady = import(/* webpackIgnore: true */ '/offline-clock/app-cache.mjs?v=4')
-    .then(module => { module.installOfflineFetch(process.env.NEXT_PUBLIC_RUTA_BACKEND); return module; })
-    .catch(() => { offlineReady = null; });
-  return offlineReady;
-}
-if (typeof window !== 'undefined') {
-  axios.defaults.adapter = 'fetch';
-  axios.interceptors.request.use(async config => { await ensureOfflineCache(); return config; });
-}
-
 const instance = axios.create({
   baseURL: process.env.NEXT_PUBLIC_RUTA_BACKEND,
   headers: {
     "Content-Type": "application/json",
   },
-  ...(typeof window !== 'undefined' ? { adapter: 'fetch' } : {}),
 });
 
 export const setAuthToken = (token) => {
@@ -30,8 +16,7 @@ export const setAuthToken = (token) => {
   }
 };
 
-instance.interceptors.request.use(async (config) => {
-  await ensureOfflineCache();
+instance.interceptors.request.use((config) => {
   const token = Cookies.get("token");
 
   if (token) {

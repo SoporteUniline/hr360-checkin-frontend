@@ -3,15 +3,15 @@
 import { AuthProvider } from "@/context/AuthContext";
 import { CommandPalette } from "@/components/CommandPalette";
 import FaceApiPreloader from "@/components/FaceApiPreloader";
+import RetireOfflineWorker from "@/components/RetireOfflineWorker";
 import { useNativeBackButton } from "@/hooks/Capacitor/useNativeBackButton";
-import OfflineExperience from '@/components/OfflineExperience';
 
 export function ClientProviders({ children }) {
   useNativeBackButton();
 
   return (
     <AuthProvider>
-      <OfflineExperience />
+      <RetireOfflineWorker />
       <FaceApiPreloader />
       {children}
       <CommandPalette />

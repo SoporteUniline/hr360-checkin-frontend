@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from "react";
 import Cookies from "js-cookie";
-import axios, { setAuthToken, ensureOfflineCache } from "@/lib/axios"; // ← USAR TU INSTANCE
+import axios, { setAuthToken } from "@/lib/axios"; // ← USAR TU INSTANCE
 import { SnackbarProvider } from "notistack";
 import { useRouter } from "next/navigation";
 
@@ -64,14 +64,9 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
-    const previousToken = Cookies.get('token');
-    void ensureOfflineCache().then(cache => cache?.clearSession(previousToken)).catch(() => {});
-    import(/* webpackIgnore: true */ '/offline-clock/store.mjs?v=4')
-      .then(store => store.clearConfig()).catch(() => {});
     Cookies.remove("token");
     setAuthToken(null);
     setIsLoggedIn(false);
-    setDataUser(null);
     router.push("/login");
   };
 
