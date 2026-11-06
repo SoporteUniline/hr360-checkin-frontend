@@ -17,7 +17,7 @@ test("native GPS does not request permissions on mount; explicit location reques
     Geolocation: {
       async checkPermissions() { permissionChecks++; return { location: "prompt" }; },
       async requestPermissions() { permissionRequests++; return { location: "granted" }; },
-      async getCurrentPosition() { locations++; return { coords: { latitude: 1, longitude: 2, accuracy: 3 } }; },
+      async getCurrentPosition(options) { assert.equal(options.maximumAge, 0); locations++; return { timestamp: 12345, coords: { latitude: 1, longitude: 2, accuracy: 3 } }; },
     },
     console,
   });
@@ -33,4 +33,22 @@ test("native GPS does not request permissions on mount; explicit location reques
   assert.equal(locations, 1);
   assert.equal(position.lat, 1);
   assert.equal(position.lng, 2);
+  assert.equal(position.timestamp, 12345);
+  assert.equal(position.accuracy, 3);
+});
+
+test("web GPS preserves measurement time and precision instead of stamping cached fixes as new", async () => {
+  const context = vm.createContext({
+    useState: value => [value, () => {}],
+    Capacitor: {isNativePlatform: () => false},
+    navigator: {geolocation: {getCurrentPosition(success, failure, options) {
+      assert.equal(options.maximumAge, 0);
+      assert.equal(options.enableHighAccuracy, true);
+      success({timestamp: 12345, coords: {latitude: 1, longitude: 2, accuracy: 2000}});
+    }}}, console,
+  });
+  vm.runInContext(source, context);
+  const position = await context.useGPS().getCurrentLocation();
+  assert.equal(position.timestamp, 12345);
+  assert.equal(position.accuracy, 2000);
 });

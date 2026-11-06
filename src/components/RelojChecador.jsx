@@ -36,6 +36,7 @@ export default function RelojChecador({
   modoEmpleado = false,
   idEmpleado = null,
 }) {
+  const [ubicacionGPS, setUbicacionGPS] = useState(null);
   const [metodo, setMetodo] = useState("facial");
   const [isMobile, setIsMobile] = useState(false);
   const [mostrarModalTurno, setMostrarModalTurno] = useState(false);
@@ -53,7 +54,7 @@ export default function RelojChecador({
   const [registrando, setRegistrando] = useState(false);
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const [subscriptionActive, setSubscriptionActive] = useState(false);
-  const { getCurrentLocation, loading: loadingGPS, error: gpsError } = useGPS();
+  const { getCurrentLocation, loading: loadingGPS } = useGPS();
 
   // Prepare recognition while subscription and clock data are being checked.
   // Camera and GPS permissions are requested only by the visible facial panel.
@@ -143,10 +144,6 @@ export default function RelojChecador({
   }, [metodo]);
 
   const registrarMovimiento = async (codigoManual) => {
-    if (gpsError) {
-      enqueueSnackbar(gpsError, { variant: "error" });
-      return;
-    }
     if (registrando) return;
     setRegistrando(true);
 
@@ -164,26 +161,24 @@ export default function RelojChecador({
     }
 
     try {
-      let latitud_actual = null;
-      let longitud_actual = null;
-      const pos = await getCurrentLocation();
-      if (pos) {
-        latitud_actual = pos.lat;
-        longitud_actual = pos.lng;
-      } else {
-        enqueueSnackbar("No se pudo obtener la ubicación.", {
-          variant: "error",
+      const payload = { codigo, id_empresa: idEmpresa };
+      let response;
+      try {
+        response = await axiosInstance.post("/checador/reloj/registrar", payload);
+      } catch (err) {
+        if (err.response?.data?.error !== "Faltan coordenadas de ubicación") throw err;
+        const pos = await getCurrentLocation();
+        setUbicacionGPS(pos);
+        if (!pos) {
+          enqueueSnackbar("Permite el acceso a ubicación y activa el GPS para checar.", {variant: "error"});
+          return;
+        }
+        response = await axiosInstance.post("/checador/reloj/registrar", {
+          ...payload, latitud_actual: pos.lat, longitud_actual: pos.lng,
+          precision_metros: pos.accuracy, ubicacion_timestamp: pos.timestamp,
         });
-        setRegistrando(false);
-        return;
       }
-
-      const { data } = await axiosInstance.post(`/checador/reloj/registrar`, {
-        codigo,
-        id_empresa: idEmpresa,
-        latitud_actual,
-        longitud_actual,
-      });
+      const { data } = response;
 
       if (data.requiereDecision) {
         setPendiente({ tipo: "codigo", codigo });
@@ -214,30 +209,29 @@ export default function RelojChecador({
   };
 
   const registrarConAccion = async (accion) => {
-    if (!pendiente) return;
+    if (!pendiente || registrando) return;
     try {
       setRegistrando(true);
-      const pos = await getCurrentLocation();
+      // Ask the server first; employees without GPS requirements need no permission.
       let dataResponse;
       const payload = {
         id_empresa: idEmpresa,
         accion,
-        latitud_actual: pos?.lat,
-        longitud_actual: pos?.lng,
       };
 
-      if (pendiente.tipo === "facial") {
-        const { data } = await axiosInstance.post(
-          "/checador/reloj/registrar-facial",
-          { ...payload, descriptor_facial: pendiente.descriptor_facial },
-        );
-        dataResponse = data;
-      } else {
-        const { data } = await axiosInstance.post("/checador/reloj/registrar", {
-          ...payload,
-          codigo: pendiente.codigo,
-        });
-        dataResponse = data;
+      const endpoint = pendiente.tipo === "facial" ? "/checador/reloj/registrar-facial" : "/checador/reloj/registrar";
+      const body = pendiente.tipo === "facial" ? {...payload, descriptor_facial: pendiente.descriptor_facial} : {...payload, codigo: pendiente.codigo};
+      try {
+        dataResponse = (await axiosInstance.post(endpoint, body)).data;
+      } catch (err) {
+        if (err.response?.data?.error !== "Faltan coordenadas de ubicación") throw err;
+        const pos = await getCurrentLocation();
+        setUbicacionGPS(pos);
+        if (!pos) throw new Error("Permite el acceso a ubicación y activa el GPS");
+        dataResponse = (await axiosInstance.post(endpoint, {...body,
+          latitud_actual: pos.lat, longitud_actual: pos.lng,
+          precision_metros: pos.accuracy, ubicacion_timestamp: pos.timestamp,
+        })).data;
       }
 
       setPopupInfo({
@@ -252,7 +246,7 @@ export default function RelojChecador({
       mutate();
       setCodigoEmpleado("");
     } catch (error) {
-      enqueueSnackbar(error.response?.data?.error || "Error al registrar", {
+      enqueueSnackbar(error.response?.data?.error || error.message || "Error al registrar", {
         variant: "error",
       });
     } finally {
@@ -381,6 +375,7 @@ export default function RelojChecador({
                   horaActual={horaActual}
                   fechaActual={fechaActual}
                 />
+                {ubicacionGPS && <p className="text-sm text-slate-600" role="status">Última lectura: precisión ±{Math.ceil(ubicacionGPS.accuracy)} m. Usa ubicación precisa para checar.</p>}
                 <EmployeeInput
                   codigo={codigoEmpleado}
                   setCodigo={setCodigoEmpleado}
@@ -511,6 +506,7 @@ export default function RelojChecador({
                         Registra tu entrada o salida
                       </p>
                     </div>
+                    {ubicacionGPS && <p className="text-sm text-slate-600" role="status">Última lectura: precisión ±{Math.ceil(ubicacionGPS.accuracy)} m. Si es aproximada, usa un celular con ubicación precisa.</p>}
                     <EmployeeInput
                       codigo={codigoEmpleado}
                       setCodigo={setCodigoEmpleado}

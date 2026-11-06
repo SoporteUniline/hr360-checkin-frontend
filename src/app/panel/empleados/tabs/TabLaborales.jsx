@@ -50,7 +50,7 @@ export default function TabLaborales({ renderCampos = () => null, form, soloLect
       return;
     }
 
-    if (!formData.latitud || !formData.longitud) {
+    if ([formData.latitud, formData.longitud].some(value => value == null || value === "" || !Number.isFinite(Number(value)))) {
       alert("Debes seleccionar una ubicación en el mapa");
       return;
     }
@@ -64,13 +64,13 @@ export default function TabLaborales({ renderCampos = () => null, form, soloLect
         longitud: Number(formData.longitud),
       };
 
-      await axios.post(
+      const response = await axios.post(
         `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/area_check2`,
         datos,
       );
 
       // 🔁 Actualiza la lista local de áreas
-      setAreas((prev) => [...prev, datos]);
+      setAreas((prev) => [...prev, {...datos, id_area: response.data.id}]);
 
       setMostrarModalArea(false);
     } catch (error) {

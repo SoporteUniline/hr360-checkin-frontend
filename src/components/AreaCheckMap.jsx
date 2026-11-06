@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,35 +17,14 @@ export default function AreaCheckMap({ area, onChange }) {
   const { enqueueSnackbar } = useSnackbar();
   const [cargando, setCargando] = useState(false);
   const searchInputRef = useRef(null);
-  const { getCurrentLocation, loading } = useGPS();
-
-  useEffect(() => {
-    const init = async () => {
-      if (!area?.latitud || !area?.longitud) {
-        const pos = await getCurrentLocation();
-
-        if (pos) {
-          onChange({
-            ...area,
-            latitud: pos.lat,
-            longitud: pos.lng,
-          });
-        } else {
-          onChange({
-            ...area,
-            latitud: 19.4326,
-            longitud: -99.1332,
-          });
-        }
-      }
-    };
-
-    init();
-  }, []);
+  const { getCurrentLocation } = useGPS();
+  const hasCoordinates = [area?.latitud, area?.longitud].every(value =>
+    value != null && value !== "" && Number.isFinite(Number(value))
+  );
 
   // Cuando se hace clic en el mapa
   const handleMapClick = (coords) => {
-    onChange({ ...area, latitud: coords.lat, longitud: coords.lng });
+    onChange(current => ({ ...current, latitud: coords.lat, longitud: coords.lng }));
   };
 
   const obtenerUbicacionActual = async () => {
@@ -53,11 +32,11 @@ export default function AreaCheckMap({ area, onChange }) {
     const pos = await getCurrentLocation();
 
     if (pos) {
-      onChange({
-        ...area,
-        latitud: pos.lat,
-        longitud: pos.lng,
-      });
+      if (!Number.isFinite(pos.accuracy) || pos.accuracy > 50) {
+        enqueueSnackbar(`Ubicación imprecisa (±${Math.ceil(pos.accuracy || 0)} m). Selecciona el punto en el mapa.`, {variant: "warning"});
+      } else {
+        onChange(current => ({...current, latitud: pos.lat, longitud: pos.lng}));
+      }
     } else {
       enqueueSnackbar("No se pudo obtener tu ubicación", {
         variant: "error",
@@ -84,7 +63,7 @@ export default function AreaCheckMap({ area, onChange }) {
             latitud: location.lat(),
             longitud: location.lng(),
           };
-          onChange({ ...area, ...coords });
+          onChange(current => ({ ...current, ...coords }));
         } else {
           enqueueSnackbar("No se encontró la dirección", {
             variant: "warning",
@@ -159,29 +138,31 @@ export default function AreaCheckMap({ area, onChange }) {
         />
       </div>
 
+      <p className="text-sm text-gray-600">El radio se mide desde el centro, no desde el borde del edificio. Selecciona el punto exacto en el mapa; la ubicación del dispositivo puede ser aproximada.</p>
       {/* Mapa */}
       <div className="border rounded-lg overflow-hidden relative">
         <MapComponent
           center={
-            area?.latitud && area?.longitud
+            hasCoordinates
               ? { lat: Number(area.latitud), lng: Number(area.longitud) }
               : { lat: 19.4326, lng: -99.1332 }
           }
-          zoom={area?.latitud && area?.longitud ? 17 : 12}
+          radius={Number(area.radio_metros ?? 100)}
+          zoom={hasCoordinates ? 17 : 12}
           height="400px"
           onClick={handleMapClick}
         />
       </div>
 
       {/* Información del punto */}
-      {area?.latitud && area?.longitud && (
+      {hasCoordinates && (
         <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
           <h4 className="text-sm font-semibold text-blue-900 mb-2 flex items-center gap-2">
             <MapPin className="h-4 w-4" /> Área seleccionada
           </h4>
-          <p className="text-sm text-blue-900">Latitud: {area.latitud ? Number(area.latitud).toFixed(6) : "—"}</p>
+          <p className="text-sm text-blue-900">Latitud: {Number(area.latitud).toFixed(6)}</p>
           <p className="text-sm text-blue-900">
-            Longitud: {area.longitud ? Number(area.longitud).toFixed(6) : "—"}
+            Longitud: {Number(area.longitud).toFixed(6)}
           </p>
         </div>
       )}

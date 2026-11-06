@@ -33,6 +33,7 @@ export default function ModalArea({
         // Si es nueva, reseteamos pero PRESERVAMOS la empresa por defecto
         setFormData({
           nombre_area: "",
+          radio_metros: 100,
           latitud: null,
           longitud: null,
           // Si empresaActiva es "all" ponemos vacío, si no, ponemos el ID seleccionado

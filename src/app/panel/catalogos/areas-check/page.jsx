@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
-import axios from "axios";
+import axios from "@/lib/axios";
 import { fetcherWithToken } from "@/lib/fetcher";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,6 +50,7 @@ function AreaCard({ area, onEdit, onDelete }) {
             </p>
           )}
 
+          <p className="text-sm text-gray-600">Radio permitido: {area.radio_metros} m</p>
           {area.latitud && area.longitud && (
             <p className="text-sm font-mono text-gray-600">
               {Number(area.latitud).toFixed(6)},{" "}
@@ -224,17 +225,23 @@ export default function AreasCheckPage() {
       return;
     }
 
-    if (!formData.latitud || !formData.longitud) {
+    if ([formData.latitud, formData.longitud].some(value => value == null || value === "" || !Number.isFinite(Number(value)))) {
       enqueueSnackbar("Debes seleccionar una ubicación en el mapa", {
         variant: "error",
       });
       return;
     }
 
+    const radius = Number(formData.radio_metros ?? 100);
+    if (!Number.isFinite(radius) || radius < 10 || radius > 1000) {
+      enqueueSnackbar("El radio debe estar entre 10 y 1000 metros", {variant: "error"});
+      return;
+    }
     setGuardando(true);
     try {
       const datos = {
         ...formData,
+        radio_metros: radius,
         id_empresa: formData.id_empresa || empresaActiva,
         latitud: Number(formData.latitud),
         longitud: Number(formData.longitud),

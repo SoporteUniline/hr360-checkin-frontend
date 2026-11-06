@@ -25,16 +25,17 @@ export function useGPS() {
           }
         }
 
-        const { coords } = await Geolocation.getCurrentPosition({
+        const { coords, timestamp } = await Geolocation.getCurrentPosition({
           enableHighAccuracy: true,
           timeout: 15000,
+          maximumAge: 0,
         });
 
         return {
           lat: coords.latitude,
           lng: coords.longitude,
           accuracy: coords.accuracy,
-          timestamp: new Date().toISOString(),
+          timestamp: timestamp,
         };
       }
 
@@ -47,11 +48,11 @@ export function useGPS() {
                 lat: pos.coords.latitude,
                 lng: pos.coords.longitude,
                 accuracy: pos.coords.accuracy,
-                timestamp: new Date().toISOString(),
+                timestamp: pos.timestamp,
               });
             },
             reject,
-            { enableHighAccuracy: true, timeout: 15000 }
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
           );
         });
       }
