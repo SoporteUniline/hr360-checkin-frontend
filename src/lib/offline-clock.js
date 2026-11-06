@@ -6,7 +6,7 @@ let registrationLoading;
 let synchronizing = false;
 const initializing = new Map();
 const warmed = new Set();
-export const clockStore = () => storeLoading ||= import(/* webpackIgnore: true */ '/offline-clock/store.mjs?v=5');
+export const clockStore = () => storeLoading ||= import(/* webpackIgnore: true */ '/offline-clock/store.mjs?v=6');
 const notify = () => window.dispatchEvent(new Event('adamia-queue'));
 const profileKey = (company, employee) => employee ? `clock:employee:${company}:${employee}` : `clock:company:${company}`;
 
@@ -182,6 +182,6 @@ export async function retryClockEvent(event) {
 
 export async function discardClockEvent(event) {
   const store = await clockStore();
-  await store.discardUnmatchedFace(event.id);
+  await store.discardReviewedEvent(event.id);
   notify();
 }

@@ -38,18 +38,21 @@ export const allValues = () => transaction('config', 'readonly', store => store.
 export const listEvents = () => transaction('events', 'readonly', store => store.getAll());
 export const saveEvent = event => transaction('events', 'readwrite', store => store.put(event));
 
-export function discardUnmatchedFace(id) {
+export function discardReviewedEvent(id) {
   return transaction('events', 'readwrite', store => {
     const request = store.get(id);
     request.onsuccess = () => {
       const event = request.result;
-      if (event?.status !== 'review' || event.method !== 'facial' || event.errorCode !== 'FACE_NOT_MATCHED') return;
+      if (event?.status !== 'review') return;
       store.put({ ...event, status: 'rejected', discarded_at: new Date().toISOString(),
         error: 'Captura descartada manualmente', code: undefined, descriptor: undefined, grant: undefined });
     };
     return request;
   });
 }
+
+// Preserve compatibility with screens still using the former facial-only action.
+export const discardUnmatchedFace = discardReviewedEvent;
 
 export function readToken() {
   return document.cookie.split('; ').find(value => value.startsWith('token='))?.slice(6);
