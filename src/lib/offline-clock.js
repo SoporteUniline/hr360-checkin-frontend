@@ -87,7 +87,8 @@ export async function registerClockMovement(payload, { company, employee = null,
   const event = {
     ...(old || {}), id: old?.id || crypto.randomUUID(), captured_at: old?.captured_at || payload.captured_at || new Date().toISOString(),
     action: payload.accion || 'auto', method, code, descriptor: payload.descriptor_facial,
-    latitude: payload.latitud_actual ?? null, longitude: payload.longitud_actual ?? null,
+    latitude: payload.latitud_actual ?? old?.latitude ?? null, longitude: payload.longitud_actual ?? old?.longitude ?? null,
+    precision_metros: payload.precision_metros ?? old?.precision_metros ?? null, ubicacion_timestamp: payload.ubicacion_timestamp ?? old?.ubicacion_timestamp ?? null,
     employee: employee ? Number(employee) : undefined, company: Number(company), scope: employee ? 'employee' : 'company',
     session: employee ? profile.session : null, grant: employee ? undefined : profile.grant,
     identity: employee ? `employee:${employee}` : method === 'codigo' ? await store.fingerprint(code) : 'facial',
@@ -136,6 +137,7 @@ async function sendEvent(event) {
   return axios.post(company ? '/checador/reloj/offline/empresa/sincronizar' : '/checador/reloj/offline/sincronizar', {
     id: event.id, captured_at: event.captured_at, action: event.action, method: event.method,
     code: event.code, descriptor: event.descriptor, latitude: event.latitude, longitude: event.longitude,
+    precision_metros: event.precision_metros, ubicacion_timestamp: event.ubicacion_timestamp,
     ...(company ? { grant: event.grant } : {}),
   }, { timeout: 15000 });
 }

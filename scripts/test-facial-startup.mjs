@@ -78,7 +78,7 @@ function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, p
       } };
       return { data: {} };
     } },
-    navigator: {
+    navigator: { onLine: true,
       mediaDevices: { async getUserMedia() {
         cameraCalls++;
         return { getTracks: () => [{ stop() { stops++; } }] };
@@ -87,7 +87,7 @@ function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, p
         gpsCalls++;
         if (gpsFails) reject({ code: 1 });
         else {
-          resolveLocation = () => resolve({ timestamp: now, coords: { latitude: 1, longitude: 2 } });
+          resolveLocation = () => resolve({ timestamp: now, coords: { latitude: 1, longitude: 2, accuracy: 8 } });
           if (!gpsPending) resolveLocation();
         }
       } },
@@ -239,6 +239,8 @@ test("GPS-required server rejection stays visible and recovers automatically aft
   assert.equal(env.requests[1].body.latitud_actual, null, "identify before asking for GPS again");
   assert.equal(env.requests[2].body.latitud_actual, 1);
   assert.equal(env.requests[2].body.longitud_actual, 2);
+  assert.equal(env.requests[2].body.precision_metros, 8);
+  assert.equal(typeof env.requests[2].body.ubicacion_timestamp, "number");
   assert.equal(env.counts().successes, 1);
   assert.equal(env.notifications.length, 0);
 });

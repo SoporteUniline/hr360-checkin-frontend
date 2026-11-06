@@ -6,7 +6,11 @@ export default function MapaSelectorGoogle({
   center = { lat: 19.4326, lng: -99.1332 },
   zoom = 13,
   height = "400px",
+  radius = null,
 }) {
+  const callbacksRef = useRef({ onClick, onMapLoad });
+  callbacksRef.current = { onClick, onMapLoad };
+  const circleRef = useRef(null);
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markerRef = useRef(null); // Solo un marcador
@@ -37,6 +41,7 @@ export default function MapaSelectorGoogle({
     checkGoogleMaps();
 
     return () => {
+      if (circleRef.current) circleRef.current.setMap(null);
       if (markerRef.current) markerRef.current.setMap(null);
       if (mapInstanceRef.current) {
         window.google.maps.event.clearInstanceListeners(mapInstanceRef.current);
@@ -52,6 +57,19 @@ export default function MapaSelectorGoogle({
     }
   }, [center]);
 
+  useEffect(() => {
+    if (!mapLoaded || !mapInstanceRef.current) return;
+    if (!Number.isFinite(Number(radius)) || Number(radius) <= 0) {
+      circleRef.current?.setMap(null);
+      return;
+    }
+    if (!circleRef.current) circleRef.current = new window.google.maps.Circle({
+      strokeColor: "#2563eb", strokeOpacity: 0.8, strokeWeight: 2,
+      fillColor: "#2563eb", fillOpacity: 0.12, clickable: false,
+    });
+    circleRef.current.setOptions({map: mapInstanceRef.current, center, radius: Number(radius)});
+  }, [mapLoaded, center, radius]);
+
   const initializeMap = () => {
     const map = new window.google.maps.Map(mapRef.current, {
       center,
@@ -66,7 +84,7 @@ export default function MapaSelectorGoogle({
     mapInstanceRef.current = map;
 
     // Crear marcador inicial
-    if (center?.lat && center?.lng) {
+    if (Number.isFinite(center?.lat) && Number.isFinite(center?.lng)) {
       markerRef.current = new window.google.maps.Marker({
         position: center,
         map,
@@ -75,7 +93,7 @@ export default function MapaSelectorGoogle({
       });
 
       markerRef.current.addListener("dragend", (e) => {
-        if (onClick) onClick({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+        if (callbacksRef.current.onClick) callbacksRef.current.onClick({ lat: e.latLng.lat(), lng: e.latLng.lng() });
       });
     }
 
@@ -93,18 +111,18 @@ export default function MapaSelectorGoogle({
         });
 
         markerRef.current.addListener("dragend", (e) => {
-          if (onClick) onClick({ lat: e.latLng.lat(), lng: e.latLng.lng() });
+          if (callbacksRef.current.onClick) callbacksRef.current.onClick({ lat: e.latLng.lat(), lng: e.latLng.lng() });
         });
       } else {
         markerRef.current.setPosition({ lat, lng });
         map.panTo({ lat, lng });
       }
 
-      if (onClick) onClick({ lat, lng });
+      if (callbacksRef.current.onClick) callbacksRef.current.onClick({ lat, lng });
     });
 
     setMapLoaded(true);
-    if (onMapLoad) onMapLoad(map);
+    if (callbacksRef.current.onMapLoad) callbacksRef.current.onMapLoad(map);
   };
 
   if (googleError) {

@@ -14,6 +14,7 @@ const FacialRecognitionPanel = ({
   handleOpenFacialModal,
   submitMovement,
 }) => {
+  const [ubicacionGPS, setUbicacionGPS] = useState(null);
   const [cameraFacing, setCameraFacing] = useState("user");
   const [error, setError] = useState("");
   const [faceApiLoaded, setFaceApiLoaded] = useState(false);
@@ -129,7 +130,7 @@ const FacialRecognitionPanel = ({
       if (!navigator.geolocation) return fail();
       try {
         navigator.geolocation.getCurrentPosition(
-          (position) => { entry.position = position; resolve({ position }); },
+          (position) => { entry.position = position; setUbicacionGPS(position); resolve({ position }); },
           fail,
           { enableHighAccuracy: true, timeout: 10000, maximumAge: GPS_MAX_AGE },
         );
@@ -240,6 +241,10 @@ const FacialRecognitionPanel = ({
     retryIntervalRef.current = MIN_INTERVAL;
 
     try {
+      if (!navigator.onLine) {
+        await getLocation();
+        if (session !== sessionRef.current) return;
+      }
       const cachedPosition = locationRef.current?.position;
       const position = cachedPosition && Date.now() - cachedPosition.timestamp <= GPS_MAX_AGE
         ? cachedPosition : null;
@@ -250,6 +255,8 @@ const FacialRecognitionPanel = ({
         id_empresa: idEmpresa,
         latitud_actual: position?.coords.latitude ?? null,
         longitud_actual: position?.coords.longitude ?? null,
+        precision_metros: position?.coords.accuracy ?? null,
+        ubicacion_timestamp: position?.timestamp ?? null,
       };
       const submit = (body) => submitMovement ? submitMovement(body) : axiosInstance.post("/checador/reloj/registrar-facial", body);
       let response;
@@ -266,8 +273,11 @@ const FacialRecognitionPanel = ({
         if (!requiredPosition) throw err;
         response = await submit({
           ...payload,
+          captured_at: new Date().toISOString(),
           latitud_actual: requiredPosition.coords.latitude,
           longitud_actual: requiredPosition.coords.longitude,
+          precision_metros: requiredPosition.coords.accuracy,
+          ubicacion_timestamp: requiredPosition.timestamp,
         });
       }
       const { data } = response;
@@ -283,6 +293,7 @@ const FacialRecognitionPanel = ({
       if (session !== sessionRef.current) return;
       const message =
         err.response?.data?.error || "Error en reconocimiento facial";
+      if (["GPS_INACCURATE", "GPS_REFRESH_REQUIRED", "OUTSIDE_AREA", "GPS_OUTSIDE_AREA"].includes(err.response?.data?.code)) locationRef.current = null;
       retryIntervalRef.current = message === "No se encontr\u00f3 coincidencia facial"
         ? MIN_INTERVAL : ERROR_INTERVAL;
 
@@ -395,6 +406,7 @@ const FacialRecognitionPanel = ({
             </div>
           </div>
 
+          {ubicacionGPS && <p className="px-3 text-sm text-slate-600" role="status">Última lectura: precisión ±{Math.ceil(ubicacionGPS.coords.accuracy)} m. La ubicación aproximada puede impedir el checado.</p>}
           <div className="overflow-y-auto">
             <>
               <div className="relative mb-4">
