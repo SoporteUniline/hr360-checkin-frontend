@@ -12,6 +12,7 @@ import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import FormularioAsistenciasMasivas from "@/components/FormularioAsistenciasMasivas";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import ClockNavigation from '@/components/Clock/ClockNavigation';
 import {
   CalendarDays,
   ChevronDown,
@@ -309,6 +310,7 @@ export default function ControlAsistencia() {
   // toolbar unificada (búsqueda + rango modal + agrupar + columnas) y vistas.
   return (
     <div className="space-y-5">
+      <ClockNavigation companyId={empresaActiva} />
 
       <div>
         <EncabezadoPagina

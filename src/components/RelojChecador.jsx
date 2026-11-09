@@ -27,6 +27,7 @@ import { useAuth } from "@/context/AuthContext";
 import QRScanner from "./QRScanner";
 import { Button } from "./ui/button";
 import { initializeClock, registerClockMovement } from '@/lib/offline-clock';
+import ClockNavigation from './Clock/ClockNavigation';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -41,7 +42,7 @@ export default function RelojChecador({
   const [metodo, setMetodo] = useState("facial");
   const [offline, setOffline] = useState(false);
   useEffect(() => {
-    const update = event => setOffline(event.detail?.offline ?? !navigator.onLine);
+    const update = event => setOffline(event.type === 'online' ? false : event.detail?.offline ?? (!navigator.onLine || window.__adamiaOffline === true));
     update({});
     window.addEventListener('online', update);
     window.addEventListener('offline', update);
@@ -149,9 +150,13 @@ export default function RelojChecador({
   }, []);
 
   useEffect(() => {
-    if (metodo !== "facial") setMostrarCamara(false);
+    if (offline) {
+      setMostrarCamara(false);
+      if (metodo === 'facial') setMetodo('codigo');
+    }
+    else if (metodo !== "facial") setMostrarCamara(false);
     else setMostrarCamara(true);
-  }, [metodo]);
+  }, [metodo, offline]);
 
   useEffect(() => {
     setCodigoEmpleado("");
@@ -222,7 +227,7 @@ export default function RelojChecador({
       mutate();
     } catch (err) {
       setCodigoEmpleado("");
-      enqueueSnackbar(err.response?.data?.error || "Error al registrar", {
+      enqueueSnackbar(err.response?.data?.error || err.message || "Error al registrar", {
         variant: "error",
       });
     } finally {
@@ -299,6 +304,7 @@ export default function RelojChecador({
   };
 
   const abrirCamara = () => {
+    if (offline || !navigator.onLine || window.__adamiaOffline === true) return;
     setMostrarQR(false);
     setMostrarCamara(true);
   };
@@ -379,6 +385,7 @@ export default function RelojChecador({
     <>
       <main className="min-h-screen bg-slate-50 p-4">
         <div className="mx-auto max-w-7xl space-y-6">
+          <ClockNavigation companyId={idEmpresa} companySlug={companySlug} />
           <div className="rounded-xl border border-blue-100 bg-linear-to-r from-indigo-50 to-blue-50 p-6">
             <div className="flex items-center gap-3">
               <div className="rounded-lg bg-blue-600 p-2.5">
@@ -396,6 +403,7 @@ export default function RelojChecador({
             </div>
           </div>
 
+          {offline && <p role="status" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">Sin conexión. Usa tu código de empleado o QR si lo tienes autorizado. La checada quedará pendiente de validar. Las cuentas configuradas solo para rostro necesitan conexión.</p>}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
             <div className="hidden md:block lg:col-span-4 md:col-span-5 space-y-6">
               <div className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">
@@ -446,6 +454,7 @@ export default function RelojChecador({
                 ].map((tab) => (
                   <button
                     key={tab.id}
+                    disabled={offline && tab.id === 'facial'}
                     onClick={() => {
                       setMetodo(tab.id);
                       if (tab.id === "facial") abrirCamara();
@@ -458,7 +467,7 @@ export default function RelojChecador({
                         setMostrarQR(false);
                       }
                     }}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all duration-300 ${
+                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed ${
                       metodo === tab.id
                         ? "bg-white text-slate-900 shadow-md scale-[1.02]"
                         : "text-slate-500 hover:text-slate-700"
@@ -477,7 +486,7 @@ export default function RelojChecador({
               </div>
 
               <div className="relative min-h-75">
-                {(metodo === "facial" || !isMobile) && (
+                {!offline && (metodo === "facial" || !isMobile) && (
                   <div
                     className={
                       metodo === "facial"

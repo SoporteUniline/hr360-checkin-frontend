@@ -93,9 +93,12 @@ try {
   })()`);
   await send('Page.reload');
   await until(() => evaluate("document.querySelector('#clock')?.hidden === false && !!navigator.serviceWorker.controller"), 'prepared clock');
-  assert.equal(await evaluate("(await caches.open('adamia-clock-shell-v4')).keys().then(keys => keys.length)"), 15);
+  const cachedAssets = await evaluate("(async()=>{const name=(await caches.keys()).find(name=>name.startsWith('adamia-clock-shell-'));return (await(await caches.open(name)).keys()).map(request=>new URL(request.url).pathname)})()");
+  for (const asset of ['/reloj-offline.html', '/offline-clock/app.mjs', '/offline-clock/store.mjs']) assert(cachedAssets.includes(asset));
+  assert.deepEqual(await evaluate("Array.from(document.querySelector('#method').options,option=>option.value)"), ['codigo']);
   disconnected = true;
   await send('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0 });
+  assert.equal(await evaluate("typeof (await import('/offline-clock/store.mjs?v=6')).saveEvent"), 'function');
   await evaluate("(() => { document.querySelector('#code').value='123'; document.querySelector('#clock').requestSubmit(); })()");
   await until(() => evaluate("document.querySelector('#message').textContent.includes('Checada guardada')"), 'offline save');
   assert.equal(received.size, 0);

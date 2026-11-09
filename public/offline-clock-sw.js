@@ -1,4 +1,4 @@
-const CACHE = 'adamia-clock-shell-v5';
+const CACHE = 'adamia-clock-shell-v6';
 const RUNTIME = 'adamia-runtime-assets-v1';
 const MAX_AGE = 7 * 86400000;
 const ASSETS = [
@@ -65,7 +65,7 @@ self.addEventListener('fetch', event => {
   const request = event.request;
   const url = new URL(request.url);
   if (request.method !== 'GET' || url.origin !== self.location.origin) return;
-  if (ASSETS.includes(url.pathname) && (!url.search || url.searchParams.get('v') === '4')) {
+  if (ASSETS.includes(url.pathname) && (!url.search || (url.searchParams.size === 1 && /^\d+$/.test(url.searchParams.get('v') || '')))) {
     event.respondWith(caches.open(CACHE).then(async cache => (await cache.match(url.origin + url.pathname, { ignoreVary: true })) || fetch(request)));
     return;
   }

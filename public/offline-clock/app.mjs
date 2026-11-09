@@ -116,6 +116,8 @@ $('clock').onsubmit = async event => {
   try {
     await currentSession();
     const method = $('method').value;
+    if (method !== 'codigo') throw new Error('Este reloj offline solo admite código de empleado. Para reconocimiento facial abre el reloj habitual con conexión.');
+    if (profile.metodo === 'facial') throw new Error('Tu cuenta solo permite rostro. Abre el reloj habitual con conexión o solicita a RH la habilitación de código si corresponde.');
     const captured_at = new Date().toISOString();
     let descriptor;
     const code = $('code').value.trim();
@@ -170,10 +172,14 @@ try {
   $('employee').textContent = profile.nombre;
   const actions = profile.scope === 'company' ? ['entrada', 'salida', 'salida_temporal', 'cerrar_turno'] : profile.cierre_turno === 'Manual' ? ['entrada', 'salida_temporal', 'cerrar_turno'] : ['entrada', 'salida'];
   for (const action of actions) $('action').add(new Option(labels[action], action));
-  const methods = profile.metodo === 'codigo' ? ['codigo'] : profile.metodo === 'facial' ? ['facial'] : ['codigo', 'facial'];
+  const methods = ['codigo'];
   for (const method of methods) $('method').add(new Option(method === 'codigo' ? 'Código / contenido numérico del QR' : 'Reconocimiento facial', method));
   $('method').onchange();
   $('clock').hidden = false;
+  if (profile.metodo === 'facial') {
+    $('clock').hidden = true;
+    message('Tu cuenta solo permite rostro. Abre el reloj habitual con conexión o solicita a RH la habilitación de código si corresponde. Tus pendientes anteriores se conservan.');
+  }
   await render();
   void sync();
 } catch (error) {

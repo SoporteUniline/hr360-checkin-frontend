@@ -55,6 +55,7 @@ async function intercept(event) {
   const json = data => send('Fetch.fulfillRequest', { requestId, responseCode: 200, responseHeaders: [{ name: 'Content-Type', value: 'application/json' }, { name: 'Access-Control-Allow-Origin', value: base }, { name: 'Access-Control-Allow-Headers', value: 'authorization,content-type,x-adamia-session' }, { name: 'Access-Control-Allow-Methods', value: 'GET,POST,PUT,DELETE,OPTIONS' }, { name: 'Access-Control-Allow-Credentials', value: 'true' }], body: Buffer.from(JSON.stringify(data)).toString('base64') });
   if (request.method === 'OPTIONS') return json({});
   if (path.endsWith('/users/verify/token')) return json({ user: user() });
+  if (path.endsWith('/offline/empresa/perfil')) return json({ scope: 'company', id_empresa: 10, slug: company.slug, nombre: company.nombre, grant: 'fixture-grant', prepared_at: new Date().toISOString() });
   if (path.endsWith('/offline/perfil')) return json({ ...employee, nombre: 'Diego Fixture', metodo: 'codigo', cierre_turno: 'Automático', checar_gps: false, prepared_at: new Date().toISOString() });
   if (path.endsWith('/offline/sincronizar')) {
     const event = JSON.parse(request.postData);
@@ -95,6 +96,12 @@ async function go(path, text) {
   try { await until(() => evaluate(`document.body?.textContent.includes(${JSON.stringify(text)})`), path + ' content'); }
   catch (error) { console.error({ page: await evaluate('location.pathname'), text: await evaluate('document.body?.innerText.slice(0,1800)'), pageErrors, apiPaths: [...apiPaths] }); throw error; }
 }
+async function followClockLink(path, text) {
+  const selector = `nav[aria-label="Navegación de asistencia"] a[href="${path}"]`;
+  await until(() => evaluate(`!!document.querySelector(${JSON.stringify(selector)})`), 'navigation link ' + path);
+  await evaluate(`document.querySelector(${JSON.stringify(selector)}).click()`);
+  await until(() => evaluate(`location.pathname === ${JSON.stringify(path)} && document.body?.textContent.includes(${JSON.stringify(text)})`), 'navigation destination ' + path);
+}
 async function snapshot() {
   try {
     await until(() => evaluate("(async()=>{const c=await import('/offline-clock/app-cache.mjs');return !!await c.readResponse(await c.ownerKey(),'page',location.href)})()"), 'page snapshot');
@@ -126,7 +133,18 @@ try {
   await send('Network.setCookie', { name: 'token', value: token(), url: base, path: '/' });
   await go('/panel/empleados', 'Ana Fixture'); await snapshot();
   await go('/panel/registro-de-entradas-y-salidas', 'Entradas'); await snapshot();
+  await go('/panel/registro-asistencia', 'Asistencias'); await snapshot();
+  await go('/fixture-company', 'Registrar Entrada / Salida');
+  await until(() => evaluate("(async()=>!!await(await caches.open('adamia-runtime-assets-v1')).match(location.origin+'/__offline/company/fixture-company'))()"), 'public company clock cached');
   await offline(true);
+  await followClockLink('/panel/registro-asistencia', 'Asistencias');
+  await followClockLink('/panel/registro-de-entradas-y-salidas', 'Entradas y salidas');
+  await followClockLink('/fixture-company', 'Registrar Entrada / Salida');
+  await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+  await followClockLink('/panel/registro-asistencia', 'Asistencia');
+  await until(() => evaluate("!!document.querySelector('nav[aria-label=\"Navegación de asistencia\"] a[href=\"/fixture-company\"]')"), 'mobile attendance navigation');
+  await followClockLink('/fixture-company', 'Registrar Entrada / Salida');
+  await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
   await go('/panel/empleados', 'Ana Fixture');
   assert(await evaluate("document.body.textContent.includes('Sin conexión')"));
   assert(await evaluate("document.querySelectorAll('nav, [data-sidebar]').length>0"));
@@ -134,6 +152,9 @@ try {
   await send('Network.setCookie', { name: 'token', value: token() + 'different', url: base, path: '/' });
   await go('/panel/empleados', 'Esta pantalla no se ha descargado');
   assert(!await evaluate("document.body.textContent.includes('Ana Fixture')"));
+  await send('Network.deleteCookies', { name: 'token', url: base });
+  await go('/fixture-company', 'Registrar Entrada / Salida');
+  assert(!await evaluate("!!document.querySelector('nav[aria-label=\"Navegación de asistencia\"]')"));
   await offline(false); role = 'Empleado';
   await send('Network.setCookie', { name: 'token', value: token(), url: base, path: '/' });
   await go('/empleado/panel/inicio', 'Hola, Diego'); await snapshot();
@@ -145,11 +166,23 @@ try {
   assert(await evaluate("document.body.textContent.includes('8 días')"));
   await go('/empleado/panel/asistencias', 'Mis asistencias');
   await go('/empleado/reloj-checador', 'Registrar Entrada / Salida');
+  await followClockLink('/empleado/panel/asistencias', 'Mis asistencias');
+  assert(!await evaluate("!!document.querySelector('nav[aria-label=\"Navegación de asistencia\"] a[href^=\"/panel/\"]')"));
+  await followClockLink('/empleado/reloj-checador', 'Registrar Entrada / Salida');
+  await until(() => evaluate("document.body.textContent.includes('Las cuentas configuradas solo para rostro necesitan conexión.') && !document.querySelector('video')"), 'offline desktop clock disables facial camera');
+  await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+  await until(() => evaluate("Array.from(document.querySelectorAll('button')).some(button=>button.textContent.trim()==='Rostro' && button.disabled && button.getBoundingClientRect().width>0) && Array.from(document.querySelectorAll('input')).some(input=>input.placeholder==='Ingresa tu código' && input.getBoundingClientRect().width>0)"), 'offline mobile clock disables facial tab and opens code input');
   for (let i = 0; i < 2; i++) {
     await evaluate("Array.from(document.querySelectorAll('input')).find(input=>input.placeholder==='Ingresa tu código'&&input.getBoundingClientRect().width>0).focus()");
     await send('Input.insertText', { text: '123' });
+    await until(() => evaluate("Array.from(document.querySelectorAll('button')).some(button=>button.textContent==='Registrar Entrada / Salida' && !button.disabled && button.getBoundingClientRect().width>0)"), 'code input enables registration');
     await evaluate("Array.from(document.querySelectorAll('button')).find(button=>button.textContent==='Registrar Entrada / Salida'&&button.getBoundingClientRect().width>0).click()");
-    await until(() => evaluate(`(async()=>{const events=await(await import('/offline-clock/store.mjs')).listEvents();return events.length===${i + 1}})()`), 'normal clock pending save');
+    try {
+      await until(() => evaluate(`(async()=>{const events=await(await import('/offline-clock/store.mjs')).listEvents();return events.length===${i + 1}})()`), 'normal clock pending save');
+    } catch (error) {
+      console.error(await evaluate("(async()=>({text:document.body.innerText,events:await(await import('/offline-clock/store.mjs')).listEvents(),inputs:Array.from(document.querySelectorAll('input'),input=>({value:input.value,visible:input.getBoundingClientRect().width>0}))}))()"));
+      throw error;
+    }
     await sleep(1100);
   }
   assert.equal(receipts.size, 0);

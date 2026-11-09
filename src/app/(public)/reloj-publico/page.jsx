@@ -40,6 +40,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import OfflineClockSetup from '@/components/Clock/OfflineClockSetup';
 import { registerClockMovement } from '@/lib/offline-clock';
+import ClockNavigation from '@/components/Clock/ClockNavigation';
 
 export default function Home() {
   const { dataUser, isLoggedIn, isAuthChecked } = useAuth();
@@ -216,6 +217,7 @@ export default function Home() {
     <>
       {offlineCompany?.slug && <OfflineClockSetup companySlug={offlineCompany.slug} companyId={dataUser.id_empresa} />}
       <main className="min-h-screen bg-linear-to-br from-slate-50 via-gray-50 to-slate-100 p-4">
+        <div className="mx-auto mb-4 max-w-7xl"><ClockNavigation companyId={dataUser?.id_empresa} companySlug={offlineCompany?.slug} /></div>
         {!isLoggedIn ? (
           <div className="max-w-md mx-auto">
             <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl border border-slate-200/50 p-8 text-center">

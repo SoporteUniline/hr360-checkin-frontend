@@ -1,6 +1,20 @@
 # Funcionamiento automático sin conexión
 
+## Política actual: código sin conexión
+
+Las nuevas checadas faciales requieren conexión. Al perder internet, el reloj habitual cierra el panel facial, cambia a código y deshabilita la pestaña Rostro. Código y QR numérico conservan su funcionamiento offline, con estado pendiente de validación. El reloj anterior `/reloj-offline.html` solo permite crear capturas con código.
+
+Se comprueban tanto `navigator.onLine` como la pérdida de conexión detectada por la aplicación. Si se pierde conexión durante la preparación de una captura facial, se cancela antes de enviarla. Si la solicitud ya se envió y no se obtuvo respuesta, se conserva como pendiente con el mismo UUID para reconciliarla sin duplicar movimientos. Los pendientes faciales anteriores se mantienen para sincronización y revisión.
+
+El service worker recupera también las URLs de módulos con versión numérica, incluida `/offline-clock/store.mjs?v=6`. Antes solo admitía `v=4`, por lo que una navegación offline podía impedir cargar el almacenamiento aunque el archivo sin parámetros ya estuviera descargado.
+
+No se cambia la política de métodos del servidor: un empleado configurado solo para rostro necesita conexión, o que RH le habilite código mediante la configuración existente. En el reloj personal se rechaza el código offline si el perfil descargado indica solo rostro; en el reloj público la identidad y el método autorizado se comprueban al sincronizar, pues no se descarga el padrón de empleados. No se garantiza la aceptación de un código guardado offline.
+
+Verificación: `node --test scripts/test-offline-clock-registration.mjs scripts/test-offline-clock.mjs scripts/test-offline-app-cache.mjs`. Probar además en dev la caída de conexión con la cámara abierta, el cambio a código en móvil y escritorio, reconexión, cuentas solo rostro y sincronización de pendientes anteriores. Las referencias a nuevas capturas faciales offline en las secciones históricas siguientes quedan sustituidas por esta política.
+
 ## Uso
+
+El reloj y las pantallas de Asistencias y Entradas y salidas incluyen una barra de navegación directa, también en móvil. RH ve los relojes de sus empresas asignadas; los empleados ven su reloj y Mis asistencias. El reloj público sin sesión no muestra enlaces a consultas privadas. Los enlaces recuperan la pantalla completa cuando no hay conexión, incluida la ruta pública del reloj de empresa. Las pantallas de destino deben haberse visitado con internet antes de usarlas offline. Si todavía no se conoce el enlace de una empresa sin conexión, se indica que necesita conexión en lugar de prometer acceso al reloj.
 
 No hay botones de preparación ni es necesario cambiar a otro reloj. Al abrir con internet el reloj de empresa, el reloj del empleado o los paneles, la aplicación descarga en segundo plano sus recursos y conserva las consultas y pantallas utilizadas.
 

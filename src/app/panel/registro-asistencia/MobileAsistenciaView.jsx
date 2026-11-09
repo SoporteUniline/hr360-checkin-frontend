@@ -17,6 +17,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/context/AuthContext";
 import MobileFiltersDrawer from "./MobileFiltersDrawer";
 import MobileEmpleadoDetalle from "./MobileEmpleadoDetalle";
+import ClockNavigation from '@/components/Clock/ClockNavigation';
 import { ArrowLeft, ArrowRight } from "lucide-react";
 
 dayjs.extend(utc);
@@ -405,6 +406,7 @@ export default function MobileAsistenciaView({
     <div className="flex flex-col h-full bg-gray-50 overflow-hidden">
       {/* ─── Header ─── */}
       <div className="bg-white px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 shrink-0">
+        <div className="mb-3"><ClockNavigation companyId={empresaActiva} /></div>
         {/* Title row */}
         <div className="mb-3">
           <h1 className="text-xl font-extrabold tracking-tight text-gray-900 leading-tight">

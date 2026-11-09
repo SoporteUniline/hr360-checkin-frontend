@@ -78,8 +78,17 @@ export async function initializeClock({ company, employee = null, slug = null })
 }
 
 export async function registerClockMovement(payload, { company, employee = null, slug = null }) {
+  const facial = Boolean(payload.descriptor_facial);
+  const offline = () => !navigator.onLine || window.__adamiaOffline === true;
+  const facialOfflineError = () => Object.assign(new Error('El reconocimiento facial necesita conexión. Usa tu código de empleado si lo tienes autorizado.'), { code: 'FACIAL_REQUIRES_CONNECTION' });
+  // Existing facial events still need reconciliation with their original UUID.
+  if (facial && !payload.offline_event && offline()) throw facialOfflineError();
   const store = await clockStore();
   const profile = await initializeClock({ company, employee, slug });
+  if (facial && !payload.offline_event && offline()) throw facialOfflineError();
+  if (!facial && offline() && employee && profile.metodo === 'facial') {
+    throw new Error('Tu cuenta solo permite reconocimiento facial. Necesitas conexión para checar; solicita a RH la habilitación de código si corresponde.');
+  }
   if (Date.now() - Date.parse(profile.prepared_at) > 7 * 86400000) throw new Error('El reloj necesita actualizar su configuración cuando vuelva internet.');
   const old = payload.offline_event;
   const method = payload.descriptor_facial ? 'facial' : 'codigo';
@@ -98,6 +107,11 @@ export async function registerClockMovement(payload, { company, employee = null,
   await store.saveEvent(event);
   notify();
   const queued = () => ({ data: { pending: true, offline_event: event, empleado: { nombre: event.alias, apellido_paterno: '' }, movimiento: 'Guardado en el celular · pendiente de sincronizar' } });
+  if (facial && !old && offline()) {
+    await store.saveEvent({ ...event, status: 'rejected', descriptor: undefined, grant: undefined, error: 'Captura facial cancelada antes de enviarse: sin conexión.' });
+    notify();
+    throw facialOfflineError();
+  }
   if (!navigator.onLine) return queued();
   const earlier = (await store.listEvents()).some(other => other.id !== event.id && other.company === event.company && (other.scope || 'employee') === event.scope && other.identity === event.identity && other.status !== 'synced' && other.status !== 'rejected' && other.captured_at <= event.captured_at);
   if (earlier) {

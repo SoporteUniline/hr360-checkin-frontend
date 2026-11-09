@@ -143,7 +143,7 @@ const FacialRecognitionPanel = ({
 
   useEffect(() => {
     const startCamera = async () => {
-      if (!isOpen) return;
+      if (!isOpen || !navigator.onLine || window.__adamiaOffline === true) return;
 
       const session = sessionRef.current;
       try {
@@ -241,10 +241,7 @@ const FacialRecognitionPanel = ({
     retryIntervalRef.current = MIN_INTERVAL;
 
     try {
-      if (!navigator.onLine) {
-        await getLocation();
-        if (session !== sessionRef.current) return;
-      }
+      if (!navigator.onLine || window.__adamiaOffline === true) throw new Error('El reconocimiento facial necesita conexión. Usa tu código de empleado si lo tienes autorizado.');
       const cachedPosition = locationRef.current?.position;
       const position = cachedPosition && Date.now() - cachedPosition.timestamp <= GPS_MAX_AGE
         ? cachedPosition : null;
@@ -292,7 +289,7 @@ const FacialRecognitionPanel = ({
     } catch (err) {
       if (session !== sessionRef.current) return;
       const message =
-        err.response?.data?.error || "Error en reconocimiento facial";
+        err.response?.data?.error || err.message || "Error en reconocimiento facial";
       if (["GPS_INACCURATE", "GPS_REFRESH_REQUIRED", "OUTSIDE_AREA", "GPS_OUTSIDE_AREA"].includes(err.response?.data?.code)) locationRef.current = null;
       retryIntervalRef.current = message === "No se encontr\u00f3 coincidencia facial"
         ? MIN_INTERVAL : ERROR_INTERVAL;
