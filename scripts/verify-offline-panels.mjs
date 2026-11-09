@@ -16,6 +16,7 @@ const profileDir = await mkdtemp(join(tmpdir(), 'adamia-panels-offline-'));
 const next = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '-p', String(testPort), '-H', '127.0.0.1'], { stdio: 'ignore', windowsHide: true, env: { ...process.env, JWT_SECRET: secret } });
 let chrome, socket, sequence = 0, role = 'Recruiter';
 const pending = new Map(), receipts = new Map();
+const companyReceipts = new Map();
 const workerSessions = new Map();
 const pageErrors = [], apiPaths = new Set();
 let droppedResponse = false;
@@ -57,6 +58,11 @@ async function intercept(event) {
   if (path.endsWith('/users/verify/token')) return json({ user: user() });
   if (path.endsWith('/offline/empresa/perfil')) return json({ scope: 'company', id_empresa: 10, slug: company.slug, nombre: company.nombre, grant: 'fixture-grant', prepared_at: new Date().toISOString() });
   if (path.endsWith('/offline/perfil')) return json({ ...employee, nombre: 'Diego Fixture', metodo: 'codigo', cierre_turno: 'Automático', checar_gps: false, prepared_at: new Date().toISOString() });
+  if (path.endsWith('/offline/empresa/sincronizar')) {
+    const event = JSON.parse(request.postData);
+    if (!companyReceipts.has(event.id)) companyReceipts.set(event.id, { id: event.id, status: 'synced', action: 'entrada', employee: { id: 101, nombre: 'Ana Fixture' } });
+    return json(companyReceipts.get(event.id));
+  }
   if (path.endsWith('/offline/sincronizar')) {
     const event = JSON.parse(request.postData);
     if (!receipts.has(event.id)) receipts.set(event.id, { id: event.id, status: 'synced', action: receipts.size % 2 ? 'salida' : 'entrada', employee: { id: 101, nombre: 'Diego Fixture' } });
@@ -70,7 +76,7 @@ async function intercept(event) {
   if (path.includes('/solicitudes-permiso/empleado/')) return json({ results: [], total: 0 });
   if (path.endsWith('/campos-personalizados')) return json([]);
   if (path.endsWith('/empleados')) return json({ data: [employee], total: 1, totalPages: 1 });
-  if (path.endsWith('/reloj/asistencia')) return json({ data: [{ ...employee, id: 1, entrada: '2026-11-04 09:00:00', salida: null }], total: 1, totalPages: 1 });
+  if (path.endsWith('/reloj/asistencia')) return json({ registros: [{ ...employee, id: 1, entrada: '2026-11-04 09:00:00', salida: null }], total: 1, totalPages: 1 });
   if (path.includes('/empresas/slug/')) return json(company);
   if (path.endsWith('/slug')) return json({ slug: 'fixture-company' });
   if (path.includes('/departamentos') || path.includes('/sucursales') || path.includes('/tiposPermiso')) return json([]);
@@ -98,7 +104,7 @@ async function go(path, text) {
 }
 async function followClockLink(path, text) {
   const selector = `nav[aria-label="Navegación de asistencia"] a[href="${path}"]`;
-  await until(() => evaluate(`!!document.querySelector(${JSON.stringify(selector)})`), 'navigation link ' + path);
+  await until(() => evaluate(`document.querySelector(${JSON.stringify(selector)})?.getBoundingClientRect().width > 0`), 'navigation link ' + path);
   await evaluate(`document.querySelector(${JSON.stringify(selector)}).click()`);
   await until(() => evaluate(`location.pathname === ${JSON.stringify(path)} && document.body?.textContent.includes(${JSON.stringify(text)})`), 'navigation destination ' + path);
 }
@@ -136,10 +142,28 @@ try {
   await go('/panel/registro-asistencia', 'Asistencias'); await snapshot();
   await go('/fixture-company', 'Registrar Entrada / Salida');
   await until(() => evaluate("(async()=>!!await(await caches.open('adamia-runtime-assets-v1')).match(location.origin+'/__offline/company/fixture-company'))()"), 'public company clock cached');
+  assert(await evaluate("document.querySelector('nav[aria-label=\"Navegación de asistencia\"]')?.getBoundingClientRect().width===0"));
   await offline(true);
+  await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+  await until(() => evaluate("(()=>{const links=Array.from(document.querySelectorAll('nav[aria-label=\"Navegación de asistencia\"] a'));return links.length===3 && links.every(link=>link.getBoundingClientRect().width>0) && new Set(links.map(link=>Math.round(link.getBoundingClientRect().top))).size===1})()"), 'mobile navigation has one row');
   await followClockLink('/panel/registro-asistencia', 'Asistencias');
   await followClockLink('/panel/registro-de-entradas-y-salidas', 'Entradas y salidas');
   await followClockLink('/fixture-company', 'Registrar Entrada / Salida');
+  await evaluate("Array.from(document.querySelectorAll('input')).find(input=>input.placeholder==='Ingresa tu código'&&input.getBoundingClientRect().width>0).focus()");
+  await send('Input.insertText', { text: '123' });
+  await until(() => evaluate("Array.from(document.querySelectorAll('button')).some(button=>button.textContent==='Registrar Entrada / Salida' && !button.disabled && button.getBoundingClientRect().width>0)"), 'company code ready');
+  await evaluate("Array.from(document.querySelectorAll('button')).find(button=>button.textContent==='Registrar Entrada / Salida'&&button.getBoundingClientRect().width>0).click()");
+  await until(() => evaluate("(async()=>{const events=await(await import('/offline-clock/store.mjs')).listEvents();return events.some(event=>event.scope==='company'&&event.status==='pending')})()"), 'company offline capture saved');
+  await followClockLink('/panel/registro-de-entradas-y-salidas', 'Entradas y salidas');
+  await until(() => evaluate("document.querySelectorAll('tr[data-offline-event]').length===1 && document.querySelector('tr[data-offline-event]').textContent.includes('Pendiente de sincronizar')"), 'pending capture appears inside attendance table');
+  assert(!await evaluate("!!document.querySelector('tr[data-offline-event] button')"));
+  await go('/panel/registro-de-entradas-y-salidas', 'Entradas y salidas');
+  await until(() => evaluate("document.querySelectorAll('tr[data-offline-event]').length===1"), 'pending table row survives offline reload');
+  await offline(false);
+  await evaluate("window.dispatchEvent(new Event('online'))");
+  await until(() => companyReceipts.size === 1, 'company capture synchronized');
+  await until(() => evaluate("document.querySelectorAll('tr[data-offline-event]').length===0 && document.body.textContent.includes('Ana Fixture')"), 'confirmed capture no longer duplicates a local row');
+  await offline(true);
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await followClockLink('/panel/registro-asistencia', 'Asistencia');
   await until(() => evaluate("!!document.querySelector('nav[aria-label=\"Navegación de asistencia\"] a[href=\"/fixture-company\"]')"), 'mobile attendance navigation');
@@ -166,10 +190,12 @@ try {
   assert(await evaluate("document.body.textContent.includes('8 días')"));
   await go('/empleado/panel/asistencias', 'Mis asistencias');
   await go('/empleado/reloj-checador', 'Registrar Entrada / Salida');
+  await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await followClockLink('/empleado/panel/asistencias', 'Mis asistencias');
   assert(!await evaluate("!!document.querySelector('nav[aria-label=\"Navegación de asistencia\"] a[href^=\"/panel/\"]')"));
   await followClockLink('/empleado/reloj-checador', 'Registrar Entrada / Salida');
-  await until(() => evaluate("document.body.textContent.includes('Las cuentas configuradas solo para rostro necesitan conexión.') && !document.querySelector('video')"), 'offline desktop clock disables facial camera');
+  await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
+  await until(() => evaluate("document.body.textContent.includes('Sin conexión · Código / QR') && !document.querySelector('video')"), 'offline desktop clock disables facial camera');
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await until(() => evaluate("Array.from(document.querySelectorAll('button')).some(button=>button.textContent.trim()==='Rostro' && button.disabled && button.getBoundingClientRect().width>0) && Array.from(document.querySelectorAll('input')).some(input=>input.placeholder==='Ingresa tu código' && input.getBoundingClientRect().width>0)"), 'offline mobile clock disables facial tab and opens code input');
   for (let i = 0; i < 2; i++) {
@@ -178,7 +204,7 @@ try {
     await until(() => evaluate("Array.from(document.querySelectorAll('button')).some(button=>button.textContent==='Registrar Entrada / Salida' && !button.disabled && button.getBoundingClientRect().width>0)"), 'code input enables registration');
     await evaluate("Array.from(document.querySelectorAll('button')).find(button=>button.textContent==='Registrar Entrada / Salida'&&button.getBoundingClientRect().width>0).click()");
     try {
-      await until(() => evaluate(`(async()=>{const events=await(await import('/offline-clock/store.mjs')).listEvents();return events.length===${i + 1}})()`), 'normal clock pending save');
+      await until(() => evaluate(`(async()=>{const events=(await(await import('/offline-clock/store.mjs')).listEvents()).filter(event=>event.scope!=='company');return events.length===${i + 1}})()`), 'normal clock pending save');
     } catch (error) {
       console.error(await evaluate("(async()=>({text:document.body.innerText,events:await(await import('/offline-clock/store.mjs')).listEvents(),inputs:Array.from(document.querySelectorAll('input'),input=>({value:input.value,visible:input.getBoundingClientRect().width>0}))}))()"));
       throw error;
@@ -189,7 +215,7 @@ try {
   await offline(false);
   await until(() => evaluate("document.body.textContent.includes('pendiente')"), 'queued records visible');
   await evaluate("window.dispatchEvent(new Event('online'))");
-  await until(() => evaluate("(async()=>{const events=await(await import('/offline-clock/store.mjs')).listEvents();return events.length===2&&events.every(event=>event.status==='synced')})()"), 'automatic sync after lost response', 600);
+  await until(() => evaluate("(async()=>{const events=(await(await import('/offline-clock/store.mjs')).listEvents()).filter(event=>event.scope!=='company');return events.length===2&&events.every(event=>event.status==='synced')})()"), 'automatic sync after lost response', 600);
   assert.equal(receipts.size, 2);
   console.log('PASS: real Next/Chrome RH menu + employee panels offline, session isolation, automatic setup, normal clock durable queue, reconnect sync and lost-response retry. No real APIs or databases used.');
 } finally { socket?.close(); chrome?.kill(); next.kill(); }

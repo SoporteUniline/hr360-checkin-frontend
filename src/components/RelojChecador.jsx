@@ -399,11 +399,11 @@ export default function RelojChecador({
                   Registro de entradas y salidas con validación por código, QR y
                   reconocimiento facial.
                 </p>
+                {offline && <p role="status" className="mt-2 inline-flex rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">Sin conexión · Código / QR · Pendiente de validar</p>}
               </div>
             </div>
           </div>
 
-          {offline && <p role="status" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">Sin conexión. Usa tu código de empleado o QR si lo tienes autorizado. La checada quedará pendiente de validar. Las cuentas configuradas solo para rostro necesitan conexión.</p>}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
             <div className="hidden md:block lg:col-span-4 md:col-span-5 space-y-6">
               <div className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">
@@ -586,7 +586,7 @@ export default function RelojChecador({
                 />
                 <div
                   className={`absolute bottom-0 right-1/4 w-10 h-10 rounded-full flex items-center justify-center shadow-lg border-4 border-white ${
-                    popupInfo.pending ? "bg-amber-500" : popupInfo.success ? "bg-green-500" : "bg-red-500"
+                    popupInfo.pending ? "bg-blue-500" : popupInfo.success ? "bg-green-500" : "bg-red-500"
                   }`}
                 >
                   {popupInfo.pending ? (
@@ -607,7 +607,7 @@ export default function RelojChecador({
               <div
                 className={`py-3 px-6 rounded-2xl inline-flex items-center gap-2 ${
                   popupInfo.pending
-                    ? "bg-amber-50 text-amber-800"
+                    ? "bg-blue-50 text-blue-800"
                     : popupInfo.success
                     ? "bg-green-50 text-green-600"
                     : "bg-red-50 text-red-600"

@@ -8,6 +8,7 @@ import LoadingTable from "@/components/LoadingTable";
 import ErrorPage from "@/components/ErrorPage";
 import { useEffect, useRef, useState } from "react";
 import { fetcherWithToken } from "@/lib/fetcher";
+import useLocalClockEvents from '@/hooks/useLocalClockEvents';
 
 export default function EntradasSalidasDataContainer({
   idEmpresa,
@@ -38,6 +39,7 @@ export default function EntradasSalidasDataContainer({
     total: 0,
   });
   const [cachedData, setCachedData] = useState(null);
+  const localEvents = useLocalClockEvents({ company: idEmpresa, from: desde || fecha, to: hasta || fecha, search: filtroNombre });
 
   const { data, error, isLoading, mutate } = useRelojChecadorData(
     idEmpresa,
@@ -59,6 +61,12 @@ export default function EntradasSalidasDataContainer({
   useEffect(() => {
     mutateRef.current = mutate;
   }, [mutate]);
+
+  useEffect(() => {
+    const refresh = () => { if (navigator.onLine && window.__adamiaOffline !== true) void mutateRef.current().catch(() => {}); };
+    window.addEventListener('adamia-queue', refresh);
+    return () => window.removeEventListener('adamia-queue', refresh);
+  }, []);
 
   // SSE: actualización en tiempo real cuando llega una checada
   useEffect(() => {
@@ -170,8 +178,8 @@ export default function EntradasSalidasDataContainer({
     if (page > totalPages) setPage(1);
   }, [headerFilterMeta, page, limit, setPage]);
 
-  if (isLoading && !effectiveData) return <LoadingTable rows={10} />;
-  if (error) {
+  if (isLoading && !effectiveData && !localEvents.length) return <LoadingTable rows={10} />;
+  if (error && (!localEvents.length || [401, 403].includes(error.response?.status))) {
     console.error(error);
     return (
       <ErrorPage message="Error al cargar los registros de entradas y salidas" />
@@ -181,8 +189,10 @@ export default function EntradasSalidasDataContainer({
   return {
     ui: (
       <>
+        {error && <p className="mb-3 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-800">No se pudo actualizar el servidor. Se muestran las capturas de este dispositivo.</p>}
         <EntradasSalidasTable
           registros={registros}
+          localEvents={localEvents}
           filterOptionsRows={filterOptionsRows}
           page={page}
           limit={limit}
