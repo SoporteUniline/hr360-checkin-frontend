@@ -26,7 +26,7 @@ import timezone from "dayjs/plugin/timezone";
 import { useAuth } from "@/context/AuthContext";
 import QRScanner from "./QRScanner";
 import { Button } from "./ui/button";
-import { initializeClock, registerClockMovement, prepareLocalFaces, localFaceStatus } from '@/lib/offline-clock';
+import { initializeClock, registerClockMovement, localFaceStatus } from '@/lib/offline-clock';
 import ClockNavigation from './Clock/ClockNavigation';
 
 dayjs.extend(utc);
@@ -42,7 +42,6 @@ export default function RelojChecador({
   const [metodo, setMetodo] = useState("facial");
   const [offline, setOffline] = useState(false);
   const [localFacesReady, setLocalFacesReady] = useState(false);
-  const [updatingFaces, setUpdatingFaces] = useState(false);
   useEffect(() => {
     const update = event => setOffline(event.type === 'online' ? false : event.detail?.offline ?? (!navigator.onLine || window.__adamiaOffline === true));
     update({});
@@ -69,20 +68,11 @@ export default function RelojChecador({
   const [subscriptionActive, setSubscriptionActive] = useState(false);
   const { getCurrentLocation, loading: loadingGPS } = useGPS();
   const submitMovement = payload => registerClockMovement(payload, { company: idEmpresa, employee: modoEmpleado ? idEmpleado : null, slug: companySlug });
-  const updateLocalFaces = async () => {
-    setUpdatingFaces(true);
-    try {
-      const dataset = await prepareLocalFaces({ company: idEmpresa, employee: modoEmpleado ? idEmpleado : null, force: true });
-      setLocalFacesReady(!!dataset?.employees?.length);
-      enqueueSnackbar(dataset?.employees?.length ? 'Reconocimiento actualizado en este dispositivo' : 'No hay referencias faciales habilitadas para descargar', { variant: dataset?.employees?.length ? 'success' : 'info' });
-    } catch (error) { enqueueSnackbar(error.response?.data?.error || error.message || 'No se pudieron actualizar los rostros', { variant: 'error' }); }
-    finally { setUpdatingFaces(false); }
-  };
   useEffect(() => {
     let active = true;
     const context = { company: idEmpresa, employee: modoEmpleado ? idEmpleado : null, slug: companySlug };
     const refresh = () => { void localFaceStatus(context).then(dataset => { if (active) setLocalFacesReady(!!dataset?.employees?.length); }).catch(() => { if (active) setLocalFacesReady(false); }); };
-    void initializeClock(context).then(() => prepareLocalFaces(context)).catch(() => {}).finally(refresh);
+    void initializeClock(context).catch(() => {}).finally(refresh);
     refresh();
     window.addEventListener('adamia-face-ready', refresh);
     return () => { active = false; window.removeEventListener('adamia-face-ready', refresh); };
@@ -419,8 +409,7 @@ export default function RelojChecador({
                   Registro de entradas y salidas con validación por código, QR y
                   reconocimiento facial.
                 </p>
-                <p role="status" className="mt-2 inline-flex rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">{offline ? localFacesReady ? 'Sin conexión · Reconocimiento local listo · Pendiente de subir' : 'Sin conexión · Código / QR · Rostro sin preparar' : localFacesReady ? 'Reconocimiento offline preparado en este dispositivo' : 'Para rostro offline, abre este reloj con una sesión autorizada e internet.'}</p>
-                {!offline && dataUser && (modoEmpleado || ['Recruiter', 'User', 'Admin'].includes(dataUser.tipo_usuario)) && <button type="button" disabled={updatingFaces} onClick={() => { void updateLocalFaces(); }} className="ml-2 min-h-11 rounded-lg px-2 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50">{updatingFaces ? 'Actualizando rostros…' : 'Actualizar rostros'}</button>}
+                <p role="status" className="mt-2 inline-flex rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">{offline ? localFacesReady ? 'Sin conexión · Reconocimiento local listo · Pendiente de subir' : 'Sin conexión · Código / QR · Rostro sin preparar' : localFacesReady ? 'Reconocimiento offline preparado en este dispositivo' : 'Las referencias se descargan automáticamente con una sesión autorizada e internet.'}</p>
               </div>
             </div>
           </div>
@@ -635,7 +624,7 @@ export default function RelojChecador({
                 }`}
               >
                 {popupInfo.pending ? <Clock4 className="w-5 h-5" /> : <CheckCircle className="w-5 h-5" />}
-                <span className="font-black text-sm uppercase">{popupInfo.pending ? 'Guardado · Aún sin validar' : '¡Éxito!'}</span>
+                <span className="font-black text-sm uppercase">{popupInfo.pending ? 'Pendiente de subir' : '¡Éxito!'}</span>
               </div>
             </div>
           </div>

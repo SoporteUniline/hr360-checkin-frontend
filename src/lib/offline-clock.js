@@ -14,14 +14,15 @@ const faceKey = (company, employee, session) => employee ? `faces:employee:${com
 const preparingFaces = new Map();
 
 export async function prepareLocalFaces({ company, employee = null, force = false }) {
-  if (!navigator.onLine || !Cookies.get('token')) return;
+  const token = Cookies.get('token');
+  if (!navigator.onLine || !token) return;
   const store = await clockStore();
   const session = employee ? await store.fingerprint(Cookies.get('token')) : null;
   const key = faceKey(company, employee, session);
   if (preparingFaces.has(key)) return preparingFaces.get(key);
   const prepare = (async () => {
     const existing = await store.getValue(key);
-    if (!force && existing && Date.now() - Date.parse(existing.prepared_at) < 3600000) return existing;
+    if (!force && existing && Date.now() - Date.parse(existing.prepared_at) < 5 * 60000) return existing;
     const engine = await faceEngine();
     const device = await engine.deviceIdentity(store);
     const { data } = await axios.post('/checador/reloj/offline/referencias', { id_empresa: Number(company), id_empleado: employee || undefined, device_id: device.id, public_key: device.publicKey }, { timeout: 30000 });
@@ -29,6 +30,7 @@ export async function prepareLocalFaces({ company, employee = null, force = fals
     // Do not advertise a prepared clock before the recognition assets can be
     // reopened without a network (the worker precaches the engine and models).
     await installOfflineWorker();
+    if (Cookies.get('token') !== token) return;
     await store.setValue(key, data);
     window.dispatchEvent(new Event('adamia-face-ready'));
     return data;
@@ -220,9 +222,9 @@ async function sendEvent(event) {
   }, { timeout: 15000 });
 }
 export async function synchronizeClockQueue() {
-  if (synchronizing || !navigator.onLine) return;
-  synchronizing = true;
-  try {
+  if (synchronizing) return synchronizing;
+  if (!navigator.onLine) return;
+  synchronizing = (async () => {
     const store = await clockStore();
     const session = await store.fingerprint(Cookies.get('token'));
     const events = await store.listEvents();
@@ -243,7 +245,8 @@ export async function synchronizeClockQueue() {
       await run(group, async event => (await sendEvent(event)).data, store.saveEvent);
     }
     notify();
-  } finally { synchronizing = false; }
+  })();
+  try { await synchronizing; } finally { synchronizing = false; }
 }
 export async function resolveClockDecision(event, action) {
   const store = await clockStore();

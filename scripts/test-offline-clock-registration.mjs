@@ -31,8 +31,8 @@ function harness({ online = true, detectedOffline = false, method = 'ambos', get
     Cookies: { get: () => 'test-session' },
     axios: { post: async (_url, body) => { requests++; return send ? send(body) : { data: { id: body.id, status: 'synced', action: 'entrada', employee: { nombre: 'Prueba' } } }; } },
   });
-  vm.runInContext(source + '\nglobalThis.register = registerClockMovement;', context);
-  return { register: payload => context.register(payload, { company: 10, employee: 2 }), store, values, events, requests: () => requests };
+  vm.runInContext(source + '\nglobalThis.register = registerClockMovement; globalThis.sync = synchronizeClockQueue;', context);
+  return { register: payload => context.register(payload, { company: 10, employee: 2 }), sync: () => context.sync(), setOnline: value => { navigator.onLine = value; }, store, values, events, requests: () => requests };
 }
 
 const face = { descriptor_facial: [0.1, 0.2] };
@@ -153,4 +153,21 @@ test('previous facial events can still be resumed offline with their original id
   assert.equal(event.id, 'previous-id');
   assert.equal(event.captured_at, '2026-11-09T12:00:00.000Z');
   assert.equal(event.status, 'pending');
+});
+
+test('background refresh callers await the same queue upload instead of reading an outdated turn snapshot', async () => {
+  let release;
+  const clock = harness({ online: false, send: body => new Promise(resolve => { release = () => resolve({ data: { id: body.id, status: 'synced', action: 'entrada' } }); }) });
+  await clock.register({ codigo: '123' });
+  clock.setOnline(true);
+  const first = clock.sync();
+  let secondFinished = false;
+  const second = clock.sync().then(() => { secondFinished = true; });
+  await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(clock.requests(), 1);
+  assert.equal(secondFinished, false);
+  release();
+  await Promise.all([first, second]);
+  assert.equal(secondFinished, true);
+  assert.equal([...clock.events.values()][0].status, 'synced');
 });

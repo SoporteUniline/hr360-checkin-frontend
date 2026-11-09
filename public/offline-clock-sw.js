@@ -1,4 +1,4 @@
-const CACHE = 'adamia-clock-shell-v7';
+const CACHE = 'adamia-clock-shell-v8';
 const RUNTIME = 'adamia-runtime-assets-v1';
 const MAX_AGE = 7 * 86400000;
 const ASSETS = [
@@ -56,6 +56,13 @@ self.addEventListener('message', event => {
     const path = '/' + encodeURIComponent(data.slug);
     const response = await fetch(path);
     if (!response.ok || response.redirected || !response.headers.get('content-type')?.includes('text/html')) return;
+    const html = await response.clone().text();
+    const assets = [...new Set(Array.from(html.matchAll(/(?:src|href)=["']([^"']+\.(?:js|css)(?:\?[^"']*)?)["']/g), match => new URL(match[1].replaceAll('&amp;', '&'), self.location.origin).href))];
+    const cache = await caches.open(RUNTIME);
+    await Promise.all(assets.map(async href => {
+      const url = new URL(href);
+      if (staticAsset(url) && !await cache.match(href, { ignoreVary: true })) await cache.add(href);
+    }));
     const owner = await digest(`company:${data.company}:${data.slug}`);
     await save(owner, 'page', new Request(self.location.origin + path), response);
     await (await caches.open(RUNTIME)).put(`${self.location.origin}/__offline/company${path}`, new Response(JSON.stringify({ owner })));

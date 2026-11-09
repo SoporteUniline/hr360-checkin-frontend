@@ -17,6 +17,7 @@ const next = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start'
 let chrome, socket, sequence = 0, role = 'Recruiter';
 const pending = new Map(), receipts = new Map();
 const companyReceipts = new Map();
+let referenceDownloads = 0;
 const fixtureDevices = new Map();
 const fixtureDescriptor = Array.from({ length: 128 }, (_, index) => index === 0 ? 1 : 0);
 const fixtureModel = 'face-api-0.22.2-128-cosine-v1';
@@ -60,6 +61,7 @@ async function intercept(event) {
   if (request.method === 'OPTIONS') return json({});
   if (path.endsWith('/users/verify/token')) return json({ user: user() });
   if (path.endsWith('/offline/referencias')) {
+    referenceDownloads++;
     const body = JSON.parse(request.postData);
     fixtureDevices.set(body.device_id, body.public_key);
     return json({ kind: 'local-face', mode: role === 'Empleado' ? 'employee' : 'company', employee: role === 'Empleado' ? 101 : null, company: 10, device_id: body.device_id, model: fixtureModel,
@@ -155,13 +157,19 @@ try {
   await send('Page.addScriptToEvaluateOnNewDocument', { source: `window.__fixtureFaceEnabled=false; window.faceapi={nets:{ssdMobilenetv1:{params:true},faceLandmark68Net:{params:true},faceRecognitionNet:{params:true}},detectSingleFace(){return {withFaceLandmarks(){return {withFaceDescriptor:async()=>window.__fixtureFaceEnabled?{descriptor:new Float32Array(${JSON.stringify(fixtureDescriptor)})}:null}}}}};` });
   await send('Network.setCookie', { name: 'token', value: token(), url: base, path: '/' });
   await go('/panel/empleados', 'Ana Fixture'); await snapshot();
+  await until(() => evaluate("(async()=>{const data=await(await import('/offline-clock/store.mjs')).getValue('faces:company:10');return data?.employees?.length===1})()"), 'global background face download without opening a clock');
+  assert.equal(await evaluate('location.pathname'), '/panel/empleados');
+  const initialDownloads = referenceDownloads;
+  await evaluate("(async()=>{const store=await import('/offline-clock/store.mjs');const data=await store.getValue('faces:company:10');await store.setValue('faces:company:10',{...data,prepared_at:new Date(Date.now()-6*60000).toISOString()});document.dispatchEvent(new Event('visibilitychange'))})()");
+  await until(() => referenceDownloads > initialDownloads, 'automatic stale reference update from an unrelated screen');
   await go('/panel/registro-de-entradas-y-salidas', 'Entradas'); await snapshot();
   await go('/panel/registro-asistencia', 'Asistencias'); await snapshot();
-  await go('/fixture-company', 'Registrar Entrada / Salida');
   await until(() => evaluate("(async()=>!!await(await caches.open('adamia-runtime-assets-v1')).match(location.origin+'/__offline/company/fixture-company'))()"), 'public company clock cached');
-  await until(() => evaluate("document.body.textContent.includes('Reconocimiento offline preparado en este dispositivo')"), 'authorized facial reference download');
-  assert(await evaluate("document.querySelector('nav[aria-label=\"Navegación de asistencia\"]')?.getBoundingClientRect().width===0"));
   await offline(true);
+  await go('/fixture-company', 'Registrar Entrada / Salida');
+  await until(() => evaluate("document.body.textContent.includes('Reconocimiento local listo')"), 'clock ready offline after background preparation from another screen');
+  assert(!await evaluate("Array.from(document.querySelectorAll('button')).some(button=>button.textContent.includes('Actualizar rostros'))"));
+  assert(await evaluate("document.querySelector('nav[aria-label=\"Navegación de asistencia\"]')?.getBoundingClientRect().width===0"));
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await until(() => evaluate("(()=>{const links=Array.from(document.querySelectorAll('nav[aria-label=\"Navegación de asistencia\"] a'));return links.length===3 && links.every(link=>link.getBoundingClientRect().width>0) && new Set(links.map(link=>Math.round(link.getBoundingClientRect().top))).size===1})()"), 'mobile navigation has one row');
   await followClockLink('/panel/registro-asistencia', 'Asistencias');
@@ -173,14 +181,18 @@ try {
   await until(() => evaluate("Array.from(document.querySelectorAll('button')).some(button=>button.textContent==='Registrar Entrada / Salida' && !button.disabled && button.getBoundingClientRect().width>0)"), 'company code ready');
   await evaluate("Array.from(document.querySelectorAll('button')).find(button=>button.textContent==='Registrar Entrada / Salida'&&button.getBoundingClientRect().width>0).click()");
   await until(() => evaluate("(async()=>{const events=await(await import('/offline-clock/store.mjs')).listEvents();return events.some(event=>event.scope==='company'&&event.status==='pending')})()"), 'company offline capture saved');
+  await until(() => evaluate("Array.from(document.querySelectorAll('span')).some(span=>span.textContent.trim()==='Pendiente de subir')"), 'pending confirmation uses upload wording');
+  assert(!await evaluate("document.body.textContent.includes('Aún sin validar')"));
   await followClockLink('/panel/registro-de-entradas-y-salidas', 'Entradas y salidas');
   await until(() => evaluate("document.querySelectorAll('tr[data-offline-event]').length===1 && document.querySelector('tr[data-offline-event]').textContent.includes('Pendiente de sincronizar')"), 'pending capture appears inside attendance table');
   assert(!await evaluate("!!document.querySelector('tr[data-offline-event] button')"));
   await go('/panel/registro-de-entradas-y-salidas', 'Entradas y salidas');
   await until(() => evaluate("document.querySelectorAll('tr[data-offline-event]').length===1"), 'pending table row survives offline reload');
+  const downloadsBeforeReconnect = referenceDownloads;
   await offline(false);
   await evaluate("window.dispatchEvent(new Event('online'))");
   await until(() => companyReceipts.size === 1, 'company capture synchronized');
+  await until(() => referenceDownloads > downloadsBeforeReconnect, 'reconnection refreshes references automatically');
   await until(() => evaluate("document.querySelectorAll('tr[data-offline-event]').length===0 && document.body.textContent.includes('Ana Fixture')"), 'confirmed capture no longer duplicates a local row');
   await offline(true);
   await followClockLink('/fixture-company', 'Registrar Entrada / Salida');
