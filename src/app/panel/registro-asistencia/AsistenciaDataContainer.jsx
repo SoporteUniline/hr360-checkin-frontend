@@ -1,4 +1,6 @@
 "use client";
+import useLocalClockEvents from '@/hooks/useLocalClockEvents';
+import LocalClockCaptures from '@/components/Clock/LocalClockCaptures';
 
 import useAsistenciaData from "@/hooks/useAsistenciaData";
 import useEmpleadosData from "@/hooks/useEmpleadosData";
@@ -55,6 +57,7 @@ export default function AsistenciaDataContainer({
     total: 0,
   });
   const [cachedData, setCachedData] = useState(null);
+  const localEvents = useLocalClockEvents({ company: idEmpresa, from: fechaInicio, to: fechaFin, search: debouncedFiltroEmpleado });
 
   const handleResetAll = () => {
     setSortConfig(DEFAULT_SORT_CONFIG);
@@ -87,6 +90,11 @@ export default function AsistenciaDataContainer({
   useEffect(() => {
     mutateRef.current = mutate;
   }, [mutate]);
+  useEffect(() => {
+    const refresh = () => { if (navigator.onLine && window.__adamiaOffline !== true) void mutateRef.current().catch(() => {}); };
+    window.addEventListener('adamia-queue', refresh);
+    return () => window.removeEventListener('adamia-queue', refresh);
+  }, []);
 
   // SSE: actualización en tiempo real cuando llega una checada.
   // Además de refrescar, se notifica con un toast discreto (máx. 1 cada 8 s
@@ -249,8 +257,8 @@ export default function AsistenciaDataContainer({
   } = useAsistenciaActions(mutate);
 
 
-  if (isLoading && !effectiveData) return <LoadingTable rows={10} />;
-  if (error) {
+  if (isLoading && !effectiveData && !localEvents.length) return <LoadingTable rows={10} />;
+  if (error && (!localEvents.length || [401, 403].includes(error.response?.status))) {
     console.error(error);
     return <ErrorPage message="Error al cargar los registros de asistencia" />;
   }
@@ -259,15 +267,16 @@ export default function AsistenciaDataContainer({
     ui: (
       <>
         {vista === "matriz" ? (
-          <AsistenciaMatriz
+          <><LocalClockCaptures events={localEvents} /><AsistenciaMatriz
             registros={filterOptionsRows}
             fechaInicio={fechaInicio}
             fechaFin={fechaFin}
             cargando={isLoading && filterOptionsRows.length === 0}
-          />
+          /></>
         ) : (
         <>
         <AsistenciaTable
+          localEvents={localEvents}
           filtrados={registros}
           filterOptionsRows={filterOptionsRows}
           page={page}
@@ -332,6 +341,7 @@ export default function AsistenciaDataContainer({
       </>
     ),
     data: effectiveData,
+    localEvents,
     mutate,
   };
 }

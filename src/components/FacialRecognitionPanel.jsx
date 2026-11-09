@@ -143,7 +143,7 @@ const FacialRecognitionPanel = ({
 
   useEffect(() => {
     const startCamera = async () => {
-      if (!isOpen || !navigator.onLine || window.__adamiaOffline === true) return;
+      if (!isOpen) return;
 
       const session = sessionRef.current;
       try {
@@ -241,7 +241,6 @@ const FacialRecognitionPanel = ({
     retryIntervalRef.current = MIN_INTERVAL;
 
     try {
-      if (!navigator.onLine || window.__adamiaOffline === true) throw new Error('El reconocimiento facial necesita conexión. Usa tu código de empleado si lo tienes autorizado.');
       const cachedPosition = locationRef.current?.position;
       const position = cachedPosition && Date.now() - cachedPosition.timestamp <= GPS_MAX_AGE
         ? cachedPosition : null;
@@ -263,8 +262,8 @@ const FacialRecognitionPanel = ({
         if (session !== sessionRef.current) return;
         // This response is returned before any attendance record is written.
         // All other failures must keep their original handling.
-        if (err.response?.status !== 400 ||
-          err.response?.data?.error !== "Faltan coordenadas de ubicaci\u00f3n") throw err;
+        if (err.response?.data?.code !== 'GPS_REQUIRED' && (err.response?.status !== 400 ||
+          err.response?.data?.error !== "Faltan coordenadas de ubicaci\u00f3n")) throw err;
         const { position: requiredPosition } = await getLocation();
         if (session !== sessionRef.current) return;
         if (!requiredPosition) throw err;

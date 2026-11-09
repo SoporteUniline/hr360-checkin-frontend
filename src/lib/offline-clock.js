@@ -7,8 +7,74 @@ let synchronizing = false;
 const initializing = new Map();
 const warmed = new Set();
 export const clockStore = () => storeLoading ||= import(/* webpackIgnore: true */ '/offline-clock/store.mjs?v=6');
+export const faceEngine = () => import(/* webpackIgnore: true */ '/offline-clock/face.mjs?v=1');
 const notify = () => window.dispatchEvent(new Event('adamia-queue'));
 const profileKey = (company, employee) => employee ? `clock:employee:${company}:${employee}` : `clock:company:${company}`;
+const faceKey = (company, employee, session) => employee ? `faces:employee:${company}:${employee}:${session}` : `faces:company:${company}`;
+const preparingFaces = new Map();
+
+export async function prepareLocalFaces({ company, employee = null, force = false }) {
+  if (!navigator.onLine || !Cookies.get('token')) return;
+  const store = await clockStore();
+  const session = employee ? await store.fingerprint(Cookies.get('token')) : null;
+  const key = faceKey(company, employee, session);
+  if (preparingFaces.has(key)) return preparingFaces.get(key);
+  const prepare = (async () => {
+    const existing = await store.getValue(key);
+    if (!force && existing && Date.now() - Date.parse(existing.prepared_at) < 3600000) return existing;
+    const engine = await faceEngine();
+    const device = await engine.deviceIdentity(store);
+    const { data } = await axios.post('/checador/reloj/offline/referencias', { id_empresa: Number(company), id_empleado: employee || undefined, device_id: device.id, public_key: device.publicKey }, { timeout: 30000 });
+    if (data.kind !== 'local-face' || data.model !== engine.MODEL || Number(data.company) !== Number(company) || data.device_id !== device.id || (employee ? data.mode !== 'employee' || Number(data.employee) !== Number(employee) : data.mode !== 'company') || !Array.isArray(data.employees)) throw new Error('Las referencias no corresponden a este reloj');
+    // Do not advertise a prepared clock before the recognition assets can be
+    // reopened without a network (the worker precaches the engine and models).
+    await installOfflineWorker();
+    await store.setValue(key, data);
+    window.dispatchEvent(new Event('adamia-face-ready'));
+    return data;
+  })();
+  preparingFaces.set(key, prepare);
+  try { return await prepare; } finally { preparingFaces.delete(key); }
+}
+
+export async function localFaceStatus({ company, employee = null }) {
+  const store = await clockStore();
+  const session = employee ? await store.fingerprint(Cookies.get('token')) : null;
+  const dataset = await store.getValue(faceKey(company, employee, session));
+  if (dataset && Date.parse(dataset.expires_at) <= Date.now()) await store.setValue(faceKey(company, employee, session), null);
+  return dataset && Date.parse(dataset.expires_at) > Date.now() ? dataset : null;
+}
+
+async function registerLocalFace(payload, context, profile, original = null) {
+  const store = await clockStore();
+  const engine = await faceEngine();
+  const old = payload.offline_event?.local_verification ? payload.offline_event : null;
+  let event;
+  if (old) {
+    event = { ...old, action: payload.accion || old.action, status: 'pending', error: '' };
+    if (!['entrada', 'salida', 'salida_temporal', 'cerrar_turno'].includes(event.action)) throw new Error('Selecciona cómo cerrar el turno');
+  } else {
+    const dataset = await localFaceStatus(context);
+    const { employee, score } = engine.matchFace(payload.descriptor_facial, dataset);
+    const events = await store.listEvents();
+    const action = engine.localAction(employee, dataset, events, payload.accion || 'auto');
+    event = { id: original?.id || crypto.randomUUID(), company: Number(context.company), employee: context.employee ? Number(context.employee) : undefined,
+      local_employee: employee.id, identity: employee.code_identity || `employee:${employee.id}`, employeeName: employee.nombre, alias: employee.nombre,
+      scope: context.employee ? 'employee' : 'company', session: profile.session, grant: context.employee ? undefined : profile.grant,
+      captured_at: original?.captured_at || payload.captured_at || new Date().toISOString(), method: 'facial', action: action === 'decision' ? 'auto' : action,
+      latitude: payload.latitud_actual ?? null, longitude: payload.longitud_actual ?? null, precision_metros: payload.precision_metros ?? null, ubicacion_timestamp: payload.ubicacion_timestamp ?? null,
+      local_verification: { grant: employee.grant, device_id: dataset.device_id, model: dataset.model, reference: employee.reference, score },
+      local_validated: true, status: action === 'decision' ? 'decision' : 'pending', error: action === 'decision' ? 'Selecciona cómo cerrar el turno' : '' };
+    engine.validateCaptureTime(dataset, event.captured_at);
+    engine.validateLocalLocation(employee, event);
+  }
+  event = await engine.signEvent(event, store);
+  await store.saveEvent(event);
+  notify();
+  if (event.status === 'decision') return { data: { requiereDecision: true, offline_event: event, empleado: { nombre: event.employeeName } } };
+  if (navigator.onLine && window.__adamiaOffline !== true) void synchronizeClockQueue().catch(() => {});
+  return { data: { pending: true, local_validated: true, offline_event: event, empleado: { nombre: event.employeeName, apellido_paterno: '' }, movimiento: `${event.action === 'entrada' ? 'Entrada' : 'Salida'} reconocida en este dispositivo · pendiente de subir` } };
+}
 
 export async function installOfflineWorker() {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !window.isSecureContext) return null;
@@ -78,18 +144,15 @@ export async function initializeClock({ company, employee = null, slug = null })
 }
 
 export async function registerClockMovement(payload, { company, employee = null, slug = null }) {
-  const facial = Boolean(payload.descriptor_facial);
+  const facial = Boolean(payload.descriptor_facial || payload.offline_event?.local_verification);
   const offline = () => !navigator.onLine || window.__adamiaOffline === true;
-  const facialOfflineError = () => Object.assign(new Error('El reconocimiento facial necesita conexión. Usa tu código de empleado si lo tienes autorizado.'), { code: 'FACIAL_REQUIRES_CONNECTION' });
-  // Existing facial events still need reconciliation with their original UUID.
-  if (facial && !payload.offline_event && offline()) throw facialOfflineError();
   const store = await clockStore();
   const profile = await initializeClock({ company, employee, slug });
-  if (facial && !payload.offline_event && offline()) throw facialOfflineError();
+  if (Date.now() - Date.parse(profile.prepared_at) > 7 * 86400000) throw new Error('El reloj necesita actualizar su configuración cuando vuelva internet.');
+  if (payload.offline_event?.local_verification || (facial && !payload.offline_event && (offline() || await localFaceStatus({ company, employee })))) return registerLocalFace(payload, { company, employee, slug }, profile);
   if (!facial && offline() && employee && profile.metodo === 'facial') {
     throw new Error('Tu cuenta solo permite reconocimiento facial. Necesitas conexión para checar; solicita a RH la habilitación de código si corresponde.');
   }
-  if (Date.now() - Date.parse(profile.prepared_at) > 7 * 86400000) throw new Error('El reloj necesita actualizar su configuración cuando vuelva internet.');
   const old = payload.offline_event;
   const method = payload.descriptor_facial ? 'facial' : 'codigo';
   const code = method === 'codigo' ? String(payload.codigo || '').trim() : undefined;
@@ -110,7 +173,7 @@ export async function registerClockMovement(payload, { company, employee = null,
   if (facial && !old && offline()) {
     await store.saveEvent({ ...event, status: 'rejected', descriptor: undefined, grant: undefined, error: 'Captura facial cancelada antes de enviarse: sin conexión.' });
     notify();
-    throw facialOfflineError();
+    return registerLocalFace(payload, { company, employee, slug }, profile, event);
   }
   if (!navigator.onLine) return queued();
   const earlier = (await store.listEvents()).some(other => other.id !== event.id && other.company === event.company && (other.scope || 'employee') === event.scope && other.identity === event.identity && other.status !== 'synced' && other.status !== 'rejected' && other.captured_at <= event.captured_at);
@@ -151,6 +214,7 @@ async function sendEvent(event) {
   return axios.post(company ? '/checador/reloj/offline/empresa/sincronizar' : '/checador/reloj/offline/sincronizar', {
     id: event.id, captured_at: event.captured_at, action: event.action, method: event.method,
     code: event.code, descriptor: event.descriptor, latitude: event.latitude, longitude: event.longitude,
+    ...(event.local_verification ? { company: event.company, local_employee: event.local_employee, local_verification: event.local_verification } : {}),
     precision_metros: event.precision_metros, ubicacion_timestamp: event.ubicacion_timestamp,
     ...(company ? { grant: event.grant } : {}),
   }, { timeout: 15000 });
@@ -183,7 +247,8 @@ export async function synchronizeClockQueue() {
 }
 export async function resolveClockDecision(event, action) {
   const store = await clockStore();
-  await store.saveEvent({ ...event, action, status: 'pending', error: '' });
+  const next = { ...event, action, status: 'pending', error: '' };
+  await store.saveEvent(event.local_verification ? await (await faceEngine()).signEvent(next, store) : next);
   notify();
   await synchronizeClockQueue();
 }

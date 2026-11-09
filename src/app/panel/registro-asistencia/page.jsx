@@ -227,7 +227,7 @@ export default function ControlAsistencia() {
     setPage(1);
   };
 
-  const { ui, data, mutate } = AsistenciaDataContainer({
+  const { ui, data, mutate, localEvents } = AsistenciaDataContainer({
     idEmpresa,
     empresaActiva,
     fechaInicio,
@@ -271,6 +271,7 @@ export default function ControlAsistencia() {
         )}
         <div className="-m-5 h-[calc(100dvh-3.5rem)] overflow-hidden">
           <MobileAsistenciaView
+            localEvents={localEvents}
             registros={registros}
             data={data}
             mutate={mutate}

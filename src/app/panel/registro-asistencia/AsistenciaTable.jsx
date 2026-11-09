@@ -6,6 +6,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import LocalClockRows from '@/components/Clock/LocalClockRows';
 import AsistenciaRow from "./AsistenciaRow";
 import { Button } from "@/components/ui/button";
 import { Plus, FileSpreadsheet } from "lucide-react";
@@ -64,6 +65,7 @@ const EXTRA_COLUMN_KEYS = new Set(
 const TH_STICKY = "sticky top-0 z-10 h-10 whitespace-nowrap bg-slate-50 align-middle text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500";
 
 export default function AsistenciaTable({
+  localEvents = [],
   filtrados,
   departamentosCatalogo,
   fecha,
@@ -992,7 +994,8 @@ export default function AsistenciaTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {displayedRows.length === 0 ? (
+              <LocalClockRows events={localEvents} columns={visibleColumnCount} timezone={userTimezone} />
+              {displayedRows.length === 0 ? (localEvents.length ? null : (
                 <TableRow>
                   <TableCell
                     colSpan={visibleColumnCount}
@@ -1001,7 +1004,7 @@ export default function AsistenciaTable({
                     No hay registros para los filtros seleccionados.
                   </TableCell>
                 </TableRow>
-              ) : groupedRows ? (
+              )) : groupedRows ? (
                 groupedRows.map(([groupName, rows]) => {
                   const isCollapsed = collapsedGroups.has(groupName);
                   const porcentajeAsistencia =

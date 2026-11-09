@@ -1,6 +1,6 @@
 // Real Next/Chrome UI; all API responses are synthetic and external requests blocked.
 import assert from 'node:assert/strict';
-import { createHmac, randomUUID } from 'node:crypto';
+import { createHmac, createHash, createPublicKey, verify as verifySignature, randomUUID } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { mkdtemp, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -17,6 +17,9 @@ const next = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start'
 let chrome, socket, sequence = 0, role = 'Recruiter';
 const pending = new Map(), receipts = new Map();
 const companyReceipts = new Map();
+const fixtureDevices = new Map();
+const fixtureDescriptor = Array.from({ length: 128 }, (_, index) => index === 0 ? 1 : 0);
+const fixtureModel = 'face-api-0.22.2-128-cosine-v1';
 const workerSessions = new Map();
 const pageErrors = [], apiPaths = new Set();
 let droppedResponse = false;
@@ -56,11 +59,24 @@ async function intercept(event) {
   const json = data => send('Fetch.fulfillRequest', { requestId, responseCode: 200, responseHeaders: [{ name: 'Content-Type', value: 'application/json' }, { name: 'Access-Control-Allow-Origin', value: base }, { name: 'Access-Control-Allow-Headers', value: 'authorization,content-type,x-adamia-session' }, { name: 'Access-Control-Allow-Methods', value: 'GET,POST,PUT,DELETE,OPTIONS' }, { name: 'Access-Control-Allow-Credentials', value: 'true' }], body: Buffer.from(JSON.stringify(data)).toString('base64') });
   if (request.method === 'OPTIONS') return json({});
   if (path.endsWith('/users/verify/token')) return json({ user: user() });
+  if (path.endsWith('/offline/referencias')) {
+    const body = JSON.parse(request.postData);
+    fixtureDevices.set(body.device_id, body.public_key);
+    return json({ kind: 'local-face', mode: role === 'Empleado' ? 'employee' : 'company', employee: role === 'Empleado' ? 101 : null, company: 10, device_id: body.device_id, model: fixtureModel,
+      prepared_at: new Date().toISOString(), expires_at: new Date(Date.now() + 7 * 86400000).toISOString(), employees: [{ id: 101, nombre: role === 'Empleado' ? 'Diego Fixture' : 'Ana Fixture', descriptor: fixtureDescriptor, reference: 'fixture-reference', grant: 'fixture-local-authorization', code_identity: createHash('sha256').update('123').digest('hex'), open: false, cierre_turno: 'Automatico', checar_gps: false, areas: [] }] });
+  }
   if (path.endsWith('/offline/empresa/perfil')) return json({ scope: 'company', id_empresa: 10, slug: company.slug, nombre: company.nombre, grant: 'fixture-grant', prepared_at: new Date().toISOString() });
   if (path.endsWith('/offline/perfil')) return json({ ...employee, nombre: 'Diego Fixture', metodo: 'codigo', cierre_turno: 'Automático', checar_gps: false, prepared_at: new Date().toISOString() });
   if (path.endsWith('/offline/empresa/sincronizar')) {
     const event = JSON.parse(request.postData);
-    if (!companyReceipts.has(event.id)) companyReceipts.set(event.id, { id: event.id, status: 'synced', action: 'entrada', employee: { id: 101, nombre: 'Ana Fixture' } });
+    if (event.local_verification) {
+      assert.equal(event.descriptor, undefined);
+      assert.equal(event.local_employee, 101);
+      const proof = event.local_verification;
+      const canonical = JSON.stringify([event.id, event.captured_at, event.action, event.method, Number(event.company), Number(event.local_employee), event.latitude ?? null, event.longitude ?? null, event.precision_metros ?? null, event.ubicacion_timestamp ?? null, proof.device_id, proof.model, proof.reference, proof.score, proof.grant]);
+      assert(verifySignature('sha256', Buffer.from(canonical), { key: createPublicKey({ key: fixtureDevices.get(proof.device_id), format: 'jwk' }), dsaEncoding: 'ieee-p1363' }, Buffer.from(proof.signature, 'base64url')));
+    }
+    if (!companyReceipts.has(event.id)) companyReceipts.set(event.id, { id: event.id, status: 'synced', action: event.action === 'auto' ? 'entrada' : event.action, employee: { id: 101, nombre: 'Ana Fixture' } });
     return json(companyReceipts.get(event.id));
   }
   if (path.endsWith('/offline/sincronizar')) {
@@ -119,7 +135,7 @@ async function snapshot() {
 }
 try {
   await until(async () => (await fetch(base + '/login')).ok, 'Next server', 600);
-  chrome = spawn(process.env.CHROMIUM_EXECUTABLE_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', ['--headless=new', '--no-sandbox', '--disable-background-networking', '--no-first-run', '--no-default-browser-check', '--remote-debugging-port=0', `--user-data-dir=${profileDir}`, 'about:blank'], { stdio: 'ignore', windowsHide: true });
+  chrome = spawn(process.env.CHROMIUM_EXECUTABLE_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe', ['--headless=new', '--no-sandbox', '--disable-background-networking', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--no-first-run', '--no-default-browser-check', '--remote-debugging-port=0', `--user-data-dir=${profileDir}`, 'about:blank'], { stdio: 'ignore', windowsHide: true });
   let port;
   await until(async () => { port = (await readFile(join(profileDir, 'DevToolsActivePort'), 'utf8')).split('\n')[0]; return port; }, 'Chrome');
   const target = await (await fetch(`http://127.0.0.1:${port}/json/new?about:blank`, { method: 'PUT' })).json();
@@ -136,12 +152,14 @@ try {
   await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
   await send('Fetch.enable', { patterns: [{ urlPattern: '*' }] });
   await send('Page.addScriptToEvaluateOnNewDocument', { source: "Object.defineProperty(navigator,'geolocation',{value:{getCurrentPosition(ok,fail){fail({code:1,message:'Fixture GPS denied'})}}});" });
+  await send('Page.addScriptToEvaluateOnNewDocument', { source: `window.__fixtureFaceEnabled=false; window.faceapi={nets:{ssdMobilenetv1:{params:true},faceLandmark68Net:{params:true},faceRecognitionNet:{params:true}},detectSingleFace(){return {withFaceLandmarks(){return {withFaceDescriptor:async()=>window.__fixtureFaceEnabled?{descriptor:new Float32Array(${JSON.stringify(fixtureDescriptor)})}:null}}}}};` });
   await send('Network.setCookie', { name: 'token', value: token(), url: base, path: '/' });
   await go('/panel/empleados', 'Ana Fixture'); await snapshot();
   await go('/panel/registro-de-entradas-y-salidas', 'Entradas'); await snapshot();
   await go('/panel/registro-asistencia', 'Asistencias'); await snapshot();
   await go('/fixture-company', 'Registrar Entrada / Salida');
   await until(() => evaluate("(async()=>!!await(await caches.open('adamia-runtime-assets-v1')).match(location.origin+'/__offline/company/fixture-company'))()"), 'public company clock cached');
+  await until(() => evaluate("document.body.textContent.includes('Reconocimiento offline preparado en este dispositivo')"), 'authorized facial reference download');
   assert(await evaluate("document.querySelector('nav[aria-label=\"Navegación de asistencia\"]')?.getBoundingClientRect().width===0"));
   await offline(true);
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
@@ -149,6 +167,7 @@ try {
   await followClockLink('/panel/registro-asistencia', 'Asistencias');
   await followClockLink('/panel/registro-de-entradas-y-salidas', 'Entradas y salidas');
   await followClockLink('/fixture-company', 'Registrar Entrada / Salida');
+  await evaluate("Array.from(document.querySelectorAll('button')).find(button=>button.textContent.trim()==='Código'&&button.getBoundingClientRect().width>0).click()");
   await evaluate("Array.from(document.querySelectorAll('input')).find(input=>input.placeholder==='Ingresa tu código'&&input.getBoundingClientRect().width>0).focus()");
   await send('Input.insertText', { text: '123' });
   await until(() => evaluate("Array.from(document.querySelectorAll('button')).some(button=>button.textContent==='Registrar Entrada / Salida' && !button.disabled && button.getBoundingClientRect().width>0)"), 'company code ready');
@@ -163,6 +182,26 @@ try {
   await evaluate("window.dispatchEvent(new Event('online'))");
   await until(() => companyReceipts.size === 1, 'company capture synchronized');
   await until(() => evaluate("document.querySelectorAll('tr[data-offline-event]').length===0 && document.body.textContent.includes('Ana Fixture')"), 'confirmed capture no longer duplicates a local row');
+  await offline(true);
+  await followClockLink('/fixture-company', 'Registrar Entrada / Salida');
+  await until(() => evaluate("document.body.textContent.includes('Reconocimiento local listo')"), 'downloaded facial data available after offline navigation');
+  await evaluate("(()=>{window.__fixtureFaceEnabled=true; Array.from(document.querySelectorAll('button')).find(button=>button.textContent.trim()==='Rostro'&&button.getBoundingClientRect().width>0).click()})()");
+  await until(() => evaluate("(async()=>{const events=await(await import('/offline-clock/store.mjs')).listEvents();return events.some(event=>event.scope==='company'&&event.local_validated&&event.status==='pending'&&event.employeeName==='Ana Fixture'&&!event.descriptor)})()"), 'camera recognized employee locally without uploading a descriptor');
+  await evaluate("window.__fixtureFaceEnabled=false");
+  await followClockLink('/panel/registro-asistencia', 'Asistencia');
+  await until(() => evaluate("document.querySelector('tr[data-offline-event]')?.textContent.includes('Rostro reconocido · Pendiente de subir') && document.querySelector('tr[data-offline-event]')?.textContent.includes('Ana Fixture')"), 'local facial attendance appears in mobile attendance');
+  await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
+  await until(() => evaluate("document.querySelectorAll('tr[data-offline-event]').length===1 && document.querySelector('tr[data-offline-event]').textContent.includes('Ana Fixture')"), 'local facial attendance appears in desktop table');
+  await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+  await followClockLink('/panel/registro-de-entradas-y-salidas', 'Entradas y salidas');
+  await until(() => evaluate("document.querySelector('tr[data-offline-event]')?.textContent.includes('Rostro reconocido · Pendiente de subir')"), 'local facial movement appears in clock history');
+  await go('/panel/registro-de-entradas-y-salidas', 'Entradas y salidas');
+  await until(() => evaluate("document.querySelectorAll('tr[data-offline-event]').length===1"), 'signed facial capture survives offline reload');
+  assert.equal(companyReceipts.size, 1);
+  await offline(false);
+  await evaluate("window.dispatchEvent(new Event('online'))");
+  await until(() => companyReceipts.size === 2, 'local face signature received without biometric reevaluation');
+  await until(() => evaluate("document.querySelectorAll('tr[data-offline-event]').length===0"), 'local facial capture confirmed without a duplicate');
   await offline(true);
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await followClockLink('/panel/registro-asistencia', 'Asistencia');
@@ -184,6 +223,7 @@ try {
   await go('/empleado/panel/inicio', 'Hola, Diego'); await snapshot();
   await go('/empleado/panel/asistencias', 'Mis asistencias'); await snapshot();
   await go('/empleado/reloj-checador', 'Registrar Entrada / Salida'); await snapshot();
+  await until(() => evaluate("document.body.textContent.includes('Reconocimiento offline preparado en este dispositivo')"), 'employee own facial download');
   assert(!await evaluate("document.body.textContent.includes('Preparar reloj offline')"));
   await offline(true);
   await go('/empleado/panel/inicio', 'Hola, Diego');
@@ -195,9 +235,10 @@ try {
   assert(!await evaluate("!!document.querySelector('nav[aria-label=\"Navegación de asistencia\"] a[href^=\"/panel/\"]')"));
   await followClockLink('/empleado/reloj-checador', 'Registrar Entrada / Salida');
   await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
-  await until(() => evaluate("document.body.textContent.includes('Sin conexión · Código / QR') && !document.querySelector('video')"), 'offline desktop clock disables facial camera');
+  await until(() => evaluate("document.body.textContent.includes('Sin conexión · Reconocimiento local listo')"), 'offline employee recognition ready');
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
-  await until(() => evaluate("Array.from(document.querySelectorAll('button')).some(button=>button.textContent.trim()==='Rostro' && button.disabled && button.getBoundingClientRect().width>0) && Array.from(document.querySelectorAll('input')).some(input=>input.placeholder==='Ingresa tu código' && input.getBoundingClientRect().width>0)"), 'offline mobile clock disables facial tab and opens code input');
+  await until(() => evaluate("Array.from(document.querySelectorAll('button')).some(button=>button.textContent.trim()==='Rostro' && !button.disabled && button.getBoundingClientRect().width>0)"), 'offline mobile facial tab remains available');
+  await evaluate("Array.from(document.querySelectorAll('button')).find(button=>button.textContent.trim()==='Código'&&button.getBoundingClientRect().width>0).click()");
   for (let i = 0; i < 2; i++) {
     await evaluate("Array.from(document.querySelectorAll('input')).find(input=>input.placeholder==='Ingresa tu código'&&input.getBoundingClientRect().width>0).focus()");
     await send('Input.insertText', { text: '123' });
@@ -212,10 +253,13 @@ try {
     await sleep(1100);
   }
   assert.equal(receipts.size, 0);
+  await followClockLink('/empleado/panel/asistencias', 'Mis asistencias');
+  await until(() => evaluate("document.querySelectorAll('tr[data-offline-event]').length===2"), 'personal history shows this session offline captures');
   await offline(false);
   await until(() => evaluate("document.body.textContent.includes('pendiente')"), 'queued records visible');
   await evaluate("window.dispatchEvent(new Event('online'))");
   await until(() => evaluate("(async()=>{const events=(await(await import('/offline-clock/store.mjs')).listEvents()).filter(event=>event.scope!=='company');return events.length===2&&events.every(event=>event.status==='synced')})()"), 'automatic sync after lost response', 600);
   assert.equal(receipts.size, 2);
-  console.log('PASS: real Next/Chrome RH menu + employee panels offline, session isolation, automatic setup, normal clock durable queue, reconnect sync and lost-response retry. No real APIs or databases used.');
+  assert(await evaluate("(async()=>{const store=await import('/offline-clock/store.mjs');await store.clearConfig();const values=await store.allValues();return !values.some(value=>value?.kind==='local-face'&&value.mode==='employee')&&values.some(value=>value?.kind==='local-face'&&value.mode==='company')&&(await store.listEvents()).length===4&&!!(await store.getValue('face:device:v1'))?.privateKey})()"));
+  console.log('PASS: Next/Chrome offline navigation, authorized facial download, local face comparison with synthetic camera detections, persistent signed captures in both tables, descriptor-free sync, session isolation and lost-response retry. No real APIs or databases used.');
 } finally { socket?.close(); chrome?.kill(); next.kill(); }

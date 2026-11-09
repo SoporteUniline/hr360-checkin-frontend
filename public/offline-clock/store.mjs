@@ -31,7 +31,19 @@ export async function transaction(store, mode, operation) {
 
 export const getConfig = () => transaction('config', 'readonly', store => store.get('profile'));
 export const setConfig = config => transaction('config', 'readwrite', store => store.put(config, 'profile'));
-export const clearConfig = () => transaction('config', 'readwrite', store => store.delete('profile'));
+export const clearConfig = () => transaction('config', 'readwrite', store => {
+  const request = store.delete('profile');
+  const cursor = store.openCursor();
+  cursor.onsuccess = () => {
+    const entry = cursor.result;
+    if (!entry) return;
+    // Company snapshots belong to the prepared kiosk. Personal biometrics must
+    // leave the device session on logout; signed pending events remain intact.
+    if (typeof entry.key === 'string' && entry.key.startsWith('faces:employee:')) entry.delete();
+    entry.continue();
+  };
+  return request;
+});
 export const getValue = key => transaction('config', 'readonly', store => store.get(key));
 export const setValue = (key, value) => transaction('config', 'readwrite', store => store.put(value, key));
 export const allValues = () => transaction('config', 'readonly', store => store.getAll());
@@ -94,7 +106,7 @@ export async function syncEvents(events, send, persist) {
         break;
       }
       if (receipt?.id !== event.id || receipt?.status !== 'synced') throw new Error('El servidor no confirmó esta checada. Se conservará pendiente.');
-      await persist({ ...event, resolvedAction: receipt.action || event.resolvedAction, employeeName: receipt.employee?.nombre || event.employeeName, status: 'synced', error: '', code: undefined, descriptor: undefined, grant: undefined });
+      await persist({ ...event, resolvedAction: receipt.action || event.resolvedAction, employeeName: receipt.employee?.nombre || event.employeeName, status: 'synced', error: '', code: undefined, descriptor: undefined, grant: undefined, local_verification: undefined });
     } catch (error) {
       const failure = syncFailure(event, error);
       await persist(failure);

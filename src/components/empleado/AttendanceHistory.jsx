@@ -5,6 +5,8 @@ import { formatDate } from '@/lib/solicitudes-equipo/model.mjs';
 import { periodRange, movePeriod } from '@/lib/empleado/presentation.mjs';
 import { attendanceTime } from './AttendanceCard';
 import { StatusBadge } from './shared';
+import useLocalClockEvents from '@/hooks/useLocalClockEvents';
+import LocalClockCaptures from '@/components/Clock/LocalClockCaptures';
 
 export default function AttendanceHistory({ rows, timezone }) {
   const [period, setPeriod] = useState('week');
@@ -12,6 +14,7 @@ export default function AttendanceHistory({ rows, timezone }) {
   const [status, setStatus] = useState('Todos');
   const [visible, setVisible] = useState(20);
   const range = periodRange(anchor, period);
+  const localEvents = useLocalClockEvents({ from: range?.from, to: range?.to });
   const periodRows = rows.filter(row => range && String(row.fecha).slice(0, 10) >= range.from && String(row.fecha).slice(0, 10) <= range.to).sort((a,b) => String(b.fecha).localeCompare(String(a.fecha)));
   const filtered = periodRows.filter(row => status === 'Todos' || row.attendanceStatus === status);
   const update = (fn, value) => { fn(value); setVisible(20); };
@@ -27,6 +30,7 @@ export default function AttendanceHistory({ rows, timezone }) {
     <div><label className="sr-only" htmlFor="attendance-status">Estado de asistencia</label><select id="attendance-status" aria-label="Estado de asistencia" value={status} onChange={e => update(setStatus,e.target.value)} className="min-h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm">{['Todos','Presente','Ausente','Tardanza','Sin clasificar'].map(item => <option key={item} value={item}>Estado: {item}</option>)}</select><p className="mt-1 px-1 text-[11px] text-slate-500">Presente · Ausente · Tardanza</p></div>
     <div className="grid grid-cols-3 divide-x divide-slate-100 rounded-lg border border-slate-200 bg-slate-50/70 py-3 text-center">{[['Presente','Presentes','text-green-700'],['Tardanza','Tardanza','text-amber-600'],['Ausente','Ausencia','text-red-600']].map(([value,text,color]) => <div key={value} className={color}><p className="text-2xl font-bold leading-7">{new Set(periodRows.filter(row => row.attendanceStatus === value).map(row => String(row.fecha).slice(0,10))).size}</p><p className="text-xs">{text}</p></div>)}</div>
     <h2 className="text-sm font-semibold">Registros {period === 'week' ? 'de la semana' : period === 'month' ? 'del mes' : 'del año'}</h2>
+    <LocalClockCaptures events={localEvents} timezone={timezone} />
     <div className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">{filtered.slice(0,visible).map((row,i) => {
       const entry = attendanceTime(row.entrada_corregida && row.entrada_corregida !== '-' ? row.entrada_corregida : row.hora_entrada || row.entrada,timezone);
       const exit = attendanceTime(row.salida_corregida && row.salida_corregida !== '-' ? row.salida_corregida : row.hora_salida || row.salida,timezone);

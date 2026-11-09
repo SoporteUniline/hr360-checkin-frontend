@@ -26,7 +26,7 @@ import timezone from "dayjs/plugin/timezone";
 import { useAuth } from "@/context/AuthContext";
 import QRScanner from "./QRScanner";
 import { Button } from "./ui/button";
-import { initializeClock, registerClockMovement } from '@/lib/offline-clock';
+import { initializeClock, registerClockMovement, prepareLocalFaces, localFaceStatus } from '@/lib/offline-clock';
 import ClockNavigation from './Clock/ClockNavigation';
 
 dayjs.extend(utc);
@@ -41,6 +41,8 @@ export default function RelojChecador({
   const [ubicacionGPS, setUbicacionGPS] = useState(null);
   const [metodo, setMetodo] = useState("facial");
   const [offline, setOffline] = useState(false);
+  const [localFacesReady, setLocalFacesReady] = useState(false);
+  const [updatingFaces, setUpdatingFaces] = useState(false);
   useEffect(() => {
     const update = event => setOffline(event.type === 'online' ? false : event.detail?.offline ?? (!navigator.onLine || window.__adamiaOffline === true));
     update({});
@@ -67,9 +69,24 @@ export default function RelojChecador({
   const [subscriptionActive, setSubscriptionActive] = useState(false);
   const { getCurrentLocation, loading: loadingGPS } = useGPS();
   const submitMovement = payload => registerClockMovement(payload, { company: idEmpresa, employee: modoEmpleado ? idEmpleado : null, slug: companySlug });
+  const updateLocalFaces = async () => {
+    setUpdatingFaces(true);
+    try {
+      const dataset = await prepareLocalFaces({ company: idEmpresa, employee: modoEmpleado ? idEmpleado : null, force: true });
+      setLocalFacesReady(!!dataset?.employees?.length);
+      enqueueSnackbar(dataset?.employees?.length ? 'Reconocimiento actualizado en este dispositivo' : 'No hay referencias faciales habilitadas para descargar', { variant: dataset?.employees?.length ? 'success' : 'info' });
+    } catch (error) { enqueueSnackbar(error.response?.data?.error || error.message || 'No se pudieron actualizar los rostros', { variant: 'error' }); }
+    finally { setUpdatingFaces(false); }
+  };
   useEffect(() => {
-    void initializeClock({ company: idEmpresa, employee: modoEmpleado ? idEmpleado : null, slug: companySlug }).catch(() => {});
-  }, [idEmpresa, idEmpleado, modoEmpleado, companySlug]);
+    let active = true;
+    const context = { company: idEmpresa, employee: modoEmpleado ? idEmpleado : null, slug: companySlug };
+    const refresh = () => { void localFaceStatus(context).then(dataset => { if (active) setLocalFacesReady(!!dataset?.employees?.length); }).catch(() => { if (active) setLocalFacesReady(false); }); };
+    void initializeClock(context).then(() => prepareLocalFaces(context)).catch(() => {}).finally(refresh);
+    refresh();
+    window.addEventListener('adamia-face-ready', refresh);
+    return () => { active = false; window.removeEventListener('adamia-face-ready', refresh); };
+  }, [idEmpresa, idEmpleado, modoEmpleado, companySlug, dataUser?.tipo_usuario]);
 
   // Prepare recognition while subscription and clock data are being checked.
   // Camera and GPS permissions are requested only by the visible facial panel.
@@ -150,13 +167,13 @@ export default function RelojChecador({
   }, []);
 
   useEffect(() => {
-    if (offline) {
+    if (offline && !localFacesReady) {
       setMostrarCamara(false);
       if (metodo === 'facial') setMetodo('codigo');
     }
     else if (metodo !== "facial") setMostrarCamara(false);
     else setMostrarCamara(true);
-  }, [metodo, offline]);
+  }, [metodo, offline, localFacesReady]);
 
   useEffect(() => {
     setCodigoEmpleado("");
@@ -218,6 +235,7 @@ export default function RelojChecador({
         foto_perfil: data.empleado.foto_perfil || "/assets/user.png",
         movimiento: data.movimiento || data.message,
         pending: Boolean(data.pending),
+        localValidated: Boolean(data.local_validated),
         success: !data.pending,
       });
 
@@ -266,6 +284,7 @@ export default function RelojChecador({
         foto_perfil: dataResponse.empleado.foto_perfil || "/assets/user.png",
         movimiento: dataResponse.movimiento || dataResponse.message,
         pending: Boolean(dataResponse.pending),
+        localValidated: Boolean(dataResponse.local_validated),
         success: !dataResponse.pending,
       });
       setTimeout(() => setPopupInfo(null), 3000);
@@ -296,6 +315,7 @@ export default function RelojChecador({
         foto_perfil: data.empleado.foto_perfil || "/assets/user.png",
         movimiento: data.movimiento || data.message,
         pending: Boolean(data.pending),
+        localValidated: Boolean(data.local_validated),
         success: !data.pending,
       });
       setTimeout(() => setPopupInfo(null), 3000);
@@ -304,7 +324,7 @@ export default function RelojChecador({
   };
 
   const abrirCamara = () => {
-    if (offline || !navigator.onLine || window.__adamiaOffline === true) return;
+    if (offline && !localFacesReady) return;
     setMostrarQR(false);
     setMostrarCamara(true);
   };
@@ -399,7 +419,8 @@ export default function RelojChecador({
                   Registro de entradas y salidas con validación por código, QR y
                   reconocimiento facial.
                 </p>
-                {offline && <p role="status" className="mt-2 inline-flex rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">Sin conexión · Código / QR · Pendiente de validar</p>}
+                <p role="status" className="mt-2 inline-flex rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">{offline ? localFacesReady ? 'Sin conexión · Reconocimiento local listo · Pendiente de subir' : 'Sin conexión · Código / QR · Rostro sin preparar' : localFacesReady ? 'Reconocimiento offline preparado en este dispositivo' : 'Para rostro offline, abre este reloj con una sesión autorizada e internet.'}</p>
+                {!offline && dataUser && (modoEmpleado || ['Recruiter', 'User', 'Admin'].includes(dataUser.tipo_usuario)) && <button type="button" disabled={updatingFaces} onClick={() => { void updateLocalFaces(); }} className="ml-2 min-h-11 rounded-lg px-2 text-xs font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50">{updatingFaces ? 'Actualizando rostros…' : 'Actualizar rostros'}</button>}
               </div>
             </div>
           </div>
@@ -454,7 +475,7 @@ export default function RelojChecador({
                 ].map((tab) => (
                   <button
                     key={tab.id}
-                    disabled={offline && tab.id === 'facial'}
+                    disabled={offline && !localFacesReady && tab.id === 'facial'}
                     onClick={() => {
                       setMetodo(tab.id);
                       if (tab.id === "facial") abrirCamara();
@@ -486,7 +507,7 @@ export default function RelojChecador({
               </div>
 
               <div className="relative min-h-75">
-                {!offline && (metodo === "facial" || !isMobile) && (
+                {(!offline || localFacesReady) && (metodo === "facial" || !isMobile) && (
                   <div
                     className={
                       metodo === "facial"

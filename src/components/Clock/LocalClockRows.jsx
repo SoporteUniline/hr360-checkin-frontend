@@ -10,7 +10,7 @@ export default function LocalClockRows({ events, columns, timezone }) {
     <TableRow className="bg-blue-50/60 hover:bg-blue-50/60"><TableCell colSpan={columns} className="px-4 py-3">
       <div className="max-w-[calc(100vw-5rem)] md:max-w-none">
         <p className="text-xs font-semibold text-blue-800">Capturas en este dispositivo · {events.length}</p>
-        <p className="mt-1 text-xs text-slate-500">Hora original de captura. Se validarán al sincronizar; aún no cuentan como registros confirmados.</p>
+        <p className="mt-1 text-xs text-slate-500">Registros de este dispositivo. La sincronización conserva su hora original.</p>
       </div>
     </TableCell></TableRow>
     {events.map(event => <TableRow key={event.id} data-offline-event={event.id} className="bg-blue-50/30 hover:bg-blue-50/50">
@@ -21,7 +21,7 @@ export default function LocalClockRows({ events, columns, timezone }) {
             <p className="mt-1 text-xs text-slate-500">{new Date(event.captured_at).toLocaleString('es-MX', { timeZone: timezone })} · {actions[event.action] || 'Movimiento por validar'}</p>
             {event.status === 'review' && event.error && <p className="mt-1 text-xs text-slate-600">{event.error}</p>}
           </div>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100/70 px-2.5 py-1 text-xs font-medium text-blue-800"><Clock4 className="size-3.5 shrink-0" aria-hidden="true" />{states[event.status]}</span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100/70 px-2.5 py-1 text-xs font-medium text-blue-800"><Clock4 className="size-3.5 shrink-0" aria-hidden="true" />{event.status === 'pending' && event.local_validated ? 'Rostro reconocido · Pendiente de subir' : states[event.status]}</span>
         </div>
       </TableCell>
     </TableRow>)}
