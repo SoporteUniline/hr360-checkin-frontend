@@ -29,7 +29,8 @@ globalThis.window = { caches: globalThis.caches, dispatchEvent() {}, fetch: asyn
 } };
 const cache = await import('../public/offline-clock/app-cache.mjs');
 cache.installOfflineFetch(origin + '/api');
-const token = account => `fixture.${Buffer.from(JSON.stringify({ sub: account, exp: Math.floor(Date.now() / 1000) + 3600 })).toString('base64url')}.fixture`;
+const tokenExpiresAt = Math.floor(Date.now() / 1000) + 3600;
+const token = account => `fixture.${Buffer.from(JSON.stringify({ sub: account, exp: tokenExpiresAt })).toString('base64url')}.fixture`;
 const login = account => { document.cookie = `token=${token(account)}`; offline = false; deny = false; fail = false; window.__adamiaOffline = false; };
 
 test('cached API reads are partitioned by the current token and never persist authorization headers', async () => {

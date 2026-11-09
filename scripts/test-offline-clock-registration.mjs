@@ -37,6 +37,14 @@ function harness({ online = true, detectedOffline = false, method = 'ambos', get
 
 const face = { descriptor_facial: [0.1, 0.2] };
 
+async function preparedClock(options = {}) {
+  const clock = harness(options);
+  const device = await engine.deviceIdentity(clock.store);
+  const descriptor = Array.from({ length: 128 }, (_, i) => i === 0 ? 1 : 0);
+  clock.values.set('faces:employee:10:2:session', { company: 10, model: engine.MODEL, device_id: device.id, prepared_at: new Date(Date.now() - 1000).toISOString(), expires_at: new Date(Date.now() + 86400000).toISOString(), employees: [{ id: 2, nombre: 'Ana Local', descriptor, reference: 'reference', grant: 'authorization', open: false, cierre_turno: 'Automatico', checar_gps: false }] });
+  return { clock, descriptor };
+}
+
 test('unprepared offline facial captures fail without storing an unidentified face', async () => {
   for (const options of [{ online: false }, { detectedOffline: true }, { getProfile: navigator => { navigator.onLine = false; } }]) {
     const clock = harness(options);
@@ -128,13 +136,76 @@ test('a prepared online device also uploads only its signed local result and nev
   clock.values.set('faces:employee:10:2:session', { company: 10, model: engine.MODEL, device_id: device.id, prepared_at: new Date(Date.now() - 1000).toISOString(), expires_at: new Date(Date.now() + 86400000).toISOString(), employees: [{ id: 2, nombre: 'Ana Local', descriptor, reference: 'reference', grant: 'authorization', open: false, cierre_turno: 'Automatico', checar_gps: false }] });
   const result = await clock.register({ descriptor_facial: descriptor });
   assert.equal(result.data.local_validated, true);
-  for (let attempt = 0; attempt < 20 && [...clock.events.values()][0]?.status !== 'synced'; attempt++) await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(result.data.pending, false);
+  assert.equal(result.data.movimiento, 'Entrada registrada');
   assert.equal(sent.length, 1);
   assert.equal(sent[0].descriptor, undefined);
   assert.equal(sent[0].local_employee, 2);
   assert.equal(sent[0].action, 'entrada');
   assert.equal(typeof sent[0].local_verification.signature, 'string');
   assert.equal([...clock.events.values()][0].status, 'synced');
+});
+
+test('online local recognition waits for acknowledgement before showing successful attendance', async () => {
+  let release;
+  const { clock, descriptor } = await preparedClock({ send: body => new Promise(resolve => { release = () => resolve({ data: { id: body.id, status: 'synced', action: 'entrada' } }); }) });
+  let finished = false;
+  const registration = clock.register({ descriptor_facial: descriptor }).then(result => { finished = true; return result; });
+  for (let attempt = 0; attempt < 40 && !release; attempt++) await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(typeof release, 'function');
+  assert.equal(finished, false);
+  release();
+  const result = await registration;
+  assert.equal(result.data.pending, false);
+  assert.equal(result.data.movimiento, 'Entrada registrada');
+});
+
+test('a failed online upload retains the recognized attendance and displays pending upload', async () => {
+  const { clock, descriptor } = await preparedClock({ send: () => { throw new Error('Network unavailable'); } });
+  const result = await clock.register({ descriptor_facial: descriptor });
+  assert.equal(result.data.pending, true);
+  const event = [...clock.events.values()][0];
+  assert.equal(event.status, 'pending');
+  assert.equal(event.local_validated, true);
+  assert.equal(event.descriptor, undefined);
+  assert.equal(typeof event.local_verification.signature, 'string');
+});
+
+test('a definitive server denial is reported instead of presenting a green check or a queued success', async () => {
+  const { clock, descriptor } = await preparedClock({ send: () => { throw Object.assign(new Error('Authorization expired'), { response: { status: 403, data: { error: 'Authorization expired', code: 'LOCAL_FACE_AUTH_EXPIRED' } } }); } });
+  await assert.rejects(clock.register({ descriptor_facial: descriptor }), /Authorization expired/);
+  assert.equal([...clock.events.values()][0].status, 'review');
+});
+
+test('an acknowledgement for another UUID cannot produce the online success confirmation', async () => {
+  const { clock, descriptor } = await preparedClock({ send: () => ({ data: { id: 'other-event', status: 'synced', action: 'entrada' } }) });
+  const result = await clock.register({ descriptor_facial: descriptor });
+  assert.equal(result.data.pending, true);
+  assert.equal([...clock.events.values()][0].status, 'pending');
+});
+
+test('a capture created during an older background pass still uploads before showing online success', async () => {
+  let release, calls = 0;
+  const { clock, descriptor } = await preparedClock({ online: false, send: body => {
+    calls++;
+    const receipt = { data: { id: body.id, status: 'synced', action: body.action === 'auto' ? 'entrada' : body.action } };
+    return calls === 1 ? new Promise(resolve => { release = () => resolve(receipt); }) : receipt;
+  } });
+  await clock.register({ codigo: '123' });
+  clock.setOnline(true);
+  const background = clock.sync();
+  for (let attempt = 0; attempt < 40 && !release; attempt++) await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(typeof release, 'function');
+  const registration = clock.register({ descriptor_facial: descriptor });
+  for (let attempt = 0; attempt < 40 && clock.events.size < 2; attempt++) await new Promise(resolve => setTimeout(resolve, 5));
+  assert.equal(clock.events.size, 2);
+  release();
+  await background;
+  const result = await registration;
+  assert.equal(result.data.pending, false);
+  assert.equal(result.data.movimiento, 'Salida registrada');
+  assert.equal(clock.requests(), 2);
+  assert([...clock.events.values()].every(event => event.status === 'synced'));
 });
 
 test('a lost response retains the facial UUID for reconciliation instead of losing evidence', async () => {

@@ -214,6 +214,13 @@ try {
   await evaluate("window.dispatchEvent(new Event('online'))");
   await until(() => companyReceipts.size === 2, 'local face signature received without biometric reevaluation');
   await until(() => evaluate("document.querySelectorAll('tr[data-offline-event]').length===0"), 'local facial capture confirmed without a duplicate');
+  await followClockLink('/fixture-company', 'Registrar Entrada / Salida');
+  await until(() => evaluate("document.body.textContent.includes('Reconocimiento offline preparado en este dispositivo')"), 'online facial clock ready');
+  await evaluate("(()=>{window.__fixtureFaceEnabled=true; Array.from(document.querySelectorAll('button')).find(button=>button.textContent.trim()==='Rostro'&&button.getBoundingClientRect().width>0).click()})()");
+  await until(() => evaluate("Array.from(document.querySelectorAll('span')).some(span=>span.textContent.trim()==='¡Éxito!'&&span.closest('div').classList.contains('bg-green-50')) && !!document.querySelector('.bg-green-500 svg')"), 'online facial capture shows the original green check and success confirmation');
+  await evaluate("window.__fixtureFaceEnabled=false");
+  assert.equal(companyReceipts.size, 3);
+  assert(!await evaluate("Array.from(document.querySelectorAll('span')).some(span=>span.textContent.trim()==='Pendiente de subir')"));
   await offline(true);
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await followClockLink('/panel/registro-asistencia', 'Asistencia');
@@ -272,6 +279,6 @@ try {
   await evaluate("window.dispatchEvent(new Event('online'))");
   await until(() => evaluate("(async()=>{const events=(await(await import('/offline-clock/store.mjs')).listEvents()).filter(event=>event.scope!=='company');return events.length===2&&events.every(event=>event.status==='synced')})()"), 'automatic sync after lost response', 600);
   assert.equal(receipts.size, 2);
-  assert(await evaluate("(async()=>{const store=await import('/offline-clock/store.mjs');await store.clearConfig();const values=await store.allValues();return !values.some(value=>value?.kind==='local-face'&&value.mode==='employee')&&values.some(value=>value?.kind==='local-face'&&value.mode==='company')&&(await store.listEvents()).length===4&&!!(await store.getValue('face:device:v1'))?.privateKey})()"));
+  assert(await evaluate("(async()=>{const store=await import('/offline-clock/store.mjs');await store.clearConfig();const values=await store.allValues();return !values.some(value=>value?.kind==='local-face'&&value.mode==='employee')&&values.some(value=>value?.kind==='local-face'&&value.mode==='company')&&(await store.listEvents()).length===5&&!!(await store.getValue('face:device:v1'))?.privateKey})()"));
   console.log('PASS: Next/Chrome offline navigation, authorized facial download, local face comparison with synthetic camera detections, persistent signed captures in both tables, descriptor-free sync, session isolation and lost-response retry. No real APIs or databases used.');
 } finally { socket?.close(); chrome?.kill(); next.kill(); }

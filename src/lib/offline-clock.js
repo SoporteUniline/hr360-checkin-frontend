@@ -74,7 +74,27 @@ async function registerLocalFace(payload, context, profile, original = null) {
   await store.saveEvent(event);
   notify();
   if (event.status === 'decision') return { data: { requiereDecision: true, offline_event: event, empleado: { nombre: event.employeeName } } };
-  if (navigator.onLine && window.__adamiaOffline !== true) void synchronizeClockQueue().catch(() => {});
+  if (navigator.onLine && window.__adamiaOffline !== true) {
+    // Keep the original online confirmation: show success only after the
+    // server acknowledges this UUID, using the already recognized local face.
+    await synchronizeClockQueue().catch(() => {});
+    let current = (await store.listEvents()).find(saved => saved.id === event.id);
+    // A background pass may have taken its queue snapshot before this capture
+    // was saved. Send one fresh pass if this event has not been attempted yet.
+    if (current?.status === 'pending' && !current.error && navigator.onLine && window.__adamiaOffline !== true) {
+      await synchronizeClockQueue().catch(() => {});
+      current = (await store.listEvents()).find(saved => saved.id === event.id);
+    }
+    if (current?.status === 'synced') return { data: {
+      pending: false, local_validated: true,
+      empleado: { nombre: current.employeeName || event.employeeName, apellido_paterno: '' },
+      movimiento: (current.resolvedAction || event.action) === 'entrada' ? 'Entrada registrada' : 'Salida registrada',
+    } };
+    if (current?.status === 'review') throw Object.assign(new Error(current.error), {
+      response: { status: current.httpStatus || 422, data: { error: current.error, code: current.errorCode } },
+    });
+    if (current?.status === 'decision') return { data: { requiereDecision: true, offline_event: current, empleado: { nombre: current.employeeName || event.employeeName } } };
+  }
   return { data: { pending: true, local_validated: true, offline_event: event, empleado: { nombre: event.employeeName, apellido_paterno: '' }, movimiento: `${event.action === 'entrada' ? 'Entrada' : 'Salida'} reconocida en este dispositivo · pendiente de subir` } };
 }
 
