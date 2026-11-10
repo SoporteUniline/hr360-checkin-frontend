@@ -56,9 +56,42 @@ test('manual closures and unresolved older captures are handled before storing t
 });
 
 test('pending codes from the same employee contribute to local state without using other employees', () => {
-  const entry = { company: 10, identity: 'code-hash', action: 'auto', status: 'pending', captured_at: new Date().toISOString() };
+  const entry = { company: 10, identity: 'code-hash', action: 'entrada', status: 'pending', captured_at: new Date().toISOString() };
   assert.equal(localAction(employee, dataset(), [entry]), 'salida');
   assert.equal(localAction(employee, dataset(), [{ ...entry, local_employee: 2 }]), 'entrada');
+  assert.throws(() => localAction(employee, dataset(), [{ ...entry, action: 'auto' }]), { code: 'LOCAL_CLOCK_PENDING' });
+});
+
+const state = (revision, open, employee = 1, company = 10) => ({ revision, open, employee, company, observed_at: new Date().toISOString() });
+
+test('confirmed state overrides a stale download even when an offline capture predates its preparation time', () => {
+  const data = dataset();
+  const oldCapture = { company: 10, local_employee: 1, action: 'entrada', resolvedAction: 'entrada', status: 'synced', captured_at: new Date(Date.now() - 3600000).toISOString(), clock_state: state(10, true) };
+  assert.equal(localAction({ ...employee, clock_state: state(9, false) }, data, [oldCapture]), 'salida');
+  const closed = { ...oldCapture, id: 'exit', action: 'salida', resolvedAction: 'salida', clock_state: state(11, false) };
+  assert.equal(localAction({ ...employee, clock_state: state(9, false) }, data, [oldCapture, closed]), 'entrada');
+});
+
+test('a snapshot already containing a confirmed code entry is not toggled a second time', () => {
+  const confirmed = { company: 10, local_employee: 1, action: 'auto', resolvedAction: 'entrada', status: 'synced', captured_at: new Date().toISOString(), clock_state: state(10, true) };
+  assert.equal(localAction({ ...employee, open: true, clock_state: state(10, true) }, dataset(), [confirmed]), 'salida');
+  assert.equal(localAction({ ...employee, clock_state: state(11, false) }, dataset(), [confirmed]), 'entrada');
+});
+
+test('a rejected entry is retained for review but never changes or blocks a known current turn', () => {
+  const review = { company: 10, local_employee: 1, action: 'entrada', status: 'review', captured_at: new Date().toISOString(), errorCode: 'CLOCK_ENTRY_ALREADY_OPEN', clock_state: state(10, true) };
+  assert.equal(localAction(employee, dataset(), [review]), 'salida');
+  assert.equal(review.status, 'review');
+  assert.equal(review.action, 'entrada');
+  const legacy = { ...review, errorCode: undefined, clock_state: undefined, error: 'Ya existe una entrada abierta. Requiere revisión de RH.' };
+  assert.throws(() => localAction(employee, dataset(), [legacy]), { code: 'LOCAL_CLOCK_STATE_REQUIRED' });
+  assert.equal(localAction({ ...employee, clock_state: state(10, true) }, dataset(), [legacy]), 'salida');
+});
+
+test('state receipts from another employee or company cannot alter the local projection', () => {
+  const confirmed = { company: 10, local_employee: 1, action: 'entrada', status: 'synced', captured_at: new Date(Date.now() - 3600000).toISOString(), clock_state: state(100, true, 2) };
+  assert.equal(localAction(employee, dataset(), [confirmed]), 'entrada');
+  assert.equal(localAction(employee, dataset(), [{ ...confirmed, clock_state: state(100, true, 1, 11) }]), 'entrada');
 });
 
 test('device keys are persistent, nonextractable and created once during concurrent preparation', async () => {

@@ -130,7 +130,7 @@ test('online facial recognition still sends and removes confirmed biometric evid
 
 test('a prepared online device also uploads only its signed local result and never resubmits the face', async () => {
   const sent = [];
-  const clock = harness({ send: body => { sent.push(body); return { data: { id: body.id, status: 'synced', action: body.action } }; } });
+  const clock = harness({ send: body => { sent.push(body); return { data: { id: body.id, status: 'synced', action: body.action === 'auto' ? 'entrada' : body.action } }; } });
   const device = await engine.deviceIdentity(clock.store);
   const descriptor = Array.from({ length: 128 }, (_, i) => i === 0 ? 1 : 0);
   clock.values.set('faces:employee:10:2:session', { company: 10, model: engine.MODEL, device_id: device.id, prepared_at: new Date(Date.now() - 1000).toISOString(), expires_at: new Date(Date.now() + 86400000).toISOString(), employees: [{ id: 2, nombre: 'Ana Local', descriptor, reference: 'reference', grant: 'authorization', open: false, cierre_turno: 'Automatico', checar_gps: false }] });
@@ -141,7 +141,7 @@ test('a prepared online device also uploads only its signed local result and nev
   assert.equal(sent.length, 1);
   assert.equal(sent[0].descriptor, undefined);
   assert.equal(sent[0].local_employee, 2);
-  assert.equal(sent[0].action, 'entrada');
+  assert.equal(sent[0].action, 'auto');
   assert.equal(typeof sent[0].local_verification.signature, 'string');
   assert.equal([...clock.events.values()][0].status, 'synced');
 });
@@ -188,7 +188,7 @@ test('a capture created during an older background pass still uploads before sho
   let release, calls = 0;
   const { clock, descriptor } = await preparedClock({ online: false, send: body => {
     calls++;
-    const receipt = { data: { id: body.id, status: 'synced', action: body.action === 'auto' ? 'entrada' : body.action } };
+    const receipt = { data: { id: body.id, status: 'synced', action: body.action === 'auto' ? (calls === 1 ? 'entrada' : 'salida') : body.action } };
     return calls === 1 ? new Promise(resolve => { release = () => resolve(receipt); }) : receipt;
   } });
   await clock.register({ codigo: '123' });
@@ -241,4 +241,31 @@ test('background refresh callers await the same queue upload instead of reading 
   await Promise.all([first, second]);
   assert.equal(secondFinished, true);
   assert.equal([...clock.events.values()][0].status, 'synced');
+});
+
+test('online automatic facial capture uses the current server turn despite a stale closed local snapshot', async () => {
+  const { clock, descriptor } = await preparedClock({ send: body => {
+    assert.equal(body.action, 'auto');
+    assert.equal(body.descriptor, undefined);
+    return { data: { id: body.id, status: 'synced', action: 'salida', clock_state: { company: 10, employee: 2, revision: 11, open: false } } };
+  } });
+  const result = await clock.register({ descriptor_facial: descriptor });
+  assert.equal(result.data.pending, false);
+  assert.equal(result.data.movimiento, 'Salida registrada');
+  assert.equal([...clock.events.values()][0].clock_state.revision, 11);
+});
+
+test('the previously rejected entry does not block a fresh online check and remains preserved for RH', async () => {
+  const { clock, descriptor } = await preparedClock({ send: body => ({ data: { id: body.id, status: 'synced', action: 'salida', clock_state: { company: 10, employee: 2, revision: 11, open: false } } }) });
+  const rejected = { id: 'historical-conflict', scope: 'employee', company: 10, employee: 2, local_employee: 2, identity: 'employee:2', action: 'entrada', captured_at: new Date(Date.now() - 60000).toISOString(), status: 'review', blocksFollowing: true, error: 'Ya existe una entrada abierta. Requiere revisión de RH.' };
+  await clock.store.saveEvent(rejected);
+  const result = await clock.register({ descriptor_facial: descriptor });
+  assert.equal(result.data.pending, false);
+  assert.equal(result.data.movimiento, 'Salida registrada');
+  assert.equal(clock.events.get(rejected.id).status, 'review');
+  assert.equal(clock.events.get(rejected.id).captured_at, rejected.captured_at);
+  assert.equal(clock.requests(), 1);
+  clock.setOnline(false);
+  const next = await clock.register({ descriptor_facial: descriptor });
+  assert.equal(next.data.offline_event.action, 'entrada');
 });

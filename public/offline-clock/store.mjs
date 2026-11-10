@@ -1,3 +1,5 @@
+import { isTurnConflict } from './turn-state.mjs?v=1';
+export { isTurnConflict } from './turn-state.mjs?v=1';
 const DB_NAME = 'adamia-offline-clock-v1';
 let opening;
 
@@ -87,8 +89,10 @@ export function syncFailure(event, error) {
   const reason = error.response?.data?.error;
   const review = [400, 403, 404, 409, 422].includes(status);
   const unmatched = code === 'FACE_NOT_MATCHED';
+  const conflict = isTurnConflict({ errorCode: code, error: reason });
   return { ...event, status: review ? 'review' : 'pending', httpStatus: status, errorCode: code,
-    blocksFollowing: !unmatched,
+    blocksFollowing: !unmatched && !conflict,
+    ...(error.response?.data?.clock_state ? { clock_state: error.response.data.clock_state } : {}),
     ...(unmatched ? { alias: 'Rostro no reconocido' } : {}),
     error: typeof reason === 'string' ? reason : error.message || 'No se pudo enviar la checada',
   };
@@ -99,14 +103,14 @@ export async function syncEvents(events, send, persist) {
   for (const event of events.filter(event => event.status !== 'synced' && event.status !== 'rejected')) {
     try {
       if (event.status === 'decision') break;
-      if (event.status === 'review') { if (event.blocksFollowing !== false) break; else continue; }
+      if (event.status === 'review') { if (event.blocksFollowing !== false && !isTurnConflict(event)) break; else continue; }
       const receipt = await send(event);
       if (receipt?.requiereDecision) {
-        await persist({ ...event, status: 'decision', employeeName: receipt.empleado?.nombre || event.employeeName, error: 'Elige salida temporal o cerrar turno para enviar esta checada.' });
+        await persist({ ...event, status: 'decision', clock_state: receipt.clock_state || event.clock_state, employeeName: receipt.empleado?.nombre || event.employeeName, error: 'Elige salida temporal o cerrar turno para enviar esta checada.' });
         break;
       }
       if (receipt?.id !== event.id || receipt?.status !== 'synced') throw new Error('El servidor no confirmó esta checada. Se conservará pendiente.');
-      await persist({ ...event, resolvedAction: receipt.action || event.resolvedAction, employeeName: receipt.employee?.nombre || event.employeeName, status: 'synced', error: '', code: undefined, descriptor: undefined, grant: undefined, local_verification: undefined });
+      await persist({ ...event, resolvedAction: receipt.action || event.resolvedAction, clock_state: receipt.clock_state || event.clock_state, confirmed_at: receipt.confirmed_at || new Date().toISOString(), employeeName: receipt.employee?.nombre || event.employeeName, status: 'synced', error: '', code: undefined, descriptor: undefined, grant: undefined, local_verification: undefined });
     } catch (error) {
       const failure = syncFailure(event, error);
       await persist(failure);

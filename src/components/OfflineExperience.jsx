@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { ensureOfflineCache } from '@/lib/axios';
 import { clockStore, installOfflineWorker, initializeClock, warmOfflineAssets, synchronizeClockQueue, resolveClockDecision, retryClockEvent, discardClockEvent } from '@/lib/offline-clock';
+import { isTurnConflict } from '../../public/offline-clock/turn-state.mjs';
 
 export default function OfflineExperience() {
   const { dataUser } = useAuth();
@@ -103,8 +104,17 @@ export default function OfflineExperience() {
     <p className="font-semibold">{offline ? 'Sin conexión · Usando información guardada en este celular' : reviews ? 'Con conexión · Hay checadas rechazadas para revisión' : 'Con conexión · Checadas pendientes de subir'}</p>
     {offline && <p className="mt-1 text-xs">Puedes consultar lo ya descargado y registrar checadas. Los demás cambios necesitan conexión.</p>}
     {pending > 0 && <button type="button" disabled={offline || syncing} onClick={() => { void syncNow(); }} className="mt-2 rounded border border-blue-400 px-2 py-1 disabled:opacity-50">{syncing ? 'Comprobando pendientes...' : 'Sincronizar ahora'}</button>}
-    {!!events.length && <details className="mt-2"><summary className="cursor-pointer">{events.length - reviews} pendiente(s){reviews ? ` · ${reviews} para revisión` : ''}</summary><p className="mt-1 text-xs">Guardadas en este dispositivo. Se subirán al recuperar conexión. Las decisiones de turno aparecen aquí.</p><ul className="max-h-52 space-y-2 overflow-y-auto pt-2">
-      {events.slice(0, 30).map(event => <li key={event.id} className="border-t border-blue-200 pt-2"><p>{event.employeeName || event.alias || 'Checada'} · {new Date(event.captured_at).toLocaleString('es-MX')}</p>{event.status === 'review' && <p className="font-semibold">No aceptada · Se conserva para revisión</p>}<p className="text-xs">{event.error || 'Se enviará automáticamente al recuperar conexión.'}</p>{event.status === 'review' && !['GPS_INACCURATE', 'GPS_REFRESH_REQUIRED'].includes(event.errorCode) && <button type="button" disabled={offline} onClick={() => { void retryClockEvent(event).catch(() => {}); }} className="mt-1 rounded border border-blue-400 px-2 py-1 disabled:opacity-50">Reintentar validación</button>}{event.status === 'review' && ['GPS_INACCURATE', 'GPS_REFRESH_REQUIRED'].includes(event.errorCode) && <p className="mt-1 text-xs">Reintentar conserva la misma ubicación. Descarta esta captura y realiza una nueva checada con ubicación precisa.</p>}{event.status === 'review' && <button type="button" onClick={() => { void discard(event); }} className="mt-1 ml-2 rounded border border-blue-400 px-2 py-1">Descartar captura</button>}{event.status === 'decision' && <div className="mt-1 flex gap-2">{[['salida_temporal', 'Salida temporal'], ['cerrar_turno', 'Cerrar turno']].map(([action, label]) => <button key={action} type="button" onClick={() => { void resolveClockDecision(event, action).catch(() => {}); }} className="rounded border border-blue-400 px-2 py-1">{label}</button>)}</div>}</li>)}
+    {!!events.length && <details className="mt-2"><summary className="cursor-pointer">{events.length - reviews} pendiente(s){reviews ? ` · ${reviews} para revisión` : ''}</summary><p className="mt-1 text-xs">Las pendientes se subirán al recuperar conexión. Las rechazadas se conservan para revisión de RH. Las decisiones de turno aparecen aquí.</p><ul className="max-h-52 space-y-2 overflow-y-auto pt-2">
+      {events.slice(0, 30).map(event => <li key={event.id} className="border-t border-blue-200 pt-2">
+        <p>{event.employeeName || event.alias || 'Checada'} · {new Date(event.captured_at).toLocaleString('es-MX')}</p>
+        {event.status === 'review' && <p className="font-semibold">No aceptada · Se conserva para revisión</p>}
+        <p className="text-xs">{event.error || 'Se enviará automáticamente al recuperar conexión.'}</p>
+        {event.status === 'review' && isTurnConflict(event) && <p className="mt-1 text-xs">{offline ? 'Conéctate para actualizar el estado del turno y continuar.' : 'Puedes registrar una nueva checada. Esta captura se conserva para revisión de RH.'}</p>}
+        {event.status === 'review' && !isTurnConflict(event) && !['GPS_INACCURATE', 'GPS_REFRESH_REQUIRED'].includes(event.errorCode) && <button type="button" disabled={offline} onClick={() => { void retryClockEvent(event).catch(() => {}); }} className="mt-1 rounded border border-blue-400 px-2 py-1 disabled:opacity-50">Reintentar envío</button>}
+        {event.status === 'review' && ['GPS_INACCURATE', 'GPS_REFRESH_REQUIRED'].includes(event.errorCode) && <p className="mt-1 text-xs">Reintentar conserva la misma ubicación. Descarta esta captura y realiza una nueva checada con ubicación precisa.</p>}
+        {event.status === 'review' && <button type="button" onClick={() => { void discard(event); }} className="mt-1 ml-2 rounded border border-blue-400 px-2 py-1">Descartar captura</button>}
+        {event.status === 'decision' && <div className="mt-1 flex gap-2">{[['salida_temporal', 'Salida temporal'], ['cerrar_turno', 'Cerrar turno']].map(([action, label]) => <button key={action} type="button" onClick={() => { void resolveClockDecision(event, action).catch(() => {}); }} className="rounded border border-blue-400 px-2 py-1">{label}</button>)}</div>}
+      </li>)}
     </ul></details>}
     <p className="mt-2 text-xs">Las capturas descartadas no registran asistencia.</p>
     {actionError && <p role="alert" className="mt-2 text-xs font-semibold">{actionError}</p>}

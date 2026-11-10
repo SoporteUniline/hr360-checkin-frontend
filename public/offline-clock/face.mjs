@@ -1,3 +1,4 @@
+import { isTurnConflict, validClockState } from './turn-state.mjs?v=1';
 export const MODEL = 'face-api-0.22.2-128-cosine-v1';
 export function fail(message, code = 'LOCAL_FACE_INVALID') {
   throw Object.assign(new Error(message), { code, response: { status: 422, data: { error: message, code } } });
@@ -39,13 +40,31 @@ export function validateLocalLocation(employee, event) {
   });
   if (!inside) fail('Fuera del área de checado autorizada en este dispositivo', 'GPS_OUTSIDE_AREA');
 }
-export function localAction(employee, dataset, events, requested = 'auto') {
-  let open = employee.open;
+export function localAction(employee, dataset, events, requested = 'auto', { online = false } = {}) {
   const previous = events.filter(event => Number(event.company) === Number(dataset.company) && event.status !== 'rejected' &&
-    (event.local_employee ? Number(event.local_employee) === employee.id : Number(event.employee) === employee.id || event.identity === employee.code_identity) &&
-    (event.status !== 'synced' || event.captured_at >= dataset.prepared_at)).sort((a, b) => a.captured_at.localeCompare(b.captured_at));
+    (event.local_employee ? Number(event.local_employee) === employee.id : Number(event.employee) === employee.id || event.identity === employee.code_identity))
+    .sort((a, b) => a.captured_at.localeCompare(b.captured_at));
+  let state = validClockState(employee.clock_state, dataset.company, employee.id) ? employee.clock_state : null;
   for (const event of previous) {
-    if (event.status === 'decision' || event.status === 'review') fail('Resuelve la captura anterior de este empleado antes de registrar otra.', 'LOCAL_PREVIOUS_REVIEW');
+    if (validClockState(event.clock_state, dataset.company, employee.id) && (!state || event.clock_state.revision >= state.revision)) state = event.clock_state;
+  }
+  let open = state ? state.open : employee.open;
+  for (const event of previous) {
+    if (event.status === 'review') {
+      if (isTurnConflict(event)) {
+        if (!state && !online) fail('Conecta el dispositivo para actualizar el estado del turno. La captura anterior se conserva para revisión.', 'LOCAL_CLOCK_STATE_REQUIRED');
+        continue; // Rejected captures never change the employee turn state.
+      }
+      if (event.blocksFollowing === false) continue;
+      fail('Resuelve la captura anterior de este empleado antes de registrar otra.', 'LOCAL_PREVIOUS_REVIEW');
+    }
+    if (event.status === 'decision') fail('Selecciona cómo cerrar el turno anterior antes de registrar otra checada.', 'LOCAL_PREVIOUS_REVIEW');
+    if (!online && event.status === 'pending' && event.action === 'auto') fail('Espera a que se suba la checada anterior de este empleado antes de registrar otra.', 'LOCAL_CLOCK_PENDING');
+    if (event.status === 'synced') {
+      if (validClockState(event.clock_state, dataset.company, employee.id)) continue;
+      // Compatibility with receipts created before versioned turn snapshots.
+      if ((event.confirmed_at || event.captured_at) < (state?.observed_at || dataset.prepared_at)) continue;
+    }
     const action = event.resolvedAction || event.action;
     open = action === 'auto' ? !open : action === 'entrada';
   }

@@ -17,6 +17,8 @@ const next = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start'
 let chrome, socket, sequence = 0, role = 'Recruiter';
 const pending = new Map(), receipts = new Map();
 const companyReceipts = new Map();
+let companyMovementId = 0, companyOpen = false;
+const companyState = () => ({ company: 10, employee: 101, movement_id: companyMovementId, revision: companyMovementId ? companyMovementId * 2 + (companyOpen ? 0 : 1) : 0, open: companyOpen, observed_at: new Date().toISOString() });
 let referenceDownloads = 0;
 const fixtureDevices = new Map();
 const fixtureDescriptor = Array.from({ length: 128 }, (_, index) => index === 0 ? 1 : 0);
@@ -78,7 +80,13 @@ async function intercept(event) {
       const canonical = JSON.stringify([event.id, event.captured_at, event.action, event.method, Number(event.company), Number(event.local_employee), event.latitude ?? null, event.longitude ?? null, event.precision_metros ?? null, event.ubicacion_timestamp ?? null, proof.device_id, proof.model, proof.reference, proof.score, proof.grant]);
       assert(verifySignature('sha256', Buffer.from(canonical), { key: createPublicKey({ key: fixtureDevices.get(proof.device_id), format: 'jwk' }), dsaEncoding: 'ieee-p1363' }, Buffer.from(proof.signature, 'base64url')));
     }
-    if (!companyReceipts.has(event.id)) companyReceipts.set(event.id, { id: event.id, status: 'synced', action: event.action === 'auto' ? 'entrada' : event.action, employee: { id: 101, nombre: 'Ana Fixture' } });
+    if (!companyReceipts.has(event.id)) {
+      const action = event.action === 'auto' ? (companyOpen ? 'salida' : 'entrada') : event.action;
+      assert.equal(action, companyOpen ? 'salida' : 'entrada', 'never silently retarget a frozen offline movement');
+      if (action === 'entrada') companyMovementId++;
+      companyOpen = action === 'entrada';
+      companyReceipts.set(event.id, { id: event.id, status: 'synced', action, clock_state: companyState(), confirmed_at: new Date().toISOString(), employee: { id: 101, nombre: 'Ana Fixture' } });
+    }
     return json(companyReceipts.get(event.id));
   }
   if (path.endsWith('/offline/sincronizar')) {
@@ -146,7 +154,7 @@ try {
   socket.onmessage = ({ data }) => {
     const message = JSON.parse(data);
     if (message.method === 'Runtime.exceptionThrown') pageErrors.push(message.params.exceptionDetails.exception?.description || message.params.exceptionDetails.text);
-    if (message.method === 'Fetch.requestPaused') { void intercept(message.params).catch(() => {}); return; }
+    if (message.method === 'Fetch.requestPaused') { void intercept(message.params).catch(error => console.error('Fixture interception failed:', error.message)); return; }
     const handler = pending.get(message.id); if (!handler) return; pending.delete(message.id);
     if (message.error) handler.reject(new Error(JSON.stringify(message.error))); else handler.resolve(message.result);
   };
@@ -214,12 +222,26 @@ try {
   await evaluate("window.dispatchEvent(new Event('online'))");
   await until(() => companyReceipts.size === 2, 'local face signature received without biometric reevaluation');
   await until(() => evaluate("document.querySelectorAll('tr[data-offline-event]').length===0"), 'local facial capture confirmed without a duplicate');
+  // A different clock opens a turn after this device downloaded its references.
+  companyMovementId++;
+  companyOpen = true;
+  const historicalConflict = { id: randomUUID(), scope: 'company', company: 10, local_employee: 101, identity: createHash('sha256').update('123').digest('hex'), method: 'facial', action: 'entrada', status: 'review', blocksFollowing: true, captured_at: new Date(Date.now() - 60000).toISOString(), error: 'Ya existe una entrada abierta. Requiere revisión de RH.' };
+  await evaluate(`(async()=>{await(await import('/offline-clock/store.mjs')).saveEvent(${JSON.stringify(historicalConflict)})})()`);
   await followClockLink('/fixture-company', 'Registrar Entrada / Salida');
   await until(() => evaluate("document.body.textContent.includes('Reconocimiento offline preparado en este dispositivo')"), 'online facial clock ready');
   await evaluate("(()=>{window.__fixtureFaceEnabled=true; Array.from(document.querySelectorAll('button')).find(button=>button.textContent.trim()==='Rostro'&&button.getBoundingClientRect().width>0).click()})()");
-  await until(() => evaluate("Array.from(document.querySelectorAll('span')).some(span=>span.textContent.trim()==='¡Éxito!'&&span.closest('div').classList.contains('bg-green-50')) && !!document.querySelector('.bg-green-500 svg')"), 'online facial capture shows the original green check and success confirmation');
+  try {
+    await until(() => evaluate("Array.from(document.querySelectorAll('span')).some(span=>span.textContent.trim()==='¡Éxito!'&&span.closest('div').classList.contains('bg-green-50')) && !!document.querySelector('.bg-green-500 svg')"), 'online facial capture shows the original green check and success confirmation');
+  } catch (error) {
+    console.error(await evaluate("(async()=>({text:document.body.innerText,online:navigator.onLine,offline:window.__adamiaOffline,events:await(await import('/offline-clock/store.mjs')).listEvents()}))()"));
+    console.error({ companyReceipts: [...companyReceipts.values()], pageErrors });
+    throw error;
+  }
   await evaluate("window.__fixtureFaceEnabled=false");
   assert.equal(companyReceipts.size, 3);
+  assert.equal([...companyReceipts.values()].at(-1).action, 'salida');
+  assert(!companyReceipts.has(historicalConflict.id));
+  assert(await evaluate(`(async()=>{const event=(await(await import('/offline-clock/store.mjs')).listEvents()).find(event=>event.id===${JSON.stringify(historicalConflict.id)});return event.status==='review'&&event.action==='entrada'&&event.captured_at===${JSON.stringify(historicalConflict.captured_at)}})()`));
   assert(!await evaluate("Array.from(document.querySelectorAll('span')).some(span=>span.textContent.trim()==='Pendiente de subir')"));
   await offline(true);
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
@@ -279,6 +301,6 @@ try {
   await evaluate("window.dispatchEvent(new Event('online'))");
   await until(() => evaluate("(async()=>{const events=(await(await import('/offline-clock/store.mjs')).listEvents()).filter(event=>event.scope!=='company');return events.length===2&&events.every(event=>event.status==='synced')})()"), 'automatic sync after lost response', 600);
   assert.equal(receipts.size, 2);
-  assert(await evaluate("(async()=>{const store=await import('/offline-clock/store.mjs');await store.clearConfig();const values=await store.allValues();return !values.some(value=>value?.kind==='local-face'&&value.mode==='employee')&&values.some(value=>value?.kind==='local-face'&&value.mode==='company')&&(await store.listEvents()).length===5&&!!(await store.getValue('face:device:v1'))?.privateKey})()"));
+  assert(await evaluate("(async()=>{const store=await import('/offline-clock/store.mjs');await store.clearConfig();const values=await store.allValues();return !values.some(value=>value?.kind==='local-face'&&value.mode==='employee')&&values.some(value=>value?.kind==='local-face'&&value.mode==='company')&&(await store.listEvents()).length===6&&!!(await store.getValue('face:device:v1'))?.privateKey})()"));
   console.log('PASS: Next/Chrome offline navigation, authorized facial download, local face comparison with synthetic camera detections, persistent signed captures in both tables, descriptor-free sync, session isolation and lost-response retry. No real APIs or databases used.');
 } finally { socket?.close(); chrome?.kill(); next.kill(); }

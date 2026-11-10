@@ -75,6 +75,16 @@ No borrar los datos del navegador/app ni desinstalar mientras existan pendientes
 - `node scripts/verify-offline-clock.mjs`: compatibilidad del almacenamiento y pantalla anterior.
 - Compilación de Next y ESLint de los archivos modificados.
 
+## Conflictos de entrada y salida
+
+Con conexión, el botón automático envía la intención de checar y el servidor decide entrada o salida con el estado vigente dentro de la transacción. El reconocimiento facial sigue siendo local. Sin conexión, se conserva la acción decidida en el celular y su hora original; no se convierte después una entrada rechazada en salida.
+
+Las referencias descargadas y los comprobantes de sincronización incluyen un estado del turno con revisión creciente: abrir un movimiento y cerrar ese mismo movimiento tienen revisiones distintas. El celular utiliza el estado más reciente, aunque la captura pendiente sea anterior a la descarga. Esto evita duplicar cambios ya incluidos en una descarga o ignorar una entrada que acaba de subirse.
+
+Los conflictos devuelven códigos específicos y el estado vigente. La captura permanece para revisión de RH y no impide una nueva checada online; tampoco se reenvía ni se descarta automáticamente. Los rechazos antiguos se reconocen por su mensaje. Para continuar offline después de un rechazo antiguo sin estado, se necesita reconectar y descargar el estado actualizado. Una checada automática cuyo envío aún no está confirmado debe sincronizarse antes de calcular otro movimiento offline.
+
+Prueba de regresión: abrir un turno desde otro dispositivo después de descargar referencias; checar online en el primero debe registrar salida, mostrar palomita y conservar cualquier conflicto histórico. Repetir la sincronización no debe insertar otro movimiento. Probar también entrada y salida offline, reconexión y una nueva checada offline después de sincronizar.
+
 ## Prueba manual en dev
 
 1. Abrir el enlace habitual del reloj de empresa en **https://dev.adamia.com.mx**. No realizar ninguna preparación.

@@ -6,8 +6,8 @@ let registrationLoading;
 let synchronizing = false;
 const initializing = new Map();
 const warmed = new Set();
-export const clockStore = () => storeLoading ||= import(/* webpackIgnore: true */ '/offline-clock/store.mjs?v=6');
-export const faceEngine = () => import(/* webpackIgnore: true */ '/offline-clock/face.mjs?v=1');
+export const clockStore = () => storeLoading ||= (typeof navigator !== 'undefined' && navigator.onLine ? installOfflineWorker().catch(() => null) : Promise.resolve()).then(() => import(/* webpackIgnore: true */ '/offline-clock/store.mjs?v=9'));
+export const faceEngine = () => import(/* webpackIgnore: true */ '/offline-clock/face.mjs?v=2');
 const notify = () => window.dispatchEvent(new Event('adamia-queue'));
 const profileKey = (company, employee) => employee ? `clock:employee:${company}:${employee}` : `clock:company:${company}`;
 const faceKey = (company, employee, session) => employee ? `faces:employee:${company}:${employee}:${session}` : `faces:company:${company}`;
@@ -59,7 +59,13 @@ async function registerLocalFace(payload, context, profile, original = null) {
     const dataset = await localFaceStatus(context);
     const { employee, score } = engine.matchFace(payload.descriptor_facial, dataset);
     const events = await store.listEvents();
-    const action = engine.localAction(employee, dataset, events, payload.accion || 'auto');
+    const requested = payload.accion || 'auto';
+    // The online button has always meant "entry or exit". Resolve that intent
+    // once against the locked server state, without repeating facial matching.
+    // Offline captures keep the explicit action decided on the device.
+    const onlineAuto = navigator.onLine && window.__adamiaOffline !== true && requested === 'auto';
+    const localAction = engine.localAction(employee, dataset, events, requested, { online: onlineAuto });
+    const action = onlineAuto ? 'auto' : localAction;
     event = { id: original?.id || crypto.randomUUID(), company: Number(context.company), employee: context.employee ? Number(context.employee) : undefined,
       local_employee: employee.id, identity: employee.code_identity || `employee:${employee.id}`, employeeName: employee.nombre, alias: employee.nombre,
       scope: context.employee ? 'employee' : 'company', session: profile.session, grant: context.employee ? undefined : profile.grant,
@@ -95,7 +101,7 @@ async function registerLocalFace(payload, context, profile, original = null) {
     });
     if (current?.status === 'decision') return { data: { requiereDecision: true, offline_event: current, empleado: { nombre: current.employeeName || event.employeeName } } };
   }
-  return { data: { pending: true, local_validated: true, offline_event: event, empleado: { nombre: event.employeeName, apellido_paterno: '' }, movimiento: `${event.action === 'entrada' ? 'Entrada' : 'Salida'} reconocida en este dispositivo · pendiente de subir` } };
+  return { data: { pending: true, local_validated: true, offline_event: event, empleado: { nombre: event.employeeName, apellido_paterno: '' }, movimiento: `${event.action === 'auto' ? 'Checada' : event.action === 'entrada' ? 'Entrada' : 'Salida'} reconocida en este dispositivo · pendiente de subir` } };
 }
 
 export async function installOfflineWorker() {

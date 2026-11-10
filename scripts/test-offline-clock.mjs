@@ -104,3 +104,30 @@ test('an unrecognized face does not block a later valid face or a code check-in'
   assert.equal(saved[1].status, 'synced');
   assert.equal(saved[2].status, 'synced');
 });
+
+test('historical transition conflicts do not block a new automatic online movement or get rewritten', async () => {
+  const conflict = { ...entry, action: 'entrada', id: 'conflict', status: 'review', blocksFollowing: true, error: 'Ya existe una entrada abierta. Requiere revisión de RH.' };
+  const next = { ...exit, id: 'next', action: 'auto' };
+  const sent = [], saved = [];
+  await syncEvents([conflict, next], async event => { sent.push(event.id); return { id: event.id, status: 'synced', action: 'salida', clock_state: { company: 10, employee: 1, revision: 11, open: false } }; }, async event => saved.push(event));
+  assert.deepEqual(sent, ['next']);
+  assert.equal(conflict.status, 'review');
+  assert.equal(conflict.action, 'entrada');
+  assert.equal(saved[0].clock_state.open, false);
+  assert.equal(saved[0].clock_state.revision, 11);
+});
+
+test('a genuine offline conflict preserves its action and timestamp while allowing later independent attempts', async () => {
+  const first = { ...entry, id: 'entry-conflict' }, next = { ...exit, id: 'later', action: 'auto' };
+  const saved = [];
+  await syncEvents([first, next], async event => {
+    if (event.id === first.id) throw { response: { status: 409, data: { error: 'Ya existe una entrada abierta. Requiere revisión de RH.', code: 'CLOCK_ENTRY_ALREADY_OPEN', clock_state: { company: 10, employee: 1, revision: 10, open: true } } } };
+    return { id: event.id, status: 'synced', action: 'salida' };
+  }, async event => saved.push(event));
+  assert.equal(saved[0].status, 'review');
+  assert.equal(saved[0].action, first.action);
+  assert.equal(saved[0].captured_at, first.captured_at);
+  assert.equal(saved[0].blocksFollowing, false);
+  assert.equal(saved[0].clock_state.open, true);
+  assert.equal(saved[1].status, 'synced');
+});
