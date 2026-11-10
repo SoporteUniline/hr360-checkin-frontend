@@ -162,6 +162,7 @@ try {
   await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
   await send('Fetch.enable', { patterns: [{ urlPattern: '*' }] });
   await send('Page.addScriptToEvaluateOnNewDocument', { source: "Object.defineProperty(navigator,'geolocation',{value:{getCurrentPosition(ok,fail){fail({code:1,message:'Fixture GPS denied'})}}});" });
+  await send('Page.addScriptToEvaluateOnNewDocument', { source: "window.__cameraRequests=0; const fixtureGetUserMedia=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);navigator.mediaDevices.getUserMedia=(...args)=>{window.__cameraRequests++;return fixtureGetUserMedia(...args)};" });
   await send('Page.addScriptToEvaluateOnNewDocument', { source: `window.__fixtureFaceEnabled=false; window.faceapi={nets:{ssdMobilenetv1:{params:true},faceLandmark68Net:{params:true},faceRecognitionNet:{params:true}},detectSingleFace(){return {withFaceLandmarks(){return {withFaceDescriptor:async()=>window.__fixtureFaceEnabled?{descriptor:new Float32Array(${JSON.stringify(fixtureDescriptor)})}:null}}}}};` });
   await send('Network.setCookie', { name: 'token', value: token(), url: base, path: '/' });
   await go('/panel/empleados', 'Ana Fixture'); await snapshot();
@@ -243,6 +244,14 @@ try {
   assert(!companyReceipts.has(historicalConflict.id));
   assert(await evaluate(`(async()=>{const event=(await(await import('/offline-clock/store.mjs')).listEvents()).find(event=>event.id===${JSON.stringify(historicalConflict.id)});return event.status==='review'&&event.action==='entrada'&&event.captured_at===${JSON.stringify(historicalConflict.captured_at)}})()`));
   assert(!await evaluate("Array.from(document.querySelectorAll('span')).some(span=>span.textContent.trim()==='Pendiente de subir')"));
+  const cameraRequests = await evaluate('window.__cameraRequests');
+  assert(cameraRequests > 0);
+  for (const disconnected of [true, false]) {
+    await offline(disconnected);
+    await sleep(1500);
+    assert.equal(await evaluate('window.__cameraRequests'), cameraRequests, 'connection changes must not reopen a closed facial camera');
+    assert(!await evaluate("Array.from(document.querySelectorAll('video')).some(video=>video.srcObject?.getVideoTracks().some(track=>track.readyState==='live'))"));
+  }
   await offline(true);
   await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
   await followClockLink('/panel/registro-asistencia', 'Asistencia');

@@ -162,7 +162,6 @@ export default function RelojChecador({
       if (metodo === 'facial') setMetodo('codigo');
     }
     else if (metodo !== "facial") setMostrarCamara(false);
-    else setMostrarCamara(true);
   }, [metodo, offline, localFacesReady]);
 
   useEffect(() => {
