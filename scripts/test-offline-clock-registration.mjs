@@ -12,27 +12,28 @@ const source = (await readFile(new URL('../src/lib/offline-clock.js', import.met
   .replace(/^export const faceEngine = .*;$/m, 'const faceEngine = async () => engine;')
   .replace(/\bexport /g, '');
 
-function harness({ online = true, detectedOffline = false, method = 'ambos', getProfile, save, send } = {}) {
+function harness({ online = true, detectedOffline = false, method = 'ambos', getProfile, save, send, companyClock = false } = {}) {
   const events = new Map();
   const values = new Map();
   const navigator = { onLine: online };
   let requests = 0;
-  const profile = { id_empresa: 10, id_empleado: 2, session: 'session', metodo: method, nombre: 'Prueba', prepared_at: new Date().toISOString() };
+  const profile = { id_empresa: 10, id_empleado: 2, session: companyClock ? null : 'session', grant: companyClock ? 'company-permit' : undefined, metodo: method, nombre: 'Prueba', prepared_at: new Date().toISOString() };
   const store = {
     getValue: async key => { if (key.startsWith('clock:')) { getProfile?.(navigator); return profile; } return values.get(key); },
     setValue: async (key, value) => values.set(key, value),
-    fingerprint: async () => 'session',
+    fingerprint: async () => companyClock ? null : 'session',
     saveEvent: async event => { events.set(event.id, event); save?.(navigator); },
     listEvents: async () => [...events.values()], syncFailure, syncEvents, syncCompanyEvents,
   };
   const context = vm.createContext({
-    store, engine, navigator, crypto: webcrypto, Event, URL, setTimeout, clearTimeout,
+    store, engine, navigator, crypto: webcrypto, Event, URL, setTimeout, clearTimeout, ensureOfflineCache: async () => null,
     window: { __adamiaOffline: detectedOffline, dispatchEvent() {} },
-    Cookies: { get: () => 'test-session' },
-    axios: { post: async (_url, body) => { requests++; return send ? send(body) : { data: { id: body.id, status: 'synced', action: 'entrada', employee: { nombre: 'Prueba' } } }; } },
+    Cookies: { get: () => companyClock ? undefined : 'test-session' },
+    fetch: async () => ({}),
+    axios: { get: async () => ({ data: {} }), post: async (url, body) => { requests++; return send ? send(body, url) : { data: { id: body.id, status: 'synced', action: 'entrada', employee: { nombre: 'Prueba' } } }; } },
   });
-  vm.runInContext(source + '\nglobalThis.register = registerClockMovement; globalThis.sync = synchronizeClockQueue;', context);
-  return { register: payload => context.register(payload, { company: 10, employee: 2 }), sync: () => context.sync(), setOnline: value => { navigator.onLine = value; }, store, values, events, requests: () => requests };
+  vm.runInContext(source + '\nglobalThis.register = registerClockMovement; globalThis.sync = synchronizeClockQueue; globalThis.prepare = prepareLocalFaces;', context);
+  return { prepare: options => context.prepare({ company: 10, slug: 'fixture', ...options }), register: payload => context.register(payload, { company: 10, employee: companyClock ? null : 2 }), sync: () => context.sync(), setOnline: value => { navigator.onLine = value; }, store, values, events, requests: () => requests };
 }
 
 const face = { descriptor_facial: [0.1, 0.2] };
@@ -81,6 +82,49 @@ test('prepared offline recognition stores a named signed attendance with no raw 
   assert.equal(clock.requests(), 0);
   const next = await clock.register({ descriptor_facial: descriptor });
   assert.equal(next.data.offline_event.action, 'salida');
+});
+
+test('a prepared public company clock recognizes offline without a login and uploads the signed capture on reconnect', async () => {
+  const clock = harness({ online: false, companyClock: true });
+  const device = await engine.deviceIdentity(clock.store);
+  const descriptor = Array.from({ length: 128 }, (_, i) => i === 0 ? 1 : 0);
+  clock.values.set('faces:company:10', { company: 10, model: engine.MODEL, device_id: device.id, prepared_at: new Date(Date.now() - 12 * 3600000).toISOString(), expires_at: new Date(Date.now() + 86400000).toISOString(), employees: [{ id: 2, nombre: 'Ana Local', descriptor, reference: 'reference', grant: 'signed-server-permit', open: false, cierre_turno: 'Automatico', checar_gps: false }] });
+  const captured_at = new Date().toISOString();
+  const result = await clock.register({ descriptor_facial: descriptor, captured_at });
+  const event = result.data.offline_event;
+  assert.equal(result.data.pending, true);
+  assert.equal(event.scope, 'company');
+  assert.equal(event.employeeName, 'Ana Local');
+  assert.equal(event.local_employee, 2);
+  assert.equal(event.descriptor, undefined);
+  assert.equal(typeof event.local_verification.signature, 'string');
+  assert.equal(clock.requests(), 0);
+  clock.setOnline(true);
+  await clock.sync();
+  assert.equal(clock.events.get(event.id).status, 'synced');
+  assert.equal(clock.events.get(event.id).captured_at, captured_at);
+  assert.equal(clock.requests(), 1);
+  await clock.sync();
+  assert.equal(clock.requests(), 1, 'already confirmed captures must not be resent');
+});
+
+test('opening a public clock downloads all faces without a session and automatically renews stale references', async () => {
+  const clock = harness({ companyClock: true, send: (body, url) => {
+    assert.equal(url, '/checador/reloj/offline/empresa/referencias');
+    assert.equal(body.grant, 'company-permit');
+    assert.equal(body.id_empleado, undefined);
+    return { data: { kind: 'local-face', mode: 'company', company: 10, model: engine.MODEL, device_id: body.device_id, prepared_at: new Date().toISOString(), expires_at: new Date(Date.now() + 7 * 86400000).toISOString(), employees: [{ id: 2 }, { id: 3 }] } };
+  } });
+  await clock.prepare();
+  assert.equal(clock.values.get('faces:company:10').employees.length, 2);
+  assert.equal(clock.requests(), 1);
+  await clock.prepare();
+  assert.equal(clock.requests(), 1);
+  clock.values.get('faces:company:10').prepared_at = new Date(Date.now() - 6 * 60000).toISOString();
+  await clock.prepare();
+  assert.equal(clock.requests(), 2);
+  await clock.prepare({ force: true });
+  assert.equal(clock.requests(), 3);
 });
 
 test('offline codes retain their original capture time and remain pending', async () => {

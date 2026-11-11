@@ -13,7 +13,7 @@ export default function FaceReferenceSync() {
     if (dataUser.tipo_usuario === 'Empleado') {
       const company = Number(dataUser.id_empresa), employee = Number(dataUser.id_empleado);
       if (!Number.isInteger(company) || company <= 0 || !Number.isInteger(employee) || employee <= 0) return;
-      contexts = [{ company, employee }];
+      contexts = [{ company }];
     } else if (['Recruiter', 'User', 'Admin'].includes(dataUser.tipo_usuario)) {
       const details = dataUser.empresas_detalle || [];
       const ids = [...new Set([...(dataUser.empresas || []), ...details.map(company => company.id_empresa), dataUser.id_empresa].map(Number))];

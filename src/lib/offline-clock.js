@@ -7,15 +7,15 @@ let synchronizing = false;
 const initializing = new Map();
 const warmed = new Set();
 export const clockStore = () => storeLoading ||= (typeof navigator !== 'undefined' && navigator.onLine ? installOfflineWorker().catch(() => null) : Promise.resolve()).then(() => import(/* webpackIgnore: true */ '/offline-clock/store.mjs?v=9'));
-export const faceEngine = () => import(/* webpackIgnore: true */ '/offline-clock/face.mjs?v=2');
+export const faceEngine = () => import(/* webpackIgnore: true */ '/offline-clock/face.mjs?v=3');
 const notify = () => window.dispatchEvent(new Event('adamia-queue'));
 const profileKey = (company, employee) => employee ? `clock:employee:${company}:${employee}` : `clock:company:${company}`;
 const faceKey = (company, employee, session) => employee ? `faces:employee:${company}:${employee}:${session}` : `faces:company:${company}`;
 const preparingFaces = new Map();
 
-export async function prepareLocalFaces({ company, employee = null, force = false }) {
+export async function prepareLocalFaces({ company, employee = null, slug = null, force = false }) {
   const token = Cookies.get('token');
-  if (!navigator.onLine || !token) return;
+  if (!navigator.onLine || (employee && !token)) return;
   const store = await clockStore();
   const session = employee ? await store.fingerprint(Cookies.get('token')) : null;
   const key = faceKey(company, employee, session);
@@ -25,12 +25,13 @@ export async function prepareLocalFaces({ company, employee = null, force = fals
     if (!force && existing && Date.now() - Date.parse(existing.prepared_at) < 5 * 60000) return existing;
     const engine = await faceEngine();
     const device = await engine.deviceIdentity(store);
-    const { data } = await axios.post('/checador/reloj/offline/referencias', { id_empresa: Number(company), id_empleado: employee || undefined, device_id: device.id, public_key: device.publicKey }, { timeout: 30000 });
+    const profile = employee ? null : await initializeClock({ company, slug });
+    const { data } = await axios.post(employee ? '/checador/reloj/offline/referencias' : '/checador/reloj/offline/empresa/referencias', { id_empresa: Number(company), id_empleado: employee || undefined, grant: profile?.grant, device_id: device.id, public_key: device.publicKey }, { timeout: 30000 });
     if (data.kind !== 'local-face' || data.model !== engine.MODEL || Number(data.company) !== Number(company) || data.device_id !== device.id || (employee ? data.mode !== 'employee' || Number(data.employee) !== Number(employee) : data.mode !== 'company') || !Array.isArray(data.employees)) throw new Error('Las referencias no corresponden a este reloj');
     // Do not advertise a prepared clock before the recognition assets can be
     // reopened without a network (the worker precaches the engine and models).
     await installOfflineWorker();
-    if (Cookies.get('token') !== token) return;
+    if (employee && Cookies.get('token') !== token) return;
     await store.setValue(key, data);
     window.dispatchEvent(new Event('adamia-face-ready'));
     return data;

@@ -79,7 +79,7 @@ test('offline transport preserves precision and original location for a manual d
   }})]});
   const sent=[],saved=[];
   const store={saveEvent:async e=>saved.push(e),listEvents:async()=>[],fingerprint:async()=> 'code-hash'};
-  const ctx={navigator:{onLine:true},crypto:{randomUUID:()=> 'f74c30f4-735b-43e4-8652-7be9388b5caf'},
+  const ctx={window:{__adamiaOffline:false},navigator:{onLine:true},crypto:{randomUUID:()=> 'f74c30f4-735b-43e4-8652-7be9388b5caf'},
     clockStore:async()=>store,initializeClock:async()=>({prepared_at:new Date().toISOString(),grant:'test-grant'}),notify(){},
     axios:{post:async(url,body)=>{sent.push(body);return {data:{action:'entrada',employee:{nombre:'Test'}}}}},
   };

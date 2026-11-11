@@ -22,6 +22,7 @@ const companyState = () => ({ company: 10, employee: 101, movement_id: companyMo
 let referenceDownloads = 0;
 const fixtureDevices = new Map();
 const fixtureDescriptor = Array.from({ length: 128 }, (_, index) => index === 0 ? 1 : 0);
+const coworkerDescriptor = Array.from({ length: 128 }, (_, index) => index === 1 ? 1 : 0);
 const fixtureModel = 'face-api-0.22.2-128-cosine-v1';
 const workerSessions = new Map();
 const pageErrors = [], apiPaths = new Set();
@@ -62,12 +63,14 @@ async function intercept(event) {
   const json = data => send('Fetch.fulfillRequest', { requestId, responseCode: 200, responseHeaders: [{ name: 'Content-Type', value: 'application/json' }, { name: 'Access-Control-Allow-Origin', value: base }, { name: 'Access-Control-Allow-Headers', value: 'authorization,content-type,x-adamia-session' }, { name: 'Access-Control-Allow-Methods', value: 'GET,POST,PUT,DELETE,OPTIONS' }, { name: 'Access-Control-Allow-Credentials', value: 'true' }], body: Buffer.from(JSON.stringify(data)).toString('base64') });
   if (request.method === 'OPTIONS') return json({});
   if (path.endsWith('/users/verify/token')) return json({ user: user() });
-  if (path.endsWith('/offline/referencias')) {
+  if (path.endsWith('/offline/referencias') || path.endsWith('/offline/empresa/referencias')) {
     referenceDownloads++;
     const body = JSON.parse(request.postData);
     fixtureDevices.set(body.device_id, body.public_key);
-    return json({ kind: 'local-face', mode: role === 'Empleado' ? 'employee' : 'company', employee: role === 'Empleado' ? 101 : null, company: 10, device_id: body.device_id, model: fixtureModel,
-      prepared_at: new Date().toISOString(), expires_at: new Date(Date.now() + 7 * 86400000).toISOString(), employees: [{ id: 101, nombre: role === 'Empleado' ? 'Diego Fixture' : 'Ana Fixture', descriptor: fixtureDescriptor, reference: 'fixture-reference', grant: 'fixture-local-authorization', code_identity: createHash('sha256').update('123').digest('hex'), open: false, cierre_turno: 'Automatico', checar_gps: false, areas: [] }] });
+    const personal = path.endsWith('/offline/referencias') && !!body.id_empleado;
+    if (!personal) assert.equal(body.grant, 'fixture-grant');
+    return json({ kind: 'local-face', mode: personal ? 'employee' : 'company', employee: personal ? 101 : null, company: 10, device_id: body.device_id, model: fixtureModel,
+      prepared_at: new Date().toISOString(), expires_at: new Date(Date.now() + 7 * 86400000).toISOString(), employees: [{ id: 101, nombre: role === 'Empleado' ? 'Diego Fixture' : 'Ana Fixture', descriptor: fixtureDescriptor, reference: 'fixture-reference', grant: 'fixture-local-authorization', code_identity: createHash('sha256').update('123').digest('hex'), open: false, cierre_turno: 'Automatico', checar_gps: false, areas: [] }, ...(!personal ? [{ id: 102, nombre: 'Luis Compañero Fixture', descriptor: coworkerDescriptor, reference: 'coworker-reference', grant: 'coworker-local-authorization', code_identity: 'coworker-code', open: false, cierre_turno: 'Automatico', checar_gps: false, areas: [] }] : [])] });
   }
   if (path.endsWith('/offline/empresa/perfil')) return json({ scope: 'company', id_empresa: 10, slug: company.slug, nombre: company.nombre, grant: 'fixture-grant', prepared_at: new Date().toISOString() });
   if (path.endsWith('/offline/perfil')) return json({ ...employee, nombre: 'Diego Fixture', metodo: 'codigo', cierre_turno: 'Automático', checar_gps: false, prepared_at: new Date().toISOString() });
@@ -75,10 +78,17 @@ async function intercept(event) {
     const event = JSON.parse(request.postData);
     if (event.local_verification) {
       assert.equal(event.descriptor, undefined);
-      assert.equal(event.local_employee, 101);
+      assert([101, 102].includes(event.local_employee));
       const proof = event.local_verification;
       const canonical = JSON.stringify([event.id, event.captured_at, event.action, event.method, Number(event.company), Number(event.local_employee), event.latitude ?? null, event.longitude ?? null, event.precision_metros ?? null, event.ubicacion_timestamp ?? null, proof.device_id, proof.model, proof.reference, proof.score, proof.grant]);
       assert(verifySignature('sha256', Buffer.from(canonical), { key: createPublicKey({ key: fixtureDevices.get(proof.device_id), format: 'jwk' }), dsaEncoding: 'ieee-p1363' }, Buffer.from(proof.signature, 'base64url')));
+    }
+    if (event.local_employee === 102) {
+      if (!companyReceipts.has(event.id)) {
+        assert.equal(event.action, 'entrada');
+        companyReceipts.set(event.id, { id: event.id, status: 'synced', action: 'entrada', employee: { id: 102, nombre: 'Luis Compañero Fixture' }, clock_state: { company: 10, employee: 102, revision: 2, open: true, observed_at: new Date().toISOString() } });
+      }
+      return json(companyReceipts.get(event.id));
     }
     if (!companyReceipts.has(event.id)) {
       const action = event.action === 'auto' ? (companyOpen ? 'salida' : 'entrada') : event.action;
@@ -91,6 +101,14 @@ async function intercept(event) {
   }
   if (path.endsWith('/offline/sincronizar')) {
     const event = JSON.parse(request.postData);
+    if (event.local_verification) {
+      assert.equal(event.descriptor, undefined);
+      assert.equal(event.local_employee, 101);
+      assert.equal(event.company, 10);
+      const proof = event.local_verification;
+      const canonical = JSON.stringify([event.id, event.captured_at, event.action, event.method, Number(event.company), Number(event.local_employee), event.latitude ?? null, event.longitude ?? null, event.precision_metros ?? null, event.ubicacion_timestamp ?? null, proof.device_id, proof.model, proof.reference, proof.score, proof.grant]);
+      assert(verifySignature('sha256', Buffer.from(canonical), { key: createPublicKey({ key: fixtureDevices.get(proof.device_id), format: 'jwk' }), dsaEncoding: 'ieee-p1363' }, Buffer.from(proof.signature, 'base64url')));
+    }
     if (!receipts.has(event.id)) receipts.set(event.id, { id: event.id, status: 'synced', action: receipts.size % 2 ? 'salida' : 'entrada', employee: { id: 101, nombre: 'Diego Fixture' } });
     if (!droppedResponse) { droppedResponse = true; return send('Fetch.failRequest', { requestId, errorReason: 'ConnectionClosed' }); }
     return json(receipts.get(event.id));
@@ -162,11 +180,49 @@ try {
   await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
   await send('Fetch.enable', { patterns: [{ urlPattern: '*' }] });
   await send('Page.addScriptToEvaluateOnNewDocument', { source: "Object.defineProperty(navigator,'geolocation',{value:{getCurrentPosition(ok,fail){fail({code:1,message:'Fixture GPS denied'})}}});" });
-  await send('Page.addScriptToEvaluateOnNewDocument', { source: "window.__cameraRequests=0; const fixtureGetUserMedia=navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);navigator.mediaDevices.getUserMedia=(...args)=>{window.__cameraRequests++;return fixtureGetUserMedia(...args)};" });
-  await send('Page.addScriptToEvaluateOnNewDocument', { source: `window.__fixtureFaceEnabled=false; window.faceapi={nets:{ssdMobilenetv1:{params:true},faceLandmark68Net:{params:true},faceRecognitionNet:{params:true}},detectSingleFace(){return {withFaceLandmarks(){return {withFaceDescriptor:async()=>window.__fixtureFaceEnabled?{descriptor:new Float32Array(${JSON.stringify(fixtureDescriptor)})}:null}}}}};` });
+  // A canvas stream makes the synthetic camera independent of host devices.
+  // The production panel still acquires, renders and stops a MediaStream.
+  await send('Page.addScriptToEvaluateOnNewDocument', { source: `
+    window.__cameraRequests=0;
+    navigator.mediaDevices.getUserMedia=async()=>{
+      window.__cameraRequests++;
+      const canvas=document.createElement('canvas'); canvas.width=640; canvas.height=480;
+      const draw=()=>{const ctx=canvas.getContext('2d');ctx.fillStyle='#ddd';ctx.fillRect(0,0,640,480)};
+      draw(); const stream=canvas.captureStream(10); const timer=setInterval(draw,100);
+      for(const track of stream.getTracks()){const stop=track.stop.bind(track);track.stop=()=>{clearInterval(timer);stop()}};
+      return stream;
+    };
+  ` });
+  await send('Page.addScriptToEvaluateOnNewDocument', { source: `window.__fixtureFaceEnabled=false; window.__fixtureFaceDescriptor=${JSON.stringify(fixtureDescriptor)}; window.faceapi={nets:{ssdMobilenetv1:{params:true},faceLandmark68Net:{params:true},faceRecognitionNet:{params:true}},detectSingleFace(){return {withFaceLandmarks(){return {withFaceDescriptor:async()=>window.__fixtureFaceEnabled?{descriptor:new Float32Array(window.__fixtureFaceDescriptor)}:null}}}}};` });
+  // Fresh browser: nobody has ever logged in on this device.
+  await go('/fixture-company', 'Registrar Entrada / Salida');
+  await until(() => evaluate("document.body.textContent.includes('Reconocimiento offline preparado en este dispositivo')"), 'public link automatically downloads faces without a login');
+  assert(!await evaluate("document.cookie.includes('token=')"));
+  await until(() => evaluate("(async()=>!!await(await caches.open('adamia-runtime-assets-v1')).match(location.origin+'/__offline/company/fixture-company'))()"), 'anonymous clock page cached');
+  const publicDownloads = referenceDownloads;
+  await offline(true);
+  await evaluate('window.__fixtureFaceEnabled=true');
+  // The facial panel is already open on desktop; no navigation or login needed.
+  await until(() => evaluate("(async()=>(await(await import('/offline-clock/store.mjs')).listEvents()).some(event=>event.scope==='company'&&event.local_validated&&event.status==='pending'))()"), 'anonymous public clock recognizes a face when internet disappears');
+  await evaluate('window.__fixtureFaceEnabled=false');
+  const publicFace = await evaluate("(async()=>(await(await import('/offline-clock/store.mjs')).listEvents())[0])()");
+  assert.equal(publicFace.employeeName, 'Ana Fixture');
+  assert.equal(publicFace.descriptor, undefined);
+  await go('/fixture-company', 'Registrar Entrada / Salida');
+  await until(() => evaluate("document.body.textContent.includes('Reconocimiento local listo')"), 'anonymous clock survives an offline reload');
+  await offline(false);
+  await evaluate("window.dispatchEvent(new Event('online'))");
+  await until(() => companyReceipts.has(publicFace.id), 'anonymous facial capture uploads on reconnect');
+  await until(() => referenceDownloads > publicDownloads, 'public references refresh on reconnect without login');
+  await evaluate("window.dispatchEvent(new Event('online'))");
+  await sleep(1200);
+  assert.equal(companyReceipts.size, 1);
+  // Reset synthetic movements before the existing HR scenarios.
+  await evaluate("(async()=>{const store=await import('/offline-clock/store.mjs');await store.transaction('events','readwrite',items=>items.clear())})()");
+  companyReceipts.clear(); companyOpen = false; companyMovementId = 0;
   await send('Network.setCookie', { name: 'token', value: token(), url: base, path: '/' });
   await go('/panel/empleados', 'Ana Fixture'); await snapshot();
-  await until(() => evaluate("(async()=>{const data=await(await import('/offline-clock/store.mjs')).getValue('faces:company:10');return data?.employees?.length===1})()"), 'global background face download without opening a clock');
+  await until(() => evaluate("(async()=>{const data=await(await import('/offline-clock/store.mjs')).getValue('faces:company:10');return data?.employees?.length===2})()"), 'global background company roster download');
   assert.equal(await evaluate('location.pathname'), '/panel/empleados');
   const initialDownloads = referenceDownloads;
   await evaluate("(async()=>{const store=await import('/offline-clock/store.mjs');const data=await store.getValue('faces:company:10');await store.setValue('faces:company:10',{...data,prepared_at:new Date(Date.now()-6*60000).toISOString()});document.dispatchEvent(new Event('visibilitychange'))})()");
@@ -310,6 +366,48 @@ try {
   await evaluate("window.dispatchEvent(new Event('online'))");
   await until(() => evaluate("(async()=>{const events=(await(await import('/offline-clock/store.mjs')).listEvents()).filter(event=>event.scope!=='company');return events.length===2&&events.every(event=>event.status==='synced')})()"), 'automatic sync after lost response', 600);
   assert.equal(receipts.size, 2);
-  assert(await evaluate("(async()=>{const store=await import('/offline-clock/store.mjs');await store.clearConfig();const values=await store.allValues();return !values.some(value=>value?.kind==='local-face'&&value.mode==='employee')&&values.some(value=>value?.kind==='local-face'&&value.mode==='company')&&(await store.listEvents()).length===6&&!!(await store.getValue('face:device:v1'))?.privateKey})()"));
+  await followClockLink('/empleado/reloj-checador', 'Registrar Entrada / Salida');
+  await until(() => evaluate("document.body.textContent.includes('Reconocimiento offline preparado en este dispositivo')"), 'employee face ready before disconnection');
+  await offline(true);
+  await evaluate("(()=>{window.__fixtureFaceEnabled=true; Array.from(document.querySelectorAll('button')).find(button=>button.textContent.trim()==='Rostro'&&button.getBoundingClientRect().width>0).click()})()");
+  await until(() => evaluate("(async()=>{const events=await(await import('/offline-clock/store.mjs')).listEvents();return events.some(event=>event.scope==='company'&&event.local_validated&&event.status==='pending'&&event.employeeName==='Diego Fixture'&&event.local_verification?.signature&&!event.descriptor)})()"), 'employee camera recognizes own face offline and persists a signed capture');
+  await evaluate("window.__fixtureFaceEnabled=false");
+  const employeeFace = await evaluate("(async()=>(await(await import('/offline-clock/store.mjs')).listEvents()).find(event=>event.scope==='company'&&event.local_validated&&event.status==='pending'))()");
+  assert.equal(receipts.size, 2, 'offline face must not reach the server');
+  await followClockLink('/empleado/panel/asistencias', 'Mis asistencias');
+  await until(() => evaluate("document.querySelector('tr[data-offline-event]')?.textContent.includes('Rostro reconocido · Pendiente de subir') && document.querySelector('tr[data-offline-event]')?.textContent.includes('Diego Fixture')"), 'employee history shows recognized face pending upload');
+  await go('/empleado/panel/asistencias', 'Mis asistencias');
+  await until(() => evaluate("document.querySelectorAll('tr[data-offline-event]').length===1"), 'employee facial capture survives offline reload');
+  await offline(false);
+  await evaluate("window.dispatchEvent(new Event('online'))");
+  await until(() => companyReceipts.has(employeeFace.id), 'employee signed face synchronized with recognized identity');
+  assert.equal(companyReceipts.get(employeeFace.id).action, employeeFace.action);
+  await until(() => evaluate("document.querySelectorAll('tr[data-offline-event]').length===0"), 'employee synchronized face no longer duplicates history');
+  await evaluate("window.dispatchEvent(new Event('online'))");
+  await sleep(1500);
+  assert.equal(companyReceipts.size, 4, 'reconnection must not duplicate employee facial attendance');
+  await followClockLink('/empleado/reloj-checador', 'Registrar Entrada / Salida');
+  await evaluate("(()=>{window.__fixtureFaceEnabled=true; Array.from(document.querySelectorAll('button')).find(button=>button.textContent.trim()==='Rostro'&&button.getBoundingClientRect().width>0).click()})()");
+  await until(() => evaluate("!!document.querySelector('.bg-green-500 svg')"), 'employee online facial capture shows green confirmation');
+  await evaluate("window.__fixtureFaceEnabled=false");
+  assert.equal(companyReceipts.size, 5, 'employee success requires a server receipt');
+  const employeeCameraRequests = await evaluate('window.__cameraRequests');
+  for (const disconnected of [true, false]) {
+    await offline(disconnected);
+    await sleep(1500);
+    assert.equal(await evaluate('window.__cameraRequests'), employeeCameraRequests, 'connection changes must not reopen employee camera');
+    assert(!await evaluate("Array.from(document.querySelectorAll('video')).some(video=>video.srcObject?.getVideoTracks().some(track=>track.readyState==='live'))"));
+  }
+  await offline(true);
+  await evaluate(`(()=>{window.__fixtureFaceDescriptor=${JSON.stringify(coworkerDescriptor)};window.__fixtureFaceEnabled=true;Array.from(document.querySelectorAll('button')).find(button=>button.textContent.trim()==='Rostro'&&button.getBoundingClientRect().width>0).click()})()`);
+  await until(() => evaluate("(async()=>(await(await import('/offline-clock/store.mjs')).listEvents()).some(event=>event.scope==='company'&&event.local_employee===102&&event.employeeName==='Luis Compañero Fixture'&&event.status==='pending'&&event.local_verification?.signature))()"), 'employee clock recognizes a coworker offline under the coworker identity');
+  await evaluate('window.__fixtureFaceEnabled=false');
+  await followClockLink('/empleado/panel/asistencias', 'Mis asistencias');
+  assert.equal(await evaluate("document.querySelectorAll('tr[data-offline-event]').length"), 0, 'coworker attendance must not enter the logged-in employee history');
+  await offline(false);
+  await evaluate("window.dispatchEvent(new Event('online'))");
+  await until(() => [...companyReceipts.values()].some(receipt => receipt.employee.id === 102), 'coworker attendance uploads under the recognized identity');
+  assert.equal(companyReceipts.size, 6);
+  assert(await evaluate("(async()=>{const store=await import('/offline-clock/store.mjs');await store.clearConfig();const values=await store.allValues();return !values.some(value=>value?.kind==='local-face'&&value.mode==='employee')&&values.some(value=>value?.kind==='local-face'&&value.mode==='company')&&(await store.listEvents()).length===9&&!!(await store.getValue('face:device:v1'))?.privateKey})()"));
   console.log('PASS: Next/Chrome offline navigation, authorized facial download, local face comparison with synthetic camera detections, persistent signed captures in both tables, descriptor-free sync, session isolation and lost-response retry. No real APIs or databases used.');
 } finally { socket?.close(); chrome?.kill(); next.kill(); }

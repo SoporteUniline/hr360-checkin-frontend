@@ -36,6 +36,11 @@ test('date filters use the company local day rather than UTC, including midnight
   assert.deepEqual(select([{ ...pending, captured_at: 'invalid' }]), []);
 });
 
+test('personal history includes own recognized shared-clock captures and excludes coworkers and unidentified codes', () => {
+  const ownFace = { ...pending, method: 'facial', local_validated: true, local_employee: 2, employeeName: 'Own' };
+  assert.deepEqual(select([ownFace, { ...ownFace, local_employee: 3 }, { ...ownFace, company: 11 }, pending], { user: employee }), [ownFace]);
+});
+
 test('search can find a masked code or known name without changing the stored capture', () => {
   assert.deepEqual(select([pending], { search: '00123' }), [pending]);
   const named = { ...pending, employeeName: 'Ana Prueba' };

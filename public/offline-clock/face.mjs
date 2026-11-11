@@ -8,7 +8,7 @@ export function cosine(a, b) {
   return a.reduce((sum, value, index) => sum + value * b[index], 0) / (Math.hypot(...a) * Math.hypot(...b)) || 0;
 }
 export function matchFace(descriptor, dataset, now = Date.now()) {
-  if (!dataset || !Array.isArray(dataset.employees) || dataset.model !== MODEL || Date.parse(dataset.expires_at) <= now || !Number.isFinite(Date.parse(dataset.expires_at))) fail('El reconocimiento offline necesita descargar sus referencias con una sesión autorizada y conexión.', 'LOCAL_FACE_NOT_READY');
+  if (!dataset || !Array.isArray(dataset.employees) || dataset.model !== MODEL || Date.parse(dataset.expires_at) <= now || !Number.isFinite(Date.parse(dataset.expires_at))) fail('Abre el reloj de la empresa con internet para descargar o renovar los rostros automáticamente.', 'LOCAL_FACE_NOT_READY');
   const matches = dataset.employees.map(employee => ({ employee, score: cosine(descriptor, employee.descriptor) })).filter(match => match.score >= 0.95).sort((a, b) => b.score - a.score);
   if (!matches.length) fail('No se encontró coincidencia facial en este dispositivo. Mejora la iluminación y vuelve a intentar.', 'FACE_NOT_MATCHED');
   if (matches.length > 1) fail('El rostro coincide con más de un empleado. RH debe revisar las referencias faciales.', 'FACE_AMBIGUOUS');

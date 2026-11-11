@@ -67,10 +67,10 @@ export default function RelojChecador({
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const [subscriptionActive, setSubscriptionActive] = useState(false);
   const { getCurrentLocation, loading: loadingGPS } = useGPS();
-  const submitMovement = payload => registerClockMovement(payload, { company: idEmpresa, employee: modoEmpleado ? idEmpleado : null, slug: companySlug });
+  const submitMovement = payload => registerClockMovement(payload, { company: idEmpresa, employee: modoEmpleado && !payload.descriptor_facial && !payload.offline_event?.local_verification ? idEmpleado : null, slug: companySlug });
   useEffect(() => {
     let active = true;
-    const context = { company: idEmpresa, employee: modoEmpleado ? idEmpleado : null, slug: companySlug };
+    const context = { company: idEmpresa, slug: companySlug };
     const refresh = () => { void localFaceStatus(context).then(dataset => { if (active) setLocalFacesReady(!!dataset?.employees?.length); }).catch(() => { if (active) setLocalFacesReady(false); }); };
     void initializeClock(context).catch(() => {}).finally(refresh);
     refresh();
@@ -408,7 +408,7 @@ export default function RelojChecador({
                   Registro de entradas y salidas con validación por código, QR y
                   reconocimiento facial.
                 </p>
-                <p role="status" className="mt-2 inline-flex rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">{offline ? localFacesReady ? 'Sin conexión · Reconocimiento local listo · Pendiente de subir' : 'Sin conexión · Código / QR · Rostro sin preparar' : localFacesReady ? 'Reconocimiento offline preparado en este dispositivo' : 'Las referencias se descargan automáticamente con una sesión autorizada e internet.'}</p>
+                <p role="status" className="mt-2 inline-flex rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">{offline ? localFacesReady ? 'Sin conexión · Reconocimiento local listo · Pendiente de subir' : 'Sin conexión · Código / QR · Rostro sin preparar' : localFacesReady ? 'Reconocimiento offline preparado en este dispositivo' : 'Los rostros de la empresa se descargan automáticamente con internet, sin iniciar sesión.'}</p>
               </div>
             </div>
           </div>

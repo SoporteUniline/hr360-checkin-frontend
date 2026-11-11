@@ -13,7 +13,12 @@ export function selectLocalClockEvents(events, { user, session, company, from, t
     if (company && company !== 'all' && Number(event.company) !== Number(company)) return false;
     if (hr) {
       if (event.scope !== 'company' || !assigned.has(Number(event.company))) return false;
-    } else if (event.scope === 'company' || Number(event.employee) !== Number(user.id_empleado) || Number(event.company) !== Number(user.id_empresa) || event.session !== session) return false;
+    } else {
+      if (Number(event.company) !== Number(user.id_empresa)) return false;
+      if (event.scope === 'company') {
+        if (!event.local_validated || Number(event.local_employee) !== Number(user.id_empleado)) return false;
+      } else if (Number(event.employee) !== Number(user.id_empleado) || event.session !== session) return false;
+    }
     const captured = new Date(event.captured_at);
     if (!Number.isFinite(captured.getTime())) return false;
     const timezone = details.find(item => Number(item.id_empresa) === Number(event.company))?.zona_horaria || user.zona_horaria || 'America/Mexico_City';

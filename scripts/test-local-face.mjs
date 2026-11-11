@@ -17,6 +17,24 @@ test('a real local comparison identifies the matching reference and refuses unkn
   assert.throws(() => matchFace(descriptor, { ...dataset(), employees: [employee, { ...employee, id: 2 }] }), { code: 'FACE_AMBIGUOUS' });
 });
 
+test('a prepared company clock identifies different employees and keeps their offline turns separate throughout the day', () => {
+  const prepared = Date.now() - 12 * 3600000;
+  const data = { ...dataset(), prepared_at: new Date(prepared).toISOString(), expires_at: new Date(prepared + 7 * 86400000).toISOString(),
+    employees: [employee, { ...employee, id: 2, nombre: 'Luis', descriptor: other, code_identity: 'other-code-hash' }] };
+  const first = matchFace(descriptor, data).employee;
+  const second = matchFace(other, data).employee;
+  assert.equal(first.id, 1);
+  assert.equal(second.id, 2);
+  const queue = [];
+  for (const person of [first, second, first, second]) {
+    const action = localAction(person, data, queue);
+    const captured_at = new Date().toISOString();
+    validateCaptureTime(data, captured_at);
+    queue.push({ company: 10, local_employee: person.id, action, status: 'pending', captured_at });
+  }
+  assert.deepEqual(queue.map(event => [event.local_employee, event.action]), [[1, 'entrada'], [2, 'entrada'], [1, 'salida'], [2, 'salida']]);
+});
+
 test('missing, expired and incompatible downloads cannot identify an employee offline', () => {
   for (const value of [null, { ...dataset(), model: 'other' }, { ...dataset(), expires_at: new Date(Date.now() - 1).toISOString() }]) assert.throws(() => matchFace(descriptor, value), { code: 'LOCAL_FACE_NOT_READY' });
 });
