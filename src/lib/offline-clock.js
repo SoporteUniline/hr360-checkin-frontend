@@ -109,7 +109,10 @@ export async function installOfflineWorker() {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !window.isSecureContext) return null;
   if (!registrationLoading) registrationLoading = (async () => {
     const registration = await navigator.serviceWorker.register('/offline-clock-sw.js', { scope: '/' });
-    await registration.update();
+    // A previously prepared clock must still start when Wi-Fi is connected
+    // but the internet is unavailable. Updating is optional with an active worker.
+    try { await registration.update(); }
+    catch (error) { if (!registration.active) throw error; }
     const worker = registration.installing || registration.waiting || registration.active;
     if (worker && worker.state !== 'activated') await new Promise((resolve, reject) => {
       const timeout = setTimeout(() => reject(new Error('Descarga offline pendiente')), 120000);

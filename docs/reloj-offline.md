@@ -32,6 +32,12 @@ Los códigos/QR conservan el flujo anterior de validación al subir. Los pendien
 
 Verificación frontend: `node --test scripts/test-local-face.mjs scripts/test-offline-clock-registration.mjs scripts/test-local-clock-events.mjs scripts/test-offline-clock.mjs scripts/test-offline-app-cache.mjs`. Backend: `node --test scripts/test-local-face.cjs scripts/test-offline-clock.cjs scripts/test-company-offline-clock.cjs tests/geofence.test.cjs tests/areaCheckRoutes.test.cjs`. `verify-offline-panels.mjs` usa Chrome, cámara simulada y detecciones sintéticas para probar preparación, comparación local, firma persistida, ambas consultas offline y sincronización sin descriptor. Falta validar con cámara y rostros reales en Android/iPhone. Esta sección sustituye las referencias históricas a validación facial exclusivamente en el servidor que aparecen abajo.
 
+## Reapertura sin internet
+
+El reloj público previamente preparado puede volver a abrirse desde su enlace en el mismo navegador, sin instalar una aplicación nativa. La primera descarga necesita internet. Si el navegador mantiene conexión a Wi-Fi pero no tiene salida a internet, un fallo al buscar actualizaciones del service worker no bloquea el uso de su versión activa. Una instalación inicial fallida sigue reportándose como incompleta.
+
+Prueba de este arranque: `node --test scripts/test-offline-worker-startup.mjs`. La prueba `node scripts/verify-offline-panels.mjs` también cubre la recarga offline del enlace público y la sincronización posterior con datos y cámara sintéticos.
+
 ## Uso
 
 El reloj y las pantallas de Asistencias y Entradas y salidas incluyen una barra de navegación directa solo en móvil. Sus botones permanecen en una fila con desplazamiento horizontal si no caben. RH ve los relojes de sus empresas asignadas; los empleados ven su reloj y Mis asistencias. El reloj público sin sesión no muestra enlaces a consultas privadas. Los enlaces recuperan la pantalla completa cuando no hay conexión, incluida la ruta pública del reloj de empresa. Las pantallas de destino deben haberse visitado con internet antes de usarlas offline. Si todavía no se conoce el enlace de una empresa sin conexión, se indica que necesita conexión en lugar de prometer acceso al reloj.
