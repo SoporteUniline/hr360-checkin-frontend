@@ -1,0 +1,83 @@
+name: Revisar actualización de Uniline Agents
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 10 * * 1' # lunes, UTC
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: uniline-agents-sync
+  cancel-in-progress: false
+
+jobs:
+  revision:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout de este proyecto
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+      - name: Preparar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Probar el sincronizador antes de usarlo
+        run: node .uniline/test-sync.cjs
+      - name: Recuperar plantilla central
+        uses: actions/checkout@v4
+        with:
+          repository: DiegoUniline/unilineagents
+          ref: main
+          path: .uniline-upstream
+          sparse-checkout: |
+            dist/proyecto
+      - name: Generar propuesta SIN sobrescribir cambios locales
+        id: sync
+        shell: bash
+        run: |
+          set -euo pipefail
+          REV="$(git -C .uniline-upstream rev-parse HEAD)"
+          echo "revision=$REV" >> "$GITHUB_OUTPUT"
+          node .uniline/sync.cjs --source .uniline-upstream/dist/proyecto --revision "$REV"
+          rm -rf .uniline-upstream
+      - name: Abrir PR de revisión (NUNCA fusionar automáticamente)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SOURCE_REV: ${{ steps.sync.outputs.revision }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -- .claude AGENTS.md CLAUDE.md .uniline/sync-state.json .uniline/sync-report.md
+          if git diff --cached --quiet; then
+            echo "Uniline Agents ya está sincronizado; no hay cambios para PR."
+            exit 0
+          fi
+
+          # Si hay una propuesta abierta, esperar revisión humana antes de otra.
+          OPEN="$(gh pr list --state open --json number,headRefName --jq '[.[]|select(.headRefName|startswith("bot/sync-uniline-"))] | length')"
+          if [ "$OPEN" -gt 0 ]; then
+            echo "::notice::Existe un PR de sincronización pendiente. Revísalo antes de generar otro."
+            exit 0
+          fi
+
+          SHORT="${SOURCE_REV:0:12}"
+          BRANCH="bot/sync-uniline-$SHORT"
+          # Nunca forzar una rama previamente publicada.
+          if git ls-remote --heads origin "$BRANCH" | grep -q .; then
+            echo "::notice::La rama $BRANCH ya existe; no se sobrescribe."
+            exit 0
+          fi
+          git switch -c "$BRANCH"
+          git commit -m "chore: proponer actualización de Uniline Agents $SHORT"
+          git push origin "HEAD:refs/heads/$BRANCH"
+          gh pr create --base "${{ github.event.repository.default_branch }}" --head "$BRANCH" \
+            --title "Actualizar Uniline Agents ($SHORT) — revisión requerida" \
+            --body "Actualización revisable, SIN merge automático. Se preservan los archivos personalizados. Leer **.uniline/sync-report.md** para archivos actualizados, añadidos y conflictos que deben resolverse antes de fusionar. Si el repositorio no permite a Actions crear PR, habilitarlo en Settings > Actions > General."
