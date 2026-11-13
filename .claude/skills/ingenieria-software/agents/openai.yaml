@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ingenieria Software"
+  short_description: "Calidad, arquitectura y verificación antes que velocidad"
+  default_prompt: "Aplica $ingenieria-software para implementar este cambio priorizando calidad, reutilización y evidencia sobre velocidad."
