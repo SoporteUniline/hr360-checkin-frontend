@@ -16,16 +16,7 @@ export default function RecuperacionPage() {
   const router = useRouter();
   const { enqueueSnackbar } = useSnackbar();
   const [loading, setLoading] = useState(false);
-  const [isNative, setIsNative] = useState(() => {
-    if (typeof window !== "undefined") {
-      return (
-        Capacitor.isNativePlatform() ||
-        navigator.userAgent.includes("AdamiaAppNative") ||
-        window.location.search.includes("native=true")
-      );
-    }
-    return false;
-  });
+  const [isNative, setIsNative] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {

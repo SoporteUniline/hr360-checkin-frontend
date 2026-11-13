@@ -17,11 +17,22 @@ const defaultRedirects = {
   Empleado: "/empleado",
 };
 
+// These public routes were previously outside the middleware matcher.
+// Keep their browser behavior when extending native-only restrictions.
+const nativeOnlyPublicRoutes = [
+  "/signup", "/funcionalidades", "/quienes-somos", "/contacto",
+  "/blog-y-noticias", "/bolsa-de-trabajo", "/calculadora-aguinaldos",
+  "/capacitacion", "/politicas", "/terminos-condiciones", "/aviso-privacidad",
+];
+
 export async function middleware(request) {
   const token = request.cookies.get("token")?.value;
   const pathname = request.nextUrl.pathname;
   const userAgent = request.headers.get("user-agent") || "";
   const isNativeApp = userAgent.includes("AdamiaAppNative");
+  if (!isNativeApp && nativeOnlyPublicRoutes.some(path => pathname === path || pathname.startsWith(path + "/"))) {
+    return NextResponse.next();
+  }
 
   // Reglas de restricción para la app nativa (estricto: solo login directo y módulos internos)
   if (isNativeApp) {
@@ -31,17 +42,7 @@ export async function middleware(request) {
       "/cotiza",
       "/alta-empresas",
       "/register",
-      "/signup",
-      "/funcionalidades",
-      "/quienes-somos",
-      "/contacto",
-      "/blog-y-noticias",
-      "/bolsa-de-trabajo",
-      "/calculadora-aguinaldos",
-      "/capacitacion",
-      "/politicas",
-      "/terminos-condiciones",
-      "/aviso-privacidad",
+      ...nativeOnlyPublicRoutes,
     ];
 
     const isBlocked =
@@ -111,9 +112,20 @@ export const config = {
     "/home/:path*",
     "/empleado/:path*",
     "/login",
-    "/register",
+    "/register/:path*",
     "/contratar-plan/:path*",
     "/cotiza/:path*",
     "/alta-empresas/:path*",
+    "/signup/:path*",
+    "/funcionalidades/:path*",
+    "/quienes-somos/:path*",
+    "/contacto/:path*",
+    "/blog-y-noticias/:path*",
+    "/bolsa-de-trabajo/:path*",
+    "/calculadora-aguinaldos/:path*",
+    "/capacitacion/:path*",
+    "/politicas/:path*",
+    "/terminos-condiciones/:path*",
+    "/aviso-privacidad/:path*",
   ],
 };
