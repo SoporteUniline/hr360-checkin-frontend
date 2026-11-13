@@ -6,6 +6,10 @@ const nextConfig = {
   async rewrites() {
     return [
       {
+        source: "/internal/offline-clock/sync",
+        destination: "/api/offline-clock/sync",
+      },
+      {
         source: "/internal/control-activos/:path*",
         destination: "/api/control-activos/:path*",
       },

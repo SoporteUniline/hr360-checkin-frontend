@@ -27,6 +27,7 @@ const fixtureModel = 'face-api-0.22.2-128-cosine-v1';
 const workerSessions = new Map();
 const pageErrors = [], apiPaths = new Set();
 let droppedResponse = false;
+let networkOffline = false;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 const company = { id_empresa: 10, nombre: 'Empresa fixture', nombre_empresa: 'Empresa fixture', slug: 'fixture-company', estado: 'Activo', zona_horaria: 'America/Mexico_City' };
 const employee = { id_empleado: 101, id_empresa: 10, nombre: 'Ana Fixture', apellido_paterno: 'Prueba', estado: 'Activo', nip: '123', departamento: 'Pruebas' };
@@ -57,6 +58,15 @@ async function evaluate(expression) {
 async function intercept(event) {
   const { requestId, request } = event;
   const url = new URL(request.url), path = url.pathname;
+  if (networkOffline && (path.endsWith('/sincronizar') || path === '/internal/offline-clock/sync' || path === '/api/offline-clock/sync')) {
+    return send('Fetch.failRequest', { requestId, errorReason: 'InternetDisconnected' });
+  }
+  // Never let the new same-origin server proxy reach a real backend in this
+  // synthetic browser suite. Personal foreground uploads are mocked below.
+  if (path === '/internal/offline-clock/sync' || path === '/api/offline-clock/sync') return send('Fetch.fulfillRequest', {
+    requestId, responseCode: 503, responseHeaders: [{ name: 'Content-Type', value: 'application/json' }],
+    body: Buffer.from(JSON.stringify({ error: 'Synthetic background retry' })).toString('base64'),
+  });
   if (request.url.startsWith(base) && !path.startsWith('/api/')) return send('Fetch.continueRequest', { requestId });
   if (event.resourceType === 'Script' && !path.startsWith('/api/')) return send('Fetch.fulfillRequest', { requestId, responseCode: 200, responseHeaders: [{ name: 'Content-Type', value: 'application/javascript' }], body: '' });
   apiPaths.add(path);
@@ -128,6 +138,7 @@ async function intercept(event) {
   return send('Fetch.continueRequest', { requestId });
 }
 async function offline(value) {
+  networkOffline = value;
   const conditions = { offline: value, latency: 0, downloadThroughput: value ? 0 : -1, uploadThroughput: value ? 0 : -1 };
   await send('Network.emulateNetworkConditions', conditions);
   const { targetInfos } = await send('Target.getTargets');
@@ -177,6 +188,9 @@ try {
     if (message.error) handler.reject(new Error(JSON.stringify(message.error))); else handler.resolve(message.result);
   };
   await send('Page.enable'); await send('Network.enable'); await send('Runtime.enable');
+  // This suite verifies the foreground fallback, including browsers/users that
+  // deny Background Sync. The dedicated clock suite tests closed-tab uploads.
+  await send('Browser.setPermission', { permission: { name: 'background-sync' }, setting: 'denied', origin: base });
   await send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false });
   await send('Fetch.enable', { patterns: [{ urlPattern: '*' }] });
   await send('Page.addScriptToEvaluateOnNewDocument', { source: "Object.defineProperty(navigator,'geolocation',{value:{getCurrentPosition(ok,fail){fail({code:1,message:'Fixture GPS denied'})}}});" });

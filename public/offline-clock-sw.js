@@ -1,8 +1,9 @@
-const CACHE = 'adamia-clock-shell-v10';
+import { synchronizeBackground } from './offline-clock/background-sync.mjs';
+const CACHE = 'adamia-clock-shell-v11';
 const RUNTIME = 'adamia-runtime-assets-v1';
 const MAX_AGE = 7 * 86400000;
 const ASSETS = [
-  '/app-offline.html', '/offline-clock/app-cache.mjs',
+  '/app-offline.html', '/offline-clock/app-cache.mjs', '/offline-clock/background-sync.mjs',
   '/reloj-offline.html', '/offline-clock/app.mjs', '/offline-clock/store.mjs', '/offline-clock/face.mjs', '/offline-clock/turn-state.mjs', '/offline-clock/style.css',
   '/vendor/face-api/face-api-0.22.2.min.js',
   '/models/face_landmark_68_model-weights_manifest.json', '/models/face_landmark_68_model-shard1',
@@ -10,6 +11,12 @@ const ASSETS = [
   '/models/ssd_mobilenetv1_model-weights_manifest.json', '/models/ssd_mobilenetv1_model-shard1', '/models/ssd_mobilenetv1_model-shard2',
 ];
 const staticAsset = url => url.origin === self.location.origin && (url.pathname.startsWith('/_next/static/') || url.pathname.startsWith('/assets/') || (url.pathname === '/_next/image' && url.searchParams.get('url')?.startsWith('/assets/')));
+self.addEventListener('sync', event => {
+  if (event.tag === 'adamia-clock-upload') event.waitUntil(synchronizeBackground().finally(async () => {
+    const clients = await self.clients.matchAll({ type: 'window' });
+    clients.forEach(client => client.postMessage({ type: 'CLOCK_QUEUE_UPDATED' }));
+  }));
+});
 async function digest(value) {
   return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))), byte => byte.toString(16).padStart(2, '0')).join('');
 }
@@ -44,6 +51,9 @@ self.addEventListener('activate', event => {
 });
 self.addEventListener('message', event => {
   const data = event.data;
+  if (data?.type === 'SCHEDULE_CLOCK_SYNC' && self.registration.sync) event.waitUntil(
+    self.registration.sync.register('adamia-clock-upload').catch(() => {})
+  );
   if (data?.type === 'WARM_ASSETS') event.waitUntil((async () => {
     const cache = await caches.open(RUNTIME);
     await Promise.allSettled((data.urls || []).slice(0, 300).map(async value => {

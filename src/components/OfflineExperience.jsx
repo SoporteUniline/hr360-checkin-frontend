@@ -37,6 +37,9 @@ export default function OfflineExperience() {
       if (!disposed) setEvents(own);
     };
     const network = event => setOffline(event.detail?.offline ?? !navigator.onLine);
+    const workerMessage = event => {
+      if (event.data?.type === 'CLOCK_QUEUE_UPDATED') window.dispatchEvent(new Event('adamia-queue'));
+    };
     const online = () => { window.__adamiaOffline = false; setOffline(false); void synchronizeClockQueue().catch(() => {}); };
     const lost = () => { window.__adamiaOffline = true; setOffline(true); };
     const visible = () => { if (!document.hidden) { void refresh().catch(() => {}); if (navigator.onLine) void synchronizeClockQueue().catch(() => {}); } };
@@ -53,6 +56,7 @@ export default function OfflineExperience() {
     setOffline(!navigator.onLine);
     void refresh().catch(() => {});
     window.addEventListener('adamia-network', network);
+    navigator.serviceWorker?.addEventListener('message', workerMessage);
     window.addEventListener('adamia-queue', refresh);
     window.addEventListener('online', online);
     window.addEventListener('offline', lost);
@@ -62,6 +66,7 @@ export default function OfflineExperience() {
     return () => {
       disposed = true; clearInterval(timer);
       window.removeEventListener('adamia-network', network);
+      navigator.serviceWorker?.removeEventListener('message', workerMessage);
       window.removeEventListener('adamia-queue', refresh);
       window.removeEventListener('online', online);
       window.removeEventListener('offline', lost);

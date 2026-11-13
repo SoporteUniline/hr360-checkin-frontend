@@ -38,6 +38,48 @@ function harness({ online = true, detectedOffline = false, method = 'ambos', get
 
 const face = { descriptor_facial: [0.1, 0.2] };
 
+test('independent offline devices keep separate queues and a conflicting upload is reviewed instead of marked synced', async () => {
+  const receipts = new Map();
+  const state = { company: 10, employee: 2, revision: 2, open: true };
+  const send = async body => {
+    if (receipts.has(body.id)) return { data: receipts.get(body.id) };
+    if (receipts.size) throw Object.assign(new Error('Entry already open'), {
+      response: { status: 409, data: { code: 'CLOCK_ENTRY_ALREADY_OPEN', error: 'Ya existe una entrada abierta. Requiere revisión de RH.', clock_state: state } },
+    });
+    const receipt = { id: body.id, status: 'synced', action: 'entrada', clock_state: state, employee: { nombre: 'Ana Local' } };
+    receipts.set(body.id, receipt);
+    return { data: receipt };
+  };
+  const a = await preparedClock({ online: false, send });
+  const b = await preparedClock({ online: false, send });
+  const first = await a.clock.register({ descriptor_facial: a.descriptor });
+  const second = await b.clock.register({ descriptor_facial: b.descriptor });
+  const eventA = first.data.offline_event, eventB = second.data.offline_event;
+  assert.notEqual(eventA.id, eventB.id);
+  assert.notEqual(eventA.local_verification.device_id, eventB.local_verification.device_id);
+  assert.equal(a.clock.events.has(eventB.id), false);
+  assert.equal(b.clock.events.has(eventA.id), false);
+  assert.equal(first.data.pending, true);
+  assert.equal(second.data.pending, true);
+  a.clock.setOnline(true);
+  await a.clock.sync();
+  assert.equal(a.clock.events.get(eventA.id).status, 'synced');
+  assert.equal(b.clock.events.get(eventB.id).status, 'pending');
+  b.clock.setOnline(true);
+  await b.clock.sync();
+  const conflict = b.clock.events.get(eventB.id);
+  assert.equal(conflict.status, 'review');
+  assert.equal(conflict.errorCode, 'CLOCK_ENTRY_ALREADY_OPEN');
+  assert.equal(conflict.captured_at, eventB.captured_at);
+  assert.equal(conflict.action, 'entrada');
+  assert.equal(conflict.clock_state.open, true);
+  assert.equal(receipts.size, 1);
+  await a.clock.sync();
+  await b.clock.sync();
+  assert.equal(receipts.size, 1);
+  assert.equal(b.clock.events.get(eventB.id).status, 'review');
+});
+
 async function preparedClock(options = {}) {
   const clock = harness(options);
   const device = await engine.deviceIdentity(clock.store);

@@ -45,6 +45,7 @@ const browser = spawn(executable, ['--headless=new', '--no-sandbox', '--disable-
 let socket;
 let nextId = 0;
 const pending = new Map();
+const registrations = new Map();
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function until(predicate, label) {
@@ -76,6 +77,9 @@ try {
   await new Promise((resolve, reject) => { socket.onopen = resolve; socket.onerror = reject; });
   socket.onmessage = ({ data }) => {
     const message = JSON.parse(data);
+    if (message.method === 'ServiceWorker.workerRegistrationUpdated') {
+      for (const registration of message.params.registrations) registrations.set(registration.scopeURL, registration.registrationId);
+    }
     const callback = pending.get(message.id);
     if (!callback) return;
     pending.delete(message.id);
@@ -83,12 +87,13 @@ try {
     else callback.resolve(message.result);
   };
   await send('Network.enable');
+  await send('ServiceWorker.enable');
   await until(() => evaluate(`location.origin === ${JSON.stringify(base)} && document.readyState === 'complete'`), 'initial page');
   await evaluate(`(async () => {
     document.cookie = 'token=fixture-only; path=/';
     const store = await import('/offline-clock/store.mjs');
     await store.setConfig({ ...${JSON.stringify(profile)}, api: location.origin, session: await store.fingerprint('fixture-only') });
-    await navigator.serviceWorker.register('/offline-clock-sw.js');
+    await navigator.serviceWorker.register('/offline-clock-sw.js', { type: 'module' });
     await navigator.serviceWorker.ready;
   })()`);
   await send('Page.reload');
@@ -146,7 +151,42 @@ try {
   await send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
   await until(() => evaluate("document.querySelector('#events').textContent.includes('Sincronizada') && document.querySelector('#events').textContent.includes('Conflicto de prueba')"), 'independent company employee queues');
   assert.equal(received.size, 2);
-  console.log('PASS: real Chrome service worker installation, cached facial assets, offline save/reload, reconnect sync, evidence cleanup, persistent conflicts and session isolation.');
+  // Leave no application document open. Dispatch the browser sync event through
+  // CDP so this test does not depend on Chrome's nondeterministic retry timer.
+  disconnected = true;
+  await send('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: 0, uploadThroughput: 0 });
+  const backgroundId = await evaluate(`(async()=>{
+    const store=await import('/offline-clock/store.mjs');
+    const id=crypto.randomUUID();
+    await store.setValue('clock:company:10',await store.getConfig());
+    await store.saveEvent({id,company:10,scope:'company',identity:'code:333',method:'codigo',code:'333',grant:'fixture',action:'entrada',captured_at:new Date().toISOString(),status:'pending'});
+    return id;
+  })()`);
+  await until(() => registrations.has(base + '/'), 'service worker registration observed');
+  await until(() => evaluate("(async()=> (await(await navigator.serviceWorker.ready).sync.getTags()).includes('adamia-clock-upload'))()"), 'background upload registered');
+  const handler = socket.onmessage;
+  const control = await (await fetch(`http://127.0.0.1:${debugPort}/json/new?about:blank`, { method: 'PUT' })).json();
+  const controlSocket = new WebSocket(control.webSocketDebuggerUrl);
+  await new Promise((resolve, reject) => { controlSocket.onopen = resolve; controlSocket.onerror = reject; });
+  controlSocket.onmessage = handler;
+  // Actually close the clock tab; the remaining blank tab only controls CDP.
+  await fetch(`http://127.0.0.1:${debugPort}/json/close/${target.id}`);
+  socket = controlSocket;
+  await send('Network.enable');
+  await send('ServiceWorker.enable');
+  const targets = await (await fetch(`http://127.0.0.1:${debugPort}/json/list`)).json();
+  assert(!targets.some(item => item.type === 'page' && item.url.startsWith(base)));
+  await until(() => evaluate("location.href==='about:blank'"), 'application tab closed');
+  assert(!received.has(backgroundId));
+  disconnected = false;
+  await send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+  await send('ServiceWorker.dispatchSyncEvent', { origin: base, registrationId: registrations.get(base + '/'), tag: 'adamia-clock-upload', lastChance: false });
+  await until(() => received.has(backgroundId), 'worker uploads with no application page open');
+  assert.equal(await evaluate('location.href'), 'about:blank');
+  await send('Page.navigate', { url: base + '/reloj-offline.html' });
+  await until(() => evaluate(`(async()=> (await(await import('/offline-clock/store.mjs')).listEvents()).find(e=>e.id===${JSON.stringify(backgroundId)})?.status==='synced')()`), 'background receipt persisted');
+  assert.equal(received.size, 3);
+  console.log('PASS: Chrome offline persistence, reconnect sync, session isolation and background upload with no application page open (sync event dispatched through CDP).');
 } finally {
   socket?.close();
   browser.kill();

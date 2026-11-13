@@ -50,7 +50,16 @@ export const getValue = key => transaction('config', 'readonly', store => store.
 export const setValue = (key, value) => transaction('config', 'readwrite', store => store.put(value, key));
 export const allValues = () => transaction('config', 'readonly', store => store.getAll());
 export const listEvents = () => transaction('events', 'readonly', store => store.getAll());
-export const saveEvent = event => transaction('events', 'readwrite', store => store.put(event));
+export async function scheduleBackgroundSync() {
+  try {
+    const registration = await globalThis.navigator?.serviceWorker?.getRegistration('/');
+    await registration?.sync?.register('adamia-clock-upload');
+  } catch { /* Unsupported or denied: the page retains its normal sync flow. */ }
+}
+export async function saveEvent(event) {
+  await transaction('events', 'readwrite', store => store.put(event));
+  if (event.status === 'pending') await scheduleBackgroundSync();
+}
 
 export function discardReviewedEvent(id) {
   return transaction('events', 'readwrite', store => {

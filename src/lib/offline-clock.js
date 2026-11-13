@@ -108,7 +108,7 @@ async function registerLocalFace(payload, context, profile, original = null) {
 export async function installOfflineWorker() {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator) || !window.isSecureContext) return null;
   if (!registrationLoading) registrationLoading = (async () => {
-    const registration = await navigator.serviceWorker.register('/offline-clock-sw.js', { scope: '/' });
+    const registration = await navigator.serviceWorker.register('/offline-clock-sw.js', { scope: '/', type: 'module' });
     // A previously prepared clock must still start when Wi-Fi is connected
     // but the internet is unavailable. Updating is optional with an active worker.
     try { await registration.update(); }
@@ -124,6 +124,7 @@ export async function installOfflineWorker() {
       };
       worker.addEventListener('statechange', changed); changed();
     });
+    registration.active?.postMessage?.({ type: 'SCHEDULE_CLOCK_SYNC' });
     return registration;
   })().catch(error => { registrationLoading = null; throw error; });
   return registrationLoading;

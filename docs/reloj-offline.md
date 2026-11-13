@@ -40,6 +40,16 @@ Prueba de este arranque: `node --test scripts/test-offline-worker-startup.mjs`. 
 
 ## Uso
 
+### Envío con la pestaña cerrada
+
+Cada captura pendiente solicita `adamia-clock-upload` mediante Background Sync cuando el navegador lo admite. El service worker abre IndexedDB y envía las colas aunque no quede una página de la aplicación abierta. Usa los mismos recibos por UUID, orden y reglas de revisión; solo elimina evidencia de capturas confirmadas. Fallos de red o respuestas sin confirmación conservan el pendiente y solicitan al navegador un reintento. Conflictos definitivos y decisiones manuales quedan para revisión al abrir la aplicación.
+
+El reloj público usa el permiso de empresa que ya contiene la captura. El reloj personal usa `/internal/offline-clock/sync`, un alias de la API de Next compatible con el proxy de dev. El servidor compara la huella de la sesión preparada con la cookie vigente y reenvía al backend configurado. No se guarda un token adicional en IndexedDB. Cerrar sesión, cambiar de cuenta o una sesión vencida mantienen las capturas pendientes hasta iniciar sesión y reabrir.
+
+El navegador y el sistema operativo deciden cuándo ejecutar y reintentar; no se garantiza envío inmediato al encender internet, ejecución con el navegador forzado a cerrar ni compatibilidad universal. Si no hay Background Sync o se deniega el permiso, se conserva el envío al reconectar con la página abierta y al volver a ella. La renovación de rostros continúa necesitando la aplicación abierta.
+
+Pruebas: `node --test scripts/test-background-sync.mjs`. `node scripts/verify-offline-clock.mjs` comprueba una subida y su persistencia en Chrome sin documento de la aplicación abierto; dispara el evento real `sync` mediante CDP para no depender del temporizador del navegador. Falta validar la programación automática del sistema con pantalla bloqueada y dispositivos reales.
+
 El reloj y las pantallas de Asistencias y Entradas y salidas incluyen una barra de navegación directa solo en móvil. Sus botones permanecen en una fila con desplazamiento horizontal si no caben. RH ve los relojes de sus empresas asignadas; los empleados ven su reloj y Mis asistencias. El reloj público sin sesión no muestra enlaces a consultas privadas. Los enlaces recuperan la pantalla completa cuando no hay conexión, incluida la ruta pública del reloj de empresa. Las pantallas de destino deben haberse visitado con internet antes de usarlas offline. Si todavía no se conoce el enlace de una empresa sin conexión, se indica que necesita conexión en lugar de prometer acceso al reloj.
 
 Entradas y salidas incorpora las capturas locales pendientes dentro de la misma tabla, con fecha/hora original y estado Pendiente de sincronizar, Requiere revisión o Requiere decisión de turno. Se respetan la empresa asignada, el rango de fechas en la zona horaria de la empresa y la búsqueda por nombre conocido o código. Un movimiento automático conserva la etiqueta Entrada / salida por confirmar hasta la validación del servidor. Estas filas no son editables como movimientos confirmados, no se suman a los indicadores ni a las exportaciones y desaparecen como locales al confirmarse o descartarse. La tabla vuelve a consultar al servidor tras los cambios de la cola. Las capturas solo están disponibles en el dispositivo/navegador que las guardó.
