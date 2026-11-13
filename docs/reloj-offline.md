@@ -1,5 +1,11 @@
 # Funcionamiento automático sin conexión
 
+## Intentos rechazados y continuidad de la cola
+
+Un intento rechazado por código incorrecto, inexistente o ambiguo, rostro sin coincidencia, método no permitido o ubicación inválida se conserva para revisión, pero ya no bloquea el envío de checadas posteriores. Cada checada posterior debe superar sus propias validaciones. Esto aplica al reloj personal, al de empresa y a los registros históricos que conservaban la marca de bloqueo; no hace falta descartarlos manualmente. Estos intentos tampoco alteran el cálculo local de entrada/salida.
+
+Los fallos de red, las respuestas sin confirmación, los errores de autorización y los rechazos desconocidos mantienen el orden de envío. Una decisión pendiente de cierre de turno sigue necesitando resolverse. No se borran capturas ni se convierten rechazos en asistencias aceptadas.
+
 ## Reloj de empresa abierto durante el día
 
 Abrir el enlace público con internet descarga automáticamente las referencias faciales de la empresa, sin iniciar sesión ni usar botones de preparación. La autorización firmada del enlace limita la descarga a esa empresa y a la clave del dispositivo. Antes de depender del reconocimiento sin red, comprobar en el reloj el mensaje **Reconocimiento offline preparado en este dispositivo**. La primera descarga necesita conexión; un enlace nunca abierto no puede descargar rostros cuando ya no hay internet.

@@ -1,5 +1,5 @@
-import { isTurnConflict } from './turn-state.mjs?v=1';
-export { isTurnConflict } from './turn-state.mjs?v=1';
+import { blocksQueue } from './turn-state.mjs?v=2';
+export { isTurnConflict } from './turn-state.mjs?v=2';
 const DB_NAME = 'adamia-offline-clock-v1';
 let opening;
 
@@ -98,21 +98,20 @@ export function syncFailure(event, error) {
   const reason = error.response?.data?.error;
   const review = [400, 403, 404, 409, 422].includes(status);
   const unmatched = code === 'FACE_NOT_MATCHED';
-  const conflict = isTurnConflict({ errorCode: code, error: reason });
   return { ...event, status: review ? 'review' : 'pending', httpStatus: status, errorCode: code,
-    blocksFollowing: !unmatched && !conflict,
+    blocksFollowing: blocksQueue({ errorCode: code, error: reason }),
     ...(error.response?.data?.clock_state ? { clock_state: error.response.data.clock_state } : {}),
     ...(unmatched ? { alias: 'Rostro no reconocido' } : {}),
     error: typeof reason === 'string' ? reason : error.message || 'No se pudo enviar la checada',
   };
 }
 
-// Stop at the first unconfirmed event: later exits must never overtake an entry.
+// Stop on uncertain delivery or decisions; definitively refused attempts can be skipped.
 export async function syncEvents(events, send, persist) {
   for (const event of events.filter(event => event.status !== 'synced' && event.status !== 'rejected')) {
     try {
       if (event.status === 'decision') break;
-      if (event.status === 'review') { if (event.blocksFollowing !== false && !isTurnConflict(event)) break; else continue; }
+      if (event.status === 'review') { if (blocksQueue(event)) break; else continue; }
       const receipt = await send(event);
       if (receipt?.requiereDecision) {
         await persist({ ...event, status: 'decision', clock_state: receipt.clock_state || event.clock_state, employeeName: receipt.empleado?.nombre || event.employeeName, error: 'Elige salida temporal o cerrar turno para enviar esta checada.' });

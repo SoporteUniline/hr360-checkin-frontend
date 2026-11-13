@@ -1,4 +1,4 @@
-import { isTurnConflict, validClockState } from './turn-state.mjs?v=1';
+import { isTurnConflict, validClockState, blocksQueue } from './turn-state.mjs?v=2';
 export const MODEL = 'face-api-0.22.2-128-cosine-v1';
 export function fail(message, code = 'LOCAL_FACE_INVALID') {
   throw Object.assign(new Error(message), { code, response: { status: 422, data: { error: message, code } } });
@@ -55,7 +55,7 @@ export function localAction(employee, dataset, events, requested = 'auto', { onl
         if (!state && !online) fail('Conecta el dispositivo para actualizar el estado del turno. La captura anterior se conserva para revisión.', 'LOCAL_CLOCK_STATE_REQUIRED');
         continue; // Rejected captures never change the employee turn state.
       }
-      if (event.blocksFollowing === false) continue;
+      if (!blocksQueue(event)) continue;
       fail('Resuelve la captura anterior de este empleado antes de registrar otra.', 'LOCAL_PREVIOUS_REVIEW');
     }
     if (event.status === 'decision') fail('Selecciona cómo cerrar el turno anterior antes de registrar otra checada.', 'LOCAL_PREVIOUS_REVIEW');

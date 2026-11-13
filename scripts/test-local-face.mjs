@@ -8,6 +8,15 @@ const other = Array.from({ length: 128 }, (_, i) => i === 1 ? 1 : 0);
 const employee = { id: 1, nombre: 'Ana', descriptor, code_identity: 'code-hash', open: false, cierre_turno: 'Automatico', checar_gps: true, areas: [{ latitud: 0, longitud: 0, radio_metros: 100 }] };
 const dataset = () => ({ company: 10, model: MODEL, prepared_at: new Date(Date.now() - 1000).toISOString(), expires_at: new Date(Date.now() + 86400000).toISOString(), employees: [employee] });
 
+test('historical invalid GPS and code captures neither block nor change the offline turn', () => {
+  for (const failure of [{ errorCode: 'CODE_NOT_MATCHED' }, { errorCode: 'GPS_INACCURATE' }, { error: 'Código no encontrado o ambiguo en esta empresa' }]) {
+    const invalid = { company: 10, local_employee: 1, action: 'entrada', status: 'review', blocksFollowing: true, captured_at: new Date().toISOString(), ...failure };
+    assert.equal(localAction(employee, dataset(), [invalid]), 'entrada');
+    assert.equal(localAction({ ...employee, open: true }, dataset(), [invalid]), 'salida');
+    assert.equal(invalid.status, 'review');
+  }
+});
+
 test('a real local comparison identifies the matching reference and refuses unknown or ambiguous faces', () => {
   assert.equal(cosine(descriptor, descriptor), 1);
   assert.equal(cosine(descriptor, other), 0);

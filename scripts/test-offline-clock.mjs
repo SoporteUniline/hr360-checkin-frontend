@@ -6,6 +6,50 @@ const profile = { id_empleado: 1, id_empresa: 10 };
 const entry = { id: 'entry', employee: 1, company: 10, captured_at: '2026-11-03T14:00:00.000Z', status: 'pending', method: 'codigo', code: '123' };
 const exit = { ...entry, id: 'exit', captured_at: '2026-11-03T20:00:00.000Z' };
 
+test('definitively invalid captures preserve evidence and allow later valid events in personal and company clocks', async () => {
+  for (const run of [syncEvents, syncCompanyEvents]) {
+    for (const code of ['CODE_NOT_MATCHED', 'CODE_NOT_FOUND', 'FACE_NOT_MATCHED', 'GPS_INACCURATE', 'GPS_OUTSIDE_AREA', 'GPS_REQUIRED', 'GPS_REFRESH_REQUIRED', 'AREA_INVALID', 'METHOD_FACIAL_ONLY', 'METHOD_CODE_ONLY']) {
+      const sent = [], saved = [];
+      await run([entry, exit], async event => {
+        sent.push(event.id);
+        if (event.id === entry.id) throw { response: { status: 403, data: { code, error: 'Intento rechazado' } } };
+        return { id: event.id, status: 'synced' };
+      }, async event => saved.push(event));
+      assert.deepEqual(sent, ['entry', 'exit'], code);
+      assert.equal(saved[0].status, 'review');
+      assert.equal(saved[0].blocksFollowing, false);
+      assert.equal(saved[0].code, entry.code);
+      assert.equal(saved[0].captured_at, entry.captured_at);
+      assert.equal(saved[1].status, 'synced');
+    }
+  }
+});
+
+test('historical invalid attempts with blocking flags no longer stop valid captures', async () => {
+  for (const failure of [{ errorCode: 'CODE_NOT_MATCHED' }, { errorCode: 'GPS_INACCURATE' }, { error: 'Código no encontrado o ambiguo en esta empresa' }]) {
+    const historical = { ...entry, ...failure, status: 'review', blocksFollowing: true };
+    const original = structuredClone(historical), sent = [];
+    await syncEvents([historical, exit], async event => {
+      sent.push(event.id);
+      return { id: event.id, status: 'synced' };
+    }, async () => {});
+    assert.deepEqual(sent, ['exit']);
+    assert.deepEqual(historical, original);
+  }
+});
+
+test('authorization failures and unknown rejections still stop later events', async () => {
+  for (const code of ['CLOCK_AUTH_EXPIRED', 'LOCAL_FACE_INVALID', undefined]) {
+    const sent = [], saved = [];
+    await syncEvents([entry, exit], async event => {
+      sent.push(event.id);
+      throw { response: { status: 403, data: { code, error: 'No autorizado' } } };
+    }, async event => saved.push(event));
+    assert.deepEqual(sent, ['entry']);
+    assert.equal(saved[0].blocksFollowing, true);
+  }
+});
+
 test('isolates employee/company queues and preserves chronological order', () => {
   assert.deepEqual(ownEvents([exit, { ...entry, employee: 2 }, { ...entry, company: 11 }, entry], profile), [entry, exit]);
 });
