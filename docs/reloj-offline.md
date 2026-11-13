@@ -6,6 +6,10 @@ Un intento rechazado por código incorrecto, inexistente o ambiguo, rostro sin c
 
 Los fallos de red, las respuestas sin confirmación, los errores de autorización y los rechazos desconocidos mantienen el orden de envío. Una decisión pendiente de cierre de turno sigue necesitando resolverse. No se borran capturas ni se convierten rechazos en asistencias aceptadas.
 
+## Reloj desde la cuenta de empleado
+
+El reloj de la cuenta de empleado permite checar a cualquier empleado activo de la misma empresa mediante rostro, código o QR. El código/QR se resuelve en el servidor dentro de la empresa autorizada, sin atribuir la captura al usuario conectado. Sin internet se conserva como código pendiente de validar, sin mostrar el nombre del usuario conectado como si fuera la persona identificada. Al sincronizar se aplican método permitido, GPS y reglas de turno de la persona identificada. La tabla personal y Mis asistencias siguen mostrando únicamente las asistencias del usuario conectado. Los intentos históricos personales rechazados no se reasignan ni se convierten automáticamente en checadas de compañeros.
+
 ## Reloj de empresa abierto durante el día
 
 Abrir el enlace público con internet descarga automáticamente las referencias faciales de la empresa, sin iniciar sesión ni usar botones de preparación. La autorización firmada del enlace limita la descarga a esa empresa y a la clave del dispositivo. Antes de depender del reconocimiento sin red, comprobar en el reloj el mensaje **Reconocimiento offline preparado en este dispositivo**. La primera descarga necesita conexión; un enlace nunca abierto no puede descargar rostros cuando ya no hay internet.

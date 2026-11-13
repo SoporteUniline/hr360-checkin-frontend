@@ -12,12 +12,15 @@ const source = (await readFile(new URL('../src/lib/offline-clock.js', import.met
   .replace(/^export const faceEngine = .*;$/m, 'const faceEngine = async () => engine;')
   .replace(/\bexport /g, '');
 
-function harness({ online = true, detectedOffline = false, method = 'ambos', getProfile, save, send, companyClock = false } = {}) {
+const componentSource = await readFile(new URL('../src/components/RelojChecador.jsx', import.meta.url), 'utf8');
+const submitMovementSource = componentSource.match(/const submitMovement = ([^\r\n]+);/)[1];
+
+function harness({ online = true, detectedOffline = false, method = 'ambos', getProfile, save, send, companyClock = false, employeePage = false } = {}) {
   const events = new Map();
   const values = new Map();
   const navigator = { onLine: online };
   let requests = 0;
-  const profile = { id_empresa: 10, id_empleado: 2, session: companyClock ? null : 'session', grant: companyClock ? 'company-permit' : undefined, metodo: method, nombre: 'Prueba', prepared_at: new Date().toISOString() };
+  const profile = { id_empresa: 10, id_empleado: 2, session: companyClock || employeePage ? null : 'session', grant: companyClock || employeePage ? 'company-permit' : undefined, metodo: method, nombre: 'Prueba', prepared_at: new Date().toISOString() };
   const store = {
     getValue: async key => { if (key.startsWith('clock:')) { getProfile?.(navigator); return profile; } return values.get(key); },
     setValue: async (key, value) => values.set(key, value),
@@ -27,14 +30,60 @@ function harness({ online = true, detectedOffline = false, method = 'ambos', get
   };
   const context = vm.createContext({
     store, engine, navigator, crypto: webcrypto, Event, URL, setTimeout, clearTimeout, ensureOfflineCache: async () => null,
+    idEmpresa: 10, idEmpleado: 2, modoEmpleado: true, companySlug: 'fixture',
     window: { __adamiaOffline: detectedOffline, dispatchEvent() {} },
     Cookies: { get: () => companyClock ? undefined : 'test-session' },
     fetch: async () => ({}),
     axios: { get: async () => ({ data: {} }), post: async (url, body) => { requests++; return send ? send(body, url) : { data: { id: body.id, status: 'synced', action: 'entrada', employee: { nombre: 'Prueba' } } }; } },
   });
   vm.runInContext(source + '\nglobalThis.register = registerClockMovement; globalThis.sync = synchronizeClockQueue; globalThis.prepare = prepareLocalFaces;', context);
-  return { prepare: options => context.prepare({ company: 10, slug: 'fixture', ...options }), register: payload => context.register(payload, { company: 10, employee: companyClock ? null : 2 }), sync: () => context.sync(), setOnline: value => { navigator.onLine = value; }, store, values, events, requests: () => requests };
+  vm.runInContext(`globalThis.pageSubmit = ${submitMovementSource};`, context);
+  return { prepare: options => context.prepare({ company: 10, slug: 'fixture', ...options }), register: payload => employeePage ? context.pageSubmit(payload) : context.register(payload, { company: 10, employee: companyClock ? null : 2 }), sync: () => context.sync(), setOnline: value => { navigator.onLine = value; }, store, values, events, requests: () => requests };
 }
+
+test('employee page submits coworker codes to the company clock and shows the server resolved identity', async () => {
+  const clock = harness({ employeePage: true, method: 'facial', send: async (body, url) => {
+    assert.equal(url, '/checador/reloj/offline/empresa/sincronizar');
+    assert.equal(body.code, '456');
+    assert.equal(body.grant, 'company-permit');
+    return { data: { id: body.id, status: 'synced', action: 'entrada', employee: { id: 3, nombre: 'Compañera' } } };
+  } });
+  const result = await clock.register({ codigo: '456' });
+  assert.equal(result.data.empleado.nombre, 'Compañera');
+  assert.equal(result.data.pending, undefined);
+  const [event] = clock.events.values();
+  assert.equal(event.scope, 'company');
+  assert.equal(event.employee, undefined);
+  assert.equal(event.status, 'synced');
+});
+
+test('coworker code captured offline on an employee page keeps time and identity through reconnect and turn decision', async () => {
+  let decision = true;
+  const clock = harness({ employeePage: true, online: false, method: 'facial', send: async (body, url) => {
+    assert.equal(url, '/checador/reloj/offline/empresa/sincronizar');
+    assert.equal(body.code, '456');
+    if (decision) { decision = false; return { data: { requiereDecision: true, empleado: { nombre: 'Compañera' } } }; }
+    assert.equal(body.action, 'cerrar_turno');
+    return { data: { id: body.id, status: 'synced', action: 'cerrar_turno', employee: { id: 3, nombre: 'Compañera' } } };
+  } });
+  const captured_at = new Date().toISOString();
+  const result = await clock.register({ codigo: '456', captured_at });
+  const original = result.data.offline_event;
+  assert.equal(result.data.pending, true);
+  assert.equal(original.scope, 'company');
+  assert.equal(original.employee, undefined);
+  assert.equal(original.alias, 'Código •••456');
+  assert.equal(clock.requests(), 0);
+  clock.setOnline(true);
+  await clock.sync();
+  const event = clock.events.get(original.id);
+  assert.equal(event.status, 'decision');
+  const confirmed = await clock.register({ codigo: '456', accion: 'cerrar_turno', offline_event: event });
+  assert.equal(confirmed.data.empleado.nombre, 'Compañera');
+  assert.equal(clock.events.size, 1);
+  assert.equal(clock.events.get(original.id).captured_at, captured_at);
+  assert.equal(clock.events.get(original.id).status, 'synced');
+});
 
 const face = { descriptor_facial: [0.1, 0.2] };
 

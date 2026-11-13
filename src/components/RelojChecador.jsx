@@ -67,7 +67,9 @@ export default function RelojChecador({
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const [subscriptionActive, setSubscriptionActive] = useState(false);
   const { getCurrentLocation, loading: loadingGPS } = useGPS();
-  const submitMovement = payload => registerClockMovement(payload, { company: idEmpresa, employee: modoEmpleado && !payload.descriptor_facial && !payload.offline_event?.local_verification ? idEmpleado : null, slug: companySlug });
+  // All methods identify the person checking in within this company. The
+  // signed-in employee only controls which history is visible on this page.
+  const submitMovement = payload => registerClockMovement(payload, { company: idEmpresa, employee: null, slug: companySlug });
   useEffect(() => {
     let active = true;
     const context = { company: idEmpresa, slug: companySlug };
@@ -344,7 +346,7 @@ export default function RelojChecador({
       } catch (error) {
         console.error("Error validando suscripción:", error);
         try {
-          const profile = await initializeClock({ company: idEmpresa, employee: modoEmpleado ? idEmpleado : null, slug: companySlug });
+          const profile = await initializeClock({ company: idEmpresa, slug: companySlug });
           setSubscriptionActive(Date.now() - Date.parse(profile.prepared_at) < 7 * 86400000);
         } catch { setSubscriptionActive(false); }
       } finally {
