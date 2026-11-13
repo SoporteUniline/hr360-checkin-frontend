@@ -189,6 +189,11 @@ export async function registerClockMovement(payload, { company, employee = null,
   const old = payload.offline_event;
   const method = payload.descriptor_facial ? 'facial' : 'codigo';
   const code = method === 'codigo' ? String(payload.codigo || '').trim() : undefined;
+  const codeIdentity = method === 'codigo' ? await store.fingerprint(code) : null;
+  const dataset = method === 'codigo' ? await localFaceStatus({ company, employee }) : null;
+  const matches = dataset && Number(dataset.company) === Number(company) && Array.isArray(dataset.code_references)
+    ? dataset.code_references.filter(reference => reference.code_identity === codeIdentity) : [];
+  const identified = matches.length === 1 && typeof matches[0].nombre === 'string' && matches[0].nombre.trim() ? matches[0] : null;
   const event = {
     ...(old || {}), id: old?.id || crypto.randomUUID(), captured_at: old?.captured_at || payload.captured_at || new Date().toISOString(),
     action: payload.accion || 'auto', method, code, descriptor: payload.descriptor_facial,
@@ -196,8 +201,9 @@ export async function registerClockMovement(payload, { company, employee = null,
     precision_metros: payload.precision_metros ?? old?.precision_metros ?? null, ubicacion_timestamp: payload.ubicacion_timestamp ?? old?.ubicacion_timestamp ?? null,
     employee: employee ? Number(employee) : undefined, company: Number(company), scope: employee ? 'employee' : 'company',
     session: employee ? profile.session : null, grant: employee ? undefined : profile.grant,
-    identity: employee ? `employee:${employee}` : method === 'codigo' ? await store.fingerprint(code) : 'facial',
-    alias: employee ? profile.nombre : method === 'codigo' ? `Código •••${code.slice(-3)}` : 'Rostro por validar',
+    identity: employee ? `employee:${employee}` : method === 'codigo' ? codeIdentity : 'facial',
+    employeeName: identified?.nombre,
+    alias: identified?.nombre || (employee ? profile.nombre : method === 'codigo' ? `Código •••${code.slice(-3)}` : 'Rostro por validar'),
     status: 'pending', error: '',
   };
   await store.saveEvent(event);

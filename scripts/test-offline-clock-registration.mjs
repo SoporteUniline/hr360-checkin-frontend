@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
-import { webcrypto } from 'node:crypto';
+import { webcrypto, createHash } from 'node:crypto';
 import { syncFailure, syncEvents, syncCompanyEvents } from '../public/offline-clock/store.mjs';
 import * as engine from '../public/offline-clock/face.mjs';
 
@@ -24,7 +24,7 @@ function harness({ online = true, detectedOffline = false, method = 'ambos', get
   const store = {
     getValue: async key => { if (key.startsWith('clock:')) { getProfile?.(navigator); return profile; } return values.get(key); },
     setValue: async (key, value) => values.set(key, value),
-    fingerprint: async () => companyClock ? null : 'session',
+    fingerprint: async value => value === 'test-session' ? 'session' : value ? createHash('sha256').update(value).digest('hex') : null,
     saveEvent: async event => { events.set(event.id, event); save?.(navigator); },
     listEvents: async () => [...events.values()], syncFailure, syncEvents, syncCompanyEvents,
   };
@@ -86,6 +86,37 @@ test('coworker code captured offline on an employee page keeps time and identity
 });
 
 const face = { descriptor_facial: [0.1, 0.2] };
+
+test('offline code and QR display the downloaded coworker name without claiming server validation', async () => {
+  const clock = harness({ employeePage: true, online: false });
+  clock.values.set('faces:company:10', { company: 10, expires_at: new Date(Date.now() + 60000).toISOString(), employees: [],
+    code_references: [{ id: 3, nombre: 'Compañera sin rostro', code_identity: createHash('sha256').update('00456').digest('hex') }] });
+  const result = await clock.register({ codigo: '00456' });
+  assert.equal(result.data.empleado.nombre, 'Compañera sin rostro');
+  assert.equal(result.data.pending, true);
+  assert.equal(result.data.local_validated, undefined);
+  const event = result.data.offline_event;
+  assert.equal(event.employeeName, 'Compañera sin rostro');
+  assert.equal(event.code, '00456');
+  assert.equal(event.employee, undefined);
+  assert.equal(event.local_employee, undefined);
+  assert.equal(event.local_verification, undefined);
+  assert.equal(clock.requests(), 0);
+});
+
+test('unknown, ambiguous, expired, other-company and old downloads retain masked offline code labels', async () => {
+  const reference = { id: 3, nombre: 'Compañera', code_identity: createHash('sha256').update('456').digest('hex') };
+  for (const changes of [
+    { code_references: [] }, { code_references: [reference, { ...reference, id: 4 }] },
+    { expires_at: new Date(Date.now() - 1000).toISOString() }, { company: 11 }, { code_references: undefined },
+  ]) {
+    const clock = harness({ employeePage: true, online: false });
+    clock.values.set('faces:company:10', { company: 10, expires_at: new Date(Date.now() + 60000).toISOString(), code_references: [reference], ...changes });
+    const result = await clock.register({ codigo: '456' });
+    assert.equal(result.data.empleado.nombre, 'Código •••456');
+    assert.equal(result.data.pending, true);
+  }
+});
 
 test('independent offline devices keep separate queues and a conflicting upload is reviewed instead of marked synced', async () => {
   const receipts = new Map();
