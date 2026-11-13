@@ -27,16 +27,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { enqueueSnackbar } = useSnackbar();
   const [loading, setLoading] = useState(false);
-  const [isNative, setIsNative] = useState(() => {
-    if (typeof window !== "undefined") {
-      return (
-        Capacitor.isNativePlatform() ||
-        navigator.userAgent.includes("AdamiaAppNative") ||
-        window.location.search.includes("native=true")
-      );
-    }
-    return false;
-  });
+  const [isNative, setIsNative] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -114,7 +105,7 @@ export default function LoginPage() {
 
   return (
     <section className="grid grid-cols-1 md:grid-cols-2 min-h-screen min-h-[100dvh]">
-      <div className="hidden sm:block">
+      <div className="hidden md:block">
         <section className="relative min-h-screen flex flex-col justify-center items-center bg-[url(/assets/bg.jpg)] bg-cover bg-center">
           <div className="absolute w-full h-full bg-slate-900/70" />
           <Image
@@ -142,7 +133,7 @@ export default function LoginPage() {
         <div className="flex flex-col justify-center items-center flex-1 px-5 py-8 sm:px-8">
           <div className="w-full max-w-sm sm:max-w-md mx-auto">
             {/* Logo de ADAMIA (visible en móvil o app nativa) */}
-            <div className="sm:hidden mb-6 flex justify-center">
+            <div className="md:hidden mb-6 flex justify-center">
               <Image
                 alt="ADAMIA"
                 src="/assets/adamia.png"
