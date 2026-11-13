@@ -6,8 +6,9 @@ import { useForm } from "react-hook-form";
 import { useSnackbar } from "notistack";
 import axios from "axios";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CheckCircle, CircleArrowLeftIcon, HomeIcon } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
 import OTPStep from "./OTPStep";
 import PasswordStep from "./PasswordStep";
 
@@ -15,6 +16,26 @@ export default function RecuperacionPage() {
   const router = useRouter();
   const { enqueueSnackbar } = useSnackbar();
   const [loading, setLoading] = useState(false);
+  const [isNative, setIsNative] = useState(() => {
+    if (typeof window !== "undefined") {
+      return (
+        Capacitor.isNativePlatform() ||
+        navigator.userAgent.includes("AdamiaAppNative") ||
+        window.location.search.includes("native=true")
+      );
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setIsNative(
+        Capacitor.isNativePlatform() ||
+          navigator.userAgent.includes("AdamiaAppNative") ||
+          window.location.search.includes("native=true")
+      );
+    }
+  }, []);
   const [steps, setSteps] = useState({
     credentials: false,
     otp: false,
@@ -58,19 +79,21 @@ export default function RecuperacionPage() {
   return (
     <section className="flex flex-col">
       <nav className="flex justify-end p-3">
-        <Button
-          variant="ghost"
-          startIcon={<HomeIcon />}
-          onClick={() => router.push("/")}
-        >
-          Página principal
-        </Button>
+        {!isNative && (
+          <Button
+            variant="ghost"
+            startIcon={<HomeIcon />}
+            onClick={() => router.push("/")}
+          >
+            Página principal
+          </Button>
+        )}
         <Button
           variant="ghost"
           startIcon={<CircleArrowLeftIcon />}
           onClick={() => router.push("/login")}
         >
-          LogIn
+          Iniciar sesión
         </Button>
       </nav>
       <div className="flex flex-col justify-center items-center flex-1">
