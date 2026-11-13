@@ -224,6 +224,8 @@ try {
   assert.equal(publicFace.descriptor, undefined);
   await go('/fixture-company', 'Registrar Entrada / Salida');
   await until(() => evaluate("document.body.textContent.includes('Reconocimiento local listo')"), 'anonymous clock survives an offline reload');
+  await go('/', 'Registrar Entrada / Salida');
+  assert.equal(await evaluate('location.pathname'), '/fixture-company', 'anonymous root restores the prepared public clock');
   await offline(false);
   await evaluate("window.dispatchEvent(new Event('online'))");
   await until(() => companyReceipts.has(publicFace.id), 'anonymous facial capture uploads on reconnect');
@@ -245,6 +247,18 @@ try {
   await go('/panel/registro-asistencia', 'Asistencias'); await snapshot();
   await until(() => evaluate("(async()=>!!await(await caches.open('adamia-runtime-assets-v1')).match(location.origin+'/__offline/company/fixture-company'))()"), 'public company clock cached');
   await offline(true);
+  await go('/', 'Asistencias');
+  assert(['/panel/empleados', '/panel/registro-asistencia', '/panel/registro-de-entradas-y-salidas'].includes(await evaluate('location.pathname')), 'root recovers a cached panel destination');
+  await go('/panel/offline-not-downloaded', 'Esta ruta no se ha descargado');
+  await until(() => evaluate("document.querySelector('#status')?.textContent.includes('Esta ruta no se ha descargado')"), 'offline destinations rendered');
+  assert(await evaluate("!!document.querySelector('#offline-pages a[href=\"/panel/empleados\"]')"));
+  await evaluate("document.querySelector('#offline-pages a[href=\"/panel/empleados\"]').click()");
+  await until(() => evaluate("location.pathname==='/panel/empleados' && document.body.textContent.includes('Ana Fixture')"), 'uncached route has a working way back to the panel');
+  await until(() => evaluate("Array.from(document.querySelectorAll('[data-sidebar=menu-button]')).some(button=>button.textContent.trim()==='Entradas y salidas')"), 'NavMain ready offline');
+  await evaluate("Array.from(document.querySelectorAll('[data-sidebar=menu-button]')).find(button=>button.textContent.trim()==='Entradas y salidas').click()");
+  await until(() => evaluate("location.pathname==='/panel/registro-de-entradas-y-salidas' && document.body.textContent.includes('Entradas y salidas')"), 'NavMain opens a downloaded screen offline');
+  await evaluate("Array.from(document.querySelectorAll('[data-sidebar=menu-button]')).find(button=>button.textContent.trim()==='Reloj Checador').click()");
+  await until(() => evaluate("location.pathname==='/fixture-company' && document.body.textContent.includes('Registrar Entrada / Salida')"), 'NavMain clock uses the prepared company link offline');
   await go('/fixture-company', 'Registrar Entrada / Salida');
   await until(() => evaluate("document.body.textContent.includes('Reconocimiento local listo')"), 'clock ready offline after background preparation from another screen');
   assert(!await evaluate("Array.from(document.querySelectorAll('button')).some(button=>button.textContent.includes('Actualizar rostros'))"));
@@ -333,7 +347,7 @@ try {
   assert(await evaluate("document.querySelectorAll('nav, [data-sidebar]').length>0"));
   await go('/panel/registro-de-entradas-y-salidas', 'Entradas');
   await send('Network.setCookie', { name: 'token', value: token() + 'different', url: base, path: '/' });
-  await go('/panel/empleados', 'Esta pantalla no se ha descargado');
+  await go('/panel/empleados', 'Esta ruta no se ha descargado');
   assert(!await evaluate("document.body.textContent.includes('Ana Fixture')"));
   await send('Network.deleteCookies', { name: 'token', url: base });
   await go('/fixture-company', 'Registrar Entrada / Salida');
@@ -346,7 +360,8 @@ try {
   await until(() => evaluate("document.body.textContent.includes('Reconocimiento offline preparado en este dispositivo')"), 'employee own facial download');
   assert(!await evaluate("document.body.textContent.includes('Preparar reloj offline')"));
   await offline(true);
-  await go('/empleado/panel/inicio', 'Hola, Diego');
+  await go('/', 'Hola, Diego');
+  assert.equal(await evaluate('location.pathname'), '/empleado/panel/inicio', 'employee root recovers the downloaded home for its role');
   assert(await evaluate("document.body.textContent.includes('8 días')"));
   await go('/empleado/panel/asistencias', 'Mis asistencias');
   await go('/empleado/reloj-checador', 'Registrar Entrada / Salida');

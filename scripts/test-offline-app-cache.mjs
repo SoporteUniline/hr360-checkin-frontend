@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 const origin = 'https://offline.test';
 const cacheStores = new Map();
 const memory = new Map();
-let offline = false, deny = false, fail = false, requests = 0;
+let offline = false, deny = false, fail = false, hang = false, requests = 0;
 globalThis.location = { origin, href: origin + '/panel/empleados', pathname: '/panel/empleados', search: '' };
 globalThis.document = { cookie: '' };
 Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { get onLine() { return !offline; } } });
@@ -16,12 +16,14 @@ globalThis.caches = {
       put: async (request, response) => entries.set(typeof request === 'string' ? request : request.url, response.clone()),
       match: async request => entries.get(typeof request === 'string' ? request : request.url)?.clone(),
       delete: async request => entries.delete(typeof request === 'string' ? request : request.url),
+      keys: async () => [...entries.keys()].map(url => new Request(url)),
     };
   },
   delete: async name => cacheStores.delete(name),
 };
 globalThis.window = { caches: globalThis.caches, dispatchEvent() {}, fetch: async request => {
   requests++;
+  if (hang) return new Promise((_resolve, reject) => request.signal.addEventListener('abort', () => reject(new TypeError('Timed out')), { once: true }));
   if (fail) throw new TypeError('Network failed');
   if (deny) return new Response('{"error":"Denied"}', { status: deny, headers: { 'content-type': 'application/json' } });
   const url = new URL(typeof request === 'string' ? request : request.url);
@@ -135,4 +137,87 @@ test('incomplete page downloads do not boot a React tree with missing JavaScript
   await (await caches.open('adamia-runtime-assets-v1')).put(origin + '/_next/static/missing.js', new Response('/* downloaded */'));
   assert.equal(await cache.restorePage(), true);
   assert.equal(writes, 1);
+});
+
+async function preparedSession(account, path, role = 'Recruiter') {
+  login(account);
+  const owner = await cache.ownerKey();
+  await cache.saveResponse(owner, 'api', origin + '/api/users/verify/token', Response.json({ user: { tipo_usuario: role } }));
+  const store = await caches.open(cache.cacheName(owner));
+  await store.put(origin + '/__offline/last-page', Response.json({ path, at: Date.now(), api: origin + '/api' }));
+  await store.put(origin + '/__offline/pages', Response.json([{ path }]));
+  await cache.saveResponse(owner, 'page', origin + path, new Response('<html>Saved page</html>'));
+  return owner;
+}
+function at(path) {
+  const url = new URL(path, origin);
+  Object.assign(location, { href: url.href, pathname: url.pathname, search: url.search });
+  globalThis.history = { replaceState: (_state, _unused, target) => at(target) };
+}
+
+test('root restores the cached role home or the last prepared screen without redirect loops', async () => {
+  const owner = await preparedSession('root-user', '/panel/empleados');
+  let writes = 0;
+  document.write = () => writes++;
+  at('/'); offline = true;
+  assert.equal(await cache.restorePage(), true);
+  assert.equal(location.pathname, '/panel/empleados');
+  await cache.saveResponse(owner, 'page', origin + '/panel/dashboard', new Response('<html>Home</html>'));
+  at('/panel');
+  assert.equal(await cache.restorePage(), true);
+  assert.equal(location.pathname, '/panel/dashboard');
+  assert.equal(writes, 2);
+});
+
+test('an uncached route offers cached destinations, isolated from a different account', async () => {
+  await preparedSession('navigation-owner', '/panel/empleados');
+  at('/panel/not-downloaded'); offline = true;
+  assert.equal(await cache.restorePage(), false);
+  assert((await cache.availableOfflinePages()).some(page => page.path === '/panel/empleados' && !page.public));
+  login('different-navigation-user'); offline = true;
+  assert(!(await cache.availableOfflinePages()).some(page => !page.public));
+  assert.equal(await cache.restorePage(), false);
+});
+
+test('anonymous root can recover a prepared public clock without opening a private page', async () => {
+  document.cookie = ''; memory.clear();
+  at('/public-clock');
+  cache.rememberCompany({ id_empresa: 19, slug: 'public-clock' });
+  const owner = await cache.digest('company:19:public-clock');
+  await cache.saveResponse(owner, 'page', origin + '/public-clock', new Response('<html>Public clock</html>'));
+  at('/'); offline = true;
+  assert.equal(await cache.restorePage(), true);
+  assert.equal(location.pathname, '/public-clock');
+  at('/panel');
+  assert.equal(await cache.restorePage(), false);
+  assert.deepEqual(await cache.availableOfflinePages(), [{ path: '/public-clock', public: true }]);
+});
+
+test('stalled router requests fall back to document navigation within a bounded timeout', async () => {
+  login('stalled-router'); at('/panel/empleados');
+  const destinations = [];
+  location.assign = target => destinations.push(target);
+  const realSetTimeout = globalThis.setTimeout;
+  let timeout;
+  globalThis.setTimeout = (callback, ms) => { timeout = ms; return realSetTimeout(callback, 0); };
+  hang = true;
+  try {
+    void window.fetch(origin + '/panel/registro-asistencia?_rsc=stalled', { headers: { rsc: '1' } });
+    await new Promise(resolve => realSetTimeout(resolve, 25));
+    assert.equal(timeout, 8000);
+    assert.deepEqual(destinations, [origin + '/panel/registro-asistencia']);
+  } finally { hang = false; globalThis.setTimeout = realSetTimeout; delete location.assign; }
+});
+
+test('simultaneous page downloads retain both destinations while incomplete pages are excluded', async () => {
+  const owner = await preparedSession('parallel-pages', '/panel/empleados');
+  await Promise.all([
+    cache.saveResponse(owner, 'page', origin + '/panel/turnos', new Response('<html>Turnos</html>')),
+    cache.saveResponse(owner, 'page', origin + '/panel/permisos', new Response('<html>Permisos</html>')),
+    cache.saveResponse(owner, 'page', origin + '/panel/incomplete', new Response('<script src="/_next/static/not-downloaded-navigation.js"></script>')),
+  ]);
+  const pages = await cache.availableOfflinePages();
+  assert(pages.some(page => page.path === '/panel/turnos'));
+  assert(pages.some(page => page.path === '/panel/permisos'));
+  assert(!pages.some(page => page.path === '/panel/incomplete'));
 });

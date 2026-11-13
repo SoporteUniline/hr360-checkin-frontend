@@ -40,6 +40,16 @@ Prueba de este arranque: `node --test scripts/test-offline-worker-startup.mjs`. 
 
 ## Uso
 
+### Navegación, raíz y rutas no descargadas
+
+`NavMain` abre documentos completos al estar offline. Si RH tiene una sola empresa y su reloj ya está preparado, el menú abre su enlace guardado sin depender del selector ni de una consulta nueva. Con varias empresas, la pantalla offline permite elegir entre relojes previamente descargados. Los enlaces internos del reloj, la barra superior y los paneles también usan navegación de documento sin conexión.
+
+Abrir `/`, `/panel`, `/empleado` o `/dashboard` offline recupera el inicio del rol cuando está descargado o la última pantalla privada disponible de la sesión actual. Se comprueba la identidad guardada y la vigencia de la sesión antes de escribir HTML privado. Sin sesión, la raíz puede recuperar el último reloj público preparado; nunca abre un panel privado. Con varios relojes sin un último destino conocido, muestra sus enlaces.
+
+Una ruta no descargada muestra un aviso, las pantallas disponibles y un botón para reintentar, conservando los pendientes. Las navegaciones y peticiones RSC esperan como máximo ocho segundos antes de intentar la recuperación; las consultas API mantienen su límite de doce segundos. Una denegación explícita de acceso no se sustituye por información privada antigua.
+
+Esto no descarga automáticamente todos los módulos ni habilita escrituras offline fuera de las checadas. Cada pantalla y consulta requiere una primera carga completa con internet. La prueba de Chrome `scripts/verify-offline-panels.mjs` incluye raíz pública y privada, regreso desde una ruta desconocida, botones de NavMain y navegación entre reloj y panel sin conexión.
+
 ### Envío con la pestaña cerrada
 
 Cada captura pendiente solicita `adamia-clock-upload` mediante Background Sync cuando el navegador lo admite. El service worker abre IndexedDB y envía las colas aunque no quede una página de la aplicación abierta. Usa los mismos recibos por UUID, orden y reglas de revisión; solo elimina evidencia de capturas confirmadas. Fallos de red o respuestas sin confirmación conservan el pendiente y solicitan al navegador un reintento. Conflictos definitivos y decisiones manuales quedan para revisión al abrir la aplicación.

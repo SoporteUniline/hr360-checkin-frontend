@@ -46,9 +46,10 @@ export default function OfflineExperience() {
     const follow = event => {
       if (!navigator.onLine || offline) {
         const link = event.target.closest?.('a[href]');
-        if (!link || link.target === '_blank' || link.hasAttribute('download') || event.ctrlKey || event.metaKey || event.shiftKey || event.button !== 0) return;
+        if (!link || link.target === '_blank' || link.hasAttribute('download') || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
         const url = new URL(link.href, location.origin);
-        if (url.origin === location.origin && /^\/(panel|empleado|dashboard)(\/|$)/.test(url.pathname)) {
+        if (url.pathname === location.pathname && url.search === location.search && url.hash) return;
+        if (url.origin === location.origin) {
           event.preventDefault(); event.stopPropagation(); location.assign(url.href);
         }
       }

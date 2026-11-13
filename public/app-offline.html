@@ -1,1 +1,33 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ADAMIA · Sin conexión</title><link rel="stylesheet" href="/offline-clock/style.css"></head><body><main><h1>Sin conexión</h1><p id="status">Abriendo la información guardada en este celular…</p><p>Las pantallas y consultas que ya abriste están disponibles con tu sesión. Para cargar información nueva necesitas internet.</p><a href="/panel/dashboard">Volver a RH</a> · <a href="/empleado/panel/inicio">Mi panel</a> · <a href="/login">Iniciar sesión</a></main><script type="module">import {restorePage} from '/offline-clock/app-cache.mjs?v=4';try{if(!await restorePage())document.querySelector('#status').textContent='Esta pantalla no se ha descargado para tu sesión, o tu sesión ha vencido. Vuelve a una pantalla que ya consultaste o recupera la conexión.';}catch{document.querySelector('#status').textContent='No se pudo abrir esta pantalla. Los registros pendientes se conservan en el celular.';}</script></body></html>
+﻿<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ADAMIA · Sin conexión</title><link rel="stylesheet" href="/offline-clock/style.css">
+</head><body><main>
+<h1>Sin conexión</h1>
+<p id="status" role="status">Buscando las pantallas guardadas en este dispositivo…</p>
+<p>Puedes consultar lo que ya descargaste. Los registros pendientes se conservan aunque esta pantalla no esté disponible.</p>
+<nav aria-label="Pantallas disponibles sin conexión"><ul id="offline-pages"></ul></nav>
+<button id="retry" type="button">Reintentar conexión</button> <a href="/">Ir al inicio</a>
+</main><script type="module">
+import { restorePage, availableOfflinePages } from '/offline-clock/app-cache.mjs?v=5';
+document.querySelector('#retry').onclick = () => location.reload();
+try {
+  if (!await restorePage()) {
+    const pages = await availableOfflinePages();
+    const list = document.querySelector('#offline-pages');
+    for (const page of pages) {
+      const item = document.createElement('li');
+      const link = document.createElement('a');
+      link.href = page.path;
+      link.textContent = page.public ? `Reloj · ${decodeURIComponent(page.path.slice(1))}` : decodeURIComponent(page.path.split('?')[0]).split('/').filter(Boolean).join(' / ').replaceAll('-', ' ');
+      item.append(link); list.append(item);
+    }
+    document.querySelector('#status').textContent = pages.length
+      ? 'Esta ruta no se ha descargado. Puedes volver a una de estas pantallas:'
+      : 'No hay pantallas disponibles para tu sesión. Recupera la conexión para continuar.';
+  }
+} catch {
+  document.querySelector('#status').textContent = 'No se pudo abrir esta pantalla. Recupera la conexión e inténtalo de nuevo; tus pendientes siguen guardados.';
+}
+</script></body></html>

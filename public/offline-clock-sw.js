@@ -1,5 +1,5 @@
 import { synchronizeBackground } from './offline-clock/background-sync.mjs';
-const CACHE = 'adamia-clock-shell-v11';
+const CACHE = 'adamia-clock-shell-v12';
 const RUNTIME = 'adamia-runtime-assets-v1';
 const MAX_AGE = 7 * 86400000;
 const ASSETS = [
@@ -30,6 +30,11 @@ async function save(owner, kind, request, response, variant = '') {
   const headers = new Headers(response.headers); headers.set('x-adamia-saved-at', String(Date.now())); headers.delete('set-cookie');
   for (const name of ['content-encoding', 'content-length', 'transfer-encoding']) headers.delete(name);
   await (await appCache(owner)).put(await key(kind, request.url, variant), new Response(await response.clone().arrayBuffer(), { status: response.status, headers }));
+  if (kind === 'page') {
+    const url = new URL(request.url);
+    const path = url.pathname + url.search;
+    await (await appCache(owner)).put(`${self.location.origin}/__offline/page-index/${await digest(path)}`, Response.json({ path, at: Date.now() }));
+  }
 }
 async function read(owner, kind, request, variant = '') {
   if (!/^[a-f0-9]{64}$/.test(owner || '')) return null;
@@ -106,7 +111,8 @@ self.addEventListener('fetch', event => {
     const kind = rsc ? 'rsc' : 'page';
     const variant = rsc ? ['rsc', 'next-router-state-tree', 'next-router-prefetch', 'next-router-segment-prefetch'].map(name => request.headers.get(name) || '').join('|') : '';
     try {
-      const response = await fetch(request);
+      const response = await fetch(request, { signal: AbortSignal.timeout(8000) });
+      if (response.status >= 500) throw new Error('El servidor no está disponible');
       await save(response.headers.get('x-adamia-session'), kind, request, response, variant).catch(() => {});
       return response;
     } catch {
