@@ -23,18 +23,37 @@ export async function middleware(request) {
   const userAgent = request.headers.get("user-agent") || "";
   const isNativeApp = userAgent.includes("AdamiaAppNative");
 
-  // Reglas de restricción para la app nativa (evita landing, planes y compras en la tienda)
+  // Reglas de restricción para la app nativa (estricto: solo login directo y módulos internos)
   if (isNativeApp) {
-    if (pathname === "/") {
+    const blockedForNative = [
+      "/",
+      "/contratar-plan",
+      "/cotiza",
+      "/alta-empresas",
+      "/register",
+      "/signup",
+      "/funcionalidades",
+      "/quienes-somos",
+      "/contacto",
+      "/blog-y-noticias",
+      "/bolsa-de-trabajo",
+      "/calculadora-aguinaldos",
+      "/capacitacion",
+      "/politicas",
+      "/terminos-condiciones",
+      "/aviso-privacidad",
+    ];
+
+    const isBlocked =
+      pathname === "/" ||
+      blockedForNative.some(
+        (blocked) => pathname === blocked || pathname.startsWith(blocked + "/"),
+      );
+
+    if (isBlocked) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
-    if (
-      pathname.startsWith("/contratar-plan") ||
-      pathname.startsWith("/cotiza") ||
-      pathname.startsWith("/alta-empresas")
-    ) {
-      return NextResponse.redirect(new URL("/login", request.url));
-    }
+
     if (pathname.startsWith("/panel/mi-suscripcion")) {
       return NextResponse.redirect(new URL("/panel", request.url));
     }
