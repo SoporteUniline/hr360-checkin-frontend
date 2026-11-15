@@ -758,7 +758,7 @@ export function NavMain() {
   const router = useRouter();
   const path = usePathname();
   const { dataUser } = useAuth();
-  const { state: sidebarState, isMobile } = useSidebar();
+  const { state: sidebarState, isMobile, setOpenMobile } = useSidebar();
   const [open, setOpen] = useState();
   const [busqueda, setBusqueda] = useState("");
   // Colapso por módulo: todos abiertos por defecto; se recuerda en localStorage.
@@ -824,6 +824,9 @@ export function NavMain() {
       return false;
     });
   const handleClick = (href) => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
     router.push(href);
   };
   let perfilRoute = "/home/cuenta";

@@ -4,12 +4,21 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ClientProviders } from "@/app/ClientProviders";
 import GlobalThirdPartyScripts from "@/components/GlobalThirdPartyScripts";
+import { NATIVE_PREPAINT_SCRIPT } from "@/lib/native-app";
 
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
 });
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  interactiveWidget: "resizes-content",
+  themeColor: "#ffffff",
+};
 
 export const metadata = {
   metadataBase: new URL("https://adamia.mx"),
@@ -32,8 +41,11 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
       <head>
+        <script
+          dangerouslySetInnerHTML={{ __html: NATIVE_PREPAINT_SCRIPT }}
+        />
         <link rel="icon" href="/favicon.ico" />
 
         <meta

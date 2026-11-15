@@ -33,7 +33,7 @@ export function NavUser() {
     swr_config,
   );
 
-  const { isMobile } = useSidebar();
+  const { isMobile, setOpenMobile } = useSidebar();
 
   const router = useRouter();
   const pathname = usePathname();
@@ -109,7 +109,10 @@ export function NavUser() {
               <>
                 <DropdownMenuGroup>
                   <DropdownMenuItem
-                    onClick={() => router.push(`/${location}/cuenta`)}
+                    onClick={() => {
+                      if (isMobile) setOpenMobile(false);
+                      router.push(`/${location}/cuenta`);
+                    }}
                   >
                     <UserCircleIcon />
                     Mi cuenta
@@ -119,7 +122,12 @@ export function NavUser() {
               </>
             )}
 
-            <DropdownMenuItem onClick={logout}>
+            <DropdownMenuItem
+              onClick={() => {
+                if (isMobile) setOpenMobile(false);
+                logout();
+              }}
+            >
               <LogOutIcon />
               Cerrar sesión
             </DropdownMenuItem>
