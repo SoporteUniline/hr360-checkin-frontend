@@ -150,6 +150,36 @@
   /* Smooth scroll */
   html {
     scroll-behavior: smooth;
+    overscroll-behavior-y: contain;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+
+  /* Sensación de app nativa en WebView / PWA (evita menús y selección accidental en botones) */
+  html.adamia-native button,
+  html.adamia-native a,
+  html.adamia-native nav,
+  html.adamia-native label,
+  html.adamia-native img,
+  html.adamia-native [role="button"] {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+
+  html.adamia-native input,
+  html.adamia-native textarea,
+  html.adamia-native [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
   }
 
   :root {
@@ -377,4 +407,12 @@ body {
 .leaflet-container {
   position: relative;
   z-index: 0 !important;
+}
+
+/* ==========================================================================
+   App Nativa (Capacitor) - evitar flasheo de controles exclusivos de web
+   ========================================================================== */
+
+html.adamia-native .adamia-web-only {
+  display: none !important;
 }

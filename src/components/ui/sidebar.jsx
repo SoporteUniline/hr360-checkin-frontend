@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { usePathname } from "next/navigation";
 import { Slot } from "@radix-ui/react-slot";
 import { cva } from "class-variance-authority";
 import { PanelLeftIcon } from "lucide-react";
@@ -52,7 +53,13 @@ function SidebarProvider({
   ...props
 }) {
   const isMobile = useIsMobile();
+  const pathname = usePathname();
   const [openMobile, setOpenMobile] = React.useState(false);
+
+  // Cierra automáticamente el menú lateral móvil al navegar a cualquier vista
+  React.useEffect(() => {
+    setOpenMobile(false);
+  }, [pathname]);
   const [_open, _setOpen] = React.useState(defaultOpen);
   const open = openProp ?? _open;
   const setOpen = React.useCallback(

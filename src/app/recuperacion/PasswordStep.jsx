@@ -1,11 +1,12 @@
 "use client";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { useSnackbar } from "notistack";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { CheckCircle, ShieldCheckIcon } from "lucide-react";
+import { CheckCircle2, ShieldCheckIcon } from "lucide-react";
 
 export default function PasswordStep({ form, steps, setSteps }) {
   const router = useRouter();
@@ -15,7 +16,8 @@ export default function PasswordStep({ form, steps, setSteps }) {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
 
-  const completeSteps = async () => {
+  const completeSteps = async (e) => {
+    e?.preventDefault?.();
     try {
       if (!password || !confirmPassword) {
         setError("Por favor completa ambos campos.");
@@ -33,9 +35,9 @@ export default function PasswordStep({ form, steps, setSteps }) {
         {
           password,
           confirmPassword,
-        }
+        },
       );
-      enqueueSnackbar("Se guardo correctamente tu nueva contraseña", {
+      enqueueSnackbar("Se guardó correctamente tu nueva contraseña", {
         variant: "success",
       });
       setError("");
@@ -43,9 +45,9 @@ export default function PasswordStep({ form, steps, setSteps }) {
       setTimeout(() => {
         router.push("/login");
       }, 2000);
-    } catch (error) {
+    } catch (err) {
       const errorMessage =
-        error.response?.data?.error || "Error al iniciar sesión";
+        err.response?.data?.error || "Error al actualizar contraseña";
       enqueueSnackbar(errorMessage, { variant: "error" });
       setLoading(false);
     }
@@ -53,48 +55,80 @@ export default function PasswordStep({ form, steps, setSteps }) {
 
   if (!steps.otp) return null;
 
-  return (
-    <>
-      <div className="flex items-center gap-2">
-        <p className="py-1 text-sm text-slate-700 font-light">
-          3. Ingrese su nueva contraseña
-        </p>
-        <span>{steps.password && <CheckCircle />}</span>
-      </div>
-      {!steps.password ? (
-        <div className="flex flex-col gap-3">
-          <Input
-            disabled={loading}
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full py-2.5 text-base"
-            placeholder="Ingrese su contraseña"
-          />
-          <Input
-            disabled={loading}
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full py-2.5 text-base"
-            placeholder="Repite de nuevo la contraseña"
-          />
-          {error && <p className="text-sm text-red-500 font-medium">{error}</p>}
-          <Button
-            startIcon={<ShieldCheckIcon />}
-            type="button"
-            onClick={completeSteps}
-            disabled={loading}
-            className="w-full bg-slate-700 cursor-pointer hover:bg-slate-500"
-          >
-            Guardar y finalizar proceso
-          </Button>
+  if (steps.password) {
+    return (
+      <div className="flex flex-col items-center text-center py-4 space-y-3">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 text-emerald-500">
+          <CheckCircle2 className="h-7 w-7" />
         </div>
-      ) : (
-        <p className="my-5">
-          Redirigiendo a inicio de sesión, espere por favor...
+        <h2 className="text-lg font-semibold text-[var(--adamia-text-primary)]">
+          ¡Contraseña actualizada!
+        </h2>
+        <p className="text-sm text-[var(--adamia-text-secondary)]">
+          Redirigiendo a inicio de sesión, espera un momento...
         </p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={completeSteps} className="space-y-4">
+      <div className="space-y-2">
+        <Label
+          htmlFor="recovery-password"
+          className="text-sm font-medium text-[var(--adamia-text-primary)]"
+        >
+          Nueva contraseña
+        </Label>
+        <PasswordInput
+          id="recovery-password"
+          disabled={loading}
+          autoComplete="new-password"
+          value={password}
+          onChange={(e) => {
+            setPassword(e.target.value);
+            if (error) setError("");
+          }}
+          className="w-full h-12 min-h-12 rounded-xl text-base px-4 border-slate-200 focus-visible:border-[var(--adamia-blue)] focus-visible:ring-[var(--adamia-blue)]/20"
+          placeholder="Ingresa tu nueva contraseña"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label
+          htmlFor="recovery-confirm-password"
+          className="text-sm font-medium text-[var(--adamia-text-primary)]"
+        >
+          Confirmar contraseña
+        </Label>
+        <PasswordInput
+          id="recovery-confirm-password"
+          disabled={loading}
+          autoComplete="new-password"
+          value={confirmPassword}
+          onChange={(e) => {
+            setConfirmPassword(e.target.value);
+            if (error) setError("");
+          }}
+          className="w-full h-12 min-h-12 rounded-xl text-base px-4 border-slate-200 focus-visible:border-[var(--adamia-blue)] focus-visible:ring-[var(--adamia-blue)]/20"
+          placeholder="Repite la nueva contraseña"
+        />
+      </div>
+
+      {error && (
+        <p className="text-sm text-red-500 font-medium text-center">{error}</p>
       )}
-    </>
+
+      <div className="pt-2">
+        <Button
+          startIcon={<ShieldCheckIcon className="w-4 h-4" />}
+          type="submit"
+          loading={loading}
+          className="w-full h-12 rounded-xl text-base font-semibold cursor-pointer text-white shadow-md shadow-blue-500/20 bg-gradient-to-r from-[var(--adamia-blue)] to-[var(--adamia-purple)] hover:opacity-95 active:scale-[0.99] transition-all"
+        >
+          Guardar nueva contraseña
+        </Button>
+      </div>
+    </form>
   );
 }
