@@ -5,7 +5,8 @@
 import { createRecorder, reporteTexto } from "./core.mjs";
 
 const CLAVE_ACTIVO = "adamia.diagReloj.activo";
-const ENDPOINT = "/api/diagnostico/reloj";
+// /internal/* llega a Next en dev/prod (el proxy manda /api/* al backend); ver next.config.mjs.
+const ENDPOINT = "/internal/diagnostico/reloj";
 const LIMITE_ENVIO = 60000;
 
 const almacen = () => {

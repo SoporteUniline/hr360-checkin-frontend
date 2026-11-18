@@ -27,7 +27,7 @@ También guarda: número de cuadros analizados (promedio y máximo en ms), cuadr
 
 ## Dónde queda guardado
 1. **En el celular:** últimas 30 mediciones (sobreviven a cerrar la app). Panel → «Compartir reporte» (texto) o «Copiar todo (JSON)».
-2. **En el servidor:** cada medición se envía a `POST /api/diagnostico/reloj` (requiere sesión válida) y queda una línea en el log de la app:
+2. **En el servidor:** cada medición se envía a `POST /internal/diagnostico/reloj` (reescrito a `/api/diagnostico/reloj`, porque en dev/prod el proxy manda `/api/*` al backend) (requiere sesión válida) y queda una línea en el log de la app:
    ```bash
    docker compose logs frontend-dev | grep "\[diag-reloj\]"
    ```
