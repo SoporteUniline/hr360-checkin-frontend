@@ -187,14 +187,6 @@ export default function AsistenciaRow({
                           .format("HH:mm")
                       : ""
                   }
-                  max={
-                    currentData.salida
-                      ? dayjs
-                          .tz(currentData.salida, DB_TIMEZONE)
-                          .tz(userTimezone)
-                          .format("HH:mm")
-                      : undefined
-                  }
                   onChange={(e) => {
                     const hora = e.target.value;
                     const nuevaEntrada = hora
@@ -219,14 +211,6 @@ export default function AsistenciaRow({
                           .tz(userTimezone)
                           .format("HH:mm")
                       : ""
-                  }
-                  min={
-                    currentData.entrada
-                      ? dayjs
-                          .tz(currentData.entrada, DB_TIMEZONE)
-                          .tz(userTimezone)
-                          .format("HH:mm")
-                      : undefined
                   }
                   onChange={(e) => {
                     const hora = e.target.value;

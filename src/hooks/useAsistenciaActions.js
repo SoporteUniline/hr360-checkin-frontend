@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "@/lib/axios";
 import { useSnackbar } from "notistack";
+import dayjs from "dayjs";
 
 const numericFields = new Set([
   "asistencia", "goce_sueldo", "hrs_extra", "pago_triple", "es_domingo",
@@ -19,19 +20,27 @@ export default function useAsistenciaActions(mutateTable, onSaveSuccess) {
   const [draft, setDraft] = useState({});
   const [isSaving, setIsSaving] = useState(false);
 
-  const original = registro?.valores_originales;
+  const storedOriginal = registro?.valores_originales;
+  const original = typeof storedOriginal === "string"
+    ? JSON.parse(storedOriginal)
+    : storedOriginal;
+  const entrada = Object.hasOwn(draft, "entrada") ? draft.entrada : registro?.entrada;
+  const salida = draft.salida;
+  const editedValues = entrada && salida && salida < entrada
+    ? { ...draft, salida: dayjs(salida).add(1, "day").format("YYYY-MM-DD HH:mm:ss") }
+    : draft;
   const reference = { ...registro, ...original };
   const differs = (field, value, previous) =>
     comparable(field, value) !== comparable(field, previous[field]);
 
   const editingRowData = {
     ...registro,
-    ...draft,
+    ...editedValues,
     correccion: Number(
       (!original && Boolean(registro?.correccion)) ||
-      Object.keys({ ...original, ...draft }).some((field) =>
+      Object.keys({ ...original, ...editedValues }).some((field) =>
         field !== "tipo_registro_nombre" &&
-        differs(field, Object.hasOwn(draft, field) ? draft[field] : registro[field], reference),
+        differs(field, Object.hasOwn(editedValues, field) ? editedValues[field] : registro[field], reference),
       ),
     ),
   };
@@ -50,15 +59,11 @@ export default function useAsistenciaActions(mutateTable, onSaveSuccess) {
     setDraft((previous) => ({ ...previous, [name]: value }));
   };
 
-  const handleRestoreOriginal = () => {
-    if (original) setDraft({ ...original });
-  };
-
-  const handleSaveClick = async () => {
+  const save = async (values, restoring = false) => {
     if (isSaving || !registro) return;
     const changes = Object.fromEntries(
-      Object.entries(draft).filter(([field, value]) =>
-        field !== "tipo_registro_nombre" && differs(field, value, registro),
+      Object.entries(values).filter(([field, value]) =>
+        field !== "tipo_registro_nombre" && (restoring || differs(field, value, registro)),
       ),
     );
     if (!Object.keys(changes).length) {
@@ -72,7 +77,7 @@ export default function useAsistenciaActions(mutateTable, onSaveSuccess) {
         `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/asistencias/${registro.id}`,
         changes,
       );
-      enqueueSnackbar("Asistencia actualizada correctamente.", { variant: "success" });
+      enqueueSnackbar(restoring ? "Asistencia restaurada al original." : "Asistencia actualizada correctamente.", { variant: "success" });
       onSaveSuccess?.(response.data?.asistencia);
       handleCancelEdit();
       await mutateTable?.();
@@ -91,7 +96,7 @@ export default function useAsistenciaActions(mutateTable, onSaveSuccess) {
     handleEditClick,
     handleCancelEdit,
     handleFieldChange,
-    handleSaveClick,
-    handleRestoreOriginal,
+    handleSaveClick: () => save(editedValues),
+    handleRestoreOriginal: () => { if (original) return save(original, true); },
   };
 }

@@ -246,7 +246,7 @@ export default function MobileEmpleadoDetalle({
 
   // Edit mode — time input helpers
   const fechaBase = currentData?.fecha
-    ? dayjs.tz(currentData.fecha, DB_TZ).tz(tz).format("YYYY-MM-DD")
+    ? currentData.fecha.slice(0, 10)
     : dayjs().format("YYYY-MM-DD");
 
   const entradaEditFmt = currentData?.entrada
@@ -429,7 +429,6 @@ export default function MobileEmpleadoDetalle({
                       <Input
                         type="time"
                         value={entradaEditFmt}
-                        max={salidaEditFmt || undefined}
                         onChange={(e) => onEntradaChange(e.target.value)}
                       />
                     </div>
@@ -440,7 +439,6 @@ export default function MobileEmpleadoDetalle({
                       <Input
                         type="time"
                         value={salidaEditFmt}
-                        min={entradaEditFmt || undefined}
                         onChange={(e) => onSalidaChange(e.target.value)}
                       />
                     </div>
