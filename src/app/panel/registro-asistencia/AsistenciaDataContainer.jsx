@@ -240,10 +240,10 @@ export default function AsistenciaDataContainer({
     editingRowId,
     setEditingRowId,
     editingRowData,
-    setEditingRowData,
     isSaving,
     handleEditClick,
     handleCancelEdit,
+    handleRestoreOriginal,
     handleFieldChange,
     handleSaveClick,
   } = useAsistenciaActions(mutate);
@@ -282,6 +282,7 @@ export default function AsistenciaDataContainer({
           tiposPermiso={tiposPermiso}
           handleEditClick={handleEditClick}
           handleCancelEdit={handleCancelEdit}
+          handleRestoreOriginal={handleRestoreOriginal}
           handleFieldChange={handleFieldChange}
           handleSaveClick={handleSaveClick}
           mutateAsistencia={mutate}

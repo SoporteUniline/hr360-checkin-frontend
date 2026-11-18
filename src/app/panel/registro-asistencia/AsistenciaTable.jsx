@@ -75,6 +75,7 @@ export default function AsistenciaTable({
   tiposPermiso,
   handleEditClick,
   handleCancelEdit,
+  handleRestoreOriginal,
   handleFieldChange,
   handleSaveClick,
   mutateAsistencia,
@@ -516,6 +517,7 @@ export default function AsistenciaTable({
       tiposPermiso={tiposPermiso}
       handleEditClick={handleEditClick}
       handleCancelEdit={handleCancelEdit}
+      handleRestoreOriginal={handleRestoreOriginal}
       handleFieldChange={handleFieldChange}
       handleSaveClick={handleSaveClick}
       mutateAsistencia={mutateAsistencia}
