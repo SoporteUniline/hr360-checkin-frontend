@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import vm from "node:vm";
 import test from "node:test";
+import { createRecorder } from "../src/lib/diagnostico-reloj/core.mjs";
 
 const require = createRequire(import.meta.url);
 const babel = require("next/dist/compiled/babel/core");
@@ -17,7 +18,7 @@ const { code } = babel.transformSync(source, {
 });
 const tick = () => new Promise(setImmediate);
 
-function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, postError = null } = {}) {
+function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, postError = null, diag } = {}) {
   const slots = [];
   let cursor = 0;
   let effects = [];
@@ -98,6 +99,7 @@ function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, p
     } } },
     setInterval(fn) { timers.add(fn); return fn; },
     clearInterval(fn) { timers.delete(fn); },
+    __adamiaDiag: diag,
   });
   vm.runInContext(code, context);
   const render = (isOpen = true) => {
@@ -276,4 +278,41 @@ test("GPS is requested after identification and recent coordinates are reused on
   assert.equal(env.requests[2].body.latitud_actual, 1);
   assert.equal(env.counts().gpsCalls, 1);
   assert.equal(env.notifications.length, 0);
+});
+
+test("with diagnostics on, behavior is unchanged and every phase is recorded", async () => {
+  let t = 0;
+  const reportes = [];
+  const rec = createRecorder({ now: () => t, storage: null, onFinish: (r) => reportes.push(r) });
+  const diag = {
+    ahora: () => (t += 5),
+    marca: rec.marca, cuenta: rec.cuenta, contexto: rec.agregarContexto,
+    iniciar: (m, c) => rec.iniciar(m, c), terminar: (r, d) => rec.terminar(r, d),
+  };
+  const env = setup({ diag,
+    postError: (body) => body.latitud_actual === null ? "Faltan coordenadas de ubicaci\u00f3n" : null,
+  });
+  await startRecognition(env);
+  await tick();
+  assert.equal(env.counts().successes, 1);
+  assert.equal(env.requests.length, 2);
+  assert.equal(env.requests[0].body.latitud_actual, null);
+  assert.equal(env.requests[1].body.latitud_actual, 1);
+  assert.equal(reportes.length, 1);
+  const r = reportes[0];
+  assert.equal(r.resultado, "checada registrada");
+  const nombres = r.marcas.map((m) => m.n);
+  for (const n of ["camara_solicitada", "camara_lista", "modelos_listos_panel", "deteccion_lista",
+    "primer_analisis_fin", "primer_rostro", "envio_inicio", "envio_fin", "gps_inicio", "gps_fin", "checada_exitosa", "fin"]) {
+    assert.ok(nombres.includes(n), `falta la marca ${n}`);
+  }
+  assert.equal(nombres.filter((n) => n === "envio_inicio").length, 2);
+  assert.equal(r.marcas.find((m) => m.n === "envio_fin").d.error, "Faltan coordenadas de ubicaci\u00f3n");
+  const gps = r.marcas.find((m) => m.n === "gps_fin").d;
+  assert.equal(gps.ok, true);
+  assert.equal(gps.precision_m, 8);
+  assert.equal(r.contexto.camara, "640x480");
+  assert.equal(r.contadores.analisis.veces, 1);
+  assert.equal(r.contadores.envio.veces, 2);
+  assert.ok(r.fases.some((f) => f.fase === "Obtener GPS" && f.ms != null));
 });

@@ -4,3 +4,4 @@
 - 2026-11-13 · arquitecto · análisis de jornadas laborales entregado; propuesta R1–R5 pendiente de APROBADO
 - 2026-11-13 · arquitecto · P-001 respondida: A (motor en backend redlab_back) · D-002
 - 2026-11-13 · arquitecto · contrato de backend de jornadas (docs/JORNADAS_BACKEND.md) y maqueta en vivo de Resumen de jornada para revisión
+- 2026-11-18 · desarrollador · modo diagnóstico del reloj checador (medición por fases, guardado en dispositivo y log [diag-reloj]); 17 pruebas en verde, build OK · docs/DIAGNOSTICO_RELOJ.md

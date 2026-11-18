@@ -11,6 +11,11 @@ export default function EmpleadoInicioPage() {
   const router = useRouter();
   const [status, setStatus] = useState("idle");
 
+  // Modo diagnóstico: cuánto tarda en validarse el usuario antes de mostrar el reloj.
+  useEffect(() => {
+    globalThis.__adamiaDiag?.marca("pagina_reloj");
+  }, []);
+
   useEffect(() => {
     if (!isLoggedIn || !dataUser) return;
 
@@ -20,6 +25,7 @@ export default function EmpleadoInicioPage() {
     }
 
     if (dataUser.esEmpleado) {
+      globalThis.__adamiaDiag?.marca("usuario_listo");
       setStatus("ok");
     } else {
       setStatus("error");
