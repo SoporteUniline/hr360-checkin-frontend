@@ -49,6 +49,7 @@ export function localAction(employee, dataset, events, requested = 'auto', { onl
     if (validClockState(event.clock_state, dataset.company, employee.id) && (!state || event.clock_state.revision >= state.revision)) state = event.clock_state;
   }
   let open = state ? state.open : employee.open;
+  let pendingAutomatic = false;
   for (const event of previous) {
     if (event.status === 'review') {
       if (isTurnConflict(event)) {
@@ -59,7 +60,7 @@ export function localAction(employee, dataset, events, requested = 'auto', { onl
       fail('Resuelve la captura anterior de este empleado antes de registrar otra.', 'LOCAL_PREVIOUS_REVIEW');
     }
     if (event.status === 'decision') fail('Selecciona cómo cerrar el turno anterior antes de registrar otra checada.', 'LOCAL_PREVIOUS_REVIEW');
-    if (!online && event.status === 'pending' && event.action === 'auto') fail('Espera a que se suba la checada anterior de este empleado antes de registrar otra.', 'LOCAL_CLOCK_PENDING');
+    if (!online && event.status === 'pending' && event.action === 'auto') pendingAutomatic = true;
     if (event.status === 'synced') {
       if (validClockState(event.clock_state, dataset.company, employee.id)) continue;
       // Compatibility with receipts created before versioned turn snapshots.
@@ -67,6 +68,10 @@ export function localAction(employee, dataset, events, requested = 'auto', { onl
     }
     const action = event.resolvedAction || event.action;
     open = action === 'auto' ? !open : action === 'entrada';
+  }
+  if (pendingAutomatic) {
+    if (requested === 'auto') return 'auto';
+    fail('Espera a que se suba la checada anterior de este empleado antes de elegir un movimiento.', 'LOCAL_CLOCK_PENDING');
   }
   if (requested !== 'auto') {
     if (requested === 'entrada' ? open : !open) fail('El movimiento no coincide con el turno guardado en este dispositivo.', 'LOCAL_TRANSITION_INVALID');

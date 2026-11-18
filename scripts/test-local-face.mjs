@@ -86,7 +86,14 @@ test('pending codes from the same employee contribute to local state without usi
   const entry = { company: 10, identity: 'code-hash', action: 'entrada', status: 'pending', captured_at: new Date().toISOString() };
   assert.equal(localAction(employee, dataset(), [entry]), 'salida');
   assert.equal(localAction(employee, dataset(), [{ ...entry, local_employee: 2 }]), 'entrada');
-  assert.throws(() => localAction(employee, dataset(), [{ ...entry, action: 'auto' }]), { code: 'LOCAL_CLOCK_PENDING' });
+  const pending = [{ ...entry, action: 'auto' }];
+  for (const capturedAt of [1000, 2000]) {
+    const action = localAction(employee, dataset(), pending);
+    assert.equal(action, 'auto');
+    pending.push({ ...entry, action, captured_at: new Date(Date.parse(entry.captured_at) + capturedAt).toISOString() });
+  }
+  assert.equal(localAction({ ...employee, cierre_turno: 'Manual' }, dataset(), pending), 'auto');
+  assert.throws(() => localAction(employee, dataset(), pending, 'salida'), { code: 'LOCAL_CLOCK_PENDING' });
 });
 
 const state = (revision, open, employee = 1, company = 10) => ({ revision, open, employee, company, observed_at: new Date().toISOString() });
