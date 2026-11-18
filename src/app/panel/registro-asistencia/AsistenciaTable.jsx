@@ -27,7 +27,7 @@ import useHorasExtra from "@/hooks/useHorasExtra";
 import { minutosDescanso, sinSalidaAComer } from "@/lib/asistencia/jornada.mjs";
 import {
   ETIQUETAS_ESTADO, FORMA_PAGO_DEFAULT, FORMAS_PAGO, cambiosAutorizar, cambiosNoAutorizar, cambiosQuitar,
-  estadoHorasExtra, etiquetaHorasExtra,
+  estadoHorasExtra, etiquetaHorasExtra, ordenarPorHorasExtra,
 } from "@/lib/asistencia/horasExtra.mjs";
 
 dayjs.extend(utc);
@@ -347,11 +347,16 @@ export default function AsistenciaTable({
     autorizacionSeleccionada.length > 0 ||
     estadoAsistenciaSeleccionado.length > 0;
 
+  // «Horas extra» se ordena en pantalla por estado y minutos (el servidor solo sabe ordenar por Sí/No).
+  const ordenarExtras = sortConfig?.sortBy === "horasExtra";
   const displayedRows = useMemo(() => {
-    if (!hasActiveHeaderFilters) return filtrados;
+    const ordenar = (rows) =>
+      ordenarExtras ? ordenarPorHorasExtra(rows, { zonaDe, orden: sortConfig.sortOrder }) : rows;
+    if (!hasActiveHeaderFilters) return ordenar(filtrados);
     const offset = (page - 1) * limit;
-    return filteredRowsAll.slice(offset, offset + limit);
-  }, [hasActiveHeaderFilters, filtrados, page, limit, filteredRowsAll]);
+    return ordenar(filteredRowsAll).slice(offset, offset + limit);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasActiveHeaderFilters, filtrados, page, limit, filteredRowsAll, ordenarExtras, sortConfig?.sortOrder]);
 
   // Agrupación de los renglones YA calculados para la página (no altera
   // filtrado ni paginación). Conserva el orden de aparición.

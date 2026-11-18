@@ -217,6 +217,13 @@ try {
   await page.waitForFunction(() => document.querySelectorAll("tr").length >= 26);
   puts.length = 0;
 
+  // 2d) Ordenar por «Horas extra»: primero las por autorizar con más minutos (Extra: 1 h 42 min).
+  await page.getByRole("button", { name: /^HORAS EXTRA/ }).click();
+  await page.waitForFunction(() => /Extra Prueba/.test(document.querySelector("tbody tr")?.innerText || ""), null, { timeout: 15000 });
+  await page.getByRole("button", { name: /^HORAS EXTRA/ }).click(); // ascendente: las sin horas extra primero
+  await page.waitForFunction(() => /Nocturno/.test(document.querySelector("tbody tr")?.innerText || ""), null, { timeout: 15000 });
+  await page.locator("th", { hasText: /^Fecha$/i }).first().click(); // regresa al orden por fecha
+
   // 3) Arranca en "Todos los registros": se ven los 25 con UNA sola descarga del periodo
   //    (sin la segunda descarga para las opciones de filtros).
   assert.equal(await page.locator("tr", { hasText: "Prueba" }).count(), 25, "debe mostrar todo el periodo");

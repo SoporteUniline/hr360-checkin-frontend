@@ -149,3 +149,17 @@ export function resumenHorasExtra(registros, zonaDe = () => DB_TZ) {
   }
   return r;
 }
+
+// Orden de la columna «Horas extra» (de mayor a menor importancia):
+// por autorizar → autorizadas → no autorizadas → sin horas extra; dentro de cada grupo, más minutos primero.
+const PRIORIDAD = { pendiente: 0, autorizada: 1, no_autorizada: 2, sin: 3 };
+export function ordenarPorHorasExtra(registros, { zonaDe = () => DB_TZ, orden = "desc" } = {}) {
+  const conInfo = (registros ?? []).map((r, i) => ({ r, i, info: estadoHorasExtra(r, zonaDe(r)) }));
+  conInfo.sort((a, b) =>
+    PRIORIDAD[a.info.estado] - PRIORIDAD[b.info.estado] ||
+    (Math.max(b.info.minutos ?? 0, 0) - Math.max(a.info.minutos ?? 0, 0)) ||
+    a.i - b.i,
+  );
+  const ordenados = conInfo.map((x) => x.r);
+  return orden === "asc" ? ordenados.reverse() : ordenados;
+}
