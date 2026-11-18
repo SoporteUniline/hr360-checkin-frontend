@@ -188,8 +188,19 @@ jobs:
             echo "🚀 Iniciando deploy — SHA: ${{ github.sha }}"
             cd ~/adamia/frontend-dev
             test "$(git branch --show-current)" = "dev"
-            git fetch origin dev
-            git merge --ff-only "${{ github.sha }}"
+            git fetch origin refs/heads/dev
+            test "$(git rev-parse FETCH_HEAD)" = "${{ github.sha }}"
+            current_sha=$(git rev-parse HEAD)
+            # Reconcile the checkout left behind by the November 18 dev rollback.
+            if [ "$current_sha" = "0e24c7a3b297c3ae118a02df7c1780e4a5689056" ]; then
+              test -z "$(git status --porcelain)" || {
+                echo "El checkout de dev en Lightsail tiene cambios locales."
+                exit 1
+              }
+              git reset --keep "${{ github.sha }}"
+            else
+              git merge --ff-only "${{ github.sha }}"
+            fi
             test "$(git rev-parse HEAD)" = "${{ github.sha }}"
             cd ~/adamia
             previous_image=$(docker inspect --format='{{.Image}}' adamia_frontend_dev)
