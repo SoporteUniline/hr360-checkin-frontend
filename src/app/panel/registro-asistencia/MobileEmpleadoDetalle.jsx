@@ -24,6 +24,8 @@ import useAsistenciaActions from "@/hooks/useAsistenciaActions";
 import useTiposPermisoData from "@/hooks/useTiposPermisoData";
 import useEmpleadosData from "@/hooks/useEmpleadosData";
 import { formatearMinutos, minutosTrabajados, salidaEsDiaSiguiente, sumarDias } from "@/lib/asistencia/jornada.mjs";
+import { cambiosRegistro } from "@/lib/asistencia/cambios.mjs";
+import { crearFormateadorCambios } from "./CeldaEditado";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -215,6 +217,10 @@ export default function MobileEmpleadoDetalle({
     ? dayjs.tz(display.salida, DB_TZ).tz(tz).format("HH:mm")
     : null;
   const horasTrabajadas = calcHours(display);
+  const cambiosDisplay = cambiosRegistro(
+    display,
+    crearFormateadorCambios({ tiposPermiso: tiposPermisoData, empleados, zona: tz }),
+  );
 
   const estadoAsistenciaLocal = (() => {
     if (display.asistencia !== 1) return "Ausente";
@@ -415,7 +421,7 @@ export default function MobileEmpleadoDetalle({
 
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm text-gray-700">
-                    {currentData.correccion ? "Corregida" : "Sin corregir"}
+                    {Number(currentData.correccion) ? "Editado" : "Sin editar"}
                   </span>
                   {currentData.valores_originales && (
                     <button
@@ -735,8 +741,8 @@ export default function MobileEmpleadoDetalle({
                   { label: "Tipo", value: display.tipo_registro_nombre },
                   { label: "Departamento", value: display.departamento },
                   {
-                    label: "Corrección",
-                    value: display.correccion ? "Sí" : "No",
+                    label: "Editado",
+                    value: Number(display.correccion) ? "Sí" : "No",
                   },
                   { label: "Estado", value: display.estado },
                 ].map(({ label, value }) => (
@@ -751,6 +757,24 @@ export default function MobileEmpleadoDetalle({
                   </div>
                 ))}
               </div>
+              {cambiosDisplay.length > 0 && (
+                <div className="mt-3 border-t border-gray-100 pt-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700 mb-2">
+                    Qué cambió
+                  </p>
+                  <ul className="space-y-2">
+                    {cambiosDisplay.map((c) => (
+                      <li key={c.campo} className="text-sm">
+                        <span className="text-gray-500">{c.etiqueta}: </span>
+                        <span className="text-gray-400 line-through">{c.antes}</span>
+                        <span className="mx-1 text-gray-400">→</span>
+                        <span className="font-semibold text-gray-900">{c.despues}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-[11px] text-gray-500">Quién y cuándo: aún no se registra.</p>
+                </div>
+              )}
             </div>
 
             <div className="h-6" />
