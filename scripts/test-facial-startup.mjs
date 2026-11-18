@@ -38,6 +38,7 @@ function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, p
   const models = new Promise((resolve) => { resolveModels = resolve; });
   const result = new Promise((resolve) => { resolveDetection = resolve; });
   const timers = new Set();
+  const startupTimers = new Map();
   const video = { readyState: 4, videoWidth: 640, videoHeight: 480,
     pause() {}, load() {}, removeAttribute() {} };
   const canvas = { getContext: () => ({ drawImage() {}, clearRect() {} }) };
@@ -99,6 +100,8 @@ function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, p
     } } },
     setInterval(fn) { timers.add(fn); return fn; },
     clearInterval(fn) { timers.delete(fn); },
+    setTimeout(fn, delay) { startupTimers.set(fn, delay); return fn; },
+    clearTimeout(fn) { startupTimers.delete(fn); },
     __adamiaDiag: diag,
   });
   vm.runInContext(code, context);
@@ -110,7 +113,7 @@ function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, p
     effects.forEach(({ cleanup }) => cleanup?.());
     effects.forEach(({ index, run, deps }) => { slots[index] = { deps, cleanup: run() }; });
   };
-  return { render, video, resolveModels, resolveDetection, timers, notifications, requests,
+  return { render, video, resolveModels, resolveDetection, timers, startupTimers, notifications, requests,
     texts: () => texts,
     advance(ms) { now += ms; },
     setGpsFails(value) { gpsFails = value; },
@@ -118,6 +121,54 @@ function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, p
     resolveLocation: () => resolveLocation(),
     counts: () => ({ cameraCalls, gpsCalls, detections, posts, stops, successes }) };
 }
+
+test("a camera that never delivers a frame stops without requiring a page reload", async () => {
+  const env = setup();
+  env.render();
+  await tick();
+  const onPlaying = env.video.onplaying;
+  for (const [timeout, delay] of env.startupTimers) if (delay === 15000) timeout();
+  onPlaying();
+  env.resolveModels();
+  await tick();
+  env.render();
+  assert.equal(env.counts().stops, 1);
+  assert.equal(env.counts().detections, 0);
+  assert.ok(env.texts().some((message) => message.includes("La cámara no inició")));
+});
+
+test("recognition waits between analyses even when no face is present", async () => {
+  const env = setup();
+  env.render();
+  await tick();
+  env.video.onplaying();
+  env.resolveModels();
+  await tick();
+  env.render();
+  env.resolveDetection(undefined);
+  await tick();
+  env.advance(100);
+  for (const detect of env.timers) detect();
+  assert.equal(env.counts().detections, 1);
+  env.advance(400);
+  for (const detect of env.timers) detect();
+  assert.equal(env.counts().detections, 2);
+});
+
+test("slow model startup offers another check-in method and recovers when loading completes", async () => {
+  const env = setup();
+  env.render();
+  await tick();
+  env.video.onplaying();
+  for (const [timeout, delay] of env.startupTimers) if (delay === 20000) timeout();
+  env.render();
+  assert.ok(env.texts().some((message) => message.includes("Puedes usar código o QR")));
+  env.resolveModels();
+  await tick();
+  env.render();
+  assert.equal(env.counts().detections, 1);
+  assert.ok(env.texts().every((message) => !message.includes("Puedes usar código o QR")));
+});
 
 test("camera starts before models without requesting GPS; model readiness does not reopen the camera", async () => {
   const env = setup();
