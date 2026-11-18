@@ -67,8 +67,11 @@ export default function useAsistenciaActions(mutateTable, onSaveSuccess) {
       ),
     );
     if (!Object.keys(changes).length) {
-      handleCancelEdit();
-      return;
+      if (!original || !Number(registro.correccion) || editingRowData.correccion) {
+        handleCancelEdit();
+        return;
+      }
+      Object.assign(changes, original);
     }
 
     setIsSaving(true);
