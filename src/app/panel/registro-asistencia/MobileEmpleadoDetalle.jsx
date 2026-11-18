@@ -157,9 +157,19 @@ export default function MobileEmpleadoDetalle({
     handleCancelEdit,
     handleFieldChange,
     handleSaveClick,
+    handleRestoreOriginal,
   } = useAsistenciaActions(mutateAsistencia, (saved) => {
     if (saved) {
-      setLocalRegistro((prev) => ({ ...prev, ...saved }));
+      setLocalRegistro((prev) => ({
+        ...prev,
+        ...saved,
+        tipo_registro_nombre:
+          saved.id_tipo_permiso === prev.id_tipo_permiso
+            ? prev.tipo_registro_nombre
+            : tiposPermiso.find(
+                (tipo) => Number(tipo.id) === Number(saved.id_tipo_permiso),
+              )?.nombre,
+      }));
     }
   });
 
@@ -249,7 +259,6 @@ export default function MobileEmpleadoDetalle({
   const onEntradaChange = (hora) => {
     if (!hora) {
       handleFieldChange("entrada", null);
-      handleFieldChange("correccion", 0); // 🔥 CLAVE
       return;
     }
 
@@ -278,12 +287,6 @@ export default function MobileEmpleadoDetalle({
         : null,
     );
   };
-
-  const areTimesDisabled = !currentData?.correccion;
-  const requiereHorario = Number(currentData?.id_tipo_permiso) === 14;
-
-  const isInvalid =
-    currentData?.correccion && requiereHorario && !currentData?.entrada;
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange} direction="bottom">
@@ -377,7 +380,6 @@ export default function MobileEmpleadoDetalle({
                         "tipo_registro_nombre",
                         sel?.nombre || "",
                       );
-                      handleFieldChange("correccion", 1);
                       handleFieldChange(
                         "asistencia",
                         sel?.cuenta_como_asistencia,
@@ -398,16 +400,20 @@ export default function MobileEmpleadoDetalle({
                   </Select>
                 </div>
 
-                {/* Corrección */}
-                <div className="bg-white rounded-2xl overflow-hidden border border-gray-100">
-                  <ToggleRow
-                    label="Corrección manual"
-                    sublabel="Habilita la edición de horarios"
-                    checked={!!currentData.correccion}
-                    onChange={(val) => {
-                      handleFieldChange("correccion", val ? 1 : 0);
-                    }}
-                  />
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm text-gray-700">
+                    {currentData.correccion ? "Corregida" : "Sin corregir"}
+                  </span>
+                  {currentData.valores_originales && (
+                    <button
+                      type="button"
+                      onClick={handleRestoreOriginal}
+                      disabled={isSaving}
+                      className="rounded-lg px-2 py-1 text-sm font-medium text-brand disabled:opacity-50"
+                    >
+                      Volver al original
+                    </button>
+                  )}
                 </div>
 
                 {/* Horarios */}
@@ -424,9 +430,7 @@ export default function MobileEmpleadoDetalle({
                         type="time"
                         value={entradaEditFmt}
                         max={salidaEditFmt || undefined}
-                        disabled={areTimesDisabled}
                         onChange={(e) => onEntradaChange(e.target.value)}
-                        className={cn(areTimesDisabled && "opacity-50")}
                       />
                     </div>
                     <div>
@@ -437,22 +441,10 @@ export default function MobileEmpleadoDetalle({
                         type="time"
                         value={salidaEditFmt}
                         min={entradaEditFmt || undefined}
-                        disabled={areTimesDisabled}
                         onChange={(e) => onSalidaChange(e.target.value)}
-                        className={cn(areTimesDisabled && "opacity-50")}
                       />
                     </div>
                   </div>
-                  {!areTimesDisabled && requiereHorario && !entradaEditFmt && (
-                    <p className="text-xs text-red-500 mt-1">
-                      Debes ingresar la hora de entrada
-                    </p>
-                  )}
-                  {areTimesDisabled && (
-                    <p className="text-xs text-gray-400 mt-1.5">
-                      Activa "Corrección manual" para editar horarios
-                    </p>
-                  )}
                 </div>
 
                 {/* Estado toggles */}
@@ -547,7 +539,7 @@ export default function MobileEmpleadoDetalle({
               </button>
               <button
                 onClick={handleSaveClick}
-                disabled={isSaving || isInvalid}
+                disabled={isSaving}
                 className="flex-1 min-h-[48px] py-3 rounded-xl bg-gradient-to-br from-brand to-[#4f46e5] text-white text-sm font-semibold shadow-[0_8px_20px_rgba(37,99,235,0.32)] flex items-center justify-center gap-2 active:opacity-90 disabled:opacity-50"
               >
                 <Save className="w-4 h-4" />

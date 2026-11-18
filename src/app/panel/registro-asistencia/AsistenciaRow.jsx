@@ -51,6 +51,7 @@ export default function AsistenciaRow({
   handleCancelEdit,
   handleFieldChange,
   handleSaveClick,
+  handleRestoreOriginal,
   mutateAsistencia,
   mostrarCamposExtras,
   empresaActiva,
@@ -61,7 +62,6 @@ export default function AsistenciaRow({
   const userTimezone = registro.zona_horaria || fallbackTimezone;
   const DB_TIMEZONE = "America/Mexico_City";
   const currentData = isEditing ? editingRowData : registro;
-  const areTimeInputsDisabled = !currentData.correccion;
   const isColVisible =
     typeof colVisible === "function"
       ? colVisible
@@ -151,7 +151,6 @@ export default function AsistenciaRow({
                       "tipo_registro_nombre",
                       seleccionado?.nombre || "",
                     );
-                    handleFieldChange("correccion", 1);
                     handleFieldChange(
                       "asistencia",
                       seleccionado?.cuenta_como_asistencia,
@@ -182,20 +181,11 @@ export default function AsistenciaRow({
             )}
             {isColVisible("correccion") && (
               <TableCell className="text-center">
-                <ToggleGroup
-                  type="single"
-                  value={currentData.correccion ? "1" : "0"}
-                  onValueChange={(val) =>
-                    handleFieldChange("correccion", val === "1")
-                  }
-                >
-                  <ToggleGroupItem value="0" aria-label="No">
-                    <XIcon className="h-4 w-4" />
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="1" aria-label="Sí">
-                    <Check className="h-4 w-4" />
-                  </ToggleGroupItem>
-                </ToggleGroup>
+                {currentData.correccion ? (
+                  <Check aria-label="Corregida" className="inline h-4 w-4 text-green-600" />
+                ) : (
+                  <XIcon aria-label="Sin corregir" className="inline h-4 w-4 text-red-600" />
+                )}
               </TableCell>
             )}
             {isColVisible("entrada") && (
@@ -228,7 +218,6 @@ export default function AsistenciaRow({
                       : null;
                     handleFieldChange("entrada", nuevaEntrada);
                   }}
-                  disabled={areTimeInputsDisabled}
                 />
               </TableCell>
             )}
@@ -262,7 +251,6 @@ export default function AsistenciaRow({
                       : null;
                     handleFieldChange("salida", nuevaSalida);
                   }}
-                  disabled={areTimeInputsDisabled}
                 />
               </TableCell>
             )}
@@ -300,7 +288,6 @@ export default function AsistenciaRow({
                   onValueChange={(val) =>
                     handleFieldChange("autorizado_por", val)
                   }
-                  disabled={areTimeInputsDisabled}
                 >
                   <SelectTrigger className="w-45">
                     <SelectValue placeholder="Autorizado por" />
@@ -572,8 +559,18 @@ export default function AsistenciaRow({
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="flex items-center justify-center gap-2 h-full px-2">
+                  {currentData.valores_originales && (
+                    <button
+                      type="button"
+                      onClick={handleRestoreOriginal}
+                      disabled={isSaving}
+                      className="rounded-lg px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+                    >
+                      Volver al original
+                    </button>
+                  )}
                   <button
-                    onClick={() => handleSaveClick(registro.id)}
+                    onClick={handleSaveClick}
                     disabled={isSaving}
                     className="rounded-lg p-1.5 text-slate-400 transition hover:bg-blue-50 hover:text-blue-600 disabled:opacity-50"
                     title="Guardar"
