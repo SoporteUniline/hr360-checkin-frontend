@@ -98,7 +98,12 @@ export default function AsistenciaDataContainer({
     mutateRef.current = mutate;
   }, [mutate]);
   useEffect(() => {
-    const refresh = () => { if (navigator.onLine && window.__adamiaOffline !== true) void mutateRef.current().catch(() => {}); };
+    // Solo recarga cuando cambió la cola de checadas; preparar el reloj ('perfil') no cambia datos
+    // (antes provocaba una segunda descarga completa del periodo al abrir la vista).
+    const refresh = (event) => {
+      if (event?.detail?.motivo === 'perfil') return;
+      if (navigator.onLine && window.__adamiaOffline !== true) void mutateRef.current().catch(() => {});
+    };
     window.addEventListener('adamia-queue', refresh);
     return () => window.removeEventListener('adamia-queue', refresh);
   }, []);
