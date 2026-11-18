@@ -20,6 +20,8 @@ import HeaderMultiFilter from "@/components/tabla/HeaderMultiFilter";
 import ActiveFilterChips from "@/components/tabla/ActiveFilterChips";
 import { ArrowUpDown, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
 import { calcularResumenJornada, formatearMinutos } from "@/utils/asistenciaHoras";
+import { resumenCambios } from "@/lib/asistencia/cambios.mjs";
+import { crearFormateadorCambios } from "./CeldaEditado";
 import { useSnackbar } from "notistack";
 
 dayjs.extend(utc);
@@ -35,7 +37,7 @@ export const COLUMNAS_ASISTENCIA = [
   { key: "departamento", label: "Departamento", extra: false },
   { key: "tipo", label: "Tipo", extra: false },
   { key: "fecha", label: "Fecha", extra: false },
-  { key: "correccion", label: "Corrección", extra: false },
+  { key: "correccion", label: "Editado", extra: false },
   { key: "entrada", label: "Entrada", extra: false },
   { key: "salida", label: "Salida", extra: false },
   { key: "jornada", label: "Jornada", extra: false },
@@ -150,11 +152,9 @@ export default function AsistenciaTable({
     [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
   const toYesNo = (value) => (value === 1 || value === true ? "Sí" : "No");
   const toCorreccion = (registro) =>
-    registro.correccion === 1 || registro.correccion === true
-      ? "Corregida"
-      : "Sin corregir";
+    Boolean(Number(registro.correccion)) ? "Editado" : "Sin editar";
 
-  const correccionOptions = ["Corregida", "Sin corregir"];
+  const correccionOptions = ["Editado", "Sin editar"];
 
   const toAutorizacion = (registro) =>
     registro.autorizado_por || registro.nombre_autorizador
@@ -259,7 +259,10 @@ export default function AsistenciaTable({
       tipoSeleccionado.includes(registro.tipo_registro_nombre);
     const pasaCorreccion =
       correccionSeleccionada.length === 0 ||
-      correccionSeleccionada.includes(toCorreccion(registro));
+      correccionSeleccionada.map(
+        // Vistas guardadas antes del cambio de nombre usan "Corregida" / "Sin corregir".
+        (v) => ({ Corregida: "Editado", "Sin corregir": "Sin editar" })[v] ?? v,
+      ).includes(toCorreccion(registro));
     const pasaAsistio =
       asistioSeleccionado.length === 0 ||
       asistioSeleccionado.includes(toYesNo(registro.asistencia));
@@ -409,7 +412,8 @@ export default function AsistenciaTable({
     { header: "Departamento", key: "departamento" },
     { header: "Tipo de Registro", key: "tipo_registro_nombre" },
     { header: "Fecha", key: "fecha" },
-    { header: "Corrección", key: "correccion" },
+    { header: "Editado", key: "correccion" },
+    { header: "Cambios (antes → después)", key: "cambios", width: 45 },
     { header: "Entrada", key: "entrada" },
     { header: "Salida", key: "salida" },
     { header: "Jornada", key: "jornada" },
@@ -450,6 +454,7 @@ export default function AsistenciaTable({
         : "-",
 
       correccion: r.correccion ? "Sí" : "No",
+    cambios: resumenCambios(r, crearFormateadorCambios({ tiposPermiso, empleados, zona: rowTimezone })) || (r.correccion ? "Sin detalle guardado" : "-"),
 
       entrada: r.entrada
         ? dayjs
@@ -631,7 +636,7 @@ export default function AsistenciaTable({
               onChange: setTipoSeleccionado,
             },
             {
-              category: "Corrección",
+              category: "Editado",
               values: correccionSeleccionada,
               options: correccionOptions,
               onChange: setCorreccionSeleccionada,
@@ -800,7 +805,7 @@ export default function AsistenciaTable({
                     className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
                     <div className="flex items-center justify-center gap-1">
-                      <span>CORRECCIÓN</span>
+                      <span>EDITADO</span>
 
                       <HeaderMultiFilter
                         selected={correccionSeleccionada}

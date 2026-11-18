@@ -43,6 +43,7 @@ const registros = Array.from({ length: 25 }, (_, i) => ({
 }));
 Object.assign(registros[1], { nombre: "Nocturno", hrs_comida: 0, hora_entrada_programada: "22:00:00", hora_salida_programada: "05:00:00", entrada: "2026-11-13 22:00:00", salida: "2026-11-14 05:00:00" });
 Object.assign(registros[2], { nombre: "NocturnoViejo", hrs_comida: 0, hora_entrada_programada: "22:00:00", hora_salida_programada: "05:00:00", entrada: "2026-11-13 22:00:00", salida: "2026-11-13 05:00:00" });
+Object.assign(registros[3], { nombre: "Editado", correccion: 1, valores_originales: JSON.stringify({ salida: "2026-11-13 13:19:00", id_tipo_permiso: 2 }) });
 
 const puts = [];
 const pedidosAsistencias = [];
@@ -68,6 +69,8 @@ try {
     if (req.method() === "OPTIONS") return json({});
     const p = url.pathname;
     if (p.endsWith("/users/verify/token")) return json({ user: usuario });
+    if (p.endsWith("/checador/reloj/asistencia-por-empleado")) return json({ registros: [{ id: 77, entrada: "2026-11-13 08:07:00", entrada_corregida: null, salida: "2026-11-13 13:19:00", salida_corregida: "2026-11-13 17:20:00", estado: "Cerrado" }] });
+    if (p.endsWith("/checador/tiposPermiso")) return json({ tiposPermiso: [{ id: 14, nombre: "Asistencia" }, { id: 2, nombre: "Sin Checar" }] });
     if (p.endsWith("/checador/asistencias") && req.method() === "GET") {
       const limit = Number(url.searchParams.get("limit") || 10);
       const pag = Number(url.searchParams.get("page") || 1);
@@ -97,6 +100,28 @@ try {
   const viejo = page.locator("tr", { hasText: "NocturnoViejo" }).first();
   assert.match(await viejo.innerText(), /7 h \/ 7 h/);
 
+  // 2b) Columna "Editado": etiqueta con número de cambios y detalle antes → después.
+  const filaEditada = page.locator("tr", { hasText: "Editado Prueba" }).first();
+  await filaEditada.getByRole("button", { name: /Editado/ }).click();
+  await page.getByText("Qué cambió").waitFor({ timeout: 10000 });
+  const textoDetalle = await page.locator("[data-radix-popper-content-wrapper]").innerText();
+  assert.match(textoDetalle, /Salida\s+13\/11 13:19\s*→\s*13\/11 17:20/);
+  assert.match(textoDetalle, /Tipo de registro\s+Sin Checar\s*→\s*Asistencia/);
+  assert.match(textoDetalle, /Quién y cuándo/);
+  assert.match(await filaEditada.innerText(), /Editado\s*·\s*2/);
+  assert.match(await page.locator("tr", { hasText: "Empleado0" }).first().innerText(), /\bNo\b/);
+  if (process.env.CAPTURAS) await page.screenshot({ path: process.env.CAPTURAS + "/editado-detalle.png" });
+  // Desde el detalle se abren las checadas del reloj: original tachada, corregida resaltada.
+  await page.getByRole("button", { name: "Ver checadas del reloj de este día" }).click();
+  await page.getByText("Historial de entradas y salidas").waitFor({ timeout: 10000 });
+  const salidaOriginal = page.locator("[role=dialog] td", { hasText: "13:19:00" }).first();
+  await salidaOriginal.waitFor({ timeout: 10000 });
+  assert.match(await salidaOriginal.getAttribute("class"), /line-through/);
+  assert.match(await page.locator("[role=dialog] span", { hasText: "17:20:00" }).first().getAttribute("class"), /bg-amber-50/);
+  if (process.env.CAPTURAS) await page.screenshot({ path: process.env.CAPTURAS + "/editado-checadas.png" });
+  await page.keyboard.press("Escape");
+  await page.locator("[role=dialog]").waitFor({ state: "detached", timeout: 10000 });
+
   // 3) Arranca en "Todos los registros": se ven los 25 con UNA sola descarga del periodo
   //    (sin la segunda descarga para las opciones de filtros).
   assert.equal(await page.locator("tr", { hasText: "Prueba" }).count(), 25, "debe mostrar todo el periodo");
@@ -122,6 +147,10 @@ try {
   const colDif = cabecera.indexOf("Hrs +/-");
   assert.equal(hoja.getRow(2).getCell(colJornada).value, "8 h 13 min / 8 h");
   assert.equal(hoja.getRow(2).getCell(colDif).value, "+13 min");
+  const colCambios = cabecera.indexOf("Cambios (antes → después)");
+  const filaExcel = hoja.getRows(2, 25).find((row) => row.getCell(cabecera.indexOf("Nombre") > 0 ? cabecera.indexOf("Nombre") : 1).value === "Editado");
+  assert.ok(colCambios > 0 && filaExcel, "columna de cambios y fila editada en Excel");
+  assert.equal(filaExcel.getCell(colCambios).value, "Salida: 13/11 13:19 → 13/11 17:20; Tipo de registro: Sin Checar → Asistencia");
   await page.getByText("Se exportaron 25 registros del periodo.").waitFor({ timeout: 10000 });
 
   // 4) Editar el nocturno: salida 06:00 debe guardarse al día siguiente (2026-11-14).
@@ -146,7 +175,7 @@ try {
 
   assert.deepEqual(errores, [], "sin errores de JavaScript en la página");
   exito = true;
-  console.log("OK · arranca con todos (sin descarga extra para filtros) · horas en minutos · nocturno +1 día · Exportar 25/25 · edición nocturna al día siguiente · incidencias en h/min");
+  console.log("OK · columna Editado con detalle y Excel · arranca con todos (sin descarga extra para filtros) · horas en minutos · nocturno +1 día · Exportar 25/25 · edición nocturna al día siguiente · incidencias en h/min");
   console.log("Consultas a /checador/asistencias (limit):", pedidosAsistencias.join(", "));
 } finally {
   await browser.close();

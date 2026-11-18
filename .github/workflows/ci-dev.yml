@@ -98,7 +98,7 @@ jobs:
         run: node --test scripts/test-activos-modules.mjs scripts/test-activos-api.mjs
 
       - name: Asistencias — cálculo de horas y exportación
-        run: node --test scripts/test-jornada-asistencia.mjs scripts/test-consulta-periodo.mjs
+        run: node --test scripts/test-jornada-asistencia.mjs scripts/test-consulta-periodo.mjs scripts/test-cambios-asistencia.mjs
 
   # ─────────────────────────────────────────────
   # 3. BUILD — Validar compilación

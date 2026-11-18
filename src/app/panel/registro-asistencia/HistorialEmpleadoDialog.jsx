@@ -134,7 +134,14 @@ export default function HistorialEmpleadoDialog({
                         key={index}
                         className="border-b border-gray-100 hover:bg-gray-50"
                       >
-                        <TableCell className="text-center">
+                        <TableCell
+                          className={`text-center ${
+                            checador.entrada_corregida && checador.entrada_corregida !== "-"
+                              ? "text-slate-400 line-through"
+                              : ""
+                          }`}
+                          title={checador.entrada_corregida && checador.entrada_corregida !== "-" ? "Hora original del reloj (corregida)" : undefined}
+                        >
                           {checador.entrada
                             ? dayjs
                                 .tz(checador.entrada, DB_TIMEZONE)
@@ -183,7 +190,13 @@ export default function HistorialEmpleadoDialog({
                               className="max-w-[120px] mx-auto text-center"
                             />
                           ) : (
-                            <span>
+                            <span
+                              className={
+                                checador.entrada_corregida && checador.entrada_corregida !== "-"
+                                  ? "rounded-md bg-amber-50 px-1.5 py-0.5 font-semibold text-amber-700"
+                                  : ""
+                              }
+                            >
                               {checador.entrada_corregida
                                 ? dayjs
                                     .tz(checador.entrada_corregida, DB_TIMEZONE)
@@ -193,7 +206,14 @@ export default function HistorialEmpleadoDialog({
                             </span>
                           )}
                         </TableCell>
-                        <TableCell className="text-center">
+                        <TableCell
+                          className={`text-center ${
+                            checador.salida_corregida && checador.salida_corregida !== "-"
+                              ? "text-slate-400 line-through"
+                              : ""
+                          }`}
+                          title={checador.salida_corregida && checador.salida_corregida !== "-" ? "Hora original del reloj (corregida)" : undefined}
+                        >
                           {checador.salida
                             ? dayjs
                                 .tz(checador.salida, DB_TIMEZONE)
@@ -243,7 +263,13 @@ export default function HistorialEmpleadoDialog({
                               className="max-w-[120px] mx-auto text-center"
                             />
                           ) : (
-                            <span>
+                            <span
+                              className={
+                                checador.salida_corregida && checador.salida_corregida !== "-"
+                                  ? "rounded-md bg-amber-50 px-1.5 py-0.5 font-semibold text-amber-700"
+                                  : ""
+                              }
+                            >
                               {checador.salida_corregida
                                 ? dayjs
                                     .tz(checador.salida_corregida, DB_TIMEZONE)

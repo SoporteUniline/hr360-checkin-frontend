@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Save, X, Check, X as XIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import HistorialEmpleadoDialog from "./HistorialEmpleadoDialog";
+import CeldaEditado, { crearFormateadorCambios } from "./CeldaEditado";
 import { useEmpresaTimezone } from "@/context/AuthContext";
 import { calcularResumenJornada, formatearMinutos } from "@/utils/asistenciaHoras";
 import { salidaEsDiaSiguiente, sumarDias } from "@/lib/asistencia/jornada.mjs";
@@ -606,11 +607,11 @@ export default function AsistenciaRow({
             )}
             {isColVisible("correccion") && (
               <TableCell className="text-center">
-                {registro.correccion ? (
-                  <Check aria-label="Corregida" className="inline h-4 w-4 text-green-600" />
-                ) : (
-                  <XIcon aria-label="Sin corregir" className="inline h-4 w-4 text-red-600" />
-                )}
+                <CeldaEditado
+                  registro={registro}
+                  formatear={crearFormateadorCambios({ tiposPermiso, empleados, zona: userTimezone })}
+                  onVerChecadas={() => setIsModalOpen(true)}
+                />
               </TableCell>
             )}
             {isColVisible("entrada") && (
