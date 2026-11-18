@@ -43,6 +43,7 @@ const registros = Array.from({ length: 25 }, (_, i) => ({
 }));
 Object.assign(registros[1], { nombre: "Nocturno", hrs_comida: 0, hora_entrada_programada: "22:00:00", hora_salida_programada: "05:00:00", entrada: "2026-11-13 22:00:00", salida: "2026-11-14 05:00:00" });
 Object.assign(registros[2], { nombre: "NocturnoViejo", hrs_comida: 0, hora_entrada_programada: "22:00:00", hora_salida_programada: "05:00:00", entrada: "2026-11-13 22:00:00", salida: "2026-11-13 05:00:00" });
+Object.assign(registros[4], { nombre: "Calendario", fecha: "2026-11-16", entrada: "2026-11-16 08:07:00", salida: "2026-11-16 17:20:00", es_domingo: 1, es_festivo: 0 });
 Object.assign(registros[3], { nombre: "Editado", correccion: 1, valores_originales: JSON.stringify({ salida: "2026-11-13 13:19:00", id_tipo_permiso: 2 }) });
 
 const puts = [];
@@ -70,6 +71,7 @@ try {
     const p = url.pathname;
     if (p.endsWith("/users/verify/token")) return json({ user: usuario });
     if (p.endsWith("/checador/reloj/asistencia-por-empleado")) return json({ registros: [{ id: 77, entrada: "2026-11-13 08:07:00", entrada_corregida: null, salida: "2026-11-13 13:19:00", salida_corregida: "2026-11-13 17:20:00", estado: "Cerrado" }] });
+    if (p.includes("/checador/holidays/")) return json([{ fecha: "2026-11-16", nombre: "Revolución" }]);
     if (p.endsWith("/checador/tiposPermiso")) return json({ tiposPermiso: [{ id: 14, nombre: "Asistencia" }, { id: 2, nombre: "Sin Checar" }] });
     if (p.endsWith("/checador/asistencias") && req.method() === "GET") {
       const limit = Number(url.searchParams.get("limit") || 10);
@@ -148,6 +150,7 @@ try {
   await libro.xlsx.readFile(archivo);
   const hoja = libro.worksheets[0];
   assert.equal(hoja.rowCount - 1, 25, "el Excel debe traer los 25 registros del periodo");
+  assert.equal(hoja.getRow(1).values.includes("Código"), false, "el Excel no debe traer el NIP");
   const cabecera = hoja.getRow(1).values;
   const colJornada = cabecera.indexOf("Jornada");
   const colDif = cabecera.indexOf("Hrs +/-");
@@ -170,6 +173,19 @@ try {
   assert.match(puts[0].salida, /^2026-11-14 06:00/, `salida enviada: ${puts[0].salida}`);
   assert.equal(Object.hasOwn(puts[0], "entrada"), false, "no debe reenviar la entrada si no cambió");
 
+  // 4b) Calendario: lunes 16 (festivo en catálogo) guardado como domingo y no festivo.
+  //     Al editar se corrige solo; Asistió/Goce siguen al tipo (sin botones sueltos).
+  const filaCal = page.locator("tr", { hasText: "Calendario Prueba" }).first();
+  await filaCal.getByTitle("Editar").click();
+  const edicionCal = page.locator("tr", { has: page.locator('input[type="time"]') }).first();
+  assert.ok(await edicionCal.locator('[title="Lo define el tipo de registro"]').count() >= 2, "Asistió y Goce fijos según el tipo");
+  await edicionCal.getByTitle("Guardar").click();
+  for (let i = 0; i < 50 && puts.length < 2; i++) await dormir(100);
+  assert.equal(puts.length, 2, "debe guardarse la corrección de calendario");
+  assert.equal(Number(puts[1].es_domingo), 0, `es_domingo enviado: ${puts[1].es_domingo}`);
+  assert.equal(Number(puts[1].es_festivo), 1, `es_festivo enviado: ${puts[1].es_festivo}`);
+  assert.equal(Object.hasOwn(puts[1], "asistencia"), false, "no se toca Asistió");
+
   // 5) Centro de incidencias: misma regla; horas extra en "h min", no en decimales.
   await page.goto(base + "/panel/incidencias", { waitUntil: "domcontentloaded" });
   const filaInc = page.locator("tr", { hasText: "Empleado0" }).first();
@@ -181,7 +197,7 @@ try {
 
   assert.deepEqual(errores, [], "sin errores de JavaScript en la página");
   exito = true;
-  console.log("OK · columna Editado con detalle y Excel · arranca con todos (sin descarga extra para filtros) · horas en minutos · nocturno +1 día · Exportar 25/25 · edición nocturna al día siguiente · incidencias en h/min");
+  console.log("OK · domingo/festivo corregidos al editar · Asistió fijo por tipo · Excel sin NIP · columna Editado con detalle y Excel · arranca con todos (sin descarga extra para filtros) · horas en minutos · nocturno +1 día · Exportar 25/25 · edición nocturna al día siguiente · incidencias en h/min");
   console.log("Consultas a /checador/asistencias (limit):", pedidosAsistencias.join(", "));
 } finally {
   await browser.close();

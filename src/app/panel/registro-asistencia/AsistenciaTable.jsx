@@ -42,7 +42,7 @@ export const COLUMNAS_ASISTENCIA = [
   { key: "salida", label: "Salida", extra: false },
   { key: "jornada", label: "Jornada", extra: false },
   { key: "hrs_diferencia", label: "Hrs +/-", extra: false },
-  { key: "autorizado_por", label: "Autorizado", extra: true },
+  { key: "autorizado_por", label: "Autorizado por", extra: true },
   { key: "asistio", label: "Asistió", extra: false },
   { key: "goce", label: "Goce", extra: false },
   { key: "pago_triple", label: "Pago triple", extra: true },
@@ -52,10 +52,8 @@ export const COLUMNAS_ASISTENCIA = [
   { key: "porcentaje_festivo", label: "% festivo", extra: true },
   { key: "hrs_extra", label: "Hrs extra", extra: false },
   { key: "forma_pago", label: "Forma pago", extra: true },
-  { key: "aut_extra", label: "Aut. extra", extra: true },
   { key: "hrs_comida", label: "Hrs comida", extra: true },
-  { key: "notas", label: "Notas", extra: false },
-  { key: "notas_extra", label: "Notas extra", extra: true },
+  { key: "notas", label: "Observaciones", extra: false },
   { key: "estado_asistencia", label: "Estado", extra: false },
   { key: "acciones", label: "Acciones", extra: false },
 ];
@@ -90,6 +88,7 @@ export default function AsistenciaTable({
   empresaActiva,
   filterOptionsRows,
   cargarPeriodoParaExportar,
+  indiceFestivos = null,
   page = 1,
   limit = 10,
   onHeaderFilteringMetaChange,
@@ -408,7 +407,6 @@ export default function AsistenciaTable({
     { header: "Apellido Paterno", key: "apellido_paterno" },
     { header: "Apellido Materno", key: "apellido_materno" },
     { header: "Unidad de negocio", key: "unidad_negocio" },
-    { header: "Código", key: "nip" },
     { header: "Departamento", key: "departamento" },
     { header: "Tipo de Registro", key: "tipo_registro_nombre" },
     { header: "Fecha", key: "fecha" },
@@ -439,13 +437,15 @@ export default function AsistenciaTable({
     const rowTimezone = r.zona_horaria || fallbackTimezone;
 
     const { jornada, minutosDiferencia } = calcularResumenJornada(r);
+    const fmt = crearFormateadorCambios({ tiposPermiso, empleados, zona: rowTimezone });
+    // "0" llega como texto en algunos campos: se evalúa como número, no como texto.
+    const siNo = (v) => (Number(v) ? "Sí" : "No");
 
     return {
       nombre: r.nombre,
       apellido_paterno: r.apellido_paterno,
       apellido_materno: r.apellido_materno,
       unidad_negocio: r.unidad_negocio || r.sucursal || r.empresa_nombre,
-      nip: r.nip,
       departamento: r.departamento,
       tipo_registro_nombre: r.tipo_registro_nombre,
 
@@ -453,8 +453,8 @@ export default function AsistenciaTable({
         ? dayjs.tz(r.fecha, DB_TIMEZONE).tz(rowTimezone).format("DD/MM/YYYY")
         : "-",
 
-      correccion: r.correccion ? "Sí" : "No",
-    cambios: resumenCambios(r, crearFormateadorCambios({ tiposPermiso, empleados, zona: rowTimezone })) || (r.correccion ? "Sin detalle guardado" : "-"),
+      correccion: siNo(r.correccion),
+    cambios: resumenCambios(r, fmt) || (siNo(r.correccion) === "Sí" ? "Sin detalle guardado" : "-"),
 
       entrada: r.entrada
         ? dayjs
@@ -473,17 +473,17 @@ export default function AsistenciaTable({
       jornada,
       hrs_diferencia: formatearMinutos(minutosDiferencia, { signo: true }),
 
-      autorizado_por: r.autorizado_por ?? "-",
-      asistencia: r.asistencia ? "Sí" : "No",
-      goce_sueldo: r.goce_sueldo ? "Sí" : "No",
-      pago_triple: r.pago_triple ? "Sí" : "No",
-      es_domingo: r.es_domingo ? "Sí" : "No",
+      autorizado_por: fmt("autorizado_por", r.autorizado_por),
+      asistencia: siNo(r.asistencia),
+      goce_sueldo: siNo(r.goce_sueldo),
+      pago_triple: siNo(r.pago_triple),
+      es_domingo: siNo(r.es_domingo),
       prima_dominical: r.prima_dominical ?? "-",
-      es_festivo: r.es_festivo ? "Sí" : "No",
+      es_festivo: siNo(r.es_festivo),
       porcentaje_dia_festivo: r.porcentaje_dia_festivo ?? "-",
-      hrs_extra: r.hrs_extra ? "Sí" : "No",
+      hrs_extra: siNo(r.hrs_extra),
       forma_pago_extras: r.forma_pago_extras ?? "-",
-      extras_autorizadas_por: r.extras_autorizadas_por ?? "-",
+      extras_autorizadas_por: fmt("extras_autorizadas_por", r.extras_autorizadas_por),
       hrs_comida: r.hrs_comida ?? "-",
       notas: r.notas ?? "-",
       notas_hrs_extra: r.notas_hrs_extra ?? "-",
@@ -546,6 +546,7 @@ export default function AsistenciaTable({
 
   const renderAsistenciaRow = (reg) => (
     <AsistenciaRow
+      indiceFestivos={indiceFestivos}
       key={reg.id}
       registro={reg}
       fecha={fecha}
@@ -861,7 +862,7 @@ export default function AsistenciaTable({
                       selected={autorizacionSeleccionada}
                       onChange={setAutorizacionSeleccionada}
                       options={autorizacionOptions}
-                      placeholder="Autorizado"
+                      placeholder="Autorizado por"
                     />
                   </TableHead>
                 )}
@@ -981,13 +982,6 @@ export default function AsistenciaTable({
                     Forma pago
                   </TableHead>
                 )}
-                {colVisible("aut_extra") && (
-                  <TableHead
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
-                  >
-                    Aut. extra
-                  </TableHead>
-                )}
                 {colVisible("hrs_comida") && (
                   <TableHead
                     className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
@@ -999,14 +993,7 @@ export default function AsistenciaTable({
                   <TableHead
                     className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
-                    Notas
-                  </TableHead>
-                )}
-                {colVisible("notas_extra") && (
-                  <TableHead
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
-                  >
-                    Notas extra
+                    Observaciones
                   </TableHead>
                 )}
 
