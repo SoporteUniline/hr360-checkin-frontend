@@ -8,7 +8,8 @@ const url = (id) => `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/asistencia
 
 // Guarda decisiones de horas extra (una o varias filas) con el mismo endpoint
 // de edición de asistencias, y ofrece «Deshacer» en el aviso.
-export default function useHorasExtra(mutate) {
+// onGuardado(items): para vistas con copia local del registro (detalle del celular).
+export default function useHorasExtra(mutate, { onGuardado } = {}) {
   const { enqueueSnackbar, closeSnackbar } = useSnackbar();
   const { dataUser } = useAuth() ?? {};
   const [guardando, setGuardando] = useState(false);
@@ -32,6 +33,8 @@ export default function useHorasExtra(mutate) {
       res.forEach((r, j) => r.status === "rejected" && errores.push(lote[j].registro));
     }
     setGuardando(false);
+    const guardados = validos.filter((i) => !errores.includes(i.registro));
+    if (guardados.length) onGuardado?.(guardados);
     await mutate?.();
     if (errores.length) {
       enqueueSnackbar(`No se pudieron guardar ${errores.length} de ${validos.length} registros. Intenta de nuevo.`, { variant: "error" });

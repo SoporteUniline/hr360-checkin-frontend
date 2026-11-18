@@ -55,9 +55,9 @@ export default function CeldaEditado({ registro, formatear, onVerChecadas }) {
           // La fila abre el historial con cualquier clic: este botón no debe dispararlo.
           onClick={(e) => e.stopPropagation()}
           className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 hover:bg-amber-100"
-          aria-label={`Editado: ver ${cambios.length || ""} cambios`.replace("  ", " ")}
+          aria-label="Editado: Sí, ver qué cambió"
         >
-          Editado{cambios.length > 0 && <span className="tabular-nums">· {cambios.length}</span>}
+          Sí
         </button>
       </PopoverTrigger>
       <PopoverContent

@@ -118,7 +118,7 @@ try {
   assert.match(textoDetalle, /Salida\s+13\/11 13:19\s*→\s*13\/11 17:20/);
   assert.match(textoDetalle, /Tipo de registro\s+Sin Checar\s*→\s*Asistencia/);
   assert.match(textoDetalle, /Quién y cuándo/);
-  assert.match(await filaEditada.innerText(), /Editado\s*·\s*2/);
+  assert.equal(await filaEditada.getByRole("button", { name: /Editado/ }).innerText(), "Sí");
   assert.match(await page.locator("tr", { hasText: "Empleado0" }).first().innerText(), /\bNo\b/);
   if (process.env.CAPTURAS) await page.screenshot({ path: process.env.CAPTURAS + "/editado-detalle.png" });
   // Desde el detalle se abren las checadas del reloj: original tachada, corregida resaltada.

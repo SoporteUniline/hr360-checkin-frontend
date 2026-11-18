@@ -353,7 +353,7 @@ export default function AsistenciaRow({
             )}
             {!readOnly && isColVisible("acciones") && (
               <TableCell
-                className="sticky right-0 bg-background z-10 text-center"
+                className="sticky right-0 bg-background z-10 text-center shadow-[-8px_0_8px_-8px_rgba(15,23,42,0.18)]"
                 onClick={(e) => e.stopPropagation()}
               >
                 <button
