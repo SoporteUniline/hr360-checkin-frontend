@@ -25,7 +25,6 @@ dayjs.extend(timezone);
 // AsistenciaTable.jsx). Se usa como fallback cuando no llega `colVisible`.
 const EXTRA_COLUMN_KEYS = new Set([
   "codigo",
-  "correccion",
   "autorizado_por",
   "pago_triple",
   "domingo",
@@ -107,19 +106,7 @@ export default function AsistenciaRow({
           <>
             {isColVisible("empleado") && (
               <TableCell className="font-semibold text-slate-800">
-                <div className="flex items-center gap-2">
-                  {Boolean(currentData.correccion) && (
-                    <span
-                      className="h-2 w-2 shrink-0 rounded-full bg-amber-500"
-                      title="Asistencia corregida"
-                      aria-label="Asistencia corregida"
-                    />
-                  )}
-
-                  <span>
-                    {registro.nombre} {registro.apellido_paterno}
-                  </span>
-                </div>
+                {registro.nombre} {registro.apellido_paterno}
               </TableCell>
             )}
             {empresaActiva === "all" && isColVisible("unidad") && (
@@ -593,19 +580,7 @@ export default function AsistenciaRow({
           <>
             {isColVisible("empleado") && (
               <TableCell className="font-semibold text-slate-800">
-                <div className="flex items-center gap-2">
-                  {Boolean(registro.correccion) && (
-                    <span
-                      className="h-2 w-2 shrink-0 rounded-full bg-amber-500"
-                      title="Asistencia corregida"
-                      aria-label="Asistencia corregida"
-                    />
-                  )}
-
-                  <span>
-                    {registro.nombre} {registro.apellido_paterno}
-                  </span>
-                </div>
+                {registro.nombre} {registro.apellido_paterno}
               </TableCell>
             )}
             {empresaActiva === "all" && isColVisible("unidad") && (
@@ -633,10 +608,10 @@ export default function AsistenciaRow({
             )}
             {isColVisible("correccion") && (
               <TableCell className="text-center">
-                {registro.correccion === 1 ? (
-                  <Check className="h-4 w-4 text-green-600 inline" />
+                {registro.correccion ? (
+                  <Check aria-label="Corregida" className="inline h-4 w-4 text-green-600" />
                 ) : (
-                  <XIcon className="h-4 w-4 text-red-600 inline" />
+                  <XIcon aria-label="Sin corregir" className="inline h-4 w-4 text-red-600" />
                 )}
               </TableCell>
             )}
