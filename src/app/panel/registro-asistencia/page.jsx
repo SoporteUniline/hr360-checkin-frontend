@@ -87,6 +87,7 @@ export default function ControlAsistencia() {
   const [soloPresentes, setSoloPresentes] = useState(false);
   const [soloAusentes, setSoloAusentes] = useState(false);
   const [horasExtra, setHorasExtra] = useState(false);
+  const [sinComida, setSinComida] = useState(false);
   const [sinGoceDeSueldo, setSinGoceDeSueldo] = useState(false);
   const [diasFestivos, setDiasFestivos] = useState(false);
   const [requiereAutorizacion, setRequiereAutorizacion] = useState(false);
@@ -230,7 +231,8 @@ export default function ControlAsistencia() {
     setPage(1);
   };
 
-  const { ui, data, mutate, localEvents, resumenHorasExtra } = AsistenciaDataContainer({
+  const { ui, data, mutate, localEvents, resumenHorasExtra, totalSinComida } = AsistenciaDataContainer({
+    sinComida,
     idEmpresa,
     empresaActiva,
     fechaInicio,
@@ -342,6 +344,9 @@ export default function ControlAsistencia() {
         horasExtra={horasExtra}
         setHorasExtra={setHorasExtra}
         resumenHorasExtra={resumenHorasExtra}
+        sinComida={sinComida}
+        setSinComida={setSinComida}
+        totalSinComida={totalSinComida}
         filtroEstadoAsistencia={filtroEstadoAsistencia}
         setFiltroEstadoAsistencia={setFiltroEstadoAsistencia}
         setPage={setPage}

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  formatearMinutos, horaAMinutos, minutosProgramados, minutosTrabajados,
-  resumenJornada, salidaEsDiaSiguiente, sumarDias,
+  formatearMinutos, horaAMinutos, minutosDescanso, minutosProgramados, minutosTrabajados,
+  resumenJornada, salidaEsDiaSiguiente, sinSalidaAComer, sumarDias,
 } from "../src/lib/asistencia/jornada.mjs";
 
 const reg = (o) => ({
@@ -10,20 +10,52 @@ const reg = (o) => ({
   entrada: "2026-11-13 08:00:00", salida: "2026-11-13 17:00:00", hrs_comida: 1, ...o,
 });
 
-test("jornada completa con comida no pagada: diferencia 0 (antes daba −1 h)", () => {
-  const r = resumenJornada(reg({}));
-  assert.equal(r.minutosProgramados, 480);
-  assert.equal(r.minutosTrabajados, 480);
-  assert.equal(r.minutosDiferencia, 0);
-  assert.equal(r.jornada, "8 h / 8 h");
+// Horario 08:00–17:00 con comida 13:00–14:00 (no se paga): programado 8 h.
+const comida = { hora_salida_comida_programada: "13:00:00", hora_regreso_comida_programada: "14:00:00" };
+const tramos = (lista) => ({
+  tramos_checadas: lista.map(([entrada, salida]) => ({ entrada, salida })),
+  minutos_trabajados_checadas: lista.reduce((t, [e, s]) => t + (Date.parse(s.replace(" ", "T") + "Z") - Date.parse(e.replace(" ", "T") + "Z")) / 60000, 0),
+  minutos_descanso_checadas: lista.length > 1
+    ? lista.slice(1).reduce((t, [e], i) => t + (Date.parse(e.replace(" ", "T") + "Z") - Date.parse(lista[i][1].replace(" ", "T") + "Z")) / 60000, 0)
+    : 0,
 });
 
-test("minutos exactos: 08:07 a 17:20 son 9 h 13 min menos 1 h de comida", () => {
+test("programado = horario − comida del horario", () => {
+  assert.equal(minutosProgramados(reg({ ...comida, hrs_comida: null })), 480);
+  // Sin comida en el horario se usa hrs_comida de la asistencia.
+  assert.equal(minutosProgramados(reg({})), 480);
+});
+
+test("trabajado = suma de tramos; el hueco es descanso (9–11 y 11:30–14 → 4 h 30 min)", () => {
+  const r = { ...reg(comida), entrada: "2026-11-13 09:00:00", salida: "2026-11-13 14:00:00",
+    ...tramos([["2026-11-13 09:00:00", "2026-11-13 11:00:00"], ["2026-11-13 11:30:00", "2026-11-13 14:00:00"]]) };
+  assert.equal(minutosTrabajados(r), 270);
+  assert.equal(minutosDescanso(r), 30);
+  assert.equal(sinSalidaAComer(r), false);
+});
+
+test("no marcó salida a comer: no se descuenta nada y se marca la alerta", () => {
+  const r = { ...reg(comida), ...tramos([["2026-11-13 08:00:00", "2026-11-13 17:00:00"]]) };
+  const j = resumenJornada(r);
+  assert.equal(j.minutosTrabajados, 540);
+  assert.equal(j.minutosDiferencia, 60);
+  assert.equal(sinSalidaAComer(r), true);
+  // Sin comida en el horario no hay alerta.
+  assert.equal(sinSalidaAComer({ ...r, hora_salida_comida_programada: null }), false);
+});
+
+test("si la entrada o salida se editaron y ya no coinciden con los tramos, se usa salida − entrada", () => {
+  const r = { ...reg(comida), salida: "2026-11-13 18:00:00", ...tramos([["2026-11-13 08:00:00", "2026-11-13 17:00:00"]]) };
+  assert.equal(minutosTrabajados(r), 600);
+  assert.equal(sinSalidaAComer(r), false);
+  assert.equal(minutosDescanso(r), null);
+});
+
+test("sin tramos del backend: salida − entrada sin descontar comida (08:07–17:20 = 9 h 13 min)", () => {
   const r = resumenJornada(reg({ entrada: "2026-11-13 08:07:00", salida: "2026-11-13 17:20:00" }));
-  assert.equal(r.minutosTrabajados, 493);
-  assert.equal(r.minutosDiferencia, 13);
-  assert.equal(formatearMinutos(r.minutosTrabajados), "8 h 13 min");
-  assert.equal(formatearMinutos(r.minutosDiferencia, { signo: true }), "+13 min");
+  assert.equal(r.minutosTrabajados, 553);
+  assert.equal(r.minutosDiferencia, 73);
+  assert.equal(formatearMinutos(r.minutosDiferencia, { signo: true }), "+1 h 13 min");
 });
 
 test("turno nocturno 22:00 → 05:00 da 7 h, nunca negativo", () => {
@@ -47,7 +79,7 @@ test("sin salida o sin entrada no se inventan horas ni diferencia", () => {
 test("sin horario programado: se muestran trabajadas, no diferencia", () => {
   const r = resumenJornada(reg({ hora_entrada_programada: null }));
   assert.equal(r.minutosProgramados, null);
-  assert.equal(r.minutosTrabajados, 480);
+  assert.equal(r.minutosTrabajados, 540);
   assert.equal(r.minutosDiferencia, null);
   assert.equal(r.jornada, "-");
 });
@@ -58,12 +90,12 @@ test("sin comida capturada no se descuenta nada", () => {
   assert.equal(r.minutosTrabajados, 540);
 });
 
-test("la comida nunca deja horas negativas", () => {
-  assert.equal(minutosTrabajados(reg({ entrada: "2026-11-13 08:00:00", salida: "2026-11-13 08:30:00" })), 0);
+test("un día corto no se vuelve negativo por la comida", () => {
+  assert.equal(minutosTrabajados(reg({ entrada: "2026-11-13 08:00:00", salida: "2026-11-13 08:30:00" })), 30);
 });
 
 test("acepta fechas ISO con zona (como las serializa MySQL)", () => {
-  assert.equal(minutosTrabajados({ entrada: "2026-11-13T14:00:00.000Z", salida: "2026-11-13T23:30:00.000Z", hrs_comida: 0.5 }), 540);
+  assert.equal(minutosTrabajados({ entrada: "2026-11-13T14:00:00.000Z", salida: "2026-11-13T23:30:00.000Z", hrs_comida: 0.5 }), 570);
 });
 
 test("formato legible en horas y minutos, sin decimales", () => {

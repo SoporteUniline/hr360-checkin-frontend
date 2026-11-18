@@ -24,6 +24,7 @@ import { resumenCambios } from "@/lib/asistencia/cambios.mjs";
 import { crearFormateadorCambios } from "./CeldaEditado";
 import { useSnackbar } from "notistack";
 import useHorasExtra from "@/hooks/useHorasExtra";
+import { minutosDescanso, sinSalidaAComer } from "@/lib/asistencia/jornada.mjs";
 import {
   ETIQUETAS_ESTADO, FORMA_PAGO_DEFAULT, FORMAS_PAGO, cambiosAutorizar, cambiosNoAutorizar, cambiosQuitar,
   estadoHorasExtra, etiquetaHorasExtra,
@@ -105,6 +106,7 @@ export default function AsistenciaTable({
   agrupar = null,
   footer = null,
   soloHorasExtra = false,
+  soloSinComida = false,
 }) {
   // Para el Excel usamos la zona de la primera empresa visible (o la activa como fallback)
   const fallbackTimezone = useEmpresaTimezone(empresaActiva);
@@ -283,7 +285,8 @@ export default function AsistenciaTable({
     const pasaHorasExtra =
       (horasExtraSeleccionado.length === 0 ||
         horasExtraSeleccionado.map((v) => ETIQUETA_HX_ANTERIOR[v] ?? v).includes(estadoExtra)) &&
-      (!soloHorasExtra || estadoExtra !== ETIQUETAS_ESTADO.sin);
+      (!soloHorasExtra || estadoExtra !== ETIQUETAS_ESTADO.sin) &&
+      (!soloSinComida || sinSalidaAComer(registro));
     const pasaFestivo =
       festivoSeleccionado.length === 0 ||
       festivoSeleccionado.includes(toYesNo(registro.es_festivo));
@@ -325,6 +328,7 @@ export default function AsistenciaTable({
       autorizacionSeleccionada,
       estadoAsistenciaSeleccionado,
       soloHorasExtra,
+      soloSinComida,
     ],
   );
 
@@ -338,6 +342,7 @@ export default function AsistenciaTable({
     goceSeleccionado.length > 0 ||
     horasExtraSeleccionado.length > 0 ||
     soloHorasExtra ||
+    soloSinComida ||
     festivoSeleccionado.length > 0 ||
     autorizacionSeleccionada.length > 0 ||
     estadoAsistenciaSeleccionado.length > 0;
@@ -444,7 +449,8 @@ export default function AsistenciaTable({
     { header: "¿Horas extra autorizadas?", key: "hrs_extra" },
     { header: "Forma de pago horas extra", key: "forma_pago_extras" },
     { header: "Horas extras autorizadas por", key: "extras_autorizadas_por" },
-    { header: "Horas de comida", key: "hrs_comida" },
+    { header: "Descanso tomado", key: "hrs_comida" },
+    { header: "No marcó salida a comer", key: "sin_salida_comida" },
     { header: "Observaciones", key: "notas" },
     { header: "Notas horas extra", key: "notas_hrs_extra" },
     { header: "Estado", key: "estadoAsistencia" },
@@ -504,7 +510,8 @@ export default function AsistenciaTable({
       hrs_extra: siNo(r.hrs_extra),
       forma_pago_extras: r.forma_pago_extras ?? "-",
       extras_autorizadas_por: fmt("extras_autorizadas_por", r.extras_autorizadas_por),
-      hrs_comida: r.hrs_comida ?? "-",
+      hrs_comida: minutosDescanso(r) != null ? formatearMinutos(minutosDescanso(r)) : r.hrs_comida ?? "-",
+      sin_salida_comida: sinSalidaAComer(r) ? "Sí" : "No",
       notas: r.notas ?? "-",
       notas_hrs_extra: r.notas_hrs_extra ?? "-",
       estadoAsistencia: r.estadoAsistencia,
