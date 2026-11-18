@@ -28,7 +28,9 @@ import axios from "@/lib/axios";
 import { fetcherWithToken } from "@/lib/fetcher";
 import { useAuth, useEmpresaTimezone } from "@/context/AuthContext";
 import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
-import { calcularResumenJornada, formatearMinutos } from "@/utils/asistenciaHoras";
+import { formatearMinutos } from "@/utils/asistenciaHoras";
+import { cambiosAutorizar, cambiosNoAutorizar, estadoHorasExtra } from "@/lib/asistencia/horasExtra.mjs";
+import useHorasExtra from "@/hooks/useHorasExtra";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Combobox } from "@/components/Combobox";
@@ -146,14 +148,16 @@ function incidenciasDeRegistro(r, fallbackTimezone) {
     });
   }
 
-  const resumen = calcularResumenJornada(r, tz);
-  if (resumen.minutosDiferencia > 0 && !esVerdadero(r?.hrs_extra)) {
+  // Misma regla que Asistencias: solo el tiempo después de la salida del horario
+  // (desde 15 min), y solo mientras no se haya autorizado o rechazado.
+  const extra = estadoHorasExtra(r, tz);
+  if (extra.estado === "pendiente") {
     incidencias.push({
       tipo: "H. extra",
       severidad: "media",
-      detalle: `${formatearMinutos(resumen.minutosDiferencia)} sin autorizar`,
+      detalle: `${formatearMinutos(extra.minutos)} después del horario, por autorizar`,
       accion: "extra",
-      minutosExtra: resumen.minutosDiferencia,
+      minutosExtra: extra.minutos,
     });
   }
 
@@ -306,6 +310,7 @@ export default function CentroIncidenciasPage() {
       setCargando(false);
     }
   }, [dataUser, idEmpresa, desde, hasta]);
+  const hx = useHorasExtra(cargar);
 
   useEffect(() => {
     cargar();
@@ -373,8 +378,11 @@ export default function CentroIncidenciasPage() {
             retardos += 1;
 
           const tz = r?.zona_horaria || fallbackTimezone;
-          const resumen = calcularResumenJornada(r, tz);
-          if (resumen.minutosDiferencia > 0) minutosExtra += resumen.minutosDiferencia;
+          // Horas extra del periodo: por autorizar + autorizadas (las no autorizadas no cuentan).
+          const extra = estadoHorasExtra(r, tz);
+          if ((extra.estado === "pendiente" || extra.estado === "autorizada") && extra.minutos > 0) {
+            minutosExtra += extra.minutos;
+          }
 
           incidenciasDeRegistro(r, fallbackTimezone).forEach((inc, index) => {
             incidencias.push({
@@ -518,9 +526,18 @@ export default function CentroIncidenciasPage() {
     }
   };
 
-  const autorizarExtra = async (inc) => {
-    await guardarCorreccion(inc.registro, inc.tz, { hrs_extra: 1 });
-  };
+  // Autorizar / no autorizar: solo se envían los campos de horas extra (antes se
+  // reenviaba el registro completo con correccion = 1 y quedaba como «Editado»).
+  const autorizarExtra = (inc) =>
+    hx.guardar(
+      [{ registro: inc.registro, cambios: cambiosAutorizar({ idAutorizador: hx.usuario.idEmpleado }) }],
+      `${nombreCompleto(inc.registro)}: horas extra autorizadas.`,
+    );
+  const noAutorizarExtra = (inc) =>
+    hx.guardar(
+      [{ registro: inc.registro, cambios: cambiosNoAutorizar(inc.registro, { quien: hx.usuario.nombre, zona: inc.tz }) }],
+      `${nombreCompleto(inc.registro)}: no autorizadas. Se paga hasta la salida del horario.`,
+    );
 
   const abrirAsistencia = (inc) => {
     const params = new URLSearchParams();
@@ -563,32 +580,14 @@ export default function CentroIncidenciasPage() {
 
     setAutorizandoMasivo(true);
     try {
-      for (const inc of targets) {
-        const payload = limpiarPayload({
-          ...inc.registro,
-          hrs_extra: 1,
-          correccion: 1,
-        });
-        await axios.put(
-          `/checador/asistencias/${inc.registro.id}`,
-          payload,
-        );
-      }
-      enqueueSnackbar(
+      await hx.guardar(
+        targets.map((inc) => ({
+          registro: inc.registro,
+          cambios: cambiosAutorizar({ idAutorizador: hx.usuario.idEmpleado }),
+        })),
         `${targets.length} registro(s) de horas extra autorizados.`,
-        { variant: "success" },
       );
       setSeleccionados(new Set());
-      await cargar();
-    } catch (e) {
-      console.error("Error autorizando horas extra:", e);
-      enqueueSnackbar(
-        e?.response?.data?.message ||
-          e?.response?.data?.error ||
-          "No se pudieron autorizar todas las horas extra.",
-        { variant: "error" },
-      );
-      await cargar();
     } finally {
       setAutorizandoMasivo(false);
     }
@@ -1231,10 +1230,23 @@ export default function CentroIncidenciasPage() {
                                               variant="outline"
                                               disabled={guardandoId === registro.id}
                                               onClick={() => autorizarExtra(inc)}
+                                              aria-label="Autorizar horas extra"
                                               className="h-10 rounded-lg border-blue-200 bg-white text-blue-700"
                                             >
                                               <Clock3 className="mr-1.5 h-4 w-4" />
                                               Autorizar
+                                            </Button>
+                                          )}
+                                          {inc.tipo === "H. extra" && (
+                                            <Button
+                                              type="button"
+                                              variant="outline"
+                                              disabled={hx.guardando}
+                                              onClick={() => noAutorizarExtra(inc)}
+                                              title="La salida pagada queda a la hora del horario; la checada del reloj se conserva"
+                                              className="h-10 rounded-lg border-rose-200 bg-white text-rose-700"
+                                            >
+                                              No autorizar
                                             </Button>
                                           )}
                                           {inc.accion === "corregir" && (

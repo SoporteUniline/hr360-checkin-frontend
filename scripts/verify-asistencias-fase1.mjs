@@ -251,8 +251,15 @@ try {
   await page.goto(base + "/panel/incidencias", { waitUntil: "domcontentloaded" });
   const filaInc = page.locator("tr", { hasText: "Empleado0" }).first();
   await filaInc.waitFor({ timeout: 30000 });
-  assert.match(await filaInc.innerText(), /13 min/);
-  assert.doesNotMatch(await filaInc.innerText(), /0\.22 h/);
+  // Misma regla que Asistencias: 17:20 con salida de horario 17:00 = 20 min (llegar temprano no cuenta).
+  assert.match(await filaInc.innerText(), /20 min/);
+  assert.doesNotMatch(await filaInc.innerText(), /0\.\d+ h/);
+  // Autorizar desde Incidencias manda solo los campos de horas extra (sin correccion ni registro completo).
+  puts.length = 0;
+  await filaInc.locator("td").nth(1).getByRole("button").click();
+  await page.getByRole("button", { name: "Autorizar horas extra" }).first().click();
+  for (let i = 0; i < 50 && !puts.length; i++) await dormir(100);
+  assert.deepEqual(puts[0], { hrs_extra: 1, forma_pago_extras: "Pago de horas extras", extras_autorizadas_por: 7 });
   const filaNoct = page.locator("tr", { hasText: "Nocturno" }).first();
   assert.match(await filaNoct.innerText(), /0 min/);
 
