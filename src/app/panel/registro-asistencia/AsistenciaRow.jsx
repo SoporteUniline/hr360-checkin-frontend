@@ -1,20 +1,12 @@
 import { TableCell, TableRow } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Textarea } from "@/components/ui/textarea";
-import { Pencil, Save, X, Check, X as XIcon } from "lucide-react";
+import { Pencil, Check, X as XIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import HistorialEmpleadoDialog from "./HistorialEmpleadoDialog";
 import CeldaEditado, { crearFormateadorCambios } from "./CeldaEditado";
-import { avisoCalendario, correccionesCalendario, enmascararNip } from "@/lib/asistencia/calendario.mjs";
+import { avisoCalendario, correccionesCalendario } from "@/lib/asistencia/calendario.mjs";
+import { estadoHorasExtra } from "@/lib/asistencia/horasExtra.mjs";
+import CeldaHorasExtra from "./CeldaHorasExtra";
+import PanelEditarAsistencia from "./PanelEditarAsistencia";
 import { useEmpresaTimezone } from "@/context/AuthContext";
 import { calcularResumenJornada, formatearMinutos } from "@/utils/asistenciaHoras";
 import { salidaEsDiaSiguiente, sumarDias } from "@/lib/asistencia/jornada.mjs";
@@ -58,6 +50,7 @@ export default function AsistenciaRow({
   colVisible,
   onRowClick,
   indiceFestivos = null,
+  horasExtra = null,
 }) {
   const fallbackTimezone = useEmpresaTimezone(empresaActiva);
   const userTimezone = registro.zona_horaria || fallbackTimezone;
@@ -69,7 +62,8 @@ export default function AsistenciaRow({
       : (key) =>
           EXTRA_COLUMN_KEYS.has(key) ? Boolean(mostrarCamposExtras) : true;
 
-  const { jornada, minutosDiferencia } = calcularResumenJornada(currentData);
+  const { jornada, minutosDiferencia } = calcularResumenJornada(registro);
+  const infoExtra = estadoHorasExtra(registro, userTimezone);
   const diferenciaTexto = formatearMinutos(minutosDiferencia, { signo: true });
   const colorDiferencia =
     minutosDiferencia < 0 ? "text-red-600" : minutosDiferencia > 0 ? "text-green-600" : "text-gray-600";
@@ -146,443 +140,26 @@ export default function AsistenciaRow({
         key={registro.id}
         onClick={handleRowClick}
         className={
-          !isEditing
-            ? "cursor-pointer hover:bg-gray-50 border-b border-gray-100"
-            : "border-b border-gray-100"
+          // Mismo tamaño y números alineados en todas las columnas.
+          `border-b border-gray-100 text-[13px] text-slate-700 tabular-nums [&>td]:whitespace-nowrap [&>td]:px-3 [&>td]:py-2.5 ${
+            !isEditing ? "cursor-pointer hover:bg-gray-50" : "bg-blue-50/40"
+          }`
         }
       >
-        {isEditing && !readOnly ? (
-          <>
+        <>
             {isColVisible("empleado") && (
               <TableCell className="font-semibold text-slate-800">
                 {registro.nombre} {registro.apellido_paterno}
               </TableCell>
             )}
             {empresaActiva === "all" && isColVisible("unidad") && (
-              <TableCell className="font-semibold text-slate-800">
-                {registro.unidad_negocio ||
-                  registro.sucursal ||
-                  registro.empresa_nombre}
-              </TableCell>
-            )}
-            {isColVisible("codigo") && <TableCell title="Código de checada (oculto por seguridad)">{enmascararNip(registro.nip)}</TableCell>}
-            {isColVisible("departamento") && (
-              <TableCell>{registro.departamento}</TableCell>
-            )}
-            {isColVisible("tipo") && (
               <TableCell>
-                <Select
-                  value={
-                    currentData.id_tipo_permiso
-                      ? String(currentData.id_tipo_permiso)
-                      : ""
-                  }
-                  onValueChange={(val) => {
-                    const seleccionado = tiposPermiso?.tiposPermiso.find(
-                      (tipo) => String(tipo.id) === val,
-                    );
-
-                    handleFieldChange("id_tipo_permiso", seleccionado?.id);
-                    handleFieldChange(
-                      "tipo_registro_nombre",
-                      seleccionado?.nombre || "",
-                    );
-                    handleFieldChange(
-                      "asistencia",
-                      seleccionado?.cuenta_como_asistencia,
-                    );
-                    handleFieldChange("goce_sueldo", seleccionado?.goce_sueldo);
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Tipo" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60 overflow-y-auto">
-                    {tiposPermiso?.tiposPermiso?.map((tipo) => (
-                      <SelectItem key={tipo.id} value={String(tipo.id)}>
-                        {tipo.nombre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </TableCell>
-            )}
-            {isColVisible("fecha") && (
-              <TableCell className="text-center">
-                {dayjs
-                  .tz(currentData.fecha, DB_TIMEZONE)
-                  .tz(userTimezone)
-                  .format("DD/MM/YYYY")}
-              </TableCell>
-            )}
-            {isColVisible("correccion") && (
-              <TableCell className="text-center">
-                {currentData.correccion ? (
-                  <Check aria-label="Corregida" className="inline h-4 w-4 text-green-600" />
-                ) : (
-                  <XIcon aria-label="Sin corregir" className="inline h-4 w-4 text-red-600" />
-                )}
-              </TableCell>
-            )}
-            {isColVisible("entrada") && (
-              <TableCell className="text-center">
-                <Input
-                  type="time"
-                  value={
-                    currentData.entrada
-                      ? dayjs
-                          .tz(currentData.entrada, DB_TIMEZONE)
-                          .tz(userTimezone)
-                          .format("HH:mm")
-                      : ""
-                  }
-                  onChange={(e) => {
-                    const hora = e.target.value;
-                    handleFieldChange("entrada", hora ? aBaseDeDatos(fechaBase, hora) : null);
-                    // Si ya hay salida, se recalcula su día respecto a la nueva entrada.
-                    const horaSalida = horaLocal(currentData.salida);
-                    if (hora && horaSalida) {
-                      const nuevaSalida = salidaParaHoras(hora, horaSalida);
-                      if (!mismaMarca(nuevaSalida, currentData.salida)) {
-                        handleFieldChange("salida", nuevaSalida);
-                      }
-                    }
-                  }}
-                />
-              </TableCell>
-            )}
-            {isColVisible("salida") && (
-              <TableCell className="text-center">
-                <Input
-                  type="time"
-                  value={
-                    currentData.salida
-                      ? dayjs
-                          .tz(currentData.salida, DB_TIMEZONE)
-                          .tz(userTimezone)
-                          .format("HH:mm")
-                      : ""
-                  }
-                  onChange={(e) => {
-                    const hora = e.target.value;
-                    handleFieldChange(
-                      "salida",
-                      hora ? salidaParaHoras(horaLocal(currentData.entrada), hora) : null,
-                    );
-                  }}
-                />
-                {salidaDiaSiguiente(currentData) && (
-                  <span className="mt-1 block text-[11px] font-semibold text-blue-600">+1 día</span>
-                )}
-              </TableCell>
-            )}
-
-            {isColVisible("jornada") && (
-              <TableCell className="text-center whitespace-nowrap">
-                {jornada}
-              </TableCell>
-            )}
-
-            {isColVisible("hrs_diferencia") && (
-              <TableCell
-                className={`text-center font-bold whitespace-nowrap ${colorDiferencia}`}
-              >
-                {diferenciaTexto}
-              </TableCell>
-            )}
-
-            {isColVisible("autorizado_por") && (
-              <TableCell className="text-center">
-                <div className="flex flex-col gap-1.5 text-left">
-                  <span className="text-[10px] font-semibold uppercase text-slate-400">Incidencia</span>
-                <Select
-                  value={
-                    currentData.autorizado_por
-                      ? String(currentData.autorizado_por)
-                      : ""
-                  }
-                  onValueChange={(val) =>
-                    handleFieldChange("autorizado_por", val)
-                  }
-                >
-                  <SelectTrigger className="w-45">
-                    <SelectValue placeholder="Autorizado por" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60 overflow-y-auto">
-                    <SelectItem value="null">
-                      No requiere autorización
-                    </SelectItem>
-                    {empleados?.map((emp) => (
-                      <SelectItem
-                        key={emp.id_empleado}
-                        value={String(emp.id_empleado)}
-                      >
-                        {emp.nombre} {emp.apellido_paterno}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                  <span className="text-[10px] font-semibold uppercase text-slate-400">Horas extra</span>
-                <Select
-                  value={
-                    currentData.extras_autorizadas_por
-                      ? String(currentData.extras_autorizadas_por)
-                      : ""
-                  }
-                  onValueChange={(val) =>
-                    handleFieldChange("extras_autorizadas_por", val)
-                  }
-                >
-                  <SelectTrigger className="w-45">
-                    <SelectValue placeholder="Autorizadas por" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60 overflow-y-auto">
-                    {empleados?.map((emp) => (
-                      <SelectItem
-                        key={emp.id_empleado}
-                        value={String(emp.id_empleado)}
-                      >
-                        {emp.nombre} {emp.apellido_paterno}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                </div>
-              </TableCell>
-            )}
-            {isColVisible("asistio") && (
-              <TableCell className="text-center">
-                {/* Lo define el tipo de registro (catálogo de tipos), no se mueve por separado. */}
-                <Marca valor={currentData.asistencia} fuente="Lo define el tipo de registro" />
-              </TableCell>
-            )}
-            {isColVisible("goce") && (
-              <TableCell className="text-center">
-                {/* Lo define el tipo de registro (catálogo de tipos), no se mueve por separado. */}
-                <Marca valor={currentData.goce_sueldo} fuente="Lo define el tipo de registro" />
-              </TableCell>
-            )}
-            {isColVisible("pago_triple") && (
-              <TableCell className="text-center">
-                <ToggleGroup
-                  type="single"
-                  value={currentData.pago_triple ? "1" : "0"}
-                  onValueChange={(val) =>
-                    handleFieldChange("pago_triple", val === "1")
-                  }
-                >
-                  <ToggleGroupItem value="0" aria-label="No">
-                    <XIcon className="h-4 w-4" />
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="1" aria-label="Sí">
-                    <Check className="h-4 w-4" />
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              </TableCell>
-            )}
-            {isColVisible("domingo") && (
-              <TableCell className="text-center">
-                <Marca valor={currentData.es_domingo} fuente="Según la fecha del registro" />
-              </TableCell>
-            )}
-            {isColVisible("prima_dominical") && (
-              <TableCell className="text-center">
-                <Input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={currentData.prima_dominical || 0}
-                  onChange={(e) =>
-                    handleFieldChange("prima_dominical", e.target.value)
-                  }
-                />
-              </TableCell>
-            )}
-            {isColVisible("festivo") && (
-              <TableCell className="text-center" title="Se marca solo si está en el catálogo de Festivos; puedes marcar uno adicional">
-                <ToggleGroup
-                  type="single"
-                  value={si(currentData.es_festivo) ? "1" : "0"}
-                  onValueChange={(val) =>
-                    handleFieldChange("es_festivo", val === "1")
-                  }
-                >
-                  <ToggleGroupItem value="0" aria-label="No">
-                    <XIcon className="h-4 w-4" />
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="1" aria-label="Sí">
-                    <Check className="h-4 w-4" />
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              </TableCell>
-            )}
-            {isColVisible("porcentaje_festivo") && (
-              <TableCell className="text-center">
-                <Input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={currentData.porcentaje_dia_festivo || 0}
-                  onChange={(e) =>
-                    handleFieldChange("porcentaje_dia_festivo", e.target.value)
-                  }
-                />
-              </TableCell>
-            )}
-            {isColVisible("hrs_extra") && (
-              <TableCell className="text-center">
-                <ToggleGroup
-                  type="single"
-                  value={currentData.hrs_extra ? "1" : "0"}
-                  onValueChange={(val) =>
-                    handleFieldChange("hrs_extra", val === "1")
-                  }
-                >
-                  <ToggleGroupItem value="0" aria-label="No">
-                    <XIcon className="h-4 w-4" />
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="1" aria-label="Sí">
-                    <Check className="h-4 w-4" />
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              </TableCell>
-            )}
-            {isColVisible("forma_pago") && (
-              <TableCell className="text-center">
-                <Select
-                  value={currentData.forma_pago_extras || ""}
-                  onValueChange={(val) =>
-                    handleFieldChange("forma_pago_extras", val)
-                  }
-                >
-                  <SelectTrigger className="w-45">
-                    <SelectValue placeholder="Forma de pago" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60 overflow-y-auto">
-                    <SelectItem value="Tiempo por tiempo">
-                      Tiempo por tiempo
-                    </SelectItem>
-                    <SelectItem value="Descuento sobre nómina">
-                      Descuento sobre nómina
-                    </SelectItem>
-                    <SelectItem value="Pago de horas extras">
-                      Pago de horas extras
-                    </SelectItem>
-                    <SelectItem value="Reposición de tiempo por tiempo">
-                      Reposición de tiempo por tiempo
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </TableCell>
-            )}
-            {isColVisible("hrs_comida") && (
-              <TableCell className="text-center">
-                <Input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={currentData.hrs_comida || 0}
-                  onChange={(e) =>
-                    handleFieldChange("hrs_comida", e.target.value)
-                  }
-                />
-              </TableCell>
-            )}
-            {isColVisible("notas") && (
-              <TableCell className="text-center">
-                <div className="flex flex-col gap-1.5 text-left">
-                  <Textarea
-                    aria-label="Observaciones"
-                    placeholder="Observaciones"
-                    value={currentData.notas || ""}
-                    onChange={(e) => handleFieldChange("notas", e.target.value)}
-                    className="min-w-37.5"
-                  />
-                  <Textarea
-                    aria-label="Notas de horas extra"
-                    placeholder="Notas de horas extra"
-                    value={currentData.notas_hrs_extra || ""}
-                    onChange={(e) =>
-                      handleFieldChange("notas_hrs_extra", e.target.value)
-                    }
-                    className="min-w-37.5"
-                  />
-                </div>
-              </TableCell>
-            )}
-
-            {isColVisible("estado_asistencia") && (
-              <TableCell className="text-center">
-                <span
-                  className={`inline-flex rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${
-                    currentData.estadoAsistencia === "Presente"
-                      ? "bg-emerald-50 text-emerald-700"
-                      : currentData.estadoAsistencia === "Ausente"
-                      ? "bg-rose-50 text-rose-700"
-                      : currentData.estadoAsistencia === "Tardanza"
-                      ? "bg-amber-50 text-amber-700"
-                      : currentData.estadoAsistencia === "Permiso"
-                      ? "bg-blue-50 text-blue-700"
-                      : currentData.estadoAsistencia === "Vacaciones"
-                      ? "bg-violet-50 text-violet-700"
-                      : "bg-slate-100 text-slate-600"
-                  }`}
-                >
-                  {currentData.estadoAsistencia?.toUpperCase()}
-                </span>
-              </TableCell>
-            )}
-            {!readOnly && isColVisible("acciones") && (
-              <TableCell
-                className="sticky right-0 bg-background z-10 text-center p-0"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-center gap-2 h-full px-2">
-                  {currentData.valores_originales && (
-                    <button
-                      type="button"
-                      onClick={handleRestoreOriginal}
-                      disabled={isSaving}
-                      className="rounded-lg px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-50"
-                    >
-                      Volver al original
-                    </button>
-                  )}
-                  <button
-                    onClick={handleSaveClick}
-                    disabled={isSaving}
-                    className="rounded-lg p-1.5 text-slate-400 transition hover:bg-blue-50 hover:text-blue-600 disabled:opacity-50"
-                    title="Guardar"
-                  >
-                    <Save className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={handleCancelEdit}
-                    disabled={isSaving}
-                    className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
-                    title="Cancelar"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              </TableCell>
-            )}
-          </>
-        ) : (
-          <>
-            {isColVisible("empleado") && (
-              <TableCell className="font-semibold text-slate-800">
-                {registro.nombre} {registro.apellido_paterno}
-              </TableCell>
-            )}
-            {empresaActiva === "all" && isColVisible("unidad") && (
-              <TableCell className="font-semibold text-slate-800">
                 {registro.unidad_negocio ||
                   registro.sucursal ||
                   registro.empresa_nombre}
               </TableCell>
             )}
-            {isColVisible("codigo") && <TableCell title="Código de checada (oculto por seguridad)">{enmascararNip(registro.nip)}</TableCell>}
+            {isColVisible("codigo") && <TableCell className="text-center">{registro.nip || "-"}</TableCell>}
             {isColVisible("departamento") && (
               <TableCell>{registro.departamento}</TableCell>
             )}
@@ -628,18 +205,30 @@ export default function AsistenciaRow({
                 {salidaDiaSiguiente(registro) && (
                   <span className="ml-1 text-[11px] font-semibold text-blue-600">+1 día</span>
                 )}
+                {infoExtra.estado === "no_autorizada" && (
+                  <span className="block text-[11px] text-slate-400 line-through" title="Checada real del reloj (se conserva)">
+                    {horaLocal(infoExtra.salidaReloj)} reloj
+                  </span>
+                )}
               </TableCell>
             )}
 
             {isColVisible("jornada") && (
-              <TableCell className="text-center whitespace-nowrap">
-                {jornada}
+              <TableCell className="text-center">
+                {jornada.includes(" / ") ? (
+                  <>
+                    {jornada.split(" / ")[0]}
+                    <span className="text-slate-400"> / {jornada.split(" / ")[1]}</span>
+                  </>
+                ) : (
+                  jornada
+                )}
               </TableCell>
             )}
 
             {isColVisible("hrs_diferencia") && (
               <TableCell
-                className={`text-center font-bold whitespace-nowrap ${colorDiferencia}`}
+                className={`text-center font-semibold ${colorDiferencia}`}
               >
                 {diferenciaTexto}
               </TableCell>
@@ -702,8 +291,19 @@ export default function AsistenciaRow({
             )}
 
             {isColVisible("hrs_extra") && (
-              <TableCell className="text-center">
-                <Marca valor={registro.hrs_extra} />
+              <TableCell className="min-w-[230px]">
+                <CeldaHorasExtra
+                  registro={registro}
+                  info={infoExtra}
+                  autorizador={nombreAutorizador("_extra_autorizador")}
+                  readOnly={readOnly || !horasExtra}
+                  guardando={horasExtra?.guardando}
+                  seleccionado={horasExtra?.seleccionados?.has(registro.id)}
+                  onSeleccionar={(v) => horasExtra?.seleccionar(registro.id, v)}
+                  onAutorizar={(opciones) => horasExtra?.autorizar(registro, opciones)}
+                  onNoAutorizar={() => horasExtra?.noAutorizar(registro)}
+                  onQuitar={() => horasExtra?.quitar(registro)}
+                />
               </TableCell>
             )}
             {isColVisible("forma_pago") && (
@@ -717,7 +317,7 @@ export default function AsistenciaRow({
               </TableCell>
             )}
             {isColVisible("notas") && (
-              <TableCell className="text-center text-xs">
+              <TableCell className="max-w-[240px] !whitespace-normal text-center text-xs">
                 {registro.notas || registro.notas_hrs_extra ? (
                   <div className="flex flex-col gap-0.5">
                     {registro.notas && <span>{registro.notas}</span>}
@@ -765,9 +365,26 @@ export default function AsistenciaRow({
                 </button>
               </TableCell>
             )}
-          </>
-        )}
+        </>
       </TableRow>
+
+      {isEditing && !readOnly && (
+        <PanelEditarAsistencia
+          abierto
+          registro={registro}
+          datos={editingRowData}
+          zona={userTimezone}
+          horas={{ horaLocal, aBaseDeDatos, salidaParaHoras, mismaMarca, salidaDiaSiguiente, fechaBase }}
+          empleados={empleados}
+          tiposPermiso={tiposPermiso}
+          avisoDe={avisoDe}
+          isSaving={isSaving}
+          handleFieldChange={handleFieldChange}
+          handleSaveClick={handleSaveClick}
+          handleCancelEdit={handleCancelEdit}
+          handleRestoreOriginal={handleRestoreOriginal}
+        />
+      )}
 
       <HistorialEmpleadoDialog
         isOpen={isModalOpen}

@@ -1,4 +1,4 @@
-// Reglas de calendario y privacidad para la vista de Asistencias.
+// Reglas de calendario para la vista de Asistencias.
 // Sin dependencias para probarlas con node:test.
 
 const fechaISO = (valor) => {
@@ -64,11 +64,4 @@ export function correccionesCalendario(registro, indice) {
   if (domingo != null && domingo !== Boolean(Number(registro?.es_domingo))) cambios.es_domingo = domingo ? 1 : 0;
   if (esFestivoSegunCatalogo(registro, indice) === true && !Number(registro?.es_festivo)) cambios.es_festivo = 1;
   return cambios;
-}
-
-// El NIP sirve para checar: en pantalla solo los 2 últimos dígitos.
-export function enmascararNip(nip) {
-  const s = String(nip ?? "").trim();
-  if (!s) return "—";
-  return s.length <= 2 ? "••" : `••${s.slice(-2)}`;
 }

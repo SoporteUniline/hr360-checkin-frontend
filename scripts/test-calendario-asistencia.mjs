@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  avisoCalendario, correccionesCalendario, enmascararNip, esDomingo, esFestivoSegunCatalogo, indiceFestivos,
+  avisoCalendario, correccionesCalendario, esDomingo, esFestivoSegunCatalogo, indiceFestivos,
 } from "../src/lib/asistencia/calendario.mjs";
 
 test("domingo según la fecha (15 nov 2026 es domingo)", () => {
@@ -39,10 +39,4 @@ test("al editar: domingo se corrige; festivo solo se activa, nunca se quita", ()
   assert.deepEqual(correccionesCalendario({ fecha: "2026-11-16", es_domingo: 1, es_festivo: 0 }, i), { es_domingo: 0, es_festivo: 1 });
   assert.deepEqual(correccionesCalendario({ fecha: "2026-11-17", es_domingo: 0, es_festivo: 1 }, i), {});
   assert.deepEqual(correccionesCalendario({ fecha: "2026-11-15", es_domingo: 0, es_festivo: 0 }, null), { es_domingo: 1 });
-});
-
-test("NIP enmascarado", () => {
-  assert.equal(enmascararNip("123456"), "••56");
-  assert.equal(enmascararNip(7), "••");
-  assert.equal(enmascararNip(""), "—");
 });
