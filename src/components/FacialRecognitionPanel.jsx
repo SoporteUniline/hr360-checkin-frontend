@@ -5,6 +5,10 @@ import axiosInstance from "@/lib/axios";
 import { Button } from "./ui/button";
 import { loadBrowserFaceApi } from "@/lib/faceapi-browser";
 
+// Modo diagnóstico opcional: si está apagado, estas llamadas no hacen nada.
+const diagApi = () => globalThis.__adamiaDiag;
+const diag = (nombre, datos) => diagApi()?.marca(nombre, datos);
+
 const FacialRecognitionPanel = ({
   isOpen,
   onOpen,
@@ -107,7 +111,7 @@ const FacialRecognitionPanel = ({
   useEffect(() => {
     let active = true;
     loadBrowserFaceApi()
-      .then(() => active && setFaceApiLoaded(true))
+      .then(() => { diag("modelos_listos_panel"); if (active) setFaceApiLoaded(true); })
       .catch(() => active && setError("No se pudieron cargar los modelos faciales. Recargue la p\u00e1gina."));
     return () => { active = false; };
   }, []);
@@ -122,15 +126,20 @@ const FacialRecognitionPanel = ({
     }
     const entry = {};
     locationRef.current = entry;
+    diag("gps_inicio");
     entry.promise = new Promise((resolve) => {
-      const fail = () => {
+      const fail = (geoError) => {
         entry.failedAt = Date.now();
+        diag("gps_fin", { ok: false, codigo: geoError?.code ?? null });
         resolve({ error: true });
       };
       if (!navigator.geolocation) return fail();
       try {
         navigator.geolocation.getCurrentPosition(
-          (position) => { entry.position = position; setUbicacionGPS(position); resolve({ position }); },
+          (position) => {
+            diag("gps_fin", { ok: true, precision_m: Math.round(position.coords.accuracy) });
+            entry.position = position; setUbicacionGPS(position); resolve({ position });
+          },
           fail,
           { enableHighAccuracy: true, timeout: 10000, maximumAge: GPS_MAX_AGE },
         );
@@ -146,6 +155,8 @@ const FacialRecognitionPanel = ({
       if (!isOpen) return;
 
       const session = sessionRef.current;
+      diagApi()?.iniciar?.("panel_facial");
+      diag("camara_solicitada", { lado: cameraFacing });
       try {
         const mediaStream = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -159,12 +170,17 @@ const FacialRecognitionPanel = ({
           videoRef.current.srcObject = mediaStream;
           streamRef.current = mediaStream;
           videoRef.current.onloadeddata = () => {
-            if (session === sessionRef.current) setCameraReady(true);
+            if (session !== sessionRef.current) return;
+            const v = videoRef.current;
+            diag("camara_lista");
+            diagApi()?.contexto?.({ camara: v ? `${v.videoWidth}x${v.videoHeight}` : null });
+            setCameraReady(true);
           };
         } else mediaStream.getTracks().forEach((t) => t.stop());
       } catch (err) {
         if (session !== sessionRef.current) return;
         console.log(err);
+        diag("camara_error", { nombre: err?.name ?? null });
         setError("No se pudo acceder a la cámara");
         enqueueSnackbar("No se pudo acceder a la cámara", {
           variant: "error",
@@ -194,6 +210,9 @@ const FacialRecognitionPanel = ({
     if (!videoRef.current || !canvasRef.current || !isOpen) return;
     if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
     const session = sessionRef.current;
+    diag("deteccion_lista");
+    let analizados = 0;
+    let rostroVisto = false;
     const detect = async () => {
       if (session !== sessionRef.current || isDetectingRef.current || isProcessingRef.current) return;
       if (Date.now() - lastCheckTimeRef.current < retryIntervalRef.current) return;
@@ -207,8 +226,21 @@ const FacialRecognitionPanel = ({
         canvas.height = video.videoHeight;
         canvas.getContext("2d").drawImage(video, 0, 0);
         // One frame and one detector pass for both presence and recognition.
+        const d = diagApi();
+        const t0 = d ? d.ahora() : 0;
         const detection = await window.faceapi.detectSingleFace(canvas)
           .withFaceLandmarks().withFaceDescriptor();
+        if (d) {
+          const ms = d.ahora() - t0;
+          d.cuenta("analisis", ms);
+          if (!detection) d.cuenta("analisis_sin_rostro", ms);
+          analizados += 1;
+          if (analizados === 1) d.marca("primer_analisis_fin", { ms: Math.round(ms) });
+          if (detection && !rostroVisto) {
+            rostroVisto = true;
+            d.marca("primer_rostro", { cuadro: analizados, confianza: Math.round((detection.detection?.score ?? 0) * 100) / 100 });
+          }
+        }
         if (session !== sessionRef.current) return;
         setFaceDetected(!!detection);
         if (detection) {
@@ -254,7 +286,21 @@ const FacialRecognitionPanel = ({
         precision_metros: position?.coords.accuracy ?? null,
         ubicacion_timestamp: position?.timestamp ?? null,
       };
-      const submit = (body) => submitMovement ? submitMovement(body) : axiosInstance.post("/checador/reloj/registrar-facial", body);
+      const submit = async (body) => {
+        const d = diagApi();
+        const t0 = d ? d.ahora() : 0;
+        d?.marca("envio_inicio", { con_gps: body.latitud_actual != null, via: submitMovement ? "submitMovement" : "servidor" });
+        try {
+          const r = await (submitMovement ? submitMovement(body) : axiosInstance.post("/checador/reloj/registrar-facial", body));
+          d?.marca("envio_fin", { estado: r?.status ?? null });
+          return r;
+        } catch (e) {
+          d?.marca("envio_fin", { estado: e.response?.status ?? null, error: e.response?.data?.error ?? e.message ?? null, codigo: e.response?.data?.code ?? null });
+          throw e;
+        } finally {
+          d?.cuenta("envio", d.ahora() - t0);
+        }
+      };
       let response;
       try {
         response = await submit(payload);
@@ -279,6 +325,8 @@ const FacialRecognitionPanel = ({
       const { data } = response;
 
       if (session !== sessionRef.current) return;
+      diag("checada_exitosa");
+      diagApi()?.terminar?.("checada registrada");
       setError("");
       setShowSuccessMessage(true);
       onSuccess(data);

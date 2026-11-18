@@ -13,6 +13,11 @@ const nextConfig = {
         source: "/internal/control-activos/:path*",
         destination: "/api/control-activos/:path*",
       },
+      {
+        // En dev/prod el proxy manda casi todo /api/* al backend; /internal/* llega a Next.
+        source: "/internal/diagnostico/reloj",
+        destination: "/api/diagnostico/reloj",
+      },
     ];
   },
   images: {
