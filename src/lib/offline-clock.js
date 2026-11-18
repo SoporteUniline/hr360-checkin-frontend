@@ -6,7 +6,8 @@ let registrationLoading;
 let synchronizing = false;
 const initializing = new Map();
 const warmed = new Set();
-export const clockStore = () => storeLoading ||= (typeof navigator !== 'undefined' && navigator.onLine ? installOfflineWorker().catch(() => null) : Promise.resolve()).then(() => import(/* webpackIgnore: true */ '/offline-clock/store.mjs?v=10'));
+// Opening stored check-ins does not require the offline shell to finish updating.
+export const clockStore = () => storeLoading ||= import(/* webpackIgnore: true */ '/offline-clock/store.mjs?v=10');
 export const faceEngine = () => import(/* webpackIgnore: true */ '/offline-clock/face.mjs?v=4');
 const notify = () => window.dispatchEvent(new Event('adamia-queue'));
 const profileKey = (company, employee) => employee ? `clock:employee:${company}:${employee}` : `clock:company:${company}`;
