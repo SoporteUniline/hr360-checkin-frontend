@@ -6,6 +6,7 @@
 
 import { useState, useCallback } from "react";
 import axios from "@/lib/axios";
+import { formatearMinutos, resumenJornada } from "@/lib/asistencia/jornada.mjs";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -129,28 +130,7 @@ function formatNombrePersona(nombre, apellidoPaterno, apellidoMaterno) {
   return partes.length ? partes.join(" ") : "—";
 }
 
-function calcularHorasDebia(row) {
-  if (!row.hora_entrada_programada || !row.hora_salida_programada) return 0;
-  const entrada = dayjs(`2000-01-01 ${row.hora_entrada_programada}`);
-  const salida = dayjs(`2000-01-01 ${row.hora_salida_programada}`);
-  return Number((salida.diff(entrada, "minute") / 60).toFixed(2));
-}
-
-function calcularHorasTrabajadas(row, tz) {
-  if (!row.entrada || !row.salida) return 0;
-  const zona = tz || DB_TIMEZONE;
-  const entrada = dayjs.tz(row.entrada, DB_TIMEZONE).tz(zona);
-  const salida = dayjs.tz(row.salida, DB_TIMEZONE).tz(zona);
-  const comida = Number(row.hrs_comida || 0);
-  return Number((salida.diff(entrada, "minute") / 60 - comida).toFixed(2));
-}
-
-function formatDiferenciaHoras(horasDebia, horasTrabajo) {
-  if (!horasDebia && !horasTrabajo) return "—";
-  const diff = Number((horasTrabajo - horasDebia).toFixed(2));
-  return diff > 0 ? `+${diff}` : String(diff);
-}
-
+// Horas: mismo cálculo que Asistencias (src/lib/asistencia/jornada.mjs), en minutos exactos.
 function calcDuracion(entrada, salida, tz) {
   if (!entrada || !salida) return "—";
   try {
@@ -227,8 +207,7 @@ function enriquecerFilaAsistencia(row, idxMovimientos) {
 function transformarFilaAsistencia(row) {
   const tz = row.zona_horaria || null;
   const unidad = row.unidad_negocio || row.sucursal || row.empresa_nombre || "—";
-  const horasDebia = calcularHorasDebia(row);
-  const horasTrabajo = calcularHorasTrabajadas(row, tz);
+  const { minutosProgramados, minutosTrabajados, minutosDiferencia } = resumenJornada(row);
 
   return {
     nombre: row.nombre || "—",
@@ -240,9 +219,9 @@ function transformarFilaAsistencia(row) {
     fecha: fmtDate(row.fecha),
     entrada: fmtTime(row.entrada, tz),
     salida: fmtTime(row.salida, tz),
-    hrs_debia: horasDebia ? String(horasDebia) : "—",
-    hrs_trabajo: horasTrabajo ? String(horasTrabajo) : "—",
-    diferencia_horas: formatDiferenciaHoras(horasDebia, horasTrabajo),
+    hrs_debia: formatearMinutos(minutosProgramados),
+    hrs_trabajo: formatearMinutos(minutosTrabajados),
+    diferencia_horas: formatearMinutos(minutosDiferencia, { signo: true }),
     estadoAsistencia: row.estadoAsistencia || "—",
     estado: row.estado || "—",
     tipo_registro_nombre: row.tipo_registro_nombre || "—",

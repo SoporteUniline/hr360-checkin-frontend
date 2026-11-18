@@ -15,6 +15,7 @@ import { useEffect, useRef, useState } from "react";
 import { fetcherWithToken } from "@/lib/fetcher";
 import useDepartamentosData from "@/hooks/useDepartamentosData";
 import { useSnackbar } from "notistack";
+import { cargarPeriodoCompleto } from "@/lib/asistencia/consultaPeriodo.mjs";
 
 const DEFAULT_SORT_CONFIG = {
   sortBy: "fecha",
@@ -121,74 +122,31 @@ export default function AsistenciaDataContainer({
     return () => es.close();
   }, [idEmpresa, enqueueSnackbar]);
 
+  // Filtros activos del periodo: los usan las opciones por columna y Exportar.
+  const filtrosPeriodo = {
+    idEmpresa,
+    fechaInicio,
+    fechaFin,
+    filtroEmpleado: debouncedFiltroEmpleado,
+    filtroDepartamento,
+    filtroTipoRegistro,
+    filtroEstadoAsistencia,
+    soloPresentes,
+    soloAusentes,
+    horasExtra,
+    sinGoceDeSueldo,
+    diasFestivos,
+    requiereAutorizacion,
+  };
+  const cargarPeriodoParaExportar = () => cargarPeriodoCompleto(fetcherWithToken, filtrosPeriodo);
+
   useEffect(() => {
     let isCancelled = false;
 
-    const appendIf = (params, key, value) => {
-      if (value === undefined || value === null) return;
-
-      if (Array.isArray(value)) {
-        if (value.length > 0) {
-          params.append(key, JSON.stringify(value));
-        }
-        return;
-      }
-
-      if (value !== "") {
-        params.append(key, String(value));
-      }
-    };
-
     const loadFilterOptionsRows = async () => {
-      if (!idEmpresa) {
-        if (!isCancelled) setFilterOptionsRows([]);
-        return;
-      }
-
       try {
-        const countParams = new URLSearchParams({
-          empresa: String(idEmpresa),
-          fechaInicio: fechaInicio || "",
-          fechaFin: fechaFin || "",
-          page: "1",
-          limit: "1",
-        });
-
-        appendIf(countParams, "filtroEmpleado", debouncedFiltroEmpleado);
-        appendIf(countParams, "filtroDepartamento", filtroDepartamento);
-        appendIf(countParams, "filtroTipoRegistro", filtroTipoRegistro);
-        appendIf(countParams, "filtroEstadoAsistencia", filtroEstadoAsistencia);
-        if (soloPresentes) countParams.append("soloPresentes", "1");
-        if (soloAusentes) countParams.append("soloAusentes", "1");
-        if (horasExtra) countParams.append("horasExtra", "1");
-        if (sinGoceDeSueldo) countParams.append("sinGoceDeSueldo", "0");
-        if (diasFestivos) countParams.append("diasFestivos", "1");
-        if (requiereAutorizacion)
-          countParams.append("requiereAutorizacion", "1");
-
-        const countData = await fetcherWithToken(
-          `/checador/asistencias?${countParams.toString()}`,
-        );
-
-        const total = Number(countData?.total || 0);
-
-        if (total === 0) {
-          if (!isCancelled) setFilterOptionsRows([]);
-          return;
-        }
-
-        const allParams = new URLSearchParams(countParams);
-        allParams.set("limit", String(total));
-
-        const allData = await fetcherWithToken(
-          `/checador/asistencias?${allParams.toString()}`,
-        );
-
-        if (!isCancelled) {
-          setFilterOptionsRows(
-            Array.isArray(allData?.registros) ? allData.registros : [],
-          );
-        }
+        const { registros } = await cargarPeriodoCompleto(fetcherWithToken, filtrosPeriodo);
+        if (!isCancelled) setFilterOptionsRows(registros);
       } catch (fetchError) {
         if (!isCancelled) {
           setFilterOptionsRows([]);
@@ -279,6 +237,7 @@ export default function AsistenciaDataContainer({
           localEvents={localEvents}
           filtrados={registros}
           filterOptionsRows={filterOptionsRows}
+          cargarPeriodoParaExportar={cargarPeriodoParaExportar}
           page={page}
           limit={limit}
           onHeaderFilteringMetaChange={setHeaderFilterMeta}

@@ -14,7 +14,8 @@ import { Pencil, Save, X, Check, X as XIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import HistorialEmpleadoDialog from "./HistorialEmpleadoDialog";
 import { useEmpresaTimezone } from "@/context/AuthContext";
-import { calcularResumenJornada } from "@/utils/asistenciaHoras";
+import { calcularResumenJornada, formatearMinutos } from "@/utils/asistenciaHoras";
+import { salidaEsDiaSiguiente, sumarDias } from "@/lib/asistencia/jornada.mjs";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -67,11 +68,30 @@ export default function AsistenciaRow({
       : (key) =>
           EXTRA_COLUMN_KEYS.has(key) ? Boolean(mostrarCamposExtras) : true;
 
-  const {
-    horasDebia: horasDebiaTrabajar,
-    horasTrabajo,
-    diferencia: diferenciaHoras,
-  } = calcularResumenJornada(currentData, userTimezone);
+  const { jornada, minutosDiferencia } = calcularResumenJornada(currentData);
+  const diferenciaTexto = formatearMinutos(minutosDiferencia, { signo: true });
+  const colorDiferencia =
+    minutosDiferencia < 0 ? "text-red-600" : minutosDiferencia > 0 ? "text-green-600" : "text-gray-600";
+
+  // Captura de horas: la fecha base es la del registro; si la salida es menor o igual
+  // a la entrada (turno nocturno 22:00 → 05:00), la salida se guarda al día siguiente.
+  const fechaBase = String(currentData.fecha ?? "").slice(0, 10);
+  const horaLocal = (valor) =>
+    valor ? dayjs.tz(valor, DB_TIMEZONE).tz(userTimezone).format("HH:mm") : "";
+  const fechaLocal = (valor) =>
+    valor ? dayjs.tz(valor, DB_TIMEZONE).tz(userTimezone).format("YYYY-MM-DD") : "";
+  const aBaseDeDatos = (fecha, hora) =>
+    dayjs.tz(`${fecha} ${hora}`, userTimezone).tz(DB_TIMEZONE).format("YYYY-MM-DD HH:mm:ss");
+  const salidaParaHoras = (horaEntrada, horaSalida) =>
+    aBaseDeDatos(
+      horaEntrada && salidaEsDiaSiguiente(horaEntrada, horaSalida) ? sumarDias(fechaBase, 1) : fechaBase,
+      horaSalida,
+    );
+  const mismaMarca = (a, b) =>
+    Boolean(a && b) &&
+    dayjs.tz(a, DB_TIMEZONE).format("YYYY-MM-DD HH:mm") === dayjs.tz(b, DB_TIMEZONE).format("YYYY-MM-DD HH:mm");
+  const salidaDiaSiguiente = (r) =>
+    Boolean(r.salida && r.entrada) && fechaLocal(r.salida) > fechaLocal(r.entrada);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleRowClick = (e) => {
@@ -189,13 +209,15 @@ export default function AsistenciaRow({
                   }
                   onChange={(e) => {
                     const hora = e.target.value;
-                    const nuevaEntrada = hora
-                      ? dayjs
-                          .tz(`${currentData.fecha} ${hora}`, userTimezone)
-                          .tz(DB_TIMEZONE)
-                          .format("YYYY-MM-DD HH:mm:ss")
-                      : null;
-                    handleFieldChange("entrada", nuevaEntrada);
+                    handleFieldChange("entrada", hora ? aBaseDeDatos(fechaBase, hora) : null);
+                    // Si ya hay salida, se recalcula su día respecto a la nueva entrada.
+                    const horaSalida = horaLocal(currentData.salida);
+                    if (hora && horaSalida) {
+                      const nuevaSalida = salidaParaHoras(hora, horaSalida);
+                      if (!mismaMarca(nuevaSalida, currentData.salida)) {
+                        handleFieldChange("salida", nuevaSalida);
+                      }
+                    }
                   }}
                 />
               </TableCell>
@@ -214,37 +236,29 @@ export default function AsistenciaRow({
                   }
                   onChange={(e) => {
                     const hora = e.target.value;
-                    const nuevaSalida = hora
-                      ? dayjs
-                          .tz(`${currentData.fecha} ${hora}`, userTimezone)
-                          .tz(DB_TIMEZONE)
-                          .format("YYYY-MM-DD HH:mm:ss")
-                      : null;
-                    handleFieldChange("salida", nuevaSalida);
+                    handleFieldChange(
+                      "salida",
+                      hora ? salidaParaHoras(horaLocal(currentData.entrada), hora) : null,
+                    );
                   }}
                 />
+                {salidaDiaSiguiente(currentData) && (
+                  <span className="mt-1 block text-[11px] font-semibold text-blue-600">+1 día</span>
+                )}
               </TableCell>
             )}
 
             {isColVisible("jornada") && (
               <TableCell className="text-center whitespace-nowrap">
-                {horasDebiaTrabajar
-                  ? `${horasTrabajo} / ${horasDebiaTrabajar} Jor.`
-                  : "-"}
+                {jornada}
               </TableCell>
             )}
 
             {isColVisible("hrs_diferencia") && (
               <TableCell
-                className={`text-center font-bold ${
-                  diferenciaHoras < 0
-                    ? "text-red-600"
-                    : diferenciaHoras > 0
-                    ? "text-green-600"
-                    : "text-gray-600"
-                }`}
+                className={`text-center font-bold whitespace-nowrap ${colorDiferencia}`}
               >
-                {diferenciaHoras > 0 ? `+${diferenciaHoras}` : diferenciaHoras}
+                {diferenciaTexto}
               </TableCell>
             )}
 
@@ -617,28 +631,23 @@ export default function AsistenciaRow({
                       .tz(userTimezone)
                       .format("HH:mm:ss")
                   : "-"}
+                {salidaDiaSiguiente(registro) && (
+                  <span className="ml-1 text-[11px] font-semibold text-blue-600">+1 día</span>
+                )}
               </TableCell>
             )}
 
             {isColVisible("jornada") && (
               <TableCell className="text-center whitespace-nowrap">
-                {horasDebiaTrabajar
-                  ? `${horasTrabajo} / ${horasDebiaTrabajar} Jor.`
-                  : "-"}
+                {jornada}
               </TableCell>
             )}
 
             {isColVisible("hrs_diferencia") && (
               <TableCell
-                className={`text-center font-bold ${
-                  diferenciaHoras < 0
-                    ? "text-red-600"
-                    : diferenciaHoras > 0
-                    ? "text-green-600"
-                    : "text-gray-600"
-                }`}
+                className={`text-center font-bold whitespace-nowrap ${colorDiferencia}`}
               >
-                {diferenciaHoras > 0 ? `+${diferenciaHoras}` : diferenciaHoras}
+                {diferenciaTexto}
               </TableCell>
             )}
             {isColVisible("autorizado_por") && (

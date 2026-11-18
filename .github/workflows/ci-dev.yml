@@ -97,6 +97,9 @@ jobs:
           CAU_TEST_PASSWORD: cau_ci_test_only
         run: node --test scripts/test-activos-modules.mjs scripts/test-activos-api.mjs
 
+      - name: Asistencias — cálculo de horas y exportación
+        run: node --test scripts/test-jornada-asistencia.mjs scripts/test-consulta-periodo.mjs
+
   # ─────────────────────────────────────────────
   # 3. BUILD — Validar compilación
   # ─────────────────────────────────────────────
