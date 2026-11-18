@@ -146,7 +146,7 @@ export default function HistorialEmpleadoDialog({
                             ? dayjs
                                 .tz(checador.entrada, DB_TIMEZONE)
                                 .tz(empresaTimezone)
-                                .format("HH:mm:ss")
+                                .format("HH:mm")
                             : "-"}
                         </TableCell>
                         <TableCell className="text-center">
@@ -201,7 +201,7 @@ export default function HistorialEmpleadoDialog({
                                 ? dayjs
                                     .tz(checador.entrada_corregida, DB_TIMEZONE)
                                     .tz(empresaTimezone)
-                                    .format("HH:mm:ss")
+                                    .format("HH:mm")
                                 : "-"}
                             </span>
                           )}
@@ -218,7 +218,7 @@ export default function HistorialEmpleadoDialog({
                             ? dayjs
                                 .tz(checador.salida, DB_TIMEZONE)
                                 .tz(empresaTimezone)
-                                .format("HH:mm:ss")
+                                .format("HH:mm")
                             : "-"}
                         </TableCell>
                         <TableCell className="text-center">
@@ -274,7 +274,7 @@ export default function HistorialEmpleadoDialog({
                                 ? dayjs
                                     .tz(checador.salida_corregida, DB_TIMEZONE)
                                     .tz(empresaTimezone)
-                                    .format("HH:mm:ss")
+                                    .format("HH:mm")
                                 : "-"}
                             </span>
                           )}

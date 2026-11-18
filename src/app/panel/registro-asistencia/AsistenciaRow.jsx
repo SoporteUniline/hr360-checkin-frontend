@@ -620,7 +620,7 @@ export default function AsistenciaRow({
                   ? dayjs
                       .tz(registro.entrada, "America/Mexico_City")
                       .tz(userTimezone)
-                      .format("HH:mm:ss")
+                      .format("HH:mm")
                   : "-"}
               </TableCell>
             )}
@@ -630,7 +630,7 @@ export default function AsistenciaRow({
                   ? dayjs
                       .tz(registro.salida, "America/Mexico_City")
                       .tz(userTimezone)
-                      .format("HH:mm:ss")
+                      .format("HH:mm")
                   : "-"}
                 {salidaDiaSiguiente(registro) && (
                   <span className="ml-1 text-[11px] font-semibold text-blue-600">+1 día</span>

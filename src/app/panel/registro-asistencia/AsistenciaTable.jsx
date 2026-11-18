@@ -460,14 +460,14 @@ export default function AsistenciaTable({
         ? dayjs
             .tz(r.entrada, DB_TIMEZONE)
             .tz(rowTimezone)
-            .format("DD/MM/YYYY HH:mm:ss")
+            .format("DD/MM/YYYY HH:mm")
         : "-",
 
       salida: r.salida
         ? dayjs
             .tz(r.salida, DB_TIMEZONE)
             .tz(rowTimezone)
-            .format("DD/MM/YYYY HH:mm:ss")
+            .format("DD/MM/YYYY HH:mm")
         : "-",
 
       jornada,

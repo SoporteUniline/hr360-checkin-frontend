@@ -93,6 +93,9 @@ try {
   const fila0 = page.locator("tr", { hasText: "Empleado0" }).first();
   assert.match(await fila0.innerText(), /8 h 13 min \/ 8 h/);
   assert.match(await fila0.innerText(), /\+13 min/);
+  // 1b) Entrada y salida sin segundos.
+  assert.match(await fila0.innerText(), /\b08:07\b(?!:)/);
+  assert.doesNotMatch(await fila0.innerText(), /08:07:00/);
   // 2) Nocturno: 7 h exactas y marca "+1 día"; el registro viejo también da 7 h (antes negativo).
   const noct = page.locator("tr", { hasText: "Nocturno" }).first();
   assert.match(await noct.innerText(), /7 h \/ 7 h/);
@@ -114,13 +117,16 @@ try {
   // Desde el detalle se abren las checadas del reloj: original tachada, corregida resaltada.
   await page.getByRole("button", { name: "Ver checadas del reloj de este día" }).click();
   await page.getByText("Historial de entradas y salidas").waitFor({ timeout: 10000 });
-  const salidaOriginal = page.locator("[role=dialog] td", { hasText: "13:19:00" }).first();
+  await page.getByText("Qué cambió").waitFor({ state: "detached", timeout: 5000 }); // el detalle se cierra al abrir el historial
+  const historial = page.getByRole("dialog", { name: /Historial de entradas y salidas/ });
+  const salidaOriginal = historial.locator("td", { hasText: "13:19" }).first();
   await salidaOriginal.waitFor({ timeout: 10000 });
   assert.match(await salidaOriginal.getAttribute("class"), /line-through/);
-  assert.match(await page.locator("[role=dialog] span", { hasText: "17:20:00" }).first().getAttribute("class"), /bg-amber-50/);
+  assert.match(await historial.locator("span", { hasText: "17:20" }).first().getAttribute("class"), /bg-amber-50/);
   if (process.env.CAPTURAS) await page.screenshot({ path: process.env.CAPTURAS + "/editado-checadas.png" });
   await page.keyboard.press("Escape");
-  await page.locator("[role=dialog]").waitFor({ state: "detached", timeout: 10000 });
+  // Al abrir el historial, el detalle "Qué cambió" se cierra solo; con Escape no queda ninguna ventana.
+  await page.waitForFunction(() => !document.querySelector("[role=dialog]"), null, { timeout: 10000 });
 
   // 3) Arranca en "Todos los registros": se ven los 25 con UNA sola descarga del periodo
   //    (sin la segunda descarga para las opciones de filtros).
