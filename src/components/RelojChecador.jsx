@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   CheckCircle,
   Keyboard,
@@ -15,6 +15,7 @@ import ErrorPage from "@/components/ErrorPage";
 import { useSnackbar } from "notistack";
 import FacialRecognitionPanel from "./FacialRecognitionPanel";
 import { loadBrowserFaceApi } from "@/lib/faceapi-browser";
+import { diagnosticoActivo, fijarDiagnostico } from "@/lib/diagnostico-reloj";
 import ClockDisplay from "./Clock/ClockDisplay";
 import EmployeeInput from "./Clock/EmployeeInput";
 import StatsCards from "./Clock/StatsCards";
@@ -85,6 +86,27 @@ export default function RelojChecador({
   useEffect(() => {
     loadBrowserFaceApi().catch(() => {});
   }, []);
+
+  // Modo diagnóstico: mide desde que se abre el reloj hasta que se checa.
+  useEffect(() => {
+    const d = globalThis.__adamiaDiag;
+    d?.iniciar?.("reloj", { modo: modoEmpleado ? "empleado" : "kiosco", id_empresa: idEmpresa ?? null, id_empleado: idEmpleado ?? null });
+    d?.marca("reloj_montado");
+    return () => d?.terminar?.("salió del reloj sin checar");
+  }, [modoEmpleado, idEmpresa, idEmpleado]);
+
+  // Cinco toques sobre la hora (celular) prenden o apagan el diagnóstico.
+  const toquesHoraRef = useRef([]);
+  const tocarHora = () => {
+    const ahora = Date.now();
+    toquesHoraRef.current = [...toquesHoraRef.current.filter((t) => ahora - t < 2500), ahora];
+    if (toquesHoraRef.current.length < 5) return;
+    toquesHoraRef.current = [];
+    const activar = !diagnosticoActivo();
+    fijarDiagnostico(activar);
+    enqueueSnackbar(activar ? "Diagnóstico activado" : "Diagnóstico desactivado", { variant: "info" });
+    setTimeout(() => window.location.reload(), 600);
+  };
 
   const formatearHora = (fechaString) => {
     if (!fechaString) return "-";
@@ -334,6 +356,7 @@ export default function RelojChecador({
 
       try {
         setSubscriptionLoading(true);
+        globalThis.__adamiaDiag?.marca("suscripcion_inicio");
 
         const response = await fetch(
           `/api/empresas/check-subscription/${idEmpresa}`,
@@ -343,8 +366,10 @@ export default function RelojChecador({
         const data = await response.json();
 
         setSubscriptionActive(Boolean(data.hasActivePlan));
+        globalThis.__adamiaDiag?.marca("suscripcion_fin", { activa: Boolean(data.hasActivePlan) });
       } catch (error) {
         console.error("Error validando suscripción:", error);
+        globalThis.__adamiaDiag?.marca("suscripcion_fin", { error: true });
         try {
           const profile = await initializeClock({ company: idEmpresa, slug: companySlug });
           setSubscriptionActive(Date.now() - Date.parse(profile.prepared_at) < 7 * 86400000);
@@ -444,7 +469,7 @@ export default function RelojChecador({
                   Adamia - Sistema de Asistencia
                 </h1>
                 <div className="py-2">
-                  <p className="text-6xl font-black text-slate-900 tracking-tighter antialiased flex items-end justify-center gap-2">
+                  <p onClick={tocarHora} className="text-6xl font-black text-slate-900 tracking-tighter antialiased flex items-end justify-center gap-2 select-none">
                     <span>{horaActual.replace(/ (AM|PM)/, "")}</span>
 
                     <span className="text-2xl text-blue-500 font-bold mt-2">
