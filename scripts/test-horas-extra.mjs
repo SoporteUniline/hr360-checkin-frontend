@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   cambiosAutorizar, cambiosNoAutorizar, cambiosQuitar, estadoHorasExtra, minutosDespuesDelHorario,
-  resumenHorasExtra, salidaProgramada, valoresPrevios,
+  ordenarPorHorasExtra, resumenHorasExtra, salidaProgramada, valoresPrevios,
 } from "../src/lib/asistencia/horasExtra.mjs";
 
 const base = {
@@ -75,4 +75,16 @@ test("autorizar y quitar: campos que se guardan", () => {
 test("resumen del periodo", () => {
   const regs = [base, { ...base, hrs_extra: 1 }, { ...base, salida: "2026-11-18 17:00:00" }, { ...base, ...cambiosNoAutorizar(base) }];
   assert.deepEqual(resumenHorasExtra(regs), { total: 3, pendientes: 1, autorizadas: 1, noAutorizadas: 1 });
+});
+
+test("orden: por autorizar (más minutos primero) → autorizadas → no autorizadas → sin", () => {
+  const regs = [
+    { ...base, id: "sin", salida: "2026-11-18 17:00:00" },
+    { ...base, id: "aut", hrs_extra: 1 },
+    { ...base, id: "p20", salida: "2026-11-18 17:20:00" },
+    { ...base, id: "no", ...cambiosNoAutorizar(base) },
+    { ...base, id: "p102" },
+  ];
+  assert.deepEqual(ordenarPorHorasExtra(regs).map((r) => r.id), ["p102", "p20", "aut", "no", "sin"]);
+  assert.deepEqual(ordenarPorHorasExtra(regs, { orden: "asc" }).map((r) => r.id), ["sin", "no", "aut", "p20", "p102"]);
 });
