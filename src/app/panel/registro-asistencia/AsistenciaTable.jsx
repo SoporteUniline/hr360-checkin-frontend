@@ -19,7 +19,8 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import HeaderMultiFilter from "@/components/tabla/HeaderMultiFilter";
 import ActiveFilterChips from "@/components/tabla/ActiveFilterChips";
 import { ArrowUpDown, ArrowUp, ArrowDown, ChevronDown } from "lucide-react";
-import { calcularResumenJornada } from "@/utils/asistenciaHoras";
+import { calcularResumenJornada, formatearMinutos } from "@/utils/asistenciaHoras";
+import { useSnackbar } from "notistack";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -86,6 +87,7 @@ export default function AsistenciaTable({
   onResetFilters,
   empresaActiva,
   filterOptionsRows,
+  cargarPeriodoParaExportar,
   page = 1,
   limit = 10,
   onHeaderFilteringMetaChange,
@@ -236,62 +238,64 @@ export default function AsistenciaTable({
     [optionSourceRows],
   );
 
-  const filteredRowsAll = useMemo(
-    () =>
-      optionSourceRows.filter((registro) => {
-        const nombreEmpleado = getEmpleadoNombre(registro);
-        const pasaEmpleado =
-          empleadoSeleccionado.length === 0 ||
-          empleadoSeleccionado.includes(nombreEmpleado);
-        const unidadRegistro =
-          registro.unidad_negocio ||
-          registro.sucursal ||
-          registro.empresa_nombre;
-        const pasaUnidad =
-          unidadSeleccionada.length === 0 ||
-          unidadSeleccionada.includes(unidadRegistro);
-        const pasaDepartamento =
-          departamentoSeleccionado.length === 0 ||
-          departamentoSeleccionado.includes(registro.departamento);
-        const pasaTipo =
-          tipoSeleccionado.length === 0 ||
-          tipoSeleccionado.includes(registro.tipo_registro_nombre);
-        const pasaCorreccion =
-          correccionSeleccionada.length === 0 ||
-          correccionSeleccionada.includes(toCorreccion(registro));
-        const pasaAsistio =
-          asistioSeleccionado.length === 0 ||
-          asistioSeleccionado.includes(toYesNo(registro.asistencia));
-        const pasaGoce =
-          goceSeleccionado.length === 0 ||
-          goceSeleccionado.includes(toYesNo(registro.goce_sueldo));
-        const pasaHorasExtra =
-          horasExtraSeleccionado.length === 0 ||
-          horasExtraSeleccionado.includes(toYesNo(registro.hrs_extra));
-        const pasaFestivo =
-          festivoSeleccionado.length === 0 ||
-          festivoSeleccionado.includes(toYesNo(registro.es_festivo));
-        const pasaAutorizacion =
-          autorizacionSeleccionada.length === 0 ||
-          autorizacionSeleccionada.includes(toAutorizacion(registro));
-        const pasaEstadoAsistencia =
-          estadoAsistenciaSeleccionado.length === 0 ||
-          estadoAsistenciaSeleccionado.includes(registro.estadoAsistencia);
+  // Filtros por columna: se aplican igual a la vista y a lo que se exporta.
+  const pasaFiltrosEncabezado = (registro) => {
+    const nombreEmpleado = getEmpleadoNombre(registro);
+    const pasaEmpleado =
+      empleadoSeleccionado.length === 0 ||
+      empleadoSeleccionado.includes(nombreEmpleado);
+    const unidadRegistro =
+      registro.unidad_negocio ||
+      registro.sucursal ||
+      registro.empresa_nombre;
+    const pasaUnidad =
+      unidadSeleccionada.length === 0 ||
+      unidadSeleccionada.includes(unidadRegistro);
+    const pasaDepartamento =
+      departamentoSeleccionado.length === 0 ||
+      departamentoSeleccionado.includes(registro.departamento);
+    const pasaTipo =
+      tipoSeleccionado.length === 0 ||
+      tipoSeleccionado.includes(registro.tipo_registro_nombre);
+    const pasaCorreccion =
+      correccionSeleccionada.length === 0 ||
+      correccionSeleccionada.includes(toCorreccion(registro));
+    const pasaAsistio =
+      asistioSeleccionado.length === 0 ||
+      asistioSeleccionado.includes(toYesNo(registro.asistencia));
+    const pasaGoce =
+      goceSeleccionado.length === 0 ||
+      goceSeleccionado.includes(toYesNo(registro.goce_sueldo));
+    const pasaHorasExtra =
+      horasExtraSeleccionado.length === 0 ||
+      horasExtraSeleccionado.includes(toYesNo(registro.hrs_extra));
+    const pasaFestivo =
+      festivoSeleccionado.length === 0 ||
+      festivoSeleccionado.includes(toYesNo(registro.es_festivo));
+    const pasaAutorizacion =
+      autorizacionSeleccionada.length === 0 ||
+      autorizacionSeleccionada.includes(toAutorizacion(registro));
+    const pasaEstadoAsistencia =
+      estadoAsistenciaSeleccionado.length === 0 ||
+      estadoAsistenciaSeleccionado.includes(registro.estadoAsistencia);
 
-        return (
-          pasaEmpleado &&
-          pasaUnidad &&
-          pasaDepartamento &&
-          pasaTipo &&
-          pasaCorreccion &&
-          pasaAsistio &&
-          pasaGoce &&
-          pasaHorasExtra &&
-          pasaFestivo &&
-          pasaAutorizacion &&
-          pasaEstadoAsistencia
-        );
-      }),
+    return (
+      pasaEmpleado &&
+      pasaUnidad &&
+      pasaDepartamento &&
+      pasaTipo &&
+      pasaCorreccion &&
+      pasaAsistio &&
+      pasaGoce &&
+      pasaHorasExtra &&
+      pasaFestivo &&
+      pasaAutorizacion &&
+      pasaEstadoAsistencia
+    );
+  };
+  const filteredRowsAll = useMemo(
+    () => optionSourceRows.filter(pasaFiltrosEncabezado),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       optionSourceRows,
       empleadoSeleccionado,
@@ -427,62 +431,91 @@ export default function AsistenciaTable({
     { header: "Estado", key: "estadoAsistencia" },
   ];
 
-  const exportData = (hasActiveHeaderFilters ? filteredRowsAll : filtrados).map(
-    (r) => {
-      const rowTimezone = r.zona_horaria || fallbackTimezone;
+  const aFilaExcel = (r) => {
+    const rowTimezone = r.zona_horaria || fallbackTimezone;
 
-      const { jornada, diferencia } = calcularResumenJornada(r, rowTimezone);
+    const { jornada, minutosDiferencia } = calcularResumenJornada(r);
 
-      return {
-        nombre: r.nombre,
-        apellido_paterno: r.apellido_paterno,
-        apellido_materno: r.apellido_materno,
-        unidad_negocio: r.unidad_negocio || r.sucursal || r.empresa_nombre,
-        nip: r.nip,
-        departamento: r.departamento,
-        tipo_registro_nombre: r.tipo_registro_nombre,
+    return {
+      nombre: r.nombre,
+      apellido_paterno: r.apellido_paterno,
+      apellido_materno: r.apellido_materno,
+      unidad_negocio: r.unidad_negocio || r.sucursal || r.empresa_nombre,
+      nip: r.nip,
+      departamento: r.departamento,
+      tipo_registro_nombre: r.tipo_registro_nombre,
 
-        fecha: r.fecha
-          ? dayjs.tz(r.fecha, DB_TIMEZONE).tz(rowTimezone).format("DD/MM/YYYY")
-          : "-",
+      fecha: r.fecha
+        ? dayjs.tz(r.fecha, DB_TIMEZONE).tz(rowTimezone).format("DD/MM/YYYY")
+        : "-",
 
-        correccion: r.correccion ? "Sí" : "No",
+      correccion: r.correccion ? "Sí" : "No",
 
-        entrada: r.entrada
-          ? dayjs
-              .tz(r.entrada, DB_TIMEZONE)
-              .tz(rowTimezone)
-              .format("DD/MM/YYYY HH:mm:ss")
-          : "-",
+      entrada: r.entrada
+        ? dayjs
+            .tz(r.entrada, DB_TIMEZONE)
+            .tz(rowTimezone)
+            .format("DD/MM/YYYY HH:mm:ss")
+        : "-",
 
-        salida: r.salida
-          ? dayjs
-              .tz(r.salida, DB_TIMEZONE)
-              .tz(rowTimezone)
-              .format("DD/MM/YYYY HH:mm:ss")
-          : "-",
+      salida: r.salida
+        ? dayjs
+            .tz(r.salida, DB_TIMEZONE)
+            .tz(rowTimezone)
+            .format("DD/MM/YYYY HH:mm:ss")
+        : "-",
 
-        jornada,
-        hrs_diferencia: diferencia,
+      jornada,
+      hrs_diferencia: formatearMinutos(minutosDiferencia, { signo: true }),
 
-        autorizado_por: r.autorizado_por ?? "-",
-        asistencia: r.asistencia ? "Sí" : "No",
-        goce_sueldo: r.goce_sueldo ? "Sí" : "No",
-        pago_triple: r.pago_triple ? "Sí" : "No",
-        es_domingo: r.es_domingo ? "Sí" : "No",
-        prima_dominical: r.prima_dominical ?? "-",
-        es_festivo: r.es_festivo ? "Sí" : "No",
-        porcentaje_dia_festivo: r.porcentaje_dia_festivo ?? "-",
-        hrs_extra: r.hrs_extra ? "Sí" : "No",
-        forma_pago_extras: r.forma_pago_extras ?? "-",
-        extras_autorizadas_por: r.extras_autorizadas_por ?? "-",
-        hrs_comida: r.hrs_comida ?? "-",
-        notas: r.notas ?? "-",
-        notas_hrs_extra: r.notas_hrs_extra ?? "-",
-        estadoAsistencia: r.estadoAsistencia,
-      };
-    },
-  );
+      autorizado_por: r.autorizado_por ?? "-",
+      asistencia: r.asistencia ? "Sí" : "No",
+      goce_sueldo: r.goce_sueldo ? "Sí" : "No",
+      pago_triple: r.pago_triple ? "Sí" : "No",
+      es_domingo: r.es_domingo ? "Sí" : "No",
+      prima_dominical: r.prima_dominical ?? "-",
+      es_festivo: r.es_festivo ? "Sí" : "No",
+      porcentaje_dia_festivo: r.porcentaje_dia_festivo ?? "-",
+      hrs_extra: r.hrs_extra ? "Sí" : "No",
+      forma_pago_extras: r.forma_pago_extras ?? "-",
+      extras_autorizadas_por: r.extras_autorizadas_por ?? "-",
+      hrs_comida: r.hrs_comida ?? "-",
+      notas: r.notas ?? "-",
+      notas_hrs_extra: r.notas_hrs_extra ?? "-",
+      estadoAsistencia: r.estadoAsistencia,
+    };
+  };
+
+  // Exporta TODO el periodo con los filtros activos (no solo la página visible).
+  const { enqueueSnackbar } = useSnackbar();
+  const [exportando, setExportando] = useState(false);
+  const exportarPeriodo = async () => {
+    if (exportando) return;
+    setExportando(true);
+    try {
+      const { registros, total, completo } = cargarPeriodoParaExportar
+        ? await cargarPeriodoParaExportar()
+        : { registros: filtrados, total: filtrados.length, completo: true };
+      if (!completo) {
+        enqueueSnackbar(`El servidor devolvió ${registros.length} de ${total} registros. No se exportó para no entregar un archivo incompleto.`, { variant: "error" });
+        return;
+      }
+      const filas = registros.filter(pasaFiltrosEncabezado);
+      if (!filas.length) {
+        enqueueSnackbar("No hay registros en el periodo con estos filtros.", { variant: "info" });
+        return;
+      }
+      await exportToExcel(filas.map(aFilaExcel), columns, "Reporte_Asistencias", {
+        sheetName: "Asistencias",
+        headerColor: "2563EB",
+      });
+      enqueueSnackbar(`Se exportaron ${filas.length} registros del periodo.`, { variant: "success" });
+    } catch (error) {
+      enqueueSnackbar("No se pudo exportar: no se descargó el periodo completo. Intenta de nuevo.", { variant: "error" });
+    } finally {
+      setExportando(false);
+    }
+  };
 
   const handleSort = (sortBy) => {
     setSortConfig((prev) => ({
@@ -537,17 +570,13 @@ export default function AsistenciaTable({
           <div className="flex flex-col gap-3 border-b border-slate-100 px-4 py-3 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
               <Button
-                onClick={() =>
-                  exportToExcel(exportData, columns, "Reporte_Asistencias", {
-                    sheetName: "Asistencias",
-                    headerColor: "2563EB",
-                  })
-                }
+                onClick={exportarPeriodo}
+                disabled={exportando}
                 variant="outline"
                 className="rounded-xl border-slate-200 text-slate-600 shadow-none hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
               >
                 <FileSpreadsheet className="h-4 w-4 mr-2" />
-                Exportar Excel
+                {exportando ? "Exportando periodo…" : "Exportar Excel"}
               </Button>
 
               <Button

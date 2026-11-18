@@ -28,7 +28,7 @@ import axios from "@/lib/axios";
 import { fetcherWithToken } from "@/lib/fetcher";
 import { useAuth, useEmpresaTimezone } from "@/context/AuthContext";
 import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
-import { calcularResumenJornada } from "@/utils/asistenciaHoras";
+import { calcularResumenJornada, formatearMinutos } from "@/utils/asistenciaHoras";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Combobox } from "@/components/Combobox";
@@ -147,16 +147,13 @@ function incidenciasDeRegistro(r, fallbackTimezone) {
   }
 
   const resumen = calcularResumenJornada(r, tz);
-  if (
-    Number(resumen?.diferencia || 0) > 0.01 &&
-    !esVerdadero(r?.hrs_extra)
-  ) {
+  if (resumen.minutosDiferencia > 0 && !esVerdadero(r?.hrs_extra)) {
     incidencias.push({
       tipo: "H. extra",
       severidad: "media",
-      detalle: `${Number(resumen.diferencia).toFixed(2)} h sin autorizar`,
+      detalle: `${formatearMinutos(resumen.minutosDiferencia)} sin autorizar`,
       accion: "extra",
-      horasExtra: Number(resumen.diferencia),
+      minutosExtra: resumen.minutosDiferencia,
     });
   }
 
@@ -354,7 +351,7 @@ export default function CentroIncidenciasPage() {
         const festivos = new Set();
         let faltas = 0;
         let retardos = 0;
-        let horasExtra = 0;
+        let minutosExtra = 0;
         const incidencias = [];
 
         emp.registros.forEach((r) => {
@@ -377,9 +374,7 @@ export default function CentroIncidenciasPage() {
 
           const tz = r?.zona_horaria || fallbackTimezone;
           const resumen = calcularResumenJornada(r, tz);
-          if (Number(resumen?.diferencia || 0) > 0) {
-            horasExtra += Number(resumen.diferencia || 0);
-          }
+          if (resumen.minutosDiferencia > 0) minutosExtra += resumen.minutosDiferencia;
 
           incidenciasDeRegistro(r, fallbackTimezone).forEach((inc, index) => {
             incidencias.push({
@@ -401,7 +396,7 @@ export default function CentroIncidenciasPage() {
           dias: dias.size,
           faltas,
           retardos,
-          horasExtra: Number(horasExtra.toFixed(2)),
+          minutosExtra,
           vacaciones: vacaciones.size,
           permisos: permisos.size,
           festivos: festivos.size,
@@ -434,7 +429,7 @@ export default function CentroIncidenciasPage() {
       if (filtro === "review") return emp.estado !== "ready";
       if (filtro === "faults") return emp.faltas > 0;
       if (filtro === "late") return emp.retardos > 0;
-      if (filtro === "extra") return emp.horasExtra > 0;
+      if (filtro === "extra") return emp.minutosExtra > 0;
       if (filtro === "vac") return emp.vacaciones > 0;
       if (filtro === "perm") return emp.permisos > 0;
       if (filtro === "holiday") return emp.festivos > 0;
@@ -632,7 +627,7 @@ export default function CentroIncidenciasPage() {
           dias: emp.dias,
           faltas: emp.faltas,
           retardos: emp.retardos,
-          extra: emp.horasExtra,
+          extra: formatearMinutos(emp.minutosExtra),
           vacaciones: emp.vacaciones,
           permisos: emp.permisos,
           festivos: emp.festivos,
@@ -1064,8 +1059,8 @@ export default function CentroIncidenciasPage() {
                         <td className={`px-2 py-3 text-center font-bold ${emp.retardos ? "text-orange-600" : "text-slate-500"}`}>
                           {emp.retardos}
                         </td>
-                        <td className={`px-2 py-3 text-center font-bold ${emp.horasExtra ? "text-blue-600" : "text-slate-500"}`}>
-                          {emp.horasExtra ? `${emp.horasExtra} h` : "0 h"}
+                        <td className={`px-2 py-3 text-center font-bold whitespace-nowrap ${emp.minutosExtra ? "text-blue-600" : "text-slate-500"}`}>
+                          {formatearMinutos(emp.minutosExtra)}
                         </td>
                         <td className="px-2 py-3 text-center font-semibold text-slate-600">
                           {emp.vacaciones}

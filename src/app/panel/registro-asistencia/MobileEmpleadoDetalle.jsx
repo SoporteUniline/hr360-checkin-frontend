@@ -23,6 +23,7 @@ import { useAuth, useEmpresaTimezone } from "@/context/AuthContext";
 import useAsistenciaActions from "@/hooks/useAsistenciaActions";
 import useTiposPermisoData from "@/hooks/useTiposPermisoData";
 import useEmpleadosData from "@/hooks/useEmpleadosData";
+import { formatearMinutos, minutosTrabajados, salidaEsDiaSiguiente, sumarDias } from "@/lib/asistencia/jornada.mjs";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -78,13 +79,16 @@ function getInitials(nombre = "", apellido = "") {
   return `${nombre[0] || ""}${apellido[0] || ""}`.toUpperCase();
 }
 
-function calcHours(entrada, salida) {
-  if (!entrada) return null;
-  const start = dayjs.tz(entrada, DB_TZ);
-  const end = salida ? dayjs.tz(salida, DB_TZ) : dayjs();
-  const mins = end.diff(start, "minute");
-  if (mins <= 0) return null;
-  return `${Math.floor(mins / 60)}:${String(mins % 60).padStart(2, "0")}`;
+// Con salida: mismo cálculo que la tabla (minutos exactos, nocturno, comida no pagada).
+// Sin salida (jornada en curso): tiempo transcurrido hasta ahora.
+function calcHours(registro) {
+  if (!registro?.entrada) return null;
+  if (registro.salida) {
+    const minutos = minutosTrabajados(registro);
+    return minutos == null ? null : formatearMinutos(minutos);
+  }
+  const mins = dayjs().diff(dayjs.tz(registro.entrada, DB_TZ), "minute");
+  return mins > 0 ? formatearMinutos(mins) : null;
 }
 
 const ESTADO_STYLES = {
@@ -210,7 +214,7 @@ export default function MobileEmpleadoDetalle({
   const salidaFmt = display.salida
     ? dayjs.tz(display.salida, DB_TZ).tz(tz).format("HH:mm")
     : null;
-  const horasTrabajadas = calcHours(display.entrada, display.salida);
+  const horasTrabajadas = calcHours(display);
 
   const estadoAsistenciaLocal = (() => {
     if (display.asistencia !== 1) return "Ausente";
@@ -269,7 +273,24 @@ export default function MobileEmpleadoDetalle({
         .tz(DB_TZ)
         .format("YYYY-MM-DD HH:mm:ss"),
     );
+    // Si ya hay salida, se recalcula su día respecto a la nueva entrada.
+    if (salidaEditFmt) {
+      const nuevaSalida = salidaConFecha(hora, salidaEditFmt);
+      const minuto = (v) => dayjs.tz(v, DB_TZ).format("YYYY-MM-DD HH:mm");
+      if (minuto(nuevaSalida) !== minuto(currentData.salida)) handleFieldChange("salida", nuevaSalida);
+    }
   };
+
+  // Turno nocturno: si la salida es menor o igual a la entrada, cae al día siguiente.
+  const salidaConFecha = (horaEntrada, hora) =>
+    dayjs
+      .tz(`${salidaEsDiaSiguiente(horaEntrada, hora) ? sumarDias(fechaBase, 1) : fechaBase} ${hora}`, tz)
+      .tz(DB_TZ)
+      .format("YYYY-MM-DD HH:mm:ss");
+  const salidaDiaSiguiente =
+    Boolean(currentData?.entrada && currentData?.salida) &&
+    dayjs.tz(currentData.salida, DB_TZ).tz(tz).format("YYYY-MM-DD") >
+      dayjs.tz(currentData.entrada, DB_TZ).tz(tz).format("YYYY-MM-DD");
 
   const onSalidaChange = (hora) => {
     if (!currentData?.entrada) {
@@ -277,15 +298,7 @@ export default function MobileEmpleadoDetalle({
       return;
     }
 
-    handleFieldChange(
-      "salida",
-      hora
-        ? dayjs
-            .tz(`${fechaBase} ${hora}`, tz)
-            .tz(DB_TZ)
-            .format("YYYY-MM-DD HH:mm:ss")
-        : null,
-    );
+    handleFieldChange("salida", hora ? salidaConFecha(entradaEditFmt, hora) : null);
   };
 
   return (
@@ -441,6 +454,9 @@ export default function MobileEmpleadoDetalle({
                         value={salidaEditFmt}
                         onChange={(e) => onSalidaChange(e.target.value)}
                       />
+                      {salidaDiaSiguiente && (
+                        <p className="mt-1 text-[11px] font-semibold text-blue-600">+1 día</p>
+                      )}
                     </div>
                   </div>
                 </div>

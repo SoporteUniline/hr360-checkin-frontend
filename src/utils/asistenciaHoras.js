@@ -1,42 +1,29 @@
 // utils/asistenciaHoras.js
-import dayjs from "dayjs";
-import utc from "dayjs/plugin/utc";
-import timezone from "dayjs/plugin/timezone";
+// Envoltura de compatibilidad: el cálculo vive en src/lib/asistencia/jornada.mjs
+// (minutos enteros, turnos nocturnos, comida descontada en ambos lados).
+// Se conservan los nombres y campos en horas para quien aún los use.
+import {
+  formatearMinutos,
+  minutosProgramados,
+  minutosTrabajados,
+  resumenJornada,
+} from "@/lib/asistencia/jornada.mjs";
 
-dayjs.extend(utc);
-dayjs.extend(timezone);
+export { formatearMinutos };
 
-const DB_TIMEZONE = "America/Mexico_City";
+const aHoras = (minutos) => (minutos == null ? 0 : Number((minutos / 60).toFixed(2)));
 
-export const calcularHorasDebiaTrabajar = (data) => {
-  if (!data.hora_entrada_programada || !data.hora_salida_programada) return 0;
+export const calcularHorasDebiaTrabajar = (data) => aHoras(minutosProgramados(data));
 
-  const entrada = dayjs(`2000-01-01 ${data.hora_entrada_programada}`);
-  const salida = dayjs(`2000-01-01 ${data.hora_salida_programada}`);
+export const calcularHorasTrabajadas = (data) => aHoras(minutosTrabajados(data));
 
-  return Number((salida.diff(entrada, "minute") / 60).toFixed(2));
-};
-
-export const calcularHorasTrabajadas = (data, userTimezone) => {
-  if (!data.entrada || !data.salida) return 0;
-
-  const entrada = dayjs.tz(data.entrada, DB_TIMEZONE).tz(userTimezone);
-  const salida = dayjs.tz(data.salida, DB_TIMEZONE).tz(userTimezone);
-  const comida = Number(data.hrs_comida || 0);
-
-  return Number((salida.diff(entrada, "minute") / 60 - comida).toFixed(2));
-};
-
-export const calcularResumenJornada = (data, userTimezone) => {
-  const horasDebia = calcularHorasDebiaTrabajar(data);
-  const horasTrabajo = calcularHorasTrabajadas(data, userTimezone);
-
-  const diferencia = Number((horasTrabajo - horasDebia).toFixed(2));
-
+// La zona horaria ya no cambia el resultado: entrada y salida vienen en la misma zona.
+export const calcularResumenJornada = (data) => {
+  const r = resumenJornada(data);
   return {
-    horasDebia,
-    horasTrabajo,
-    diferencia,
-    jornada: horasDebia ? `${horasTrabajo} / ${horasDebia} Jor.` : "-",
+    ...r,
+    horasDebia: aHoras(r.minutosProgramados),
+    horasTrabajo: aHoras(r.minutosTrabajados),
+    diferencia: r.minutosDiferencia == null ? null : aHoras(r.minutosDiferencia),
   };
 };
