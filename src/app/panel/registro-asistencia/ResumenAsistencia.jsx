@@ -14,6 +14,9 @@ export default function ResumenAsistencia({
   horasExtra,
   setHorasExtra,
   resumenHorasExtra = null,
+  sinComida = false,
+  setSinComida = () => {},
+  totalSinComida = 0,
   filtroEstadoAsistencia,
   setFiltroEstadoAsistencia,
   setPage,
@@ -189,6 +192,26 @@ export default function ResumenAsistencia({
               </span>
             )}
           </button>
+
+          {(totalSinComida > 0 || sinComida) && (
+            <button
+              type="button"
+              onClick={() => {
+                setSinComida(!sinComida);
+                setPage(1);
+              }}
+              title="Su horario tiene comida pero solo checaron entrada y salida: no se les descontó nada"
+              className={`inline-flex items-center gap-1.5 rounded-md border px-1.5 text-xs font-semibold transition-colors ${
+                sinComida
+                  ? "border-amber-300 bg-amber-100 text-amber-900"
+                  : "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100"
+              }`}
+            >
+              ⚠ No marcaron salida a comer{" "}
+              <b className="font-extrabold tabular-nums">{totalSinComida}</b>
+              {sinComida && <span className="text-[10px] font-bold text-amber-600">✕ quitar</span>}
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -18,7 +18,7 @@ import { useAuth } from "@/context/AuthContext";
 import MobileFiltersDrawer from "./MobileFiltersDrawer";
 import MobileEmpleadoDetalle from "./MobileEmpleadoDetalle";
 import { estadoHorasExtra } from "@/lib/asistencia/horasExtra.mjs";
-import { formatearMinutos } from "@/lib/asistencia/jornada.mjs";
+import { formatearMinutos, sinSalidaAComer } from "@/lib/asistencia/jornada.mjs";
 import ClockNavigation from '@/components/Clock/ClockNavigation';
 import LocalClockCaptures from '@/components/Clock/LocalClockCaptures';
 import { ArrowLeft, ArrowRight } from "lucide-react";
@@ -159,6 +159,9 @@ function EmpleadoCard({ registro, index, totalCount, onClick }) {
           <p className="mt-0.5 truncate text-[11px] font-semibold text-orange-700">
             {formatearMinutos(extra.minutos)} extra por autorizar
           </p>
+        )}
+        {sinSalidaAComer(registro) && (
+          <p className="mt-0.5 truncate text-[11px] font-semibold text-amber-700">⚠ No marcó salida a comer</p>
         )}
       </div>
 

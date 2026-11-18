@@ -5,11 +5,11 @@ import HistorialEmpleadoDialog from "./HistorialEmpleadoDialog";
 import CeldaEditado, { crearFormateadorCambios } from "./CeldaEditado";
 import { avisoCalendario, correccionesCalendario } from "@/lib/asistencia/calendario.mjs";
 import { estadoHorasExtra } from "@/lib/asistencia/horasExtra.mjs";
-import CeldaHorasExtra from "./CeldaHorasExtra";
+import CeldaHorasExtra, { CeldaAutorizarExtra } from "./CeldaHorasExtra";
 import PanelEditarAsistencia from "./PanelEditarAsistencia";
 import { useEmpresaTimezone } from "@/context/AuthContext";
 import { calcularResumenJornada, formatearMinutos } from "@/utils/asistenciaHoras";
-import { salidaEsDiaSiguiente, sumarDias } from "@/lib/asistencia/jornada.mjs";
+import { minutosDescanso, salidaEsDiaSiguiente, sinSalidaAComer, sumarDias } from "@/lib/asistencia/jornada.mjs";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -64,6 +64,8 @@ export default function AsistenciaRow({
 
   const { minutosTrabajados, minutosProgramados, minutosDiferencia } = calcularResumenJornada(registro);
   const esDescanso = /descanso/i.test(registro.tipo_registro_nombre ?? "");
+  const noMarcoComida = sinSalidaAComer(registro);
+  const descansoTomado = minutosDescanso(registro);
   const sinChecadas = !registro.entrada && !registro.salida;
   const avanceJornada =
     minutosTrabajados != null && minutosProgramados
@@ -84,6 +86,10 @@ export default function AsistenciaRow({
   const fechaBase = String(currentData.fecha ?? "").slice(0, 10);
   const horaLocal = (valor) =>
     valor ? dayjs.tz(valor, DB_TIMEZONE).tz(userTimezone).format("HH:mm") : "";
+  // Tramos del reloj para el detalle de la jornada (09:00–11:00 · 11:30–14:00).
+  const detalleTramos = Array.isArray(registro.tramos_checadas) && registro.tramos_checadas.length > 1
+    ? registro.tramos_checadas.map((t) => `${horaLocal(t.entrada)}–${horaLocal(t.salida)}`).join(" · ")
+    : null;
   const fechaLocal = (valor) =>
     valor ? dayjs.tz(valor, DB_TIMEZONE).tz(userTimezone).format("YYYY-MM-DD") : "";
   const aBaseDeDatos = (fecha, hora) =>
@@ -232,7 +238,7 @@ export default function AsistenciaRow({
                 ) : sinChecadas ? (
                   <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500">Sin checadas</span>
                 ) : (
-                  <div>
+                  <div title={detalleTramos ? `Tramos: ${detalleTramos} · descanso ${formatearMinutos(descansoTomado)}` : undefined}>
                     <span className={esDescanso ? "" : "font-semibold text-slate-900"}>{formatearMinutos(minutosTrabajados)}</span>
                     {minutosProgramados != null && (
                       <span className="text-slate-400"> de {formatearMinutos(minutosProgramados)}</span>
@@ -244,6 +250,17 @@ export default function AsistenciaRow({
                           style={{ width: `${avanceJornada}%` }}
                         />
                       </div>
+                    )}
+                    {noMarcoComida && (
+                      <span
+                        className="mt-1 inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800"
+                        title="Su horario tiene comida, pero solo checó entrada y salida: no se le descontó nada."
+                      >
+                        ⚠ No marcó salida a comer
+                      </span>
+                    )}
+                    {detalleTramos && (
+                      <span className="mt-1 block text-[11px] text-slate-400">Descanso {formatearMinutos(descansoTomado)}</span>
                     )}
                   </div>
                 )}
@@ -317,15 +334,25 @@ export default function AsistenciaRow({
             )}
 
             {isColVisible("hrs_extra") && (
-              <TableCell className="min-w-[230px]">
+              <TableCell>
                 <CeldaHorasExtra
+                  registro={registro}
+                  info={infoExtra}
+                  readOnly={readOnly || !horasExtra}
+                  seleccionado={horasExtra?.seleccionados?.has(registro.id)}
+                  onSeleccionar={(v) => horasExtra?.seleccionar(registro.id, v)}
+                />
+              </TableCell>
+            )}
+            {/* «¿Autorizar?» se muestra junto con «Horas extra» (misma opción en Columnas). */}
+            {isColVisible("hrs_extra") && (
+              <TableCell>
+                <CeldaAutorizarExtra
                   registro={registro}
                   info={infoExtra}
                   autorizador={nombreAutorizador("_extra_autorizador")}
                   readOnly={readOnly || !horasExtra}
                   guardando={horasExtra?.guardando}
-                  seleccionado={horasExtra?.seleccionados?.has(registro.id)}
-                  onSeleccionar={(v) => horasExtra?.seleccionar(registro.id, v)}
                   onAutorizar={(opciones) => horasExtra?.autorizar(registro, opciones)}
                   onNoAutorizar={() => horasExtra?.noAutorizar(registro)}
                   onQuitar={() => horasExtra?.quitar(registro)}
@@ -339,7 +366,7 @@ export default function AsistenciaRow({
             )}
             {isColVisible("hrs_comida") && (
               <TableCell className="text-center">
-                {registro.hrs_comida ? registro.hrs_comida : "-"}
+                {descansoTomado != null ? formatearMinutos(descansoTomado) : registro.hrs_comida ? `${registro.hrs_comida} h` : "-"}
               </TableCell>
             )}
             {isColVisible("notas") && (

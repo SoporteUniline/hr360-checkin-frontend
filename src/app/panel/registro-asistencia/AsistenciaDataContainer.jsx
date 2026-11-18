@@ -20,6 +20,7 @@ import { indiceFestivos as crearIndiceFestivos } from "@/lib/asistencia/calendar
 import useSWR from "swr";
 import { useEmpresaTimezone } from "@/context/AuthContext";
 import { resumenHorasExtra as resumenHorasExtraPeriodo } from "@/lib/asistencia/horasExtra.mjs";
+import { sinSalidaAComer } from "@/lib/asistencia/jornada.mjs";
 
 const DEFAULT_SORT_CONFIG = {
   sortBy: "fecha",
@@ -46,6 +47,7 @@ export default function AsistenciaDataContainer({
   soloPresentes,
   soloAusentes,
   horasExtra,
+  sinComida = false,
   sinGoceDeSueldo,
   diasFestivos,
   requiereAutorizacion,
@@ -216,6 +218,8 @@ export default function AsistenciaDataContainer({
     () => resumenHorasExtraPeriodo(filasPeriodo, (r) => r.zona_horaria || zonaEmpresa),
     [filasPeriodo, zonaEmpresa],
   );
+  // Quienes no marcaron salida a comer (su horario tiene comida y solo hay un tramo).
+  const totalSinComida = useMemo(() => filasPeriodo.filter(sinSalidaAComer).length, [filasPeriodo]);
 
   const mostrarPaginacion = effectiveData?.aplicarPaginacion !== false;
   const totalRegistros = effectiveData?.total || 0;
@@ -294,6 +298,7 @@ export default function AsistenciaDataContainer({
           agrupar={agrupar}
           visibleColumns={visibleColumns}
           soloHorasExtra={horasExtra}
+          soloSinComida={sinComida}
           footer={
             mostrarPaginacion && registros.length > 0 ? (
               <TablePagination
@@ -332,6 +337,7 @@ export default function AsistenciaDataContainer({
     ),
     data: effectiveData,
     resumenHorasExtra,
+    totalSinComida,
     localEvents,
     mutate,
   };

@@ -49,6 +49,13 @@ Object.assign(registros[5], { nombre: "Extra", salida: "2026-11-13 18:42:00" });
 Object.assign(registros[6], { nombre: "Autorizada", salida: "2026-11-13 19:20:00", hrs_extra: 1, extras_autorizadas_por: 9,
   nombre_extra_autorizador: "Laura", apellido_paterno_extra_autorizador: "Gómez", forma_pago_extras: "Pago de horas extras", notas_hrs_extra: "Inventario" });
 Object.assign(registros[7], { nombre: "NoAut", salida: "2026-11-13 17:00:00", correccion: 1, valores_originales: JSON.stringify({ salida: "2026-11-13 18:15:00" }) });
+// Comida en el horario (13:00–14:00): uno sin salida a comer (un solo tramo) y uno con dos tramos.
+const comidaHorario = { hora_salida_comida_programada: "13:00:00", hora_regreso_comida_programada: "14:00:00" };
+Object.assign(registros[8], { nombre: "SinComida", ...comidaHorario,
+  tramos_checadas: [{ entrada: "2026-11-13 08:07:00", salida: "2026-11-13 17:20:00" }], minutos_trabajados_checadas: 553, minutos_descanso_checadas: 0 });
+Object.assign(registros[9], { nombre: "DosTramos", ...comidaHorario,
+  tramos_checadas: [{ entrada: "2026-11-13 08:07:00", salida: "2026-11-13 13:00:00" }, { entrada: "2026-11-13 14:00:00", salida: "2026-11-13 17:20:00" }],
+  minutos_trabajados_checadas: 493, minutos_descanso_checadas: 60 });
 Object.assign(registros[3], { nombre: "Editado", correccion: 1, valores_originales: JSON.stringify({ salida: "2026-11-13 13:19:00", id_tipo_permiso: 2 }) });
 
 const puts = [];
@@ -96,13 +103,28 @@ try {
   await page.goto(base + "/panel/registro-asistencia", { waitUntil: "domcontentloaded" });
   await page.getByText("Empleado0", { exact: false }).first().waitFor({ timeout: 30000 });
 
-  // 1) Horas en minutos: 08:07–17:20 con 1 h de comida = 8 h 13 min de 8 h programadas → +13 min.
+  // 1) Horas en minutos: sin tramos del reloj, 08:07–17:20 = 9 h 13 min (la comida no checada no se descuenta);
+  //    programado 8 h (horario 9 h − 1 h de comida) → +1 h 13 min.
   const fila0 = page.locator("tr", { hasText: "Empleado0" }).first();
-  assert.match(await fila0.innerText(), /8 h 13 min de 8 h/);
-  assert.match(await fila0.innerText(), /\+13 min/);
+  assert.match(await fila0.innerText(), /9 h 13 min de 8 h/);
+  assert.match(await fila0.innerText(), /\+1 h 13 min/);
+  // 1c) Comida: un solo tramo con comida en el horario → alerta; dos tramos → el hueco es descanso.
+  const filaSinComida = page.locator("tr", { hasText: "SinComida Prueba" }).first();
+  assert.match(await filaSinComida.innerText(), /9 h 13 min de 8 h[\s\S]*No marcó salida a comer/);
+  const filaTramos = page.locator("tr", { hasText: "DosTramos Prueba" }).first();
+  assert.match(await filaTramos.innerText(), /8 h 13 min de 8 h[\s\S]*Descanso 1 h/);
+  assert.doesNotMatch(await filaTramos.innerText(), /No marcó salida a comer/);
+  const alertaComida = page.getByRole("button", { name: /No marcaron salida a comer/ });
+  assert.match(await alertaComida.innerText(), /No marcaron salida a comer\s*1/);
+  await alertaComida.click();
+  await page.waitForFunction(() => document.querySelectorAll("tbody tr").length < 5);
+  assert.equal(await page.locator("tr", { hasText: "Prueba" }).count(), 1);
+  if (process.env.CAPTURAS) await page.screenshot({ path: process.env.CAPTURAS + "/comida-alerta.png" });
+  await alertaComida.click();
+  await page.waitForFunction(() => document.querySelectorAll("tbody tr").length >= 25);
   // 1a) Balance: solo signo y número (±10 min en gris); estado con palabra completa; nombre fijo a la izquierda.
   assert.doesNotMatch(await fila0.innerText(), /Sobró|Faltó/);
-  assert.match(await fila0.locator("span.rounded-full", { hasText: "+13 min" }).first().getAttribute("class"), /bg-emerald-50/);
+  assert.match(await fila0.locator("span.rounded-full", { hasText: "+1 h 13 min" }).first().getAttribute("class"), /bg-emerald-50/);
   assert.match(await fila0.innerText(), /\bPresente\b/);
   assert.match(await fila0.locator("td").first().getAttribute("class"), /sticky left-0/);
   // 1b) Entrada y salida sin segundos.
@@ -144,7 +166,7 @@ try {
   const esperarPuts = async (n) => { for (let i = 0; i < 60 && puts.length < n; i++) await dormir(100); assert.equal(puts.length, n, JSON.stringify(puts)); };
   const filaExtra = page.locator("tr", { hasText: "Extra Prueba" }).first();
   assert.match(await filaExtra.innerText(), /1 h 42 min/);
-  await filaExtra.getByRole("button", { name: "Autorizar", exact: true }).click();
+  await filaExtra.getByRole("button", { name: "Sí", exact: true }).click();
   await esperarPuts(1);
   assert.deepEqual(puts[0], { hrs_extra: 1, forma_pago_extras: "Pago de horas extras", extras_autorizadas_por: 7 });
   await page.getByText("Extra Prueba: horas extra autorizadas.").waitFor({ timeout: 10000 });
@@ -157,15 +179,20 @@ try {
   assert.deepEqual(puts[2], { hrs_extra: 0, salida: "2026-11-13 17:00:00", notas_hrs_extra: "No autorizadas por RH Prueba · salida del reloj 2026-11-13 18:42" });
   // Autorizada: quién, forma de pago y nota; «Quitar» solo baja hrs_extra.
   const filaAut = page.locator("tr", { hasText: "Autorizada Prueba" }).first();
-  assert.match(await filaAut.innerText(), /2 h 20 min[\s\S]*Laura Gómez · Pago de horas extras[\s\S]*Inventario/);
-  await filaAut.getByRole("button", { name: "Quitar" }).click();
+  // Columna «¿Autorizar?»: Sí | No. El Sí activo; quién, forma de pago y nota en el detalle.
+  assert.match(await filaAut.innerText(), /2 h 20 min[\s\S]*Laura Gómez/);
+  const siAut = filaAut.getByRole("button", { name: "Sí", exact: true });
+  assert.equal(await siAut.getAttribute("aria-pressed"), "true");
+  assert.match(await filaAut.getByRole("group", { name: /Autorizar horas extra/ }).locator("..").getAttribute("title"), /Laura Gómez · Pago de horas extras · “Inventario”/);
+  await siAut.click(); // tocar el Sí activo lo quita
   await esperarPuts(4);
   assert.deepEqual(puts[3], { hrs_extra: 0 });
   // No autorizada: salida pagada al horario y la del reloj tachada; «Deshacer» regresa la del reloj.
   const filaNo = page.locator("tr", { hasText: "NoAut Prueba" }).first();
-  assert.match(await filaNo.innerText(), /No autorizadas · 1 h 15 min/);
+  assert.equal(await filaNo.getByRole("button", { name: "No", exact: true }).getAttribute("aria-pressed"), "true");
+  assert.match(await filaNo.locator(".line-through", { hasText: "1 h 15 min" }).first().innerText(), /1 h 15 min/);
   assert.match(await filaNo.locator(".line-through", { hasText: "18:15" }).first().innerText(), /18:15 reloj/);
-  await filaNo.getByRole("button", { name: "Deshacer" }).click();
+  await filaNo.getByRole("button", { name: "No", exact: true }).click(); // tocar el No activo lo deshace
   await esperarPuts(5);
   assert.deepEqual(puts[4], { salida: "2026-11-13 18:15:00", notas_hrs_extra: null });
   // Resumen: «Horas extra N · M por autorizar» y filtra en pantalla (los nocturnos no tienen).
@@ -214,8 +241,10 @@ try {
   const cabecera = hoja.getRow(1).values;
   const colJornada = cabecera.indexOf("Jornada");
   const colDif = cabecera.indexOf("Balance del día");
-  assert.equal(hoja.getRow(2).getCell(colJornada).value, "8 h 13 min / 8 h");
-  assert.equal(hoja.getRow(2).getCell(colDif).value, "+13 min");
+  assert.equal(hoja.getRow(2).getCell(colJornada).value, "9 h 13 min / 8 h");
+  assert.equal(hoja.getRow(2).getCell(colDif).value, "+1 h 13 min");
+  const colSinComida = cabecera.indexOf("No marcó salida a comer");
+  assert.ok(colSinComida > 0, "columna de la alerta de comida en el Excel");
   const colCambios = cabecera.indexOf("Cambios (antes → después)");
   const filaExcel = hoja.getRows(2, 25).find((row) => row.getCell(cabecera.indexOf("Nombre") > 0 ? cabecera.indexOf("Nombre") : 1).value === "Editado");
   assert.ok(colCambios > 0 && filaExcel, "columna de cambios y fila editada en Excel");
