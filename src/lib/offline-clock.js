@@ -9,7 +9,8 @@ const warmed = new Set();
 // Opening stored check-ins does not require the offline shell to finish updating.
 export const clockStore = () => storeLoading ||= import(/* webpackIgnore: true */ '/offline-clock/store.mjs?v=10');
 export const faceEngine = () => import(/* webpackIgnore: true */ '/offline-clock/face.mjs?v=4');
-const notify = () => window.dispatchEvent(new Event('adamia-queue'));
+// motivo 'perfil': solo se preparó el reloj; no cambió ninguna checada (las tablas no recargan).
+const notify = (motivo) => window.dispatchEvent(new CustomEvent('adamia-queue', { detail: { motivo } }));
 const profileKey = (company, employee) => employee ? `clock:employee:${company}:${employee}` : `clock:company:${company}`;
 const faceKey = (company, employee, session) => employee ? `faces:employee:${company}:${employee}:${session}` : `faces:company:${company}`;
 const preparingFaces = new Map();
@@ -170,7 +171,7 @@ export async function initializeClock({ company, employee = null, slug = null })
       }
     }
     void warmOfflineAssets().catch(() => {});
-    notify();
+    notify('perfil');
     return profile;
   })();
   initializing.set(key, promise);
@@ -282,7 +283,9 @@ export async function synchronizeClockQueue() {
       const run = group[0].scope === 'company' ? store.syncCompanyEvents : store.syncEvents;
       await run(group, async event => (await sendEvent(event)).data, store.saveEvent);
     }
-    notify();
+    // Solo avisa si había checadas por subir. Esta sincronización corre cada 30 s:
+    // avisar siempre hacía que Asistencias y Entradas/salidas recargaran todo el periodo.
+    if (groups.size) notify();
   })();
   try { await synchronizing; } finally { synchronizing = false; }
 }
