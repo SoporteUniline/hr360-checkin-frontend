@@ -5,7 +5,7 @@ import HistorialEmpleadoDialog from "./HistorialEmpleadoDialog";
 import CeldaEditado, { crearFormateadorCambios } from "./CeldaEditado";
 import { avisoCalendario, correccionesCalendario } from "@/lib/asistencia/calendario.mjs";
 import { estadoHorasExtra } from "@/lib/asistencia/horasExtra.mjs";
-import CeldaHorasExtra from "./CeldaHorasExtra";
+import CeldaHorasExtra, { CeldaAutorizarExtra } from "./CeldaHorasExtra";
 import PanelEditarAsistencia from "./PanelEditarAsistencia";
 import { useEmpresaTimezone } from "@/context/AuthContext";
 import { calcularResumenJornada, formatearMinutos } from "@/utils/asistenciaHoras";
@@ -334,15 +334,25 @@ export default function AsistenciaRow({
             )}
 
             {isColVisible("hrs_extra") && (
-              <TableCell className="min-w-[230px]">
+              <TableCell>
                 <CeldaHorasExtra
+                  registro={registro}
+                  info={infoExtra}
+                  readOnly={readOnly || !horasExtra}
+                  seleccionado={horasExtra?.seleccionados?.has(registro.id)}
+                  onSeleccionar={(v) => horasExtra?.seleccionar(registro.id, v)}
+                />
+              </TableCell>
+            )}
+            {/* «¿Autorizar?» se muestra junto con «Horas extra» (misma opción en Columnas). */}
+            {isColVisible("hrs_extra") && (
+              <TableCell>
+                <CeldaAutorizarExtra
                   registro={registro}
                   info={infoExtra}
                   autorizador={nombreAutorizador("_extra_autorizador")}
                   readOnly={readOnly || !horasExtra}
                   guardando={horasExtra?.guardando}
-                  seleccionado={horasExtra?.seleccionados?.has(registro.id)}
-                  onSeleccionar={(v) => horasExtra?.seleccionar(registro.id, v)}
                   onAutorizar={(opciones) => horasExtra?.autorizar(registro, opciones)}
                   onNoAutorizar={() => horasExtra?.noAutorizar(registro)}
                   onQuitar={() => horasExtra?.quitar(registro)}

@@ -142,7 +142,7 @@ export default function AsistenciaTable({
       if (col.key === "unidad" && empresaActiva !== "all") return false;
       if (col.key === "acciones" && readOnly) return false;
       return colVisible(col.key);
-    }).length || 1;
+    }).length + (colVisible("hrs_extra") ? 1 : 0) || 1; // +1: «¿Autorizar?» va con «Horas extra»
 
   const optionSourceRows = useMemo(
     () => (Array.isArray(filterOptionsRows) ? filterOptionsRows : filtrados),
@@ -1091,6 +1091,13 @@ export default function AsistenciaTable({
                         placeholder=""
                       />
                     </div>
+                  </TableHead>
+                )}
+                {colVisible("hrs_extra") && (
+                  <TableHead
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500`}
+                  >
+                    ¿Autorizar?
                   </TableHead>
                 )}
                 {colVisible("forma_pago") && (
