@@ -25,6 +25,7 @@ import useTiposPermisoData from "@/hooks/useTiposPermisoData";
 import useEmpleadosData from "@/hooks/useEmpleadosData";
 import { formatearMinutos, minutosTrabajados, salidaEsDiaSiguiente, sumarDias } from "@/lib/asistencia/jornada.mjs";
 import { cambiosRegistro } from "@/lib/asistencia/cambios.mjs";
+import { enmascararNip } from "@/lib/asistencia/calendario.mjs";
 import { crearFormateadorCambios } from "./CeldaEditado";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -223,7 +224,7 @@ export default function MobileEmpleadoDetalle({
   );
 
   const estadoAsistenciaLocal = (() => {
-    if (display.asistencia !== 1) return "Ausente";
+    if (!Number(display.asistencia)) return "Ausente";
 
     if (display.entrada && display.hora_entrada_programada) {
       const [h, m, s] = display.hora_entrada_programada.split(":").map(Number);
@@ -361,14 +362,14 @@ export default function MobileEmpleadoDetalle({
             <p className="text-gray-500 text-sm mt-2">
               {display.departamento}
               {empresa ? ` · ${empresa}` : ""}
-              {display.nip ? ` · #${display.nip}` : ""}
+              {display.nip ? ` · #${enmascararNip(display.nip)}` : ""}
             </p>
             <div className="flex flex-wrap justify-center gap-2 mt-3">
               <span className="bg-gray-50 border border-gray-200 text-gray-600 text-xs font-medium px-3 py-1 rounded-full">
                 {display.tipo_registro_nombre || "Turno regular"}
               </span>
               <span className="bg-gray-50 border border-gray-200 text-gray-600 text-xs font-medium px-3 py-1 rounded-full">
-                Goce: {display.goce_sueldo ? "Sí" : "No"}
+                Goce: {Number(display.goce_sueldo) ? "Sí" : "No"}
               </span>
             </div>
           </div>
@@ -473,15 +474,20 @@ export default function MobileEmpleadoDetalle({
                     Estado
                   </p>
                   <div className="bg-white rounded-2xl overflow-hidden border border-gray-100">
+                    {/* Asistió y goce los define el tipo de registro; no se mueven por separado. */}
                     <ToggleRow
                       label="Asistió"
-                      checked={currentData.asistencia}
-                      onChange={(val) => handleFieldChange("asistencia", val)}
+                      sublabel="Lo define el tipo de registro"
+                      checked={Boolean(Number(currentData.asistencia))}
+                      onChange={() => {}}
+                      disabled
                     />
                     <ToggleRow
                       label="Goce de sueldo"
-                      checked={currentData.goce_sueldo}
-                      onChange={(val) => handleFieldChange("goce_sueldo", val)}
+                      sublabel="Lo define el tipo de registro"
+                      checked={Boolean(Number(currentData.goce_sueldo))}
+                      onChange={() => {}}
+                      disabled
                     />
                     <ToggleRow
                       label="Horas extra"

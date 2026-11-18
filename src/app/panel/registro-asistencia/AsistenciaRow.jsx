@@ -11,9 +11,10 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Textarea } from "@/components/ui/textarea";
 import { Pencil, Save, X, Check, X as XIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import HistorialEmpleadoDialog from "./HistorialEmpleadoDialog";
 import CeldaEditado, { crearFormateadorCambios } from "./CeldaEditado";
+import { avisoCalendario, correccionesCalendario, enmascararNip } from "@/lib/asistencia/calendario.mjs";
 import { useEmpresaTimezone } from "@/context/AuthContext";
 import { calcularResumenJornada, formatearMinutos } from "@/utils/asistenciaHoras";
 import { salidaEsDiaSiguiente, sumarDias } from "@/lib/asistencia/jornada.mjs";
@@ -34,9 +35,7 @@ const EXTRA_COLUMN_KEYS = new Set([
   "festivo",
   "porcentaje_festivo",
   "forma_pago",
-  "aut_extra",
   "hrs_comida",
-  "notas_extra",
 ]);
 
 export default function AsistenciaRow({
@@ -58,6 +57,7 @@ export default function AsistenciaRow({
   empresaActiva,
   colVisible,
   onRowClick,
+  indiceFestivos = null,
 }) {
   const fallbackTimezone = useEmpresaTimezone(empresaActiva);
   const userTimezone = registro.zona_horaria || fallbackTimezone;
@@ -93,6 +93,34 @@ export default function AsistenciaRow({
     dayjs.tz(a, DB_TIMEZONE).format("YYYY-MM-DD HH:mm") === dayjs.tz(b, DB_TIMEZONE).format("YYYY-MM-DD HH:mm");
   const salidaDiaSiguiente = (r) =>
     Boolean(r.salida && r.entrada) && fechaLocal(r.salida) > fechaLocal(r.entrada);
+
+  // Domingo y festivo: los define la fecha y el catálogo de Festivos (no se capturan a mano).
+  const avisos = avisoCalendario(registro, indiceFestivos);
+  const avisoDe = (campo) => avisos.find((a) => a.campo === campo)?.texto;
+  const correccionesFecha = useMemo(
+    () => (isEditing ? correccionesCalendario(registro, indiceFestivos) : {}),
+    [isEditing, registro, indiceFestivos],
+  );
+  useEffect(() => {
+    // Al entrar a editar se corrigen domingo/festivo; quedan en "Qué cambió" al guardar.
+    Object.entries(correccionesFecha).forEach(([campo, valor]) => handleFieldChange(campo, valor));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [correccionesFecha]);
+  const si = (v) => Boolean(Number(v));
+  const Marca = ({ valor, aviso, fuente }) => (
+    <span className="inline-flex items-center gap-1" title={aviso || fuente}>
+      {si(valor) ? (
+        <Check aria-label="Sí" className="inline h-4 w-4 text-green-600" />
+      ) : (
+        <XIcon aria-label="No" className="inline h-4 w-4 text-red-600" />
+      )}
+      {aviso && <span aria-label={aviso} className="text-xs text-amber-600">⚠</span>}
+    </span>
+  );
+  const nombreAutorizador = (prefijo) =>
+    [registro[`nombre${prefijo}`], registro[`apellido_paterno${prefijo}`], registro[`apellido_materno${prefijo}`]]
+      .filter(Boolean)
+      .join(" ");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleRowClick = (e) => {
@@ -137,7 +165,7 @@ export default function AsistenciaRow({
                   registro.empresa_nombre}
               </TableCell>
             )}
-            {isColVisible("codigo") && <TableCell>{registro.nip}</TableCell>}
+            {isColVisible("codigo") && <TableCell title="Código de checada (oculto por seguridad)">{enmascararNip(registro.nip)}</TableCell>}
             {isColVisible("departamento") && (
               <TableCell>{registro.departamento}</TableCell>
             )}
@@ -265,6 +293,8 @@ export default function AsistenciaRow({
 
             {isColVisible("autorizado_por") && (
               <TableCell className="text-center">
+                <div className="flex flex-col gap-1.5 text-left">
+                  <span className="text-[10px] font-semibold uppercase text-slate-400">Incidencia</span>
                 <Select
                   value={
                     currentData.autorizado_por
@@ -292,42 +322,44 @@ export default function AsistenciaRow({
                     ))}
                   </SelectContent>
                 </Select>
+                  <span className="text-[10px] font-semibold uppercase text-slate-400">Horas extra</span>
+                <Select
+                  value={
+                    currentData.extras_autorizadas_por
+                      ? String(currentData.extras_autorizadas_por)
+                      : ""
+                  }
+                  onValueChange={(val) =>
+                    handleFieldChange("extras_autorizadas_por", val)
+                  }
+                >
+                  <SelectTrigger className="w-45">
+                    <SelectValue placeholder="Autorizadas por" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-60 overflow-y-auto">
+                    {empleados?.map((emp) => (
+                      <SelectItem
+                        key={emp.id_empleado}
+                        value={String(emp.id_empleado)}
+                      >
+                        {emp.nombre} {emp.apellido_paterno}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                </div>
               </TableCell>
             )}
             {isColVisible("asistio") && (
               <TableCell className="text-center">
-                <ToggleGroup
-                  type="single"
-                  value={currentData.asistencia ? "1" : "0"}
-                  onValueChange={(val) =>
-                    handleFieldChange("asistencia", val === "1")
-                  }
-                >
-                  <ToggleGroupItem value="0" aria-label="No">
-                    <XIcon className="h-4 w-4" />
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="1" aria-label="Sí">
-                    <Check className="h-4 w-4" />
-                  </ToggleGroupItem>
-                </ToggleGroup>
+                {/* Lo define el tipo de registro (catálogo de tipos), no se mueve por separado. */}
+                <Marca valor={currentData.asistencia} fuente="Lo define el tipo de registro" />
               </TableCell>
             )}
             {isColVisible("goce") && (
               <TableCell className="text-center">
-                <ToggleGroup
-                  type="single"
-                  value={currentData.goce_sueldo ? "1" : "0"}
-                  onValueChange={(val) =>
-                    handleFieldChange("goce_sueldo", val === "1")
-                  }
-                >
-                  <ToggleGroupItem value="0" aria-label="No">
-                    <XIcon className="h-4 w-4" />
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="1" aria-label="Sí">
-                    <Check className="h-4 w-4" />
-                  </ToggleGroupItem>
-                </ToggleGroup>
+                {/* Lo define el tipo de registro (catálogo de tipos), no se mueve por separado. */}
+                <Marca valor={currentData.goce_sueldo} fuente="Lo define el tipo de registro" />
               </TableCell>
             )}
             {isColVisible("pago_triple") && (
@@ -350,20 +382,7 @@ export default function AsistenciaRow({
             )}
             {isColVisible("domingo") && (
               <TableCell className="text-center">
-                <ToggleGroup
-                  type="single"
-                  value={currentData.es_domingo ? "1" : "0"}
-                  onValueChange={(val) =>
-                    handleFieldChange("es_domingo", val === "1")
-                  }
-                >
-                  <ToggleGroupItem value="0" aria-label="No">
-                    <XIcon className="h-4 w-4" />
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="1" aria-label="Sí">
-                    <Check className="h-4 w-4" />
-                  </ToggleGroupItem>
-                </ToggleGroup>
+                <Marca valor={currentData.es_domingo} fuente="Según la fecha del registro" />
               </TableCell>
             )}
             {isColVisible("prima_dominical") && (
@@ -380,10 +399,10 @@ export default function AsistenciaRow({
               </TableCell>
             )}
             {isColVisible("festivo") && (
-              <TableCell className="text-center">
+              <TableCell className="text-center" title="Se marca solo si está en el catálogo de Festivos; puedes marcar uno adicional">
                 <ToggleGroup
                   type="single"
-                  value={currentData.es_festivo ? "1" : "0"}
+                  value={si(currentData.es_festivo) ? "1" : "0"}
                   onValueChange={(val) =>
                     handleFieldChange("es_festivo", val === "1")
                   }
@@ -456,34 +475,6 @@ export default function AsistenciaRow({
                 </Select>
               </TableCell>
             )}
-            {isColVisible("aut_extra") && (
-              <TableCell className="text-center">
-                <Select
-                  value={
-                    currentData.extras_autorizadas_por
-                      ? String(currentData.extras_autorizadas_por)
-                      : ""
-                  }
-                  onValueChange={(val) =>
-                    handleFieldChange("extras_autorizadas_por", val)
-                  }
-                >
-                  <SelectTrigger className="w-45">
-                    <SelectValue placeholder="Autorizadas por" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60 overflow-y-auto">
-                    {empleados?.map((emp) => (
-                      <SelectItem
-                        key={emp.id_empleado}
-                        value={String(emp.id_empleado)}
-                      >
-                        {emp.nombre} {emp.apellido_paterno}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </TableCell>
-            )}
             {isColVisible("hrs_comida") && (
               <TableCell className="text-center">
                 <Input
@@ -499,22 +490,24 @@ export default function AsistenciaRow({
             )}
             {isColVisible("notas") && (
               <TableCell className="text-center">
-                <Textarea
-                  value={currentData.notas || ""}
-                  onChange={(e) => handleFieldChange("notas", e.target.value)}
-                  className="min-w-37.5"
-                />
-              </TableCell>
-            )}
-            {isColVisible("notas_extra") && (
-              <TableCell className="text-center">
-                <Textarea
-                  value={currentData.notas_hrs_extra || ""}
-                  onChange={(e) =>
-                    handleFieldChange("notas_hrs_extra", e.target.value)
-                  }
-                  className="min-w-37.5"
-                />
+                <div className="flex flex-col gap-1.5 text-left">
+                  <Textarea
+                    aria-label="Observaciones"
+                    placeholder="Observaciones"
+                    value={currentData.notas || ""}
+                    onChange={(e) => handleFieldChange("notas", e.target.value)}
+                    className="min-w-37.5"
+                  />
+                  <Textarea
+                    aria-label="Notas de horas extra"
+                    placeholder="Notas de horas extra"
+                    value={currentData.notas_hrs_extra || ""}
+                    onChange={(e) =>
+                      handleFieldChange("notas_hrs_extra", e.target.value)
+                    }
+                    className="min-w-37.5"
+                  />
+                </div>
               </TableCell>
             )}
 
@@ -589,7 +582,7 @@ export default function AsistenciaRow({
                   registro.empresa_nombre}
               </TableCell>
             )}
-            {isColVisible("codigo") && <TableCell>{registro.nip}</TableCell>}
+            {isColVisible("codigo") && <TableCell title="Código de checada (oculto por seguridad)">{enmascararNip(registro.nip)}</TableCell>}
             {isColVisible("departamento") && (
               <TableCell>{registro.departamento}</TableCell>
             )}
@@ -652,49 +645,40 @@ export default function AsistenciaRow({
               </TableCell>
             )}
             {isColVisible("autorizado_por") && (
-              <TableCell className="text-center">
-                {registro.nombre_autorizador
-                  ? `${registro.nombre_autorizador} ${registro.apellido_paterno_autorizador} ${registro.apellido_materno_autorizador}`
-                  : ""}
+              <TableCell className="text-center text-xs">
+                {nombreAutorizador("_autorizador") || nombreAutorizador("_extra_autorizador") ? (
+                  <div className="flex flex-col gap-0.5">
+                    {nombreAutorizador("_autorizador") && <span>{nombreAutorizador("_autorizador")}</span>}
+                    {nombreAutorizador("_extra_autorizador") && (
+                      <span className="text-slate-500">Extras: {nombreAutorizador("_extra_autorizador")}</span>
+                    )}
+                  </div>
+                ) : (
+                  "-"
+                )}
               </TableCell>
             )}
 
             {isColVisible("asistio") && (
               <TableCell className="text-center">
-                {registro.asistencia === 1 ? (
-                  <Check className="h-4 w-4 text-green-600 inline" />
-                ) : (
-                  <XIcon className="h-4 w-4 text-red-600 inline" />
-                )}
+                <Marca valor={registro.asistencia} />
               </TableCell>
             )}
             {isColVisible("goce") && (
               <TableCell className="text-center">
-                {registro.goce_sueldo === 1 ? (
-                  <Check className="h-4 w-4 text-green-600 inline" />
-                ) : (
-                  <XIcon className="h-4 w-4 text-red-600 inline" />
-                )}
+                <Marca valor={registro.goce_sueldo} />
               </TableCell>
             )}
 
             {isColVisible("pago_triple") && (
               <TableCell className="text-center">
-                {registro.pago_triple === 1 ? (
-                  <Check className="h-4 w-4 text-green-600 inline" />
-                ) : (
-                  <XIcon className="h-4 w-4 text-red-600 inline" />
-                )}
+                <Marca valor={registro.pago_triple} />
               </TableCell>
             )}
 
             {isColVisible("domingo") && (
               <TableCell className="text-center">
-                {registro.es_domingo === 1 ? (
-                  <Check className="h-4 w-4 text-green-600 inline" />
-                ) : (
-                  <XIcon className="h-4 w-4 text-red-600 inline" />
-                )}
+                <Marca valor={registro.es_domingo} aviso={avisoDe("es_domingo")} fuente="Según la fecha del registro" />
               </TableCell>
             )}
             {isColVisible("prima_dominical") && (
@@ -706,11 +690,7 @@ export default function AsistenciaRow({
             )}
             {isColVisible("festivo") && (
               <TableCell className="text-center">
-                {registro.es_festivo === 1 ? (
-                  <Check className="h-4 w-4 text-green-600 inline" />
-                ) : (
-                  <XIcon className="h-4 w-4 text-red-600 inline" />
-                )}
+                <Marca valor={registro.es_festivo} aviso={avisoDe("es_festivo")} fuente="Según el catálogo de Festivos" />
               </TableCell>
             )}
             {isColVisible("porcentaje_festivo") && (
@@ -723,23 +703,12 @@ export default function AsistenciaRow({
 
             {isColVisible("hrs_extra") && (
               <TableCell className="text-center">
-                {registro.hrs_extra === 1 ? (
-                  <Check className="h-4 w-4 text-green-600 inline" />
-                ) : (
-                  <XIcon className="h-4 w-4 text-red-600 inline" />
-                )}
+                <Marca valor={registro.hrs_extra} />
               </TableCell>
             )}
             {isColVisible("forma_pago") && (
               <TableCell className="text-center">
                 {registro.forma_pago_extras ? registro.forma_pago_extras : "-"}
-              </TableCell>
-            )}
-            {isColVisible("aut_extra") && (
-              <TableCell className="text-center">
-                {registro.nombre_extra_autorizador
-                  ? `${registro.nombre_extra_autorizador} ${registro.apellido_paterno_extra_autorizador} ${registro.apellido_materno_extra_autorizador}`
-                  : ""}
               </TableCell>
             )}
             {isColVisible("hrs_comida") && (
@@ -748,13 +717,17 @@ export default function AsistenciaRow({
               </TableCell>
             )}
             {isColVisible("notas") && (
-              <TableCell className="text-center">
-                {registro.notas ? registro.notas : "-"}
-              </TableCell>
-            )}
-            {isColVisible("notas_extra") && (
-              <TableCell className="text-center">
-                {registro.notas_hrs_extra ? registro.notas_hrs_extra : "-"}
+              <TableCell className="text-center text-xs">
+                {registro.notas || registro.notas_hrs_extra ? (
+                  <div className="flex flex-col gap-0.5">
+                    {registro.notas && <span>{registro.notas}</span>}
+                    {registro.notas_hrs_extra && (
+                      <span className="text-slate-500">Extras: {registro.notas_hrs_extra}</span>
+                    )}
+                  </div>
+                ) : (
+                  "-"
+                )}
               </TableCell>
             )}
             {isColVisible("estado_asistencia") && (

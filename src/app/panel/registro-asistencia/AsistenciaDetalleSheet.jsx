@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Pencil, LogIn, LogOut, UtensilsCrossed, History } from "lucide-react";
+import { enmascararNip } from "@/lib/asistencia/calendario.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -101,7 +102,7 @@ export default function AsistenciaDetalleSheet({
               {nombre || "Empleado"}
             </SheetTitle>
             <div className="truncate text-[11.5px] font-medium text-gray-500">
-              {[registro.nip, unidad, registro.departamento]
+              {[registro.nip ? enmascararNip(registro.nip) : null, unidad, registro.departamento]
                 .filter(Boolean)
                 .join(" · ")}
             </div>

@@ -11,11 +11,13 @@ import AsistenciaMatriz from "./AsistenciaMatriz";
 import TablePagination from "@/components/TablePagination";
 import LoadingTable from "@/components/LoadingTable";
 import ErrorPage from "@/components/ErrorPage";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { fetcherWithToken } from "@/lib/fetcher";
 import useDepartamentosData from "@/hooks/useDepartamentosData";
 import { useSnackbar } from "notistack";
 import { cargarPeriodoCompleto, LIMITE_TODOS } from "@/lib/asistencia/consultaPeriodo.mjs";
+import { indiceFestivos as crearIndiceFestivos } from "@/lib/asistencia/calendario.mjs";
+import useSWR from "swr";
 
 const DEFAULT_SORT_CONFIG = {
   sortBy: "fecha",
@@ -181,6 +183,13 @@ export default function AsistenciaDataContainer({
   ]);
 
   const { data: empleados } = useEmpleadosData(idEmpresa);
+  // Catálogo de Festivos: marca y valida "Festivo" en cada registro.
+  const { data: festivosData } = useSWR(
+    idEmpresa ? `/checador/holidays/${idEmpresa}` : null,
+    fetcherWithToken,
+    { revalidateOnFocus: false },
+  );
+  const indiceFestivos = useMemo(() => crearIndiceFestivos(festivosData), [festivosData]);
   const { data: tiposPermiso } = useTiposPermisoData();
 
   const effectiveData = data;
@@ -245,6 +254,7 @@ export default function AsistenciaDataContainer({
           filtrados={registros}
           filterOptionsRows={filasPeriodo}
           cargarPeriodoParaExportar={cargarPeriodoParaExportar}
+          indiceFestivos={indiceFestivos}
           page={page}
           limit={limit}
           onHeaderFilteringMetaChange={setHeaderFilterMeta}
