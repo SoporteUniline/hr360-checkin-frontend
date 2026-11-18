@@ -98,17 +98,22 @@ try {
 
   // 1) Horas en minutos: 08:07–17:20 con 1 h de comida = 8 h 13 min de 8 h programadas → +13 min.
   const fila0 = page.locator("tr", { hasText: "Empleado0" }).first();
-  assert.match(await fila0.innerText(), /8 h 13 min \/ 8 h/);
+  assert.match(await fila0.innerText(), /8 h 13 min de 8 h/);
   assert.match(await fila0.innerText(), /\+13 min/);
+  // 1a) Balance: solo signo y número (±10 min en gris); estado con palabra completa; nombre fijo a la izquierda.
+  assert.doesNotMatch(await fila0.innerText(), /Sobró|Faltó/);
+  assert.match(await fila0.locator("span.rounded-full", { hasText: "+13 min" }).first().getAttribute("class"), /bg-emerald-50/);
+  assert.match(await fila0.innerText(), /\bPresente\b/);
+  assert.match(await fila0.locator("td").first().getAttribute("class"), /sticky left-0/);
   // 1b) Entrada y salida sin segundos.
   assert.match(await fila0.innerText(), /\b08:07\b(?!:)/);
   assert.doesNotMatch(await fila0.innerText(), /08:07:00/);
   // 2) Nocturno: 7 h exactas y marca "+1 día"; el registro viejo también da 7 h (antes negativo).
   const noct = page.locator("tr", { hasText: "Nocturno" }).first();
-  assert.match(await noct.innerText(), /7 h \/ 7 h/);
+  assert.match(await noct.innerText(), /7 h de 7 h/);
   assert.match(await noct.innerText(), /\+1 día/);
   const viejo = page.locator("tr", { hasText: "NocturnoViejo" }).first();
-  assert.match(await viejo.innerText(), /7 h \/ 7 h/);
+  assert.match(await viejo.innerText(), /7 h de 7 h/);
 
   // 2b) Columna "Editado": etiqueta con número de cambios y detalle antes → después.
   const filaEditada = page.locator("tr", { hasText: "Editado Prueba" }).first();
@@ -208,7 +213,7 @@ try {
   assert.equal(hoja.getRow(1).values.includes("Código"), false, "el Excel no debe traer el NIP");
   const cabecera = hoja.getRow(1).values;
   const colJornada = cabecera.indexOf("Jornada");
-  const colDif = cabecera.indexOf("Hrs +/-");
+  const colDif = cabecera.indexOf("Balance del día");
   assert.equal(hoja.getRow(2).getCell(colJornada).value, "8 h 13 min / 8 h");
   assert.equal(hoja.getRow(2).getCell(colDif).value, "+13 min");
   const colCambios = cabecera.indexOf("Cambios (antes → después)");
