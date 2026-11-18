@@ -33,7 +33,7 @@ export const COLUMNAS_ASISTENCIA = [
   { key: "departamento", label: "Departamento", extra: false },
   { key: "tipo", label: "Tipo", extra: false },
   { key: "fecha", label: "Fecha", extra: false },
-  { key: "correccion", label: "Corrección", extra: true },
+  { key: "correccion", label: "Corrección", extra: false },
   { key: "entrada", label: "Entrada", extra: false },
   { key: "salida", label: "Salida", extra: false },
   { key: "jornada", label: "Jornada", extra: false },
