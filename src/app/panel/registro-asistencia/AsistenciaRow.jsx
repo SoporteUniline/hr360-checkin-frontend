@@ -789,6 +789,19 @@ export default function AsistenciaRow({
                 className="sticky right-0 bg-background z-10 text-center"
                 onClick={(e) => e.stopPropagation()}
               >
+                {registro.valores_originales ? (
+                  <button
+                    type="button"
+                    onClick={() => handleEditClick(registro, true)}
+                    className="rounded-lg px-2 py-1 text-xs font-medium text-brand hover:bg-blue-50"
+                  >
+                    Volver al original
+                  </button>
+                ) : registro.correccion ? (
+                  <span className="px-2 text-xs text-slate-500">
+                    Original no disponible
+                  </span>
+                ) : null}
                 <button
                   onClick={() => handleEditClick(registro)}
                   className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
