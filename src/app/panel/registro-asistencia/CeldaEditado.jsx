@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cambiosRegistro } from "@/lib/asistencia/cambios.mjs";
 import dayjs from "dayjs";
@@ -38,6 +39,7 @@ export function crearFormateadorCambios({ tiposPermiso, empleados, zona }) {
 
 // Columna "Editado": etiqueta ámbar con el detalle de qué cambió (antes → después).
 export default function CeldaEditado({ registro, formatear, onVerChecadas }) {
+  const [abierto, setAbierto] = useState(false);
   const editado = Boolean(Number(registro?.correccion));
   if (!editado) {
     return <span className="text-xs text-slate-400" aria-label="Sin editar">No</span>;
@@ -45,7 +47,7 @@ export default function CeldaEditado({ registro, formatear, onVerChecadas }) {
   const cambios = cambiosRegistro(registro, formatear);
 
   return (
-    <Popover>
+    <Popover open={abierto} onOpenChange={setAbierto}>
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -99,7 +101,11 @@ export default function CeldaEditado({ registro, formatear, onVerChecadas }) {
           <div className="border-t border-slate-100 px-4 py-2">
             <button
               type="button"
-              onClick={onVerChecadas}
+              onClick={() => {
+                // Cierra este detalle para que el historial no quede tapado.
+                setAbierto(false);
+                onVerChecadas();
+              }}
               className="text-xs font-semibold text-blue-600 hover:underline"
             >
               Ver checadas del reloj de este día
