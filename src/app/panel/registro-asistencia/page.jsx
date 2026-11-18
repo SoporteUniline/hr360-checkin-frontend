@@ -230,7 +230,7 @@ export default function ControlAsistencia() {
     setPage(1);
   };
 
-  const { ui, data, mutate, localEvents } = AsistenciaDataContainer({
+  const { ui, data, mutate, localEvents, resumenHorasExtra } = AsistenciaDataContainer({
     idEmpresa,
     empresaActiva,
     fechaInicio,
@@ -341,6 +341,7 @@ export default function ControlAsistencia() {
         setSoloAusentes={setSoloAusentes}
         horasExtra={horasExtra}
         setHorasExtra={setHorasExtra}
+        resumenHorasExtra={resumenHorasExtra}
         filtroEstadoAsistencia={filtroEstadoAsistencia}
         setFiltroEstadoAsistencia={setFiltroEstadoAsistencia}
         setPage={setPage}

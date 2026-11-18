@@ -13,6 +13,7 @@ export default function ResumenAsistencia({
   setSoloAusentes,
   horasExtra,
   setHorasExtra,
+  resumenHorasExtra = null,
   filtroEstadoAsistencia,
   setFiltroEstadoAsistencia,
   setPage,
@@ -26,7 +27,12 @@ export default function ResumenAsistencia({
   const total_presentes = num(totals?.total_presentes);
   const total_tardanzas = num(totals?.total_tardanzas);
   const total_ausencias = num(totals?.total_ausencias);
-  const total_con_horas_extra = num(totals?.total_con_horas_extra);
+  // Con el periodo cargado se cuentan todas las que tienen tiempo extra (por autorizar,
+  // autorizadas y no autorizadas); si no, se usa el conteo del servidor.
+  const total_con_horas_extra = resumenHorasExtra
+    ? resumenHorasExtra.total
+    : num(totals?.total_con_horas_extra);
+  const pendientes_horas_extra = resumenHorasExtra?.pendientes ?? 0;
 
   // Denominador defensivo: si total_empleados falta o es menor que la suma
   // de estados, se usa la suma; el porcentaje queda acotado a 0–100.
@@ -172,6 +178,11 @@ export default function ResumenAsistencia({
             <b className="font-extrabold tabular-nums text-gray-900">
               {total_con_horas_extra}
             </b>
+            {pendientes_horas_extra > 0 && (
+              <span className="text-[11px] font-bold text-orange-600">
+                · {pendientes_horas_extra} por autorizar
+              </span>
+            )}
             {horasExtra && (
               <span className="text-[10px] font-bold text-purple-400">
                 ✕ quitar

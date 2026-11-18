@@ -25,7 +25,6 @@ import useTiposPermisoData from "@/hooks/useTiposPermisoData";
 import useEmpleadosData from "@/hooks/useEmpleadosData";
 import { formatearMinutos, minutosTrabajados, salidaEsDiaSiguiente, sumarDias } from "@/lib/asistencia/jornada.mjs";
 import { cambiosRegistro } from "@/lib/asistencia/cambios.mjs";
-import { enmascararNip } from "@/lib/asistencia/calendario.mjs";
 import { crearFormateadorCambios } from "./CeldaEditado";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -362,7 +361,7 @@ export default function MobileEmpleadoDetalle({
             <p className="text-gray-500 text-sm mt-2">
               {display.departamento}
               {empresa ? ` · ${empresa}` : ""}
-              {display.nip ? ` · #${enmascararNip(display.nip)}` : ""}
+              {display.nip ? ` · #${display.nip}` : ""}
             </p>
             <div className="flex flex-wrap justify-center gap-2 mt-3">
               <span className="bg-gray-50 border border-gray-200 text-gray-600 text-xs font-medium px-3 py-1 rounded-full">

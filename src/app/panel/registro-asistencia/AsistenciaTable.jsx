@@ -23,6 +23,11 @@ import { calcularResumenJornada, formatearMinutos } from "@/utils/asistenciaHora
 import { resumenCambios } from "@/lib/asistencia/cambios.mjs";
 import { crearFormateadorCambios } from "./CeldaEditado";
 import { useSnackbar } from "notistack";
+import useHorasExtra from "@/hooks/useHorasExtra";
+import {
+  ETIQUETAS_ESTADO, FORMA_PAGO_DEFAULT, FORMAS_PAGO, cambiosAutorizar, cambiosNoAutorizar, cambiosQuitar,
+  estadoHorasExtra, etiquetaHorasExtra,
+} from "@/lib/asistencia/horasExtra.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -99,6 +104,7 @@ export default function AsistenciaTable({
   onRowClick,
   agrupar = null,
   footer = null,
+  soloHorasExtra = false,
 }) {
   // Para el Excel usamos la zona de la primera empresa visible (o la activa como fallback)
   const fallbackTimezone = useEmpresaTimezone(empresaActiva);
@@ -149,6 +155,9 @@ export default function AsistenciaTable({
 
   const uniqueOptions = (values) =>
     [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const zonaDe = (registro) => registro.zona_horaria || fallbackTimezone;
+  // Vistas guardadas antes de los estados de horas extra usan "Sí" / "No".
+  const ETIQUETA_HX_ANTERIOR = { Sí: ETIQUETAS_ESTADO.autorizada, No: ETIQUETAS_ESTADO.sin };
   const toYesNo = (value) => (value === 1 || value === true ? "Sí" : "No");
   const toCorreccion = (registro) =>
     Boolean(Number(registro.correccion)) ? "Editado" : "Sin editar";
@@ -211,7 +220,7 @@ export default function AsistenciaTable({
   const horasExtraOptions = useMemo(
     () =>
       uniqueOptions(
-        optionSourceRows.map((registro) => toYesNo(registro.hrs_extra)),
+        optionSourceRows.map((registro) => etiquetaHorasExtra(registro, zonaDe(registro))),
       ),
     [optionSourceRows],
   );
@@ -268,9 +277,13 @@ export default function AsistenciaTable({
     const pasaGoce =
       goceSeleccionado.length === 0 ||
       goceSeleccionado.includes(toYesNo(registro.goce_sueldo));
+    const estadoExtra = horasExtraSeleccionado.length || soloHorasExtra
+      ? etiquetaHorasExtra(registro, zonaDe(registro))
+      : null;
     const pasaHorasExtra =
-      horasExtraSeleccionado.length === 0 ||
-      horasExtraSeleccionado.includes(toYesNo(registro.hrs_extra));
+      (horasExtraSeleccionado.length === 0 ||
+        horasExtraSeleccionado.map((v) => ETIQUETA_HX_ANTERIOR[v] ?? v).includes(estadoExtra)) &&
+      (!soloHorasExtra || estadoExtra !== ETIQUETAS_ESTADO.sin);
     const pasaFestivo =
       festivoSeleccionado.length === 0 ||
       festivoSeleccionado.includes(toYesNo(registro.es_festivo));
@@ -311,6 +324,7 @@ export default function AsistenciaTable({
       festivoSeleccionado,
       autorizacionSeleccionada,
       estadoAsistenciaSeleccionado,
+      soloHorasExtra,
     ],
   );
 
@@ -323,6 +337,7 @@ export default function AsistenciaTable({
     asistioSeleccionado.length > 0 ||
     goceSeleccionado.length > 0 ||
     horasExtraSeleccionado.length > 0 ||
+    soloHorasExtra ||
     festivoSeleccionado.length > 0 ||
     autorizacionSeleccionada.length > 0 ||
     estadoAsistenciaSeleccionado.length > 0;
@@ -424,7 +439,9 @@ export default function AsistenciaTable({
     { header: "Prima Dominical", key: "prima_dominical" },
     { header: "Es Festivo", key: "es_festivo" },
     { header: "Porcentaje Día Festivo", key: "porcentaje_dia_festivo" },
-    { header: "¿Trabajó horas extra?", key: "hrs_extra" },
+    { header: "Horas extra (estado)", key: "estado_horas_extra" },
+    { header: "Tiempo después del horario", key: "minutos_horas_extra" },
+    { header: "¿Horas extra autorizadas?", key: "hrs_extra" },
     { header: "Forma de pago horas extra", key: "forma_pago_extras" },
     { header: "Horas extras autorizadas por", key: "extras_autorizadas_por" },
     { header: "Horas de comida", key: "hrs_comida" },
@@ -437,6 +454,7 @@ export default function AsistenciaTable({
     const rowTimezone = r.zona_horaria || fallbackTimezone;
 
     const { jornada, minutosDiferencia } = calcularResumenJornada(r);
+    const extra = estadoHorasExtra(r, rowTimezone);
     const fmt = crearFormateadorCambios({ tiposPermiso, empleados, zona: rowTimezone });
     // "0" llega como texto en algunos campos: se evalúa como número, no como texto.
     const siNo = (v) => (Number(v) ? "Sí" : "No");
@@ -481,6 +499,8 @@ export default function AsistenciaTable({
       prima_dominical: r.prima_dominical ?? "-",
       es_festivo: siNo(r.es_festivo),
       porcentaje_dia_festivo: r.porcentaje_dia_festivo ?? "-",
+      estado_horas_extra: ETIQUETAS_ESTADO[extra.estado],
+      minutos_horas_extra: extra.minutos > 0 ? formatearMinutos(extra.minutos) : "-",
       hrs_extra: siNo(r.hrs_extra),
       forma_pago_extras: r.forma_pago_extras ?? "-",
       extras_autorizadas_por: fmt("extras_autorizadas_por", r.extras_autorizadas_por),
@@ -544,6 +564,51 @@ export default function AsistenciaTable({
     );
   };
 
+  // --- Horas extra: decisiones de un clic y masivas ---
+  const hx = useHorasExtra(mutateAsistencia);
+  const [seleccionados, setSeleccionados] = useState(() => new Set());
+  const [formaMasiva, setFormaMasiva] = useState(FORMA_PAGO_DEFAULT);
+  const [notaMasiva, setNotaMasiva] = useState("");
+  const nombreCorto = (r) => `${r.nombre ?? ""} ${r.apellido_paterno ?? ""}`.trim();
+  const limpiarSeleccion = () => setSeleccionados(new Set());
+  const accionesHorasExtra = readOnly ? null : {
+    guardando: hx.guardando,
+    seleccionados,
+    seleccionar: (id, v) => setSeleccionados((prev) => {
+      const s = new Set(prev);
+      if (v) s.add(id); else s.delete(id);
+      return s;
+    }),
+    autorizar: (r, { forma, notas } = {}) =>
+      hx.guardar(
+        [{ registro: r, cambios: cambiosAutorizar({ forma, notas, idAutorizador: hx.usuario.idEmpleado }) }],
+        `${nombreCorto(r)}: horas extra autorizadas.`,
+      ),
+    noAutorizar: (r) =>
+      hx.guardar(
+        [{ registro: r, cambios: cambiosNoAutorizar(r, { quien: hx.usuario.nombre, zona: zonaDe(r) }) }],
+        `${nombreCorto(r)}: no autorizadas. Se paga hasta la salida del horario; la checada real se conserva.`,
+      ),
+    quitar: (r) =>
+      hx.guardar([{ registro: r, cambios: cambiosQuitar(r, zonaDe(r)) }], `${nombreCorto(r)}: decisión quitada.`),
+  };
+  const filasSeleccionadas = optionSourceRows.filter(
+    (r) => seleccionados.has(r.id) && estadoHorasExtra(r, zonaDe(r)).estado === "pendiente",
+  );
+  const pendientesVisibles = (displayedRows ?? []).filter((r) => estadoHorasExtra(r, zonaDe(r)).estado === "pendiente");
+  const todasPendientesMarcadas = pendientesVisibles.length > 0 && pendientesVisibles.every((r) => seleccionados.has(r.id));
+  const decidirMasivo = async (autorizar) => {
+    const items = filasSeleccionadas.map((r) => ({
+      registro: r,
+      cambios: autorizar
+        ? cambiosAutorizar({ forma: formaMasiva, notas: notaMasiva || undefined, idAutorizador: hx.usuario.idEmpleado })
+        : cambiosNoAutorizar(r, { quien: hx.usuario.nombre, zona: zonaDe(r) }),
+    }));
+    await hx.guardar(items, `${items.length} registros ${autorizar ? "autorizados" : "no autorizados (salida al horario)"}.`);
+    limpiarSeleccion();
+    setNotaMasiva("");
+  };
+
   const renderAsistenciaRow = (reg) => (
     <AsistenciaRow
       indiceFestivos={indiceFestivos}
@@ -566,6 +631,7 @@ export default function AsistenciaTable({
       empresaActiva={empresaActiva}
       colVisible={colVisible}
       onRowClick={onRowClick}
+      horasExtra={accionesHorasExtra}
     />
   );
 
@@ -592,6 +658,38 @@ export default function AsistenciaTable({
                 <Plus className="h-4 w-4 mr-2" />
                 Registrar asistencia masiva
               </Button>
+
+              {filasSeleccionadas.length > 0 && (
+                <div className="flex items-center gap-2 whitespace-nowrap rounded-xl border border-blue-100 bg-blue-50 px-3 py-1.5 text-sm" role="region" aria-label="Autorizar horas extra seleccionadas">
+                  <b className="text-slate-800">{filasSeleccionadas.length} seleccionados</b>
+                  <select
+                    aria-label="Forma de pago para todos"
+                    value={formaMasiva}
+                    onChange={(e) => setFormaMasiva(e.target.value)}
+                    className="h-8 w-auto rounded-lg border border-slate-200 bg-white px-2 text-xs"
+                  >
+                    {FORMAS_PAGO.map((f) => <option key={f}>{f}</option>)}
+                  </select>
+                  <input
+                    aria-label="Nota para todos"
+                    placeholder="Nota para todos"
+                    value={notaMasiva}
+                    onChange={(e) => setNotaMasiva(e.target.value)}
+                    className="h-8 w-32 rounded-lg border border-slate-200 bg-white px-2 text-xs"
+                  />
+                  <button type="button" disabled={hx.guardando} onClick={() => decidirMasivo(true)}
+                    className="h-8 rounded-lg bg-emerald-700 px-3 text-xs font-semibold text-white hover:bg-emerald-800 disabled:opacity-50">
+                    ✓ Autorizar
+                  </button>
+                  <button type="button" disabled={hx.guardando} onClick={() => decidirMasivo(false)}
+                    className="h-8 rounded-lg border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50">
+                    ✕ No autorizar
+                  </button>
+                  <button type="button" onClick={limpiarSeleccion} aria-label="Quitar selección" title="Quitar selección" className="h-8 px-2 text-xs font-semibold text-slate-500 hover:text-slate-800">
+                    ✕
+                  </button>
+                </div>
+              )}
 
               {/* <Button
                 onClick={onResetFilters}
@@ -956,7 +1054,19 @@ export default function AsistenciaTable({
                   <TableHead
                     className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
-                    <div className="flex items-center justify-center gap-1">
+                    <div className="flex items-center gap-1">
+                      {!readOnly && pendientesVisibles.length > 0 && (
+                        <input
+                          type="checkbox"
+                          aria-label="Seleccionar horas extra por autorizar"
+                          title="Seleccionar todas las que faltan por autorizar"
+                          checked={todasPendientesMarcadas}
+                          onChange={(e) =>
+                            setSeleccionados(e.target.checked ? new Set(pendientesVisibles.map((r) => r.id)) : new Set())
+                          }
+                          className="mr-1 h-4 w-4 accent-blue-600"
+                        />
+                      )}
                       <button
                         type="button"
                         onClick={() => handleSort("horasExtra")}

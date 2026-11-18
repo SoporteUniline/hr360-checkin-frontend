@@ -18,6 +18,8 @@ import { useSnackbar } from "notistack";
 import { cargarPeriodoCompleto, LIMITE_TODOS } from "@/lib/asistencia/consultaPeriodo.mjs";
 import { indiceFestivos as crearIndiceFestivos } from "@/lib/asistencia/calendario.mjs";
 import useSWR from "swr";
+import { useEmpresaTimezone } from "@/context/AuthContext";
+import { resumenHorasExtra as resumenHorasExtraPeriodo } from "@/lib/asistencia/horasExtra.mjs";
 
 const DEFAULT_SORT_CONFIG = {
   sortBy: "fecha",
@@ -80,7 +82,9 @@ export default function AsistenciaDataContainer({
     filtroEstadoAsistencia,
     soloPresentes,
     soloAusentes,
-    horasExtra,
+    // «Horas extra» se filtra en pantalla por estado (por autorizar, autorizadas,
+    // no autorizadas); el filtro del servidor solo conocía hrs_extra = 1.
+    false,
     sinGoceDeSueldo,
     diasFestivos,
     requiereAutorizacion,
@@ -135,7 +139,6 @@ export default function AsistenciaDataContainer({
     filtroEstadoAsistencia,
     soloPresentes,
     soloAusentes,
-    horasExtra,
     sinGoceDeSueldo,
     diasFestivos,
     requiereAutorizacion,
@@ -175,7 +178,6 @@ export default function AsistenciaDataContainer({
     filtroEstadoAsistencia,
     soloPresentes,
     soloAusentes,
-    horasExtra,
     sinGoceDeSueldo,
     diasFestivos,
     requiereAutorizacion,
@@ -204,6 +206,11 @@ export default function AsistenciaDataContainer({
   // Filas del periodo completo para los filtros por columna y la matriz.
   const filasPeriodo = mostrarTodos ? registros : filterOptionsRows;
   const currentPage = effectiveData?.page || page || 1;
+  const zonaEmpresa = useEmpresaTimezone(empresaActiva);
+  const resumenHorasExtra = useMemo(
+    () => resumenHorasExtraPeriodo(filasPeriodo, (r) => r.zona_horaria || zonaEmpresa),
+    [filasPeriodo, zonaEmpresa],
+  );
 
   const mostrarPaginacion = effectiveData?.aplicarPaginacion !== false;
   const totalRegistros = effectiveData?.total || 0;
@@ -281,6 +288,7 @@ export default function AsistenciaDataContainer({
           setPage={setPage}
           agrupar={agrupar}
           visibleColumns={visibleColumns}
+          soloHorasExtra={horasExtra}
           footer={
             mostrarPaginacion && registros.length > 0 ? (
               <TablePagination
@@ -318,6 +326,7 @@ export default function AsistenciaDataContainer({
       </>
     ),
     data: effectiveData,
+    resumenHorasExtra,
     localEvents,
     mutate,
   };
