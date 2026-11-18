@@ -2,6 +2,9 @@
 // La usan las opciones de filtros por columna y Exportar (que debe sacar TODO el
 // periodo, no solo la página visible). Sin dependencias para probarla con node:test.
 
+// Valor que usa el selector "Todos los registros" de TablePagination.
+export const LIMITE_TODOS = 1000000;
+
 export function parametrosPeriodo(f = {}) {
   const params = new URLSearchParams({
     empresa: String(f.idEmpresa ?? ""),

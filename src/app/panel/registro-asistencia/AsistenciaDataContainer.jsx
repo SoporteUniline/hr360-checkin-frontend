@@ -15,7 +15,7 @@ import { useEffect, useRef, useState } from "react";
 import { fetcherWithToken } from "@/lib/fetcher";
 import useDepartamentosData from "@/hooks/useDepartamentosData";
 import { useSnackbar } from "notistack";
-import { cargarPeriodoCompleto } from "@/lib/asistencia/consultaPeriodo.mjs";
+import { cargarPeriodoCompleto, LIMITE_TODOS } from "@/lib/asistencia/consultaPeriodo.mjs";
 
 const DEFAULT_SORT_CONFIG = {
   sortBy: "fecha",
@@ -140,8 +140,12 @@ export default function AsistenciaDataContainer({
   };
   const cargarPeriodoParaExportar = () => cargarPeriodoCompleto(fetcherWithToken, filtrosPeriodo);
 
+  // Con "Todos los registros" la tabla ya trae el periodo completo: no se descarga dos veces.
+  const mostrarTodos = Number(limit) >= LIMITE_TODOS;
+
   useEffect(() => {
     let isCancelled = false;
+    if (mostrarTodos) return undefined;
 
     const loadFilterOptionsRows = async () => {
       try {
@@ -173,6 +177,7 @@ export default function AsistenciaDataContainer({
     sinGoceDeSueldo,
     diasFestivos,
     requiereAutorizacion,
+    mostrarTodos,
   ]);
 
   const { data: empleados } = useEmpleadosData(idEmpresa);
@@ -187,6 +192,8 @@ export default function AsistenciaDataContainer({
   const registros = Array.isArray(effectiveData?.registros)
     ? effectiveData.registros
     : [];
+  // Filas del periodo completo para los filtros por columna y la matriz.
+  const filasPeriodo = mostrarTodos ? registros : filterOptionsRows;
   const currentPage = effectiveData?.page || page || 1;
 
   const mostrarPaginacion = effectiveData?.aplicarPaginacion !== false;
@@ -226,17 +233,17 @@ export default function AsistenciaDataContainer({
       <>
         {vista === "matriz" ? (
           <><LocalClockCaptures events={localEvents} /><AsistenciaMatriz
-            registros={filterOptionsRows}
+            registros={filasPeriodo}
             fechaInicio={fechaInicio}
             fechaFin={fechaFin}
-            cargando={isLoading && filterOptionsRows.length === 0}
+            cargando={isLoading && filasPeriodo.length === 0}
           /></>
         ) : (
         <>
         <AsistenciaTable
           localEvents={localEvents}
           filtrados={registros}
-          filterOptionsRows={filterOptionsRows}
+          filterOptionsRows={filasPeriodo}
           cargarPeriodoParaExportar={cargarPeriodoParaExportar}
           page={page}
           limit={limit}

@@ -43,6 +43,7 @@ import ColumnasSelector, {
 } from "@/components/tabla/ColumnasSelector";
 import { COLUMNAS_ASISTENCIA } from "./AsistenciaTable";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
+import { LIMITE_TODOS } from "@/lib/asistencia/consultaPeriodo.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -72,7 +73,9 @@ export default function ControlAsistencia() {
   const [fechaInicio, setFechaInicio] = useState(initialDate);
   const [fechaFin, setFechaFin] = useState(initialDate);
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  // Escritorio arranca en "Todos los registros": se ve el periodo completo y los
+  // filtros por columna se aplican sobre todo. Celular conserva páginas de 500.
+  const [limit, setLimit] = useState(LIMITE_TODOS);
   const [filtroEmpleado, setFiltroEmpleado] = useState(
     searchParams.get("empleado") || "",
   );
@@ -122,7 +125,7 @@ export default function ControlAsistencia() {
   // al nuevo límite.
   useEffect(() => {
     setPage(1);
-    setLimit(isMobile ? 500 : 10);
+    setLimit(isMobile ? 500 : LIMITE_TODOS);
   }, [isMobile]);
 
   const [modoFormulario, setModoFormulario] = useState(false);
