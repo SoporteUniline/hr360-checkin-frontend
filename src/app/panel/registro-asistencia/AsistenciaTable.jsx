@@ -46,7 +46,7 @@ export const COLUMNAS_ASISTENCIA = [
   { key: "entrada", label: "Entrada", extra: false },
   { key: "salida", label: "Salida", extra: false },
   { key: "jornada", label: "Jornada", extra: false },
-  { key: "hrs_diferencia", label: "Hrs +/-", extra: false },
+  { key: "hrs_diferencia", label: "Balance del día", extra: false },
   { key: "autorizado_por", label: "Autorizado por", extra: true },
   { key: "asistio", label: "Asistió", extra: false },
   { key: "goce", label: "Goce", extra: false },
@@ -55,7 +55,7 @@ export const COLUMNAS_ASISTENCIA = [
   { key: "prima_dominical", label: "Prima dom.", extra: true },
   { key: "festivo", label: "Festivo", extra: true },
   { key: "porcentaje_festivo", label: "% festivo", extra: true },
-  { key: "hrs_extra", label: "Hrs extra", extra: false },
+  { key: "hrs_extra", label: "Horas extra", extra: false },
   { key: "forma_pago", label: "Forma pago", extra: true },
   { key: "hrs_comida", label: "Hrs comida", extra: true },
   { key: "notas", label: "Observaciones", extra: false },
@@ -430,7 +430,7 @@ export default function AsistenciaTable({
     { header: "Entrada", key: "entrada" },
     { header: "Salida", key: "salida" },
     { header: "Jornada", key: "jornada" },
-    { header: "Hrs +/-", key: "hrs_diferencia" },
+    { header: "Balance del día", key: "hrs_diferencia" },
     { header: "Autorizado por", key: "autorizado_por" },
     { header: "¿Asistió?", key: "asistencia" },
     { header: "¿Goce de Sueldo?", key: "goce_sueldo" },
@@ -753,7 +753,7 @@ export default function AsistenciaTable({
               onChange: setGoceSeleccionado,
             },
             {
-              category: "Hrs extra",
+              category: "Horas extra",
               values: horasExtraSeleccionado,
               options: horasExtraOptions,
               onChange: setHorasExtraSeleccionado,
@@ -791,7 +791,7 @@ export default function AsistenciaTable({
               <TableRow className="bg-slate-50 hover:bg-slate-50 [&_th]:text-[10px] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-[0.05em] [&_th]:text-slate-500 [&_th_button]:text-[10px] [&_th_button]:font-semibold [&_th_button]:uppercase [&_th_button]:tracking-[0.05em]">
                 {colVisible("empleado") && (
                   <TableHead
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500`}
+                    className={`${TH_STICKY} left-0 z-20 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 shadow-[8px_0_8px_-8px_rgba(15,23,42,0.18)]`}
                   >
                     <div className="flex items-center gap-1">
                       <button
@@ -941,7 +941,8 @@ export default function AsistenciaTable({
                   <TableHead
                     className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
-                    Jornada
+                    Jornada{" "}
+                    <span className="font-medium normal-case tracking-normal text-slate-400">trabajado de programado</span>
                   </TableHead>
                 )}
 
@@ -949,7 +950,7 @@ export default function AsistenciaTable({
                   <TableHead
                     className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
-                    Hrs +/-
+                    Balance del día
                   </TableHead>
                 )}
                 {colVisible("autorizado_por") && (
@@ -1072,7 +1073,7 @@ export default function AsistenciaTable({
                         onClick={() => handleSort("horasExtra")}
                         className="flex items-center"
                       >
-                        HRS EXTRA
+                        HORAS EXTRA
                         {renderSortIcon("horasExtra")}
                       </button>
 

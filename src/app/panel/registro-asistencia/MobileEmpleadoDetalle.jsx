@@ -26,6 +26,11 @@ import useEmpleadosData from "@/hooks/useEmpleadosData";
 import { formatearMinutos, minutosTrabajados, salidaEsDiaSiguiente, sumarDias } from "@/lib/asistencia/jornada.mjs";
 import { cambiosRegistro } from "@/lib/asistencia/cambios.mjs";
 import { crearFormateadorCambios } from "./CeldaEditado";
+import HorasExtraMovil from "./HorasExtraMovil";
+import useHorasExtra from "@/hooks/useHorasExtra";
+import {
+  cambiosAutorizar, cambiosNoAutorizar, cambiosQuitar, estadoHorasExtra,
+} from "@/lib/asistencia/horasExtra.mjs";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -179,6 +184,15 @@ export default function MobileEmpleadoDetalle({
     }
   });
 
+  // Horas extra: al guardar se actualiza la copia local para ver el cambio sin cerrar.
+  const hx = useHorasExtra(mutateAsistencia, {
+    onGuardado: (items) =>
+      setLocalRegistro((prev) => {
+        const item = items.find((i) => i.registro.id === prev?.id);
+        return item ? { ...prev, ...item.cambios } : prev;
+      }),
+  });
+
   const isEditing = localRegistro && editingRowId === localRegistro.id;
   const currentData = isEditing ? editingRowData : localRegistro;
 
@@ -217,6 +231,17 @@ export default function MobileEmpleadoDetalle({
     ? dayjs.tz(display.salida, DB_TZ).tz(tz).format("HH:mm")
     : null;
   const horasTrabajadas = calcHours(display);
+  const zonaRegistro = display.zona_horaria || tz;
+  const infoExtra = estadoHorasExtra(display, zonaRegistro);
+  const autorizadorExtra = [display.nombre_extra_autorizador, display.apellido_paterno_extra_autorizador]
+    .filter(Boolean)
+    .join(" ") || (() => {
+      const p = empleados.find((e) => String(e.id_empleado) === String(display.extras_autorizadas_por));
+      return p ? `${p.nombre} ${p.apellido_paterno ?? ""}`.trim() : "";
+    })();
+  const salidaProgramadaFmt = display.hora_salida_programada
+    ? String(display.hora_salida_programada).slice(0, 5)
+    : null;
   const cambiosDisplay = cambiosRegistro(
     display,
     crearFormateadorCambios({ tiposPermiso: tiposPermisoData, empleados, zona: tz }),
@@ -489,7 +514,7 @@ export default function MobileEmpleadoDetalle({
                       disabled
                     />
                     <ToggleRow
-                      label="Horas extra"
+                      label="Horas extra autorizadas"
                       checked={currentData.hrs_extra}
                       onChange={(val) => handleFieldChange("hrs_extra", val)}
                     />
@@ -689,9 +714,14 @@ export default function MobileEmpleadoDetalle({
                   >
                     {salidaFmt ? salidaFmt.replace(":", " : ") : "— : —"}
                   </div>
-                  {!salidaFmt && (
+                  {infoExtra.estado === "no_autorizada" && (
+                    <div className="text-[11px] text-gray-400 line-through mt-1" title="Checada real del reloj (se conserva)">
+                      {dayjs.tz(infoExtra.salidaReloj, DB_TZ).tz(zonaRegistro).format("HH:mm")} reloj
+                    </div>
+                  )}
+                  {!salidaFmt && salidaProgramadaFmt && (
                     <div className="text-[10px] text-gray-400 mt-1">
-                      Programada 17:00
+                      Programada {salidaProgramadaFmt}
                     </div>
                   )}
                 </div>
@@ -712,7 +742,7 @@ export default function MobileEmpleadoDetalle({
                     H. Extra
                   </div>
                   <div className="text-base font-extrabold text-gray-900 mt-0.5 tabular-nums">
-                    {display.hrs_extra ? "Sí" : "0:00"}
+                    {infoExtra.minutos > 0 && infoExtra.estado !== "sin" ? formatearMinutos(infoExtra.minutos) : "—"}
                   </div>
                 </div>
                 <div className="flex-1">
@@ -725,6 +755,29 @@ export default function MobileEmpleadoDetalle({
                 </div>
               </div>
             </div>
+
+            <HorasExtraMovil
+              key={`${display.id}-${infoExtra.estado}`}
+              registro={display}
+              info={infoExtra}
+              autorizador={autorizadorExtra}
+              guardando={hx.guardando}
+              onAutorizar={({ forma, notas }) =>
+                hx.guardar(
+                  [{ registro: display, cambios: cambiosAutorizar({ forma, notas, idAutorizador: hx.usuario.idEmpleado }) }],
+                  "Horas extra autorizadas.",
+                )
+              }
+              onNoAutorizar={() =>
+                hx.guardar(
+                  [{ registro: display, cambios: cambiosNoAutorizar(display, { quien: hx.usuario.nombre, zona: zonaRegistro }) }],
+                  "No autorizadas. Se paga hasta la salida del horario.",
+                )
+              }
+              onQuitar={() =>
+                hx.guardar([{ registro: display, cambios: cambiosQuitar(display, zonaRegistro) }], "Decisión quitada.")
+              }
+            />
 
             {/* Notes */}
             {display.notas && (

@@ -62,11 +62,22 @@ export default function AsistenciaRow({
       : (key) =>
           EXTRA_COLUMN_KEYS.has(key) ? Boolean(mostrarCamposExtras) : true;
 
-  const { jornada, minutosDiferencia } = calcularResumenJornada(registro);
+  const { minutosTrabajados, minutosProgramados, minutosDiferencia } = calcularResumenJornada(registro);
+  const esDescanso = /descanso/i.test(registro.tipo_registro_nombre ?? "");
+  const sinChecadas = !registro.entrada && !registro.salida;
+  const avanceJornada =
+    minutosTrabajados != null && minutosProgramados
+      ? Math.min(100, Math.round((minutosTrabajados / minutosProgramados) * 100))
+      : null;
   const infoExtra = estadoHorasExtra(registro, userTimezone);
+  // Balance del día: solo el número con signo; ±10 min se considera en horario (gris).
   const diferenciaTexto = formatearMinutos(minutosDiferencia, { signo: true });
-  const colorDiferencia =
-    minutosDiferencia < 0 ? "text-red-600" : minutosDiferencia > 0 ? "text-green-600" : "text-gray-600";
+  const estiloBalance =
+    minutosDiferencia == null || Math.abs(minutosDiferencia) <= 10
+      ? "bg-slate-100 text-slate-500"
+      : minutosDiferencia < 0
+      ? "bg-red-50 text-red-600"
+      : "bg-emerald-50 text-emerald-700";
 
   // Captura de horas: la fecha base es la del registro; si la salida es menor o igual
   // a la entrada (turno nocturno 22:00 → 05:00), la salida se guarda al día siguiente.
@@ -141,14 +152,15 @@ export default function AsistenciaRow({
         onClick={handleRowClick}
         className={
           // Mismo tamaño y números alineados en todas las columnas.
-          `border-b border-gray-100 text-[13px] text-slate-700 tabular-nums [&>td]:whitespace-nowrap [&>td]:px-3 [&>td]:py-2.5 ${
-            !isEditing ? "cursor-pointer hover:bg-gray-50" : "bg-blue-50/40"
-          }`
+          `group border-b border-gray-100 text-[13px] tabular-nums [&>td]:whitespace-nowrap [&>td]:px-3 [&>td]:py-2.5 ${
+            esDescanso ? "text-slate-400" : "text-slate-700"
+          } ${!isEditing ? "cursor-pointer hover:bg-gray-50" : "bg-blue-50/40"}`
         }
       >
         <>
             {isColVisible("empleado") && (
-              <TableCell className="font-semibold text-slate-800">
+              // Fija a la izquierda: el nombre no se pierde al desplazar la tabla.
+              <TableCell className={`sticky left-0 z-[5] bg-background font-semibold shadow-[8px_0_8px_-8px_rgba(15,23,42,0.18)] group-hover:bg-gray-50 ${esDescanso ? "text-slate-500" : "text-slate-800"}`}>
                 {registro.nombre} {registro.apellido_paterno}
               </TableCell>
             )}
@@ -214,23 +226,37 @@ export default function AsistenciaRow({
             )}
 
             {isColVisible("jornada") && (
-              <TableCell className="text-center">
-                {jornada.includes(" / ") ? (
-                  <>
-                    {jornada.split(" / ")[0]}
-                    <span className="text-slate-400"> / {jornada.split(" / ")[1]}</span>
-                  </>
+              <TableCell className="min-w-[150px]">
+                {esDescanso && sinChecadas ? (
+                  <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500">Descanso</span>
+                ) : sinChecadas ? (
+                  <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500">Sin checadas</span>
                 ) : (
-                  jornada
+                  <div>
+                    <span className={esDescanso ? "" : "font-semibold text-slate-900"}>{formatearMinutos(minutosTrabajados)}</span>
+                    {minutosProgramados != null && (
+                      <span className="text-slate-400"> de {formatearMinutos(minutosProgramados)}</span>
+                    )}
+                    {avanceJornada != null && (
+                      <div className="mt-1 h-1 w-full rounded-full bg-slate-200" aria-hidden>
+                        <div
+                          className={`h-1 rounded-full ${minutosDiferencia < -10 ? "bg-red-400" : "bg-emerald-400"}`}
+                          style={{ width: `${avanceJornada}%` }}
+                        />
+                      </div>
+                    )}
+                  </div>
                 )}
               </TableCell>
             )}
 
             {isColVisible("hrs_diferencia") && (
-              <TableCell
-                className={`text-center font-semibold ${colorDiferencia}`}
-              >
-                {diferenciaTexto}
+              <TableCell className="text-center">
+                {minutosDiferencia == null ? (
+                  <span className="text-slate-300">—</span>
+                ) : (
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${estiloBalance}`}>{diferenciaTexto}</span>
+                )}
               </TableCell>
             )}
             {isColVisible("autorizado_por") && (
@@ -332,28 +358,27 @@ export default function AsistenciaRow({
             )}
             {isColVisible("estado_asistencia") && (
               <TableCell className="text-center">
-                <span
-                  className={`inline-flex rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${
-                    registro.estadoAsistencia === "Presente"
-                      ? "bg-emerald-50 text-emerald-700"
-                      : registro.estadoAsistencia === "Ausente"
-                      ? "bg-rose-50 text-rose-700"
-                      : registro.estadoAsistencia === "Tardanza"
-                      ? "bg-amber-50 text-amber-700"
-                      : registro.estadoAsistencia === "Permiso"
-                      ? "bg-blue-50 text-blue-700"
-                      : registro.estadoAsistencia === "Vacaciones"
-                      ? "bg-violet-50 text-violet-700"
-                      : "bg-slate-100 text-slate-600"
-                  }`}
-                >
-                  {registro.estadoAsistencia?.toUpperCase()}
+                {/* Punto de color + palabra completa (antes la etiqueta en mayúsculas se cortaba). */}
+                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700">
+                  <span
+                    aria-hidden
+                    className={`h-2 w-2 rounded-full ${
+                      {
+                        Presente: "bg-emerald-500",
+                        Ausente: "bg-rose-500",
+                        Tardanza: "bg-amber-500",
+                        Permiso: "bg-blue-500",
+                        Vacaciones: "bg-violet-500",
+                      }[registro.estadoAsistencia] ?? "bg-slate-400"
+                    }`}
+                  />
+                  {registro.estadoAsistencia || "—"}
                 </span>
               </TableCell>
             )}
             {!readOnly && isColVisible("acciones") && (
               <TableCell
-                className="sticky right-0 bg-background z-10 text-center"
+                className="sticky right-0 bg-background z-10 text-center shadow-[-8px_0_8px_-8px_rgba(15,23,42,0.18)]"
                 onClick={(e) => e.stopPropagation()}
               >
                 <button

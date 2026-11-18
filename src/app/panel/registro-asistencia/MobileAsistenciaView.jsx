@@ -17,6 +17,8 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/context/AuthContext";
 import MobileFiltersDrawer from "./MobileFiltersDrawer";
 import MobileEmpleadoDetalle from "./MobileEmpleadoDetalle";
+import { estadoHorasExtra } from "@/lib/asistencia/horasExtra.mjs";
+import { formatearMinutos } from "@/lib/asistencia/jornada.mjs";
 import ClockNavigation from '@/components/Clock/ClockNavigation';
 import LocalClockCaptures from '@/components/Clock/LocalClockCaptures';
 import { ArrowLeft, ArrowRight } from "lucide-react";
@@ -78,7 +80,12 @@ const TABS = [
   { key: "Tardanza", label: "Tarde", dotClass: "bg-amber-500" },
   // { key: "Pendiente", label: "Pendiente", dotClass: "bg-slate-400" },
   { key: "Ausente", label: "Ausente", dotClass: "bg-red-500" },
+  { key: "extra", label: "H. extra", dotClass: "bg-brand-accent" },
 ];
+
+// Mismo cálculo que escritorio: tiempo después de la salida del horario.
+const infoExtra = (r) => estadoHorasExtra(r, r.zona_horaria || DB_TZ);
+const tieneExtra = (r) => infoExtra(r).estado !== "sin";
 
 const GRUPO_CONFIG = {
   Presente: {
@@ -127,6 +134,7 @@ function EmpleadoCard({ registro, index, totalCount, onClick }) {
     : null;
 
   const esTarde = registro.estadoAsistencia === "Tardanza";
+  const extra = infoExtra(registro);
 
   return (
     <button
@@ -147,6 +155,11 @@ function EmpleadoCard({ registro, index, totalCount, onClick }) {
           {registro.departamento}
           {empresa ? ` · ${empresa}` : ""}
         </p>
+        {extra.estado === "pendiente" && (
+          <p className="mt-0.5 truncate text-[11px] font-semibold text-orange-700">
+            {formatearMinutos(extra.minutos)} extra por autorizar
+          </p>
+        )}
       </div>
 
       {/* Times */}
@@ -345,6 +358,7 @@ export default function MobileAsistenciaView({
   // Local tab filtering (client-side, no API call)
   const displayedRegistros = useMemo(() => {
     if (activeTab === "all") return registros;
+    if (activeTab === "extra") return registros.filter(tieneExtra);
     if (activeTab === "Pendiente")
       return registros.filter(
         (r) => !r.estadoAsistencia || r.estadoAsistencia === "Pendiente",
@@ -379,6 +393,7 @@ export default function MobileAsistenciaView({
         (r) => !r.estadoAsistencia || r.estadoAsistencia === "Pendiente",
       ).length,
       Ausente: registros.filter((r) => r.estadoAsistencia === "Ausente").length,
+      extra: registros.filter(tieneExtra).length,
     }),
     [registros],
   );
