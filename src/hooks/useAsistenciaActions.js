@@ -36,9 +36,9 @@ export default function useAsistenciaActions(mutateTable, onSaveSuccess) {
     ),
   };
 
-  const handleEditClick = (selected, restoreOriginal = false) => {
+  const handleEditClick = (selected) => {
     setRegistro(selected);
-    setDraft(restoreOriginal ? { ...selected.valores_originales } : {});
+    setDraft({});
   };
 
   const handleCancelEdit = () => {

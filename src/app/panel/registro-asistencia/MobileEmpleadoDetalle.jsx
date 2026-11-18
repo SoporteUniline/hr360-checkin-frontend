@@ -352,19 +352,6 @@ export default function MobileEmpleadoDetalle({
                 Goce: {display.goce_sueldo ? "Sí" : "No"}
               </span>
             </div>
-            {!isEditing && (
-              localRegistro.valores_originales ? (
-                <button
-                  type="button"
-                  onClick={() => handleEditClick(localRegistro, true)}
-                  className="mt-3 rounded-lg px-3 py-2 text-sm font-medium text-brand"
-                >
-                  Volver al original
-                </button>
-              ) : localRegistro.correccion ? (
-                <p className="mt-3 text-sm text-gray-500">Original no disponible</p>
-              ) : null
-            )}
           </div>
         </div>
 
