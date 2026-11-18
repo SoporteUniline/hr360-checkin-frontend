@@ -97,7 +97,15 @@ try {
   const viejo = page.locator("tr", { hasText: "NocturnoViejo" }).first();
   assert.match(await viejo.innerText(), /7 h \/ 7 h/);
 
-  // 3) Exportar: descarga TODO el periodo (25), no la página visible (10).
+  // 3) Arranca en "Todos los registros": se ven los 25 con UNA sola descarga del periodo
+  //    (sin la segunda descarga para las opciones de filtros).
+  assert.equal(await page.locator("tr", { hasText: "Prueba" }).count(), 25, "debe mostrar todo el periodo");
+  // Ninguna consulta de conteo (limit=1) ni de periodo aparte: la tabla ya trae todo.
+  assert.ok(pedidosAsistencias.every((l) => l === 1000000), `consultas iniciales: ${pedidosAsistencias.join(", ")}`);
+  // Con 10 por página se ven 10, y Exportar sigue sacando el periodo completo.
+  await page.getByRole("button", { name: "Todos" }).click();
+  await page.getByRole("menuitem", { name: "10 por página" }).click();
+  await page.waitForFunction(() => document.querySelectorAll("tr").length < 20);
   const visibles = await page.locator("tr", { hasText: "Prueba" }).count();
   assert.ok(visibles <= 10, `la página muestra ${visibles} filas`);
   const [descarga] = await Promise.all([
@@ -138,7 +146,7 @@ try {
 
   assert.deepEqual(errores, [], "sin errores de JavaScript en la página");
   exito = true;
-  console.log("OK · horas en minutos · nocturno +1 día · Exportar 25/25 · edición nocturna al día siguiente · incidencias en h/min");
+  console.log("OK · arranca con todos (sin descarga extra para filtros) · horas en minutos · nocturno +1 día · Exportar 25/25 · edición nocturna al día siguiente · incidencias en h/min");
   console.log("Consultas a /checador/asistencias (limit):", pedidosAsistencias.join(", "));
 } finally {
   await browser.close();
