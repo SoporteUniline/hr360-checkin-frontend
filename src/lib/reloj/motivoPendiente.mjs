@@ -8,3 +8,7 @@ export function motivoPendiente(event, online = typeof navigator === 'undefined'
   }
   return 'En espera: antes debe subir otra checada anterior de esta persona.';
 }
+
+// ¿El servidor respondió con error? (no es falta de internet). Se reintenta sola, pero hay que avisar a RH
+// si no se resuelve: no debe parecer un problema de conexión de la persona.
+export const errorDelServidor = (event) => Boolean(event && event.status === 'pending' && event.error && event.httpStatus);

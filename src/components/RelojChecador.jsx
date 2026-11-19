@@ -249,6 +249,7 @@ export default function RelojChecador({
         movimiento: data.movimiento || data.message,
         pending: Boolean(data.pending),
         motivo: data.motivo || "",
+        errorServidor: Boolean(data.errorServidor),
         localValidated: Boolean(data.local_validated),
         success: !data.pending,
       });
@@ -299,6 +300,7 @@ export default function RelojChecador({
         movimiento: dataResponse.movimiento || dataResponse.message,
         pending: Boolean(dataResponse.pending),
         motivo: dataResponse.motivo || "",
+        errorServidor: Boolean(dataResponse.errorServidor),
         localValidated: Boolean(dataResponse.local_validated),
         success: !dataResponse.pending,
       });
@@ -331,6 +333,7 @@ export default function RelojChecador({
         movimiento: data.movimiento || data.message,
         pending: Boolean(data.pending),
         motivo: data.motivo || "",
+        errorServidor: Boolean(data.errorServidor),
         localValidated: Boolean(data.local_validated),
         success: !data.pending,
       });
@@ -627,7 +630,7 @@ export default function RelojChecador({
                 />
                 <div
                   className={`absolute bottom-0 right-1/4 w-10 h-10 rounded-full flex items-center justify-center shadow-lg border-4 border-white ${
-                    popupInfo.pending ? "bg-blue-500" : popupInfo.success ? "bg-green-500" : "bg-red-500"
+                    popupInfo.pending ? (popupInfo.errorServidor ? "bg-amber-500" : "bg-blue-500") : popupInfo.success ? "bg-green-500" : "bg-red-500"
                   }`}
                 >
                   {popupInfo.pending ? (
@@ -651,14 +654,14 @@ export default function RelojChecador({
               <div
                 className={`py-3 px-6 rounded-2xl inline-flex items-center gap-2 ${
                   popupInfo.pending
-                    ? "bg-blue-50 text-blue-800"
+                    ? popupInfo.errorServidor ? "bg-amber-50 text-amber-800" : "bg-blue-50 text-blue-800"
                     : popupInfo.success
                     ? "bg-green-50 text-green-600"
                     : "bg-red-50 text-red-600"
                 }`}
               >
                 {popupInfo.pending ? <Clock4 className="w-5 h-5" /> : popupInfo.success ? <CheckCircle className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
-                <span className="font-black text-sm uppercase">{popupInfo.pending ? 'Pendiente de subir' : popupInfo.success ? '¡Éxito!' : 'No se registró · avisa a RH'}</span>
+                <span className="font-black text-sm uppercase">{popupInfo.pending ? (popupInfo.errorServidor ? 'Error del servidor · avisa a RH' : 'Pendiente de subir') : popupInfo.success ? '¡Éxito!' : 'No se registró · avisa a RH'}</span>
               </div>
             </div>
           </div>
