@@ -12,3 +12,10 @@ export function motivoPendiente(event, online = typeof navigator === 'undefined'
 // ¿El servidor respondió con error? (no es falta de internet). Se reintenta sola, pero hay que avisar a RH
 // si no se resuelve: no debe parecer un problema de conexión de la persona.
 export const errorDelServidor = (event) => Boolean(event && event.status === 'pending' && event.error && event.httpStatus);
+
+// Texto de la checada confirmada. «ignorada» (19/11/2026): el servidor no registró un movimiento nuevo
+// porque la persona ya había checado hace menos de 5 min (candado contra checadas repetidas).
+export function textoChecada(accion, mensaje) {
+  if (accion === 'ignorada') return mensaje || 'Ya estaba registrada hace menos de 5 minutos';
+  return accion === 'entrada' ? 'Entrada registrada' : 'Salida registrada';
+}

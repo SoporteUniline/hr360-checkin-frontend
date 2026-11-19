@@ -18,3 +18,11 @@ test("un error del servidor no se presenta como falta de internet", async () => 
   assert.equal(errorDelServidor({ status: "pending", error: "" }), false);
   assert.equal(errorDelServidor({ status: "synced", error: "x", httpStatus: 503 }), false);
 });
+
+test("checada repetida (candado de 5 min): se muestra el aviso del servidor, no «Salida registrada»", async () => {
+  const { textoChecada } = await import("../src/lib/reloj/motivoPendiente.mjs");
+  assert.equal(textoChecada("ignorada", "Ya registraste tu entrada a las 16:20"), "Ya registraste tu entrada a las 16:20");
+  assert.equal(textoChecada("ignorada"), "Ya estaba registrada hace menos de 5 minutos");
+  assert.equal(textoChecada("entrada"), "Entrada registrada");
+  assert.equal(textoChecada("salida"), "Salida registrada");
+});

@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import vm from 'node:vm';
 import { webcrypto } from 'node:crypto';
 import { syncEvents, syncCompanyEvents, syncFailure } from '../public/offline-clock/store.mjs';
+import { motivoPendiente, errorDelServidor, textoChecada } from '../src/lib/reloj/motivoPendiente.mjs';
 const require = createRequire(import.meta.url);
 const babel = require('next/dist/compiled/babel/core');
 const source = (await readFile(new URL('../src/lib/offline-clock.js', import.meta.url), 'utf8')).replace('let storeLoading;', 'let storeLoading = Promise.resolve(fixtureStore);');
@@ -21,7 +22,7 @@ function fixture({ online = true, failStorage = false, failNetwork = false, deci
     saveEvent: async event => { if (failStorage) throw Error('Storage full'); records.set(event.id, event); },
     syncEvents, syncCompanyEvents, syncFailure,
   };
-  const context = vm.createContext({ fixtureStore: store, Cookies: { get: () => 'session-current' },
+  const context = vm.createContext({ fixtureStore: store, Cookies: { get: () => 'session-current' }, motivoPendiente, errorDelServidor, textoChecada,
     navigator: { onLine: online }, window: { dispatchEvent() {} }, Event, CustomEvent, Date, crypto: webcrypto,
     console, URL, setTimeout, clearTimeout, ensureOfflineCache: async () => null,
     axios: { post: async (_url, event) => {
