@@ -6,6 +6,7 @@
 export const ETIQUETAS_CAMPO = {
   entrada: "Entrada",
   salida: "Salida",
+  comida_agregada: "Comida",
   id_tipo_permiso: "Tipo de registro",
   asistencia: "Asistió",
   goce_sueldo: "Goce de sueldo",
@@ -61,19 +62,28 @@ export function etiquetaCampo(campo) {
 
 // Devuelve [{ campo, etiqueta, antes, despues }] solo de los campos que cambiaron.
 // `formatear(campo, valor)` convierte cada valor a texto para mostrarlo (horas, catálogos, sí/no).
+// Comida agregada a mano (POST /asistencias/:id/comida): el valor actual son los descansos entre tramos.
+function valorActual(registro, campo) {
+  if (campo !== "comida_agregada") return registro?.[campo];
+  const tramos = Array.isArray(registro?.tramos_checadas) ? registro.tramos_checadas : [];
+  const hora = (v) => String(v ?? "").slice(11, 16);
+  const huecos = tramos.slice(1).map((t, i) => `${hora(tramos[i].salida)}–${hora(t.entrada)}`);
+  return huecos.length ? huecos.join(", ") : "Agregada";
+}
+
 export function cambiosRegistro(registro, formatear = (_c, v) => (v == null || v === "" ? "—" : String(v))) {
   const originales = leerOriginales(registro);
   if (!originales) return [];
   const orden = Object.keys(ETIQUETAS_CAMPO);
   return Object.keys(originales)
     .filter((campo) => !IGNORAR.has(campo))
-    .filter((campo) => normalizar(campo, originales[campo]) !== normalizar(campo, registro?.[campo]))
+    .filter((campo) => normalizar(campo, originales[campo]) !== normalizar(campo, valorActual(registro, campo)))
     .sort((a, b) => (orden.indexOf(a) + 1 || 99) - (orden.indexOf(b) + 1 || 99))
     .map((campo) => ({
       campo,
       etiqueta: etiquetaCampo(campo),
       antes: formatear(campo, originales[campo]),
-      despues: formatear(campo, registro?.[campo]),
+      despues: formatear(campo, valorActual(registro, campo)),
     }));
 }
 

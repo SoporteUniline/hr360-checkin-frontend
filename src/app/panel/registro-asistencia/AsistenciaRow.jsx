@@ -6,6 +6,7 @@ import CeldaEditado, { crearFormateadorCambios } from "./CeldaEditado";
 import { avisoCalendario, correccionesCalendario } from "@/lib/asistencia/calendario.mjs";
 import { estadoHorasExtra } from "@/lib/asistencia/horasExtra.mjs";
 import CeldaHorasExtra, { CeldaAutorizarExtra } from "./CeldaHorasExtra";
+import BotonAgregarComida from "./BotonAgregarComida";
 import PanelEditarAsistencia from "./PanelEditarAsistencia";
 import { useEmpresaTimezone } from "@/context/AuthContext";
 import { calcularResumenJornada, formatearMinutos } from "@/utils/asistenciaHoras";
@@ -252,12 +253,15 @@ export default function AsistenciaRow({
                       </div>
                     )}
                     {noMarcoComida && (
-                      <span
-                        className="mt-1 inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-800"
-                        title="Su horario tiene comida, pero solo checó entrada y salida: no se le descontó nada."
-                      >
-                        ⚠ No marcó salida a comer
-                      </span>
+                      <div>
+                        <BotonAgregarComida
+                          registro={registro}
+                          aBaseDeDatos={aBaseDeDatos}
+                          fechaBase={fechaBase}
+                          readOnly={readOnly}
+                          onGuardado={mutateAsistencia}
+                        />
+                      </div>
                     )}
                     {detalleTramos && (
                       <span className="mt-1 block text-[11px] text-slate-400">Descanso {formatearMinutos(descansoTomado)}</span>
