@@ -26,3 +26,10 @@ test("checada repetida (candado de 5 min): se muestra el aviso del servidor, no 
   assert.equal(textoChecada("entrada"), "Entrada registrada");
   assert.equal(textoChecada("salida"), "Salida registrada");
 });
+
+test("pregunta del candado en 12 h", async () => {
+  const { preguntaRepetida } = await import("../src/lib/reloj/motivoPendiente.mjs");
+  assert.equal(preguntaRepetida({ tipo: "salida", hora: "16:49" }), "Acabas de registrar tu salida a las 4:49 p.m.");
+  assert.equal(preguntaRepetida({ tipo: "entrada", hora: "09:05" }), "Acabas de registrar tu entrada a las 9:05 a.m.");
+  assert.equal(preguntaRepetida(null, "Ya registraste tu entrada a las 12:00"), "Ya registraste tu entrada a las 12:00");
+});

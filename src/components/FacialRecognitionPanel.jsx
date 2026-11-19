@@ -433,7 +433,7 @@ const FacialRecognitionPanel = ({
       diag("checada_exitosa");
       diagApi()?.terminar?.("checada registrada");
       setError("");
-      if (!data?.requiereDecision) setResultadoChecada(data?.pending ? (data?.errorServidor ? "error_servidor" : "pendiente") : "registrada");
+      if (!data?.requiereDecision) setResultadoChecada(data?.repetida ? "repetida" : data?.pending ? (data?.errorServidor ? "error_servidor" : "pendiente") : "registrada");
       if (!data?.requiereDecision) {
         recientesRef.current = recordarChecada(recientesRef.current, detection.descriptor,
           data?.empleado ? `${data.empleado.nombre ?? ""} ${data.empleado.apellido_paterno ?? ""}`.trim() : "", Date.now(), Boolean(data?.pending));
@@ -494,6 +494,7 @@ const FacialRecognitionPanel = ({
     if (!cameraReady)
       return { text: "Iniciando cámara...", color: "bg-gray-700" };
     if (resultadoChecada === "pendiente") return { text: "Checada pendiente de subir", color: "bg-amber-600" };
+    if (resultadoChecada === "repetida") return { text: "Ya estaba registrada · confirma abajo", color: "bg-amber-600" };
     if (resultadoChecada === "error_servidor") return { text: "El servidor no aceptó la checada · avisa a RH", color: "bg-amber-600" };
     if (resultadoChecada === "registrada")
       return {

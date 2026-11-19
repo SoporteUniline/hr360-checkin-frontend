@@ -118,7 +118,7 @@ export async function syncEvents(events, send, persist) {
         break;
       }
       if (receipt?.id !== event.id || receipt?.status !== 'synced') throw new Error('El servidor no confirmó esta checada. Se conservará pendiente.');
-      await persist({ ...event, resolvedAction: receipt.action || event.resolvedAction, clock_state: receipt.clock_state || event.clock_state, confirmed_at: receipt.confirmed_at || new Date().toISOString(), employeeName: receipt.employee?.nombre || event.employeeName, status: 'synced', error: '', code: undefined, descriptor: undefined, grant: undefined, local_verification: undefined });
+      await persist({ ...event, resolvedAction: receipt.action || event.resolvedAction, resolvedMessage: receipt.message, resolvedRebote: receipt.rebote, clock_state: receipt.clock_state || event.clock_state, confirmed_at: receipt.confirmed_at || new Date().toISOString(), employeeName: receipt.employee?.nombre || event.employeeName, status: 'synced', error: '', code: undefined, descriptor: undefined, grant: undefined, local_verification: undefined });
     } catch (error) {
       const failure = syncFailure(event, error);
       await persist(failure);

@@ -5,7 +5,7 @@ import { createRequire } from 'node:module';
 import vm from 'node:vm';
 import { webcrypto } from 'node:crypto';
 import { syncEvents, syncCompanyEvents, syncFailure } from '../public/offline-clock/store.mjs';
-import { motivoPendiente, errorDelServidor, textoChecada } from '../src/lib/reloj/motivoPendiente.mjs';
+import { motivoPendiente, errorDelServidor, textoChecada, preguntaRepetida } from '../src/lib/reloj/motivoPendiente.mjs';
 const require = createRequire(import.meta.url);
 const babel = require('next/dist/compiled/babel/core');
 const source = (await readFile(new URL('../src/lib/offline-clock.js', import.meta.url), 'utf8')).replace('let storeLoading;', 'let storeLoading = Promise.resolve(fixtureStore);');
@@ -13,7 +13,7 @@ const { code } = babel.transformSync(source, { configFile: false, babelrc: false
   ImportDeclaration(path) { path.remove(); },
   ExportNamedDeclaration(path) { if (path.node.declaration) path.replaceWith(path.node.declaration); else path.remove(); },
 } })] });
-function fixture({ online = true, failStorage = false, failNetwork = false, decision = false } = {}) {
+function fixture({ online = true, failStorage = false, failNetwork = false, decision = false, rebote = false } = {}) {
   const records = new Map(), sent = [], profiles = new Map();
   const profile = { id_empresa: 10, id_empleado: 101, nombre: 'Empleado', session: 'session-current', prepared_at: new Date().toISOString() };
   profiles.set('clock:employee:10:101', profile);
@@ -22,13 +22,14 @@ function fixture({ online = true, failStorage = false, failNetwork = false, deci
     saveEvent: async event => { if (failStorage) throw Error('Storage full'); records.set(event.id, event); },
     syncEvents, syncCompanyEvents, syncFailure,
   };
-  const context = vm.createContext({ fixtureStore: store, Cookies: { get: () => 'session-current' }, motivoPendiente, errorDelServidor, textoChecada,
+  const context = vm.createContext({ fixtureStore: store, Cookies: { get: () => 'session-current' }, motivoPendiente, errorDelServidor, textoChecada, preguntaRepetida,
     navigator: { onLine: online }, window: { dispatchEvent() {} }, Event, CustomEvent, Date, crypto: webcrypto,
     console, URL, setTimeout, clearTimeout, ensureOfflineCache: async () => null,
     axios: { post: async (_url, event) => {
       sent.push(event);
       if (failNetwork) { failNetwork = false; throw Error('Response lost'); }
       if (decision && event.action === 'auto') return { data: { requiereDecision: true, empleado: { nombre: 'Empleado' } } };
+      if (rebote && !event.repetir) return { data: { id: event.id, status: 'synced', action: 'ignorada', message: 'Ya registraste tu salida a las 16:49', rebote: { tipo: 'salida', hora: '16:49' }, employee: { nombre: 'Empleado' } } };
       return { data: { id: event.id, status: 'synced', action: event.action === 'auto' ? 'entrada' : event.action, employee: { nombre: 'Empleado' } } };
     } },
   });
@@ -77,4 +78,20 @@ test('a renewed session can sync its own old pending records but cannot sync a d
   assert.deepEqual(fx.sent.map(event => event.id), ['old']);
   assert.equal(fx.records.get('old').status, 'synced');
   assert.equal(fx.records.get('other').status, 'pending');
+});
+
+test('candado de 5 min: el reloj pregunta y «Sí, registrar» reenvía como captura nueva con repetir', async () => {
+  const fx = fixture({ rebote: true });
+  const { data } = await fx.clock.registerClockMovement({ codigo: '123' }, args);
+  assert.equal(data.repetida, true);
+  assert.equal(data.pregunta, 'Acabas de registrar tu salida a las 4:49 p.m.');
+  assert.equal(data.reintentar.repetir, true);
+  assert.equal(fx.sent.length, 1);
+  assert.equal(fx.sent[0].repetir, undefined, 'la primera checada no fuerza');
+  const segunda = await fx.clock.registerClockMovement(data.reintentar, args);
+  assert.equal(fx.sent.length, 2);
+  assert.equal(fx.sent[1].repetir, true);
+  assert.notEqual(fx.sent[1].id, fx.sent[0].id, 'es una captura nueva');
+  assert.equal(segunda.data.repetida, undefined);
+  assert.equal(segunda.data.movimiento, 'Entrada registrada', 'se registra (el servidor simulado responde entrada)');
 });
