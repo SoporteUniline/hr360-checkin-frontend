@@ -6,7 +6,7 @@ export function attendanceTime(value, timezone) {
   if (!value || value === "-") return "—";
   if (/^\d{2}:\d{2}(:\d{2})?$/.test(value)) return value.slice(0, 5);
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "—" : new Intl.DateTimeFormat("es-MX", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: timezone }).format(date);
+  return Number.isNaN(date.getTime()) ? "—" : new Intl.DateTimeFormat("es-MX", { hour: "2-digit", minute: "2-digit", hourCycle: "h12", timeZone: timezone }).format(date);
 }
 export default function AttendanceCard({ row, timezone, today = false, compact = false }) {
   const entry = row.entrada_corregida && row.entrada_corregida !== "-" ? row.entrada_corregida : row.hora_entrada || row.entrada;

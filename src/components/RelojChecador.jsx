@@ -32,6 +32,7 @@ import QRScanner from "./QRScanner";
 import { Button } from "./ui/button";
 import { initializeClock, registerClockMovement, localFaceStatus } from '@/lib/offline-clock';
 import ClockNavigation from './Clock/ClockNavigation';
+import { hora12 } from "@/lib/hora12.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -134,10 +135,7 @@ export default function RelojChecador({
 
   const formatearHora = (fechaString) => {
     if (!fechaString) return "-";
-    return dayjs
-      .tz(fechaString, DB_TIMEZONE)
-      .tz(EMPRESA_TIMEZONE)
-      .format("HH:mm:ss");
+    return hora12(dayjs.tz(fechaString, DB_TIMEZONE).tz(EMPRESA_TIMEZONE), { segundos: true });
   };
 
   const endpoint = modoEmpleado
@@ -185,7 +183,7 @@ export default function RelojChecador({
   useEffect(() => {
     const actualizarHora = () => {
       const ahora = dayjs().tz(EMPRESA_TIMEZONE);
-      setHoraActual(ahora.format("HH:mm:ss"));
+      setHoraActual(hora12(ahora, { segundos: true }));
       const fechaFormateada = ahora.format("dddd, D [de] MMMM [de] YYYY");
       const [dia, ...resto] = fechaFormateada.split(", ");
       const diaCapitalizado = dia.charAt(0).toUpperCase() + dia.slice(1);
@@ -427,8 +425,8 @@ export default function RelojChecador({
     return () => window.removeEventListener("resize", medir);
   }, [subscriptionLoading, subscriptionActive, menuMovil]);
 
-  // 24 horas en todo el reloj (19/11/2026).
-  const horaCorta = horaActual ? horaActual.slice(0, 5) : "";
+  // 12 horas con a.m./p.m. (19/11/2026): «4:49 p.m.».
+  const horaCorta = horaActual ? horaActual.replace(/:\d{2} /, " ") : "";
 
   if (subscriptionLoading) {
     return (
@@ -719,7 +717,7 @@ export default function RelojChecador({
                 </p>
                 {popupInfo.pending && popupInfo.motivo && <p className="mt-1 text-xs text-amber-700">{popupInfo.motivo}</p>}
               </div>
-              <span className="shrink-0 text-lg font-bold tabular-nums text-slate-900">{horaCorta.slice(0, 5)}</span>
+              <span className="shrink-0 text-lg font-bold tabular-nums text-slate-900">{horaCorta}</span>
             </div>
           );
         })()}

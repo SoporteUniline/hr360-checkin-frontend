@@ -14,13 +14,14 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Pencil, LogIn, LogOut, UtensilsCrossed, History } from "lucide-react";
+import { hora12 } from "@/lib/hora12.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 const DB_TIMEZONE = "America/Mexico_City";
 
-const fmtHora = (v) => (v ? dayjs.tz(v, DB_TIMEZONE).format("HH:mm") : null);
+const fmtHora = (v) => (v ? hora12(dayjs.tz(v, DB_TIMEZONE)) : null);
 
 const fmtFecha = (v) =>
   v ? dayjs.tz(v, DB_TIMEZONE).format("DD/MM/YYYY") : "—";

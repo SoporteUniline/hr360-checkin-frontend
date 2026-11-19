@@ -100,7 +100,7 @@ try {
   const dlgDia = page.getByRole("dialog");
   await dlgDia.waitFor();
   const textoDia = await dlgDia.innerText();
-  assert.match(textoDia, /Diego Prueba[\s\S]*jueves 19 de noviembre 2026[\s\S]*08:00 – 17:00[\s\S]*08:00 → 19:31[\s\S]*2 h 31 min[\s\S]*Por autorizar/i);
+  assert.match(textoDia, /Diego Prueba[\s\S]*jueves 19 de noviembre 2026[\s\S]*08:00 – 17:00[\s\S]*8:00 a\.m\. → 7:31 p\.m\.[\s\S]*2 h 31 min[\s\S]*Por autorizar/i);
   const enlace = await dlgDia.getByRole("link", { name: /Abrir en Asistencias/ }).getAttribute("href");
   assert.match(enlace, /^\/panel\/registro-asistencia\?fecha=2026-11-19&empleado=Diego\+Prueba&abrir=\d+$/);
   if (process.env.CAPTURAS) { await dormir(300); await page.screenshot({ path: process.env.CAPTURAS + "/horas-extra-dia.png" }); }
@@ -118,6 +118,8 @@ try {
   // Quincena y mes: más columnas.
   await page.getByRole("group", { name: "Periodo" }).getByRole("button", { name: "Mes" }).click();
   await page.getByText(/^1 nov – 30 nov 2026$/).waitFor();
+  // Espera a que la matriz del mes termine de dibujarse (antes se contaba mientras recargaba).
+  await page.waitForFunction(() => document.querySelectorAll('table[aria-label="Horas extra por día"] thead th').length === 32, null, { timeout: 10000 });
   assert.equal(await matriz.locator("thead th").count(), 1 + 30 + 1);
   await page.getByRole("group", { name: "Periodo" }).getByRole("button", { name: "Semana" }).click();
   await page.getByText(/^16 nov – 22 nov 2026$/).waitFor();

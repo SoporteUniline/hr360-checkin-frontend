@@ -1209,7 +1209,7 @@ export default function PageMapaDeRutas() {
             {new Date().toLocaleTimeString("es-MX", {
               hour: "2-digit",
               minute: "2-digit",
-              hourCycle: "h23",
+              hourCycle: "h12",
             })}{" "}
             - Sistema Adamia
           </div>
@@ -1560,7 +1560,7 @@ export default function PageMapaDeRutas() {
     const horaGenerado = new Date().toLocaleTimeString("es-MX", {
       hour: "2-digit",
       minute: "2-digit",
-      hourCycle: "h23",
+      hourCycle: "h12",
     });
     for (let i = 1; i <= totalPages; i++) {
       doc.setPage(i);

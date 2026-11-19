@@ -11,6 +11,7 @@ import { Pencil, Save, X } from "lucide-react";
 import useClockCheckData from "@/hooks/useRelojChecador";
 import useEntradaSalida from "@/hooks/useEntradaSalida";
 import { useAuth, useEmpresaTimezone } from "@/context/AuthContext";
+import { hora12 } from "@/lib/hora12.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -42,6 +43,8 @@ export default function ChecadasDelDia({ empleado, activo = true, mutateAsistenc
   } = useEntradaSalida(mutate);
 
   const hora = (v) => (valida(v) ? dayjs.tz(v, DB_TIMEZONE).tz(zona).format("HH:mm") : "");
+  // Para mostrar (12 h); `hora` (HH:mm) queda para los campos de captura.
+  const horaVer = (v) => (valida(v) ? hora12(dayjs.tz(v, DB_TIMEZONE).tz(zona)) : "");
   const fechaBase = dayjs.tz(empleado?.entrada, DB_TIMEZONE).tz(zona).format("YYYY-MM-DD");
   const aFecha = (h) => (h ? dayjs(`${fechaBase} ${h}`).format("YYYY-MM-DD HH:mm:ss") : null);
   const registros = Array.isArray(data?.registros) ? data.registros : [];
@@ -53,12 +56,12 @@ export default function ChecadasDelDia({ empleado, activo = true, mutateAsistenc
       {valida(corregida) ? (
         <span className="tabular-nums">
           {valida(original) && (
-            <span className="mr-1 text-slate-400 line-through" title="Hora original del reloj (corregida)">{hora(original)}</span>
+            <span className="mr-1 text-slate-400 line-through" title="Hora original del reloj (corregida)">{horaVer(original)}</span>
           )}
-          <span className="rounded-md bg-amber-50 px-1.5 py-0.5 font-semibold text-amber-700">{hora(corregida)}</span>
+          <span className="rounded-md bg-amber-50 px-1.5 py-0.5 font-semibold text-amber-700">{horaVer(corregida)}</span>
         </span>
       ) : (
-        <span className="font-semibold tabular-nums text-slate-800">{hora(original) || "—"}</span>
+        <span className="font-semibold tabular-nums text-slate-800">{horaVer(original) || "—"}</span>
       )}
     </div>
   );

@@ -16,6 +16,7 @@ import { minutosDescanso, salidaEsDiaSiguiente, sinSalidaAComer, sumarDias } fro
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
+import { hora12 } from "@/lib/hora12.mjs";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
@@ -93,8 +94,10 @@ export default function AsistenciaRow({
   const horaLocal = (valor) =>
     valor ? dayjs.tz(valor, DB_TIMEZONE).tz(userTimezone).format("HH:mm") : "";
   // Tramos del reloj para el detalle de la jornada (09:00–11:00 · 11:30–14:00).
+  // Para mostrar (12 h); horaLocal (HH:mm) se queda para los campos de captura.
+  const horaVer = (valor) => (valor ? hora12(dayjs.tz(valor, DB_TIMEZONE).tz(userTimezone)) : "");
   const detalleTramos = Array.isArray(registro.tramos_checadas) && registro.tramos_checadas.length > 1
-    ? registro.tramos_checadas.map((t) => `${horaLocal(t.entrada)}–${horaLocal(t.salida)}`).join(" · ")
+    ? registro.tramos_checadas.map((t) => `${horaVer(t.entrada)}–${horaVer(t.salida)}`).join(" · ")
     : null;
   const fechaLocal = (valor) =>
     valor ? dayjs.tz(valor, DB_TIMEZONE).tz(userTimezone).format("YYYY-MM-DD") : "";
@@ -223,28 +226,18 @@ export default function AsistenciaRow({
             )}
             {isColVisible("entrada") && (
               <TableCell className="text-center">
-                {registro.entrada
-                  ? dayjs
-                      .tz(registro.entrada, "America/Mexico_City")
-                      .tz(userTimezone)
-                      .format("HH:mm")
-                  : "-"}
+                {registro.entrada ? horaVer(registro.entrada) : "-"}
               </TableCell>
             )}
             {isColVisible("salida") && (
               <TableCell className="text-center">
-                {registro.salida
-                  ? dayjs
-                      .tz(registro.salida, "America/Mexico_City")
-                      .tz(userTimezone)
-                      .format("HH:mm")
-                  : "-"}
+                {registro.salida ? horaVer(registro.salida) : "-"}
                 {salidaDiaSiguiente(registro) && (
                   <span className="ml-1 text-[11px] font-semibold text-blue-600">+1 día</span>
                 )}
                 {infoExtra.estado === "no_autorizada" && infoExtra.salidaReloj && infoExtra.salidaReloj !== registro.salida && (
                   <span className="block text-[11px] text-slate-400 line-through" title="Checada real del reloj (se conserva)">
-                    {horaLocal(infoExtra.salidaReloj)} reloj
+                    {horaVer(infoExtra.salidaReloj)} reloj
                   </span>
                 )}
               </TableCell>

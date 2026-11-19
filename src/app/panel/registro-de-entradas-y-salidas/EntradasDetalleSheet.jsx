@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Pencil, LogIn, LogOut } from "lucide-react";
 import { useEmpresaTimezone } from "@/context/AuthContext";
+import { hora12 } from "@/lib/hora12.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -51,7 +52,7 @@ export default function EntradasDetalleSheet({
   const userTimezone = registro.zona_horaria || fallbackTimezone;
 
   const fmtHora = (v) =>
-    v ? dayjs.tz(v, DB_TIMEZONE).tz(userTimezone).format("HH:mm") : "—";
+    v ? hora12(dayjs.tz(v, DB_TIMEZONE).tz(userTimezone)) : "—";
   const fmtFecha = (v) =>
     v ? dayjs.tz(v, DB_TIMEZONE).tz(userTimezone).format("DD/MM/YYYY") : "—";
 

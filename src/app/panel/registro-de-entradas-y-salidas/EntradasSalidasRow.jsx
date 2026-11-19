@@ -5,6 +5,7 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { useEmpresaTimezone } from "@/context/AuthContext";
+import { hora12 } from "@/lib/hora12.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -54,12 +55,10 @@ export default function EntradasSalidasRow({
       .format("DD/MM/YYYY");
   };
 
+  // Mostrar en 12 h con a.m./p.m.; los campos de captura siguen en HH:mm.
   const formatTime = (dateTimeString) => {
     if (!dateTimeString) return "-";
-    return dayjs
-      .tz(dateTimeString, DB_TIMEZONE)
-      .tz(userTimezone)
-      .format("HH:mm");
+    return hora12(dayjs.tz(dateTimeString, DB_TIMEZONE).tz(userTimezone));
   };
 
   const baseDateForCorrection = dayjs
