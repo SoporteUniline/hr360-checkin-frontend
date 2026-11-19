@@ -56,7 +56,7 @@ try {
   await ctx.addCookies([{ name: "token", value: token, url: base }]);
   const page = await ctx.newPage();
   const errores = []; page.on("pageerror", (e) => errores.push(e.message));
-  await page.route("**/*", async (route) => {
+  const rutas = async (route) => {
     const req = route.request(); const url = new URL(req.url());
     if (url.origin === base && !url.pathname.startsWith("/api/")) return route.continue();
     const json = (data, status = 200) => route.fulfill({ status, contentType: "application/json", headers: { "Access-Control-Allow-Origin": base, "Access-Control-Allow-Credentials": "true", "Access-Control-Allow-Headers": "authorization,content-type", "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS" }, body: JSON.stringify(data) });
@@ -73,18 +73,70 @@ try {
     if (/\/checador\/asistencias\/\d+\/cambios$/.test(p)) return json({ disponible: true, cambios: [] });
     if (p.includes("eventos-checada")) return route.abort();
     return json({});
-  });
+  };
+  await page.route("**/*", rutas);
 
   // Llega desde Asistencias › Horas con la semana y la persona.
   await page.goto(`${base}/panel/horas-extra?semana=${dia(3)}&empleado=`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Control de horas extra" }).waitFor({ timeout: 30000 });
-  await page.locator("tr", { hasText: "Gabriel Prueba" }).first().waitFor({ timeout: 30000 });
+  // Vista «Por fechas» (predeterminada): días arriba, horas abajo.
+  const matriz = page.getByRole("table", { name: "Horas extra por día" });
+  await matriz.waitFor({ timeout: 30000 });
   assert.ok(pedidos.some((x) => x.startsWith("asistencias") && x.includes(`fechaInicio=${L}`) && x.includes(`fechaFin=${dia(6)}`)), JSON.stringify(pedidos));
   assert.ok(pedidos.some((x) => x === `jornada ?fecha=${L}`));
-  assert.match(await page.getByText(/^Semana 16 nov – 22 nov 2026$/).innerText(), /16 nov/);
+  assert.match(await page.getByText(/^16 nov – 22 nov 2026$/).innerText(), /16 nov/);
+  assert.match(await matriz.locator("thead").innerText(), /Lun\s*16[\s\S]*Dom\s*22[\s\S]*Total[\s\S]*De 9 h al doble/i);
+  // Pendientes primero; solo quien tiene horas extra.
+  const nombres = await matriz.locator("tbody tr").evaluateAll((trs) => trs.map((t) => t.getAttribute("aria-label")));
+  assert.deepEqual(nombres.slice(0, 2).sort(), ["Diego Prueba", "Hilda Prueba"]);
+  assert.ok(!nombres.includes("Sinextra Prueba"));
+  const filaG = matriz.getByRole("row", { name: "Gabriel Prueba", exact: true });
+  assert.match(await filaG.innerText(), /4:00[\s\S]*4:00[\s\S]*5:30[\s\S]*13 h 30 min[\s\S]*4 h 30 min al triple/);
+  assert.match(await matriz.locator("tfoot").innerText(), /Total del día[\s\S]*2 por aut\./);
+  if (process.env.CAPTURAS) { await dormir(300); await page.screenshot({ path: process.env.CAPTURAS + "/horas-extra-fechas.png" }); }
+
+  // Clic en un día: sus registros, decidir y el enlace a Asistencias.
+  await matriz.getByRole("button", { name: /^Diego Prueba 2026-11-19/ }).click();
+  const dlgDia = page.getByRole("dialog");
+  await dlgDia.waitFor();
+  const textoDia = await dlgDia.innerText();
+  assert.match(textoDia, /Diego Prueba[\s\S]*jueves 19 de noviembre 2026[\s\S]*08:00 – 17:00[\s\S]*08:00 → 19:31[\s\S]*2 h 31 min[\s\S]*Por autorizar/i);
+  const enlace = await dlgDia.getByRole("link", { name: /Abrir en Asistencias/ }).getAttribute("href");
+  assert.match(enlace, /^\/panel\/registro-asistencia\?fecha=2026-11-19&empleado=Diego\+Prueba&abrir=\d+$/);
+  if (process.env.CAPTURAS) { await dormir(300); await page.screenshot({ path: process.env.CAPTURAS + "/horas-extra-dia.png" }); }
+  await dlgDia.getByRole("button", { name: "Sí", exact: true }).click();
+  for (let i = 0; i < 40 && !puts.length; i++) await dormir(100);
+  assert.deepEqual(puts[0].cuerpo, { hrs_extra: 1, forma_pago_extras: "Pago de horas extras", extras_autorizadas_por: 7 });
+  puts.length = 0;
+  await page.keyboard.press("Escape");
+
+  // Tarjeta «Por autorizar» filtra la matriz.
+  await page.getByRole("button", { name: /Por autorizar/ }).first().click();
+  await page.waitForFunction(() => document.querySelectorAll('table[aria-label="Horas extra por día"] tbody tr').length === 2);
+  await page.getByRole("button", { name: /Por autorizar/ }).first().click();
+
+  // Quincena y mes: más columnas.
+  await page.getByRole("group", { name: "Periodo" }).getByRole("button", { name: "Mes" }).click();
+  await page.getByText(/^1 nov – 30 nov 2026$/).waitFor();
+  assert.equal(await matriz.locator("thead th").count(), 1 + 30 + 1);
+  await page.getByRole("group", { name: "Periodo" }).getByRole("button", { name: "Semana" }).click();
+  await page.getByText(/^16 nov – 22 nov 2026$/).waitFor();
+
+  // «Abrir en Asistencias» abre la ventana de edición de ese registro.
+  const p2 = await ctx.newPage();
+  p2.on("pageerror", (e) => errores.push(e.message));
+  await p2.route("**/*", rutas);
+  await p2.goto(base + enlace, { waitUntil: "domcontentloaded" });
+  await p2.getByRole("dialog").waitFor({ timeout: 30000 });
+  assert.match(await p2.getByRole("dialog").innerText(), /Diego/);
+  await p2.close();
+
+  // Vista «Lista»: la tabla de Asistencias con las columnas del control.
+  await page.getByRole("button", { name: "Lista", exact: true }).click();
+  await page.locator("tr", { hasText: "Gabriel Prueba" }).first().waitFor({ timeout: 30000 });
 
   // Tarjetas.
-  const tarjetas = await page.getByRole("group", { name: "Resumen de la semana" }).innerText();
+  const tarjetas = await page.getByRole("group", { name: "Resumen del periodo" }).innerText();
   assert.match(tarjetas, /Por autorizar\s*3 h 46 min\s*2 registros · 2 personas/i);
   assert.match(tarjetas, /Autorizadas\s*13 h 30 min\s*9 h al doble · 4 h 30 min al triple/i);
   assert.match(tarjetas, /No autorizadas\s*6 h 59 min/i);
@@ -128,10 +180,6 @@ try {
   assert.match(await page.getByRole("dialog").innerText(), /Diego/);
   await page.keyboard.press("Escape");
 
-  // Por persona: agrupa por empleado.
-  await page.getByRole("button", { name: "Por persona" }).click();
-  assert.equal(await page.getByRole("button", { name: "Por persona" }).getAttribute("aria-pressed"), "true");
-
   // Teléfono: no desborda la página.
   await page.setViewportSize({ width: 390, height: 844 });
   await dormir(500);
@@ -140,7 +188,7 @@ try {
 
   assert.deepEqual(errores, []);
   exito = true;
-  console.log("OK control de horas extra: semana del enlace, tope del catálogo, tarjetas (por autorizar/autorizadas doble-triple/no autorizadas/alertas), solo filas con extra, decidió/semana/alertas, filtro por tarjeta, autorizar en bloque, ventana de edición, por persona, teléfono");
+  console.log("OK control de horas extra: vista por fechas (días arriba, pendientes primero, totales del día, tope), clic en un día con registros y Sí/No, enlace que abre la edición en Asistencias, filtro por tarjeta, semana/mes, vista Lista con tarjetas, columnas del control y autorizar en bloque, teléfono");
 } finally {
   await browser.close();
   next.kill();

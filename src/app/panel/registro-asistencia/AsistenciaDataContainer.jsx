@@ -13,6 +13,7 @@ import TablePagination from "@/components/TablePagination";
 import LoadingTable from "@/components/LoadingTable";
 import ErrorPage from "@/components/ErrorPage";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { fetcherWithToken } from "@/lib/fetcher";
 import useDepartamentosData from "@/hooks/useDepartamentosData";
 import { useSnackbar } from "notistack";
@@ -258,6 +259,18 @@ export default function AsistenciaDataContainer({
     handleFieldChange,
     handleSaveClick,
   } = useAsistenciaActions(mutate);
+
+  // «Abrir en Asistencias» desde Control de horas extra: ?abrir=<id> abre su ventana de edición una vez.
+  const searchParams = useSearchParams();
+  const abrirId = searchParams?.get("abrir");
+  const abiertoRef = useRef(null);
+  useEffect(() => {
+    if (!abrirId || abiertoRef.current === abrirId) return;
+    const r = registros.find((x) => String(x.id) === String(abrirId));
+    if (!r) return;
+    abiertoRef.current = abrirId;
+    handleEditClick(r);
+  }, [abrirId, registros, handleEditClick]);
 
 
   if (isLoading && !effectiveData && !localEvents.length) return <LoadingTable rows={10} />;
