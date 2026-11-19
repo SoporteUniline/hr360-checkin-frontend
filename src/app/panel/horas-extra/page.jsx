@@ -1,10 +1,11 @@
 "use client";
 
-// Control de horas extra (maqueta aprobada 19/11/2026).
-// Reutiliza la tabla de Asistencias filtrada a quien tiene horas extra: misma edición al dar clic,
-// mismas acciones masivas, mismo Excel e historial. Lo que se cambia aquí ES la asistencia.
-// Arriba: semana legal (lunes–domingo), tarjetas que filtran y el tope semanal al doble de la LFT.
-// Lógica: lib/asistencia/controlHorasExtra.mjs.
+// Control de horas extra (maquetas aprobadas 19/11/2026).
+// «Por fechas» (predeterminada): días arriba, horas abajo; clic en un día abre sus registros.
+// «Lista»: la tabla de Asistencias filtrada a quien tiene horas extra (edición, acciones masivas,
+// Excel, historial). Lo que se cambia aquí ES la asistencia.
+// Arriba: periodo (semana legal, quincena, mes o rango), tarjetas que filtran y el tope semanal de la LFT.
+// Lógica: lib/asistencia/controlHorasExtra.mjs y lib/asistencia/matrizHorasExtra.mjs.
 import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
@@ -21,7 +22,11 @@ import AsistenciaDataContainer from "../registro-asistencia/AsistenciaDataContai
 import { LIMITE_TODOS } from "@/lib/asistencia/consultaPeriodo.mjs";
 import { ETIQUETAS_ESTADO } from "@/lib/asistencia/horasExtra.mjs";
 import { formatearMinutos } from "@/lib/asistencia/jornada.mjs";
-import { moverSemana, semanaDe, topeRespaldo } from "@/lib/asistencia/controlHorasExtra.mjs";
+import { topeRespaldo } from "@/lib/asistencia/controlHorasExtra.mjs";
+import { diasDelPeriodo, moverPeriodo, periodoDe } from "@/lib/asistencia/matrizHorasExtra.mjs";
+import useHorasExtra from "@/hooks/useHorasExtra";
+import { useEmpresaTimezone } from "@/context/AuthContext";
+import VistaFechas from "./VistaFechas";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -29,6 +34,7 @@ dayjs.extend(timezone);
 const COLUMNAS = ["empleado", "departamento", "fecha", "correccion", "salida", "hrs_extra", "forma_pago", "notas"];
 const ORDEN = { sortBy: "horasExtra", sortOrder: "desc" };
 const corta = (f) => dayjs(f).format("D MMM").replace(".", "");
+const MODOS = [["semana", "Semana"], ["quincena", "Quincena"], ["mes", "Mes"], ["rango", "Rango"]];
 const TARJETAS = [
   ["pendiente", "Por autorizar", "text-orange-700"],
   ["autorizada", "Autorizadas", "text-emerald-700"],
@@ -39,27 +45,29 @@ function ControlHorasExtra() {
   const params = useSearchParams();
   const { dataUser } = useAuth();
   const hoy = dayjs().tz("America/Mexico_City").format("YYYY-MM-DD");
-  const [semana, setSemana] = useState(() => semanaDe(params.get("semana") || hoy));
+  const [modo, setModo] = useState("semana");
+  const [periodo, setPeriodo] = useState(() => periodoDe("semana", params.get("semana") || hoy));
+  const [vista, setVista] = useState("fechas"); // "fechas" | "lista"
+  const cambiarModo = (m) => { setModo(m); if (m !== "rango") setPeriodo((p) => periodoDe(m, p.inicio <= hoy && hoy <= p.fin ? hoy : p.inicio)); };
   const [buscar, setBuscar] = useState(params.get("empleado") || "");
   const filtroEmpleado = useDebounce(buscar, 400);
   const [estado, setEstado] = useState(null);
-  const [porPersona, setPorPersona] = useState(false);
   const [page, setPage] = useState(1);
   const [sortConfig, setSortConfig] = useState(ORDEN);
   // Igual que Asistencias: todas las empresas del usuario.
   const empresaActiva = dataUser ? "all" : null;
 
   // Tope semanal al doble del catálogo de jornadas legales (o el respaldo de la LFT).
-  const { data: regla } = useSWR(`/checador/jornadas-legales/vigente?fecha=${semana.inicio}`, fetcherWithToken, { revalidateOnFocus: false, shouldRetryOnError: false });
-  const tope = Number(regla?.data?.minutos_extra_transitorios_semanales) || topeRespaldo(semana.inicio);
+  const { data: regla } = useSWR(`/checador/jornadas-legales/vigente?fecha=${periodo.inicio}`, fetcherWithToken, { revalidateOnFocus: false, shouldRetryOnError: false });
+  const tope = Number(regla?.data?.minutos_extra_transitorios_semanales) || topeRespaldo(periodo.inicio);
   const controlHorasExtra = useMemo(() => ({ tope }), [tope]);
   const estados = useMemo(() => (estado ? [ETIQUETAS_ESTADO[estado]] : []), [estado]);
 
   const res = AsistenciaDataContainer({
     idEmpresa: empresaActiva,
     empresaActiva,
-    fechaInicio: semana.inicio,
-    fechaFin: semana.fin,
+    fechaInicio: periodo.inicio,
+    fechaFin: periodo.fin,
     page,
     limit: LIMITE_TODOS,
     debouncedFiltroEmpleado: filtroEmpleado,
@@ -79,7 +87,7 @@ function ControlHorasExtra() {
     requiereAutorizacion: false,
     sortConfig,
     setSortConfig,
-    agrupar: porPersona ? "empleado" : null,
+    agrupar: null,
     visibleColumns: COLUMNAS,
     vista: "lista",
     controlHorasExtra,
@@ -88,14 +96,21 @@ function ControlHorasExtra() {
   });
   const ui = res?.ui ?? res;
   const resumen = res?.control?.resumen;
+  const registros = useMemo(() => (Array.isArray(res?.data?.registros) ? res.data.registros : []), [res?.data]);
+  const hx = useHorasExtra(res?.mutate);
+  const zonaEmpresa = useEmpresaTimezone(empresaActiva);
+  const zonaDe = useMemo(() => (r) => r.zona_horaria || zonaEmpresa, [zonaEmpresa]);
+  const dias = useMemo(() => diasDelPeriodo(periodo), [periodo]);
+  const estadosMatriz = useMemo(() => (estado ? [estado] : null), [estado]);
 
   const valor = (k) => resumen?.[k];
   const nota = {
     pendiente: resumen ? `${resumen.pendiente.registros} registros · ${resumen.pendiente.personas} personas` : "",
     autorizada: resumen ? `${formatearMinutos(resumen.autorizada.dobles)} al doble · ${formatearMinutos(resumen.autorizada.triples)} al triple` : "",
-    no_autorizada: "se pagó hasta la salida del horario",
+    no_autorizada: "con constancia; no suman",
   };
-  const semanaActual = semana.inicio <= hoy && hoy <= semana.fin;
+  const enCurso = periodo.inicio <= hoy && hoy <= periodo.fin;
+  const titulo = `${corta(periodo.inicio)} – ${corta(periodo.fin)} ${periodo.fin.slice(0, 4)}`;
 
   return (
     <div className="space-y-4">
@@ -107,23 +122,36 @@ function ControlHorasExtra() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2 text-sm">
-          <button type="button" aria-label="Semana anterior" onClick={() => { setSemana((s) => moverSemana(s, -1)); setPage(1); }}
+          <button type="button" aria-label="Periodo anterior" onClick={() => { setPeriodo((p) => moverPeriodo(modo, p, -1)); setPage(1); }}
             className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white hover:bg-slate-50"><ChevronLeft className="h-4 w-4" /></button>
-          <b className="text-slate-900">Semana {corta(semana.inicio)} – {corta(semana.fin)} {semana.fin.slice(0, 4)}</b>
-          <button type="button" aria-label="Semana siguiente" onClick={() => { setSemana((s) => moverSemana(s, 1)); setPage(1); }}
+          <b className="text-slate-900">{titulo}</b>
+          <button type="button" aria-label="Periodo siguiente" onClick={() => { setPeriodo((p) => moverPeriodo(modo, p, 1)); setPage(1); }}
             className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white hover:bg-slate-50"><ChevronRight className="h-4 w-4" /></button>
-          {!semanaActual && (
-            <button type="button" className="text-xs font-semibold text-blue-600 hover:underline" onClick={() => setSemana(semanaDe(hoy))}>Esta semana</button>
+          <div className="flex overflow-hidden rounded-xl border border-slate-200 bg-white text-[12.5px] font-semibold" role="group" aria-label="Periodo">
+            {MODOS.map(([k, t]) => (
+              <button key={k} type="button" aria-pressed={modo === k} onClick={() => cambiarModo(k)}
+                className={`px-2.5 py-1.5 ${modo === k ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-50"}`}>{t}</button>
+            ))}
+          </div>
+          {modo === "rango" && (
+            <span className="flex items-center gap-1 text-xs text-slate-600">
+              <input type="date" aria-label="Desde" value={periodo.inicio} max={periodo.fin} onChange={(e) => e.target.value && setPeriodo((p) => ({ ...p, inicio: e.target.value }))} className="h-8 rounded-lg border border-slate-200 px-2" />
+              a
+              <input type="date" aria-label="Hasta" value={periodo.fin} min={periodo.inicio} onChange={(e) => e.target.value && setPeriodo((p) => ({ ...p, fin: e.target.value }))} className="h-8 rounded-lg border border-slate-200 px-2" />
+            </span>
+          )}
+          {!enCurso && modo !== "rango" && (
+            <button type="button" className="text-xs font-semibold text-blue-600 hover:underline" onClick={() => setPeriodo(periodoDe(modo, hoy))}>Hoy</button>
           )}
           <span className="text-xs text-slate-500">· semana legal lunes–domingo · {formatearMinutos(tope)} extra al doble, lo demás al triple</span>
         </div>
-        <div className="flex overflow-hidden rounded-xl border border-slate-200 bg-white text-sm font-semibold" role="group" aria-label="Agrupar">
-          <button type="button" aria-pressed={!porPersona} onClick={() => setPorPersona(false)} className={`px-3 py-1.5 ${!porPersona ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-50"}`}>Por día</button>
-          <button type="button" aria-pressed={porPersona} onClick={() => setPorPersona(true)} className={`px-3 py-1.5 ${porPersona ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-50"}`}>Por persona</button>
+        <div className="flex overflow-hidden rounded-xl border border-slate-200 bg-white text-sm font-semibold" role="group" aria-label="Vista">
+          <button type="button" aria-pressed={vista === "fechas"} onClick={() => setVista("fechas")} className={`px-3 py-1.5 ${vista === "fechas" ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-50"}`}>Por fechas</button>
+          <button type="button" aria-pressed={vista === "lista"} onClick={() => setVista("lista")} className={`px-3 py-1.5 ${vista === "lista" ? "bg-blue-600 text-white" : "text-slate-600 hover:bg-slate-50"}`}>Lista</button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4" role="group" aria-label="Resumen de la semana">
+      <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4" role="group" aria-label="Resumen del periodo">
         {TARJETAS.map(([k, titulo, color]) => (
           <button key={k} type="button" aria-pressed={estado === k} onClick={() => setEstado(estado === k ? null : k)}
             className={`rounded-2xl border bg-white px-4 py-2.5 text-left transition hover:border-slate-300 ${estado === k ? "border-blue-500 ring-2 ring-blue-500/30" : "border-slate-200"}`}>
@@ -154,11 +182,25 @@ function ControlHorasExtra() {
         )}
       </div>
 
-      {ui}
+      {vista === "fechas" ? (
+        <VistaFechas
+          registros={registros}
+          dias={dias}
+          zonaDe={zonaDe}
+          estados={estadosMatriz}
+          tope={tope}
+          resumen={resumen}
+          hx={hx}
+          mostrarTope={modo === "semana"}
+          cargando={!res?.data && !res?.ui}
+        />
+      ) : ui}
 
       <p className="text-xs text-slate-500">
-        Clic en una fila: abre la misma ventana de Asistencias (horario, checadas del reloj, edición e historial).
-        Lo que cambias aquí es la asistencia: se ve igual en Asistencias, en el Reporte de horas y en la pestaña Horas.
+        {vista === "fechas"
+          ? "Clic en un día: sus registros, decidir Sí / No y abrir la asistencia. En «Lista» puedes elegir varios y corregir de una vez."
+          : "Clic en una fila: abre la misma ventana de Asistencias (horario, checadas del reloj, edición e historial)."}
+        {" "}Lo que cambias aquí es la asistencia: se ve igual en Asistencias, en el Reporte de horas y en la pestaña Horas.
       </p>
     </div>
   );
