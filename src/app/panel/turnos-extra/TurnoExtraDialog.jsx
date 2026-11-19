@@ -130,7 +130,7 @@ export default function TurnoExtraDialog({ open, onOpenChange, empresas, turno, 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-[860px]">
+      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-[1040px]">
         <DialogHeader>
           <DialogTitle>{editando ? "Editar turno extra" : "Nuevo turno extra"}</DialogTitle>
           <DialogDescription>
@@ -198,7 +198,61 @@ export default function TurnoExtraDialog({ open, onOpenChange, empresas, turno, 
             </button>
           ) : null}
         </div>
-        <div className="grid max-h-[38vh] grid-cols-1 gap-1.5 overflow-y-auto pr-1 sm:grid-cols-2" aria-busy={cargando}>
+        {visibles.length ? (
+          <div className="hidden max-h-[42vh] overflow-auto rounded-xl border border-gray-200 md:block" aria-busy={cargando}>
+            <table className="w-full border-collapse text-[12.5px] tabular-nums" aria-label="Personas para el turno">
+              <thead className="sticky top-0 z-10 bg-gray-50 text-left text-[10.5px] uppercase tracking-wide text-gray-500 shadow-[0_1px_0_#e5e7eb]">
+                <tr>
+                  <th scope="col" className="w-9 px-2 py-2">
+                    <input type="checkbox" aria-label={todosVisibles ? "Quitar a los mostrados" : "Elegir a los mostrados"}
+                      className="h-4 w-4 accent-[var(--color-brand,#2563eb)]" checked={todosVisibles} onChange={alternarVisibles} />
+                  </th>
+                  <th scope="col" className="px-2 py-2 font-semibold">Empleado</th>
+                  <th scope="col" className="px-2 py-2 font-semibold">Su turno</th>
+                  <th scope="col" className="px-2 py-2 font-semibold">Salió</th>
+                  <th scope="col" className="px-2 py-2 font-semibold">Semana</th>
+                  <th scope="col" className="px-2 py-2 font-semibold">Extra sem.</th>
+                  <th scope="col" className="px-2 py-2 font-semibold">Este turno</th>
+                  <th scope="col" className="px-2 py-2 font-semibold">Avisos de ley</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibles.map((c) => {
+                  const elegido = seleccion.has(c.id_empleado);
+                  const avisos = c.avisos?.filter((a) => a.nivel !== "info") ?? [];
+                  const info = c.avisos?.filter((a) => a.nivel === "info") ?? [];
+                  return (
+                    <tr key={c.id_empleado} aria-label={c.nombre_empleado} aria-selected={elegido} onClick={() => alternar(c.id_empleado)}
+                      className={`cursor-pointer border-t border-gray-100 align-top ${elegido ? "bg-brand/5" : "hover:bg-gray-50"} ${c.grave ? "shadow-[inset_3px_0_0_#ef4444]" : ""}`}>
+                      <td className="px-2 py-1.5">
+                        <input type="checkbox" aria-label={`Elegir a ${c.nombre_empleado}`} className="h-4 w-4 accent-[var(--color-brand,#2563eb)]"
+                          checked={elegido} onChange={() => alternar(c.id_empleado)} onClick={(e) => e.stopPropagation()} />
+                      </td>
+                      <td className="px-2 py-1.5">
+                        <b className="block leading-tight text-gray-900">{c.nombre_empleado}</b>
+                        <span className="text-[11px] text-gray-500">{c.departamento || c.puesto || ""}</span>
+                      </td>
+                      <td className="whitespace-nowrap px-2 py-1.5 text-gray-600">{c.horario_dia ?? <span className="text-gray-400">{info.length ? "Descanso" : "—"}</span>}</td>
+                      <td className="whitespace-nowrap px-2 py-1.5 text-gray-600">{c.salida_anterior ? c.salida_anterior.slice(11, 16) : "—"}</td>
+                      <td className="whitespace-nowrap px-2 py-1.5">{c.semanaTrabajado != null ? textoMin(c.semanaTrabajado) : "—"}</td>
+                      <td className="whitespace-nowrap px-2 py-1.5">{c.semanaExtraAutorizadas ? textoMin(c.semanaExtraAutorizadas) : "—"}</td>
+                      <td className="whitespace-nowrap px-2 py-1.5">
+                        {textoMin(c.duracion)}
+                        {c.triples ? <span className="block text-[11px] font-semibold text-red-700">{textoMin(c.triples)} al triple</span> : null}
+                      </td>
+                      <td className="px-2 py-1.5">
+                        {avisos.length ? avisos.map((a) => (
+                          <span key={a.codigo} className={`block leading-snug ${TONO_AVISO[a.nivel] ?? ""}`}>⚠ {a.mensaje}</span>
+                        )) : <span className="text-gray-400">{info.length ? info.map((a) => a.mensaje).join(" · ") : "Sin avisos"}</span>}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+        <div className="grid max-h-[38vh] grid-cols-1 gap-1.5 overflow-y-auto pr-1 md:hidden" aria-busy={cargando}>
           {visibles.map((c) => {
             const elegido = seleccion.has(c.id_empleado);
             return (
@@ -224,12 +278,12 @@ export default function TurnoExtraDialog({ open, onOpenChange, empresas, turno, 
               </label>
             );
           })}
-          {!cargando && !visibles.length ? (
-            <p className="col-span-full rounded-xl border border-dashed border-gray-200 p-4 text-center text-sm text-gray-500">
-              {filtro === "salieron" ? "Nadie salió de su turno poco antes de este horario. Usa «Todos» o un departamento." : "No hay personas con este filtro."}
-            </p>
-          ) : null}
         </div>
+        {!cargando && !visibles.length ? (
+          <p className="rounded-xl border border-dashed border-gray-200 p-4 text-center text-sm text-gray-500">
+            {filtro === "salieron" ? "Nadie salió de su turno poco antes de este horario. Usa «Todos» o un departamento." : "No hay personas con este filtro."}
+          </p>
+        ) : null}
 
         <div className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs text-gray-700">
           <b>LFT:</b> el turno extra son <b>horas extra</b> y son voluntarias. Máx. <b>4 h extra al día</b> en 4 días por semana y jornada máx. <b>12 h</b>.

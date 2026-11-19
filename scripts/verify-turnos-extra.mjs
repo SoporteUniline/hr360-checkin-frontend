@@ -45,6 +45,9 @@ const candidatos = [
   { ...persona(201, "Iván Delgado", null, [grave, { nivel: "aviso", codigo: "EXTRA_4H", mensaje: "8 h extra en un día (máx. 4 h)" }]), salida_anterior: `${hoy} 09:02:00`, semanaTrabajado: 2280, semanaExtraAutorizadas: 120 },
   { ...persona(204, "Gabriel Núñez", null, [{ nivel: "aviso", codigo: "TRIPLES", mensaje: "Pasa de 9 h extra: 7 h irían al triple" }]), salida_anterior: `${hoy} 09:00:00`, triples: 420 },
   { ...persona(205, "Karla Vega", null, [{ nivel: "info", codigo: "DESCANSO", mensaje: "Es su día de descanso" }]), departamento: "Almacén", horario_dia: null, salida_anterior: null },
+  // Plantilla real: 190 personas en la lista.
+  ...Array.from({ length: 187 }, (_, i) => ({ ...persona(1000 + i, `Zeta Relleno ${String(i + 1).padStart(3, "0")}`, null, []),
+    departamento: "Empaque", horario_dia: "07:00–15:00", salida_anterior: null })),
 ];
 
 const pedidos = [];
@@ -99,16 +102,33 @@ try {
   // Nuevo turno: avisos por persona, filtro «salieron hoy», confirmación de graves.
   await page.getByRole("button", { name: /Nuevo turno extra/ }).click();
   const dlg = page.getByRole("dialog", { name: "Nuevo turno extra" });
-  await dlg.getByText("Gabriel Núñez").waitFor();
+  const filaCand = (n) => dlg.getByRole("row", { name: n, exact: true });
+  await filaCand("Gabriel Núñez").waitFor();
   const cand = pedidos.filter((x) => x.ruta.endsWith("/candidatos")).at(-1);
   assert.match(cand.params, new RegExp(`empresa=10&fecha=${hoy}&hora_inicio=11(%3A|:)00&hora_fin=19(%3A|:)00`));
   assert.match(await dlg.getByRole("button", { name: /Salieron hoy de su turno/ }).innerText(), /\(2\)/);
-  assert.equal(await dlg.getByText("Karla Vega").count(), 0, "el filtro inicial muestra solo a quien salió de su turno");
+  assert.equal(await filaCand("Karla Vega").count(), 0, "el filtro inicial muestra solo a quien salió de su turno");
+  assert.match(await filaCand("Iván Delgado").innerText(), /Iván Delgado[\s\S]*22:00–09:00[\s\S]*09:02[\s\S]*38 h[\s\S]*2 h[\s\S]*8 h[\s\S]*suma 19 h seguidas/);
+  assert.match(await filaCand("Gabriel Núñez").innerText(), /7 h al triple/);
   await dlg.getByRole("button", { name: /^Todos/ }).click();
-  await dlg.getByText("Karla Vega").waitFor();
+  await filaCand("Karla Vega").waitFor();
+  const tablaCand = dlg.getByRole("table", { name: "Personas para el turno" });
+  assert.equal(await tablaCand.locator("tbody tr").count(), 190);
+  const altoCand = await filaCand("Zeta Relleno 001").evaluate((el) => el.getBoundingClientRect().height);
+  assert.ok(altoCand <= 48, `fila compacta (${altoCand}px)`);
+  assert.match(await filaCand("Karla Vega").innerText(), /Descanso[\s\S]*Es su día de descanso/);
+  // Encabezado fijo al bajar.
+  await tablaCand.evaluate((t) => { t.parentElement.scrollTop = 5000; });
+  const enc = await tablaCand.locator("thead").evaluate((t) => t.getBoundingClientRect().top - t.closest("div").getBoundingClientRect().top);
+  assert.ok(Math.abs(enc) <= 2, `encabezado fijo (${enc})`);
+  // Clic en la fila elige/quita.
+  await filaCand("Zeta Relleno 001").click();
+  assert.equal(await filaCand("Zeta Relleno 001").getAttribute("aria-selected"), "true");
+  await filaCand("Zeta Relleno 001").click();
+  assert.equal(await filaCand("Zeta Relleno 001").getAttribute("aria-selected"), "false");
   await dlg.getByPlaceholder("Doble turno · Producción").fill("Doble turno · Producción");
   await dlg.getByRole("button", { name: /^Salieron hoy/ }).click();
-  await dlg.getByRole("button", { name: "Elegir a los mostrados" }).click();
+  await dlg.getByRole("checkbox", { name: "Elegir a los mostrados" }).click();
   assert.match(await dlg.innerText(), /2 personas · 16 h extra programadas · 7 h al triple · 2 con avisos/);
   await dlg.getByRole("button", { name: "Programar turno" }).click();
   await dlg.getByRole("alert").waitFor();
