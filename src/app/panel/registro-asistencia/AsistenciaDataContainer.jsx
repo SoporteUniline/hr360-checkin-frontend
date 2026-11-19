@@ -8,6 +8,7 @@ import useTiposPermisoData from "@/hooks/useTiposPermisoData";
 import useAsistenciaActions from "@/hooks/useAsistenciaActions";
 import AsistenciaTable from "./AsistenciaTable";
 import AsistenciaMatriz from "./AsistenciaMatriz";
+import VistaHoras from "./VistaHoras";
 import TablePagination from "@/components/TablePagination";
 import LoadingTable from "@/components/LoadingTable";
 import ErrorPage from "@/components/ErrorPage";
@@ -257,7 +258,14 @@ export default function AsistenciaDataContainer({
   return {
     ui: (
       <>
-        {vista === "matriz" ? (
+        {vista === "horas" ? (
+          <VistaHoras
+            idEmpresa={idEmpresa}
+            fechaInicio={fechaInicio}
+            fechaFin={fechaFin}
+            filtroEmpleado={debouncedFiltroEmpleado || ""}
+          />
+        ) : vista === "matriz" ? (
           <><LocalClockCaptures events={localEvents} /><AsistenciaMatriz
             registros={filasPeriodo}
             fechaInicio={fechaInicio}
