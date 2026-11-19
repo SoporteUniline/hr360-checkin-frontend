@@ -9,6 +9,7 @@ import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import EntradasSalidasDataContainer from "./EntradasSalidasDataContainer";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import ClockNavigation from '@/components/Clock/ClockNavigation';
 import {
   CalendarCheck2,
   ClipboardList,
@@ -177,6 +178,7 @@ export default function RegistroEntradasSalidas() {
 
   return (
     <div className="space-y-5">
+      <ClockNavigation companyId={empresaActiva} />
 
       <div>
         <EncabezadoPagina

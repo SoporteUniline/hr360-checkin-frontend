@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   CheckCircle,
   Keyboard,
@@ -8,7 +8,10 @@ import {
   XCircle,
   Clock4,
   AlertTriangle,
+  Camera,
+  Menu,
 } from "lucide-react";
+import Link from "next/link";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import ErrorPage from "@/components/ErrorPage";
@@ -16,6 +19,7 @@ import { useSnackbar } from "notistack";
 import axiosInstance from "@/lib/axios";
 import FacialRecognitionPanel from "./FacialRecognitionPanel";
 import { loadBrowserFaceApi } from "@/lib/faceapi-browser";
+import { diagnosticoActivo, fijarDiagnostico } from "@/lib/diagnostico-reloj";
 import ClockDisplay from "./Clock/ClockDisplay";
 import EmployeeInput from "./Clock/EmployeeInput";
 import StatsCards from "./Clock/StatsCards";
@@ -27,6 +31,7 @@ import timezone from "dayjs/plugin/timezone";
 import { useAuth } from "@/context/AuthContext";
 import QRScanner from "./QRScanner";
 import { Button } from "./ui/button";
+import ClockNavigation from './Clock/ClockNavigation';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -35,9 +40,30 @@ export default function RelojChecador({
   idEmpresa,
   modoEmpleado = false,
   idEmpleado = null,
+  companySlug = null,
 }) {
   const [ubicacionGPS, setUbicacionGPS] = useState(null);
   const [metodo, setMetodo] = useState("facial");
+  // Celular (maqueta aprobada 19/11/2026): la cámara ocupa el alto que queda entre la franja de
+  // arriba y la barra de abajo. Se mide porque arriba puede haber navegación (reloj del empleado).
+  const areaRef = useRef(null);
+  const [altoArea, setAltoArea] = useState(null);
+  const [ajustesCamara, setAjustesCamara] = useState(false);
+  const [menuMovil, setMenuMovil] = useState(false);
+  // Cámara siempre encendida: útil en un reloj fijo (fila de personas). En el celular de cada
+  // empleado conviene apagarla al checar. Se recuerda por dispositivo.
+  const claveCamara = `adamia-reloj-camara-fija:${modoEmpleado ? "empleado" : "empresa"}`;
+  const [camaraFija, setCamaraFija] = useState(!modoEmpleado);
+  useEffect(() => {
+    try {
+      const guardado = localStorage.getItem(claveCamara);
+      if (guardado !== null) setCamaraFija(guardado === "1");
+    } catch { /* sin almacenamiento: queda el valor por defecto */ }
+  }, [claveCamara]);
+  const cambiarCamaraFija = () => setCamaraFija((actual) => {
+    try { localStorage.setItem(claveCamara, actual ? "0" : "1"); } catch { /* solo esta sesión */ }
+    return !actual;
+  });
   const [isMobile, setIsMobile] = useState(false);
   const [mostrarModalTurno, setMostrarModalTurno] = useState(false);
   const [pendiente, setPendiente] = useState(null);
@@ -55,12 +81,32 @@ export default function RelojChecador({
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const [subscriptionActive, setSubscriptionActive] = useState(false);
   const { getCurrentLocation, loading: loadingGPS } = useGPS();
-
   // Prepare recognition while subscription and clock data are being checked.
   // Camera and GPS permissions are requested only by the visible facial panel.
   useEffect(() => {
     loadBrowserFaceApi().catch(() => {});
   }, []);
+
+  // Modo diagnóstico: mide desde que se abre el reloj hasta que se checa.
+  useEffect(() => {
+    const d = globalThis.__adamiaDiag;
+    d?.iniciar?.("reloj", { modo: modoEmpleado ? "empleado" : "kiosco", id_empresa: idEmpresa ?? null, id_empleado: idEmpleado ?? null });
+    d?.marca("reloj_montado");
+    return () => d?.terminar?.("salió del reloj sin checar");
+  }, [modoEmpleado, idEmpresa, idEmpleado]);
+
+  // Cinco toques sobre la hora (celular) prenden o apagan el diagnóstico.
+  const toquesHoraRef = useRef([]);
+  const tocarHora = () => {
+    const ahora = Date.now();
+    toquesHoraRef.current = [...toquesHoraRef.current.filter((t) => ahora - t < 2500), ahora];
+    if (toquesHoraRef.current.length < 5) return;
+    toquesHoraRef.current = [];
+    const activar = !diagnosticoActivo();
+    fijarDiagnostico(activar);
+    enqueueSnackbar(activar ? "Diagnóstico activado" : "Diagnóstico desactivado", { variant: "info" });
+    setTimeout(() => window.location.reload(), 600);
+  };
 
   const formatearHora = (fechaString) => {
     if (!fechaString) return "-";
@@ -136,7 +182,6 @@ export default function RelojChecador({
 
   useEffect(() => {
     if (metodo !== "facial") setMostrarCamara(false);
-    else setMostrarCamara(true);
   }, [metodo]);
 
   useEffect(() => {
@@ -292,6 +337,7 @@ export default function RelojChecador({
 
       try {
         setSubscriptionLoading(true);
+        globalThis.__adamiaDiag?.marca("suscripcion_inicio");
 
         const response = await fetch(
           `/api/empresas/check-subscription/${idEmpresa}`,
@@ -301,8 +347,10 @@ export default function RelojChecador({
         const data = await response.json();
 
         setSubscriptionActive(Boolean(data.hasActivePlan));
+        globalThis.__adamiaDiag?.marca("suscripcion_fin", { activa: Boolean(data.hasActivePlan) });
       } catch (error) {
         console.error("Error validando suscripción:", error);
+        globalThis.__adamiaDiag?.marca("suscripcion_fin", { error: true });
         setSubscriptionActive(false);
       } finally {
         setSubscriptionLoading(false);
@@ -310,7 +358,23 @@ export default function RelojChecador({
     };
 
     validarSuscripcion();
-  }, [idEmpresa, modoEmpleado]);
+  }, [idEmpresa, modoEmpleado, idEmpleado]);
+
+  useEffect(() => {
+    if (subscriptionLoading || !subscriptionActive) return;
+    const medir = () => {
+      const area = areaRef.current;
+      if (!area || window.innerWidth >= 768) { setAltoArea(null); return; }
+      const arriba = area.getBoundingClientRect().top + window.scrollY;
+      const barra = document.getElementById("reloj-barra-movil")?.offsetHeight ?? 72;
+      setAltoArea(Math.max(320, window.innerHeight - arriba - barra));
+    };
+    medir();
+    window.addEventListener("resize", medir);
+    return () => window.removeEventListener("resize", medir);
+  }, [subscriptionLoading, subscriptionActive, menuMovil, ajustesCamara, metodo]);
+
+  const horaCorta = horaActual ? `${horaActual.slice(0, 5)} ${horaActual.includes("AM") ? "a.m." : "p.m."}` : "";
 
   if (subscriptionLoading) {
     return (
@@ -349,9 +413,9 @@ export default function RelojChecador({
 
   return (
     <>
-      <main className="min-h-screen bg-slate-50 p-4">
-        <div className="mx-auto max-w-7xl space-y-6">
-          <div className="rounded-xl border border-blue-100 bg-linear-to-r from-indigo-50 to-blue-50 p-6">
+      <main className="bg-slate-50 md:min-h-screen md:p-4">
+        <div className="mx-auto max-w-7xl md:space-y-6">
+          <div className="hidden md:block rounded-xl border border-blue-100 bg-linear-to-r from-indigo-50 to-blue-50 p-6">
             <div className="flex items-center gap-3">
               <div className="rounded-lg bg-blue-600 p-2.5">
                 <Clock4 className="w-5 h-5 text-white" />
@@ -368,7 +432,7 @@ export default function RelojChecador({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-12 md:gap-6">
             <div className="hidden md:block lg:col-span-4 md:col-span-5 space-y-6">
               <div className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">
                 <ClockDisplay
@@ -392,29 +456,44 @@ export default function RelojChecador({
             </div>
 
             <div className="lg:col-span-8 md:col-span-7 md:space-y-6">
-              <div className="block md:hidden mb-6 text-center space-y-1">
-                <h1 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                  Adamia - Sistema de Asistencia
-                </h1>
-                <div className="py-2">
-                  <p className="text-6xl font-black text-slate-900 tracking-tighter antialiased flex items-end justify-center gap-2">
-                    <span>{horaActual.replace(/ (AM|PM)/, "")}</span>
-
-                    <span className="text-2xl text-blue-500 font-bold mt-2">
-                      {horaActual.includes("AM") ? "AM" : "PM"}
-                    </span>
-                  </p>
-                  <p className="text-xs font-bold text-slate-500 uppercase mt-1 tracking-wider">
-                    {fechaActual}
-                  </p>
-                </div>
+              {/* Franja con la marca ADAMIA (19/11/2026): logo y colores de marca, sin nombre de la empresa. */}
+              <div className="md:hidden flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-2">
+                <span className="flex min-w-0 items-center gap-2">
+                  {dataUser && (
+                    <button type="button" onClick={() => setMenuMovil((v) => !v)} aria-expanded={menuMovil} aria-label="Menú"
+                      className="-ml-1 grid size-9 shrink-0 place-items-center rounded-lg text-slate-600 hover:bg-slate-100">
+                      <Menu className="size-5" aria-hidden="true" />
+                    </button>
+                  )}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/assets/adamia-logo-reloj.png" alt="ADAMIA" width={600} height={159} className="h-7 w-auto" />
+                </span>
+                <span onClick={tocarHora} className="shrink-0 select-none bg-linear-to-r from-brand to-brand-accent bg-clip-text text-lg font-bold tabular-nums text-transparent">{horaCorta}</span>
               </div>
+              {menuMovil && dataUser && (
+                <div className="md:hidden border-b border-slate-200 bg-white px-3 py-3 space-y-2">
+                  {modoEmpleado && <Link href="/empleado/panel/inicio" className="flex min-h-11 items-center font-semibold text-brand">← Volver a mi inicio</Link>}
+                  <ClockNavigation companyId={idEmpresa} companySlug={companySlug} />
+                </div>
+              )}
 
-              <div className="flex md:hidden mb-8 bg-slate-200/60 p-1.5 rounded-2xl border border-slate-200 shadow-inner">
+              <div id="reloj-barra-movil" className="md:hidden fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white px-3 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))]">
+              {ajustesCamara && metodo === "facial" && (
+                <label className="mb-2 flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm shadow-lg">
+                  <span>
+                    <span className="block font-semibold text-slate-800">Cámara siempre encendida</span>
+                    <span className="block text-xs text-slate-500">{camaraFija ? "Reloj fijo: queda lista para la siguiente persona" : "Se apaga al checar"}</span>
+                  </span>
+                  <input type="checkbox" role="switch" className="peer sr-only" checked={camaraFija} onChange={cambiarCamaraFija} />
+                  <span aria-hidden="true" className="relative h-6 w-11 shrink-0 rounded-full bg-slate-300 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:bg-brand peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-brand" />
+                </label>
+              )}
+              <div className="flex items-center gap-2">
+              <div className="flex flex-1 rounded-xl bg-slate-100 p-1">
                 {[
-                  { id: "qr", icon: QrCode, label: "QR" },
-                  { id: "codigo", icon: Keyboard, label: "Código" },
                   { id: "facial", icon: ScanEye, label: "Rostro" },
+                  { id: "codigo", icon: Keyboard, label: "Código" },
+                  { id: "qr", icon: QrCode, label: "QR" },
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -430,30 +509,53 @@ export default function RelojChecador({
                         setMostrarQR(false);
                       }
                     }}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all duration-300 ${
+                    className={`flex-1 flex min-h-11 items-center justify-center gap-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                       metodo === tab.id
-                        ? "bg-white text-slate-900 shadow-md scale-[1.02]"
+                        ? "bg-white text-slate-900 shadow-sm"
                         : "text-slate-500 hover:text-slate-700"
                     }`}
                   >
                     <tab.icon
                       className={`w-5 h-5 ${
-                        metodo === tab.id ? "text-blue-600" : ""
+                        metodo === tab.id ? "text-brand" : ""
                       }`}
                     />
-                    <span className="text-[10px] font-black uppercase tracking-tight">
+                    <span className="text-xs font-semibold">
                       {tab.label}
                     </span>
                   </button>
                 ))}
               </div>
+              {metodo === "facial" && (
+                <button type="button" onClick={() => setAjustesCamara((v) => !v)} aria-expanded={ajustesCamara}
+                  aria-label="Ajustes de la cámara" title="Cámara siempre encendida"
+                  className={`grid size-11 shrink-0 place-items-center rounded-xl border ${ajustesCamara ? "border-brand/40 bg-brand/10 text-brand" : "border-slate-200 text-brand"}`}>
+                  <Camera className="size-5" aria-hidden="true" />
+                </button>
+              )}
+              </div>
+              </div>
 
-              <div className="relative min-h-75">
+              {metodo === "facial" && (
+                <label className="mb-3 hidden md:flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm">
+                  <span>
+                    <span className="block font-semibold text-slate-800">Cámara siempre encendida</span>
+                    <span className="block text-xs text-slate-500">
+                      {camaraFija ? "Reloj fijo: queda lista para la siguiente persona" : "Se apaga al checar"}
+                    </span>
+                  </span>
+                  <input type="checkbox" role="switch" className="peer sr-only" checked={camaraFija} onChange={cambiarCamaraFija} />
+                  <span aria-hidden="true" className="relative h-6 w-11 shrink-0 rounded-full bg-slate-300 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:bg-blue-600 peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-400" />
+                </label>
+              )}
+
+              <div ref={areaRef} style={altoArea ? { height: altoArea } : undefined}
+                className="relative overflow-y-auto md:min-h-75 md:overflow-visible">
                 {(metodo === "facial" || !isMobile) && (
                   <div
                     className={
                       metodo === "facial"
-                        ? "block animate-in fade-in duration-500"
+                        ? "block h-full md:h-auto animate-in fade-in duration-500"
                         : "hidden md:block"
                     }
                   >
@@ -464,13 +566,14 @@ export default function RelojChecador({
                       onSuccess={handleFacialResponse}
                       idEmpresa={idEmpresa}
                       handleOpenFacialModal={() => setMostrarCamara(false)}
-                      continuo
+                      continuo={camaraFija}
+                      pantallaCompleta={isMobile}
                     />
                   </div>
                 )}
 
                 {metodo === "qr" && (
-                  <div className="block md:hidden bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 p-8 animate-in zoom-in-95 fade-in duration-300">
+                  <div className="block md:hidden m-3 bg-white rounded-3xl shadow-sm border border-slate-100 p-6 animate-in fade-in duration-300">
                     <div className="text-center mb-8">
                       <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-blue-100">
                         <QrCode className="w-10 h-10 text-blue-600" />
@@ -495,7 +598,7 @@ export default function RelojChecador({
                 )}
 
                 {metodo === "codigo" && (
-                  <div className="block md:hidden bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 p-8 animate-in zoom-in-95 fade-in duration-300">
+                  <div className="block md:hidden m-3 bg-white rounded-3xl shadow-sm border border-slate-100 p-6 animate-in fade-in duration-300">
                     <div className="text-center mb-8">
                       <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-blue-100">
                         <Keyboard className="w-10 h-10 text-blue-600" />
@@ -538,8 +641,31 @@ export default function RelojChecador({
           />
         )}
 
+        {popupInfo && (() => {
+          const tono = popupInfo.success ? "green" : "red";
+          const colores = { green: "text-green-700 bg-green-50", red: "text-red-700 bg-red-50" }[tono];
+          const estado = popupInfo.success ? (popupInfo.movimiento || "Registrada") : "No se registró · avisa a RH";
+          const iniciales = String(popupInfo.nombre || "").trim().split(/\s+/).slice(0, 2).map((p) => p[0] || "").join("").toUpperCase();
+          // Celular: tarjeta sobre la cámara, sin tapar la pantalla (maqueta aprobada).
+          return (
+            <div role="status" aria-live="polite" className="md:hidden fixed inset-x-3 z-100 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] flex items-center gap-3 rounded-2xl bg-white p-3 shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-200">
+              {popupInfo.foto_perfil && !popupInfo.foto_perfil.endsWith("/assets/user.png")
+                ? <img src={popupInfo.foto_perfil} alt="" className="size-12 shrink-0 rounded-full object-cover" />
+                : <span className="grid size-12 shrink-0 place-items-center rounded-full bg-linear-to-br from-brand to-brand-accent font-bold text-white">{iniciales || "?"}</span>}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-base font-bold text-slate-900">{popupInfo.nombre}</p>
+                <p className={`mt-0.5 inline-flex max-w-full items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold ${colores}`}>
+                  {popupInfo.success ? <CheckCircle className="size-3.5 shrink-0" /> : <XCircle className="size-3.5 shrink-0" />}
+                  <span className="truncate">{estado}</span>
+                </p>
+              </div>
+              <span className="shrink-0 text-lg font-bold tabular-nums text-slate-900">{horaCorta.slice(0, 5)}</span>
+            </div>
+          );
+        })()}
+
         {popupInfo && (
-          <div className="fixed inset-0 z-100 flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
+          <div className="fixed inset-0 z-100 hidden md:flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
             <div className="bg-white rounded-[3rem] shadow-2xl p-10 text-center max-w-sm w-full transform animate-bounce-in border border-slate-100">
               <div className="relative mb-6">
                 <img

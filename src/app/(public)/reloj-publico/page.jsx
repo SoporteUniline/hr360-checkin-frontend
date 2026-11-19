@@ -37,6 +37,7 @@ import { twMerge } from "tailwind-merge";
 import Cookies from "js-cookie";
 import axiosInstance from "@/lib/axios";
 import { useRouter } from "next/navigation";
+import ClockNavigation from "@/components/Clock/ClockNavigation";
 import { useAuth } from "@/context/AuthContext";
 
 export default function Home() {
@@ -212,6 +213,7 @@ export default function Home() {
   return (
     <>
       <main className="min-h-screen bg-linear-to-br from-slate-50 via-gray-50 to-slate-100 p-4">
+        <div className="mx-auto mb-4 max-w-7xl"><ClockNavigation companyId={dataUser?.id_empresa} /></div>
         {!isLoggedIn ? (
           <div className="max-w-md mx-auto">
             <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl border border-slate-200/50 p-8 text-center">

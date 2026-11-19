@@ -97,5 +97,5 @@ export default function ChecadorPage() {
     return <RedirectingPage message={error || "Empresa no encontrada"} />;
   }
 
-  return <RelojChecador idEmpresa={idEmpresa} />;
+  return <RelojChecador idEmpresa={idEmpresa} companySlug={slug} />;
 }
