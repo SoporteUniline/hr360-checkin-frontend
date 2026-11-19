@@ -50,6 +50,10 @@ const FacialRecognitionPanel = ({
   const NO_MATCH_INTERVAL = 800; // sin coincidencia: no saturar el reconocimiento / servidor
   const PAUSA_TRAS_CHECAR = 2000; // modo reloj: el nombre se ve 2 s y sigue con el siguiente
   const RESPALDO_SSD_MS = 2000; // si el detector rápido no ve cara en 2 s, se alterna con SSD
+  // (19/11/2026) En dev nadie pudo checar con el detector rápido: la huella facial queda muy cerca del
+  // umbral del reloj (0.95) frente a las fotos registradas con SSD. Se vuelve a SSD para reconocer;
+  // el detector rápido queda apagado hasta validarlo con fotos reales.
+  const DETECTOR_RAPIDO = false;
   const retryIntervalRef = useRef(MIN_INTERVAL);
   const recientesRef = useRef([]); // checadas de los últimos 60 s (evita doble checada)
   const CAMERA_START_TIMEOUT = 15000;
@@ -282,7 +286,7 @@ const FacialRecognitionPanel = ({
         const d = diagApi();
         const t0 = d ? d.ahora() : 0;
         // Detector rápido; si lleva 2 s sin ver cara, alterna con SSD (respaldo para poca luz o lejanía).
-        usarRespaldo = Date.now() - sinRostroDesde > RESPALDO_SSD_MS ? !usarRespaldo : false;
+        usarRespaldo = !DETECTOR_RAPIDO || (Date.now() - sinRostroDesde > RESPALDO_SSD_MS ? !usarRespaldo : false);
         const detection = await (usarRespaldo
           ? window.faceapi.detectSingleFace(canvas)
           : window.faceapi.detectSingleFace(canvas, opcionesRapidas(window.faceapi)))
