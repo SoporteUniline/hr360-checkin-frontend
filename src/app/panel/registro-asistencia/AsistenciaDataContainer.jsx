@@ -262,15 +262,21 @@ export default function AsistenciaDataContainer({
 
   // «Abrir en Asistencias» desde Control de horas extra: ?abrir=<id> abre su ventana de edición una vez.
   const searchParams = useSearchParams();
+  // Desde la pestaña Horas (19/11/2026): ?abrirEmpleado=<id_empleado>&fecha=YYYY-MM-DD abre el registro de ese día.
   const abrirId = searchParams?.get("abrir");
+  const abrirEmpleado = searchParams?.get("abrirEmpleado");
+  const abrirFecha = searchParams?.get("fecha");
   const abiertoRef = useRef(null);
   useEffect(() => {
-    if (!abrirId || abiertoRef.current === abrirId) return;
-    const r = registros.find((x) => String(x.id) === String(abrirId));
+    const clave = abrirId || (abrirEmpleado && `${abrirEmpleado}|${abrirFecha}`);
+    if (!clave || abiertoRef.current === clave) return;
+    const r = abrirId
+      ? registros.find((x) => String(x.id) === String(abrirId))
+      : registros.find((x) => String(x.id_empleado) === String(abrirEmpleado) && String(x.fecha ?? "").slice(0, 10) === abrirFecha);
     if (!r) return;
-    abiertoRef.current = abrirId;
+    abiertoRef.current = clave;
     handleEditClick(r);
-  }, [abrirId, registros, handleEditClick]);
+  }, [abrirId, abrirEmpleado, abrirFecha, registros, handleEditClick]);
 
 
   // (19/11/2026) La página desestructura { ui, ... }: antes se devolvía el JSX suelto y, mientras
