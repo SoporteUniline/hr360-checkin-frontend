@@ -47,7 +47,11 @@ export default function ChecadasDelDia({ empleado, activo = true, mutateAsistenc
   const horaVer = (v) => (valida(v) ? hora12(dayjs.tz(v, DB_TIMEZONE).tz(zona)) : "");
   const fechaBase = dayjs.tz(empleado?.entrada, DB_TIMEZONE).tz(zona).format("YYYY-MM-DD");
   const aFecha = (h) => (h ? dayjs(`${fechaBase} ${h}`).format("YYYY-MM-DD HH:mm:ss") : null);
-  const registros = Array.isArray(data?.registros) ? data.registros : [];
+  // En orden de hora (19/11/2026): el tramo creado al agregar la comida salía antes que el de la mañana.
+  const horaEfectiva = (c) => String(c.entrada_corregida || c.entrada || c.salida_corregida || c.salida || "");
+  const registros = Array.isArray(data?.registros)
+    ? [...data.registros].sort((a, b) => horaEfectiva(a).localeCompare(horaEfectiva(b)) || Number(a.id) - Number(b.id))
+    : [];
 
   // Hora original tachada + corregida resaltada (o solo la original).
   const Marca = ({ original, corregida, etiqueta }) => (
