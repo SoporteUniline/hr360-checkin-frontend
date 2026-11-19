@@ -34,3 +34,15 @@ test("ya se excedió, dentro del límite y semana pasada sin proyección", () =>
   assert.equal(pasada.restante, 0);
   assert.equal(pasada.nivel, "ok");
 });
+
+test("horaCorta y orden de la tabla", async () => {
+  const { horaCorta, ordenarFilas } = await import("../src/lib/asistencia/semanaHoras.mjs");
+  assert.equal(horaCorta(570), "9:30");
+  assert.equal(horaCorta(2805), "46:45");
+  assert.equal(horaCorta(0), "—");
+  const f = (nombre, trabajado, alertas = []) => ({ r: { empleado: { nombre_empleado: nombre } }, s: { trabajado, autorizadas: 0, porAutorizar: 0, alertas } });
+  const filas = [f("Beto", 100), f("Ana", 300), f("Carla", 100, ["x"])];
+  assert.deepEqual(ordenarFilas(filas).map((x) => x.r.empleado.nombre_empleado), ["Ana", "Beto", "Carla"]);
+  assert.deepEqual(ordenarFilas(filas, "nombre", "asc").map((x) => x.r.empleado.nombre_empleado), ["Ana", "Beto", "Carla"]);
+  assert.deepEqual(ordenarFilas(filas, "alertas", "desc").map((x) => x.r.empleado.nombre_empleado), ["Carla", "Ana", "Beto"]);
+});
