@@ -3,6 +3,8 @@ import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import vm from "node:vm";
 import test from "node:test";
+import { createRecorder } from "../src/lib/diagnostico-reloj/core.mjs";
+import { yaRegistrado, recordarChecada } from "../src/lib/reloj/recientes.mjs";
 
 const require = createRequire(import.meta.url);
 const babel = require("next/dist/compiled/babel/core");
@@ -17,7 +19,7 @@ const { code } = babel.transformSync(source, {
 });
 const tick = () => new Promise(setImmediate);
 
-function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, postError = null } = {}) {
+function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, postError = null, diag, props = {} } = {}) {
   const slots = [];
   let cursor = 0;
   let effects = [];
@@ -29,6 +31,7 @@ function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, p
   let successes = 0;
   let now = Date.now();
   const notifications = [];
+  const detectores = [];
   const requests = [];
   let texts = [];
   let resolveModels;
@@ -37,6 +40,7 @@ function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, p
   const models = new Promise((resolve) => { resolveModels = resolve; });
   const result = new Promise((resolve) => { resolveDetection = resolve; });
   const timers = new Set();
+  const startupTimers = new Map();
   const video = { readyState: 4, videoWidth: 640, videoHeight: 480,
     pause() {}, load() {}, removeAttribute() {} };
   const canvas = { getContext: () => ({ drawImage() {}, clearRect() {} }) };
@@ -67,6 +71,8 @@ function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, p
     } },
     Camera() {}, Power() {}, RotateCcw() {}, Button() {},
     loadBrowserFaceApi: () => models,
+    opcionesRapidas: () => ({ rapido: true }),
+    yaRegistrado, recordarChecada,
     enqueueSnackbar(message) { notifications.push(message); }, console,
     axiosInstance: { post: async (url, body) => {
       posts++;
@@ -78,7 +84,7 @@ function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, p
       } };
       return { data: {} };
     } },
-    navigator: {
+    navigator: { onLine: true,
       mediaDevices: { async getUserMedia() {
         cameraCalls++;
         return { getTracks: () => [{ stop() { stops++; } }] };
@@ -92,23 +98,27 @@ function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, p
         }
       } },
     },
-    window: { faceapi: { detectSingleFace() {
+    window: { faceapi: { detectSingleFace(_canvas, opciones) {
       detections++;
+      detectores.push(opciones?.rapido ? "rapido" : "ssd");
       return { withFaceLandmarks: () => ({ withFaceDescriptor: () => result }) };
     } } },
     setInterval(fn) { timers.add(fn); return fn; },
     clearInterval(fn) { timers.delete(fn); },
+    setTimeout(fn, delay) { startupTimers.set(fn, delay); return fn; },
+    clearTimeout(fn) { startupTimers.delete(fn); },
+    __adamiaDiag: diag,
   });
   vm.runInContext(code, context);
   const render = (isOpen = true) => {
     cursor = 0;
     effects = [];
     texts = [];
-    context.Component({ isOpen, idEmpresa: 1, onClose() {}, onSuccess() { successes++; } });
+    context.Component({ isOpen, idEmpresa: 1, onClose() {}, onSuccess() { successes++; }, ...props });
     effects.forEach(({ cleanup }) => cleanup?.());
     effects.forEach(({ index, run, deps }) => { slots[index] = { deps, cleanup: run() }; });
   };
-  return { render, video, resolveModels, resolveDetection, timers, notifications, requests,
+  return { render, video, resolveModels, resolveDetection, timers, startupTimers, notifications, requests, detectores,
     texts: () => texts,
     advance(ms) { now += ms; },
     setGpsFails(value) { gpsFails = value; },
@@ -116,6 +126,54 @@ function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, p
     resolveLocation: () => resolveLocation(),
     counts: () => ({ cameraCalls, gpsCalls, detections, posts, stops, successes }) };
 }
+
+test("a camera that never delivers a frame stops without requiring a page reload", async () => {
+  const env = setup();
+  env.render();
+  await tick();
+  const onPlaying = env.video.onplaying;
+  for (const [timeout, delay] of env.startupTimers) if (delay === 15000) timeout();
+  onPlaying();
+  env.resolveModels();
+  await tick();
+  env.render();
+  assert.equal(env.counts().stops, 1);
+  assert.equal(env.counts().detections, 0);
+  assert.ok(env.texts().some((message) => message.includes("La cámara no inició")));
+});
+
+test("without a face, the next analysis starts almost immediately (60 ms), not after half a second", async () => {
+  const env = setup();
+  env.render();
+  await tick();
+  env.video.onplaying();
+  env.resolveModels();
+  await tick();
+  env.render();
+  env.resolveDetection(undefined);
+  await tick();
+  env.advance(30);
+  for (const detect of env.timers) detect();
+  assert.equal(env.counts().detections, 1, "no new analysis before 60 ms");
+  env.advance(40);
+  for (const detect of env.timers) detect();
+  assert.equal(env.counts().detections, 2);
+});
+
+test("slow model startup offers another check-in method and recovers when loading completes", async () => {
+  const env = setup();
+  env.render();
+  await tick();
+  env.video.onplaying();
+  for (const [timeout, delay] of env.startupTimers) if (delay === 20000) timeout();
+  env.render();
+  assert.ok(env.texts().some((message) => message.includes("Puedes usar código o QR")));
+  env.resolveModels();
+  await tick();
+  env.render();
+  assert.equal(env.counts().detections, 1);
+  assert.ok(env.texts().every((message) => !message.includes("Puedes usar código o QR")));
+});
 
 test("camera starts before models without requesting GPS; model readiness does not reopen the camera", async () => {
   const env = setup();
@@ -196,7 +254,7 @@ test("missing or denied GPS does not block employees without a GPS requirement",
   }
 });
 
-test("nonmatching faces retry with a stable inline error, no snackbar flood, and a pause", async () => {
+test("nonmatching faces retry with a stable inline error, no snackbar flood, and a pause (800 ms)", async () => {
   const message = "No se encontr\u00f3 coincidencia facial";
   const env = setup({ postError: message });
   await startRecognition(env);
@@ -205,7 +263,7 @@ test("nonmatching faces retry with a stable inline error, no snackbar flood, and
     for (const fn of env.timers) fn();
     await tick();
     assert.equal(env.counts().posts, attempt + 1, "wait before submitting another frame");
-    env.advance(500);
+    env.advance(800);
     for (const fn of env.timers) fn();
     env.render();
     assert.ok(env.texts().includes(message), "previous message stays visible during retry");
@@ -217,7 +275,7 @@ test("nonmatching faces retry with a stable inline error, no snackbar flood, and
   assert.equal(env.counts().gpsCalls, 0, "unknown faces never trigger a location prompt");
   assert.equal(env.counts().successes, 0);
   env.setPostError(null);
-  env.advance(500);
+  env.advance(800);
   for (const fn of env.timers) fn();
   await tick();
   assert.equal(env.counts().successes, 1, "automatic retries can still succeed");
@@ -276,4 +334,96 @@ test("GPS is requested after identification and recent coordinates are reused on
   assert.equal(env.requests[2].body.latitud_actual, 1);
   assert.equal(env.counts().gpsCalls, 1);
   assert.equal(env.notifications.length, 0);
+});
+
+test("with diagnostics on, behavior is unchanged and every phase is recorded", async () => {
+  let t = 0;
+  const reportes = [];
+  const rec = createRecorder({ now: () => t, storage: null, onFinish: (r) => reportes.push(r) });
+  const diag = {
+    ahora: () => (t += 5),
+    marca: rec.marca, cuenta: rec.cuenta, contexto: rec.agregarContexto,
+    iniciar: (m, c) => rec.iniciar(m, c), terminar: (r, d) => rec.terminar(r, d),
+  };
+  const env = setup({ diag,
+    postError: (body) => body.latitud_actual === null ? "Faltan coordenadas de ubicaci\u00f3n" : null,
+  });
+  await startRecognition(env);
+  await tick();
+  assert.equal(env.counts().successes, 1);
+  assert.equal(env.requests.length, 2);
+  assert.equal(env.requests[0].body.latitud_actual, null);
+  assert.equal(env.requests[1].body.latitud_actual, 1);
+  assert.equal(reportes.length, 1);
+  const r = reportes[0];
+  assert.equal(r.resultado, "checada registrada");
+  const nombres = r.marcas.map((m) => m.n);
+  for (const n of ["camara_solicitada", "camara_lista", "modelos_listos_panel", "deteccion_lista",
+    "primer_analisis_fin", "primer_rostro", "envio_inicio", "envio_fin", "gps_inicio", "gps_fin", "checada_exitosa", "fin"]) {
+    assert.ok(nombres.includes(n), `falta la marca ${n}`);
+  }
+  assert.equal(nombres.filter((n) => n === "envio_inicio").length, 2);
+  assert.equal(r.marcas.find((m) => m.n === "envio_fin").d.error, "Faltan coordenadas de ubicaci\u00f3n");
+  const gps = r.marcas.find((m) => m.n === "gps_fin").d;
+  assert.equal(gps.ok, true);
+  assert.equal(gps.precision_m, 8);
+  assert.equal(r.contexto.camara, "640x480");
+  assert.equal(r.contadores.analisis.veces, 1);
+  assert.equal(r.contadores.envio.veces, 2);
+  assert.ok(r.fases.some((f) => f.fase === "Obtener GPS" && f.ms != null));
+});
+
+const cara = Float32Array.from({ length: 128 }, (_, i) => Math.sin(i * 1.3));
+
+test("el detector rápido se usa siempre; tras 2 s sin cara se alterna con SSD como respaldo", async () => {
+  const env = setup();
+  env.render();
+  await tick();
+  env.video.onplaying();
+  env.resolveModels();
+  await tick();
+  env.render();
+  env.resolveDetection(undefined);
+  await tick();
+  assert.deepEqual(env.detectores, ["rapido"]);
+  for (let i = 0; i < 4; i++) { env.advance(100); for (const detect of env.timers) detect(); await tick(); }
+  assert.ok(env.detectores.every((d) => d === "rapido"), "antes de 2 s solo el rápido");
+  env.advance(2000);
+  for (let i = 0; i < 4; i++) { env.advance(100); for (const detect of env.timers) detect(); await tick(); }
+  assert.ok(env.detectores.slice(5).includes("ssd"), "después de 2 s sin cara entra SSD");
+  assert.ok(env.detectores.slice(5).includes("rapido"), "y se alterna con el rápido");
+});
+
+test("modo reloj: la cámara sigue encendida tras checar y la misma persona no vuelve a checar en 60 s", async () => {
+  const env = setup({ props: { continuo: true } });
+  env.render();
+  await tick();
+  env.video.onloadeddata();
+  env.resolveModels();
+  await tick();
+  env.render();
+  env.resolveDetection({ descriptor: cara });
+  await tick();
+  env.render();
+  assert.equal(env.counts().posts, 1);
+  assert.equal(env.counts().successes, 1);
+  assert.equal(env.counts().stops, 0, "la cámara no se apaga");
+  // Pausa de 2 s con el nombre en pantalla: no analiza.
+  env.advance(500);
+  for (const fn of env.timers) fn();
+  await tick();
+  assert.equal(env.counts().posts, 1);
+  // Pasada la pausa, la misma cara sigue enfrente: aviso y sin otra checada.
+  for (const [fn, delay] of env.startupTimers) if (delay === 2000) { env.startupTimers.delete(fn); fn(); }
+  env.advance(2000);
+  for (const fn of env.timers) fn();
+  await tick();
+  env.render();
+  assert.equal(env.counts().posts, 1, "no se duplica la checada");
+  assert.ok(env.texts().some((t) => /ya registrado hace \d+ s/.test(t)), JSON.stringify(env.texts()));
+  // Después de 60 s sí puede volver a checar (p. ej. su salida).
+  env.advance(61000);
+  for (const fn of env.timers) fn();
+  await tick();
+  assert.equal(env.counts().posts, 2);
 });

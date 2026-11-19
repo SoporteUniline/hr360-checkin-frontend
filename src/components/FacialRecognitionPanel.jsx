@@ -3,7 +3,12 @@ import { Camera, Power, RotateCcw } from "lucide-react";
 import { enqueueSnackbar } from "notistack";
 import axiosInstance from "@/lib/axios";
 import { Button } from "./ui/button";
-import { loadBrowserFaceApi } from "@/lib/faceapi-browser";
+import { loadBrowserFaceApi, opcionesRapidas } from "@/lib/faceapi-browser";
+import { yaRegistrado, recordarChecada } from "@/lib/reloj/recientes.mjs";
+
+// Modo diagnóstico opcional: si está apagado, estas llamadas no hacen nada.
+const diagApi = () => globalThis.__adamiaDiag;
+const diag = (nombre, datos) => diagApi()?.marca(nombre, datos);
 
 const FacialRecognitionPanel = ({
   isOpen,
@@ -12,15 +17,22 @@ const FacialRecognitionPanel = ({
   onSuccess,
   idEmpresa,
   handleOpenFacialModal,
+  submitMovement,
+  // Reloj de la empresa: la cámara se queda encendida para el siguiente empleado.
+  continuo = false,
 }) => {
   const [ubicacionGPS, setUbicacionGPS] = useState(null);
   const [cameraFacing, setCameraFacing] = useState("user");
   const [error, setError] = useState("");
   const [faceApiLoaded, setFaceApiLoaded] = useState(false);
+  const [modelError, setModelError] = useState("");
   const [cameraReady, setCameraReady] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [resultadoChecada, setResultadoChecada] = useState(null);
+  const [avisoRepetido, setAvisoRepetidoEstado] = useState("");
+  const avisoRepetidoRef = useRef("");
+  const setAvisoRepetido = (v) => { avisoRepetidoRef.current = v; setAvisoRepetidoEstado(v); };
   const streamRef = useRef(null);
   const [faceDetected, setFaceDetected] = useState(false);
 
@@ -33,8 +45,14 @@ const FacialRecognitionPanel = ({
   const isProcessingRef = useRef(false);
   const isDetectingRef = useRef(false);
   const lastCheckTimeRef = useRef(0);
-  const retryIntervalRef = useRef(500);
-  const MIN_INTERVAL = 500;
+  // (19/11/2026) Checar debe ser inmediato: se analiza en cuanto termina el cuadro anterior.
+  const MIN_INTERVAL = 60;
+  const NO_MATCH_INTERVAL = 800; // sin coincidencia: no saturar el reconocimiento / servidor
+  const PAUSA_TRAS_CHECAR = 2000; // modo reloj: el nombre se ve 2 s y sigue con el siguiente
+  const RESPALDO_SSD_MS = 2000; // si el detector rápido no ve cara en 2 s, se alterna con SSD
+  const retryIntervalRef = useRef(MIN_INTERVAL);
+  const recientesRef = useRef([]); // checadas de los últimos 60 s (evita doble checada)
+  const CAMERA_START_TIMEOUT = 15000;
   const ERROR_INTERVAL = 3000;
   const GPS_MAX_AGE = 30000;
 
@@ -58,6 +76,8 @@ const FacialRecognitionPanel = ({
 
       if (videoRef.current) {
         const vid = videoRef.current;
+        vid.onloadeddata = null;
+        vid.onplaying = null;
         vid.pause();
         vid.srcObject = null;
         vid.removeAttribute("src");
@@ -93,7 +113,7 @@ const FacialRecognitionPanel = ({
     setError("");
     setIsLoading(false);
     setCountdown(0);
-    setShowSuccessMessage(false);
+    setResultadoChecada(null);
     setFaceDetected(false);
     isProcessingRef.current = false;
   };
@@ -104,12 +124,28 @@ const FacialRecognitionPanel = ({
   };
 
   useEffect(() => {
+    if (!isOpen || faceApiLoaded) return;
     let active = true;
+    setModelError("");
+    const timeout = setTimeout(() => {
+      setModelError("El reconocimiento está tardando. Puedes usar código o QR.");
+    }, 20000);
     loadBrowserFaceApi()
-      .then(() => active && setFaceApiLoaded(true))
-      .catch(() => active && setError("No se pudieron cargar los modelos faciales. Recargue la p\u00e1gina."));
-    return () => { active = false; };
-  }, []);
+      .then(() => {
+        diag("modelos_listos_panel");
+        if (!active) return;
+        setModelError("");
+        setFaceApiLoaded(true);
+      })
+      .catch(() => {
+        if (active) setModelError("No se pudo iniciar el reconocimiento. Apaga y vuelve a encender la cámara, o usa código o QR.");
+      })
+      .finally(() => clearTimeout(timeout));
+    return () => {
+      active = false;
+      clearTimeout(timeout);
+    };
+  }, [isOpen, faceApiLoaded]);
 
   // Request GPS only after the server identifies an employee who requires it.
   const getLocation = () => {
@@ -121,15 +157,20 @@ const FacialRecognitionPanel = ({
     }
     const entry = {};
     locationRef.current = entry;
+    diag("gps_inicio");
     entry.promise = new Promise((resolve) => {
-      const fail = () => {
+      const fail = (geoError) => {
         entry.failedAt = Date.now();
+        diag("gps_fin", { ok: false, codigo: geoError?.code ?? null });
         resolve({ error: true });
       };
       if (!navigator.geolocation) return fail();
       try {
         navigator.geolocation.getCurrentPosition(
-          (position) => { entry.position = position; setUbicacionGPS(position); resolve({ position }); },
+          (position) => {
+            diag("gps_fin", { ok: true, precision_m: Math.round(position.coords.accuracy) });
+            entry.position = position; setUbicacionGPS(position); resolve({ position });
+          },
           fail,
           { enableHighAccuracy: true, timeout: 10000, maximumAge: GPS_MAX_AGE },
         );
@@ -141,10 +182,21 @@ const FacialRecognitionPanel = ({
   };
 
   useEffect(() => {
-    const startCamera = async () => {
-      if (!isOpen) return;
+    if (!isOpen) return;
+    const session = sessionRef.current;
+    setError("");
+    lastCheckTimeRef.current = 0;
+    retryIntervalRef.current = MIN_INTERVAL;
 
-      const session = sessionRef.current;
+    const startupTimeout = setTimeout(() => {
+      if (session !== sessionRef.current) return;
+      shutdownCamera();
+      setError("La cámara no inició. Apágala y vuelve a encenderla, o usa código o QR.");
+    }, CAMERA_START_TIMEOUT);
+
+    const startCamera = async () => {
+      diagApi()?.iniciar?.("panel_facial");
+      diag("camara_solicitada", { lado: cameraFacing });
       try {
         const mediaStream = await navigator.mediaDevices.getUserMedia({
           video: {
@@ -155,15 +207,28 @@ const FacialRecognitionPanel = ({
         });
 
         if (videoRef.current && isOpen && session === sessionRef.current) {
-          videoRef.current.srcObject = mediaStream;
+          const video = videoRef.current;
           streamRef.current = mediaStream;
-          videoRef.current.onloadeddata = () => {
-            if (session === sessionRef.current) setCameraReady(true);
+          const markReady = () => {
+            if (session !== sessionRef.current || video.onplaying !== markReady || video.readyState < 2 || !video.videoWidth) return;
+            clearTimeout(startupTimeout);
+            video.onloadeddata = null;
+            video.onplaying = null;
+            diag("camara_lista");
+            diagApi()?.contexto?.({ camara: `${video.videoWidth}x${video.videoHeight}` });
+            setCameraReady(true);
           };
+          video.onloadeddata = markReady;
+          video.onplaying = markReady;
+          video.srcObject = mediaStream;
+          video.play?.()?.then(markReady, () => {});
         } else mediaStream.getTracks().forEach((t) => t.stop());
       } catch (err) {
         if (session !== sessionRef.current) return;
+        clearTimeout(startupTimeout);
+        shutdownCamera();
         console.log(err);
+        diag("camara_error", { nombre: err?.name ?? null });
         setError("No se pudo acceder a la cámara");
         enqueueSnackbar("No se pudo acceder a la cámara", {
           variant: "error",
@@ -173,7 +238,10 @@ const FacialRecognitionPanel = ({
     };
 
     startCamera();
-    return () => shutdownCamera();
+    return () => {
+      clearTimeout(startupTimeout);
+      shutdownCamera();
+    };
   }, [isOpen, cameraFacing]);
 
   // Camera and model initialization run concurrently. Recognition starts
@@ -193,26 +261,66 @@ const FacialRecognitionPanel = ({
     if (!videoRef.current || !canvasRef.current || !isOpen) return;
     if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
     const session = sessionRef.current;
+    diag("deteccion_lista");
+    let analizados = 0;
+    let rostroVisto = false;
+    let sinRostroDesde = Date.now();
+    let usarRespaldo = false;
     const detect = async () => {
-      if (session !== sessionRef.current || isDetectingRef.current || isProcessingRef.current) return;
+      if (session !== sessionRef.current || isDetectingRef.current || isProcessingRef.current || globalThis.document?.hidden) return;
       if (Date.now() - lastCheckTimeRef.current < retryIntervalRef.current) return;
       const canvas = canvasRef.current;
       const video = videoRef.current;
-      if (!canvas || !video || video.readyState < 2) return;
+      if (!canvas || !video || video.readyState < 2 || !video.videoWidth || !video.videoHeight) return;
 
       isDetectingRef.current = true;
       try {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        if (canvas.width !== video.videoWidth) canvas.width = video.videoWidth;
+        if (canvas.height !== video.videoHeight) canvas.height = video.videoHeight;
         canvas.getContext("2d").drawImage(video, 0, 0);
         // One frame and one detector pass for both presence and recognition.
-        const detection = await window.faceapi.detectSingleFace(canvas)
+        const d = diagApi();
+        const t0 = d ? d.ahora() : 0;
+        // Detector rápido; si lleva 2 s sin ver cara, alterna con SSD (respaldo para poca luz o lejanía).
+        usarRespaldo = Date.now() - sinRostroDesde > RESPALDO_SSD_MS ? !usarRespaldo : false;
+        const detection = await (usarRespaldo
+          ? window.faceapi.detectSingleFace(canvas)
+          : window.faceapi.detectSingleFace(canvas, opcionesRapidas(window.faceapi)))
           .withFaceLandmarks().withFaceDescriptor();
+        if (d) {
+          const ms = d.ahora() - t0;
+          d.cuenta("analisis", ms);
+          if (!detection) d.cuenta("analisis_sin_rostro", ms);
+          analizados += 1;
+          if (analizados === 1) d.marca("primer_analisis_fin", { ms: Math.round(ms) });
+          if (detection && !rostroVisto) {
+            rostroVisto = true;
+            d.marca("primer_rostro", { cuadro: analizados, confianza: Math.round((detection.detection?.score ?? 0) * 100) / 100 });
+          }
+        }
         if (session !== sessionRef.current) return;
         setFaceDetected(!!detection);
         if (detection) {
+          sinRostroDesde = Date.now();
+          d?.cuenta(usarRespaldo ? "detector_respaldo" : "detector_rapido", 0);
+          // La misma persona en los últimos 60 s: no se vuelve a checar.
+          const repetida = yaRegistrado(recientesRef.current, detection.descriptor, Date.now());
+          if (repetida) {
+            setError("");
+            setAvisoRepetido(repetida.pendiente
+              ? `${repetida.nombre}: checada pendiente de subir`
+              : `${repetida.nombre}: ya registrado hace ${repetida.hace} s`);
+            lastCheckTimeRef.current = Date.now();
+            retryIntervalRef.current = NO_MATCH_INTERVAL;
+            return;
+          }
+          setAvisoRepetido("");
           isProcessingRef.current = true;
           await captureAndRecognize(detection, session);
+        } else {
+          lastCheckTimeRef.current = Date.now();
+          retryIntervalRef.current = MIN_INTERVAL; // terminó la pausa / aviso: volver a analizar sin espera
+          if (avisoRepetidoRef.current) setAvisoRepetido("");
         }
       } catch (err) {
         if (session === sessionRef.current) {
@@ -224,7 +332,7 @@ const FacialRecognitionPanel = ({
         isDetectingRef.current = false;
       }
     };
-    detectionIntervalRef.current = setInterval(detect, 100);
+    detectionIntervalRef.current = setInterval(detect, 40);
     void detect();
   };
 
@@ -245,6 +353,7 @@ const FacialRecognitionPanel = ({
         ? cachedPosition : null;
       const descriptor = Array.from(detection.descriptor);
       const payload = {
+        captured_at: new Date().toISOString(),
         descriptor_facial: descriptor,
         id_empresa: idEmpresa,
         latitud_actual: position?.coords.latitude ?? null,
@@ -252,7 +361,21 @@ const FacialRecognitionPanel = ({
         precision_metros: position?.coords.accuracy ?? null,
         ubicacion_timestamp: position?.timestamp ?? null,
       };
-      const submit = (body) => axiosInstance.post("/checador/reloj/registrar-facial", body);
+      const submit = async (body) => {
+        const d = diagApi();
+        const t0 = d ? d.ahora() : 0;
+        d?.marca("envio_inicio", { con_gps: body.latitud_actual != null, via: submitMovement ? "submitMovement" : "servidor" });
+        try {
+          const r = await (submitMovement ? submitMovement(body) : axiosInstance.post("/checador/reloj/registrar-facial", body));
+          d?.marca("envio_fin", { estado: r?.status ?? null });
+          return r;
+        } catch (e) {
+          d?.marca("envio_fin", { estado: e.response?.status ?? null, error: e.response?.data?.error ?? e.message ?? null, codigo: e.response?.data?.code ?? null });
+          throw e;
+        } finally {
+          d?.cuenta("envio", d.ahora() - t0);
+        }
+      };
       let response;
       try {
         response = await submit(payload);
@@ -260,13 +383,14 @@ const FacialRecognitionPanel = ({
         if (session !== sessionRef.current) return;
         // This response is returned before any attendance record is written.
         // All other failures must keep their original handling.
-        if (err.response?.status !== 400 ||
-          err.response?.data?.error !== "Faltan coordenadas de ubicaci\u00f3n") throw err;
+        if (err.response?.data?.code !== 'GPS_REQUIRED' && (err.response?.status !== 400 ||
+          err.response?.data?.error !== "Faltan coordenadas de ubicaci\u00f3n")) throw err;
         const { position: requiredPosition } = await getLocation();
         if (session !== sessionRef.current) return;
         if (!requiredPosition) throw err;
         response = await submit({
           ...payload,
+          captured_at: new Date().toISOString(),
           latitud_actual: requiredPosition.coords.latitude,
           longitud_actual: requiredPosition.coords.longitude,
           precision_metros: requiredPosition.coords.accuracy,
@@ -276,19 +400,31 @@ const FacialRecognitionPanel = ({
       const { data } = response;
 
       if (session !== sessionRef.current) return;
+      diag("checada_exitosa");
+      diagApi()?.terminar?.("checada registrada");
       setError("");
-      setShowSuccessMessage(true);
+      if (!data?.requiereDecision) setResultadoChecada(data?.pending ? "pendiente" : "registrada");
+      if (!data?.requiereDecision) {
+        recientesRef.current = recordarChecada(recientesRef.current, detection.descriptor,
+          data?.empleado ? `${data.empleado.nombre ?? ""} ${data.empleado.apellido_paterno ?? ""}`.trim() : "", Date.now(), Boolean(data?.pending));
+      }
       onSuccess(data);
+      if (continuo && !data?.requiereDecision) {
+        // Reloj de la empresa: la cámara sigue encendida; pausa breve y listo para el siguiente.
+        retryIntervalRef.current = PAUSA_TRAS_CHECAR;
+        setTimeout(() => { if (session === sessionRef.current) setResultadoChecada(null); }, PAUSA_TRAS_CHECAR);
+        return;
+      }
       shutdownCamera();
       handleClose();
 
     } catch (err) {
       if (session !== sessionRef.current) return;
       const message =
-        err.response?.data?.error || "Error en reconocimiento facial";
-      if (["GPS_INACCURATE", "GPS_REFRESH_REQUIRED", "OUTSIDE_AREA"].includes(err.response?.data?.code)) locationRef.current = null;
-      retryIntervalRef.current = message === "No se encontr\u00f3 coincidencia facial"
-        ? MIN_INTERVAL : ERROR_INTERVAL;
+        err.response?.data?.error || err.message || "Error en reconocimiento facial";
+      if (["GPS_INACCURATE", "GPS_REFRESH_REQUIRED", "OUTSIDE_AREA", "GPS_OUTSIDE_AREA"].includes(err.response?.data?.code)) locationRef.current = null;
+      retryIntervalRef.current = /coincidencia facial/i.test(message)
+        ? NO_MATCH_INTERVAL : ERROR_INTERVAL;
 
       // Keep one stable message by the camera while automatic retries continue.
       setError(message === "Faltan coordenadas de ubicaci\u00f3n"
@@ -312,15 +448,20 @@ const FacialRecognitionPanel = ({
 
   const getStatusMessage = () => {
     if (error) return { text: error, color: "bg-red-600" };
+    if (modelError) return { text: modelError, color: "bg-red-600" };
     if (!faceApiLoaded)
       return { text: "Preparando reconocimiento facial...", color: "bg-gray-700" };
     if (isLoading)
       return { text: "Procesando reconocimiento...", color: "bg-gray-700" };
-    if (showSuccessMessage)
+    if (!cameraReady)
+      return { text: "Iniciando cámara...", color: "bg-gray-700" };
+    if (resultadoChecada === "pendiente") return { text: "Checada pendiente de subir", color: "bg-amber-600" };
+    if (resultadoChecada === "registrada")
       return {
         text: "¡Listo! Esperando siguiente empleado...",
         color: "bg-green-600",
       };
+    if (avisoRepetido) return { text: avisoRepetido, color: "bg-blue-600" };
     if (countdown > 0)
       return { text: "Preparando captura...", color: "bg-gray-700" };
     if (faceDetected)

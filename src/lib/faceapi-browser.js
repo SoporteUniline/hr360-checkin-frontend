@@ -1,11 +1,15 @@
 let loading;
+// Marca opcional del modo diagnóstico (no hace nada si está apagado).
+const diag = (nombre, datos) => globalThis.__adamiaDiag?.marca(nombre, datos);
 
 // Share initialization across mounts; an existing script is not proof that
 // its model weights have finished loading.
 export function loadBrowserFaceApi() {
   if (loading) return loading;
   loading = (async () => {
+    diag("faceapi_inicio");
     if (!window.faceapi) {
+      diag("faceapi_script_inicio");
       await new Promise((resolve, reject) => {
         const script = document.createElement("script");
         script.src = "/vendor/face-api/face-api-0.22.2.min.js";
@@ -16,25 +20,43 @@ export function loadBrowserFaceApi() {
         };
         document.head.appendChild(script);
       });
+      diag("faceapi_script_fin");
     }
     const api = window.faceapi;
+    diag("faceapi_modelos_inicio");
     await Promise.all([
-      api.nets.ssdMobilenetv1,
-      api.nets.faceLandmark68Net,
-      api.nets.faceRecognitionNet,
-    ].map((net) => net.params ? undefined : net.loadFromUri("/models")));
+      // Detector rápido para checar (19/11/2026: ~10× más rápido que SSD en las pruebas, mismas
+      // huellas faciales); SSD queda como respaldo cuando el rápido no encuentra la cara.
+      ["detector_rapido", api.nets.tinyFaceDetector],
+      ["detector", api.nets.ssdMobilenetv1],
+      ["puntos_cara", api.nets.faceLandmark68Net],
+      ["reconocimiento", api.nets.faceRecognitionNet],
+    ].map(([modelo, net]) => net.params
+      ? diag("faceapi_modelo_en_memoria", { modelo })
+      : net.loadFromUri("/models").then(() => diag("faceapi_modelo_fin", { modelo }))));
+    diag("faceapi_modelos_fin");
     // Compile detector shaders before the first camera frame.
+    diag("faceapi_warmup_inicio");
     try {
       const canvas = document.createElement("canvas");
       canvas.width = canvas.height = 160;
+      await api.detectSingleFace(canvas, opcionesRapidas(api));
       await api.detectSingleFace(canvas);
     } catch {
       // Warmup is optional.
     }
+    diag("faceapi_warmup_fin");
+    diag("faceapi_listo", { motor: api.tf?.getBackend?.() ?? null });
     return api;
   })().catch((error) => {
     loading = undefined;
     throw error;
   });
   return loading;
+}
+
+// Opciones del detector rápido para checar (inputSize 160: en las pruebas encontró 7/7 caras y la huella
+// facial coincidió ≥ 99.4 % con la de SSD, muy por encima del 95 % que pide el reloj).
+export function opcionesRapidas(api = window.faceapi) {
+  return new api.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 });
 }

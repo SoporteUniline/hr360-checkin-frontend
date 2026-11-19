@@ -464,6 +464,7 @@ export default function RelojChecador({
                       onSuccess={handleFacialResponse}
                       idEmpresa={idEmpresa}
                       handleOpenFacialModal={() => setMostrarCamara(false)}
+                      continuo
                     />
                   </div>
                 )}
