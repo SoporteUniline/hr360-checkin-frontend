@@ -1,6 +1,4 @@
 "use client";
-import useLocalClockEvents from '@/hooks/useLocalClockEvents';
-import LocalClockCaptures from '@/components/Clock/LocalClockCaptures';
 
 import useAsistenciaData from "@/hooks/useAsistenciaData";
 import useEmpleadosData from "@/hooks/useEmpleadosData";
@@ -71,7 +69,6 @@ export default function AsistenciaDataContainer({
     total: 0,
   });
   const [cachedData, setCachedData] = useState(null);
-  const localEvents = useLocalClockEvents({ company: idEmpresa, from: fechaInicio, to: fechaFin, search: debouncedFiltroEmpleado });
 
   const handleResetAll = () => {
     setSortConfig(DEFAULT_SORT_CONFIG);
@@ -106,16 +103,6 @@ export default function AsistenciaDataContainer({
   useEffect(() => {
     mutateRef.current = mutate;
   }, [mutate]);
-  useEffect(() => {
-    // Solo recarga cuando cambió la cola de checadas; preparar el reloj ('perfil') no cambia datos
-    // (antes provocaba una segunda descarga completa del periodo al abrir la vista).
-    const refresh = (event) => {
-      if (event?.detail?.motivo === 'perfil') return;
-      if (navigator.onLine && window.__adamiaOffline !== true) void mutateRef.current().catch(() => {});
-    };
-    window.addEventListener('adamia-queue', refresh);
-    return () => window.removeEventListener('adamia-queue', refresh);
-  }, []);
 
   // SSE: actualización en tiempo real cuando llega una checada.
   // Además de refrescar, se notifica con un toast discreto (máx. 1 cada 8 s
@@ -273,8 +260,8 @@ export default function AsistenciaDataContainer({
   }, [abrirId, registros, handleEditClick]);
 
 
-  if (isLoading && !effectiveData && !localEvents.length) return <LoadingTable rows={10} />;
-  if (error && (!localEvents.length || [401, 403].includes(error.response?.status))) {
+  if (isLoading && !effectiveData) return <LoadingTable rows={10} />;
+  if (error) {
     console.error(error);
     return <ErrorPage message="Error al cargar los registros de asistencia" />;
   }
@@ -290,16 +277,15 @@ export default function AsistenciaDataContainer({
             filtroEmpleado={debouncedFiltroEmpleado || ""}
           />
         ) : vista === "matriz" ? (
-          <><LocalClockCaptures events={localEvents} /><AsistenciaMatriz
+          <AsistenciaMatriz
             registros={filasPeriodo}
             fechaInicio={fechaInicio}
             fechaFin={fechaFin}
             cargando={isLoading && filasPeriodo.length === 0}
-          /></>
+          />
         ) : (
         <>
         <AsistenciaTable
-          localEvents={localEvents}
           filtrados={registros}
           filterOptionsRows={filasPeriodo}
           cargarPeriodoParaExportar={cargarPeriodoParaExportar}
@@ -377,7 +363,6 @@ export default function AsistenciaDataContainer({
     totalSinComida,
     control,
     cargando: isLoading && !effectiveData,
-    localEvents,
     mutate,
   };
 }
