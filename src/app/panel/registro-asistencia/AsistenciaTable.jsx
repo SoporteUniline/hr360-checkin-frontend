@@ -108,6 +108,10 @@ export default function AsistenciaTable({
   footer = null,
   soloHorasExtra = false,
   soloSinComida = false,
+  // «Control de horas extra»: columnas Decidió / Semana / Alertas y filtro de estados desde las tarjetas.
+  control = null,
+  estadosHorasExtra = null,
+  ocultarRegistroMasivo = false,
 }) {
   // Para el Excel usamos la zona de la primera empresa visible (o la activa como fallback)
   const fallbackTimezone = useEmpresaTimezone(empresaActiva);
@@ -120,6 +124,9 @@ export default function AsistenciaTable({
   const [asistioSeleccionado, setAsistioSeleccionado] = useState([]);
   const [goceSeleccionado, setGoceSeleccionado] = useState([]);
   const [horasExtraSeleccionado, setHorasExtraSeleccionado] = useState([]);
+  useEffect(() => {
+    if (Array.isArray(estadosHorasExtra)) setHorasExtraSeleccionado(estadosHorasExtra);
+  }, [estadosHorasExtra]);
   const [festivoSeleccionado, setFestivoSeleccionado] = useState([]);
   const [autorizacionSeleccionada, setAutorizacionSeleccionada] = useState([]);
   const [correccionSeleccionada, setCorreccionSeleccionada] = useState([]);
@@ -142,7 +149,7 @@ export default function AsistenciaTable({
     COLUMNAS_ASISTENCIA.filter((col) => {
       if (col.key === "unidad" && empresaActiva !== "all") return false;
       return colVisible(col.key);
-    }).length + (colVisible("hrs_extra") ? 1 : 0) || 1; // +1: «¿Autorizar?» va con «Horas extra»
+    }).length + (colVisible("hrs_extra") ? 1 : 0) + (control ? 3 : 0) || 1; // +1: «¿Autorizar?» va con «Horas extra»
 
   const optionSourceRows = useMemo(
     () => (Array.isArray(filterOptionsRows) ? filterOptionsRows : filtrados),
@@ -637,6 +644,7 @@ export default function AsistenciaTable({
       colVisible={colVisible}
       onRowClick={onRowClick}
       horasExtra={accionesHorasExtra}
+      control={control}
       seleccion={readOnly ? null : { marcado: seleccionados.has(reg.id), alternar: (v) => accionesHorasExtra.seleccionar(reg.id, v) }}
     />
   );
@@ -657,6 +665,7 @@ export default function AsistenciaTable({
                 {exportando ? "Exportando periodo…" : "Exportar Excel"}
               </Button>
 
+              {!ocultarRegistroMasivo && (
               <Button
                 onClick={abrirFormulario}
                 className="rounded-xl bg-blue-600 text-white shadow-sm hover:bg-blue-700"
@@ -664,6 +673,7 @@ export default function AsistenciaTable({
                 <Plus className="h-4 w-4 mr-2" />
                 Registrar asistencia masiva
               </Button>
+              )}
 
               {/* <Button
                 onClick={onResetFilters}
@@ -1065,6 +1075,13 @@ export default function AsistenciaTable({
                   >
                     ¿Autorizar?
                   </TableHead>
+                )}
+                {control && (
+                  <>
+                    <TableHead className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500`}>Decidió</TableHead>
+                    <TableHead className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500`}>Semana</TableHead>
+                    <TableHead className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500`}>Alertas</TableHead>
+                  </>
                 )}
                 {colVisible("forma_pago") && (
                   <TableHead
