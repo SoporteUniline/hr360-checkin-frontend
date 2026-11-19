@@ -375,7 +375,7 @@ test("with diagnostics on, behavior is unchanged and every phase is recorded", a
 
 const cara = Float32Array.from({ length: 128 }, (_, i) => Math.sin(i * 1.3));
 
-test("el detector rápido se usa siempre; tras 2 s sin cara se alterna con SSD como respaldo", async () => {
+test("se reconoce con SSD (el detector rápido queda apagado hasta validarlo con fotos reales)", async () => {
   const env = setup();
   env.render();
   await tick();
@@ -385,13 +385,9 @@ test("el detector rápido se usa siempre; tras 2 s sin cara se alterna con SSD c
   env.render();
   env.resolveDetection(undefined);
   await tick();
-  assert.deepEqual(env.detectores, ["rapido"]);
   for (let i = 0; i < 4; i++) { env.advance(100); for (const detect of env.timers) detect(); await tick(); }
-  assert.ok(env.detectores.every((d) => d === "rapido"), "antes de 2 s solo el rápido");
-  env.advance(2000);
-  for (let i = 0; i < 4; i++) { env.advance(100); for (const detect of env.timers) detect(); await tick(); }
-  assert.ok(env.detectores.slice(5).includes("ssd"), "después de 2 s sin cara entra SSD");
-  assert.ok(env.detectores.slice(5).includes("rapido"), "y se alterna con el rápido");
+  assert.ok(env.detectores.length >= 2);
+  assert.ok(env.detectores.every((d) => d === "ssd"), JSON.stringify(env.detectores));
 });
 
 test("modo reloj: la cámara sigue encendida tras checar y la misma persona no vuelve a checar en 60 s", async () => {
