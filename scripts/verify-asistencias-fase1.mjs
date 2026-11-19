@@ -101,6 +101,10 @@ try {
       comidas.push({ cuerpo: JSON.parse(req.postData() || "{}"), token: req.headers().authorization || "", ruta: p });
       return json({ asistencia: {} });
     }
+    if (/\/checador\/asistencias\/1003\/cambios$/.test(p)) {
+      return json({ disponible: true, cambios: [{ campo: "salida", valor_antes: "2026-11-13 13:19:00", valor_despues: "2026-11-13 17:20:00",
+        origen: "reloj", nombre_usuario: "Laura Gómez", tipo_usuario: "Recruiter", creado_en: "2026-11-18 19:45:12.000000" }] });
+    }
     if (p.endsWith("/checador/bulk-incident/register")) {
       autorizacionMasivo.push(req.headers().authorization || "");
       return json({ message: "ok" });
@@ -166,6 +170,10 @@ try {
   assert.match(textoDetalle, /Salida\s+13\/11 13:19\s*→\s*13\/11 17:20/);
   assert.match(textoDetalle, /Tipo de registro\s+Sin Checar\s*→\s*Asistencia/);
   assert.match(textoDetalle, /Quién y cuándo/);
+  // Historial: quién, cuándo, desde dónde y antes → después (GET /asistencias/:id/cambios).
+  await page.getByRole("list", { name: "Historial de cambios" }).waitFor({ timeout: 10000 });
+  assert.match(await page.getByRole("list", { name: "Historial de cambios" }).innerText(),
+    /Laura Gómez · 18\/11 19:45 · Reloj checador\s*Salida: 13\/11 13:19 → 13\/11 17:20/);
   assert.equal(await filaEditada.getByRole("button", { name: /Editado/ }).innerText(), "Sí");
   assert.match(await page.locator("tr", { hasText: "Empleado0" }).first().innerText(), /\bNo\b/);
   if (process.env.CAPTURAS) await page.screenshot({ path: process.env.CAPTURAS + "/editado-detalle.png" });

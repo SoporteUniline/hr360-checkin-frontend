@@ -27,6 +27,7 @@ import { formatearMinutos, minutosTrabajados, salidaEsDiaSiguiente, sumarDias } 
 import { cambiosRegistro } from "@/lib/asistencia/cambios.mjs";
 import { crearFormateadorCambios } from "./CeldaEditado";
 import HorasExtraMovil from "./HorasExtraMovil";
+import { quienCuando } from "@/lib/asistencia/historial.mjs";
 import useHorasExtra from "@/hooks/useHorasExtra";
 import {
   cambiosAutorizar, cambiosNoAutorizar, cambiosQuitar, estadoHorasExtra,
@@ -830,7 +831,9 @@ export default function MobileEmpleadoDetalle({
                       </li>
                     ))}
                   </ul>
-                  <p className="mt-2 text-[11px] text-gray-500">Quién y cuándo: aún no se registra.</p>
+                  <p className="mt-2 text-[11px] text-gray-500">
+                    Quién y cuándo: {display.ultimo_cambio ? quienCuando(display.ultimo_cambio) : "anterior al historial (no se sabe quién)."}
+                  </p>
                 </div>
               )}
             </div>
