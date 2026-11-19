@@ -250,6 +250,7 @@ export default function RelojChecador({
         pending: Boolean(data.pending),
         localValidated: Boolean(data.local_validated),
         success: !data.pending,
+        eventId: data.event_id || null,
       });
 
       setTimeout(() => setPopupInfo(null), 3000);
@@ -331,10 +332,30 @@ export default function RelojChecador({
         localValidated: Boolean(data.local_validated),
         success: !data.pending,
       });
-      setTimeout(() => setPopupInfo(null), 3000);
+      setTimeout(() => setPopupInfo(null), 2500);
       mutate();
     }
   };
+
+  // Confirmación al instante: si después el servidor rechaza la checada, se avisa aquí mismo.
+  useEffect(() => {
+    const alRechazar = (e) => {
+      const { nombre, error } = e.detail || {};
+      setPopupInfo({ nombre: nombre || "Checada", foto_perfil: "/assets/user.png", movimiento: error, pending: false, success: false, rechazada: true });
+      setTimeout(() => setPopupInfo(null), 6000);
+    };
+    // Confirmación del servidor: corrige entrada/salida si el dispositivo tenía el turno desactualizado.
+    const alConfirmar = (e) => {
+      const { id, movimiento } = e.detail || {};
+      setPopupInfo((p) => (p && p.eventId === id && p.movimiento !== movimiento ? { ...p, movimiento } : p));
+    };
+    window.addEventListener("adamia-checada-rechazada", alRechazar);
+    window.addEventListener("adamia-checada-confirmada", alConfirmar);
+    return () => {
+      window.removeEventListener("adamia-checada-rechazada", alRechazar);
+      window.removeEventListener("adamia-checada-confirmada", alConfirmar);
+    };
+  }, []);
 
   const abrirCamara = () => {
     if (offline && !localFacesReady) return;
@@ -538,6 +559,7 @@ export default function RelojChecador({
                       idEmpresa={idEmpresa}
                       submitMovement={submitMovement}
                       handleOpenFacialModal={() => setMostrarCamara(false)}
+                      continuo
                     />
                   </div>
                 )}
@@ -649,8 +671,8 @@ export default function RelojChecador({
                     : "bg-red-50 text-red-600"
                 }`}
               >
-                {popupInfo.pending ? <Clock4 className="w-5 h-5" /> : <CheckCircle className="w-5 h-5" />}
-                <span className="font-black text-sm uppercase">{popupInfo.pending ? 'Pendiente de subir' : '¡Éxito!'}</span>
+                {popupInfo.pending ? <Clock4 className="w-5 h-5" /> : popupInfo.success ? <CheckCircle className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+                <span className="font-black text-sm uppercase">{popupInfo.pending ? 'Pendiente de subir' : popupInfo.success ? '¡Éxito!' : 'No se registró · avisa a RH'}</span>
               </div>
             </div>
           </div>

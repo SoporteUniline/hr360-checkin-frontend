@@ -54,6 +54,7 @@ async function registerLocalFace(payload, context, profile, original = null) {
   const store = await clockStore();
   const engine = await faceEngine();
   const old = payload.offline_event?.local_verification ? payload.offline_event : null;
+  let localActionEstimada = null;
   let event;
   if (old) {
     event = { ...old, action: payload.accion || old.action, status: 'pending', error: '' };
@@ -69,6 +70,7 @@ async function registerLocalFace(payload, context, profile, original = null) {
     const onlineAuto = navigator.onLine && window.__adamiaOffline !== true && requested === 'auto';
     const localAction = engine.localAction(employee, dataset, events, requested, { online: onlineAuto });
     const action = onlineAuto ? 'auto' : localAction;
+    localActionEstimada = localAction;
     event = { id: original?.id || crypto.randomUUID(), company: Number(context.company), employee: context.employee ? Number(context.employee) : undefined,
       local_employee: employee.id, identity: employee.code_identity || `employee:${employee.id}`, employeeName: employee.nombre, alias: employee.nombre,
       scope: context.employee ? 'employee' : 'company', session: profile.session, grant: context.employee ? undefined : profile.grant,
@@ -84,27 +86,48 @@ async function registerLocalFace(payload, context, profile, original = null) {
   notify();
   if (event.status === 'decision') return { data: { requiereDecision: true, offline_event: event, empleado: { nombre: event.employeeName } } };
   if (navigator.onLine && window.__adamiaOffline !== true) {
-    // Keep the original online confirmation: show success only after the
-    // server acknowledges this UUID, using the already recognized local face.
-    await synchronizeClockQueue().catch(() => {});
-    let current = (await store.listEvents()).find(saved => saved.id === event.id);
-    // A background pass may have taken its queue snapshot before this capture
-    // was saved. Send one fresh pass if this event has not been attempted yet.
-    if (current?.status === 'pending' && !current.error && navigator.onLine && window.__adamiaOffline !== true) {
-      await synchronizeClockQueue().catch(() => {});
-      current = (await store.listEvents()).find(saved => saved.id === event.id);
-    }
-    if (current?.status === 'synced') return { data: {
-      pending: false, local_validated: true,
-      empleado: { nombre: current.employeeName || event.employeeName, apellido_paterno: '' },
-      movimiento: (current.resolvedAction || event.action) === 'entrada' ? 'Entrada registrada' : 'Salida registrada',
+    // (19/11/2026, decisión del dueño) Confirmación al instante: la cara ya se reconoció en este
+    // dispositivo; el servidor confirma por detrás. Si la rechaza o pide decisión de turno, se avisa
+    // con «adamia-checada-rechazada» y la captura queda en la lista para revisión, como siempre.
+    void confirmarEnSegundoPlano(event);
+    const estimada = event.action === 'auto' ? localActionEstimada : event.action;
+    return { data: {
+      pending: false, local_validated: true, instant: true, event_id: event.id,
+      empleado: { nombre: event.employeeName, apellido_paterno: '' },
+      movimiento: estimada === 'entrada' ? 'Entrada registrada' : estimada === 'salida' ? 'Salida registrada' : 'Checada registrada',
     } };
-    if (current?.status === 'review') throw Object.assign(new Error(current.error), {
-      response: { status: current.httpStatus || 422, data: { error: current.error, code: current.errorCode } },
-    });
-    if (current?.status === 'decision') return { data: { requiereDecision: true, offline_event: current, empleado: { nombre: current.employeeName || event.employeeName } } };
   }
   return { data: { pending: true, local_validated: true, offline_event: event, empleado: { nombre: event.employeeName, apellido_paterno: '' }, movimiento: `${event.action === 'auto' ? 'Checada' : event.action === 'entrada' ? 'Entrada' : 'Salida'} reconocida en este dispositivo · pendiente de subir` } };
+}
+
+// Sube la captura y avisa si el servidor no la aceptó (la pantalla ya mostró el nombre al instante).
+async function confirmarEnSegundoPlano(event) {
+  try {
+    await synchronizeClockQueue().catch(() => {});
+    let current = (await (await clockStore()).listEvents()).find(saved => saved.id === event.id);
+    // Una pasada en curso pudo tomar la cola antes de guardar esta captura: una más.
+    if (current?.status === 'pending' && !current.error && navigator.onLine && window.__adamiaOffline !== true) {
+      await synchronizeClockQueue().catch(() => {});
+      current = (await (await clockStore()).listEvents()).find(saved => saved.id === event.id);
+    }
+    if (current?.status === 'synced') {
+      // El servidor decide entrada/salida con el turno real: si la pantalla adivinó otra cosa, se corrige.
+      const accion = current.resolvedAction || current.action;
+      window.dispatchEvent(new CustomEvent('adamia-checada-confirmada', { detail: {
+        id: event.id, nombre: current.employeeName || event.employeeName || '',
+        movimiento: accion === 'entrada' ? 'Entrada registrada' : accion === 'salida' ? 'Salida registrada' : 'Checada registrada',
+      } }));
+    }
+    if (current && ['review', 'decision'].includes(current.status)) {
+      window.dispatchEvent(new CustomEvent('adamia-checada-rechazada', { detail: {
+        id: event.id, nombre: current.employeeName || event.employeeName || '',
+        error: current.status === 'decision' ? 'Requiere elegir cómo cerrar el turno anterior' : (current.error || 'El servidor no aceptó la checada'),
+        estado: current.status,
+      } }));
+    }
+  } catch {
+    // La captura sigue guardada en el dispositivo y se reintenta en la siguiente sincronización.
+  }
 }
 
 export async function installOfflineWorker() {

@@ -1,5 +1,5 @@
 import { synchronizeBackground } from './offline-clock/background-sync.mjs';
-const CACHE = 'adamia-clock-shell-v14';
+const CACHE = 'adamia-clock-shell-v15';
 const RUNTIME = 'adamia-runtime-assets-v1';
 const MAX_AGE = 7 * 86400000;
 const ASSETS = [
@@ -9,6 +9,7 @@ const ASSETS = [
   '/models/face_landmark_68_model-weights_manifest.json', '/models/face_landmark_68_model-shard1',
   '/models/face_recognition_model-weights_manifest.json', '/models/face_recognition_model-shard1', '/models/face_recognition_model-shard2',
   '/models/ssd_mobilenetv1_model-weights_manifest.json', '/models/ssd_mobilenetv1_model-shard1', '/models/ssd_mobilenetv1_model-shard2',
+  '/models/tiny_face_detector_model-weights_manifest.json', '/models/tiny_face_detector_model-shard1',
 ];
 const staticAsset = url => url.origin === self.location.origin && (url.pathname.startsWith('/_next/static/') || url.pathname.startsWith('/assets/') || (url.pathname === '/_next/image' && url.searchParams.get('url')?.startsWith('/assets/')));
 self.addEventListener('sync', event => {
