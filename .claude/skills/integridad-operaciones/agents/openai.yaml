@@ -1,0 +1,4 @@
+interface:
+  display_name: "Integridad Operaciones"
+  short_description: "Integridad de inventarios, documentos, cobros y saldos"
+  default_prompt: "Aplica $integridad-operaciones para diseñar y verificar este módulo con sus dependencias y casos de prueba."

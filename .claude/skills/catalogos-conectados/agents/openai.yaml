@@ -1,0 +1,4 @@
+interface:
+  display_name: "Catalogos Conectados"
+  short_description: "Crear catálogos relacionados sin salir del formulario"
+  default_prompt: "Aplica $catalogos-conectados para diseñar y verificar este módulo con sus dependencias y casos de prueba."
