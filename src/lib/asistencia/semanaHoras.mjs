@@ -63,3 +63,30 @@ export function resumenSemana(reporte, semana, hoy) {
     dias,
   };
 }
+
+// Horas compactas para celdas de tabla: 570 → "9:30", 0 → "—".
+export function horaCorta(min) {
+  const m = Math.round(Number(min) || 0);
+  if (!m) return "—";
+  const abs = Math.abs(m);
+  return `${m < 0 ? "−" : ""}${Math.floor(abs / 60)}:${String(abs % 60).padStart(2, "0")}`;
+}
+
+// Orden de la tabla de Horas. campo: nombre | trabajado | autorizadas | porAutorizar | alertas.
+// Por defecto (trabajado desc) los que más horas llevan quedan arriba.
+const VALOR = {
+  nombre: (f) => String(f.r.empleado?.nombre_empleado ?? ""),
+  trabajado: (f) => f.s.trabajado,
+  autorizadas: (f) => f.s.autorizadas,
+  porAutorizar: (f) => f.s.porAutorizar,
+  alertas: (f) => f.s.alertas.length,
+};
+export function ordenarFilas(filas, campo = "trabajado", dir = "desc") {
+  const valor = VALOR[campo] ?? VALOR.trabajado;
+  const signo = dir === "asc" ? 1 : -1;
+  return [...filas].sort((a, b) => {
+    const x = valor(a), y = valor(b);
+    const c = typeof x === "string" ? x.localeCompare(y, "es") : x - y;
+    return c * signo || VALOR.nombre(a).localeCompare(VALOR.nombre(b), "es");
+  });
+}

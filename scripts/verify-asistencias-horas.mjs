@@ -52,6 +52,8 @@ const reportes = [
   reporte(1, "Excede Prueba", 2900, { alertas: ["Horas extra en más de 4 días"], aut: 120 }),
   reporte(2, "Cerca Prueba", 2000, { pend: 45, alertaDia: "Más de 4 h extra" }),
   reporte(3, "Bien Prueba", 600),
+  // 187 más para revisar la tabla con una plantilla real (190 trabajadores).
+  ...Array.from({ length: 187 }, (_, i) => reporte(100 + i, `Zeta Relleno ${String(i + 1).padStart(3, "0")}`, 300)),
 ];
 let pedidos = [];
 let exito = false;
@@ -77,27 +79,42 @@ try {
   await page.goto(base + "/panel/registro-asistencia", { waitUntil: "domcontentloaded" });
   await page.getByRole("button", { name: "Horas", exact: true }).click();
   const vista = page.getByRole("region", { name: "Horas de la semana" });
-  await vista.getByText("Excede Prueba").waitFor({ timeout: 30000 });
+  await vista.getByRole("row", { name: "Excede Prueba", exact: true }).waitFor({ timeout: 30000 });
   // Pide la semana legal completa que contiene hoy (con «Hoy» elegido arriba).
   assert.match(pedidos[0], new RegExp(`fechaInicio=${lunes}&fechaFin=${domingo}`));
   const texto = await vista.innerText();
   assert.match(texto, /límite LFT:\s*46 h/);
   assert.match(texto, /Se están excediendo\s*1/);
   assert.match(texto, /Con extras por autorizar\s*1/);
-  const fila = (n) => vista.getByRole("article", { name: n });
-  assert.match(await fila("Excede Prueba").innerText(), /arriba[\s\S]*Se está excediendo[\s\S]*Horas extra en más de 4 días/);
-  assert.match(await fila("Bien Prueba").innerText(), /Dentro del límite/);
-  // Filtrar por contador.
+  // PC: tabla, una fila por empleado.
+  const tabla = vista.getByRole("table");
+  const fila = (n) => tabla.getByRole("row", { name: n, exact: true });
+  assert.equal(await tabla.locator("tbody tr").count(), 190);
+  const alto = await fila("Bien Prueba").evaluate((el) => el.getBoundingClientRect().height);
+  assert.ok(alto <= 48, `fila compacta (${alto}px)`);
+  assert.equal(await tabla.locator("tbody tr").first().getAttribute("aria-label"), "Excede Prueba", "orden por defecto: más horas arriba");
+  assert.match(await fila("Excede Prueba").innerText(), /arriba[\s\S]*Excede[\s\S]*Horas extra en más de 4 días/);
+  assert.match(await fila("Bien Prueba").innerText(), /le quedan[\s\S]*En límite[\s\S]*Sin alertas/);
+  assert.match(await fila("Cerca Prueba").innerText(), /45 min/);
+  // Filtros por contador.
   await vista.getByRole("button", { name: /Se están excediendo/ }).click();
-  assert.equal(await vista.getByRole("article").count(), 1);
+  assert.equal(await tabla.locator("tbody tr").count(), 1);
   await vista.getByRole("button", { name: /Se están excediendo/ }).click();
-  assert.equal(await vista.getByRole("article").count(), 3);
-  // Detalle por día.
-  await fila("Cerca Prueba").getByRole("button").first().click();
-  await fila("Cerca Prueba").getByLabel("Semana día por día").waitFor({ timeout: 5000 });
-  assert.match(await fila("Cerca Prueba").getByLabel("Semana día por día").innerText(), /Lun[\s\S]*Más de 4 h extra/);
+  assert.equal(await tabla.locator("tbody tr").count(), 190);
+  // Ordenar por nombre.
+  await tabla.getByRole("button", { name: /Empleado/ }).click();
+  assert.equal(await tabla.locator("tbody tr").first().getAttribute("aria-label"), "Bien Prueba");
+  // Encabezado fijo al bajar en la tabla.
+  await tabla.evaluate((t) => { t.parentElement.scrollTop = 4000; });
+  const enc = await tabla.locator("thead").evaluate((t) => t.getBoundingClientRect().top - t.closest("div").getBoundingClientRect().top);
+  assert.ok(Math.abs(enc) <= 2, `encabezado fijo (${enc})`);
+  await tabla.evaluate((t) => { t.parentElement.scrollTop = 0; });
+  // Clic en la fila: alertas de la semana y por día.
+  await fila("Cerca Prueba").click();
+  await tabla.getByRole("row", { name: "Alertas de Cerca Prueba" }).waitFor({ timeout: 5000 });
+  assert.match(await tabla.getByRole("row", { name: "Alertas de Cerca Prueba" }).innerText(), /Más de 4 h extra[\s\S]*Lun \d+: Más de 4 h extra/);
   if (process.env.CAPTURAS) await page.screenshot({ path: process.env.CAPTURAS + "/pestana-horas.png", fullPage: true });
   assert.deepEqual(errores, [], "sin errores de JavaScript");
   exito = true;
-  console.log("OK pestaña Horas · semana legal completa · límite 46 h · se excede / va a pasar / dentro · contadores que filtran · detalle por día");
+  console.log("OK pestaña Horas · semana legal completa · límite 46 h · se excede / va a pasar / dentro · contadores que filtran · detalle por día · tabla de 190 con orden y encabezado fijo");
 } finally { await browser.close(); next.kill(); if (!exito) process.exitCode = 1; }

@@ -11,7 +11,7 @@ import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { fetcherWithToken } from "@/lib/fetcher";
 import { formatearMinutos } from "@/lib/asistencia/jornada.mjs";
-import { resumenSemana, semanaInicial, semanasDelRango } from "@/lib/asistencia/semanaHoras.mjs";
+import { horaCorta, ordenarFilas, resumenSemana, semanaInicial, semanasDelRango } from "@/lib/asistencia/semanaHoras.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -33,6 +33,7 @@ export default function VistaHoras({ idEmpresa, fechaInicio, fechaFin, filtroEmp
   const semana = semanas.find((s) => s.inicio === elegida) ?? semanaInicial(semanas, hoy);
   const [filtro, setFiltro] = useState(null);
   const [abierto, setAbierto] = useState(null);
+  const [orden, setOrden] = useState({ campo: "trabajado", dir: "desc" });
 
   const clave = semana
     ? `/checador/reportes/horas-ley?fechaInicio=${semana.inicio}&fechaFin=${semana.fin}${idEmpresa && idEmpresa !== "all" ? `&empresa=${idEmpresa}` : ""}`
@@ -44,8 +45,7 @@ export default function VistaHoras({ idEmpresa, fechaInicio, fechaFin, filtroEmp
     const busca = filtroEmpleado.trim().toLowerCase();
     return reportes
       .filter((r) => !busca || String(r.empleado?.nombre_empleado ?? "").toLowerCase().includes(busca))
-      .map((r) => ({ r, s: resumenSemana(r, semana, hoy) }))
-      .sort((a, b) => b.s.trabajado - a.s.trabajado);
+      .map((r) => ({ r, s: resumenSemana(r, semana, hoy) }));
   }, [data, filtroEmpleado, semana, hoy]);
 
   if (!semana) return null;
@@ -58,7 +58,8 @@ export default function VistaHoras({ idEmpresa, fechaInicio, fechaFin, filtroEmp
     ["por-autorizar", "Con extras por autorizar", (f) => f.s.porAutorizar > 0],
     ["ok", "Dentro del límite", (f) => f.s.nivel === "ok"],
   ];
-  const visibles = filtro ? filas.filter(contadores.find(([k]) => k === filtro)[2]) : filas;
+  const visibles = ordenarFilas(filtro ? filas.filter(contadores.find(([k]) => k === filtro)[2]) : filas, orden.campo, orden.dir);
+  const ordenarPor = (campo) => setOrden((o) => ({ campo, dir: o.campo === campo && o.dir === "desc" ? "asc" : campo === "nombre" && o.campo !== "nombre" ? "asc" : "desc" }));
 
   return (
     <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4" aria-label="Horas de la semana">
@@ -93,72 +94,137 @@ export default function VistaHoras({ idEmpresa, fechaInicio, fechaFin, filtroEmp
       {error && <p className="py-6 text-center text-sm text-red-600">No se pudieron calcular las horas.</p>}
       {!isLoading && !error && !visibles.length && <p className="py-6 text-center text-sm text-slate-500">No hay empleados para mostrar.</p>}
 
-      <div className="space-y-2">
-        {visibles.map(({ r, s }) => {
-          const n = NIVEL[s.nivel];
-          const pct = s.limite ? Math.min(100, (s.trabajado / s.limite) * 100) : 0;
-          const proy = s.limite ? Math.min(100, (s.proyeccion / s.limite) * 100) : 0;
-          const id = r.empleado?.id_empleado;
-          const restantesDobles = s.topeDoble != null ? Math.max(0, s.topeDoble - s.dobles) : null;
-          return (
-            <article key={id} className="rounded-xl border border-slate-200 px-4 py-3 hover:bg-slate-50" aria-label={r.empleado?.nombre_empleado}>
-              <button type="button" onClick={() => setAbierto(abierto === id ? null : id)} className="grid w-full gap-3 text-left md:grid-cols-[190px_1fr_230px_240px] md:items-center">
-                <div>
-                  <p className="font-semibold text-slate-900">{r.empleado?.nombre_empleado}</p>
-                  <p className="text-xs text-slate-500">{r.empleado?.departamento || r.empleado?.puesto || ""}</p>
-                </div>
-                <div>
-                  <p className="text-[13px] text-slate-700">
-                    <b className={`text-base ${n.color}`}>{fmt(s.trabajado)}</b>
-                    {s.limite != null && <> de {fmt(s.limite)}</>}
-                    {s.limite != null && (s.trabajado > s.limite
-                      ? <span className="ml-1 rounded-full bg-red-50 px-2 text-[11px] font-semibold text-red-700">+{fmt(s.trabajado - s.limite)} arriba</span>
-                      : <span className="text-xs text-slate-500"> · le quedan {fmt(s.limite - s.trabajado)}</span>)}
-                    {s.enCurso && <span className="text-xs text-slate-500"> · faltan {fmt(s.restante)} de su horario</span>}
-                  </p>
-                  <div className="relative my-1.5 h-2.5 overflow-hidden rounded-full bg-slate-200" aria-hidden>
-                    {s.enCurso && <i className="absolute inset-y-0 left-0 rounded-full bg-[repeating-linear-gradient(45deg,#cbd5e1,#cbd5e1_4px,#e2e8f0_4px,#e2e8f0_8px)]" style={{ width: `${proy}%` }} />}
+      {visibles.length > 0 && (
+        <TablaHoras visibles={visibles} semana={semana} hoy={hoy} orden={orden} ordenarPor={ordenarPor} abierto={abierto} setAbierto={setAbierto} />
+      )}
+
+      <p className="text-[11.5px] text-slate-400">
+        Ordena con los títulos de las columnas · clic en una fila con alertas para verlas completas · horas en h:mm; entre paréntesis, lo que le falta de su horario.
+        {" "}Usa la búsqueda y el rango de fechas de arriba.
+      </p>
+    </section>
+  );
+}
+
+const ESTADO_CORTO = { excede: "Excede", "va-a-pasar": "Va a pasar", ok: "En límite", sin: "Sin regla" };
+
+function Th({ campo, orden, ordenarPor, children, className = "" }) {
+  const activo = orden.campo === campo;
+  return (
+    <th scope="col" className={`px-2 py-2 font-semibold ${className}`} aria-sort={activo ? (orden.dir === "asc" ? "ascending" : "descending") : "none"}>
+      <button type="button" onClick={() => ordenarPor(campo)} className={`inline-flex items-center gap-0.5 uppercase hover:text-slate-900 ${activo ? "text-slate-900" : ""}`}>
+        {children}<span aria-hidden className="text-[9px]">{activo ? (orden.dir === "asc" ? "▲" : "▼") : "↕"}</span>
+      </button>
+    </th>
+  );
+}
+
+// Tabla: una fila por empleado (pensada para cientos), encabezado fijo y orden por columna.
+function TablaHoras({ visibles, semana, hoy, orden, ordenarPor, abierto, setAbierto }) {
+  const fechas = Array.from({ length: 7 }, (_, i) => dayjs(semana.inicio).add(i, "day").format("YYYY-MM-DD"));
+  return (
+    <div className="max-h-[70vh] overflow-auto rounded-xl border border-slate-200">
+      <table className="w-full min-w-[1040px] border-collapse text-[13px] tabular-nums">
+        <thead className="sticky top-0 z-10 bg-slate-50 text-left text-[10.5px] uppercase tracking-wide text-slate-500 shadow-[0_1px_0_#e2e8f0]">
+          <tr>
+            <Th campo="nombre" orden={orden} ordenarPor={ordenarPor} className="min-w-[180px]">Empleado</Th>
+            {fechas.map((f, i) => (
+              <th key={f} scope="col" className={`px-1.5 py-2 text-center font-semibold ${f === hoy ? "bg-blue-50 text-blue-700" : ""}`}>
+                {DIAS[i]} {dayjs(f).format("D")}
+              </th>
+            ))}
+            <Th campo="trabajado" orden={orden} ordenarPor={ordenarPor} className="min-w-[150px]">Semana</Th>
+            <th scope="col" className="px-2 py-2 font-semibold">Contra el límite</th>
+            <Th campo="autorizadas" orden={orden} ordenarPor={ordenarPor}>Extra aut.</Th>
+            <Th campo="porAutorizar" orden={orden} ordenarPor={ordenarPor}>Por aut.</Th>
+            <th scope="col" className="px-2 py-2 font-semibold">Estado</th>
+            <Th campo="alertas" orden={orden} ordenarPor={ordenarPor} className="w-[240px]">Alertas</Th>
+          </tr>
+        </thead>
+        <tbody>
+          {visibles.map(({ r, s }) => {
+            const n = NIVEL[s.nivel];
+            const id = r.empleado?.id_empleado;
+            const nombre = r.empleado?.nombre_empleado;
+            const pct = s.limite ? Math.min(100, (s.trabajado / s.limite) * 100) : 0;
+            const proy = s.limite ? Math.min(100, (s.proyeccion / s.limite) * 100) : 0;
+            const abiertoAqui = abierto === id;
+            return (
+              <FilaHoras key={id} nombre={nombre} abierto={abiertoAqui} onClick={() => setAbierto(abiertoAqui ? null : id)} alertas={s.alertas} dias={s.dias}>
+                <td className="px-2 py-1.5">
+                  <p className="font-semibold leading-tight text-slate-900">{nombre}</p>
+                  <p className="truncate text-[11px] text-slate-500">{r.empleado?.departamento || r.empleado?.puesto || ""}</p>
+                </td>
+                {s.dias.map((d) => (
+                  <td key={d.fecha} title={d.alertas.join(" · ") || undefined}
+                    className={`px-1.5 py-1.5 text-center ${d.fecha === hoy ? "bg-blue-50/60" : ""} ${d.alertas.length ? "font-semibold text-red-700" : d.fecha > hoy ? "text-slate-300" : "text-slate-700"}`}>
+                    {d.fecha > hoy && !d.trabajado ? (d.programado ? <span className="text-[11px]">({horaCorta(d.programado)})</span> : "—") : horaCorta(d.trabajado)}
+                    {d.alertas.length ? <span aria-hidden> •</span> : null}
+                  </td>
+                ))}
+                <td className="px-2 py-1.5">
+                  <b className={n.color}>{fmt(s.trabajado)}</b>
+                  {s.limite != null && <span className="text-[11px] text-slate-500"> / {fmt(s.limite)}</span>}
+                  <div className="relative mt-1 h-1.5 w-28 overflow-hidden rounded-full bg-slate-200" aria-hidden>
+                    {s.enCurso && <i className="absolute inset-y-0 left-0 rounded-full bg-slate-300" style={{ width: `${proy}%` }} />}
                     <i className={`absolute inset-y-0 left-0 rounded-full ${n.barra}`} style={{ width: `${pct}%` }} />
                   </div>
-                  <p className={`text-[11.5px] font-semibold ${n.color}`}>
-                    {n.texto}{s.nivel === "va-a-pasar" ? ` · si cumple su horario llega a ${fmt(s.proyeccion)}` : ""}
-                  </p>
-                </div>
-                <div className="flex gap-4">
-                  <div>
-                    <p className="text-[10.5px] font-semibold uppercase tracking-wide text-slate-500">Extra autorizadas</p>
-                    <p className="font-bold tabular-nums">{fmt(s.autorizadas)}</p>
-                    <p className="text-[11px] text-slate-500">
-                      {fmt(s.dobles)} dobles{s.triples ? ` · ${fmt(s.triples)} triples` : restantesDobles != null ? ` · le quedan ${fmt(restantesDobles)}` : ""}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[10.5px] font-semibold uppercase tracking-wide text-slate-500">Por autorizar</p>
-                    <p className={`font-bold tabular-nums ${s.porAutorizar ? "text-orange-700" : ""}`}>{fmt(s.porAutorizar)}</p>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {s.alertas.length
-                    ? s.alertas.map((a) => <span key={a} className="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-semibold text-red-700">⚠ {a}</span>)
-                    : <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">Sin alertas</span>}
-                </div>
-              </button>
-              {abierto === id && (
-                <div className="mt-3 grid grid-cols-7 gap-1.5 border-t border-dashed border-slate-200 pt-3" aria-label="Semana día por día">
-                  {s.dias.map((d, i) => (
-                    <div key={d.fecha} className="rounded-lg bg-slate-50 px-2 py-1.5 text-xs">
-                      <p className="text-[11px] text-slate-500">{DIAS[i]} {dayjs(d.fecha).format("D")}</p>
-                      <p className="font-semibold tabular-nums">{d.trabajado ? fmt(d.trabajado) : "—"}</p>
-                      {d.alertas.map((a) => <p key={a} className="text-[10.5px] font-semibold text-red-700">{a}</p>)}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </article>
-          );
-        })}
-      </div>
-      <p className="text-[11.5px] text-slate-400">Clic en un empleado para ver su semana día por día. Usa la búsqueda y el rango de fechas de arriba.</p>
-    </section>
+                </td>
+                <td className="whitespace-nowrap px-2 py-1.5 text-[12px]">
+                  {s.limite == null ? "—" : s.trabajado > s.limite
+                    ? <span className="font-semibold text-red-700">+{fmt(s.trabajado - s.limite)} arriba</span>
+                    : s.nivel === "va-a-pasar"
+                      ? <span className="font-semibold text-amber-700">llegaría a {fmt(s.proyeccion)}</span>
+                      : <span className="text-slate-500">le quedan {fmt(s.limite - s.trabajado)}</span>}
+                </td>
+                <td className="whitespace-nowrap px-2 py-1.5">
+                  {s.autorizadas ? <><b>{fmt(s.autorizadas)}</b><span className="block text-[11px] text-slate-500">{s.triples ? `${fmt(s.triples)} triples` : `${fmt(s.dobles)} dobles`}</span></> : <span className="text-slate-400">—</span>}
+                </td>
+                <td className={`whitespace-nowrap px-2 py-1.5 ${s.porAutorizar ? "font-semibold text-orange-700" : "text-slate-400"}`}>
+                  {s.porAutorizar ? fmt(s.porAutorizar) : "—"}
+                </td>
+                <td className="px-2 py-1.5">
+                  <span className={`whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold ${n.chip}`}>{ESTADO_CORTO[s.nivel]}</span>
+                </td>
+                <td className="max-w-[240px] px-2 py-1.5 text-[11.5px]" title={s.alertas.join(" · ") || undefined}>
+                  {s.alertas.length ? (
+                    <span className="flex items-center gap-1.5 font-semibold text-red-700">
+                      <span className="shrink-0 whitespace-nowrap rounded-full bg-red-50 px-1.5">⚠ {s.alertas.length}</span>
+                      <span className="truncate">{s.alertas[0]}</span>
+                    </span>
+                  ) : <span className="text-slate-400">Sin alertas</span>}
+                </td>
+              </FilaHoras>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function FilaHoras({ nombre, abierto, onClick, alertas, dias, children }) {
+  const porDia = dias.map((d, i) => ({ ...d, dia: DIAS[i] })).filter((d) => d.alertas.length);
+  return (
+    <>
+      <tr aria-label={nombre} aria-expanded={alertas.length ? abierto : undefined} onClick={alertas.length ? onClick : undefined}
+        className={`border-t border-slate-100 align-middle ${alertas.length ? "cursor-pointer" : ""} ${abierto ? "bg-slate-50" : "hover:bg-slate-50"}`}>
+        {children}
+      </tr>
+      {abierto && (
+        <tr className="bg-slate-50" aria-label={`Alertas de ${nombre}`}>
+          <td colSpan={15} className="px-3 pb-2.5 pt-0 text-[12px]">
+            <div className="flex flex-wrap gap-1.5">
+              {alertas.map((a) => <span key={a} className="rounded-full bg-red-50 px-2 py-0.5 font-semibold text-red-700">⚠ {a}</span>)}
+            </div>
+            {porDia.length ? (
+              <p className="mt-1 text-slate-600">
+                {porDia.map((d) => `${d.dia} ${dayjs(d.fecha).format("D")}: ${d.alertas.join(", ")}`).join(" · ")}
+              </p>
+            ) : null}
+          </td>
+        </tr>
+      )}
+    </>
   );
 }
