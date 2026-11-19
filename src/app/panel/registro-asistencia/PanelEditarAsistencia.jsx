@@ -170,6 +170,13 @@ export default function PanelEditarAsistencia({
           </div>
           <div className="space-y-5">
           <Seccion titulo="Horas extra">
+            {/* Solo se editan si ese día hay tiempo extra (o ya estaban autorizadas, para poder quitarlas). */}
+            {extra.estado === "sin" && !Number(datos.hrs_extra) ? (
+              <p className="rounded-xl border border-dashed border-slate-200 px-3 py-2.5 text-sm text-slate-500">
+                Sin horas extra este día: no salió después de su horario.
+              </p>
+            ) : (
+              <>
             <Dato
               etiqueta={ETIQUETAS_ESTADO[extra.estado]}
               valor={extra.minutos > 0 ? formatearMinutos(extra.minutos) : "—"}
@@ -212,6 +219,8 @@ export default function PanelEditarAsistencia({
                 onChange={(e) => handleFieldChange("notas_hrs_extra", e.target.value)}
               />
             </Campo>
+              </>
+            )}
           </Seccion>
 
           <Seccion titulo="Registro">
