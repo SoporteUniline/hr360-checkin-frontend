@@ -59,6 +59,7 @@ Object.assign(registros[9], { nombre: "DosTramos", ...comidaHorario,
 Object.assign(registros[3], { nombre: "Editado", correccion: 1, valores_originales: JSON.stringify({ salida: "2026-11-13 13:19:00", id_tipo_permiso: 2 }) });
 
 const puts = [];
+const autorizacionMasivo = [];
 const pedidosAsistencias = [];
 let exito = false;
 const browser = await chromium.launch();
@@ -94,6 +95,10 @@ try {
     if (/\/checador\/asistencias\/\d+$/.test(p) && req.method() === "PUT") {
       puts.push(JSON.parse(req.postData() || "{}"));
       return json({ asistencia: {} });
+    }
+    if (p.endsWith("/checador/bulk-incident/register")) {
+      autorizacionMasivo.push(req.headers().authorization || "");
+      return json({ message: "ok" });
     }
     if (p.includes("eventos-checada")) return route.abort();
     if (url.origin === base) return json({});
@@ -282,6 +287,13 @@ try {
   assert.equal(Number(puts[1].es_domingo), 0, `es_domingo enviado: ${puts[1].es_domingo}`);
   assert.equal(Number(puts[1].es_festivo), 1, `es_festivo enviado: ${puts[1].es_festivo}`);
   assert.equal(Object.hasOwn(puts[1], "asistencia"), false, "no se toca Asistió");
+
+  // 4c) «Registrar asistencia masiva» manda la sesión (el backend la exige desde el 19/11/2026).
+  await page.getByRole("button", { name: /Registrar asistencia masiva/ }).click();
+  await page.getByRole("button", { name: /Registrar asistencia\(s\)/ }).click();
+  for (let i = 0; i < 50 && !autorizacionMasivo.length; i++) await dormir(100);
+  assert.match(autorizacionMasivo[0] || "", /^Bearer .+/, "el registro masivo debe mandar el token");
+  await page.keyboard.press("Escape");
 
   // 5) Centro de incidencias: misma regla; horas extra en "h min", no en decimales.
   await page.goto(base + "/panel/incidencias", { waitUntil: "domcontentloaded" });
