@@ -49,12 +49,20 @@ export default function FaceReferenceSync() {
     };
     const online = () => { void refresh(true); };
     const visible = () => { void refresh(); };
-    void refresh(true);
+    // (19/11/2026) La primera pasada (perfil, rostros, motor facial) ya no compite con la carga de
+    // la pantalla: espera a que el navegador esté libre, con un mínimo de 8 s.
+    let idle = null;
+    const start = setTimeout(() => {
+      if (typeof window.requestIdleCallback === 'function') idle = window.requestIdleCallback(() => { void refresh(true); }, { timeout: 5000 });
+      else void refresh(true);
+    }, 8000);
     const timer = setInterval(visible, 60000);
     window.addEventListener('online', online);
     document.addEventListener('visibilitychange', visible);
     return () => {
       disposed = true;
+      clearTimeout(start);
+      if (idle !== null && typeof window.cancelIdleCallback === 'function') window.cancelIdleCallback(idle);
       clearInterval(timer);
       window.removeEventListener('online', online);
       document.removeEventListener('visibilitychange', visible);
