@@ -50,6 +50,11 @@ export default function useAsistenciaActions(mutateTable, onSaveSuccess) {
     setDraft({});
   };
 
+  // Refresca los datos base del registro abierto (p. ej. tras corregir una checada) sin perder el borrador.
+  const handleActualizarBase = (nuevo) => {
+    setRegistro((previo) => (previo && nuevo && previo.id === nuevo.id ? nuevo : previo));
+  };
+
   const handleCancelEdit = () => {
     setRegistro(null);
     setDraft({});
@@ -98,6 +103,7 @@ export default function useAsistenciaActions(mutateTable, onSaveSuccess) {
     isSaving,
     handleEditClick,
     handleCancelEdit,
+    handleActualizarBase,
     handleFieldChange,
     handleSaveClick: () => save(editedValues),
     handleRestoreOriginal: () => { if (original) return save(original, true); },

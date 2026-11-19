@@ -1,14 +1,16 @@
 "use client";
 
-// Edición de una asistencia en panel lateral (reemplaza la edición dentro de la fila).
+// Ventana de la asistencia (clic en la fila): horario, checadas del reloj y edición juntos.
+// Pedido del 19/11/2026: ventana flotante centrada, como la de turnos/horarios.
 // Usa el mismo estado y guardado de useAsistenciaActions: solo se envían los campos cambiados.
 
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { calcularResumenJornada, formatearMinutos } from "@/utils/asistenciaHoras";
 import { ETIQUETAS_ESTADO, FORMAS_PAGO, estadoHorasExtra } from "@/lib/asistencia/horasExtra.mjs";
+import ChecadasDelDia from "./ChecadasDelDia";
 
 const si = (v) => Boolean(Number(v));
 
@@ -74,30 +76,52 @@ export default function PanelEditarAsistencia({
   handleSaveClick,
   handleCancelEdit,
   handleRestoreOriginal,
+  mutateAsistencia,
 }) {
   if (!registro) return null;
   const { horaLocal, aBaseDeDatos, salidaParaHoras, mismaMarca, salidaDiaSiguiente, fechaBase } = horas;
   const { minutosTrabajados, minutosProgramados, minutosDiferencia } = calcularResumenJornada(datos);
   const extra = estadoHorasExtra(datos, zona);
-  const horario = [registro.hora_entrada_programada, registro.hora_salida_programada]
-    .map((h) => String(h ?? "").slice(0, 5))
-    .filter(Boolean)
-    .join("–");
+  const corta = (h) => String(h ?? "").slice(0, 5);
+  const horario = [registro.hora_entrada_programada, registro.hora_salida_programada].map(corta).filter(Boolean).join("–");
+  const comidaHorario = [registro.hora_salida_comida_programada, registro.hora_regreso_comida_programada].map(corta).filter(Boolean).join("–");
 
   return (
-    <Sheet open={abierto} onOpenChange={(v) => !v && handleCancelEdit()}>
-      <SheetContent side="right" className="flex w-full flex-col gap-0 bg-white p-0 sm:max-w-[460px]" data-no-row-click>
-        <SheetHeader className="border-b border-slate-200 px-5 py-4 text-left">
-          <SheetTitle>{registro.nombre} {registro.apellido_paterno}</SheetTitle>
-          <SheetDescription>
+    <Dialog open={abierto} onOpenChange={(v) => !v && handleCancelEdit()}>
+      <DialogContent className="flex max-h-[90vh] flex-col gap-0 overflow-hidden bg-white p-0 sm:max-w-[960px]" data-no-row-click>
+        <DialogHeader className="shrink-0 border-b border-slate-200 px-6 py-4 text-left">
+          <DialogTitle>{registro.nombre} {registro.apellido_paterno}</DialogTitle>
+          <DialogDescription>
             {String(registro.fecha ?? "").slice(0, 10).split("-").reverse().join("/")}
-            {horario && ` · Horario ${horario}`}
-            {registro.hrs_comida ? ` · comida ${registro.hrs_comida} h` : ""}
-          </SheetDescription>
-        </SheetHeader>
+            {registro.departamento ? ` · ${registro.departamento}` : ""}
+            {registro.tipo_registro_nombre ? ` · ${registro.tipo_registro_nombre}` : ""}
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="flex-1 space-y-5 overflow-y-auto px-5 py-4">
-          <Seccion titulo="Checadas">
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-5">
+          <Seccion titulo="Horario del día">
+            <div className="grid grid-cols-2 gap-3 rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5 text-sm">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Jornada</p>
+                <p className="font-semibold tabular-nums text-slate-800">{horario || "Sin horario"}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Comida</p>
+                <p className="font-semibold tabular-nums text-slate-800">
+                  {comidaHorario || (registro.hrs_comida ? `${registro.hrs_comida} h` : "Sin comida")}
+                </p>
+              </div>
+            </div>
+          </Seccion>
+
+          <Seccion titulo="Checadas del reloj">
+            <ChecadasDelDia empleado={registro} activo={abierto} mutateAsistencia={mutateAsistencia} />
+            <p className="text-[11px] text-slate-400">Con el lápiz corriges una checada; la hora original del reloj queda tachada.</p>
+          </Seccion>
+
+          <Seccion titulo="Entrada y salida del día">
             <div className="grid grid-cols-2 gap-3">
               <Campo label="Entrada">
                 <Input
@@ -143,6 +167,8 @@ export default function PanelEditarAsistencia({
             />
           </Seccion>
 
+          </div>
+          <div className="space-y-5">
           <Seccion titulo="Horas extra">
             <Dato
               etiqueta={ETIQUETAS_ESTADO[extra.estado]}
@@ -261,9 +287,11 @@ export default function PanelEditarAsistencia({
               </Campo>
             </div>
           </Seccion>
+          </div>
+          </div>
         </div>
 
-        <div className="flex items-center justify-between gap-2 border-t border-slate-200 px-5 py-3">
+        <DialogFooter className="shrink-0 flex-row items-center justify-between gap-2 border-t border-slate-200 px-6 py-3 sm:justify-between">
           <div>
             {registro.valores_originales && (
               <button type="button" onClick={handleRestoreOriginal} disabled={isSaving}
@@ -282,8 +310,8 @@ export default function PanelEditarAsistencia({
               {isSaving ? "Guardando…" : "Guardar"}
             </button>
           </div>
-        </div>
-      </SheetContent>
-    </Sheet>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
