@@ -52,6 +52,7 @@ export default function AsistenciaRow({
   onRowClick,
   indiceFestivos = null,
   horasExtra = null,
+  seleccion = null,
   handleActualizarBase,
 }) {
   const fallbackTimezone = useEmpresaTimezone(empresaActiva);
@@ -165,13 +166,23 @@ export default function AsistenciaRow({
           // Mismo tamaño y números alineados en todas las columnas.
           `group border-b border-gray-100 text-[13px] tabular-nums [&>td]:whitespace-nowrap [&>td]:px-3 [&>td]:py-2.5 ${
             esDescanso ? "text-slate-400" : "text-slate-700"
-          } ${!isEditing ? "cursor-pointer hover:bg-gray-50" : "bg-blue-50/40"}`
+          } ${!isEditing ? "cursor-pointer hover:bg-gray-50" : "bg-blue-50/40"} ${seleccion?.marcado ? "bg-blue-50 [&>td]:bg-blue-50" : ""}`
         }
       >
         <>
             {isColVisible("empleado") && (
               // Fija a la izquierda: el nombre no se pierde al desplazar la tabla.
               <TableCell className={`sticky left-0 z-[5] bg-background font-semibold shadow-[8px_0_8px_-8px_rgba(15,23,42,0.18)] group-hover:bg-gray-50 ${esDescanso ? "text-slate-500" : "text-slate-800"}`}>
+                {seleccion ? (
+                  <input
+                    type="checkbox"
+                    aria-label={`Elegir a ${registro.nombre ?? ""} ${registro.apellido_paterno ?? ""}`.trim()}
+                    checked={seleccion.marcado}
+                    onChange={(e) => seleccion.alternar(e.target.checked)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="mr-2.5 h-4 w-4 cursor-pointer align-middle accent-blue-600"
+                  />
+                ) : null}
                 {registro.nombre} {registro.apellido_paterno}
               </TableCell>
             )}
@@ -347,8 +358,6 @@ export default function AsistenciaRow({
                   registro={registro}
                   info={infoExtra}
                   readOnly={readOnly || !horasExtra}
-                  seleccionado={horasExtra?.seleccionados?.has(registro.id)}
-                  onSeleccionar={(v) => horasExtra?.seleccionar(registro.id, v)}
                 />
               </TableCell>
             )}

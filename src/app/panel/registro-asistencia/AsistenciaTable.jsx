@@ -24,9 +24,10 @@ import { resumenCambios } from "@/lib/asistencia/cambios.mjs";
 import { crearFormateadorCambios } from "./CeldaEditado";
 import { useSnackbar } from "notistack";
 import useHorasExtra from "@/hooks/useHorasExtra";
+import AccionesMasivas from "./AccionesMasivas";
 import { minutosDescanso, sinSalidaAComer } from "@/lib/asistencia/jornada.mjs";
 import {
-  ETIQUETAS_ESTADO, FORMA_PAGO_DEFAULT, FORMAS_PAGO, cambiosAutorizar, cambiosNoAutorizar, cambiosQuitar,
+  ETIQUETAS_ESTADO, cambiosAutorizar, cambiosNoAutorizar, cambiosQuitar,
   estadoHorasExtra, etiquetaHorasExtra, ordenarPorHorasExtra,
 } from "@/lib/asistencia/horasExtra.mjs";
 
@@ -578,8 +579,6 @@ export default function AsistenciaTable({
   // --- Horas extra: decisiones de un clic y masivas ---
   const hx = useHorasExtra(mutateAsistencia);
   const [seleccionados, setSeleccionados] = useState(() => new Set());
-  const [formaMasiva, setFormaMasiva] = useState(FORMA_PAGO_DEFAULT);
-  const [notaMasiva, setNotaMasiva] = useState("");
   const nombreCorto = (r) => `${r.nombre ?? ""} ${r.apellido_paterno ?? ""}`.trim();
   const limpiarSeleccion = () => setSeleccionados(new Set());
   const accionesHorasExtra = readOnly ? null : {
@@ -603,22 +602,16 @@ export default function AsistenciaTable({
     quitar: (r) =>
       hx.guardar([{ registro: r, cambios: cambiosQuitar(r, zonaDe(r)) }], `${nombreCorto(r)}: decisión quitada.`),
   };
-  const filasSeleccionadas = optionSourceRows.filter(
-    (r) => seleccionados.has(r.id) && estadoHorasExtra(r, zonaDe(r)).estado === "pendiente",
-  );
-  const pendientesVisibles = (displayedRows ?? []).filter((r) => estadoHorasExtra(r, zonaDe(r)).estado === "pendiente");
-  const todasPendientesMarcadas = pendientesVisibles.length > 0 && pendientesVisibles.every((r) => seleccionados.has(r.id));
-  const decidirMasivo = async (autorizar) => {
-    const items = filasSeleccionadas.map((r) => ({
-      registro: r,
-      cambios: autorizar
-        ? cambiosAutorizar({ forma: formaMasiva, notas: notaMasiva || undefined, idAutorizador: hx.usuario.idEmpleado })
-        : cambiosNoAutorizar(r, { quien: hx.usuario.nombre, zona: zonaDe(r) }),
-    }));
-    await hx.guardar(items, `${items.length} registros ${autorizar ? "autorizados" : "no autorizados (salida al horario)"}.`);
-    limpiarSeleccion();
-    setNotaMasiva("");
-  };
+  // Selección para acciones masivas (casilla en cada fila). Solo filas que siguen cargadas.
+  const filasSeleccionadas = readOnly ? [] : optionSourceRows.filter((r) => seleccionados.has(r.id));
+  const visiblesSeleccionables = readOnly ? [] : (displayedRows ?? []).filter((r) => r?.id != null);
+  const marcadasVisibles = visiblesSeleccionables.filter((r) => seleccionados.has(r.id)).length;
+  const todasVisiblesMarcadas = visiblesSeleccionables.length > 0 && marcadasVisibles === visiblesSeleccionables.length;
+  const alternarVisibles = (v) => setSeleccionados((prev) => {
+    const s = new Set(prev);
+    for (const r of visiblesSeleccionables) { if (v) s.add(r.id); else s.delete(r.id); }
+    return s;
+  });
 
   const renderAsistenciaRow = (reg) => (
     <AsistenciaRow
@@ -644,6 +637,7 @@ export default function AsistenciaTable({
       colVisible={colVisible}
       onRowClick={onRowClick}
       horasExtra={accionesHorasExtra}
+      seleccion={readOnly ? null : { marcado: seleccionados.has(reg.id), alternar: (v) => accionesHorasExtra.seleccionar(reg.id, v) }}
     />
   );
 
@@ -670,38 +664,6 @@ export default function AsistenciaTable({
                 <Plus className="h-4 w-4 mr-2" />
                 Registrar asistencia masiva
               </Button>
-
-              {filasSeleccionadas.length > 0 && (
-                <div className="flex items-center gap-2 whitespace-nowrap rounded-xl border border-blue-100 bg-blue-50 px-3 py-1.5 text-sm" role="region" aria-label="Autorizar horas extra seleccionadas">
-                  <b className="text-slate-800">{filasSeleccionadas.length} seleccionados</b>
-                  <select
-                    aria-label="Forma de pago para todos"
-                    value={formaMasiva}
-                    onChange={(e) => setFormaMasiva(e.target.value)}
-                    className="h-8 w-auto rounded-lg border border-slate-200 bg-white px-2 text-xs"
-                  >
-                    {FORMAS_PAGO.map((f) => <option key={f}>{f}</option>)}
-                  </select>
-                  <input
-                    aria-label="Nota para todos"
-                    placeholder="Nota para todos"
-                    value={notaMasiva}
-                    onChange={(e) => setNotaMasiva(e.target.value)}
-                    className="h-8 w-32 rounded-lg border border-slate-200 bg-white px-2 text-xs"
-                  />
-                  <button type="button" disabled={hx.guardando} onClick={() => decidirMasivo(true)}
-                    className="h-8 rounded-lg bg-emerald-700 px-3 text-xs font-semibold text-white hover:bg-emerald-800 disabled:opacity-50">
-                    ✓ Autorizar
-                  </button>
-                  <button type="button" disabled={hx.guardando} onClick={() => decidirMasivo(false)}
-                    className="h-8 rounded-lg border border-rose-200 bg-white px-3 text-xs font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50">
-                    ✕ No autorizar
-                  </button>
-                  <button type="button" onClick={limpiarSeleccion} aria-label="Quitar selección" title="Quitar selección" className="h-8 px-2 text-xs font-semibold text-slate-500 hover:text-slate-800">
-                    ✕
-                  </button>
-                </div>
-              )}
 
               {/* <Button
                 onClick={onResetFilters}
@@ -806,6 +768,17 @@ export default function AsistenciaTable({
                     className={`${TH_STICKY} left-0 z-20 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 shadow-[8px_0_8px_-8px_rgba(15,23,42,0.18)]`}
                   >
                     <div className="flex items-center gap-1">
+                      {!readOnly && (
+                        <input
+                          type="checkbox"
+                          aria-label="Elegir todos los mostrados"
+                          title="Elegir todos los mostrados"
+                          checked={todasVisiblesMarcadas}
+                          ref={(el) => { if (el) el.indeterminate = marcadasVisibles > 0 && !todasVisiblesMarcadas; }}
+                          onChange={(e) => alternarVisibles(e.target.checked)}
+                          className="mr-1.5 h-4 w-4 cursor-pointer accent-blue-600"
+                        />
+                      )}
                       <button
                         type="button"
                         onClick={() => handleSort("empleado")}
@@ -1068,18 +1041,6 @@ export default function AsistenciaTable({
                     className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
                     <div className="flex items-center gap-1">
-                      {!readOnly && pendientesVisibles.length > 0 && (
-                        <input
-                          type="checkbox"
-                          aria-label="Seleccionar horas extra por autorizar"
-                          title="Seleccionar todas las que faltan por autorizar"
-                          checked={todasPendientesMarcadas}
-                          onChange={(e) =>
-                            setSeleccionados(e.target.checked ? new Set(pendientesVisibles.map((r) => r.id)) : new Set())
-                          }
-                          className="mr-1 h-4 w-4 accent-blue-600"
-                        />
-                      )}
                       <button
                         type="button"
                         onClick={() => handleSort("horasExtra")}
@@ -1213,6 +1174,16 @@ export default function AsistenciaTable({
           </div>
         )}
       </div>
+      {!readOnly && (
+        <AccionesMasivas
+          filas={filasSeleccionadas}
+          tiposPermiso={tiposPermiso}
+          zonaDe={zonaDe}
+          hx={hx}
+          onLimpiar={limpiarSeleccion}
+          onGuardado={mutateAsistencia}
+        />
+      )}
     </>
   );
 }
