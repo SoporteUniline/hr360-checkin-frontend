@@ -1,5 +1,6 @@
 import axios, { ensureOfflineCache } from './axios';
 import Cookies from 'js-cookie';
+import { motivoPendiente } from './reloj/motivoPendiente.mjs';
 
 let storeLoading;
 let registrationLoading;
@@ -104,7 +105,8 @@ async function registerLocalFace(payload, context, profile, original = null) {
     });
     if (current?.status === 'decision') return { data: { requiereDecision: true, offline_event: current, empleado: { nombre: current.employeeName || event.employeeName } } };
   }
-  return { data: { pending: true, local_validated: true, offline_event: event, empleado: { nombre: event.employeeName, apellido_paterno: '' }, movimiento: `${event.action === 'auto' ? 'Checada' : event.action === 'entrada' ? 'Entrada' : 'Salida'} reconocida en este dispositivo · pendiente de subir` } };
+  const guardado = (await store.listEvents()).find(saved => saved.id === event.id) || event;
+  return { data: { pending: true, local_validated: true, offline_event: event, motivo: motivoPendiente(guardado), empleado: { nombre: event.employeeName, apellido_paterno: '' }, movimiento: `${event.action === 'auto' ? 'Checada' : event.action === 'entrada' ? 'Entrada' : 'Salida'} reconocida en este dispositivo · pendiente de subir` } };
 }
 
 export async function installOfflineWorker() {
