@@ -74,7 +74,9 @@ export default function BotonAgregarComida({ registro, aBaseDeDatos, fechaBase, 
           </button>
         )}
       </PopoverTrigger>
-      <PopoverContent className="w-72 border border-slate-200 bg-white p-4 shadow-xl" data-no-row-click onClick={detener}>
+      {/* (19/11/2026) Dentro de la ventana de edición «Guardar comida» no hacía nada: la ventana pone
+          pointer-events:none fuera de ella. Arreglado en ui/popover (pointer-events-auto) + z-[60]. */}
+      <PopoverContent className="z-[60] w-72 border border-slate-200 bg-white p-4 shadow-xl" data-no-row-click onClick={detener}>
         <p className="text-sm font-semibold text-slate-900">Agregar comida · {registro.nombre} {registro.apellido_paterno}</p>
         <p className="mt-0.5 text-xs text-slate-500">Su día queda en dos tramos; el tiempo de comida no se paga.</p>
         <div className="mt-3 grid grid-cols-2 gap-2">
