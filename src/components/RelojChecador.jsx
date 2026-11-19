@@ -41,6 +41,20 @@ export default function RelojChecador({
 }) {
   const [ubicacionGPS, setUbicacionGPS] = useState(null);
   const [metodo, setMetodo] = useState("facial");
+  // Cámara siempre encendida: útil en un reloj fijo (fila de personas). En el celular de cada
+  // empleado conviene apagarla al checar. Se recuerda por dispositivo.
+  const claveCamara = `adamia-reloj-camara-fija:${modoEmpleado ? "empleado" : "empresa"}`;
+  const [camaraFija, setCamaraFija] = useState(!modoEmpleado);
+  useEffect(() => {
+    try {
+      const guardado = localStorage.getItem(claveCamara);
+      if (guardado !== null) setCamaraFija(guardado === "1");
+    } catch { /* sin almacenamiento: queda el valor por defecto */ }
+  }, [claveCamara]);
+  const cambiarCamaraFija = () => setCamaraFija((actual) => {
+    try { localStorage.setItem(claveCamara, actual ? "0" : "1"); } catch { /* solo esta sesión */ }
+    return !actual;
+  });
   const [offline, setOffline] = useState(false);
   const [localFacesReady, setLocalFacesReady] = useState(false);
   useEffect(() => {
@@ -525,6 +539,19 @@ export default function RelojChecador({
                 ))}
               </div>
 
+              {metodo === "facial" && (
+                <label className="mb-3 flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm">
+                  <span>
+                    <span className="block font-semibold text-slate-800">Cámara siempre encendida</span>
+                    <span className="block text-xs text-slate-500">
+                      {camaraFija ? "Reloj fijo: queda lista para la siguiente persona" : "Se apaga al checar"}
+                    </span>
+                  </span>
+                  <input type="checkbox" role="switch" className="peer sr-only" checked={camaraFija} onChange={cambiarCamaraFija} />
+                  <span aria-hidden="true" className="relative h-6 w-11 shrink-0 rounded-full bg-slate-300 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:bg-blue-600 peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-400" />
+                </label>
+              )}
+
               <div className="relative min-h-75">
                 {(!offline || localFacesReady) && (metodo === "facial" || !isMobile) && (
                   <div
@@ -542,7 +569,7 @@ export default function RelojChecador({
                       idEmpresa={idEmpresa}
                       submitMovement={submitMovement}
                       handleOpenFacialModal={() => setMostrarCamara(false)}
-                      continuo
+                      continuo={camaraFija}
                     />
                   </div>
                 )}
