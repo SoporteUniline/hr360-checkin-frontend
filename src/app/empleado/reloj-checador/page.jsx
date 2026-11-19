@@ -82,9 +82,10 @@ export default function EmpleadoInicioPage() {
   if (status === "ok") {
     return (
       <>
-        <Navbar />
-        <div className="pt-14">
-          <Link href="/empleado/panel/inicio" className="flex min-h-12 items-center bg-white px-5 font-semibold text-blue-700">← Volver a mi inicio</Link>
+        {/* En celular solo el reloj: la vuelta al inicio queda en el menú de la franja. */}
+        <div className="hidden md:block"><Navbar /></div>
+        <div className="md:pt-14">
+          <Link href="/empleado/panel/inicio" className="hidden md:flex min-h-12 items-center bg-white px-5 font-semibold text-blue-700">← Volver a mi inicio</Link>
           <OfflineClockSetup />
           <RelojChecador
             idEmpresa={dataUser.id_empresa}
