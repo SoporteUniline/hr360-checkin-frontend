@@ -337,7 +337,7 @@ export default function AsistenciaMatriz({
             No hay registros en el rango y filtros seleccionados.
           </div>
         ) : (
-          <table className="w-max min-w-full border-collapse text-[11px] leading-none">
+          <table className="w-max min-w-full border-collapse text-[12px] leading-none">
             <thead className="sticky top-0 z-30 bg-[#1f2937] text-white">
               <tr>
                 <th className="sticky left-0 z-40 w-9 min-w-9 bg-[#1f2937] px-1 py-1.5 text-center font-semibold">
@@ -349,24 +349,24 @@ export default function AsistenciaMatriz({
                 {dias.map((d) => (
                   <th
                     key={d.format("YYYY-MM-DD")}
-                    className="w-8 min-w-8 px-0.5 py-1 text-center font-semibold"
+                    className="w-10 min-w-10 px-0.5 py-1 text-center font-semibold"
                   >
-                    <div>{d.format("DD")}</div>
-                    <div className="text-[9px] font-normal opacity-70">
+                    <div className="text-[12px]">{d.format("DD")}</div>
+                    <div className="text-[10px] font-normal opacity-70">
                       {LETRA_DIA[d.day()]}
                     </div>
                   </th>
                 ))}
-                <th className="w-12 min-w-12 px-1 py-1.5 text-center font-semibold">
+                <th className="w-12 min-w-12 px-1 py-1.5 text-center text-[12px] font-semibold">
                   Pres.
                 </th>
-                <th className="w-12 min-w-12 px-1 py-1.5 text-center font-semibold">
+                <th className="w-12 min-w-12 px-1 py-1.5 text-center text-[12px] font-semibold">
                   Faltas
                 </th>
-                <th className="w-12 min-w-12 px-1 py-1.5 text-center font-semibold">
+                <th className="w-12 min-w-12 px-1 py-1.5 text-center text-[12px] font-semibold">
                   Total
                 </th>
-                <th className="w-14 min-w-14 px-1 py-1.5 text-center font-semibold">
+                <th className="w-14 min-w-14 px-1 py-1.5 text-center text-[12px] font-semibold">
                   % Aus.
                 </th>
               </tr>
@@ -394,7 +394,7 @@ export default function AsistenciaMatriz({
                     return (
                       <td
                         key={d.format("YYYY-MM-DD")}
-                        className={`h-11 w-8 min-w-8 px-0.5 py-2 text-center font-bold ${c.text} ${c.bg}`}
+                        className={`h-11 w-10 min-w-10 px-0.5 py-2 text-center text-[13px] font-bold ${c.text} ${c.bg}`}
                       >
                         {c.code}
                       </td>
