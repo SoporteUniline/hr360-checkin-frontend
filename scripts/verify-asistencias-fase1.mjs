@@ -154,7 +154,8 @@ try {
   assert.match(await fila0.innerText(), /\bPresente\b/);
   assert.match(await fila0.locator("td").first().getAttribute("class"), /sticky left-0/);
   // 1b) Entrada y salida sin segundos.
-  assert.match(await fila0.innerText(), /\b08:07\b(?!:)/);
+  // Horas en 12 h con a.m./p.m. (19/11/2026), sin segundos.
+  assert.match(await fila0.innerText(), /\b8:07 a\.m\./);
   assert.doesNotMatch(await fila0.innerText(), /08:07:00/);
   // 2) Nocturno: 7 h exactas y marca "+1 día"; el registro viejo también da 7 h (antes negativo).
   const noct = page.locator("tr", { hasText: "Nocturno" }).first();
@@ -185,10 +186,10 @@ try {
   await panelEditado.getByRole("list", { name: "Checadas del reloj" }).waitFor({ timeout: 10000 });
   await page.getByText("Qué cambió").waitFor({ state: "detached", timeout: 5000 }); // el detalle se cierra al abrir el historial
   const historial = panelEditado.getByRole("list", { name: "Checadas del reloj" });
-  const salidaOriginal = historial.locator("span.line-through", { hasText: "13:19" }).first();
+  const salidaOriginal = historial.locator("span.line-through", { hasText: "1:19 p.m." }).first();
   await salidaOriginal.waitFor({ timeout: 10000 });
   assert.match(await salidaOriginal.getAttribute("class"), /line-through/);
-  assert.equal(await historial.locator("span.bg-amber-50", { hasText: /^17:20$/ }).count(), 1, "la salida corregida 17:20 va resaltada");
+  assert.equal(await historial.locator("span.bg-amber-50", { hasText: /^5:20 p\.m\.$/ }).count(), 1, "la salida corregida 17:20 va resaltada");
   if (process.env.CAPTURAS) { await dormir(700); await page.screenshot({ path: process.env.CAPTURAS + "/editado-checadas.png" }); }
   await page.keyboard.press("Escape");
   // Al abrir el historial, el detalle "Qué cambió" se cierra solo; con Escape no queda ninguna ventana.
@@ -224,7 +225,7 @@ try {
   const filaNo = page.locator("tr", { hasText: "NoAut Prueba" }).first();
   assert.equal(await filaNo.getByRole("button", { name: "No", exact: true }).getAttribute("aria-pressed"), "true");
   assert.match(await filaNo.locator(".line-through", { hasText: "2 h 8 min" }).first().innerText(), /2 h 8 min/);
-  assert.match(await filaNo.locator(".line-through", { hasText: "18:15" }).first().innerText(), /18:15 reloj/);
+  assert.match(await filaNo.locator(".line-through", { hasText: "6:15 p.m." }).first().innerText(), /6:15 p\.m\. reloj/);
   await filaNo.getByRole("button", { name: "No", exact: true }).click(); // tocar el No activo lo deshace
   await esperarPuts(5);
   assert.deepEqual(puts[4], { salida: "2026-11-13 18:15:00", notas_hrs_extra: null });

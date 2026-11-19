@@ -20,6 +20,7 @@ import { quienCuando } from "@/lib/asistencia/historial.mjs";
 import { cambiosAutorizar, cambiosNoAutorizar, cambiosQuitar, DB_TZ } from "@/lib/asistencia/horasExtra.mjs";
 import { alertasDia, semanaExtra } from "@/lib/asistencia/controlHorasExtra.mjs";
 import { enlaceAsistencia, horaCorta, matrizHorasExtra } from "@/lib/asistencia/matrizHorasExtra.mjs";
+import { hora12 } from "@/lib/hora12.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -36,7 +37,7 @@ const ESTADO = {
   autorizada: ["Autorizada", "bg-emerald-50 text-emerald-700"],
   no_autorizada: ["No autorizada", "bg-slate-100 text-slate-600"],
 };
-const hhmm = (v, zona) => (v ? dayjs.tz(v, DB_TZ).tz(zona || DB_TZ).format("HH:mm") : "—");
+const hhmm = (v, zona) => (v ? hora12(dayjs.tz(v, DB_TZ).tz(zona || DB_TZ)) : "—");
 
 export default function VistaFechas({ registros, dias, zonaDe, estados, tope, resumen, hx, mostrarTope, cargando }) {
   const [abierta, setAbierta] = useState(null); // { id, fecha }

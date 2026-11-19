@@ -22,6 +22,7 @@ import { formatearMinutos, sinSalidaAComer } from "@/lib/asistencia/jornada.mjs"
 import ClockNavigation from '@/components/Clock/ClockNavigation';
 import LocalClockCaptures from '@/components/Clock/LocalClockCaptures';
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { hora12 } from "@/lib/hora12.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -127,10 +128,10 @@ function EmpleadoCard({ registro, index, totalCount, onClick }) {
     "";
 
   const entradaFmt = registro.entrada
-    ? dayjs.tz(registro.entrada, DB_TZ).format("HH:mm")
+    ? hora12(dayjs.tz(registro.entrada, DB_TZ))
     : null;
   const salidaFmt = registro.salida
-    ? dayjs.tz(registro.salida, DB_TZ).format("HH:mm")
+    ? hora12(dayjs.tz(registro.salida, DB_TZ))
     : null;
 
   const esTarde = registro.estadoAsistencia === "Tardanza";
