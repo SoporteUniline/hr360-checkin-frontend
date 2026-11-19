@@ -29,7 +29,7 @@ function harness({ online = true, detectedOffline = false, method = 'ambos', get
     listEvents: async () => [...events.values()], syncFailure, syncEvents, syncCompanyEvents,
   };
   const context = vm.createContext({
-    store, engine, navigator, crypto: webcrypto, Event, URL, setTimeout, clearTimeout, ensureOfflineCache: async () => null,
+    store, engine, navigator, crypto: webcrypto, Event, CustomEvent, URL, setTimeout, clearTimeout, ensureOfflineCache: async () => null,
     idEmpresa: 10, idEmpleado: 2, modoEmpleado: true, companySlug: 'fixture',
     window: { __adamiaOffline: detectedOffline, dispatchEvent() {} },
     Cookies: { get: () => companyClock ? undefined : 'test-session' },

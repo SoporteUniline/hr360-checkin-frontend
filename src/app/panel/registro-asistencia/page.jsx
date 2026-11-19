@@ -17,6 +17,7 @@ import {
   CalendarDays,
   ChevronDown,
   ClipboardCheck,
+  Clock3,
   Grid3x3,
   Layers,
   List,
@@ -87,6 +88,7 @@ export default function ControlAsistencia() {
   const [soloPresentes, setSoloPresentes] = useState(false);
   const [soloAusentes, setSoloAusentes] = useState(false);
   const [horasExtra, setHorasExtra] = useState(false);
+  const [sinComida, setSinComida] = useState(false);
   const [sinGoceDeSueldo, setSinGoceDeSueldo] = useState(false);
   const [diasFestivos, setDiasFestivos] = useState(false);
   const [requiereAutorizacion, setRequiereAutorizacion] = useState(false);
@@ -94,7 +96,7 @@ export default function ControlAsistencia() {
 
   // Nueva UX de escritorio: rango con modal, agrupación, columnas y detalle
   const [rangoOpen, setRangoOpen] = useState(false);
-  const [vista, setVista] = useState("lista"); // "lista" | "matriz"
+  const [vista, setVista] = useState("lista"); // "lista" | "matriz" | "horas"
   const [rangoEtiqueta, setRangoEtiqueta] = useState("Hoy");
   const [agrupar, setAgrupar] = useState(null);
   const [visibleColumns, setVisibleColumns] = useState(null);
@@ -230,7 +232,8 @@ export default function ControlAsistencia() {
     setPage(1);
   };
 
-  const { ui, data, mutate, localEvents } = AsistenciaDataContainer({
+  const { ui, data, mutate, localEvents, resumenHorasExtra, totalSinComida } = AsistenciaDataContainer({
+    sinComida,
     idEmpresa,
     empresaActiva,
     fechaInicio,
@@ -341,6 +344,10 @@ export default function ControlAsistencia() {
         setSoloAusentes={setSoloAusentes}
         horasExtra={horasExtra}
         setHorasExtra={setHorasExtra}
+        resumenHorasExtra={resumenHorasExtra}
+        sinComida={sinComida}
+        setSinComida={setSinComida}
+        totalSinComida={totalSinComida}
         filtroEstadoAsistencia={filtroEstadoAsistencia}
         setFiltroEstadoAsistencia={setFiltroEstadoAsistencia}
         setPage={setPage}
@@ -397,6 +404,18 @@ export default function ControlAsistencia() {
           >
             <Grid3x3 className="h-4 w-4" />
             Matriz
+          </button>
+          <button
+            type="button"
+            onClick={() => setVista("horas")}
+            className={`flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold transition-colors ${
+              vista === "horas"
+                ? "bg-[#2563EB] text-white"
+                : "bg-white text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            <Clock3 className="h-4 w-4" />
+            Horas
           </button>
         </div>
 

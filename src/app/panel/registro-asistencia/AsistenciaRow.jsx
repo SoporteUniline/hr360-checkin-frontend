@@ -1,22 +1,17 @@
 import { TableCell, TableRow } from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { Textarea } from "@/components/ui/textarea";
-import { Pencil, Save, X, Check, X as XIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Check, X as XIcon } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import HistorialEmpleadoDialog from "./HistorialEmpleadoDialog";
 import CeldaEditado, { crearFormateadorCambios } from "./CeldaEditado";
+import { avisoCalendario, correccionesCalendario } from "@/lib/asistencia/calendario.mjs";
+import { estadoHorasExtra } from "@/lib/asistencia/horasExtra.mjs";
+import CeldaHorasExtra, { CeldaAutorizarExtra } from "./CeldaHorasExtra";
+import BotonAgregarComida from "./BotonAgregarComida";
+import CeldasControlHorasExtra from "./CeldasControlHorasExtra";
+import PanelEditarAsistencia from "./PanelEditarAsistencia";
 import { useEmpresaTimezone } from "@/context/AuthContext";
 import { calcularResumenJornada, formatearMinutos } from "@/utils/asistenciaHoras";
-import { salidaEsDiaSiguiente, sumarDias } from "@/lib/asistencia/jornada.mjs";
+import { minutosDescanso, salidaEsDiaSiguiente, sinSalidaAComer, sumarDias } from "@/lib/asistencia/jornada.mjs";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -34,9 +29,7 @@ const EXTRA_COLUMN_KEYS = new Set([
   "festivo",
   "porcentaje_festivo",
   "forma_pago",
-  "aut_extra",
   "hrs_comida",
-  "notas_extra",
 ]);
 
 export default function AsistenciaRow({
@@ -58,6 +51,11 @@ export default function AsistenciaRow({
   empresaActiva,
   colVisible,
   onRowClick,
+  indiceFestivos = null,
+  horasExtra = null,
+  seleccion = null,
+  control = null,
+  handleActualizarBase,
 }) {
   const fallbackTimezone = useEmpresaTimezone(empresaActiva);
   const userTimezone = registro.zona_horaria || fallbackTimezone;
@@ -69,16 +67,34 @@ export default function AsistenciaRow({
       : (key) =>
           EXTRA_COLUMN_KEYS.has(key) ? Boolean(mostrarCamposExtras) : true;
 
-  const { jornada, minutosDiferencia } = calcularResumenJornada(currentData);
+  const { minutosTrabajados, minutosProgramados, minutosDiferencia } = calcularResumenJornada(registro);
+  const esDescanso = /descanso/i.test(registro.tipo_registro_nombre ?? "");
+  const noMarcoComida = sinSalidaAComer(registro);
+  const descansoTomado = minutosDescanso(registro);
+  const sinChecadas = !registro.entrada && !registro.salida;
+  const avanceJornada =
+    minutosTrabajados != null && minutosProgramados
+      ? Math.min(100, Math.round((minutosTrabajados / minutosProgramados) * 100))
+      : null;
+  const infoExtra = estadoHorasExtra(registro, userTimezone);
+  // Balance del día: solo el número con signo; ±10 min se considera en horario (gris).
   const diferenciaTexto = formatearMinutos(minutosDiferencia, { signo: true });
-  const colorDiferencia =
-    minutosDiferencia < 0 ? "text-red-600" : minutosDiferencia > 0 ? "text-green-600" : "text-gray-600";
+  const estiloBalance =
+    minutosDiferencia == null || Math.abs(minutosDiferencia) <= 10
+      ? "bg-slate-100 text-slate-500"
+      : minutosDiferencia < 0
+      ? "bg-red-50 text-red-600"
+      : "bg-emerald-50 text-emerald-700";
 
   // Captura de horas: la fecha base es la del registro; si la salida es menor o igual
   // a la entrada (turno nocturno 22:00 → 05:00), la salida se guarda al día siguiente.
   const fechaBase = String(currentData.fecha ?? "").slice(0, 10);
   const horaLocal = (valor) =>
     valor ? dayjs.tz(valor, DB_TIMEZONE).tz(userTimezone).format("HH:mm") : "";
+  // Tramos del reloj para el detalle de la jornada (09:00–11:00 · 11:30–14:00).
+  const detalleTramos = Array.isArray(registro.tramos_checadas) && registro.tramos_checadas.length > 1
+    ? registro.tramos_checadas.map((t) => `${horaLocal(t.entrada)}–${horaLocal(t.salida)}`).join(" · ")
+    : null;
   const fechaLocal = (valor) =>
     valor ? dayjs.tz(valor, DB_TIMEZONE).tz(userTimezone).format("YYYY-MM-DD") : "";
   const aBaseDeDatos = (fecha, hora) =>
@@ -93,24 +109,55 @@ export default function AsistenciaRow({
     dayjs.tz(a, DB_TIMEZONE).format("YYYY-MM-DD HH:mm") === dayjs.tz(b, DB_TIMEZONE).format("YYYY-MM-DD HH:mm");
   const salidaDiaSiguiente = (r) =>
     Boolean(r.salida && r.entrada) && fechaLocal(r.salida) > fechaLocal(r.entrada);
+
+  // Domingo y festivo: los define la fecha y el catálogo de Festivos (no se capturan a mano).
+  const avisos = avisoCalendario(registro, indiceFestivos);
+  const avisoDe = (campo) => avisos.find((a) => a.campo === campo)?.texto;
+  const correccionesFecha = useMemo(
+    () => (isEditing ? correccionesCalendario(registro, indiceFestivos) : {}),
+    [isEditing, registro, indiceFestivos],
+  );
+  useEffect(() => {
+    // Al entrar a editar se corrigen domingo/festivo; quedan en "Qué cambió" al guardar.
+    Object.entries(correccionesFecha).forEach(([campo, valor]) => handleFieldChange(campo, valor));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [correccionesFecha]);
+  const si = (v) => Boolean(Number(v));
+  const Marca = ({ valor, aviso, fuente }) => (
+    <span className="inline-flex items-center gap-1" title={aviso || fuente}>
+      {si(valor) ? (
+        <Check aria-label="Sí" className="inline h-4 w-4 text-green-600" />
+      ) : (
+        <XIcon aria-label="No" className="inline h-4 w-4 text-red-600" />
+      )}
+      {aviso && <span aria-label={aviso} className="text-xs text-amber-600">⚠</span>}
+    </span>
+  );
+  const nombreAutorizador = (prefijo) =>
+    [registro[`nombre${prefijo}`], registro[`apellido_paterno${prefijo}`], registro[`apellido_materno${prefijo}`]]
+      .filter(Boolean)
+      .join(" ");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Clic en la fila: abre el panel con las checadas del reloj y la edición juntas
+  // (pedido del 19/11/2026: sin botón «Editar»). En solo lectura, solo las checadas.
   const handleRowClick = (e) => {
     if (isEditing) return;
+    // No disparar desde elementos interactivos dentro de la fila.
+    if (e?.target?.closest?.("button,input,select,a,[role=combobox],[data-no-row-click]")) return;
     if (onRowClick) {
-      // No disparar desde elementos interactivos dentro de la fila
-      if (
-        e?.target?.closest?.(
-          "button,input,select,a,[role=combobox],[data-no-row-click]",
-        )
-      ) {
-        return;
-      }
       onRowClick(registro);
       return;
     }
-    setIsModalOpen(true);
+    if (readOnly) setIsModalOpen(true);
+    else handleEditClick(registro);
   };
+  // Si los datos de la fila se recargan con el panel abierto (p. ej. tras corregir una checada),
+  // el panel toma los valores nuevos sin perder lo que se esté editando.
+  useEffect(() => {
+    if (isEditing) handleActualizarBase?.(registro);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [registro]);
 
   return (
     <>
@@ -118,478 +165,37 @@ export default function AsistenciaRow({
         key={registro.id}
         onClick={handleRowClick}
         className={
-          !isEditing
-            ? "cursor-pointer hover:bg-gray-50 border-b border-gray-100"
-            : "border-b border-gray-100"
+          // Mismo tamaño y números alineados en todas las columnas.
+          `group border-b border-gray-100 text-[13px] tabular-nums [&>td]:whitespace-nowrap [&>td]:px-3 [&>td]:py-2.5 ${
+            esDescanso ? "text-slate-400" : "text-slate-700"
+          } ${!isEditing ? "cursor-pointer hover:bg-gray-50" : "bg-blue-50/40"} ${seleccion?.marcado ? "bg-blue-50 [&>td]:bg-blue-50" : ""}`
         }
       >
-        {isEditing && !readOnly ? (
-          <>
+        <>
             {isColVisible("empleado") && (
-              <TableCell className="font-semibold text-slate-800">
+              // Fija a la izquierda: el nombre no se pierde al desplazar la tabla.
+              <TableCell className={`sticky left-0 z-[5] bg-background font-semibold shadow-[8px_0_8px_-8px_rgba(15,23,42,0.18)] group-hover:bg-gray-50 ${esDescanso ? "text-slate-500" : "text-slate-800"}`}>
+                {seleccion ? (
+                  <input
+                    type="checkbox"
+                    aria-label={`Elegir a ${registro.nombre ?? ""} ${registro.apellido_paterno ?? ""}`.trim()}
+                    checked={seleccion.marcado}
+                    onChange={(e) => seleccion.alternar(e.target.checked)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="mr-2.5 h-4 w-4 cursor-pointer align-middle accent-blue-600"
+                  />
+                ) : null}
                 {registro.nombre} {registro.apellido_paterno}
               </TableCell>
             )}
             {empresaActiva === "all" && isColVisible("unidad") && (
-              <TableCell className="font-semibold text-slate-800">
-                {registro.unidad_negocio ||
-                  registro.sucursal ||
-                  registro.empresa_nombre}
-              </TableCell>
-            )}
-            {isColVisible("codigo") && <TableCell>{registro.nip}</TableCell>}
-            {isColVisible("departamento") && (
-              <TableCell>{registro.departamento}</TableCell>
-            )}
-            {isColVisible("tipo") && (
               <TableCell>
-                <Select
-                  value={
-                    currentData.id_tipo_permiso
-                      ? String(currentData.id_tipo_permiso)
-                      : ""
-                  }
-                  onValueChange={(val) => {
-                    const seleccionado = tiposPermiso?.tiposPermiso.find(
-                      (tipo) => String(tipo.id) === val,
-                    );
-
-                    handleFieldChange("id_tipo_permiso", seleccionado?.id);
-                    handleFieldChange(
-                      "tipo_registro_nombre",
-                      seleccionado?.nombre || "",
-                    );
-                    handleFieldChange(
-                      "asistencia",
-                      seleccionado?.cuenta_como_asistencia,
-                    );
-                    handleFieldChange("goce_sueldo", seleccionado?.goce_sueldo);
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Tipo" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60 overflow-y-auto">
-                    {tiposPermiso?.tiposPermiso?.map((tipo) => (
-                      <SelectItem key={tipo.id} value={String(tipo.id)}>
-                        {tipo.nombre}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </TableCell>
-            )}
-            {isColVisible("fecha") && (
-              <TableCell className="text-center">
-                {dayjs
-                  .tz(currentData.fecha, DB_TIMEZONE)
-                  .tz(userTimezone)
-                  .format("DD/MM/YYYY")}
-              </TableCell>
-            )}
-            {isColVisible("correccion") && (
-              <TableCell className="text-center">
-                {currentData.correccion ? (
-                  <Check aria-label="Corregida" className="inline h-4 w-4 text-green-600" />
-                ) : (
-                  <XIcon aria-label="Sin corregir" className="inline h-4 w-4 text-red-600" />
-                )}
-              </TableCell>
-            )}
-            {isColVisible("entrada") && (
-              <TableCell className="text-center">
-                <Input
-                  type="time"
-                  value={
-                    currentData.entrada
-                      ? dayjs
-                          .tz(currentData.entrada, DB_TIMEZONE)
-                          .tz(userTimezone)
-                          .format("HH:mm")
-                      : ""
-                  }
-                  onChange={(e) => {
-                    const hora = e.target.value;
-                    handleFieldChange("entrada", hora ? aBaseDeDatos(fechaBase, hora) : null);
-                    // Si ya hay salida, se recalcula su día respecto a la nueva entrada.
-                    const horaSalida = horaLocal(currentData.salida);
-                    if (hora && horaSalida) {
-                      const nuevaSalida = salidaParaHoras(hora, horaSalida);
-                      if (!mismaMarca(nuevaSalida, currentData.salida)) {
-                        handleFieldChange("salida", nuevaSalida);
-                      }
-                    }
-                  }}
-                />
-              </TableCell>
-            )}
-            {isColVisible("salida") && (
-              <TableCell className="text-center">
-                <Input
-                  type="time"
-                  value={
-                    currentData.salida
-                      ? dayjs
-                          .tz(currentData.salida, DB_TIMEZONE)
-                          .tz(userTimezone)
-                          .format("HH:mm")
-                      : ""
-                  }
-                  onChange={(e) => {
-                    const hora = e.target.value;
-                    handleFieldChange(
-                      "salida",
-                      hora ? salidaParaHoras(horaLocal(currentData.entrada), hora) : null,
-                    );
-                  }}
-                />
-                {salidaDiaSiguiente(currentData) && (
-                  <span className="mt-1 block text-[11px] font-semibold text-blue-600">+1 día</span>
-                )}
-              </TableCell>
-            )}
-
-            {isColVisible("jornada") && (
-              <TableCell className="text-center whitespace-nowrap">
-                {jornada}
-              </TableCell>
-            )}
-
-            {isColVisible("hrs_diferencia") && (
-              <TableCell
-                className={`text-center font-bold whitespace-nowrap ${colorDiferencia}`}
-              >
-                {diferenciaTexto}
-              </TableCell>
-            )}
-
-            {isColVisible("autorizado_por") && (
-              <TableCell className="text-center">
-                <Select
-                  value={
-                    currentData.autorizado_por
-                      ? String(currentData.autorizado_por)
-                      : ""
-                  }
-                  onValueChange={(val) =>
-                    handleFieldChange("autorizado_por", val)
-                  }
-                >
-                  <SelectTrigger className="w-45">
-                    <SelectValue placeholder="Autorizado por" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60 overflow-y-auto">
-                    <SelectItem value="null">
-                      No requiere autorización
-                    </SelectItem>
-                    {empleados?.map((emp) => (
-                      <SelectItem
-                        key={emp.id_empleado}
-                        value={String(emp.id_empleado)}
-                      >
-                        {emp.nombre} {emp.apellido_paterno}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </TableCell>
-            )}
-            {isColVisible("asistio") && (
-              <TableCell className="text-center">
-                <ToggleGroup
-                  type="single"
-                  value={currentData.asistencia ? "1" : "0"}
-                  onValueChange={(val) =>
-                    handleFieldChange("asistencia", val === "1")
-                  }
-                >
-                  <ToggleGroupItem value="0" aria-label="No">
-                    <XIcon className="h-4 w-4" />
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="1" aria-label="Sí">
-                    <Check className="h-4 w-4" />
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              </TableCell>
-            )}
-            {isColVisible("goce") && (
-              <TableCell className="text-center">
-                <ToggleGroup
-                  type="single"
-                  value={currentData.goce_sueldo ? "1" : "0"}
-                  onValueChange={(val) =>
-                    handleFieldChange("goce_sueldo", val === "1")
-                  }
-                >
-                  <ToggleGroupItem value="0" aria-label="No">
-                    <XIcon className="h-4 w-4" />
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="1" aria-label="Sí">
-                    <Check className="h-4 w-4" />
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              </TableCell>
-            )}
-            {isColVisible("pago_triple") && (
-              <TableCell className="text-center">
-                <ToggleGroup
-                  type="single"
-                  value={currentData.pago_triple ? "1" : "0"}
-                  onValueChange={(val) =>
-                    handleFieldChange("pago_triple", val === "1")
-                  }
-                >
-                  <ToggleGroupItem value="0" aria-label="No">
-                    <XIcon className="h-4 w-4" />
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="1" aria-label="Sí">
-                    <Check className="h-4 w-4" />
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              </TableCell>
-            )}
-            {isColVisible("domingo") && (
-              <TableCell className="text-center">
-                <ToggleGroup
-                  type="single"
-                  value={currentData.es_domingo ? "1" : "0"}
-                  onValueChange={(val) =>
-                    handleFieldChange("es_domingo", val === "1")
-                  }
-                >
-                  <ToggleGroupItem value="0" aria-label="No">
-                    <XIcon className="h-4 w-4" />
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="1" aria-label="Sí">
-                    <Check className="h-4 w-4" />
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              </TableCell>
-            )}
-            {isColVisible("prima_dominical") && (
-              <TableCell className="text-center">
-                <Input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={currentData.prima_dominical || 0}
-                  onChange={(e) =>
-                    handleFieldChange("prima_dominical", e.target.value)
-                  }
-                />
-              </TableCell>
-            )}
-            {isColVisible("festivo") && (
-              <TableCell className="text-center">
-                <ToggleGroup
-                  type="single"
-                  value={currentData.es_festivo ? "1" : "0"}
-                  onValueChange={(val) =>
-                    handleFieldChange("es_festivo", val === "1")
-                  }
-                >
-                  <ToggleGroupItem value="0" aria-label="No">
-                    <XIcon className="h-4 w-4" />
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="1" aria-label="Sí">
-                    <Check className="h-4 w-4" />
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              </TableCell>
-            )}
-            {isColVisible("porcentaje_festivo") && (
-              <TableCell className="text-center">
-                <Input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={currentData.porcentaje_dia_festivo || 0}
-                  onChange={(e) =>
-                    handleFieldChange("porcentaje_dia_festivo", e.target.value)
-                  }
-                />
-              </TableCell>
-            )}
-            {isColVisible("hrs_extra") && (
-              <TableCell className="text-center">
-                <ToggleGroup
-                  type="single"
-                  value={currentData.hrs_extra ? "1" : "0"}
-                  onValueChange={(val) =>
-                    handleFieldChange("hrs_extra", val === "1")
-                  }
-                >
-                  <ToggleGroupItem value="0" aria-label="No">
-                    <XIcon className="h-4 w-4" />
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="1" aria-label="Sí">
-                    <Check className="h-4 w-4" />
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              </TableCell>
-            )}
-            {isColVisible("forma_pago") && (
-              <TableCell className="text-center">
-                <Select
-                  value={currentData.forma_pago_extras || ""}
-                  onValueChange={(val) =>
-                    handleFieldChange("forma_pago_extras", val)
-                  }
-                >
-                  <SelectTrigger className="w-45">
-                    <SelectValue placeholder="Forma de pago" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60 overflow-y-auto">
-                    <SelectItem value="Tiempo por tiempo">
-                      Tiempo por tiempo
-                    </SelectItem>
-                    <SelectItem value="Descuento sobre nómina">
-                      Descuento sobre nómina
-                    </SelectItem>
-                    <SelectItem value="Pago de horas extras">
-                      Pago de horas extras
-                    </SelectItem>
-                    <SelectItem value="Reposición de tiempo por tiempo">
-                      Reposición de tiempo por tiempo
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </TableCell>
-            )}
-            {isColVisible("aut_extra") && (
-              <TableCell className="text-center">
-                <Select
-                  value={
-                    currentData.extras_autorizadas_por
-                      ? String(currentData.extras_autorizadas_por)
-                      : ""
-                  }
-                  onValueChange={(val) =>
-                    handleFieldChange("extras_autorizadas_por", val)
-                  }
-                >
-                  <SelectTrigger className="w-45">
-                    <SelectValue placeholder="Autorizadas por" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60 overflow-y-auto">
-                    {empleados?.map((emp) => (
-                      <SelectItem
-                        key={emp.id_empleado}
-                        value={String(emp.id_empleado)}
-                      >
-                        {emp.nombre} {emp.apellido_paterno}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </TableCell>
-            )}
-            {isColVisible("hrs_comida") && (
-              <TableCell className="text-center">
-                <Input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={currentData.hrs_comida || 0}
-                  onChange={(e) =>
-                    handleFieldChange("hrs_comida", e.target.value)
-                  }
-                />
-              </TableCell>
-            )}
-            {isColVisible("notas") && (
-              <TableCell className="text-center">
-                <Textarea
-                  value={currentData.notas || ""}
-                  onChange={(e) => handleFieldChange("notas", e.target.value)}
-                  className="min-w-37.5"
-                />
-              </TableCell>
-            )}
-            {isColVisible("notas_extra") && (
-              <TableCell className="text-center">
-                <Textarea
-                  value={currentData.notas_hrs_extra || ""}
-                  onChange={(e) =>
-                    handleFieldChange("notas_hrs_extra", e.target.value)
-                  }
-                  className="min-w-37.5"
-                />
-              </TableCell>
-            )}
-
-            {isColVisible("estado_asistencia") && (
-              <TableCell className="text-center">
-                <span
-                  className={`inline-flex rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${
-                    currentData.estadoAsistencia === "Presente"
-                      ? "bg-emerald-50 text-emerald-700"
-                      : currentData.estadoAsistencia === "Ausente"
-                      ? "bg-rose-50 text-rose-700"
-                      : currentData.estadoAsistencia === "Tardanza"
-                      ? "bg-amber-50 text-amber-700"
-                      : currentData.estadoAsistencia === "Permiso"
-                      ? "bg-blue-50 text-blue-700"
-                      : currentData.estadoAsistencia === "Vacaciones"
-                      ? "bg-violet-50 text-violet-700"
-                      : "bg-slate-100 text-slate-600"
-                  }`}
-                >
-                  {currentData.estadoAsistencia?.toUpperCase()}
-                </span>
-              </TableCell>
-            )}
-            {!readOnly && isColVisible("acciones") && (
-              <TableCell
-                className="sticky right-0 bg-background z-10 text-center p-0"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-center gap-2 h-full px-2">
-                  {currentData.valores_originales && (
-                    <button
-                      type="button"
-                      onClick={handleRestoreOriginal}
-                      disabled={isSaving}
-                      className="rounded-lg px-2 py-1 text-xs text-slate-600 hover:bg-slate-100 disabled:opacity-50"
-                    >
-                      Volver al original
-                    </button>
-                  )}
-                  <button
-                    onClick={handleSaveClick}
-                    disabled={isSaving}
-                    className="rounded-lg p-1.5 text-slate-400 transition hover:bg-blue-50 hover:text-blue-600 disabled:opacity-50"
-                    title="Guardar"
-                  >
-                    <Save className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={handleCancelEdit}
-                    disabled={isSaving}
-                    className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
-                    title="Cancelar"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              </TableCell>
-            )}
-          </>
-        ) : (
-          <>
-            {isColVisible("empleado") && (
-              <TableCell className="font-semibold text-slate-800">
-                {registro.nombre} {registro.apellido_paterno}
-              </TableCell>
-            )}
-            {empresaActiva === "all" && isColVisible("unidad") && (
-              <TableCell className="font-semibold text-slate-800">
                 {registro.unidad_negocio ||
                   registro.sucursal ||
                   registro.empresa_nombre}
               </TableCell>
             )}
-            {isColVisible("codigo") && <TableCell>{registro.nip}</TableCell>}
+            {isColVisible("codigo") && <TableCell className="text-center">{registro.nip || "-"}</TableCell>}
             {isColVisible("departamento") && (
               <TableCell>{registro.departamento}</TableCell>
             )}
@@ -610,7 +216,7 @@ export default function AsistenciaRow({
                 <CeldaEditado
                   registro={registro}
                   formatear={crearFormateadorCambios({ tiposPermiso, empleados, zona: userTimezone })}
-                  onVerChecadas={() => setIsModalOpen(true)}
+                  onVerChecadas={() => (readOnly ? setIsModalOpen(true) : handleEditClick(registro))}
                 />
               </TableCell>
             )}
@@ -635,66 +241,97 @@ export default function AsistenciaRow({
                 {salidaDiaSiguiente(registro) && (
                   <span className="ml-1 text-[11px] font-semibold text-blue-600">+1 día</span>
                 )}
+                {infoExtra.estado === "no_autorizada" && infoExtra.salidaReloj && infoExtra.salidaReloj !== registro.salida && (
+                  <span className="block text-[11px] text-slate-400 line-through" title="Checada real del reloj (se conserva)">
+                    {horaLocal(infoExtra.salidaReloj)} reloj
+                  </span>
+                )}
               </TableCell>
             )}
 
             {isColVisible("jornada") && (
-              <TableCell className="text-center whitespace-nowrap">
-                {jornada}
+              <TableCell className="min-w-[150px]">
+                {esDescanso && sinChecadas ? (
+                  <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500">Descanso</span>
+                ) : sinChecadas ? (
+                  <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500">Sin checadas</span>
+                ) : (
+                  <div title={detalleTramos ? `Tramos: ${detalleTramos} · descanso ${formatearMinutos(descansoTomado)}` : undefined}>
+                    <span className={esDescanso ? "" : "font-semibold text-slate-900"}>{formatearMinutos(minutosTrabajados)}</span>
+                    {minutosProgramados != null && (
+                      <span className="text-slate-400"> de {formatearMinutos(minutosProgramados)}</span>
+                    )}
+                    {avanceJornada != null && (
+                      <div className="mt-1 h-1 w-full rounded-full bg-slate-200" aria-hidden>
+                        <div
+                          className={`h-1 rounded-full ${minutosDiferencia < -10 ? "bg-red-400" : "bg-emerald-400"}`}
+                          style={{ width: `${avanceJornada}%` }}
+                        />
+                      </div>
+                    )}
+                    {noMarcoComida && (
+                      <div>
+                        <BotonAgregarComida
+                          registro={registro}
+                          aBaseDeDatos={aBaseDeDatos}
+                          fechaBase={fechaBase}
+                          readOnly={readOnly}
+                          onGuardado={mutateAsistencia}
+                        />
+                      </div>
+                    )}
+                    {detalleTramos && (
+                      <span className="mt-1 block text-[11px] text-slate-400">Descanso {formatearMinutos(descansoTomado)}</span>
+                    )}
+                  </div>
+                )}
               </TableCell>
             )}
 
             {isColVisible("hrs_diferencia") && (
-              <TableCell
-                className={`text-center font-bold whitespace-nowrap ${colorDiferencia}`}
-              >
-                {diferenciaTexto}
+              <TableCell className="text-center">
+                {minutosDiferencia == null ? (
+                  <span className="text-slate-300">—</span>
+                ) : (
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${estiloBalance}`}>{diferenciaTexto}</span>
+                )}
               </TableCell>
             )}
             {isColVisible("autorizado_por") && (
-              <TableCell className="text-center">
-                {registro.nombre_autorizador
-                  ? `${registro.nombre_autorizador} ${registro.apellido_paterno_autorizador} ${registro.apellido_materno_autorizador}`
-                  : ""}
+              <TableCell className="text-center text-xs">
+                {nombreAutorizador("_autorizador") || nombreAutorizador("_extra_autorizador") ? (
+                  <div className="flex flex-col gap-0.5">
+                    {nombreAutorizador("_autorizador") && <span>{nombreAutorizador("_autorizador")}</span>}
+                    {nombreAutorizador("_extra_autorizador") && (
+                      <span className="text-slate-500">Extras: {nombreAutorizador("_extra_autorizador")}</span>
+                    )}
+                  </div>
+                ) : (
+                  "-"
+                )}
               </TableCell>
             )}
 
             {isColVisible("asistio") && (
               <TableCell className="text-center">
-                {registro.asistencia === 1 ? (
-                  <Check className="h-4 w-4 text-green-600 inline" />
-                ) : (
-                  <XIcon className="h-4 w-4 text-red-600 inline" />
-                )}
+                <Marca valor={registro.asistencia} />
               </TableCell>
             )}
             {isColVisible("goce") && (
               <TableCell className="text-center">
-                {registro.goce_sueldo === 1 ? (
-                  <Check className="h-4 w-4 text-green-600 inline" />
-                ) : (
-                  <XIcon className="h-4 w-4 text-red-600 inline" />
-                )}
+                <Marca valor={registro.goce_sueldo} />
               </TableCell>
             )}
 
             {isColVisible("pago_triple") && (
               <TableCell className="text-center">
-                {registro.pago_triple === 1 ? (
-                  <Check className="h-4 w-4 text-green-600 inline" />
-                ) : (
-                  <XIcon className="h-4 w-4 text-red-600 inline" />
-                )}
+                <Marca valor={registro.pago_triple} />
               </TableCell>
             )}
 
             {isColVisible("domingo") && (
               <TableCell className="text-center">
-                {registro.es_domingo === 1 ? (
-                  <Check className="h-4 w-4 text-green-600 inline" />
-                ) : (
-                  <XIcon className="h-4 w-4 text-red-600 inline" />
-                )}
+                <Marca valor={registro.es_domingo} aviso={avisoDe("es_domingo")} fuente="Según la fecha del registro" />
               </TableCell>
             )}
             {isColVisible("prima_dominical") && (
@@ -706,11 +343,7 @@ export default function AsistenciaRow({
             )}
             {isColVisible("festivo") && (
               <TableCell className="text-center">
-                {registro.es_festivo === 1 ? (
-                  <Check className="h-4 w-4 text-green-600 inline" />
-                ) : (
-                  <XIcon className="h-4 w-4 text-red-600 inline" />
-                )}
+                <Marca valor={registro.es_festivo} aviso={avisoDe("es_festivo")} fuente="Según el catálogo de Festivos" />
               </TableCell>
             )}
             {isColVisible("porcentaje_festivo") && (
@@ -722,79 +355,95 @@ export default function AsistenciaRow({
             )}
 
             {isColVisible("hrs_extra") && (
-              <TableCell className="text-center">
-                {registro.hrs_extra === 1 ? (
-                  <Check className="h-4 w-4 text-green-600 inline" />
-                ) : (
-                  <XIcon className="h-4 w-4 text-red-600 inline" />
-                )}
+              <TableCell>
+                <CeldaHorasExtra
+                  registro={registro}
+                  info={infoExtra}
+                  readOnly={readOnly || !horasExtra}
+                />
               </TableCell>
             )}
+            {/* «¿Autorizar?» se muestra junto con «Horas extra» (misma opción en Columnas). */}
+            {isColVisible("hrs_extra") && (
+              <TableCell>
+                <CeldaAutorizarExtra
+                  registro={registro}
+                  info={infoExtra}
+                  autorizador={nombreAutorizador("_extra_autorizador")}
+                  readOnly={readOnly || !horasExtra}
+                  guardando={horasExtra?.guardando}
+                  onAutorizar={(opciones) => horasExtra?.autorizar(registro, opciones)}
+                  onNoAutorizar={() => horasExtra?.noAutorizar(registro)}
+                  onQuitar={() => horasExtra?.quitar(registro)}
+                />
+              </TableCell>
+            )}
+            {control && <CeldasControlHorasExtra registro={registro} control={control} zona={userTimezone} />}
             {isColVisible("forma_pago") && (
               <TableCell className="text-center">
                 {registro.forma_pago_extras ? registro.forma_pago_extras : "-"}
               </TableCell>
             )}
-            {isColVisible("aut_extra") && (
-              <TableCell className="text-center">
-                {registro.nombre_extra_autorizador
-                  ? `${registro.nombre_extra_autorizador} ${registro.apellido_paterno_extra_autorizador} ${registro.apellido_materno_extra_autorizador}`
-                  : ""}
-              </TableCell>
-            )}
             {isColVisible("hrs_comida") && (
               <TableCell className="text-center">
-                {registro.hrs_comida ? registro.hrs_comida : "-"}
+                {descansoTomado != null ? formatearMinutos(descansoTomado) : registro.hrs_comida ? `${registro.hrs_comida} h` : "-"}
               </TableCell>
             )}
             {isColVisible("notas") && (
-              <TableCell className="text-center">
-                {registro.notas ? registro.notas : "-"}
-              </TableCell>
-            )}
-            {isColVisible("notas_extra") && (
-              <TableCell className="text-center">
-                {registro.notas_hrs_extra ? registro.notas_hrs_extra : "-"}
+              <TableCell className="max-w-[240px] !whitespace-normal text-center text-xs">
+                {registro.notas || registro.notas_hrs_extra ? (
+                  <div className="flex flex-col gap-0.5">
+                    {registro.notas && <span>{registro.notas}</span>}
+                    {registro.notas_hrs_extra && (
+                      <span className="text-slate-500">Extras: {registro.notas_hrs_extra}</span>
+                    )}
+                  </div>
+                ) : (
+                  "-"
+                )}
               </TableCell>
             )}
             {isColVisible("estado_asistencia") && (
               <TableCell className="text-center">
-                <span
-                  className={`inline-flex rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-wide ${
-                    registro.estadoAsistencia === "Presente"
-                      ? "bg-emerald-50 text-emerald-700"
-                      : registro.estadoAsistencia === "Ausente"
-                      ? "bg-rose-50 text-rose-700"
-                      : registro.estadoAsistencia === "Tardanza"
-                      ? "bg-amber-50 text-amber-700"
-                      : registro.estadoAsistencia === "Permiso"
-                      ? "bg-blue-50 text-blue-700"
-                      : registro.estadoAsistencia === "Vacaciones"
-                      ? "bg-violet-50 text-violet-700"
-                      : "bg-slate-100 text-slate-600"
-                  }`}
-                >
-                  {registro.estadoAsistencia?.toUpperCase()}
+                {/* Punto de color + palabra completa (antes la etiqueta en mayúsculas se cortaba). */}
+                <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700">
+                  <span
+                    aria-hidden
+                    className={`h-2 w-2 rounded-full ${
+                      {
+                        Presente: "bg-emerald-500",
+                        Ausente: "bg-rose-500",
+                        Tardanza: "bg-amber-500",
+                        Permiso: "bg-blue-500",
+                        Vacaciones: "bg-violet-500",
+                      }[registro.estadoAsistencia] ?? "bg-slate-400"
+                    }`}
+                  />
+                  {registro.estadoAsistencia || "—"}
                 </span>
               </TableCell>
             )}
-            {!readOnly && isColVisible("acciones") && (
-              <TableCell
-                className="sticky right-0 bg-background z-10 text-center"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <button
-                  onClick={() => handleEditClick(registro)}
-                  className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
-                  title="Editar"
-                >
-                  <Pencil className="h-4 w-4" />
-                </button>
-              </TableCell>
-            )}
-          </>
-        )}
+        </>
       </TableRow>
+
+      {isEditing && !readOnly && (
+        <PanelEditarAsistencia
+          abierto
+          registro={registro}
+          datos={editingRowData}
+          zona={userTimezone}
+          horas={{ horaLocal, aBaseDeDatos, salidaParaHoras, mismaMarca, salidaDiaSiguiente, fechaBase }}
+          empleados={empleados}
+          tiposPermiso={tiposPermiso}
+          avisoDe={avisoDe}
+          isSaving={isSaving}
+          handleFieldChange={handleFieldChange}
+          handleSaveClick={handleSaveClick}
+          handleCancelEdit={handleCancelEdit}
+          handleRestoreOriginal={handleRestoreOriginal}
+          mutateAsistencia={mutateAsistencia}
+        />
+      )}
 
       <HistorialEmpleadoDialog
         isOpen={isModalOpen}

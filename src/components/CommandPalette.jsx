@@ -12,6 +12,7 @@ import {
   BriefcaseBusiness,
   FileText,
   CalendarClock,
+  Clock3,
   ClipboardList,
   ReceiptText,
   ClipboardCheck,
@@ -221,6 +222,13 @@ const ALL_NAV_ITEMS = [
     icon: ClipboardCheck,
   },
   {
+    title: "Control de horas extra",
+    url: "/panel/horas-extra",
+    rol: "Recruiter",
+    section: "Control de Tiempo",
+    icon: Clock3,
+  },
+  {
     title: "Entradas y salidas",
     url: "/panel/registro-de-entradas-y-salidas",
     rol: "Recruiter",
@@ -240,6 +248,13 @@ const ALL_NAV_ITEMS = [
     rol: "Recruiter",
     section: "Control de Tiempo",
     icon: BarChart3,
+  },
+  {
+    title: "Turnos extra",
+    url: "/panel/turnos-extra",
+    rol: "Recruiter",
+    section: "Control de Tiempo",
+    icon: CalendarClock,
   },
   // Ausencias y permisos
   {

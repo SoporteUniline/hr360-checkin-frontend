@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { X, Save, Calendar, User, FileText } from "lucide-react";
-import axios from "axios";
+import axios from "@/lib/axios"; // manda la sesión (el backend la exige desde el 19/11/2026)
 import useEmpleadosData from "@/hooks/useEmpleadosData";
 import useTiposPermisoData from "@/hooks/useTiposPermisoData";
 import { Combobox } from "@/components/Combobox";

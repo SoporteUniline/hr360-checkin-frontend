@@ -28,7 +28,9 @@ import axios from "@/lib/axios";
 import { fetcherWithToken } from "@/lib/fetcher";
 import { useAuth, useEmpresaTimezone } from "@/context/AuthContext";
 import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
-import { calcularResumenJornada, formatearMinutos } from "@/utils/asistenciaHoras";
+import { formatearMinutos } from "@/utils/asistenciaHoras";
+import { cambiosAutorizar, cambiosNoAutorizar, estadoHorasExtra } from "@/lib/asistencia/horasExtra.mjs";
+import useHorasExtra from "@/hooks/useHorasExtra";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Combobox } from "@/components/Combobox";
@@ -146,14 +148,16 @@ function incidenciasDeRegistro(r, fallbackTimezone) {
     });
   }
 
-  const resumen = calcularResumenJornada(r, tz);
-  if (resumen.minutosDiferencia > 0 && !esVerdadero(r?.hrs_extra)) {
+  // Misma regla que Asistencias: solo el tiempo después de la salida del horario
+  // (desde 15 min), y solo mientras no se haya autorizado o rechazado.
+  const extra = estadoHorasExtra(r, tz);
+  if (extra.estado === "pendiente") {
     incidencias.push({
       tipo: "H. extra",
       severidad: "media",
-      detalle: `${formatearMinutos(resumen.minutosDiferencia)} sin autorizar`,
+      detalle: `${formatearMinutos(extra.minutos)} de más, por autorizar`,
       accion: "extra",
-      minutosExtra: resumen.minutosDiferencia,
+      minutosExtra: extra.minutos,
     });
   }
 
@@ -306,6 +310,7 @@ export default function CentroIncidenciasPage() {
       setCargando(false);
     }
   }, [dataUser, idEmpresa, desde, hasta]);
+  const hx = useHorasExtra(cargar);
 
   useEffect(() => {
     cargar();
@@ -373,8 +378,11 @@ export default function CentroIncidenciasPage() {
             retardos += 1;
 
           const tz = r?.zona_horaria || fallbackTimezone;
-          const resumen = calcularResumenJornada(r, tz);
-          if (resumen.minutosDiferencia > 0) minutosExtra += resumen.minutosDiferencia;
+          // Horas extra del periodo: por autorizar + autorizadas (las no autorizadas no cuentan).
+          const extra = estadoHorasExtra(r, tz);
+          if ((extra.estado === "pendiente" || extra.estado === "autorizada") && extra.minutos > 0) {
+            minutosExtra += extra.minutos;
+          }
 
           incidenciasDeRegistro(r, fallbackTimezone).forEach((inc, index) => {
             incidencias.push({
@@ -518,9 +526,18 @@ export default function CentroIncidenciasPage() {
     }
   };
 
-  const autorizarExtra = async (inc) => {
-    await guardarCorreccion(inc.registro, inc.tz, { hrs_extra: 1 });
-  };
+  // Autorizar / no autorizar: solo se envían los campos de horas extra (antes se
+  // reenviaba el registro completo con correccion = 1 y quedaba como «Editado»).
+  const autorizarExtra = (inc) =>
+    hx.guardar(
+      [{ registro: inc.registro, cambios: cambiosAutorizar({ idAutorizador: hx.usuario.idEmpleado }) }],
+      `${nombreCompleto(inc.registro)}: horas extra autorizadas.`,
+    );
+  const noAutorizarExtra = (inc) =>
+    hx.guardar(
+      [{ registro: inc.registro, cambios: cambiosNoAutorizar(inc.registro, { quien: hx.usuario.nombre, zona: inc.tz }) }],
+      `${nombreCompleto(inc.registro)}: no autorizadas. Se paga hasta la salida del horario.`,
+    );
 
   const abrirAsistencia = (inc) => {
     const params = new URLSearchParams();
@@ -563,32 +580,14 @@ export default function CentroIncidenciasPage() {
 
     setAutorizandoMasivo(true);
     try {
-      for (const inc of targets) {
-        const payload = limpiarPayload({
-          ...inc.registro,
-          hrs_extra: 1,
-          correccion: 1,
-        });
-        await axios.put(
-          `/checador/asistencias/${inc.registro.id}`,
-          payload,
-        );
-      }
-      enqueueSnackbar(
+      await hx.guardar(
+        targets.map((inc) => ({
+          registro: inc.registro,
+          cambios: cambiosAutorizar({ idAutorizador: hx.usuario.idEmpleado }),
+        })),
         `${targets.length} registro(s) de horas extra autorizados.`,
-        { variant: "success" },
       );
       setSeleccionados(new Set());
-      await cargar();
-    } catch (e) {
-      console.error("Error autorizando horas extra:", e);
-      enqueueSnackbar(
-        e?.response?.data?.message ||
-          e?.response?.data?.error ||
-          "No se pudieron autorizar todas las horas extra.",
-        { variant: "error" },
-      );
-      await cargar();
     } finally {
       setAutorizandoMasivo(false);
     }
@@ -924,7 +923,7 @@ export default function CentroIncidenciasPage() {
                 variant="outline"
                 disabled={autorizandoMasivo}
                 onClick={autorizarHorasExtraSeleccionados}
-                className="h-10 rounded-lg border-blue-200 bg-white text-blue-700"
+                className="h-9 rounded-lg border-blue-200 bg-white px-3 text-blue-700"
               >
                 {autorizandoMasivo ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1137,6 +1136,10 @@ export default function CentroIncidenciasPage() {
                                 </div>
                               ) : (
                                 <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                                  {/* Mismas columnas en todas las filas: los títulos van una vez arriba (en pantallas anchas). */}
+                                  <div className="hidden gap-3 border-b border-slate-100 bg-slate-50 px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-slate-500 xl:grid xl:grid-cols-[112px_96px_118px_132px_132px_minmax(0,1fr)_352px]" aria-hidden>
+                                    <span>Fecha</span><span>Incidencia</span><span>Horario</span><span>Entrada</span><span>Salida</span><span>Nota</span><span className="text-right">Acciones</span>
+                                  </div>
                                   {emp.incidencias.map((inc) => {
                                     const registro = inc.registro;
                                     const draft = draftDe(registro, inc.tz);
@@ -1146,13 +1149,13 @@ export default function CentroIncidenciasPage() {
                                     return (
                                       <div
                                         key={inc.key}
-                                        className="grid gap-3 border-b border-slate-100 p-3 last:border-0 xl:grid-cols-[105px_130px_1fr_auto] xl:items-center"
+                                        className="grid grid-cols-2 gap-3 border-b border-slate-100 p-3 last:border-0 sm:grid-cols-4 xl:items-center xl:grid-cols-[112px_96px_118px_132px_132px_minmax(0,1fr)_352px]"
                                       >
                                         <div>
-                                          <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                                          <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400 xl:hidden">
                                             Fecha
                                           </div>
-                                          <div className="mt-1 font-bold text-slate-800">
+                                          <div className="mt-1 whitespace-nowrap text-[13px] font-bold text-slate-800 xl:mt-0">
                                             {fecha}
                                           </div>
                                         </div>
@@ -1165,17 +1168,16 @@ export default function CentroIncidenciasPage() {
                                           </span>
                                         </div>
 
-                                        <div className="grid gap-2 sm:grid-cols-4">
-                                          <label className="text-[11px] font-semibold text-slate-500">
-                                            Horario
-                                            <div className="mt-1 flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-2 text-sm font-bold text-slate-700">
-                                              {registro.hora_entrada_programada || "—"}
-                                              <span className="mx-1 text-slate-300">–</span>
-                                              {registro.hora_salida_programada || "—"}
-                                            </div>
-                                          </label>
-                                          <label className="text-[11px] font-semibold text-slate-500">
-                                            Entrada
+                                        <div className="text-[11px] font-semibold text-slate-500">
+                                          <span className="xl:hidden">Horario</span>
+                                          <div className="mt-1 flex h-10 items-center whitespace-nowrap text-[13px] font-semibold tabular-nums text-slate-700 xl:mt-0">
+                                            {String(registro.hora_entrada_programada || "—").slice(0, 5)}
+                                            <span className="mx-1 text-slate-300">–</span>
+                                            {String(registro.hora_salida_programada || "—").slice(0, 5)}
+                                          </div>
+                                        </div>
+                                          <label className={`text-[11px] font-semibold text-slate-500 `}>
+                                            <span className="xl:sr-only">Entrada</span>
                                             <Input
                                               type="time"
                                               value={draft.entrada}
@@ -1187,11 +1189,11 @@ export default function CentroIncidenciasPage() {
                                                   inc.tz,
                                                 )
                                               }
-                                              className="mt-1 h-10 rounded-lg border-slate-200 bg-white text-sm font-bold"
+                                              className="mt-1 h-10 rounded-lg border-slate-200 bg-white text-sm font-semibold tabular-nums xl:mt-0"
                                             />
                                           </label>
-                                          <label className="text-[11px] font-semibold text-slate-500">
-                                            Salida
+                                          <label className={`text-[11px] font-semibold text-slate-500 `}>
+                                            <span className="xl:sr-only">Salida</span>
                                             <Input
                                               type="time"
                                               value={draft.salida}
@@ -1203,11 +1205,11 @@ export default function CentroIncidenciasPage() {
                                                   inc.tz,
                                                 )
                                               }
-                                              className="mt-1 h-10 rounded-lg border-slate-200 bg-white text-sm font-bold"
+                                              className="mt-1 h-10 rounded-lg border-slate-200 bg-white text-sm font-semibold tabular-nums xl:mt-0"
                                             />
                                           </label>
-                                          <label className="text-[11px] font-semibold text-slate-500">
-                                            Nota
+                                          <label className={`text-[11px] font-semibold text-slate-500 col-span-2 sm:col-span-1`}>
+                                            <span className="xl:sr-only">Nota</span>
                                             <Input
                                               value={draft.notas}
                                               onChange={(e) =>
@@ -1219,22 +1221,35 @@ export default function CentroIncidenciasPage() {
                                                 )
                                               }
                                               placeholder={inc.detalle}
-                                              className="mt-1 h-10 rounded-lg border-slate-200 bg-white text-sm"
+                                              title={inc.detalle}
+                                              className="mt-1 h-10 rounded-lg border-slate-200 bg-white text-sm xl:mt-0"
                                             />
                                           </label>
-                                        </div>
 
-                                        <div className="flex flex-wrap gap-2 xl:justify-end">
+                                        <div className="col-span-2 flex flex-wrap gap-2 sm:col-span-4 xl:col-span-1 xl:flex-nowrap xl:justify-end">
                                           {inc.tipo === "H. extra" && (
                                             <Button
                                               type="button"
                                               variant="outline"
                                               disabled={guardandoId === registro.id}
                                               onClick={() => autorizarExtra(inc)}
-                                              className="h-10 rounded-lg border-blue-200 bg-white text-blue-700"
+                                              aria-label="Autorizar horas extra"
+                                              className="h-9 rounded-lg border-blue-200 bg-white px-3 text-blue-700"
                                             >
                                               <Clock3 className="mr-1.5 h-4 w-4" />
                                               Autorizar
+                                            </Button>
+                                          )}
+                                          {inc.tipo === "H. extra" && (
+                                            <Button
+                                              type="button"
+                                              variant="outline"
+                                              disabled={hx.guardando}
+                                              onClick={() => noAutorizarExtra(inc)}
+                                              title="La salida pagada queda a la hora del horario; la checada del reloj se conserva"
+                                              className="h-9 rounded-lg border-rose-200 bg-white px-3 text-rose-700"
+                                            >
+                                              No autorizar
                                             </Button>
                                           )}
                                           {inc.accion === "corregir" && (
@@ -1244,7 +1259,7 @@ export default function CentroIncidenciasPage() {
                                               onClick={() =>
                                                 guardarCorreccion(registro, inc.tz)
                                               }
-                                              className="h-10 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                                              className="h-9 rounded-lg bg-blue-600 px-3 text-white hover:bg-blue-700"
                                             >
                                               {guardandoId === registro.id ? (
                                                 <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
@@ -1258,7 +1273,7 @@ export default function CentroIncidenciasPage() {
                                             type="button"
                                             variant="outline"
                                             onClick={() => abrirAsistencia(inc)}
-                                            className="h-10 rounded-lg border-slate-200 bg-white"
+                                            className="h-9 rounded-lg border-slate-200 bg-white px-3"
                                           >
                                             <ExternalLink className="mr-1.5 h-4 w-4" />
                                             Revisar

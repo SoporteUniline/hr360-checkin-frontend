@@ -23,6 +23,13 @@ import { calcularResumenJornada, formatearMinutos } from "@/utils/asistenciaHora
 import { resumenCambios } from "@/lib/asistencia/cambios.mjs";
 import { crearFormateadorCambios } from "./CeldaEditado";
 import { useSnackbar } from "notistack";
+import useHorasExtra from "@/hooks/useHorasExtra";
+import AccionesMasivas from "./AccionesMasivas";
+import { minutosDescanso, sinSalidaAComer } from "@/lib/asistencia/jornada.mjs";
+import {
+  ETIQUETAS_ESTADO, cambiosAutorizar, cambiosNoAutorizar, cambiosQuitar,
+  estadoHorasExtra, etiquetaHorasExtra, ordenarPorHorasExtra,
+} from "@/lib/asistencia/horasExtra.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -41,8 +48,8 @@ export const COLUMNAS_ASISTENCIA = [
   { key: "entrada", label: "Entrada", extra: false },
   { key: "salida", label: "Salida", extra: false },
   { key: "jornada", label: "Jornada", extra: false },
-  { key: "hrs_diferencia", label: "Hrs +/-", extra: false },
-  { key: "autorizado_por", label: "Autorizado", extra: true },
+  { key: "hrs_diferencia", label: "Balance del día", extra: false },
+  { key: "autorizado_por", label: "Autorizado por", extra: true },
   { key: "asistio", label: "Asistió", extra: false },
   { key: "goce", label: "Goce", extra: false },
   { key: "pago_triple", label: "Pago triple", extra: true },
@@ -50,14 +57,11 @@ export const COLUMNAS_ASISTENCIA = [
   { key: "prima_dominical", label: "Prima dom.", extra: true },
   { key: "festivo", label: "Festivo", extra: true },
   { key: "porcentaje_festivo", label: "% festivo", extra: true },
-  { key: "hrs_extra", label: "Hrs extra", extra: false },
+  { key: "hrs_extra", label: "Horas extra", extra: false },
   { key: "forma_pago", label: "Forma pago", extra: true },
-  { key: "aut_extra", label: "Aut. extra", extra: true },
   { key: "hrs_comida", label: "Hrs comida", extra: true },
-  { key: "notas", label: "Notas", extra: false },
-  { key: "notas_extra", label: "Notas extra", extra: true },
+  { key: "notas", label: "Observaciones", extra: false },
   { key: "estado_asistencia", label: "Estado", extra: false },
-  { key: "acciones", label: "Acciones", extra: false },
 ];
 
 const EXTRA_COLUMN_KEYS = new Set(
@@ -80,6 +84,7 @@ export default function AsistenciaTable({
   tiposPermiso,
   handleEditClick,
   handleCancelEdit,
+  handleActualizarBase,
   handleRestoreOriginal,
   handleFieldChange,
   handleSaveClick,
@@ -90,6 +95,7 @@ export default function AsistenciaTable({
   empresaActiva,
   filterOptionsRows,
   cargarPeriodoParaExportar,
+  indiceFestivos = null,
   page = 1,
   limit = 10,
   onHeaderFilteringMetaChange,
@@ -100,6 +106,12 @@ export default function AsistenciaTable({
   onRowClick,
   agrupar = null,
   footer = null,
+  soloHorasExtra = false,
+  soloSinComida = false,
+  // «Control de horas extra»: columnas Decidió / Semana / Alertas y filtro de estados desde las tarjetas.
+  control = null,
+  estadosHorasExtra = null,
+  ocultarRegistroMasivo = false,
 }) {
   // Para el Excel usamos la zona de la primera empresa visible (o la activa como fallback)
   const fallbackTimezone = useEmpresaTimezone(empresaActiva);
@@ -112,6 +124,9 @@ export default function AsistenciaTable({
   const [asistioSeleccionado, setAsistioSeleccionado] = useState([]);
   const [goceSeleccionado, setGoceSeleccionado] = useState([]);
   const [horasExtraSeleccionado, setHorasExtraSeleccionado] = useState([]);
+  useEffect(() => {
+    if (Array.isArray(estadosHorasExtra)) setHorasExtraSeleccionado(estadosHorasExtra);
+  }, [estadosHorasExtra]);
   const [festivoSeleccionado, setFestivoSeleccionado] = useState([]);
   const [autorizacionSeleccionada, setAutorizacionSeleccionada] = useState([]);
   const [correccionSeleccionada, setCorreccionSeleccionada] = useState([]);
@@ -133,9 +148,8 @@ export default function AsistenciaTable({
   const visibleColumnCount =
     COLUMNAS_ASISTENCIA.filter((col) => {
       if (col.key === "unidad" && empresaActiva !== "all") return false;
-      if (col.key === "acciones" && readOnly) return false;
       return colVisible(col.key);
-    }).length || 1;
+    }).length + (colVisible("hrs_extra") ? 1 : 0) + (control ? 3 : 0) || 1; // +1: «¿Autorizar?» va con «Horas extra»
 
   const optionSourceRows = useMemo(
     () => (Array.isArray(filterOptionsRows) ? filterOptionsRows : filtrados),
@@ -150,6 +164,9 @@ export default function AsistenciaTable({
 
   const uniqueOptions = (values) =>
     [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const zonaDe = (registro) => registro.zona_horaria || fallbackTimezone;
+  // Vistas guardadas antes de los estados de horas extra usan "Sí" / "No".
+  const ETIQUETA_HX_ANTERIOR = { Sí: ETIQUETAS_ESTADO.autorizada, No: ETIQUETAS_ESTADO.sin };
   const toYesNo = (value) => (value === 1 || value === true ? "Sí" : "No");
   const toCorreccion = (registro) =>
     Boolean(Number(registro.correccion)) ? "Editado" : "Sin editar";
@@ -212,7 +229,7 @@ export default function AsistenciaTable({
   const horasExtraOptions = useMemo(
     () =>
       uniqueOptions(
-        optionSourceRows.map((registro) => toYesNo(registro.hrs_extra)),
+        optionSourceRows.map((registro) => etiquetaHorasExtra(registro, zonaDe(registro))),
       ),
     [optionSourceRows],
   );
@@ -269,9 +286,14 @@ export default function AsistenciaTable({
     const pasaGoce =
       goceSeleccionado.length === 0 ||
       goceSeleccionado.includes(toYesNo(registro.goce_sueldo));
+    const estadoExtra = horasExtraSeleccionado.length || soloHorasExtra
+      ? etiquetaHorasExtra(registro, zonaDe(registro))
+      : null;
     const pasaHorasExtra =
-      horasExtraSeleccionado.length === 0 ||
-      horasExtraSeleccionado.includes(toYesNo(registro.hrs_extra));
+      (horasExtraSeleccionado.length === 0 ||
+        horasExtraSeleccionado.map((v) => ETIQUETA_HX_ANTERIOR[v] ?? v).includes(estadoExtra)) &&
+      (!soloHorasExtra || estadoExtra !== ETIQUETAS_ESTADO.sin) &&
+      (!soloSinComida || sinSalidaAComer(registro));
     const pasaFestivo =
       festivoSeleccionado.length === 0 ||
       festivoSeleccionado.includes(toYesNo(registro.es_festivo));
@@ -312,6 +334,8 @@ export default function AsistenciaTable({
       festivoSeleccionado,
       autorizacionSeleccionada,
       estadoAsistenciaSeleccionado,
+      soloHorasExtra,
+      soloSinComida,
     ],
   );
 
@@ -324,15 +348,22 @@ export default function AsistenciaTable({
     asistioSeleccionado.length > 0 ||
     goceSeleccionado.length > 0 ||
     horasExtraSeleccionado.length > 0 ||
+    soloHorasExtra ||
+    soloSinComida ||
     festivoSeleccionado.length > 0 ||
     autorizacionSeleccionada.length > 0 ||
     estadoAsistenciaSeleccionado.length > 0;
 
+  // «Horas extra» se ordena en pantalla por estado y minutos (el servidor solo sabe ordenar por Sí/No).
+  const ordenarExtras = sortConfig?.sortBy === "horasExtra";
   const displayedRows = useMemo(() => {
-    if (!hasActiveHeaderFilters) return filtrados;
+    const ordenar = (rows) =>
+      ordenarExtras ? ordenarPorHorasExtra(rows, { zonaDe, orden: sortConfig.sortOrder }) : rows;
+    if (!hasActiveHeaderFilters) return ordenar(filtrados);
     const offset = (page - 1) * limit;
-    return filteredRowsAll.slice(offset, offset + limit);
-  }, [hasActiveHeaderFilters, filtrados, page, limit, filteredRowsAll]);
+    return ordenar(filteredRowsAll).slice(offset, offset + limit);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasActiveHeaderFilters, filtrados, page, limit, filteredRowsAll, ordenarExtras, sortConfig?.sortOrder]);
 
   // Agrupación de los renglones YA calculados para la página (no altera
   // filtrado ni paginación). Conserva el orden de aparición.
@@ -408,7 +439,6 @@ export default function AsistenciaTable({
     { header: "Apellido Paterno", key: "apellido_paterno" },
     { header: "Apellido Materno", key: "apellido_materno" },
     { header: "Unidad de negocio", key: "unidad_negocio" },
-    { header: "Código", key: "nip" },
     { header: "Departamento", key: "departamento" },
     { header: "Tipo de Registro", key: "tipo_registro_nombre" },
     { header: "Fecha", key: "fecha" },
@@ -417,7 +447,7 @@ export default function AsistenciaTable({
     { header: "Entrada", key: "entrada" },
     { header: "Salida", key: "salida" },
     { header: "Jornada", key: "jornada" },
-    { header: "Hrs +/-", key: "hrs_diferencia" },
+    { header: "Balance del día", key: "hrs_diferencia" },
     { header: "Autorizado por", key: "autorizado_por" },
     { header: "¿Asistió?", key: "asistencia" },
     { header: "¿Goce de Sueldo?", key: "goce_sueldo" },
@@ -426,10 +456,13 @@ export default function AsistenciaTable({
     { header: "Prima Dominical", key: "prima_dominical" },
     { header: "Es Festivo", key: "es_festivo" },
     { header: "Porcentaje Día Festivo", key: "porcentaje_dia_festivo" },
-    { header: "¿Trabajó horas extra?", key: "hrs_extra" },
+    { header: "Horas extra (estado)", key: "estado_horas_extra" },
+    { header: "Tiempo trabajado de más", key: "minutos_horas_extra" },
+    { header: "¿Horas extra autorizadas?", key: "hrs_extra" },
     { header: "Forma de pago horas extra", key: "forma_pago_extras" },
     { header: "Horas extras autorizadas por", key: "extras_autorizadas_por" },
-    { header: "Horas de comida", key: "hrs_comida" },
+    { header: "Descanso tomado", key: "hrs_comida" },
+    { header: "No marcó salida a comer", key: "sin_salida_comida" },
     { header: "Observaciones", key: "notas" },
     { header: "Notas horas extra", key: "notas_hrs_extra" },
     { header: "Estado", key: "estadoAsistencia" },
@@ -439,13 +472,16 @@ export default function AsistenciaTable({
     const rowTimezone = r.zona_horaria || fallbackTimezone;
 
     const { jornada, minutosDiferencia } = calcularResumenJornada(r);
+    const extra = estadoHorasExtra(r, rowTimezone);
+    const fmt = crearFormateadorCambios({ tiposPermiso, empleados, zona: rowTimezone });
+    // "0" llega como texto en algunos campos: se evalúa como número, no como texto.
+    const siNo = (v) => (Number(v) ? "Sí" : "No");
 
     return {
       nombre: r.nombre,
       apellido_paterno: r.apellido_paterno,
       apellido_materno: r.apellido_materno,
       unidad_negocio: r.unidad_negocio || r.sucursal || r.empresa_nombre,
-      nip: r.nip,
       departamento: r.departamento,
       tipo_registro_nombre: r.tipo_registro_nombre,
 
@@ -453,8 +489,8 @@ export default function AsistenciaTable({
         ? dayjs.tz(r.fecha, DB_TIMEZONE).tz(rowTimezone).format("DD/MM/YYYY")
         : "-",
 
-      correccion: r.correccion ? "Sí" : "No",
-    cambios: resumenCambios(r, crearFormateadorCambios({ tiposPermiso, empleados, zona: rowTimezone })) || (r.correccion ? "Sin detalle guardado" : "-"),
+      correccion: siNo(r.correccion),
+    cambios: resumenCambios(r, fmt) || (siNo(r.correccion) === "Sí" ? "Sin detalle guardado" : "-"),
 
       entrada: r.entrada
         ? dayjs
@@ -473,18 +509,21 @@ export default function AsistenciaTable({
       jornada,
       hrs_diferencia: formatearMinutos(minutosDiferencia, { signo: true }),
 
-      autorizado_por: r.autorizado_por ?? "-",
-      asistencia: r.asistencia ? "Sí" : "No",
-      goce_sueldo: r.goce_sueldo ? "Sí" : "No",
-      pago_triple: r.pago_triple ? "Sí" : "No",
-      es_domingo: r.es_domingo ? "Sí" : "No",
+      autorizado_por: fmt("autorizado_por", r.autorizado_por),
+      asistencia: siNo(r.asistencia),
+      goce_sueldo: siNo(r.goce_sueldo),
+      pago_triple: siNo(r.pago_triple),
+      es_domingo: siNo(r.es_domingo),
       prima_dominical: r.prima_dominical ?? "-",
-      es_festivo: r.es_festivo ? "Sí" : "No",
+      es_festivo: siNo(r.es_festivo),
       porcentaje_dia_festivo: r.porcentaje_dia_festivo ?? "-",
-      hrs_extra: r.hrs_extra ? "Sí" : "No",
+      estado_horas_extra: ETIQUETAS_ESTADO[extra.estado],
+      minutos_horas_extra: extra.minutos > 0 ? formatearMinutos(extra.minutos) : "-",
+      hrs_extra: siNo(r.hrs_extra),
       forma_pago_extras: r.forma_pago_extras ?? "-",
-      extras_autorizadas_por: r.extras_autorizadas_por ?? "-",
-      hrs_comida: r.hrs_comida ?? "-",
+      extras_autorizadas_por: fmt("extras_autorizadas_por", r.extras_autorizadas_por),
+      hrs_comida: minutosDescanso(r) != null ? formatearMinutos(minutosDescanso(r)) : r.hrs_comida ?? "-",
+      sin_salida_comida: sinSalidaAComer(r) ? "Sí" : "No",
       notas: r.notas ?? "-",
       notas_hrs_extra: r.notas_hrs_extra ?? "-",
       estadoAsistencia: r.estadoAsistencia,
@@ -544,8 +583,46 @@ export default function AsistenciaTable({
     );
   };
 
+  // --- Horas extra: decisiones de un clic y masivas ---
+  const hx = useHorasExtra(mutateAsistencia);
+  const [seleccionados, setSeleccionados] = useState(() => new Set());
+  const nombreCorto = (r) => `${r.nombre ?? ""} ${r.apellido_paterno ?? ""}`.trim();
+  const limpiarSeleccion = () => setSeleccionados(new Set());
+  const accionesHorasExtra = readOnly ? null : {
+    guardando: hx.guardando,
+    seleccionados,
+    seleccionar: (id, v) => setSeleccionados((prev) => {
+      const s = new Set(prev);
+      if (v) s.add(id); else s.delete(id);
+      return s;
+    }),
+    autorizar: (r, { forma, notas } = {}) =>
+      hx.guardar(
+        [{ registro: r, cambios: cambiosAutorizar({ forma, notas, idAutorizador: hx.usuario.idEmpleado }) }],
+        `${nombreCorto(r)}: horas extra autorizadas.`,
+      ),
+    noAutorizar: (r) =>
+      hx.guardar(
+        [{ registro: r, cambios: cambiosNoAutorizar(r, { quien: hx.usuario.nombre, zona: zonaDe(r) }) }],
+        `${nombreCorto(r)}: no autorizadas. Se paga hasta la salida del horario; la checada real se conserva.`,
+      ),
+    quitar: (r) =>
+      hx.guardar([{ registro: r, cambios: cambiosQuitar(r, zonaDe(r)) }], `${nombreCorto(r)}: decisión quitada.`),
+  };
+  // Selección para acciones masivas (casilla en cada fila). Solo filas que siguen cargadas.
+  const filasSeleccionadas = readOnly ? [] : optionSourceRows.filter((r) => seleccionados.has(r.id));
+  const visiblesSeleccionables = readOnly ? [] : (displayedRows ?? []).filter((r) => r?.id != null);
+  const marcadasVisibles = visiblesSeleccionables.filter((r) => seleccionados.has(r.id)).length;
+  const todasVisiblesMarcadas = visiblesSeleccionables.length > 0 && marcadasVisibles === visiblesSeleccionables.length;
+  const alternarVisibles = (v) => setSeleccionados((prev) => {
+    const s = new Set(prev);
+    for (const r of visiblesSeleccionables) { if (v) s.add(r.id); else s.delete(r.id); }
+    return s;
+  });
+
   const renderAsistenciaRow = (reg) => (
     <AsistenciaRow
+      indiceFestivos={indiceFestivos}
       key={reg.id}
       registro={reg}
       fecha={fecha}
@@ -557,6 +634,7 @@ export default function AsistenciaTable({
       tiposPermiso={tiposPermiso}
       handleEditClick={handleEditClick}
       handleCancelEdit={handleCancelEdit}
+      handleActualizarBase={handleActualizarBase}
       handleRestoreOriginal={handleRestoreOriginal}
       handleFieldChange={handleFieldChange}
       handleSaveClick={handleSaveClick}
@@ -565,6 +643,9 @@ export default function AsistenciaTable({
       empresaActiva={empresaActiva}
       colVisible={colVisible}
       onRowClick={onRowClick}
+      horasExtra={accionesHorasExtra}
+      control={control}
+      seleccion={readOnly ? null : { marcado: seleccionados.has(reg.id), alternar: (v) => accionesHorasExtra.seleccionar(reg.id, v) }}
     />
   );
 
@@ -584,6 +665,7 @@ export default function AsistenciaTable({
                 {exportando ? "Exportando periodo…" : "Exportar Excel"}
               </Button>
 
+              {!ocultarRegistroMasivo && (
               <Button
                 onClick={abrirFormulario}
                 className="rounded-xl bg-blue-600 text-white shadow-sm hover:bg-blue-700"
@@ -591,6 +673,7 @@ export default function AsistenciaTable({
                 <Plus className="h-4 w-4 mr-2" />
                 Registrar asistencia masiva
               </Button>
+              )}
 
               {/* <Button
                 onClick={onResetFilters}
@@ -654,7 +737,7 @@ export default function AsistenciaTable({
               onChange: setGoceSeleccionado,
             },
             {
-              category: "Hrs extra",
+              category: "Horas extra",
               values: horasExtraSeleccionado,
               options: horasExtraOptions,
               onChange: setHorasExtraSeleccionado,
@@ -692,9 +775,20 @@ export default function AsistenciaTable({
               <TableRow className="bg-slate-50 hover:bg-slate-50 [&_th]:text-[10px] [&_th]:font-semibold [&_th]:uppercase [&_th]:tracking-[0.05em] [&_th]:text-slate-500 [&_th_button]:text-[10px] [&_th_button]:font-semibold [&_th_button]:uppercase [&_th_button]:tracking-[0.05em]">
                 {colVisible("empleado") && (
                   <TableHead
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500`}
+                    className={`${TH_STICKY} left-0 z-20 text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 shadow-[8px_0_8px_-8px_rgba(15,23,42,0.18)]`}
                   >
                     <div className="flex items-center gap-1">
+                      {!readOnly && (
+                        <input
+                          type="checkbox"
+                          aria-label="Elegir todos los mostrados"
+                          title="Elegir todos los mostrados"
+                          checked={todasVisiblesMarcadas}
+                          ref={(el) => { if (el) el.indeterminate = marcadasVisibles > 0 && !todasVisiblesMarcadas; }}
+                          onChange={(e) => alternarVisibles(e.target.checked)}
+                          className="mr-1.5 h-4 w-4 cursor-pointer accent-blue-600"
+                        />
+                      )}
                       <button
                         type="button"
                         onClick={() => handleSort("empleado")}
@@ -842,7 +936,8 @@ export default function AsistenciaTable({
                   <TableHead
                     className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
-                    Jornada
+                    Jornada{" "}
+                    <span className="font-medium normal-case tracking-normal text-slate-400">trabajado de programado</span>
                   </TableHead>
                 )}
 
@@ -850,7 +945,7 @@ export default function AsistenciaTable({
                   <TableHead
                     className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
-                    Hrs +/-
+                    Balance del día
                   </TableHead>
                 )}
                 {colVisible("autorizado_por") && (
@@ -861,7 +956,7 @@ export default function AsistenciaTable({
                       selected={autorizacionSeleccionada}
                       onChange={setAutorizacionSeleccionada}
                       options={autorizacionOptions}
-                      placeholder="Autorizado"
+                      placeholder="Autorizado por"
                     />
                   </TableHead>
                 )}
@@ -955,13 +1050,13 @@ export default function AsistenciaTable({
                   <TableHead
                     className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
-                    <div className="flex items-center justify-center gap-1">
+                    <div className="flex items-center gap-1">
                       <button
                         type="button"
                         onClick={() => handleSort("horasExtra")}
                         className="flex items-center"
                       >
-                        HRS EXTRA
+                        HORAS EXTRA
                         {renderSortIcon("horasExtra")}
                       </button>
 
@@ -974,18 +1069,25 @@ export default function AsistenciaTable({
                     </div>
                   </TableHead>
                 )}
+                {colVisible("hrs_extra") && (
+                  <TableHead
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500`}
+                  >
+                    ¿Autorizar?
+                  </TableHead>
+                )}
+                {control && (
+                  <>
+                    <TableHead className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500`}>Decidió</TableHead>
+                    <TableHead className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500`}>Semana</TableHead>
+                    <TableHead className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500`}>Alertas</TableHead>
+                  </>
+                )}
                 {colVisible("forma_pago") && (
                   <TableHead
                     className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
                     Forma pago
-                  </TableHead>
-                )}
-                {colVisible("aut_extra") && (
-                  <TableHead
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
-                  >
-                    Aut. extra
                   </TableHead>
                 )}
                 {colVisible("hrs_comida") && (
@@ -999,14 +1101,7 @@ export default function AsistenciaTable({
                   <TableHead
                     className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
                   >
-                    Notas
-                  </TableHead>
-                )}
-                {colVisible("notas_extra") && (
-                  <TableHead
-                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
-                  >
-                    Notas extra
+                    Observaciones
                   </TableHead>
                 )}
 
@@ -1022,11 +1117,7 @@ export default function AsistenciaTable({
                     />
                   </TableHead>
                 )}
-                {!readOnly && colVisible("acciones") && (
-                  <TableHead className="sticky right-0 top-0 z-20 h-10 whitespace-nowrap bg-slate-50 text-center align-middle text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
-                    Acciones
-                  </TableHead>
-                )}
+                
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1100,6 +1191,16 @@ export default function AsistenciaTable({
           </div>
         )}
       </div>
+      {!readOnly && (
+        <AccionesMasivas
+          filas={filasSeleccionadas}
+          tiposPermiso={tiposPermiso}
+          zonaDe={zonaDe}
+          hx={hx}
+          onLimpiar={limpiarSeleccion}
+          onGuardado={mutateAsistencia}
+        />
+      )}
     </>
   );
 }

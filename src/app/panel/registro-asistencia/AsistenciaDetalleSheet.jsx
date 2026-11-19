@@ -101,7 +101,7 @@ export default function AsistenciaDetalleSheet({
               {nombre || "Empleado"}
             </SheetTitle>
             <div className="truncate text-[11.5px] font-medium text-gray-500">
-              {[registro.nip, unidad, registro.departamento]
+              {[registro.nip ? `#${registro.nip}` : null, unidad, registro.departamento]
                 .filter(Boolean)
                 .join(" · ")}
             </div>

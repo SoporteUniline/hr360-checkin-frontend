@@ -8,14 +8,22 @@ import useTiposPermisoData from "@/hooks/useTiposPermisoData";
 import useAsistenciaActions from "@/hooks/useAsistenciaActions";
 import AsistenciaTable from "./AsistenciaTable";
 import AsistenciaMatriz from "./AsistenciaMatriz";
+import VistaHoras from "./VistaHoras";
 import TablePagination from "@/components/TablePagination";
 import LoadingTable from "@/components/LoadingTable";
 import ErrorPage from "@/components/ErrorPage";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { fetcherWithToken } from "@/lib/fetcher";
 import useDepartamentosData from "@/hooks/useDepartamentosData";
 import { useSnackbar } from "notistack";
 import { cargarPeriodoCompleto, LIMITE_TODOS } from "@/lib/asistencia/consultaPeriodo.mjs";
+import { indiceFestivos as crearIndiceFestivos } from "@/lib/asistencia/calendario.mjs";
+import useSWR from "swr";
+import { useEmpresaTimezone } from "@/context/AuthContext";
+import { resumenHorasExtra as resumenHorasExtraPeriodo } from "@/lib/asistencia/horasExtra.mjs";
+import { resumenControl } from "@/lib/asistencia/controlHorasExtra.mjs";
+import { sinSalidaAComer } from "@/lib/asistencia/jornada.mjs";
 
 const DEFAULT_SORT_CONFIG = {
   sortBy: "fecha",
@@ -42,6 +50,7 @@ export default function AsistenciaDataContainer({
   soloPresentes,
   soloAusentes,
   horasExtra,
+  sinComida = false,
   sinGoceDeSueldo,
   diasFestivos,
   requiereAutorizacion,
@@ -50,6 +59,10 @@ export default function AsistenciaDataContainer({
   agrupar = null,
   visibleColumns = null,
   vista = "lista",
+  // «Control de horas extra»: { tope } activa sus columnas; estadosHorasExtra filtra desde las tarjetas.
+  controlHorasExtra = null,
+  estadosHorasExtra = null,
+  ocultarRegistroMasivo = false,
 }) {
   const { departamentos } = useDepartamentosData(idEmpresa);
   const [filterOptionsRows, setFilterOptionsRows] = useState([]);
@@ -78,7 +91,9 @@ export default function AsistenciaDataContainer({
     filtroEstadoAsistencia,
     soloPresentes,
     soloAusentes,
-    horasExtra,
+    // «Horas extra» se filtra en pantalla por estado (por autorizar, autorizadas,
+    // no autorizadas); el filtro del servidor solo conocía hrs_extra = 1.
+    false,
     sinGoceDeSueldo,
     diasFestivos,
     requiereAutorizacion,
@@ -92,7 +107,12 @@ export default function AsistenciaDataContainer({
     mutateRef.current = mutate;
   }, [mutate]);
   useEffect(() => {
-    const refresh = () => { if (navigator.onLine && window.__adamiaOffline !== true) void mutateRef.current().catch(() => {}); };
+    // Solo recarga cuando cambió la cola de checadas; preparar el reloj ('perfil') no cambia datos
+    // (antes provocaba una segunda descarga completa del periodo al abrir la vista).
+    const refresh = (event) => {
+      if (event?.detail?.motivo === 'perfil') return;
+      if (navigator.onLine && window.__adamiaOffline !== true) void mutateRef.current().catch(() => {});
+    };
     window.addEventListener('adamia-queue', refresh);
     return () => window.removeEventListener('adamia-queue', refresh);
   }, []);
@@ -133,7 +153,6 @@ export default function AsistenciaDataContainer({
     filtroEstadoAsistencia,
     soloPresentes,
     soloAusentes,
-    horasExtra,
     sinGoceDeSueldo,
     diasFestivos,
     requiereAutorizacion,
@@ -173,7 +192,6 @@ export default function AsistenciaDataContainer({
     filtroEstadoAsistencia,
     soloPresentes,
     soloAusentes,
-    horasExtra,
     sinGoceDeSueldo,
     diasFestivos,
     requiereAutorizacion,
@@ -181,6 +199,13 @@ export default function AsistenciaDataContainer({
   ]);
 
   const { data: empleados } = useEmpleadosData(idEmpresa);
+  // Catálogo de Festivos: marca y valida "Festivo" en cada registro.
+  const { data: festivosData } = useSWR(
+    idEmpresa ? `/checador/holidays/${idEmpresa}` : null,
+    fetcherWithToken,
+    { revalidateOnFocus: false },
+  );
+  const indiceFestivos = useMemo(() => crearIndiceFestivos(festivosData), [festivosData]);
   const { data: tiposPermiso } = useTiposPermisoData();
 
   const effectiveData = data;
@@ -195,6 +220,19 @@ export default function AsistenciaDataContainer({
   // Filas del periodo completo para los filtros por columna y la matriz.
   const filasPeriodo = mostrarTodos ? registros : filterOptionsRows;
   const currentPage = effectiveData?.page || page || 1;
+  const zonaEmpresa = useEmpresaTimezone(empresaActiva);
+  const resumenHorasExtra = useMemo(
+    () => resumenHorasExtraPeriodo(filasPeriodo, (r) => r.zona_horaria || zonaEmpresa),
+    [filasPeriodo, zonaEmpresa],
+  );
+  const control = useMemo(
+    () => (controlHorasExtra
+      ? { tope: controlHorasExtra.tope, resumen: resumenControl(filasPeriodo, { zonaDe: (r) => r.zona_horaria || zonaEmpresa, tope: controlHorasExtra.tope }) }
+      : null),
+    [controlHorasExtra, filasPeriodo, zonaEmpresa],
+  );
+  // Quienes no marcaron salida a comer (su horario tiene comida y solo hay un tramo).
+  const totalSinComida = useMemo(() => filasPeriodo.filter(sinSalidaAComer).length, [filasPeriodo]);
 
   const mostrarPaginacion = effectiveData?.aplicarPaginacion !== false;
   const totalRegistros = effectiveData?.total || 0;
@@ -216,10 +254,23 @@ export default function AsistenciaDataContainer({
     isSaving,
     handleEditClick,
     handleCancelEdit,
+    handleActualizarBase,
     handleRestoreOriginal,
     handleFieldChange,
     handleSaveClick,
   } = useAsistenciaActions(mutate);
+
+  // «Abrir en Asistencias» desde Control de horas extra: ?abrir=<id> abre su ventana de edición una vez.
+  const searchParams = useSearchParams();
+  const abrirId = searchParams?.get("abrir");
+  const abiertoRef = useRef(null);
+  useEffect(() => {
+    if (!abrirId || abiertoRef.current === abrirId) return;
+    const r = registros.find((x) => String(x.id) === String(abrirId));
+    if (!r) return;
+    abiertoRef.current = abrirId;
+    handleEditClick(r);
+  }, [abrirId, registros, handleEditClick]);
 
 
   if (isLoading && !effectiveData && !localEvents.length) return <LoadingTable rows={10} />;
@@ -231,7 +282,14 @@ export default function AsistenciaDataContainer({
   return {
     ui: (
       <>
-        {vista === "matriz" ? (
+        {vista === "horas" ? (
+          <VistaHoras
+            idEmpresa={idEmpresa}
+            fechaInicio={fechaInicio}
+            fechaFin={fechaFin}
+            filtroEmpleado={debouncedFiltroEmpleado || ""}
+          />
+        ) : vista === "matriz" ? (
           <><LocalClockCaptures events={localEvents} /><AsistenciaMatriz
             registros={filasPeriodo}
             fechaInicio={fechaInicio}
@@ -245,6 +303,7 @@ export default function AsistenciaDataContainer({
           filtrados={registros}
           filterOptionsRows={filasPeriodo}
           cargarPeriodoParaExportar={cargarPeriodoParaExportar}
+          indiceFestivos={indiceFestivos}
           page={page}
           limit={limit}
           onHeaderFilteringMetaChange={setHeaderFilterMeta}
@@ -257,6 +316,7 @@ export default function AsistenciaDataContainer({
           tiposPermiso={tiposPermiso}
           handleEditClick={handleEditClick}
           handleCancelEdit={handleCancelEdit}
+          handleActualizarBase={handleActualizarBase}
           handleRestoreOriginal={handleRestoreOriginal}
           handleFieldChange={handleFieldChange}
           handleSaveClick={handleSaveClick}
@@ -271,6 +331,11 @@ export default function AsistenciaDataContainer({
           setPage={setPage}
           agrupar={agrupar}
           visibleColumns={visibleColumns}
+          soloHorasExtra={horasExtra}
+          soloSinComida={sinComida}
+          control={control}
+          estadosHorasExtra={estadosHorasExtra}
+          ocultarRegistroMasivo={ocultarRegistroMasivo}
           footer={
             mostrarPaginacion && registros.length > 0 ? (
               <TablePagination
@@ -288,7 +353,7 @@ export default function AsistenciaDataContainer({
           }
         />
 
-        {!mostrarPaginacion && registros.length > 0 && (
+        {!mostrarPaginacion && !controlHorasExtra && registros.length > 0 && (
           <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded text-center">
             <p className="text-gray-600">
               Mostrando <strong>{registros.length}</strong> registros de{" "}
@@ -308,6 +373,10 @@ export default function AsistenciaDataContainer({
       </>
     ),
     data: effectiveData,
+    resumenHorasExtra,
+    totalSinComida,
+    control,
+    cargando: isLoading && !effectiveData,
     localEvents,
     mutate,
   };

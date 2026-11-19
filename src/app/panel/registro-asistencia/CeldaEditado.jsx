@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { cambiosRegistro } from "@/lib/asistencia/cambios.mjs";
+import { cambiosRegistro, etiquetaCampo } from "@/lib/asistencia/cambios.mjs";
+import { etiquetaOrigen, fechaCorta, quienCuando } from "@/lib/asistencia/historial.mjs";
+import useSWR from "swr";
+import { fetcherWithToken } from "@/lib/fetcher";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -41,6 +44,13 @@ export function crearFormateadorCambios({ tiposPermiso, empleados, zona }) {
 export default function CeldaEditado({ registro, formatear, onVerChecadas }) {
   const [abierto, setAbierto] = useState(false);
   const editado = Boolean(Number(registro?.correccion));
+  // Historial completo (quién, cuándo, antes → después): se pide solo al abrir el detalle.
+  const { data: historial, isLoading: cargandoHistorial } = useSWR(
+    abierto && editado && registro?.id ? `/checador/asistencias/${registro.id}/cambios` : null,
+    fetcherWithToken,
+    { revalidateOnFocus: false },
+  );
+  const movimientos = Array.isArray(historial?.cambios) ? historial.cambios : [];
   if (!editado) {
     return <span className="text-xs text-slate-400" aria-label="Sin editar">No</span>;
   }
@@ -55,9 +65,9 @@ export default function CeldaEditado({ registro, formatear, onVerChecadas }) {
           // La fila abre el historial con cualquier clic: este botón no debe dispararlo.
           onClick={(e) => e.stopPropagation()}
           className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 hover:bg-amber-100"
-          aria-label={`Editado: ver ${cambios.length || ""} cambios`.replace("  ", " ")}
+          aria-label="Editado: Sí, ver qué cambió"
         >
-          Editado{cambios.length > 0 && <span className="tabular-nums">· {cambios.length}</span>}
+          Sí
         </button>
       </PopoverTrigger>
       <PopoverContent
@@ -93,9 +103,39 @@ export default function CeldaEditado({ registro, formatear, onVerChecadas }) {
               originales (se editó antes de que el sistema los guardara).
             </p>
           )}
-          <p className="mt-3 border-t border-slate-100 pt-2 text-[11px] text-slate-500">
-            Quién y cuándo: aún no se registra. Pendiente en el sistema.
-          </p>
+          <div className="mt-3 border-t border-slate-100 pt-2">
+            <p className="text-[11px] font-semibold text-slate-700">Quién y cuándo</p>
+            {movimientos.length > 0 ? (
+              <ul className="mt-1 space-y-1.5" aria-label="Historial de cambios">
+                {movimientos.map((c, i) => (
+                  <li key={`${c.creado_en}-${c.campo}-${i}`} className="text-[11px] leading-snug text-slate-600">
+                    <span className="font-semibold text-slate-800">{c.nombre_usuario || "Usuario sin nombre"}</span>
+                    {" · "}{fechaCorta(c.creado_en)}
+                    <span className="text-slate-400"> · {etiquetaOrigen(c.origen)}</span>
+                    <br />
+                    {c.campo === "comida" ? "Comida" : etiquetaCampo(c.campo)}:{" "}
+                    <span className="text-slate-400 line-through">
+                      {c.campo === "comida" ? c.valor_antes : formatear ? formatear(c.campo, c.valor_antes) : c.valor_antes ?? "—"}
+                    </span>
+                    {" → "}
+                    <span className="font-semibold text-slate-800">
+                      {c.campo === "comida" ? c.valor_despues : formatear ? formatear(c.campo, c.valor_despues) : c.valor_despues ?? "—"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : registro?.ultimo_cambio ? (
+              <p className="mt-1 text-[11px] text-slate-600">{quienCuando(registro.ultimo_cambio)}</p>
+            ) : (
+              <p className="mt-1 text-[11px] text-slate-500">
+                {cargandoHistorial
+                  ? "Cargando…"
+                  : historial?.disponible === false
+                  ? "Se empezará a registrar cuando se active el historial en el sistema."
+                  : "Este cambio es anterior al historial; no se sabe quién lo hizo."}
+              </p>
+            )}
+          </div>
         </div>
         {onVerChecadas && (
           <div className="border-t border-slate-100 px-4 py-2">

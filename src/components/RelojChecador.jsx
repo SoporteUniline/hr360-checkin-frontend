@@ -331,7 +331,7 @@ export default function RelojChecador({
         localValidated: Boolean(data.local_validated),
         success: !data.pending,
       });
-      setTimeout(() => setPopupInfo(null), 3000);
+      setTimeout(() => setPopupInfo(null), 2500);
       mutate();
     }
   };
@@ -538,6 +538,7 @@ export default function RelojChecador({
                       idEmpresa={idEmpresa}
                       submitMovement={submitMovement}
                       handleOpenFacialModal={() => setMostrarCamara(false)}
+                      continuo
                     />
                   </div>
                 )}
@@ -649,8 +650,8 @@ export default function RelojChecador({
                     : "bg-red-50 text-red-600"
                 }`}
               >
-                {popupInfo.pending ? <Clock4 className="w-5 h-5" /> : <CheckCircle className="w-5 h-5" />}
-                <span className="font-black text-sm uppercase">{popupInfo.pending ? 'Pendiente de subir' : '¡Éxito!'}</span>
+                {popupInfo.pending ? <Clock4 className="w-5 h-5" /> : popupInfo.success ? <CheckCircle className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+                <span className="font-black text-sm uppercase">{popupInfo.pending ? 'Pendiente de subir' : popupInfo.success ? '¡Éxito!' : 'No se registró · avisa a RH'}</span>
               </div>
             </div>
           </div>

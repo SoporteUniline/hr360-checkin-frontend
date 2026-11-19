@@ -22,7 +22,7 @@ function fixture({ online = true, failStorage = false, failNetwork = false, deci
     syncEvents, syncCompanyEvents, syncFailure,
   };
   const context = vm.createContext({ fixtureStore: store, Cookies: { get: () => 'session-current' },
-    navigator: { onLine: online }, window: { dispatchEvent() {} }, Event, Date, crypto: webcrypto,
+    navigator: { onLine: online }, window: { dispatchEvent() {} }, Event, CustomEvent, Date, crypto: webcrypto,
     console, URL, setTimeout, clearTimeout, ensureOfflineCache: async () => null,
     axios: { post: async (_url, event) => {
       sent.push(event);

@@ -34,6 +34,8 @@ import AccesosRapidos from "@/components/AccesosRapidos";
 import { fetchImageAsDataUrl } from "@/lib/pdfCompanyLogo";
 import { BarChart3, FileDown, FileSpreadsheet, Search } from "lucide-react";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
+import ResumenLey, { Chip } from "./ResumenLey";
+import { formatearMinutos } from "@/lib/asistencia/jornada.mjs";
 
 function fmtDate(d) {
   const dd = new Date(d);
@@ -312,30 +314,14 @@ export default function ReporteHorasPage() {
       const auth = {
         headers: { Authorization: `Bearer ${Cookies.get("token") || ""}` },
       };
-      const requests = ids.map((id) =>
-        axios.get(`/checador/reportes/horas`, {
-          params: {
-            empleadoId: id,
-            fechaInicio,
-            fechaFin,
-          },
-          ...auth,
-        }),
-      );
-      const results = await Promise.allSettled(requests);
-
-      const exitosos = results.filter(
-        (result) => result.status === "fulfilled",
-      );
-      const fallidos = results.filter(
-        (result) => result.status === "rejected",
-      );
-
-      const okReports = exitosos
-        .map((result) => result.value.data)
-        .filter((data) => data?.ok)
-        .map((data) => data.data);
-
+      // Una sola llamada para todos los empleados, con el cálculo de la LFT por semana
+      // (antes: una llamada por empleado).
+      const { data: respuesta } = await axios.get(`/checador/reportes/horas-ley`, {
+        params: { fechaInicio, fechaFin, empleados: ids.join(",") },
+        ...auth,
+      });
+      const okReports = respuesta?.ok ? respuesta.data.reportes : [];
+      const fallidos = respuesta?.ok ? [] : [respuesta];
       setReportes(okReports);
 
       if (okReports.length === 0) {
@@ -359,6 +345,14 @@ export default function ReporteHorasPage() {
       setLoading(false);
     }
   }
+
+  // Reporte en tiempo real: se vuelve a calcular al cambiar fechas o empleados (sin «Generar»).
+  const idsParaReporte = (empleadoIds.length ? empleadoIds : empleadosFiltrados.map((e) => String(e.id_empleado))).join(",");
+  useEffect(() => {
+    if (!idsParaReporte || !fechaInicio || !fechaFin) return;
+    handleGenerar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idsParaReporte, fechaInicio, fechaFin]);
 
   function handleImprimir() {
     window.print();
@@ -1308,6 +1302,10 @@ export default function ReporteHorasPage() {
             </div>
           ) : (
             <div className="space-y-10">
+              <ResumenLey
+                reportes={reportes}
+                onElegir={(i) => document.querySelectorAll('[data-report-block="true"]')[i]?.scrollIntoView({ behavior: "smooth" })}
+              />
               {reportes.map((reporte, idx) => (
                 <div key={idx} className="space-y-6" data-report-block="true">
                   {/* Top bar - Diseño limpio como imagen de referencia */}
@@ -1380,65 +1378,33 @@ export default function ReporteHorasPage() {
                     <div className="lg:col-span-4">
                       <section
                         data-summary-section="true"
-                        className="grid grid-cols-4 gap-0 border border-gray-300 rounded-sm overflow-hidden bg-gray-50"
+                        className={`grid ${reporte.ley ? "grid-cols-5" : "grid-cols-4"} gap-0 border border-gray-300 rounded-sm overflow-hidden bg-gray-50`}
                         aria-label="Resumen del periodo"
                       >
-                        <div className="text-center px-2 py-3 border-r border-gray-300 bg-gray-50">
-                          <div
-                            className="text-[8px] text-gray-600 uppercase font-semibold mb-1.5 tracking-wide"
-                            data-summary-label="true"
-                          >
-                            Total Horas
+                        {(reporte.ley
+                          ? [
+                              ["Trabajadas", formatearMinutos(reporte.ley.trabajado)],
+                              ["Ordinarias", formatearMinutos(reporte.ley.trabajado - reporte.ley.autorizadas)],
+                              ["Extra dobles", formatearMinutos(reporte.ley.dobles)],
+                              ["Extra triples", formatearMinutos(reporte.ley.triples)],
+                              ["Por autorizar", formatearMinutos(reporte.ley.porAutorizar)],
+                            ]
+                          : [
+                              ["Total Horas", reporte.resumen?.totalHoras || "0:00"],
+                              ["Días", reporte.resumen?.diasTrabajados || "0"],
+                              ["Promedio", reporte.resumen?.promedioHoras || "0:00"],
+                              ["Horas Extra", reporte.resumen?.horasExtrasLaboradas || "0:00"],
+                            ]
+                        ).map(([etiqueta, valor], i) => (
+                          <div key={etiqueta} className={`text-center px-2 py-3 bg-gray-50 ${i ? "border-l border-gray-300" : ""}`}>
+                            <div className="text-[8px] text-gray-600 uppercase font-semibold mb-1.5 tracking-wide" data-summary-label="true">
+                              {etiqueta}
+                            </div>
+                            <div className="text-base font-bold leading-none text-gray-900 mb-1 tabular-nums" data-summary-value="true">
+                              {valor}
+                            </div>
                           </div>
-                          <div
-                            className="text-xl font-bold leading-none text-gray-900 mb-1"
-                            data-summary-value="true"
-                          >
-                            {reporte.resumen?.totalHoras || "0:00"}
-                          </div>
-                        </div>
-                        <div className="text-center px-2 py-3 border-r border-gray-300 bg-gray-50">
-                          <div
-                            className="text-[8px] text-gray-600 uppercase font-semibold mb-1.5 tracking-wide"
-                            data-summary-label="true"
-                          >
-                            Días
-                          </div>
-                          <div
-                            className="text-xl font-bold leading-none text-gray-900 mb-1"
-                            data-summary-value="true"
-                          >
-                            {reporte.resumen?.diasTrabajados || "0"}
-                          </div>
-                        </div>
-                        <div className="text-center px-2 py-3 bg-gray-50">
-                          <div
-                            className="text-[8px] text-gray-600 uppercase font-semibold mb-1.5 tracking-wide"
-                            data-summary-label="true"
-                          >
-                            Promedio
-                          </div>
-                          <div
-                            className="text-xl font-bold leading-none text-gray-900 mb-1"
-                            data-summary-value="true"
-                          >
-                            {reporte.resumen?.promedioHoras || "0:00"}
-                          </div>
-                        </div>
-                        <div className="text-center px-2 py-3 border-l border-gray-300 bg-gray-50">
-                          <div
-                            className="text-[8px] text-gray-600 uppercase font-semibold mb-1.5 tracking-wide"
-                            data-summary-label="true"
-                          >
-                            Horas Extra
-                          </div>
-                          <div
-                            className="text-xl font-bold leading-none text-gray-900 mb-1"
-                            data-summary-value="true"
-                          >
-                            {reporte.resumen?.horasExtrasLaboradas || "0:00"}
-                          </div>
-                        </div>
+                        ))}
                       </section>
                     </div>
                   </div>
@@ -1467,6 +1433,11 @@ export default function ReporteHorasPage() {
                           <th className="p-2 border text-xs uppercase font-semibold text-gray-700">
                             Notas
                           </th>
+                          {reporte.ley && (
+                            <th className="p-2 border text-xs uppercase font-semibold text-gray-700">
+                              Extra / ley
+                            </th>
+                          )}
                         </tr>
                       </thead>
                       <tbody>
@@ -1570,6 +1541,21 @@ export default function ReporteHorasPage() {
                                     <span className="text-zinc-500">—</span>
                                   )}
                                 </td>
+                                {reporte.ley && (
+                                  <td className="p-2 border align-top">
+                                    <div className="flex flex-wrap gap-1">
+                                      {d.ley?.extraMin > 0 && (
+                                        <Chip tono={d.ley.estadoExtra === "autorizada" ? "ok" : "or"}>
+                                          +{formatearMinutos(d.ley.extraMin)}{d.ley.estadoExtra === "autorizada" ? "" : " por autorizar"}
+                                        </Chip>
+                                      )}
+                                      {(d.ley?.alertas ?? []).map((a) => (
+                                        <Chip key={a} tono={/Domingo/.test(a) ? "az" : "rj"}>{a}</Chip>
+                                      ))}
+                                      {!d.ley?.extraMin && !(d.ley?.alertas ?? []).length && <span className="text-zinc-400">—</span>}
+                                    </div>
+                                  </td>
+                                )}
                               </tr>
                               {Array.isArray(d.movimientos) &&
                               d.movimientos.length > 1 ? (
@@ -1578,7 +1564,7 @@ export default function ReporteHorasPage() {
                                   data-detail-row="true"
                                 >
                                   <td
-                                    colSpan={7}
+                                    colSpan={reporte.ley ? 8 : 7}
                                     className="p-2 pl-6 border-t text-xs text-zinc-600 font-mono"
                                   >
                                     <div
@@ -1626,6 +1612,34 @@ export default function ReporteHorasPage() {
                           );
                         })}
                       </tbody>
+                    {reporte.ley && (
+                        <tfoot>
+                          {reporte.ley.semanas.map((sem) => (
+                            <tr key={sem.inicio}>
+                              <td colSpan={8} className="border bg-slate-50 p-2 text-left text-[12.5px] text-slate-700">
+                                <b>Semana {humanDate(sem.inicio)} – {humanDate(sem.fin)}:</b>{" "}
+                                {formatearMinutos(sem.trabajado)} trabajadas de {formatearMinutos(sem.programado)} programadas
+                                {sem.limite != null && <> · límite ordinario <b>{formatearMinutos(sem.limite)}</b></>}
+                                {" "}· extra autorizadas <b>{formatearMinutos(sem.autorizadas)}</b> ({formatearMinutos(sem.dobles)} dobles
+                                {sem.triples ? `, ${formatearMinutos(sem.triples)} triples` : ""})
+                                {sem.porAutorizar ? <span className="text-orange-700"> · {formatearMinutos(sem.porAutorizar)} por autorizar</span> : null}
+                                {sem.alertas.length > 0 && (
+                                  <div className="mt-1 flex flex-wrap gap-1">
+                                    {sem.alertas.map((a) => <Chip key={a} tono="rj">⚠ {a}</Chip>)}
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                          <tr>
+                            <td colSpan={8} className="p-2 text-left text-[11px] text-slate-500">
+                              Registro de jornada conforme a la LFT (reforma DOF 1/may/2026). Horas extra: máx. 4 h al día en 4 días por
+                              semana; las primeras horas de la semana hasta el tope del año van al doble y el excedente al triple; jornada
+                              total máx. 12 h al día. Solo cuentan las autorizadas en Asistencias. Horas, no pesos.
+                            </td>
+                          </tr>
+                        </tfoot>
+                      )}
                     </table>
                   </section>
                   {/* Firmas (con etiquetas visibles en preview) */}

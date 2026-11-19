@@ -19,6 +19,7 @@ import { Capacitor } from "@capacitor/core";
 import {
   UsersIcon,
   ClipboardCheck,
+  Clock3,
   CircleUserRoundIcon,
   ClockIcon,
   ClockArrowUp,
@@ -176,6 +177,18 @@ const menuGroups = [
         url: "/panel/registro-asistencia",
         rol: "Recruiter",
         icon: ClipboardCheck,
+      },
+      {
+        title: "Control de horas extra",
+        url: "/panel/horas-extra",
+        rol: "Recruiter",
+        icon: Clock3,
+      },
+      {
+        title: "Turnos extra",
+        url: "/panel/turnos-extra",
+        rol: "Recruiter",
+        icon: CalendarClock,
       },
       {
         title: "Entradas y salidas",
