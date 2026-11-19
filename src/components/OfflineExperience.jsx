@@ -127,7 +127,7 @@ export default function OfflineExperience() {
     {pending > 0 && <button type="button" disabled={offline || syncing} onClick={() => { void syncNow(); }} className="mt-2 rounded border border-blue-400 px-2 py-1 disabled:opacity-50">{syncing ? 'Comprobando pendientes...' : 'Sincronizar ahora'}</button>}
     {!!events.length && <details className="mt-2"><summary className="cursor-pointer">{events.length - reviews} pendiente(s){reviews ? ` · ${reviews} para revisión` : ''}</summary><p className="mt-1 text-xs">Las pendientes se subirán al recuperar conexión. Las rechazadas se conservan para revisión de RH. Las decisiones de turno aparecen aquí.</p><ul className="max-h-52 space-y-2 overflow-y-auto pt-2">
       {events.slice(0, 30).map(event => <li key={event.id} className="border-t border-blue-200 pt-2">
-        <p>{event.employeeName || event.alias || 'Checada'} · {new Date(event.captured_at).toLocaleString('es-MX')}</p>
+        <p>{event.employeeName || event.alias || 'Checada'} · {new Date(event.captured_at).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short', hourCycle: 'h23' })}</p>
         {event.status === 'review' && <p className="font-semibold">No aceptada · Se conserva para revisión</p>}
         <p className="text-xs">{event.error || 'Se enviará automáticamente al recuperar conexión.'}</p>
         {event.status === 'review' && isTurnConflict(event) && <p className="mt-1 text-xs">{offline ? 'Conéctate para actualizar el estado del turno y continuar.' : 'Puedes registrar una nueva checada. Esta captura se conserva para revisión de RH.'}</p>}

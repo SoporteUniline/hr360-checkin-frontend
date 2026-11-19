@@ -137,7 +137,7 @@ export default function RelojChecador({
     return dayjs
       .tz(fechaString, DB_TIMEZONE)
       .tz(EMPRESA_TIMEZONE)
-      .format("hh:mm:ss A");
+      .format("HH:mm:ss");
   };
 
   const endpoint = modoEmpleado
@@ -185,7 +185,7 @@ export default function RelojChecador({
   useEffect(() => {
     const actualizarHora = () => {
       const ahora = dayjs().tz(EMPRESA_TIMEZONE);
-      setHoraActual(ahora.format("hh:mm:ss A"));
+      setHoraActual(ahora.format("HH:mm:ss"));
       const fechaFormateada = ahora.format("dddd, D [de] MMMM [de] YYYY");
       const [dia, ...resto] = fechaFormateada.split(", ");
       const diaCapitalizado = dia.charAt(0).toUpperCase() + dia.slice(1);
@@ -427,7 +427,8 @@ export default function RelojChecador({
     return () => window.removeEventListener("resize", medir);
   }, [subscriptionLoading, subscriptionActive, menuMovil]);
 
-  const horaCorta = horaActual ? `${horaActual.slice(0, 5)} ${horaActual.includes("AM") ? "a.m." : "p.m."}` : "";
+  // 24 horas en todo el reloj (19/11/2026).
+  const horaCorta = horaActual ? horaActual.slice(0, 5) : "";
 
   if (subscriptionLoading) {
     return (
