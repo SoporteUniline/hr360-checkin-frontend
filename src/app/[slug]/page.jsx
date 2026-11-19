@@ -43,6 +43,7 @@ export default function ChecadorPage() {
   const params = useParams();
   const slug = params.slug;
   const [idEmpresa, setIdEmpresa] = useState(null);
+  const [nombreEmpresa, setNombreEmpresa] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -51,6 +52,7 @@ export default function ChecadorPage() {
       try {
         const res = await axiosInstance.get(`/empresas/slug/${slug}`);
         const id = res.data.id_empresa;
+        setNombreEmpresa(res.data.nombre || res.data.nombre_empresa || "");
 
         const response = await fetch(`/api/empresas/check-subscription/${id}`, {
           cache: "no-store",
@@ -103,5 +105,5 @@ export default function ChecadorPage() {
     return <RedirectingPage message={error || "Empresa no encontrada"} />;
   }
 
-  return <><OfflineClockSetup companySlug={slug} companyId={idEmpresa} /><RelojChecador idEmpresa={idEmpresa} companySlug={slug} /></>;
+  return <><OfflineClockSetup companySlug={slug} companyId={idEmpresa} /><RelojChecador idEmpresa={idEmpresa} companySlug={slug} nombreEmpresa={nombreEmpresa} /></>;
 }

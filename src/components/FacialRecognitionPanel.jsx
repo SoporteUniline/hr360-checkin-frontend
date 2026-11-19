@@ -20,7 +20,13 @@ const FacialRecognitionPanel = ({
   submitMovement,
   // Reloj de la empresa: la cámara se queda encendida para el siguiente empleado.
   continuo = false,
+  // Celular: la cámara llena el alto que le da el contenedor (maqueta aprobada 19/11/2026).
+  pantallaCompleta = false,
 }) => {
+  // (19/11/2026) El análisis corre en un intervalo creado al encender la cámara: leer `continuo`
+  // directo dejaba el valor de ese momento y el interruptor no surtía efecto hasta reiniciarla.
+  const continuoRef = useRef(continuo);
+  continuoRef.current = continuo;
   const [ubicacionGPS, setUbicacionGPS] = useState(null);
   const [cameraFacing, setCameraFacing] = useState("user");
   const [error, setError] = useState("");
@@ -413,7 +419,7 @@ const FacialRecognitionPanel = ({
           data?.empleado ? `${data.empleado.nombre ?? ""} ${data.empleado.apellido_paterno ?? ""}`.trim() : "", Date.now(), Boolean(data?.pending));
       }
       onSuccess(data);
-      if (continuo && !data?.requiereDecision) {
+      if (continuoRef.current && !data?.requiereDecision) {
         // Reloj de la empresa: la cámara sigue encendida; pausa breve y listo para el siguiente.
         retryIntervalRef.current = PAUSA_TRAS_CHECAR;
         setTimeout(() => { if (session === sessionRef.current) setResultadoChecada(null); }, PAUSA_TRAS_CHECAR);
@@ -472,25 +478,15 @@ const FacialRecognitionPanel = ({
     if (faceDetected)
       return { text: "Rostro detectado", color: "bg-green-600" };
 
-    return { text: "Esperando detección de rostro...", color: "bg-gray-600" };
+    return { text: pantallaCompleta ? "Mira a la cámara" : "Esperando detección de rostro...", color: "bg-gray-600" };
   };
 
   return (
     <div
-      className="
-  p-0
-  bg-transparent
-  rounded-none
-  shadow-none
-  md:p-4
-  md:bg-white
-  md:rounded-2xl
-  md:shadow-xl
-  space-y-4
-"
+      className={`p-0 bg-transparent rounded-none shadow-none md:p-4 md:bg-white md:rounded-2xl md:shadow-xl ${pantallaCompleta ? "h-full bg-slate-950" : "space-y-4"}`}
     >
       {!isOpen ? (
-        <div className="flex flex-col items-center justify-center py-16 px-4 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
+        <div className={`flex flex-col items-center justify-center px-4 ${pantallaCompleta ? "h-full bg-slate-50" : "py-16 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50"}`}>
           <div className="bg-blue-100 rounded-full p-6 mb-4">
             <Camera className="h-12 w-12 text-blue-600" />
           </div>
@@ -545,19 +541,28 @@ const FacialRecognitionPanel = ({
             </div>
           </div>
 
-          {ubicacionGPS && <p className="px-3 text-sm text-slate-600" role="status">Última lectura: precisión ±{Math.ceil(ubicacionGPS.coords.accuracy)} m. La ubicación aproximada puede impedir el checado.</p>}
-          <div className="overflow-y-auto">
+          {ubicacionGPS && <p className={pantallaCompleta ? "absolute left-3 right-3 top-3 z-10 rounded-lg bg-slate-900/70 px-3 py-1.5 text-xs text-white" : "px-3 text-sm text-slate-600"} role="status">Última lectura: precisión ±{Math.ceil(ubicacionGPS.coords.accuracy)} m. La ubicación aproximada puede impedir el checado.</p>}
+          <div className={pantallaCompleta ? "relative h-full" : "overflow-y-auto"}>
             <>
-              <div className="relative mb-4">
+              <div className={pantallaCompleta ? "relative h-full" : "relative mb-4"}>
                 <>
                   <video
                     ref={videoRef}
                     autoPlay
                     muted
                     playsInline
-                    className="w-full object-cover border-0 md:border-4 rounded-none md:rounded-lg"
+                    className={`w-full object-cover border-0 md:border-4 rounded-none md:rounded-lg ${pantallaCompleta ? "h-full" : ""}`}
                   />
-                  <div className="md:hidden absolute top-4 right-3 flex gap-3">
+                  {pantallaCompleta && (
+                    <div aria-hidden="true" className={`pointer-events-none absolute left-1/2 top-[44%] h-[52%] max-h-80 aspect-[3/4] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border-[3px] shadow-[0_0_0_9999px_rgba(2,6,23,0.35)] transition-colors ${resultadoChecada === "registrada" || faceDetected ? "border-green-400" : resultadoChecada ? "border-amber-400" : "border-white/85"}`} />
+                  )}
+                  <div className={`md:hidden absolute right-3 flex gap-2 ${pantallaCompleta ? (ubicacionGPS ? "top-14" : "top-3") : "top-4"}`}>
+                    {pantallaCompleta ? (<>
+                      <button type="button" aria-label="Cambiar de cámara" onClick={() => setCameraFacing((prev) => (prev === "user" ? "environment" : "user"))}
+                        className="grid size-10 place-items-center rounded-full bg-slate-900/55 text-white"><RotateCcw className="size-5" /></button>
+                      <button type="button" aria-label="Apagar cámara" onClick={handleOpenFacialModal}
+                        className="grid size-10 place-items-center rounded-full bg-slate-900/55 text-white"><Power className="size-5" /></button>
+                    </>) : (<>
                     <Button
                       onClick={() =>
                         setCameraFacing((prev) =>
@@ -577,13 +582,14 @@ const FacialRecognitionPanel = ({
                       <Power />
                       Apagar
                     </Button>
+                    </>)}
                   </div>
 
                   {(() => {
                     const { text, color } = getStatusMessage();
                     return (
                       <div
-                        className={`absolute bottom-3 left-1/2 -translate-x-1/2 px-4 py-2 text-white text-sm font-medium rounded-lg shadow-lg ${color} bg-opacity-90 text-center`}
+                        className={`absolute left-1/2 -translate-x-1/2 px-4 py-2 text-white text-sm font-medium shadow-lg ${color} bg-opacity-90 text-center ${pantallaCompleta ? "bottom-4 max-w-[calc(100%-2rem)] rounded-full" : "bottom-3 rounded-lg"}`}
                       >
                         {text}
                       </div>

@@ -423,3 +423,21 @@ test("modo reloj: la cámara sigue encendida tras checar y la misma persona no v
   await tick();
   assert.equal(env.counts().posts, 2);
 });
+
+test("apagar «Cámara siempre encendida» con la cámara ya encendida sí la apaga al checar", async () => {
+  const props = { continuo: true };
+  const env = setup({ props });
+  env.render();
+  await tick();
+  env.video.onloadeddata();
+  env.resolveModels();
+  await tick();
+  env.render();
+  props.continuo = false; // el usuario apaga el interruptor; el análisis ya estaba corriendo
+  env.render();
+  env.resolveDetection({ descriptor: cara });
+  await tick();
+  env.render();
+  assert.equal(env.counts().posts, 1);
+  assert.ok(env.counts().stops > 0, "la cámara se apaga al checar");
+});

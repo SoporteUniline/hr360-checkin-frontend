@@ -7,7 +7,8 @@ export default function RootLayout({ children }) {
     <>
       <Navbar />
       <main className="mt-15">{children}</main>
-      <Footer />
+      {/* En celular el reloj ocupa la pantalla: sin pie de página para que la cámara no se mueva. */}
+      <div className="hidden md:block"><Footer /></div>
     </>
   );
 }
