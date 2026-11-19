@@ -1,6 +1,14 @@
 import axios, { ensureOfflineCache } from './axios';
 import Cookies from 'js-cookie';
-import { motivoPendiente, errorDelServidor, textoChecada } from './reloj/motivoPendiente.mjs';
+import { motivoPendiente, errorDelServidor, textoChecada, preguntaRepetida } from './reloj/motivoPendiente.mjs';
+
+// Candado de 5 min (19/11/2026): el servidor no registró una checada repetida. Se devuelve la pregunta
+// y el payload para «Sí, registrar» (se reenvía como captura nueva con repetir: true).
+const repetida = (payload, nombre, rebote, mensaje) => ({ data: {
+  repetida: true, pregunta: preguntaRepetida(rebote, mensaje), movimiento: textoChecada('ignorada', mensaje),
+  empleado: { nombre: nombre || '', apellido_paterno: '' },
+  reintentar: { ...payload, offline_event: undefined, captured_at: undefined, repetir: true },
+} });
 
 let storeLoading;
 let registrationLoading;
@@ -8,7 +16,7 @@ let synchronizing = false;
 const initializing = new Map();
 const warmed = new Set();
 // Opening stored check-ins does not require the offline shell to finish updating.
-export const clockStore = () => storeLoading ||= import(/* webpackIgnore: true */ '/offline-clock/store.mjs?v=10');
+export const clockStore = () => storeLoading ||= import(/* webpackIgnore: true */ '/offline-clock/store.mjs?v=11');
 export const faceEngine = () => import(/* webpackIgnore: true */ '/offline-clock/face.mjs?v=5');
 // motivo 'perfil': solo se preparó el reloj; no cambió ninguna checada (las tablas no recargan).
 const notify = (motivo) => window.dispatchEvent(new CustomEvent('adamia-queue', { detail: { motivo } }));
@@ -76,7 +84,8 @@ async function registerLocalFace(payload, context, profile, original = null) {
       captured_at: original?.captured_at || payload.captured_at || new Date().toISOString(), method: 'facial', action: action === 'decision' ? 'auto' : action,
       latitude: payload.latitud_actual ?? null, longitude: payload.longitud_actual ?? null, precision_metros: payload.precision_metros ?? null, ubicacion_timestamp: payload.ubicacion_timestamp ?? null,
       local_verification: { grant: employee.grant, device_id: dataset.device_id, model: dataset.model, reference: employee.reference, score },
-      local_validated: true, status: action === 'decision' ? 'decision' : 'pending', error: action === 'decision' ? 'Selecciona cómo cerrar el turno' : '' };
+      local_validated: true, status: action === 'decision' ? 'decision' : 'pending', error: action === 'decision' ? 'Selecciona cómo cerrar el turno' : '',
+      ...(payload.repetir === true ? { repetir: true } : {}) };
     engine.validateCaptureTime(dataset, event.captured_at);
     engine.validateLocalLocation(employee, event);
   }
@@ -95,6 +104,7 @@ async function registerLocalFace(payload, context, profile, original = null) {
       await synchronizeClockQueue().catch(() => {});
       current = (await store.listEvents()).find(saved => saved.id === event.id);
     }
+    if (current?.status === 'synced' && current.resolvedAction === 'ignorada') return repetida(payload, current.employeeName || event.employeeName, current.resolvedRebote, current.resolvedMessage);
     if (current?.status === 'synced') return { data: {
       pending: false, local_validated: true,
       empleado: { nombre: current.employeeName || event.employeeName, apellido_paterno: '' },
@@ -209,6 +219,7 @@ export async function registerClockMovement(payload, { company, employee = null,
     employeeName: identified?.nombre,
     alias: identified?.nombre || (employee ? profile.nombre : method === 'codigo' ? `Código •••${code.slice(-3)}` : 'Rostro por validar'),
     status: 'pending', error: '',
+    ...(payload.repetir === true ? { repetir: true } : {}),
   };
   await store.saveEvent(event);
   notify();
@@ -223,6 +234,7 @@ export async function registerClockMovement(payload, { company, employee = null,
   if (earlier) {
     await synchronizeClockQueue().catch(() => {});
     const current = (await store.listEvents()).find(other => other.id === event.id);
+    if (current?.status === 'synced' && current.resolvedAction === 'ignorada') return repetida(payload, current.employeeName || event.alias, current.resolvedRebote, current.resolvedMessage);
     if (current?.status === 'synced') return { data: { empleado: { nombre: current.employeeName || event.alias, apellido_paterno: '' }, movimiento: textoChecada(current.resolvedAction) } };
     if (current?.status === 'review') throw Object.assign(new Error(current.error), { response: { status: current.httpStatus || 422, data: { error: current.error, code: current.errorCode } } });
     if (current?.status === 'decision') return { data: { requiereDecision: true, offline_event: event, descriptor_facial: event.descriptor } };
@@ -236,6 +248,7 @@ export async function registerClockMovement(payload, { company, employee = null,
     }
     await store.saveEvent({ ...event, status: 'synced', employeeName: data.employee?.nombre, resolvedAction: data.action, code: undefined, descriptor: undefined, grant: undefined });
     notify();
+    if (data.action === 'ignorada') return repetida(payload, data.employee?.nombre || event.alias, data.rebote, data.message);
     return { data: { ...data, empleado: { nombre: data.employee?.nombre || event.alias, apellido_paterno: '' }, movimiento: textoChecada(data.action, data.message) } };
   } catch (error) {
     if (!error.response || error.response.status >= 500) {
@@ -259,6 +272,7 @@ async function sendEvent(event) {
     code: event.code, descriptor: event.descriptor, latitude: event.latitude, longitude: event.longitude,
     ...(event.local_verification ? { company: event.company, local_employee: event.local_employee, local_verification: event.local_verification } : {}),
     precision_metros: event.precision_metros, ubicacion_timestamp: event.ubicacion_timestamp,
+    ...(event.repetir === true ? { repetir: true } : {}),
     ...(company ? { grant: event.grant } : {}),
   }, { timeout: 15000 });
 }

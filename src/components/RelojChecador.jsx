@@ -89,6 +89,9 @@ export default function RelojChecador({
   const [mostrarCamara, setMostrarCamara] = useState(true);
   const { enqueueSnackbar } = useSnackbar();
   const [popupInfo, setPopupInfo] = useState(null);
+  // Candado de 5 min (19/11/2026): «Acabas de registrar tu salida a las 4:49 p.m. ¿Registrar otra vez?».
+  const [pregunta, setPregunta] = useState(null);
+  const [repitiendo, setRepitiendo] = useState(false);
   const [registrando, setRegistrando] = useState(false);
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const [subscriptionActive, setSubscriptionActive] = useState(false);
@@ -258,6 +261,12 @@ export default function RelojChecador({
       }
       const { data } = response;
 
+      if (data.repetida) {
+        setPregunta(data);
+        setCodigoEmpleado("");
+        return;
+      }
+
       if (data.requiereDecision) {
         setPendiente({ tipo: "codigo", codigo, offline_event: data.offline_event });
         setMostrarModalTurno(true);
@@ -341,6 +350,10 @@ export default function RelojChecador({
   };
 
   const handleFacialResponse = (data) => {
+    if (data.repetida) {
+      setPregunta(data);
+      return;
+    }
     if (data.requiereDecision) {
       setPendiente({
         tipo: "facial",
@@ -362,6 +375,21 @@ export default function RelojChecador({
       // Con motivo de «pendiente» se deja más tiempo para poder leerlo.
       setTimeout(() => setPopupInfo(null), data.pending && data.motivo ? 8000 : 2500);
       mutate();
+    }
+  };
+
+  const registrarDeTodosModos = async () => {
+    if (!pregunta?.reintentar || repitiendo) return;
+    setRepitiendo(true);
+    try {
+      const { data } = await submitMovement(pregunta.reintentar);
+      setPregunta(null);
+      handleFacialResponse({ ...data, repetida: false });
+    } catch (err) {
+      setPregunta(null);
+      enqueueSnackbar(err.response?.data?.error || err.message || "No se pudo registrar", { variant: "error" });
+    } finally {
+      setRepitiendo(false);
     }
   };
 
@@ -696,6 +724,22 @@ export default function RelojChecador({
               setMostrarQR(false);
             }}
           />
+        )}
+
+        {pregunta && (
+          <div className="fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-100 md:inset-0 md:flex md:items-center md:justify-center md:bg-slate-900/40 md:p-4">
+            <div role="alertdialog" aria-labelledby="pregunta-repetida" className="mx-auto w-full max-w-sm rounded-2xl bg-white p-4 shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-200">
+              <p className="text-base font-bold text-slate-900">{pregunta.empleado?.nombre} {pregunta.empleado?.apellido_paterno}</p>
+              <p id="pregunta-repetida" className="mt-1 text-sm text-slate-700">{String(pregunta.pregunta).replace(/\.?$/, ".")} ¿Registrar otra vez?</p>
+              <p className="mt-1 text-xs text-slate-500">Solo si de verdad sales o regresas; si fue un doble toque, no hace falta.</p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => setPregunta(null)} disabled={repitiendo}
+                  className="min-h-11 rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">No, está bien</button>
+                <button type="button" onClick={registrarDeTodosModos} disabled={repitiendo}
+                  className="min-h-11 rounded-xl bg-brand px-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60">{repitiendo ? "Registrando…" : "Sí, registrar"}</button>
+              </div>
+            </div>
+          </div>
         )}
 
         {popupInfo && (() => {
