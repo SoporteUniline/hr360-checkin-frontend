@@ -7,6 +7,7 @@ import { avisoCalendario, correccionesCalendario } from "@/lib/asistencia/calend
 import { estadoHorasExtra } from "@/lib/asistencia/horasExtra.mjs";
 import CeldaHorasExtra, { CeldaAutorizarExtra } from "./CeldaHorasExtra";
 import BotonAgregarComida from "./BotonAgregarComida";
+import CeldaObservaciones from "./CeldaObservaciones";
 import CeldasControlHorasExtra from "./CeldasControlHorasExtra";
 import PanelEditarAsistencia from "./PanelEditarAsistencia";
 import { useEmpresaTimezone } from "@/context/AuthContext";
@@ -390,17 +391,8 @@ export default function AsistenciaRow({
               </TableCell>
             )}
             {isColVisible("notas") && (
-              <TableCell className="max-w-[240px] !whitespace-normal text-center text-xs">
-                {registro.notas || registro.notas_hrs_extra ? (
-                  <div className="flex flex-col gap-0.5">
-                    {registro.notas && <span>{registro.notas}</span>}
-                    {registro.notas_hrs_extra && (
-                      <span className="text-slate-500">Extras: {registro.notas_hrs_extra}</span>
-                    )}
-                  </div>
-                ) : (
-                  "-"
-                )}
+              <TableCell className="max-w-[220px] text-center text-xs">
+                <CeldaObservaciones notas={registro.notas} notasHorasExtra={registro.notas_hrs_extra} />
               </TableCell>
             )}
             {isColVisible("estado_asistencia") && (
