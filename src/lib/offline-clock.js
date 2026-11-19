@@ -1,6 +1,6 @@
 import axios, { ensureOfflineCache } from './axios';
 import Cookies from 'js-cookie';
-import { motivoPendiente, errorDelServidor } from './reloj/motivoPendiente.mjs';
+import { motivoPendiente, errorDelServidor, textoChecada } from './reloj/motivoPendiente.mjs';
 
 let storeLoading;
 let registrationLoading;
@@ -98,7 +98,7 @@ async function registerLocalFace(payload, context, profile, original = null) {
     if (current?.status === 'synced') return { data: {
       pending: false, local_validated: true,
       empleado: { nombre: current.employeeName || event.employeeName, apellido_paterno: '' },
-      movimiento: (current.resolvedAction || event.action) === 'entrada' ? 'Entrada registrada' : 'Salida registrada',
+      movimiento: textoChecada(current.resolvedAction || event.action),
     } };
     if (current?.status === 'review') throw Object.assign(new Error(current.error), {
       response: { status: current.httpStatus || 422, data: { error: current.error, code: current.errorCode } },
@@ -223,7 +223,7 @@ export async function registerClockMovement(payload, { company, employee = null,
   if (earlier) {
     await synchronizeClockQueue().catch(() => {});
     const current = (await store.listEvents()).find(other => other.id === event.id);
-    if (current?.status === 'synced') return { data: { empleado: { nombre: current.employeeName || event.alias, apellido_paterno: '' }, movimiento: current.resolvedAction === 'entrada' ? 'Entrada registrada' : 'Salida registrada' } };
+    if (current?.status === 'synced') return { data: { empleado: { nombre: current.employeeName || event.alias, apellido_paterno: '' }, movimiento: textoChecada(current.resolvedAction) } };
     if (current?.status === 'review') throw Object.assign(new Error(current.error), { response: { status: current.httpStatus || 422, data: { error: current.error, code: current.errorCode } } });
     if (current?.status === 'decision') return { data: { requiereDecision: true, offline_event: event, descriptor_facial: event.descriptor } };
     return queued();
@@ -236,7 +236,7 @@ export async function registerClockMovement(payload, { company, employee = null,
     }
     await store.saveEvent({ ...event, status: 'synced', employeeName: data.employee?.nombre, resolvedAction: data.action, code: undefined, descriptor: undefined, grant: undefined });
     notify();
-    return { data: { ...data, empleado: { nombre: data.employee?.nombre || event.alias, apellido_paterno: '' }, movimiento: data.action === 'entrada' ? 'Entrada registrada' : 'Salida registrada' } };
+    return { data: { ...data, empleado: { nombre: data.employee?.nombre || event.alias, apellido_paterno: '' }, movimiento: textoChecada(data.action, data.message) } };
   } catch (error) {
     if (!error.response || error.response.status >= 500) {
       await store.saveEvent(store.syncFailure(event, error));
