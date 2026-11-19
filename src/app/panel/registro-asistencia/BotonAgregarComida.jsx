@@ -21,7 +21,8 @@ function comidaSugerida(registro) {
   return ["13:00", "13:30"];
 }
 
-export default function BotonAgregarComida({ registro, aBaseDeDatos, fechaBase, onGuardado, readOnly }) {
+// variante "alerta" (tabla: chip amarillo) o "boton" (ventana de la fila: botón normal).
+export default function BotonAgregarComida({ registro, aBaseDeDatos, fechaBase, onGuardado, readOnly, variante = "alerta" }) {
   const { enqueueSnackbar } = useSnackbar();
   const [abierto, setAbierto] = useState(false);
   const [sugerida] = useState(() => comidaSugerida(registro));
@@ -61,10 +62,17 @@ export default function BotonAgregarComida({ registro, aBaseDeDatos, fechaBase, 
   return (
     <Popover open={abierto} onOpenChange={setAbierto}>
       <PopoverTrigger asChild>
-        <button type="button" data-no-row-click onClick={detener} className={`${clases} hover:bg-amber-100`} title="Agregar la comida que no marcó">
-          {etiqueta}
-          <span className="ml-1 rounded-full bg-amber-600 px-1.5 text-[10px] text-white">Agregar comida</span>
-        </button>
+        {variante === "boton" ? (
+          <button type="button" data-no-row-click onClick={detener}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100">
+            + Agregar comida
+          </button>
+        ) : (
+          <button type="button" data-no-row-click onClick={detener} className={`${clases} hover:bg-amber-100`} title="Agregar la comida que no marcó">
+            {etiqueta}
+            <span className="ml-1 rounded-full bg-amber-600 px-1.5 text-[10px] text-white">Agregar comida</span>
+          </button>
+        )}
       </PopoverTrigger>
       <PopoverContent className="w-72 border border-slate-200 bg-white p-4 shadow-xl" data-no-row-click onClick={detener}>
         <p className="text-sm font-semibold text-slate-900">Agregar comida · {registro.nombre} {registro.apellido_paterno}</p>
