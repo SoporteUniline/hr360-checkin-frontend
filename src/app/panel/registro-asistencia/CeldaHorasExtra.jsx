@@ -64,23 +64,15 @@ function DetalleAutorizar({ registro, minutos, onAutorizar, children }) {
 }
 
 // Columna «Horas extra»: solo el tiempo.
-export default function CeldaHorasExtra({ registro, info, readOnly, seleccionado, onSeleccionar }) {
+// (La casilla para elegir filas ahora está junto al nombre: acciones masivas.)
+export default function CeldaHorasExtra({ info }) {
   const { estado, minutos } = info;
   if (estado === "sin") {
     return <span className="text-slate-300" title={`Sin tiempo después del horario (cuenta desde ${UMBRAL_MINUTOS} min)`}>—</span>;
   }
   const texto = minutos != null ? formatearMinutos(minutos) : "Sí";
   return (
-    <div className="flex items-center gap-2 whitespace-nowrap" data-no-row-click onClick={detener}>
-      {!readOnly && estado === "pendiente" && (
-        <input
-          type="checkbox"
-          aria-label={`Seleccionar ${registro.nombre} ${registro.apellido_paterno ?? ""}`}
-          checked={Boolean(seleccionado)}
-          onChange={(e) => onSeleccionar?.(e.target.checked)}
-          className="h-4 w-4 shrink-0 accent-blue-600"
-        />
-      )}
+    <div className="flex items-center gap-2 whitespace-nowrap">
       <span
         className={`font-semibold tabular-nums ${
           estado === "pendiente" ? "text-orange-700" : estado === "autorizada" ? "text-emerald-700" : "text-slate-400 line-through"

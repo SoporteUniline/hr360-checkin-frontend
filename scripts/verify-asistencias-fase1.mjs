@@ -233,20 +233,80 @@ try {
   await page.waitForFunction(() => document.querySelectorAll("tr").length < 26);
   assert.equal(await page.locator("tr", { hasText: "Prueba" }).count(), 23);
   assert.equal(await page.locator("tr", { hasText: "Nocturno" }).count(), 0);
-  // Masivo: la casilla del encabezado marca las que faltan; se autorizan de una vez.
-  await page.getByRole("checkbox", { name: "Seleccionar horas extra por autorizar" }).check();
-  const barra = page.getByRole("region", { name: "Autorizar horas extra seleccionadas" });
-  assert.match(await barra.innerText(), /21 seleccionados/);
-  await barra.getByRole("combobox", { name: "Forma de pago para todos" }).selectOption("Tiempo por tiempo");
-  await barra.getByRole("textbox", { name: "Nota para todos" }).fill("Cierre de mes");
+  // Masivo: la casilla junto a «Empleado» elige los mostrados; «Horas extra» solo aplica a las por autorizar.
+  await page.getByRole("checkbox", { name: "Elegir todos los mostrados" }).check();
+  const barra = page.getByRole("region", { name: "Acciones para los seleccionados" });
+  assert.match(await barra.innerText(), /23 seleccionados/);
+  await barra.getByRole("button", { name: "✓ Horas extra" }).click();
+  const dlgHx = page.getByRole("dialog", { name: "Horas extra" });
+  await dlgHx.getByRole("combobox", { name: "Forma de pago" }).selectOption("Tiempo por tiempo");
+  await dlgHx.getByRole("textbox", { name: "Nota de horas extra" }).fill("Cierre de mes");
+  assert.match(await dlgHx.innerText(), /Se aplica a 21 · se omiten 2/);
+  assert.match(await dlgHx.innerText(), /Autorizada Prueba[\s\S]*Se omite: no tiene horas extra por decidir/);
   if (process.env.CAPTURAS) await page.screenshot({ path: process.env.CAPTURAS + "/hx-masivo.png" });
-  await barra.getByRole("button", { name: "✓ Autorizar" }).click();
+  await dlgHx.getByRole("button", { name: "Aplicar a 21" }).click();
   await esperarPuts(26);
   assert.ok(puts.slice(5).every((b) => JSON.stringify(b) === JSON.stringify({ hrs_extra: 1, forma_pago_extras: "Tiempo por tiempo", notas_hrs_extra: "Cierre de mes", extras_autorizadas_por: 7 })));
-  await page.getByText("21 registros autorizados.").waitFor({ timeout: 10000 });
+  await page.getByText("21 autorizadas.").waitFor({ timeout: 10000 });
+  await barra.getByRole("button", { name: "Quitar selección" }).click();
   await toggle.click();
   await page.waitForFunction(() => document.querySelectorAll("tr").length >= 26);
   puts.length = 0;
+
+  // 2c-bis) Acciones masivas: salida del horario, tipo de registro, comida y observación (con vista previa).
+  const elegir = (n) => page.getByRole("checkbox", { name: `Elegir a ${n} Prueba` }).check();
+  await elegir("Empleado10"); await elegir("Empleado11"); await elegir("Nocturno");
+  assert.match(await barra.innerText(), /3 seleccionados/);
+  const altoBarra = await barra.evaluate((el) => el.getBoundingClientRect().height);
+  assert.ok(altoBarra < 60, `la barra cabe en una línea (${altoBarra}px)`);
+  if (process.env.CAPTURAS) await page.screenshot({ path: process.env.CAPTURAS + "/masivo-barra.png" });
+  assert.equal(await page.locator("tr", { hasText: "Empleado10 Prueba" }).first().locator("td").first().evaluate((td) => getComputedStyle(td).backgroundColor !== "rgba(0, 0, 0, 0)"), true, "la fila elegida se pinta");
+  await barra.getByRole("button", { name: "Corregir entrada / salida" }).click();
+  const dlgHora = page.getByRole("dialog", { name: "Corregir entrada / salida" });
+  const textoHora = await dlgHora.innerText();
+  assert.match(textoHora, /Empleado10 Prueba[\s\S]*Salida 17:20[\s\S]*Salida 17:00 \(horario\)/);
+  assert.match(textoHora, /Nocturno Prueba[\s\S]*Se omite: ya tiene salida 05:00/);
+  assert.match(textoHora, /Se aplica a 2 · se omiten 1/);
+  if (process.env.CAPTURAS) { await dormir(500); await page.screenshot({ path: process.env.CAPTURAS + "/masivo-salida.png" }); }
+  await dlgHora.getByRole("button", { name: "Aplicar a 2" }).click();
+  await esperarPuts(2);
+  assert.deepEqual(puts, [{ salida: "2026-11-13 17:00:00" }, { salida: "2026-11-13 17:00:00" }]);
+  await page.getByText("2 registros corregidos.").waitFor({ timeout: 10000 });
+  puts.length = 0;
+  // Tipo de registro + nota.
+  await barra.getByRole("button", { name: "Tipo de registro" }).click();
+  const dlgTipo = page.getByRole("dialog", { name: "Cambiar tipo de registro" });
+  assert.match(await dlgTipo.innerText(), /Elige el tipo de registro/);
+  assert.equal(await dlgTipo.getByRole("button", { name: "Nada que aplicar" }).isDisabled(), true);
+  await dlgTipo.getByRole("combobox", { name: "Nuevo tipo" }).selectOption({ label: "Sin Checar" });
+  await dlgTipo.getByRole("textbox", { name: "Nota" }).fill("Paro de línea");
+  await dlgTipo.getByRole("button", { name: "Aplicar a 3" }).click();
+  await esperarPuts(3);
+  assert.ok(puts.every((b) => JSON.stringify(b) === JSON.stringify({ id_tipo_permiso: 2, asistencia: 0, goce_sueldo: 0, notas: "Paro de línea" })), JSON.stringify(puts));
+  await page.getByText("3 registros cambiados de tipo.").waitFor({ timeout: 10000 });
+  puts.length = 0;
+  // Observación.
+  await barra.getByRole("button", { name: "Observación" }).click();
+  const dlgNota = page.getByRole("dialog", { name: "Agregar observación" });
+  await dlgNota.getByRole("textbox", { name: "Observación" }).fill("Corte de luz");
+  await dlgNota.getByRole("button", { name: "Aplicar a 3" }).click();
+  await esperarPuts(3);
+  assert.ok(puts.every((b) => b.notas === "Corte de luz"), JSON.stringify(puts));
+  puts.length = 0;
+  // Agregar comida: solo a quien no checó salida a comer.
+  await barra.getByRole("button", { name: "Quitar selección" }).click();
+  await elegir("SinComida"); await elegir("Empleado10");
+  await barra.getByRole("button", { name: "Agregar comida" }).click();
+  const dlgComida = page.getByRole("dialog", { name: "Agregar comida" });
+  assert.match(await dlgComida.innerText(), /SinComida Prueba[\s\S]*Comida 13:00–14:00[\s\S]*Empleado10 Prueba[\s\S]*Se omite/);
+  const antesComidas = comidas.length;
+  await dlgComida.getByRole("button", { name: "Aplicar a 1" }).click();
+  for (let i = 0; i < 50 && comidas.length === antesComidas; i++) await dormir(100);
+  assert.deepEqual(comidas.at(-1).cuerpo, { salida_comida: "2026-11-13 13:00:00", regreso_comida: "2026-11-13 14:00:00" });
+  assert.match(comidas.at(-1).ruta, /\/checador\/asistencias\/1008\/comida$/);
+  await page.getByText(/Comida agregada a 1 registro/).waitFor({ timeout: 10000 });
+  await barra.getByRole("button", { name: "Quitar selección" }).click();
+  assert.equal(await barra.count(), 0, "sin selección no hay barra");
 
   // 2d) Ordenar por «Horas extra»: primero las por autorizar con más minutos (Extra: 1 h 42 min).
   await page.getByRole("button", { name: /^HORAS EXTRA/ }).click();
