@@ -100,3 +100,14 @@ test("entrada y salida juntas; sin entrada no se manda solo la salida", () => {
   const igual = planHora([base({ entrada: `${F} 08:00:00`, salida: `${F} 17:00:00` })], { campo: "ambas", modo: "horario" });
   assert.equal(igual.omitir[0].motivo, "ya tiene esa entrada y salida");
 });
+
+test("no deja poner una hora que todavía no llega (el reloj rechazaría las checadas siguientes)", () => {
+  const hoy = base({ id: 30, fecha: "2026-11-19", entrada: "2026-11-19 09:00:00", salida: null,
+    hora_entrada_programada: "09:00:00", hora_salida_programada: "18:00:00" });
+  const a12_50 = Date.parse("2026-11-19T18:50:00Z"); // 12:50 en Ciudad de México
+  const p = planHora([hoy], { campo: "salida", modo: "horario", ahora: a12_50 });
+  assert.equal(p.aplicar.length, 0);
+  assert.equal(p.omitir[0].motivo, "esa hora (18:00) aún no llega: su turno sigue abierto");
+  const ambas = planHora([base({ id: 31, fecha: "2026-11-19", entrada: null, salida: null })], { campo: "ambas", modo: "otra", horaEntrada: "08:00", horaSalida: "12:00", ahora: a12_50 });
+  assert.equal(ambas.aplicar.length, 1, "horas ya pasadas sí se aplican");
+});

@@ -39,7 +39,7 @@ function resultado(filas, fn) {
 //    opciones: { campo: "salida" | "entrada" | "ambas", modo: "horario" | "otra", hora, horaEntrada, horaSalida, zonaDe }
 //    Sin checada de entrada no se manda solo la salida: el backend crea la checada del reloj
 //    únicamente cuando recibe la entrada (sola o con la salida). Se pide «Entrada y salida».
-export function planHora(filas, { campo = "salida", modo = "horario", hora, horaEntrada, horaSalida, zonaDe = () => DB_TZ } = {}) {
+export function planHora(filas, { campo = "salida", modo = "horario", hora, horaEntrada, horaSalida, zonaDe = () => DB_TZ, ahora = Date.now() } = {}) {
   const otra = modo === "otra";
   if (otra && campo !== "ambas" && !HORA.test(String(hora ?? ""))) return { aplicar: [], omitir: [], error: "Escribe la hora (HH:MM)." };
   if (otra && campo === "ambas" && (!HORA.test(String(horaEntrada ?? "")) || !HORA.test(String(horaSalida ?? "")))) {
@@ -76,6 +76,11 @@ export function planHora(filas, { campo = "salida", modo = "horario", hora, hora
     }
     const entrada = cambios.entrada ?? r.entrada;
     const salida = cambios.salida ?? r.salida;
+    // (19/11/2026) Una hora que todavía no llega deja una checada «en el futuro» y el reloj rechaza
+    // cualquier checada nueva de esa persona («Existe una checada posterior…») hasta esa hora.
+    const ahoraMin = Math.floor(ahora / 60000);
+    const futura = [cambios.entrada, cambios.salida].find((v) => v && minutos(v) > ahoraMin);
+    if (futura) return { motivo: `esa hora (${local(futura, zona)}) aún no llega: su turno sigue abierto` };
     if (entrada && salida && minutos(salida) <= minutos(entrada)) {
       return { motivo: `la salida quedaría antes de la entrada (${local(entrada, zona)})` };
     }
