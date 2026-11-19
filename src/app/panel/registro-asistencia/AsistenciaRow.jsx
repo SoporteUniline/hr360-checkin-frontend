@@ -1,5 +1,5 @@
 import { TableCell, TableRow } from "@/components/ui/table";
-import { Pencil, Check, X as XIcon } from "lucide-react";
+import { Check, X as XIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import HistorialEmpleadoDialog from "./HistorialEmpleadoDialog";
 import CeldaEditado, { crearFormateadorCambios } from "./CeldaEditado";
@@ -51,6 +51,7 @@ export default function AsistenciaRow({
   onRowClick,
   indiceFestivos = null,
   horasExtra = null,
+  handleActualizarBase,
 }) {
   const fallbackTimezone = useEmpresaTimezone(empresaActiva);
   const userTimezone = registro.zona_horaria || fallbackTimezone;
@@ -134,22 +135,25 @@ export default function AsistenciaRow({
       .join(" ");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // Clic en la fila: abre el panel con las checadas del reloj y la edición juntas
+  // (pedido del 19/11/2026: sin botón «Editar»). En solo lectura, solo las checadas.
   const handleRowClick = (e) => {
     if (isEditing) return;
+    // No disparar desde elementos interactivos dentro de la fila.
+    if (e?.target?.closest?.("button,input,select,a,[role=combobox],[data-no-row-click]")) return;
     if (onRowClick) {
-      // No disparar desde elementos interactivos dentro de la fila
-      if (
-        e?.target?.closest?.(
-          "button,input,select,a,[role=combobox],[data-no-row-click]",
-        )
-      ) {
-        return;
-      }
       onRowClick(registro);
       return;
     }
-    setIsModalOpen(true);
+    if (readOnly) setIsModalOpen(true);
+    else handleEditClick(registro);
   };
+  // Si los datos de la fila se recargan con el panel abierto (p. ej. tras corregir una checada),
+  // el panel toma los valores nuevos sin perder lo que se esté editando.
+  useEffect(() => {
+    if (isEditing) handleActualizarBase?.(registro);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [registro]);
 
   return (
     <>
@@ -198,7 +202,7 @@ export default function AsistenciaRow({
                 <CeldaEditado
                   registro={registro}
                   formatear={crearFormateadorCambios({ tiposPermiso, empleados, zona: userTimezone })}
-                  onVerChecadas={() => setIsModalOpen(true)}
+                  onVerChecadas={() => (readOnly ? setIsModalOpen(true) : handleEditClick(registro))}
                 />
               </TableCell>
             )}
@@ -403,20 +407,6 @@ export default function AsistenciaRow({
                 </span>
               </TableCell>
             )}
-            {!readOnly && isColVisible("acciones") && (
-              <TableCell
-                className="sticky right-0 bg-background z-10 text-center shadow-[-8px_0_8px_-8px_rgba(15,23,42,0.18)]"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <button
-                  onClick={() => handleEditClick(registro)}
-                  className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
-                  title="Editar"
-                >
-                  <Pencil className="h-4 w-4" />
-                </button>
-              </TableCell>
-            )}
         </>
       </TableRow>
 
@@ -435,6 +425,7 @@ export default function AsistenciaRow({
           handleSaveClick={handleSaveClick}
           handleCancelEdit={handleCancelEdit}
           handleRestoreOriginal={handleRestoreOriginal}
+          mutateAsistencia={mutateAsistencia}
         />
       )}
 

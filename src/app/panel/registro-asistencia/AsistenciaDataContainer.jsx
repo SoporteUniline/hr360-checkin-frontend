@@ -241,6 +241,7 @@ export default function AsistenciaDataContainer({
     isSaving,
     handleEditClick,
     handleCancelEdit,
+    handleActualizarBase,
     handleRestoreOriginal,
     handleFieldChange,
     handleSaveClick,
@@ -283,6 +284,7 @@ export default function AsistenciaDataContainer({
           tiposPermiso={tiposPermiso}
           handleEditClick={handleEditClick}
           handleCancelEdit={handleCancelEdit}
+          handleActualizarBase={handleActualizarBase}
           handleRestoreOriginal={handleRestoreOriginal}
           handleFieldChange={handleFieldChange}
           handleSaveClick={handleSaveClick}

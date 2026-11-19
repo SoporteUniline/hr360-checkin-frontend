@@ -155,14 +155,16 @@ try {
   if (process.env.CAPTURAS) await page.screenshot({ path: process.env.CAPTURAS + "/editado-detalle.png" });
   // Desde el detalle se abren las checadas del reloj: original tachada, corregida resaltada.
   await page.getByRole("button", { name: "Ver checadas del reloj de este día" }).click();
-  await page.getByText("Historial de entradas y salidas").waitFor({ timeout: 10000 });
+  // Abre el panel de la fila: checadas del reloj y edición juntas.
+  const panelEditado = page.getByRole("dialog", { name: /Editado Prueba/ });
+  await panelEditado.getByRole("list", { name: "Checadas del reloj" }).waitFor({ timeout: 10000 });
   await page.getByText("Qué cambió").waitFor({ state: "detached", timeout: 5000 }); // el detalle se cierra al abrir el historial
-  const historial = page.getByRole("dialog", { name: /Historial de entradas y salidas/ });
-  const salidaOriginal = historial.locator("td", { hasText: "13:19" }).first();
+  const historial = panelEditado.getByRole("list", { name: "Checadas del reloj" });
+  const salidaOriginal = historial.locator("span.line-through", { hasText: "13:19" }).first();
   await salidaOriginal.waitFor({ timeout: 10000 });
   assert.match(await salidaOriginal.getAttribute("class"), /line-through/);
-  assert.match(await historial.locator("span", { hasText: "17:20" }).first().getAttribute("class"), /bg-amber-50/);
-  if (process.env.CAPTURAS) await page.screenshot({ path: process.env.CAPTURAS + "/editado-checadas.png" });
+  assert.equal(await historial.locator("span.bg-amber-50", { hasText: /^17:20$/ }).count(), 1, "la salida corregida 17:20 va resaltada");
+  if (process.env.CAPTURAS) { await dormir(700); await page.screenshot({ path: process.env.CAPTURAS + "/editado-checadas.png" }); }
   await page.keyboard.press("Escape");
   // Al abrir el historial, el detalle "Qué cambió" se cierra solo; con Escape no queda ninguna ventana.
   await page.waitForFunction(() => !document.querySelector("[role=dialog]"), null, { timeout: 10000 });
@@ -265,7 +267,8 @@ try {
 
   // 4) Editar el nocturno: salida 06:00 debe guardarse al día siguiente (2026-11-14).
   //    La edición abre el panel lateral (ya no se edita dentro de la fila).
-  await noct.getByTitle("Editar").click();
+  assert.equal(await page.getByTitle("Editar").count(), 0, "ya no hay botón Editar: se abre con clic en la fila");
+  await noct.locator("td").first().click();
   const panel = page.getByRole("dialog", { name: /Nocturno Prueba/ });
   await panel.getByLabel("Salida", { exact: true }).fill("06:00");
   if (process.env.CAPTURAS) { await dormir(600); await page.screenshot({ path: process.env.CAPTURAS + "/panel-editar.png" }); }
@@ -278,7 +281,7 @@ try {
   // 4b) Calendario: lunes 16 (festivo en catálogo) guardado como domingo y no festivo.
   //     Al editar se corrige solo; Asistió/Goce siguen al tipo (sin botones sueltos).
   const filaCal = page.locator("tr", { hasText: "Calendario Prueba" }).first();
-  await filaCal.getByTitle("Editar").click();
+  await filaCal.locator("td").first().click();
   const edicionCal = page.getByRole("dialog", { name: /Calendario Prueba/ });
   await edicionCal.getByText("Asistió y Goce los define el tipo.").waitFor({ timeout: 10000 });
   await edicionCal.getByRole("button", { name: "Guardar" }).click();
@@ -313,7 +316,7 @@ try {
 
   assert.deepEqual(errores, [], "sin errores de JavaScript en la página");
   exito = true;
-  console.log("OK · horas extra (autorizar, deshacer, no autorizar, quitar, masivo, filtro del resumen) · panel lateral · domingo/festivo corregidos al editar · Asistió fijo por tipo · Excel sin NIP · columna Editado con detalle y Excel · arranca con todos (sin descarga extra para filtros) · horas en minutos · nocturno +1 día · Exportar 25/25 · edición nocturna al día siguiente · incidencias en h/min");
+  console.log("OK · horas extra (autorizar, deshacer, no autorizar, quitar, masivo, filtro del resumen) · ventana de la fila (horario + checadas + edición) · domingo/festivo corregidos al editar · Asistió fijo por tipo · Excel sin NIP · columna Editado con detalle y Excel · arranca con todos (sin descarga extra para filtros) · horas en minutos · nocturno +1 día · Exportar 25/25 · edición nocturna al día siguiente · incidencias en h/min");
   console.log("Consultas a /checador/asistencias (limit):", pedidosAsistencias.join(", "));
 } finally {
   await browser.close();

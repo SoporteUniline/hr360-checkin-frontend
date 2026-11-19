@@ -61,7 +61,6 @@ export const COLUMNAS_ASISTENCIA = [
   { key: "hrs_comida", label: "Hrs comida", extra: true },
   { key: "notas", label: "Observaciones", extra: false },
   { key: "estado_asistencia", label: "Estado", extra: false },
-  { key: "acciones", label: "Acciones", extra: false },
 ];
 
 const EXTRA_COLUMN_KEYS = new Set(
@@ -84,6 +83,7 @@ export default function AsistenciaTable({
   tiposPermiso,
   handleEditClick,
   handleCancelEdit,
+  handleActualizarBase,
   handleRestoreOriginal,
   handleFieldChange,
   handleSaveClick,
@@ -140,7 +140,6 @@ export default function AsistenciaTable({
   const visibleColumnCount =
     COLUMNAS_ASISTENCIA.filter((col) => {
       if (col.key === "unidad" && empresaActiva !== "all") return false;
-      if (col.key === "acciones" && readOnly) return false;
       return colVisible(col.key);
     }).length + (colVisible("hrs_extra") ? 1 : 0) || 1; // +1: «¿Autorizar?» va con «Horas extra»
 
@@ -635,6 +634,7 @@ export default function AsistenciaTable({
       tiposPermiso={tiposPermiso}
       handleEditClick={handleEditClick}
       handleCancelEdit={handleCancelEdit}
+      handleActualizarBase={handleActualizarBase}
       handleRestoreOriginal={handleRestoreOriginal}
       handleFieldChange={handleFieldChange}
       handleSaveClick={handleSaveClick}
@@ -1139,11 +1139,7 @@ export default function AsistenciaTable({
                     />
                   </TableHead>
                 )}
-                {!readOnly && colVisible("acciones") && (
-                  <TableHead className="sticky right-0 top-0 z-20 h-10 whitespace-nowrap bg-slate-50 text-center align-middle text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500">
-                    Acciones
-                  </TableHead>
-                )}
+                
               </TableRow>
             </TableHeader>
             <TableBody>
