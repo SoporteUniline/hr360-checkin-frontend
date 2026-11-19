@@ -5,6 +5,7 @@
 // real del reloj se conserva y el registro queda «Editado».
 
 import { useState } from "react";
+import { mutate as recargar } from "swr";
 import { useSnackbar } from "notistack";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import axios from "@/lib/axios";
@@ -51,7 +52,11 @@ export default function BotonAgregarComida({ registro, aBaseDeDatos, fechaBase, 
       });
       enqueueSnackbar(`Comida agregada: ${salida}–${regreso}. Su checada original se conserva.`, { variant: "success" });
       setAbierto(false);
-      await onGuardado?.();
+      // (19/11/2026) Refresca también las «Checadas del reloj» de la ventana: antes había que cerrar y abrir.
+      await Promise.all([
+        onGuardado?.(),
+        recargar((clave) => typeof clave === "string" && clave.includes("/checador/reloj/asistencia-por-empleado")),
+      ]);
     } catch (error) {
       enqueueSnackbar(error?.response?.data?.message || "No se pudo agregar la comida.", { variant: "error" });
     } finally {
