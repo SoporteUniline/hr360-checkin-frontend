@@ -32,6 +32,7 @@ function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, p
   let now = Date.now();
   const notifications = [];
   const detectores = [];
+  let videoProps = null;
   const requests = [];
   let texts = [];
   let resolveModels;
@@ -65,7 +66,7 @@ function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, p
     Date: class extends Date { static now() { return now; } },
     React: { createElement(type, props, ...children) {
       texts.push(...children.filter((child) => typeof child === "string"));
-      if (type === "video") props.ref.current = video;
+      if (type === "video") { props.ref.current = video; videoProps = props; }
       if (type === "canvas") props.ref.current = canvas;
       return null;
     } },
@@ -119,7 +120,7 @@ function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, p
     effects.forEach(({ cleanup }) => cleanup?.());
     effects.forEach(({ index, run, deps }) => { slots[index] = { deps, cleanup: run() }; });
   };
-  return { render, video, resolveModels, resolveDetection, timers, startupTimers, notifications, requests, detectores,
+  return { render, video, resolveModels, resolveDetection, timers, startupTimers, notifications, requests, detectores, videoProps: () => videoProps,
     texts: () => texts,
     advance(ms) { now += ms; },
     setGpsFails(value) { gpsFails = value; },
@@ -485,4 +486,12 @@ test("apagar «Cámara siempre encendida» con la cámara ya encendida sí la ap
   env.render();
   assert.equal(env.counts().posts, 1);
   assert.ok(env.counts().stops > 0, "la cámara se apaga al checar");
+});
+
+test("la cámara frontal se ve en espejo (girar a la izquierda se ve a la izquierda)", async () => {
+  const env = setup();
+  env.render();
+  await tick();
+  env.render();
+  assert.equal(env.videoProps()?.style?.transform, "scaleX(-1)");
 });
