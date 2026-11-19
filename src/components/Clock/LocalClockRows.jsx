@@ -19,7 +19,7 @@ export default function LocalClockRows({ events, columns, timezone }) {
         <div className="flex max-w-[calc(100vw-5rem)] flex-wrap items-start justify-between gap-2 whitespace-normal md:max-w-none">
           <div className="min-w-0">
             <p className="text-sm font-semibold text-slate-800">{event.employeeName || event.alias || 'Identidad por validar'}</p>
-            <p className="mt-1 text-xs text-slate-500">{new Date(event.captured_at).toLocaleString('es-MX', { timeZone: timezone })} · {actions[event.action] || 'Movimiento por validar'}</p>
+            <p className="mt-1 text-xs text-slate-500">{new Date(event.captured_at).toLocaleString('es-MX', { timeZone: timezone, dateStyle: 'short', timeStyle: 'short', hourCycle: 'h23' })} · {actions[event.action] || 'Movimiento por validar'}</p>
             {event.status === 'review' && event.error && <p className="mt-1 text-xs text-slate-600">{event.error}</p>}
             {event.status === 'pending' && <p className="mt-1 text-xs text-amber-700">{motivoPendiente(event)}</p>}
           </div>

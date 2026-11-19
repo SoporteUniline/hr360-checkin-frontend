@@ -89,8 +89,10 @@ export default function RegistroEntradasSalidas() {
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
 
+  // (19/11/2026) La más reciente arriba: «fechaEntrada» ordena solo por día y dentro del mismo día
+  // las checadas salían de la más vieja a la más nueva; «horaEntrada» usa fecha y hora completas.
   const getDefaultSortConfig = () => ({
-    sortBy: "fechaEntrada",
+    sortBy: "horaEntrada",
     sortOrder: "desc",
   });
 
