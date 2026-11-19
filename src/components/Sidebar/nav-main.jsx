@@ -178,6 +178,12 @@ const menuGroups = [
         icon: ClipboardCheck,
       },
       {
+        title: "Turnos extra",
+        url: "/panel/turnos-extra",
+        rol: "Recruiter",
+        icon: CalendarClock,
+      },
+      {
         title: "Entradas y salidas",
         url: "/panel/registro-de-entradas-y-salidas",
         rol: "Recruiter",
