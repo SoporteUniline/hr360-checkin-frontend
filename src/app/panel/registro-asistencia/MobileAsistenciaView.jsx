@@ -17,6 +17,10 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/context/AuthContext";
 import MobileFiltersDrawer from "./MobileFiltersDrawer";
 import MobileEmpleadoDetalle from "./MobileEmpleadoDetalle";
+import { estadoHorasExtra } from "@/lib/asistencia/horasExtra.mjs";
+import { formatearMinutos, sinSalidaAComer } from "@/lib/asistencia/jornada.mjs";
+import ClockNavigation from '@/components/Clock/ClockNavigation';
+import LocalClockCaptures from '@/components/Clock/LocalClockCaptures';
 import { ArrowLeft, ArrowRight } from "lucide-react";
 
 dayjs.extend(utc);
@@ -76,7 +80,12 @@ const TABS = [
   { key: "Tardanza", label: "Tarde", dotClass: "bg-amber-500" },
   // { key: "Pendiente", label: "Pendiente", dotClass: "bg-slate-400" },
   { key: "Ausente", label: "Ausente", dotClass: "bg-red-500" },
+  { key: "extra", label: "H. extra", dotClass: "bg-brand-accent" },
 ];
+
+// Mismo cálculo que escritorio: tiempo después de la salida del horario.
+const infoExtra = (r) => estadoHorasExtra(r, r.zona_horaria || DB_TZ);
+const tieneExtra = (r) => infoExtra(r).estado !== "sin";
 
 const GRUPO_CONFIG = {
   Presente: {
@@ -125,6 +134,7 @@ function EmpleadoCard({ registro, index, totalCount, onClick }) {
     : null;
 
   const esTarde = registro.estadoAsistencia === "Tardanza";
+  const extra = infoExtra(registro);
 
   return (
     <button
@@ -145,6 +155,14 @@ function EmpleadoCard({ registro, index, totalCount, onClick }) {
           {registro.departamento}
           {empresa ? ` · ${empresa}` : ""}
         </p>
+        {extra.estado === "pendiente" && (
+          <p className="mt-0.5 truncate text-[11px] font-semibold text-orange-700">
+            {formatearMinutos(extra.minutos)} extra por autorizar
+          </p>
+        )}
+        {sinSalidaAComer(registro) && (
+          <p className="mt-0.5 truncate text-[11px] font-semibold text-amber-700">⚠ No marcó salida a comer</p>
+        )}
       </div>
 
       {/* Times */}
@@ -241,6 +259,7 @@ function GrupoSection({
 }
 
 export default function MobileAsistenciaView({
+  localEvents = [],
   registros = [],
   data,
   mutate,
@@ -342,6 +361,7 @@ export default function MobileAsistenciaView({
   // Local tab filtering (client-side, no API call)
   const displayedRegistros = useMemo(() => {
     if (activeTab === "all") return registros;
+    if (activeTab === "extra") return registros.filter(tieneExtra);
     if (activeTab === "Pendiente")
       return registros.filter(
         (r) => !r.estadoAsistencia || r.estadoAsistencia === "Pendiente",
@@ -376,6 +396,7 @@ export default function MobileAsistenciaView({
         (r) => !r.estadoAsistencia || r.estadoAsistencia === "Pendiente",
       ).length,
       Ausente: registros.filter((r) => r.estadoAsistencia === "Ausente").length,
+      extra: registros.filter(tieneExtra).length,
     }),
     [registros],
   );
@@ -405,6 +426,7 @@ export default function MobileAsistenciaView({
     <div className="flex flex-col h-full bg-gray-50 overflow-hidden">
       {/* ─── Header ─── */}
       <div className="bg-white px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 shrink-0">
+        <div className="mb-3"><ClockNavigation companyId={empresaActiva} /></div>
         {/* Title row */}
         <div className="mb-3">
           <h1 className="text-xl font-extrabold tracking-tight text-gray-900 leading-tight">
@@ -641,6 +663,7 @@ export default function MobileAsistenciaView({
 
       {/* ─── List ─── */}
       <div className="flex-1 overflow-y-auto">
+        <div className="px-3 py-2"><LocalClockCaptures events={localEvents} /></div>
         {isLoading && registros.length === 0 && (
           <div className="flex flex-col gap-3 p-3">
             {[...Array(8)].map((_, i) => (

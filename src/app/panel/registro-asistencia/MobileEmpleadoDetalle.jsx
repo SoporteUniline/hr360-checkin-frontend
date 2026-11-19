@@ -23,6 +23,15 @@ import { useAuth, useEmpresaTimezone } from "@/context/AuthContext";
 import useAsistenciaActions from "@/hooks/useAsistenciaActions";
 import useTiposPermisoData from "@/hooks/useTiposPermisoData";
 import useEmpleadosData from "@/hooks/useEmpleadosData";
+import { formatearMinutos, minutosTrabajados, salidaEsDiaSiguiente, sumarDias } from "@/lib/asistencia/jornada.mjs";
+import { cambiosRegistro } from "@/lib/asistencia/cambios.mjs";
+import { crearFormateadorCambios } from "./CeldaEditado";
+import HorasExtraMovil from "./HorasExtraMovil";
+import { quienCuando } from "@/lib/asistencia/historial.mjs";
+import useHorasExtra from "@/hooks/useHorasExtra";
+import {
+  cambiosAutorizar, cambiosNoAutorizar, cambiosQuitar, estadoHorasExtra,
+} from "@/lib/asistencia/horasExtra.mjs";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -78,13 +87,16 @@ function getInitials(nombre = "", apellido = "") {
   return `${nombre[0] || ""}${apellido[0] || ""}`.toUpperCase();
 }
 
-function calcHours(entrada, salida) {
-  if (!entrada) return null;
-  const start = dayjs.tz(entrada, DB_TZ);
-  const end = salida ? dayjs.tz(salida, DB_TZ) : dayjs();
-  const mins = end.diff(start, "minute");
-  if (mins <= 0) return null;
-  return `${Math.floor(mins / 60)}:${String(mins % 60).padStart(2, "0")}`;
+// Con salida: mismo cálculo que la tabla (minutos exactos, nocturno, comida no pagada).
+// Sin salida (jornada en curso): tiempo transcurrido hasta ahora.
+function calcHours(registro) {
+  if (!registro?.entrada) return null;
+  if (registro.salida) {
+    const minutos = minutosTrabajados(registro);
+    return minutos == null ? null : formatearMinutos(minutos);
+  }
+  const mins = dayjs().diff(dayjs.tz(registro.entrada, DB_TZ), "minute");
+  return mins > 0 ? formatearMinutos(mins) : null;
 }
 
 const ESTADO_STYLES = {
@@ -173,6 +185,15 @@ export default function MobileEmpleadoDetalle({
     }
   });
 
+  // Horas extra: al guardar se actualiza la copia local para ver el cambio sin cerrar.
+  const hx = useHorasExtra(mutateAsistencia, {
+    onGuardado: (items) =>
+      setLocalRegistro((prev) => {
+        const item = items.find((i) => i.registro.id === prev?.id);
+        return item ? { ...prev, ...item.cambios } : prev;
+      }),
+  });
+
   const isEditing = localRegistro && editingRowId === localRegistro.id;
   const currentData = isEditing ? editingRowData : localRegistro;
 
@@ -210,10 +231,25 @@ export default function MobileEmpleadoDetalle({
   const salidaFmt = display.salida
     ? dayjs.tz(display.salida, DB_TZ).tz(tz).format("HH:mm")
     : null;
-  const horasTrabajadas = calcHours(display.entrada, display.salida);
+  const horasTrabajadas = calcHours(display);
+  const zonaRegistro = display.zona_horaria || tz;
+  const infoExtra = estadoHorasExtra(display, zonaRegistro);
+  const autorizadorExtra = [display.nombre_extra_autorizador, display.apellido_paterno_extra_autorizador]
+    .filter(Boolean)
+    .join(" ") || (() => {
+      const p = empleados.find((e) => String(e.id_empleado) === String(display.extras_autorizadas_por));
+      return p ? `${p.nombre} ${p.apellido_paterno ?? ""}`.trim() : "";
+    })();
+  const salidaProgramadaFmt = display.hora_salida_programada
+    ? String(display.hora_salida_programada).slice(0, 5)
+    : null;
+  const cambiosDisplay = cambiosRegistro(
+    display,
+    crearFormateadorCambios({ tiposPermiso: tiposPermisoData, empleados, zona: tz }),
+  );
 
   const estadoAsistenciaLocal = (() => {
-    if (display.asistencia !== 1) return "Ausente";
+    if (!Number(display.asistencia)) return "Ausente";
 
     if (display.entrada && display.hora_entrada_programada) {
       const [h, m, s] = display.hora_entrada_programada.split(":").map(Number);
@@ -246,7 +282,7 @@ export default function MobileEmpleadoDetalle({
 
   // Edit mode — time input helpers
   const fechaBase = currentData?.fecha
-    ? dayjs.tz(currentData.fecha, DB_TZ).tz(tz).format("YYYY-MM-DD")
+    ? currentData.fecha.slice(0, 10)
     : dayjs().format("YYYY-MM-DD");
 
   const entradaEditFmt = currentData?.entrada
@@ -269,7 +305,24 @@ export default function MobileEmpleadoDetalle({
         .tz(DB_TZ)
         .format("YYYY-MM-DD HH:mm:ss"),
     );
+    // Si ya hay salida, se recalcula su día respecto a la nueva entrada.
+    if (salidaEditFmt) {
+      const nuevaSalida = salidaConFecha(hora, salidaEditFmt);
+      const minuto = (v) => dayjs.tz(v, DB_TZ).format("YYYY-MM-DD HH:mm");
+      if (minuto(nuevaSalida) !== minuto(currentData.salida)) handleFieldChange("salida", nuevaSalida);
+    }
   };
+
+  // Turno nocturno: si la salida es menor o igual a la entrada, cae al día siguiente.
+  const salidaConFecha = (horaEntrada, hora) =>
+    dayjs
+      .tz(`${salidaEsDiaSiguiente(horaEntrada, hora) ? sumarDias(fechaBase, 1) : fechaBase} ${hora}`, tz)
+      .tz(DB_TZ)
+      .format("YYYY-MM-DD HH:mm:ss");
+  const salidaDiaSiguiente =
+    Boolean(currentData?.entrada && currentData?.salida) &&
+    dayjs.tz(currentData.salida, DB_TZ).tz(tz).format("YYYY-MM-DD") >
+      dayjs.tz(currentData.entrada, DB_TZ).tz(tz).format("YYYY-MM-DD");
 
   const onSalidaChange = (hora) => {
     if (!currentData?.entrada) {
@@ -277,15 +330,7 @@ export default function MobileEmpleadoDetalle({
       return;
     }
 
-    handleFieldChange(
-      "salida",
-      hora
-        ? dayjs
-            .tz(`${fechaBase} ${hora}`, tz)
-            .tz(DB_TZ)
-            .format("YYYY-MM-DD HH:mm:ss")
-        : null,
-    );
+    handleFieldChange("salida", hora ? salidaConFecha(entradaEditFmt, hora) : null);
   };
 
   return (
@@ -349,7 +394,7 @@ export default function MobileEmpleadoDetalle({
                 {display.tipo_registro_nombre || "Turno regular"}
               </span>
               <span className="bg-gray-50 border border-gray-200 text-gray-600 text-xs font-medium px-3 py-1 rounded-full">
-                Goce: {display.goce_sueldo ? "Sí" : "No"}
+                Goce: {Number(display.goce_sueldo) ? "Sí" : "No"}
               </span>
             </div>
           </div>
@@ -402,7 +447,7 @@ export default function MobileEmpleadoDetalle({
 
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-sm text-gray-700">
-                    {currentData.correccion ? "Corregida" : "Sin corregir"}
+                    {Number(currentData.correccion) ? "Editado" : "Sin editar"}
                   </span>
                   {currentData.valores_originales && (
                     <button
@@ -429,7 +474,6 @@ export default function MobileEmpleadoDetalle({
                       <Input
                         type="time"
                         value={entradaEditFmt}
-                        max={salidaEditFmt || undefined}
                         onChange={(e) => onEntradaChange(e.target.value)}
                       />
                     </div>
@@ -440,9 +484,11 @@ export default function MobileEmpleadoDetalle({
                       <Input
                         type="time"
                         value={salidaEditFmt}
-                        min={entradaEditFmt || undefined}
                         onChange={(e) => onSalidaChange(e.target.value)}
                       />
+                      {salidaDiaSiguiente && (
+                        <p className="mt-1 text-[11px] font-semibold text-blue-600">+1 día</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -453,18 +499,23 @@ export default function MobileEmpleadoDetalle({
                     Estado
                   </p>
                   <div className="bg-white rounded-2xl overflow-hidden border border-gray-100">
+                    {/* Asistió y goce los define el tipo de registro; no se mueven por separado. */}
                     <ToggleRow
                       label="Asistió"
-                      checked={currentData.asistencia}
-                      onChange={(val) => handleFieldChange("asistencia", val)}
+                      sublabel="Lo define el tipo de registro"
+                      checked={Boolean(Number(currentData.asistencia))}
+                      onChange={() => {}}
+                      disabled
                     />
                     <ToggleRow
                       label="Goce de sueldo"
-                      checked={currentData.goce_sueldo}
-                      onChange={(val) => handleFieldChange("goce_sueldo", val)}
+                      sublabel="Lo define el tipo de registro"
+                      checked={Boolean(Number(currentData.goce_sueldo))}
+                      onChange={() => {}}
+                      disabled
                     />
                     <ToggleRow
-                      label="Horas extra"
+                      label="Horas extra autorizadas"
                       checked={currentData.hrs_extra}
                       onChange={(val) => handleFieldChange("hrs_extra", val)}
                     />
@@ -664,9 +715,14 @@ export default function MobileEmpleadoDetalle({
                   >
                     {salidaFmt ? salidaFmt.replace(":", " : ") : "— : —"}
                   </div>
-                  {!salidaFmt && (
+                  {infoExtra.estado === "no_autorizada" && infoExtra.salidaReloj && infoExtra.salidaReloj !== display.salida && (
+                    <div className="text-[11px] text-gray-400 line-through mt-1" title="Checada real del reloj (se conserva)">
+                      {dayjs.tz(infoExtra.salidaReloj, DB_TZ).tz(zonaRegistro).format("HH:mm")} reloj
+                    </div>
+                  )}
+                  {!salidaFmt && salidaProgramadaFmt && (
                     <div className="text-[10px] text-gray-400 mt-1">
-                      Programada 17:00
+                      Programada {salidaProgramadaFmt}
                     </div>
                   )}
                 </div>
@@ -687,7 +743,7 @@ export default function MobileEmpleadoDetalle({
                     H. Extra
                   </div>
                   <div className="text-base font-extrabold text-gray-900 mt-0.5 tabular-nums">
-                    {display.hrs_extra ? "Sí" : "0:00"}
+                    {infoExtra.minutos > 0 && infoExtra.estado !== "sin" ? formatearMinutos(infoExtra.minutos) : "—"}
                   </div>
                 </div>
                 <div className="flex-1">
@@ -700,6 +756,29 @@ export default function MobileEmpleadoDetalle({
                 </div>
               </div>
             </div>
+
+            <HorasExtraMovil
+              key={`${display.id}-${infoExtra.estado}`}
+              registro={display}
+              info={infoExtra}
+              autorizador={autorizadorExtra}
+              guardando={hx.guardando}
+              onAutorizar={({ forma, notas }) =>
+                hx.guardar(
+                  [{ registro: display, cambios: cambiosAutorizar({ forma, notas, idAutorizador: hx.usuario.idEmpleado }) }],
+                  "Horas extra autorizadas.",
+                )
+              }
+              onNoAutorizar={() =>
+                hx.guardar(
+                  [{ registro: display, cambios: cambiosNoAutorizar(display, { quien: hx.usuario.nombre, zona: zonaRegistro }) }],
+                  "No autorizadas. Se paga hasta la salida del horario.",
+                )
+              }
+              onQuitar={() =>
+                hx.guardar([{ registro: display, cambios: cambiosQuitar(display, zonaRegistro) }], "Decisión quitada.")
+              }
+            />
 
             {/* Notes */}
             {display.notas && (
@@ -721,8 +800,8 @@ export default function MobileEmpleadoDetalle({
                   { label: "Tipo", value: display.tipo_registro_nombre },
                   { label: "Departamento", value: display.departamento },
                   {
-                    label: "Corrección",
-                    value: display.correccion ? "Sí" : "No",
+                    label: "Editado",
+                    value: Number(display.correccion) ? "Sí" : "No",
                   },
                   { label: "Estado", value: display.estado },
                 ].map(({ label, value }) => (
@@ -737,6 +816,26 @@ export default function MobileEmpleadoDetalle({
                   </div>
                 ))}
               </div>
+              {cambiosDisplay.length > 0 && (
+                <div className="mt-3 border-t border-gray-100 pt-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700 mb-2">
+                    Qué cambió
+                  </p>
+                  <ul className="space-y-2">
+                    {cambiosDisplay.map((c) => (
+                      <li key={c.campo} className="text-sm">
+                        <span className="text-gray-500">{c.etiqueta}: </span>
+                        <span className="text-gray-400 line-through">{c.antes}</span>
+                        <span className="mx-1 text-gray-400">→</span>
+                        <span className="font-semibold text-gray-900">{c.despues}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-[11px] text-gray-500">
+                    Quién y cuándo: {display.ultimo_cambio ? quienCuando(display.ultimo_cambio) : "anterior al historial (no se sabe quién)."}
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="h-6" />

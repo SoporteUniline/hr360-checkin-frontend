@@ -12,10 +12,12 @@ import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import FormularioAsistenciasMasivas from "@/components/FormularioAsistenciasMasivas";
 import AccesosRapidos from "@/components/AccesosRapidos";
+import ClockNavigation from '@/components/Clock/ClockNavigation';
 import {
   CalendarDays,
   ChevronDown,
   ClipboardCheck,
+  Clock3,
   Grid3x3,
   Layers,
   List,
@@ -42,6 +44,7 @@ import ColumnasSelector, {
 } from "@/components/tabla/ColumnasSelector";
 import { COLUMNAS_ASISTENCIA } from "./AsistenciaTable";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
+import { LIMITE_TODOS } from "@/lib/asistencia/consultaPeriodo.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -71,7 +74,9 @@ export default function ControlAsistencia() {
   const [fechaInicio, setFechaInicio] = useState(initialDate);
   const [fechaFin, setFechaFin] = useState(initialDate);
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  // Escritorio arranca en "Todos los registros": se ve el periodo completo y los
+  // filtros por columna se aplican sobre todo. Celular conserva páginas de 500.
+  const [limit, setLimit] = useState(LIMITE_TODOS);
   const [filtroEmpleado, setFiltroEmpleado] = useState(
     searchParams.get("empleado") || "",
   );
@@ -83,6 +88,7 @@ export default function ControlAsistencia() {
   const [soloPresentes, setSoloPresentes] = useState(false);
   const [soloAusentes, setSoloAusentes] = useState(false);
   const [horasExtra, setHorasExtra] = useState(false);
+  const [sinComida, setSinComida] = useState(false);
   const [sinGoceDeSueldo, setSinGoceDeSueldo] = useState(false);
   const [diasFestivos, setDiasFestivos] = useState(false);
   const [requiereAutorizacion, setRequiereAutorizacion] = useState(false);
@@ -90,7 +96,7 @@ export default function ControlAsistencia() {
 
   // Nueva UX de escritorio: rango con modal, agrupación, columnas y detalle
   const [rangoOpen, setRangoOpen] = useState(false);
-  const [vista, setVista] = useState("lista"); // "lista" | "matriz"
+  const [vista, setVista] = useState("lista"); // "lista" | "matriz" | "horas"
   const [rangoEtiqueta, setRangoEtiqueta] = useState("Hoy");
   const [agrupar, setAgrupar] = useState(null);
   const [visibleColumns, setVisibleColumns] = useState(null);
@@ -121,7 +127,7 @@ export default function ControlAsistencia() {
   // al nuevo límite.
   useEffect(() => {
     setPage(1);
-    setLimit(isMobile ? 500 : 10);
+    setLimit(isMobile ? 500 : LIMITE_TODOS);
   }, [isMobile]);
 
   const [modoFormulario, setModoFormulario] = useState(false);
@@ -226,7 +232,8 @@ export default function ControlAsistencia() {
     setPage(1);
   };
 
-  const { ui, data, mutate } = AsistenciaDataContainer({
+  const { ui, data, mutate, localEvents, resumenHorasExtra, totalSinComida } = AsistenciaDataContainer({
+    sinComida,
     idEmpresa,
     empresaActiva,
     fechaInicio,
@@ -270,6 +277,7 @@ export default function ControlAsistencia() {
         )}
         <div className="-m-5 h-[calc(100dvh-3.5rem)] overflow-hidden">
           <MobileAsistenciaView
+            localEvents={localEvents}
             registros={registros}
             data={data}
             mutate={mutate}
@@ -309,6 +317,7 @@ export default function ControlAsistencia() {
   // toolbar unificada (búsqueda + rango modal + agrupar + columnas) y vistas.
   return (
     <div className="space-y-5">
+      <ClockNavigation companyId={empresaActiva} />
 
       <div>
         <EncabezadoPagina
@@ -335,6 +344,10 @@ export default function ControlAsistencia() {
         setSoloAusentes={setSoloAusentes}
         horasExtra={horasExtra}
         setHorasExtra={setHorasExtra}
+        resumenHorasExtra={resumenHorasExtra}
+        sinComida={sinComida}
+        setSinComida={setSinComida}
+        totalSinComida={totalSinComida}
         filtroEstadoAsistencia={filtroEstadoAsistencia}
         setFiltroEstadoAsistencia={setFiltroEstadoAsistencia}
         setPage={setPage}
@@ -391,6 +404,18 @@ export default function ControlAsistencia() {
           >
             <Grid3x3 className="h-4 w-4" />
             Matriz
+          </button>
+          <button
+            type="button"
+            onClick={() => setVista("horas")}
+            className={`flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold transition-colors ${
+              vista === "horas"
+                ? "bg-[#2563EB] text-white"
+                : "bg-white text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            <Clock3 className="h-4 w-4" />
+            Horas
           </button>
         </div>
 
