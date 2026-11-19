@@ -81,3 +81,21 @@ test("horas extra: solo pendientes; autorizar o no autorizar (salida al horario)
   assert.equal(no.aplicar[0].cambios.salida, `${F} 17:00:00`);
   assert.match(no.aplicar[0].cambios.notas_hrs_extra, /No autorizadas por Laura Gómez · salida del reloj 2026-11-18 18:42/);
 });
+
+test("entrada y salida juntas; sin entrada no se manda solo la salida", () => {
+  const vacio = base({ id: 20, entrada: null, salida: null });
+  const soloSalida = planHora([vacio], { campo: "salida", modo: "horario" });
+  assert.equal(soloSalida.omitir[0].motivo, "no tiene entrada: usa «Entrada y salida»");
+  const ambas = planHora([vacio, auto, noche], { campo: "ambas", modo: "horario" });
+  assert.deepEqual(ambas.aplicar.map((a) => [a.registro.id, a.cambios, a.despues]), [
+    [20, { entrada: `${F} 08:00:00`, salida: `${F} 17:00:00` }, "08:00 – 17:00 (horario)"],
+    [2, { entrada: `${F} 08:00:00`, salida: `${F} 17:00:00` }, "08:00 – 17:00 (horario)"],
+    [3, { entrada: `${F} 22:00:00`, salida: "2026-11-19 06:00:00" }, "22:00 – 06:00 (horario)"],
+  ]);
+  assert.equal(ambas.aplicar[0].antes, "— – —");
+  const otra = planHora([vacio], { campo: "ambas", modo: "otra", horaEntrada: "22:00", horaSalida: "06:00" });
+  assert.deepEqual(otra.aplicar[0].cambios, { entrada: `${F} 22:00:00`, salida: "2026-11-19 06:00:00" });
+  assert.ok(planHora([vacio], { campo: "ambas", modo: "otra", horaEntrada: "08:00" }).error);
+  const igual = planHora([base({ entrada: `${F} 08:00:00`, salida: `${F} 17:00:00` })], { campo: "ambas", modo: "horario" });
+  assert.equal(igual.omitir[0].motivo, "ya tiene esa entrada y salida");
+});
