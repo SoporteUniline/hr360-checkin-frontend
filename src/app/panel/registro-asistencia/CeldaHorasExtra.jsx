@@ -68,7 +68,7 @@ function DetalleAutorizar({ registro, minutos, onAutorizar, children }) {
 export default function CeldaHorasExtra({ info }) {
   const { estado, minutos } = info;
   if (estado === "sin") {
-    return <span className="text-slate-300" title={`Sin tiempo después del horario (cuenta desde ${UMBRAL_MINUTOS} min)`}>—</span>;
+    return <span className="text-slate-300" title={`Sin tiempo trabajado de más (cuenta desde ${UMBRAL_MINUTOS} min)`}>—</span>;
   }
   const texto = minutos != null ? formatearMinutos(minutos) : "Sí";
   return (
@@ -77,7 +77,7 @@ export default function CeldaHorasExtra({ info }) {
         className={`font-semibold tabular-nums ${
           estado === "pendiente" ? "text-orange-700" : estado === "autorizada" ? "text-emerald-700" : "text-slate-400 line-through"
         }`}
-        title={estado === "no_autorizada" ? "No autorizadas: se paga hasta la salida del horario" : undefined}
+        title={estado === "no_autorizada" ? "No autorizadas: queda la constancia; si se quedó después de su horario, se paga hasta la salida del horario" : undefined}
       >
         {texto}
       </span>

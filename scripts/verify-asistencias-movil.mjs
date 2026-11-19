@@ -35,7 +35,7 @@ const reg = (i, extra) => ({
   id: 2000 + i, id_empleado: 300 + i, nombre: `Movil${i}`, apellido_paterno: "Prueba", nip: String(500 + i),
   departamento: "Operación", unidad_negocio: "Matriz", zona_horaria: "America/Mexico_City", fecha: hoy,
   tipo_registro_nombre: "Asistencia", id_tipo_permiso: 14, asistencia: 1, goce_sueldo: 1, correccion: 0, estadoAsistencia: "Presente",
-  hrs_comida: 1, hora_entrada_programada: "08:00:00", hora_salida_programada: "17:00:00",
+  hrs_comida: 0, hora_entrada_programada: "08:00:00", hora_salida_programada: "17:00:00",
   entrada: `${hoy} 08:00:00`, salida: `${hoy} 17:00:00`, ...extra,
 });
 const registros = [

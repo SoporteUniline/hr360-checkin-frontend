@@ -30,7 +30,7 @@ let id = 1000;
 const reg = (nombre, n, salida, o = {}) => ({
   id: id++, id_empleado: o.id_empleado ?? 200, nombre, apellido_paterno: "Prueba", apellido_materno: "", nip: "1",
   departamento: "Producción", unidad_negocio: "Matriz", zona_horaria: "America/Mexico_City", fecha: dia(n),
-  tipo_registro_nombre: "Asistencia", id_tipo_permiso: 14, asistencia: 1, correccion: 0, estadoAsistencia: "Presente", hrs_comida: 1,
+  tipo_registro_nombre: "Asistencia", id_tipo_permiso: 14, asistencia: 1, correccion: 0, estadoAsistencia: "Presente", hrs_comida: 0,
   hora_entrada_programada: "08:00:00", hora_salida_programada: "17:00:00",
   entrada: `${dia(n)} 08:00:00`, salida: `${dia(n)} ${salida}:00`, hrs_extra: 0, ...o,
 });

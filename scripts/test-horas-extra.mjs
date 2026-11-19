@@ -21,12 +21,26 @@ test("minutos después del horario; llegar temprano no cuenta", () => {
   assert.equal(minutosDespuesDelHorario({ ...base, hora_salida_programada: null }), null);
 });
 
-test("estado: pendiente desde 15 min, sin por debajo, autorizada con hrs_extra", () => {
-  assert.deepEqual(estadoHorasExtra(base), { estado: "pendiente", minutos: 102 });
-  assert.equal(estadoHorasExtra({ ...base, salida: "2026-11-18 17:14:00" }).estado, "sin");
-  assert.equal(estadoHorasExtra({ ...base, salida: "2026-11-18 17:15:00" }).estado, "pendiente");
-  assert.deepEqual(estadoHorasExtra({ ...base, hrs_extra: "1" }), { estado: "autorizada", minutos: 102 });
+test("estado: lo trabajado de más (llegó 07:58, salió 18:42 = 1 h 44 min); desde 15 min; autorizada con hrs_extra", () => {
+  assert.deepEqual(estadoHorasExtra(base), { estado: "pendiente", minutos: 104 });
+  const exacto = { ...base, entrada: "2026-11-18 08:00:00" };
+  assert.equal(estadoHorasExtra({ ...exacto, salida: "2026-11-18 17:14:00" }).estado, "sin");
+  assert.equal(estadoHorasExtra({ ...exacto, salida: "2026-11-18 17:15:00" }).estado, "pendiente");
+  assert.deepEqual(estadoHorasExtra({ ...base, hrs_extra: "1" }), { estado: "autorizada", minutos: 104 });
   assert.deepEqual(estadoHorasExtra({ ...base, hrs_extra: 1, salida: "2026-11-18 16:00:00" }), { estado: "autorizada", minutos: null });
+});
+
+test("llegar antes cuenta; no checar comida cuenta; salir antes lo compensa", () => {
+  // Llegó 07:30 y salió a su hora: 30 min de más.
+  assert.deepEqual(estadoHorasExtra({ ...base, entrada: "2026-11-18 07:30:00", salida: "2026-11-18 17:00:00" }), { estado: "pendiente", minutos: 30 });
+  // Horario 09:00–16:00 con comida 13:00–14:00 (6 h); checó 09:00–16:00 en un solo tramo: 1 h de más.
+  const sinComida = { ...base, hora_entrada_programada: "09:00", hora_salida_programada: "16:00",
+    hora_salida_comida_programada: "13:00", hora_regreso_comida_programada: "14:00",
+    entrada: "2026-11-18 09:00:00", salida: "2026-11-18 16:00:00",
+    tramos_checadas: [{ entrada: "2026-11-18 09:00:00", salida: "2026-11-18 16:00:00" }], minutos_trabajados_checadas: 420 };
+  assert.deepEqual(estadoHorasExtra(sinComida), { estado: "pendiente", minutos: 60 });
+  // Llegó 1 h antes pero se fue 1 h antes: no hay tiempo de más.
+  assert.equal(estadoHorasExtra({ ...base, entrada: "2026-11-18 07:00:00", salida: "2026-11-18 16:00:00" }).estado, "sin");
 });
 
 test("turno nocturno: la salida del horario es al día siguiente", () => {
@@ -50,12 +64,21 @@ test("no autorizar: salida al horario + constancia; se reconoce y se deshace", (
   });
   // Con la constancia en notas (sin valores_originales)
   const guardado = { ...base, ...cambios };
-  assert.deepEqual(estadoHorasExtra(guardado), { estado: "no_autorizada", minutos: 102, salidaReloj: "2026-11-18 18:42:00" });
-  // Con valores_originales del backend (JSON en texto)
+  assert.deepEqual(estadoHorasExtra(guardado), { estado: "no_autorizada", minutos: 104, salidaReloj: "2026-11-18 18:42:00" });
+  // Con valores_originales del backend (JSON en texto), registro anterior sin constancia
   const conOriginal = { ...base, salida: "2026-11-18 17:00:00", valores_originales: JSON.stringify({ salida: "2026-11-18 18:42:00" }) };
-  assert.equal(estadoHorasExtra(conOriginal).estado, "no_autorizada");
+  assert.equal(estadoHorasExtra({ ...conOriginal, entrada: "2026-11-18 08:00:00" }).estado, "no_autorizada");
   assert.deepEqual(cambiosQuitar(guardado), { salida: "2026-11-18 18:42:00", notas_hrs_extra: null });
   assert.equal(cambiosNoAutorizar({ ...base, salida: null }), null);
+});
+
+test("no autorizar a quien salió a su hora (llegó antes / no checó comida): no mueve la salida", () => {
+  const temprano = { ...base, entrada: "2026-11-18 07:30:00", salida: "2026-11-18 17:00:00" };
+  const cambios = cambiosNoAutorizar(temprano, { quien: "Laura Gómez" });
+  assert.deepEqual(cambios, { hrs_extra: 0, notas_hrs_extra: "No autorizadas por Laura Gómez · salida del reloj 2026-11-18 17:00" });
+  const guardado = { ...temprano, ...cambios };
+  assert.deepEqual(estadoHorasExtra(guardado), { estado: "no_autorizada", minutos: 30, salidaReloj: "2026-11-18 17:00:00" });
+  assert.deepEqual(cambiosQuitar(guardado), { notas_hrs_extra: null });
 });
 
 test("una salida corregida a menos sin horas extra originales no es «no autorizada»", () => {

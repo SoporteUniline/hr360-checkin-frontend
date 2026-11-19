@@ -73,7 +73,8 @@ test("observación: agregar al final o reemplazar; no duplica", () => {
 
 test("horas extra: solo pendientes; autorizar o no autorizar (salida al horario)", () => {
   const extra = base({ id: 8, salida: `${F} 18:42:00` });
-  const p = planHorasExtra([extra, base(), base({ id: 10, salida: `${F} 19:00:00`, hrs_extra: 1 })], { decision: "autorizar", forma: "Tiempo por tiempo", idAutorizador: 7 });
+  // Sin tiempo de más: 08:02–16:05 son 8 h 3 min de 8 h programadas (comida de 13 a 14 en su horario).
+  const p = planHorasExtra([extra, base({ salida: `${F} 16:05:00` }), base({ id: 10, salida: `${F} 19:00:00`, hrs_extra: 1 })], { decision: "autorizar", forma: "Tiempo por tiempo", idAutorizador: 7 });
   assert.deepEqual(p.aplicar.map((a) => a.registro.id), [8]);
   assert.deepEqual(p.aplicar[0].cambios, { hrs_extra: 1, forma_pago_extras: "Tiempo por tiempo", extras_autorizadas_por: 7 });
   assert.equal(p.omitir.length, 2);

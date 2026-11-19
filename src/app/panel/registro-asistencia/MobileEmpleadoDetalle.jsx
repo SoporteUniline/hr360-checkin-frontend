@@ -715,7 +715,7 @@ export default function MobileEmpleadoDetalle({
                   >
                     {salidaFmt ? salidaFmt.replace(":", " : ") : "— : —"}
                   </div>
-                  {infoExtra.estado === "no_autorizada" && (
+                  {infoExtra.estado === "no_autorizada" && infoExtra.salidaReloj && infoExtra.salidaReloj !== display.salida && (
                     <div className="text-[11px] text-gray-400 line-through mt-1" title="Checada real del reloj (se conserva)">
                       {dayjs.tz(infoExtra.salidaReloj, DB_TZ).tz(zonaRegistro).format("HH:mm")} reloj
                     </div>

@@ -166,8 +166,12 @@ export function planHorasExtra(filas, { decision = "autorizar", forma, nota, idA
     if (estadoHorasExtra(r, zona).estado !== "pendiente") return { motivo: "no tiene horas extra por decidir" };
     if (decision === "no") {
       const cambios = cambiosNoAutorizar(r, { quien, zona });
-      if (!cambios) return { motivo: "no tiene horario para calcular la salida" };
-      return { cambios, antes: `Por autorizar · salida ${local(r.salida, zona)}`, despues: `No autorizadas · salida ${local(cambios.salida, zona)}` };
+      if (!cambios) return { motivo: "no tiene salida registrada" };
+      return {
+        cambios,
+        antes: `Por autorizar · salida ${local(r.salida, zona)}`,
+        despues: cambios.salida ? `No autorizadas · salida ${local(cambios.salida, zona)}` : "No autorizadas · salida sin cambio",
+      };
     }
     return {
       cambios: cambiosAutorizar({ forma, notas: String(nota ?? "").trim() || undefined, idAutorizador }),
