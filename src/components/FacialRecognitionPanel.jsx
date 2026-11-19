@@ -54,6 +54,12 @@ const FacialRecognitionPanel = ({
   // (19/11/2026) Checar debe ser inmediato: se analiza en cuanto termina el cuadro anterior.
   const MIN_INTERVAL = 60;
   const NO_MATCH_INTERVAL = 800; // sin coincidencia: no saturar el reconocimiento / servidor
+  // (19/11/2026) Al entrar al cuadro o al abrir la cámara, el primer cuadro suele salir borroso o
+  // a contraluz y no alcanza 0.95: se reintenta rápido y en silencio; el aviso «no se encontró
+  // coincidencia» solo aparece si sigue sin reconocer después de este tiempo.
+  const GRACIA_SIN_COINCIDENCIA_MS = 1500;
+  const NO_MATCH_RAPIDO = 200;
+  const sinCoincidenciaDesdeRef = useRef(null);
   const PAUSA_TRAS_CHECAR = 2000; // modo reloj: el nombre se ve 2 s y sigue con el siguiente
   const RESPALDO_SSD_MS = 2000; // si el detector rápido no ve cara en 2 s, se alterna con SSD
   // (19/11/2026) En dev nadie pudo checar con el detector rápido: la huella facial queda muy cerca del
@@ -330,6 +336,7 @@ const FacialRecognitionPanel = ({
         } else {
           lastCheckTimeRef.current = Date.now();
           retryIntervalRef.current = MIN_INTERVAL; // terminó la pausa / aviso: volver a analizar sin espera
+          sinCoincidenciaDesdeRef.current = null;
           if (avisoRepetidoRef.current) setAvisoRepetido("");
         }
       } catch (err) {
@@ -410,6 +417,7 @@ const FacialRecognitionPanel = ({
       const { data } = response;
 
       if (session !== sessionRef.current) return;
+      sinCoincidenciaDesdeRef.current = null;
       diag("checada_exitosa");
       diagApi()?.terminar?.("checada registrada");
       setError("");
@@ -433,8 +441,16 @@ const FacialRecognitionPanel = ({
       const message =
         err.response?.data?.error || err.message || "Error en reconocimiento facial";
       if (["GPS_INACCURATE", "GPS_REFRESH_REQUIRED", "OUTSIDE_AREA", "GPS_OUTSIDE_AREA"].includes(err.response?.data?.code)) locationRef.current = null;
-      retryIntervalRef.current = /coincidencia facial/i.test(message)
-        ? NO_MATCH_INTERVAL : ERROR_INTERVAL;
+      const sinCoincidencia = /coincidencia facial/i.test(message);
+      if (sinCoincidencia) {
+        sinCoincidenciaDesdeRef.current ??= Date.now();
+        if (Date.now() - sinCoincidenciaDesdeRef.current < GRACIA_SIN_COINCIDENCIA_MS) {
+          retryIntervalRef.current = NO_MATCH_RAPIDO;
+          setError("");
+          return;
+        }
+      }
+      retryIntervalRef.current = sinCoincidencia ? NO_MATCH_INTERVAL : ERROR_INTERVAL;
 
       // Keep one stable message by the camera while automatic retries continue.
       setError(message === "Faltan coordenadas de ubicaci\u00f3n"
