@@ -343,7 +343,7 @@ export default function AsistenciaMatriz({
                 <th className="sticky left-0 z-40 w-9 min-w-9 bg-[#1f2937] px-1 py-1.5 text-center font-semibold">
                   No.
                 </th>
-                <th className="sticky left-9 z-40 w-[190px] min-w-[190px] max-w-[190px] bg-[#1f2937] px-2 py-1.5 text-left font-semibold">
+                <th className="sticky left-9 z-40 w-[220px] min-w-[220px] max-w-[220px] bg-[#1f2937] px-3 py-1.5 text-left font-semibold">
                   Nombre completo
                 </th>
                 {dias.map((d) => (
@@ -375,14 +375,14 @@ export default function AsistenciaMatriz({
               {empleados.map((emp, i) => (
                 <tr key={emp.key} className="h-11 odd:bg-white even:bg-gray-50/60">
                   <td
-                    className={`sticky left-0 z-20 h-11 w-9 min-w-9 px-1 py-2 text-center text-gray-500 ${
+                    className={`sticky left-0 z-20 h-11 w-9 min-w-9 px-1 py-2 text-center text-[12px] tabular-nums text-gray-500 ${
                       i % 2 ? "bg-gray-50" : "bg-white"
                     }`}
                   >
                     {i + 1}
                   </td>
                   <td
-                    className={`sticky left-9 z-20 h-11 w-[190px] min-w-[190px] max-w-[190px] truncate px-2 py-2 font-medium text-gray-900 ${
+                    className={`sticky left-9 z-20 h-11 w-[220px] min-w-[220px] max-w-[220px] truncate px-3 py-2 text-[13px] font-semibold text-slate-800 ${
                       i % 2 ? "bg-gray-50" : "bg-white"
                     }`}
                     title={emp.nombre}
@@ -400,16 +400,16 @@ export default function AsistenciaMatriz({
                       </td>
                     );
                   })}
-                  <td className="h-11 px-1 py-2 text-center font-semibold text-green-700">
+                  <td className="h-11 px-1 py-2 text-center text-[13px] font-semibold tabular-nums text-green-700">
                     {emp.presentes}
                   </td>
-                  <td className="h-11 px-1 py-2 text-center font-bold text-red-700">
+                  <td className="h-11 px-1 py-2 text-center text-[13px] font-bold tabular-nums text-red-700">
                     {emp.faltas}
                   </td>
-                  <td className="h-11 px-1 py-2 text-center text-gray-700">
+                  <td className="h-11 px-1 py-2 text-center text-[13px] tabular-nums text-gray-700">
                     {emp.total}
                   </td>
-                  <td className="h-11 px-1 py-2 text-center font-semibold text-gray-900">
+                  <td className="h-11 px-1 py-2 text-center text-[13px] font-semibold tabular-nums text-gray-900">
                     {emp.pctAusencia}%
                   </td>
                 </tr>
