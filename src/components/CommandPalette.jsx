@@ -241,6 +241,13 @@ const ALL_NAV_ITEMS = [
     section: "Control de Tiempo",
     icon: BarChart3,
   },
+  {
+    title: "Turnos extra",
+    url: "/panel/turnos-extra",
+    rol: "Recruiter",
+    section: "Control de Tiempo",
+    icon: CalendarClock,
+  },
   // Ausencias y permisos
   {
     title: "Vacaciones",

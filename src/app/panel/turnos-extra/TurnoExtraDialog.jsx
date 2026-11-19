@@ -1,0 +1,271 @@
+"use client";
+
+// Formulario «Nuevo turno extra» / «Editar turno extra».
+// Pide los avisos de ley al backend (GET /checador/turnos-extra/candidatos) cada vez que cambia el día o el horario.
+// Avisa y no bloquea: los avisos graves (menor de edad, más de 12 h seguidas) piden confirmar antes de guardar.
+import { useEffect, useMemo, useState } from "react";
+import { useSnackbar } from "notistack";
+import axios from "@/lib/axios";
+import {
+  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import {
+  departamentos, duracion, filtrarCandidatos, resumenSeleccion, salioAntes, textoMin,
+} from "@/lib/asistencia/turnosExtra.mjs";
+
+const TONO_AVISO = {
+  grave: "text-red-700 font-semibold",
+  aviso: "text-amber-700",
+  info: "text-gray-500",
+};
+
+const vacio = (fecha) => ({
+  nombre: "", fecha, hora_inicio: "11:00", hora_fin: "19:00", tolerancia_min: 30, motivo: "",
+});
+
+export default function TurnoExtraDialog({ open, onOpenChange, empresas, turno, plantilla, fechaInicial, onGuardado }) {
+  const { enqueueSnackbar } = useSnackbar();
+  const editando = Boolean(turno);
+  const [datos, setDatos] = useState(vacio(fechaInicial));
+  const [empresa, setEmpresa] = useState("");
+  const [candidatos, setCandidatos] = useState([]);
+  const [cargando, setCargando] = useState(false);
+  const [seleccion, setSeleccion] = useState(new Set());
+  const [filtro, setFiltro] = useState("salieron");
+  const [buscar, setBuscar] = useState("");
+  const [confirmar, setConfirmar] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setDatos(turno ? {
+      nombre: turno.nombre, fecha: turno.fecha, hora_inicio: turno.hora_inicio, hora_fin: turno.hora_fin,
+      tolerancia_min: turno.tolerancia_min, motivo: turno.motivo ?? "",
+    } : vacio(fechaInicial));
+    setEmpresa(String(turno?.id_empresa ?? empresas[0]?.id ?? ""));
+    setSeleccion(new Set((plantilla ?? []).map((p) => p.id_empleado)));
+    setFiltro(turno ? "elegidos" : "salieron");
+    setBuscar("");
+    setConfirmar(false);
+  }, [open, turno, plantilla, fechaInicial, empresas]);
+
+  const horarioValido = /^\d{4}-\d{2}-\d{2}$/.test(datos.fecha) && duracion(datos.hora_inicio, datos.hora_fin) > 0;
+
+  useEffect(() => {
+    if (!open || !empresa || !horarioValido) return undefined;
+    let vigente = true;
+    const t = setTimeout(async () => {
+      setCargando(true);
+      try {
+        const { data } = await axios.get("/checador/turnos-extra/candidatos", {
+          params: { empresa, fecha: datos.fecha, hora_inicio: datos.hora_inicio, hora_fin: datos.hora_fin, turno: turno?.id },
+        });
+        if (vigente) setCandidatos(data?.data ?? []);
+      } catch (e) {
+        if (vigente) enqueueSnackbar(e?.response?.data?.error || "No se pudo calcular quién puede venir", { variant: "error" });
+      } finally {
+        if (vigente) setCargando(false);
+      }
+    }, 300);
+    return () => { vigente = false; clearTimeout(t); };
+  }, [open, empresa, datos.fecha, datos.hora_inicio, datos.hora_fin, horarioValido, turno?.id, enqueueSnackbar]);
+
+  const salieron = useMemo(
+    () => candidatos.filter((c) => salioAntes(c, datos.fecha, datos.hora_inicio)).length,
+    [candidatos, datos.fecha, datos.hora_inicio],
+  );
+  const deptos = useMemo(() => departamentos(candidatos), [candidatos]);
+  const visibles = useMemo(() => {
+    if (filtro === "elegidos") return candidatos.filter((c) => seleccion.has(c.id_empleado) && filtrarCandidatos([c], { buscar }).length);
+    return filtrarCandidatos(candidatos, { filtro, buscar, fecha: datos.fecha, horaInicio: datos.hora_inicio });
+  }, [candidatos, filtro, buscar, seleccion, datos.fecha, datos.hora_inicio]);
+  const resumen = useMemo(() => resumenSeleccion(candidatos, seleccion), [candidatos, seleccion]);
+
+  const cambiar = (campo) => (e) => { setDatos((d) => ({ ...d, [campo]: e.target.value })); setConfirmar(false); };
+  const alternar = (id) => {
+    setSeleccion((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+    setConfirmar(false);
+  };
+  const todosVisibles = visibles.length > 0 && visibles.every((c) => seleccion.has(c.id_empleado));
+  const alternarVisibles = () => setSeleccion((s) => {
+    const n = new Set(s);
+    for (const c of visibles) { if (todosVisibles) n.delete(c.id_empleado); else n.add(c.id_empleado); }
+    return n;
+  });
+
+  const guardar = async () => {
+    if (!datos.nombre.trim()) return enqueueSnackbar("Ponle un nombre al turno", { variant: "warning" });
+    if (!horarioValido) return enqueueSnackbar("Revisa el día y el horario", { variant: "warning" });
+    if (!resumen.personas) return enqueueSnackbar("Elige al menos a una persona", { variant: "warning" });
+    if (resumen.graves.length && !confirmar) { setConfirmar(true); return undefined; }
+    setGuardando(true);
+    try {
+      const cuerpo = { ...datos, tolerancia_min: Number(datos.tolerancia_min), empleados: [...seleccion], confirmar: resumen.graves.length > 0 };
+      const { data } = editando
+        ? await axios.put(`/checador/turnos-extra/${turno.id}`, cuerpo)
+        : await axios.post("/checador/turnos-extra", { ...cuerpo, id_empresa: Number(empresa) });
+      enqueueSnackbar(editando ? "Turno extra guardado" : `Turno extra programado: ${resumen.personas} personas`, { variant: "success" });
+      onGuardado?.(editando ? turno.id : data?.data?.id);
+      onOpenChange(false);
+    } catch (e) {
+      enqueueSnackbar(e?.response?.data?.error || "No se pudo guardar el turno extra", { variant: "error" });
+    } finally {
+      setGuardando(false);
+    }
+    return undefined;
+  };
+
+  const chip = (valor, texto) => (
+    <button
+      type="button"
+      key={valor}
+      onClick={() => setFiltro(valor)}
+      className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${filtro === valor ? "border-brand bg-brand text-white" : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"}`}
+    >
+      {texto}
+    </button>
+  );
+  const campo = "rounded-lg border border-gray-200 px-2.5 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand/30";
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-[860px]">
+        <DialogHeader>
+          <DialogTitle>{editando ? "Editar turno extra" : "Nuevo turno extra"}</DialogTitle>
+          <DialogDescription>
+            Elige el día, el horario y quién viene. El sistema avisa lo que la ley marca; la empresa decide.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+          <label className="col-span-2 flex flex-col gap-1 text-[11.5px] font-semibold text-gray-500">
+            Nombre
+            <input className={campo} value={datos.nombre} onChange={cambiar("nombre")} placeholder="Doble turno · Producción" maxLength={120} />
+          </label>
+          <label className="flex flex-col gap-1 text-[11.5px] font-semibold text-gray-500">
+            Día
+            <input type="date" className={campo} value={datos.fecha} onChange={cambiar("fecha")} />
+          </label>
+          <label className="flex flex-col gap-1 text-[11.5px] font-semibold text-gray-500">
+            Entra
+            <input type="time" className={campo} value={datos.hora_inicio} onChange={cambiar("hora_inicio")} />
+          </label>
+          <label className="flex flex-col gap-1 text-[11.5px] font-semibold text-gray-500">
+            Sale
+            <input type="time" className={campo} value={datos.hora_fin} onChange={cambiar("hora_fin")} />
+          </label>
+          <label className="flex flex-col gap-1 text-[11.5px] font-semibold text-gray-500">
+            Tolerancia
+            <select className={campo} value={datos.tolerancia_min} onChange={cambiar("tolerancia_min")}>
+              {[0, 10, 15, 30, 45, 60].map((m) => <option key={m} value={m}>{m} min</option>)}
+            </select>
+          </label>
+          {empresas.length > 1 && !editando ? (
+            <label className="flex flex-col gap-1 text-[11.5px] font-semibold text-gray-500">
+              Empresa
+              <select className={campo} value={empresa} onChange={(e) => { setEmpresa(e.target.value); setSeleccion(new Set()); }}>
+                {empresas.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
+              </select>
+            </label>
+          ) : null}
+          <label className={`${empresas.length > 1 && !editando ? "col-span-2 sm:col-span-3" : "col-span-2 sm:col-span-4"} flex flex-col gap-1 text-[11.5px] font-semibold text-gray-500`}>
+            Motivo
+            <input className={campo} value={datos.motivo} onChange={cambiar("motivo")} placeholder="Opcional" maxLength={255} />
+          </label>
+        </div>
+        {horarioValido ? (
+          <p className="text-xs text-gray-500">
+            Dura <b className="text-gray-800">{textoMin(duracion(datos.hora_inicio, datos.hora_fin))}</b>
+            {horaFinMenor(datos) ? " · termina al día siguiente" : ""}. Quien esté en la plantilla puede checar desde {datos.tolerancia_min} min antes.
+          </p>
+        ) : <p className="text-xs text-red-600">La entrada y la salida no pueden ser iguales.</p>}
+
+        <div className="flex flex-wrap items-center gap-1.5 text-xs text-gray-500">
+          <span>Mostrar:</span>
+          {chip("salieron", `Salieron hoy de su turno (${salieron})`)}
+          {deptos.slice(0, 4).map((d) => chip(`depto:${d.nombre}`, `${d.nombre} (${d.total})`))}
+          {chip("todos", `Todos (${candidatos.length})`)}
+          {chip("elegidos", `Elegidos (${resumen.personas})`)}
+          <input className={`${campo} ml-auto w-full sm:w-48`} placeholder="Buscar empleado…" value={buscar} onChange={(e) => setBuscar(e.target.value)} />
+        </div>
+
+        <div className="flex items-center justify-between text-xs text-gray-500">
+          <span>{cargando ? "Calculando avisos…" : `${visibles.length} personas`}</span>
+          {visibles.length ? (
+            <button type="button" className="font-semibold text-brand hover:underline" onClick={alternarVisibles}>
+              {todosVisibles ? "Quitar a los mostrados" : "Elegir a los mostrados"}
+            </button>
+          ) : null}
+        </div>
+        <div className="grid max-h-[38vh] grid-cols-1 gap-1.5 overflow-y-auto pr-1 sm:grid-cols-2" aria-busy={cargando}>
+          {visibles.map((c) => {
+            const elegido = seleccion.has(c.id_empleado);
+            return (
+              <label
+                key={c.id_empleado}
+                className={`flex cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2 text-[12.5px] ${elegido ? "border-brand/50 bg-brand/5" : "border-gray-200"} ${c.grave ? "ring-1 ring-red-200" : ""}`}
+              >
+                <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--color-brand,#2563eb)]" checked={elegido} onChange={() => alternar(c.id_empleado)} />
+                <div className="min-w-0">
+                  <b className="block text-[13.5px] text-gray-900">{c.nombre_empleado}</b>
+                  <span className="block text-gray-500">
+                    {c.horario_dia ? `Turno ${c.horario_dia}` : "Sin horario ese día"}
+                    {c.salida_anterior ? ` · salió ${c.salida_anterior.slice(11, 16)}` : ""}
+                    {c.semanaTrabajado != null ? ` · semana ${textoMin(c.semanaTrabajado)}` : ""}
+                    {c.semanaExtraAutorizadas ? ` · extra ${textoMin(c.semanaExtraAutorizadas)}` : ""}
+                  </span>
+                  {c.avisos?.map((a) => (
+                    <span key={a.codigo} className={`block ${TONO_AVISO[a.nivel] ?? ""}`}>
+                      {a.nivel === "info" ? "" : "⚠ "}{a.mensaje}
+                    </span>
+                  ))}
+                </div>
+              </label>
+            );
+          })}
+          {!cargando && !visibles.length ? (
+            <p className="col-span-full rounded-xl border border-dashed border-gray-200 p-4 text-center text-sm text-gray-500">
+              {filtro === "salieron" ? "Nadie salió de su turno poco antes de este horario. Usa «Todos» o un departamento." : "No hay personas con este filtro."}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-xs text-gray-700">
+          <b>LFT:</b> el turno extra son <b>horas extra</b> y son voluntarias. Máx. <b>4 h extra al día</b> en 4 días por semana y jornada máx. <b>12 h</b>.
+          Las primeras horas extra de la semana se pagan al doble (9 h en 2027) y el resto al <b>triple</b>. Si se rebasa, queda registrado con la alerta.
+        </div>
+
+        {confirmar && resumen.graves.length ? (
+          <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+            <b>{resumen.graves.length === 1 ? "1 persona tiene" : `${resumen.graves.length} personas tienen`} avisos graves de ley:</b>
+            <ul className="ml-4 list-disc">
+              {resumen.graves.map((g) => (
+                <li key={g.id_empleado}>{g.nombre_empleado}: {g.avisos.filter((a) => a.nivel === "grave").map((a) => a.mensaje).join(" · ")}</li>
+              ))}
+            </ul>
+            Si de todos modos la empresa decide programarlas, queda registrado quién lo confirmó. Pulsa otra vez para confirmar.
+          </div>
+        ) : null}
+
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-xs text-gray-500">
+            {resumen.personas} personas · {textoMin(resumen.minutos)} extra programadas
+            {resumen.triples ? ` · ${textoMin(resumen.triples)} al triple` : ""}
+            {resumen.conAvisos ? ` · ${resumen.conAvisos} con avisos` : ""}
+          </span>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={guardando}>Cancelar</Button>
+            <Button onClick={guardar} disabled={guardando} className={confirmar ? "bg-red-600 hover:bg-red-700" : ""}>
+              {guardando ? "Guardando…" : confirmar ? "Confirmar y programar" : editando ? "Guardar cambios" : "Programar turno"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function horaFinMenor(d) {
+  return String(d.hora_fin) < String(d.hora_inicio);
+}
