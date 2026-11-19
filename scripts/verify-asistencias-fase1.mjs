@@ -60,6 +60,7 @@ Object.assign(registros[3], { nombre: "Editado", correccion: 1, valores_original
 
 const puts = [];
 const autorizacionMasivo = [];
+const comidas = [];
 const pedidosAsistencias = [];
 let exito = false;
 const browser = await chromium.launch();
@@ -96,6 +97,10 @@ try {
       puts.push(JSON.parse(req.postData() || "{}"));
       return json({ asistencia: {} });
     }
+    if (/\/checador\/asistencias\/\d+\/comida$/.test(p) && req.method() === "POST") {
+      comidas.push({ cuerpo: JSON.parse(req.postData() || "{}"), token: req.headers().authorization || "", ruta: p });
+      return json({ asistencia: {} });
+    }
     if (/\/checador\/asistencias\/1003\/cambios$/.test(p)) {
       return json({ disponible: true, cambios: [{ campo: "salida", valor_antes: "2026-11-13 13:19:00", valor_despues: "2026-11-13 17:20:00",
         origen: "reloj", nombre_usuario: "Laura Gómez", tipo_usuario: "Recruiter", creado_en: "2026-11-18 19:45:12.000000" }] });
@@ -129,6 +134,17 @@ try {
   await page.waitForFunction(() => document.querySelectorAll("tbody tr").length < 5);
   assert.equal(await page.locator("tr", { hasText: "Prueba" }).count(), 1);
   if (process.env.CAPTURAS) await page.screenshot({ path: process.env.CAPTURAS + "/comida-alerta.png" });
+  // 1d) «Agregar comida»: viene con la comida de su horario (13:00–14:00) y se puede cambiar.
+  await filaSinComida.getByRole("button", { name: /Agregar comida/ }).click();
+  await page.getByLabel("Salió a comer").fill("13:30");
+  await page.getByLabel("Regresó de comer").fill("14:00");
+  if (process.env.CAPTURAS) await page.screenshot({ path: process.env.CAPTURAS + "/comida-agregar.png" });
+  await page.getByRole("button", { name: "Guardar comida" }).click();
+  for (let i = 0; i < 50 && !comidas.length; i++) await dormir(100);
+  assert.deepEqual(comidas[0].cuerpo, { salida_comida: "2026-11-13 13:30:00", regreso_comida: "2026-11-13 14:00:00" });
+  assert.match(comidas[0].ruta, /\/checador\/asistencias\/1008\/comida$/);
+  assert.match(comidas[0].token, /^Bearer .+/);
+  await page.getByText("Comida agregada: 13:30–14:00").waitFor({ timeout: 10000 });
   await alertaComida.click();
   await page.waitForFunction(() => document.querySelectorAll("tbody tr").length >= 25);
   // 1a) Balance: solo signo y número (±10 min en gris); estado con palabra completa; nombre fijo a la izquierda.
