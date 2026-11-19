@@ -21,6 +21,7 @@ import { indiceFestivos as crearIndiceFestivos } from "@/lib/asistencia/calendar
 import useSWR from "swr";
 import { useEmpresaTimezone } from "@/context/AuthContext";
 import { resumenHorasExtra as resumenHorasExtraPeriodo } from "@/lib/asistencia/horasExtra.mjs";
+import { resumenControl } from "@/lib/asistencia/controlHorasExtra.mjs";
 import { sinSalidaAComer } from "@/lib/asistencia/jornada.mjs";
 
 const DEFAULT_SORT_CONFIG = {
@@ -57,6 +58,10 @@ export default function AsistenciaDataContainer({
   agrupar = null,
   visibleColumns = null,
   vista = "lista",
+  // «Control de horas extra»: { tope } activa sus columnas; estadosHorasExtra filtra desde las tarjetas.
+  controlHorasExtra = null,
+  estadosHorasExtra = null,
+  ocultarRegistroMasivo = false,
 }) {
   const { departamentos } = useDepartamentosData(idEmpresa);
   const [filterOptionsRows, setFilterOptionsRows] = useState([]);
@@ -219,6 +224,12 @@ export default function AsistenciaDataContainer({
     () => resumenHorasExtraPeriodo(filasPeriodo, (r) => r.zona_horaria || zonaEmpresa),
     [filasPeriodo, zonaEmpresa],
   );
+  const control = useMemo(
+    () => (controlHorasExtra
+      ? { tope: controlHorasExtra.tope, resumen: resumenControl(filasPeriodo, { zonaDe: (r) => r.zona_horaria || zonaEmpresa, tope: controlHorasExtra.tope }) }
+      : null),
+    [controlHorasExtra, filasPeriodo, zonaEmpresa],
+  );
   // Quienes no marcaron salida a comer (su horario tiene comida y solo hay un tramo).
   const totalSinComida = useMemo(() => filasPeriodo.filter(sinSalidaAComer).length, [filasPeriodo]);
 
@@ -309,6 +320,9 @@ export default function AsistenciaDataContainer({
           visibleColumns={visibleColumns}
           soloHorasExtra={horasExtra}
           soloSinComida={sinComida}
+          control={control}
+          estadosHorasExtra={estadosHorasExtra}
+          ocultarRegistroMasivo={ocultarRegistroMasivo}
           footer={
             mostrarPaginacion && registros.length > 0 ? (
               <TablePagination
@@ -326,7 +340,7 @@ export default function AsistenciaDataContainer({
           }
         />
 
-        {!mostrarPaginacion && registros.length > 0 && (
+        {!mostrarPaginacion && !controlHorasExtra && registros.length > 0 && (
           <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded text-center">
             <p className="text-gray-600">
               Mostrando <strong>{registros.length}</strong> registros de{" "}
@@ -348,6 +362,8 @@ export default function AsistenciaDataContainer({
     data: effectiveData,
     resumenHorasExtra,
     totalSinComida,
+    control,
+    cargando: isLoading && !effectiveData,
     localEvents,
     mutate,
   };

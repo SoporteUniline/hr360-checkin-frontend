@@ -5,6 +5,7 @@
 // Datos: GET /checador/reportes/horas-ley (semana completa elegida). Lógica: lib/asistencia/semanaHoras.mjs
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import useSWR from "swr";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -178,7 +179,13 @@ function TablaHoras({ visibles, semana, hoy, orden, ordenarPor, abierto, setAbie
                       : <span className="text-slate-500">le quedan {fmt(s.limite - s.trabajado)}</span>}
                 </td>
                 <td className="whitespace-nowrap px-2 py-1.5">
-                  {s.autorizadas ? <><b>{fmt(s.autorizadas)}</b><span className="block text-[11px] text-slate-500">{s.triples ? `${fmt(s.triples)} triples` : `${fmt(s.dobles)} dobles`}</span></> : <span className="text-slate-400">—</span>}
+                  {s.autorizadas || s.porAutorizar ? (
+                    <Link href={`/panel/horas-extra?semana=${semana.inicio}&empleado=${encodeURIComponent(nombre ?? "")}`} onClick={(e) => e.stopPropagation()}
+                      className="group/hx rounded-md hover:underline" title="Ver sus horas extra en Control de horas extra">
+                      {s.autorizadas ? <b>{fmt(s.autorizadas)}</b> : <span className="text-slate-400">0 min</span>}
+                      <span className="block text-[11px] text-slate-500 group-hover/hx:text-blue-600">{s.triples ? `${fmt(s.triples)} triples` : `${fmt(s.dobles)} dobles`} ›</span>
+                    </Link>
+                  ) : <span className="text-slate-400">—</span>}
                 </td>
                 <td className={`whitespace-nowrap px-2 py-1.5 ${s.porAutorizar ? "font-semibold text-orange-700" : "text-slate-400"}`}>
                   {s.porAutorizar ? fmt(s.porAutorizar) : "—"}

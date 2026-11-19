@@ -7,6 +7,7 @@ import { avisoCalendario, correccionesCalendario } from "@/lib/asistencia/calend
 import { estadoHorasExtra } from "@/lib/asistencia/horasExtra.mjs";
 import CeldaHorasExtra, { CeldaAutorizarExtra } from "./CeldaHorasExtra";
 import BotonAgregarComida from "./BotonAgregarComida";
+import CeldasControlHorasExtra from "./CeldasControlHorasExtra";
 import PanelEditarAsistencia from "./PanelEditarAsistencia";
 import { useEmpresaTimezone } from "@/context/AuthContext";
 import { calcularResumenJornada, formatearMinutos } from "@/utils/asistenciaHoras";
@@ -53,6 +54,7 @@ export default function AsistenciaRow({
   indiceFestivos = null,
   horasExtra = null,
   seleccion = null,
+  control = null,
   handleActualizarBase,
 }) {
   const fallbackTimezone = useEmpresaTimezone(empresaActiva);
@@ -376,6 +378,7 @@ export default function AsistenciaRow({
                 />
               </TableCell>
             )}
+            {control && <CeldasControlHorasExtra registro={registro} control={control} zona={userTimezone} />}
             {isColVisible("forma_pago") && (
               <TableCell className="text-center">
                 {registro.forma_pago_extras ? registro.forma_pago_extras : "-"}
