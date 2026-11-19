@@ -17,7 +17,7 @@ import { FORMAS_PAGO, FORMA_PAGO_DEFAULT } from "@/lib/asistencia/horasExtra.mjs
 import { ACCIONES_MASIVAS } from "@/lib/asistencia/masivo.mjs";
 
 const INICIAL = {
-  hora: { campo: "salida", modo: "horario", hora: "17:00" },
+  hora: { campo: "salida", modo: "horario", hora: "17:00", horaEntrada: "09:00", horaSalida: "18:00" },
   tipo: { idTipo: "", nota: "" },
   comida: { modo: "horario", de: "13:00", a: "13:30" },
   nota: { texto: "", modo: "agregar" },
@@ -105,15 +105,27 @@ export default function AccionesMasivas({ filas, tiposPermiso, zonaDe, hx, onLim
         <div className="flex flex-wrap gap-5">
           <Opcion name="cual" value="salida" actual={op.campo} onChange={(v) => set("campo", v)}>Salida</Opcion>
           <Opcion name="cual" value="entrada" actual={op.campo} onChange={(v) => set("campo", v)}>Entrada</Opcion>
+          <Opcion name="cual" value="ambas" actual={op.campo} onChange={(v) => set("campo", v)}>Entrada y salida</Opcion>
         </div>
         <div className="flex flex-wrap items-center gap-5">
           <Opcion name="como" value="horario" actual={op.modo} onChange={(v) => set("modo", v)}>La de su horario</Opcion>
           <Opcion name="como" value="otra" actual={op.modo} onChange={(v) => set("modo", v)}>
-            Otra hora
-            <input type="time" aria-label="Hora" className={campo} value={op.hora} onFocus={() => set("modo", "otra")} onChange={(e) => set("hora", e.target.value)} />
+            {op.campo === "ambas" ? (
+              <>
+                Otras: entra
+                <input type="time" aria-label="Hora de entrada" className={campo} value={op.horaEntrada} onFocus={() => set("modo", "otra")} onChange={(e) => set("horaEntrada", e.target.value)} />
+                sale
+                <input type="time" aria-label="Hora de salida" className={campo} value={op.horaSalida} onFocus={() => set("modo", "otra")} onChange={(e) => set("horaSalida", e.target.value)} />
+              </>
+            ) : (
+              <>
+                Otra hora
+                <input type="time" aria-label="Hora" className={campo} value={op.hora} onFocus={() => set("modo", "otra")} onChange={(e) => set("hora", e.target.value)} />
+              </>
+            )}
           </Opcion>
         </div>
-        <p className="text-xs text-slate-500">Para quien olvidó checar o las salidas que el sistema cerró solo. La checada real del reloj se conserva en el historial.</p>
+        <p className="text-xs text-slate-500">Para quien olvidó checar o las salidas que el sistema cerró solo. Si no hay ninguna checada del día, usa «Entrada y salida»: así queda también el registro del reloj (corregido). La checada real, si existe, se conserva en el historial.</p>
       </>
     );
     if (accion === "tipo") return (

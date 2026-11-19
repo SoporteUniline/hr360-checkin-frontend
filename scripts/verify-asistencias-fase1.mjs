@@ -273,6 +273,18 @@ try {
   assert.deepEqual(puts, [{ salida: "2026-11-13 17:00:00" }, { salida: "2026-11-13 17:00:00" }]);
   await page.getByText("2 registros corregidos.").waitFor({ timeout: 10000 });
   puts.length = 0;
+  // Entrada y salida juntas (otra hora; el nocturno pasa al día siguiente).
+  await barra.getByRole("button", { name: "Corregir entrada / salida" }).click();
+  const dlgAmbas = page.getByRole("dialog", { name: "Corregir entrada / salida" });
+  await dlgAmbas.getByRole("radio", { name: "Entrada y salida" }).check();
+  await dlgAmbas.getByRole("radio", { name: /Otras: entra/ }).check();
+  await dlgAmbas.getByLabel("Hora de entrada").fill("09:00");
+  await dlgAmbas.getByLabel("Hora de salida").fill("18:00");
+  assert.match(await dlgAmbas.innerText(), /Empleado10 Prueba[\s\S]*08:07 – 17:20[\s\S]*09:00 – 18:00/);
+  await dlgAmbas.getByRole("button", { name: "Aplicar a 3" }).click();
+  await esperarPuts(3);
+  assert.deepEqual(puts[0], { entrada: "2026-11-13 09:00:00", salida: "2026-11-13 18:00:00" });
+  puts.length = 0;
   // Tipo de registro + nota.
   await barra.getByRole("button", { name: "Tipo de registro" }).click();
   const dlgTipo = page.getByRole("dialog", { name: "Cambiar tipo de registro" });

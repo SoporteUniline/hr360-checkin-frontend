@@ -35,40 +35,63 @@ function resultado(filas, fn) {
   return { aplicar, omitir };
 }
 
-// 1) Corregir entrada o salida: la del horario u otra hora.
-//    opciones: { campo: "salida" | "entrada", modo: "horario" | "otra", hora: "HH:mm", zonaDe }
-export function planHora(filas, { campo = "salida", modo = "horario", hora, zonaDe = () => DB_TZ } = {}) {
-  if (modo === "otra" && !HORA.test(String(hora ?? ""))) return { aplicar: [], omitir: [], error: "Escribe la hora (HH:MM)." };
+// 1) Corregir entrada, salida o ambas: la del horario u otra hora.
+//    opciones: { campo: "salida" | "entrada" | "ambas", modo: "horario" | "otra", hora, horaEntrada, horaSalida, zonaDe }
+//    Sin checada de entrada no se manda solo la salida: el backend crea la checada del reloj
+//    únicamente cuando recibe la entrada (sola o con la salida). Se pide «Entrada y salida».
+export function planHora(filas, { campo = "salida", modo = "horario", hora, horaEntrada, horaSalida, zonaDe = () => DB_TZ } = {}) {
+  const otra = modo === "otra";
+  if (otra && campo !== "ambas" && !HORA.test(String(hora ?? ""))) return { aplicar: [], omitir: [], error: "Escribe la hora (HH:MM)." };
+  if (otra && campo === "ambas" && (!HORA.test(String(horaEntrada ?? "")) || !HORA.test(String(horaSalida ?? "")))) {
+    return { aplicar: [], omitir: [], error: "Escribe la hora de entrada y la de salida (HH:MM)." };
+  }
   return resultado(filas, (r) => {
     const zona = zonaDe(r);
     const fecha = fechaDe(r);
-    let nuevo;
-    if (campo === "entrada") {
-      const h = modo === "horario" ? hhmm(r.hora_entrada_programada) : hora;
-      if (!h) return { motivo: "no tiene horario ese día" };
-      nuevo = aBD(fecha, h, zona);
-    } else if (modo === "horario") {
-      const p = salidaProgramada(r, zona);
-      if (!p) return { motivo: "no tiene horario ese día" };
-      nuevo = p.tz(DB_TZ).format(FORMATO_BD);
-    } else {
-      // Otra hora: si es menor o igual que su entrada, es del día siguiente (turno nocturno).
-      const entrada = local(r.entrada, zona);
-      const dia = r.entrada && hora <= entrada ? sumarDia(fecha) : fecha;
-      nuevo = aBD(dia, hora, zona);
+    const hEntrada = campo === "salida" ? null : otra ? (campo === "ambas" ? horaEntrada : hora) : hhmm(r.hora_entrada_programada);
+    if (campo !== "salida" && !hEntrada) return { motivo: "no tiene horario ese día" };
+    const nuevaEntrada = hEntrada ? aBD(fecha, hEntrada, zona) : null;
+
+    let nuevaSalida = null;
+    if (campo !== "entrada") {
+      if (!otra) {
+        const p = salidaProgramada(r, zona);
+        if (!p) return { motivo: "no tiene horario ese día" };
+        nuevaSalida = p.tz(DB_TZ).format(FORMATO_BD);
+      } else {
+        // Si la salida es menor o igual que la entrada, es del día siguiente (turno nocturno).
+        const hSalida = campo === "ambas" ? horaSalida : hora;
+        const refEntrada = hEntrada ?? (r.entrada ? local(r.entrada, zona) : null);
+        nuevaSalida = aBD(refEntrada && hSalida <= refEntrada ? sumarDia(fecha) : fecha, hSalida, zona);
+      }
+      if (campo === "salida" && !r.entrada) return { motivo: "no tiene entrada: usa «Entrada y salida»" };
     }
-    const actual = r[campo] ? dayjs.tz(r[campo], DB_TZ).format(FORMATO_BD) : null;
-    if (actual === nuevo) return { motivo: `ya tiene ${campo} ${local(nuevo, zona)}` };
-    const entrada = campo === "entrada" ? nuevo : r.entrada;
-    const salida = campo === "salida" ? nuevo : r.salida;
+
+    const cambios = {};
+    const actual = (c) => (r[c] ? dayjs.tz(r[c], DB_TZ).format(FORMATO_BD) : null);
+    if (nuevaEntrada && actual("entrada") !== nuevaEntrada) cambios.entrada = nuevaEntrada;
+    if (nuevaSalida && actual("salida") !== nuevaSalida) cambios.salida = nuevaSalida;
+    if (!Object.keys(cambios).length) {
+      return { motivo: campo === "ambas" ? "ya tiene esa entrada y salida" : `ya tiene ${campo} ${local(nuevaEntrada ?? nuevaSalida, zona)}` };
+    }
+    const entrada = cambios.entrada ?? r.entrada;
+    const salida = cambios.salida ?? r.salida;
     if (entrada && salida && minutos(salida) <= minutos(entrada)) {
       return { motivo: `la salida quedaría antes de la entrada (${local(entrada, zona)})` };
     }
+    const sufijo = otra ? "" : " (horario)";
+    if (campo === "ambas") {
+      return {
+        cambios,
+        antes: `${local(r.entrada, zona)} – ${local(r.salida, zona)}`,
+        despues: `${local(entrada, zona)} – ${local(salida, zona)}${sufijo}`,
+      };
+    }
     const etiqueta = campo === "salida" ? "Salida" : "Entrada";
     return {
-      cambios: { [campo]: nuevo },
+      cambios,
       antes: `${etiqueta} ${local(r[campo], zona)}`,
-      despues: `${etiqueta} ${local(nuevo, zona)}${modo === "horario" ? " (horario)" : ""}`,
+      despues: `${etiqueta} ${local(cambios[campo], zona)}${sufijo}`,
     };
   });
 }
