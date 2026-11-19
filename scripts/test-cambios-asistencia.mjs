@@ -44,3 +44,15 @@ test("resumen para Excel usa el formateador y la flecha antes → después", () 
   const fmt = (campo, v) => (v == null ? "—" : campo === "asistencia" ? (Number(v) ? "Sí" : "No") : String(v).slice(11, 16));
   assert.equal(resumenCambios(r, fmt), "Salida: — → 17:00; Asistió: No → Sí");
 });
+
+test("comida agregada a mano: «Comida: No la marcó → 10:00–10:30»", () => {
+  const r = {
+    correccion: 1,
+    valores_originales: JSON.stringify({ comida_agregada: "No la marcó" }),
+    tramos_checadas: [
+      { entrada: "2026-11-18 09:00:00", salida: "2026-11-18 10:00:00" },
+      { entrada: "2026-11-18 10:30:00", salida: "2026-11-18 16:00:00" },
+    ],
+  };
+  assert.deepEqual(cambiosRegistro(r).map(({ etiqueta, antes, despues }) => [etiqueta, antes, despues]), [["Comida", "No la marcó", "10:00–10:30"]]);
+});
