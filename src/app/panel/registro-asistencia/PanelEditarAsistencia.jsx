@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { calcularResumenJornada, formatearMinutos } from "@/utils/asistenciaHoras";
 import { ETIQUETAS_ESTADO, FORMAS_PAGO, estadoHorasExtra } from "@/lib/asistencia/horasExtra.mjs";
 import ChecadasDelDia from "./ChecadasDelDia";
+import BotonAgregarComida from "./BotonAgregarComida";
 
 const si = (v) => Boolean(Number(v));
 
@@ -118,7 +119,21 @@ export default function PanelEditarAsistencia({
 
           <Seccion titulo="Checadas del reloj">
             <ChecadasDelDia empleado={registro} activo={abierto} mutateAsistencia={mutateAsistencia} />
-            <p className="text-[11px] text-slate-400">Con el lápiz corriges una checada; la hora original del reloj queda tachada.</p>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[11px] text-slate-400">Con el lápiz corriges una checada; la hora original del reloj queda tachada.</p>
+              {/* Agregar comida: disponible cuando el día tiene entrada y salida y un solo tramo
+                  (o el servidor aún no manda tramos). Se valida otra vez en el servidor. */}
+              {registro.entrada && registro.salida &&
+                (!Array.isArray(registro.tramos_checadas) || registro.tramos_checadas.length <= 1) && (
+                <BotonAgregarComida
+                  variante="boton"
+                  registro={registro}
+                  aBaseDeDatos={aBaseDeDatos}
+                  fechaBase={fechaBase}
+                  onGuardado={mutateAsistencia}
+                />
+              )}
+            </div>
           </Seccion>
 
           <Seccion titulo="Entrada y salida del día">

@@ -294,6 +294,8 @@ try {
   assert.equal(await page.getByTitle("Editar").count(), 0, "ya no hay botón Editar: se abre con clic en la fila");
   await noct.locator("td").first().click();
   const panel = page.getByRole("dialog", { name: /Nocturno Prueba/ });
+  // La ventana ofrece «Agregar comida» cuando el día tiene un solo tramo.
+  await panel.getByRole("button", { name: "+ Agregar comida" }).waitFor({ timeout: 10000 });
   // Sin tiempo extra ese día, la ventana no muestra controles de horas extra.
   await panel.getByText("Sin horas extra este día").waitFor({ timeout: 10000 });
   assert.equal(await panel.getByLabel("Forma de pago").count(), 0);
