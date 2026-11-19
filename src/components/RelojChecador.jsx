@@ -248,6 +248,7 @@ export default function RelojChecador({
         foto_perfil: data.empleado.foto_perfil || "/assets/user.png",
         movimiento: data.movimiento || data.message,
         pending: Boolean(data.pending),
+        motivo: data.motivo || "",
         localValidated: Boolean(data.local_validated),
         success: !data.pending,
       });
@@ -297,6 +298,7 @@ export default function RelojChecador({
         foto_perfil: dataResponse.empleado.foto_perfil || "/assets/user.png",
         movimiento: dataResponse.movimiento || dataResponse.message,
         pending: Boolean(dataResponse.pending),
+        motivo: dataResponse.motivo || "",
         localValidated: Boolean(dataResponse.local_validated),
         success: !dataResponse.pending,
       });
@@ -328,10 +330,12 @@ export default function RelojChecador({
         foto_perfil: data.empleado.foto_perfil || "/assets/user.png",
         movimiento: data.movimiento || data.message,
         pending: Boolean(data.pending),
+        motivo: data.motivo || "",
         localValidated: Boolean(data.local_validated),
         success: !data.pending,
       });
-      setTimeout(() => setPopupInfo(null), 2500);
+      // Con motivo de «pendiente» se deja más tiempo para poder leerlo.
+      setTimeout(() => setPopupInfo(null), data.pending && data.motivo ? 8000 : 2500);
       mutate();
     }
   };
@@ -641,6 +645,9 @@ export default function RelojChecador({
               <p className="text-slate-500 font-bold uppercase text-xs tracking-widest mb-6">
                 {popupInfo.movimiento}
               </p>
+              {popupInfo.pending && popupInfo.motivo && (
+                <p className="-mt-3 mb-5 text-sm font-medium text-amber-700">{popupInfo.motivo}</p>
+              )}
               <div
                 className={`py-3 px-6 rounded-2xl inline-flex items-center gap-2 ${
                   popupInfo.pending
