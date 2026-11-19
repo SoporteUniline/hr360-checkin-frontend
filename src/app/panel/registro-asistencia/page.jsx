@@ -232,7 +232,7 @@ export default function ControlAsistencia() {
     setPage(1);
   };
 
-  const { ui, data, mutate, localEvents, resumenHorasExtra, totalSinComida } = AsistenciaDataContainer({
+  const { ui, data, mutate, localEvents, resumenHorasExtra, totalSinComida, cargando } = AsistenciaDataContainer({
     sinComida,
     idEmpresa,
     empresaActiva,
@@ -338,6 +338,7 @@ export default function ControlAsistencia() {
 
       <ResumenAsistencia
         totals={data}
+        cargando={cargando}
         soloPresentes={soloPresentes}
         setSoloPresentes={setSoloPresentes}
         soloAusentes={soloAusentes}

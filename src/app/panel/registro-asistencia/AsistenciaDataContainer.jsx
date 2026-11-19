@@ -273,10 +273,16 @@ export default function AsistenciaDataContainer({
   }, [abrirId, registros, handleEditClick]);
 
 
-  if (isLoading && !effectiveData && !localEvents.length) return <LoadingTable rows={10} />;
+  // (19/11/2026) La página desestructura { ui, ... }: antes se devolvía el JSX suelto y, mientras
+  // cargaba, la tabla desaparecía (y el mensaje de error nunca se veía). Además, antes de saber la
+  // empresa (idEmpresa aún nulo) se pintaba «No hay registros». Ahora: un solo esqueleto hasta
+  // tener datos, con la misma forma de respuesta.
+  const sinDatosAun = !effectiveData && !localEvents.length && (isLoading || !idEmpresa);
+  const base = { data: effectiveData, resumenHorasExtra, totalSinComida, control, cargando: true, localEvents, mutate };
+  if (sinDatosAun) return { ...base, ui: <LoadingTable cols={9} rows={10} /> };
   if (error && (!localEvents.length || [401, 403].includes(error.response?.status))) {
     console.error(error);
-    return <ErrorPage message="Error al cargar los registros de asistencia" />;
+    return { ...base, cargando: false, ui: <ErrorPage message="Error al cargar los registros de asistencia" /> };
   }
 
   return {
