@@ -582,6 +582,9 @@ const FacialRecognitionPanel = ({
                     muted
                     playsInline
                     className={`w-full object-cover border-0 md:border-4 rounded-none md:rounded-lg ${pantallaCompleta ? "h-full" : ""}`}
+                    // (19/11/2026) Cámara frontal en espejo, como cualquier selfie: si giras a la izquierda,
+                    // la imagen también. Solo cambia lo que se ve; el reconocimiento usa el cuadro original.
+                    style={cameraFacing === "user" ? { transform: "scaleX(-1)" } : undefined}
                   />
                   {pantallaCompleta && (
                     <div aria-hidden="true" className={`pointer-events-none absolute left-1/2 top-[44%] h-[52%] max-h-80 aspect-[3/4] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border-[3px] shadow-[0_0_0_9999px_rgba(2,6,23,0.35)] transition-colors ${acercate ? "border-amber-400" : resultadoChecada === "registrada" || faceDetected ? "border-green-400" : resultadoChecada ? "border-amber-400" : "border-white/85"}`} />
