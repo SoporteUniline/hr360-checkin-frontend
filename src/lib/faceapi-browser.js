@@ -1,4 +1,7 @@
 let loading;
+// (19/11/2026) El reloj pide acercarse: con la cara grande basta el detector rápido (190 KB) y no se
+// descarga SSD (5.4 MB) al abrir. false = volver a SSD (respaldo si en campo no reconoce bien).
+export const DETECTOR_RAPIDO = true;
 // Marca opcional del modo diagnóstico (no hace nada si está apagado).
 const diag = (nombre, datos) => globalThis.__adamiaDiag?.marca(nombre, datos);
 
@@ -25,10 +28,8 @@ export function loadBrowserFaceApi() {
     const api = window.faceapi;
     diag("faceapi_modelos_inicio");
     await Promise.all([
-      // Detector rápido para checar (19/11/2026: ~10× más rápido que SSD en las pruebas, mismas
-      // huellas faciales); SSD queda como respaldo cuando el rápido no encuentra la cara.
-      ["detector_rapido", api.nets.tinyFaceDetector],
-      ["detector", api.nets.ssdMobilenetv1],
+      // Un solo detector: el rápido (cara cerca del reloj) o SSD si se vuelve a él.
+      DETECTOR_RAPIDO ? ["detector_rapido", api.nets.tinyFaceDetector] : ["detector", api.nets.ssdMobilenetv1],
       ["puntos_cara", api.nets.faceLandmark68Net],
       ["reconocimiento", api.nets.faceRecognitionNet],
     ].map(([modelo, net]) => net.params
@@ -40,8 +41,12 @@ export function loadBrowserFaceApi() {
     try {
       const canvas = document.createElement("canvas");
       canvas.width = canvas.height = 160;
-      await api.detectSingleFace(canvas, opcionesRapidas(api));
-      await api.detectSingleFace(canvas);
+      await (DETECTOR_RAPIDO ? api.detectSingleFace(canvas, opcionesRapidas(api)) : api.detectSingleFace(canvas));
+      // También los modelos de puntos y de huella: así el primer rostro no paga su preparación.
+      const cara = document.createElement("canvas");
+      cara.width = cara.height = 150;
+      await api.nets.faceLandmark68Net.detectLandmarks(cara);
+      await api.nets.faceRecognitionNet.computeFaceDescriptor(cara);
     } catch {
       // Warmup is optional.
     }
@@ -57,6 +62,9 @@ export function loadBrowserFaceApi() {
 
 // Opciones del detector rápido para checar (inputSize 160: en las pruebas encontró 7/7 caras y la huella
 // facial coincidió ≥ 99.4 % con la de SSD, muy por encima del 95 % que pide el reloj).
-export function opcionesRapidas(api = window.faceapi) {
-  return new api.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 });
+// `sensible`: umbral más bajo para poca luz (se alterna cuando lleva un rato sin ver cara).
+// inputSize 160 (19/11/2026, 7 caras cercanas): 7/7 detectadas y huella 99.4–99.8 % igual a la de SSD.
+// Con 224 una cara quedó en 87 % (abajo del 95 % del reloj): no subirlo sin volver a medir.
+export function opcionesRapidas(api = window.faceapi, sensible = false) {
+  return new api.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: sensible ? 0.3 : 0.5 });
 }

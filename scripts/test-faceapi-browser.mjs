@@ -4,20 +4,26 @@ import vm from "node:vm";
 import test from "node:test";
 
 const source = (await readFile(new URL("../src/lib/faceapi-browser.js", import.meta.url), "utf8"))
-  .replace("export function", "function");
+  .replace(/\bexport (function|const) /g, "var _x; $1 ").replace(/var _x; const /g, "var ");
 
 function setup({ scriptFails = false, modelFails = false, warmupFails = false } = {}) {
   let scripts = 0;
   let warmups = 0;
   const pending = [];
-  const nets = Object.fromEntries(["ssdMobilenetv1", "faceLandmark68Net", "faceRecognitionNet"].map((name) => [name, {
+  // (19/11/2026) Hay que acercarse al reloj: se carga el detector rápido, no SSD.
+  const cargados = [];
+  const nets = Object.fromEntries(["tinyFaceDetector", "ssdMobilenetv1", "faceLandmark68Net", "faceRecognitionNet"].map((name) => [name, {
+    detectLandmarks: async () => { warmups++; if (warmupFails) throw Error("warmup"); },
+    computeFaceDescriptor: async () => { warmups++; if (warmupFails) throw Error("warmup"); },
     loadFromUri(path) {
+      cargados.push(name);
       assert.equal(path, "/models");
       if (modelFails) return Promise.reject(new Error("model failed"));
       return new Promise((resolve) => pending.push(() => { this.params = {}; resolve(); }));
     },
   }]));
-  const api = { nets, async detectSingleFace() { warmups++; if (warmupFails) throw Error("warmup"); } };
+  const api = { nets, TinyFaceDetectorOptions: function (o) { Object.assign(this, o); },
+    async detectSingleFace() { warmups++; if (warmupFails) throw Error("warmup"); } };
   const context = vm.createContext({
     window: {},
     document: {
@@ -33,7 +39,7 @@ function setup({ scriptFails = false, modelFails = false, warmupFails = false } 
     },
   });
   vm.runInContext(source, context);
-  return { context, pending, api, load: () => context.loadBrowserFaceApi(),
+  return { context, pending, api, cargados, load: () => context.loadBrowserFaceApi(),
     counts: () => ({ scripts, warmups }) };
 }
 
@@ -44,6 +50,7 @@ test("concurrent consumers share script, parallel model loading, and warmup", as
   assert.equal(first, second);
   await new Promise(setImmediate);
   assert.equal(env.pending.length, 3, "all model requests start before any completes");
+  assert.deepEqual([...env.cargados].sort(), ["faceLandmark68Net", "faceRecognitionNet", "tinyFaceDetector"], "SSD no se descarga");
   let ready = false;
   first.then(() => { ready = true; });
   env.pending[0]();
@@ -52,13 +59,14 @@ test("concurrent consumers share script, parallel model loading, and warmup", as
   env.pending.slice(1).forEach((finish) => finish());
   assert.equal(await first, env.api);
   assert.equal(await env.load(), env.api);
-  assert.deepEqual(env.counts(), { scripts: 1, warmups: 1 });
+  // Calentamiento: detector + puntos de la cara + huella (el primer rostro no paga su preparación).
+  assert.deepEqual(env.counts(), { scripts: 1, warmups: 3 });
 });
 
 test("an existing runtime still waits for missing models; loaded models are reused", async () => {
   const env = setup();
   env.context.window.faceapi = env.api;
-  env.api.nets.ssdMobilenetv1.params = {};
+  env.api.nets.tinyFaceDetector.params = {};
   const ready = env.load();
   assert.equal(env.pending.length, 2);
   env.pending.forEach((finish) => finish());
