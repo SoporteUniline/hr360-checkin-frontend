@@ -89,7 +89,7 @@ export default function AccionesMasivas({ filas, tiposPermiso, zonaDe, hx, onLim
           hora: `${n} ${n === 1 ? "registro corregido" : "registros corregidos"}.`,
           tipo: `${n} ${n === 1 ? "registro cambiado" : "registros cambiados"} de tipo.`,
           nota: `Observación agregada a ${n} ${n === 1 ? "registro" : "registros"}.`,
-          extra: op.decision === "no" ? `${n} no autorizadas (salida al horario).` : `${n} ${n === 1 ? "autorizada" : "autorizadas"}.`,
+          extra: op.decision === "no" ? `${n} no autorizadas.` : `${n} ${n === 1 ? "autorizada" : "autorizadas"}.`,
         };
         await hx.guardar(plan.aplicar.map(({ registro, cambios }) => ({ registro, cambios })), textos[accion]);
       }
@@ -174,7 +174,7 @@ export default function AccionesMasivas({ filas, tiposPermiso, zonaDe, hx, onLim
       <>
         <div className="flex flex-wrap gap-5">
           <Opcion name="dec" value="autorizar" actual={op.decision} onChange={(v) => set("decision", v)}>Autorizar</Opcion>
-          <Opcion name="dec" value="no" actual={op.decision} onChange={(v) => set("decision", v)}>No autorizar (se paga hasta la salida del horario)</Opcion>
+          <Opcion name="dec" value="no" actual={op.decision} onChange={(v) => set("decision", v)}>No autorizar (queda la constancia; si se quedó después de su horario, la salida pasa a la del horario)</Opcion>
         </div>
         {op.decision === "autorizar" && (
           <div className="grid gap-3 sm:grid-cols-[220px_1fr]">

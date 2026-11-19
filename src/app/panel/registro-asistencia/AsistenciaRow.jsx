@@ -241,7 +241,7 @@ export default function AsistenciaRow({
                 {salidaDiaSiguiente(registro) && (
                   <span className="ml-1 text-[11px] font-semibold text-blue-600">+1 día</span>
                 )}
-                {infoExtra.estado === "no_autorizada" && (
+                {infoExtra.estado === "no_autorizada" && infoExtra.salidaReloj && infoExtra.salidaReloj !== registro.salida && (
                   <span className="block text-[11px] text-slate-400 line-through" title="Checada real del reloj (se conserva)">
                     {horaLocal(infoExtra.salidaReloj)} reloj
                   </span>

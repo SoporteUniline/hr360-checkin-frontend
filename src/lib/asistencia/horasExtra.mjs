@@ -1,20 +1,21 @@
-// Horas extra de una asistencia: cuánto tiempo pasó de la salida del horario,
-// en qué estado está la autorización y qué campos se guardan en cada acción.
-// Se prueba con node:test (scripts/test-horas-extra.mjs).
+// Horas extra de una asistencia: cuánto trabajó de más, en qué estado está la autorización
+// y qué campos se guardan en cada acción. Se prueba con node:test (scripts/test-horas-extra.mjs).
 //
-// Reglas (aprobadas en la maqueta del 18/11/2026):
-// - Cuenta como hora extra solo el tiempo DESPUÉS de la salida del horario y
-//   a partir de UMBRAL_MINUTOS. Llegar temprano no cuenta.
-// - Estados: "pendiente" (hay tiempo extra sin decidir), "autorizada"
-//   (hrs_extra = 1), "no_autorizada" (la salida se llevó a la del horario) y "sin".
-// - No autorizar NO borra la checada: la salida pagada pasa a la del horario,
-//   el backend guarda la original en valores_originales y la fila queda «Editado».
-//   Además se deja constancia legible en notas_hrs_extra (quién y hora del reloj).
+// Reglas:
+// - (19/11/2026, pedido del dueño) Cuenta como hora extra TODO lo trabajado por encima de lo
+//   programado (mismo número que «Balance del día»): quedarse después de la salida, llegar antes
+//   y no checar la salida a comer. Desde UMBRAL_MINUTOS. La empresa decide o corrige.
+// - Estados: "pendiente" (hay tiempo de más sin decidir), "autorizada" (hrs_extra = 1),
+//   "no_autorizada" (constancia «No autorizadas por …» en notas_hrs_extra) y "sin".
+// - No autorizar NO borra la checada: si salió después de su horario, la salida pagada pasa a la del
+//   horario (el backend guarda la original en valores_originales); en todos los casos queda la
+//   constancia legible en notas_hrs_extra (quién y hora del reloj).
 
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
 import { leerOriginales } from "./cambios.mjs";
+import { minutosProgramados, minutosTrabajados } from "./jornada.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -79,22 +80,31 @@ function salidaRelojDeNota(nota, zona) {
   return m ? dayjs.tz(m[1], zona || DB_TZ).tz(DB_TZ).format(FORMATO_BD) : null;
 }
 
+// Minutos trabajados de más (trabajado − programado; negativo si trabajó menos). null sin horario o sin checadas.
+export function minutosDeMas(registro) {
+  const trabajados = minutosTrabajados(registro);
+  const programados = minutosProgramados(registro);
+  return trabajados == null || programados == null ? null : trabajados - programados;
+}
+
 export function estadoHorasExtra(registro, zona = DB_TZ) {
-  const minutos = minutosDespuesDelHorario(registro, zona);
+  const minutos = minutosDeMas(registro);
   if (Number(registro?.hrs_extra)) {
     return { estado: "autorizada", minutos: minutos != null && minutos > 0 ? minutos : null };
   }
-  if (minutos != null && minutos >= UMBRAL_MINUTOS) return { estado: "pendiente", minutos };
 
-  // ¿La salida se llevó a la del horario? Se reconoce por la checada original
-  // guardada por el backend o por la constancia en las notas de horas extra.
+  // No autorizadas: constancia en las notas (y, si se recortó la salida, la del reloj en valores_originales).
   const nota = String(registro?.notas_hrs_extra ?? "");
   const salidaReloj = leerOriginales(registro)?.salida || (nota.startsWith(PREFIJO_NO) ? salidaRelojDeNota(nota, zona) : null);
-  if (salidaReloj && minutos != null && minutos <= 0) {
-    const minutosReloj = minutosDespuesDelHorario(registro, zona, salidaReloj);
-    if (minutosReloj != null && minutosReloj >= UMBRAL_MINUTOS) {
-      return { estado: "no_autorizada", minutos: minutosReloj, salidaReloj };
-    }
+  const minutosReloj = salidaReloj ? minutosDeMas({ ...registro, salida: salidaReloj }) : null;
+  if (nota.startsWith(PREFIJO_NO)) {
+    const m = Math.max(minutos ?? 0, minutosReloj ?? 0);
+    return { estado: "no_autorizada", minutos: m || null, salidaReloj };
+  }
+  if (minutos != null && minutos >= UMBRAL_MINUTOS) return { estado: "pendiente", minutos };
+  // Registros anteriores sin constancia: la salida se llevó a la del horario y la del reloj daba extra.
+  if (salidaReloj && minutos != null && minutos <= 0 && minutosReloj != null && minutosReloj >= UMBRAL_MINUTOS) {
+    return { estado: "no_autorizada", minutos: minutosReloj, salidaReloj };
   }
   return { estado: "sin", minutos };
 }
@@ -111,20 +121,25 @@ export function cambiosAutorizar({ forma, notas, idAutorizador } = {}) {
 }
 
 export function cambiosNoAutorizar(registro, { quien, zona } = {}) {
+  if (!registro?.salida) return null;
+  const cambios = { hrs_extra: 0, notas_hrs_extra: notaNoAutorizada(registro.salida, quien, zona) };
+  // Si se quedó después de su horario, se paga hasta la salida del horario (la del reloj se conserva).
   const programada = salidaProgramada(registro, zona);
-  if (!programada || !registro?.salida) return null;
-  return {
-    hrs_extra: 0,
-    salida: programada.tz(DB_TZ).format(FORMATO_BD),
-    notas_hrs_extra: notaNoAutorizada(registro.salida, quien, zona),
-  };
+  const despues = minutosDespuesDelHorario(registro, zona);
+  if (programada && despues != null && despues > 0) cambios.salida = programada.tz(DB_TZ).format(FORMATO_BD);
+  return cambios;
 }
 
 // Quitar una autorización, o deshacer un «No autorizar» (regresa la salida del reloj).
 export function cambiosQuitar(registro, zona) {
   const info = estadoHorasExtra(registro, zona);
   if (info.estado === "autorizada") return { hrs_extra: 0 };
-  if (info.estado === "no_autorizada") return { salida: info.salidaReloj, notas_hrs_extra: null };
+  if (info.estado === "no_autorizada") {
+    // Regresa la salida del reloj solo si se había recortado; nunca manda una salida vacía.
+    const cambios = { notas_hrs_extra: null };
+    if (info.salidaReloj && info.salidaReloj !== registro.salida) cambios.salida = info.salidaReloj;
+    return cambios;
+  }
   return null;
 }
 

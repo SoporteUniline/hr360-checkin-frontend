@@ -457,7 +457,7 @@ export default function AsistenciaTable({
     { header: "Es Festivo", key: "es_festivo" },
     { header: "Porcentaje Día Festivo", key: "porcentaje_dia_festivo" },
     { header: "Horas extra (estado)", key: "estado_horas_extra" },
-    { header: "Tiempo después del horario", key: "minutos_horas_extra" },
+    { header: "Tiempo trabajado de más", key: "minutos_horas_extra" },
     { header: "¿Horas extra autorizadas?", key: "hrs_extra" },
     { header: "Forma de pago horas extra", key: "forma_pago_extras" },
     { header: "Horas extras autorizadas por", key: "extras_autorizadas_por" },

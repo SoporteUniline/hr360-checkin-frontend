@@ -155,7 +155,7 @@ function incidenciasDeRegistro(r, fallbackTimezone) {
     incidencias.push({
       tipo: "H. extra",
       severidad: "media",
-      detalle: `${formatearMinutos(extra.minutos)} después del horario, por autorizar`,
+      detalle: `${formatearMinutos(extra.minutos)} de más, por autorizar`,
       accion: "extra",
       minutosExtra: extra.minutos,
     });
