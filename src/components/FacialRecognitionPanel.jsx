@@ -29,7 +29,7 @@ const FacialRecognitionPanel = ({
   const [cameraReady, setCameraReady] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [countdown, setCountdown] = useState(0);
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [resultadoChecada, setResultadoChecada] = useState(null);
   const [avisoRepetido, setAvisoRepetidoEstado] = useState("");
   const avisoRepetidoRef = useRef("");
   const setAvisoRepetido = (v) => { avisoRepetidoRef.current = v; setAvisoRepetidoEstado(v); };
@@ -113,7 +113,7 @@ const FacialRecognitionPanel = ({
     setError("");
     setIsLoading(false);
     setCountdown(0);
-    setShowSuccessMessage(false);
+    setResultadoChecada(null);
     setFaceDetected(false);
     isProcessingRef.current = false;
   };
@@ -307,7 +307,9 @@ const FacialRecognitionPanel = ({
           const repetida = yaRegistrado(recientesRef.current, detection.descriptor, Date.now());
           if (repetida) {
             setError("");
-            setAvisoRepetido(`${repetida.nombre}: ya registrado hace ${repetida.hace} s`);
+            setAvisoRepetido(repetida.pendiente
+              ? `${repetida.nombre}: checada pendiente de subir`
+              : `${repetida.nombre}: ya registrado hace ${repetida.hace} s`);
             lastCheckTimeRef.current = Date.now();
             retryIntervalRef.current = NO_MATCH_INTERVAL;
             return;
@@ -401,16 +403,16 @@ const FacialRecognitionPanel = ({
       diag("checada_exitosa");
       diagApi()?.terminar?.("checada registrada");
       setError("");
-      setShowSuccessMessage(true);
+      if (!data?.requiereDecision) setResultadoChecada(data?.pending ? "pendiente" : "registrada");
       if (!data?.requiereDecision) {
         recientesRef.current = recordarChecada(recientesRef.current, detection.descriptor,
-          data?.empleado ? `${data.empleado.nombre ?? ""} ${data.empleado.apellido_paterno ?? ""}`.trim() : "", Date.now());
+          data?.empleado ? `${data.empleado.nombre ?? ""} ${data.empleado.apellido_paterno ?? ""}`.trim() : "", Date.now(), Boolean(data?.pending));
       }
       onSuccess(data);
       if (continuo && !data?.requiereDecision) {
         // Reloj de la empresa: la cámara sigue encendida; pausa breve y listo para el siguiente.
         retryIntervalRef.current = PAUSA_TRAS_CHECAR;
-        setTimeout(() => { if (session === sessionRef.current) setShowSuccessMessage(false); }, PAUSA_TRAS_CHECAR);
+        setTimeout(() => { if (session === sessionRef.current) setResultadoChecada(null); }, PAUSA_TRAS_CHECAR);
         return;
       }
       shutdownCamera();
@@ -453,7 +455,8 @@ const FacialRecognitionPanel = ({
       return { text: "Procesando reconocimiento...", color: "bg-gray-700" };
     if (!cameraReady)
       return { text: "Iniciando cámara...", color: "bg-gray-700" };
-    if (showSuccessMessage)
+    if (resultadoChecada === "pendiente") return { text: "Checada pendiente de subir", color: "bg-amber-600" };
+    if (resultadoChecada === "registrada")
       return {
         text: "¡Listo! Esperando siguiente empleado...",
         color: "bg-green-600",

@@ -14,12 +14,12 @@ export function coseno(a, b) {
 export function yaRegistrado(recientes, descriptor, ahora = Date.now()) {
   for (const r of recientes ?? []) {
     if (ahora - r.t > VENTANA_MS) continue;
-    if (coseno(r.descriptor, descriptor) >= UMBRAL) return { nombre: r.nombre || "Esta persona", hace: Math.max(1, Math.round((ahora - r.t) / 1000)) };
+    if (coseno(r.descriptor, descriptor) >= UMBRAL) return { nombre: r.nombre || "Esta persona", pendiente: r.pendiente, hace: Math.max(1, Math.round((ahora - r.t) / 1000)) };
   }
   return null;
 }
 
 // Agrega la checada y quita las de más de 60 s.
-export function recordarChecada(recientes, descriptor, nombre, ahora = Date.now()) {
-  return [...(recientes ?? []).filter((r) => ahora - r.t <= VENTANA_MS), { descriptor: Array.from(descriptor), nombre, t: ahora }];
+export function recordarChecada(recientes, descriptor, nombre, ahora = Date.now(), pendiente = false) {
+  return [...(recientes ?? []).filter((r) => ahora - r.t <= VENTANA_MS), { descriptor: Array.from(descriptor), nombre, pendiente, t: ahora }];
 }

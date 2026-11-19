@@ -250,7 +250,6 @@ export default function RelojChecador({
         pending: Boolean(data.pending),
         localValidated: Boolean(data.local_validated),
         success: !data.pending,
-        eventId: data.event_id || null,
       });
 
       setTimeout(() => setPopupInfo(null), 3000);
@@ -336,26 +335,6 @@ export default function RelojChecador({
       mutate();
     }
   };
-
-  // Confirmación al instante: si después el servidor rechaza la checada, se avisa aquí mismo.
-  useEffect(() => {
-    const alRechazar = (e) => {
-      const { nombre, error } = e.detail || {};
-      setPopupInfo({ nombre: nombre || "Checada", foto_perfil: "/assets/user.png", movimiento: error, pending: false, success: false, rechazada: true });
-      setTimeout(() => setPopupInfo(null), 6000);
-    };
-    // Confirmación del servidor: corrige entrada/salida si el dispositivo tenía el turno desactualizado.
-    const alConfirmar = (e) => {
-      const { id, movimiento } = e.detail || {};
-      setPopupInfo((p) => (p && p.eventId === id && p.movimiento !== movimiento ? { ...p, movimiento } : p));
-    };
-    window.addEventListener("adamia-checada-rechazada", alRechazar);
-    window.addEventListener("adamia-checada-confirmada", alConfirmar);
-    return () => {
-      window.removeEventListener("adamia-checada-rechazada", alRechazar);
-      window.removeEventListener("adamia-checada-confirmada", alConfirmar);
-    };
-  }, []);
 
   const abrirCamara = () => {
     if (offline && !localFacesReady) return;
