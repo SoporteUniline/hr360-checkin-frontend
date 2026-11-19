@@ -285,9 +285,13 @@ export async function synchronizeClockQueue() {
       const run = group[0].scope === 'company' ? store.syncCompanyEvents : store.syncEvents;
       await run(group, async event => (await sendEvent(event)).data, store.saveEvent);
     }
-    // Solo avisa si había checadas por subir. Esta sincronización corre cada 30 s:
-    // avisar siempre hacía que Asistencias y Entradas/salidas recargaran todo el periodo.
-    if (groups.size) notify();
+    // Solo avisa si alguna checada cambió de estado. Esta sincronización corre cada 30 s y al abrir
+    // cada pantalla: con capturas en revisión avisaba siempre y Asistencias pedía todo dos veces.
+    if (groups.size) {
+      const antes = new Map([...groups.values()].flat().map(event => [event.id, `${event.status}|${event.error || ''}`]));
+      const cambio = (await store.listEvents()).some(event => antes.has(event.id) && antes.get(event.id) !== `${event.status}|${event.error || ''}`);
+      if (cambio) notify();
+    }
   })();
   try { await synchronizing; } finally { synchronizing = false; }
 }
