@@ -1,6 +1,6 @@
 import { TableRow, TableCell } from '@/components/ui/table';
 import { Clock4 } from 'lucide-react';
-import { motivoPendiente } from '@/lib/reloj/motivoPendiente.mjs';
+import { motivoPendiente, errorDelServidor } from '@/lib/reloj/motivoPendiente.mjs';
 
 const actions = { entrada: 'Entrada', salida: 'Salida', salida_temporal: 'Salida temporal', cerrar_turno: 'Cerrar turno', auto: 'Entrada / salida por confirmar' };
 const states = { pending: 'Pendiente de sincronizar', review: 'Requiere revisión', decision: 'Requiere decisión de turno' };
@@ -23,7 +23,7 @@ export default function LocalClockRows({ events, columns, timezone }) {
             {event.status === 'review' && event.error && <p className="mt-1 text-xs text-slate-600">{event.error}</p>}
             {event.status === 'pending' && <p className="mt-1 text-xs text-amber-700">{motivoPendiente(event)}</p>}
           </div>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100/70 px-2.5 py-1 text-xs font-medium text-blue-800"><Clock4 className="size-3.5 shrink-0" aria-hidden="true" />{event.status === 'pending' && event.local_validated ? 'Rostro reconocido · Pendiente de subir' : states[event.status]}</span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-100/70 px-2.5 py-1 text-xs font-medium text-blue-800"><Clock4 className="size-3.5 shrink-0" aria-hidden="true" />{errorDelServidor(event) ? 'Error del servidor · se reintenta sola' : event.status === 'pending' && event.local_validated ? 'Rostro reconocido · Pendiente de subir' : states[event.status]}</span>
         </div>
       </TableCell>
     </TableRow>)}

@@ -12,7 +12,7 @@ const source = (await readFile(new URL('../src/lib/offline-clock.js', import.met
   .replace(/^export const faceEngine = .*;$/m, 'const faceEngine = async () => engine;')
   .replace(/\bexport /g, '');
 
-import { motivoPendiente } from '../src/lib/reloj/motivoPendiente.mjs';
+import { motivoPendiente, errorDelServidor } from '../src/lib/reloj/motivoPendiente.mjs';
 const componentSource = await readFile(new URL('../src/components/RelojChecador.jsx', import.meta.url), 'utf8');
 const submitMovementSource = componentSource.match(/const submitMovement = ([^\r\n]+);/)[1];
 
@@ -30,7 +30,7 @@ function harness({ online = true, detectedOffline = false, method = 'ambos', get
     listEvents: async () => [...events.values()], syncFailure, syncEvents, syncCompanyEvents,
   };
   const context = vm.createContext({
-    store, engine, navigator, motivoPendiente, crypto: webcrypto, Event, CustomEvent, URL, setTimeout, clearTimeout, ensureOfflineCache: async () => null,
+    store, engine, navigator, motivoPendiente, errorDelServidor, crypto: webcrypto, Event, CustomEvent, URL, setTimeout, clearTimeout, ensureOfflineCache: async () => null,
     idEmpresa: 10, idEmpleado: 2, modoEmpleado: true, companySlug: 'fixture',
     window: { __adamiaOffline: detectedOffline, dispatchEvent() {} },
     Cookies: { get: () => companyClock ? undefined : 'test-session' },
