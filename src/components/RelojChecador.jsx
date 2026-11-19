@@ -9,7 +9,9 @@ import {
   Clock4,
   AlertTriangle,
   Camera,
+  Menu,
 } from "lucide-react";
+import Link from "next/link";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import ErrorPage from "@/components/ErrorPage";
@@ -48,6 +50,7 @@ export default function RelojChecador({
   const areaRef = useRef(null);
   const [altoArea, setAltoArea] = useState(null);
   const [ajustesCamara, setAjustesCamara] = useState(false);
+  const [menuMovil, setMenuMovil] = useState(false);
   // Cámara siempre encendida: útil en un reloj fijo (fila de personas). En el celular de cada
   // empleado conviene apagarla al checar. Se recuerda por dispositivo.
   const claveCamara = `adamia-reloj-camara-fija:${modoEmpleado ? "empleado" : "empresa"}`;
@@ -422,7 +425,7 @@ export default function RelojChecador({
     medir();
     window.addEventListener("resize", medir);
     return () => window.removeEventListener("resize", medir);
-  }, [subscriptionLoading, subscriptionActive]);
+  }, [subscriptionLoading, subscriptionActive, menuMovil]);
 
   const horaCorta = horaActual ? `${horaActual.slice(0, 5)} ${horaActual.includes("AM") ? "a.m." : "p.m."}` : "";
 
@@ -465,7 +468,7 @@ export default function RelojChecador({
     <>
       <main className="bg-slate-50 md:min-h-screen md:p-4">
         <div className="mx-auto max-w-7xl md:space-y-6">
-          <div className="px-3 pt-2 empty:hidden md:p-0"><ClockNavigation companyId={idEmpresa} companySlug={companySlug} /></div>
+          <div className="hidden md:block"><ClockNavigation companyId={idEmpresa} companySlug={companySlug} /></div>
           <div className="hidden md:block rounded-xl border border-blue-100 bg-linear-to-r from-indigo-50 to-blue-50 p-6">
             <div className="flex items-center gap-3">
               <div className="rounded-lg bg-blue-600 p-2.5">
@@ -509,10 +512,24 @@ export default function RelojChecador({
 
             <div className="lg:col-span-8 md:col-span-7 md:space-y-6">
               <div className="md:hidden flex items-center justify-between gap-3 bg-slate-900 px-4 py-2.5 text-white">
-                <span className="min-w-0 truncate text-sm font-semibold">{nombreEmpresa || "Reloj checador"}</span>
+                <span className="flex min-w-0 items-center gap-2">
+                  {dataUser && (
+                    <button type="button" onClick={() => setMenuMovil((v) => !v)} aria-expanded={menuMovil} aria-label="Menú"
+                      className="-ml-1 grid size-9 shrink-0 place-items-center rounded-lg text-white/90 hover:bg-white/10">
+                      <Menu className="size-5" aria-hidden="true" />
+                    </button>
+                  )}
+                  <span className="min-w-0 truncate text-sm font-semibold">{nombreEmpresa || dataUser?.empresas_detalle?.find?.((e) => Number(e.id_empresa) === Number(idEmpresa))?.nombre || "Reloj checador"}</span>
+                </span>
                 {offline && <span className="shrink-0 rounded-full bg-amber-400/20 px-2 py-0.5 text-[11px] font-semibold text-amber-200">{localFacesReady ? "Sin conexión · rostro listo" : "Sin conexión"}</span>}
                 <span onClick={tocarHora} className="shrink-0 select-none text-lg font-bold tabular-nums">{horaCorta}</span>
               </div>
+              {menuMovil && dataUser && (
+                <div className="md:hidden border-b border-slate-200 bg-white px-3 py-3 space-y-2">
+                  {modoEmpleado && <Link href="/empleado/panel/inicio" className="flex min-h-11 items-center font-semibold text-blue-700">← Volver a mi inicio</Link>}
+                  <ClockNavigation companyId={idEmpresa} companySlug={companySlug} />
+                </div>
+              )}
 
               <div id="reloj-barra-movil" className="md:hidden fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white px-3 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))]">
               {ajustesCamara && metodo === "facial" && (
