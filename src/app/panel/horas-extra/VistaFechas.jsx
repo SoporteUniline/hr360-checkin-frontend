@@ -15,18 +15,19 @@ import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { CeldaAutorizarExtra } from "../registro-asistencia/CeldaHorasExtra";
-import { formatearMinutos } from "@/lib/asistencia/jornada.mjs";
+import { duracionCorta, formatearMinutos } from "@/lib/asistencia/jornada.mjs";
 import { quienCuando } from "@/lib/asistencia/historial.mjs";
 import { cambiosAutorizar, cambiosNoAutorizar, cambiosQuitar, DB_TZ } from "@/lib/asistencia/horasExtra.mjs";
 import { alertasDia, semanaExtra } from "@/lib/asistencia/controlHorasExtra.mjs";
-import { enlaceAsistencia, horaCorta, matrizHorasExtra } from "@/lib/asistencia/matrizHorasExtra.mjs";
+import { enlaceAsistencia, matrizHorasExtra } from "@/lib/asistencia/matrizHorasExtra.mjs";
 import { hora12 } from "@/lib/hora12.mjs";
+import { diaSemana } from "@/lib/fechaHora.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
 const DIAS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
-const diaSemana = (f) => DIAS[new Date(`${f}T00:00:00Z`).getUTCDay()];
+const nombreDia = (f) => DIAS[diaSemana(f)];
 const CELDA = {
   pendiente: "bg-orange-100 text-orange-800 hover:bg-orange-200",
   autorizada: "bg-emerald-100 text-emerald-800 hover:bg-emerald-200",
@@ -37,7 +38,7 @@ const ESTADO = {
   autorizada: ["Autorizada", "bg-emerald-50 text-emerald-700"],
   no_autorizada: ["No autorizada", "bg-slate-100 text-slate-600"],
 };
-const hhmm = (v, zona) => (v ? hora12(dayjs.tz(v, DB_TZ).tz(zona || DB_TZ)) : "—");
+const horaVer = (v, zona) => (v ? hora12(dayjs.tz(v, DB_TZ).tz(zona || DB_TZ)) : "—");
 
 export default function VistaFechas({ registros, dias, zonaDe, estados, tope, resumen, hx, mostrarTope, cargando }) {
   const [abierta, setAbierta] = useState(null); // { id, fecha }
@@ -77,7 +78,7 @@ export default function VistaFechas({ registros, dias, zonaDe, estados, tope, re
               <th scope="col" className="sticky left-0 z-20 min-w-[190px] bg-slate-50 px-3 py-2 text-left">Empleado</th>
               {dias.map((f) => (
                 <th key={f} scope="col" className={`min-w-[62px] px-1 py-2 ${f === hoy ? "bg-blue-50 text-blue-700" : ""}`}>
-                  {diaSemana(f)}<b className="block text-[15px] tracking-normal text-slate-900">{Number(f.slice(8, 10))}</b>
+                  {nombreDia(f)}<b className="block text-[15px] tracking-normal text-slate-900">{Number(f.slice(8, 10))}</b>
                 </th>
               ))}
               <th scope="col" className="px-3 py-2">Total</th>
@@ -99,9 +100,9 @@ export default function VistaFechas({ registros, dias, zonaDe, estados, tope, re
                       <td key={d} className={`px-1 py-1.5 text-center ${d === hoy ? "bg-blue-50/50" : ""}`}>
                         {c ? (
                           <button type="button" onClick={() => setAbierta({ id: f.id, fecha: d })}
-                            aria-label={`${f.nombre} ${d}: ${horaCorta(c.minutos)} ${ESTADO[c.estado][0]}`}
+                            aria-label={`${f.nombre} ${d}: ${duracionCorta(c.minutos, { cero: "0:00" })} ${ESTADO[c.estado][0]}`}
                             className={`relative w-[58px] rounded-lg py-1.5 font-bold ${CELDA[c.estado]} ${abierta?.id === f.id && abierta?.fecha === d ? "ring-2 ring-blue-500 ring-offset-1" : ""}`}>
-                            {horaCorta(c.minutos)}
+                            {duracionCorta(c.minutos, { cero: "0:00" })}
                             {c.estado !== "no_autorizada" && c.minutos > 240 && <span className="absolute -right-1 -top-1.5 text-[11px] text-red-600" aria-hidden>⚠</span>}
                           </button>
                         ) : <span className="text-slate-300">—</span>}
@@ -130,7 +131,7 @@ export default function VistaFechas({ registros, dias, zonaDe, estados, tope, re
                 const t = m.totalesDia[d];
                 return (
                   <td key={d} className="px-1 py-2 text-center">
-                    {t.minutos ? horaCorta(t.minutos) : "—"}
+                    {duracionCorta(t.minutos)}
                     {t.pendientes ? <small className="block text-[10.5px] font-semibold text-orange-700">{t.pendientes} por aut.</small> : null}
                   </td>
                 );
@@ -155,8 +156,8 @@ export default function VistaFechas({ registros, dias, zonaDe, estados, tope, re
                 const alertas = alertasDia(r, resumen, { zona, tope });
                 const semana = semanaExtra(r, resumen, tope);
                 const tramos = Array.isArray(r.tramos_checadas) && r.tramos_checadas.length
-                  ? r.tramos_checadas.map((t) => `${hhmm(t.entrada, zona)} → ${hhmm(t.salida, zona)}`).join(" · ")
-                  : `${hhmm(r.entrada, zona)} → ${hhmm(r.salida, zona)}`;
+                  ? r.tramos_checadas.map((t) => `${horaVer(t.entrada, zona)} → ${horaVer(t.salida, zona)}`).join(" · ")
+                  : `${horaVer(r.entrada, zona)} → ${horaVer(r.salida, zona)}`;
                 const a = acciones(r);
                 const [etiqueta, color] = ESTADO[info.estado];
                 const autorizador = [r.nombre_extra_autorizador, r.apellido_paterno_extra_autorizador].filter(Boolean).join(" ");

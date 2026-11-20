@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { alertasDia, lunesDe, moverSemana, quienDecidio, resumenControl, semanaDe, semanaExtra, topeRespaldo } from "../src/lib/asistencia/controlHorasExtra.mjs";
+import { alertasDia, moverSemana, quienDecidio, resumenControl, semanaExtra, topeRespaldo } from "../src/lib/asistencia/controlHorasExtra.mjs";
+import { lunesDe, semanaDe } from "../src/lib/fechaHora.mjs";
 
 const reg = (o) => ({ id_empleado: 1, fecha: "2026-11-16", hora_entrada_programada: "08:00:00", hora_salida_programada: "17:00:00", entrada: "2026-11-16 08:00:00", hrs_extra: 0, ...o });
 const aut = (fecha, salida, o = {}) => reg({ fecha, entrada: `${fecha} 08:00:00`, salida: `${fecha} ${salida}:00`, hrs_extra: 1, nombre_extra_autorizador: "Laura", apellido_paterno_extra_autorizador: "Gómez", ...o });

@@ -3,7 +3,7 @@ import { Camera, Power, RotateCcw } from "lucide-react";
 import { enqueueSnackbar } from "notistack";
 import axiosInstance from "@/lib/axios";
 import { Button } from "./ui/button";
-import { loadBrowserFaceApi, opcionesRapidas, DETECTOR_RAPIDO } from "@/lib/faceapi-browser";
+import { loadBrowserFaceApi, opcionesRapidas } from "@/lib/faceapi-browser";
 import { yaRegistrado, recordarChecada } from "@/lib/reloj/recientes.mjs";
 
 // Modo diagnóstico opcional: si está apagado, estas llamadas no hacen nada.
@@ -65,7 +65,7 @@ const FacialRecognitionPanel = ({
   const NO_MATCH_RAPIDO = 200;
   const sinCoincidenciaDesdeRef = useRef(null);
   const PAUSA_TRAS_CHECAR = 2000; // modo reloj: el nombre se ve 2 s y sigue con el siguiente
-  const RESPALDO_SSD_MS = 2000; // si el detector rápido no ve cara en 2 s, se alterna con SSD
+  const RESPALDO_SENSIBLE_MS = 2000; // si no ve cara en 2 s, alterna con un umbral más sensible (poca luz)
   // (19/11/2026) Hay que acercarse al reloj: si la cara ocupa menos de esta fracción del alto del
   // cuadro, se pide «Acércate» y no se intenta reconocer (cara chica = huella pobre).
   const CARA_MINIMA = 0.22;
@@ -302,10 +302,9 @@ const FacialRecognitionPanel = ({
         const d = diagApi();
         const t0 = d ? d.ahora() : 0;
         // Detector rápido; si lleva 2 s sin ver cara, alterna con un umbral más sensible (poca luz).
-        usarRespaldo = Date.now() - sinRostroDesde > RESPALDO_SSD_MS ? !usarRespaldo : false;
-        const detection = await (DETECTOR_RAPIDO
-          ? window.faceapi.detectSingleFace(canvas, opcionesRapidas(window.faceapi, usarRespaldo))
-          : window.faceapi.detectSingleFace(canvas))
+        usarRespaldo = Date.now() - sinRostroDesde > RESPALDO_SENSIBLE_MS ? !usarRespaldo : false;
+        const detection = await window.faceapi
+          .detectSingleFace(canvas, opcionesRapidas(window.faceapi, usarRespaldo))
           .withFaceLandmarks().withFaceDescriptor();
         if (d) {
           const ms = d.ahora() - t0;

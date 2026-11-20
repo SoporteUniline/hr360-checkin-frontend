@@ -1,17 +1,10 @@
 // Reglas de calendario para la vista de Asistencias.
-// Sin dependencias para probarlas con node:test.
-
-const fechaISO = (valor) => {
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(valor ?? ""));
-  return m ? `${m[1]}-${m[2]}-${m[3]}` : null;
-};
+import { diaSemana, fechaISO } from "../fechaHora.mjs";
 
 // ¿La fecha del registro es domingo? (null si no hay fecha válida)
 export function esDomingo(fecha) {
-  const iso = fechaISO(fecha);
-  if (!iso) return null;
-  const [y, m, d] = iso.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, d)).getUTCDay() === 0;
+  const d = diaSemana(fecha);
+  return d == null ? null : d === 0;
 }
 
 const unidadDe = (fila) =>

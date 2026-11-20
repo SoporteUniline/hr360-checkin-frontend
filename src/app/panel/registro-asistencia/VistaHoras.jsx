@@ -11,8 +11,8 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { fetcherWithToken } from "@/lib/fetcher";
-import { formatearMinutos } from "@/lib/asistencia/jornada.mjs";
-import { horaCorta, ordenarFilas, resumenSemana, semanaInicial, semanasDelRango } from "@/lib/asistencia/semanaHoras.mjs";
+import { duracionCorta, formatearMinutos } from "@/lib/asistencia/jornada.mjs";
+import { ordenarFilas, resumenSemana, semanaInicial, semanasDelRango } from "@/lib/asistencia/semanaHoras.mjs";
 
 // (19/11/2026) Clic en un día (o en su alerta) abre el registro de ese día en la Lista para corregirlo.
 export const enlaceDia = (idEmpleado, nombre, fecha) =>
@@ -168,7 +168,7 @@ function TablaHoras({ visibles, semana, hoy, orden, ordenarPor, abierto, setAbie
                 {s.dias.map((d) => {
                   const contenido = (
                     <>
-                      {d.fecha > hoy && !d.trabajado ? (d.programado ? <span className="text-[11px]">({horaCorta(d.programado)})</span> : "—") : horaCorta(d.trabajado)}
+                      {d.fecha > hoy && !d.trabajado ? (d.programado ? <span className="text-[11px]">({duracionCorta(d.programado)})</span> : "—") : duracionCorta(d.trabajado)}
                       {d.alertas.length ? <span aria-hidden> •</span> : null}
                     </>
                   );

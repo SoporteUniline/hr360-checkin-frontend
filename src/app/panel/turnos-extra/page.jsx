@@ -17,8 +17,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import TurnoExtraDialog from "./TurnoExtraDialog";
 import {
-  FASES, estadoPersona, faseTurno, semanaDe, sumarDias, textoDia, textoMin, textoSemana,
+  FASES, estadoPersona, faseTurno, textoDia, textoSemana,
 } from "@/lib/asistencia/turnosExtra.mjs";
+import { semanaDe, sumarDias } from "@/lib/fechaHora.mjs";
+import { formatearMinutos } from "@/lib/asistencia/jornada.mjs";
 
 const get = (url) => axios.get(url).then((r) => r.data);
 const hoyLocal = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Mexico_City" }).format(new Date());
@@ -191,7 +193,7 @@ function Detalle({ d, onEditar, onCancelar }) {
           <Chip tono={fase.tono}>{turno.fase === "en_curso" ? "● " : ""}{fase.texto}</Chip>
           <h2 className="mt-1.5 text-lg font-bold text-gray-900">{turno.nombre}</h2>
           <p className="text-[13px] text-gray-700">
-            {textoDia(turno.fecha)} · <b>{turno.hora_inicio} – {turno.hora_fin}</b> ({textoMin(turno.duracion)}) · tolerancia {turno.tolerancia_min} min
+            {textoDia(turno.fecha)} · <b>{turno.hora_inicio} – {turno.hora_fin}</b> ({formatearMinutos(turno.duracion)}) · tolerancia {turno.tolerancia_min} min
             {turno.motivo ? ` · Motivo: ${turno.motivo}` : ""}
           </p>
           <p className="text-xs text-gray-500">
@@ -209,9 +211,9 @@ function Detalle({ d, onEditar, onCancelar }) {
 
       <div className="my-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Kpi titulo="Personas" valor={resumen.personas} nota={`${resumen.checaron} checaron · ${resumen.sinLlegar} sin llegar`} />
-        <Kpi titulo="Horas extra hasta ahora" valor={textoMin(resumen.minutos)} nota="se actualiza con cada checada" />
-        <Kpi titulo="Al doble" valor={textoMin(resumen.dobles)} clase="text-emerald-700" />
-        <Kpi titulo="Al triple" valor={textoMin(resumen.triples)} clase={resumen.triples ? "text-red-700" : "text-gray-900"} />
+        <Kpi titulo="Horas extra hasta ahora" valor={formatearMinutos(resumen.minutos)} nota="se actualiza con cada checada" />
+        <Kpi titulo="Al doble" valor={formatearMinutos(resumen.dobles)} clase="text-emerald-700" />
+        <Kpi titulo="Al triple" valor={formatearMinutos(resumen.triples)} clase={resumen.triples ? "text-red-700" : "text-gray-900"} />
       </div>
 
       <ul className="space-y-2 md:hidden" aria-label="Personas del turno">
@@ -229,7 +231,7 @@ function Detalle({ d, onEditar, onCancelar }) {
               </p>
               <p className="mt-1 tabular-nums text-gray-700">
                 {p.vivo.entrada ? `Entró ${hora(p.vivo.entrada)}${p.vivo.salida ? ` · salió ${hora(p.vivo.salida)}` : ""}` : "Sin checada en este turno"}
-                {p.vivo.minutos ? <> · <b>{textoMin(p.vivo.minutos)}</b> (<span className="text-emerald-700">{textoMin(p.vivo.dobles)}</span>{p.vivo.triples ? <> · <span className="text-red-700">{textoMin(p.vivo.triples)} triple</span></> : null})</> : null}
+                {p.vivo.minutos ? <> · <b>{formatearMinutos(p.vivo.minutos)}</b> (<span className="text-emerald-700">{formatearMinutos(p.vivo.dobles)}</span>{p.vivo.triples ? <> · <span className="text-red-700">{formatearMinutos(p.vivo.triples)} triple</span></> : null})</> : null}
               </p>
               {alertas.length ? <div className="mt-1.5 flex flex-wrap gap-1">{alertas.map((a) => <Chip key={a.codigo} tono={a.nivel === "grave" ? "rojo" : "ambar"}>⚠ {a.mensaje}</Chip>)}</div> : null}
             </li>
@@ -256,11 +258,11 @@ function Detalle({ d, onEditar, onCancelar }) {
                   </td>
                   <td className="whitespace-nowrap px-2 py-2.5">{hora(p.vivo.entrada)}</td>
                   <td className="whitespace-nowrap px-2 py-2.5">{hora(p.vivo.salida)}</td>
-                  <td className="whitespace-nowrap px-2 py-2.5 font-semibold">{p.vivo.minutos ? textoMin(p.vivo.minutos) : "—"}</td>
+                  <td className="whitespace-nowrap px-2 py-2.5 font-semibold">{p.vivo.minutos ? formatearMinutos(p.vivo.minutos) : "—"}</td>
                   <td className="whitespace-nowrap px-2 py-2.5">
                     {p.vivo.minutos ? (
-                      <><span className="text-emerald-700">{textoMin(p.vivo.dobles)}</span>
-                        {p.vivo.triples ? <> · <span className="text-red-700">{textoMin(p.vivo.triples)}</span></> : null}</>
+                      <><span className="text-emerald-700">{formatearMinutos(p.vivo.dobles)}</span>
+                        {p.vivo.triples ? <> · <span className="text-red-700">{formatearMinutos(p.vivo.triples)}</span></> : null}</>
                     ) : "—"}
                   </td>
                   <td className="px-2 py-2.5"><Chip tono={e.tono}>{e.texto}</Chip></td>
