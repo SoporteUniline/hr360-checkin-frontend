@@ -12,8 +12,9 @@ import {
   DataTable,
   Notice,
   Confirm,
+  QueryState,
+  Pagination,
 } from "./ui";
-import { QueryState, Pagination } from "./ApiViews";
 const labels = {
   employeeScore: "Colaborador puede ver su puntaje",
   employeeCategories: "Colaborador puede ver categorías",

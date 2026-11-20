@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useEvaluations, useEvaluationQuery } from "./EvaluationContext";
-import { QueryState } from "./ApiViews";
 import { normalizeTemplate } from "@/lib/evaluaciones/api.mjs";
 import {
   Heading,
@@ -17,6 +16,7 @@ import {
   Errors,
   Confirm,
   Person,
+  QueryState,
 } from "./ui";
 import {
   PERSPECTIVES,

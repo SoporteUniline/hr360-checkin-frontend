@@ -41,35 +41,35 @@ export function EvaluationProvider({ children, employee = false }) {
       </div>
     );
   const company = selected ?? initial;
-  return (
-    <>
-      {!employee && companies.length > 1 && (
-        <label className="block p-4">
-          Empresa{" "}
-          <select
-            aria-label="Empresa de evaluaciones"
-            value={company}
-            onChange={(e) => setSelected(e.target.value)}
-          >
-            {companies.map((c) => (
-              <option key={c.id_empresa} value={c.id_empresa}>
-                {c.nombre}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-      <ScopedProvider
-        key={`${company}:${dataUser?.id_usuario}:${dataUser?.id_empleado}`}
-        company={company}
-        employee={employee}
+  // (20/11/2026) La empresa se elige en la barra de pestañas (antes era una fila aparte arriba).
+  const selectorEmpresa = !employee && companies.length > 1 && (
+    <label className="ev-company">
+      <span className="sr-only">Empresa</span>
+      <select
+        aria-label="Empresa de evaluaciones"
+        value={company}
+        onChange={(e) => setSelected(e.target.value)}
       >
-        {children}
-      </ScopedProvider>
-    </>
+        {companies.map((c) => (
+          <option key={c.id_empresa} value={c.id_empresa}>
+            {c.nombre}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+  return (
+    <ScopedProvider
+      key={`${company}:${dataUser?.id_usuario}:${dataUser?.id_empleado}`}
+      company={company}
+      employee={employee}
+      selectorEmpresa={selectorEmpresa}
+    >
+      {children}
+    </ScopedProvider>
   );
 }
-function ScopedProvider({ children, company, employee }) {
+function ScopedProvider({ children, company, employee, selectorEmpresa }) {
   const api = useMemo(() => createEvaluationApi(axios, company), [company]);
   const { enqueueSnackbar } = useSnackbar(),
     router = useRouter(),
@@ -159,6 +159,7 @@ function ScopedProvider({ children, company, employee }) {
         perform,
         revision,
         notify,
+        selectorEmpresa,
         base,
         section,
         href: (to = "") => `${base}${to ? "/" + to : ""}`,
@@ -179,7 +180,12 @@ function ScopedProvider({ children, company, employee }) {
     </Context.Provider>
   );
 }
-export function useEvaluationQuery(path, params = {}, { enabled = true } = {}) {
+// all: trae todas las páginas (para cruzar listados completos, p. ej. resultados y planes de una campaña).
+export function useEvaluationQuery(
+  path,
+  params = {},
+  { enabled = true, all = false } = {}
+) {
   const { api, revision } = useEvaluations();
   const paramsKey = JSON.stringify(params),
     key = `${path}:${paramsKey}`;
@@ -193,9 +199,19 @@ export function useEvaluationQuery(path, params = {}, { enabled = true } = {}) {
   useEffect(() => {
     if (!enabled) return;
     const controller = new AbortController();
-    setResult({ key, data: null, error: "", loading: true });
-    api
-      .get(path, JSON.parse(paramsKey), controller.signal)
+    // Al refrescar lo mismo (después de guardar) se conserva lo que ya se ve: así no se cierra
+    // la vista ni el formulario abierto. Solo una consulta distinta empieza en blanco.
+    setResult((prev) =>
+      prev.key === key
+        ? { ...prev, loading: true }
+        : { key, data: null, error: "", loading: true }
+    );
+    (all
+      ? api
+          .all(path, JSON.parse(paramsKey), controller.signal)
+          .then((data) => ({ data }))
+      : api.get(path, JSON.parse(paramsKey), controller.signal)
+    )
       .then((r) => {
         if (!controller.signal.aborted)
           setResult({ key, ...r, error: "", loading: false });
@@ -205,7 +221,7 @@ export function useEvaluationQuery(path, params = {}, { enabled = true } = {}) {
           setResult({ key, data: null, error: e.message, loading: false });
       });
     return () => controller.abort();
-  }, [api, path, key, paramsKey, revision, retry, enabled]);
+  }, [api, path, key, paramsKey, revision, retry, enabled, all]);
   return {
     ...(result.key === key ? result : { data: null, loading: true, error: "" }),
     reload: () => setRetry((x) => x + 1),

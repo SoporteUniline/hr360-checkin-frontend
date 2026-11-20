@@ -10,81 +10,22 @@ import {
   SearchInput,
   Select,
   Status,
-  Metrics,
-  Notice,
   Field,
   Input,
   Textarea,
   Modal,
   Confirm,
+  QueryState,
+  Pagination,
 } from "./ui";
-import { PRESETS, PERSPECTIVES, dateText } from "@/lib/evaluaciones/model.mjs";
-export function QueryState({ query, children }) {
-  if (query.loading)
-    return (
-      <div className="ev-pad" role="status">
-        Cargando…
-      </div>
-    );
-  if (query.error)
-    return (
-      <Notice tone="red">
-        <p role="alert">{query.error}</p>
-        <Button variant="outline" onClick={query.reload}>
-          Reintentar
-        </Button>
-      </Notice>
-    );
-  return children;
-}
-export function Pagination({ query, page, setPage }) {
-  const p = query.pagination;
-  return p ? (
-    <div className="ev-footer">
-      <span>
-        {p.total} registros · Página {page}
-      </span>
-      <div className="ev-actions">
-        <Button
-          variant="outline"
-          disabled={page <= 1 || query.loading}
-          onClick={() => setPage(page - 1)}
-        >
-          Anterior
-        </Button>
-        <Button
-          variant="outline"
-          disabled={page * p.pageSize >= p.total || query.loading}
-          onClick={() => setPage(page + 1)}
-        >
-          Siguiente
-        </Button>
-      </div>
-    </div>
-  ) : null;
-}
-export function ExportButton({ kind = "results", filters = {} }) {
-  const { api, perform, busy } = useEvaluations();
-  return (
-    <Button
-      variant="outline"
-      disabled={busy}
-      onClick={() =>
-        perform(async () => {
-          const { blob, filename } = await api.exportCsv(kind, filters);
-          const url = URL.createObjectURL(blob),
-            a = document.createElement("a");
-          a.href = url;
-          a.download = filename;
-          a.click();
-          setTimeout(() => URL.revokeObjectURL(url), 1000);
-        })
-      }
-    >
-      Exportar CSV
-    </Button>
-  );
-}
+import {
+  PRESETS,
+  PERSPECTIVES,
+  dateText,
+  scoreText,
+} from "@/lib/evaluaciones/model.mjs";
+import { filasCampana, pasosCampana } from "@/lib/evaluaciones/avance.mjs";
+import { Indicadores } from "./Indicadores";
 export function Templates() {
   const { api, perform, busy, navigate, capabilities } = useEvaluations();
   const [q, setQ] = useState(""),
@@ -221,6 +162,7 @@ export function Campaigns() {
           )
         }
       />
+      <Indicadores />
       <Panel>
         <div className="ev-filters">
           <SearchInput
@@ -295,6 +237,18 @@ export function Campaigns() {
 export function CampaignDetail({ id }) {
   const { api, perform, busy, navigate, actor } = useEvaluations(),
     query = useEvaluationQuery(`/campaigns/${id}`);
+  // Resultados y planes de esta campaña para la fila de cada persona (en borrador aún no hay).
+  const abierta = !!query.data && query.data.status !== "draft",
+    resultados = useEvaluationQuery(
+      "/results",
+      { campaignId: id },
+      { enabled: abierta, all: true }
+    ),
+    planes = useEvaluationQuery(
+      "/plans",
+      { campaignId: id },
+      { enabled: abierta, all: true }
+    );
   const [action, setAction] = useState(""),
     [reason, setReason] = useState(""),
     [due, setDue] = useState("");
@@ -357,89 +311,79 @@ export function CampaignDetail({ id }) {
               </>
             }
           />
-          <Metrics
-            items={[
-              {
-                label: "Colaboradores",
-                value: c.subjects?.length ?? c.subjectIds?.length ?? 0,
-              },
-              { label: "Recibidas", value: c.submitted ?? 0 },
-              { label: "Pendientes", value: c.pending ?? 0 },
-            ]}
-          />
-          <Panel title="Colaboradores">
-            <DataTable
-              rows={c.subjects || []}
-              columns={[
-                { key: "name", label: "Nombre" },
-                {
-                  key: "result",
-                  label: "Resultado",
-                  render: (s) =>
-                    c.status !== "draft" && (
-                      <ActionLink to={`resultados/${id}/${s.employeeId}`}>
+          <div className="ev-stack">
+            <CampaignProgress
+              campaign={c}
+              results={abierta ? resultados.data : []}
+              plans={abierta ? planes.data : []}
+              loading={abierta && (!resultados.data || !planes.data)}
+            />
+            {abierta && <Indicadores campaignId={id} />}
+            <details className="ev-panel">
+              <summary>
+                Cada evaluación (
+                {Array.isArray(c.assignments) ? c.assignments.length : 0})
+              </summary>
+              <DataTable
+                rows={Array.isArray(c.assignments) ? c.assignments : []}
+                columns={[
+                  {
+                    key: "subjectId",
+                    label: "Colaborador",
+                    render: (a) =>
+                      c.subjects?.find(
+                        (s) => String(s.employeeId) === String(a.subjectId)
+                      )?.name || a.subjectId,
+                  },
+                  { key: "evaluatorName", label: "Evaluador" },
+                  {
+                    key: "perspective",
+                    label: "Perspectiva",
+                    render: (a) => PERSPECTIVES[a.perspective] || a.perspective,
+                  },
+                  {
+                    key: "status",
+                    label: "Estado",
+                    render: (a) => <Status value={a.status} />,
+                  },
+                  {
+                    key: "open",
+                    label: "",
+                    render: (a) => (
+                      <ActionLink to={`responder/${a.id}`}>
                         Consultar
                       </ActionLink>
                     ),
-                },
-              ]}
-            />
-          </Panel>
-          <Panel title="Asignaciones">
-            <DataTable
-              rows={Array.isArray(c.assignments) ? c.assignments : []}
-              columns={[
-                {
-                  key: "subjectId",
-                  label: "Colaborador",
-                  render: (a) =>
-                    c.subjects?.find(
-                      (s) => String(s.employeeId) === String(a.subjectId)
-                    )?.name || a.subjectId,
-                },
-                { key: "evaluatorName", label: "Evaluador" },
-                {
-                  key: "perspective",
-                  label: "Perspectiva",
-                  render: (a) => PERSPECTIVES[a.perspective] || a.perspective,
-                },
-                {
-                  key: "status",
-                  label: "Estado",
-                  render: (a) => <Status value={a.status} />,
-                },
-                {
-                  key: "open",
-                  label: "",
-                  render: (a) => (
-                    <ActionLink to={`responder/${a.id}`}>Consultar</ActionLink>
-                  ),
-                },
-              ]}
-            />
-          </Panel>
-          <div className="ev-actions">
-            {flags.canExtend && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setDue(c.dueOn);
-                  setAction("extend");
-                }}
-              >
-                Ampliar plazo
-              </Button>
-            )}
-            {flags.canClose && (
-              <Button variant="outline" onClick={() => setAction("close")}>
-                Cerrar campaña
-              </Button>
-            )}
-            {actor.role === "hr" && c.status === "active" && (
-              <Button variant="outline" onClick={() => setAction("reminders")}>
-                Recordar pendientes
-              </Button>
-            )}
+                  },
+                ]}
+              />
+            </details>
+            <div className="ev-actions">
+              {flags.canExtend && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setDue(c.dueOn);
+                    setAction("extend");
+                  }}
+                >
+                  Ampliar plazo
+                </Button>
+              )}
+              {flags.canClose && (
+                <Button variant="outline" onClick={() => setAction("close")}>
+                  Cerrar campaña
+                </Button>
+              )}
+              {actor.role === "hr" && c.status === "active" && (
+                <Button
+                  variant="outline"
+                  onClick={() => setAction("reminders")}
+                >
+                  Recordar pendientes
+                </Button>
+              )}
+            </div>
           </div>
           <Modal
             open={!!action}
@@ -498,13 +442,93 @@ export function CampaignDetail({ id }) {
     </QueryState>
   );
 }
+// Los 5 pasos de la campaña y una fila por persona (respuestas, resultado y plan).
+// Al abrir a la persona se ven sus respuestas, su resultado y su plan de acción (ResultDetail).
+function CampaignProgress({ campaign, results, plans, loading }) {
+  const filas = filasCampana(campaign, results || [], plans || []);
+  const pasos = pasosCampana(campaign, filas);
+  const abierta = campaign.status !== "draft";
+  return (
+    <>
+      <ol className="ev-steps" aria-label="Pasos de la campaña">
+        {pasos.map((p, i) => (
+          <li
+            key={p.clave}
+            data-estado={p.estado}
+            aria-current={p.estado === "actual" ? "step" : undefined}
+          >
+            <strong>
+              {i + 1} · {p.titulo}
+            </strong>
+            <span>{loading && i > 1 ? "Calculando…" : p.detalle}</span>
+          </li>
+        ))}
+      </ol>
+      <Panel title="Personas">
+        <DataTable
+          rows={filas}
+          columns={[
+            { key: "nombre", label: "Persona" },
+            {
+              key: "respuestas",
+              label: "Respuestas",
+              render: (f) =>
+                f.total ? (
+                  <span
+                    className={
+                      f.faltan.length ? "ev-text-amber" : "ev-text-green"
+                    }
+                  >
+                    {f.respondidas} de {f.total}
+                    {f.faltan.length > 0 && ` · falta ${f.faltan.join(", ")}`}
+                  </span>
+                ) : (
+                  "—"
+                ),
+            },
+            {
+              key: "resultado",
+              label: "Resultado",
+              render: (f) =>
+                f.resultado?.score != null ? (
+                  `${scoreText(f.resultado.score)} / 5`
+                ) : (
+                  <Status
+                    value={
+                      f.resultado?.status || (abierta ? "pending" : "draft")
+                    }
+                  />
+                ),
+            },
+            {
+              key: "planes",
+              label: "Plan",
+              render: (f) =>
+                f.planes ? `${f.planes} plan${f.planes > 1 ? "es" : ""}` : "—",
+            },
+            {
+              key: "abrir",
+              label: "",
+              render: (f) =>
+                abierta && (
+                  <ActionLink to={`resultados/${campaign.id}/${f.id}`}>
+                    Abrir
+                  </ActionLink>
+                ),
+            },
+          ]}
+        />
+      </Panel>
+    </>
+  );
+}
 export function Assignments() {
   const [page, setPage] = useState(1),
     query = useEvaluationQuery("/my/assignments", { page, pageSize: 25 });
   return (
     <>
       <Heading
-        title="Mis pendientes"
+        title="Por responder"
         description="Evaluaciones asignadas a tu cuenta."
       />
       <Panel>
