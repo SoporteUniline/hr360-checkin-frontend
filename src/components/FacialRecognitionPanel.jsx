@@ -22,11 +22,15 @@ const FacialRecognitionPanel = ({
   continuo = false,
   // Celular: la cámara llena el alto que le da el contenedor (maqueta aprobada 19/11/2026).
   pantallaCompleta = false,
+  // Mientras el reloj pregunta «¿Registrar otra vez?» no se reconoce a nadie más (la tarjeta quedaría tapada).
+  pausado = false,
 }) => {
   // (19/11/2026) El análisis corre en un intervalo creado al encender la cámara: leer `continuo`
   // directo dejaba el valor de ese momento y el interruptor no surtía efecto hasta reiniciarla.
   const continuoRef = useRef(continuo);
   continuoRef.current = continuo;
+  const pausadoRef = useRef(pausado);
+  pausadoRef.current = pausado;
   const [ubicacionGPS, setUbicacionGPS] = useState(null);
   const [cameraFacing, setCameraFacing] = useState("user");
   const [error, setError] = useState("");
@@ -283,7 +287,7 @@ const FacialRecognitionPanel = ({
     let sinRostroDesde = Date.now();
     let usarRespaldo = false;
     const detect = async () => {
-      if (session !== sessionRef.current || isDetectingRef.current || isProcessingRef.current || globalThis.document?.hidden) return;
+      if (session !== sessionRef.current || pausadoRef.current || isDetectingRef.current || isProcessingRef.current || globalThis.document?.hidden) return;
       if (Date.now() - lastCheckTimeRef.current < retryIntervalRef.current) return;
       const canvas = canvasRef.current;
       const video = videoRef.current;

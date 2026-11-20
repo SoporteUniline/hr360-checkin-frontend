@@ -19,7 +19,9 @@ export default function CeldasControlHorasExtra({ registro, control, zona }) {
         {decidio.estado === "pendiente" ? (
           <span className="rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-semibold text-orange-700">Pendiente</span>
         ) : (
-          <span className="font-semibold text-slate-800">{cuando || decidio.nombre || "—"}</span>
+          // (19/11/2026) Primero quien decidió las horas extra; el último cambio del registro puede ser de
+          // otra persona (p. ej. editó una nota) y solo se usa si no se sabe quién decidió.
+          <span className="font-semibold text-slate-800">{decidio.nombre || cuando || "—"}</span>
         )}
       </TableCell>
       <TableCell>
