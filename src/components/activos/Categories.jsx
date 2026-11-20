@@ -14,17 +14,20 @@ import {
   SearchBox,
   matches,
 } from "./ui";
-export default function Categories() {
+// `type`: el tipo de las categorías (Ajustes lo manda desde ?tipo=; por defecto, activos).
+export default function Categories({ type }) {
   const { state, execute, resourceType } = useActivos();
+  const tipo = type ?? resourceType ?? "asset";
+  const categorias = (state.categories || []).filter((c) => c.type === tipo);
   const [form, setForm] = useState(null),
     [q, setQ] = useState("");
   const title =
-    resourceType === "uniform"
+    tipo === "uniform"
       ? "Categorías de uniformes"
       : "Categorías de activos";
   async function save(e) {
     e.preventDefault();
-    if (await execute("category.save", { ...form, type: resourceType }))
+    if (await execute("category.save", { ...form, type: tipo }))
       setForm(null);
   }
   return (
@@ -113,7 +116,7 @@ export default function Categories() {
                 "Acciones",
               ]}
             >
-              {state.categories
+              {categorias
                 .filter((c) => matches(q, c.name, c.description))
                 .map((c) => (
                   <tr key={c.id}>
@@ -142,7 +145,7 @@ export default function Categories() {
                   </tr>
                 ))}
             </Table>
-            {!state.categories.length && (
+            {!categorias.length && (
               <Empty>
                 Agrega tu primera categoría para organizar el inventario.
               </Empty>
