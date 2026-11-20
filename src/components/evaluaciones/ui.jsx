@@ -146,19 +146,6 @@ export function Status({ value }) {
   const [label, tone] = STATES[value] || [value, "gray"];
   return <Badge tone={tone}>{label}</Badge>;
 }
-export function Metrics({ items }) {
-  return (
-    <div className="ev-metrics">
-      {items.map(({ label, value, detail, tone }) => (
-        <div className="ev-metric" key={label}>
-          <span>{label}</span>
-          <strong className={tone ? `ev-text-${tone}` : ""}>{value}</strong>
-          <small>{detail}</small>
-        </div>
-      ))}
-    </div>
-  );
-}
 export function Progress({ value = 0, label }) {
   const safe = Math.max(0, Math.min(100, value));
   return (
@@ -447,4 +434,72 @@ export function downloadCsv(name, content) {
   a.download = name;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+// Estados de carga, paginación y exportación compartidos por todas las vistas (antes en ApiViews:
+// las demás vistas lo importaban de ahí y no se podía reutilizar sin dependencias circulares).
+export function QueryState({ query, children }) {
+  if (query.loading && query.data == null)
+    return (
+      <div className="ev-pad" role="status">
+        Cargando…
+      </div>
+    );
+  if (query.error)
+    return (
+      <Notice tone="red">
+        <p role="alert">{query.error}</p>
+        <Button variant="outline" onClick={query.reload}>
+          Reintentar
+        </Button>
+      </Notice>
+    );
+  return children;
+}
+export function Pagination({ query, page, setPage }) {
+  const p = query.pagination;
+  return p ? (
+    <div className="ev-footer">
+      <span>
+        {p.total} registros · Página {page}
+      </span>
+      <div className="ev-actions">
+        <Button
+          variant="outline"
+          disabled={page <= 1 || query.loading}
+          onClick={() => setPage(page - 1)}
+        >
+          Anterior
+        </Button>
+        <Button
+          variant="outline"
+          disabled={page * p.pageSize >= p.total || query.loading}
+          onClick={() => setPage(page + 1)}
+        >
+          Siguiente
+        </Button>
+      </div>
+    </div>
+  ) : null;
+}
+export function ExportButton({ kind = "results", filters = {} }) {
+  const { api, perform, busy } = useEvaluations();
+  return (
+    <Button
+      variant="outline"
+      disabled={busy}
+      onClick={() =>
+        perform(async () => {
+          const { blob, filename } = await api.exportCsv(kind, filters);
+          const url = URL.createObjectURL(blob),
+            a = document.createElement("a");
+          a.href = url;
+          a.download = filename;
+          a.click();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        })
+      }
+    >
+      Exportar CSV
+    </Button>
+  );
 }

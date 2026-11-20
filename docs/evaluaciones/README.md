@@ -1,5 +1,7 @@
 # Evaluación de desempeño · Integración con API
 
+> (20/11/2026) Navegación vigente: una entrada «Evaluaciones» con pestañas por rol y la campaña en una sola pantalla. Ver [menos-vistas.md](menos-vistas.md).
+
 Las rutas de RH (`/panel/evaluaciones`) y del empleado (`/empleado/panel/evaluaciones`) consumen la API real mediante el cliente Axios y el JWT existentes. No leen ni migran el estado ficticio de `localStorage`.
 
 ## Contrato vigente

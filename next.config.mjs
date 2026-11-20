@@ -52,6 +52,10 @@ const nextConfig = {
       a(`${viejo}/:ajuste(ubicaciones|paquetes)`, "/panel/activos/ajustes/:ajuste"),
       a(`${viejo}/:seccion(entregas|resguardos|solicitudes)/:resto*`, "/panel/activos/:seccion/:resto*"),
       a(viejo, "/panel/activos"),
+      // (20/11/2026) Evaluaciones: «Tablero» era el mismo «Resumen»; resultados y planes viven en cada
+      // campaña o en «Mis resultados». La entrada del módulo decide la pestaña según el rol.
+      a("/panel/evaluaciones/:vista(tablero|resultados|seguimiento)", "/panel/evaluaciones"),
+      a("/empleado/panel/evaluaciones/:vista(tablero|resultados|seguimiento)", "/empleado/panel/evaluaciones"),
     ];
   },
 

@@ -429,34 +429,17 @@ const menuGroups = [
     ],
   },
   {
+    // (20/11/2026) Antes 4 entradas (Resumen, Campañas, Plantillas, Tablero). Ahora una sola: dentro,
+    // cada quien ve sus pestañas (src/components/evaluaciones/EvaluationModule.jsx).
     group: "EVALUACIÓN DE DESEMPEÑO",
     groupIcon: BarChart3,
     items: [
       {
-        title: "Resumen de evaluaciones",
+        title: "Evaluaciones",
         url: "/panel/evaluaciones",
-        rol: "Recruiter",
-        icon: LayoutDashboard,
-      },
-      {
-        title: "Campañas",
-        url: "/panel/evaluaciones/campanas",
+        matchPrefix: "/panel/evaluaciones",
         rol: "Recruiter",
         icon: ClipboardCheck,
-        matchPrefix: "/panel/evaluaciones/campanas",
-      },
-      {
-        title: "Plantillas de evaluación",
-        url: "/panel/evaluaciones/plantillas",
-        rol: "Recruiter",
-        icon: LayoutTemplate,
-        matchPrefix: "/panel/evaluaciones/plantillas",
-      },
-      {
-        title: "Tablero de desempeño",
-        url: "/panel/evaluaciones/tablero",
-        rol: "Recruiter",
-        icon: BarChart3,
       },
     ],
   },

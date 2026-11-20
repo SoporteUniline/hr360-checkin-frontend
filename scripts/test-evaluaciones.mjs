@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import {
   answerScore, civilToday, copy, newQuestion, newTemplate, validateAnswers, validateTemplate,
 } from "../src/lib/evaluaciones/model.mjs";
+import { filasCampana, pasosCampana } from "../src/lib/evaluaciones/avance.mjs";
 
 // Plantilla válida: 4 categorías de 25 % con una pregunta de escala cada una.
 function plantilla() {
@@ -50,4 +51,43 @@ test("respuestas: el envío definitivo exige al menos una respuesta con puntaje"
   const respuestas = Object.fromEntries(t.categories.flatMap((c) => c.questions.map((q) => [q.id, 4])));
   assert.deepEqual(validateAnswers(t, respuestas, true), []);
   assert.match(civilToday(), /^\d{4}-\d{2}-\d{2}$/);
+});
+
+// (20/11/2026) Avance de la campaña en una sola pantalla: pasos y fila por persona.
+
+const campana = {
+  status: "active",
+  subjects: [{ employeeId: 1, name: "Ana" }, { employeeId: 2, name: "Luis" }],
+  assignments: [
+    { subjectId: 1, perspective: "self", status: "submitted" },
+    { subjectId: 1, perspective: "descending", status: "submitted" },
+    { subjectId: 2, perspective: "self", status: "submitted" },
+    { subjectId: 2, perspective: "descending", status: "pending" },
+    { subjectId: "2", perspective: "peer", status: "in_progress" },
+  ],
+};
+
+test("fila por persona: respuestas, quién falta, resultado y planes", () => {
+  const filas = filasCampana(campana, [{ subjectId: 1, score: 4.2, approvedAt: "2026-11-01" }], [{ subjectId: 1 }, { subjectId: 1 }]);
+  assert.deepEqual(filas.map((f) => [f.nombre, f.respondidas, f.total, f.faltan, f.planes]), [
+    ["Ana", 2, 2, [], 2],
+    ["Luis", 1, 3, ["su jefe", "pares"], 0],
+  ]);
+  assert.equal(filas[0].resultado.score, 4.2);
+  assert.equal(filas[1].resultado, null);
+  assert.deepEqual(filasCampana(null), []);
+});
+
+test("pasos: el primero sin terminar es el actual", () => {
+  const estados = (c, r = [], p = []) => pasosCampana(c, filasCampana(c, r, p)).map((x) => x.estado);
+  assert.deepEqual(estados({ ...campana, status: "draft" }), ["actual", "pendiente", "pendiente", "pendiente", "pendiente"]);
+  assert.deepEqual(estados(campana), ["hecho", "actual", "pendiente", "pendiente", "pendiente"]);
+  const pasos = pasosCampana(campana, filasCampana(campana));
+  assert.equal(pasos[1].detalle, "3 de 5 (60 %)");
+  // Cerrada aunque falten respuestas: ya se revisa.
+  const cerrada = { ...campana, status: "closed" };
+  assert.deepEqual(estados(cerrada, [{ subjectId: 1, approvedAt: "x" }]), ["hecho", "hecho", "actual", "pendiente", "pendiente"]);
+  const publicados = [{ subjectId: 1, publishedAt: "x" }, { subjectId: 2, publishedAt: "x" }];
+  assert.deepEqual(estados(cerrada, publicados, [{ subjectId: 2 }]), ["hecho", "hecho", "hecho", "hecho", "actual"]);
+  assert.equal(pasosCampana(cerrada, filasCampana(cerrada, publicados, [{ subjectId: 2 }]))[4].detalle, "1 con plan");
 });
