@@ -1,4 +1,5 @@
 "use client";
+import { CuentaHorasProvider } from "./CuentaHorasContext";
 import useLocalClockEvents from '@/hooks/useLocalClockEvents';
 import LocalClockCaptures from '@/components/Clock/LocalClockCaptures';
 
@@ -293,7 +294,7 @@ export default function AsistenciaDataContainer({
 
   return {
     ui: (
-      <>
+      <CuentaHorasProvider registros={registros}>
         {vista === "horas" ? (
           <VistaHoras
             idEmpresa={idEmpresa}
@@ -382,7 +383,7 @@ export default function AsistenciaDataContainer({
         )}
         </>
         )}
-      </>
+      </CuentaHorasProvider>
     ),
     data: effectiveData,
     resumenHorasExtra,

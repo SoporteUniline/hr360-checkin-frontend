@@ -6,6 +6,7 @@ import CeldaEditado, { crearFormateadorCambios } from "./CeldaEditado";
 import { avisoCalendario, correccionesCalendario } from "@/lib/asistencia/calendario.mjs";
 import { estadoHorasExtra } from "@/lib/asistencia/horasExtra.mjs";
 import CeldaHorasExtra, { CeldaAutorizarExtra } from "./CeldaHorasExtra";
+import EtiquetaPermisoHoras from "./EtiquetaPermisoHoras";
 import BotonAgregarComida from "./BotonAgregarComida";
 import CeldaObservaciones from "./CeldaObservaciones";
 import CeldasControlHorasExtra from "./CeldasControlHorasExtra";
@@ -406,6 +407,7 @@ export default function AsistenciaRow({
                   />
                   {registro.estadoAsistencia || "—"}
                 </span>
+                {registro.permiso_horas && <div className="mt-1"><EtiquetaPermisoHoras permiso={registro.permiso_horas} /></div>}
               </TableCell>
             )}
         </>

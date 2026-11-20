@@ -27,6 +27,7 @@ import { diasDelPeriodo, moverPeriodo, periodoDe } from "@/lib/asistencia/matriz
 import useHorasExtra from "@/hooks/useHorasExtra";
 import { useEmpresaTimezone } from "@/context/AuthContext";
 import VistaFechas from "./VistaFechas";
+import { CuentaHorasProvider } from "../registro-asistencia/CuentaHorasContext";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -199,6 +200,7 @@ function ControlHorasExtra() {
         )}
       </div>
 
+      <CuentaHorasProvider registros={registros}>
       {vista === "fechas" ? (
         <VistaFechas
           registros={registros}
@@ -212,6 +214,7 @@ function ControlHorasExtra() {
           cargando={!res?.data && !res?.ui}
         />
       ) : ui}
+      </CuentaHorasProvider>
 
       <p className="text-xs text-slate-500">
         {vista === "fechas"

@@ -97,7 +97,7 @@ test("autorizar y quitar: campos que se guardan", () => {
 
 test("resumen del periodo", () => {
   const regs = [base, { ...base, hrs_extra: 1 }, { ...base, salida: "2026-11-18 17:00:00" }, { ...base, ...cambiosNoAutorizar(base) }];
-  assert.deepEqual(resumenHorasExtra(regs), { total: 3, pendientes: 1, autorizadas: 1, noAutorizadas: 1 });
+  assert.deepEqual(resumenHorasExtra(regs), { total: 3, pendientes: 1, autorizadas: 1, noAutorizadas: 1, reposiciones: 0 });
 });
 
 test("orden: por autorizar (más minutos primero) → autorizadas → no autorizadas → sin", () => {

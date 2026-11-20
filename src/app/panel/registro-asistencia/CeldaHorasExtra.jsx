@@ -4,13 +4,17 @@
 // - «Horas extra»: solo el tiempo después de la salida del horario (+ casilla para el masivo).
 // - «¿Autorizar?»: selector Sí | No. Tocar la opción ya elegida la quita (vuelve a «por autorizar»).
 //   «⋯» abre forma de pago y nota.
+// - (20/11/2026, permisos por horas) Si el empleado debe horas aparece una tercera opción, «Repone»,
+//   sugerida con el aviso «Debe 2 h»: autoriza con la forma «Reposición de tiempo por tiempo», que baja
+//   su cuenta de horas y no se paga como hora extra.
 
 import { useState } from "react";
 import { MoreHorizontal } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
-import { FORMA_PAGO_DEFAULT, FORMAS_PAGO, UMBRAL_MINUTOS } from "@/lib/asistencia/horasExtra.mjs";
+import { FORMA_PAGO_DEFAULT, FORMA_REPOSICION, FORMAS_PAGO, UMBRAL_MINUTOS } from "@/lib/asistencia/horasExtra.mjs";
 import { formatearMinutos } from "@/lib/asistencia/jornada.mjs";
+import { useDebeHoras } from "./CuentaHorasContext";
 
 const detener = (e) => e.stopPropagation();
 const notaPropia = (registro) =>
@@ -75,7 +79,7 @@ export default function CeldaHorasExtra({ info }) {
     <div className="flex items-center gap-2 whitespace-nowrap">
       <span
         className={`font-semibold tabular-nums ${
-          estado === "pendiente" ? "text-orange-700" : estado === "autorizada" ? "text-emerald-700" : "text-slate-400 line-through"
+          estado === "pendiente" ? "text-orange-700" : estado === "autorizada" ? "text-emerald-700" : estado === "reposicion" ? "text-sky-700" : "text-slate-400 line-through"
         }`}
         title={estado === "no_autorizada" ? "No autorizadas: queda la constancia; si se quedó después de su horario, se paga hasta la salida del horario" : undefined}
       >
@@ -90,19 +94,24 @@ export function CeldaAutorizarExtra({
   registro, info, autorizador, readOnly, guardando, onAutorizar, onNoAutorizar, onQuitar,
 }) {
   const { estado, minutos } = info;
+  const debe = useDebeHoras(registro.id_empleado);
   if (estado === "sin") return <span className="text-slate-300">—</span>;
   const si = estado === "autorizada";
   const no = estado === "no_autorizada";
+  const repone = estado === "reposicion";
+  const conRepone = repone || debe > 0;
   const opcion = (activa, tono) =>
     `px-3 py-1 text-xs font-semibold transition disabled:opacity-50 ${
       activa ? tono : "bg-white text-slate-500 hover:bg-slate-50"
     }`;
-  const detalle = si
+  const detalle = si || repone
     ? [autorizador || "Sin autorizador", registro.forma_pago_extras, notaPropia(registro) && `“${notaPropia(registro)}”`]
         .filter(Boolean)
         .join(" · ")
     : no
     ? "Se paga hasta la salida del horario; la checada del reloj se conserva"
+    : debe > 0
+    ? `Debe ${formatearMinutos(debe)} de permisos por horas: «Repone» lo descuenta de su cuenta y no se paga como extra`
     : "Por autorizar";
 
   return (
@@ -130,7 +139,19 @@ export function CeldaAutorizarExtra({
         >
           No
         </button>
+        {conRepone && (
+          <button
+            type="button"
+            aria-pressed={repone}
+            disabled={readOnly || guardando}
+            onClick={() => (repone ? onQuitar() : onAutorizar({ forma: FORMA_REPOSICION }))}
+            className={`${opcion(repone, "bg-sky-600 text-white")} border-l border-slate-200 ${!repone && estado === "pendiente" ? "bg-sky-50 text-sky-800" : ""}`}
+          >
+            Repone
+          </button>
+        )}
       </div>
+      {debe > 0 && !repone && <span className="text-[11px] font-semibold text-sky-700">Debe {formatearMinutos(debe)}</span>}
       {!readOnly && !no && (
         <DetalleAutorizar registro={registro} minutos={minutos} onAutorizar={onAutorizar}>
           <button
@@ -144,7 +165,7 @@ export function CeldaAutorizarExtra({
           </button>
         </DetalleAutorizar>
       )}
-      {si && <span className="max-w-[140px] truncate text-[11px] text-slate-500">{autorizador || ""}</span>}
+      {(si || repone) && <span className="max-w-[140px] truncate text-[11px] text-slate-500">{autorizador || ""}</span>}
     </div>
   );
 }

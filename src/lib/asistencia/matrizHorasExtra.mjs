@@ -44,7 +44,7 @@ const nombreDe = (r) => [r.nombre, r.apellido_paterno].filter(Boolean).join(" ")
 // Lo que suma al total: por autorizar y autorizadas. Las no autorizadas se muestran tachadas y no suman.
 const suma = (estado) => estado === "pendiente" || estado === "autorizada";
 // Prioridad del color de la celda cuando un día tiene varios registros.
-const PRIORIDAD = { pendiente: 0, autorizada: 1, no_autorizada: 2 };
+const PRIORIDAD = { pendiente: 0, autorizada: 1, reposicion: 2, no_autorizada: 3 };
 
 // filas: [{ id, nombre, departamento, celdas: { [fecha]: { minutos, estado, registros } }, total, pendientes }]
 export function matrizHorasExtra(registros, { dias, zonaDe = () => DB_TZ, estados = null } = {}) {

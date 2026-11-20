@@ -17,6 +17,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/context/AuthContext";
 import MobileFiltersDrawer from "./MobileFiltersDrawer";
 import MobileEmpleadoDetalle from "./MobileEmpleadoDetalle";
+import EtiquetaPermisoHoras from "./EtiquetaPermisoHoras";
 import { estadoHorasExtra } from "@/lib/asistencia/horasExtra.mjs";
 import { formatearMinutos, sinSalidaAComer } from "@/lib/asistencia/jornada.mjs";
 import ClockNavigation from '@/components/Clock/ClockNavigation';
@@ -164,6 +165,7 @@ function EmpleadoCard({ registro, index, totalCount, onClick }) {
         {sinSalidaAComer(registro) && (
           <p className="mt-0.5 truncate text-[11px] font-semibold text-amber-700">⚠ No marcó salida a comer</p>
         )}
+        {registro.permiso_horas && <EtiquetaPermisoHoras permiso={registro.permiso_horas} className="mt-1" />}
       </div>
 
       {/* Times */}
