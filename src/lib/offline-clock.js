@@ -65,7 +65,7 @@ async function registerLocalFace(payload, context, profile, original = null) {
   const old = payload.offline_event?.local_verification ? payload.offline_event : null;
   let event;
   if (old) {
-    event = { ...old, action: payload.accion || old.action, status: 'pending', error: '' };
+    event = { ...old, action: payload.accion || old.action, status: 'pending', error: '', ...(payload.repetir === true ? { repetir: true } : {}) };
     if (!['entrada', 'salida', 'salida_temporal', 'cerrar_turno'].includes(event.action)) throw new Error('Selecciona cómo cerrar el turno');
   } else {
     const dataset = await localFaceStatus(context);

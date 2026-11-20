@@ -217,6 +217,25 @@ export default function RelojChecador({
     setCodigoEmpleado("");
   }, [metodo]);
 
+  // Tarjeta del resultado. Un solo temporizador: con el reloj fijo, el aviso de la persona siguiente ya no
+  // se cierra antes de tiempo por el temporizador de la anterior. Con motivo de «pendiente», más tiempo.
+  const temporizadorPopup = useRef(null);
+  const mostrarResultado = (data) => {
+    clearTimeout(temporizadorPopup.current);
+    setPopupInfo({
+      nombre: `${data.empleado?.nombre ?? ""} ${data.empleado?.apellido_paterno ?? ""}`.trim(),
+      foto_perfil: data.empleado?.foto_perfil || "/assets/user.png",
+      movimiento: data.movimiento || data.message,
+      pending: Boolean(data.pending),
+      motivo: data.motivo || "",
+      errorServidor: Boolean(data.errorServidor),
+      localValidated: Boolean(data.local_validated),
+      success: !data.pending,
+    });
+    temporizadorPopup.current = setTimeout(() => setPopupInfo(null), data.pending && data.motivo ? 8000 : 2500);
+    mutate();
+  };
+
   const registrarMovimiento = async (codigoManual) => {
     if (registrando) return;
     setRegistrando(true);
@@ -274,21 +293,8 @@ export default function RelojChecador({
         return;
       }
 
-      setPopupInfo({
-        nombre: `${data.empleado.nombre} ${data.empleado.apellido_paterno}`,
-        foto_perfil: data.empleado.foto_perfil || "/assets/user.png",
-        movimiento: data.movimiento || data.message,
-        pending: Boolean(data.pending),
-        motivo: data.motivo || "",
-        errorServidor: Boolean(data.errorServidor),
-        localValidated: Boolean(data.local_validated),
-        success: !data.pending,
-      });
-
-      setTimeout(() => setPopupInfo(null), 3000);
-      // enqueueSnackbar("Registro realizado", { variant: "success" });
+      mostrarResultado(data);
       setCodigoEmpleado("");
-      mutate();
     } catch (err) {
       setCodigoEmpleado("");
       enqueueSnackbar(err.response?.data?.error || err.message || "Error al registrar", {
@@ -309,6 +315,7 @@ export default function RelojChecador({
         id_empresa: idEmpresa,
         accion,
         offline_event: pendiente.offline_event,
+        ...(pendiente.repetir ? { repetir: true } : {}),
       };
 
       const body = pendiente.tipo === "facial" ? {...payload, descriptor_facial: pendiente.descriptor_facial} : {...payload, codigo: pendiente.codigo};
@@ -325,20 +332,11 @@ export default function RelojChecador({
         })).data;
       }
 
-      setPopupInfo({
-        nombre: `${dataResponse.empleado.nombre} ${dataResponse.empleado.apellido_paterno}`,
-        foto_perfil: dataResponse.empleado.foto_perfil || "/assets/user.png",
-        movimiento: dataResponse.movimiento || dataResponse.message,
-        pending: Boolean(dataResponse.pending),
-        motivo: dataResponse.motivo || "",
-        errorServidor: Boolean(dataResponse.errorServidor),
-        localValidated: Boolean(dataResponse.local_validated),
-        success: !dataResponse.pending,
-      });
-      setTimeout(() => setPopupInfo(null), 3000);
       setMostrarModalTurno(false);
+      // «Sí, registrar» + «Turno abierto»: si aun así rebota, se vuelve a preguntar en lugar de pintar éxito.
+      if (dataResponse.repetida) setPregunta(dataResponse);
+      else mostrarResultado(dataResponse);
       setPendiente(null);
-      mutate();
       setCodigoEmpleado("");
     } catch (error) {
       enqueueSnackbar(error.response?.data?.error || error.message || "Error al registrar", {
@@ -362,19 +360,7 @@ export default function RelojChecador({
       });
       setMostrarModalTurno(true);
     } else {
-      setPopupInfo({
-        nombre: `${data.empleado.nombre} ${data.empleado.apellido_paterno}`,
-        foto_perfil: data.empleado.foto_perfil || "/assets/user.png",
-        movimiento: data.movimiento || data.message,
-        pending: Boolean(data.pending),
-        motivo: data.motivo || "",
-        errorServidor: Boolean(data.errorServidor),
-        localValidated: Boolean(data.local_validated),
-        success: !data.pending,
-      });
-      // Con motivo de «pendiente» se deja más tiempo para poder leerlo.
-      setTimeout(() => setPopupInfo(null), data.pending && data.motivo ? 8000 : 2500);
-      mutate();
+      mostrarResultado(data);
     }
   };
 
@@ -384,7 +370,15 @@ export default function RelojChecador({
     try {
       const { data } = await submitMovement(pregunta.reintentar);
       setPregunta(null);
-      handleFacialResponse({ ...data, repetida: false });
+      if (data.requiereDecision) {
+        // Cierre manual: después de «Sí, registrar» pregunta «salida temporal / cerrar turno»; la decisión
+        // conserva repetir y el tipo (código o rostro) para no volver a chocar con el candado.
+        const { codigo, descriptor_facial } = pregunta.reintentar;
+        setPendiente({ tipo: codigo ? "codigo" : "facial", codigo, descriptor_facial, offline_event: data.offline_event, repetir: true });
+        setMostrarModalTurno(true);
+      } else {
+        mostrarResultado(data);
+      }
     } catch (err) {
       setPregunta(null);
       enqueueSnackbar(err.response?.data?.error || err.message || "No se pudo registrar", { variant: "error" });
