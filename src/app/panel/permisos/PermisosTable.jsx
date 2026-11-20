@@ -1,5 +1,6 @@
 "use client";
 
+import { horarioPermiso } from "@/lib/asistencia/permisoHoras.mjs";
 import React, { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import {
@@ -347,6 +348,11 @@ export default function PermisosTable({
                       <span className="inline-flex items-center rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-800">
                         {row.tipo_permiso_nombre}
                       </span>
+                      {row.modalidad === "horas" && (
+                        <div className="mt-1 text-xs text-slate-600">
+                          {horarioPermiso(row)} · {row.tratamiento === "rebaja" ? "se rebaja" : "se repone"}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell className="font-mono text-sm">
                       {formatDateDMY(di)}

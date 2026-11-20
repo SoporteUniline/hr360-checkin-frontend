@@ -112,7 +112,7 @@ export default function DiagnosticoReloj() {
               <ul className="mt-1 space-y-1">
                 {historial.slice(0, 10).map((r) => (
                   <li key={r.id} className="flex justify-between gap-2">
-                    <span className="truncate">{new Date(r.fecha).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short" })} · {r.resultado}</span>
+                    <span className="truncate">{new Date(r.fecha).toLocaleString("es-MX", { dateStyle: "short", timeStyle: "short", hourCycle: "h12" })} · {r.resultado}</span>
                     <span className="shrink-0 tabular-nums">{seg(r.total_ms)} {r.enviado ? "✓" : "⏳"}</span>
                   </li>
                 ))}

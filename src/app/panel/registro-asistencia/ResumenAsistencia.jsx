@@ -7,6 +7,8 @@
 
 export default function ResumenAsistencia({
   totals,
+  // Mientras llegan los datos se muestra «—» en lugar de 0 % y ceros.
+  cargando = false,
   soloPresentes,
   setSoloPresentes,
   soloAusentes,
@@ -107,7 +109,7 @@ export default function ResumenAsistencia({
     <div className="flex flex-wrap items-center gap-x-6 gap-y-3 rounded-2xl border border-gray-100 bg-white px-6 py-4 shadow-sm">
       <div className="flex items-baseline gap-3">
         <div className="text-[38px] font-extrabold leading-none tracking-tight tabular-nums bg-gradient-to-br from-brand to-brand-accent bg-clip-text text-transparent">
-          {pct}%
+          {cargando ? "—" : `${pct}%`}
         </div>
         <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500 leading-tight">
           Asistencia
@@ -155,7 +157,7 @@ export default function ResumenAsistencia({
                 style={{ backgroundColor: s.color }}
               />
               {s.label}{" "}
-              <b className="font-extrabold tabular-nums text-gray-900">{s.n}</b>
+              <b className="font-extrabold tabular-nums text-gray-900">{cargando ? "—" : s.n}</b>
               {s.activo && (
                 <span className="text-[10px] font-bold text-blue-400">
                   ✕ quitar
@@ -179,7 +181,7 @@ export default function ResumenAsistencia({
             <span className="h-2 w-2 rounded-[3px] bg-brand-accent" />
             Horas extra{" "}
             <b className="font-extrabold tabular-nums text-gray-900">
-              {total_con_horas_extra}
+              {cargando ? "—" : total_con_horas_extra}
             </b>
             {pendientes_horas_extra > 0 && (
               <span className="text-[11px] font-bold text-orange-600">

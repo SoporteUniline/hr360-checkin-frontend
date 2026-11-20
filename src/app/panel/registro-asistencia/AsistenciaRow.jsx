@@ -6,15 +6,19 @@ import CeldaEditado, { crearFormateadorCambios } from "./CeldaEditado";
 import { avisoCalendario, correccionesCalendario } from "@/lib/asistencia/calendario.mjs";
 import { estadoHorasExtra } from "@/lib/asistencia/horasExtra.mjs";
 import CeldaHorasExtra, { CeldaAutorizarExtra } from "./CeldaHorasExtra";
+import EtiquetaPermisoHoras from "./EtiquetaPermisoHoras";
 import BotonAgregarComida from "./BotonAgregarComida";
+import CeldaObservaciones from "./CeldaObservaciones";
 import CeldasControlHorasExtra from "./CeldasControlHorasExtra";
 import PanelEditarAsistencia from "./PanelEditarAsistencia";
 import { useEmpresaTimezone } from "@/context/AuthContext";
 import { calcularResumenJornada, formatearMinutos } from "@/utils/asistenciaHoras";
-import { minutosDescanso, salidaEsDiaSiguiente, sinSalidaAComer, sumarDias } from "@/lib/asistencia/jornada.mjs";
+import { minutosDescanso, salidaEsDiaSiguiente, sinSalidaAComer } from "@/lib/asistencia/jornada.mjs";
+import { sumarDias } from "@/lib/fechaHora.mjs";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
+import { hora12 } from "@/lib/hora12.mjs";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
@@ -92,8 +96,10 @@ export default function AsistenciaRow({
   const horaLocal = (valor) =>
     valor ? dayjs.tz(valor, DB_TIMEZONE).tz(userTimezone).format("HH:mm") : "";
   // Tramos del reloj para el detalle de la jornada (09:00–11:00 · 11:30–14:00).
+  // Para mostrar (12 h); horaLocal (HH:mm) se queda para los campos de captura.
+  const horaVer = (valor) => (valor ? hora12(dayjs.tz(valor, DB_TIMEZONE).tz(userTimezone)) : "");
   const detalleTramos = Array.isArray(registro.tramos_checadas) && registro.tramos_checadas.length > 1
-    ? registro.tramos_checadas.map((t) => `${horaLocal(t.entrada)}–${horaLocal(t.salida)}`).join(" · ")
+    ? registro.tramos_checadas.map((t) => `${horaVer(t.entrada)}–${horaVer(t.salida)}`).join(" · ")
     : null;
   const fechaLocal = (valor) =>
     valor ? dayjs.tz(valor, DB_TIMEZONE).tz(userTimezone).format("YYYY-MM-DD") : "";
@@ -222,28 +228,18 @@ export default function AsistenciaRow({
             )}
             {isColVisible("entrada") && (
               <TableCell className="text-center">
-                {registro.entrada
-                  ? dayjs
-                      .tz(registro.entrada, "America/Mexico_City")
-                      .tz(userTimezone)
-                      .format("HH:mm")
-                  : "-"}
+                {registro.entrada ? horaVer(registro.entrada) : "-"}
               </TableCell>
             )}
             {isColVisible("salida") && (
               <TableCell className="text-center">
-                {registro.salida
-                  ? dayjs
-                      .tz(registro.salida, "America/Mexico_City")
-                      .tz(userTimezone)
-                      .format("HH:mm")
-                  : "-"}
+                {registro.salida ? horaVer(registro.salida) : "-"}
                 {salidaDiaSiguiente(registro) && (
                   <span className="ml-1 text-[11px] font-semibold text-blue-600">+1 día</span>
                 )}
                 {infoExtra.estado === "no_autorizada" && infoExtra.salidaReloj && infoExtra.salidaReloj !== registro.salida && (
                   <span className="block text-[11px] text-slate-400 line-through" title="Checada real del reloj (se conserva)">
-                    {horaLocal(infoExtra.salidaReloj)} reloj
+                    {horaVer(infoExtra.salidaReloj)} reloj
                   </span>
                 )}
               </TableCell>
@@ -390,17 +386,8 @@ export default function AsistenciaRow({
               </TableCell>
             )}
             {isColVisible("notas") && (
-              <TableCell className="max-w-[240px] !whitespace-normal text-center text-xs">
-                {registro.notas || registro.notas_hrs_extra ? (
-                  <div className="flex flex-col gap-0.5">
-                    {registro.notas && <span>{registro.notas}</span>}
-                    {registro.notas_hrs_extra && (
-                      <span className="text-slate-500">Extras: {registro.notas_hrs_extra}</span>
-                    )}
-                  </div>
-                ) : (
-                  "-"
-                )}
+              <TableCell className="max-w-[220px] text-center text-xs">
+                <CeldaObservaciones notas={registro.notas} notasHorasExtra={registro.notas_hrs_extra} />
               </TableCell>
             )}
             {isColVisible("estado_asistencia") && (
@@ -421,6 +408,7 @@ export default function AsistenciaRow({
                   />
                   {registro.estadoAsistencia || "—"}
                 </span>
+                {registro.permiso_horas && <div className="mt-1"><EtiquetaPermisoHoras permiso={registro.permiso_horas} /></div>}
               </TableCell>
             )}
         </>

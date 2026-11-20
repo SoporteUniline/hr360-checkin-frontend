@@ -514,6 +514,7 @@ export const AdministrativeDetailsModal = ({
     const horaGenerado = new Date().toLocaleTimeString("es-MX", {
       hour: "2-digit",
       minute: "2-digit",
+      hourCycle: "h12",
     });
 
     for (let p = 1; p <= totalPages; p++) {

@@ -5,19 +5,19 @@
 // real del reloj se conserva y el registro queda «Editado».
 
 import { useState } from "react";
+import { mutate as recargar } from "swr";
 import { useSnackbar } from "notistack";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import axios from "@/lib/axios";
-import { horaAMinutos } from "@/lib/asistencia/jornada.mjs";
+import { horaAMinutos, minutosAHora } from "@/lib/fechaHora.mjs";
 
 const detener = (e) => e.stopPropagation();
-const hhmm = (min) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
 
 // Por defecto la comida de su horario; si no tiene, 30 min a las 13:00.
 function comidaSugerida(registro) {
   const sale = horaAMinutos(registro.hora_salida_comida_programada);
   const regresa = horaAMinutos(registro.hora_regreso_comida_programada);
-  if (sale != null && regresa != null && regresa > sale) return [hhmm(sale), hhmm(regresa)];
+  if (sale != null && regresa != null && regresa > sale) return [minutosAHora(sale), minutosAHora(regresa)];
   return ["13:00", "13:30"];
 }
 
@@ -51,7 +51,11 @@ export default function BotonAgregarComida({ registro, aBaseDeDatos, fechaBase, 
       });
       enqueueSnackbar(`Comida agregada: ${salida}–${regreso}. Su checada original se conserva.`, { variant: "success" });
       setAbierto(false);
-      await onGuardado?.();
+      // (19/11/2026) Refresca también las «Checadas del reloj» de la ventana: antes había que cerrar y abrir.
+      await Promise.all([
+        onGuardado?.(),
+        recargar((clave) => typeof clave === "string" && clave.includes("/checador/reloj/asistencia-por-empleado")),
+      ]);
     } catch (error) {
       enqueueSnackbar(error?.response?.data?.message || "No se pudo agregar la comida.", { variant: "error" });
     } finally {
@@ -74,7 +78,9 @@ export default function BotonAgregarComida({ registro, aBaseDeDatos, fechaBase, 
           </button>
         )}
       </PopoverTrigger>
-      <PopoverContent className="w-72 border border-slate-200 bg-white p-4 shadow-xl" data-no-row-click onClick={detener}>
+      {/* (19/11/2026) Dentro de la ventana de edición «Guardar comida» no hacía nada: la ventana pone
+          pointer-events:none fuera de ella. Arreglado en ui/popover (pointer-events-auto) + z-[60]. */}
+      <PopoverContent className="z-[60] w-72 border border-slate-200 bg-white p-4 shadow-xl" data-no-row-click onClick={detener}>
         <p className="text-sm font-semibold text-slate-900">Agregar comida · {registro.nombre} {registro.apellido_paterno}</p>
         <p className="mt-0.5 text-xs text-slate-500">Su día queda en dos tramos; el tiempo de comida no se paga.</p>
         <div className="mt-3 grid grid-cols-2 gap-2">

@@ -23,7 +23,8 @@ import { useAuth, useEmpresaTimezone } from "@/context/AuthContext";
 import useAsistenciaActions from "@/hooks/useAsistenciaActions";
 import useTiposPermisoData from "@/hooks/useTiposPermisoData";
 import useEmpleadosData from "@/hooks/useEmpleadosData";
-import { formatearMinutos, minutosTrabajados, salidaEsDiaSiguiente, sumarDias } from "@/lib/asistencia/jornada.mjs";
+import { formatearMinutos, minutosTrabajados, salidaEsDiaSiguiente } from "@/lib/asistencia/jornada.mjs";
+import { sumarDias } from "@/lib/fechaHora.mjs";
 import { cambiosRegistro } from "@/lib/asistencia/cambios.mjs";
 import { crearFormateadorCambios } from "./CeldaEditado";
 import HorasExtraMovil from "./HorasExtraMovil";
@@ -35,6 +36,7 @@ import {
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
+import { hora12 } from "@/lib/hora12.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -226,10 +228,10 @@ export default function MobileEmpleadoDetalle({
 
   // View mode — display helpers
   const entradaFmt = display.entrada
-    ? dayjs.tz(display.entrada, DB_TZ).tz(tz).format("HH:mm")
+    ? hora12(dayjs.tz(display.entrada, DB_TZ).tz(tz))
     : null;
   const salidaFmt = display.salida
-    ? dayjs.tz(display.salida, DB_TZ).tz(tz).format("HH:mm")
+    ? hora12(dayjs.tz(display.salida, DB_TZ).tz(tz))
     : null;
   const horasTrabajadas = calcHours(display);
   const zonaRegistro = display.zona_horaria || tz;
@@ -717,7 +719,7 @@ export default function MobileEmpleadoDetalle({
                   </div>
                   {infoExtra.estado === "no_autorizada" && infoExtra.salidaReloj && infoExtra.salidaReloj !== display.salida && (
                     <div className="text-[11px] text-gray-400 line-through mt-1" title="Checada real del reloj (se conserva)">
-                      {dayjs.tz(infoExtra.salidaReloj, DB_TZ).tz(zonaRegistro).format("HH:mm")} reloj
+                      {hora12(dayjs.tz(infoExtra.salidaReloj, DB_TZ).tz(zonaRegistro))} reloj
                     </div>
                   )}
                   {!salidaFmt && salidaProgramadaFmt && (

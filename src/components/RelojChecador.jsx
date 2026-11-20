@@ -15,8 +15,8 @@ import Link from "next/link";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import ErrorPage from "@/components/ErrorPage";
-import { useSnackbar } from "notistack";
 import axiosInstance from "@/lib/axios";
+import { useSnackbar } from "notistack";
 import FacialRecognitionPanel from "./FacialRecognitionPanel";
 import { loadBrowserFaceApi } from "@/lib/faceapi-browser";
 import { diagnosticoActivo, fijarDiagnostico } from "@/lib/diagnostico-reloj";
@@ -32,6 +32,7 @@ import { useAuth } from "@/context/AuthContext";
 import QRScanner from "./QRScanner";
 import { Button } from "./ui/button";
 import ClockNavigation from './Clock/ClockNavigation';
+import { hora12 } from "@/lib/hora12.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -41,6 +42,7 @@ export default function RelojChecador({
   modoEmpleado = false,
   idEmpleado = null,
   companySlug = null,
+  nombreEmpresa = "",
 }) {
   const [ubicacionGPS, setUbicacionGPS] = useState(null);
   const [metodo, setMetodo] = useState("facial");
@@ -77,10 +79,20 @@ export default function RelojChecador({
   const [mostrarCamara, setMostrarCamara] = useState(true);
   const { enqueueSnackbar } = useSnackbar();
   const [popupInfo, setPopupInfo] = useState(null);
+  // Candado de 5 min (19/11/2026): «Acabas de registrar tu salida a las 4:49 p.m. ¿Registrar otra vez?».
+  const [pregunta, setPregunta] = useState(null);
+  const [repitiendo, setRepitiendo] = useState(false);
   const [registrando, setRegistrando] = useState(false);
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const [subscriptionActive, setSubscriptionActive] = useState(false);
   const { getCurrentLocation, loading: loadingGPS } = useGPS();
+  // All methods identify the person checking in within this company. The
+  // signed-in employee only controls which history is visible on this page.
+  const submitMovement = (payload) => axiosInstance.post(
+    payload.descriptor_facial ? "/checador/reloj/registrar-facial" : "/checador/reloj/registrar",
+    payload,
+  );
+
   // Prepare recognition while subscription and clock data are being checked.
   // Camera and GPS permissions are requested only by the visible facial panel.
   useEffect(() => {
@@ -110,10 +122,7 @@ export default function RelojChecador({
 
   const formatearHora = (fechaString) => {
     if (!fechaString) return "-";
-    return dayjs
-      .tz(fechaString, DB_TIMEZONE)
-      .tz(EMPRESA_TIMEZONE)
-      .format("hh:mm:ss A");
+    return hora12(dayjs.tz(fechaString, DB_TIMEZONE).tz(EMPRESA_TIMEZONE), { segundos: true });
   };
 
   const endpoint = modoEmpleado
@@ -161,7 +170,7 @@ export default function RelojChecador({
   useEffect(() => {
     const actualizarHora = () => {
       const ahora = dayjs().tz(EMPRESA_TIMEZONE);
-      setHoraActual(ahora.format("hh:mm:ss A"));
+      setHoraActual(hora12(ahora, { segundos: true }));
       const fechaFormateada = ahora.format("dddd, D [de] MMMM [de] YYYY");
       const [dia, ...resto] = fechaFormateada.split(", ");
       const diaCapitalizado = dia.charAt(0).toUpperCase() + dia.slice(1);
@@ -188,9 +197,25 @@ export default function RelojChecador({
     setCodigoEmpleado("");
   }, [metodo]);
 
+  // Tarjeta del resultado. Un solo temporizador: con el reloj fijo, el aviso de la persona siguiente ya no
+  // se cierra antes de tiempo por el temporizador de la anterior. Con motivo de «pendiente», más tiempo.
+  const temporizadorPopup = useRef(null);
+  const mostrarResultado = (data) => {
+    clearTimeout(temporizadorPopup.current);
+    setPopupInfo({
+      nombre: `${data.empleado?.nombre ?? ""} ${data.empleado?.apellido_paterno ?? ""}`.trim(),
+      foto_perfil: data.empleado?.foto_perfil || "/assets/user.png",
+      movimiento: data.movimiento || data.message,
+      success: true,
+    });
+    temporizadorPopup.current = setTimeout(() => setPopupInfo(null), 2500);
+    mutate();
+  };
+
   const registrarMovimiento = async (codigoManual) => {
     if (registrando) return;
     setRegistrando(true);
+    const captured_at = new Date().toISOString();
 
     const rawCodigo =
       typeof codigoManual === "string" || typeof codigoManual === "number"
@@ -206,10 +231,10 @@ export default function RelojChecador({
     }
 
     try {
-      const payload = { codigo, id_empresa: idEmpresa };
+      const payload = { codigo, id_empresa: idEmpresa, captured_at };
       let response;
       try {
-        response = await axiosInstance.post("/checador/reloj/registrar", payload);
+        response = await submitMovement(payload);
       } catch (err) {
         if (err.response?.data?.error !== "Faltan coordenadas de ubicación") throw err;
         const pos = await getCurrentLocation();
@@ -218,12 +243,18 @@ export default function RelojChecador({
           enqueueSnackbar("Permite el acceso a ubicación y activa el GPS para checar.", {variant: "error"});
           return;
         }
-        response = await axiosInstance.post("/checador/reloj/registrar", {
-          ...payload, latitud_actual: pos.lat, longitud_actual: pos.lng,
+        response = await submitMovement({
+          ...payload, captured_at: new Date().toISOString(), latitud_actual: pos.lat, longitud_actual: pos.lng,
           precision_metros: pos.accuracy, ubicacion_timestamp: pos.timestamp,
         });
       }
       const { data } = response;
+
+      if (data.repetida) {
+        setPregunta(data);
+        setCodigoEmpleado("");
+        return;
+      }
 
       if (data.requiereDecision) {
         setPendiente({ tipo: "codigo", codigo });
@@ -232,20 +263,11 @@ export default function RelojChecador({
         return;
       }
 
-      setPopupInfo({
-        nombre: `${data.empleado.nombre} ${data.empleado.apellido_paterno}`,
-        foto_perfil: data.empleado.foto_perfil || "/assets/user.png",
-        movimiento: data.movimiento || data.message,
-        success: true,
-      });
-
-      setTimeout(() => setPopupInfo(null), 3000);
-      // enqueueSnackbar("Registro realizado", { variant: "success" });
+      mostrarResultado(data);
       setCodigoEmpleado("");
-      mutate();
     } catch (err) {
       setCodigoEmpleado("");
-      enqueueSnackbar(err.response?.data?.error || "Error al registrar", {
+      enqueueSnackbar(err.response?.data?.error || err.message || "Error al registrar", {
         variant: "error",
       });
     } finally {
@@ -262,33 +284,28 @@ export default function RelojChecador({
       const payload = {
         id_empresa: idEmpresa,
         accion,
+        ...(pendiente.repetir ? { repetir: true } : {}),
       };
 
-      const endpoint = pendiente.tipo === "facial" ? "/checador/reloj/registrar-facial" : "/checador/reloj/registrar";
       const body = pendiente.tipo === "facial" ? {...payload, descriptor_facial: pendiente.descriptor_facial} : {...payload, codigo: pendiente.codigo};
       try {
-        dataResponse = (await axiosInstance.post(endpoint, body)).data;
+        dataResponse = (await submitMovement(body)).data;
       } catch (err) {
         if (err.response?.data?.error !== "Faltan coordenadas de ubicación") throw err;
         const pos = await getCurrentLocation();
         setUbicacionGPS(pos);
         if (!pos) throw new Error("Permite el acceso a ubicación y activa el GPS");
-        dataResponse = (await axiosInstance.post(endpoint, {...body,
+        dataResponse = (await submitMovement({...body,
           latitud_actual: pos.lat, longitud_actual: pos.lng,
           precision_metros: pos.accuracy, ubicacion_timestamp: pos.timestamp,
         })).data;
       }
 
-      setPopupInfo({
-        nombre: `${dataResponse.empleado.nombre} ${dataResponse.empleado.apellido_paterno}`,
-        foto_perfil: dataResponse.empleado.foto_perfil || "/assets/user.png",
-        movimiento: dataResponse.movimiento || dataResponse.message,
-        success: true,
-      });
-      setTimeout(() => setPopupInfo(null), 3000);
       setMostrarModalTurno(false);
+      // «Sí, registrar» + «Turno abierto»: si aun así rebota, se vuelve a preguntar en lugar de pintar éxito.
+      if (dataResponse.repetida) setPregunta(dataResponse);
+      else mostrarResultado(dataResponse);
       setPendiente(null);
-      mutate();
       setCodigoEmpleado("");
     } catch (error) {
       enqueueSnackbar(error.response?.data?.error || error.message || "Error al registrar", {
@@ -300,6 +317,10 @@ export default function RelojChecador({
   };
 
   const handleFacialResponse = (data) => {
+    if (data.repetida) {
+      setPregunta(data);
+      return;
+    }
     if (data.requiereDecision) {
       setPendiente({
         tipo: "facial",
@@ -307,14 +328,30 @@ export default function RelojChecador({
       });
       setMostrarModalTurno(true);
     } else {
-      setPopupInfo({
-        nombre: `${data.empleado.nombre} ${data.empleado.apellido_paterno}`,
-        foto_perfil: data.empleado.foto_perfil || "/assets/user.png",
-        movimiento: data.movimiento || data.message,
-        success: true,
-      });
-      setTimeout(() => setPopupInfo(null), 3000);
-      mutate();
+      mostrarResultado(data);
+    }
+  };
+
+  const registrarDeTodosModos = async () => {
+    if (!pregunta?.reintentar || repitiendo) return;
+    setRepitiendo(true);
+    try {
+      const { data } = await submitMovement(pregunta.reintentar);
+      setPregunta(null);
+      if (data.requiereDecision) {
+        // Cierre manual: después de «Sí, registrar» pregunta «salida temporal / cerrar turno»; la decisión
+        // conserva repetir y el tipo (código o rostro) para no volver a chocar con el candado.
+        const { codigo, descriptor_facial } = pregunta.reintentar;
+        setPendiente({ tipo: codigo ? "codigo" : "facial", codigo, descriptor_facial, repetir: true });
+        setMostrarModalTurno(true);
+      } else {
+        mostrarResultado(data);
+      }
+    } catch (err) {
+      setPregunta(null);
+      enqueueSnackbar(err.response?.data?.error || err.message || "No se pudo registrar", { variant: "error" });
+    } finally {
+      setRepitiendo(false);
     }
   };
 
@@ -358,7 +395,7 @@ export default function RelojChecador({
     };
 
     validarSuscripcion();
-  }, [idEmpresa, modoEmpleado, idEmpleado]);
+  }, [idEmpresa, modoEmpleado, idEmpleado, companySlug]);
 
   useEffect(() => {
     if (subscriptionLoading || !subscriptionActive) return;
@@ -374,7 +411,8 @@ export default function RelojChecador({
     return () => window.removeEventListener("resize", medir);
   }, [subscriptionLoading, subscriptionActive, menuMovil, ajustesCamara, metodo]);
 
-  const horaCorta = horaActual ? `${horaActual.slice(0, 5)} ${horaActual.includes("AM") ? "a.m." : "p.m."}` : "";
+  // 12 horas con a.m./p.m. (19/11/2026): «4:49 p.m.».
+  const horaCorta = horaActual ? horaActual.replace(/:\d{2} /, " ") : "";
 
   if (subscriptionLoading) {
     return (
@@ -415,6 +453,7 @@ export default function RelojChecador({
     <>
       <main className="bg-slate-50 md:min-h-screen md:p-4">
         <div className="mx-auto max-w-7xl md:space-y-6">
+          <div className="hidden md:block"><ClockNavigation companyId={idEmpresa} companySlug={companySlug} /></div>
           <div className="hidden md:block rounded-xl border border-blue-100 bg-linear-to-r from-indigo-50 to-blue-50 p-6">
             <div className="flex items-center gap-3">
               <div className="rounded-lg bg-blue-600 p-2.5">
@@ -565,9 +604,11 @@ export default function RelojChecador({
                       onClose={() => setMostrarCamara(false)}
                       onSuccess={handleFacialResponse}
                       idEmpresa={idEmpresa}
+                      submitMovement={submitMovement}
                       handleOpenFacialModal={() => setMostrarCamara(false)}
                       continuo={camaraFija}
                       pantallaCompleta={isMobile}
+                      pausado={Boolean(pregunta)}
                     />
                   </div>
                 )}
@@ -641,6 +682,22 @@ export default function RelojChecador({
           />
         )}
 
+        {pregunta && (
+          <div className="fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-100 md:inset-0 md:flex md:items-center md:justify-center md:bg-slate-900/40 md:p-4">
+            <div role="alertdialog" aria-labelledby="pregunta-repetida" className="mx-auto w-full max-w-sm rounded-2xl bg-white p-4 shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-200">
+              <p className="text-base font-bold text-slate-900">{pregunta.empleado?.nombre} {pregunta.empleado?.apellido_paterno}</p>
+              <p id="pregunta-repetida" className="mt-1 text-sm text-slate-700">{String(pregunta.pregunta).replace(/\.?$/, ".")} ¿Registrar otra vez?</p>
+              <p className="mt-1 text-xs text-slate-500">Solo si de verdad sales o regresas; si fue un doble toque, no hace falta.</p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => setPregunta(null)} disabled={repitiendo}
+                  className="min-h-11 rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">No, está bien</button>
+                <button type="button" onClick={registrarDeTodosModos} disabled={repitiendo}
+                  className="min-h-11 rounded-xl bg-brand px-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60">{repitiendo ? "Registrando…" : "Sí, registrar"}</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {popupInfo && (() => {
           const tono = popupInfo.success ? "green" : "red";
           const colores = { green: "text-green-700 bg-green-50", red: "text-red-700 bg-red-50" }[tono];
@@ -659,7 +716,7 @@ export default function RelojChecador({
                   <span className="truncate">{estado}</span>
                 </p>
               </div>
-              <span className="shrink-0 text-lg font-bold tabular-nums text-slate-900">{horaCorta.slice(0, 5)}</span>
+              <span className="shrink-0 text-lg font-bold tabular-nums text-slate-900">{horaCorta}</span>
             </div>
           );
         })()}

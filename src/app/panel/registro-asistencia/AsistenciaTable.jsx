@@ -1115,6 +1115,7 @@ export default function AsistenciaTable({
                     />
                   </TableHead>
                 )}
+
               </TableRow>
             </TableHeader>
             <TableBody>

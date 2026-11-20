@@ -39,14 +39,14 @@ const clockSource = await readFile(new URL('../src/components/RelojChecador.jsx'
 const {code: clockCode} = babel.transformSync(clockSource,{configFile:false,babelrc:false,presets,plugins:[() => ({visitor:{
   Program:{exit(p){
     const component=p.node.body.find(n=>n.type==='ExportDefaultDeclaration').declaration;
-    p.node.body=component.body.body.filter(n=>n.type==='VariableDeclaration'&&n.declarations.some(d=>['registrarMovimiento','registrarConAccion'].includes(d.id.name)));
+    p.node.body=component.body.body.filter(n=>n.type==='VariableDeclaration'&&n.declarations.some(d=>['submitMovement','registrarMovimiento','registrarConAccion'].includes(d.id.name)));
   }},
 }})]});
 
 for (const gpsRequired of [false,true]) test(`code clock requests location only when required (${gpsRequired})`,async()=>{
   let gpsCalls=0, writes=0;const requests=[];
   const ctx={registrando:false,codigoEmpleado:'123',idEmpresa:1,
-    setRegistrando(){},setUbicacionGPS(){},setPendiente(){},setMostrarModalTurno(){},setPopupInfo(){},setCodigoEmpleado(){},mutate(){},setTimeout(){},enqueueSnackbar(){},
+    mostrarResultado(){},setRegistrando(){},setUbicacionGPS(){},setPendiente(){},setMostrarModalTurno(){},setPopupInfo(){},setCodigoEmpleado(){},mutate(){},setTimeout(){},enqueueSnackbar(){},
     getCurrentLocation:async()=>{gpsCalls++;return {lat:19,lng:-99,accuracy:8,timestamp:12345}},
     axiosInstance:{post:async(url,body)=>{requests.push(body);if(gpsRequired&&!body.latitud_actual)throw {response:{data:{error:'Faltan coordenadas de ubicación'}}};writes++;return {data:{empleado:{nombre:'Test',apellido_paterno:'User'}}}}},
   };
@@ -59,7 +59,7 @@ for (const gpsRequired of [false,true]) test(`code clock requests location only 
 test('code clock retries after denied GPS without a sticky previous error',async()=>{
   let calls=0,writes=0;
   const ctx={registrando:false,codigoEmpleado:'123',idEmpresa:1,gpsError:'old failure',
-    setRegistrando(){},setUbicacionGPS(){},setPendiente(){},setMostrarModalTurno(){},setPopupInfo(){},setCodigoEmpleado(){},mutate(){},setTimeout(){},enqueueSnackbar(){},
+    mostrarResultado(){},setRegistrando(){},setUbicacionGPS(){},setPendiente(){},setMostrarModalTurno(){},setPopupInfo(){},setCodigoEmpleado(){},mutate(){},setTimeout(){},enqueueSnackbar(){},
     getCurrentLocation:async()=>++calls===1?null:{lat:19,lng:-99,accuracy:8,timestamp:12345},
     axiosInstance:{post:async(url,body)=>{if(!body.latitud_actual)throw {response:{data:{error:'Faltan coordenadas de ubicación'}}};writes++;return {data:{empleado:{nombre:'Test',apellido_paterno:'User'}}}}},
   };

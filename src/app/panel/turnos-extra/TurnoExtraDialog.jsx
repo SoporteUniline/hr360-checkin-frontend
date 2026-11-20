@@ -3,7 +3,7 @@
 // Formulario «Nuevo turno extra» / «Editar turno extra».
 // Pide los avisos de ley al backend (GET /checador/turnos-extra/candidatos) cada vez que cambia el día o el horario.
 // Avisa y no bloquea: los avisos graves (menor de edad, más de 12 h seguidas) piden confirmar antes de guardar.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSnackbar } from "notistack";
 import axios from "@/lib/axios";
 import {
@@ -11,8 +11,9 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
-  departamentos, duracion, filtrarCandidatos, resumenSeleccion, salioAntes, textoMin,
+  departamentos, duracion, filtrarCandidatos, resumenSeleccion, salioAntes,
 } from "@/lib/asistencia/turnosExtra.mjs";
+import { formatearMinutos } from "@/lib/asistencia/jornada.mjs";
 
 const TONO_AVISO = {
   grave: "text-red-700 font-semibold",
@@ -37,18 +38,34 @@ export default function TurnoExtraDialog({ open, onOpenChange, empresas, turno, 
   const [confirmar, setConfirmar] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
+  // (19/11/2026) Se reinicia SOLO al abrirse. Antes dependía de `plantilla`, que con el turno en curso se
+  // recarga cada minuto, y borraba lo que el usuario estaba editando.
+  const abierto = useRef(false);
+  const plantillaCargada = useRef(false);
   useEffect(() => {
-    if (!open) return;
+    if (!open) { abierto.current = false; return; }
+    if (abierto.current) return;
+    abierto.current = true;
+    plantillaCargada.current = false;
+    setEmpresa(String(turno?.id_empresa ?? empresas[0]?.id ?? ""));
     setDatos(turno ? {
       nombre: turno.nombre, fecha: turno.fecha, hora_inicio: turno.hora_inicio, hora_fin: turno.hora_fin,
       tolerancia_min: turno.tolerancia_min, motivo: turno.motivo ?? "",
     } : vacio(fechaInicial));
-    setEmpresa(String(turno?.id_empresa ?? empresas[0]?.id ?? ""));
-    setSeleccion(new Set((plantilla ?? []).map((p) => p.id_empleado)));
     setFiltro(turno ? "elegidos" : "salieron");
     setBuscar("");
     setConfirmar(false);
-  }, [open, turno, plantilla, fechaInicial, empresas]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `empresas` puede llegar después; lo cubre el efecto siguiente.
+  }, [open, turno, fechaInicial]);
+  // La empresa y la plantilla pueden llegar después de abrir: se ponen una sola vez.
+  useEffect(() => {
+    if (open && !empresa) setEmpresa(String(turno?.id_empresa ?? empresas[0]?.id ?? ""));
+  }, [open, empresa, turno, empresas]);
+  useEffect(() => {
+    if (!open || plantillaCargada.current || (turno && !plantilla)) return;
+    plantillaCargada.current = true;
+    setSeleccion(new Set((plantilla ?? []).map((p) => p.id_empleado)));
+  }, [open, turno, plantilla]);
 
   const horarioValido = /^\d{4}-\d{2}-\d{2}$/.test(datos.fecha) && duracion(datos.hora_inicio, datos.hora_fin) > 0;
 
@@ -176,7 +193,7 @@ export default function TurnoExtraDialog({ open, onOpenChange, empresas, turno, 
         </div>
         {horarioValido ? (
           <p className="text-xs text-gray-500">
-            Dura <b className="text-gray-800">{textoMin(duracion(datos.hora_inicio, datos.hora_fin))}</b>
+            Dura <b className="text-gray-800">{formatearMinutos(duracion(datos.hora_inicio, datos.hora_fin))}</b>
             {horaFinMenor(datos) ? " · termina al día siguiente" : ""}. Quien esté en la plantilla puede checar desde {datos.tolerancia_min} min antes.
           </p>
         ) : <p className="text-xs text-red-600">La entrada y la salida no pueden ser iguales.</p>}
@@ -234,11 +251,11 @@ export default function TurnoExtraDialog({ open, onOpenChange, empresas, turno, 
                       </td>
                       <td className="whitespace-nowrap px-2 py-1.5 text-gray-600">{c.horario_dia ?? <span className="text-gray-400">{info.length ? "Descanso" : "—"}</span>}</td>
                       <td className="whitespace-nowrap px-2 py-1.5 text-gray-600">{c.salida_anterior ? c.salida_anterior.slice(11, 16) : "—"}</td>
-                      <td className="whitespace-nowrap px-2 py-1.5">{c.semanaTrabajado != null ? textoMin(c.semanaTrabajado) : "—"}</td>
-                      <td className="whitespace-nowrap px-2 py-1.5">{c.semanaExtraAutorizadas ? textoMin(c.semanaExtraAutorizadas) : "—"}</td>
+                      <td className="whitespace-nowrap px-2 py-1.5">{c.semanaTrabajado != null ? formatearMinutos(c.semanaTrabajado) : "—"}</td>
+                      <td className="whitespace-nowrap px-2 py-1.5">{c.semanaExtraAutorizadas ? formatearMinutos(c.semanaExtraAutorizadas) : "—"}</td>
                       <td className="whitespace-nowrap px-2 py-1.5">
-                        {textoMin(c.duracion)}
-                        {c.triples ? <span className="block text-[11px] font-semibold text-red-700">{textoMin(c.triples)} al triple</span> : null}
+                        {formatearMinutos(c.duracion)}
+                        {c.triples ? <span className="block text-[11px] font-semibold text-red-700">{formatearMinutos(c.triples)} al triple</span> : null}
                       </td>
                       <td className="px-2 py-1.5">
                         {avisos.length ? avisos.map((a) => (
@@ -266,8 +283,8 @@ export default function TurnoExtraDialog({ open, onOpenChange, empresas, turno, 
                   <span className="block text-gray-500">
                     {c.horario_dia ? `Turno ${c.horario_dia}` : "Sin horario ese día"}
                     {c.salida_anterior ? ` · salió ${c.salida_anterior.slice(11, 16)}` : ""}
-                    {c.semanaTrabajado != null ? ` · semana ${textoMin(c.semanaTrabajado)}` : ""}
-                    {c.semanaExtraAutorizadas ? ` · extra ${textoMin(c.semanaExtraAutorizadas)}` : ""}
+                    {c.semanaTrabajado != null ? ` · semana ${formatearMinutos(c.semanaTrabajado)}` : ""}
+                    {c.semanaExtraAutorizadas ? ` · extra ${formatearMinutos(c.semanaExtraAutorizadas)}` : ""}
                   </span>
                   {c.avisos?.map((a) => (
                     <span key={a.codigo} className={`block ${TONO_AVISO[a.nivel] ?? ""}`}>
@@ -304,8 +321,8 @@ export default function TurnoExtraDialog({ open, onOpenChange, empresas, turno, 
 
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-xs text-gray-500">
-            {resumen.personas} personas · {textoMin(resumen.minutos)} extra programadas
-            {resumen.triples ? ` · ${textoMin(resumen.triples)} al triple` : ""}
+            {resumen.personas} personas · {formatearMinutos(resumen.minutos)} extra programadas
+            {resumen.triples ? ` · ${formatearMinutos(resumen.triples)} al triple` : ""}
             {resumen.conAvisos ? ` · ${resumen.conAvisos} con avisos` : ""}
           </span>
           <div className="flex gap-2">

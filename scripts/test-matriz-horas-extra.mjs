@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { diasDelPeriodo, enlaceAsistencia, horaCorta, matrizHorasExtra, moverPeriodo, periodoDe } from "../src/lib/asistencia/matrizHorasExtra.mjs";
+import { diasDelPeriodo, enlaceAsistencia, matrizHorasExtra, moverPeriodo, periodoDe } from "../src/lib/asistencia/matrizHorasExtra.mjs";
+import { duracionCorta } from "../src/lib/asistencia/jornada.mjs";
 
 test("periodos: semana legal, quincenas, mes y moverse", () => {
   assert.deepEqual(periodoDe("semana", "2026-11-19"), { inicio: "2026-11-16", fin: "2026-11-22" });
@@ -45,6 +46,17 @@ test("matriz: celdas por persona y día, total que no suma las no autorizadas, o
 
 test("enlace a Asistencias y hora corta", () => {
   assert.equal(enlaceAsistencia(reg(9, 10, "Gabriel", "2026-11-18", "21:30")), "/panel/registro-asistencia?fecha=2026-11-18&empleado=Gabriel+P&abrir=9");
-  assert.equal(horaCorta(270), "4:30");
-  assert.equal(horaCorta(5), "0:05");
+  assert.equal(duracionCorta(270), "4:30");
+  assert.equal(duracionCorta(5), "0:05");
+});
+
+test("matriz: la celda no depende del orden de los registros (no autorizada leída antes que una autorizada)", () => {
+  const dias = diasDelPeriodo(periodoDe("semana", "2026-11-19"));
+  const noAut = reg(1, 10, "Gabriel", "2026-11-18", "17:00", { correccion: 1, valores_originales: JSON.stringify({ salida: "2026-11-18 20:00:00" }),
+    notas_hrs_extra: "No autorizadas por Laura · salida del reloj 2026-11-18 20:00" });
+  const aut = reg(2, 10, "Gabriel", "2026-11-18", "19:00", { hrs_extra: 1 });
+  for (const orden of [[noAut, aut], [aut, noAut]]) {
+    const celda = matrizHorasExtra(orden, { dias }).filas[0].celdas["2026-11-18"];
+    assert.equal(celda.minutos, 120, "solo cuentan las autorizadas");
+  }
 });

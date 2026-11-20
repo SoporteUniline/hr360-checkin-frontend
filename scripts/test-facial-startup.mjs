@@ -32,6 +32,7 @@ function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, p
   let now = Date.now();
   const notifications = [];
   const detectores = [];
+  let videoProps = null;
   const requests = [];
   let texts = [];
   let resolveModels;
@@ -65,7 +66,7 @@ function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, p
     Date: class extends Date { static now() { return now; } },
     React: { createElement(type, props, ...children) {
       texts.push(...children.filter((child) => typeof child === "string"));
-      if (type === "video") props.ref.current = video;
+      if (type === "video") { props.ref.current = video; videoProps = props; }
       if (type === "canvas") props.ref.current = canvas;
       return null;
     } },
@@ -118,7 +119,7 @@ function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, p
     effects.forEach(({ cleanup }) => cleanup?.());
     effects.forEach(({ index, run, deps }) => { slots[index] = { deps, cleanup: run() }; });
   };
-  return { render, video, resolveModels, resolveDetection, timers, startupTimers, notifications, requests, detectores,
+  return { render, video, resolveModels, resolveDetection, timers, startupTimers, notifications, requests, detectores, videoProps: () => videoProps,
     texts: () => texts,
     advance(ms) { now += ms; },
     setGpsFails(value) { gpsFails = value; },
@@ -394,7 +395,7 @@ test("with diagnostics on, behavior is unchanged and every phase is recorded", a
 
 const cara = Float32Array.from({ length: 128 }, (_, i) => Math.sin(i * 1.3));
 
-test("se reconoce con SSD (el detector rápido queda apagado hasta validarlo con fotos reales)", async () => {
+test("se reconoce con el detector rápido (hay que acercarse al reloj; SSD ya no se usa)", async () => {
   const env = setup();
   env.render();
   await tick();
@@ -406,7 +407,32 @@ test("se reconoce con SSD (el detector rápido queda apagado hasta validarlo con
   await tick();
   for (let i = 0; i < 4; i++) { env.advance(100); for (const detect of env.timers) detect(); await tick(); }
   assert.ok(env.detectores.length >= 2);
-  assert.ok(env.detectores.every((d) => d === "ssd"), JSON.stringify(env.detectores));
+  assert.ok(env.detectores.every((d) => d === "rapido"), JSON.stringify(env.detectores));
+});
+
+test("cara lejos (chica en el cuadro): pide «Acércate al reloj» y no intenta reconocer", async () => {
+  const env = setup();
+  env.render();
+  await tick();
+  env.video.onplaying();
+  env.resolveModels();
+  await tick();
+  env.render();
+  // 480 de alto: una cara de 60 px es 12.5 % del cuadro (mínimo 22 %).
+  const caraVista = { descriptor: cara, detection: { box: { height: 60 } } };
+  env.resolveDetection(caraVista);
+  await tick();
+  env.render();
+  assert.equal(env.counts().posts, 0, "no se envía a reconocer");
+  assert.ok(env.texts().includes("Acércate al reloj"), JSON.stringify(env.texts()));
+  // Ya cerca (200 px ≈ 42 %): reconoce.
+  caraVista.detection.box.height = 200; // el detector simulado devuelve siempre el mismo objeto
+  env.advance(100);
+  for (const fn of env.timers) fn();
+  await tick();
+  env.render();
+  assert.equal(env.counts().posts, 1);
+  assert.ok(!env.texts().includes("Acércate al reloj"));
 });
 
 test("modo reloj: la cámara sigue encendida tras checar y la misma persona no vuelve a checar en 60 s", async () => {
@@ -459,4 +485,12 @@ test("apagar «Cámara siempre encendida» con la cámara ya encendida sí la ap
   env.render();
   assert.equal(env.counts().posts, 1);
   assert.ok(env.counts().stops > 0, "la cámara se apaga al checar");
+});
+
+test("la cámara frontal se ve en espejo (girar a la izquierda se ve a la izquierda)", async () => {
+  const env = setup();
+  env.render();
+  await tick();
+  env.render();
+  assert.equal(env.videoProps()?.style?.transform, "scaleX(-1)");
 });

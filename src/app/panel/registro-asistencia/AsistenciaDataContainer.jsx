@@ -1,4 +1,5 @@
 "use client";
+import { CuentaHorasProvider } from "./CuentaHorasContext";
 
 import useAsistenciaData from "@/hooks/useAsistenciaData";
 import useEmpleadosData from "@/hooks/useEmpleadosData";
@@ -214,7 +215,7 @@ export default function AsistenciaDataContainer({
   );
   const control = useMemo(
     () => (controlHorasExtra
-      ? { tope: controlHorasExtra.tope, resumen: resumenControl(filasPeriodo, { zonaDe: (r) => r.zona_horaria || zonaEmpresa, tope: controlHorasExtra.tope }) }
+      ? { tope: controlHorasExtra.tope, resumen: resumenControl(filasPeriodo, { zonaDe: (r) => r.zona_horaria || zonaEmpresa, tope: controlHorasExtra.tope, contexto: controlHorasExtra.contexto }) }
       : null),
     [controlHorasExtra, filasPeriodo, zonaEmpresa],
   );
@@ -249,26 +250,38 @@ export default function AsistenciaDataContainer({
 
   // «Abrir en Asistencias» desde Control de horas extra: ?abrir=<id> abre su ventana de edición una vez.
   const searchParams = useSearchParams();
+  // Desde la pestaña Horas (19/11/2026): ?abrirEmpleado=<id_empleado>&fecha=YYYY-MM-DD abre el registro de ese día.
   const abrirId = searchParams?.get("abrir");
+  const abrirEmpleado = searchParams?.get("abrirEmpleado");
+  const abrirFecha = searchParams?.get("fecha");
   const abiertoRef = useRef(null);
   useEffect(() => {
-    if (!abrirId || abiertoRef.current === abrirId) return;
-    const r = registros.find((x) => String(x.id) === String(abrirId));
+    const clave = abrirId || (abrirEmpleado && `${abrirEmpleado}|${abrirFecha}`);
+    if (!clave || abiertoRef.current === clave) return;
+    const r = abrirId
+      ? registros.find((x) => String(x.id) === String(abrirId))
+      : registros.find((x) => String(x.id_empleado) === String(abrirEmpleado) && String(x.fecha ?? "").slice(0, 10) === abrirFecha);
     if (!r) return;
-    abiertoRef.current = abrirId;
+    abiertoRef.current = clave;
     handleEditClick(r);
-  }, [abrirId, registros, handleEditClick]);
+  }, [abrirId, abrirEmpleado, abrirFecha, registros, handleEditClick]);
 
 
-  if (isLoading && !effectiveData) return <LoadingTable rows={10} />;
+  // (19/11/2026) La página desestructura { ui, ... }: antes se devolvía el JSX suelto y, mientras
+  // cargaba, la tabla desaparecía (y el mensaje de error nunca se veía). Además, antes de saber la
+  // empresa (idEmpresa aún nulo) se pintaba «No hay registros». Ahora: un solo esqueleto hasta
+  // tener datos, con la misma forma de respuesta.
+  const sinDatosAun = !effectiveData && (isLoading || !idEmpresa);
+  const base = { data: effectiveData, resumenHorasExtra, totalSinComida, control, cargando: true, mutate };
+  if (sinDatosAun) return { ...base, ui: <LoadingTable cols={9} rows={10} /> };
   if (error) {
     console.error(error);
-    return <ErrorPage message="Error al cargar los registros de asistencia" />;
+    return { ...base, cargando: false, ui: <ErrorPage message="Error al cargar los registros de asistencia" /> };
   }
 
   return {
     ui: (
-      <>
+      <CuentaHorasProvider registros={registros}>
         {vista === "horas" ? (
           <VistaHoras
             idEmpresa={idEmpresa}
@@ -356,7 +369,7 @@ export default function AsistenciaDataContainer({
         )}
         </>
         )}
-      </>
+      </CuentaHorasProvider>
     ),
     data: effectiveData,
     resumenHorasExtra,

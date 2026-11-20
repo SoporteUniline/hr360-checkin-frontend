@@ -1,9 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  semanaDe, textoSemana, textoDia, duracion, faseTurno, estadoPersona, salioAntes,
+  textoSemana, textoDia, duracion, faseTurno, estadoPersona, salioAntes,
   filtrarCandidatos, departamentos, resumenSeleccion,
 } from "../src/lib/asistencia/turnosExtra.mjs";
+import { semanaDe } from "../src/lib/fechaHora.mjs";
 
 test("semana lunes–domingo y textos", () => {
   assert.deepEqual(semanaDe("2027-01-22"), { inicio: "2027-01-18", fin: "2027-01-24" });

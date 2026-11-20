@@ -67,6 +67,7 @@ export function AuthProvider({ children }) {
     Cookies.remove("token");
     setAuthToken(null);
     setIsLoggedIn(false);
+    setDataUser(null);
     router.push("/login");
   };
 

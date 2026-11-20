@@ -97,6 +97,9 @@ jobs:
           CAU_TEST_PASSWORD: cau_ci_test_only
         run: node --test scripts/test-activos-modules.mjs scripts/test-activos-api.mjs
 
+      - name: Asistencias — cálculo de horas y exportación
+        run: node --test scripts/test-jornada-asistencia.mjs scripts/test-consulta-periodo.mjs scripts/test-cambios-asistencia.mjs scripts/test-calendario-asistencia.mjs scripts/test-horas-extra.mjs scripts/test-historial-asistencia.mjs scripts/test-semana-horas.mjs scripts/test-turnos-extra.mjs scripts/test-hora12.mjs scripts/test-masivo-asistencia.mjs scripts/test-control-horas-extra.mjs scripts/test-matriz-horas-extra.mjs scripts/test-permiso-horas.mjs scripts/test-fecha-hora.mjs scripts/test-reloj-recientes.mjs scripts/test-facial-startup.mjs scripts/test-faceapi-browser.mjs scripts/test-faceapi-preload.mjs scripts/test-diagnostico-reloj.mjs
+
   # ─────────────────────────────────────────────
   # 3. BUILD — Validar compilación
   # ─────────────────────────────────────────────
@@ -188,8 +191,19 @@ jobs:
             echo "🚀 Iniciando deploy — SHA: ${{ github.sha }}"
             cd ~/adamia/frontend-dev
             test "$(git branch --show-current)" = "dev"
-            git fetch origin dev
-            git merge --ff-only "${{ github.sha }}"
+            git fetch origin refs/heads/dev
+            test "$(git rev-parse FETCH_HEAD)" = "${{ github.sha }}"
+            current_sha=$(git rev-parse HEAD)
+            # Reconcile the checkout left behind by the November 18 dev rollback.
+            if [ "$current_sha" = "0e24c7a3b297c3ae118a02df7c1780e4a5689056" ]; then
+              test -z "$(git status --porcelain)" || {
+                echo "El checkout de dev en Lightsail tiene cambios locales."
+                exit 1
+              }
+              git reset --keep "${{ github.sha }}"
+            else
+              git merge --ff-only "${{ github.sha }}"
+            fi
             test "$(git rev-parse HEAD)" = "${{ github.sha }}"
             cd ~/adamia
             previous_image=$(docker inspect --format='{{.Image}}' adamia_frontend_dev)

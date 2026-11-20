@@ -56,9 +56,6 @@ export default function EntradasSalidasDataContainer({
 
   // Ref para siempre tener el mutate más reciente sin recrear el EventSource
   const mutateRef = useRef(mutate);
-  useEffect(() => {
-    mutateRef.current = mutate;
-  }, [mutate]);
 
   // SSE: actualización en tiempo real cuando llega una checada
   useEffect(() => {
@@ -181,6 +178,7 @@ export default function EntradasSalidasDataContainer({
   return {
     ui: (
       <>
+        {error && <p className="mb-3 rounded-lg bg-blue-50 px-3 py-2 text-xs text-blue-800">No se pudo actualizar el servidor. Se muestran las capturas de este dispositivo.</p>}
         <EntradasSalidasTable
           registros={registros}
           filterOptionsRows={filterOptionsRows}

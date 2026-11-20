@@ -19,14 +19,16 @@ import { fetcherWithToken } from "@/lib/fetcher";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import { Input } from "@/components/ui/input";
 import AsistenciaDataContainer from "../registro-asistencia/AsistenciaDataContainer";
-import { LIMITE_TODOS } from "@/lib/asistencia/consultaPeriodo.mjs";
+import { LIMITE_TODOS, cargarPeriodoCompleto } from "@/lib/asistencia/consultaPeriodo.mjs";
 import { ETIQUETAS_ESTADO } from "@/lib/asistencia/horasExtra.mjs";
 import { formatearMinutos } from "@/lib/asistencia/jornada.mjs";
 import { topeRespaldo } from "@/lib/asistencia/controlHorasExtra.mjs";
+import { lunesDe, sumarDias } from "@/lib/fechaHora.mjs";
 import { diasDelPeriodo, moverPeriodo, periodoDe } from "@/lib/asistencia/matrizHorasExtra.mjs";
 import useHorasExtra from "@/hooks/useHorasExtra";
 import { useEmpresaTimezone } from "@/context/AuthContext";
 import VistaFechas from "./VistaFechas";
+import { CuentaHorasProvider } from "../registro-asistencia/CuentaHorasContext";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -60,7 +62,24 @@ function ControlHorasExtra() {
   // Tope semanal al doble del catálogo de jornadas legales (o el respaldo de la LFT).
   const { data: regla } = useSWR(`/checador/jornadas-legales/vigente?fecha=${periodo.inicio}`, fetcherWithToken, { revalidateOnFocus: false, shouldRetryOnError: false });
   const tope = Number(regla?.data?.minutos_extra_transitorios_semanales) || topeRespaldo(periodo.inicio);
-  const controlHorasExtra = useMemo(() => ({ tope }), [tope]);
+  // Días de las semanas de los bordes que quedan fuera del periodo (quincena/mes a media semana): solo para
+  // el tope semanal al doble; no se muestran ni suman a los totales del periodo.
+  const bordes = useMemo(() => {
+    const lunesIni = lunesDe(periodo.inicio);
+    const domingoFin = sumarDias(lunesDe(periodo.fin), 6);
+    return [
+      lunesIni < periodo.inicio ? [lunesIni, sumarDias(periodo.inicio, -1)] : null,
+      domingoFin > periodo.fin ? [sumarDias(periodo.fin, 1), domingoFin] : null,
+    ].filter(Boolean);
+  }, [periodo.inicio, periodo.fin]);
+  const { data: contexto } = useSWR(
+    dataUser && bordes.length ? ["horas-extra-bordes", ...bordes.flat(), filtroEmpleado] : null,
+    () => Promise.all(bordes.map(([fechaInicio, fechaFin]) => cargarPeriodoCompleto(fetcherWithToken, {
+      idEmpresa: "all", fechaInicio, fechaFin, filtroEmpleado,
+    }))).then((partes) => partes.flatMap((p) => p.registros)),
+    { revalidateOnFocus: false },
+  );
+  const controlHorasExtra = useMemo(() => ({ tope, contexto: contexto ?? [] }), [tope, contexto]);
   const estados = useMemo(() => (estado ? [ETIQUETAS_ESTADO[estado]] : []), [estado]);
 
   const res = AsistenciaDataContainer({
@@ -182,6 +201,7 @@ function ControlHorasExtra() {
         )}
       </div>
 
+      <CuentaHorasProvider registros={registros}>
       {vista === "fechas" ? (
         <VistaFechas
           registros={registros}
@@ -195,6 +215,7 @@ function ControlHorasExtra() {
           cargando={!res?.data && !res?.ui}
         />
       ) : ui}
+      </CuentaHorasProvider>
 
       <p className="text-xs text-slate-500">
         {vista === "fechas"

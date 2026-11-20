@@ -7,6 +7,8 @@
 //   y no checar la salida a comer. Desde UMBRAL_MINUTOS. La empresa decide o corrige.
 // - Estados: "pendiente" (hay tiempo de más sin decidir), "autorizada" (hrs_extra = 1),
 //   "no_autorizada" (constancia «No autorizadas por …» en notas_hrs_extra) y "sin".
+// - (20/11/2026, permisos por horas) "reposicion": autorizada con forma FORMA_REPOSICION. Ese tiempo
+//   cubre horas que el empleado debía (cuenta de horas): NO es hora extra ni suma a dobles/triples.
 // - No autorizar NO borra la checada: si salió después de su horario, la salida pagada pasa a la del
 //   horario (el backend guarda la original en valores_originales); en todos los casos queda la
 //   constancia legible en notas_hrs_extra (quién y hora del reloj).
@@ -16,6 +18,7 @@ import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
 import { leerOriginales } from "./cambios.mjs";
 import { minutosProgramados, minutosTrabajados } from "./jornada.mjs";
+import { fechaISO, hhmm, horaAMinutos } from "../fechaHora.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -23,37 +26,33 @@ dayjs.extend(timezone);
 export const DB_TZ = "America/Mexico_City";
 export const UMBRAL_MINUTOS = 15;
 export const FORMA_PAGO_DEFAULT = "Pago de horas extras";
+export const FORMA_REPOSICION = "Reposición de tiempo por tiempo";
 export const FORMAS_PAGO = [
   "Pago de horas extras",
   "Tiempo por tiempo",
-  "Reposición de tiempo por tiempo",
+  FORMA_REPOSICION,
   "Descuento sobre nómina",
 ];
 export const ETIQUETAS_ESTADO = {
   pendiente: "Por autorizar",
   autorizada: "Autorizadas",
   no_autorizada: "No autorizadas",
+  reposicion: "Reposición",
   sin: "Sin horas extra",
 };
 
 const PREFIJO_NO = "No autorizadas";
 const FORMATO_BD = "YYYY-MM-DD HH:mm:ss";
 
-const fechaISO = (valor) => /^(\d{4}-\d{2}-\d{2})/.exec(String(valor ?? ""))?.[1] ?? null;
-const hora = (valor) => /^(\d{1,2}:\d{2})/.exec(String(valor ?? "").trim())?.[1] ?? null;
-const aMin = (h) => {
-  const [a, b] = h.split(":").map(Number);
-  return a * 60 + b;
-};
 
 // Salida del horario en la zona del empleado (dayjs) o null si no hay horario.
 export function salidaProgramada(registro, zona = DB_TZ) {
   const fecha = fechaISO(registro?.fecha);
-  const sale = hora(registro?.hora_salida_programada);
-  const entra = hora(registro?.hora_entrada_programada);
+  const sale = hhmm(registro?.hora_salida_programada);
+  const entra = hhmm(registro?.hora_entrada_programada);
   if (!fecha || !sale) return null;
   // Turno nocturno (22:00 → 06:00): la salida del horario es al día siguiente.
-  const dia = entra && aMin(sale) <= aMin(entra)
+  const dia = entra && horaAMinutos(sale) <= horaAMinutos(entra)
     ? dayjs.utc(fecha).add(1, "day").format("YYYY-MM-DD")
     : fecha;
   const d = dayjs.tz(`${dia} ${sale}`, zona || DB_TZ);
@@ -90,7 +89,8 @@ export function minutosDeMas(registro) {
 export function estadoHorasExtra(registro, zona = DB_TZ) {
   const minutos = minutosDeMas(registro);
   if (Number(registro?.hrs_extra)) {
-    return { estado: "autorizada", minutos: minutos != null && minutos > 0 ? minutos : null };
+    const estado = registro?.forma_pago_extras === FORMA_REPOSICION ? "reposicion" : "autorizada";
+    return { estado, minutos: minutos != null && minutos > 0 ? minutos : null };
   }
 
   // No autorizadas: constancia en las notas (y, si se recortó la salida, la del reloj en valores_originales).
@@ -133,7 +133,7 @@ export function cambiosNoAutorizar(registro, { quien, zona } = {}) {
 // Quitar una autorización, o deshacer un «No autorizar» (regresa la salida del reloj).
 export function cambiosQuitar(registro, zona) {
   const info = estadoHorasExtra(registro, zona);
-  if (info.estado === "autorizada") return { hrs_extra: 0 };
+  if (info.estado === "autorizada" || info.estado === "reposicion") return { hrs_extra: 0 };
   if (info.estado === "no_autorizada") {
     // Regresa la salida del reloj solo si se había recortado; nunca manda una salida vacía.
     const cambios = { notas_hrs_extra: null };
@@ -153,7 +153,7 @@ export function valoresPrevios(registro, cambios) {
 }
 
 export function resumenHorasExtra(registros, zonaDe = () => DB_TZ) {
-  const r = { total: 0, pendientes: 0, autorizadas: 0, noAutorizadas: 0 };
+  const r = { total: 0, pendientes: 0, autorizadas: 0, noAutorizadas: 0, reposiciones: 0 };
   for (const reg of registros ?? []) {
     const { estado } = estadoHorasExtra(reg, zonaDe(reg));
     if (estado === "sin") continue;
@@ -161,13 +161,14 @@ export function resumenHorasExtra(registros, zonaDe = () => DB_TZ) {
     if (estado === "pendiente") r.pendientes += 1;
     if (estado === "autorizada") r.autorizadas += 1;
     if (estado === "no_autorizada") r.noAutorizadas += 1;
+    if (estado === "reposicion") r.reposiciones += 1;
   }
   return r;
 }
 
 // Orden de la columna «Horas extra» (de mayor a menor importancia):
-// por autorizar → autorizadas → no autorizadas → sin horas extra; dentro de cada grupo, más minutos primero.
-const PRIORIDAD = { pendiente: 0, autorizada: 1, no_autorizada: 2, sin: 3 };
+// por autorizar → autorizadas → reposición → no autorizadas → sin horas extra; dentro de cada grupo, más minutos primero.
+const PRIORIDAD = { pendiente: 0, autorizada: 1, reposicion: 2, no_autorizada: 3, sin: 4 };
 export function ordenarPorHorasExtra(registros, { zonaDe = () => DB_TZ, orden = "desc" } = {}) {
   const conInfo = (registros ?? []).map((r, i) => ({ r, i, info: estadoHorasExtra(r, zonaDe(r)) }));
   conInfo.sort((a, b) =>
