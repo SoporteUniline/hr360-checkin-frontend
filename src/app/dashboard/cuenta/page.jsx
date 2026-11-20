@@ -8,6 +8,7 @@ import useSWR from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import PasswordChange from "./Contrasena";
 import { KeyRound, User } from "lucide-react";
+import ErrorPage from "@/components/ErrorPage";
 
 export default function MyAccountEmpresa() {
   const { dataUser } = useAuth();

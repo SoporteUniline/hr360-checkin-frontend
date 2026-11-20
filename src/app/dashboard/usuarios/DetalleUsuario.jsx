@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { formatearFecha } from "@/lib/utils";
 import { ArrowLeft } from "lucide-react";
+import ErrorPage from "@/components/ErrorPage";
 import Image from "next/image";
 import React from "react";
 import useSWR from "swr";
