@@ -11,6 +11,7 @@ import {
   DB_TZ, cambiosAutorizar, cambiosNoAutorizar, estadoHorasExtra, salidaProgramada,
 } from "./horasExtra.mjs";
 import { minutosComidaHorario, sinSalidaAComer } from "./jornada.mjs";
+import { hhmm } from "../fechaHora.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -18,7 +19,6 @@ dayjs.extend(timezone);
 const FORMATO_BD = "YYYY-MM-DD HH:mm:ss";
 const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
 const fechaDe = (r) => String(r?.fecha ?? "").slice(0, 10);
-const hhmm = (v) => /^(\d{1,2}:\d{2})/.exec(String(v ?? "").trim())?.[1]?.padStart(5, "0") ?? null;
 const enZona = (valor, zona) => (valor ? dayjs.tz(valor, DB_TZ).tz(zona || DB_TZ) : null);
 const local = (valor, zona) => (valor ? enZona(valor, zona).format("HH:mm") : "—");
 const aBD = (fecha, hora, zona) => dayjs.tz(`${fecha} ${hora}`, zona || DB_TZ).tz(DB_TZ).format(FORMATO_BD);

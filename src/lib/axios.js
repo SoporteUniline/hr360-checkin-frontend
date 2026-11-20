@@ -9,9 +9,22 @@ export function ensureOfflineCache() {
     .catch(() => { offlineReady = null; });
   return offlineReady;
 }
+// (20/11/2026) El backend ya pide sesión en catálogos (festivos, departamentos, unidades de negocio…)
+// y en la ficha del empleado. Las pantallas que usan `axios` directo (no la instancia de abajo) también
+// mandan el token, pero solo cuando la petición va a nuestro backend y no trae ya su Authorization.
+function agregarTokenAlBackend(config) {
+  const backend = process.env.NEXT_PUBLIC_RUTA_BACKEND;
+  const url = `${config.baseURL ?? ""}${config.url ?? ""}`;
+  const token = Cookies.get("token");
+  if (token && backend && url.startsWith(backend) && !config.headers?.Authorization) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+}
+
 if (typeof window !== 'undefined') {
   axios.defaults.adapter = 'fetch';
-  axios.interceptors.request.use(async config => { await ensureOfflineCache(); return config; });
+  axios.interceptors.request.use(async config => { await ensureOfflineCache(); return agregarTokenAlBackend(config); });
 }
 
 const instance = axios.create({

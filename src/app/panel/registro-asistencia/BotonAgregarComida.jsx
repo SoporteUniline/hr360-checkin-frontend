@@ -9,16 +9,15 @@ import { mutate as recargar } from "swr";
 import { useSnackbar } from "notistack";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import axios from "@/lib/axios";
-import { horaAMinutos } from "@/lib/asistencia/jornada.mjs";
+import { horaAMinutos, minutosAHora } from "@/lib/fechaHora.mjs";
 
 const detener = (e) => e.stopPropagation();
-const hhmm = (min) => `${String(Math.floor(min / 60) % 24).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
 
 // Por defecto la comida de su horario; si no tiene, 30 min a las 13:00.
 function comidaSugerida(registro) {
   const sale = horaAMinutos(registro.hora_salida_comida_programada);
   const regresa = horaAMinutos(registro.hora_regreso_comida_programada);
-  if (sale != null && regresa != null && regresa > sale) return [hhmm(sale), hhmm(regresa)];
+  if (sale != null && regresa != null && regresa > sale) return [minutosAHora(sale), minutosAHora(regresa)];
   return ["13:00", "13:30"];
 }
 

@@ -1,6 +1,6 @@
 // Cálculo único de horas de una asistencia, en MINUTOS ENTEROS.
 // Lo usan Asistencias (escritorio y celular), Centro de incidencias y Reportes.
-// Sin dependencias para poder probarlo con node:test.
+// Duraciones (formatearMinutos, duracionCorta) viven aquí; fechas y horas del día en ../fechaHora.mjs.
 //
 // Reglas del dueño (18/11/2026). La comida no se paga en ningún caso (Adamia no maneja nómina).
 // - Programadas = salida programada − entrada programada (+24 h si cruza medianoche)
@@ -13,32 +13,9 @@
 //   tramos: salida − entrada, sin descontar comida.
 // - Si falta entrada o salida, trabajadas y diferencia quedan en null (no se inventan).
 
+import { horaAMinutos, marcaEnMinutos } from "../fechaHora.mjs";
+
 const MIN_DIA = 24 * 60;
-
-// "08:30", "08:30:00" → 510
-export function horaAMinutos(hora) {
-  const m = /^(\d{1,2}):(\d{2})/.exec(String(hora ?? "").trim());
-  if (!m) return null;
-  const h = Number(m[1]);
-  const min = Number(m[2]);
-  if (h > 23 || min > 59) return null;
-  return h * 60 + min;
-}
-
-// Fecha y hora → minutos desde época. Ambas marcas vienen en la misma zona (la de la BD),
-// así que la diferencia entre dos marcas es exacta (México no tiene horario de verano).
-function marcaEnMinutos(valor) {
-  if (valor == null || valor === "") return null;
-  if (valor instanceof Date) return Number.isNaN(valor.getTime()) ? null : Math.floor(valor.getTime() / 60000);
-  const s = String(valor).trim();
-  if (/[zZ]$|[+-]\d{2}:?\d{2}$/.test(s)) {
-    const t = Date.parse(s);
-    return Number.isNaN(t) ? null : Math.floor(t / 60000);
-  }
-  const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/.exec(s);
-  if (!m) return null;
-  return Math.floor(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) / 60000);
-}
 
 // Comida del horario de ese día (salida → regreso de comida); null si el horario no la tiene.
 export function minutosComidaHorario(registro) {
@@ -115,8 +92,10 @@ export function resumenJornada(registro) {
 
 // 510 → "8 h 30 min" · 480 → "8 h" · 45 → "45 min" · null → "—"
 // signo: true → "+10 min" / "−10 min" (con signo menos tipográfico).
-export function formatearMinutos(minutos, { signo = false } = {}) {
-  if (minutos == null || !Number.isFinite(minutos)) return "—";
+export function formatearMinutos(valor, { signo = false } = {}) {
+  // Acepta también números que llegan como texto ("540"); vacío o ilegible → "—".
+  const minutos = valor == null || valor === "" ? NaN : Number(valor);
+  if (!Number.isFinite(minutos)) return "—";
   const negativo = minutos < 0;
   const abs = Math.abs(Math.round(minutos));
   const h = Math.floor(abs / 60);
@@ -124,6 +103,14 @@ export function formatearMinutos(minutos, { signo = false } = {}) {
   const texto = h && m ? `${h} h ${m} min` : h ? `${h} h` : `${m} min`;
   if (negativo) return `−${texto}`;
   return signo && abs > 0 ? `+${texto}` : texto;
+}
+
+// Duración compacta para celdas de tabla: 570 → "9:30", −45 → "−0:45", 0 o vacío → "—" (o `cero`).
+export function duracionCorta(minutos, { cero = "—" } = {}) {
+  const m = Math.round(Number(minutos) || 0);
+  if (!m) return cero;
+  const abs = Math.abs(m);
+  return `${m < 0 ? "−" : ""}${Math.floor(abs / 60)}:${String(abs % 60).padStart(2, "0")}`;
 }
 
 // Para capturar horas: ¿la salida cae al día siguiente de la entrada?
@@ -134,10 +121,3 @@ export function salidaEsDiaSiguiente(horaEntrada, horaSalida) {
   return e != null && s != null && s <= e;
 }
 
-// "2026-11-13" + 1 → "2026-11-14" (sin zonas horarias: solo calendario).
-export function sumarDias(fecha, dias) {
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(fecha ?? ""));
-  if (!m) return null;
-  const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3] + dias));
-  return d.toISOString().slice(0, 10);
-}

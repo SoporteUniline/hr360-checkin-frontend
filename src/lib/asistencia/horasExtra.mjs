@@ -18,6 +18,7 @@ import utc from "dayjs/plugin/utc.js";
 import timezone from "dayjs/plugin/timezone.js";
 import { leerOriginales } from "./cambios.mjs";
 import { minutosProgramados, minutosTrabajados } from "./jornada.mjs";
+import { fechaISO, hhmm, horaAMinutos } from "../fechaHora.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -43,21 +44,15 @@ export const ETIQUETAS_ESTADO = {
 const PREFIJO_NO = "No autorizadas";
 const FORMATO_BD = "YYYY-MM-DD HH:mm:ss";
 
-const fechaISO = (valor) => /^(\d{4}-\d{2}-\d{2})/.exec(String(valor ?? ""))?.[1] ?? null;
-const hora = (valor) => /^(\d{1,2}:\d{2})/.exec(String(valor ?? "").trim())?.[1] ?? null;
-const aMin = (h) => {
-  const [a, b] = h.split(":").map(Number);
-  return a * 60 + b;
-};
 
 // Salida del horario en la zona del empleado (dayjs) o null si no hay horario.
 export function salidaProgramada(registro, zona = DB_TZ) {
   const fecha = fechaISO(registro?.fecha);
-  const sale = hora(registro?.hora_salida_programada);
-  const entra = hora(registro?.hora_entrada_programada);
+  const sale = hhmm(registro?.hora_salida_programada);
+  const entra = hhmm(registro?.hora_entrada_programada);
   if (!fecha || !sale) return null;
   // Turno nocturno (22:00 → 06:00): la salida del horario es al día siguiente.
-  const dia = entra && aMin(sale) <= aMin(entra)
+  const dia = entra && horaAMinutos(sale) <= horaAMinutos(entra)
     ? dayjs.utc(fecha).add(1, "day").format("YYYY-MM-DD")
     : fecha;
   const d = dayjs.tz(`${dia} ${sale}`, zona || DB_TZ);

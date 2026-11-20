@@ -4,14 +4,8 @@
 import { DB_TZ, estadoHorasExtra } from "./horasExtra.mjs";
 import { leerOriginales } from "./cambios.mjs";
 import { formatearMinutos } from "./jornada.mjs";
+import { lunesDe, semanaDe, sumarDias } from "../fechaHora.mjs";
 
-const sumarDias = (fecha, n) => new Date(Date.parse(`${fecha}T00:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
-export const lunesDe = (fecha) => {
-  const f = String(fecha ?? "").slice(0, 10);
-  const d = new Date(`${f}T00:00:00Z`).getUTCDay();
-  return sumarDias(f, -((d + 6) % 7));
-};
-export const semanaDe = (fecha) => { const inicio = lunesDe(fecha); return { inicio, fin: sumarDias(inicio, 6) }; };
 export const moverSemana = (semana, n) => semanaDe(sumarDias(semana.inicio, 7 * n));
 
 // Tope semanal al doble si no hay catálogo (mismo respaldo que el backend: jornadas_legales).

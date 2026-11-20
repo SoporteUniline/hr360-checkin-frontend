@@ -73,7 +73,6 @@ function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, p
     Camera() {}, Power() {}, RotateCcw() {}, Button() {},
     loadBrowserFaceApi: () => models,
     opcionesRapidas: () => ({ rapido: true }),
-    DETECTOR_RAPIDO: true,
     yaRegistrado, recordarChecada,
     enqueueSnackbar(message) { notifications.push(message); }, console,
     axiosInstance: { post: async (url, body) => {

@@ -2,10 +2,7 @@
 // Periodos (semana legal, quincena, mes, rango) y la matriz persona × día con el estado de cada celda.
 // Probado en scripts/test-matriz-horas-extra.mjs.
 import { DB_TZ, estadoHorasExtra } from "./horasExtra.mjs";
-import { lunesDe } from "./controlHorasExtra.mjs";
-
-const DIA_MS = 86400000;
-export const sumarDias = (fecha, n) => new Date(Date.parse(`${fecha}T00:00:00Z`) + n * DIA_MS).toISOString().slice(0, 10);
+import { DIA_MS, lunesDe, sumarDias } from "../fechaHora.mjs";
 const finDeMes = (fecha) => {
   const [a, m] = fecha.split("-").map(Number);
   return new Date(Date.UTC(a, m, 0)).toISOString().slice(0, 10);
@@ -97,8 +94,3 @@ export function enlaceAsistencia(registro) {
   return `/panel/registro-asistencia?${p.toString()}`;
 }
 
-// 270 → "4:30"
-export const horaCorta = (min) => {
-  const m = Math.max(0, Math.round(Number(min) || 0));
-  return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`;
-};

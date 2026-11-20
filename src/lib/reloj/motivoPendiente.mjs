@@ -1,3 +1,5 @@
+import { hora12 } from "../hora12.mjs";
+
 // Por qué una checada sigue en el dispositivo (se muestra en el reloj y en «Capturas en este dispositivo»).
 export function motivoPendiente(event, online = typeof navigator === 'undefined' || navigator.onLine) {
   if (!event || event.status !== 'pending') return '';
@@ -18,9 +20,7 @@ export const errorDelServidor = (event) => Boolean(event && event.status === 'pe
 // Pregunta del candado (19/11/2026): «Acabas de registrar tu salida a las 4:49 p.m. ¿Registrar otra vez?».
 export function preguntaRepetida(rebote, mensaje) {
   if (rebote?.tipo && rebote?.hora) {
-    const [h, m] = String(rebote.hora).split(':').map(Number);
-    const hora = Number.isFinite(h) && Number.isFinite(m) ? `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, '0')} ${h < 12 ? 'a.m.' : 'p.m.'}` : rebote.hora;
-    return `Acabas de registrar tu ${rebote.tipo} a las ${hora}`;
+    return `Acabas de registrar tu ${rebote.tipo} a las ${hora12(rebote.hora)}`;
   }
   return (mensaje || 'Acabas de registrar hace menos de 5 minutos').replace(/\.$/, '');
 }

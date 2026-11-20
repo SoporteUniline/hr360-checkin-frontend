@@ -25,10 +25,18 @@ export default function OTPStep({ form, steps, setSteps }) {
     // verificar codigo otp
     try {
       setLoading(true);
+      // (20/11/2026) En recuperación el backend revisa que el teléfono sea el de la cuenta y entrega
+      // un token de recuperación (15 min) que se manda al cambiar la contraseña.
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_RUTA_BACKEND}/otp/verify`,
-        { telefono: form.getValues("telefono"), code },
+        {
+          telefono: form.getValues("telefono"),
+          code,
+          recovery: true,
+          correo: form.getValues("correo"),
+        },
       );
+      form.setValue("recovery_token", response?.data?.recovery_token || "");
       enqueueSnackbar(
         response?.data?.message || "Código de verificación aceptado",
         {

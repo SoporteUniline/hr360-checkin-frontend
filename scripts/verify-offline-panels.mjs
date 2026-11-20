@@ -207,7 +207,7 @@ try {
       return stream;
     };
   ` });
-  await send('Page.addScriptToEvaluateOnNewDocument', { source: `window.__fixtureFaceEnabled=false; window.__fixtureFaceDescriptor=${JSON.stringify(fixtureDescriptor)}; window.faceapi={nets:{ssdMobilenetv1:{params:true},faceLandmark68Net:{params:true},faceRecognitionNet:{params:true}},detectSingleFace(){return {withFaceLandmarks(){return {withFaceDescriptor:async()=>window.__fixtureFaceEnabled?{descriptor:new Float32Array(window.__fixtureFaceDescriptor)}:null}}}}};` });
+  await send('Page.addScriptToEvaluateOnNewDocument', { source: `window.__fixtureFaceEnabled=false; window.__fixtureFaceDescriptor=${JSON.stringify(fixtureDescriptor)}; window.faceapi={nets:{tinyFaceDetector:{params:true},faceLandmark68Net:{params:true,detectLandmarks:async()=>null},faceRecognitionNet:{params:true,computeFaceDescriptor:async()=>null}},TinyFaceDetectorOptions:class{constructor(o){Object.assign(this,o)}},detectSingleFace(){return {withFaceLandmarks(){return {withFaceDescriptor:async()=>window.__fixtureFaceEnabled?{descriptor:new Float32Array(window.__fixtureFaceDescriptor)}:null}}}}};` });
   // Fresh browser: nobody has ever logged in on this device.
   await go('/fixture-company', 'Registrar Entrada / Salida');
   await until(() => evaluate("document.body.textContent.includes('Reconocimiento offline preparado en este dispositivo')"), 'public link automatically downloads faces without a login');

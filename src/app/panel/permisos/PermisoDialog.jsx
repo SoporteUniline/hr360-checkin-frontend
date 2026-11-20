@@ -30,8 +30,8 @@ import styles from "./permisos-theme.module.css";
 import PermisoCancelacionDiasPasadosDialog from "./PermisoCancelacionDiasPasadosDialog";
 import { CalendarCheck2, Save } from "lucide-react";
 import CamposPermisoHoras, { datosPermisoHoras, erroresPermisoHoras } from "./CamposPermisoHoras";
+import { hhmm } from "@/lib/fechaHora.mjs";
 
-const hhmm = (v) => (v ? String(v).slice(0, 5) : "");
 const esPorHoras = (item) => item?.modalidad === "horas";
 
 // Dialog para crear/editar una solicitud de permiso.
@@ -153,8 +153,8 @@ export default function PermisoDialog({
       modalidad: esPorHoras(editItem) ? "horas" : "dias",
       tipo_horas: editItem?.tipo_horas || "",
       tratamiento: editItem?.tratamiento || "",
-      hora_inicio: hhmm(editItem?.hora_inicio),
-      hora_fin: hhmm(editItem?.hora_fin),
+      hora_inicio: hhmm(editItem?.hora_inicio) ?? "",
+      hora_fin: hhmm(editItem?.hora_fin) ?? "",
     });
     setErrors([]);
     // Evitar fugas de estado entre ediciones (cancelación con días pasados).
@@ -217,8 +217,8 @@ export default function PermisoDialog({
           (porHoras && (
             String(editItem.tipo_horas || "") !== form.tipo_horas ||
             String(editItem.tratamiento || "") !== form.tratamiento ||
-            hhmm(editItem.hora_inicio) !== form.hora_inicio ||
-            hhmm(editItem.hora_fin) !== form.hora_fin
+            (hhmm(editItem.hora_inicio) ?? "") !== form.hora_inicio ||
+            (hhmm(editItem.hora_fin) ?? "") !== form.hora_fin
           ));
 
         if (fieldsChanged) {

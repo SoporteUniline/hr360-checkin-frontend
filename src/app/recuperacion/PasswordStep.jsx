@@ -24,6 +24,11 @@ export default function PasswordStep({ form, steps, setSteps }) {
         return;
       }
 
+      if (password.length < 8) {
+        setError("La contraseña debe tener al menos 8 caracteres.");
+        return;
+      }
+
       if (password !== confirmPassword) {
         setError("Las contraseñas no coinciden.");
         return;
@@ -35,6 +40,7 @@ export default function PasswordStep({ form, steps, setSteps }) {
         {
           password,
           confirmPassword,
+          recovery_token: form.getValues("recovery_token"),
         },
       );
       enqueueSnackbar("Se guardó correctamente tu nueva contraseña", {
