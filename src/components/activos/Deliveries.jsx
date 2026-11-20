@@ -185,7 +185,9 @@ export function DeliveryForm() {
         subtitle={
           resourceType === "uniform"
             ? "Entrega de prendas, tallas y cantidades al empleado."
-            : "Asignación de equipos y herramientas a su responsable."
+            : resourceType === "asset"
+            ? "Asignación de equipos y herramientas a su responsable."
+            : "Equipos y prendas para el empleado, en una sola entrega."
         }
       />
       <form onSubmit={submit}>

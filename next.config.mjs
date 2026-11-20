@@ -33,6 +33,28 @@ const nextConfig = {
     ],
   },
 
+  // (20/11/2026) Activos y uniformes es un solo módulo en /panel/activos. Las rutas viejas de los dos
+  // módulos redirigen a su equivalente (la consulta, p. ej. ?empresa=, se conserva sola).
+  async redirects() {
+    const viejo = "/panel/:modulo(control-activos|control-uniformes)";
+    const a = (source, destination) => ({ source, destination, permanent: false });
+    return [
+      a("/panel/control-activos/activos/:resto*", "/panel/activos/inventario/:resto*?tipo=activos"),
+      a("/panel/control-activos/uniformes/:resto*", "/panel/activos/inventario/:resto*?tipo=uniformes"),
+      a("/panel/control-uniformes/prendas/:resto*", "/panel/activos/inventario/:resto*?tipo=uniformes"),
+      a("/panel/control-activos/categorias", "/panel/activos/ajustes/categorias?tipo=activos"),
+      a("/panel/control-uniformes/categorias", "/panel/activos/ajustes/categorias?tipo=uniformes"),
+      a(`${viejo}/entregas/nueva`, "/panel/activos/entregar"),
+      a(`${viejo}/devoluciones`, "/panel/activos/recibir"),
+      a(`${viejo}/empleados/:resto*`, "/panel/activos/personas/:resto*"),
+      a(`${viejo}/mantenimiento`, "/panel/activos/revision"),
+      a(`${viejo}/movimientos`, "/panel/activos/historial"),
+      a(`${viejo}/:ajuste(ubicaciones|paquetes)`, "/panel/activos/ajustes/:ajuste"),
+      a(`${viejo}/:seccion(entregas|resguardos|solicitudes)/:resto*`, "/panel/activos/:seccion/:resto*"),
+      a(viejo, "/panel/activos"),
+    ];
+  },
+
   async headers() {
     return [
       {
