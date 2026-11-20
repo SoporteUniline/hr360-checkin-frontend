@@ -3,7 +3,7 @@
 // Formulario «Nuevo turno extra» / «Editar turno extra».
 // Pide los avisos de ley al backend (GET /checador/turnos-extra/candidatos) cada vez que cambia el día o el horario.
 // Avisa y no bloquea: los avisos graves (menor de edad, más de 12 h seguidas) piden confirmar antes de guardar.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSnackbar } from "notistack";
 import axios from "@/lib/axios";
 import {
@@ -37,18 +37,34 @@ export default function TurnoExtraDialog({ open, onOpenChange, empresas, turno, 
   const [confirmar, setConfirmar] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
+  // (19/11/2026) Se reinicia SOLO al abrirse. Antes dependía de `plantilla`, que con el turno en curso se
+  // recarga cada minuto, y borraba lo que el usuario estaba editando.
+  const abierto = useRef(false);
+  const plantillaCargada = useRef(false);
   useEffect(() => {
-    if (!open) return;
+    if (!open) { abierto.current = false; return; }
+    if (abierto.current) return;
+    abierto.current = true;
+    plantillaCargada.current = false;
+    setEmpresa(String(turno?.id_empresa ?? empresas[0]?.id ?? ""));
     setDatos(turno ? {
       nombre: turno.nombre, fecha: turno.fecha, hora_inicio: turno.hora_inicio, hora_fin: turno.hora_fin,
       tolerancia_min: turno.tolerancia_min, motivo: turno.motivo ?? "",
     } : vacio(fechaInicial));
-    setEmpresa(String(turno?.id_empresa ?? empresas[0]?.id ?? ""));
-    setSeleccion(new Set((plantilla ?? []).map((p) => p.id_empleado)));
     setFiltro(turno ? "elegidos" : "salieron");
     setBuscar("");
     setConfirmar(false);
-  }, [open, turno, plantilla, fechaInicial, empresas]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `empresas` puede llegar después; lo cubre el efecto siguiente.
+  }, [open, turno, fechaInicial]);
+  // La empresa y la plantilla pueden llegar después de abrir: se ponen una sola vez.
+  useEffect(() => {
+    if (open && !empresa) setEmpresa(String(turno?.id_empresa ?? empresas[0]?.id ?? ""));
+  }, [open, empresa, turno, empresas]);
+  useEffect(() => {
+    if (!open || plantillaCargada.current || (turno && !plantilla)) return;
+    plantillaCargada.current = true;
+    setSeleccion(new Set((plantilla ?? []).map((p) => p.id_empleado)));
+  }, [open, turno, plantilla]);
 
   const horarioValido = /^\d{4}-\d{2}-\d{2}$/.test(datos.fecha) && duracion(datos.hora_inicio, datos.hora_fin) > 0;
 

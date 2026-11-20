@@ -647,6 +647,7 @@ export default function RelojChecador({
                       handleOpenFacialModal={() => setMostrarCamara(false)}
                       continuo={camaraFija}
                       pantallaCompleta={isMobile}
+                      pausado={Boolean(pregunta)}
                     />
                   </div>
                 )}

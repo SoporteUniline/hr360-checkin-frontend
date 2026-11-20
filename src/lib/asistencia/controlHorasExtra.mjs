@@ -26,7 +26,10 @@ export function topeRespaldo(fecha) {
 const claveSemana = (r) => `${r.id_empleado}|${lunesDe(r.fecha)}`;
 
 // Resumen de los registros con horas extra (los demás se ignoran).
-export function resumenControl(registros, { zonaDe = () => DB_TZ, tope = 540 } = {}) {
+// `contexto` (19/11/2026): registros de los días de la semana que quedan FUERA del periodo (quincena o mes que
+// empieza o termina a media semana). Solo cuentan para el tope semanal: las dobles/triples se reparten en
+// orden de fecha dentro de cada semana y al periodo solo se le suma lo de sus propios registros.
+export function resumenControl(registros, { zonaDe = () => DB_TZ, tope = 540, contexto = [] } = {}) {
   const res = {
     pendiente: { minutos: 0, registros: 0, personas: new Set() },
     autorizada: { minutos: 0, registros: 0, dobles: 0, triples: 0 },
@@ -34,22 +37,36 @@ export function resumenControl(registros, { zonaDe = () => DB_TZ, tope = 540 } =
     alertas: 0,
     porSemana: new Map(),
   };
-  for (const r of registros ?? []) {
+  const autorizadas = [];
+  const sumar = (r, delPeriodo) => {
     const { estado, minutos } = estadoHorasExtra(r, zonaDe(r));
-    if (estado === "sin") continue;
+    if (estado === "sin") return;
     const m = Math.max(0, Number(minutos) || 0);
+    if (estado === "autorizada") {
+      res.porSemana.set(claveSemana(r), (res.porSemana.get(claveSemana(r)) ?? 0) + m);
+      autorizadas.push({ r, m, delPeriodo });
+    }
+    if (!delPeriodo) return;
     const b = res[estado];
     b.minutos += m;
     b.registros += 1;
     if (estado === "pendiente") b.personas.add(r.id_empleado);
-    if (estado === "autorizada") res.porSemana.set(claveSemana(r), (res.porSemana.get(claveSemana(r)) ?? 0) + m);
     if (estado !== "no_autorizada" && m > 240) res.alertas += 1; // más de 4 h extra en el día
+  };
+  for (const r of registros ?? []) sumar(r, true);
+  for (const r of contexto ?? []) sumar(r, false);
+  // Reparto en orden de fecha: las primeras horas de la semana son dobles hasta el tope; lo demás, triples.
+  const acumulado = new Map();
+  autorizadas.sort((a, b) => String(a.r.fecha).localeCompare(String(b.r.fecha)));
+  for (const { r, m, delPeriodo } of autorizadas) {
+    const antes = acumulado.get(claveSemana(r)) ?? 0;
+    acumulado.set(claveSemana(r), antes + m);
+    if (!delPeriodo) continue;
+    const dobles = Math.min(m, Math.max(0, tope - antes));
+    res.autorizada.dobles += dobles;
+    res.autorizada.triples += m - dobles;
   }
-  for (const total of res.porSemana.values()) {
-    res.autorizada.dobles += Math.min(total, tope);
-    res.autorizada.triples += Math.max(0, total - tope);
-    if (total > tope) res.alertas += 1; // pasa del tope semanal al doble
-  }
+  for (const total of res.porSemana.values()) if (total > tope) res.alertas += 1; // pasa del tope semanal al doble
   res.pendiente.personas = res.pendiente.personas.size;
   return res;
 }

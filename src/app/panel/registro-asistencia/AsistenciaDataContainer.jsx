@@ -227,7 +227,7 @@ export default function AsistenciaDataContainer({
   );
   const control = useMemo(
     () => (controlHorasExtra
-      ? { tope: controlHorasExtra.tope, resumen: resumenControl(filasPeriodo, { zonaDe: (r) => r.zona_horaria || zonaEmpresa, tope: controlHorasExtra.tope }) }
+      ? { tope: controlHorasExtra.tope, resumen: resumenControl(filasPeriodo, { zonaDe: (r) => r.zona_horaria || zonaEmpresa, tope: controlHorasExtra.tope, contexto: controlHorasExtra.contexto }) }
       : null),
     [controlHorasExtra, filasPeriodo, zonaEmpresa],
   );
