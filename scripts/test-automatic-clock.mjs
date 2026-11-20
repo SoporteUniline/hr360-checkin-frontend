@@ -95,3 +95,13 @@ test('candado de 5 min: el reloj pregunta y «Sí, registrar» reenvía como cap
   assert.equal(segunda.data.repetida, undefined);
   assert.equal(segunda.data.movimiento, 'Entrada registrada', 'se registra (el servidor simulado responde entrada)');
 });
+
+test('«Sí, registrar» con cierre manual: la decisión de turno conserva repetir', async () => {
+  const fx = fixture({ decision: true });
+  const primera = await fx.clock.registerClockMovement({ codigo: '123', repetir: true }, args);
+  assert.equal(primera.data.requiereDecision, true);
+  assert.equal(fx.sent[0].repetir, true);
+  await fx.clock.registerClockMovement({ codigo: '123', accion: 'cerrar_turno', offline_event: primera.data.offline_event, repetir: true }, args);
+  assert.equal(fx.sent.at(-1).action, 'cerrar_turno');
+  assert.equal(fx.sent.at(-1).repetir, true, 'la decisión no vuelve a chocar con el candado de 5 min');
+});
