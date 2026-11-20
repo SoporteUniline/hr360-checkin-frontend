@@ -31,6 +31,8 @@ export default function FestivoFormDialog({
   const [idEmpresaSeleccionada, setIdEmpresaSeleccionada] = useState("");
   const [error, setError] = useState("");
   const { enqueueSnackbar } = useSnackbar();
+  // Valor fijo (no la lista): así el efecto no reinicia el formulario en cada render.
+  const empresaUnica = empresas.length === 1 ? String(empresas[0].id_empresa) : "";
 
   useEffect(() => {
     if (editFestivo) {
@@ -43,11 +45,13 @@ export default function FestivoFormDialog({
       // Lógica de pre-selección:
       // Si el filtro de la página es una empresa específica, la usamos.
       // Si es "all", dejamos que el usuario elija o ponemos la primera de la lista.
-      const preseleccionada = id_empresa === "all" ? "" : id_empresa;
+      // (20/11/2026) Con una sola empresa el selector no se muestra: se usa esa empresa
+      // (antes el alta pedía «Debes seleccionar una empresa» sin forma de elegirla).
+      const preseleccionada = id_empresa === "all" ? empresaUnica : id_empresa;
       setIdEmpresaSeleccionada(preseleccionada);
     }
     setError("");
-  }, [editFestivo, open, id_empresa]);
+  }, [editFestivo, open, id_empresa, empresaUnica]);
 
   const handleSubmit = async () => {
     if (!fecha) {

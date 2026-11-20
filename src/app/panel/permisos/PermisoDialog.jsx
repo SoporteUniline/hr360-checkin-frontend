@@ -29,6 +29,10 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import styles from "./permisos-theme.module.css";
 import PermisoCancelacionDiasPasadosDialog from "./PermisoCancelacionDiasPasadosDialog";
 import { CalendarCheck2, Save } from "lucide-react";
+import CamposPermisoHoras, { datosPermisoHoras, erroresPermisoHoras } from "./CamposPermisoHoras";
+import { hhmm } from "@/lib/fechaHora.mjs";
+
+const esPorHoras = (item) => item?.modalidad === "horas";
 
 // Dialog para crear/editar una solicitud de permiso.
 // - Se relaciona con: src/lib/permisosApi.js y src/app/panel/permisos/page.jsx
@@ -54,7 +58,14 @@ export default function PermisoDialog({
     fecha_fin: "",
     motivo: "",
     estado: "Pendiente",
+    // Permisos por horas (20/11/2026)
+    modalidad: "dias",
+    tipo_horas: "",
+    tratamiento: "",
+    hora_inicio: "",
+    hora_fin: "",
   });
+  const porHoras = form.modalidad === "horas";
 
   // Catálogo y selección de empleados
   const [empleados, setEmpleados] = useState([]); // [{ id, nombre }]
@@ -139,6 +150,11 @@ export default function PermisoDialog({
         : "",
       motivo: editItem?.motivo || "",
       estado: editItem?.estado || "Pendiente",
+      modalidad: esPorHoras(editItem) ? "horas" : "dias",
+      tipo_horas: editItem?.tipo_horas || "",
+      tratamiento: editItem?.tratamiento || "",
+      hora_inicio: hhmm(editItem?.hora_inicio) ?? "",
+      hora_fin: hhmm(editItem?.hora_fin) ?? "",
     });
     setErrors([]);
     // Evitar fugas de estado entre ediciones (cancelación con días pasados).
@@ -154,13 +170,17 @@ export default function PermisoDialog({
     // Validaciones de formulario con mensajes amigables
     const errs = [];
     if (!form.id_tipo_permiso) errs.push("Selecciona el tipo de permiso.");
-    if (!form.fecha_inicio) errs.push("La fecha de inicio es obligatoria.");
-    if (!form.fecha_fin) errs.push("La fecha fin es obligatoria.");
+    if (porHoras) {
+      errs.push(...erroresPermisoHoras(form));
+    } else {
+      if (!form.fecha_inicio) errs.push("La fecha de inicio es obligatoria.");
+      if (!form.fecha_fin) errs.push("La fecha fin es obligatoria.");
 
-    // Validación: la fecha fin no puede ser anterior a la fecha inicio
-    // Nota: Se permite seleccionar fechas anteriores a la fecha actual según requerimiento del cliente
-    if (form.fecha_fin && form.fecha_fin < form.fecha_inicio) {
-      errs.push("La fecha fin no puede ser anterior a la fecha inicio.");
+      // Validación: la fecha fin no puede ser anterior a la fecha inicio
+      // Nota: Se permite seleccionar fechas anteriores a la fecha actual según requerimiento del cliente
+      if (form.fecha_fin && form.fecha_fin < form.fecha_inicio) {
+        errs.push("La fecha fin no puede ser anterior a la fecha inicio.");
+      }
     }
 
     // Resolver a qué empleados aplica
@@ -192,7 +212,14 @@ export default function PermisoDialog({
           (editItem.fecha_fin
             ? dayjs(editItem.fecha_fin).format("YYYY-MM-DD")
             : "") !== (form.fecha_fin || "") ||
-          String(editItem.motivo || "") !== String(form.motivo || "");
+          String(editItem.motivo || "") !== String(form.motivo || "") ||
+          (esPorHoras(editItem) ? "horas" : "dias") !== form.modalidad ||
+          (porHoras && (
+            String(editItem.tipo_horas || "") !== form.tipo_horas ||
+            String(editItem.tratamiento || "") !== form.tratamiento ||
+            (hhmm(editItem.hora_inicio) ?? "") !== form.hora_inicio ||
+            (hhmm(editItem.hora_fin) ?? "") !== form.hora_fin
+          ));
 
         if (fieldsChanged) {
           await permisosApi.actualizar(editItem.id, {
@@ -202,6 +229,7 @@ export default function PermisoDialog({
             fecha_fin: form.fecha_fin || null,
             motivo: form.motivo || null,
             id_empresa: Number(idEmpresaSeleccionada),
+            ...(porHoras ? datosPermisoHoras(form) : { modalidad: "dias" }),
           });
         }
         // Si el estado cambió respecto al original, actualizar estado
@@ -219,6 +247,19 @@ export default function PermisoDialog({
           );
         }
         enqueueSnackbar("Permiso actualizado correctamente.", {
+          variant: "success",
+        });
+      } else if (porHoras) {
+        // Por horas: una solicitud por empleado (el alta masiva es solo de días completos).
+        for (const id of idsTarget) {
+          await permisosApi.crear({
+            id_empleado: Number(id),
+            id_tipo_permiso: Number(form.id_tipo_permiso),
+            motivo: form.motivo || null,
+            ...datosPermisoHoras(form),
+          });
+        }
+        enqueueSnackbar(idsTarget.length === 1 ? "Permiso por horas creado." : `${idsTarget.length} permisos por horas creados.`, {
           variant: "success",
         });
       } else {
@@ -277,7 +318,8 @@ export default function PermisoDialog({
     }
 
     // Solo aplica en edición (cambiar estado de una solicitud existente).
-    if (!isEdit) {
+    // Un permiso por horas no marca días en Asistencias: se cancela sin reclasificar.
+    if (!isEdit || esPorHoras(editItem)) {
       setForm((f) => ({ ...f, estado: v }));
       return;
     }
@@ -484,7 +526,24 @@ export default function PermisoDialog({
               </div>
             ) : null}
 
+            {/* Días completos o por horas (20/11/2026) */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700">Duración</Label>
+              <div className="inline-flex w-full overflow-hidden rounded-lg border border-slate-200 sm:w-auto" role="radiogroup" aria-label="Duración del permiso">
+                {[["dias", "Días completos"], ["horas", "Por horas"]].map(([valor, texto]) => (
+                  <button key={valor} type="button" role="radio" aria-checked={form.modalidad === valor}
+                    onClick={() => setForm((f) => ({ ...f, modalidad: valor }))}
+                    className={`flex-1 px-4 py-2 text-sm font-semibold transition sm:flex-none ${form.modalidad === valor ? "bg-blue-600 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}>
+                    {texto}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {porHoras && <CamposPermisoHoras form={form} setForm={setForm} />}
+
             {/* Fechas */}
+            {!porHoras && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-gray-700">
@@ -514,6 +573,7 @@ export default function PermisoDialog({
                 />
               </div>
             </div>
+            )}
 
             {/* Estado (solo en modo edición) */}
             {isEdit ? (

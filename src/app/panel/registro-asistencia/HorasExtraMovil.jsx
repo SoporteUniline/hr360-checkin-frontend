@@ -1,25 +1,29 @@
 "use client";
 
 // Tarjeta de horas extra en el detalle del celular: mismo estado y acciones que la tabla
-// de escritorio (CeldaHorasExtra), con botones táctiles grandes.
+// de escritorio (CeldaHorasExtra), con botones táctiles grandes. Si el empleado debe horas de
+// permisos por horas, «Repone» (20/11/2026) descuenta ese tiempo de su cuenta y no se paga como extra.
 
 import { useState } from "react";
-import { Check, X } from "lucide-react";
+import { Check, RotateCcw, X } from "lucide-react";
 import {
-  ETIQUETAS_ESTADO, FORMA_PAGO_DEFAULT, FORMAS_PAGO, UMBRAL_MINUTOS,
+  ETIQUETAS_ESTADO, FORMA_PAGO_DEFAULT, FORMA_REPOSICION, FORMAS_PAGO, UMBRAL_MINUTOS,
 } from "@/lib/asistencia/horasExtra.mjs";
 import { formatearMinutos } from "@/lib/asistencia/jornada.mjs";
+import { useDebeHoras } from "./CuentaHorasContext";
 
 const COLOR = {
   pendiente: "text-orange-700",
   autorizada: "text-emerald-700",
   no_autorizada: "text-slate-600",
+  reposicion: "text-sky-700",
   sin: "text-gray-400",
 };
 
 export default function HorasExtraMovil({ registro, info, autorizador, guardando, onAutorizar, onNoAutorizar, onQuitar }) {
   const [forma, setForma] = useState(registro.forma_pago_extras || FORMA_PAGO_DEFAULT);
   const [nota, setNota] = useState("");
+  const debe = useDebeHoras(registro.id_empleado);
   const { estado, minutos } = info;
   if (estado === "sin" && !Number(registro.hrs_extra)) return null;
 
@@ -40,7 +44,13 @@ export default function HorasExtraMovil({ registro, info, autorizador, guardando
           : `Tiempo después de la salida del horario (cuenta desde ${UMBRAL_MINUTOS} min).`}
       </p>
 
-      {estado === "autorizada" && (
+      {debe > 0 && estado !== "reposicion" && (
+        <p className="mt-2 rounded-xl bg-sky-50 px-3 py-2 text-sm text-sky-800">
+          Debe <b>{formatearMinutos(debe)}</b> de permisos por horas. «Repone» lo descuenta de su cuenta y no se paga como extra.
+        </p>
+      )}
+
+      {(estado === "autorizada" || estado === "reposicion") && (
         <div className="mt-3 space-y-0.5 text-sm text-gray-700">
           <p>Autorizó: <b>{autorizador || "Sin autorizador"}</b></p>
           {registro.forma_pago_extras && <p>Forma de pago: <b>{registro.forma_pago_extras}</b></p>}
@@ -65,6 +75,12 @@ export default function HorasExtraMovil({ registro, info, autorizador, guardando
             onChange={(e) => setNota(e.target.value)}
             className="h-11 w-full rounded-xl border border-gray-200 px-3 text-sm"
           />
+          {debe > 0 && (
+            <button type="button" disabled={guardando} onClick={() => onAutorizar({ forma: FORMA_REPOSICION, notas: nota || undefined })}
+              className={`${boton} w-full bg-sky-600 text-white active:bg-sky-700`}>
+              <RotateCcw className="h-4 w-4" /> Repone (debe {formatearMinutos(debe)})
+            </button>
+          )}
           <div className="flex gap-2">
             <button type="button" disabled={guardando} onClick={() => onAutorizar({ forma, notas: nota || undefined })}
               className={`${boton} bg-emerald-700 text-white active:bg-emerald-800`}>
@@ -78,10 +94,10 @@ export default function HorasExtraMovil({ registro, info, autorizador, guardando
         </div>
       )}
 
-      {(estado === "autorizada" || estado === "no_autorizada") && (
+      {(estado === "autorizada" || estado === "reposicion" || estado === "no_autorizada") && (
         <button type="button" disabled={guardando} onClick={onQuitar}
           className={`${boton} mt-3 w-full border border-gray-200 bg-white text-gray-700 active:bg-gray-50`}>
-          {estado === "autorizada" ? "Quitar autorización" : "Deshacer (regresar la salida del reloj)"}
+          {estado === "autorizada" ? "Quitar autorización" : estado === "reposicion" ? "Quitar reposición" : "Deshacer (regresar la salida del reloj)"}
         </button>
       )}
     </section>

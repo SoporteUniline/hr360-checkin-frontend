@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { horaAMinutos, sumarDias } from "../src/lib/fechaHora.mjs";
 import {
-  formatearMinutos, horaAMinutos, minutosDescanso, minutosProgramados, minutosTrabajados,
-  resumenJornada, salidaEsDiaSiguiente, sinSalidaAComer, sumarDias,
+  formatearMinutos, minutosDescanso, minutosProgramados, minutosTrabajados,
+  resumenJornada, salidaEsDiaSiguiente, sinSalidaAComer,
 } from "../src/lib/asistencia/jornada.mjs";
 
 const reg = (o) => ({

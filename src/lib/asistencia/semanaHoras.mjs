@@ -5,9 +5,7 @@
 // a partir del rango elegido; si el rango toca varias semanas se elige una (por defecto la que
 // contiene hoy, o la última). La proyección («va a pasar de 46 h») solo aplica a la semana en curso.
 
-const sumarDias = (fecha, n) => new Date(Date.parse(`${fecha}T00:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
-const diaSemana = (fecha) => new Date(`${fecha}T00:00:00Z`).getUTCDay();
-export const lunesDe = (fecha) => sumarDias(fecha, -((diaSemana(fecha) + 6) % 7));
+import { lunesDe, sumarDias } from "../fechaHora.mjs";
 
 // Semanas completas que tocan el rango [inicio, fin].
 export function semanasDelRango(inicio, fin) {
@@ -62,14 +60,6 @@ export function resumenSemana(reporte, semana, hoy) {
     alertas: [...new Set([...(sem?.alertas ?? []), ...dias.flatMap((d) => d.alertas)])],
     dias,
   };
-}
-
-// Horas compactas para celdas de tabla: 570 → "9:30", 0 → "—".
-export function horaCorta(min) {
-  const m = Math.round(Number(min) || 0);
-  if (!m) return "—";
-  const abs = Math.abs(m);
-  return `${m < 0 ? "−" : ""}${Math.floor(abs / 60)}:${String(abs % 60).padStart(2, "0")}`;
 }
 
 // Orden de la tabla de Horas. campo: nombre | trabajado | autorizadas | porAutorizar | alertas.

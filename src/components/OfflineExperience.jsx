@@ -28,6 +28,20 @@ export default function OfflineExperience() {
     try { await discardClockEvent(event); }
     catch { setActionError('No se pudo descartar la captura. Intenta de nuevo.'); }
   };
+  // Descarta de una vez todas las capturas rechazadas de este dispositivo (no tocan el servidor).
+  const [discardingAll, setDiscardingAll] = useState(false);
+  const discardAllReviews = async () => {
+    const revision = events.filter(event => event.status === 'review');
+    if (!revision.length || !window.confirm(`¿Descartar las ${revision.length} capturas para revisión de este dispositivo? No registran asistencia y no se pueden recuperar.`)) return;
+    setActionError('');
+    setDiscardingAll(true);
+    let fallidas = 0;
+    for (const event of revision) {
+      try { await discardClockEvent(event); } catch { fallidas++; }
+    }
+    setDiscardingAll(false);
+    if (fallidas) setActionError(`No se pudieron descartar ${fallidas} captura(s). Intenta de nuevo.`);
+  };
   useEffect(() => {
     let disposed = false;
     const refresh = async () => {
@@ -109,10 +123,11 @@ export default function OfflineExperience() {
     {!compact && <>
     <p className="font-semibold">{offline ? 'Sin conexión · Usando información guardada en este celular' : reviews ? 'Con conexión · Hay checadas rechazadas para revisión' : 'Con conexión · Checadas pendientes de subir'}</p>
     {offline && <p className="mt-1 text-xs">Puedes consultar lo ya descargado y registrar checadas. Los demás cambios necesitan conexión.</p>}
+    {reviews > 1 && <button type="button" disabled={discardingAll} onClick={() => { void discardAllReviews(); }} className="mt-2 mr-2 rounded border border-blue-400 px-2 py-1 disabled:opacity-50">{discardingAll ? 'Descartando...' : `Descartar las ${reviews} de revisión`}</button>}
     {pending > 0 && <button type="button" disabled={offline || syncing} onClick={() => { void syncNow(); }} className="mt-2 rounded border border-blue-400 px-2 py-1 disabled:opacity-50">{syncing ? 'Comprobando pendientes...' : 'Sincronizar ahora'}</button>}
     {!!events.length && <details className="mt-2"><summary className="cursor-pointer">{events.length - reviews} pendiente(s){reviews ? ` · ${reviews} para revisión` : ''}</summary><p className="mt-1 text-xs">Las pendientes se subirán al recuperar conexión. Las rechazadas se conservan para revisión de RH. Las decisiones de turno aparecen aquí.</p><ul className="max-h-52 space-y-2 overflow-y-auto pt-2">
       {events.slice(0, 30).map(event => <li key={event.id} className="border-t border-blue-200 pt-2">
-        <p>{event.employeeName || event.alias || 'Checada'} · {new Date(event.captured_at).toLocaleString('es-MX')}</p>
+        <p>{event.employeeName || event.alias || 'Checada'} · {new Date(event.captured_at).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short', hourCycle: 'h12' })}</p>
         {event.status === 'review' && <p className="font-semibold">No aceptada · Se conserva para revisión</p>}
         <p className="text-xs">{event.error || 'Se enviará automáticamente al recuperar conexión.'}</p>
         {event.status === 'review' && isTurnConflict(event) && <p className="mt-1 text-xs">{offline ? 'Conéctate para actualizar el estado del turno y continuar.' : 'Puedes registrar una nueva checada. Esta captura se conserva para revisión de RH.'}</p>}

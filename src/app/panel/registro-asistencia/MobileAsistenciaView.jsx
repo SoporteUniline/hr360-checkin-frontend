@@ -17,11 +17,13 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/context/AuthContext";
 import MobileFiltersDrawer from "./MobileFiltersDrawer";
 import MobileEmpleadoDetalle from "./MobileEmpleadoDetalle";
+import EtiquetaPermisoHoras from "./EtiquetaPermisoHoras";
 import { estadoHorasExtra } from "@/lib/asistencia/horasExtra.mjs";
 import { formatearMinutos, sinSalidaAComer } from "@/lib/asistencia/jornada.mjs";
 import ClockNavigation from '@/components/Clock/ClockNavigation';
 import LocalClockCaptures from '@/components/Clock/LocalClockCaptures';
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { hora12 } from "@/lib/hora12.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -127,10 +129,10 @@ function EmpleadoCard({ registro, index, totalCount, onClick }) {
     "";
 
   const entradaFmt = registro.entrada
-    ? dayjs.tz(registro.entrada, DB_TZ).format("HH:mm")
+    ? hora12(dayjs.tz(registro.entrada, DB_TZ))
     : null;
   const salidaFmt = registro.salida
-    ? dayjs.tz(registro.salida, DB_TZ).format("HH:mm")
+    ? hora12(dayjs.tz(registro.salida, DB_TZ))
     : null;
 
   const esTarde = registro.estadoAsistencia === "Tardanza";
@@ -163,6 +165,7 @@ function EmpleadoCard({ registro, index, totalCount, onClick }) {
         {sinSalidaAComer(registro) && (
           <p className="mt-0.5 truncate text-[11px] font-semibold text-amber-700">⚠ No marcó salida a comer</p>
         )}
+        {registro.permiso_horas && <EtiquetaPermisoHoras permiso={registro.permiso_horas} className="mt-1" />}
       </div>
 
       {/* Times */}

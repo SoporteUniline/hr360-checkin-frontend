@@ -20,7 +20,17 @@ const FacialRecognitionPanel = ({
   submitMovement,
   // Reloj de la empresa: la cámara se queda encendida para el siguiente empleado.
   continuo = false,
+  // Celular: la cámara llena el alto que le da el contenedor (maqueta aprobada 19/11/2026).
+  pantallaCompleta = false,
+  // Mientras el reloj pregunta «¿Registrar otra vez?» no se reconoce a nadie más (la tarjeta quedaría tapada).
+  pausado = false,
 }) => {
+  // (19/11/2026) El análisis corre en un intervalo creado al encender la cámara: leer `continuo`
+  // directo dejaba el valor de ese momento y el interruptor no surtía efecto hasta reiniciarla.
+  const continuoRef = useRef(continuo);
+  continuoRef.current = continuo;
+  const pausadoRef = useRef(pausado);
+  pausadoRef.current = pausado;
   const [ubicacionGPS, setUbicacionGPS] = useState(null);
   const [cameraFacing, setCameraFacing] = useState("user");
   const [error, setError] = useState("");
@@ -48,8 +58,18 @@ const FacialRecognitionPanel = ({
   // (19/11/2026) Checar debe ser inmediato: se analiza en cuanto termina el cuadro anterior.
   const MIN_INTERVAL = 60;
   const NO_MATCH_INTERVAL = 800; // sin coincidencia: no saturar el reconocimiento / servidor
+  // (19/11/2026) Al entrar al cuadro o al abrir la cámara, el primer cuadro suele salir borroso o
+  // a contraluz y no alcanza 0.95: se reintenta rápido y en silencio; el aviso «no se encontró
+  // coincidencia» solo aparece si sigue sin reconocer después de este tiempo.
+  const GRACIA_SIN_COINCIDENCIA_MS = 1500;
+  const NO_MATCH_RAPIDO = 200;
+  const sinCoincidenciaDesdeRef = useRef(null);
   const PAUSA_TRAS_CHECAR = 2000; // modo reloj: el nombre se ve 2 s y sigue con el siguiente
-  const RESPALDO_SSD_MS = 2000; // si el detector rápido no ve cara en 2 s, se alterna con SSD
+  const RESPALDO_SENSIBLE_MS = 2000; // si no ve cara en 2 s, alterna con un umbral más sensible (poca luz)
+  // (19/11/2026) Hay que acercarse al reloj: si la cara ocupa menos de esta fracción del alto del
+  // cuadro, se pide «Acércate» y no se intenta reconocer (cara chica = huella pobre).
+  const CARA_MINIMA = 0.22;
+  const [acercate, setAcercate] = useState(false);
   const retryIntervalRef = useRef(MIN_INTERVAL);
   const recientesRef = useRef([]); // checadas de los últimos 60 s (evita doble checada)
   const CAMERA_START_TIMEOUT = 15000;
@@ -267,7 +287,7 @@ const FacialRecognitionPanel = ({
     let sinRostroDesde = Date.now();
     let usarRespaldo = false;
     const detect = async () => {
-      if (session !== sessionRef.current || isDetectingRef.current || isProcessingRef.current || globalThis.document?.hidden) return;
+      if (session !== sessionRef.current || pausadoRef.current || isDetectingRef.current || isProcessingRef.current || globalThis.document?.hidden) return;
       if (Date.now() - lastCheckTimeRef.current < retryIntervalRef.current) return;
       const canvas = canvasRef.current;
       const video = videoRef.current;
@@ -281,11 +301,10 @@ const FacialRecognitionPanel = ({
         // One frame and one detector pass for both presence and recognition.
         const d = diagApi();
         const t0 = d ? d.ahora() : 0;
-        // Detector rápido; si lleva 2 s sin ver cara, alterna con SSD (respaldo para poca luz o lejanía).
-        usarRespaldo = Date.now() - sinRostroDesde > RESPALDO_SSD_MS ? !usarRespaldo : false;
-        const detection = await (usarRespaldo
-          ? window.faceapi.detectSingleFace(canvas)
-          : window.faceapi.detectSingleFace(canvas, opcionesRapidas(window.faceapi)))
+        // Detector rápido; si lleva 2 s sin ver cara, alterna con un umbral más sensible (poca luz).
+        usarRespaldo = Date.now() - sinRostroDesde > RESPALDO_SENSIBLE_MS ? !usarRespaldo : false;
+        const detection = await window.faceapi
+          .detectSingleFace(canvas, opcionesRapidas(window.faceapi, usarRespaldo))
           .withFaceLandmarks().withFaceDescriptor();
         if (d) {
           const ms = d.ahora() - t0;
@@ -300,9 +319,21 @@ const FacialRecognitionPanel = ({
         }
         if (session !== sessionRef.current) return;
         setFaceDetected(!!detection);
+        // Cara muy chica (lejos del reloj): pedir que se acerque, sin reconocer.
+        const altoCara = detection?.detection?.box?.height;
+        const lejos = Boolean(detection && altoCara && canvas.height && altoCara / canvas.height < CARA_MINIMA);
+        setAcercate(lejos);
+        if (lejos) {
+          d?.cuenta("cara_lejos", 0);
+          sinRostroDesde = Date.now();
+          sinCoincidenciaDesdeRef.current = null;
+          lastCheckTimeRef.current = Date.now();
+          retryIntervalRef.current = MIN_INTERVAL;
+          return;
+        }
         if (detection) {
           sinRostroDesde = Date.now();
-          d?.cuenta(usarRespaldo ? "detector_respaldo" : "detector_rapido", 0);
+          d?.cuenta(usarRespaldo ? "detector_sensible" : "detector_rapido", 0);
           // La misma persona en los últimos 60 s: no se vuelve a checar.
           const repetida = yaRegistrado(recientesRef.current, detection.descriptor, Date.now());
           if (repetida) {
@@ -320,6 +351,7 @@ const FacialRecognitionPanel = ({
         } else {
           lastCheckTimeRef.current = Date.now();
           retryIntervalRef.current = MIN_INTERVAL; // terminó la pausa / aviso: volver a analizar sin espera
+          sinCoincidenciaDesdeRef.current = null;
           if (avisoRepetidoRef.current) setAvisoRepetido("");
         }
       } catch (err) {
@@ -400,16 +432,17 @@ const FacialRecognitionPanel = ({
       const { data } = response;
 
       if (session !== sessionRef.current) return;
+      sinCoincidenciaDesdeRef.current = null;
       diag("checada_exitosa");
       diagApi()?.terminar?.("checada registrada");
       setError("");
-      if (!data?.requiereDecision) setResultadoChecada(data?.pending ? "pendiente" : "registrada");
+      if (!data?.requiereDecision) setResultadoChecada(data?.repetida ? "repetida" : data?.pending ? (data?.errorServidor ? "error_servidor" : "pendiente") : "registrada");
       if (!data?.requiereDecision) {
         recientesRef.current = recordarChecada(recientesRef.current, detection.descriptor,
           data?.empleado ? `${data.empleado.nombre ?? ""} ${data.empleado.apellido_paterno ?? ""}`.trim() : "", Date.now(), Boolean(data?.pending));
       }
       onSuccess(data);
-      if (continuo && !data?.requiereDecision) {
+      if (continuoRef.current && !data?.requiereDecision) {
         // Reloj de la empresa: la cámara sigue encendida; pausa breve y listo para el siguiente.
         retryIntervalRef.current = PAUSA_TRAS_CHECAR;
         setTimeout(() => { if (session === sessionRef.current) setResultadoChecada(null); }, PAUSA_TRAS_CHECAR);
@@ -423,8 +456,16 @@ const FacialRecognitionPanel = ({
       const message =
         err.response?.data?.error || err.message || "Error en reconocimiento facial";
       if (["GPS_INACCURATE", "GPS_REFRESH_REQUIRED", "OUTSIDE_AREA", "GPS_OUTSIDE_AREA"].includes(err.response?.data?.code)) locationRef.current = null;
-      retryIntervalRef.current = /coincidencia facial/i.test(message)
-        ? NO_MATCH_INTERVAL : ERROR_INTERVAL;
+      const sinCoincidencia = /coincidencia facial/i.test(message);
+      if (sinCoincidencia) {
+        sinCoincidenciaDesdeRef.current ??= Date.now();
+        if (Date.now() - sinCoincidenciaDesdeRef.current < GRACIA_SIN_COINCIDENCIA_MS) {
+          retryIntervalRef.current = NO_MATCH_RAPIDO;
+          setError("");
+          return;
+        }
+      }
+      retryIntervalRef.current = sinCoincidencia ? NO_MATCH_INTERVAL : ERROR_INTERVAL;
 
       // Keep one stable message by the camera while automatic retries continue.
       setError(message === "Faltan coordenadas de ubicaci\u00f3n"
@@ -456,6 +497,8 @@ const FacialRecognitionPanel = ({
     if (!cameraReady)
       return { text: "Iniciando cámara...", color: "bg-gray-700" };
     if (resultadoChecada === "pendiente") return { text: "Checada pendiente de subir", color: "bg-amber-600" };
+    if (resultadoChecada === "repetida") return { text: "Ya estaba registrada · confirma abajo", color: "bg-amber-600" };
+    if (resultadoChecada === "error_servidor") return { text: "El servidor no aceptó la checada · avisa a RH", color: "bg-amber-600" };
     if (resultadoChecada === "registrada")
       return {
         text: "¡Listo! Esperando siguiente empleado...",
@@ -464,28 +507,20 @@ const FacialRecognitionPanel = ({
     if (avisoRepetido) return { text: avisoRepetido, color: "bg-blue-600" };
     if (countdown > 0)
       return { text: "Preparando captura...", color: "bg-gray-700" };
+    if (acercate)
+      return { text: "Acércate al reloj", color: "bg-amber-600" };
     if (faceDetected)
       return { text: "Rostro detectado", color: "bg-green-600" };
 
-    return { text: "Esperando detección de rostro...", color: "bg-gray-600" };
+    return { text: pantallaCompleta ? "Mira a la cámara" : "Esperando detección de rostro...", color: "bg-gray-600" };
   };
 
   return (
     <div
-      className="
-  p-0
-  bg-transparent
-  rounded-none
-  shadow-none
-  md:p-4
-  md:bg-white
-  md:rounded-2xl
-  md:shadow-xl
-  space-y-4
-"
+      className={`p-0 bg-transparent rounded-none shadow-none md:p-4 md:bg-white md:rounded-2xl md:shadow-xl ${pantallaCompleta ? "h-full bg-slate-950" : "space-y-4"}`}
     >
       {!isOpen ? (
-        <div className="flex flex-col items-center justify-center py-16 px-4 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50">
+        <div className={`flex flex-col items-center justify-center px-4 ${pantallaCompleta ? "h-full bg-slate-50" : "py-16 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50"}`}>
           <div className="bg-blue-100 rounded-full p-6 mb-4">
             <Camera className="h-12 w-12 text-blue-600" />
           </div>
@@ -540,19 +575,31 @@ const FacialRecognitionPanel = ({
             </div>
           </div>
 
-          {ubicacionGPS && <p className="px-3 text-sm text-slate-600" role="status">Última lectura: precisión ±{Math.ceil(ubicacionGPS.coords.accuracy)} m. La ubicación aproximada puede impedir el checado.</p>}
-          <div className="overflow-y-auto">
+          {ubicacionGPS && <p className={pantallaCompleta ? "absolute left-3 right-3 top-3 z-10 rounded-lg bg-slate-900/70 px-3 py-1.5 text-xs text-white" : "px-3 text-sm text-slate-600"} role="status">Última lectura: precisión ±{Math.ceil(ubicacionGPS.coords.accuracy)} m. La ubicación aproximada puede impedir el checado.</p>}
+          <div className={pantallaCompleta ? "relative h-full" : "overflow-y-auto"}>
             <>
-              <div className="relative mb-4">
+              <div className={pantallaCompleta ? "relative h-full" : "relative mb-4"}>
                 <>
                   <video
                     ref={videoRef}
                     autoPlay
                     muted
                     playsInline
-                    className="w-full object-cover border-0 md:border-4 rounded-none md:rounded-lg"
+                    className={`w-full object-cover border-0 md:border-4 rounded-none md:rounded-lg ${pantallaCompleta ? "h-full" : ""}`}
+                    // (19/11/2026) Cámara frontal en espejo, como cualquier selfie: si giras a la izquierda,
+                    // la imagen también. Solo cambia lo que se ve; el reconocimiento usa el cuadro original.
+                    style={cameraFacing === "user" ? { transform: "scaleX(-1)" } : undefined}
                   />
-                  <div className="md:hidden absolute top-4 right-3 flex gap-3">
+                  {pantallaCompleta && (
+                    <div aria-hidden="true" className={`pointer-events-none absolute left-1/2 top-[44%] h-[52%] max-h-80 aspect-[3/4] -translate-x-1/2 -translate-y-1/2 rounded-[50%] border-[3px] shadow-[0_0_0_9999px_rgba(2,6,23,0.35)] transition-colors ${acercate ? "border-amber-400" : resultadoChecada === "registrada" || faceDetected ? "border-green-400" : resultadoChecada ? "border-amber-400" : "border-white/85"}`} />
+                  )}
+                  <div className={`md:hidden absolute right-3 flex gap-2 ${pantallaCompleta ? (ubicacionGPS ? "top-14" : "top-3") : "top-4"}`}>
+                    {pantallaCompleta ? (<>
+                      <button type="button" aria-label="Cambiar de cámara" onClick={() => setCameraFacing((prev) => (prev === "user" ? "environment" : "user"))}
+                        className="grid size-10 place-items-center rounded-full bg-slate-900/55 text-white"><RotateCcw className="size-5" /></button>
+                      <button type="button" aria-label="Apagar cámara" onClick={handleOpenFacialModal}
+                        className="grid size-10 place-items-center rounded-full bg-slate-900/55 text-white"><Power className="size-5" /></button>
+                    </>) : (<>
                     <Button
                       onClick={() =>
                         setCameraFacing((prev) =>
@@ -572,13 +619,14 @@ const FacialRecognitionPanel = ({
                       <Power />
                       Apagar
                     </Button>
+                    </>)}
                   </div>
 
                   {(() => {
                     const { text, color } = getStatusMessage();
                     return (
                       <div
-                        className={`absolute bottom-3 left-1/2 -translate-x-1/2 px-4 py-2 text-white text-sm font-medium rounded-lg shadow-lg ${color} bg-opacity-90 text-center`}
+                        className={`absolute left-1/2 -translate-x-1/2 px-4 py-2 text-white text-sm font-medium shadow-lg ${color} bg-opacity-90 text-center ${pantallaCompleta ? "bottom-4 max-w-[calc(100%-2rem)] rounded-full" : "bottom-3 rounded-lg"}`}
                       >
                         {text}
                       </div>

@@ -2,20 +2,11 @@
 // El backend (hr360-checkin-backend/docs/turnos-extra.md) calcula avisos y estado en vivo;
 // aquí solo se arma la semana, las etiquetas, los filtros y el resumen de lo elegido.
 
-const DIA_MS = 86400000;
+import { diaSemana, horaAMinutos, marcaEnMinutos, minutosAbsolutos, sinAcentos } from "../fechaHora.mjs";
+import { formatearMinutos } from "./jornada.mjs";
+
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 const DIAS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
-
-export function sumarDias(fecha, n) {
-  return new Date(Date.parse(`${fecha}T00:00:00Z`) + n * DIA_MS).toISOString().slice(0, 10);
-}
-
-// Semana legal lunes–domingo que contiene la fecha.
-export function semanaDe(fecha) {
-  const d = new Date(`${fecha}T00:00:00Z`).getUTCDay();
-  const inicio = sumarDias(fecha, d === 0 ? -6 : 1 - d);
-  return { inicio, fin: sumarDias(inicio, 6) };
-}
 
 const partes = (f) => ({ d: +f.slice(8, 10), m: MESES[+f.slice(5, 7) - 1], a: f.slice(0, 4) });
 
@@ -26,33 +17,23 @@ export function textoSemana({ inicio, fin }) {
 
 export function textoDia(fecha) {
   const p = partes(fecha);
-  return `${DIAS[new Date(`${fecha}T00:00:00Z`).getUTCDay()]} ${p.d} ${p.m}`;
-}
-
-export function horaMin(h) {
-  const m = /^(\d{1,2}):(\d{2})/.exec(String(h ?? ""));
-  return m ? +m[1] * 60 + +m[2] : null;
+  return `${DIAS[diaSemana(fecha)]} ${p.d} ${p.m}`;
 }
 
 // Duración en minutos (si la salida es menor, termina al día siguiente).
 export function duracion(inicio, fin) {
-  const a = horaMin(inicio), b = horaMin(fin);
+  const a = horaAMinutos(inicio), b = horaAMinutos(fin);
   if (a == null || b == null || a === b) return 0;
   return b > a ? b - a : b + 1440 - a;
-}
-
-export function textoMin(min) {
-  const m = Math.max(0, Math.round(Number(min) || 0));
-  const h = Math.floor(m / 60), r = m % 60;
-  return h && r ? `${h} h ${r} min` : h ? `${h} h` : `${r} min`;
 }
 
 // Fase de un turno de la lista. `ahora` = minutos absolutos en hora local (lo manda el backend).
 export function faseTurno(t, ahora) {
   if (t.estado === "cancelado") return "cancelado";
-  const ini = Math.floor(Date.parse(`${t.fecha}T00:00:00Z`) / 60000) + horaMin(t.hora_inicio);
+  const ini = minutosAbsolutos(t.fecha, t.hora_inicio);
+  // Sin hora de inicio válida no se puede saber la fase (antes contaba como medianoche).
+  if (ahora == null || ini == null) return "programado";
   const fin = ini + duracion(t.hora_inicio, t.hora_fin);
-  if (ahora == null) return "programado";
   return ahora < ini ? "programado" : ahora <= fin ? "en_curso" : "terminado";
 }
 
@@ -65,26 +46,24 @@ export const FASES = {
 
 export function estadoPersona(vivo) {
   if (!vivo) return { texto: "—", tono: "gris" };
-  if (vivo.llegoTarde && vivo.estado === "trabajando") return { texto: `Llegó ${textoMin(vivo.llegoTarde)} tarde`, tono: "ambar" };
+  if (vivo.llegoTarde && vivo.estado === "trabajando") return { texto: `Llegó ${formatearMinutos(vivo.llegoTarde)} tarde`, tono: "ambar" };
   return {
     programado: { texto: "Programado", tono: "gris" },
     por_llegar: { texto: "Por llegar", tono: "gris" },
     no_se_presento: { texto: "No se ha presentado", tono: "rojo" },
     trabajando: { texto: "Trabajando", tono: "azul" },
-    termino: { texto: vivo.llegoTarde ? `Terminó · llegó ${textoMin(vivo.llegoTarde)} tarde` : "Terminó", tono: "verde" },
+    termino: { texto: vivo.llegoTarde ? `Terminó · llegó ${formatearMinutos(vivo.llegoTarde)} tarde` : "Terminó", tono: "verde" },
   }[vivo.estado] ?? { texto: vivo.estado, tono: "gris" };
 }
 
 // ¿Salió de su turno el mismo día, poco antes del turno extra? (filtro «Salieron hoy de su turno»).
 export function salioAntes(candidato, fecha, horaInicio, margenMin = 8 * 60) {
-  const s = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}):(\d{2})/.exec(String(candidato?.salida_anterior ?? ""));
-  if (!s) return false;
-  const salida = Math.floor(Date.parse(`${s[1]}T00:00:00Z`) / 60000) + +s[2] * 60 + +s[3];
-  const inicio = Math.floor(Date.parse(`${fecha}T00:00:00Z`) / 60000) + horaMin(horaInicio);
-  return salida <= inicio && inicio - salida <= margenMin;
+  const salida = marcaEnMinutos(candidato?.salida_anterior);
+  // Sin hora de inicio todavía no hay contra qué comparar (antes contaba como medianoche).
+  const inicio = minutosAbsolutos(fecha, horaInicio);
+  return salida != null && inicio != null && salida <= inicio && inicio - salida <= margenMin;
 }
 
-const sinAcentos = (v) => String(v ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
 export function filtrarCandidatos(lista, { filtro = "todos", buscar = "", fecha, horaInicio } = {}) {
   const q = sinAcentos(buscar).trim();

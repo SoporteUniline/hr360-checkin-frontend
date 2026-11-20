@@ -111,7 +111,7 @@ try {
   assert.equal(puts[2].salida, `${hoy} 17:00:00`);
   assert.match(puts[2].notas_hrs_extra, /^No autorizadas por RH Prueba · salida del reloj .* 18:42$/);
   await tarjeta.getByText("No autorizadas", { exact: true }).waitFor({ timeout: 10000 });
-  await page.getByText("18:42 reloj").waitFor({ timeout: 10000 });
+  await page.getByText("6:42 p.m. reloj").waitFor({ timeout: 10000 });
   if (process.env.CAPTURAS) await page.screenshot({ path: process.env.CAPTURAS + "/movil-noaut.png" });
 
   assert.deepEqual(errores, [], "sin errores de JavaScript en la página");

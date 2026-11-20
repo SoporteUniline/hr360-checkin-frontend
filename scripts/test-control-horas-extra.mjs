@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { alertasDia, lunesDe, moverSemana, quienDecidio, resumenControl, semanaDe, semanaExtra, topeRespaldo } from "../src/lib/asistencia/controlHorasExtra.mjs";
+import { alertasDia, moverSemana, quienDecidio, resumenControl, semanaExtra, topeRespaldo } from "../src/lib/asistencia/controlHorasExtra.mjs";
+import { lunesDe, semanaDe } from "../src/lib/fechaHora.mjs";
 
 const reg = (o) => ({ id_empleado: 1, fecha: "2026-11-16", hora_entrada_programada: "08:00:00", hora_salida_programada: "17:00:00", entrada: "2026-11-16 08:00:00", hrs_extra: 0, ...o });
 const aut = (fecha, salida, o = {}) => reg({ fecha, entrada: `${fecha} 08:00:00`, salida: `${fecha} ${salida}:00`, hrs_extra: 1, nombre_extra_autorizador: "Laura", apellido_paterno_extra_autorizador: "Gómez", ...o });
@@ -36,4 +37,16 @@ test("quién decidió", () => {
   assert.equal(quienDecidio(reg({ salida: "2026-11-16 18:15:00" })).estado, "pendiente");
   const no = quienDecidio(reg({ salida: "2026-11-16 17:00:00", correccion: 1, valores_originales: JSON.stringify({ salida: "2026-11-16 23:59:00" }), notas_hrs_extra: "No autorizadas por Diego León · salida del reloj 2026-11-16 23:59" }));
   assert.deepEqual([no.estado, no.nombre], ["no_autorizada", "Diego León"]);
+});
+
+test("quincena/mes que empieza a media semana: el tope semanal usa toda la semana (contexto)", () => {
+  // Semana 16–22 nov: lun 16 y mar 17 fuera del periodo con 4 h autorizadas cada uno (8 h); el periodo empieza el miércoles 18 con 3 h.
+  const contexto = [aut("2026-11-16", "21:00"), aut("2026-11-17", "21:00")];
+  const periodo = [aut("2026-11-18", "20:00")];
+  const sin = resumenControl(periodo, { tope: 540 });
+  assert.deepEqual([sin.autorizada.dobles, sin.autorizada.triples], [180, 0], "sin contexto se veía todo al doble");
+  const con = resumenControl(periodo, { tope: 540, contexto });
+  assert.deepEqual([con.autorizada.minutos, con.autorizada.registros], [180, 1], "los totales son solo del periodo");
+  assert.deepEqual([con.autorizada.dobles, con.autorizada.triples], [60, 120]);
+  assert.equal(semanaExtra(periodo[0], con.resumen ?? con, 540).acumulado, 660, "la columna Semana ve la semana completa");
 });

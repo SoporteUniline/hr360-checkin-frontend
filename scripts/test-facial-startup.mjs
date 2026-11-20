@@ -32,6 +32,7 @@ function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, p
   let now = Date.now();
   const notifications = [];
   const detectores = [];
+  let videoProps = null;
   const requests = [];
   let texts = [];
   let resolveModels;
@@ -65,7 +66,7 @@ function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, p
     Date: class extends Date { static now() { return now; } },
     React: { createElement(type, props, ...children) {
       texts.push(...children.filter((child) => typeof child === "string"));
-      if (type === "video") props.ref.current = video;
+      if (type === "video") { props.ref.current = video; videoProps = props; }
       if (type === "canvas") props.ref.current = canvas;
       return null;
     } },
@@ -118,7 +119,7 @@ function setup({ gpsFails = false, gpsUnavailable = false, gpsPending = false, p
     effects.forEach(({ cleanup }) => cleanup?.());
     effects.forEach(({ index, run, deps }) => { slots[index] = { deps, cleanup: run() }; });
   };
-  return { render, video, resolveModels, resolveDetection, timers, startupTimers, notifications, requests, detectores,
+  return { render, video, resolveModels, resolveDetection, timers, startupTimers, notifications, requests, detectores, videoProps: () => videoProps,
     texts: () => texts,
     advance(ms) { now += ms; },
     setGpsFails(value) { gpsFails = value; },
@@ -254,22 +255,41 @@ test("missing or denied GPS does not block employees without a GPS requirement",
   }
 });
 
-test("nonmatching faces retry with a stable inline error, no snackbar flood, and a pause (800 ms)", async () => {
+test("sin coincidencia: los primeros 1.5 s reintenta rápido sin aviso; después, aviso estable y pausa de 800 ms", async () => {
   const message = "No se encontr\u00f3 coincidencia facial";
   const env = setup({ postError: message });
   await startRecognition(env);
-  assert.ok(env.texts().includes(message));
-  for (let attempt = 0; attempt < 3; attempt++) {
+  // (19/11/2026) Primer cuadro borroso al entrar: no se muestra «no se encontró» y se reintenta a los 200 ms.
+  assert.ok(!env.texts().includes(message), "el primer fallo no muestra el aviso");
+  assert.equal(env.counts().posts, 1);
+  env.advance(150);
+  for (const fn of env.timers) fn();
+  await tick();
+  assert.equal(env.counts().posts, 1, "espera 200 ms entre intentos");
+  env.advance(60);
+  for (const fn of env.timers) fn();
+  await tick();
+  env.render();
+  assert.equal(env.counts().posts, 2, "reintenta rápido");
+  assert.ok(!env.texts().includes(message));
+  // Pasada la gracia, el aviso aparece y se queda mientras sigue reintentando cada 800 ms.
+  env.advance(1400);
+  for (const fn of env.timers) fn();
+  await tick();
+  env.render();
+  assert.equal(env.counts().posts, 3);
+  assert.ok(env.texts().includes(message), "después de 1.5 s sí avisa");
+  for (let attempt = 0; attempt < 2; attempt++) {
     for (const fn of env.timers) fn();
     await tick();
-    assert.equal(env.counts().posts, attempt + 1, "wait before submitting another frame");
+    assert.equal(env.counts().posts, attempt + 3, "wait before submitting another frame");
     env.advance(800);
     for (const fn of env.timers) fn();
     env.render();
     assert.ok(env.texts().includes(message), "previous message stays visible during retry");
     await tick();
     env.render();
-    assert.equal(env.counts().posts, attempt + 2);
+    assert.equal(env.counts().posts, attempt + 4);
   }
   assert.equal(env.notifications.length, 0);
   assert.equal(env.counts().gpsCalls, 0, "unknown faces never trigger a location prompt");
@@ -375,7 +395,7 @@ test("with diagnostics on, behavior is unchanged and every phase is recorded", a
 
 const cara = Float32Array.from({ length: 128 }, (_, i) => Math.sin(i * 1.3));
 
-test("el detector rápido se usa siempre; tras 2 s sin cara se alterna con SSD como respaldo", async () => {
+test("se reconoce con el detector rápido (hay que acercarse al reloj; SSD ya no se usa)", async () => {
   const env = setup();
   env.render();
   await tick();
@@ -385,13 +405,34 @@ test("el detector rápido se usa siempre; tras 2 s sin cara se alterna con SSD c
   env.render();
   env.resolveDetection(undefined);
   await tick();
-  assert.deepEqual(env.detectores, ["rapido"]);
   for (let i = 0; i < 4; i++) { env.advance(100); for (const detect of env.timers) detect(); await tick(); }
-  assert.ok(env.detectores.every((d) => d === "rapido"), "antes de 2 s solo el rápido");
-  env.advance(2000);
-  for (let i = 0; i < 4; i++) { env.advance(100); for (const detect of env.timers) detect(); await tick(); }
-  assert.ok(env.detectores.slice(5).includes("ssd"), "después de 2 s sin cara entra SSD");
-  assert.ok(env.detectores.slice(5).includes("rapido"), "y se alterna con el rápido");
+  assert.ok(env.detectores.length >= 2);
+  assert.ok(env.detectores.every((d) => d === "rapido"), JSON.stringify(env.detectores));
+});
+
+test("cara lejos (chica en el cuadro): pide «Acércate al reloj» y no intenta reconocer", async () => {
+  const env = setup();
+  env.render();
+  await tick();
+  env.video.onplaying();
+  env.resolveModels();
+  await tick();
+  env.render();
+  // 480 de alto: una cara de 60 px es 12.5 % del cuadro (mínimo 22 %).
+  const caraVista = { descriptor: cara, detection: { box: { height: 60 } } };
+  env.resolveDetection(caraVista);
+  await tick();
+  env.render();
+  assert.equal(env.counts().posts, 0, "no se envía a reconocer");
+  assert.ok(env.texts().includes("Acércate al reloj"), JSON.stringify(env.texts()));
+  // Ya cerca (200 px ≈ 42 %): reconoce.
+  caraVista.detection.box.height = 200; // el detector simulado devuelve siempre el mismo objeto
+  env.advance(100);
+  for (const fn of env.timers) fn();
+  await tick();
+  env.render();
+  assert.equal(env.counts().posts, 1);
+  assert.ok(!env.texts().includes("Acércate al reloj"));
 });
 
 test("modo reloj: la cámara sigue encendida tras checar y la misma persona no vuelve a checar en 60 s", async () => {
@@ -426,4 +467,30 @@ test("modo reloj: la cámara sigue encendida tras checar y la misma persona no v
   for (const fn of env.timers) fn();
   await tick();
   assert.equal(env.counts().posts, 2);
+});
+
+test("apagar «Cámara siempre encendida» con la cámara ya encendida sí la apaga al checar", async () => {
+  const props = { continuo: true };
+  const env = setup({ props });
+  env.render();
+  await tick();
+  env.video.onloadeddata();
+  env.resolveModels();
+  await tick();
+  env.render();
+  props.continuo = false; // el usuario apaga el interruptor; el análisis ya estaba corriendo
+  env.render();
+  env.resolveDetection({ descriptor: cara });
+  await tick();
+  env.render();
+  assert.equal(env.counts().posts, 1);
+  assert.ok(env.counts().stops > 0, "la cámara se apaga al checar");
+});
+
+test("la cámara frontal se ve en espejo (girar a la izquierda se ve a la izquierda)", async () => {
+  const env = setup();
+  env.render();
+  await tick();
+  env.render();
+  assert.equal(env.videoProps()?.style?.transform, "scaleX(-1)");
 });

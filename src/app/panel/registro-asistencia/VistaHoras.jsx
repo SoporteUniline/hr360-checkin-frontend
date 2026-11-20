@@ -11,8 +11,17 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { fetcherWithToken } from "@/lib/fetcher";
-import { formatearMinutos } from "@/lib/asistencia/jornada.mjs";
-import { horaCorta, ordenarFilas, resumenSemana, semanaInicial, semanasDelRango } from "@/lib/asistencia/semanaHoras.mjs";
+import { duracionCorta, formatearMinutos } from "@/lib/asistencia/jornada.mjs";
+import { ordenarFilas, resumenSemana, semanaInicial, semanasDelRango } from "@/lib/asistencia/semanaHoras.mjs";
+
+// (19/11/2026) Clic en un día (o en su alerta) abre el registro de ese día en la Lista para corregirlo.
+export const enlaceDia = (idEmpleado, nombre, fecha) =>
+  `/panel/registro-asistencia?${new URLSearchParams({ fecha, empleado: nombre ?? "", abrirEmpleado: String(idEmpleado ?? "") })}`;
+const irAlDia = (e, idEmpleado, nombre, fecha) => {
+  e.stopPropagation();
+  // Navegación completa: la página toma fecha, empleado y registro a abrir al cargar.
+  window.location.assign(enlaceDia(idEmpleado, nombre, fecha));
+};
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -151,18 +160,31 @@ function TablaHoras({ visibles, semana, hoy, orden, ordenarPor, abierto, setAbie
             const proy = s.limite ? Math.min(100, (s.proyeccion / s.limite) * 100) : 0;
             const abiertoAqui = abierto === id;
             return (
-              <FilaHoras key={id} nombre={nombre} abierto={abiertoAqui} onClick={() => setAbierto(abiertoAqui ? null : id)} alertas={s.alertas} dias={s.dias}>
+              <FilaHoras key={id} idEmpleado={id} nombre={nombre} abierto={abiertoAqui} onClick={() => setAbierto(abiertoAqui ? null : id)} alertas={s.alertas} dias={s.dias}>
                 <td className="px-2 py-1.5">
                   <p className="font-semibold leading-tight text-slate-900">{nombre}</p>
                   <p className="truncate text-[11px] text-slate-500">{r.empleado?.departamento || r.empleado?.puesto || ""}</p>
                 </td>
-                {s.dias.map((d) => (
-                  <td key={d.fecha} title={d.alertas.join(" · ") || undefined}
-                    className={`px-1.5 py-1.5 text-center ${d.fecha === hoy ? "bg-blue-50/60" : ""} ${d.alertas.length ? "font-semibold text-red-700" : d.fecha > hoy ? "text-slate-300" : "text-slate-700"}`}>
-                    {d.fecha > hoy && !d.trabajado ? (d.programado ? <span className="text-[11px]">({horaCorta(d.programado)})</span> : "—") : horaCorta(d.trabajado)}
-                    {d.alertas.length ? <span aria-hidden> •</span> : null}
-                  </td>
-                ))}
+                {s.dias.map((d) => {
+                  const contenido = (
+                    <>
+                      {d.fecha > hoy && !d.trabajado ? (d.programado ? <span className="text-[11px]">({duracionCorta(d.programado)})</span> : "—") : duracionCorta(d.trabajado)}
+                      {d.alertas.length ? <span aria-hidden> •</span> : null}
+                    </>
+                  );
+                  const abrible = d.fecha <= hoy && (d.trabajado || d.alertas.length);
+                  return (
+                    <td key={d.fecha} title={[...d.alertas, abrible ? "Clic para ver y corregir este día" : ""].filter(Boolean).join(" · ") || undefined}
+                      className={`px-1 py-1 text-center ${d.fecha === hoy ? "bg-blue-50/60" : ""} ${d.alertas.length ? "font-semibold text-red-700" : d.fecha > hoy ? "text-slate-300" : "text-slate-700"}`}>
+                      {abrible ? (
+                        <button type="button" onClick={(e) => irAlDia(e, id, nombre, d.fecha)}
+                          className="w-full rounded-md px-1 py-0.5 underline-offset-2 hover:bg-white hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
+                          {contenido}
+                        </button>
+                      ) : contenido}
+                    </td>
+                  );
+                })}
                 <td className="px-2 py-1.5">
                   <b className={n.color}>{fmt(s.trabajado)}</b>
                   {s.limite != null && <span className="text-[11px] text-slate-500"> / {fmt(s.limite)}</span>}
@@ -210,7 +232,7 @@ function TablaHoras({ visibles, semana, hoy, orden, ordenarPor, abierto, setAbie
   );
 }
 
-function FilaHoras({ nombre, abierto, onClick, alertas, dias, children }) {
+function FilaHoras({ idEmpleado, nombre, abierto, onClick, alertas, dias, children }) {
   const porDia = dias.map((d, i) => ({ ...d, dia: DIAS[i] })).filter((d) => d.alertas.length);
   return (
     <>
@@ -225,8 +247,13 @@ function FilaHoras({ nombre, abierto, onClick, alertas, dias, children }) {
               {alertas.map((a) => <span key={a} className="rounded-full bg-red-50 px-2 py-0.5 font-semibold text-red-700">⚠ {a}</span>)}
             </div>
             {porDia.length ? (
-              <p className="mt-1 text-slate-600">
-                {porDia.map((d) => `${d.dia} ${dayjs(d.fecha).format("D")}: ${d.alertas.join(", ")}`).join(" · ")}
+              <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-slate-600">
+                {porDia.map((d) => (
+                  <button key={d.fecha} type="button" onClick={(e) => irAlDia(e, idEmpleado, nombre, d.fecha)}
+                    className="font-medium text-blue-700 underline-offset-2 hover:underline">
+                    {d.dia} {dayjs(d.fecha).format("D")}: {d.alertas.join(", ")} · Ver y corregir →
+                  </button>
+                ))}
               </p>
             ) : null}
           </td>

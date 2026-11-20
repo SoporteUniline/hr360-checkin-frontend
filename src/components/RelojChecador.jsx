@@ -8,7 +8,10 @@ import {
   XCircle,
   Clock4,
   AlertTriangle,
+  Camera,
+  Menu,
 } from "lucide-react";
+import Link from "next/link";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import ErrorPage from "@/components/ErrorPage";
@@ -29,6 +32,7 @@ import QRScanner from "./QRScanner";
 import { Button } from "./ui/button";
 import { initializeClock, registerClockMovement, localFaceStatus } from '@/lib/offline-clock';
 import ClockNavigation from './Clock/ClockNavigation';
+import { hora12 } from "@/lib/hora12.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -38,9 +42,30 @@ export default function RelojChecador({
   modoEmpleado = false,
   idEmpleado = null,
   companySlug = null,
+  nombreEmpresa = "",
 }) {
   const [ubicacionGPS, setUbicacionGPS] = useState(null);
   const [metodo, setMetodo] = useState("facial");
+  // Celular (maqueta aprobada 19/11/2026): la cámara ocupa el alto que queda entre la franja de
+  // arriba y la barra de abajo. Se mide porque arriba puede haber navegación (reloj del empleado).
+  const areaRef = useRef(null);
+  const [altoArea, setAltoArea] = useState(null);
+  const [ajustesCamara, setAjustesCamara] = useState(false);
+  const [menuMovil, setMenuMovil] = useState(false);
+  // Cámara siempre encendida: útil en un reloj fijo (fila de personas). En el celular de cada
+  // empleado conviene apagarla al checar. Se recuerda por dispositivo.
+  const claveCamara = `adamia-reloj-camara-fija:${modoEmpleado ? "empleado" : "empresa"}`;
+  const [camaraFija, setCamaraFija] = useState(!modoEmpleado);
+  useEffect(() => {
+    try {
+      const guardado = localStorage.getItem(claveCamara);
+      if (guardado !== null) setCamaraFija(guardado === "1");
+    } catch { /* sin almacenamiento: queda el valor por defecto */ }
+  }, [claveCamara]);
+  const cambiarCamaraFija = () => setCamaraFija((actual) => {
+    try { localStorage.setItem(claveCamara, actual ? "0" : "1"); } catch { /* solo esta sesión */ }
+    return !actual;
+  });
   const [offline, setOffline] = useState(false);
   const [localFacesReady, setLocalFacesReady] = useState(false);
   useEffect(() => {
@@ -64,6 +89,9 @@ export default function RelojChecador({
   const [mostrarCamara, setMostrarCamara] = useState(true);
   const { enqueueSnackbar } = useSnackbar();
   const [popupInfo, setPopupInfo] = useState(null);
+  // Candado de 5 min (19/11/2026): «Acabas de registrar tu salida a las 4:49 p.m. ¿Registrar otra vez?».
+  const [pregunta, setPregunta] = useState(null);
+  const [repitiendo, setRepitiendo] = useState(false);
   const [registrando, setRegistrando] = useState(false);
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const [subscriptionActive, setSubscriptionActive] = useState(false);
@@ -110,10 +138,7 @@ export default function RelojChecador({
 
   const formatearHora = (fechaString) => {
     if (!fechaString) return "-";
-    return dayjs
-      .tz(fechaString, DB_TIMEZONE)
-      .tz(EMPRESA_TIMEZONE)
-      .format("hh:mm:ss A");
+    return hora12(dayjs.tz(fechaString, DB_TIMEZONE).tz(EMPRESA_TIMEZONE), { segundos: true });
   };
 
   const endpoint = modoEmpleado
@@ -161,7 +186,7 @@ export default function RelojChecador({
   useEffect(() => {
     const actualizarHora = () => {
       const ahora = dayjs().tz(EMPRESA_TIMEZONE);
-      setHoraActual(ahora.format("hh:mm:ss A"));
+      setHoraActual(hora12(ahora, { segundos: true }));
       const fechaFormateada = ahora.format("dddd, D [de] MMMM [de] YYYY");
       const [dia, ...resto] = fechaFormateada.split(", ");
       const diaCapitalizado = dia.charAt(0).toUpperCase() + dia.slice(1);
@@ -191,6 +216,25 @@ export default function RelojChecador({
   useEffect(() => {
     setCodigoEmpleado("");
   }, [metodo]);
+
+  // Tarjeta del resultado. Un solo temporizador: con el reloj fijo, el aviso de la persona siguiente ya no
+  // se cierra antes de tiempo por el temporizador de la anterior. Con motivo de «pendiente», más tiempo.
+  const temporizadorPopup = useRef(null);
+  const mostrarResultado = (data) => {
+    clearTimeout(temporizadorPopup.current);
+    setPopupInfo({
+      nombre: `${data.empleado?.nombre ?? ""} ${data.empleado?.apellido_paterno ?? ""}`.trim(),
+      foto_perfil: data.empleado?.foto_perfil || "/assets/user.png",
+      movimiento: data.movimiento || data.message,
+      pending: Boolean(data.pending),
+      motivo: data.motivo || "",
+      errorServidor: Boolean(data.errorServidor),
+      localValidated: Boolean(data.local_validated),
+      success: !data.pending,
+    });
+    temporizadorPopup.current = setTimeout(() => setPopupInfo(null), data.pending && data.motivo ? 8000 : 2500);
+    mutate();
+  };
 
   const registrarMovimiento = async (codigoManual) => {
     if (registrando) return;
@@ -236,6 +280,12 @@ export default function RelojChecador({
       }
       const { data } = response;
 
+      if (data.repetida) {
+        setPregunta(data);
+        setCodigoEmpleado("");
+        return;
+      }
+
       if (data.requiereDecision) {
         setPendiente({ tipo: "codigo", codigo, offline_event: data.offline_event });
         setMostrarModalTurno(true);
@@ -243,19 +293,8 @@ export default function RelojChecador({
         return;
       }
 
-      setPopupInfo({
-        nombre: `${data.empleado.nombre} ${data.empleado.apellido_paterno}`,
-        foto_perfil: data.empleado.foto_perfil || "/assets/user.png",
-        movimiento: data.movimiento || data.message,
-        pending: Boolean(data.pending),
-        localValidated: Boolean(data.local_validated),
-        success: !data.pending,
-      });
-
-      setTimeout(() => setPopupInfo(null), 3000);
-      // enqueueSnackbar("Registro realizado", { variant: "success" });
+      mostrarResultado(data);
       setCodigoEmpleado("");
-      mutate();
     } catch (err) {
       setCodigoEmpleado("");
       enqueueSnackbar(err.response?.data?.error || err.message || "Error al registrar", {
@@ -276,6 +315,7 @@ export default function RelojChecador({
         id_empresa: idEmpresa,
         accion,
         offline_event: pendiente.offline_event,
+        ...(pendiente.repetir ? { repetir: true } : {}),
       };
 
       const body = pendiente.tipo === "facial" ? {...payload, descriptor_facial: pendiente.descriptor_facial} : {...payload, codigo: pendiente.codigo};
@@ -292,18 +332,11 @@ export default function RelojChecador({
         })).data;
       }
 
-      setPopupInfo({
-        nombre: `${dataResponse.empleado.nombre} ${dataResponse.empleado.apellido_paterno}`,
-        foto_perfil: dataResponse.empleado.foto_perfil || "/assets/user.png",
-        movimiento: dataResponse.movimiento || dataResponse.message,
-        pending: Boolean(dataResponse.pending),
-        localValidated: Boolean(dataResponse.local_validated),
-        success: !dataResponse.pending,
-      });
-      setTimeout(() => setPopupInfo(null), 3000);
       setMostrarModalTurno(false);
+      // «Sí, registrar» + «Turno abierto»: si aun así rebota, se vuelve a preguntar en lugar de pintar éxito.
+      if (dataResponse.repetida) setPregunta(dataResponse);
+      else mostrarResultado(dataResponse);
       setPendiente(null);
-      mutate();
       setCodigoEmpleado("");
     } catch (error) {
       enqueueSnackbar(error.response?.data?.error || error.message || "Error al registrar", {
@@ -315,6 +348,10 @@ export default function RelojChecador({
   };
 
   const handleFacialResponse = (data) => {
+    if (data.repetida) {
+      setPregunta(data);
+      return;
+    }
     if (data.requiereDecision) {
       setPendiente({
         tipo: "facial",
@@ -323,16 +360,30 @@ export default function RelojChecador({
       });
       setMostrarModalTurno(true);
     } else {
-      setPopupInfo({
-        nombre: `${data.empleado.nombre} ${data.empleado.apellido_paterno}`,
-        foto_perfil: data.empleado.foto_perfil || "/assets/user.png",
-        movimiento: data.movimiento || data.message,
-        pending: Boolean(data.pending),
-        localValidated: Boolean(data.local_validated),
-        success: !data.pending,
-      });
-      setTimeout(() => setPopupInfo(null), 2500);
-      mutate();
+      mostrarResultado(data);
+    }
+  };
+
+  const registrarDeTodosModos = async () => {
+    if (!pregunta?.reintentar || repitiendo) return;
+    setRepitiendo(true);
+    try {
+      const { data } = await submitMovement(pregunta.reintentar);
+      setPregunta(null);
+      if (data.requiereDecision) {
+        // Cierre manual: después de «Sí, registrar» pregunta «salida temporal / cerrar turno»; la decisión
+        // conserva repetir y el tipo (código o rostro) para no volver a chocar con el candado.
+        const { codigo, descriptor_facial } = pregunta.reintentar;
+        setPendiente({ tipo: codigo ? "codigo" : "facial", codigo, descriptor_facial, offline_event: data.offline_event, repetir: true });
+        setMostrarModalTurno(true);
+      } else {
+        mostrarResultado(data);
+      }
+    } catch (err) {
+      setPregunta(null);
+      enqueueSnackbar(err.response?.data?.error || err.message || "No se pudo registrar", { variant: "error" });
+    } finally {
+      setRepitiendo(false);
     }
   };
 
@@ -382,6 +433,23 @@ export default function RelojChecador({
     validarSuscripcion();
   }, [idEmpresa, modoEmpleado, idEmpleado, companySlug]);
 
+  useEffect(() => {
+    if (subscriptionLoading || !subscriptionActive) return;
+    const medir = () => {
+      const area = areaRef.current;
+      if (!area || window.innerWidth >= 768) { setAltoArea(null); return; }
+      const arriba = area.getBoundingClientRect().top + window.scrollY;
+      const barra = document.getElementById("reloj-barra-movil")?.offsetHeight ?? 72;
+      setAltoArea(Math.max(320, window.innerHeight - arriba - barra));
+    };
+    medir();
+    window.addEventListener("resize", medir);
+    return () => window.removeEventListener("resize", medir);
+  }, [subscriptionLoading, subscriptionActive, menuMovil]);
+
+  // 12 horas con a.m./p.m. (19/11/2026): «4:49 p.m.».
+  const horaCorta = horaActual ? horaActual.replace(/:\d{2} /, " ") : "";
+
   if (subscriptionLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -419,10 +487,10 @@ export default function RelojChecador({
 
   return (
     <>
-      <main className="min-h-screen bg-slate-50 p-4">
-        <div className="mx-auto max-w-7xl space-y-6">
-          <ClockNavigation companyId={idEmpresa} companySlug={companySlug} />
-          <div className="rounded-xl border border-blue-100 bg-linear-to-r from-indigo-50 to-blue-50 p-6">
+      <main className="bg-slate-50 md:min-h-screen md:p-4">
+        <div className="mx-auto max-w-7xl md:space-y-6">
+          <div className="hidden md:block"><ClockNavigation companyId={idEmpresa} companySlug={companySlug} /></div>
+          <div className="hidden md:block rounded-xl border border-blue-100 bg-linear-to-r from-indigo-50 to-blue-50 p-6">
             <div className="flex items-center gap-3">
               <div className="rounded-lg bg-blue-600 p-2.5">
                 <Clock4 className="w-5 h-5 text-white" />
@@ -440,7 +508,7 @@ export default function RelojChecador({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-12 md:gap-6">
             <div className="hidden md:block lg:col-span-4 md:col-span-5 space-y-6">
               <div className="rounded-xl border border-slate-200 bg-white p-6 text-center shadow-sm">
                 <ClockDisplay
@@ -464,29 +532,45 @@ export default function RelojChecador({
             </div>
 
             <div className="lg:col-span-8 md:col-span-7 md:space-y-6">
-              <div className="block md:hidden mb-6 text-center space-y-1">
-                <h1 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                  Adamia - Sistema de Asistencia
-                </h1>
-                <div className="py-2">
-                  <p onClick={tocarHora} className="text-6xl font-black text-slate-900 tracking-tighter antialiased flex items-end justify-center gap-2 select-none">
-                    <span>{horaActual.replace(/ (AM|PM)/, "")}</span>
-
-                    <span className="text-2xl text-blue-500 font-bold mt-2">
-                      {horaActual.includes("AM") ? "AM" : "PM"}
-                    </span>
-                  </p>
-                  <p className="text-xs font-bold text-slate-500 uppercase mt-1 tracking-wider">
-                    {fechaActual}
-                  </p>
-                </div>
+              {/* Franja con la marca ADAMIA (19/11/2026): logo y colores de marca, sin nombre de la empresa. */}
+              <div className="md:hidden flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-2">
+                <span className="flex min-w-0 items-center gap-2">
+                  {dataUser && (
+                    <button type="button" onClick={() => setMenuMovil((v) => !v)} aria-expanded={menuMovil} aria-label="Menú"
+                      className="-ml-1 grid size-9 shrink-0 place-items-center rounded-lg text-slate-600 hover:bg-slate-100">
+                      <Menu className="size-5" aria-hidden="true" />
+                    </button>
+                  )}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/assets/adamia-logo-reloj.png" alt="ADAMIA" width={600} height={159} className="h-7 w-auto" />
+                </span>
+                {offline && <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">{localFacesReady ? "Sin conexión · rostro listo" : "Sin conexión"}</span>}
+                <span onClick={tocarHora} className="shrink-0 select-none bg-linear-to-r from-brand to-brand-accent bg-clip-text text-lg font-bold tabular-nums text-transparent">{horaCorta}</span>
               </div>
+              {menuMovil && dataUser && (
+                <div className="md:hidden border-b border-slate-200 bg-white px-3 py-3 space-y-2">
+                  {modoEmpleado && <Link href="/empleado/panel/inicio" className="flex min-h-11 items-center font-semibold text-brand">← Volver a mi inicio</Link>}
+                  <ClockNavigation companyId={idEmpresa} companySlug={companySlug} />
+                </div>
+              )}
 
-              <div className="flex md:hidden mb-8 bg-slate-200/60 p-1.5 rounded-2xl border border-slate-200 shadow-inner">
+              <div id="reloj-barra-movil" className="md:hidden fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white px-3 pt-2 pb-[max(0.6rem,env(safe-area-inset-bottom))]">
+              {ajustesCamara && metodo === "facial" && (
+                <label className="mb-2 flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm shadow-lg">
+                  <span>
+                    <span className="block font-semibold text-slate-800">Cámara siempre encendida</span>
+                    <span className="block text-xs text-slate-500">{camaraFija ? "Reloj fijo: queda lista para la siguiente persona" : "Se apaga al checar"}</span>
+                  </span>
+                  <input type="checkbox" role="switch" className="peer sr-only" checked={camaraFija} onChange={cambiarCamaraFija} />
+                  <span aria-hidden="true" className="relative h-6 w-11 shrink-0 rounded-full bg-slate-300 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:bg-brand peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-brand" />
+                </label>
+              )}
+              <div className="flex items-center gap-2">
+              <div className="flex flex-1 rounded-xl bg-slate-100 p-1">
                 {[
-                  { id: "qr", icon: QrCode, label: "QR" },
-                  { id: "codigo", icon: Keyboard, label: "Código" },
                   { id: "facial", icon: ScanEye, label: "Rostro" },
+                  { id: "codigo", icon: Keyboard, label: "Código" },
+                  { id: "qr", icon: QrCode, label: "QR" },
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -503,30 +587,53 @@ export default function RelojChecador({
                         setMostrarQR(false);
                       }
                     }}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed ${
+                    className={`flex-1 flex min-h-11 items-center justify-center gap-1.5 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                       metodo === tab.id
-                        ? "bg-white text-slate-900 shadow-md scale-[1.02]"
+                        ? "bg-white text-slate-900 shadow-sm"
                         : "text-slate-500 hover:text-slate-700"
                     }`}
                   >
                     <tab.icon
                       className={`w-5 h-5 ${
-                        metodo === tab.id ? "text-blue-600" : ""
+                        metodo === tab.id ? "text-brand" : ""
                       }`}
                     />
-                    <span className="text-[10px] font-black uppercase tracking-tight">
+                    <span className="text-xs font-semibold">
                       {tab.label}
                     </span>
                   </button>
                 ))}
               </div>
+              {metodo === "facial" && (
+                <button type="button" onClick={() => setAjustesCamara((v) => !v)} aria-expanded={ajustesCamara}
+                  aria-label="Ajustes de la cámara" title="Cámara siempre encendida"
+                  className={`grid size-11 shrink-0 place-items-center rounded-xl border ${ajustesCamara ? "border-brand/40 bg-brand/10 text-brand" : "border-slate-200 text-brand"}`}>
+                  <Camera className="size-5" aria-hidden="true" />
+                </button>
+              )}
+              </div>
+              </div>
 
-              <div className="relative min-h-75">
+              {metodo === "facial" && (
+                <label className="mb-3 hidden md:flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm">
+                  <span>
+                    <span className="block font-semibold text-slate-800">Cámara siempre encendida</span>
+                    <span className="block text-xs text-slate-500">
+                      {camaraFija ? "Reloj fijo: queda lista para la siguiente persona" : "Se apaga al checar"}
+                    </span>
+                  </span>
+                  <input type="checkbox" role="switch" className="peer sr-only" checked={camaraFija} onChange={cambiarCamaraFija} />
+                  <span aria-hidden="true" className="relative h-6 w-11 shrink-0 rounded-full bg-slate-300 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition-transform peer-checked:bg-blue-600 peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-400" />
+                </label>
+              )}
+
+              <div ref={areaRef} style={altoArea ? { height: altoArea } : undefined}
+                className="relative overflow-y-auto md:min-h-75 md:overflow-visible">
                 {(!offline || localFacesReady) && (metodo === "facial" || !isMobile) && (
                   <div
                     className={
                       metodo === "facial"
-                        ? "block animate-in fade-in duration-500"
+                        ? "block h-full md:h-auto animate-in fade-in duration-500"
                         : "hidden md:block"
                     }
                   >
@@ -538,13 +645,15 @@ export default function RelojChecador({
                       idEmpresa={idEmpresa}
                       submitMovement={submitMovement}
                       handleOpenFacialModal={() => setMostrarCamara(false)}
-                      continuo
+                      continuo={camaraFija}
+                      pantallaCompleta={isMobile}
+                      pausado={Boolean(pregunta)}
                     />
                   </div>
                 )}
 
                 {metodo === "qr" && (
-                  <div className="block md:hidden bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 p-8 animate-in zoom-in-95 fade-in duration-300">
+                  <div className="block md:hidden m-3 bg-white rounded-3xl shadow-sm border border-slate-100 p-6 animate-in fade-in duration-300">
                     <div className="text-center mb-8">
                       <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-blue-100">
                         <QrCode className="w-10 h-10 text-blue-600" />
@@ -569,7 +678,7 @@ export default function RelojChecador({
                 )}
 
                 {metodo === "codigo" && (
-                  <div className="block md:hidden bg-white rounded-[2.5rem] shadow-2xl border border-slate-100 p-8 animate-in zoom-in-95 fade-in duration-300">
+                  <div className="block md:hidden m-3 bg-white rounded-3xl shadow-sm border border-slate-100 p-6 animate-in fade-in duration-300">
                     <div className="text-center mb-8">
                       <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-sm border border-blue-100">
                         <Keyboard className="w-10 h-10 text-blue-600" />
@@ -612,8 +721,48 @@ export default function RelojChecador({
           />
         )}
 
+        {pregunta && (
+          <div className="fixed inset-x-3 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-100 md:inset-0 md:flex md:items-center md:justify-center md:bg-slate-900/40 md:p-4">
+            <div role="alertdialog" aria-labelledby="pregunta-repetida" className="mx-auto w-full max-w-sm rounded-2xl bg-white p-4 shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-200">
+              <p className="text-base font-bold text-slate-900">{pregunta.empleado?.nombre} {pregunta.empleado?.apellido_paterno}</p>
+              <p id="pregunta-repetida" className="mt-1 text-sm text-slate-700">{String(pregunta.pregunta).replace(/\.?$/, ".")} ¿Registrar otra vez?</p>
+              <p className="mt-1 text-xs text-slate-500">Solo si de verdad sales o regresas; si fue un doble toque, no hace falta.</p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => setPregunta(null)} disabled={repitiendo}
+                  className="min-h-11 rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">No, está bien</button>
+                <button type="button" onClick={registrarDeTodosModos} disabled={repitiendo}
+                  className="min-h-11 rounded-xl bg-brand px-3 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60">{repitiendo ? "Registrando…" : "Sí, registrar"}</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {popupInfo && (() => {
+          const tono = popupInfo.pending ? (popupInfo.errorServidor ? "amber" : "blue") : popupInfo.success ? "green" : "red";
+          const colores = { amber: "text-amber-700 bg-amber-50", blue: "text-blue-700 bg-blue-50", green: "text-green-700 bg-green-50", red: "text-red-700 bg-red-50" }[tono];
+          const estado = popupInfo.pending ? (popupInfo.errorServidor ? "Error del servidor · avisa a RH" : "Pendiente de subir") : popupInfo.success ? (popupInfo.movimiento || "Registrada") : "No se registró · avisa a RH";
+          const iniciales = String(popupInfo.nombre || "").trim().split(/\s+/).slice(0, 2).map((p) => p[0] || "").join("").toUpperCase();
+          // Celular: tarjeta sobre la cámara, sin tapar la pantalla (maqueta aprobada).
+          return (
+            <div role="status" aria-live="polite" className="md:hidden fixed inset-x-3 z-100 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] flex items-center gap-3 rounded-2xl bg-white p-3 shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-200">
+              {popupInfo.foto_perfil && !popupInfo.foto_perfil.endsWith("/assets/user.png")
+                ? <img src={popupInfo.foto_perfil} alt="" className="size-12 shrink-0 rounded-full object-cover" />
+                : <span className="grid size-12 shrink-0 place-items-center rounded-full bg-linear-to-br from-brand to-brand-accent font-bold text-white">{iniciales || "?"}</span>}
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-base font-bold text-slate-900">{popupInfo.nombre}</p>
+                <p className={`mt-0.5 inline-flex max-w-full items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold ${colores}`}>
+                  {popupInfo.pending ? <Clock4 className="size-3.5 shrink-0" /> : popupInfo.success ? <CheckCircle className="size-3.5 shrink-0" /> : <XCircle className="size-3.5 shrink-0" />}
+                  <span className="truncate">{estado}</span>
+                </p>
+                {popupInfo.pending && popupInfo.motivo && <p className="mt-1 text-xs text-amber-700">{popupInfo.motivo}</p>}
+              </div>
+              <span className="shrink-0 text-lg font-bold tabular-nums text-slate-900">{horaCorta}</span>
+            </div>
+          );
+        })()}
+
         {popupInfo && (
-          <div className="fixed inset-0 z-100 flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
+          <div className="fixed inset-0 z-100 hidden md:flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4">
             <div className="bg-white rounded-[3rem] shadow-2xl p-10 text-center max-w-sm w-full transform animate-bounce-in border border-slate-100">
               <div className="relative mb-6">
                 <img
@@ -623,7 +772,7 @@ export default function RelojChecador({
                 />
                 <div
                   className={`absolute bottom-0 right-1/4 w-10 h-10 rounded-full flex items-center justify-center shadow-lg border-4 border-white ${
-                    popupInfo.pending ? "bg-blue-500" : popupInfo.success ? "bg-green-500" : "bg-red-500"
+                    popupInfo.pending ? (popupInfo.errorServidor ? "bg-amber-500" : "bg-blue-500") : popupInfo.success ? "bg-green-500" : "bg-red-500"
                   }`}
                 >
                   {popupInfo.pending ? (
@@ -641,17 +790,20 @@ export default function RelojChecador({
               <p className="text-slate-500 font-bold uppercase text-xs tracking-widest mb-6">
                 {popupInfo.movimiento}
               </p>
+              {popupInfo.pending && popupInfo.motivo && (
+                <p className="-mt-3 mb-5 text-sm font-medium text-amber-700">{popupInfo.motivo}</p>
+              )}
               <div
                 className={`py-3 px-6 rounded-2xl inline-flex items-center gap-2 ${
                   popupInfo.pending
-                    ? "bg-blue-50 text-blue-800"
+                    ? popupInfo.errorServidor ? "bg-amber-50 text-amber-800" : "bg-blue-50 text-blue-800"
                     : popupInfo.success
                     ? "bg-green-50 text-green-600"
                     : "bg-red-50 text-red-600"
                 }`}
               >
                 {popupInfo.pending ? <Clock4 className="w-5 h-5" /> : popupInfo.success ? <CheckCircle className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
-                <span className="font-black text-sm uppercase">{popupInfo.pending ? 'Pendiente de subir' : popupInfo.success ? '¡Éxito!' : 'No se registró · avisa a RH'}</span>
+                <span className="font-black text-sm uppercase">{popupInfo.pending ? (popupInfo.errorServidor ? 'Error del servidor · avisa a RH' : 'Pendiente de subir') : popupInfo.success ? '¡Éxito!' : 'No se registró · avisa a RH'}</span>
               </div>
             </div>
           </div>
