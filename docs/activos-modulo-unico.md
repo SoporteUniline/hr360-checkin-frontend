@@ -22,5 +22,8 @@ Propuesta «menos vistas» aprobada por el dueño. Antes: dos módulos con 24 en
 - Portal del empleado («Mis recursos») y Expediente 360: sin cambios.
 - Pruebas: `scripts/test-activos-modules.mjs` (enlaces) y `scripts/verify-activos.mjs` (navegador).
 
-Pendiente (siguiente entrega): solo un rol autorizado puede revertir entregas y dar de baja; lecturas por
-pantalla y paginadas para quitar el tope de 10,000 registros.
+Decisión del dueño (20/11/2026): **quién puede revertir y dar de baja se queda como está**: cualquier
+usuario del panel con acceso al módulo (el dueño y sus cuentas de «Usuarios con acceso») puede cancelar
+entregas, dar de baja, ajustar existencias y archivar. No se agrega rol ni permiso nuevo.
+
+Pendiente: lecturas por pantalla y paginadas para quitar el tope de 10,000 registros.
