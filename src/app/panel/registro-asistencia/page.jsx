@@ -7,6 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import useDebounce from "@/hooks/useDebounce";
 import AsistenciaDataContainer from "./AsistenciaDataContainer";
 import MobileAsistenciaView from "./MobileAsistenciaView";
+import { CuentaHorasProvider } from "./CuentaHorasContext";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -276,6 +277,7 @@ export default function ControlAsistencia() {
           />
         )}
         <div className="-m-5 h-[calc(100dvh-3.5rem)] overflow-hidden">
+          <CuentaHorasProvider registros={registros}>
           <MobileAsistenciaView
             localEvents={localEvents}
             registros={registros}
@@ -308,6 +310,7 @@ export default function ControlAsistencia() {
             filtroRapido={filtroRapido}
             setFiltroRapido={setFiltroRapido}
           />
+          </CuentaHorasProvider>
         </div>
       </>
     );

@@ -1,5 +1,6 @@
 "use client";
 
+import { horarioPermiso } from "@/lib/asistencia/permisoHoras.mjs";
 import { useEffect, useState } from "react";
 import {
   Dialog,
@@ -799,6 +800,11 @@ export default function PermisoViewDialog({
                 <div className="text-sm text-gray-600">Tipo de permiso</div>
                 <div className="text-sm font-semibold text-gray-900">
                   {item.tipo_permiso_nombre}
+                  {item.modalidad === "horas" && (
+                    <span className="block text-xs font-normal text-slate-600">
+                      {horarioPermiso(item)} · {item.tratamiento === "rebaja" ? "se rebaja" : "se repone"}
+                    </span>
+                  )}
                 </div>
               </div>
               <div>

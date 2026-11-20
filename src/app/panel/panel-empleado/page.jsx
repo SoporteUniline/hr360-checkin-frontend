@@ -40,6 +40,7 @@ import {
 import PanelEmpleadoGeneral from "./components/PanelEmpleadoGeneral";
 import { ExpedienteResources } from "@/components/activos/Employees";
 import PanelEmpleadoPermisos from "./components/PanelEmpleadoPermisos";
+import CuentaHorasEmpleado from "./components/CuentaHorasEmpleado";
 import PanelEmpleadoAsistencias from "./components/PanelEmpleadoAsistencias";
 import PanelEmpleadoEntradasSalidas from "./components/PanelEmpleadoEntradasSalidas";
 import PanelEmpleadoContratos from "./components/PanelEmpleadoContratos";
@@ -519,6 +520,10 @@ export default function PanelEmpleadoPage() {
                       <PanelEmpleadoGeneral datosEmpleado={datosEmpleado} />
                     </TabsContent>
                     <TabsContent value="permisos" className="mt-0">
+                      <CuentaHorasEmpleado
+                        idEmpleado={idEmpleadoActual}
+                        dadoDeBaja={/baja/i.test(estadoEmpleado)}
+                      />
                       <PanelEmpleadoPermisos
                         datosEmpleado={datosEmpleado}
                         festivosSet={festivosSet}
