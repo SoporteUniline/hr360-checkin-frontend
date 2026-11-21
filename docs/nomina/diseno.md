@@ -51,3 +51,7 @@ Estado: Vuelta de diseño. **No se construye nada hasta `APROBADO R1`.**
   Al guardar (asistencia o checada) la nómina se recalcula sola; cancelar no recalcula. Lo editado a mano en el recibo se conserva.
   (21/11/2026: antes abría otra pestaña; el dueño pidió la ventana flotante.)
 - Panel del recibo más ancho (720 px) con secciones: asistencia del periodo, percepciones, descuentos, agregar, totales.
+- **Falla del 21/11/2026 (corregida):** en Dev, «Corregir» mostraba «No se pudo abrir este módulo». Causa: a la ventana se le pasaba
+  la respuesta de empleados (`{ data: [...] }`) en vez de la lista, y `empleados.map` tronaba. La prueba no lo vio porque el backend
+  simulado devolvía `[]`; ahora devuelve la forma real (reproducido en rojo antes del arreglo). La pantalla de error del panel ahora
+  muestra el detalle técnico y, si el error es por una versión nueva publicada con la página abierta, recarga sola.

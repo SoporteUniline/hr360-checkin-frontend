@@ -1,12 +1,48 @@
 "use client";
 import { useEffect, useState } from 'react';
 
-export default function PanelError({ reset }) {
+// Pantalla de error del panel. (21/11/2026) Dos mejoras:
+// 1) Si el error es porque se publicó una versión nueva mientras la página estaba abierta (los archivos de la versión
+//    anterior ya no existen: ChunkLoadError), se recarga sola una vez y abre la versión nueva.
+// 2) En cualquier otro error se muestra el detalle técnico para poder reportarlo (antes solo decía «no se pudo abrir»).
+const esVersionNueva = (e) => /ChunkLoadError|Loading (CSS )?chunk|dynamically imported module|Importing a module script failed/i.test(`${e?.name ?? ''} ${e?.message ?? ''}`);
+const CLAVE = 'adamia-recarga-version';
+
+export default function PanelError({ error, reset }) {
   const [offline, setOffline] = useState(false);
-  useEffect(() => { setOffline(!navigator.onLine || window.__adamiaOffline === true); }, []);
+  const [recargando, setRecargando] = useState(false);
+  useEffect(() => {
+    const sinRed = !navigator.onLine || window.__adamiaOffline === true;
+    setOffline(sinRed);
+    if (error) console.error('Error en el panel:', error);
+    if (sinRed || !esVersionNueva(error)) return;
+    let ultima = 0;
+    try { ultima = Number(sessionStorage.getItem(CLAVE)) || 0; } catch {}
+    if (Date.now() - ultima < 30000) return; // ya se intentó: no entrar en ciclo
+    try { sessionStorage.setItem(CLAVE, String(Date.now())); } catch {}
+    setRecargando(true);
+    window.location.reload();
+  }, [error]);
+
+  if (recargando) {
+    return <section role="status" className="mx-auto max-w-xl rounded-xl border border-blue-200 bg-blue-50 p-6 text-slate-800">
+      <h1 className="text-xl font-semibold">Hay una versión nueva de ADAMIA</h1>
+      <p className="mt-3">Cargándola…</p>
+    </section>;
+  }
+  const detalle = [error?.name, error?.message].filter(Boolean).join(': ') || null;
   return <section role="alert" className="mx-auto max-w-xl rounded-xl border border-amber-200 bg-amber-50 p-6 text-slate-800">
     <h1 className="text-xl font-semibold">{offline ? 'No se pudo abrir esta pantalla sin conexión' : 'No se pudo abrir este módulo'}</h1>
     <p className="mt-3">{offline ? 'Tus checadas pendientes siguen guardadas. Puedes volver a abrir la copia descargada de esta pantalla o regresar al menú.' : 'Intenta abrirlo de nuevo. Las checadas pendientes se conservan en el celular.'}</p>
-    <button type="button" className="mt-4 min-h-11 rounded-lg bg-blue-700 px-4 text-white" onClick={() => offline ? window.location.reload() : reset()}>Volver a intentar</button>
+    <div className="mt-4 flex flex-wrap gap-2">
+      <button type="button" className="min-h-11 rounded-lg bg-blue-700 px-4 text-white" onClick={() => offline ? window.location.reload() : reset()}>Volver a intentar</button>
+      {!offline ? <button type="button" className="min-h-11 rounded-lg border border-slate-300 bg-white px-4" onClick={() => window.location.reload()}>Recargar la página</button> : null}
+    </div>
+    {!offline && (detalle || error?.digest) ? (
+      <details className="mt-4 text-xs text-slate-600">
+        <summary className="cursor-pointer">Detalle para soporte</summary>
+        <p className="mt-2 break-words font-mono">{detalle}{error?.digest ? ` (ref. ${error.digest})` : ''}</p>
+      </details>
+    ) : null}
   </section>;
 }

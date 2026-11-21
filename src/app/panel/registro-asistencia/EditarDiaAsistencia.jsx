@@ -82,7 +82,7 @@ export default function EditarDiaAsistencia({ idEmpresa, idEmpleado, nombre, fec
       datos={editingRowData}
       zona={zona}
       horas={herramientasHoras(editingRowData, zona)}
-      empleados={empleados}
+      empleados={empleados?.data}
       tiposPermiso={tiposPermiso}
       avisoDe={(campo) => avisos.find((a) => a.campo === campo)?.texto}
       isSaving={acciones.isSaving}
