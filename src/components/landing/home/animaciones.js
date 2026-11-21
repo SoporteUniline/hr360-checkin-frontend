@@ -113,6 +113,7 @@ function vac() { var n = 0, el = $("vac-n"); (function paso() { el.textContent =
 function fmtNum(v, fmt, dec) {
   if (fmt === "h") { var h = Math.floor(v + 1e-6), m = Math.round((v - h) * 60); if (m === 60) { h++; m = 0; } return h + " h" + (m ? " " + m + " min" : ""); }
   if (fmt === "%") return Math.round(v) + " %";
+  if (fmt === "mxn") { var c = Math.round(v * 100) / 100; return "$" + c.toLocaleString("es-MX", { minimumFractionDigits: c % 1 ? 2 : 0, maximumFractionDigits: 2 }); }
   return dec ? v.toFixed(1) : String(Math.round(v));
 }
 function anima(el, a, b, ms) {
@@ -177,7 +178,7 @@ function numerosEnVivo() {
 
 // Cada bloque se anima al entrar y sigue vivo mientras se ve; al salir se detiene.
 var bloquesVivos = [
-  { el: $("band"), entra: function () { tarjetas($("band")); }, cada: 7000, vive: function () { tarjetas($("band")); } },
+  { el: $("ley-block"), entra: function () { var b = $("ley-block"); b.classList.remove("on"); void b.offsetWidth; b.classList.add("on"); desdeCero(b); } },
   { el: hxb, entra: function () { hxb.classList.remove("on"); void hxb.offsetWidth; hxb.querySelectorAll(".stats b").forEach(function (b) { b._v = 0; }); hxb.classList.add("on"); pintaSemana(semanaBase); }, cada: 3200, vive: function () { pintaSemana(semanaNueva()); } },
   { el: nb, entra: function () { nb.classList.remove("on"); void nb.offsetWidth; nb.classList.add("on"); desdeCero(nb); ln.style.transition = ""; ln.style.strokeDashoffset = ""; pintaLinea(pts); dona([124, 4, 4]); vivo = { pres: 128, ret: 4, hx: 11, asis: 97 }; }, cada: 2600, vive: function () { lineaAvanza(); numerosEnVivo(); if (Math.random() < .35) dona([vivo.pres - vivo.ret, vivo.ret, Math.max(2, 132 - vivo.pres)]); } },
   { el: $("uni-photo"), entra: function () { tarjetas($("uni-photo")); }, cada: 7000, vive: function () { tarjetas($("uni-photo")); } },
