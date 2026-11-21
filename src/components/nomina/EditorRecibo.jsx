@@ -16,7 +16,19 @@ import AsistenciaRecibo from "./AsistenciaRecibo";
 const get = (url) => axios.get(url).then((r) => r.data);
 const plural = (n, palabra) => `${Number(n) || 0} ${palabra}${Number(n) === 1 ? "" : "s"}`;
 
-export default function EditorRecibo({ recibo, periodo, editable, idEmpresa, alCambiar, alCerrar }) {
+function Seccion({ titulo, children, extra }) {
+  return (
+    <section className="grid gap-2">
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="text-[10.5px] font-semibold uppercase tracking-[0.07em] text-slate-500">{titulo}</h3>
+        {extra}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+export default function EditorRecibo({ recibo, periodo, editable, idEmpresa, alCambiar, alCerrar, onCorregir }) {
   const { enqueueSnackbar } = useSnackbar();
   const [cambios, setCambios] = useState({});
   const [agregar, setAgregar] = useState({ id_concepto: "", importe: "" });
@@ -50,10 +62,10 @@ export default function EditorRecibo({ recibo, periodo, editable, idEmpresa, alC
   const fila = (l) => {
     const c = cambios[l.clave];
     return (
-      <li key={l.clave} className="rounded-lg border border-gray-200 p-2.5">
+      <li key={l.clave} className="px-3 py-2.5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="font-semibold text-gray-900">{l.concepto}{l.cantidad != null ? <span className="font-normal text-gray-500"> · {Number(l.cantidad)}</span> : null}</p>
+            <p className="font-medium text-slate-900">{l.concepto}{l.cantidad != null ? <span className="font-normal text-gray-500"> · {Number(l.cantidad)}</span> : null}</p>
             {l.nota ? <p className="text-xs text-amber-700">{l.nota}</p> : null}
             {Number(l.editado) ? <p className="text-xs text-gray-500">Editado{l.editado_por_nombre ? ` por ${l.editado_por_nombre}` : ""}{l.motivo ? `: ${l.motivo}` : ""} · sugerido {dinero(l.importe_sugerido)}</p> : null}
           </div>
@@ -84,25 +96,27 @@ export default function EditorRecibo({ recibo, periodo, editable, idEmpresa, alC
 
   return (
     <Sheet open onOpenChange={(v) => !v && alCerrar()}>
-      <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
-        <SheetHeader>
+      <SheetContent className="w-full gap-0 overflow-y-auto bg-white p-0 sm:max-w-[720px]">
+        <SheetHeader className="border-b border-slate-200 px-6 py-4 text-left">
           <SheetTitle>{d.empleado?.nombre ?? "Recibo"}</SheetTitle>
-          <p className="text-sm text-gray-500">{d.empleado?.puesto ? `${d.empleado.puesto} · ` : ""}Pago {String(d.empleado?.periodo_pago ?? "").toLowerCase()} · {plural(d.resumen?.faltas, "falta")} · {plural(d.resumen?.retardos, "retardo")}</p>
+          <p className="text-sm text-slate-500">{d.empleado?.puesto ? `${d.empleado.puesto} · ` : ""}Pago {String(d.empleado?.periodo_pago ?? "").toLowerCase()} · {plural(d.resumen?.faltas, "falta")} · {plural(d.resumen?.retardos, "retardo")}</p>
         </SheetHeader>
-        <div className="grid gap-4 px-4 pb-6 text-sm">
-          <AsistenciaRecibo recibo={recibo} modo="compacto" />
+        <div className="grid gap-6 px-6 py-5 text-sm">
           {(d.alertas ?? []).length ? (
-            <ul className="grid gap-1 rounded-lg bg-amber-50 p-3 text-amber-900">{d.alertas.map((a) => <li key={a}>⚠ {a}</li>)}</ul>
+            <ul className="grid gap-1 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[12.5px] text-amber-900">{d.alertas.map((a) => <li key={a}>⚠ {a}</li>)}</ul>
           ) : null}
-          <section><h3 className="mb-2 font-bold">Percepciones</h3><ul className="grid gap-2">{percepciones.map(fila)}</ul></section>
-          <section><h3 className="mb-2 font-bold">Descuentos</h3>{descuentos.length ? <ul className="grid gap-2">{descuentos.map(fila)}</ul> : <p className="text-gray-500">Sin descuentos.</p>}</section>
+          <Seccion titulo="Asistencia del periodo" extra={onCorregir ? <span className="text-[11px] text-slate-400">«Corregir» abre ese día en Asistencias</span> : null}>
+            <AsistenciaRecibo recibo={recibo} modo="compacto" onCorregir={onCorregir} />
+          </Seccion>
+          <Seccion titulo="Percepciones"><ul className="divide-y divide-slate-100 rounded-xl border border-slate-200">{percepciones.map(fila)}</ul></Seccion>
+          <Seccion titulo="Descuentos">{descuentos.length ? <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200">{descuentos.map(fila)}</ul> : <p className="text-slate-500">Sin descuentos.</p>}</Seccion>
           {editable && lineasCambiadas.length ? (
             <Button disabled={guardando} onClick={() => enviar({ lineas: lineasCambiadas }, "Cambios guardados.")}>Guardar cambios ({lineasCambiadas.length})</Button>
           ) : null}
 
           {editable ? (
-            <section className="grid gap-2 rounded-lg border border-dashed border-gray-300 p-3">
-              <h3 className="font-bold">Agregar</h3>
+            <section className="grid gap-2 rounded-xl border border-dashed border-slate-300 p-3.5">
+              <h3 className="text-[10.5px] font-semibold uppercase tracking-[0.07em] text-slate-500">Agregar bono o descuento</h3>
               <div className="flex flex-wrap gap-2">
                 <select aria-label="Bono o descuento del catálogo" className="h-9 flex-1 rounded-lg border border-gray-300 px-2" value={agregar.id_concepto} onChange={(e) => setAgregar({ ...agregar, id_concepto: e.target.value })}>
                   <option value="">Del catálogo…</option>
@@ -120,7 +134,7 @@ export default function EditorRecibo({ recibo, periodo, editable, idEmpresa, alC
             </section>
           ) : null}
 
-          <section className="grid gap-1 rounded-lg bg-gray-50 p-3 tabular-nums">
+          <section className="grid gap-1.5 rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-3 tabular-nums">
             <p className="flex justify-between"><span>Percepciones</span><b>{dinero(recibo.total_percepciones)}</b></p>
             <p className="flex justify-between"><span>Descuentos</span><b>{dinero(recibo.total_descuentos)}</b></p>
             <p className="flex justify-between text-base"><span className="font-bold">Neto</span><b className="text-[#2c56e8]">{dinero(recibo.neto)}</b></p>

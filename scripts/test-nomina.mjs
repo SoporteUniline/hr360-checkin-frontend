@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { periodoSugerido, acciones, dinero, fechaCorta } from "../src/lib/nomina/nomina.mjs";
+import { periodoSugerido, acciones, dinero, fechaCorta, avancePrestamo } from "../src/lib/nomina/nomina.mjs";
 
 test("fechas sugeridas por periodicidad", () => {
   assert.deepEqual(periodoSugerido("Semanal", "2026-11-21"), { inicio: "2026-11-16", fin: "2026-11-22" });
@@ -31,4 +31,10 @@ test("horas y días cortos", async () => {
   assert.equal(horas(0), "—");
   assert.equal(horas(45), "45 min");
   assert.equal(diaCorto("2026-11-16"), "lun 16");
+});
+
+test("avance de un préstamo", () => {
+  assert.deepEqual(avancePrestamo({ monto: 3000, abono: 600, saldo: 2400 }), { pagado: 600, porcentaje: 20, pagosRestantes: 4 });
+  assert.deepEqual(avancePrestamo({ monto: 3000, abono: 700, saldo: 3000 }), { pagado: 0, porcentaje: 0, pagosRestantes: 5 });
+  assert.deepEqual(avancePrestamo({ monto: 100, abono: 100, saldo: 0 }), { pagado: 100, porcentaje: 100, pagosRestantes: 0 });
 });

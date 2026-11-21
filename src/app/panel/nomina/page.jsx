@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { useSnackbar } from "notistack";
-import { Plus, Settings2, Wallet } from "lucide-react";
+import { HandCoins, Plus, Settings2, Wallet } from "lucide-react";
 import axios from "@/lib/axios";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import { Button } from "@/components/ui/button";
@@ -49,6 +49,7 @@ export default function NominaPage() {
         acciones={
           <>
             <SelectorEmpresa {...empresa} />
+            <Button variant="outline" size="sm" asChild><Link href="/panel/nomina/prestamos"><HandCoins className="size-4" /> Préstamos</Link></Button>
             <Button variant="outline" size="sm" asChild><Link href="/panel/nomina/ajustes"><Settings2 className="size-4" /> Bonos y descuentos</Link></Button>
             <Button size="sm" onClick={abrirNuevo} disabled={!empresa.idEmpresa}><Plus className="size-4" /> Nueva nómina</Button>
           </>

@@ -1,11 +1,12 @@
 "use client";
-import { Package, ClipboardCheck, LogOut, UsersRound, ReceiptText } from "lucide-react";
+import { Package, ClipboardCheck, LogOut, UsersRound, ReceiptText, HandCoins } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { MenuLink, cardClass } from "@/components/empleado/shared";
 export default function EmployeeSpace() {
   const { dataUser, logout } = useAuth();
   return <div className="space-y-5"><h1 className="text-3xl font-bold tracking-tight">Mi espacio</h1><section className={cardClass}><p className="font-semibold">{dataUser?.nombre}</p><p className="mt-1 break-words text-sm text-slate-500">{dataUser?.correo || dataUser?.email}</p></section>
     <div className="space-y-3"><MenuLink href="/empleado/panel/mis-recibos" icon={ReceiptText} title="Mis recibos de pago" description="Consulta, descarga y firma tus recibos" />
+      <MenuLink href="/empleado/panel/mis-prestamos" icon={HandCoins} title="Mis préstamos" description="Pide un préstamo, firma tu acuerdo y ve tu saldo" />
       <MenuLink href="/empleado/panel/mis-recursos" icon={Package} title="Mis activos y uniformes" description="Consulta tus entregas y resguardos" />
       <MenuLink href="/empleado/panel/evaluaciones" icon={ClipboardCheck} title="Mis evaluaciones" description="Evaluaciones, resultados y seguimiento" />
       <MenuLink href="/empleado/panel/solicitudes-equipo" icon={UsersRound} title="Solicitudes de mi equipo" description="Si tienes colaboradores asignados" />

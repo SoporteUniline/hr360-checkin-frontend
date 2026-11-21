@@ -90,3 +90,27 @@ export function diaCorto(fecha) {
   const d = new Date(`${fecha}T12:00:00Z`);
   return `${["dom", "lun", "mar", "mié", "jue", "vie", "sáb"][d.getUTCDay()]} ${d.getUTCDate()}`;
 }
+
+// ——— R2: préstamos ———
+export const PRESTAMO = {
+  solicitado: { texto: "Por aprobar", tono: "ambar" },
+  por_firmar: { texto: "Por firmar", tono: "azul" },
+  vigente: { texto: "Vigente", tono: "verde" },
+  liquidado: { texto: "Pagado", tono: "gris" },
+  rechazado: { texto: "Rechazado", tono: "rojo" },
+  cancelado: { texto: "Cancelado", tono: "rojo" },
+};
+
+export const MOVIMIENTO = { abono_nomina: "Descuento en nómina", abono_efectivo: "Abono en efectivo", reverso: "Regresado (nómina cancelada)" };
+
+// Pagos estimados y porcentaje pagado de un préstamo.
+export function avancePrestamo({ monto, abono, saldo }) {
+  const m = Number(monto) || 0;
+  const s = Number(saldo ?? m) || 0;
+  const a = Number(abono) || 0;
+  return {
+    pagado: Math.max(0, m - s),
+    porcentaje: m > 0 ? Math.round(((m - s) / m) * 100) : 0,
+    pagosRestantes: a > 0 ? Math.ceil(s / a) : null,
+  };
+}
