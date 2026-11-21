@@ -51,8 +51,7 @@ export default function AsistenciaRecibo({ recibo, modo = "tabla", onEditar }) {
         {r.sueldo ? <p><b>Sueldo:</b> {explicaSueldo(r)}{r.diario ? ` · diario ${dinero(r.diario / 100)}` : ""}.</p> : null}
         {extra ? (
           <p>
-            <b>Horas extra autorizadas:</b> {horas(r.minDobles)} al doble{r.minTriples ? ` y ${horas(r.minTriples)} al triple (pasó el tope semanal de la ley)` : ""}
-. Solo cuentan las autorizadas en Asistencias.
+            <b>Horas extra autorizadas:</b> {horas(r.minDobles)} al doble{r.minTriples ? ` y ${horas(r.minTriples)} al triple (pasó el tope semanal de la ley)` : ""}. Solo cuentan las autorizadas en Asistencias.
           </p>
         ) : null}
         {r.retardos ? <p><b>Retardos:</b> no descuentan sueldo; solo quitan bonos condicionados a puntualidad.</p> : null}
