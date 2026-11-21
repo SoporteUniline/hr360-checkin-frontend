@@ -30,6 +30,7 @@ import {
   Store,
   HeartHandshake,
   Gift,
+  Wallet,
   Megaphone,
   HandCoins,
   MapPin,
@@ -289,6 +290,12 @@ const menuGroups = [
         url: "/panel/actas-administrativas",
         rol: "Recruiter",
         icon: FolderClosed,
+      },
+      {
+        title: "Nómina",
+        url: "/panel/nomina",
+        rol: "Recruiter",
+        icon: Wallet,
       },
       {
         title: "Finiquitos y liquidaciones",
