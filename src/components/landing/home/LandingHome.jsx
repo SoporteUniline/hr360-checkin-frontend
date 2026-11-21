@@ -24,8 +24,8 @@ export default function LandingHome() {
         <SitioEncabezado />
         <main id="inicio">
           <section className="hero">
+            <HeroCarrusel />
             <div className="wrap">
-              <HeroCarrusel />
               <p className="sync-tit">Así se ve en vivo: <b>tu gente checa y RH lo recibe al instante.</b></p>
               <div className="sync" aria-label="Ejemplo: una persona checa en su celular y la entrada aparece al instante en el panel de RH">
                 <div className="phone">
