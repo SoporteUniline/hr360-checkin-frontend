@@ -30,6 +30,7 @@ import {
   Store,
   HeartHandshake,
   Gift,
+  Megaphone,
   HandCoins,
   MapPin,
   Route,
@@ -126,6 +127,12 @@ const dashboardItems = [
     url: "/dashboard/cupones",
     rol: "Admin",
     icon: Gift,
+  },
+  {
+    title: "Pop-ups de la página",
+    url: "/dashboard/popups",
+    rol: "Admin",
+    icon: Megaphone,
   },
   {
     title: "Mensajes sistema",
