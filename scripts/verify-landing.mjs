@@ -60,6 +60,9 @@ try {
   await page.waitForFunction(() => document.querySelector(".cnt").textContent === "36", null, { timeout: 4000 });
   assert.equal(await page.locator("#allm li").count(), 36);
 
+  // El asistente comercial de antes sigue en la página.
+  await page.getByText("asistente comercial de ADAMIA").first().waitFor({ timeout: 4000 });
+
   // Enlaces: demo → /contacto, sesión → /login. Al salir no quedan animaciones vivas (sin errores).
   assert.equal(await page.locator(".top-actions a.btn").getAttribute("href"), "/contacto");
   await page.locator(".top-actions .login").click();

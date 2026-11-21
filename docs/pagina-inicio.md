@@ -5,7 +5,7 @@ Diseño aprobado por el dueño («Aprobado, hazlo y publica en mi rama»), const
 
 | Archivo | Qué tiene |
 |---|---|
-| `src/app/(landing)/page.jsx` | Ruta `/`; solo monta `LandingHome`. |
+| `src/app/(landing)/page.jsx` | Ruta `/`: monta `LandingHome` y el asistente comercial `AdamiaChatWidget` (el mismo de antes, por decisión del dueño). |
 | `src/app/(landing)/layout.jsx` | Agrega la fuente Outfit (títulos); Inter ya viene del layout raíz. |
 | `src/components/landing/home/LandingHome.jsx` | Marcado de la página. |
 | `src/components/landing/home/landing-home.css` | Estilos, todos bajo `.lh` y animaciones con prefijo `lh-` (no tocan el resto de la app). |
@@ -23,5 +23,5 @@ Reglas del contenido:
 - «Solicitar demo» y «Contacto» llevan a `/contacto`; «Iniciar sesión» a `/login`.
 - Respeta «reducir movimiento» del sistema operativo.
 
-Pendiente: los componentes anteriores (`MarketingLanding.jsx`, `LandingHeader.jsx`, `AdamiaChatWidget.jsx`) ya no se
+Pendiente: los componentes anteriores (`MarketingLanding.jsx`, `LandingHeader.jsx`) ya no se
 usan; se borran solo con `CONFIRMO`.
