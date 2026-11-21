@@ -13,6 +13,7 @@ Estado: Vuelta de diseño. **No se construye nada hasta `APROBADO R1`.**
 - **D-2 Retardos (21/11/2026):** **no afectan la nómina** (no se descuenta sueldo de un día trabajado). El seguimiento va fuera de nómina: aviso en el dashboard/incidencias al llegar a N retardos (configurable) con propuesta de acta administrativa ya llena. 💡 PROPUESTO: que los retardos puedan quitar un bono de puntualidad condicionado (pendiente de confirmar).
 - **D-3 Todo proporcional (21/11/2026):** el sistema **sugiere** el pago con base en la ley (días trabajados, parte proporcional del séptimo día —art. 72 LFT—, horas extra, festivos, etc.) y **todo se puede editar** en la nómina antes de autorizar. Ej.: si vino 4 días, se paga lo proporcional a 4 días.
 - **D-4 Autorización (21/11/2026):** dos pasos: RH calcula y revisa; el **dueño** (o administrador) autoriza. Al autorizar se cierra el periodo y se generan/envían los recibos.
+- **D-5 Préstamos (21/11/2026):** el empleado lo solicita desde **Mi espacio** (aprobación del jefe/dueño, p. ej. por WhatsApp como permisos) **o** RH lo registra directo. 🧭 Criterio: si lo registra RH, el empleado confirma/firma el acuerdo de abonos en Mi espacio — porque la ley pide que el descuento sea aceptado por el trabajador.
 
 ## Lo que ya existe (comprobado en código)
 - Empleado: `periodo_pago` (Diario, Semanal, Catorcenal, Quincenal, Mensual, Por hora), sueldo, `forma_pago` (= Fijo / Comisiones / Fijo + Comisiones, es el esquema, no el medio), `forma_calculo`, banco y `cuenta_bancaria` (`TabNomina.jsx`, `FormularioEmpleado.jsx`).
