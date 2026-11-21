@@ -24,3 +24,11 @@ test("formatos", () => {
   assert.equal(dinero(1650), "$1,650.00");
   assert.equal(fechaCorta("2026-11-16"), "16/11/2026");
 });
+
+test("horas y días cortos", async () => {
+  const { horas, diaCorto } = await import("../src/lib/nomina/nomina.mjs");
+  assert.equal(horas(510), "8 h 30 min");
+  assert.equal(horas(0), "—");
+  assert.equal(horas(45), "45 min");
+  assert.equal(diaCorto("2026-11-16"), "lun 16");
+});
