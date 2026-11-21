@@ -12,6 +12,7 @@ import {
   Menu,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import ErrorPage from "@/components/ErrorPage";
@@ -220,9 +221,15 @@ export default function RelojChecador({
   // Tarjeta del resultado. Un solo temporizador: con el reloj fijo, el aviso de la persona siguiente ya no
   // se cierra antes de tiempo por el temporizador de la anterior. Con motivo de «pendiente», más tiempo.
   const temporizadorPopup = useRef(null);
+  const router = useRouter();
+  useEffect(() => () => clearTimeout(temporizadorPopup.current), []);
   const mostrarResultado = (data) => {
     clearTimeout(temporizadorPopup.current);
+    // (21/11/2026) App del empleado: al checar regresa a su Inicio (ahí ve su jornada actualizada). Con error del
+    // servidor se queda para que lo vea y avise a RH; los errores al registrar no pasan por aquí (se quedan en el reloj).
+    const volverAInicio = modoEmpleado && !data.errorServidor;
     setPopupInfo({
+      volviendo: volverAInicio,
       nombre: `${data.empleado?.nombre ?? ""} ${data.empleado?.apellido_paterno ?? ""}`.trim(),
       foto_perfil: data.empleado?.foto_perfil || "/assets/user.png",
       movimiento: data.movimiento || data.message,
@@ -232,7 +239,10 @@ export default function RelojChecador({
       localValidated: Boolean(data.local_validated),
       success: !data.pending,
     });
-    temporizadorPopup.current = setTimeout(() => setPopupInfo(null), data.pending && data.motivo ? 8000 : 2500);
+    temporizadorPopup.current = setTimeout(() => {
+      setPopupInfo(null);
+      if (volverAInicio) router.replace("/empleado/panel/inicio");
+    }, data.pending && data.motivo ? 8000 : 2500);
     mutate();
   };
 
@@ -757,6 +767,7 @@ export default function RelojChecador({
                   <span className="truncate">{estado}</span>
                 </p>
                 {popupInfo.pending && popupInfo.motivo && <p className="mt-1 text-xs text-amber-700">{popupInfo.motivo}</p>}
+                {popupInfo.volviendo && <p className="mt-1 text-xs text-slate-500">Regresando a tu inicio…</p>}
               </div>
               <span className="shrink-0 text-lg font-bold tabular-nums text-slate-900">{horaCorta}</span>
             </div>
@@ -795,6 +806,7 @@ export default function RelojChecador({
               {popupInfo.pending && popupInfo.motivo && (
                 <p className="-mt-3 mb-5 text-sm font-medium text-amber-700">{popupInfo.motivo}</p>
               )}
+              {popupInfo.volviendo && <p className="-mt-3 mb-5 text-sm text-slate-500">Regresando a tu inicio…</p>}
               <div
                 className={`py-3 px-6 rounded-2xl inline-flex items-center gap-2 ${
                   popupInfo.pending

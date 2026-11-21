@@ -19,7 +19,7 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:4491';
     for (const width of [320, 390, 768, 1280]) {
       const context = await browser.newContext({ viewport: { width, height: 780 }, isMobile: true, deviceScaleFactor: 1 });
       await context.addCookies([{ name: 'token', value: token, url: base }]);
-      let posts = 0, failHistory = false;
+      let posts = 0, failHistory = false, checadas = 0;
       const requests = [{ id: 1, id_empleado: 101, id_tipo_permiso: 2, tipo_permiso_nombre: 'Vacaciones', fecha_inicio: '2026-11-02', fecha_fin: '2026-11-04', estado: 'Pendiente', motivo: 'Descanso', dias_trabajo: 'Lunes,Martes,Miércoles,Jueves,Viernes', descuenta_vacaciones: 1 }];
       for (let i=2;i<=13;i++) requests.push({ ...requests[0], id:i, estado:i===13?'Rechazado':'Aprobado', motivo:'Solicitud anterior '+i });
       await context.route('**/*', async route => {
@@ -34,6 +34,11 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:4491';
         if (p.endsWith('/vacaciones/mi-saldo')) return json({ dias_disponibles: 8, dias_cargados: 12, dias_tomados: 4 });
         if (p.includes('/solicitudes-permiso/empleado/101')) { const pageNo=Number(new URL(route.request().url()).searchParams.get('page') || 1); return json({results:requests.slice((pageNo-1)*5,pageNo*5),total:requests.length}); }
         if(p.includes('/holidays/')) return json({festivos:[]});
+        // Reloj del empleado (21/11/2026): perfil del dispositivo y checada por código.
+        if (p.startsWith('/api/empresas/check-subscription/')) return json({ hasActivePlan: true });
+        if (p.endsWith('/empresas/id/10/slug')) return json({ slug: 'empresa-prueba' });
+        if (p.endsWith('/reloj/offline/empresa/perfil') || p.endsWith('/reloj/offline/perfil')) return json({ id_empresa: 10, id_empleado: 101, slug: 'empresa-prueba', nombre: 'Diego León', metodo: 'codigo', grant: 'g', prepared_at: new Date().toISOString() });
+        if (p.endsWith('/reloj/offline/empresa/sincronizar') || p.endsWith('/reloj/offline/sincronizar')) { checadas++; return json({ action: 'entrada', employee: { nombre: 'Diego León' }, message: 'Entrada registrada' }); }
         if (p.endsWith('/tiposPermiso')) return json({ tiposPermiso: [{ id: 2, nombre: 'Vacaciones', es_permiso: 0, descuenta_vacaciones: 1 }, { id: 3, nombre: 'Permiso personal', es_permiso: 1, descuenta_vacaciones: 0 }] });
         if (p.endsWith('/solicitudes-permiso') && route.request().method() === 'POST') {
           posts++;
@@ -127,6 +132,17 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:4491';
       await page.getByRole('link', { name: 'Mi espacio', exact: true }).click();
       await page.getByRole('link', { name: /Mis activos y uniformes/ }).waitFor();
       await noOverflow();
+      // Checar desde la app del empleado: al registrar regresa a su Inicio (no se queda en el reloj).
+      if (width === 390) {
+        await page.goto(`${base}/empleado/reloj-checador`);
+        await page.getByRole('button', { name: /Código/ }).first().click();
+        await page.getByPlaceholder('Ingresa tu código').locator('visible=true').first().fill('1234');
+        await page.getByRole('button', { name: /Registrar Entrada/ }).locator('visible=true').first().click();
+        await page.getByText('Regresando a tu inicio…').first().waitFor();
+        await page.waitForURL('**/empleado/panel/inicio', { timeout: 10000 });
+        assert.equal(checadas, 1);
+        await page.getByRole('heading', { name: 'Hola, Diego' }).waitFor();
+      }
       failHistory = true;
       await page.goto(`${base}/empleado/panel/asistencias`);
       await page.getByRole('alert').filter({ hasText: 'No pudimos consultar esta información' }).waitFor();
