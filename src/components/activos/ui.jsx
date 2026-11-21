@@ -7,7 +7,6 @@ import { Search, Package } from "lucide-react";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import { useActivos } from "./ActivosProvider";
 import { resourceHref } from "@/lib/activos/module.mjs";
-export const ROOT = "/panel/control-activos";
 export function ResourceLink({ to = "", moduleType, children, ...props }) {
   const ctx = useActivos();
   return (

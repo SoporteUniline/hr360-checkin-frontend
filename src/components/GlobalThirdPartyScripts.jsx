@@ -4,16 +4,20 @@ import { useEffect, useState } from "react";
 import Script from "next/script";
 import { usePathname } from "next/navigation";
 import { isNativeClient } from "@/lib/native-app";
+import { leerConsentimiento, EVENTO_COOKIES } from "@/lib/legal/cookies";
 
 export default function GlobalThirdPartyScripts() {
   const pathname = usePathname();
   const [allowMetaPixel, setAllowMetaPixel] = useState(false);
 
   useEffect(() => {
-    // En iOS/Android nativo se omite Meta Pixel para cumplir App Tracking Transparency (ATT)
-    if (!isNativeClient()) {
-      setAllowMetaPixel(true);
-    }
+    // En iOS/Android nativo se omite Meta Pixel para cumplir App Tracking Transparency (ATT).
+    // En web, solo con el consentimiento de cookies de publicidad (aviso de cookies, 21/11/2026).
+    if (isNativeClient()) return undefined;
+    const revisar = () => setAllowMetaPixel(leerConsentimiento() === "aceptadas");
+    revisar();
+    window.addEventListener(EVENTO_COOKIES, revisar);
+    return () => window.removeEventListener(EVENTO_COOKIES, revisar);
   }, []);
 
   if (pathname?.startsWith("/firmar/") || pathname?.startsWith("/reclutamiento-demo/")) {

@@ -1,0 +1,67 @@
+/* Página de Funciones: mismo lenguaje visual que el inicio (.lh). Colores sólidos, sin degradados. */
+.lh .fx-hero { background: var(--blue); color: #fff; padding-block: 88px 96px; }
+.lh .fx-hero-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr); gap: 56px; align-items: center; }
+.lh .fx-hero-txt { display: grid; gap: 18px; }
+.lh .fx-hero h1 { color: #fff; font-size: clamp(2.4rem, 5vw, 4rem); line-height: 1.02; font-weight: 800; }
+.lh .fx-hero .eyebrow { color: rgba(255, 255, 255, .8); }
+.lh .fx-hero .lead { color: rgba(255, 255, 255, .9); font-size: 1.12rem; max-width: 52ch; margin: 0; }
+.lh .fx-hero .ctas { display: flex; flex-wrap: wrap; gap: 12px; }
+.lh .fx-hero .btn-primary { background: #fff; color: var(--ink); }
+.lh .fx-hero .btn-primary:hover { background: #eef1ff; }
+.lh .fx-hero .btn-claro { background: transparent; color: #fff; border-color: rgba(255, 255, 255, .6); }
+.lh .fx-indice { display: grid; gap: 8px; background: #fff; color: var(--ink); border-radius: 24px; padding: 24px; box-shadow: var(--shadow); }
+.lh .fx-indice p { margin: 0 0 6px; color: var(--body); }
+.lh .fx-indice p b { font: 800 2.2rem/1 var(--fh); color: var(--ink); margin-right: 6px; }
+.lh .fx-indice a { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; color: var(--ink); font-weight: 600; text-decoration: none; transition: background .2s; }
+.lh .fx-indice a:hover, .lh .fx-indice a:focus-visible { background: var(--soft); outline: none; }
+.lh .fx-indice a span { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--c); color: #fff; font: 800 .95rem/1 var(--fh); }
+
+.lh .fx-cat { padding-block: 96px; scroll-margin-top: 80px; }
+.lh .fx-cat-grid { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 56px; align-items: start; }
+.lh .fx-cat-txt { display: grid; gap: 16px; justify-items: start; position: sticky; top: 110px; }
+.lh .fx-cat-txt h2 { font-size: clamp(2rem, 3.6vw, 3rem); line-height: 1.05; font-weight: 800; }
+.lh .fx-cat-txt p { margin: 0; font-size: 1.08rem; max-width: 40ch; }
+.lh .fx-mods { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.lh .fx-mod { position: relative; display: grid; gap: 6px; align-content: start; padding: 20px; border-radius: 18px; background: #fff; border: 1px solid var(--line); color: var(--body); text-decoration: none; }
+.lh .fx-mod b { color: var(--ink); font: 700 1.05rem/1.25 var(--fh); letter-spacing: -0.01em; }
+.lh .fx-mod span:last-of-type { font-size: .94rem; line-height: 1.45; }
+.lh .fx-num { font: 800 .8rem/1 var(--fh); color: var(--c); letter-spacing: .06em; }
+.lh .fx-mod.enlace { transition: transform .2s var(--ease), border-color .2s; }
+.lh .fx-mod.enlace:hover, .lh .fx-mod.enlace:focus-visible { transform: translateY(-3px); border-color: var(--blue); outline: none; }
+.lh .fx-mod.enlace i { position: absolute; top: 18px; right: 18px; font-style: normal; color: var(--blue); font-weight: 700; }
+
+/* Fondos de cada grupo (sólidos). En los de color, títulos en blanco y tarjetas blancas. */
+.lh .fondo-gris { background: #f3f5f9; }
+.lh .fondo-azul, .lh .fondo-violeta, .lh .fondo-marino { color: rgba(255, 255, 255, .86); }
+.lh .fondo-azul { background: var(--blue); }
+.lh .fondo-violeta { background: var(--violet); }
+.lh .fondo-marino { background: var(--ink); }
+.lh :is(.fondo-azul, .fondo-violeta, .fondo-marino) h2 { color: #fff; }
+.lh :is(.fondo-azul, .fondo-violeta, .fondo-marino) .eyebrow { color: rgba(255, 255, 255, .78); }
+.lh :is(.fondo-azul, .fondo-violeta, .fondo-marino) .fx-mod { border-color: transparent; }
+.lh :is(.fondo-azul, .fondo-violeta, .fondo-marino) .btn-claro { background: transparent; color: #fff; border-color: rgba(255, 255, 255, .6); }
+.lh :is(.fondo-azul, .fondo-violeta, .fondo-marino) .btn-claro:hover { background: rgba(255, 255, 255, .12); }
+
+.lh .fx-detalles { padding-block: 96px 40px; }
+.lh .fx-detalles h2 { font-size: clamp(1.8rem, 3vw, 2.4rem); margin-bottom: 28px; }
+.lh .fx-det-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; }
+.lh .fx-det { position: relative; display: grid; gap: 6px; padding: 22px 20px 44px; border-radius: 18px; background: var(--soft); color: var(--body); text-decoration: none; transition: transform .2s var(--ease), background .2s; }
+.lh .fx-det b { color: var(--ink); font: 700 1.05rem/1.25 var(--fh); }
+.lh .fx-det i { position: absolute; left: 20px; bottom: 16px; font-style: normal; color: var(--blue); font-weight: 700; }
+.lh .fx-det:hover, .lh .fx-det:focus-visible { transform: translateY(-3px); background: var(--blue-soft); outline: none; }
+.lh .fx-final { display: grid; gap: 16px; justify-items: center; text-align: center; padding-block: 40px 100px; }
+.lh .fx-final p { margin: 0; font-size: 1.1rem; }
+.lh .fx-final .ctas { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+
+@media (max-width: 980px) {
+  .lh .fx-hero { padding-block: 56px 64px; }
+  .lh .fx-hero-grid, .lh .fx-cat-grid { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+  .lh .fx-cat { padding-block: 64px; }
+  .lh .fx-cat-txt { position: static; }
+  .lh .fx-det-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .lh .fx-mods { grid-template-columns: minmax(0, 1fr); }
+  .lh .fx-hero .ctas .btn, .lh .fx-final .ctas .btn { flex: 1 1 100%; }
+  .lh .fx-det-grid { grid-template-columns: minmax(0, 1fr); }
+}

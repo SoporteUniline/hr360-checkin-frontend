@@ -23,7 +23,7 @@ Código que debe conservarse como referencia de contrato:
 | Archivo                                             | Responsabilidad                                                                          |
 | --------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | `src/lib/evaluaciones/model.mjs`                    | Validaciones, tipos, asignaciones, ponderación, resultados y visibilidad de demostración |
-| `src/lib/evaluaciones/demoStore.mjs`                | Semilla ficticia y comandos locales                                                      |
+| `src/lib/evaluaciones/demoStore.mjs` (eliminado el 20/11/2026: no lo usaba ninguna pantalla)                | Semilla ficticia y comandos locales                                                      |
 | `src/components/evaluaciones/EvaluationContext.jsx` | Adaptador actual de persistencia local; punto principal a sustituir por API              |
 | `src/components/evaluaciones/*Views.jsx`            | Pantallas y acciones                                                                     |
 | `scripts/test-evaluaciones.mjs`                     | Casos de cálculo, permisos, estados y versiones                                          |

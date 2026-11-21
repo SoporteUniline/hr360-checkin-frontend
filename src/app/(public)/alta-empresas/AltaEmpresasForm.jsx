@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { DOCS_CUENTA, registrarAceptacion } from "@/lib/legal/aceptacion";
 import {
   Form,
   FormField,
@@ -49,6 +50,9 @@ export default function AltaEmpresasForm() {
   };
 
   const onSubmit = async (data) => {
+    // Constancia de la aceptación de la casilla obligatoria (no detiene el alta si falla).
+    registrarAceptacion({ contexto: "alta_empresa", documentos: DOCS_CUENTA, nombre: data.nombre_duenio || data.nombre_empresa, correo: data.correo_empresa, telefono: data.celular });
+
     if (!selectedFile && !imagePreview) {
       setError("imagen", {
         type: "required",

@@ -1,6 +1,11 @@
 "use client";
 
+import "@/components/landing/home/landing-home.css";
+import "./cotiza.css";
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import AceptoLegal from "@/components/legal/AceptoLegal";
+import { DOCS_AVISO, registrarAceptacion } from "@/lib/legal/aceptacion";
 import axios from "@/lib/axios";
 import {
   Dialog,
@@ -332,6 +337,8 @@ export default function CotizaPage() {
     });
   };
 
+  const [aceptaAviso, setAceptaAviso] = useState(false);
+
   const validate = () => {
     if (
       !form.nombre.trim() ||
@@ -352,6 +359,9 @@ export default function CotizaPage() {
     }
     if (!seleccion) {
       return "Primero selecciona un plan.";
+    }
+    if (!aceptaAviso) {
+      return "Para continuar, acepta el Aviso de privacidad.";
     }
     return "";
   };
@@ -455,6 +465,9 @@ export default function CotizaPage() {
       });
       return;
     }
+
+    // Constancia de que aceptó el aviso de privacidad (no detiene la cotización si falla).
+    registrarAceptacion({ contexto: "cotizar", documentos: DOCS_AVISO, nombre: form.nombre, correo: form.correo, telefono: fullPhone });
 
     try {
       setLoading(true);
@@ -768,139 +781,98 @@ export default function CotizaPage() {
     }
   };
 
-  return (
-    <main className="min-h-screen bg-[var(--adamia-bg-light)] text-[var(--adamia-text-primary)]">
-      <section className="bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] px-6 py-14 text-center text-white">
-        <h1 className="text-4xl font-black md:text-5xl">
-          Cotiza tu plan ADAMIA
-        </h1>
-        <p className="mx-auto mt-3 max-w-3xl text-white/90">
-          Calcula tu plan y descarga tu PDF de cotización en segundos.
-        </p>
-      </section>
+  const nombrePlan = (meses) => (meses === 1 ? "Mensual" : meses === 6 ? "Semestral" : "Anual");
+  const campo =
+    "h-11 w-full rounded-xl border border-[#c9cde0] bg-white px-3 text-[15px] text-[#0b1033] outline-none transition focus:border-[#2c56e8] focus:ring-2 focus:ring-[#2c56e8]/20";
 
-      <section className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-8 md:px-6">
-        <article className="rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-5 shadow-sm">
-          <div className="flex flex-col items-center justify-between gap-4 md:flex-row">
-            <div>
-              <h2 className="text-xl font-black">
-                ¿Cuántos empleados tiene tu empresa?
-              </h2>
-              <p className="text-sm text-[var(--adamia-text-secondary)]">
-                Ajusta en incrementos de 5.
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => handleEmployees(-5)}
-                className="h-12 w-12 rounded-lg bg-[var(--adamia-blue)] text-3xl font-bold text-white"
-              >
-                -
+  // Diseño del 21/11/2026: mismo estilo que el inicio (bloques de color sólido, lado a lado). La lógica no cambió.
+  return (
+    <main className="lh cz">
+      <section className="cz-hero">
+        <div className="wrap cz-hero-grid">
+          <div className="cz-hero-txt">
+            <span className="eyebrow">Cotizar</span>
+            <h1>Tu precio en segundos.</h1>
+            <p className="lead">
+              Elige cuántas personas tiene tu empresa, compara planes y recibe tu cotización en PDF.
+            </p>
+          </div>
+          <div className="cz-contador">
+            <label htmlFor="cz-empleados">¿Cuántas personas trabajan en tu empresa?</label>
+            <div className="cz-stepper">
+              <button type="button" onClick={() => handleEmployees(-5)} aria-label="Quitar 5 personas">
+                −
               </button>
               <input
+                id="cz-empleados"
                 type="number"
                 min={1}
                 value={empleados}
-                onChange={(event) =>
-                  setEmpleados(Math.max(1, Number(event.target.value || 1)))
-                }
-                className="h-12 w-28 rounded-lg border-2 border-[var(--adamia-blue)]/40 text-center text-2xl font-black"
+                onChange={(event) => setEmpleados(Math.max(1, Number(event.target.value || 1)))}
               />
-              <button
-                type="button"
-                onClick={() => handleEmployees(5)}
-                className="h-12 w-12 rounded-lg bg-[var(--adamia-blue)] text-3xl font-bold text-white"
-              >
+              <button type="button" onClick={() => handleEmployees(5)} aria-label="Agregar 5 personas">
                 +
               </button>
             </div>
+            <small>Ajusta de 5 en 5 o escribe el número exacto.</small>
           </div>
-        </article>
+        </div>
+      </section>
 
-        <article className="grid gap-4 md:grid-cols-3">
-          {planesCalculados.map((plan) => {
-            const active = plan.meses === planSeleccionado;
-            const planName =
-              plan.meses === 1
-                ? "Mensual"
-                : plan.meses === 6
-                ? "Semestral"
-                : "Anual";
-            return (
-              <div
-                key={plan.meses}
-                className={`rounded-2xl border-2 p-5 shadow-sm transition ${
-                  active
-                    ? "border-[var(--adamia-blue)] bg-[var(--adamia-blue)]/5"
-                    : "border-slate-200 bg-white"
-                }`}
-              >
-                <h3 className="text-2xl font-black">{planName}</h3>
-                <p className="mt-1 text-xs font-semibold uppercase text-[var(--adamia-text-secondary)]">
-                  {plan.descuentoPorcentaje}% de descuento
-                </p>
-                <p className="mt-4 text-sm text-[var(--adamia-text-secondary)]">
-                  Precio por mes
-                </p>
-                <p className="text-3xl font-black text-[var(--adamia-blue)]">
-                  {formatCurrencyMXN(plan.precioPorMes)}
-                </p>
-                <p className="mt-1 text-sm text-[var(--adamia-text-secondary)]">
-                  Total: <strong>{formatCurrencyMXN(plan.total)}</strong>
-                </p>
-                <p className="mt-1 text-xs text-[var(--adamia-text-secondary)]">
-                  {formatCurrencyMXN(plan.precioPorMes / plan.empleados)} por
-                  empleado
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setPlanSeleccionado(plan.meses)}
-                  className={`mt-4 w-full rounded-lg px-4 py-2 text-sm font-bold ${
-                    active
-                      ? "bg-[var(--adamia-blue)] text-white"
-                      : "bg-slate-100 text-[var(--adamia-text-primary)]"
-                  }`}
-                >
-                  {active ? "Plan seleccionado" : `Seleccionar ${planName}`}
-                </button>
+      <section className="wrap cz-planes" aria-label="Planes">
+        {planesCalculados.map((plan) => {
+          const active = plan.meses === planSeleccionado;
+          const planName = nombrePlan(plan.meses);
+          return (
+            <article key={plan.meses} className={`cz-plan${active ? " on" : ""}`}>
+              <header>
+                <h2>{planName}</h2>
+                {plan.descuentoPorcentaje ? <span>{plan.descuentoPorcentaje}% de descuento</span> : <span>Sin plazo forzoso</span>}
+              </header>
+              <p className="cz-precio">
+                {formatCurrencyMXN(plan.precioPorMes)}
+                <small> al mes</small>
+              </p>
+              <p className="cz-detalle">
+                {formatCurrencyMXN(plan.precioPorMes / plan.empleados)} por persona · Total {formatCurrencyMXN(plan.total)}
+              </p>
+              <button type="button" onClick={() => setPlanSeleccionado(plan.meses)} aria-pressed={active} className="btn">
+                {active ? "Plan elegido" : `Elegir ${planName}`}
+              </button>
+            </article>
+          );
+        })}
+      </section>
+
+      <section className="cz-form-banda">
+        <div className="wrap cz-form-grid">
+          <div className="cz-form-txt">
+            <span className="eyebrow">Tu cotización</span>
+            <h2>Recíbela en PDF.</h2>
+            <p>Verificamos tu WhatsApp para enviarte la cotización y darte seguimiento. Tiene vigencia de 30 días.</p>
+            {seleccion ? (
+              <div className="cz-resumen">
+                <small>Resumen</small>
+                <b>
+                  {nombrePlan(seleccion.meses)} · {formatCurrencyMXN(seleccion.total)}
+                </b>
+                <span>{empleados} personas</span>
               </div>
-            );
-          })}
-        </article>
-
-        <article className="rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-5 shadow-sm">
-          <h2 className="text-xl font-black">
-            Completa tus datos para cotización PDF
-          </h2>
-          <form
-            onSubmit={handleSubmit}
-            className="mt-4 grid gap-4 md:grid-cols-2"
-          >
-            <input
-              type="text"
-              placeholder="Nombre completo"
-              value={form.nombre}
-              onChange={(event) => updateField("nombre", event.target.value)}
-              className="rounded-lg border border-slate-300 px-3 py-2"
-            />
-            <input
-              type="text"
-              placeholder="Empresa"
-              value={form.empresa}
-              onChange={(event) => updateField("empresa", event.target.value)}
-              className="rounded-lg border border-slate-300 px-3 py-2"
-            />
-            <div className="md:col-span-2">
-              <div className="flex items-center gap-2">
-                <select
-                  value={form.codigo_pais}
-                  onChange={(event) =>
-                    updateField("codigo_pais", event.target.value)
-                  }
-                  className="h-10 w-28 rounded-lg border border-slate-300 px-2 text-sm"
-                  aria-label="Código de país"
-                >
+            ) : null}
+          </div>
+          <form onSubmit={handleSubmit} className="cz-form">
+            <label>
+              Nombre completo
+              <input type="text" autoComplete="name" value={form.nombre} onChange={(event) => updateField("nombre", event.target.value)} className={campo} />
+            </label>
+            <label>
+              Empresa
+              <input type="text" autoComplete="organization" value={form.empresa} onChange={(event) => updateField("empresa", event.target.value)} className={campo} />
+            </label>
+            <label className="ancho">
+              WhatsApp
+              <span className="flex items-center gap-2">
+                <select value={form.codigo_pais} onChange={(event) => updateField("codigo_pais", event.target.value)} className={`${campo} !w-28`} aria-label="Código de país">
                   {COUNTRY_CODES.map((country) => (
                     <option key={country.code} value={country.code}>
                       {country.code}
@@ -909,195 +881,110 @@ export default function CotizaPage() {
                 </select>
                 <input
                   type="tel"
-                  placeholder="Número de WhatsApp"
+                  autoComplete="tel-national"
+                  inputMode="numeric"
                   value={form.telefono}
-                  onChange={(event) =>
-                    updateField(
-                      "telefono",
-                      event.target.value.replace(/\D/g, "").slice(0, 15),
-                    )
-                  }
-                  className="h-10 w-full rounded-lg border border-slate-300 px-3 text-sm"
+                  onChange={(event) => updateField("telefono", event.target.value.replace(/\D/g, "").slice(0, 15))}
+                  className={campo}
                 />
-              </div>
-            </div>
-            <input
-              type="email"
-              placeholder="Correo electrónico"
-              value={form.correo}
-              onChange={(event) => updateField("correo", event.target.value)}
-              className="rounded-lg border border-slate-300 px-3 py-2"
-            />
-            <div className="rounded-xl border border-slate-200 bg-[var(--adamia-bg-light)] p-3 md:col-span-2">
-              <p className="text-xs text-[var(--adamia-text-secondary)]">
-                Número internacional: <strong>{fullPhone || "—"}</strong>
+              </span>
+            </label>
+            <label className="ancho">
+              Correo electrónico
+              <input type="email" autoComplete="email" value={form.correo} onChange={(event) => updateField("correo", event.target.value)} className={campo} />
+            </label>
+            <div className="cz-otp ancho">
+              <p>
+                Número: <strong>{fullPhone || "—"}</strong>
               </p>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={sendOtpByWhatsApp}
-                  disabled={otpSending || otpCountdown > 0}
-                  className="rounded-lg border border-[var(--adamia-blue)]/25 bg-white px-3 py-2 text-xs font-bold text-[var(--adamia-blue)] disabled:opacity-60"
-                >
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" onClick={sendOtpByWhatsApp} disabled={otpSending || otpCountdown > 0} className="btn btn-line">
                   {otpSending
-                    ? "Enviando..."
+                    ? "Enviando…"
                     : otpCountdown > 0
-                    ? `Reenviar en ${otpCountdown}s`
-                    : otpSent
-                    ? "Reenviar código WhatsApp"
-                    : "Enviar código por WhatsApp"}
+                      ? `Reenviar en ${otpCountdown} s`
+                      : otpSent
+                        ? "Reenviar código por WhatsApp"
+                        : "Enviar código por WhatsApp"}
                 </button>
-                <span
-                  className={`inline-flex items-center rounded-lg px-3 py-2 text-xs font-semibold ${
-                    otpVerified
-                      ? "bg-emerald-50 text-emerald-700"
-                      : "bg-slate-100 text-slate-600"
-                  }`}
-                >
-                  {otpVerified ? "Número verificado" : "Pendiente de verificar"}
-                </span>
+                <span className={`cz-estado${otpVerified ? " ok" : ""}`}>{otpVerified ? "Número verificado" : "Pendiente de verificar"}</span>
               </div>
               {otpSent ? (
                 <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
                   <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode}>
                     <InputOTPGroup>
-                      <InputOTPSlot index={0} className="h-9 w-8 text-sm" />
-                      <InputOTPSlot index={1} className="h-9 w-8 text-sm" />
-                      <InputOTPSlot index={2} className="h-9 w-8 text-sm" />
-                      <InputOTPSlot index={3} className="h-9 w-8 text-sm" />
-                      <InputOTPSlot index={4} className="h-9 w-8 text-sm" />
-                      <InputOTPSlot index={5} className="h-9 w-8 text-sm" />
+                      {[0, 1, 2, 3, 4, 5].map((i) => (
+                        <InputOTPSlot key={i} index={i} className="h-11 w-10 text-base" />
+                      ))}
                     </InputOTPGroup>
                   </InputOTP>
-                  <button
-                    type="button"
-                    onClick={verifyOtp}
-                    disabled={otpVerifying || otpCode.length !== 6}
-                    className="rounded-lg bg-[var(--adamia-blue)] px-4 py-2 text-xs font-bold text-white disabled:opacity-60"
-                  >
-                    {otpVerifying ? "Validando..." : "Validar código"}
+                  <button type="button" onClick={verifyOtp} disabled={otpVerifying || otpCode.length !== 6} className="btn btn-primary">
+                    {otpVerifying ? "Validando…" : "Validar código"}
                   </button>
                 </div>
               ) : null}
-              {otpMessage ? (
-                <p className="mt-2 text-xs font-semibold text-[var(--adamia-blue)]">
-                  {otpMessage}
-                </p>
-              ) : null}
+              {otpMessage ? <p className="cz-msg" role="status">{otpMessage}</p> : null}
             </div>
-            <select
-              value={form.tipoContratacion}
-              onChange={(event) =>
-                updateField("tipoContratacion", event.target.value)
-              }
-              className="rounded-lg border border-slate-300 px-3 py-2 md:col-span-2"
-            >
-              <option value="Normal">Tipo de contratación: Normal</option>
-              <option value="Prueba">Tipo de contratación: Prueba</option>
-            </select>
-
-            {seleccion ? (
-              <div className="rounded-xl bg-[var(--adamia-blue)] px-4 py-3 text-white md:col-span-2">
-                <p className="text-xs uppercase text-white/80">
-                  Resumen seleccionado
-                </p>
-                <p className="text-lg font-black">
-                  {seleccion.meses === 1
-                    ? "Mensual"
-                    : seleccion.meses === 6
-                    ? "Semestral"
-                    : "Anual"}{" "}
-                  - {formatCurrencyMXN(seleccion.total)}
-                </p>
-              </div>
-            ) : null}
-
-            <button
-              type="submit"
-              disabled={loading || !planesCalculados.length}
-              className="rounded-lg bg-emerald-600 px-4 py-3 font-bold text-white disabled:opacity-60 md:col-span-2"
-            >
-              {loading ? "Generando y enviando..." : "Descargar cotización PDF"}
+            <label className="ancho">
+              Tipo de contratación
+              <select value={form.tipoContratacion} onChange={(event) => updateField("tipoContratacion", event.target.value)} className={campo}>
+                <option value="Normal">Normal</option>
+                <option value="Prueba">Prueba</option>
+              </select>
+            </label>
+            <AceptoLegal id="cz-acepto" className="ancho" checked={aceptaAviso} onChange={setAceptaAviso} />
+            <button type="submit" disabled={loading || !planesCalculados.length} className="btn btn-primary ancho">
+              {loading ? "Generando y enviando…" : "Descargar cotización en PDF"}
             </button>
           </form>
-        </article>
+        </div>
+      </section>
 
-        <section className="rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-6 shadow-sm">
-          <div className="text-center">
-            <h2 className="text-3xl font-black text-[var(--adamia-text-primary)]">
-              Todo lo que incluye tu plan ADAMIA
-            </h2>
-            <p className="mt-2 text-sm text-[var(--adamia-text-secondary)]">
-              Funcionalidades clave para operar RRHH con orden, visibilidad y
-              control.
-            </p>
-          </div>
-          <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {beneficios.map((item, idx) => (
-              <article
-                key={item.title}
-                className={`rounded-xl border p-4 ${
-                  idx % 3 === 0
-                    ? "border-emerald-200 bg-emerald-50/50"
-                    : idx % 3 === 1
-                    ? "border-sky-200 bg-sky-50/50"
-                    : "border-violet-200 bg-violet-50/50"
-                }`}
-              >
-                <div className="text-2xl">{item.icon}</div>
-                <h3 className="mt-2 text-base font-black">{item.title}</h3>
-                <p className="mt-1 text-sm text-[var(--adamia-text-secondary)]">
-                  {item.text}
-                </p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="grid gap-4 md:grid-cols-3">
-          {garantias.map((item) => (
-            <article
-              key={item.title}
-              className="rounded-2xl border border-[var(--adamia-blue)]/15 bg-gradient-to-br from-white to-slate-50 p-5 shadow-sm"
-            >
-              <div className="mb-2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-emerald-600 text-lg font-bold text-white">
-                {item.icon}
-              </div>
-              <h3 className="text-lg font-black">{item.title}</h3>
-              <p className="mt-1 text-sm text-[var(--adamia-text-secondary)]">
-                {item.text}
-              </p>
+      <section className="wrap cz-incluye">
+        <span className="eyebrow">Incluido en todos los planes</span>
+        <h2>Todo lo que incluye tu plan.</h2>
+        <div className="cz-incluye-grid">
+          {beneficios.map((item) => (
+            <article key={item.title}>
+              <span aria-hidden="true">{item.icon}</span>
+              <h3>{item.title}</h3>
+              <p>{item.text}</p>
             </article>
           ))}
-        </section>
+        </div>
+      </section>
 
-        <section className="rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-6 shadow-sm">
-          <h2 className="text-2xl font-black">Preguntas frecuentes</h2>
-          <div className="mt-4 grid gap-3">
-            {faqs.map((faq) => (
-              <article key={faq.q} className="rounded-xl bg-slate-50 p-4">
-                <h3 className="font-bold">{faq.q}</h3>
-                <p className="mt-1 text-sm text-[var(--adamia-text-secondary)]">
-                  {faq.a}
-                </p>
-              </article>
-            ))}
+      <section className="cz-garantias">
+        <div className="wrap cz-garantias-grid">
+          {garantias.map((item) => (
+            <article key={item.title}>
+              <span aria-hidden="true">{item.icon}</span>
+              <h3>{item.title}</h3>
+              <p>{item.text}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="wrap cz-faq">
+        <h2>Preguntas frecuentes</h2>
+        {faqs.map((faq) => (
+          <details key={faq.q}>
+            <summary>{faq.q}</summary>
+            <p>{faq.a}</p>
+          </details>
+        ))}
+      </section>
+
+      <section className="cz-final">
+        <div className="wrap">
+          <h2>¿Listo para empezar?</h2>
+          <p>Contrata en línea o pide una demostración con tu información.</p>
+          <div className="ctas">
+            <Link className="btn btn-primary" href="/contratar-plan">Contratar ahora</Link>
+            <Link className="btn btn-claro" href="/contacto">Solicitar demo</Link>
           </div>
-        </section>
-
-        <section className="rounded-2xl bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] p-8 text-center text-white shadow-sm">
-          <h2 className="text-3xl font-black">
-            ¿Listo para activar ADAMIA en tu empresa?
-          </h2>
-          <p className="mx-auto mt-2 max-w-3xl text-white/90">
-            Recibe tu cotización en PDF, compártela internamente y avanza con
-            una implementación guiada.
-          </p>
-          <p className="mt-4 text-sm text-white/85">
-            Sitio web: <span className="font-bold">https://adamia.com.mx/</span>{" "}
-            · Correo: <span className="font-bold">sistema@adamia.mx</span>
-          </p>
-        </section>
+        </div>
       </section>
       <Dialog
         open={alertaModal.open}

@@ -156,7 +156,7 @@ export default function AdamiaChatWidget() {
         onClick={() => (isOpen ? closeChat() : openChat())}
         className={cn(
           "h-14 w-14 rounded-full p-0",
-          "bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)]",
+          "bg-[#2c56e8]",
           "shadow-[0_10px_30px_rgba(37,99,235,0.35)] hover:shadow-[0_14px_38px_rgba(37,99,235,0.45)]",
           !isOpen && badgeVisible && "adamia-pulse",
           isOpen && "opacity-0 pointer-events-none sm:opacity-100 sm:pointer-events-auto"
@@ -196,15 +196,18 @@ export default function AdamiaChatWidget() {
             aria-label="Chat ADAMIA"
           >
             {/* Header */}
-            <div className="flex h-16 items-center justify-between bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] px-4 text-white sm:h-[70px] sm:rounded-t-2xl">
+            <div className="flex h-16 items-center justify-between bg-[#2c56e8] px-4 text-white sm:h-[70px] sm:rounded-t-2xl">
               <div className="flex min-w-0 items-center gap-3">
-                <Image
-                  src="/assets/adamia.png"
-                  alt="ADAMIA"
-                  width={120}
-                  height={40}
-                  className="h-8 w-auto object-contain"
-                />
+                {/* Marca en blanco sobre el encabezado de color (sin recuadro blanco). */}
+                <span className="grid size-9 shrink-0 place-items-center rounded-full bg-white/15">
+                  <Image
+                    src="/landing/adamia-a.png"
+                    alt="ADAMIA"
+                    width={22}
+                    height={20}
+                    className="h-5 w-auto object-contain brightness-0 invert"
+                  />
+                </span>
                 <div className="min-w-0">
                   <div className="truncate text-sm font-semibold sm:text-[15px]">
                     Asistente ADAMIA
@@ -239,7 +242,7 @@ export default function AdamiaChatWidget() {
                 m.sender === "bot" ? (
                   <div key={m.id} className="flex w-full">
                     <div className="flex max-w-[85%] gap-2">
-                      <div className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] text-sm">
+                      <div className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[#2c56e8] text-sm">
                         🤖
                       </div>
                       <div className="rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm leading-relaxed text-[var(--adamia-text-primary)] shadow-sm whitespace-pre-line">
@@ -249,7 +252,7 @@ export default function AdamiaChatWidget() {
                   </div>
                 ) : (
                   <div key={m.id} className="flex w-full justify-end">
-                    <div className="max-w-[85%] rounded-xl bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] px-4 py-2 text-sm leading-relaxed text-white shadow-sm whitespace-pre-line">
+                    <div className="max-w-[85%] rounded-xl bg-[#2c56e8] px-4 py-2 text-sm leading-relaxed text-white shadow-sm whitespace-pre-line">
                       {m.text}
                     </div>
                   </div>
@@ -279,7 +282,7 @@ export default function AdamiaChatWidget() {
               {isTyping ? (
                 <div className="flex w-full">
                   <div className="flex max-w-[85%] gap-2">
-                    <div className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] text-sm">
+                    <div className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[#2c56e8] text-sm">
                       🤖
                     </div>
                     <div className="flex items-center gap-1 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
@@ -309,7 +312,7 @@ export default function AdamiaChatWidget() {
                 type="button"
                 onClick={() => send()}
                 disabled={isTyping || !input.trim()}
-                className="h-11 w-11 rounded-full p-0 bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)]"
+                className="h-11 w-11 rounded-full p-0 bg-[#2c56e8]"
                 aria-label="Enviar"
               >
                 <Send className="h-5 w-5" />

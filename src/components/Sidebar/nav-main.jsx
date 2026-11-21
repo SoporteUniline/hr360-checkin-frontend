@@ -29,6 +29,7 @@ import {
   Store,
   HeartHandshake,
   Gift,
+  Megaphone,
   HandCoins,
   MapPin,
   Route,
@@ -54,9 +55,6 @@ import {
   CalendarClock,
   TriangleAlert,
   Package,
-  Shirt,
-  Wrench,
-  ArrowLeftRight,
 } from "lucide-react";
 import {
   ChevronDown,
@@ -128,6 +126,12 @@ const dashboardItems = [
     url: "/dashboard/cupones",
     rol: "Admin",
     icon: Gift,
+  },
+  {
+    title: "Pop-ups de la página",
+    url: "/dashboard/popups",
+    rol: "Admin",
+    icon: Megaphone,
   },
   {
     title: "Mensajes sistema",
@@ -416,198 +420,32 @@ const menuGroups = [
     ],
   },
   {
-    group: "CONTROL DE ACTIVOS",
+    // (20/11/2026) Antes dos grupos con 24 entradas (12 de activos y 12 de uniformes). Ahora un solo
+    // módulo con pestañas Inicio · Inventario · Personas y Ajustes (src/app/panel/activos).
+    group: "ACTIVOS Y UNIFORMES",
     groupIcon: Monitor,
     items: [
       {
-        title: "Resumen de activos",
-        url: "/panel/control-activos",
+        title: "Activos y uniformes",
+        url: "/panel/activos",
+        matchPrefix: "/panel/activos",
         rol: "Recruiter",
         icon: LayoutDashboard,
-      },
-      {
-        title: "Inventario de activos",
-        url: "/panel/control-activos/activos",
-        matchPrefix: "/panel/control-activos/activos",
-        rol: "Recruiter",
-        icon: Monitor,
-      },
-      {
-        title: "Categorías de activos",
-        url: "/panel/control-activos/categorias",
-        rol: "Recruiter",
-        icon: Package,
-      },
-      {
-        title: "Asignaciones y préstamos",
-        url: "/panel/control-activos/entregas",
-        matchPrefix: "/panel/control-activos/entregas",
-        rol: "Recruiter",
-        icon: Package,
-      },
-      {
-        title: "Devoluciones de activos",
-        url: "/panel/control-activos/devoluciones",
-        rol: "Recruiter",
-        icon: ArrowLeftRight,
-      },
-      {
-        title: "Activos por empleado",
-        url: "/panel/control-activos/empleados",
-        matchPrefix: "/panel/control-activos/empleados",
-        rol: "Recruiter",
-        icon: UsersIcon,
-      },
-      {
-        title: "Resguardos de activos",
-        url: "/panel/control-activos/resguardos",
-        matchPrefix: "/panel/control-activos/resguardos",
-        rol: "Recruiter",
-        icon: FileText,
-      },
-      {
-        title: "Mantenimiento",
-        url: "/panel/control-activos/mantenimiento",
-        rol: "Recruiter",
-        icon: Wrench,
-      },
-      {
-        title: "Incidencias de activos",
-        url: "/panel/control-activos/solicitudes",
-        rol: "Recruiter",
-        icon: TriangleAlert,
-      },
-      {
-        title: "Paquetes de equipo",
-        url: "/panel/control-activos/paquetes",
-        rol: "Recruiter",
-        icon: BriefcaseBusiness,
-      },
-      {
-        title: "Ubicaciones de activos",
-        url: "/panel/control-activos/ubicaciones",
-        rol: "Recruiter",
-        icon: Building,
-      },
-      {
-        title: "Movimientos de activos",
-        url: "/panel/control-activos/movimientos",
-        rol: "Recruiter",
-        icon: BookOpen,
       },
     ],
   },
   {
-    group: "CONTROL DE UNIFORMES",
-    groupIcon: Shirt,
-    items: [
-      {
-        title: "Resumen de uniformes",
-        url: "/panel/control-uniformes",
-        rol: "Recruiter",
-        icon: LayoutDashboard,
-      },
-      {
-        title: "Prendas y existencias",
-        url: "/panel/control-uniformes/prendas",
-        matchPrefix: "/panel/control-uniformes/prendas",
-        rol: "Recruiter",
-        icon: Shirt,
-      },
-      {
-        title: "Categorías de uniformes",
-        url: "/panel/control-uniformes/categorias",
-        rol: "Recruiter",
-        icon: Package,
-      },
-      {
-        title: "Entregas de uniformes",
-        url: "/panel/control-uniformes/entregas",
-        matchPrefix: "/panel/control-uniformes/entregas",
-        rol: "Recruiter",
-        icon: Package,
-      },
-      {
-        title: "Devoluciones y cambios",
-        url: "/panel/control-uniformes/devoluciones",
-        rol: "Recruiter",
-        icon: ArrowLeftRight,
-      },
-      {
-        title: "Uniformes por empleado",
-        url: "/panel/control-uniformes/empleados",
-        matchPrefix: "/panel/control-uniformes/empleados",
-        rol: "Recruiter",
-        icon: UsersIcon,
-      },
-      {
-        title: "Comprobantes de entrega",
-        url: "/panel/control-uniformes/resguardos",
-        matchPrefix: "/panel/control-uniformes/resguardos",
-        rol: "Recruiter",
-        icon: FileText,
-      },
-      {
-        title: "Prendas en revisión",
-        url: "/panel/control-uniformes/mantenimiento",
-        rol: "Recruiter",
-        icon: Wrench,
-      },
-      {
-        title: "Solicitudes de uniformes",
-        url: "/panel/control-uniformes/solicitudes",
-        rol: "Recruiter",
-        icon: TriangleAlert,
-      },
-      {
-        title: "Dotaciones por puesto",
-        url: "/panel/control-uniformes/paquetes",
-        rol: "Recruiter",
-        icon: BriefcaseBusiness,
-      },
-      {
-        title: "Ubicaciones de uniformes",
-        url: "/panel/control-uniformes/ubicaciones",
-        rol: "Recruiter",
-        icon: Building,
-      },
-      {
-        title: "Movimientos de uniformes",
-        url: "/panel/control-uniformes/movimientos",
-        rol: "Recruiter",
-        icon: BookOpen,
-      },
-    ],
-  },
-  {
+    // (20/11/2026) Antes 4 entradas (Resumen, Campañas, Plantillas, Tablero). Ahora una sola: dentro,
+    // cada quien ve sus pestañas (src/components/evaluaciones/EvaluationModule.jsx).
     group: "EVALUACIÓN DE DESEMPEÑO",
     groupIcon: BarChart3,
     items: [
       {
-        title: "Resumen de evaluaciones",
+        title: "Evaluaciones",
         url: "/panel/evaluaciones",
-        rol: "Recruiter",
-        icon: LayoutDashboard,
-      },
-      {
-        title: "Campañas",
-        url: "/panel/evaluaciones/campanas",
+        matchPrefix: "/panel/evaluaciones",
         rol: "Recruiter",
         icon: ClipboardCheck,
-        matchPrefix: "/panel/evaluaciones/campanas",
-      },
-      {
-        title: "Plantillas de evaluación",
-        url: "/panel/evaluaciones/plantillas",
-        rol: "Recruiter",
-        icon: LayoutTemplate,
-        matchPrefix: "/panel/evaluaciones/plantillas",
-      },
-      {
-        title: "Tablero de desempeño",
-        url: "/panel/evaluaciones/tablero",
-        rol: "Recruiter",
-        icon: BarChart3,
       },
     ],
   },
@@ -837,9 +675,7 @@ export function NavMain() {
       return false;
     });
   const handleClick = (href) => {
-    if (isMobile) {
-      setOpenMobile(false);
-    }
+    if (isMobile) setOpenMobile(false);
     router.push(href);
   };
   let perfilRoute = "/home/cuenta";

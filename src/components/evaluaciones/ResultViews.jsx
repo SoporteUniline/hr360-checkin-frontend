@@ -6,7 +6,6 @@ import {
   Panel,
   Field,
   Input,
-  Select,
   Textarea,
   Toggle,
   Button,
@@ -16,8 +15,10 @@ import {
   Notice,
   ScoreBar,
   Modal,
+  QueryState,
+  Pagination,
+  ExportButton,
 } from "./ui";
-import { QueryState, Pagination, ExportButton } from "./ApiViews";
 import { PlanList } from "./PlanViews";
 import {
   PERSPECTIVES,
@@ -33,9 +34,10 @@ function Score({ value }) {
     <strong>{scoreText(value)} / 5</strong>
   );
 }
-export function Results({ personal = false }) {
+// Lo que recibió la persona (con su plan dentro del detalle). La vista de RH vive en cada campaña.
+export function Results() {
   const [page, setPage] = useState(1),
-    query = useEvaluationQuery(personal ? "/my/results" : "/results", {
+    query = useEvaluationQuery("/my/results", {
       page,
       pageSize: 25,
     });
@@ -46,11 +48,8 @@ export function Results({ personal = false }) {
   return (
     <>
       <Heading
-        title={
-          personal ? "Mis evaluaciones recibidas" : "Resultados e historial"
-        }
-        description="Consulta los resultados y su publicación."
-        actions={!personal && <ExportButton />}
+        title="Mis resultados"
+        description="Tus evaluaciones publicadas y tu plan de acción."
       />
       <Panel>
         <QueryState query={query}>
@@ -58,15 +57,6 @@ export function Results({ personal = false }) {
             serverPaginated
             rows={rows}
             columns={[
-              ...(!personal
-                ? [
-                    {
-                      key: "subjectName",
-                      label: "Colaborador",
-                      render: (r) => r.subjectName || r.person?.name || r.name,
-                    },
-                  ]
-                : []),
               {
                 key: "campaignName",
                 label: "Campaña",
@@ -145,7 +135,13 @@ export function ResultDetail({ campaignId, subjectId }) {
           <Heading
             title="Resultado de evaluación"
             description={r.campaignName || r.campaign?.name}
-            back={own ? "mis-evaluaciones" : "resultados"}
+            back={
+              own
+                ? "mis-evaluaciones"
+                : capabilities.flags?.canViewCampaigns
+                ? `campanas/${campaignId}`
+                : "equipo"
+            }
             actions={
               !own &&
               capabilities.scopes.includes("results") && (
@@ -238,11 +234,7 @@ export function ResultDetail({ campaignId, subjectId }) {
               </Panel>
             )}
             {capabilities.scopes.includes("plans") && (
-              <PlanList
-                embedded
-                campaignId={campaignId}
-                subjectId={subjectId}
-              />
+              <PlanList campaignId={campaignId} subjectId={subjectId} />
             )}
             {own && (r.publication?.publishedAt || r.publishedAt) && (
               <Panel title="Confirmación de recibido">
@@ -347,120 +339,5 @@ export function ResultDetail({ campaignId, subjectId }) {
         </>
       )}
     </QueryState>
-  );
-}
-const metricLabels = {
-  total: "Total",
-  campaigns: "Campañas",
-  activeCampaigns: "Campañas activas",
-  subjects: "Colaboradores",
-  assignments: "Evaluaciones",
-  submitted: "Completadas",
-  pending: "Pendientes",
-  published: "Publicados",
-  average: "Promedio",
-  score: "Calificación",
-  completion: "Avance",
-  completionRate: "Avance",
-  count: "Cantidad",
-  low: "Menos de 3",
-  medium: "De 3 a 3.99",
-  high: "4 o más",
-  areas: "Áreas",
-  categories: "Categorías",
-  distribution: "Distribución",
-  bands: "Semáforo",
-  metrics: "Indicadores",
-  summary: "Resumen",
-  totals: "Totales",
-  results: "Resultados",
-  name: "Nombre",
-  label: "Indicador",
-  below3: "Menos de 3",
-  between3And4: "De 3 a 3.99",
-  above4: "4 o más",
-  denominator: "Resultados considerados",
-  completed: "Completadas",
-  trafficLight: "Semáforo ejecutivo",
-  competencies: "Competencias",
-  comparison: "Comparación",
-  progress: "Avance",
-  evaluated: "Evaluados",
-  n: "Resultados considerados",
-};
-function DashboardValues({ value }) {
-  if (value == null) return null;
-  if (Array.isArray(value))
-    return (
-      <div className="ev-stack">
-        {value.map((v, i) => (
-          <DashboardValues key={i} value={v} />
-        ))}
-      </div>
-    );
-  if (typeof value !== "object")
-    return (
-      <strong>
-        {typeof value === "number"
-          ? new Intl.NumberFormat("es-MX", { maximumFractionDigits: 2 }).format(
-              value
-            )
-          : String(value)}
-      </strong>
-    );
-  return (
-    <div className="ev-grid">
-      {Object.entries(value)
-        .filter(([k]) => !/id$|timezone|capabilities/i.test(k))
-        .map(([k, v]) => (
-          <div className="ev-pad" key={k}>
-            <span>
-              {metricLabels[k] || k.replace(/([a-z])([A-Z])/g, "$1 $2")}
-            </span>
-            <DashboardValues value={v} />
-          </div>
-        ))}
-    </div>
-  );
-}
-export function Overview({ executive = false }) {
-  const [campaignId, setCampaignId] = useState("");
-  const query = useEvaluationQuery(
-    "/dashboard",
-    campaignId ? { campaignId } : {}
-  );
-  const campaigns = useEvaluationQuery("/campaigns", {
-    page: 1,
-    pageSize: 100,
-  });
-  return (
-    <>
-      <Heading
-        title={executive ? "Tablero de desempeño" : "Resumen de evaluaciones"}
-        description="Indicadores calculados por el servidor."
-      />
-      <Panel>
-        <div className="ev-filters">
-          <Select
-            label="Campaña"
-            value={campaignId}
-            onChange={(e) => setCampaignId(e.target.value)}
-          >
-            <option value="">Todas las campañas</option>
-            {(campaigns.data || []).map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
-          <ExportButton
-            filters={campaignId ? { campaignId: Number(campaignId) } : {}}
-          />
-        </div>
-        <QueryState query={query}>
-          <DashboardValues value={query.data} />
-        </QueryState>
-      </Panel>
-    </>
   );
 }

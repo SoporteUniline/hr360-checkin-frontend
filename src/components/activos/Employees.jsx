@@ -39,12 +39,8 @@ export default function Employees() {
   return (
     <>
       <Heading
-        title={
-          resourceType === "uniform"
-            ? "Uniformes por empleado"
-            : "Activos por empleado"
-        }
-        subtitle="Responsables e historial de entregas de este módulo."
+        title="Personas"
+        subtitle="Qué tiene cada empleado. Abre a la persona para entregar, recibir o ver sus resguardos."
       ></Heading>
       <div className="mb-4">
         <SearchBox
@@ -58,10 +54,8 @@ export default function Employees() {
           headers={[
             "Empleado",
             "Puesto",
-            resourceType === "uniform"
-              ? "Prendas entregadas"
-              : "Activos a cargo",
-            "Expediente",
+            "Artículos a su cargo",
+            "",
           ]}
         >
           {state.employees
@@ -84,7 +78,7 @@ export default function Employees() {
                     to={`/empleados/${e.id}`}
                     className="font-medium text-blue-700"
                   >
-                    Ver expediente
+                    Abrir
                   </ResourceLink>
                 </td>
               </tr>
@@ -333,12 +327,12 @@ export function EmployeeDetail({ id }) {
         </Button>
         <Button variant="outline" asChild>
           <ResourceLink to={`/devoluciones?empleado=${id}`}>
-            Registrar devolución
+            Recibir devolución
           </ResourceLink>
         </Button>
         <Button asChild>
           <ResourceLink moduleType={resourceType} to={`/entregas/nueva?empleado=${id}`}>
-            Nueva entrega
+            Entregar
           </ResourceLink>
         </Button>
       </Heading>
