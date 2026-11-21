@@ -59,3 +59,17 @@ export function guardarVisto(almacen, id, ahora = Date.now()) {
     // Sin almacenamiento (incógnito, bloqueado): se limita a una vez por visita.
   }
 }
+
+// Si el botón lleva a Contratar y hay cupón, se manda ya escrito (?cupon=).
+export function enlaceConCupon(url, cupon) {
+  if (!cupon || !String(url ?? "").startsWith("/contratar-plan")) return url;
+  return `${url}${url.includes("?") ? "&" : "?"}cupon=${encodeURIComponent(cupon)}`;
+}
+
+// "2026-11-30 23:59:00" → "30 de noviembre" (la fecha ya viene en hora de la Ciudad de México).
+export function validoHasta(fechaFin) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(fechaFin ?? ""));
+  if (!m) return null;
+  const fecha = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], 12));
+  return fecha.toLocaleDateString("es-MX", { day: "numeric", month: "long", timeZone: "UTC" });
+}

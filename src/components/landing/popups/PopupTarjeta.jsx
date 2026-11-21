@@ -2,12 +2,17 @@
 "use client";
 
 import { useState } from "react";
+import { enlaceConCupon, validoHasta } from "@/lib/popups/reglas.mjs";
 import "./popup-venta.css";
+
+// La imagen la entrega el backend (ruta relativa a NEXT_PUBLIC_RUTA_BACKEND); una vista previa local trae blob:.
+const fuenteImagen = (url) => (url?.startsWith("/") ? `${process.env.NEXT_PUBLIC_RUTA_BACKEND ?? ""}${url}` : url);
 
 // Tarjeta del pop-up. La usan la página pública (PopupVenta) y la vista previa del panel.
 export default function PopupTarjeta({ popup, alCerrar, alClic, cerrarRef, vistaPrevia = false }) {
   const [copiado, setCopiado] = useState(false);
   const externo = /^https:\/\//i.test(popup.boton_url ?? "");
+  const hasta = validoHasta(popup.fecha_fin);
 
   const copiar = async () => {
     try {
@@ -25,7 +30,7 @@ export default function PopupTarjeta({ popup, alCerrar, alClic, cerrarRef, vista
       </button>
       {popup.imagen_url ? (
         <div className="pv-imagen">
-          <img src={popup.imagen_url} alt="" />
+          <img src={fuenteImagen(popup.imagen_url)} alt="" />
         </div>
       ) : null}
       <div className="pv-cuerpo">
@@ -33,19 +38,20 @@ export default function PopupTarjeta({ popup, alCerrar, alClic, cerrarRef, vista
         {popup.texto ? <p>{popup.texto}</p> : null}
         {popup.cupon ? (
           <div className="pv-cupon">
-            <span>Usa el código</span>
+            <span>Tu código</span>
             <b>{popup.cupon}</b>
-            <button type="button" onClick={copiar}>{copiado ? "¡Copiado!" : "Copiar"}</button>
+            <button type="button" onClick={copiar} aria-live="polite">{copiado ? "¡Copiado!" : "Copiar"}</button>
           </div>
         ) : null}
         <a
           className="pv-boton"
-          href={popup.boton_url}
+          href={enlaceConCupon(popup.boton_url, popup.cupon)}
           onClick={vistaPrevia ? (e) => e.preventDefault() : alClic}
           {...(externo ? { target: "_blank", rel: "noopener noreferrer" } : {})}
         >
           {popup.boton_texto}
         </a>
+        {hasta ? <small className="pv-vigencia">Válido hasta el {hasta}.</small> : null}
       </div>
     </div>
   );

@@ -29,7 +29,7 @@ const next = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start"
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const popup = {
-  id: 7, titulo: "30 % en tu primer año", texto: "Solo en el Buen Fin.", imagen_url: null, boton_texto: "Cotizar ahora",
+  id: 7, titulo: "30 % en tu primer año", texto: "Solo en el Buen Fin.", imagen_url: "/checador/popups/publicos/7/imagen?v=1", boton_texto: "Cotizar ahora",
   boton_url: "/contacto", cupon: "BUENFIN26", disparador: "tiempo", segundos: 3, scroll_pct: 50, frecuencia_dias: 7, dispositivos: "todos",
 };
 const eventos = [];
@@ -53,6 +53,10 @@ async function contexto(browser, opciones = {}, { conBackend = true } = {}) {
     if (url.pathname === "/api/checador/popups/publicos") {
       assert.ok(["inicio", "blog", "articulos"].includes(url.searchParams.get("pagina")));
       return responde({ json: { ok: true, popups: [popup] } });
+    }
+    // La imagen la entrega el backend (bucket privado): PNG de 1×1.
+    if (url.pathname === "/api/checador/popups/publicos/7/imagen") {
+      return responde({ status: 200, contentType: "image/png", body: Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", "base64") });
     }
     const ev = /^\/api\/checador\/popups\/publicos\/(\d+)\/evento$/.exec(url.pathname);
     if (ev) {
@@ -96,6 +100,10 @@ try {
   const dialogo = page.getByRole("dialog", { name: "30 % en tu primer año" });
   await dialogo.waitFor({ timeout: 5000 });
   assert.ok(await dialogo.getByText("BUENFIN26").isVisible());
+  // La imagen carga desde el backend y la tarjeta es grande en escritorio.
+  await page.waitForFunction(() => document.querySelector(".pv-imagen img")?.naturalWidth > 0, null, { timeout: 4000 });
+  assert.match(await page.locator(".pv-imagen img").getAttribute("src"), /^https:\/\/api\.prueba\.invalid\/api\/checador\/popups\/publicos\/7\/imagen\?v=1$/);
+  assert.ok((await dialogo.boundingBox()).width >= 960, "pop-up ancho en escritorio");
   assert.equal(await page.evaluate(() => document.activeElement?.getAttribute("aria-label")), "Cerrar", "el foco va al botón de cerrar");
   await page.keyboard.press("Escape");
   await dialogo.waitFor({ state: "detached" });

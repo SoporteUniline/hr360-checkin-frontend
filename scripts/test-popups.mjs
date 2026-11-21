@@ -50,3 +50,13 @@ test("historial en el navegador: tolera datos dañados y almacenamiento bloquead
   assert.deepEqual(leerHistorial(bloqueado), {});
   assert.doesNotThrow(() => guardarVisto(bloqueado, 1));
 });
+
+test("botón a Contratar con el cupón ya escrito y «Válido hasta…»", async () => {
+  const { enlaceConCupon, validoHasta } = await import("../src/lib/popups/reglas.mjs");
+  assert.equal(enlaceConCupon("/contratar-plan", "BUENFIN2026"), "/contratar-plan?cupon=BUENFIN2026");
+  assert.equal(enlaceConCupon("/contratar-plan?x=1", "A-1"), "/contratar-plan?x=1&cupon=A-1");
+  assert.equal(enlaceConCupon("/cotiza", "BUENFIN2026"), "/cotiza");
+  assert.equal(enlaceConCupon("/contratar-plan", null), "/contratar-plan");
+  assert.equal(validoHasta("2026-11-30 23:59:00"), "30 de noviembre");
+  assert.equal(validoHasta(null), null);
+});
