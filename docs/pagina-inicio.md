@@ -25,3 +25,25 @@ Reglas del contenido:
 
 Pendiente: los componentes anteriores (`MarketingLanding.jsx`, `LandingHeader.jsx`) ya no se
 usan; se borran solo con `CONFIRMO`.
+
+## Versión 2 (21/11/2026): carrusel, franjas lado a lado, la ley y el blog
+
+- **Portada:** `HeroCarrusel.jsx` + `diapositivas.js`. Cinco diapositivas (foto + frase + botón) que pasan cada
+  6 s; se pausan al pasar el cursor o con el botón ❚❚, y se mueven con flechas, puntos o teclado. Con
+  «reducir movimiento» no avanzan solas. Solo la primera usa `h1`.
+- **Franjas a todo lo ancho, lado a lado:** «Checa donde trabaja tu equipo» y «Mi espacio» en gris, horas extra en
+  azul, contratos en violeta e indicadores en azul marino (texto y cifras a la izquierda, gráficas a la derecha).
+- **La ley** (`SeccionLey.jsx`, `#ley`): artículo 132 fr. XXXIV, multa de 250 a 5,000 UMA que cuenta de 0 a
+  $586,550 y la jornada de 48 a 40 h; enlaza a la guía del blog.
+- **Blog** (`/blog`, `/blog/[slug]`): contenido en `src/lib/blog/articulos.js`. Cinco artículos con resumen,
+  preguntas frecuentes, fuentes y aviso legal. Cada artículo trae `canonical`, Open Graph y datos estructurados
+  (Article, FAQPage, BreadcrumbList). `/blog-y-noticias` (apagado) redirige a `/blog`.
+- **Buscadores:** `src/app/sitemap.js` (páginas públicas y artículos) y `src/app/robots.js`. Solo el dominio de
+  producción (`https://adamia.com.mx`, según `NEXT_PUBLIC_RUTA_DOMAIN`) se deja indexar; dev pide no indexar.
+- Encabezado y pie compartidos con el blog: `SitioEncabezado.jsx`, `SitioPie.jsx`.
+
+### Fuentes de los datos legales
+Esta sesión no pudo abrir el DOF ni el sitio de la Cámara de Diputados (red restringida). Los datos se tomaron solo
+donde coinciden varias fuentes (despachos y medios especializados, listados en cada artículo) y se cita el documento
+oficial. ❓ PENDIENTE: que un abogado laboral revise los cinco artículos antes de llevarlos a producción, y
+actualizarlos cuando la STPS publique las disposiciones del registro electrónico.

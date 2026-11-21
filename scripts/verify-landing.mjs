@@ -42,6 +42,15 @@ try {
   await page.waitForFunction(() => document.querySelector("#h-rows .trow b").textContent === "Ana Torres", null, { timeout: 3000 });
   assert.equal(await page.locator("#k-pres-n").innerText(), "22");
 
+  // Carrusel: pasa solo a la siguiente diapositiva y se puede pausar.
+  const slideActual = () => page.evaluate(() => [...document.querySelectorAll(".carr .slide")].findIndex((d) => d.classList.contains("on")));
+  assert.equal(await slideActual(), 0);
+  await page.waitForFunction(() => document.querySelectorAll(".carr .slide")[1].classList.contains("on"), null, { timeout: 8000 });
+  await page.getByRole("tab", { name: "Ir a 3: Checa donde trabaja tu equipo." }).click();
+  assert.equal(await slideActual(), 2);
+  await page.mouse.move(5, 5);
+
+
   // Horas extra: las cifras arrancan en 0 y llegan a 13 h 30 min autorizadas.
   const hx = page.locator("#hx-block .stats b").first();
   assert.equal(await hx.innerText(), "0 h", "antes de verse empieza en 0");
@@ -54,6 +63,11 @@ try {
   await page.getByText("Ana Torres pasó del límite semanal").waitFor();
   await page.getByText("Correo · Regla de aviso").first().waitFor();
   assert.equal(await page.locator(".wk-row.ex").count(), 2, "Ana y Carlos exceden 46 h");
+
+  // La ley: la multa cuenta desde 0 hasta $586,550 y enlaza a la guía del blog.
+  await page.locator("#ley").scrollIntoViewIfNeeded();
+  await page.waitForFunction(() => document.querySelector("#ley .multa b.max span").textContent === "$586,550", null, { timeout: 4000 });
+  assert.equal(await page.locator("#ley a.btn-primary").getAttribute("href"), "/blog/registro-electronico-jornada-2027");
 
   // Módulos: 36 herramientas en 5 grupos.
   await page.locator("#allm").scrollIntoViewIfNeeded();
@@ -68,6 +82,23 @@ try {
   await page.locator(".top-actions .login").click();
   await page.waitForURL("**/login");
   await dormir(3000);
+
+  // Blog: lista, artículo con datos estructurados, sitemap y robots (fuera de producción no se indexa).
+  await page.goto(base + "/blog", { waitUntil: "domcontentloaded" });
+  assert.equal(await page.locator(".post-card").count(), 5);
+  await page.locator(".post-card.principal").click();
+  await page.waitForURL("**/blog/registro-electronico-jornada-2027");
+  await page.getByRole("heading", { level: 1, name: "Registro electrónico de la jornada: obligatorio desde 2027" }).waitFor();
+  const ld = await page.locator('script[type="application/ld+json"]').allTextContents();
+  assert.ok(ld.some((t) => JSON.parse(t)["@type"] === "FAQPage"), "FAQPage en el artículo");
+  assert.match(await page.locator("link[rel=canonical]").getAttribute("href"), /\/blog\/registro-electronico-jornada-2027$/);
+  const mapa = await (await fetch(base + "/sitemap.xml")).text();
+  assert.match(mapa, /blog\/multas-registro-jornada-laboral/);
+  const robots = await (await fetch(base + "/robots.txt")).text();
+  assert.match(robots, /Disallow: \/\s*$/m, "fuera de producción no se indexa");
+  assert.equal((await fetch(base + "/blog/no-existe")).status, 404);
+  await page.goto(base + "/blog-y-noticias");
+  await page.waitForURL("**/blog");
 
   // Celular: sin desbordes horizontales.
   const movil = await ctx.newPage();
@@ -88,7 +119,7 @@ try {
 
   assert.deepEqual(errores, []);
   exito = true;
-  console.log("OK página de inicio: checada rostro → GPS → registro sincronizada con el panel, cifras desde 0, reporte semanal con notificaciones, 36 módulos, enlaces, celular y reducir movimiento");
+  console.log("OK página de inicio y blog: carrusel, ley con multa animada, blog con datos estructurados, sitemap y robots, checada rostro → GPS → registro sincronizada con el panel, cifras desde 0, reporte semanal con notificaciones, 36 módulos, enlaces, celular y reducir movimiento");
 } finally {
   await browser.close();
   next.kill();

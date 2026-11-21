@@ -56,6 +56,8 @@ const nextConfig = {
       // campaña o en «Mis resultados». La entrada del módulo decide la pestaña según el rol.
       a("/panel/evaluaciones/:vista(tablero|resultados|seguimiento)", "/panel/evaluaciones"),
       a("/empleado/panel/evaluaciones/:vista(tablero|resultados|seguimiento)", "/empleado/panel/evaluaciones"),
+      // (21/11/2026) El blog vive en /blog; la página vieja estaba apagada.
+      a("/blog-y-noticias", "/blog"),
     ];
   },
 

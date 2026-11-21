@@ -9,6 +9,10 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { iniciarAnimaciones } from "./animaciones";
+import HeroCarrusel from "./HeroCarrusel";
+import SeccionLey from "./SeccionLey";
+import SitioEncabezado from "./SitioEncabezado";
+import SitioPie from "./SitioPie";
 import "./landing-home.css";
 
 export default function LandingHome() {
@@ -17,23 +21,12 @@ export default function LandingHome() {
   return (
     <div className="lh" ref={raiz}>
       <div>
-        <header className="top">
-          <div className="wrap">
-            <Link className="brand" href="/" aria-label="ADAMIA, inicio"><img src="/landing/adamia-a.png" alt="" width={30} height={28} /><span>ADAMIA</span></Link>
-            <nav className="nav" aria-label="Secciones"><a href="#producto">Producto</a><a href="#empresa">Para tu empresa</a></nav>
-            <div className="top-actions"><Link className="login" href="/login">Iniciar sesión</Link><Link className="btn btn-primary" href="/contacto">Solicitar demo</Link></div>
-          </div>
-        </header>
+        <SitioEncabezado />
         <main id="inicio">
           <section className="hero">
             <div className="wrap">
-              <span className="eyebrow">Recursos Humanos para empresas en México</span>
-              <h1><span className="l">Tu gente checa.</span><span className="l">Tú tienes <span className="mark">el control.</span></span></h1>
-              <p className="lead">Asistencia desde el celular, permisos por WhatsApp y contratos en un solo lugar.</p>
-              <div className="ctas">
-                <Link className="btn btn-primary" href="/contacto">Solicitar demo <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg></Link>
-                <a className="btn btn-line" href="#producto">Ver cómo funciona</a>
-              </div>
+              <HeroCarrusel />
+              <p className="sync-tit">Así se ve en vivo: <b>tu gente checa y RH lo recibe al instante.</b></p>
               <div className="sync" aria-label="Ejemplo: una persona checa en su celular y la entrada aparece al instante en el panel de RH">
                 <div className="phone">
                   <div className="scr" id="h-scr">
@@ -98,17 +91,7 @@ export default function LandingHome() {
             </div>
             <div className="marq" aria-hidden="true"><div className="marq-in" id="marq"><span>Reconocimiento facial</span><span>Validación GPS</span><span>Funciona sin internet</span><span>Horas extra según la LFT</span><span>Vacaciones y permisos</span><span>Aprobación por WhatsApp</span><span>Contratos y actas</span><span>Activos y uniformes</span><span>Aguinaldos y finiquitos</span><span>Evaluaciones 360°</span><span>Varias sucursales</span><span aria-hidden="true">Reconocimiento facial</span><span aria-hidden="true">Validación GPS</span><span aria-hidden="true">Funciona sin internet</span><span aria-hidden="true">Horas extra según la LFT</span><span aria-hidden="true">Vacaciones y permisos</span><span aria-hidden="true">Aprobación por WhatsApp</span><span aria-hidden="true">Contratos y actas</span><span aria-hidden="true">Activos y uniformes</span><span aria-hidden="true">Aguinaldos y finiquitos</span><span aria-hidden="true">Evaluaciones 360°</span><span aria-hidden="true">Varias sucursales</span></div></div>
           </section>
-          <section className="band">
-            <div className="wrap">
-              <div className="photo reveal" id="band">
-                <img src="/landing/planta.webp" alt="Trabajadora de una planta empacadora checando su entrada desde el celular" width={1400} height={788} />
-                <div className="float-card" data-t={0} style={{right: '4%', bottom: '12%'}}><i><svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5 9-10" /></svg></i><div>Entrada registrada · 08:58<small>Planta Empaque</small></div></div>
-                <div className="float-card bob" data-t={1} style={{right: '4%', bottom: '31%'}}><i style={{background: 'var(--blue)'}}><svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" /></svg></i><div>Ubicación validada<small>38 m de 100 m</small></div></div>
-                <div className="float-card" data-t={2} style={{left: '4%', top: '8%'}}><i style={{background: 'var(--violet)'}}><svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><circle cx={12} cy={8} r={4} /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" /></svg></i><div>Rostro verificado<small>Ana Torres · Empaque</small></div></div>
-              </div>
-            </div>
-          </section>
-          <section className="blk" id="producto">
+          <section className="fullband gris" id="producto">
             <div className="wrap row2">
               <div className="txt reveal">
                 <h2>Checa donde trabaja tu equipo.</h2>
@@ -150,7 +133,7 @@ export default function LandingHome() {
               </div>
             </div>
           </section>
-          <section className="blk">
+          <section className="fullband azul">
             <div className="wrap">
               <div className="solid blue reveal" id="hx-block">
                 <div className="grid2">
@@ -205,9 +188,10 @@ export default function LandingHome() {
               </div>
             </div>
           </section>
-          <section className="blk">
+          <SeccionLey />
+          <section className="fullband violeta">
             <div className="wrap">
-              <div className="stage lav solid violet reveal" style={{minHeight: 0}} id="docs-stage">
+              <div className="stage solid violet reveal" style={{minHeight: 0}} id="docs-stage">
                 <div className="row2" style={{width: '100%'}}>
                   <div className="txt" style={{paddingLeft: 'clamp(0px,3vw,36px)'}}>
                     <h2>Contratos y registros en orden.</h2>
@@ -243,7 +227,7 @@ export default function LandingHome() {
               </div>
             </div>
           </section>
-          <section className="blk">
+          <section className="fullband gris">
             <div className="wrap row2">
               <div className="txt reveal">
                 <h2>Cada colaborador tiene su espacio.</h2>
@@ -264,21 +248,21 @@ export default function LandingHome() {
               </div>
             </div>
           </section>
-          <section className="blk">
+          <section className="fullband marino">
             <div className="wrap">
               <div className="solid navy reveal" id="num-block">
-                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap'}}>
-                  <div style={{display: 'grid', gap: 14, maxWidth: 620}}>
-                    <span className="eyeb">Indicadores</span>
-                    <h2>Tu operación, en números. En tiempo real.</h2>
-                  </div>
+                <div className="ind-grid">
+                <div className="ind-txt">
+                  <span className="eyeb">Indicadores</span>
+                  <h2>Tu operación, en números. En tiempo real.</h2>
+                  <p>Asistencia, retardos y horas extra de todas tus sucursales, al momento.</p>
                   <span className="tag-ej">Datos de ejemplo</span>
-                </div>
                 <div className="nums">
                   <div><b data-to={97} data-fmt="%">0</b><span>asistencia del mes</span></div>
                   <div><b data-to={128}>0</b><span>presentes hoy</span></div>
                   <div><b data-to={4}>0</b><span>retardos hoy</span></div>
                   <div><b data-to={11} data-fmt="h">0</b><span>horas extra hoy</span></div>
+                </div>
                 </div>
                 <div className="charts2">
                   <div className="chartcard">
@@ -300,6 +284,7 @@ export default function LandingHome() {
                       <ul><li><span style={{"--c": '#16a34a'}}>Asistencia</span><b>124</b></li><li><span style={{"--c": '#d97706'}}>Retardo</span><b>4</b></li><li><span style={{"--c": '#dc2626'}}>Ausencia</span><b>4</b></li></ul>
                     </div>
                   </div>
+                </div>
                 </div>
               </div>
             </div>
@@ -339,12 +324,7 @@ export default function LandingHome() {
             </div>
           </section>
         </main>
-        <footer>
-          <div className="wrap">
-            <Link className="brand" href="/" aria-label="ADAMIA, inicio"><img src="/landing/adamia-a.png" alt="" width={24} height={22} style={{height: 22}} /><span style={{fontSize: '1rem'}}>ADAMIA</span></Link>
-            <nav aria-label="Legal"><Link href="/contacto">Contacto</Link><Link href="/aviso-privacidad">Aviso de privacidad</Link></nav>
-          </div>
-        </footer>
+        <SitioPie />
       </div>
     </div>
   );
