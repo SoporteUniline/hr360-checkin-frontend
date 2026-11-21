@@ -49,11 +49,11 @@
 	<string>ADAMIA requiere acceso a la cámara para el reconocimiento facial biométrico y la prueba de vida al registrar asistencia.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>ADAMIA utiliza tu ubicación para validar que el registro de asistencia se realice dentro del perímetro de tu sucursal o centro de trabajo.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>ADAMIA utiliza tu ubicación para verificar el registro de asistencia dentro de la zona de trabajo asignada.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>ADAMIA requiere acceso a la galería para la carga de documentos y evidencias laborales.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>ADAMIA requiere permiso para guardar recibos y comprobantes de asistencia en tu dispositivo.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

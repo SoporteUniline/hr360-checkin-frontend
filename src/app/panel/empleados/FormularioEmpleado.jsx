@@ -24,6 +24,7 @@ import ImageUpload from "./ImageUpload";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { Icon } from "@iconify/react";
 import ErrorPage from "@/components/ErrorPage";
+import { isNativeClient } from "@/lib/native-app";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
@@ -646,14 +647,18 @@ export default function FormularioEmpleado({
         "Error desconocido";
 
       if (status === 403) {
-        // Límite de empleados alcanzado — mostrar aviso con link a suscripción
+        // En app nativa no mostrar enlace externo de suscripción
         enqueueSnackbar(
-          <span>
-            {mensaje}{" "}
-            <a href="/panel/mi-suscripcion" className="underline font-semibold">
-              Mejorar plan →
-            </a>
-          </span>,
+          isNativeClient() ? (
+            mensaje
+          ) : (
+            <span>
+              {mensaje}{" "}
+              <a href="/panel/mi-suscripcion" className="underline font-semibold">
+                Mejorar plan →
+              </a>
+            </span>
+          ),
           { variant: "warning", autoHideDuration: 6000 },
         );
       } else {
