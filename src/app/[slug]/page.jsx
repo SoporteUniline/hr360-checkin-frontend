@@ -6,6 +6,7 @@ import RelojChecador from "@/components/RelojChecador";
 import OfflineClockSetup from '@/components/Clock/OfflineClockSetup';
 import { loadBrowserFaceApi } from "@/lib/faceapi-browser";
 import { clockStore } from '@/lib/offline-clock';
+import { validadaHoy, guardarValidada, olvidarValidada } from "@/lib/reloj/suscripcionDia.mjs";
 
 function RedirectingPage({ message }) {
   const router = useRouter();
@@ -49,6 +50,14 @@ export default function ChecadorPage() {
 
   useEffect(() => {
     const fetchAndValidate = async () => {
+      // (21/11/2026) Una vez al día: si hoy ya se validó este reloj en el dispositivo, abre directo.
+      const hoy = validadaHoy(`slug:${slug}`);
+      if (hoy?.idEmpresa) {
+        setNombreEmpresa(hoy.nombre || "");
+        setIdEmpresa(hoy.idEmpresa);
+        setLoading(false);
+        return;
+      }
       try {
         const res = await axiosInstance.get(`/empresas/slug/${slug}`);
         const id = res.data.id_empresa;
@@ -60,10 +69,13 @@ export default function ChecadorPage() {
 
         const statusData = await response.json();
         if (!statusData.hasActivePlan) {
+          olvidarValidada(`slug:${slug}`);
           setError("Suscripción inactiva");
           return;
         }
 
+        guardarValidada(`slug:${slug}`, { idEmpresa: id, nombre: res.data.nombre || res.data.nombre_empresa || "" });
+        guardarValidada(`empresa:${id}`);
         setIdEmpresa(id);
       } catch (err) {
         if (err.response?.status === 404) {
