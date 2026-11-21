@@ -1,16 +1,11 @@
 // app/layout.jsx
 // Tipografía oficial ADAMIA: Inter
-import { Inter } from "next/font/google";
+import { inter } from "@/fonts";
 import "./globals.css";
 import { ClientProviders } from "@/app/ClientProviders";
 import GlobalThirdPartyScripts from "@/components/GlobalThirdPartyScripts";
 import { NATIVE_PREPAINT_SCRIPT } from "@/lib/native-app";
 
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-  display: "swap",
-});
 
 export const viewport = {
   width: "device-width",
