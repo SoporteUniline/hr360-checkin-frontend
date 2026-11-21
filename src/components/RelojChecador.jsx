@@ -500,7 +500,7 @@ export default function RelojChecador({
       <main className="bg-slate-50 md:min-h-screen md:p-4">
         <div className="mx-auto max-w-7xl md:space-y-6">
           <div className="hidden md:block"><ClockNavigation companyId={idEmpresa} companySlug={companySlug} /></div>
-          <div className="hidden md:block rounded-xl border border-blue-100 bg-linear-to-r from-indigo-50 to-blue-50 p-6">
+          <div className="hidden md:block rounded-xl border border-blue-100 bg-indigo-50/60 p-6">
             <div className="flex items-center gap-3">
               <div className="rounded-lg bg-blue-600 p-2.5">
                 <Clock4 className="w-5 h-5 text-white" />
@@ -557,7 +557,7 @@ export default function RelojChecador({
                   <img src="/assets/adamia-logo-reloj.png" alt="ADAMIA" width={600} height={159} className="h-7 w-auto" />
                 </span>
                 {offline && <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">{localFacesReady ? "Sin conexión · rostro listo" : "Sin conexión"}</span>}
-                <span onClick={tocarHora} className="shrink-0 select-none bg-linear-to-r from-brand to-brand-accent bg-clip-text text-lg font-bold tabular-nums text-transparent">{horaCorta}</span>
+                <span onClick={tocarHora} className="shrink-0 select-none text-brand text-lg font-bold tabular-nums ">{horaCorta}</span>
               </div>
               {menuMovil && dataUser && (
                 <div className="md:hidden border-b border-slate-200 bg-white px-3 py-3 space-y-2">
@@ -759,7 +759,7 @@ export default function RelojChecador({
             <div role="status" aria-live="polite" className="md:hidden fixed inset-x-3 z-100 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] flex items-center gap-3 rounded-2xl bg-white p-3 shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-200">
               {popupInfo.foto_perfil && !popupInfo.foto_perfil.endsWith("/assets/user.png")
                 ? <img src={popupInfo.foto_perfil} alt="" className="size-12 shrink-0 rounded-full object-cover" />
-                : <span className="grid size-12 shrink-0 place-items-center rounded-full bg-linear-to-br from-brand to-brand-accent font-bold text-white">{iniciales || "?"}</span>}
+                : <span className="grid size-12 shrink-0 place-items-center rounded-full bg-brand font-bold text-white">{iniciales || "?"}</span>}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-base font-bold text-slate-900">{popupInfo.nombre}</p>
                 <p className={`mt-0.5 inline-flex max-w-full items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold ${colores}`}>

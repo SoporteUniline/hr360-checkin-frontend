@@ -83,7 +83,7 @@ export default function TiposRegistro() {
           </CampoFiltro>
           <div className="flex justify-start md:justify-end">
             <Button
-              className="h-[38px] w-full gap-2 rounded-md bg-gradient-to-br from-brand to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95 md:w-auto"
+              className="h-[38px] w-full gap-2 rounded-md bg-brand font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95 md:w-auto"
               onClick={() => {
                 setEditPerm(null);
                 setOpenForm(true);

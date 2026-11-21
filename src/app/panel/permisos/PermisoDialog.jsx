@@ -379,7 +379,7 @@ export default function PermisoDialog({
          - max-h-[85vh] overflow-y-auto: permite scroll interno si el contenido crece.
          Relación: este modal se invoca desde `src/app/panel/permisos/page.jsx`. */}
         <DialogContent className="p-0 overflow-hidden max-w-[95vw] sm:max-w-xl">
-          <DialogHeader className="p-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white">
+          <DialogHeader className="p-5 bg-brand text-white">
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
               <span className="grid size-9 place-items-center rounded-lg bg-white/15">
                 <CalendarCheck2 className="size-5 text-white" />

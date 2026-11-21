@@ -7,25 +7,7 @@ import { useState, useMemo } from "react";
 import { Search, Plus, X, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EstadoBadge } from "@/lib/estados";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 
-const AVATAR_COLORS = [
-  "#F97316",
-  "#3B82F6",
-  "#10B981",
-  "#8B5CF6",
-  "#EF4444",
-  "#F59E0B",
-  "#EC4899",
-  "#14B8A6",
-];
-
-function getAvatarColor(str = "") {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++)
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
 
 function getInitials(nombre = "", apellido = "") {
   return `${nombre[0] || ""}${apellido[0] || ""}`.toUpperCase();
@@ -45,7 +27,6 @@ const TABS = [
 
 function EmpleadoCard({ emp, onClick }) {
   const nombreCompleto = getNombreCompleto(emp);
-  const avatarColor = getAvatarColor(nombreCompleto);
   const initials = getInitials(emp.nombre, emp.apellido_paterno);
   const subtitulo = [emp.puesto, emp.departamento].filter(Boolean).join(" · ");
 
@@ -76,8 +57,7 @@ function EmpleadoCard({ emp, onClick }) {
         />
       ) : (
         <div
-          className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
-          style={{ backgroundColor: avatarColor }}
+          className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold bg-blue-50 text-blue-700 shrink-0"
         >
           {initials}
         </div>
@@ -219,16 +199,14 @@ export default function MobileEmpleadosView({
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
-      {/* Header oscuro */}
-      <div className="bg-[#1E293B] text-white px-4 pt-4 pb-3 shrink-0">
+      {/* Encabezado blanco con acentos azul ADAMIA, como la app del empleado (21/11/2026; antes azul pizarra oscuro).
+          Sin botón de menú propio: el encabezado general del panel ya lo tiene. */}
+      <div className="bg-white text-[#080d36] px-4 pt-3 pb-3 shrink-0 border-b border-slate-200">
         <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <SidebarTrigger className="text-white hover:bg-white/10 -ml-1" />
-            <h1 className="text-lg font-bold">Empleados</h1>
-          </div>
+          <h1 className="text-2xl font-bold tracking-tight">Empleados</h1>
           <button
             onClick={() => abrirFormulario(null, false, false)}
-            className="flex items-center gap-1.5 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white text-sm font-medium px-3 py-1.5 rounded-lg transition-colors"
+            className="flex min-h-10 items-center gap-1.5 bg-brand hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold px-3.5 rounded-xl transition-colors"
           >
             <Plus className="w-4 h-4" />
             Nuevo
@@ -238,18 +216,19 @@ export default function MobileEmpleadosView({
         {/* Buscador */}
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/50 pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
             <input
               type="text"
               value={localSearch}
               onChange={(e) => setLocalSearch(e.target.value)}
-              placeholder="Nombre, puesto, departamento..."
-              className="w-full bg-white/10 text-white placeholder-white/50 text-sm pl-9 pr-9 py-2 rounded-lg border border-white/20 focus:outline-none focus:border-white/50"
+              placeholder="Buscar por nombre o puesto"
+              className="w-full min-h-11 bg-slate-50 text-[#080d36] placeholder-slate-400 text-base pl-9 pr-9 rounded-xl border border-slate-200 focus:outline-none focus:border-brand focus:bg-white"
             />
             {localSearch && (
               <button
                 onClick={() => setLocalSearch("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/50 hover:text-white"
+                aria-label="Borrar búsqueda"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -258,7 +237,8 @@ export default function MobileEmpleadosView({
 
           <button
             onClick={() => setShowFilters(true)}
-            className="relative p-2.5 bg-blue-500 rounded-lg text-white shrink-0 active:bg-blue-700"
+            aria-label="Filtros"
+            className="relative grid size-11 place-items-center rounded-xl border border-slate-200 bg-white text-brand shrink-0 active:bg-blue-50"
           >
             <ListFilter className="w-4 h-4" />
 

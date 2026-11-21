@@ -77,7 +77,7 @@ export default function VistasGuardadas({
         }}
         className={`rounded-xl border px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors ${
           vistaActiva === null && !hayFiltros
-            ? "border-brand bg-gradient-to-br from-blue-50 to-violet-50 text-[#1d4ed8] shadow-[inset_0_0_0_1px_#2563eb]"
+            ? "border-brand bg-blue-50/60 text-[#1d4ed8] shadow-[inset_0_0_0_1px_#2563eb]"
             : "border-gray-200 bg-white text-gray-600 hover:border-blue-200 hover:text-gray-900"
         }`}
       >
@@ -89,7 +89,7 @@ export default function VistasGuardadas({
           key={v.nombre}
           className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors cursor-pointer ${
             vistaActiva === v.nombre
-              ? "border-brand bg-gradient-to-br from-blue-50 to-violet-50 text-[#1d4ed8] shadow-[inset_0_0_0_1px_#2563eb]"
+              ? "border-brand bg-blue-50/60 text-[#1d4ed8] shadow-[inset_0_0_0_1px_#2563eb]"
               : "border-gray-200 bg-white text-gray-600 hover:border-blue-200 hover:text-gray-900"
           }`}
           role="button"
@@ -137,13 +137,13 @@ export default function VistasGuardadas({
         <DialogContent className="gap-0 overflow-hidden rounded-2xl p-0 sm:max-w-[420px]">
           <DialogHeader className="px-6 pb-4 pt-5">
             <DialogTitle className="flex items-center gap-2 text-base font-extrabold tracking-tight text-gray-900">
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-brand to-brand-accent shadow-[0_5px_12px_rgba(37,99,235,0.3)]">
+              <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand shadow-[0_5px_12px_rgba(37,99,235,0.3)]">
                 <Bookmark className="h-4 w-4 text-white" />
               </span>
               Guardar vista
             </DialogTitle>
           </DialogHeader>
-          <div className="h-[2.5px] bg-gradient-to-r from-brand to-brand-accent" />
+          <div className="h-[2.5px] bg-brand" />
           <div className="px-6 py-5">
             <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-widest text-gray-500">
               Nombre de la vista
@@ -175,7 +175,7 @@ export default function VistasGuardadas({
             <Button
               onClick={confirmarGuardar}
               disabled={!nombreVista.trim()}
-              className="rounded-xl bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
+              className="rounded-xl bg-brand font-semibold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
             >
               Guardar vista
             </Button>

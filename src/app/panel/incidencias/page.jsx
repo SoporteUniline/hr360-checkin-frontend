@@ -776,7 +776,7 @@ export default function CentroIncidenciasPage() {
                   variant: "success",
                 })
               }
-              className="h-11 rounded-xl bg-gradient-to-br from-brand to-brand-accent px-5 font-bold text-white shadow-sm disabled:opacity-45"
+              className="h-11 rounded-xl bg-brand px-5 font-bold text-white shadow-sm disabled:opacity-45"
               title={
                 totalIncidencias > 0
                   ? `Hay ${totalIncidencias} incidencia(s) pendientes`
@@ -866,7 +866,7 @@ export default function CentroIncidenciasPage() {
                   }}
                   className={
                     filtro === key
-                      ? "min-h-10 rounded-xl bg-gradient-to-br from-brand to-brand-accent px-3 text-xs font-bold text-white shadow-sm"
+                      ? "min-h-10 rounded-xl bg-brand px-3 text-xs font-bold text-white shadow-sm"
                       : "min-h-10 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-600 transition hover:border-blue-200 hover:text-blue-600"
                   }
                 >
@@ -913,7 +913,7 @@ export default function CentroIncidenciasPage() {
         </div>
 
         {seleccionados.size > 0 && (
-          <div className="flex flex-col gap-3 border-b border-blue-100 bg-gradient-to-r from-blue-50/80 to-violet-50/80 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-3 border-b border-blue-100 bg-blue-50/80 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-sm font-bold text-slate-800">
               {seleccionados.size} empleado
               {seleccionados.size === 1 ? "" : "s"} seleccionado
@@ -1006,7 +1006,7 @@ export default function CentroIncidenciasPage() {
                         key={emp.key}
                         className={
                           open
-                            ? "border-b border-blue-100 bg-gradient-to-r from-blue-50/35 to-violet-50/35"
+                            ? "border-b border-blue-100 bg-blue-50/35 "
                             : "border-b border-slate-100 transition hover:bg-slate-50/70"
                         }
                       >
@@ -1025,7 +1025,7 @@ export default function CentroIncidenciasPage() {
                             onClick={() => setExpandido(open ? null : emp.key)}
                             className="flex min-h-10 w-full items-center gap-3 text-left"
                           >
-                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-50 to-violet-100 text-xs font-extrabold text-blue-700">
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50/60 text-xs font-extrabold text-blue-700">
                               {emp.nombre
                                 .split(" ")
                                 .map((x) => x[0])

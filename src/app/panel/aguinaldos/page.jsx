@@ -2253,7 +2253,7 @@ export default function PageAguinaldos() {
                   <Button
                     onClick={calcularAguinaldos}
                     disabled={empleadosSeleccionados.length === 0}
-                    className="h-[38px] rounded-md bg-gradient-to-br from-brand to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95 disabled:opacity-50"
+                    className="h-[38px] rounded-md bg-brand font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95 disabled:opacity-50"
                   >
                     <Calculator className="h-4 w-4 mr-2" /> Calcular
                   </Button>
@@ -2486,7 +2486,7 @@ export default function PageAguinaldos() {
         onOpenChange={(open) => !open && setDeleteRow(null)}
       >
         <AlertDialogContent className="sm:max-w-[425px] p-0">
-          <AlertDialogHeader className="bg-gradient-to-r from-red-500 to-red-600 text-white p-6 rounded-t-lg">
+          <AlertDialogHeader className="bg-red-600 text-white p-6 rounded-t-lg">
             <div className="flex items-center gap-3">
               <AlertTriangle className="h-6 w-6" />
               <AlertDialogTitle className="text-white">

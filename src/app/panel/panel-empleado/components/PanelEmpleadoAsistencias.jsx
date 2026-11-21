@@ -225,7 +225,7 @@ export default function PanelEmpleadoAsistencias({ datosEmpleado }) {
         </div>
         <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-brand to-brand-accent transition-all"
+            className="h-full rounded-full bg-brand transition-all"
             style={{ width: `${porcentaje}%` }}
           />
         </div>
