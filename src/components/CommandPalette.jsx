@@ -6,6 +6,7 @@ import { Command } from "cmdk";
 import axiosInstance from "@/lib/axios";
 import { useAuth } from "@/context/AuthContext";
 import { RECRUITMENT_NAV } from "@/components/reclutamiento/navigation";
+import { isNativeClient } from "@/lib/native-app";
 import {
   Users,
   Building2,
@@ -492,9 +493,16 @@ export function CommandPalette() {
   const [query, setQuery] = useState("");
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [isNative, setIsNative] = useState(false);
   const debounceRef = useRef(null);
   const router = useRouter();
   const { dataUser } = useAuth();
+
+  useEffect(() => {
+    if (isNativeClient()) {
+      setIsNative(true);
+    }
+  }, []);
 
   // Rol efectivo: "User" → "Recruiter", igual que en NavMain
   const effectiveRole =
@@ -507,10 +515,11 @@ export function CommandPalette() {
     return ALL_NAV_ITEMS.filter(
       (item) =>
         item.rol === effectiveRole &&
+        (!isNative || item.url !== "/panel/mi-suscripcion") &&
         (item.title.toLowerCase().includes(q) ||
           item.section.toLowerCase().includes(q)),
     ).slice(0, 6);
-  }, [query, effectiveRole]);
+  }, [query, effectiveRole, isNative]);
 
   // Abrir/cerrar con Cmd+K / Ctrl+K
   useEffect(() => {
