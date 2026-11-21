@@ -162,6 +162,7 @@ Pedido del dueño: «cada que entra al reloj valida; que lo haga una vez al día
   la medianoche validan otra vez. Un resultado inactivo no se guarda (al reactivar, funciona de inmediato).
 - ⚠️ Riesgo (ya existía): el backend no revisa la suscripción al registrar checadas; el único control es esta pantalla
   (y el modo sin conexión ya permitía 7 días). Con este cambio, si la suscripción vence a media jornada, ese dispositivo
-  sigue abriendo el reloj hasta la medianoche. 💡 PROPUESTO: validar la suscripción en el backend al sincronizar.
+  sigue abriendo el reloj hasta la medianoche. ✅ Aceptado por el dueño (21/11/2026: «no importa que dure hasta
+  medianoche checando, no pasa nada»). 💡 Opcional a futuro: validar la suscripción en el backend al sincronizar.
 - Pruebas: `scripts/test-suscripcion-dia.mjs`; `verify-employee-mobile.cjs` (segunda entrada abre en < 2 s aunque el
   servidor tarde 3 s; reproducido en rojo sin el cambio).
