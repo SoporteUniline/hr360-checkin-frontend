@@ -460,13 +460,14 @@
 
 /* ===== v2 (21/11/2026): carrusel, franjas de color lado a lado y sección de la ley ===== */
 /* Carrusel de la portada: foto con acercamiento lento y tarjeta de texto encima. */
-.lh .carr { position: relative; width: 100%; max-width: 1160px; margin: 0 auto; border-radius: 32px; overflow: hidden; aspect-ratio: 16 / 7.2; background: var(--soft); text-align: left; }
-.lh .slide { position: absolute; inset: 0; opacity: 0; visibility: hidden; transition: opacity .9s var(--ease), visibility 0s linear .9s; }
+.lh .carr { position: relative; display: grid; width: 100%; max-width: 1160px; margin: 0 auto; text-align: left; }
+.lh .slide { grid-area: 1 / 1; display: grid; grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr); gap: clamp(28px, 4.5vw, 72px); align-items: center; opacity: 0; visibility: hidden; transition: opacity .9s var(--ease), visibility 0s linear .9s; }
 .lh .slide.on { opacity: 1; visibility: visible; transition: opacity .9s var(--ease); }
-.lh .slide img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 70% center; transform: scale(1); }
-.lh .slide.on img { animation: lh-acerca 7s ease-out forwards; }
-@keyframes lh-acerca { to { transform: scale(1.08); } }
-.lh .slide-txt { position: absolute; left: 3.5%; top: 50%; transform: translateY(-50%); width: min(560px, 50%); background: #fff; border-radius: 26px; padding: clamp(22px, 3vw, 40px); display: grid; gap: 14px; box-shadow: var(--shadow); }
+.lh .slide-foto { position: relative; border-radius: 32px; overflow: hidden; aspect-ratio: 5 / 4; background: var(--soft); }
+.lh .slide-foto img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; transform: scale(1); }
+.lh .slide.on .slide-foto img { animation: lh-acerca 7s ease-out forwards; }
+@keyframes lh-acerca { from { transform: scale(1.08); } to { transform: scale(1); } }
+.lh .slide-txt { display: grid; gap: 16px; padding-bottom: 72px; }
 .lh .slide-txt h1, .lh .slide-txt h2 { font-size: clamp(2rem, 4vw, 3.4rem); line-height: 1; font-weight: 800; letter-spacing: -0.04em; }
 .lh .slide .l { display: block; }
 .lh .slide.on .l { animation: lh-linea .8s var(--ease) both; } .lh .slide.on .l:nth-child(2) { animation-delay: .12s; }
@@ -477,7 +478,7 @@
 .lh .slide-txt .ctas { justify-content: flex-start; }
 .lh .btn-claro { background: #fff; color: var(--ink); border-color: #c9cde0; }
 .lh .btn-claro:hover { border-color: var(--blue); color: var(--blue); }
-.lh .carr-ctl { position: absolute; left: 50%; transform: translateX(-50%); bottom: 20px; display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, .92); border-radius: 999px; padding: 6px 8px; box-shadow: 0 10px 24px -14px rgba(11, 16, 51, .5); }
+.lh .carr-ctl { position: absolute; left: 0; bottom: 0; border: 1px solid var(--line, #e6e8f0); display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, .92); border-radius: 999px; padding: 6px 8px; box-shadow: 0 10px 24px -14px rgba(11, 16, 51, .5); }
 .lh .carr-btn { width: 34px; height: 34px; border-radius: 50%; border: 0; background: transparent; color: var(--ink); font: 700 1.1rem/1 var(--f); cursor: pointer; }
 .lh .carr-btn:hover, .lh .carr-btn:focus-visible { background: var(--blue-soft); color: var(--blue); outline: none; }
 .lh .carr-dots { display: flex; gap: 6px; }
@@ -535,17 +536,14 @@
 @keyframes lh-crece { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 
 @media (max-width: 980px) {
-  .lh .carr { aspect-ratio: auto; display: grid; }
-  .lh .slide { position: relative; display: none; }
-  .lh .slide.on { display: block; }
-  .lh .slide img { position: relative; aspect-ratio: 4 / 3; height: auto; }
-  .lh .slide-txt { position: relative; left: auto; top: auto; transform: none; width: auto; margin: -40px 14px 70px; }
-  .lh .carr-ctl { bottom: 14px; }
+  .lh .slide { grid-template-columns: minmax(0, 1fr); gap: 24px; align-content: start; }
+  .lh .slide-foto { order: -1; aspect-ratio: 4 / 3; }
+  .lh .carr-ctl { left: 50%; transform: translateX(-50%); }
   .lh .ind-grid, .lh .ley-grid { grid-template-columns: minmax(0, 1fr); gap: 32px; }
   .lh .fullband { padding-block: 72px; margin-top: 80px; }
 }
 @media (max-width: 600px) {
-  .lh .carr { border-radius: 22px; }
+  .lh .slide-foto { border-radius: 22px; }
   .lh .slide-txt h1, .lh .slide-txt h2 { font-size: 2.1rem; }
   .lh .multa { padding: 22px; }
 }
