@@ -1,0 +1,57 @@
+/* Páginas de detalle de Funciones. --c = color de la página (sólido). */
+.lh .dt-hero { background: var(--c); color: #fff; padding-block: 64px 88px; }
+.lh .dt-hero-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr); gap: 56px; align-items: center; }
+.lh .dt-hero-txt { display: grid; gap: 16px; justify-items: start; }
+.lh .dt-volver { color: rgba(255, 255, 255, .85); text-decoration: none; font-weight: 600; font-size: .92rem; }
+.lh .dt-volver:hover, .lh .dt-volver:focus-visible { color: #fff; text-decoration: underline; }
+.lh .dt-hero .eyebrow { color: rgba(255, 255, 255, .8); }
+.lh .dt-hero h1 { color: #fff; font-size: clamp(2.3rem, 4.8vw, 3.8rem); line-height: 1.04; font-weight: 800; }
+.lh .dt-hero .lead { color: rgba(255, 255, 255, .9); font-size: 1.12rem; margin: 0; max-width: 52ch; }
+.lh .dt-hero .ctas { display: flex; flex-wrap: wrap; gap: 12px; }
+.lh .dt-hero .btn-primary, .lh .dt-final .btn-primary { background: #fff; color: var(--ink); }
+.lh .dt-hero .btn-primary:hover, .lh .dt-final .btn-primary:hover { background: #eef1ff; }
+.lh .dt-hero .btn-claro, .lh .dt-final .btn-claro { background: transparent; color: #fff; border-color: rgba(255, 255, 255, .6); }
+.lh .dt-resumen { list-style: none; margin: 0; padding: 26px; display: grid; gap: 14px; background: #fff; color: var(--ink); border-radius: 24px; box-shadow: var(--shadow); }
+.lh .dt-resumen li { position: relative; padding-left: 34px; font-weight: 600; line-height: 1.35; }
+.lh .dt-resumen li::before { content: "✓"; position: absolute; left: 0; top: -1px; width: 24px; height: 24px; border-radius: 50%; background: var(--c); color: #fff; display: grid; place-items: center; font-size: .8rem; font-weight: 800; }
+
+.lh .dt-bloque { padding-block: 88px; }
+.lh .dt-bloque.gris { background: #f3f5f9; }
+.lh .dt-bloque-grid { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 56px; align-items: start; }
+.lh .dt-bloque-txt { display: grid; gap: 14px; position: sticky; top: 110px; }
+.lh .dt-num { font: 800 .9rem/1 var(--fh); color: var(--c); letter-spacing: .08em; }
+.lh .dt-bloque-txt h2 { font-size: clamp(1.9rem, 3.4vw, 2.8rem); line-height: 1.06; font-weight: 800; }
+.lh .dt-bloque-txt p { margin: 0; font-size: 1.08rem; max-width: 42ch; }
+.lh .dt-puntos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.lh .dt-puntos article { display: grid; gap: 6px; align-content: start; padding: 22px; border-radius: 18px; background: #fff; border: 1px solid var(--line); border-top: 4px solid var(--c); }
+.lh .dt-puntos b { color: var(--ink); font: 700 1.06rem/1.25 var(--fh); }
+.lh .dt-puntos span { font-size: .95rem; line-height: 1.5; }
+
+.lh .dt-faq { padding-block: 88px 24px; display: grid; gap: 12px; max-width: 860px; }
+.lh .dt-faq h2, .lh .dt-otras h2 { font-size: clamp(1.8rem, 3vw, 2.4rem); margin-bottom: 12px; }
+.lh .dt-faq details { border: 1px solid var(--line); border-radius: 14px; padding: 4px 18px; }
+.lh .dt-faq summary { cursor: pointer; padding: 14px 0; font-weight: 700; color: var(--ink); }
+.lh .dt-faq details p { margin: 0 0 14px; }
+.lh .dt-otras { padding-block: 64px 24px; }
+.lh .dt-otras-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+.lh .dt-otras-grid a { position: relative; display: grid; gap: 6px; padding: 22px 20px 44px; border-radius: 18px; background: var(--soft); color: var(--body); text-decoration: none; transition: transform .2s var(--ease), background .2s; }
+.lh .dt-otras-grid b { color: var(--ink); font: 700 1.05rem/1.25 var(--fh); }
+.lh .dt-otras-grid i { position: absolute; left: 20px; bottom: 16px; font-style: normal; color: var(--blue); font-weight: 700; }
+.lh .dt-otras-grid a:hover, .lh .dt-otras-grid a:focus-visible { transform: translateY(-3px); background: var(--blue-soft); outline: none; }
+.lh .dt-final { background: var(--ink); color: rgba(255, 255, 255, .8); padding-block: 88px; margin-top: 72px; text-align: center; }
+.lh .dt-final .wrap { display: grid; gap: 14px; justify-items: center; }
+.lh .dt-final h2 { color: #fff; font-size: clamp(2rem, 4vw, 3rem); font-weight: 800; }
+.lh .dt-final p { margin: 0; }
+.lh .dt-final .ctas { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 8px; }
+
+@media (max-width: 980px) {
+  .lh .dt-hero { padding-block: 44px 64px; }
+  .lh .dt-hero-grid, .lh .dt-bloque-grid { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .lh .dt-bloque { padding-block: 64px; }
+  .lh .dt-bloque-txt { position: static; }
+  .lh .dt-otras-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .lh .dt-puntos, .lh .dt-otras-grid { grid-template-columns: minmax(0, 1fr); }
+  .lh .dt-hero .ctas .btn, .lh .dt-final .ctas .btn { flex: 1 1 100%; }
+}
