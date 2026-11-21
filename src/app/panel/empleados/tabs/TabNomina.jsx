@@ -14,6 +14,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { FormLabelWithAsterisk } from "@/components/FormLabelWithAsterisk";
+import { BonosEmpleado, MedioPago } from "./PagoNominaEmpleado";
 
 export default function TabNomina({ renderCampos = () => null, form, soloLectura }) {
   const periodoPago = form.watch("periodo_pago");
@@ -230,6 +231,14 @@ export default function TabNomina({ renderCampos = () => null, form, soloLectura
           {renderCampos("porcentaje", true)}
           {renderCampos("fin", true)}
         </div>
+      </div>
+      {/* (21/11/2026) Nómina R1: cómo se le paga y qué bonos o descuentos tiene. */}
+      <div className="rounded-xl border-2 border-gray-100 bg-white p-6">
+        <h3 className="text-lg font-bold text-gray-900">Pago en la nómina</h3>
+        <p className="mb-4 text-sm text-gray-600">Cómo recibe su pago y sus bonos o descuentos de cada periodo.</p>
+        <MedioPago form={form} soloLectura={soloLectura} />
+        <h4 className="mb-2 mt-6 font-semibold text-gray-900">Bonos y descuentos</h4>
+        <BonosEmpleado idEmpleado={form.watch("id_empleado")} soloLectura={soloLectura} />
       </div>
     </section>
   );

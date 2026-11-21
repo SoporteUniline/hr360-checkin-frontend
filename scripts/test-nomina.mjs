@@ -1,0 +1,26 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { periodoSugerido, acciones, dinero, fechaCorta } from "../src/lib/nomina/nomina.mjs";
+
+test("fechas sugeridas por periodicidad", () => {
+  assert.deepEqual(periodoSugerido("Semanal", "2026-11-21"), { inicio: "2026-11-16", fin: "2026-11-22" });
+  assert.deepEqual(periodoSugerido("Catorcenal", "2026-11-21"), { inicio: "2026-11-16", fin: "2026-11-29" });
+  assert.deepEqual(periodoSugerido("Quincenal", "2026-11-21"), { inicio: "2026-11-16", fin: "2026-11-30" });
+  assert.deepEqual(periodoSugerido("Quincenal", "2026-02-10"), { inicio: "2026-02-01", fin: "2026-02-15" });
+  assert.deepEqual(periodoSugerido("Mensual", "2026-02-10"), { inicio: "2026-02-01", fin: "2026-02-28" });
+  assert.deepEqual(periodoSugerido("Diario", "2026-11-21"), { inicio: "2026-11-21", fin: "2026-11-21" });
+});
+
+test("acciones por estado: solo el dueño autoriza y cancela una autorizada", () => {
+  assert.equal(acciones("borrador", false).editar, true);
+  assert.equal(acciones("por_autorizar", false).autorizar, false);
+  assert.equal(acciones("por_autorizar", true).autorizar, true);
+  assert.equal(acciones("autorizado", false).cancelar, false);
+  assert.equal(acciones("autorizado", true).cancelar, true);
+  assert.equal(acciones("cancelado", true).cancelar, false);
+});
+
+test("formatos", () => {
+  assert.equal(dinero(1650), "$1,650.00");
+  assert.equal(fechaCorta("2026-11-16"), "16/11/2026");
+});

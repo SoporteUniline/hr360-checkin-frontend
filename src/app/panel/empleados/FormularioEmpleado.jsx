@@ -133,6 +133,8 @@ export default function FormularioEmpleado({
       periodo_pago: "sin-seleccion",
       forma_pago: "sin-seleccion",
       forma_calculo: "sin-seleccion",
+      medio_pago: "",
+      monto_transferencia: "",
       banco: "",
       otro_banco: "",
       tipo_cuenta: "Cuenta",
@@ -236,6 +238,8 @@ export default function FormularioEmpleado({
         periodo_pago: restoEmpleado.periodo_pago ?? "sin-seleccion",
         forma_pago: restoEmpleado.forma_pago ?? "sin-seleccion",
         forma_calculo: restoEmpleado.forma_calculo ?? "sin-seleccion",
+        medio_pago: restoEmpleado.medio_pago ?? "",
+        monto_transferencia: restoEmpleado.monto_transferencia ?? "",
 
         cc_vacaciones: restoEmpleado.cc_vacaciones ?? "",
         cc_permisos: restoEmpleado.cc_permisos ?? "",
@@ -394,6 +398,8 @@ export default function FormularioEmpleado({
         "forma_calculo",
         "sueldo",
         "porcentaje",
+        "medio_pago",
+        "monto_transferencia",
       ],
       cuentas: ["banco", "otro_banco", "numero_cuenta", "tipo_cuenta"],
     };

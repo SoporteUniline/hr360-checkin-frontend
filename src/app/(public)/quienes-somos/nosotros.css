@@ -1,0 +1,66 @@
+/* Nosotros: estilo del inicio (.lh). Colores sólidos; la foto de la portada se funde con el azul (máscara, no degradado de color). */
+.lh .ns-hero { position: relative; overflow: hidden; background: var(--blue); color: #fff; min-height: clamp(480px, 40vw, 600px); display: flex; align-items: center; }
+.lh .ns-hero-foto { position: absolute; inset: 0 0 0 auto; width: 58%; -webkit-mask-image: linear-gradient(to right, transparent 0, #000 30%); mask-image: linear-gradient(to right, transparent 0, #000 30%); }
+.lh .ns-hero-foto img { width: 100%; height: 100%; object-fit: cover; }
+.lh .ns-hero-in { position: relative; width: 100%; padding-block: 64px; }
+.lh .ns-hero-txt { max-width: 560px; display: grid; gap: 18px; }
+.lh .ns-hero h1 { color: #fff; font-size: clamp(2.4rem, 5vw, 4rem); line-height: 1.02; font-weight: 800; }
+.lh .ns-hero .eyebrow { color: rgba(255, 255, 255, .8); }
+.lh .ns-hero .lead { margin: 0; color: rgba(255, 255, 255, .9); font-size: 1.15rem; }
+.lh .ns-hero .ctas, .lh .ns-final .ctas { display: flex; flex-wrap: wrap; gap: 12px; }
+.lh .ns-hero .btn-primary, .lh .ns-final .btn-primary { background: #fff; color: var(--ink); }
+.lh .ns-hero .btn-primary:hover, .lh .ns-final .btn-primary:hover { background: #eef1ff; }
+.lh .ns-hero .btn-claro, .lh .ns-final .btn-claro { background: transparent; color: #fff; border-color: rgba(255, 255, 255, .6); }
+
+.lh .ns-dos { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 56px; align-items: center; }
+.lh .ns-bloque-txt { display: grid; gap: 14px; align-content: start; }
+.lh .ns-bloque-txt h2, .lh .ns-final h2 { font-size: clamp(2rem, 3.8vw, 3rem); line-height: 1.05; font-weight: 800; }
+.lh .ns-bloque-txt p { margin: 0; font-size: 1.08rem; }
+.lh .ns-historia { padding-block: 96px; }
+.lh .ns-historia .ns-dos { align-items: start; }
+.lh .ns-parrafos p { margin: 0 0 16px; font-size: 1.12rem; line-height: 1.7; }
+
+.lh .ns-mision { background: #f3f5f9; padding-block: 88px; text-align: center; }
+.lh .ns-mision .wrap { display: grid; gap: 18px; justify-items: center; }
+.lh .ns-cita { margin: 0; max-width: 28ch; font: 800 clamp(1.8rem, 3.6vw, 2.8rem)/1.15 var(--fh); color: var(--ink); letter-spacing: -0.03em; text-wrap: balance; }
+
+.lh .ns-hechos { background: var(--ink); padding-block: 64px; }
+.lh .ns-hechos-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
+.lh .ns-hechos-grid div { display: grid; gap: 6px; border-left: 3px solid var(--blue); padding-left: 16px; }
+.lh .ns-hechos-grid b { color: #fff; font: 800 clamp(1.5rem, 2.6vw, 2.2rem)/1.05 var(--fh); }
+.lh .ns-hechos-grid span { color: rgba(255, 255, 255, .72); }
+
+.lh .ns-pilares { background: var(--violet); padding-block: 96px; color: rgba(255, 255, 255, .86); }
+.lh .ns-pilares .ns-dos { align-items: start; }
+.lh .ns-pilares h2 { color: #fff; }
+.lh .ns-pilares .eyebrow { color: rgba(255, 255, 255, .78); }
+.lh .ns-pilares-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.lh .ns-pilares-grid article { display: grid; gap: 6px; padding: 22px; border-radius: 18px; background: #fff; color: var(--body); }
+.lh .ns-pilares-grid span { font: 800 .82rem/1 var(--fh); color: var(--violet); letter-spacing: .08em; }
+.lh .ns-pilares-grid b { color: var(--ink); font: 700 1.15rem/1.2 var(--fh); }
+.lh .ns-pilares-grid p { margin: 0; font-size: .96rem; line-height: 1.5; }
+
+.lh .ns-foto-banda { padding-block: 96px; }
+.lh .ns-foto-banda img { width: 100%; aspect-ratio: 5 / 4; object-fit: cover; border-radius: 28px; }
+.lh .ns-lista { margin: 8px 0 0; padding: 0; list-style: none; display: grid; gap: 14px; }
+.lh .ns-lista li { position: relative; padding-left: 30px; line-height: 1.55; }
+.lh .ns-lista li::before { content: "✓"; position: absolute; left: 0; top: 2px; width: 20px; height: 20px; border-radius: 50%; background: var(--blue); color: #fff; display: grid; place-items: center; font-size: .72rem; font-weight: 800; }
+.lh .ns-lista b { color: var(--ink); }
+
+.lh .ns-final { background: var(--blue); color: rgba(255, 255, 255, .86); padding-block: 88px; text-align: center; }
+.lh .ns-final .wrap { display: grid; gap: 14px; justify-items: center; }
+.lh .ns-final h2 { color: #fff; }
+.lh .ns-final p { margin: 0; }
+
+@media (max-width: 980px) {
+  .lh .ns-hero { flex-direction: column; align-items: stretch; min-height: 0; }
+  .lh .ns-hero-foto { position: relative; width: 100%; height: 260px; -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent); mask-image: linear-gradient(to bottom, #000 62%, transparent); }
+  .lh .ns-hero-in { padding-block: 8px 56px; }
+  .lh .ns-dos { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .lh .ns-hechos-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lh .ns-historia, .lh .ns-pilares, .lh .ns-foto-banda { padding-block: 64px; }
+}
+@media (max-width: 600px) {
+  .lh .ns-pilares-grid, .lh .ns-hechos-grid { grid-template-columns: minmax(0, 1fr); }
+  .lh .ns-hero .ctas .btn, .lh .ns-final .ctas .btn { flex: 1 1 100%; }
+}
