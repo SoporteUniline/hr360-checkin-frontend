@@ -1,4 +1,5 @@
 import { outfit } from "@/fonts";
+import AvisoCookies from "@/components/legal/AvisoCookies";
 import PopupVenta from "@/components/landing/popups/PopupVenta";
 
 // Layout de la página de inicio ("/").
@@ -11,6 +12,7 @@ export default function LandingLayout({ children }) {
     <div className={outfit.variable}>
       {children}
       <PopupVenta />
+      <AvisoCookies />
     </div>
   );
 }

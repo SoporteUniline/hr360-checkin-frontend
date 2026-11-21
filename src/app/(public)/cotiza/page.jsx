@@ -4,6 +4,8 @@ import "@/components/landing/home/landing-home.css";
 import "./cotiza.css";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import AceptoLegal from "@/components/legal/AceptoLegal";
+import { DOCS_AVISO, registrarAceptacion } from "@/lib/legal/aceptacion";
 import axios from "@/lib/axios";
 import {
   Dialog,
@@ -335,6 +337,8 @@ export default function CotizaPage() {
     });
   };
 
+  const [aceptaAviso, setAceptaAviso] = useState(false);
+
   const validate = () => {
     if (
       !form.nombre.trim() ||
@@ -355,6 +359,9 @@ export default function CotizaPage() {
     }
     if (!seleccion) {
       return "Primero selecciona un plan.";
+    }
+    if (!aceptaAviso) {
+      return "Para continuar, acepta el Aviso de privacidad.";
     }
     return "";
   };
@@ -458,6 +465,9 @@ export default function CotizaPage() {
       });
       return;
     }
+
+    // Constancia de que aceptó el aviso de privacidad (no detiene la cotización si falla).
+    registrarAceptacion({ contexto: "cotizar", documentos: DOCS_AVISO, nombre: form.nombre, correo: form.correo, telefono: fullPhone });
 
     try {
       setLoading(true);
@@ -922,6 +932,7 @@ export default function CotizaPage() {
                 <option value="Prueba">Prueba</option>
               </select>
             </label>
+            <AceptoLegal id="cz-acepto" className="ancho" checked={aceptaAviso} onChange={setAceptaAviso} />
             <button type="submit" disabled={loading || !planesCalculados.length} className="btn btn-primary ancho">
               {loading ? "Generando y enviando…" : "Descargar cotización en PDF"}
             </button>
