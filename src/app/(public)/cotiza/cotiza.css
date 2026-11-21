@@ -1,0 +1,87 @@
+/* Cotizar: estilo del inicio (.lh). Colores sólidos, sin degradados. */
+.lh.cz { background: #fff; }
+.lh .cz-hero { background: var(--blue); color: #fff; padding-block: 72px 120px; }
+.lh .cz-hero-grid { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 48px; align-items: center; }
+.lh .cz-hero-txt { display: grid; gap: 16px; }
+.lh .cz-hero h1 { color: #fff; font-size: clamp(2.4rem, 5vw, 4rem); line-height: 1.02; font-weight: 800; }
+.lh .cz-hero .eyebrow { color: rgba(255, 255, 255, .8); }
+.lh .cz-hero .lead { color: rgba(255, 255, 255, .9); font-size: 1.12rem; margin: 0; max-width: 46ch; }
+.lh .cz-contador { display: grid; gap: 14px; background: #fff; color: var(--ink); border-radius: 24px; padding: 28px; box-shadow: var(--shadow); }
+.lh .cz-contador label { font: 700 1.15rem/1.3 var(--fh); }
+.lh .cz-contador small { color: var(--muted); }
+.lh .cz-stepper { display: grid; grid-template-columns: 56px minmax(0, 1fr) 56px; align-items: center; gap: 10px; }
+.lh .cz-stepper button { width: 56px; height: 56px; border-radius: 14px; border: 0; background: var(--blue); color: #fff; font: 700 1.8rem/1 var(--f); cursor: pointer; }
+.lh .cz-stepper button:hover, .lh .cz-stepper button:focus-visible { background: var(--blue-ink); outline: none; }
+.lh .cz-stepper input { width: 100%; min-width: 0; height: 56px; border-radius: 14px; border: 2px solid #c9cde0; text-align: center; font: 800 1.8rem/1 var(--fh); color: var(--ink); }
+.lh .cz-stepper input:focus { border-color: var(--blue); outline: none; }
+
+.lh .cz-planes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: -72px; position: relative; }
+.lh .cz-plan { display: grid; gap: 10px; background: #fff; border: 1.5px solid var(--line); border-radius: 22px; padding: 26px; box-shadow: var(--shadow); transition: transform .2s var(--ease); }
+.lh .cz-plan header { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.lh .cz-plan h2 { font-size: 1.5rem; font-weight: 800; }
+.lh .cz-plan header span { font: 700 .78rem/1 var(--f); letter-spacing: .06em; text-transform: uppercase; color: var(--green); background: var(--green-soft); padding: 6px 8px; border-radius: 8px; }
+.lh .cz-precio { margin: 8px 0 0; font: 800 2.2rem/1 var(--fh); color: var(--ink); letter-spacing: -0.03em; }
+.lh .cz-precio small { font: 500 1rem/1 var(--f); color: var(--muted); letter-spacing: 0; }
+.lh .cz-detalle { margin: 0; font-size: .92rem; }
+.lh .cz-plan .btn { margin-top: 8px; min-height: 46px; background: var(--soft); color: var(--ink); }
+.lh .cz-plan.on { background: var(--ink); border-color: var(--ink); color: rgba(255, 255, 255, .8); transform: translateY(-6px); }
+.lh .cz-plan.on h2, .lh .cz-plan.on .cz-precio { color: #fff; }
+.lh .cz-plan.on .cz-precio small { color: rgba(255, 255, 255, .7); }
+.lh .cz-plan.on .btn { background: var(--blue); color: #fff; }
+
+.lh .cz-form-banda { background: #f3f5f9; margin-top: 88px; padding-block: 88px; }
+.lh .cz-form-grid { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: 56px; align-items: start; }
+.lh .cz-form-txt { display: grid; gap: 14px; position: sticky; top: 110px; }
+.lh .cz-form-txt h2 { font-size: clamp(2rem, 3.6vw, 3rem); font-weight: 800; }
+.lh .cz-form-txt p { margin: 0; font-size: 1.05rem; }
+.lh .cz-resumen { display: grid; gap: 4px; background: var(--blue); color: #fff; border-radius: 18px; padding: 18px 20px; margin-top: 8px; }
+.lh .cz-resumen small { text-transform: uppercase; letter-spacing: .1em; font-size: .75rem; opacity: .8; }
+.lh .cz-resumen b { font: 800 1.35rem/1.2 var(--fh); }
+.lh .cz-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; background: #fff; border-radius: 24px; padding: 28px; box-shadow: var(--shadow); }
+.lh .cz-form label { display: grid; gap: 6px; font-weight: 600; color: var(--ink); font-size: .92rem; }
+.lh .cz-form .ancho { grid-column: 1 / -1; }
+.lh .cz-form .btn { min-height: 52px; }
+.lh .cz-otp { display: grid; gap: 10px; background: var(--soft); border-radius: 16px; padding: 16px; }
+.lh .cz-otp p { margin: 0; font-size: .9rem; }
+.lh .cz-otp .btn { min-height: 42px; padding: 0 16px; font-size: .9rem; }
+.lh .cz-estado { display: inline-flex; align-items: center; min-height: 42px; padding: 0 12px; border-radius: 10px; background: #e6e8f0; color: var(--body); font-size: .85rem; font-weight: 600; }
+.lh .cz-estado.ok { background: var(--green-soft); color: var(--green); }
+.lh .cz-msg { color: var(--blue); font-weight: 600; font-size: .9rem; }
+
+.lh .cz-incluye { padding-block: 96px 64px; display: grid; gap: 12px; }
+.lh .cz-incluye h2 { font-size: clamp(2rem, 3.6vw, 3rem); font-weight: 800; margin-bottom: 18px; }
+.lh .cz-incluye-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.lh .cz-incluye-grid article, .lh .cz-garantias-grid article { display: grid; gap: 6px; align-content: start; padding: 22px; border-radius: 18px; background: var(--soft); }
+.lh .cz-incluye-grid span, .lh .cz-garantias-grid span { font-size: 1.6rem; }
+.lh .cz-incluye-grid h3, .lh .cz-garantias-grid h3 { font-size: 1.1rem; font-weight: 700; }
+.lh .cz-incluye-grid p, .lh .cz-garantias-grid p { margin: 0; font-size: .95rem; }
+.lh .cz-garantias { background: var(--violet); padding-block: 64px; }
+.lh .cz-garantias-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+.lh .cz-garantias-grid article { background: #fff; }
+
+.lh .cz-faq { padding-block: 88px 40px; display: grid; gap: 12px; max-width: 860px; }
+.lh .cz-faq h2 { font-size: clamp(1.8rem, 3vw, 2.4rem); margin-bottom: 12px; }
+.lh .cz-faq details { border: 1px solid var(--line); border-radius: 14px; padding: 4px 18px; }
+.lh .cz-faq summary { cursor: pointer; padding: 14px 0; font-weight: 700; color: var(--ink); }
+.lh .cz-faq details p { margin: 0 0 14px; }
+
+.lh .cz-final { background: var(--ink); color: rgba(255, 255, 255, .8); padding-block: 88px; margin-top: 60px; text-align: center; }
+.lh .cz-final .wrap { display: grid; gap: 14px; justify-items: center; }
+.lh .cz-final h2 { color: #fff; font-size: clamp(2rem, 4vw, 3rem); font-weight: 800; }
+.lh .cz-final p { margin: 0; }
+.lh .cz-final .ctas { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 8px; }
+.lh .cz-final .btn-claro { background: transparent; color: #fff; border-color: rgba(255, 255, 255, .6); }
+
+@media (max-width: 980px) {
+  .lh .cz-hero { padding-block: 48px 104px; }
+  .lh .cz-hero-grid, .lh .cz-form-grid { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .lh .cz-planes { grid-template-columns: minmax(0, 1fr); margin-top: -64px; }
+  .lh .cz-plan.on { transform: none; }
+  .lh .cz-form-txt { position: static; }
+  .lh .cz-incluye-grid, .lh .cz-garantias-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .lh .cz-form { grid-template-columns: minmax(0, 1fr); padding: 20px; }
+  .lh .cz-incluye-grid, .lh .cz-garantias-grid { grid-template-columns: minmax(0, 1fr); }
+  .lh .cz-final .ctas .btn { flex: 1 1 100%; }
+}
