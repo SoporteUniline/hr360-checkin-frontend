@@ -23,3 +23,13 @@ Solicitudes de equipo e Iniciar sesión.
 ## Pendiente
 - Validar en iPhone y Android reales (el simulador no reemplaza al dispositivo). Horizontal (landscape) no se midió.
 - Estados no recorridos: resultado de checada (éxito/error), cámara encendida con rostro, firma de documentos.
+
+## Segunda vuelta (captura de «Solicitar permiso» en iPhone)
+- Faltaba el **permiso por horas** en Mi espacio (llega tarde, sale antes, sale y regresa). Ahora «¿Por cuánto tiempo?
+  Días completos / Unas horas» usa los mismos campos y validación que el panel (`CamposPermisoHoras`); el empleado propone
+  «se repone / se rebaja» y RH lo confirma o cambia al aprobar (🧭 criterio: RH ya aprueba todo permiso). La lista muestra
+  el horario («Sale antes · desde 3:00 p.m.») en lugar de «1 día».
+- **Campos de fecha/hora** salían por la derecha en iPhone (Safari les da ancho mínimo propio). Ajuste solo para iOS en
+  `globals.css`. ❓ PENDIENTE verificar en iPhone real: este entorno no tiene el motor de Safari.
+- **Ventanas en celular**: tope común de altura sin la zona de la hora ni la barra de inicio; se desplazan por dentro.
+- Auditoría: 64 de 64 (agrega «Nueva solicitud por horas»); la medición ahora descuenta lo recortado por zonas con desplazamiento.

@@ -20,3 +20,7 @@ const data=await fetchAllRequests(async()=>({results:[{id:++pages}],total:3}),10
 assert.equal(data.length,3);
 await assert.rejects(()=>fetchAllRequests(async()=>({results:[{id:1}],total:3}),101),/completar/);
 console.log('PASS periods, leap year, weekdays, holidays, unavailable schedules, attendance classification and complete pagination');
+
+// Permiso por horas: un día y su horario en lugar de «1 día».
+assert.equal(requestDates({ fecha_inicio: '2026-11-23', fecha_fin: '2026-11-23', modalidad: 'horas', tipo_horas: 'sale_antes', hora_inicio: '15:00:00' }, []).duration, 'Sale antes · desde 3:00 p.m.');
+assert.equal(requestDates({ fecha_inicio: '2026-11-23', modalidad: 'horas', tipo_horas: 'sale_regresa', hora_inicio: '10:00', hora_fin: '12:00' }, []).duration, 'Sale y regresa · 10:00 a.m. a 12:00 p.m.');

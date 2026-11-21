@@ -425,3 +425,22 @@ html.adamia-native .adamia-web-only {
   body:has(#reloj-barra-movil) .notistack-SnackbarContainer { top: calc(env(safe-area-inset-top, 0px) + 4rem) !important; bottom: auto !important; }
   body:has(nav[aria-label="Navegación del colaborador"]) .notistack-SnackbarContainer { bottom: calc(env(safe-area-inset-bottom, 0px) + 5rem) !important; }
 }
+
+/* (21/11/2026) iPhone/iPad (Safari y la app): los campos de fecha y hora tienen un ancho mínimo propio y se salían del
+   formulario por la derecha (visto en «Solicitar permiso»). Solo en iOS: en computadora se conservan como están. */
+@supports (-webkit-touch-callout: none) {
+  input[type="date"], input[type="time"], input[type="datetime-local"], input[type="month"] {
+    min-width: 0; max-width: 100%; -webkit-appearance: none; appearance: none; display: block;
+  }
+  input[type="date"]::-webkit-date-and-time-value, input[type="time"]::-webkit-date-and-time-value,
+  input[type="datetime-local"]::-webkit-date-and-time-value { text-align: left; }
+}
+
+/* (21/11/2026) Celular: ninguna ventana (Dialog) se mete debajo de la hora/batería ni sobre la barra de inicio del iPhone.
+   Tope común a la altura útil; si el contenido no cabe, se desplaza por dentro. */
+@media (max-width: 767px) {
+  [data-slot="dialog-content"] {
+    max-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 1rem) !important;
+    overflow-y: auto;
+  }
+}

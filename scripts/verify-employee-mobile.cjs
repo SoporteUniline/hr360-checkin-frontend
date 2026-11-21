@@ -34,10 +34,16 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:4491';
         if (p.endsWith('/vacaciones/mi-saldo')) return json({ dias_disponibles: 8, dias_cargados: 12, dias_tomados: 4 });
         if (p.includes('/solicitudes-permiso/empleado/101')) { const pageNo=Number(new URL(route.request().url()).searchParams.get('page') || 1); return json({results:requests.slice((pageNo-1)*5,pageNo*5),total:requests.length}); }
         if(p.includes('/holidays/')) return json({festivos:[]});
-        if (p.endsWith('/tiposPermiso')) return json({ tiposPermiso: [{ id: 2, nombre: 'Vacaciones', es_permiso: 0, descuenta_vacaciones: 1 }] });
+        if (p.endsWith('/tiposPermiso')) return json({ tiposPermiso: [{ id: 2, nombre: 'Vacaciones', es_permiso: 0, descuenta_vacaciones: 1 }, { id: 3, nombre: 'Permiso personal', es_permiso: 1, descuenta_vacaciones: 0 }] });
         if (p.endsWith('/solicitudes-permiso') && route.request().method() === 'POST') {
           posts++;
           const payload = route.request().postDataJSON();
+          if (payload.modalidad === 'horas') {
+            // Permiso por horas desde Mi espacio (21/11/2026): un día, tipo, hora y cómo se cubre.
+            assert.deepEqual([payload.id_empleado, payload.id_tipo_permiso, payload.tipo_horas, payload.hora_inicio, payload.hora_fin, payload.tratamiento, payload.fecha_inicio, payload.fecha_fin], [101, 3, 'sale_antes', '15:00', null, 'repone', '2026-11-23', '2026-11-23']);
+            requests.unshift({ ...payload, id: 98, tipo_permiso_nombre: 'Permiso personal', estado: 'Pendiente' });
+            return json({ id: 3 });
+          }
           assert.equal(payload.id_empleado, 101); assert.equal(payload.id_tipo_permiso, 2);
           assert.equal(payload.fecha_inicio, '2026-11-09'); assert.equal(payload.fecha_fin, '2026-11-10');
           await new Promise(resolve => setTimeout(resolve, 400));
@@ -102,6 +108,22 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:4491';
       await page.getByText('Solicitud de prueba', { exact: true }).waitFor();
       assert.equal(await page.getByRole('button', { name: 'Enviar solicitud' }).count(), 0);
       await page.getByRole('button', { name: 'Cerrar', exact: true }).click();
+      // Permiso por horas: «Unas horas» cambia las fechas por día, tipo y hora (mismos campos que el panel de RH).
+      await page.getByRole('button', { name: 'Nueva solicitud' }).click();
+      await page.getByLabel('Tipo de permiso', { exact: true }).click();
+      await page.getByRole('option', { name: 'Permiso personal' }).click();
+      await page.getByRole('radio', { name: 'Unas horas' }).click();
+      assert.equal(await page.getByLabel('Fecha inicial').count(), 0, 'por horas no pide rango de fechas');
+      await page.getByRole('dialog').locator('input[type=date]').fill('2026-11-23');
+      await page.getByLabel('Tipo de permiso por horas').selectOption('sale_antes');
+      await page.getByLabel('Desde qué hora').fill('15:00');
+      await page.getByRole('radio', { name: /Se repone/ }).click();
+      await page.getByLabel('Motivo', { exact: true }).fill('Cita médica');
+      await noOverflow();
+      await page.getByRole('button', { name: 'Enviar solicitud' }).click();
+      await page.getByRole('dialog').waitFor({ state: 'hidden' });
+      assert.equal(posts, 2);
+      await page.getByText('Sale antes · desde 3:00 p.m.').first().waitFor();
       await page.getByRole('link', { name: 'Mi espacio', exact: true }).click();
       await page.getByRole('link', { name: /Mis activos y uniformes/ }).waitFor();
       await noOverflow();

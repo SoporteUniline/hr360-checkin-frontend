@@ -58,7 +58,10 @@ const RUTAS = [
 ];
 // Estados extra dentro de una pantalla (pestañas, formularios).
 const ESTADOS = {
-  "/empleado/panel/solicitudes": [["Nueva solicitud", (pg) => pg.getByRole("button", { name: /Nueva solicitud/ }).click()]],
+  "/empleado/panel/solicitudes": [
+    ["Nueva solicitud", (pg) => pg.getByRole("button", { name: /Nueva solicitud/ }).click()],
+    ["Nueva solicitud por horas", async (pg) => { await pg.getByRole("radio", { name: "Unas horas" }).click(); await pg.getByLabel("Tipo de permiso por horas").selectOption("sale_regresa"); }],
+  ],
   "/empleado/reloj-checador": [["Código", (pg) => pg.getByRole("button", { name: /Código/ }).first().click()], ["QR", (pg) => pg.getByRole("button", { name: /^QR/ }).first().click()]],
 };
 
@@ -75,13 +78,25 @@ function medir({ ARRIBA, ABAJO }) {
     const t = (el.getAttribute("aria-label") || el.innerText || el.getAttribute("alt") || el.getAttribute("placeholder") || "").trim().replace(/\s+/g, " ").slice(0, 50);
     return `${el.tagName.toLowerCase()}${t ? ` «${t}»` : ""}`;
   };
+  // Parte del elemento que de verdad se ve: recortada por los contenedores con desplazamiento u overflow oculto.
+  const visto = (el) => {
+    let { top, bottom, left, right } = el.getBoundingClientRect();
+    for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+      const s = getComputedStyle(p);
+      if (s.overflowY !== "visible" || s.overflowX !== "visible") {
+        const r = p.getBoundingClientRect();
+        top = Math.max(top, r.top); bottom = Math.min(bottom, r.bottom); left = Math.max(left, r.left); right = Math.min(right, r.right);
+      }
+    }
+    return { top, bottom, left, right, vacio: bottom - top < 2 || right - left < 2 };
+  };
   const conTexto = (el) => [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
   const contenido = [...document.querySelectorAll("body *")].filter((el) => (conTexto(el) || /^(BUTTON|A|IMG|INPUT|SELECT|TEXTAREA|SVG)$/i.test(el.tagName)) && visible(el));
   const interactivo = (el) => /^(BUTTON|A|INPUT|SELECT|TEXTAREA)$/.test(el.tagName) || el.getAttribute("role") === "button";
   const dentroDeScrollX = (el) => { for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) { const ox = getComputedStyle(p).overflowX; if ((ox === "auto" || ox === "scroll") && p.scrollWidth > p.clientWidth) return true; } return false; };
   const fijoArriba = (el) => { for (let p = el; p && p !== document.body; p = p.parentElement) { const ps = getComputedStyle(p).position; if (ps === "fixed" || ps === "sticky") return true; } return false; };
-  const bajoEstado = contenido.filter((el) => { const r = el.getBoundingClientRect(); return r.top < ARRIBA - 1 && r.bottom > 2 && (window.scrollY === 0 || fijoArriba(el)); }).map(describe);
-  const sobreInicio = contenido.filter((el) => interactivo(el) && el.getBoundingClientRect().bottom > H - ABAJO + 1 && el.getBoundingClientRect().top < H && fijoArriba(el)).map(describe);
+  const bajoEstado = contenido.filter((el) => { const r = visto(el); return !r.vacio && r.top < ARRIBA - 1 && r.bottom > 2 && (window.scrollY === 0 || fijoArriba(el)); }).map(describe);
+  const sobreInicio = contenido.filter((el) => { const r = visto(el); return interactivo(el) && !r.vacio && r.bottom > H - ABAJO + 1 && r.top < H && fijoArriba(el); }).map(describe);
   const desborde = document.documentElement.scrollWidth > W + 1;
   // Los avisos entran deslizándose desde un lado: a media animación no cuentan como desborde (el documento no crece).
   const fuera = contenido.filter((el) => { const r = el.getBoundingClientRect(); return (r.right > W + 1 || r.left < -1) && !dentroDeScrollX(el) && !el.closest(".notistack-SnackbarContainer"); }).map(describe);
