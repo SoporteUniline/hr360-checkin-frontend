@@ -1,7 +1,7 @@
 // Verificación en navegador de la página de inicio (21/11/2026): portada sincronizada (la checada pasa por
 // rostro → GPS → registro y la fila llega al panel), números que cuentan desde 0, reporte semanal con
 // notificaciones, sin errores, sin desbordes en celular y sin animaciones vivas al salir de la página.
-// Las llamadas a otros dominios se bloquean (nada sale a internet). Uso: npm run build && node scripts/verify-landing.mjs
+// Las llamadas a otros dominios se bloquean (nada sale a internet). Uso: NEXT_PUBLIC_RUTA_DOMAIN=https://dev.adamia.com.mx npm run build && node scripts/verify-landing.mjs (construir como Dev: robots debe bloquear)
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";

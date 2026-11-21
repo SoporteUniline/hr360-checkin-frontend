@@ -1,6 +1,6 @@
 "use client";
 
-// Carrusel de la portada: foto + frase + botones. Pasa solo cada 6 s, se pausa al pasar el cursor o con el
+// Carrusel de la portada, lado a lado: frase + botones a la izquierda y foto a la derecha. Pasa solo cada 6 s, se pausa al pasar el cursor o con el
 // botón (WCAG 2.2.2) y se mueve con las flechas o el teclado. Con «reducir movimiento» no avanza solo.
 /* eslint-disable @next/next/no-img-element -- fotos ya optimizadas (webp) con efecto de acercamiento */
 import { useCallback, useEffect, useState } from "react";
@@ -56,7 +56,6 @@ export default function HeroCarrusel() {
             aria-label={`${i + 1} de ${total}`}
             aria-hidden={i !== actual}
           >
-            <img src={d.foto} alt={d.alt} width={1400} height={788} loading={i === 0 ? "eager" : "lazy"} />
             <div className="slide-txt">
               <span className="eyebrow">{d.etiqueta}</span>
               <Titulo>
@@ -85,6 +84,9 @@ export default function HeroCarrusel() {
                   Ver cómo funciona
                 </a>
               </div>
+            </div>
+            <div className="slide-foto">
+              <img src={d.foto} alt={d.alt} width={1400} height={788} loading={i === 0 ? "eager" : "lazy"} />
             </div>
           </div>
         );
