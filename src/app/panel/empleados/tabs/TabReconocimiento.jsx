@@ -3,14 +3,22 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { faceapi, loadFaceApiModels, isFaceApiReady } from "@/lib/faceapi";
 import { useSnackbar } from "notistack";
+import { useAuth } from "@/context/AuthContext";
+import ConsentimientoRostro from "./ConsentimientoRostro";
 
 export default function TabReconocimiento({
   renderCampos = () => null,
+  form,
   setDescriptor,
   soloLectura,
   active,
 }) {
   const { enqueueSnackbar } = useSnackbar();
+  const { dataUser } = useAuth();
+  const valores = form?.getValues?.() ?? {};
+  const idEmpresa = valores.id_empresa;
+  const empresaNombre = (dataUser?.empresas_detalle ?? []).find((e) => Number(e.id_empresa) === Number(idEmpresa))?.nombre;
+  const nombreEmpleado = [valores.nombre, valores.apellido_paterno, valores.apellido_materno].filter(Boolean).join(" ");
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const intervalRef = useRef(null);
@@ -302,6 +310,7 @@ export default function TabReconocimiento({
   return (
     <div className="flex flex-col items-center gap-6 py-4">
       {renderCampos("inicio", true)}
+      <ConsentimientoRostro idEmpresa={idEmpresa} idEmpleado={valores.id_empleado} nombre={nombreEmpleado} empresa={empresaNombre} />
       {loadingModels ? (
         <div className="flex flex-col items-center gap-3 py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2563EB]"></div>
