@@ -13,12 +13,12 @@ import CeldasControlHorasExtra from "./CeldasControlHorasExtra";
 import PanelEditarAsistencia from "./PanelEditarAsistencia";
 import { useEmpresaTimezone } from "@/context/AuthContext";
 import { calcularResumenJornada, formatearMinutos } from "@/utils/asistenciaHoras";
-import { minutosDescanso, salidaEsDiaSiguiente, sinSalidaAComer } from "@/lib/asistencia/jornada.mjs";
-import { sumarDias } from "@/lib/fechaHora.mjs";
+import { minutosDescanso, sinSalidaAComer } from "@/lib/asistencia/jornada.mjs";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 import { hora12 } from "@/lib/hora12.mjs";
+import { herramientasHoras } from "@/lib/asistencia/horasEdicion.mjs";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
@@ -90,31 +90,14 @@ export default function AsistenciaRow({
       ? "bg-red-50 text-red-600"
       : "bg-emerald-50 text-emerald-700";
 
-  // Captura de horas: la fecha base es la del registro; si la salida es menor o igual
-  // a la entrada (turno nocturno 22:00 → 05:00), la salida se guarda al día siguiente.
-  const fechaBase = String(currentData.fecha ?? "").slice(0, 10);
-  const horaLocal = (valor) =>
-    valor ? dayjs.tz(valor, DB_TIMEZONE).tz(userTimezone).format("HH:mm") : "";
+  // Captura de horas (misma función que la ventana de Nómina): fecha base del registro, zona de la empresa.
+  const { fechaBase, horaLocal, aBaseDeDatos, salidaParaHoras, mismaMarca, salidaDiaSiguiente } = herramientasHoras(currentData, userTimezone);
   // Tramos del reloj para el detalle de la jornada (09:00–11:00 · 11:30–14:00).
   // Para mostrar (12 h); horaLocal (HH:mm) se queda para los campos de captura.
   const horaVer = (valor) => (valor ? hora12(dayjs.tz(valor, DB_TIMEZONE).tz(userTimezone)) : "");
   const detalleTramos = Array.isArray(registro.tramos_checadas) && registro.tramos_checadas.length > 1
     ? registro.tramos_checadas.map((t) => `${horaVer(t.entrada)}–${horaVer(t.salida)}`).join(" · ")
     : null;
-  const fechaLocal = (valor) =>
-    valor ? dayjs.tz(valor, DB_TIMEZONE).tz(userTimezone).format("YYYY-MM-DD") : "";
-  const aBaseDeDatos = (fecha, hora) =>
-    dayjs.tz(`${fecha} ${hora}`, userTimezone).tz(DB_TIMEZONE).format("YYYY-MM-DD HH:mm:ss");
-  const salidaParaHoras = (horaEntrada, horaSalida) =>
-    aBaseDeDatos(
-      horaEntrada && salidaEsDiaSiguiente(horaEntrada, horaSalida) ? sumarDias(fechaBase, 1) : fechaBase,
-      horaSalida,
-    );
-  const mismaMarca = (a, b) =>
-    Boolean(a && b) &&
-    dayjs.tz(a, DB_TIMEZONE).format("YYYY-MM-DD HH:mm") === dayjs.tz(b, DB_TIMEZONE).format("YYYY-MM-DD HH:mm");
-  const salidaDiaSiguiente = (r) =>
-    Boolean(r.salida && r.entrada) && fechaLocal(r.salida) > fechaLocal(r.entrada);
 
   // Domingo y festivo: los define la fecha y el catálogo de Festivos (no se capturan a mano).
   const avisos = avisoCalendario(registro, indiceFestivos);

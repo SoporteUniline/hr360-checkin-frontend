@@ -120,7 +120,7 @@ try {
   await dlg.getByLabel("Importe").fill("200");
   await dlg.getByRole("button", { name: "Registrar abono" }).click();
   await dlg.getByText("Abono registrado.").waitFor();
-  await dlg.getByText("Abono en efectivo").waitFor();
+  await dlg.getByRole("cell", { name: "Abono en efectivo" }).waitFor();
   await captura(page, "prestamos-detalle");
   await page.keyboard.press("Escape");
 

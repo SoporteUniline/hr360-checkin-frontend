@@ -105,7 +105,7 @@ export default function EditorRecibo({ recibo, periodo, editable, idEmpresa, alC
           {(d.alertas ?? []).length ? (
             <ul className="grid gap-1 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[12.5px] text-amber-900">{d.alertas.map((a) => <li key={a}>⚠ {a}</li>)}</ul>
           ) : null}
-          <Seccion titulo="Asistencia del periodo" extra={onCorregir ? <span className="text-[11px] text-slate-400">«Corregir» abre ese día en Asistencias</span> : null}>
+          <Seccion titulo="Asistencia del periodo" extra={onCorregir ? <span className="text-[11px] text-slate-400">«Corregir» abre la ventana de Asistencias de ese día</span> : null}>
             <AsistenciaRecibo recibo={recibo} modo="compacto" onCorregir={onCorregir} />
           </Seccion>
           <Seccion titulo="Percepciones"><ul className="divide-y divide-slate-100 rounded-xl border border-slate-200">{percepciones.map(fila)}</ul></Seccion>

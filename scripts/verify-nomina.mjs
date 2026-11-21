@@ -23,7 +23,7 @@ const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 const captura = (pg, nombre) => (process.env.CAPTURAS ? pg.screenshot({ path: `${process.env.CAPTURAS}/${nombre}.png` }) : null);
 
 // Backend simulado.
-const estado = { periodos: [], ediciones: [], posts: [] };
+const estado = { periodos: [], ediciones: [], posts: [], asistencias: [] };
 const recibo = () => ({
   id: 11, id_empleado: 15, estado: "vigente", envio_estado: null, transferencia_editada: null,
   datos: { empleado: { nombre: "Ana Torres", puesto: "Empacadora", medio_pago: "Mixto", monto_transferencia: 1000 }, resumen: { diasPagados: 4.67, diasRango: 7, diasTrabajados: 4, minTrabajados: 2040, minExtra: 120, minDobles: 120, minTriples: 0, faltas: 2, sinGoce: 0, retardos: 1, domingos: 0, festivosTrab: 0, sueldo: 210000, diario: 30000, periodoPago: "Semanal" }, alertas: [],
@@ -77,6 +77,12 @@ async function rutas(ctx, usuario) {
       estado.periodos[0].version += 1;
       return ok({ ok: true });
     }
+    // Asistencias (la ventana de edición que se abre desde «Corregir»).
+    if (p === "/checador/asistencias" && req.method() === "GET") {
+      assert.deepEqual([url.searchParams.get("fechaInicio"), url.searchParams.get("fechaFin"), url.searchParams.get("filtroEmpleado")], ["2026-11-18", "2026-11-18", "Ana Torres"]);
+      return ok({ registros: [{ id: 501, id_empleado: 15, nombre: "Ana", apellido_paterno: "Torres", fecha: "2026-11-18", entrada: "2026-11-18 09:10:00", salida: "2026-11-18 17:00:00", asistencia: 1, hora_entrada_programada: "09:00:00", hora_salida_programada: "17:00:00", zona_horaria: "America/Mexico_City", tipo_registro_nombre: "Asistencia" }], total: 1, page: 1 });
+    }
+    if (/^\/checador\/asistencias\/501$/.test(p) && req.method() === "PUT") { estado.asistencias.push(req.postDataJSON()); return ok({ ok: true }); }
     if (p === "/checador/nomina/conceptos") return ok({ ok: true, conceptos: [{ id: 1, nombre: "Despensa", tipo: "percepcion", forma: "fijo", valor: 200, activo: 1 }] });
     if (p === "/checador/nomina/mis-recibos") return ok({ ok: true, recibos: [{ id: 11, id_empresa: 7, folio: "N5-11", neto: 1650, transferencia: 1000, efectivo: 650, fecha_inicio: "2026-11-16", fecha_fin: "2026-11-22", firma_estatus: "pendiente" }] });
     if (p === "/checador/firma-digital/solicitudes/documento") { assert.equal(url.searchParams.get("tipo_documento"), "RECIBO_NOMINA"); return ok({ success: true, solicitud: { estatus: "pendiente", url_firma: "/firmar/tok-recibo" } }); }
@@ -122,17 +128,18 @@ try {
   assert.ok((await asistencia.getByRole("row", { name: /vie 20/ }).innerText()).includes("Falta"));
   await asistencia.getByText(/\$2,100\.00 semanal × 4\.67 días pagados ÷ 7 días del periodo/).waitFor();
   await captura(page, "nomina-desplegado");
-  // «Corregir» abre ese día en Asistencias (otra pestaña, con su ventana de edición) y al volver ofrece recalcular.
-  const [asis] = await Promise.all([ctx.waitForEvent("page"), mie.getByRole("button", { name: /Corregir/ }).click()]);
-  await asis.waitForURL(/registro-asistencia/);
-  const q = new URL(asis.url()).searchParams;
-  assert.deepEqual([q.get("fecha"), q.get("abrirEmpleado"), q.get("empleado")], ["2026-11-18", "15", "Ana Torres"]);
-  await asis.close();
-  await page.bringToFront();
-  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
-  await page.getByText("¿Corregiste la asistencia?").waitFor();
-  await page.getByRole("button", { name: "Recalcular ahora" }).click();
-  await page.getByText("¿Corregiste la asistencia?").waitFor({ state: "detached" });
+  // «Corregir» abre AQUÍ MISMO la ventana de edición de Asistencias de ese día; al guardar la nómina se recalcula sola.
+  await mie.getByRole("button", { name: /Corregir/ }).click();
+  const ventana = page.getByRole("dialog", { name: /Ana Torres/ });
+  await ventana.getByLabel("Entrada").waitFor({ timeout: 10000 });
+  assert.equal(await ventana.getByLabel("Entrada").inputValue(), "09:10");
+  assert.equal(page.url().includes("/panel/nomina/5"), true, "no salió de la nómina");
+  await dormir(500);
+  await captura(page, "nomina-corregir");
+  await ventana.getByLabel("Entrada").fill("09:00");
+  await ventana.getByRole("button", { name: "Guardar" }).click();
+  await page.getByText(/Asistencia corregida: la nómina se recalculó/).waitFor();
+  assert.equal(estado.asistencias[0].entrada, "2026-11-18 09:00:00");
   assert.deepEqual(estado.posts.at(-1).accion, "calcular");
   estado.posts.length = 0;
   // Otro clic lo cierra; el botón abre el recibo para ajustar importes.
@@ -143,6 +150,13 @@ try {
   await page.getByRole("button", { name: "Guardar cambios (1)" }).click();
   await page.getByText(/Editado por RH Prueba: Ajuste acordado/).waitFor();
   assert.equal(await page.getByRole("dialog").getByRole("button", { name: /Corregir/ }).count(), 7, "el panel del recibo también deja corregir cada día");
+  // Desde el panel del recibo también abre la ventana encima; cancelar no recalcula.
+  const posts = estado.posts.length;
+  await page.getByRole("dialog").getByRole("button", { name: "Corregir asistencia del mié 18" }).click();
+  await page.getByRole("dialog", { name: /Ana Torres/ }).getByLabel("Entrada").waitFor();
+  await page.getByRole("dialog", { name: /Ana Torres/ }).getByRole("button", { name: "Cancelar" }).click();
+  await page.getByLabel("Entrada").waitFor({ state: "detached" });
+  assert.equal(estado.posts.length, posts, "cancelar no recalcula");
   await captura(page, "nomina-recibo");
   assert.deepEqual(estado.ediciones[0], { version: 2, lineas: [{ clave: "concepto:1", importe: 250, motivo: "Ajuste acordado" }] });
   await page.keyboard.press("Escape");

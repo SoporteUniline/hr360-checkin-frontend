@@ -46,6 +46,8 @@ Estado: Vuelta de diseño. **No se construye nada hasta `APROBADO R1`.**
 ## Detalle de la asistencia en la nómina (21/11/2026, pedido del dueño)
 - Misma tipografía que Asistencias: franja de totales con cuadritos de color y encabezados en versalitas.
 - Cada día dice **lo que se pagó de más**: horas extra al doble o al triple, prima dominical 25 %, festivo o descanso trabajado +200 %.
-- **Corregir** en cada día (solo en borrador) abre ese día en Asistencias con su ventana de edición (mismo editor, misma regla de
-  candado); al volver a la nómina se ofrece «Recalcular ahora». Lo editado a mano en el recibo se conserva.
+- **Corregir** en cada día (solo en borrador) abre AHÍ MISMO la ventana flotante de Asistencias de ese día
+  (`registro-asistencia/EditarDiaAsistencia.jsx` reutiliza `PanelEditarAsistencia` y `useAsistenciaActions`; mismo candado).
+  Al guardar (asistencia o checada) la nómina se recalcula sola; cancelar no recalcula. Lo editado a mano en el recibo se conserva.
+  (21/11/2026: antes abría otra pestaña; el dueño pidió la ventana flotante.)
 - Panel del recibo más ancho (720 px) con secciones: asistencia del periodo, percepciones, descuentos, agregar, totales.

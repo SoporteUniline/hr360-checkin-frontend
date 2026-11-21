@@ -3,7 +3,7 @@
 // Asistencia de una persona en el periodo de nómina: de dónde sale cada número (días, faltas, retardos, horas extra,
 // festivos, domingos y el sueldo), día por día y con lo que se pagó de más cada día. Misma tipografía que Asistencias.
 // `modo="tabla"`: desplegable de la tabla de la nómina; `modo="compacto"`: dentro del panel del recibo (menos columnas).
-// `onCorregir(fecha)`: abre ese día en Asistencias para corregirlo (solo con la nómina en borrador).
+// `onCorregir(fecha)`: abre la ventana de edición de Asistencias de ese día (solo con la nómina en borrador).
 import { Pencil } from "lucide-react";
 import { DIA, diaCorto, dinero, horas } from "@/lib/nomina/nomina.mjs";
 import { Chip } from "./comun";
@@ -117,7 +117,7 @@ export default function AsistenciaRecibo({ recibo, modo = "tabla", onEditar, onC
                     <td className={td}><PagosDia pagos={x.pagos} /></td>
                     {onCorregir ? (
                       <td className={`${td} text-right`}>
-                        <button type="button" onClick={() => onCorregir(x.fecha)} title="Corregir en Asistencias" className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-semibold text-[#2c56e8] hover:bg-blue-50" aria-label={`Corregir ${diaCorto(x.fecha)} en Asistencias`}>
+                        <button type="button" onClick={() => onCorregir(x.fecha)} title="Corregir asistencia" className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-[12px] font-semibold text-[#2c56e8] hover:bg-blue-50" aria-label={`Corregir asistencia del ${diaCorto(x.fecha)}`}>
                           <Pencil className="size-3.5" />{compacto ? null : " Corregir"}
                         </button>
                       </td>

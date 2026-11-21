@@ -2,7 +2,7 @@
 
 // Detalle de una nómina (R1): totales, recibos por persona, edición en borrador y flujo
 // borrador → por autorizar → autorizada (solo el dueño) | cancelada (con motivo). Backend: /checador/nomina.
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import useSWR from "swr";
@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Chip, Kpi, descargar, mensajeError } from "@/components/nomina/comun";
 import EditorRecibo from "@/components/nomina/EditorRecibo";
 import AsistenciaRecibo from "@/components/nomina/AsistenciaRecibo";
+import EditarDiaAsistencia from "@/app/panel/registro-asistencia/EditarDiaAsistencia";
 import { ENVIOS, ESTADOS, acciones, dinero, fechaCorta, horas } from "@/lib/nomina/nomina.mjs";
 
 const get = (url) => axios.get(url).then((r) => r.data);
@@ -31,15 +32,8 @@ export default function DetalleNomina() {
   const [confirmar, setConfirmar] = useState(null); // "autorizar" | "cancelar" | "enviar"
   const [motivo, setMotivo] = useState("");
   const [ocupado, setOcupado] = useState(false);
-  // «Corregir» abre ese día en Asistencias en otra pestaña; al volver se ofrece recalcular.
-  const [corrigiendo, setCorrigiendo] = useState(false);
-  const [volvio, setVolvio] = useState(false);
-  useEffect(() => {
-    if (!corrigiendo) return undefined;
-    const alVolver = () => { setVolvio(true); setCorrigiendo(false); };
-    window.addEventListener("focus", alVolver);
-    return () => window.removeEventListener("focus", alVolver);
-  }, [corrigiendo]);
+  // «Corregir» abre aquí mismo la ventana de edición de Asistencias de ese día; al guardar se recalcula sola.
+  const [editarDia, setEditarDia] = useState(null); // { idEmpleado, nombre, fecha }
 
   if (error) return <p role="alert" className="m-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{mensajeError(error, "No se pudo cargar la nómina.")}</p>;
   if (isLoading || !data) return <p className="m-4 text-sm text-gray-500">Cargando…</p>;
@@ -51,13 +45,8 @@ export default function DetalleNomina() {
   const negativos = recibos.filter((r) => Number(r.neto) < 0).length;
   const recibo = recibos.find((r) => r.id === abierto) ?? null;
 
-  // Mismo enlace que la pestaña Horas de Asistencias: abre la ventana de edición de esa persona en ese día.
   const corregir = a.recalcular
-    ? (r) => (fecha) => {
-      const q = new URLSearchParams({ fecha, empleado: r.datos?.empleado?.nombre ?? "", abrirEmpleado: String(r.id_empleado) });
-      window.open(`/panel/registro-asistencia?${q}`, "_blank", "noopener");
-      setCorrigiendo(true);
-    }
+    ? (r) => (fecha) => setEditarDia({ idEmpleado: r.id_empleado, nombre: r.datos?.empleado?.nombre ?? "", fecha })
     : null;
 
   const accion = async (ruta, cuerpo, ok) => {
@@ -110,16 +99,6 @@ export default function DetalleNomina() {
           </div>
         );
       })()}
-
-      {volvio && a.recalcular ? (
-        <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-950">
-          <span>¿Corregiste la asistencia? Recalcula para que la nómina tome los cambios. Lo que ajustaste a mano se conserva.</span>
-          <span className="flex gap-2">
-            <Button size="sm" disabled={ocupado} onClick={() => accion("calcular", {}, "Nómina recalculada con la asistencia actual.").then(() => setVolvio(false))}>Recalcular ahora</Button>
-            <Button size="sm" variant="outline" onClick={() => setVolvio(false)}>Después</Button>
-          </span>
-        </div>
-      ) : null}
 
       <div className="flex flex-wrap gap-2">
         {a.recalcular ? <Button variant="outline" size="sm" disabled={ocupado} onClick={() => accion("calcular", {}, "Nómina recalculada con la asistencia actual.")}>Recalcular</Button> : null}
@@ -196,6 +175,16 @@ export default function DetalleNomina() {
         </div>
       )}
 
+      {editarDia ? (
+        <EditarDiaAsistencia
+          idEmpresa={periodo.id_empresa}
+          {...editarDia}
+          onCerrar={(huboCambios) => {
+            setEditarDia(null);
+            if (huboCambios) accion("calcular", {}, "Asistencia corregida: la nómina se recalculó. Lo que ajustaste a mano se conserva.");
+          }}
+        />
+      ) : null}
       {recibo ? <EditorRecibo recibo={recibo} periodo={periodo} editable={a.editar} idEmpresa={periodo.id_empresa} alCambiar={() => mutate()} alCerrar={() => setAbierto(null)} onCorregir={corregir?.(recibo)} /> : null}
 
       <Dialog open={Boolean(confirmar)} onOpenChange={(v) => !v && setConfirmar(null)}>
