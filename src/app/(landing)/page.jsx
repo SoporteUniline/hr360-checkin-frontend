@@ -1,7 +1,5 @@
-"use client";
-
-import MarketingLanding from "@/components/landing/MarketingLanding";
+import LandingHome from "@/components/landing/home/LandingHome";
 
 export default function LandingHomePage() {
-  return <MarketingLanding />;
+  return <LandingHome />;
 }
