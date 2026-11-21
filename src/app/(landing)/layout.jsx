@@ -1,10 +1,10 @@
-"use client";
+import { Outfit } from "next/font/google";
 
-// Layout dedicado para la landing (homepage "/").
-// Relación:
-// - Evita reutilizar el layout de `(public)` (Navbar/Footer) para respetar el diseño de `Landing.txt`.
-// - Mantiene el `RootLayout` principal (`src/app/layout.jsx`) para fuentes, AuthProvider y scripts globales.
+// Layout de la página de inicio ("/").
+// - No usa el layout de `(public)` (Navbar/Footer): la página trae su propio encabezado y pie.
+// - Agrega Outfit (títulos) a Inter, que ya carga `src/app/layout.jsx`.
+const outfit = Outfit({ subsets: ["latin"], weight: ["500", "600", "700", "800"], variable: "--font-outfit", display: "swap" });
+
 export default function LandingLayout({ children }) {
-  return <>{children}</>;
+  return <div className={outfit.variable}>{children}</div>;
 }
-
