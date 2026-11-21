@@ -10,7 +10,7 @@ Estado: Vuelta de diseño. **No se construye nada hasta `APROBADO R1`.**
 
 ## Decisiones del dueño
 - **D-1 Pago mixto:** monto fijo por transferencia y el resto en efectivo. El monto se define en el empleado como valor inicial y **se puede editar en cada nómina**.
-- **D-2 Retardos:** regla configurable por empresa; por defecto **3 retardos = 1 falta** (21/11/2026).
+- ~~**D-2 Retardos:** 3 retardos = 1 falta~~ → **EN REVISIÓN** (21/11/2026): descontar un día que sí se trabajó parece contrario a la LFT (arts. 107 multas, 110 descuentos); la disciplina por retardos va por reglamento interior / actas administrativas. ❓ PENDIENTE nueva decisión del dueño y revisión de abogado.
 
 ## Lo que ya existe (comprobado en código)
 - Empleado: `periodo_pago` (Diario, Semanal, Catorcenal, Quincenal, Mensual, Por hora), sueldo, `forma_pago` (= Fijo / Comisiones / Fijo + Comisiones, es el esquema, no el medio), `forma_calculo`, banco y `cuenta_bancaria` (`TabNomina.jsx`, `FormularioEmpleado.jsx`).
