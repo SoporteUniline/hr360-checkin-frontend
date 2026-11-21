@@ -11,6 +11,17 @@ const config: CapacitorConfig = {
     allowNavigation: ["adamia.com.mx", "*.adamia.com.mx", "www.adamia.com.mx"],
   },
   appendUserAgent: "AdamiaAppNative",
+  plugins: {
+    SplashScreen: {
+      launchShowDuration: 1500,
+      launchAutoHide: true,
+      launchFadeOutDuration: 250,
+      backgroundColor: "#ffffff",
+      showSpinner: false,
+      splashFullScreen: false,
+      splashImmersive: false,
+    },
+  },
 };
 
 export default config;
