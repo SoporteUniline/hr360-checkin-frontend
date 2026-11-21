@@ -63,6 +63,17 @@
 .lh .top-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 .lh .top-actions .login { color: var(--ink); font-weight: 600; text-decoration: none; padding: 12px 8px; font-size: .95rem; }
 .lh .top .btn { min-height: 44px; padding: 0 18px; font-size: .94rem; }
+.lh .nav a[aria-current="page"] { color: var(--blue); }
+.lh .menu-btn { display: none; width: 44px; height: 44px; border-radius: 12px; border: 1.5px solid #c9cde0; background: #fff; color: var(--ink); font-size: 1.2rem; cursor: pointer; }
+.lh .menu-movil { display: none; }
+@media (max-width: 1100px) { .lh .top .wrap { gap: 22px; } .lh .nav { gap: 18px; } .lh .top-actions .contratar { display: none; } }
+@media (max-width: 980px) {
+  .lh .menu-btn { display: inline-grid; place-items: center; }
+  .lh .menu-movil { display: grid; border-top: 1px solid var(--line); background: #fff; padding: 8px max(20px, env(safe-area-inset-left, 0px)) 16px; }
+  .lh .menu-movil a { padding: 14px 4px; border-bottom: 1px solid var(--line); color: var(--ink); font-weight: 600; text-decoration: none; }
+  .lh .menu-movil a[aria-current="page"] { color: var(--blue); }
+}
+@media (max-width: 600px) { .lh .top .btn-primary { padding: 0 14px; font-size: .88rem; } }
 
 /* ——— Portada ——— */
 .lh .hero { position: relative; overflow: hidden; }
@@ -253,9 +264,21 @@
 .lh .mods li:hover { border-color: var(--violet); color: var(--violet); transform: translateY(-2px); }
 .lh .final { padding-block: 110px; text-align: center; }
 .lh .final h2 { font-size: clamp(2.4rem, 5.6vw, 4.2rem); }
-.lh footer { border-top: 1px solid var(--line); }
-.lh footer .wrap { padding-block: 26px; display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; font-size: .88rem; color: var(--muted); }
-.lh footer nav { display: flex; gap: 22px; } .lh footer a { color: var(--body); text-decoration: none; } .lh footer a:hover { color: var(--blue); }
+/* ——— Pie del sitio (azul marino, marca en blanco) ——— */
+.lh .pie { background: var(--ink); color: rgba(255, 255, 255, .72); padding-top: 64px; }
+.lh .pie-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) repeat(5, minmax(0, 1fr)); gap: 32px; }
+.lh .pie .brand span { color: #fff; }
+.lh .logo-blanco { filter: brightness(0) invert(1); }
+.lh .pie-marca { display: grid; gap: 16px; align-content: start; justify-items: start; }
+.lh .pie-marca p { margin: 0; font-size: .92rem; line-height: 1.55; max-width: 30ch; }
+.lh .pie-marca .btn { min-height: 44px; padding: 0 18px; font-size: .92rem; }
+.lh .pie h2 { font: 700 .82rem/1 var(--f); letter-spacing: .12em; text-transform: uppercase; color: #fff; margin: 6px 0 14px; }
+.lh .pie ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.lh .pie a:not(.btn) { color: rgba(255, 255, 255, .72); text-decoration: none; font-size: .92rem; }
+.lh .pie a:not(.btn):hover, .lh .pie a:not(.btn):focus-visible { color: #fff; text-decoration: underline; }
+.lh .pie-final { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; margin-top: 48px; padding-block: 22px; border-top: 1px solid rgba(255, 255, 255, .14); font-size: .85rem; }
+@media (max-width: 1100px) { .lh .pie-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .lh .pie-marca { grid-column: 1 / -1; } }
+@media (max-width: 600px) { .lh .pie-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
 /* ===== Fotos con tarjetas flotantes ===== */
 .lh .photo { position: relative; border-radius: 28px; overflow: hidden; background: var(--soft); }
@@ -606,3 +629,6 @@
 .lh .aviso { font-size: .9rem !important; color: var(--muted) !important; border-top: 1px solid var(--line); padding-top: 12px; }
 @media (max-width: 980px) { .lh .blog-lista.mini { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 600px) { .lh .blog-lista { grid-template-columns: minmax(0, 1fr); } .lh .post-cta { padding: 20px; } }
+
+/* Encabezado fijo en las páginas públicas que no son el inicio (el contenedor .lh solo envuelve el encabezado). */
+.lh.sitio-fijo { position: sticky; top: 0; z-index: 40; overflow: visible; background: transparent; }
