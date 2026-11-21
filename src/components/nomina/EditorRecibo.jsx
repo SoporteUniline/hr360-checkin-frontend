@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Chip, descargar, mensajeError } from "./comun";
 import { dinero } from "@/lib/nomina/nomina.mjs";
+import AsistenciaRecibo from "./AsistenciaRecibo";
 
 const get = (url) => axios.get(url).then((r) => r.data);
 const plural = (n, palabra) => `${Number(n) || 0} ${palabra}${Number(n) === 1 ? "" : "s"}`;
@@ -86,9 +87,10 @@ export default function EditorRecibo({ recibo, periodo, editable, idEmpresa, alC
       <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>{d.empleado?.nombre ?? "Recibo"}</SheetTitle>
-          <p className="text-sm text-gray-500">{d.empleado?.puesto ? `${d.empleado.puesto} · ` : ""}Días pagados {d.resumen?.diasPagados ?? "—"} de {d.resumen?.diasRango ?? "—"} · {plural(d.resumen?.faltas, "falta")} · {plural(d.resumen?.retardos, "retardo")}</p>
+          <p className="text-sm text-gray-500">{d.empleado?.puesto ? `${d.empleado.puesto} · ` : ""}Pago {String(d.empleado?.periodo_pago ?? "").toLowerCase()} · {plural(d.resumen?.faltas, "falta")} · {plural(d.resumen?.retardos, "retardo")}</p>
         </SheetHeader>
         <div className="grid gap-4 px-4 pb-6 text-sm">
+          <AsistenciaRecibo recibo={recibo} modo="compacto" />
           {(d.alertas ?? []).length ? (
             <ul className="grid gap-1 rounded-lg bg-amber-50 p-3 text-amber-900">{d.alertas.map((a) => <li key={a}>⚠ {a}</li>)}</ul>
           ) : null}

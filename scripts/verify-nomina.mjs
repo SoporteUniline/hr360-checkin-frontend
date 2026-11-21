@@ -26,7 +26,8 @@ const captura = (pg, nombre) => (process.env.CAPTURAS ? pg.screenshot({ path: `$
 const estado = { periodos: [], ediciones: [], posts: [] };
 const recibo = () => ({
   id: 11, id_empleado: 15, estado: "vigente", envio_estado: null, transferencia_editada: null,
-  datos: { empleado: { nombre: "Ana Torres", puesto: "Empacadora", medio_pago: "Mixto", monto_transferencia: 1000 }, resumen: { diasPagados: 4.67, diasRango: 7, faltas: 2, retardos: 1 }, alertas: [] },
+  datos: { empleado: { nombre: "Ana Torres", puesto: "Empacadora", medio_pago: "Mixto", monto_transferencia: 1000 }, resumen: { diasPagados: 4.67, diasRango: 7, diasTrabajados: 4, minTrabajados: 2040, minExtra: 120, minDobles: 120, minTriples: 0, faltas: 2, sinGoce: 0, retardos: 1, domingos: 0, festivosTrab: 0, sueldo: 210000, diario: 30000, periodoPago: "Semanal" }, alertas: [],
+    dias: [["2026-11-16", "trabajado", 600, 120, false], ["2026-11-17", "trabajado", 480, 0, false], ["2026-11-18", "trabajado", 480, 0, true], ["2026-11-19", "trabajado", 480, 0, false], ["2026-11-20", "falta", 0, 0, false], ["2026-11-21", "falta", 0, 0, false], ["2026-11-22", "descanso", 0, 0, false]].map(([fecha, estado, min, extra, retardo]) => ({ fecha, estado, min, extra, retardo, programado: estado === "descanso" ? 0 : 480, entrada: min ? (retardo ? "09:10" : "09:00") : null, salida: min ? (extra ? "19:00" : "17:00") : null })) },
   total_percepciones: 1600, total_descuentos: 0, neto: 1600, transferencia: 1000, efectivo: 600,
   lineas: [
     { clave: "sueldo", concepto: "Sueldo (días pagados)", tipo: "percepcion", cantidad: 4.67, importe: 1400, importe_sugerido: 1400, editado: 0, origen: "calculo" },
@@ -103,11 +104,25 @@ try {
   await page.waitForURL("**/panel/nomina/5");
   await page.getByRole("heading", { name: /Nómina del/ }).waitFor();
   await page.getByText("$1,600.00").first().waitFor();
+  // La tabla dice cuánto trabajó, faltas, retardos y horas extra (no solo el total).
+  await page.getByText("Asistencia del periodo").waitFor();
+  const fila = page.getByRole("row", { name: /Ana Torres/ });
+  for (const t of ["4 d", "34 h", "2 h", "4.67"]) assert.ok((await fila.innerText()).includes(t), `fila con ${t}`);
   assert.equal(await page.getByRole("button", { name: "Autorizar y enviar recibos" }).count(), 0, "RH no ve Autorizar");
   await captura(page, "nomina-detalle");
 
-  // 2) Abrir el recibo de Ana: el bono condicionado explica por qué es $0; editar despensa con motivo.
+  // 2) Clic en Ana: se despliega su asistencia día por día (entrada, salida, horas, extra, retardo) y el porqué del sueldo.
   await page.getByRole("button", { name: "Ana Torres" }).click();
+  const asistencia = page.getByRole("region", { name: "Asistencia de Ana Torres" });
+  await asistencia.waitFor();
+  const mie = asistencia.getByRole("row", { name: /mié 18/ });
+  for (const t of ["Trabajó", "Retardo", "09:10", "17:00", "8 h"]) assert.ok((await mie.innerText()).includes(t), `miércoles con ${t}`);
+  assert.ok((await asistencia.getByRole("row", { name: /lun 16/ }).innerText()).includes("+2 h"), "lunes con 2 h extra autorizadas");
+  assert.ok((await asistencia.getByRole("row", { name: /vie 20/ }).innerText()).includes("Falta"));
+  await asistencia.getByText(/\$2,100\.00 semanal × 4\.67 días pagados ÷ 7 días del periodo/).waitFor();
+  await captura(page, "nomina-desplegado");
+  // Otro clic lo cierra; el botón abre el recibo para ajustar importes.
+  await asistencia.getByRole("button", { name: "Revisar recibo y ajustar importes" }).click();
   await page.getByText("No cumple: 1 retardo").waitFor();
   await page.getByLabel("Importe de Despensa").fill("250");
   await page.getByPlaceholder("Motivo del cambio (opcional)").fill("Ajuste acordado");

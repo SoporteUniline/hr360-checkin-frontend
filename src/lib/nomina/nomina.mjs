@@ -62,3 +62,31 @@ export function acciones(estado, puedeAutorizar) {
     reenviar: estado === "autorizado",
   };
 }
+
+// Minutos → "8 h 30 min" (o "—" si no hay).
+export function horas(min) {
+  const m = Math.round(Number(min) || 0);
+  if (!m) return "—";
+  const h = Math.floor(m / 60);
+  const r = m % 60;
+  return h && r ? `${h} h ${r} min` : h ? `${h} h` : `${r} min`;
+}
+
+// Cómo se pinta cada día en el detalle (tono y texto corto).
+export const DIA = {
+  trabajado: { texto: "Trabajó", tono: "verde" },
+  festivo_trabajado: { texto: "Festivo trabajado", tono: "verde" },
+  descanso_trabajado: { texto: "Trabajó en descanso", tono: "verde" },
+  festivo: { texto: "Festivo", tono: "azul" },
+  permiso_con_goce: { texto: "Permiso con goce", tono: "azul" },
+  permiso_sin_goce: { texto: "Sin goce", tono: "ambar" },
+  falta: { texto: "Falta", tono: "rojo" },
+  descanso: { texto: "Descanso", tono: "gris" },
+  inactivo: { texto: "No activo", tono: "gris" },
+};
+
+// Fecha → "lun 16".
+export function diaCorto(fecha) {
+  const d = new Date(`${fecha}T12:00:00Z`);
+  return `${["dom", "lun", "mar", "mié", "jue", "vie", "sáb"][d.getUTCDay()]} ${d.getUTCDate()}`;
+}

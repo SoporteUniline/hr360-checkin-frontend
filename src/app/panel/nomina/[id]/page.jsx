@@ -2,7 +2,7 @@
 
 // Detalle de una nómina (R1): totales, recibos por persona, edición en borrador y flujo
 // borrador → por autorizar → autorizada (solo el dueño) | cancelada (con motivo). Backend: /checador/nomina.
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import useSWR from "swr";
@@ -14,7 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Chip, Kpi, descargar, mensajeError } from "@/components/nomina/comun";
 import EditorRecibo from "@/components/nomina/EditorRecibo";
-import { ENVIOS, ESTADOS, acciones, dinero, fechaCorta } from "@/lib/nomina/nomina.mjs";
+import AsistenciaRecibo from "@/components/nomina/AsistenciaRecibo";
+import { ENVIOS, ESTADOS, acciones, dinero, fechaCorta, horas } from "@/lib/nomina/nomina.mjs";
 
 const get = (url) => axios.get(url).then((r) => r.data);
 
@@ -26,6 +27,7 @@ export default function DetalleNomina() {
     refreshInterval: (d) => (d?.recibos?.some((r) => r.envio_estado === "pendiente") ? 3000 : 0),
   });
   const [abierto, setAbierto] = useState(null);
+  const [desplegado, setDesplegado] = useState(null); // fila con su asistencia abierta
   const [confirmar, setConfirmar] = useState(null); // "autorizar" | "cancelar" | "enviar"
   const [motivo, setMotivo] = useState("");
   const [ocupado, setOcupado] = useState(false);
@@ -79,6 +81,18 @@ export default function DetalleNomina() {
         <Kpi titulo="En efectivo" valor={dinero(periodo.total_efectivo)} />
       </div>
 
+      {(() => {
+        const suma = (k) => recibos.reduce((t, r) => t + (Number(r.datos?.resumen?.[k]) || 0), 0);
+        const extra = suma("minDobles") + suma("minTriples");
+        return (
+          <div className="grid grid-cols-3 gap-2 text-sm md:max-w-xl">
+            <Kpi titulo="Faltas" valor={suma("faltas")} clase={suma("faltas") ? "text-red-700" : "text-gray-900"} />
+            <Kpi titulo="Retardos" valor={suma("retardos")} nota="no descuentan sueldo" clase={suma("retardos") ? "text-amber-700" : "text-gray-900"} />
+            <Kpi titulo="Horas extra" valor={horas(extra)} nota={suma("minTriples") ? `${horas(suma("minTriples"))} al triple` : null} />
+          </div>
+        );
+      })()}
+
       <div className="flex flex-wrap gap-2">
         {a.recalcular ? <Button variant="outline" size="sm" disabled={ocupado} onClick={() => accion("calcular", {}, "Nómina recalculada con la asistencia actual.")}>Recalcular</Button> : null}
         {a.enviar ? <Button size="sm" disabled={ocupado || negativos > 0} onClick={() => setConfirmar("enviar")}>Enviar a autorizar</Button> : null}
@@ -94,29 +108,59 @@ export default function DetalleNomina() {
         <p className="rounded-xl border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">Nadie entra en esta nómina. Revisa que tus empleados tengan «{periodo.periodicidad}» como periodo de pago y que no estén ya en otra nómina de esas fechas.</p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-          <table className="w-full min-w-[860px] text-[13px] tabular-nums">
+          <table className="w-full min-w-[1100px] text-[13px] tabular-nums">
             <thead>
-              <tr className="bg-gray-50 text-left text-[10.5px] uppercase tracking-wide text-gray-500">
-                {["Empleado", "Días pagados", "Percepciones", "Descuentos", "Neto", "Transferencia", "Efectivo", periodo.estado === "autorizado" ? "Envío" : "Avisos"].map((h) => <th key={h} className="px-3 py-2 font-semibold">{h}</th>)}
+              <tr className="bg-gray-50 text-[10px] uppercase tracking-wide text-gray-500">
+                <th className="px-3 pt-2 text-left font-semibold" rowSpan={2}>Empleado</th>
+                <th className="border-l border-gray-200 px-3 pt-2 text-center font-semibold text-gray-700" colSpan={5}>Asistencia del periodo</th>
+                <th className="border-l border-gray-200 px-3 pt-2 text-center font-semibold text-gray-700" colSpan={5}>Pago</th>
+                <th className="border-l border-gray-200 px-3 pt-2 text-left font-semibold" rowSpan={2}>{periodo.estado === "autorizado" ? "Envío" : "Avisos"}</th>
+              </tr>
+              <tr className="bg-gray-50 text-left text-[10px] uppercase tracking-wide text-gray-500">
+                {["Trabajó", "Faltas", "Retardos", "Horas extra", "Días pagados"].map((h, i) => <th key={h} className={`px-3 pb-2 font-semibold ${i === 0 ? "border-l border-gray-200" : ""}`}>{h}</th>)}
+                {["Percepciones", "Descuentos", "Neto", "Transferencia", "Efectivo"].map((h, i) => <th key={h} className={`px-3 pb-2 font-semibold ${i === 0 ? "border-l border-gray-200" : ""}`}>{h}</th>)}
               </tr>
             </thead>
             <tbody>
               {recibos.map((r) => {
                 const avisos = r.datos?.alertas ?? [];
                 const envio = ENVIOS[r.envio_estado];
+                const res = r.datos?.resumen ?? {};
+                const extra = (res.minDobles ?? 0) + (res.minTriples ?? 0);
                 return (
-                  <tr key={r.id} className="cursor-pointer border-t border-gray-100 hover:bg-blue-50/40" onClick={() => setAbierto(r.id)}>
-                    <td className="px-3 py-2.5"><button type="button" className="font-semibold text-gray-900 hover:underline" onClick={() => setAbierto(r.id)}>{r.datos?.empleado?.nombre ?? r.id_empleado}</button></td>
-                    <td className="px-3 py-2.5">{r.datos?.resumen?.diasPagados ?? "—"}</td>
-                    <td className="px-3 py-2.5">{dinero(r.total_percepciones)}</td>
+                  <Fragment key={r.id}>
+                  <tr className={`cursor-pointer border-t border-gray-100 hover:bg-blue-50/40 ${desplegado === r.id ? "bg-blue-50/60" : ""}`} onClick={() => setDesplegado(desplegado === r.id ? null : r.id)}>
+                    <td className="px-3 py-2.5">
+                      <button type="button" aria-expanded={desplegado === r.id} className="flex items-center gap-1.5 text-left font-semibold text-gray-900 hover:underline" onClick={(e) => { e.stopPropagation(); setDesplegado(desplegado === r.id ? null : r.id); }}>
+                        <span aria-hidden="true" className={`inline-block text-[10px] text-gray-400 transition-transform ${desplegado === r.id ? "rotate-90" : ""}`}>▶</span>
+                        {r.datos?.empleado?.nombre ?? r.id_empleado}
+                      </button>
+                      {r.datos?.empleado?.puesto ? <p className="text-[11px] text-gray-500">{r.datos.empleado.puesto}</p> : null}
+                    </td>
+                    <td className="border-l border-gray-100 px-3 py-2.5">{res.diasTrabajados == null ? "—" : `${res.diasTrabajados} d`}{res.minTrabajados ? <span className="block text-[11px] text-gray-500">{horas(res.minTrabajados)}</span> : null}</td>
+                    <td className={`px-3 py-2.5 ${res.faltas ? "font-semibold text-red-700" : "text-gray-500"}`}>{res.faltas ?? "—"}</td>
+                    <td className={`px-3 py-2.5 ${res.retardos ? "font-semibold text-amber-700" : "text-gray-500"}`}>{res.retardos ?? "—"}</td>
+                    <td className="px-3 py-2.5">{extra ? <>{horas(extra)}{res.minTriples ? <span className="block text-[11px] text-red-700">{horas(res.minTriples)} triples</span> : null}</> : <span className="text-gray-500">—</span>}</td>
+                    <td className="px-3 py-2.5 font-semibold">{res.diasPagados ?? "—"}{res.diasRango ? <span className="font-normal text-gray-500"> / {res.diasRango}</span> : null}</td>
+                    <td className="border-l border-gray-100 px-3 py-2.5">{dinero(r.total_percepciones)}</td>
                     <td className="px-3 py-2.5">{dinero(r.total_descuentos)}</td>
                     <td className={`px-3 py-2.5 font-bold ${Number(r.neto) < 0 ? "text-red-700" : ""}`}>{dinero(r.neto)}</td>
                     <td className="px-3 py-2.5">{dinero(r.transferencia)}</td>
                     <td className="px-3 py-2.5">{dinero(r.efectivo)}</td>
-                    <td className="px-3 py-2.5">
-                      {periodo.estado === "autorizado" ? (envio ? <Chip tono={envio.tono}>{envio.texto}</Chip> : "—") : avisos.length ? <Chip tono="ambar">⚠ {avisos.length}</Chip> : <span className="text-gray-400">—</span>}
+                    <td className="max-w-[240px] border-l border-gray-100 px-3 py-2.5">
+                      {periodo.estado === "autorizado" ? (envio ? <Chip tono={envio.tono}>{envio.texto}</Chip> : "—") : avisos.length ? (
+                        <span className="block truncate text-[11.5px] text-amber-800" title={avisos.join("\n")}>⚠ {avisos[0]}{avisos.length > 1 ? ` (+${avisos.length - 1})` : ""}</span>
+                      ) : <span className="text-gray-400">—</span>}
                     </td>
                   </tr>
+                  {desplegado === r.id ? (
+                    <tr className="bg-blue-50/30">
+                      <td colSpan={12} className="px-3 pb-4 pt-1">
+                        <AsistenciaRecibo recibo={r} onEditar={() => setAbierto(r.id)} />
+                      </td>
+                    </tr>
+                  ) : null}
+                  </Fragment>
                 );
               })}
             </tbody>
