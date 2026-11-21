@@ -1,4 +1,5 @@
 import { outfit } from "@/fonts";
+import AvisoCookies from "@/components/legal/AvisoCookies";
 import SitioEncabezado from "@/components/landing/home/SitioEncabezado";
 import SitioPie from "@/components/landing/home/SitioPie";
 
@@ -15,6 +16,7 @@ export default function LayoutPublico({ children }) {
       <div className="lh">
         <SitioPie />
       </div>
+      <AvisoCookies />
     </div>
   );
 }

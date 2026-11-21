@@ -48,6 +48,7 @@ export const PIE = [
     enlaces: [
       { href: "/aviso-privacidad", texto: "Aviso de privacidad" },
       { href: "/terminos-condiciones", texto: "Términos y condiciones" },
+      { href: "/aviso-empleados", texto: "Aviso para empleados" },
       { href: "/politicas", texto: "Políticas" },
     ],
   },

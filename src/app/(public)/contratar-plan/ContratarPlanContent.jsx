@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import AceptoLegal from "@/components/legal/AceptoLegal";
+import { DOCS_CUENTA, registrarAceptacion } from "@/lib/legal/aceptacion";
 import "@/components/landing/home/landing-home.css";
 import "./contratar.css";
 import axios from "@/lib/axios";
@@ -112,6 +114,7 @@ export default function ContratarPlanContent() {
   }, [searchParams]);
 
   const [form, setForm] = useState(initialForm);
+  const [aceptaLegal, setAceptaLegal] = useState(false);
 
   // (21/11/2026) Cupón que llega desde un pop-up de la página (?cupon=BUENFIN2026): queda escrito, listo para «Aplicar».
   useEffect(() => {
@@ -334,6 +337,12 @@ export default function ContratarPlanContent() {
       setSubmitError("Las contraseñas no coinciden.");
       return;
     }
+    if (!aceptaLegal) {
+      setSubmitError("Para crear tu cuenta, acepta el Aviso de privacidad y los Términos y condiciones.");
+      return;
+    }
+    // Constancia de la aceptación (versión, fecha e IP). No detiene la contratación si falla.
+    registrarAceptacion({ contexto: "contratar", documentos: DOCS_CUENTA, nombre: form.nombre_cliente, correo: form.correo, telefono: fullPhone });
 
     try {
       setSubmitting(true);
@@ -716,6 +725,8 @@ export default function ContratarPlanContent() {
                 Ir a pagar con Stripe
               </a>
             ) : null}
+
+            <AceptoLegal id="ct-acepto" className="mt-5" conTerminos checked={aceptaLegal} onChange={setAceptaLegal} />
 
             <div className="mt-5 flex flex-wrap gap-3">
               <button type="submit" disabled={submitting} className="btn btn-primary disabled:opacity-60">
