@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import "@/components/landing/home/landing-home.css";
+import "./contratar.css";
 import axios from "@/lib/axios";
 import {
   Dialog,
@@ -382,7 +384,8 @@ export default function ContratarPlanContent() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-[var(--adamia-bg-light)] to-white text-[var(--adamia-text-primary)]">
+    // Diseño del 21/11/2026: mismo estilo que el inicio. La lógica de registro, verificación y pago no cambió.
+    <main className="lh ct">
       <Dialog open={successModalOpen} onOpenChange={setSuccessModalOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
@@ -421,36 +424,30 @@ export default function ContratarPlanContent() {
         </DialogContent>
       </Dialog>
 
-      <section className="bg-gradient-to-r from-[var(--adamia-blue)] to-[var(--adamia-purple)] px-6 py-12 text-center text-white">
-        <div className="mx-auto max-w-5xl">
-          <h1 className="text-3xl font-black md:text-5xl">
-            Activa ADAMIA para tu empresa
-          </h1>
-          <p className="mx-auto mt-3 max-w-3xl text-sm text-white/90 md:text-base">
-            El cobro mensual depende de los empleados realmente registrados
-            en tu empresa y de su estado.
-          </p>
+      <section className="ct-hero">
+        <div className="wrap ct-hero-grid">
+          <div className="ct-hero-txt">
+            <span className="eyebrow">Contratar</span>
+            <h1>Activa ADAMIA hoy.</h1>
+            <p className="lead">Crea tu cuenta, verifica tu WhatsApp y paga en línea. Solo pagas por las personas que registras.</p>
+          </div>
+          <div className="ct-tarifas" aria-label="Tarifas mensuales">
+            <h2>Tarifas mensuales</h2>
+            <SummaryRow label="Empleado activo" value="$60 MXN / mes" />
+            <SummaryRow label="Empleado inactivo o de baja" value="$15 MXN / mes" />
+            <p>
+              Sin cuota base. Se cobra solo por los empleados registrados, con ajustes proporcionales del periodo. Sin empleados
+              registrados, el importe es $0.
+            </p>
+          </div>
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-7xl px-4 py-8 md:px-6">
-        <div className="rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-5 shadow-sm md:p-6">
-          <h2 className="text-lg font-black md:text-xl">Tarifas mensuales</h2>
-          <div className="mt-3 space-y-2 text-sm">
-            <SummaryRow label="Empleado Activo" value="$60 MXN / mes" />
-            <SummaryRow label="Empleado Inactivo o Baja" value="$15 MXN / mes" />
-          </div>
-          <p className="mt-3 text-sm text-[var(--adamia-text-secondary)]">
-            Sin cuota base. El cobro utiliza exclusivamente los empleados realmente
-            registrados y conserva los ajustes proporcionales del periodo.
-            Si tu empresa no tiene empleados registrados, el importe es $0.
-          </p>
-        </div>
-
-        <div className="mt-8 grid gap-8 lg:grid-cols-[1.25fr_0.75fr]">
+      <section className="wrap ct-cuerpo">
+        <div className="ct-grid">
           <form
             onSubmit={onSubmit}
-            className="rounded-2xl border border-[var(--adamia-blue)]/15 bg-white p-5 shadow-sm md:p-7"
+            className="ct-form"
           >
             <h2 className="text-2xl font-black">Crea tu cuenta</h2>
             <p className="mt-1 text-sm text-[var(--adamia-text-secondary)]">
@@ -715,33 +712,32 @@ export default function ContratarPlanContent() {
             ) : null}
 
             <div className="mt-5 flex flex-wrap gap-3">
-              <button
-                type="submit"
-                disabled={submitting}
-                className="rounded-xl bg-[var(--adamia-blue)] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-60"
-              >
+              <button type="submit" disabled={submitting} className="btn btn-primary disabled:opacity-60">
                 {submitting ? "Procesando..." : "Continuar al pago"}
               </button>
-              <Link
-                href="/cotiza"
-                className="rounded-xl border border-[var(--adamia-blue)]/30 px-5 py-2.5 text-sm font-bold text-[var(--adamia-blue)]"
-              >
-                Ver tabla de precios
+              <Link href="/cotiza" className="btn btn-line">
+                Cotizar por plan
               </Link>
             </div>
           </form>
 
-          <aside className="space-y-5">
-            <article className="rounded-2xl border border-[var(--adamia-blue)]/20 bg-white p-5 shadow-sm">
-              <h3 className="text-xl font-black">Beneficios del software</h3>
-              <div className="mt-3 space-y-2 text-sm text-[var(--adamia-text-secondary)]">
-                <p>• Reloj checador con evidencia y control en tiempo real.</p>
-                <p>• Gestión de contratos, permisos y vacaciones.</p>
-                <p>• Reportes para operación y nómina.</p>
-                <p>• Plataforma web empresarial con soporte continuo.</p>
-              </div>
-            </article>
-
+          <aside className="ct-aside">
+            <div className="ct-incluye">
+              <h3>Incluye</h3>
+              <ul>
+                <li>Reloj checador con rostro y GPS, aunque no haya internet.</li>
+                <li>Vacaciones, permisos y aprobaciones por WhatsApp.</li>
+                <li>Contratos, expedientes y firma en línea.</li>
+                <li>Reportes de horas y asistencia listos para pagar.</li>
+              </ul>
+            </div>
+            <div className="ct-ayuda">
+              <h3>¿Prefieres que te lo mostremos?</h3>
+              <p>Agenda una demostración con tu información, sin compromiso.</p>
+              <Link className="btn btn-line" href="/contacto">
+                Solicitar demo
+              </Link>
+            </div>
           </aside>
         </div>
       </section>
