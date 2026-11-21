@@ -1,10 +1,20 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Script from "next/script";
 import { usePathname } from "next/navigation";
+import { isNativeClient } from "@/lib/native-app";
 
 export default function GlobalThirdPartyScripts() {
   const pathname = usePathname();
+  const [allowMetaPixel, setAllowMetaPixel] = useState(false);
+
+  useEffect(() => {
+    // En iOS/Android nativo se omite Meta Pixel para cumplir App Tracking Transparency (ATT)
+    if (!isNativeClient()) {
+      setAllowMetaPixel(true);
+    }
+  }, []);
 
   if (pathname?.startsWith("/firmar/") || pathname?.startsWith("/reclutamiento-demo/")) {
     return null;
@@ -18,22 +28,24 @@ export default function GlobalThirdPartyScripts() {
         strategy="afterInteractive"
       />
 
-      {/* Meta Pixel */}
-      <Script id="meta-pixel" strategy="afterInteractive">
-        {`
-          !function(f,b,e,v,n,t,s)
-          {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-          n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-          if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-          n.queue=[];t=b.createElement(e);t.async=!0;
-          t.src=v;s=b.getElementsByTagName(e)[0];
-          s.parentNode.insertBefore(t,s)}(window, document,'script',
-          'https://connect.facebook.net/en_US/fbevents.js');
+      {/* Meta Pixel (solo web) */}
+      {allowMetaPixel && (
+        <Script id="meta-pixel" strategy="afterInteractive">
+          {`
+            !function(f,b,e,v,n,t,s)
+            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+            n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t,s)}(window, document,'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
 
-          fbq('init', '2003925690497108');
-          fbq('track', 'PageView');
-        `}
-      </Script>
+            fbq('init', '2003925690497108');
+            fbq('track', 'PageView');
+          `}
+        </Script>
+      )}
     </>
   );
 }
