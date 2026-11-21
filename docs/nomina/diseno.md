@@ -10,7 +10,8 @@ Estado: Vuelta de diseño. **No se construye nada hasta `APROBADO R1`.**
 
 ## Decisiones del dueño
 - **D-1 Pago mixto:** monto fijo por transferencia y el resto en efectivo. El monto se define en el empleado como valor inicial y **se puede editar en cada nómina**.
-- ~~**D-2 Retardos:** 3 retardos = 1 falta~~ → **EN REVISIÓN** (21/11/2026): descontar un día que sí se trabajó parece contrario a la LFT (arts. 107 multas, 110 descuentos); la disciplina por retardos va por reglamento interior / actas administrativas. ❓ PENDIENTE nueva decisión del dueño y revisión de abogado.
+- **D-2 Retardos (21/11/2026):** **no afectan la nómina** (no se descuenta sueldo de un día trabajado). El seguimiento va fuera de nómina: aviso en el dashboard/incidencias al llegar a N retardos (configurable) con propuesta de acta administrativa ya llena. 💡 PROPUESTO: que los retardos puedan quitar un bono de puntualidad condicionado (pendiente de confirmar).
+- **D-3 Todo proporcional (21/11/2026):** el sistema **sugiere** el pago con base en la ley (días trabajados, parte proporcional del séptimo día —art. 72 LFT—, horas extra, festivos, etc.) y **todo se puede editar** en la nómina antes de autorizar. Ej.: si vino 4 días, se paga lo proporcional a 4 días.
 
 ## Lo que ya existe (comprobado en código)
 - Empleado: `periodo_pago` (Diario, Semanal, Catorcenal, Quincenal, Mensual, Por hora), sueldo, `forma_pago` (= Fijo / Comisiones / Fijo + Comisiones, es el esquema, no el medio), `forma_calculo`, banco y `cuenta_bancaria` (`TabNomina.jsx`, `FormularioEmpleado.jsx`).
@@ -26,6 +27,5 @@ Estado: Vuelta de diseño. **No se construye nada hasta `APROBADO R1`.**
 - Rebanadas: R1 periodos + cálculo + conceptos + pago mixto + PDF/correo; R2 préstamos; R3 bonos por regla, firma y archivo bancario.
 
 ## ❓ PENDIENTE
-- Faltas sin justificar: día completo por sueldo diario; ¿activar descuento proporcional del séptimo día?
 - Si permisos con/sin goce y tipos de incapacidad se agregan.
 - Revisión legal del recibo sin CFDI y de los topes de descuento.
