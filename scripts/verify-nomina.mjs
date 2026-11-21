@@ -86,6 +86,8 @@ async function rutas(ctx, usuario) {
     // Misma forma que el backend real ({ data: [...] }): la ventana necesita la lista, no el objeto (falla del 21/11/2026).
     if (p === "/checador/empleados") return ok({ data: [{ id_empleado: 15, nombre: "Ana", apellido_paterno: "Torres" }, { id_empleado: 3, nombre: "Luis", apellido_paterno: "Jefe" }], total: 2 });
     if (p === "/checador/tiposPermiso") return ok({ tiposPermiso: [{ id: 1, nombre: "Asistencia" }] });
+    // Ficha del empleado (clic en su nombre en cualquier pantalla).
+    if (p === "/checador/empleados/15") { estado.fichas = (estado.fichas ?? 0) + 1; return ok({ id_empleado: 15, id_empresa: 7, nombre: "Ana", apellido_paterno: "Torres", apellido_materno: "Paz", puesto: "Empacadora", estado: "Activo", correo: "ana@x.mx", nip: "1515" }); }
     if (p === "/checador/nomina/conceptos") return ok({ ok: true, conceptos: [{ id: 1, nombre: "Despensa", tipo: "percepcion", forma: "fijo", valor: 200, activo: 1 }] });
     if (p === "/checador/nomina/mis-recibos") return ok({ ok: true, recibos: [{ id: 11, id_empresa: 7, folio: "N5-11", neto: 1650, transferencia: 1000, efectivo: 650, fecha_inicio: "2026-11-16", fecha_fin: "2026-11-22", firma_estatus: "pendiente" }] });
     if (p === "/checador/firma-digital/solicitudes/documento") { assert.equal(url.searchParams.get("tipo_documento"), "RECIBO_NOMINA"); return ok({ success: true, solicitud: { estatus: "pendiente", url_firma: "/firmar/tok-recibo" } }); }
@@ -121,7 +123,7 @@ try {
   await captura(page, "nomina-detalle");
 
   // 2) Clic en Ana: se despliega su asistencia día por día (entrada, salida, horas, extra, retardo) y el porqué del sueldo.
-  await page.getByRole("button", { name: "Ana Torres" }).click();
+  await page.getByRole("button", { name: "Ver asistencia de Ana Torres" }).click();
   const asistencia = page.getByRole("region", { name: "Asistencia de Ana Torres" });
   await asistencia.waitFor();
   const mie = asistencia.getByRole("row", { name: /mié 18/ });
@@ -163,6 +165,22 @@ try {
   await captura(page, "nomina-recibo");
   assert.deepEqual(estado.ediciones[0], { version: 2, lineas: [{ clave: "concepto:1", importe: 250, motivo: "Ajuste acordado" }] });
   await page.keyboard.press("Escape");
+
+  // 2b) Clic en el NOMBRE: abre aquí mismo su ficha (la misma de Empleados), con «Editar»; Ctrl+clic sería otra pestaña.
+  const enlace = page.getByRole("row", { name: /Ana Torres/ }).first().getByRole("link", { name: "Ana Torres" });
+  assert.equal(await enlace.getAttribute("href"), "/panel/empleados?id=15");
+  await enlace.click();
+  const ficha = page.getByRole("dialog", { name: "Ficha de Ana Torres Paz" });
+  await ficha.getByRole("button", { name: "Editar" }).first().waitFor({ timeout: 20000 });
+  assert.ok(page.url().endsWith("/panel/nomina/5"), "no salió de la nómina");
+  assert.equal(estado.fichas, 1);
+  await dormir(400);
+  await captura(page, "ficha-flotante");
+  await ficha.getByRole("button", { name: "Editar" }).first().click();
+  await ficha.getByRole("button", { name: "Actualizar" }).first().waitFor();
+  await ficha.getByRole("button", { name: "Cerrar" }).first().click();
+  await ficha.waitFor({ state: "detached" });
+  await page.getByRole("region", { name: "Asistencia de Ana Torres" }).waitFor(); // la fila desplegada sigue igual
 
   // 3) Enviar a autorizar (confirmación).
   await page.getByRole("button", { name: "Enviar a autorizar" }).click();

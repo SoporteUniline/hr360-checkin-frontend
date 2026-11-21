@@ -2,6 +2,7 @@
 
 // Detalle de un préstamo (Nómina R2): saldo, avance, historial de abonos y las acciones según su estado.
 // D-9: RH o el dueño aprueba; cancelar uno vigente con saldo solo el dueño. El backend vuelve a validar todo.
+import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
 import { useEffect, useState } from "react";
 import useSWR from "swr";
 import axios from "@/lib/axios";
@@ -64,7 +65,7 @@ export default function DetallePrestamo({ id, onCerrar, onCambio }) {
     <Dialog open={Boolean(id)} onOpenChange={(v) => !v && onCerrar()}>
       <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="flex flex-wrap items-center gap-2">{p ? <>{p.empleado} <Chip tono={est.tono}>{est.texto}</Chip></> : "Préstamo"}</DialogTitle>
+          <DialogTitle className="flex flex-wrap items-center gap-2">{p ? <><NombreEmpleado id={p.id_empleado}>{p.empleado}</NombreEmpleado> <Chip tono={est.tono}>{est.texto}</Chip></> : "Préstamo"}</DialogTitle>
           <DialogDescription>{p ? `Préstamo P-${p.id} · ${p.origen === "empleado" ? "lo pidió desde Mi espacio" : `registrado por ${p.solicitado_por_nombre ?? "RH"}`} el ${fechaHora(p.creado_en)}` : "Cargando…"}</DialogDescription>
         </DialogHeader>
         {error ? <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{mensajeError(error, "No se pudo cargar el préstamo.")}</p> : null}

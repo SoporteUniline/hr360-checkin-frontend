@@ -6,6 +6,7 @@
 // - Puestos: /api/checador/empleados/puestos?empresa=ID
 // Relacionado con: redlab_back/modules/attendance/controllers/reporteHorasController.js
 
+import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1344,7 +1345,7 @@ export default function ReporteHorasPage() {
                             Empleado
                           </div>
                           <div className="text-sm font-bold text-gray-900 leading-tight">
-                            {reporte.empleado?.nombre_empleado}
+                            <NombreEmpleado id={reporte.empleado?.id_empleado}>{reporte.empleado?.nombre_empleado}</NombreEmpleado>
                           </div>
                         </div>
                         <div className="px-3 border-r border-gray-300">

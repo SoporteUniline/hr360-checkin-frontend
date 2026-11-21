@@ -13,6 +13,7 @@
  *            redlab_back/modules/attendance/routes/vacacionesRoutes.js
  */
 
+import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "@/lib/axios";
 import { useAuth } from "@/context/AuthContext";
@@ -756,7 +757,7 @@ export default function VacacionesPage() {
                               >
                                 <ChevronRight className="h-4 w-4 text-gray-500" />
                               </span>
-                              {emp.nombre_completo}
+                              <NombreEmpleado id={emp.id_empleado}>{emp.nombre_completo}</NombreEmpleado>
                             </TableCell>
                             <TableCell>{emp.departamento}</TableCell>
                             <TableCell className="text-center">
@@ -1123,7 +1124,7 @@ export default function VacacionesPage() {
                   {datosPagina.map((emp) => (
                     <TableRow key={emp.id_empleado}>
                       <TableCell className="font-semibold">
-                        {emp.nombre_completo}
+                        <NombreEmpleado id={emp.id_empleado}>{emp.nombre_completo}</NombreEmpleado>
                       </TableCell>
 
                       <TableCell>{emp.departamento}</TableCell>
@@ -1213,7 +1214,7 @@ export default function VacacionesPage() {
                         Nombre
                       </div>
                       <div className="font-semibold">
-                        {detalleData?.empleado?.nombre_completo}
+                        <NombreEmpleado id={detalleData?.empleado?.id_empleado}>{detalleData?.empleado?.nombre_completo}</NombreEmpleado>
                       </div>
                     </div>
                     <div>
@@ -1274,7 +1275,7 @@ export default function VacacionesPage() {
                         Nombre
                       </div>
                       <div className="font-semibold">
-                        {detalleData?.empleado?.nombre_completo}
+                        <NombreEmpleado id={detalleData?.empleado?.id_empleado}>{detalleData?.empleado?.nombre_completo}</NombreEmpleado>
                       </div>
                     </div>
                     <div>

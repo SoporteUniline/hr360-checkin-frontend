@@ -1,5 +1,6 @@
 "use client";
 
+import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import dayjs from "dayjs";
@@ -1110,7 +1111,7 @@ export default function CentroIncidenciasPage() {
                               <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
                                   <div className="font-extrabold text-slate-900">
-                                    Incidencias de {emp.nombre}
+                                    Incidencias de <NombreEmpleado id={emp.idEmpleado}>{emp.nombre}</NombreEmpleado>
                                   </div>
                                   <div className="text-xs text-slate-500">
                                     Corrige horarios directamente. Los cambios se guardan en Asistencias y quedan marcados como corrección.

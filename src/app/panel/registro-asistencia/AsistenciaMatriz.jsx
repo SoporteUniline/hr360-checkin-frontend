@@ -4,6 +4,7 @@
 // registro-asistencia. NO hace fetch: recibe los registros que la pantalla ya
 // cargó con su rango y filtros. Exporta a PDF (con logo) y Excel desde el front.
 
+import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
 import { useMemo, useState } from "react";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -88,6 +89,7 @@ export default function AsistenciaMatriz({
         mapa.set(key, {
           key,
           nombre,
+          id_empleado: r.id_empleado,
           nip: r.nip || "",
           diasMap: {},
         });
@@ -387,7 +389,7 @@ export default function AsistenciaMatriz({
                     }`}
                     title={emp.nombre}
                   >
-                    {emp.nombre}
+                    <NombreEmpleado id={emp.id_empleado}>{emp.nombre}</NombreEmpleado>
                   </td>
                   {dias.map((d) => {
                     const c = celdaDe(emp, d);

@@ -1,5 +1,6 @@
 "use client";
 
+import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
 import { horarioPermiso } from "@/lib/asistencia/permisoHoras.mjs";
 import { useEffect, useState } from "react";
 import {
@@ -793,7 +794,7 @@ export default function PermisoViewDialog({
               <div>
                 <div className="text-sm text-gray-600">Empleado</div>
                 <div className="text-sm font-semibold text-gray-900">
-                  {item.empleado_nombre || `ID ${item.id_empleado}`}
+                  <NombreEmpleado id={item.id_empleado}>{item.empleado_nombre || `ID ${item.id_empleado}`}</NombreEmpleado>
                 </div>
               </div>
               <div>
