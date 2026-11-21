@@ -339,7 +339,7 @@ export default function TabReconocimiento({
 
           {/* Video con marco mejorado */}
           <div className="relative">
-            <div className="absolute -inset-4 bg-gradient-to-r from-blue-400 to-purple-400 rounded-2xl blur opacity-20"></div>
+            <div className="absolute -inset-4 bg-brand rounded-2xl blur opacity-20"></div>
             <div className="relative bg-white p-4 rounded-2xl shadow-lg">
               <div className="relative w-[300px] h-[300px] rounded-xl overflow-hidden bg-gray-900">
                 <video

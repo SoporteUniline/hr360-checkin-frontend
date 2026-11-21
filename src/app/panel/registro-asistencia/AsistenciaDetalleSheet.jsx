@@ -94,7 +94,7 @@ export default function AsistenciaDetalleSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full gap-0 overflow-y-auto p-0 sm:max-w-[400px]">
         <SheetHeader className="flex-row items-center gap-3.5 space-y-0 px-6 pb-4 pt-6">
-          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-brand to-brand-accent text-[15px] font-extrabold text-white shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
+          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-brand text-[15px] font-extrabold text-white shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
             {iniciales || "—"}
           </div>
           <div className="min-w-0">
@@ -108,7 +108,7 @@ export default function AsistenciaDetalleSheet({
             </div>
           </div>
         </SheetHeader>
-        <div className="h-[2.5px] bg-gradient-to-r from-brand to-brand-accent" />
+        <div className="h-[2.5px] bg-brand" />
 
         <div className="flex-1 px-6 py-5">
           <div className="mb-2.5 text-[10px] font-bold uppercase tracking-widest text-gray-400">
@@ -138,7 +138,7 @@ export default function AsistenciaDetalleSheet({
               Sin checadas registradas este día
             </div>
           ) : (
-            <div className="relative pl-6 before:absolute before:bottom-2 before:left-[7px] before:top-2 before:w-0.5 before:rounded before:bg-gradient-to-b before:from-brand before:to-brand-accent">
+            <div className="relative pl-6 before:absolute before:bottom-2 before:left-[7px] before:top-2 before:w-0.5 before:rounded before:bg-brand before:to-brand-accent">
               {entrada && (
                 <div className="relative py-1.5">
                   <span className="absolute -left-[23px] top-2.5 grid h-4 w-4 place-items-center rounded-full border-2 border-brand bg-white">
@@ -214,7 +214,7 @@ export default function AsistenciaDetalleSheet({
                   onOpenChange(false);
                   onCorregir(registro);
                 }}
-                className="flex-1 rounded-xl bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
+                className="flex-1 rounded-xl bg-brand font-semibold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
               >
                 <Pencil className="mr-2 h-4 w-4" />
                 Corregir horario

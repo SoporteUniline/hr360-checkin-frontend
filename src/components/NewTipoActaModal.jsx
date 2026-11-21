@@ -289,7 +289,7 @@ const NewTipoActaModal = ({
         )}
       >
         {/* Header - Diseño ADAMIA (patrón Contratos) */}
-        <DialogHeader className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white p-6 rounded-t-lg">
+        <DialogHeader className="bg-brand text-white p-6 rounded-t-lg">
           <div className="flex items-center gap-3">
             <FileText className="h-6 w-6" />
             <DialogTitle className="text-white text-lg font-semibold">
@@ -306,7 +306,7 @@ const NewTipoActaModal = ({
           <Form {...form}>
             <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)}>
               {/* Información del tipo */}
-              <div className="bg-gradient-to-br from-blue-50 via-white to-blue-50 border border-blue-100 rounded-xl p-5 space-y-4">
+              <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-5 space-y-4">
                 <div className="flex items-center gap-2">
                   <div className="bg-[#2563EB] p-2 rounded-lg">
                     <FileText className="h-4 w-4 text-white" />
@@ -384,7 +384,7 @@ const NewTipoActaModal = ({
               </div>
 
               {/* Clasificación y gravedad */}
-              <div className="bg-gradient-to-br from-purple-50 via-white to-fuchsia-50 border border-purple-100 rounded-xl p-5 space-y-4">
+              <div className="bg-purple-50/60 border border-purple-100 rounded-xl p-5 space-y-4">
                 <div className="flex items-center gap-2">
                   <div className="bg-[#7C3AED] p-2 rounded-lg">
                     <SlidersHorizontal className="h-4 w-4 text-white" />
@@ -602,7 +602,7 @@ const NewTipoActaModal = ({
         onOpenChange={(o) => !o && setDeletingTipo(null)}
       >
         <AlertDialogContent className="sm:max-w-[425px] p-0">
-          <AlertDialogHeader className="bg-gradient-to-r from-red-500 to-red-600 text-white p-6 rounded-t-lg">
+          <AlertDialogHeader className="bg-red-600 text-white p-6 rounded-t-lg">
             <div className="flex items-center gap-3">
               <AlertTriangle className="h-6 w-6" />
               <AlertDialogTitle className="text-white">

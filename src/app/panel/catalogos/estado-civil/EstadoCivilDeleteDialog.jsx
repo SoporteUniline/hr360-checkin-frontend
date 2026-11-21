@@ -41,7 +41,7 @@ export default function EstadoCivilDeleteDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden">
         <DialogHeader className="p-0">
-          <div className="bg-gradient-to-r from-red-500 to-red-600 p-6">
+          <div className="bg-red-600 p-6">
             <div className="flex items-center gap-3">
               <div className="bg-white/20 p-3 rounded-lg backdrop-blur-sm">
                 <AlertTriangle className="h-6 w-6 text-white" />

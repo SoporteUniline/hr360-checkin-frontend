@@ -175,9 +175,9 @@ export default function TabLaborales({ renderCampos = () => null, form, soloLect
   return (
     <section className="space-y-6">
       {/* Información laboral */}
-      <div className="bg-linear-to-br from-emerald-50 via-white to-emerald-50 border-2 border-emerald-100 rounded-xl p-6">
+      <div className="bg-emerald-50/60 border-2 border-emerald-100 rounded-xl p-6">
         <div className="flex items-center gap-3 mb-5">
-          <div className="bg-linear-to-br from-emerald-500 to-emerald-600 p-3 rounded-lg shadow-md">
+          <div className="bg-emerald-600 p-3 rounded-lg shadow-md">
             <svg
               className="w-6 h-6 text-white"
               fill="none"

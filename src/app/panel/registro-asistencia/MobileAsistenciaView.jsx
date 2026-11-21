@@ -54,23 +54,6 @@ const DIAS_ES = [
   "Sábado",
 ];
 
-const AVATAR_COLORS = [
-  "#F97316",
-  "#3B82F6",
-  "#10B981",
-  "#8B5CF6",
-  "#EF4444",
-  "#F59E0B",
-  "#EC4899",
-  "#14B8A6",
-];
-
-function getAvatarColor(str = "") {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++)
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
 
 function getInitials(nombre = "", apellido = "") {
   return `${nombre[0] || ""}${apellido[0] || ""}`.toUpperCase();
@@ -144,7 +127,7 @@ function EmpleadoCard({ registro, index, totalCount, onClick }) {
       className="w-[calc(100%-1.5rem)] mx-3 my-1.5 min-h-[64px] flex items-center gap-3 px-3.5 py-3 bg-white rounded-2xl border border-gray-100 shadow-sm hover:bg-gray-50/60 active:bg-gray-50 text-left transition-colors"
     >
       {/* Avatar */}
-      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand to-brand-accent flex items-center justify-center text-sm font-bold text-white shrink-0">
+      <div className="w-10 h-10 rounded-xl bg-brand flex items-center justify-center text-sm font-bold text-white shrink-0">
         {initials}
       </div>
 
@@ -231,7 +214,7 @@ function GrupoSection({
           <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
             {config.label}
           </span>
-          <span className="text-xs font-extrabold bg-gradient-to-br from-brand to-brand-accent bg-clip-text text-transparent tabular-nums">
+          <span className="text-xs font-extrabold text-brand tabular-nums">
             {totalFromStats ?? registros.length}
           </span>
         </div>
@@ -435,7 +418,7 @@ export default function MobileAsistenciaView({
           <h1 className="text-xl font-extrabold tracking-tight text-gray-900 leading-tight">
             Asistencia
           </h1>
-          <div className="mt-1.5 h-0.5 w-12 rounded-full bg-gradient-to-r from-brand to-brand-accent" />
+          <div className="mt-1.5 h-0.5 w-12 rounded-full bg-brand" />
         </div>
 
         {/* Date navigator */}
@@ -510,7 +493,7 @@ export default function MobileAsistenciaView({
               </div>
               <button
                 onClick={handleGoToToday}
-                className="text-xs font-semibold px-4 min-h-[44px] rounded-xl bg-gradient-to-br from-brand to-[#4f46e5] text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] shrink-0 cursor-pointer active:opacity-90"
+                className="text-xs font-semibold px-4 min-h-[44px] rounded-xl bg-brand text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] shrink-0 cursor-pointer active:opacity-90"
               >
                 × Hoy
               </button>
@@ -612,7 +595,7 @@ export default function MobileAsistenciaView({
         </div>
         <button
           onClick={() => setShowFilters(true)}
-          className="relative w-11 h-11 flex items-center justify-center bg-gradient-to-br from-brand to-[#4f46e5] rounded-xl text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] shrink-0 active:opacity-90"
+          className="relative w-11 h-11 flex items-center justify-center bg-brand rounded-xl text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] shrink-0 active:opacity-90"
         >
           <ListFilter className="w-4 h-4" />
           {activeFiltersCount > 0 && (
@@ -637,7 +620,7 @@ export default function MobileAsistenciaView({
                 className={cn(
                   "flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-colors shrink-0",
                   isActive
-                    ? "bg-gradient-to-br from-brand to-[#4f46e5] text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)]"
+                    ? "bg-brand text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)]"
                     : "text-gray-600 border border-gray-200 bg-white hover:bg-gray-50",
                 )}
               >
@@ -746,7 +729,7 @@ export default function MobileAsistenciaView({
       <div className="shrink-0 bg-white border-t border-gray-100 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] flex items-center justify-between gap-3">
         <div className="text-[11px] text-gray-400 leading-tight min-w-0">
           <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
-            <span className="text-sm font-extrabold bg-gradient-to-br from-brand to-brand-accent bg-clip-text text-transparent tabular-nums normal-case tracking-normal">
+            <span className="text-sm font-extrabold text-brand tabular-nums normal-case tracking-normal">
               {totalRegistros}
             </span>{" "}
             registros
@@ -787,7 +770,7 @@ export default function MobileAsistenciaView({
         </div>
         <button
           onClick={abrirFormulario}
-          className="flex items-center gap-1.5 bg-gradient-to-br from-brand to-[#4f46e5] text-white text-xs font-semibold px-4 min-h-[44px] rounded-xl shadow-[0_8px_20px_rgba(37,99,235,0.32)] shrink-0 active:opacity-90"
+          className="flex items-center gap-1.5 bg-brand text-white text-xs font-semibold px-4 min-h-[44px] rounded-xl shadow-[0_8px_20px_rgba(37,99,235,0.32)] shrink-0 active:opacity-90"
         >
           <Plus className="w-3.5 h-3.5" />
           Masivo

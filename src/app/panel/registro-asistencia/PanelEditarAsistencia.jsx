@@ -44,7 +44,7 @@ function SiNo({ valor, onChange, disabled }) {
           disabled={disabled}
           onClick={() => onChange(v === "1" ? 1 : 0)}
           className={`rounded-md px-3 py-1 text-xs font-semibold ${
-            (si(valor) ? "1" : "0") === v ? "bg-slate-900 text-white" : "text-slate-500"
+            (si(valor) ? "1" : "0") === v ? "bg-brand text-white" : "text-slate-500"
           } disabled:opacity-60`}
         >
           {t}

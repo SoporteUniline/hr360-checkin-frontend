@@ -428,7 +428,7 @@ export default function ContratoDialog({
       <DialogContent className="max-w-[95vw] sm:max-w-5xl max-h-[90vh] overflow-y-auto p-0">
         {/* Header ADAMIA */}
         <DialogHeader className="p-0">
-          <div className="bg-gradient-to-r from-[#2563EB] to-[#1d4ed8] p-6">
+          <div className="bg-brand p-6">
             <div className="flex items-center gap-3">
               <div className="bg-white/20 p-3 rounded-lg backdrop-blur-sm">
                 {isEdit ? (
@@ -481,7 +481,7 @@ export default function ContratoDialog({
           ) : null}
 
           {/* Información Básica */}
-          <div className="bg-gradient-to-br from-blue-50 via-white to-blue-50 border border-blue-100 rounded-xl p-5 space-y-4">
+          <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-5 space-y-4">
             <div className="flex items-center gap-2">
               <div className="bg-[#2563EB] p-2 rounded-lg">
                 <FileText className="h-4 w-4 text-white" />
@@ -624,7 +624,7 @@ export default function ContratoDialog({
           </div>
 
           {/* Tipo y Vigencia */}
-          <div className="bg-gradient-to-br from-amber-50 via-white to-amber-50 border border-amber-100 rounded-xl p-5 space-y-4">
+          <div className="bg-amber-50/60 border border-amber-100 rounded-xl p-5 space-y-4">
             <div className="flex items-center gap-2">
               <div className="bg-amber-500 p-2 rounded-lg">
                 <svg
@@ -698,7 +698,7 @@ export default function ContratoDialog({
           </div>
 
           {/* Compensación */}
-          <div className="bg-gradient-to-br from-green-50 via-white to-green-50 border border-green-100 rounded-xl p-5 space-y-4">
+          <div className="bg-green-50/60 border border-green-100 rounded-xl p-5 space-y-4">
             <div className="flex items-center gap-2">
               <div className="bg-green-600 p-2 rounded-lg">
                 <svg
@@ -768,7 +768,7 @@ export default function ContratoDialog({
           </div>
 
           {/* Jornada */}
-          <div className="bg-gradient-to-br from-orange-50 via-white to-orange-50 border border-orange-100 rounded-xl p-5 space-y-4">
+          <div className="bg-orange-50/60 border border-orange-100 rounded-xl p-5 space-y-4">
             <div className="flex items-center gap-2">
               <div className="bg-orange-600 p-2 rounded-lg">
                 <svg
@@ -873,7 +873,7 @@ export default function ContratoDialog({
 
           {/* Prestaciones */}
           {form.tipo_contrato !== "prestacion_servicios" ? (
-            <div className="bg-gradient-to-br from-purple-50 via-white to-purple-50 border border-purple-100 rounded-xl p-5 space-y-4">
+            <div className="bg-purple-50/60 border border-purple-100 rounded-xl p-5 space-y-4">
               <div className="flex items-center gap-2">
                 <div className="bg-[#7C3AED] p-2 rounded-lg">
                   <svg
@@ -951,7 +951,7 @@ export default function ContratoDialog({
           ) : null}
 
           {/* Ubicación y modalidad + Notas */}
-          <div className="bg-gradient-to-br from-teal-50 via-white to-teal-50 border border-teal-100 rounded-xl p-5 space-y-4">
+          <div className="bg-teal-50/60 border border-teal-100 rounded-xl p-5 space-y-4">
             <div className="flex items-center gap-2">
               <div className="bg-teal-600 p-2 rounded-lg">
                 <svg

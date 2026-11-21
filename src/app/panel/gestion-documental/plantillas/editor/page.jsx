@@ -236,7 +236,7 @@ function PanelIA({ onApply, categoria, nombre }) {
   };
 
   return (
-    <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-xl border border-purple-100 shadow-sm overflow-hidden">
+    <div className="bg-violet-50/60 rounded-xl border border-purple-100 shadow-sm overflow-hidden">
       {/* Header toggle */}
       <button
         type="button"

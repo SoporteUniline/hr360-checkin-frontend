@@ -32,7 +32,7 @@ function FilterSection({ title, options, selected, onChange }) {
               className={cn(
                 "px-4 py-1.5 rounded-full text-sm font-medium transition-colors",
                 isSelected
-                  ? "bg-gray-900 text-white"
+                  ? "bg-brand text-white"
                   : "bg-gray-100 text-gray-700",
               )}
             >

@@ -112,7 +112,7 @@ export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
         </div>
         <div className="h-1.5 overflow-hidden rounded-full bg-slate-100">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-brand to-brand-accent transition-all"
+            className="h-full rounded-full bg-brand transition-all"
             style={{ width: `${balance.porcentaje_usado || 0}%` }}
           />
         </div>
@@ -524,7 +524,7 @@ function CalendarioGrande({ mesAnio, diasVacaciones }) {
                   flex aspect-square items-center justify-center rounded-md text-[10px] font-semibold transition-colors sm:text-xs md:text-sm
                   ${
                     esVacacion
-                      ? "bg-gradient-to-br from-brand to-brand-accent text-white"
+                      ? "bg-brand text-white"
                       : esHoy
                       ? "border border-blue-300 bg-blue-50 font-bold text-blue-700"
                       : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50/70"
@@ -608,7 +608,7 @@ function CalendarioPequeno({
                 flex aspect-square min-h-[14px] items-center justify-center rounded-sm text-[8px] font-semibold leading-none sm:min-h-[16px] sm:text-[9px] md:min-h-[18px] md:text-[10px] lg:min-h-[20px] lg:text-[11px]
                 ${
                   esVacacion
-                    ? "bg-gradient-to-br from-brand to-brand-accent text-white"
+                    ? "bg-brand text-white"
                     : "text-slate-500"
                 }
               `}

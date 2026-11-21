@@ -102,7 +102,7 @@ export default function PositionFormDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">
-            <div className="bg-gradient-to-br from-[#7C3AED] to-[#6d28d9] p-3 rounded-lg shadow-md">
+            <div className="bg-brand-accent p-3 rounded-lg shadow-md">
               <svg
                 className="w-6 h-6 text-white"
                 fill="none"

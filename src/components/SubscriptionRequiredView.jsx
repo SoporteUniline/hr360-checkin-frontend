@@ -33,7 +33,7 @@ export default function SubscriptionRequiredView() {
           )}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="adamia-web-only cursor-pointer flex items-center gap-2 rounded-lg bg-indigo-600 px-6 py-3 font-semibold text-white hover:bg-indigo-700 transition-colors"
+          className="adamia-web-only cursor-pointer flex items-center gap-2 rounded-lg bg-brand px-6 py-3 font-semibold text-white hover:bg-blue-700 transition-colors"
         >
           <CreditCard className="size-4" />
           Renovar ahora

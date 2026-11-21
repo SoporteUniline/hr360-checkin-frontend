@@ -101,7 +101,7 @@ export default function OTPStep({ form, steps, setSteps }) {
       <div className="w-full space-y-2 pt-1">
         <Button
           type="button"
-          className="w-full h-12 rounded-xl text-base font-semibold cursor-pointer text-white shadow-md shadow-blue-500/20 bg-gradient-to-r from-[var(--adamia-blue)] to-[var(--adamia-purple)] hover:opacity-95 active:scale-[0.99] transition-all"
+          className="w-full h-12 rounded-xl text-base font-semibold cursor-pointer text-white shadow-md shadow-blue-500/20 bg-brand hover:opacity-95 active:scale-[0.99] transition-all"
           loading={loading}
           onClick={checkSecondStep}
         >

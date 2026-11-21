@@ -536,7 +536,7 @@ export default function ReglasAvisoPage() {
       {/* Dialogo Editar */}
       <Dialog open={openEdit} onOpenChange={setOpenEdit}>
         <DialogContent className="p-0 overflow-hidden w-[95vw] md:max-w-6xl max-h-[90vh] md:max-h-[85vh]">
-          <div className="p-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white">
+          <div className="p-5 bg-brand text-white">
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
               <span className="grid size-9 place-items-center rounded-lg bg-white/15">
                 <Settings2 className="size-5 text-white" />
@@ -572,7 +572,7 @@ export default function ReglasAvisoPage() {
       {/* Dialogo Duplicar */}
       <Dialog open={openDup} onOpenChange={setOpenDup}>
         <DialogContent className="p-0 overflow-hidden w-[95vw] md:max-w-6xl max-h-[90vh] md:max-h-[85vh]">
-          <div className="p-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white">
+          <div className="p-5 bg-brand text-white">
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
               <span className="grid size-9 place-items-center rounded-lg bg-white/15">
                 <Copy className="size-5 text-white" />
@@ -615,7 +615,7 @@ export default function ReglasAvisoPage() {
         onOpenChange={(open) => !open && setDeleteRow(null)}
       >
         <AlertDialogContent className="p-0 overflow-hidden sm:max-w-lg">
-          <div className="p-5 bg-gradient-to-r from-red-600 to-red-700 text-white">
+          <div className="p-5 bg-red-600 text-white">
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2 text-base font-bold text-white">
                 <span className="grid size-9 place-items-center rounded-lg bg-white/15">

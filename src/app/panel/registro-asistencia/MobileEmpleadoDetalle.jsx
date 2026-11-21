@@ -67,23 +67,6 @@ const DIAS_ES = [
   "Sábado",
 ];
 
-const AVATAR_COLORS = [
-  "#F97316",
-  "#3B82F6",
-  "#10B981",
-  "#8B5CF6",
-  "#EF4444",
-  "#F59E0B",
-  "#EC4899",
-  "#14B8A6",
-];
-
-function getAvatarColor(str = "") {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++)
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
 
 function getInitials(nombre = "", apellido = "") {
   return `${nombre[0] || ""}${apellido[0] || ""}`.toUpperCase();
@@ -379,13 +362,13 @@ export default function MobileEmpleadoDetalle({
           </div>
 
           <div className="flex flex-col items-center text-center">
-            <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-brand to-brand-accent flex items-center justify-center text-xl font-bold text-white mb-3 shrink-0 shadow-[0_8px_20px_rgba(37,99,235,0.32)]">
+            <div className="w-16 h-16 rounded-xl bg-brand flex items-center justify-center text-xl font-bold text-white mb-3 shrink-0 shadow-[0_8px_20px_rgba(37,99,235,0.32)]">
               {initials}
             </div>
             <h2 className="text-gray-900 text-xl font-extrabold tracking-tight leading-tight">
               {nombreCompleto}
             </h2>
-            <div className="mt-2 h-0.5 w-10 rounded-full bg-gradient-to-r from-brand to-brand-accent" />
+            <div className="mt-2 h-0.5 w-10 rounded-full bg-brand" />
             <p className="text-gray-500 text-sm mt-2">
               {display.departamento}
               {empresa ? ` · ${empresa}` : ""}
@@ -593,7 +576,7 @@ export default function MobileEmpleadoDetalle({
               <button
                 onClick={handleSaveClick}
                 disabled={isSaving}
-                className="flex-1 min-h-[48px] py-3 rounded-xl bg-gradient-to-br from-brand to-[#4f46e5] text-white text-sm font-semibold shadow-[0_8px_20px_rgba(37,99,235,0.32)] flex items-center justify-center gap-2 active:opacity-90 disabled:opacity-50"
+                className="flex-1 min-h-[48px] py-3 rounded-xl bg-brand text-white text-sm font-semibold shadow-[0_8px_20px_rgba(37,99,235,0.32)] flex items-center justify-center gap-2 active:opacity-90 disabled:opacity-50"
               >
                 <Save className="w-4 h-4" />
                 {isSaving ? "Guardando..." : "Guardar"}
@@ -608,7 +591,7 @@ export default function MobileEmpleadoDetalle({
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="text-center min-w-11 rounded-xl border border-gray-100 bg-white shadow-sm p-2">
-                    <div className="text-lg font-extrabold leading-none tabular-nums bg-gradient-to-br from-brand to-brand-accent bg-clip-text text-transparent">
+                    <div className="text-lg font-extrabold leading-none tabular-nums text-brand ">
                       {diaNumero}
                     </div>
                     <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mt-1">
@@ -682,7 +665,7 @@ export default function MobileEmpleadoDetalle({
                   </div>
                 </div>
 
-                <div className="w-6 h-0.5 rounded-full bg-gradient-to-r from-brand to-brand-accent shrink-0" />
+                <div className="w-6 h-0.5 rounded-full bg-brand shrink-0" />
 
                 <div
                   className={cn(
@@ -736,7 +719,7 @@ export default function MobileEmpleadoDetalle({
                   <div className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
                     Horas
                   </div>
-                  <div className="text-base font-extrabold mt-0.5 tabular-nums bg-gradient-to-br from-brand to-brand-accent bg-clip-text text-transparent">
+                  <div className="text-base font-extrabold mt-0.5 tabular-nums text-brand ">
                     {horasTrabajadas || "—"}
                   </div>
                 </div>

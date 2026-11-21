@@ -105,7 +105,7 @@ export default function EstadoCivilFormDialog({
       <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden">
         {/* Header - Diseño ADAMIA */}
         <DialogHeader className="p-0">
-          <div className="bg-gradient-to-r from-[#2563EB] to-[#1d4ed8] p-6">
+          <div className="bg-brand p-6">
             <div className="flex items-center gap-3">
               <div className="bg-white/20 p-3 rounded-lg backdrop-blur-sm">
                 <FileText className="h-6 w-6 text-white" />
@@ -126,7 +126,7 @@ export default function EstadoCivilFormDialog({
 
         <div className="p-6 space-y-6">
           {/* Sección por color (patrón Contratos) */}
-          <div className="bg-gradient-to-br from-blue-50 via-white to-blue-50 border border-blue-100 rounded-xl p-5 space-y-3">
+          <div className="bg-blue-50/60 border border-blue-100 rounded-xl p-5 space-y-3">
             <div className="flex items-center gap-2">
               <div className="bg-[#2563EB] p-2 rounded-lg">
                 <FileText className="h-4 w-4 text-white" />

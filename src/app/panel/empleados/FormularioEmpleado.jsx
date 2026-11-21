@@ -719,11 +719,11 @@ export default function FormularioEmpleado({
       {/* Contenedor principal: columna fija en mobile, flujo normal en desktop */}
       <div className={`flex flex-col sm:block sm:h-auto ${enVentana ? "h-full" : "h-[calc(100dvh-3.5rem)]"}`}>
         {/* ── Header mobile (oscuro, fijo arriba) ── */}
-        <div className="sm:hidden bg-gray-900 text-white px-4 pt-4 pb-3 shrink-0">
+        <div className="sm:hidden bg-white text-[#080d36] border-b border-slate-200 px-4 pt-3 pb-3 shrink-0">
           <div className="flex items-center justify-between gap-2">
             <button
               type="button"
-              className="flex items-center gap-2 text-white active:opacity-70 min-w-0"
+              className="flex min-h-11 items-center gap-2 text-[#080d36] active:opacity-70 min-w-0"
               onClick={() => {
                 setModoFormulario(false);
                 setTab("personales");
@@ -746,7 +746,7 @@ export default function FormularioEmpleado({
             {soloLectura && (
               <button
                 type="button"
-                className="shrink-0 bg-white/10 active:bg-white/20 text-white text-sm font-medium px-3 py-1.5 rounded-lg"
+                className="shrink-0 min-h-10 border border-brand text-brand active:bg-blue-50 text-sm font-semibold px-3.5 rounded-xl"
                 onClick={() => {
                   fueDesdeLectura.current = true;
                   setEditar(true);
@@ -1060,7 +1060,7 @@ export default function FormularioEmpleado({
             <button
               type="submit"
               form="formulario-empleado"
-              className="w-full bg-gray-900 active:bg-gray-700 text-white text-sm font-bold py-3 rounded-xl"
+              className="w-full bg-brand active:bg-blue-800 text-white text-sm font-bold py-3 rounded-xl"
             >
               {editar ? "Actualizar empleado" : "Registrar empleado"}
             </button>
