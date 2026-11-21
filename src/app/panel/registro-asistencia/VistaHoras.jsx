@@ -4,6 +4,7 @@
 // empleado contra el límite de la LFT, quién se está excediendo o va a pasar, extras y alertas.
 // Datos: GET /checador/reportes/horas-ley (semana completa elegida). Lógica: lib/asistencia/semanaHoras.mjs
 
+import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
@@ -162,7 +163,7 @@ function TablaHoras({ visibles, semana, hoy, orden, ordenarPor, abierto, setAbie
             return (
               <FilaHoras key={id} idEmpleado={id} nombre={nombre} abierto={abiertoAqui} onClick={() => setAbierto(abiertoAqui ? null : id)} alertas={s.alertas} dias={s.dias}>
                 <td className="px-2 py-1.5">
-                  <p className="font-semibold leading-tight text-slate-900">{nombre}</p>
+                  <p className="font-semibold leading-tight text-slate-900"><NombreEmpleado id={id}>{nombre}</NombreEmpleado></p>
                   <p className="truncate text-[11px] text-slate-500">{r.empleado?.departamento || r.empleado?.puesto || ""}</p>
                 </td>
                 {s.dias.map((d) => {

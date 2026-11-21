@@ -93,15 +93,15 @@ try {
 
   // 1) Lista: KPIs, filtro y la solicitud de Ana primero.
   await page.goto(base + "/panel/nomina/prestamos", { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: "Ana Torres" }).waitFor({ timeout: 20000 });
+  await page.getByRole("link", { name: "Ana Torres" }).waitFor({ timeout: 20000 });
   await page.getByText("Por cobrar").waitFor();
   await captura(page, "prestamos-lista");
   await page.getByRole("button", { name: "Vigentes (1)" }).click();
-  assert.equal(await page.getByRole("button", { name: "Ana Torres" }).count(), 0, "filtra por estado");
+  assert.equal(await page.getByRole("link", { name: "Ana Torres" }).count(), 0, "filtra por estado");
   await page.getByRole("button", { name: "Todos" }).click();
 
   // 2) Aprobar ajustando el abono → por firmar.
-  await page.getByRole("button", { name: "Ana Torres" }).click();
+  await page.getByRole("button", { name: "Revisar préstamo de Ana Torres" }).click();
   const dlg = page.getByRole("dialog");
   await dlg.getByText("Consulta médica").waitFor();
   await dlg.getByRole("button", { name: "Aprobar", exact: true }).click();
@@ -113,7 +113,7 @@ try {
   await page.keyboard.press("Escape");
 
   // 3) Beto (vigente): historial y abono en efectivo.
-  await page.getByRole("button", { name: "Beto Ruiz" }).click();
+  await page.getByRole("button", { name: "Ver préstamo de Beto Ruiz" }).click();
   await dlg.getByText("Descuento en nómina").first().waitFor();
   assert.equal(await dlg.getByRole("button", { name: "Cancelar préstamo" }).count(), 0, "RH no cancela uno vigente");
   await dlg.getByRole("button", { name: "Registrar abono en efectivo" }).click();

@@ -2,6 +2,7 @@
 
 // Nómina → Préstamos (R2). RH o el dueño aprueba lo que piden los empleados (D-9), registra préstamos y abonos en
 // efectivo. El descuento sale solo en cada nómina cuando la persona ya firmó su acuerdo. Backend: /checador/nomina/prestamos.
+import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
@@ -84,7 +85,7 @@ export default function PrestamosPage() {
                 return (
                   <tr key={p.id} className="cursor-pointer border-t border-gray-100 hover:bg-gray-50" onClick={() => setDetalle(p.id)}>
                     <td className="px-3 py-2.5">
-                      <button type="button" className="text-left font-semibold text-gray-900 hover:underline" onClick={(ev) => { ev.stopPropagation(); setDetalle(p.id); }}>{p.empleado}</button>
+                      <span className="font-semibold text-gray-900"><NombreEmpleado id={p.id_empleado}>{p.empleado}</NombreEmpleado></span>
                       <p className="text-[11.5px] text-gray-500">P-{p.id}{p.motivo ? ` · ${p.motivo}` : ""}</p>
                     </td>
                     <td className="px-3 py-2.5">{dinero(p.monto)}</td>
@@ -97,7 +98,9 @@ export default function PrestamosPage() {
                       </div>
                     </td>
                     <td className="px-3 py-2.5"><Chip tono={e.tono}>{e.texto}</Chip></td>
-                    <td className="px-3 py-2.5 text-right font-semibold text-[#2c56e8]">{p.estado === "solicitado" ? "Revisar" : "Ver"}</td>
+                    <td className="px-3 py-2.5 text-right">
+                      <button type="button" aria-label={`${p.estado === "solicitado" ? "Revisar" : "Ver"} préstamo de ${p.empleado}`} className="font-semibold text-[#2c56e8] hover:underline" onClick={(ev) => { ev.stopPropagation(); setDetalle(p.id); }}>{p.estado === "solicitado" ? "Revisar" : "Ver"}</button>
+                    </td>
                   </tr>
                 );
               })}

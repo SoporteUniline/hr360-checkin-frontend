@@ -63,6 +63,9 @@ export default function FormularioEmpleado({
   setSoloLectura,
   onClose,
   mutate,
+  // (21/11/2026) Ficha flotante desde otras pantallas (components/empleado/FichaEmpleado.jsx).
+  textoRegresar = "Regresar a la tabla",
+  enVentana = false,
 }) {
   const DIAS_SEMANA = React.useMemo(
     () => [
@@ -714,7 +717,7 @@ export default function FormularioEmpleado({
   return (
     <Form {...form}>
       {/* Contenedor principal: columna fija en mobile, flujo normal en desktop */}
-      <div className="flex flex-col h-[calc(100dvh-3.5rem)] sm:block sm:h-auto">
+      <div className={`flex flex-col sm:block sm:h-auto ${enVentana ? "h-full" : "h-[calc(100dvh-3.5rem)]"}`}>
         {/* ── Header mobile (oscuro, fijo arriba) ── */}
         <div className="sm:hidden bg-gray-900 text-white px-4 pt-4 pb-3 shrink-0">
           <div className="flex items-center justify-between gap-2">
@@ -768,7 +771,7 @@ export default function FormularioEmpleado({
               }}
             >
               <Icon icon="material-symbols:arrow-back" width={20} height={20} />
-              <span className="text-sm">Regresar a la tabla</span>
+              <span className="text-sm">{textoRegresar}</span>
             </button>
 
             <div className="flex items-center gap-3">

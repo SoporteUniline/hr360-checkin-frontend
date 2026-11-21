@@ -11,6 +11,7 @@ import BotonAgregarComida from "./BotonAgregarComida";
 import CeldaObservaciones from "./CeldaObservaciones";
 import CeldasControlHorasExtra from "./CeldasControlHorasExtra";
 import PanelEditarAsistencia from "./PanelEditarAsistencia";
+import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
 import { useEmpresaTimezone } from "@/context/AuthContext";
 import { calcularResumenJornada, formatearMinutos } from "@/utils/asistenciaHoras";
 import { minutosDescanso, sinSalidaAComer } from "@/lib/asistencia/jornada.mjs";
@@ -174,7 +175,7 @@ export default function AsistenciaRow({
                     className="mr-2.5 h-4 w-4 cursor-pointer align-middle accent-blue-600"
                   />
                 ) : null}
-                {registro.nombre} {registro.apellido_paterno}
+                <NombreEmpleado id={registro.id_empleado}>{registro.nombre} {registro.apellido_paterno}</NombreEmpleado>
               </TableCell>
             )}
             {empresaActiva === "all" && isColVisible("unidad") && (

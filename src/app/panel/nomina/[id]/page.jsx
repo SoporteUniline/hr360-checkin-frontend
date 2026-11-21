@@ -2,6 +2,7 @@
 
 // Detalle de una nómina (R1): totales, recibos por persona, edición en borrador y flujo
 // borrador → por autorizar → autorizada (solo el dueño) | cancelada (con motivo). Backend: /checador/nomina.
+import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
 import { Fragment, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -138,10 +139,12 @@ export default function DetalleNomina() {
                   <Fragment key={r.id}>
                   <tr className={`cursor-pointer border-t border-gray-100 hover:bg-blue-50/40 ${desplegado === r.id ? "bg-blue-50/60" : ""}`} onClick={() => setDesplegado(desplegado === r.id ? null : r.id)}>
                     <td className="px-3 py-2.5">
-                      <button type="button" aria-expanded={desplegado === r.id} className="flex items-center gap-1.5 text-left font-semibold text-gray-900 hover:underline" onClick={(e) => { e.stopPropagation(); setDesplegado(desplegado === r.id ? null : r.id); }}>
-                        <span aria-hidden="true" className={`inline-block text-[10px] text-gray-400 transition-transform ${desplegado === r.id ? "rotate-90" : ""}`}>▶</span>
-                        {r.datos?.empleado?.nombre ?? r.id_empleado}
-                      </button>
+                      <span className="flex items-center gap-1.5 font-semibold text-gray-900">
+                        <button type="button" aria-expanded={desplegado === r.id} aria-label={`Ver asistencia de ${r.datos?.empleado?.nombre ?? "la persona"}`} className="grid size-5 place-items-center rounded text-gray-400 hover:bg-gray-100" onClick={(e) => { e.stopPropagation(); setDesplegado(desplegado === r.id ? null : r.id); }}>
+                          <span aria-hidden="true" className={`inline-block text-[10px] transition-transform ${desplegado === r.id ? "rotate-90" : ""}`}>▶</span>
+                        </button>
+                        <NombreEmpleado id={r.id_empleado}>{r.datos?.empleado?.nombre ?? r.id_empleado}</NombreEmpleado>
+                      </span>
                       {r.datos?.empleado?.puesto ? <p className="text-[11px] text-gray-500">{r.datos.empleado.puesto}</p> : null}
                     </td>
                     <td className="border-l border-gray-100 px-3 py-2.5">{res.diasTrabajados == null ? "—" : `${res.diasTrabajados} d`}{res.minTrabajados ? <span className="block text-[11px] text-gray-500">{horas(res.minTrabajados)}</span> : null}</td>

@@ -3,6 +3,7 @@
 // Panel para revisar y editar un recibo (solo en borrador). Cada importe sugerido se puede cambiar con un motivo
 // y volver al sugerido (D-3); se agregan bonos/descuentos del catálogo o renglones a mano; el reparto
 // transferencia/efectivo se edita para esta nómina (D-1).
+import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
 import { useEffect, useState } from "react";
 import useSWR from "swr";
 import { useSnackbar } from "notistack";
@@ -98,7 +99,7 @@ export default function EditorRecibo({ recibo, periodo, editable, idEmpresa, alC
     <Sheet open onOpenChange={(v) => !v && alCerrar()}>
       <SheetContent className="w-full gap-0 overflow-y-auto bg-white p-0 sm:max-w-[720px]">
         <SheetHeader className="border-b border-slate-200 px-6 py-4 text-left">
-          <SheetTitle>{d.empleado?.nombre ?? "Recibo"}</SheetTitle>
+          <SheetTitle><NombreEmpleado id={recibo.id_empleado}>{d.empleado?.nombre ?? "Recibo"}</NombreEmpleado></SheetTitle>
           <p className="text-sm text-slate-500">{d.empleado?.puesto ? `${d.empleado.puesto} · ` : ""}Pago {String(d.empleado?.periodo_pago ?? "").toLowerCase()} · {plural(d.resumen?.faltas, "falta")} · {plural(d.resumen?.retardos, "retardo")}</p>
         </SheetHeader>
         <div className="grid gap-6 px-6 py-5 text-sm">

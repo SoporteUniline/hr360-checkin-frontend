@@ -368,7 +368,9 @@ try {
   // 4) Editar el nocturno: salida 06:00 debe guardarse al día siguiente (2026-11-14).
   //    La edición abre el panel lateral (ya no se edita dentro de la fila).
   assert.equal(await page.getByTitle("Editar").count(), 0, "ya no hay botón Editar: se abre con clic en la fila");
-  await noct.locator("td").first().click();
+  // El nombre es un enlace a la ficha del empleado (21/11/2026); el resto de la fila abre la edición.
+  assert.equal(await noct.locator("td").first().getByRole("link").count(), 1, "el nombre abre la ficha");
+  await noct.locator("td").nth(2).click();
   const panel = page.getByRole("dialog", { name: /Nocturno Prueba/ });
   // La ventana ofrece «Agregar comida» cuando el día tiene un solo tramo.
   await panel.getByRole("button", { name: "+ Agregar comida" }).waitFor({ timeout: 10000 });
@@ -386,7 +388,7 @@ try {
   // 4b) Calendario: lunes 16 (festivo en catálogo) guardado como domingo y no festivo.
   //     Al editar se corrige solo; Asistió/Goce siguen al tipo (sin botones sueltos).
   const filaCal = page.locator("tr", { hasText: "Calendario Prueba" }).first();
-  await filaCal.locator("td").first().click();
+  await filaCal.locator("td").nth(2).click();
   const edicionCal = page.getByRole("dialog", { name: /Calendario Prueba/ });
   await edicionCal.getByText("Asistió y Goce los define el tipo.").waitFor({ timeout: 10000 });
   await edicionCal.getByRole("button", { name: "Guardar" }).click();
