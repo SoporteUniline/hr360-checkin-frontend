@@ -316,7 +316,7 @@ export default function AsistenciaMatriz({
         <Button
           onClick={exportarPDF}
           disabled={cargando || exportando !== null || !empleados.length}
-          className="h-9 rounded-xl bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white"
+          className="h-9 rounded-xl bg-brand font-semibold text-white"
         >
           {exportando === "pdf" ? (
             <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />

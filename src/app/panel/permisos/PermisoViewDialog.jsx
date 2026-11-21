@@ -772,7 +772,7 @@ export default function PermisoViewDialog({
          - max-h-[85vh] overflow-y-auto: evita desbordes verticales y permite scroll.
          Relación: abierto desde `src/app/panel/permisos/page.jsx`. */}
       <DialogContent className="p-0 overflow-hidden max-w-[95vw] sm:max-w-2xl">
-        <DialogHeader className="p-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white">
+        <DialogHeader className="p-5 bg-brand text-white">
           <DialogTitle className="flex items-center justify-between gap-3 text-base font-bold">
             <span className="flex items-center gap-2">
               <span className="grid size-9 place-items-center rounded-lg bg-white/15">

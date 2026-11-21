@@ -192,8 +192,8 @@ export default function AsignarEmpleadosDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[85vh] flex-col overflow-hidden sm:max-w-[650px]">
         <DialogHeader className="shrink-0">
-          <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-indigo-50">
-            <UserRoundPlus className="h-5 w-5 text-indigo-600" />
+          <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-blue-50">
+            <UserRoundPlus className="h-5 w-5 text-brand" />
           </div>
 
           <DialogTitle>Asignar empleados</DialogTitle>
@@ -246,7 +246,7 @@ export default function AsignarEmpleadosDialog({
         <div className="min-h-0 flex-1 overflow-y-auto pr-1">
           {cargando ? (
             <div className="flex h-40 items-center justify-center">
-              <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
+              <Loader2 className="h-6 w-6 animate-spin text-brand" />
             </div>
           ) : empleadosFiltrados.length === 0 ? (
             <div className="flex h-40 flex-col items-center justify-center text-gray-500">
@@ -272,7 +272,7 @@ export default function AsignarEmpleadosDialog({
                     key={idEmpleado}
                     className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors ${
                       seleccionado
-                        ? "border-indigo-200 bg-indigo-50"
+                        ? "border-blue-200 bg-blue-50"
                         : "border-gray-200 bg-white hover:bg-gray-50"
                     }`}
                   >
@@ -319,7 +319,7 @@ export default function AsignarEmpleadosDialog({
             type="button"
             disabled={guardando || cargando}
             onClick={guardar}
-            className="bg-indigo-600 hover:bg-indigo-700"
+            className="bg-brand hover:bg-blue-700"
           >
             {guardando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 

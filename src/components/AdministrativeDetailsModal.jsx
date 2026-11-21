@@ -839,7 +839,7 @@ export const AdministrativeDetailsModal = ({
         )}
       >
         {/* Header - Diseño ADAMIA (patrón Contratos) */}
-        <DialogHeader className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white p-6 rounded-t-lg">
+        <DialogHeader className="bg-brand text-white p-6 rounded-t-lg">
           <div className="flex items-center gap-3">
             <FileText className="h-6 w-6" />
             <DialogTitle className="text-white">
@@ -1167,7 +1167,7 @@ export const AdministrativeDetailsModal = ({
           onOpenChange={setOpenEstatusDialog}
         >
           <AlertDialogContent className="sm:max-w-[425px] p-0">
-            <AlertDialogHeader className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white p-6 rounded-t-lg">
+            <AlertDialogHeader className="bg-brand text-white p-6 rounded-t-lg">
               <div className="flex items-center gap-3">
                 <AlertTriangle className="h-6 w-6" />
                 <AlertDialogTitle className="text-white">

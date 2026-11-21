@@ -871,7 +871,7 @@ export default function VacacionesPorPeriodoPage() {
         }}
       >
         <DialogContent className="p-0 overflow-hidden max-w-[95vw] sm:max-w-lg">
-          <DialogHeader className="p-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white">
+          <DialogHeader className="p-5 bg-brand text-white">
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
               <span className="grid size-9 place-items-center rounded-lg bg-white/15">
                 <CalendarDays className="size-5 text-white" />
@@ -1093,7 +1093,7 @@ export default function VacacionesPorPeriodoPage() {
       {/* Confirmación de guardar cambios */}
       <AlertDialog open={confirmSaveOpen} onOpenChange={setConfirmSaveOpen}>
         <AlertDialogContent className="p-0 overflow-hidden sm:max-w-lg">
-          <div className="p-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white">
+          <div className="p-5 bg-brand text-white">
             <div className="text-base font-bold">Confirmar cambios</div>
             <div className="text-sm text-white/80 mt-1">
               Revisa antes de continuar.
@@ -1125,7 +1125,7 @@ export default function VacacionesPorPeriodoPage() {
         onOpenChange={(open) => !open && setDeleteRow(null)}
       >
         <AlertDialogContent className="p-0 overflow-hidden sm:max-w-lg">
-          <div className="p-5 bg-gradient-to-r from-red-600 to-red-700 text-white">
+          <div className="p-5 bg-red-600 text-white">
             <div className="flex items-center gap-2 text-base font-bold">
               <span className="grid size-9 place-items-center rounded-lg bg-white/15">
                 <AlertTriangle className="size-5 text-white" />

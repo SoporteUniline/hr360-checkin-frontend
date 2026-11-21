@@ -199,7 +199,7 @@ export default function AccionesMasivas({ filas, tiposPermiso, zonaDe, hx, onLim
     <>
       {n > 0 && (
         <div role="region" aria-label="Acciones para los seleccionados"
-          className="fixed inset-x-0 bottom-5 z-40 mx-auto flex w-fit max-w-[calc(100vw-2rem)] flex-wrap items-center justify-center gap-1.5 rounded-2xl bg-slate-900 py-2 pl-4 pr-2 text-sm text-white shadow-[0_18px_40px_rgba(15,23,42,0.35)]">
+          className="fixed inset-x-0 bottom-5 z-40 mx-auto flex w-fit max-w-[calc(100vw-2rem)] flex-wrap items-center justify-center gap-1.5 rounded-2xl bg-[#080d36] py-2 pl-4 pr-2 text-sm text-white shadow-[0_18px_40px_rgba(15,23,42,0.35)]">
           <b>{n} {n === 1 ? "seleccionado" : "seleccionados"}</b>
           <button type="button" onClick={onLimpiar} className="px-1 text-xs text-slate-400 underline hover:text-white">Quitar selección</button>
           <span className="mx-1 h-5 w-px bg-slate-700" aria-hidden />

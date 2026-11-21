@@ -176,7 +176,7 @@ export default function TurnosPage() {
           <Button
             type="button"
             disabled={!idEmpresa}
-            className="bg-indigo-600 hover:bg-indigo-700"
+            className="bg-brand hover:bg-blue-700"
             onClick={abrirNuevoTurno}
           >
             <Plus className="mr-2 h-4 w-4" />
@@ -278,10 +278,10 @@ export default function TurnosPage() {
                           <button
                             type="button"
                             onClick={() => setTurnoAsignar(turno)}
-                            className="rounded-lg bg-indigo-50 p-2 transition-colors hover:bg-indigo-100"
+                            className="rounded-lg bg-blue-50 p-2 transition-colors hover:bg-blue-100"
                             title="Asignar empleados"
                           >
-                            <UsersRound className="h-4 w-4 text-indigo-600" />
+                            <UsersRound className="h-4 w-4 text-brand" />
                           </button>
                         </div>
                       </TableCell>

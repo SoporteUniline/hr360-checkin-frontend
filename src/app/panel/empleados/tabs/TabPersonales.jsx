@@ -70,9 +70,9 @@ export default function TabPersonales({ renderCampos = () => null, form, soloLec
   return (
     <section className="space-y-6">
       {/* Información personal */}
-      <div className="bg-gradient-to-br from-blue-50 via-white to-blue-50 border-2 border-blue-100 rounded-xl p-6">
+      <div className="bg-blue-50/60 border-2 border-blue-100 rounded-xl p-6">
         <div className="flex items-center gap-3 mb-5">
-          <div className="bg-gradient-to-br from-[#2563EB] to-[#1d4ed8] p-3 rounded-lg shadow-md">
+          <div className="bg-brand p-3 rounded-lg shadow-md">
             <svg
               className="w-6 h-6 text-white"
               fill="none"
@@ -329,9 +329,9 @@ export default function TabPersonales({ renderCampos = () => null, form, soloLec
       </div>
 
       {/* Documentos oficiales */}
-      <div className="bg-gradient-to-br from-purple-50 via-white to-purple-50 border-2 border-purple-100 rounded-xl p-6">
+      <div className="bg-purple-50/60 border-2 border-purple-100 rounded-xl p-6">
         <div className="flex items-center gap-3 mb-5">
-          <div className="bg-gradient-to-br from-[#7C3AED] to-[#6d28d9] p-3 rounded-lg shadow-md">
+          <div className="bg-brand-accent p-3 rounded-lg shadow-md">
             <svg
               className="w-6 h-6 text-white"
               fill="none"

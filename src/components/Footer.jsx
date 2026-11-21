@@ -4,7 +4,7 @@ import React from "react";
 
 export default function Footer() {
   return (
-    <footer className="bg-gradient-to-br from-[var(--adamia-blue)] to-[var(--adamia-purple)] py-12 text-white">
+    <footer className="bg-brand py-12 text-white">
       <div className="mx-auto w-full max-w-7xl px-6">
         <div className="grid gap-8 md:grid-cols-3">
           <div>

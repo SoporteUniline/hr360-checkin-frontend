@@ -123,7 +123,7 @@ export default function QRScanner({ onScan, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-0 md:p-4 animate-fade-in">
       <div className="relative w-full max-w-md bg-white md:rounded-3xl overflow-hidden shadow-2xl animate-slide-up">
-        <div className="flex justify-between items-center p-4 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white">
+        <div className="flex justify-between items-center p-4 bg-brand text-white">
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <Scan className="w-5 h-5 text-white" />
             Escanear QR

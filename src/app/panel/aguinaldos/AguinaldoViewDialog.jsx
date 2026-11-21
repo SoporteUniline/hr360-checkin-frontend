@@ -1060,7 +1060,7 @@ export default function AguinaldoViewDialog({
       <DialogContent className="max-w-[95vw] sm:max-w-2xl md:max-w-4xl xl:max-w-5xl max-h-[85vh] overflow-hidden flex flex-col p-0">
         {/* Header - patrón Contratos */}
         <DialogHeader className="p-0 flex-shrink-0">
-          <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white p-6">
+          <div className="bg-brand text-white p-6">
             <div className="flex items-center gap-3">
               <div className="bg-white/20 p-3 rounded-lg backdrop-blur-sm">
                 <FileText className="h-6 w-6 text-white" />
@@ -1115,7 +1115,7 @@ export default function AguinaldoViewDialog({
               </div>
 
               {/* Total General */}
-              <div className="bg-gradient-to-r from-[#2563EB] to-[#1d4ed8] text-white p-4 sm:p-6 rounded-xl text-center shadow-sm">
+              <div className="bg-brand text-white p-4 sm:p-6 rounded-xl text-center shadow-sm">
                 <div className="text-xs sm:text-sm uppercase tracking-wider mb-2 opacity-90 font-bold">
                   Total general a pagar
                 </div>

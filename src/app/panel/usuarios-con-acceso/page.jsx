@@ -255,7 +255,7 @@ export default function UserAccessPage() {
       <div>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-brand to-brand-accent shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-brand shadow-[0_8px_18px_rgba(37,99,235,0.3)]">
               <ShieldCheck className="h-5 w-5 text-white" />
             </div>
             <div>
@@ -269,12 +269,12 @@ export default function UserAccessPage() {
           </div>
           <Button
             onClick={abrirCrear}
-            className="h-[38px] w-full gap-2 rounded-md bg-gradient-to-br from-brand to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95 sm:w-auto"
+            className="h-[38px] w-full gap-2 rounded-md bg-brand font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95 sm:w-auto"
           >
             <Plus className="h-4 w-4" /> Nuevo acceso
           </Button>
         </div>
-        <div className="mt-3 h-[2.5px] rounded bg-gradient-to-r from-brand to-brand-accent" />
+        <div className="mt-3 h-[2.5px] rounded bg-brand" />
       </div>
 
       <div className="flex justify-end">
@@ -434,7 +434,7 @@ export default function UserAccessPage() {
 
       <Dialog open={openForm} onOpenChange={setOpenForm}>
         <DialogContent className="p-0 overflow-hidden sm:max-w-lg">
-          <DialogHeader className="p-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white">
+          <DialogHeader className="p-5 bg-brand text-white">
             <DialogTitle className="flex items-center gap-2 text-base font-bold">
               <span className="grid size-9 place-items-center rounded-lg bg-white/15">
                 <User className="size-5 text-white" />
@@ -541,7 +541,7 @@ export default function UserAccessPage() {
 
       <AlertDialog open={openConfirm} onOpenChange={setOpenConfirm}>
         <AlertDialogContent className="p-0 overflow-hidden sm:max-w-lg">
-          <div className="p-5 bg-gradient-to-r from-red-600 to-red-700 text-white">
+          <div className="p-5 bg-red-600 text-white">
             <AlertDialogHeader>
               <AlertDialogTitle className="flex items-center gap-2 text-base font-bold text-white">
                 <span className="grid size-9 place-items-center rounded-lg bg-white/15">

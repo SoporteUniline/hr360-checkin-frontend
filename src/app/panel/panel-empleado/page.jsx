@@ -334,7 +334,7 @@ export default function PanelEmpleadoPage() {
                         className="h-14 w-14 flex-shrink-0 rounded-full object-cover"
                       />
                     ) : (
-                      <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-accent text-lg font-bold text-white">
+                      <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-full bg-brand text-lg font-bold text-white">
                         {obtenerIniciales(
                           datosEmpleado.informacion_general?.nombre_completo
                         )}
@@ -646,13 +646,13 @@ const SidebarContent = ({
               }`}
             >
               {activo && (
-                <span className="absolute bottom-1.5 left-0 top-1.5 w-[3px] rounded-full bg-gradient-to-b from-brand to-brand-accent" />
+                <span className="absolute bottom-1.5 left-0 top-1.5 w-[3px] rounded-full bg-brand" />
               )}
               <div className="flex items-center gap-2.5">
                 <div
                   className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
                     activo
-                      ? "bg-gradient-to-br from-brand to-brand-accent text-white"
+                      ? "bg-brand text-white"
                       : "bg-slate-100 text-slate-600"
                   }`}
                 >
