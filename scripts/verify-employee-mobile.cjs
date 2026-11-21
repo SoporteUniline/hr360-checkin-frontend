@@ -19,7 +19,7 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:4491';
     for (const width of [320, 390, 768, 1280]) {
       const context = await browser.newContext({ viewport: { width, height: 780 }, isMobile: true, deviceScaleFactor: 1 });
       await context.addCookies([{ name: 'token', value: token, url: base }]);
-      let posts = 0, failHistory = false, checadas = 0;
+      let posts = 0, failHistory = false, checadas = 0, suscripcionLenta = false;
       const requests = [{ id: 1, id_empleado: 101, id_tipo_permiso: 2, tipo_permiso_nombre: 'Vacaciones', fecha_inicio: '2026-11-02', fecha_fin: '2026-11-04', estado: 'Pendiente', motivo: 'Descanso', dias_trabajo: 'Lunes,Martes,Miércoles,Jueves,Viernes', descuenta_vacaciones: 1 }];
       for (let i=2;i<=13;i++) requests.push({ ...requests[0], id:i, estado:i===13?'Rechazado':'Aprobado', motivo:'Solicitud anterior '+i });
       await context.route('**/*', async route => {
@@ -35,7 +35,7 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:4491';
         if (p.includes('/solicitudes-permiso/empleado/101')) { const pageNo=Number(new URL(route.request().url()).searchParams.get('page') || 1); return json({results:requests.slice((pageNo-1)*5,pageNo*5),total:requests.length}); }
         if(p.includes('/holidays/')) return json({festivos:[]});
         // Reloj del empleado (21/11/2026): perfil del dispositivo y checada por código.
-        if (p.startsWith('/api/empresas/check-subscription/')) return json({ hasActivePlan: true });
+        if (p.startsWith('/api/empresas/check-subscription/')) { if (suscripcionLenta) await new Promise(r => setTimeout(r, 3000)); return json({ hasActivePlan: true }); }
         if (p.endsWith('/empresas/id/10/slug')) return json({ slug: 'empresa-prueba' });
         if (p.endsWith('/reloj/offline/empresa/perfil') || p.endsWith('/reloj/offline/perfil')) return json({ id_empresa: 10, id_empleado: 101, slug: 'empresa-prueba', nombre: 'Diego León', metodo: 'codigo', grant: 'g', prepared_at: new Date().toISOString() });
         if (p.endsWith('/reloj/offline/empresa/sincronizar') || p.endsWith('/reloj/offline/sincronizar')) { checadas++; return json({ action: 'entrada', employee: { nombre: 'Diego León' }, message: 'Entrada registrada' }); }
@@ -51,7 +51,7 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:4491';
           }
           assert.equal(payload.id_empleado, 101); assert.equal(payload.id_tipo_permiso, 2);
           assert.equal(payload.fecha_inicio, '2026-11-09'); assert.equal(payload.fecha_fin, '2026-11-10');
-          await new Promise(resolve => setTimeout(resolve, 400));
+          await new Promise(resolve => setTimeout(resolve, 1500)); // deja ver «Enviando…» (con 0.4 s la prueba fallaba a veces)
           requests.unshift({ ...payload, id: 99, tipo_permiso_nombre: 'Vacaciones' });
           return json({ id: 2 });
         }
@@ -64,7 +64,7 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:4491';
       await page.goto(`${base}/empleado`);
       await page.getByRole('heading', { name: 'Hola, Diego' }).waitFor();
       await page.getByText('09:00 a.m.', { exact: true }).waitFor();
-      await page.screenshot({ path: `/tmp/employee-home-${width}.png`, fullPage: true });
+      await page.screenshot({ path: `/tmp/employee-home-${width}.png`, fullPage: true }).catch(() => {}); // solo de apoyo: si falla la captura no tumba la prueba
       assert.equal(await page.locator('section').filter({hasText:'Solicitudes recientes'}).getByRole('heading', {level:2}).count(), 3, 'Home shows only two recent requests');
       await noOverflow();
       await page.getByRole('link', { name: 'Asistencia', exact: true }).click();
@@ -142,6 +142,13 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:4491';
         await page.waitForURL('**/empleado/panel/inicio', { timeout: 10000 });
         assert.equal(checadas, 1);
         await page.getByRole('heading', { name: 'Hola, Diego' }).waitFor();
+        // Una vez al día: la segunda entrada al reloj abre directo. Aunque el servidor tarde 3 s en contestar la
+        // suscripción, el reloj aparece antes (antes se quedaba en «Validando suscripción…» hasta la respuesta).
+        suscripcionLenta = true;
+        await page.goto(`${base}/empleado/reloj-checador`, { waitUntil: 'domcontentloaded' });
+        await page.getByRole('button', { name: /Código/ }).first().waitFor({ timeout: 2000 });
+        assert.equal(await page.getByText('Validando suscripción').count(), 0);
+        suscripcionLenta = false;
       }
       failHistory = true;
       await page.goto(`${base}/empleado/panel/asistencias`);

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { validadaHoy, guardarValidada, olvidarValidada } from "@/lib/reloj/suscripcionDia.mjs";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import ErrorPage from "@/components/ErrorPage";
@@ -414,6 +415,12 @@ export default function RelojChecador({
   useEffect(() => {
     const validarSuscripcion = async () => {
       if (!idEmpresa) return;
+      // (21/11/2026) Una vez al día: si hoy ya se validó en este dispositivo, entra directo sin preguntar al servidor.
+      if (validadaHoy(`empresa:${idEmpresa}`)) {
+        setSubscriptionActive(true);
+        setSubscriptionLoading(false);
+        return;
+      }
 
       try {
         setSubscriptionLoading(true);
@@ -427,6 +434,8 @@ export default function RelojChecador({
         const data = await response.json();
 
         setSubscriptionActive(Boolean(data.hasActivePlan));
+        if (data.hasActivePlan) guardarValidada(`empresa:${idEmpresa}`);
+        else olvidarValidada(`empresa:${idEmpresa}`);
         globalThis.__adamiaDiag?.marca("suscripcion_fin", { activa: Boolean(data.hasActivePlan) });
       } catch (error) {
         console.error("Error validando suscripción:", error);

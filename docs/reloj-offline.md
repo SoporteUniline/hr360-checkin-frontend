@@ -154,3 +154,15 @@ Los rechazos definitivos de validación se conservan con estado `review`, motivo
 `scripts/verify-offline-webkit.cjs` verifica el menú real de RH en WebKit con perfil iPhone, ambas tablas con registros y un rechazo facial 403 con su motivo visible. Usa un servidor de APIs sintéticas en loopback; para construir ese fixture se utiliza `NEXT_PUBLIC_RUTA_BACKEND=http://127.0.0.1:4561/api` únicamente en el entorno del comando de build. Playwright se resuelve mediante `PLAYWRIGHT_MODULE_PATH` o una instalación de pruebas; no se requiere como dependencia del producto. WebKit automatizado no sustituye la comprobación en el iPhone físico.
 
 Después de actualizar dev, recargar Safari con conexión y abrir Asistencias y Entradas y salidas una vez antes de repetir la navegación offline. No borrar datos de Safari: los registros pendientes/rechazados se conservan durante esta actualización.
+
+## Validación de suscripción una vez al día (21/11/2026)
+Pedido del dueño: «cada que entra al reloj valida; que lo haga una vez al día y guarde para todo el día».
+- `src/lib/reloj/suscripcionDia.mjs`: guarda en el dispositivo solo un resultado ACTIVO y solo para hoy (día de CDMX).
+  El reloj del empleado (`RelojChecador`) y el de la empresa (`app/[slug]`) entran directo si hoy ya se validó; pasada
+  la medianoche validan otra vez. Un resultado inactivo no se guarda (al reactivar, funciona de inmediato).
+- ⚠️ Riesgo (ya existía): el backend no revisa la suscripción al registrar checadas; el único control es esta pantalla
+  (y el modo sin conexión ya permitía 7 días). Con este cambio, si la suscripción vence a media jornada, ese dispositivo
+  sigue abriendo el reloj hasta la medianoche. ✅ Aceptado por el dueño (21/11/2026: «no importa que dure hasta
+  medianoche checando, no pasa nada»). 💡 Opcional a futuro: validar la suscripción en el backend al sincronizar.
+- Pruebas: `scripts/test-suscripcion-dia.mjs`; `verify-employee-mobile.cjs` (segunda entrada abre en < 2 s aunque el
+  servidor tarde 3 s; reproducido en rojo sin el cambio).
