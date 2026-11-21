@@ -16,6 +16,7 @@ Estado: Vuelta de diseño. **No se construye nada hasta `APROBADO R1`.**
 - **D-5 Préstamos (21/11/2026):** el empleado lo solicita desde **Mi espacio** (aprobación del jefe/dueño, p. ej. por WhatsApp como permisos) **o** RH lo registra directo. 🧭 Criterio: si lo registra RH, el empleado confirma/firma el acuerdo de abonos en Mi espacio — porque la ley pide que el descuento sea aceptado por el trabajador.
 - **D-6 Bonos (21/11/2026):** catálogo por empresa con sugeridos (puntualidad, asistencia, productividad, despensa). Cada bono tiene **valor editable** y una forma de aplicarse: **fijo** cada periodo, **condicionado** («se paga si cumple»: sin faltas, sin retardos o ambos — ADAMIA lo revisa solo con la asistencia) o **capturado a mano** en cada nómina. Todo editable antes de autorizar. 🧭 Criterio: los descuentos (préstamo, anticipo, otros) usan el mismo catálogo con la misma estructura — porque así RH aprende una sola pantalla.
 - **D-7 Recibo (21/11/2026):** al autorizar, el PDF se envía por correo y queda en **Mi espacio**, donde el empleado lo **firma digitalmente** (firma existente de ADAMIA). Constancia de pago para la empresa.
+- **D-8 Permisos e incapacidades (21/11/2026):** cada tipo de permiso indica **con goce / sin goce** y la nómina lo aplica solo. Incapacidades con tipo (enfermedad general, riesgo de trabajo, maternidad); por defecto la empresa no paga esos días (los cubre el IMSS). Todo editable en la nómina.
 
 ## Lo que ya existe (comprobado en código)
 - Empleado: `periodo_pago` (Diario, Semanal, Catorcenal, Quincenal, Mensual, Por hora), sueldo, `forma_pago` (= Fijo / Comisiones / Fijo + Comisiones, es el esquema, no el medio), `forma_calculo`, banco y `cuenta_bancaria` (`TabNomina.jsx`, `FormularioEmpleado.jsx`).
@@ -31,5 +32,4 @@ Estado: Vuelta de diseño. **No se construye nada hasta `APROBADO R1`.**
 - Rebanadas: R1 periodos + cálculo + conceptos + pago mixto + PDF/correo; R2 préstamos; R3 bonos por regla, firma y archivo bancario.
 
 ## ❓ PENDIENTE
-- Si permisos con/sin goce y tipos de incapacidad se agregan.
 - Revisión legal del recibo sin CFDI y de los topes de descuento.
