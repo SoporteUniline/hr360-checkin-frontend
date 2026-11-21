@@ -1,7 +1,8 @@
 // Diapositivas del carrusel de la portada. Fotos ilustrativas (generadas con IA, personas ficticias).
-// `marca`: parte de la última línea que lleva el subrayado animado.
+// `marca`: parte de la última línea que lleva el subrayado animado. `fondo`: color sólido de la marca de cada diapositiva.
 export const DIAPOSITIVAS = [
   {
+    fondo: "#2c56e8",
     foto: "/landing/planta.webp",
     alt: "Trabajadora de una planta empacadora checando su entrada desde el celular",
     etiqueta: "Recursos Humanos para empresas en México",
@@ -11,6 +12,7 @@ export const DIAPOSITIVAS = [
     boton: { texto: "Solicitar demo", href: "/contacto" },
   },
   {
+    fondo: "#0b1033",
     foto: "/landing/rh.webp",
     alt: "Encargada de Recursos Humanos revisando contratos en su oficina",
     etiqueta: "Reforma LFT · DOF 1 de mayo de 2026",
@@ -20,6 +22,7 @@ export const DIAPOSITIVAS = [
     boton: { texto: "Leer la guía", href: "/blog/registro-electronico-jornada-2027" },
   },
   {
+    fondo: "#5a3cf4",
     foto: "/landing/campo.webp",
     alt: "Técnico en obra registrando su llegada desde el celular",
     etiqueta: "Checador con rostro y GPS",
@@ -29,6 +32,7 @@ export const DIAPOSITIVAS = [
     boton: { texto: "Solicitar demo", href: "/contacto" },
   },
   {
+    fondo: "#1f44c8",
     foto: "/landing/supervisor.webp",
     alt: "Supervisor de almacén aprobando un permiso desde su celular",
     etiqueta: "Vacaciones y permisos",
@@ -38,6 +42,7 @@ export const DIAPOSITIVAS = [
     boton: { texto: "Solicitar demo", href: "/contacto" },
   },
   {
+    fondo: "#0b1033",
     foto: "/landing/equipo.webp",
     alt: "Equipo de trabajo de una planta con uniforme azul",
     etiqueta: "Todo tu personal",
