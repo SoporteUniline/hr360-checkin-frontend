@@ -12,6 +12,7 @@ import {
   Menu,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import ErrorPage from "@/components/ErrorPage";
@@ -220,9 +221,15 @@ export default function RelojChecador({
   // Tarjeta del resultado. Un solo temporizador: con el reloj fijo, el aviso de la persona siguiente ya no
   // se cierra antes de tiempo por el temporizador de la anterior. Con motivo de «pendiente», más tiempo.
   const temporizadorPopup = useRef(null);
+  const router = useRouter();
+  useEffect(() => () => clearTimeout(temporizadorPopup.current), []);
   const mostrarResultado = (data) => {
     clearTimeout(temporizadorPopup.current);
+    // (21/11/2026) App del empleado: al checar regresa a su Inicio (ahí ve su jornada actualizada). Con error del
+    // servidor se queda para que lo vea y avise a RH; los errores al registrar no pasan por aquí (se quedan en el reloj).
+    const volverAInicio = modoEmpleado && !data.errorServidor;
     setPopupInfo({
+      volviendo: volverAInicio,
       nombre: `${data.empleado?.nombre ?? ""} ${data.empleado?.apellido_paterno ?? ""}`.trim(),
       foto_perfil: data.empleado?.foto_perfil || "/assets/user.png",
       movimiento: data.movimiento || data.message,
@@ -232,7 +239,10 @@ export default function RelojChecador({
       localValidated: Boolean(data.local_validated),
       success: !data.pending,
     });
-    temporizadorPopup.current = setTimeout(() => setPopupInfo(null), data.pending && data.motivo ? 8000 : 2500);
+    temporizadorPopup.current = setTimeout(() => {
+      setPopupInfo(null);
+      if (volverAInicio) router.replace("/empleado/panel/inicio");
+    }, data.pending && data.motivo ? 8000 : 2500);
     mutate();
   };
 
@@ -532,8 +542,10 @@ export default function RelojChecador({
             </div>
 
             <div className="lg:col-span-8 md:col-span-7 md:space-y-6">
-              {/* Franja con la marca ADAMIA (19/11/2026): logo y colores de marca, sin nombre de la empresa. */}
-              <div className="md:hidden flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-2">
+              {/* Franja con la marca ADAMIA (19/11/2026): logo y colores de marca, sin nombre de la empresa.
+                  (21/11/2026) En la app del iPhone la hora y la batería del sistema quedaban encima: deja el espacio de la
+                  muesca (safe area) y se queda fija arriba al desplazar. */}
+              <div className="md:hidden sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 pb-2 pt-[calc(env(safe-area-inset-top)+0.5rem)]">
                 <span className="flex min-w-0 items-center gap-2">
                   {dataUser && (
                     <button type="button" onClick={() => setMenuMovil((v) => !v)} aria-expanded={menuMovil} aria-label="Menú"
@@ -755,6 +767,7 @@ export default function RelojChecador({
                   <span className="truncate">{estado}</span>
                 </p>
                 {popupInfo.pending && popupInfo.motivo && <p className="mt-1 text-xs text-amber-700">{popupInfo.motivo}</p>}
+                {popupInfo.volviendo && <p className="mt-1 text-xs text-slate-500">Regresando a tu inicio…</p>}
               </div>
               <span className="shrink-0 text-lg font-bold tabular-nums text-slate-900">{horaCorta}</span>
             </div>
@@ -793,6 +806,7 @@ export default function RelojChecador({
               {popupInfo.pending && popupInfo.motivo && (
                 <p className="-mt-3 mb-5 text-sm font-medium text-amber-700">{popupInfo.motivo}</p>
               )}
+              {popupInfo.volviendo && <p className="-mt-3 mb-5 text-sm text-slate-500">Regresando a tu inicio…</p>}
               <div
                 className={`py-3 px-6 rounded-2xl inline-flex items-center gap-2 ${
                   popupInfo.pending
@@ -810,7 +824,7 @@ export default function RelojChecador({
         )}
 
         {mostrarModalTurno && (
-          <div className="fixed inset-0 z-110 flex items-end md:items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+          <div className="fixed inset-0 z-110 flex items-end md:items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
             <div className="bg-white rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl p-8 w-full max-w-sm animate-in slide-in-from-bottom-10 duration-300">
               <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6 md:hidden" />
               <h2 className="text-2xl font-black text-slate-800 mb-2 tracking-tight">
