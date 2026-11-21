@@ -416,3 +416,12 @@ body {
 html.adamia-native .adamia-web-only {
   display: none !important;
 }
+
+/* (21/11/2026) App móvil: los avisos (notistack) no quedan sobre la barra de inicio del iPhone ni tapan la barra inferior
+   del reloj checador o la navegación del colaborador. Solo en celular. */
+@media (max-width: 767px) {
+  .notistack-SnackbarContainer { bottom: calc(env(safe-area-inset-bottom, 0px) + 14px) !important; }
+  /* En el reloj van arriba, debajo de la franja del logo: abajo tapaban la cámara y sus mensajes. */
+  body:has(#reloj-barra-movil) .notistack-SnackbarContainer { top: calc(env(safe-area-inset-top, 0px) + 4rem) !important; bottom: auto !important; }
+  body:has(nav[aria-label="Navegación del colaborador"]) .notistack-SnackbarContainer { bottom: calc(env(safe-area-inset-bottom, 0px) + 5rem) !important; }
+}

@@ -532,8 +532,10 @@ export default function RelojChecador({
             </div>
 
             <div className="lg:col-span-8 md:col-span-7 md:space-y-6">
-              {/* Franja con la marca ADAMIA (19/11/2026): logo y colores de marca, sin nombre de la empresa. */}
-              <div className="md:hidden flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-2">
+              {/* Franja con la marca ADAMIA (19/11/2026): logo y colores de marca, sin nombre de la empresa.
+                  (21/11/2026) En la app del iPhone la hora y la batería del sistema quedaban encima: deja el espacio de la
+                  muesca (safe area) y se queda fija arriba al desplazar. */}
+              <div className="md:hidden sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 pb-2 pt-[calc(env(safe-area-inset-top)+0.5rem)]">
                 <span className="flex min-w-0 items-center gap-2">
                   {dataUser && (
                     <button type="button" onClick={() => setMenuMovil((v) => !v)} aria-expanded={menuMovil} aria-label="Menú"
@@ -810,7 +812,7 @@ export default function RelojChecador({
         )}
 
         {mostrarModalTurno && (
-          <div className="fixed inset-0 z-110 flex items-end md:items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+          <div className="fixed inset-0 z-110 flex items-end md:items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
             <div className="bg-white rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl p-8 w-full max-w-sm animate-in slide-in-from-bottom-10 duration-300">
               <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6 md:hidden" />
               <h2 className="text-2xl font-black text-slate-800 mb-2 tracking-tight">

@@ -285,7 +285,7 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
                 }
                 disabled={isReadOnly || saving}
               >
-                <SelectTrigger id="request-type" className="w-full min-h-11 bg-white text-base">
+                <SelectTrigger id="request-type" className="h-auto w-full min-h-11 whitespace-normal bg-white text-left text-base [&>span]:line-clamp-none">
                   <SelectValue placeholder="Selecciona un tipo de permiso" />
                 </SelectTrigger>
 
