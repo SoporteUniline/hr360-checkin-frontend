@@ -35,3 +35,17 @@ Estado: Vuelta de diseño. **No se construye nada hasta `APROBADO R1`.**
 
 ## ❓ PENDIENTE
 - Revisión legal del recibo sin CFDI y de los topes de descuento.
+
+## R2 Préstamos — pantallas (21/11/2026)
+- Panel → Nómina → **Préstamos** (`/panel/nomina/prestamos`): totales (por aprobar, por firmar, vigentes, por cobrar), filtros por estado,
+  detalle con avance, historial de abonos y acciones (aprobar ajustando monto/abono, rechazar, generar acuerdo, abono en efectivo,
+  cancelar; uno vigente solo lo cancela el dueño). «Registrar préstamo» muestra antes de guardar los pagos estimados y los avisos de la ley.
+- Mi espacio → **Mis préstamos**: pedirlo (monto, abono y motivo), firmar el acuerdo, ver saldo y abonos. Uno abierto a la vez.
+- Prueba en navegador: `scripts/verify-prestamos.mjs`.
+
+## Detalle de la asistencia en la nómina (21/11/2026, pedido del dueño)
+- Misma tipografía que Asistencias: franja de totales con cuadritos de color y encabezados en versalitas.
+- Cada día dice **lo que se pagó de más**: horas extra al doble o al triple, prima dominical 25 %, festivo o descanso trabajado +200 %.
+- **Corregir** en cada día (solo en borrador) abre ese día en Asistencias con su ventana de edición (mismo editor, misma regla de
+  candado); al volver a la nómina se ofrece «Recalcular ahora». Lo editado a mano en el recibo se conserva.
+- Panel del recibo más ancho (720 px) con secciones: asistencia del periodo, percepciones, descuentos, agregar, totales.
