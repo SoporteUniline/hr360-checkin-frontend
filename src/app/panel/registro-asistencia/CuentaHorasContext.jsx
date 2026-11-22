@@ -28,3 +28,6 @@ export function CuentaHorasProvider({ registros, children }) {
 
 // Minutos que debe (0 si no debe o no se sabe).
 export const useDebeHoras = (idEmpleado) => Number(useContext(Contexto)?.[Number(idEmpleado)]) || 0;
+
+// Todas las cuentas visibles: { id_empleado: minutos que debe } (vista En vivo).
+export const useCuentasHoras = () => useContext(Contexto) ?? {};

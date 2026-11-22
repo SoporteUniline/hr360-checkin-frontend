@@ -95,6 +95,9 @@ export default function FormularioEmpleado({
   const [contactosEmergencia, setContactosEmergencia] = useState([]);
   const [tab, setTab] = useState("personales");
   const fueDesdeLectura = useRef(false);
+  // (22/11/2026) Al editar, el rostro solo se envía si RH capturó uno nuevo: así guardar la ficha no pisa el rostro que la
+  // persona haya actualizado desde su app mientras la ficha estaba abierta.
+  const rostroCapturado = useRef(false);
   const nombreInputRef = useRef(null);
 
   const { enqueueSnackbar } = useSnackbar();
@@ -507,6 +510,7 @@ export default function FormularioEmpleado({
       const formData = new FormData();
 
       delete data.nombre_empresa;
+      if (editar && !rostroCapturado.current) delete data.descriptor_facial;
 
       [
         "id_jefe_inmediato",
@@ -1026,9 +1030,10 @@ export default function FormularioEmpleado({
                           form={form}
                           soloLectura={soloLectura}
                           active={tab === "reconocimiento"}
-                          setDescriptor={(descriptor) =>
-                            form.setValue("descriptor_facial", descriptor)
-                          }
+                          setDescriptor={(descriptor) => {
+                            rostroCapturado.current = true;
+                            form.setValue("descriptor_facial", descriptor);
+                          }}
                         />
                       )}
 

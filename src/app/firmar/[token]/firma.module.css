@@ -1131,3 +1131,94 @@
     transition: none !important;
   }
 }
+
+/* (22/11/2026) Firmar con PIN: elegir método y escribir el PIN. */
+.methodChoice {
+  display: grid;
+  gap: 12px;
+  margin: 8px 0 24px;
+}
+.methodOption {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 72px;
+  padding: 16px 18px;
+  text-align: left;
+  background: #fff;
+  border: 1px solid #dfe5ef;
+  border-radius: 14px;
+  color: #19243b;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.methodOption:hover {
+  border-color: #2563eb;
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.1);
+}
+.methodOption > svg:first-child {
+  flex: none;
+  color: #2563eb;
+}
+.methodOption > svg:last-child {
+  flex: none;
+  margin-left: auto;
+  color: #9aa6ba;
+}
+.methodOption span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.methodOption strong {
+  font-size: 15px;
+}
+.methodOption small {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #64748b;
+}
+.methodOption .methodWarning {
+  color: #b45309;
+  font-weight: 600;
+}
+.methodSwitch {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 4px 0 18px;
+  padding: 8px 0;
+  min-height: 44px;
+  background: none;
+  border: 0;
+  color: #2563eb;
+  font-size: 13px;
+  font-weight: 600;
+}
+.pinLabel {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: #19243b;
+  margin-bottom: 8px;
+}
+.pinInput {
+  display: block;
+  width: 100%;
+  max-width: 260px;
+  height: 56px;
+  padding: 0 16px;
+  font-size: 26px;
+  letter-spacing: 0.5em;
+  text-align: center;
+  border: 1px solid #cfd8e6;
+  border-radius: 12px;
+  background: #fff;
+  color: #080d36;
+}
+.pinHelp {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #64748b;
+}
