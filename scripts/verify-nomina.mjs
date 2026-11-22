@@ -23,7 +23,7 @@ const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 const captura = (pg, nombre) => (process.env.CAPTURAS ? pg.screenshot({ path: `${process.env.CAPTURAS}/${nombre}.png` }) : null);
 
 // Backend simulado.
-const estado = { periodos: [], ediciones: [], posts: [], asistencias: [] };
+const estado = { periodos: [], ediciones: [], posts: [], asistencias: [], personas: [], conceptosNuevos: [] };
 const recibo = () => ({
   id: 11, id_empleado: 15, estado: "vigente", envio_estado: null, transferencia_editada: null,
   datos: { empleado: { nombre: "Ana Torres", puesto: "Empacadora", medio_pago: "Mixto", monto_transferencia: 1000 }, resumen: { diasPagados: 4.67, diasRango: 7, diasTrabajados: 4, minTrabajados: 2040, minExtra: 120, minDobles: 120, minTriples: 0, faltas: 2, sinGoce: 0, retardos: 1, domingos: 0, festivosTrab: 0, sueldo: 210000, diario: 30000, periodoPago: "Semanal" }, alertas: [],
@@ -31,7 +31,7 @@ const recibo = () => ({
   total_percepciones: 1600, total_descuentos: 0, neto: 1600, transferencia: 1000, efectivo: 600,
   lineas: [
     { clave: "sueldo", concepto: "Sueldo (días pagados)", tipo: "percepcion", cantidad: 4.67, importe: 1400, importe_sugerido: 1400, editado: 0, origen: "calculo" },
-    { clave: "concepto:1", concepto: "Despensa", tipo: "percepcion", cantidad: null, importe: 200, importe_sugerido: 200, editado: 0, origen: "concepto" },
+    { clave: "concepto:1", concepto: "Despensa", tipo: "percepcion", cantidad: null, importe: 200, importe_sugerido: 200, editado: 0, origen: "concepto", id_concepto: 1 },
     { clave: "concepto:2", concepto: "Puntualidad", tipo: "percepcion", cantidad: null, importe: 0, importe_sugerido: 0, editado: 0, origen: "concepto", nota: "No cumple: 1 retardo" },
   ],
 });
@@ -71,6 +71,7 @@ async function rutas(ctx, usuario) {
       estado.ediciones.push(b);
       const r = estado.periodos[0].recibos[0];
       for (const l of b.lineas ?? []) Object.assign(r.lineas.find((x) => x.clave === l.clave), { importe: l.importe, editado: 1, motivo: l.motivo, editado_por_nombre: "RH Prueba" });
+      for (const a of b.agregar ?? []) r.lineas.push({ clave: `concepto:${a.id_concepto}`, concepto: "Bono de productividad", tipo: "percepcion", importe: a.importe, importe_sugerido: 0, editado: 1, origen: "manual", id_concepto: a.id_concepto });
       r.neto = r.lineas.reduce((t, l) => t + Number(l.importe), 0);
       r.total_percepciones = r.neto;
       r.efectivo = r.neto - 1000;
@@ -88,6 +89,8 @@ async function rutas(ctx, usuario) {
     if (p === "/checador/tiposPermiso") return ok({ tiposPermiso: [{ id: 1, nombre: "Asistencia" }] });
     // Ficha del empleado (clic en su nombre en cualquier pantalla).
     if (p === "/checador/empleados/15") { estado.fichas = (estado.fichas ?? 0) + 1; return ok({ id_empleado: 15, id_empresa: 7, nombre: "Ana", apellido_paterno: "Torres", apellido_materno: "Paz", puesto: "Empacadora", estado: "Activo", correo: "ana@x.mx", nip: "1515" }); }
+    if (p === "/checador/nomina/conceptos" && req.method() === "POST") { estado.conceptosNuevos.push(req.postDataJSON()); return ok({ ok: true, id: 9 }, 201); }
+    if (/^\/checador\/nomina\/conceptos\/\d+\/personas$/.test(p)) { estado.personas.push({ id: Number(p.split("/")[4]), ...req.postDataJSON() }); return ok({ ok: true }); }
     if (p === "/checador/nomina/conceptos") return ok({ ok: true, conceptos: [{ id: 1, nombre: "Despensa", tipo: "percepcion", forma: "fijo", valor: 200, activo: 1 }] });
     if (p === "/checador/nomina/mis-recibos") return ok({ ok: true, recibos: [{ id: 11, id_empresa: 7, folio: "N5-11", neto: 1650, transferencia: 1000, efectivo: 650, fecha_inicio: "2026-11-16", fecha_fin: "2026-11-22", firma_estatus: "pendiente" }] });
     if (p === "/checador/firma-digital/solicitudes/documento") { assert.equal(url.searchParams.get("tipo_documento"), "RECIBO_NOMINA"); return ok({ success: true, solicitud: { estatus: "pendiente", url_firma: "/firmar/tok-recibo" } }); }
@@ -164,6 +167,21 @@ try {
   assert.equal(estado.posts.length, posts, "cancelar no recalcula");
   await captura(page, "nomina-recibo");
   assert.deepEqual(estado.ediciones[0], { version: 2, lineas: [{ clave: "concepto:1", importe: 250, motivo: "Ajuste acordado" }] });
+  // Desde el recibo: crear un bono nuevo (se agrega y se le asigna para las próximas nóminas) y quitar uno para siempre.
+  const panelRecibo = page.getByRole("dialog").first();
+  await panelRecibo.getByRole("button", { name: "Crear uno nuevo" }).click();
+  const formNuevo = page.getByRole("dialog", { name: "Nuevo bono o descuento" });
+  await formNuevo.getByLabel("Nombre").fill("Bono de productividad");
+  await formNuevo.getByLabel("Valor ($)").fill("500");
+  await formNuevo.getByRole("button", { name: "Guardar" }).click();
+  await page.getByText("Agregado y asignado para las próximas nóminas.").waitFor();
+  assert.deepEqual([estado.conceptosNuevos[0].nombre, estado.conceptosNuevos[0].valor], ["Bono de productividad", 500]);
+  assert.deepEqual(estado.ediciones.at(-1).agregar, [{ id_concepto: 9, importe: 500 }]);
+  assert.deepEqual(estado.personas.at(-1), { id: 9, cambios: [{ id_empleado: 15, lo_tiene: true }] });
+  await panelRecibo.getByRole("button", { name: "Quitárselo para siempre" }).first().click();
+  await page.getByText("Quitado de esta nómina y de su ficha.").waitFor();
+  assert.deepEqual(estado.personas.at(-1), { id: 1, cambios: [{ id_empleado: 15, lo_tiene: false }] });
+  assert.deepEqual(estado.ediciones.at(-1).lineas, [{ clave: "concepto:1", importe: 0, motivo: "Se le quitó (también de su ficha)" }]);
   await page.keyboard.press("Escape");
 
   // 2b) Clic en el NOMBRE: abre aquí mismo su ficha (la misma de Empleados), con «Editar»; Ctrl+clic sería otra pestaña.

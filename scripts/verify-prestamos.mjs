@@ -100,42 +100,50 @@ try {
   assert.equal(await page.getByRole("link", { name: "Ana Torres" }).count(), 0, "filtra por estado");
   await page.getByRole("button", { name: "Todos" }).click();
 
-  // 2) Aprobar ajustando el abono → por firmar.
-  await page.getByRole("button", { name: "Revisar préstamo de Ana Torres" }).click();
-  const dlg = page.getByRole("dialog");
-  await dlg.getByText("Consulta médica").waitFor();
-  await dlg.getByRole("button", { name: "Aprobar", exact: true }).click();
-  await dlg.getByLabel("Abono por nómina").fill("600");
-  await dlg.getByRole("button", { name: "Aprobar y enviar acuerdo" }).click();
-  await dlg.getByText("Esperando su firma en Mi espacio").waitFor();
+  // Módulo Nómina: las tres secciones como pestañas.
+  for (const t of ["Nóminas", "Bonos y descuentos", "Préstamos"]) await page.getByRole("navigation", { name: "Secciones de nómina" }).getByRole("link", { name: t }).waitFor();
+
+  // 2) Clic en el renglón (fuera del nombre) → página de detalle. Aprobar ajustando el abono → por firmar.
+  await page.getByRole("row", { name: "Préstamo de Ana Torres" }).getByRole("cell").nth(1).click();
+  await page.waitForURL("**/panel/nomina/prestamos/3");
+  await page.getByText("Consulta médica").waitFor();
+  await page.getByRole("button", { name: "Aprobar", exact: true }).click();
+  await page.getByLabel("Abono por nómina").fill("600");
+  await page.getByRole("button", { name: "Aprobar y enviar acuerdo" }).click();
+  await page.getByText("Esperando su firma en Mi espacio").waitFor();
   const aprobado = estado.posts.find((x) => x.accion === "aprobar");
   assert.deepEqual([aprobado.id, aprobado.abono, aprobado.version], [3, 600, 1]);
-  await page.keyboard.press("Escape");
+  await page.getByRole("link", { name: "Préstamos" }).first().click();
+  await page.waitForURL(/\/panel\/nomina\/prestamos$/);
 
-  // 3) Beto (vigente): historial y abono en efectivo.
-  await page.getByRole("button", { name: "Ver préstamo de Beto Ruiz" }).click();
-  await dlg.getByText("Descuento en nómina").first().waitFor();
-  assert.equal(await dlg.getByRole("button", { name: "Cancelar préstamo" }).count(), 0, "RH no cancela uno vigente");
-  await dlg.getByRole("button", { name: "Registrar abono en efectivo" }).click();
-  await dlg.getByLabel("Importe").fill("200");
-  await dlg.getByRole("button", { name: "Registrar abono" }).click();
-  await dlg.getByText("Abono registrado.").waitFor();
-  await dlg.getByRole("cell", { name: "Abono en efectivo" }).waitFor();
+  // 3) Beto (vigente): historial y abono en efectivo, en su página.
+  await page.getByRole("row", { name: "Préstamo de Beto Ruiz" }).getByRole("cell").nth(3).click();
+  await page.waitForURL("**/panel/nomina/prestamos/2");
+  await page.getByText("Descuento en nómina").first().waitFor();
+  assert.equal(await page.getByRole("button", { name: "Cancelar préstamo" }).count(), 0, "RH no cancela uno vigente");
+  await page.getByRole("button", { name: "Registrar abono en efectivo" }).click();
+  await page.getByLabel("Importe").fill("200");
+  await page.getByRole("button", { name: "Registrar abono" }).click();
+  await page.getByText("Abono registrado.").waitFor();
+  await page.getByRole("cell", { name: "Abono en efectivo" }).waitFor();
   await captura(page, "prestamos-detalle");
-  await page.keyboard.press("Escape");
+  await page.goBack();
+  await page.waitForURL(/\/panel\/nomina\/prestamos$/);
 
-  // 4) Registrar uno nuevo: avisos de la ley antes de guardar.
+  // 4) Registrar uno nuevo: persona con buscador; avisos de la ley antes de guardar; al guardar va a su detalle.
   await page.getByRole("button", { name: "Registrar préstamo" }).click();
   const reg = page.getByRole("dialog");
-  await reg.getByPlaceholder("Buscar por nombre").fill("carla");
-  await reg.getByLabel("Elige a la persona").selectOption("17");
+  await reg.getByRole("combobox").fill("carla");
+  await reg.getByRole("option", { name: /Carla Paz/ }).click();
+  await reg.getByText("Carla Paz").waitFor();
   await reg.getByLabel("Monto prestado").fill("10000");
   await reg.getByLabel("Abono por nómina").fill("500");
   await reg.getByText("Pasa de un mes de salario").waitFor();
   await reg.getByText("20 nóminas").waitFor();
   await captura(page, "prestamos-registrar");
   await reg.getByRole("button", { name: "Registrar y enviar a firma" }).click();
-  await page.getByText("Préstamo P-4").waitFor();
+  await page.waitForURL("**/panel/nomina/prestamos/4");
+  await page.getByText(/Préstamo P-4/).waitFor();
   const creado = estado.posts.find((x) => x.accion === "crear");
   assert.deepEqual([creado.id_empleado, creado.monto, creado.abono], [17, 10000, 500]);
   await ctx.close();

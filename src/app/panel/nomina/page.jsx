@@ -3,16 +3,15 @@
 // Nómina sin timbrado R1: lista de periodos y alta de una nómina nueva. Backend: /checador/nomina
 // (hr360-checkin-backend/docs/nomina-r1.md). RH calcula y envía; el dueño autoriza.
 import { useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { useSnackbar } from "notistack";
-import { HandCoins, Plus, Settings2, Wallet } from "lucide-react";
+import { Plus } from "lucide-react";
 import axios from "@/lib/axios";
-import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Chip, SelectorEmpresa, mensajeError, useEmpresaNomina } from "@/components/nomina/comun";
+import { Chip, Kpi, SelectorEmpresa, mensajeError, useEmpresaNomina } from "@/components/nomina/comun";
+import { ModuloNomina, Tabla, FilaEnlace, CeldaEnlace, celda, Cargando, ErrorCarga, Vacio } from "@/components/nomina/ModuloNomina";
 import { ESTADOS, PERIODICIDADES, dinero, fechaCorta, periodoSugerido } from "@/lib/nomina/nomina.mjs";
 
 const get = (url) => axios.get(url).then((r) => r.data);
@@ -41,58 +40,42 @@ export default function NominaPage() {
   };
 
   return (
-    <div className="space-y-5 p-1">
-      <EncabezadoPagina
-        icono={Wallet}
-        titulo="Nómina"
-        subtitulo="Calcula, revisa y autoriza el pago de tu equipo. Recibos sin timbrar."
-        acciones={
-          <>
-            <SelectorEmpresa {...empresa} />
-            <Button variant="outline" size="sm" asChild><Link href="/panel/nomina/prestamos"><HandCoins className="size-4" /> Préstamos</Link></Button>
-            <Button variant="outline" size="sm" asChild><Link href="/panel/nomina/ajustes"><Settings2 className="size-4" /> Bonos y descuentos</Link></Button>
-            <Button size="sm" onClick={abrirNuevo} disabled={!empresa.idEmpresa}><Plus className="size-4" /> Nueva nómina</Button>
-          </>
-        }
-      />
-
+    <ModuloNomina acciones={<><SelectorEmpresa {...empresa} /><Button onClick={abrirNuevo} disabled={!empresa.idEmpresa}><Plus className="size-4" /> Nueva nómina</Button></>}>
       {error ? (
-        <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{mensajeError(error, "No se pudieron cargar las nóminas.")}</p>
+        <ErrorCarga error={error} texto="No se pudieron cargar las nóminas." />
       ) : isLoading || !empresa.idEmpresa ? (
-        <p className="text-sm text-gray-500">Cargando…</p>
+        <Cargando />
       ) : periodos.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-300 p-10 text-center">
-          <p className="font-semibold text-gray-900">Aún no hay nóminas.</p>
-          <p className="mt-1 text-sm text-gray-500">Crea la primera: ADAMIA calcula días, horas extra, bonos y descuentos con la asistencia y tú revisas antes de autorizar.</p>
-          <Button className="mt-4" onClick={abrirNuevo}><Plus className="size-4" /> Nueva nómina</Button>
-        </div>
+        <Vacio titulo="Aún no hay nóminas." texto="Crea la primera: ADAMIA calcula días, horas extra, bonos y descuentos con la asistencia y tú revisas antes de autorizar.">
+          <Button onClick={abrirNuevo}><Plus className="size-4" /> Nueva nómina</Button>
+        </Vacio>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-gray-200 bg-white">
-          <table className="w-full min-w-[760px] text-[13px] tabular-nums">
-            <thead>
-              <tr className="bg-gray-50 text-left text-[10.5px] uppercase tracking-wide text-gray-500">
-                {["Periodo", "Pago", "Estado", "Personas", "Neto", "Transferencias", "Efectivo", ""].map((h) => <th key={h} className="px-3 py-2 font-semibold">{h}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {periodos.map((p) => {
-                const e = ESTADOS[p.estado] ?? ESTADOS.borrador;
-                return (
-                  <tr key={p.id} className="border-t border-gray-100 hover:bg-gray-50">
-                    <td className="px-3 py-2.5 font-semibold text-gray-900">{fechaCorta(p.fecha_inicio)} – {fechaCorta(p.fecha_fin)}</td>
-                    <td className="px-3 py-2.5">{p.periodicidad}</td>
-                    <td className="px-3 py-2.5"><Chip tono={e.tono}>{e.texto}</Chip></td>
-                    <td className="px-3 py-2.5">{p.empleados}</td>
-                    <td className="px-3 py-2.5 font-semibold">{dinero(p.total_neto)}</td>
-                    <td className="px-3 py-2.5">{dinero(p.total_transferencia)}</td>
-                    <td className="px-3 py-2.5">{dinero(p.total_efectivo)}</td>
-                    <td className="px-3 py-2.5 text-right"><Link className="font-semibold text-[#2c56e8] hover:underline" href={`/panel/nomina/${p.id}`}>Abrir</Link></td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <Kpi titulo="Por autorizar" valor={periodos.filter((p) => p.estado === "por_autorizar").length} clase={periodos.some((p) => p.estado === "por_autorizar") ? "text-amber-700" : "text-gray-900"} />
+            <Kpi titulo="En borrador" valor={periodos.filter((p) => p.estado === "borrador").length} />
+            <Kpi titulo="Autorizadas" valor={periodos.filter((p) => p.estado === "autorizado").length} />
+            <Kpi titulo="Última autorizada" valor={(() => { const u = periodos.find((p) => p.estado === "autorizado"); return u ? dinero(u.total_neto) : "—"; })()} clase="text-brand" />
+          </div>
+          <Tabla columnas={[{ titulo: "Periodo" }, { titulo: "Pago" }, { titulo: "Estado" }, { titulo: "Personas" }, { titulo: "Neto" }, { titulo: "Transferencias" }, { titulo: "Efectivo" }]}>
+            {periodos.map((p) => {
+              const e = ESTADOS[p.estado] ?? ESTADOS.borrador;
+              const href = `/panel/nomina/${p.id}`;
+              const periodo = `${fechaCorta(p.fecha_inicio)} – ${fechaCorta(p.fecha_fin)}`;
+              return (
+                <FilaEnlace key={p.id} href={href} etiqueta={`Nómina ${periodo}`}>
+                  <CeldaEnlace href={href}>{periodo}</CeldaEnlace>
+                  <td className={celda}>{p.periodicidad}</td>
+                  <td className={celda}><Chip tono={e.tono}>{e.texto}</Chip></td>
+                  <td className={celda}>{p.empleados}</td>
+                  <td className={`${celda} font-semibold`}>{dinero(p.total_neto)}</td>
+                  <td className={celda}>{dinero(p.total_transferencia)}</td>
+                  <td className={celda}>{dinero(p.total_efectivo)}</td>
+                </FilaEnlace>
+              );
+            })}
+          </Tabla>
+        </>
       )}
 
       <Dialog open={Boolean(nuevo)} onOpenChange={(v) => !v && setNuevo(null)}>
@@ -119,6 +102,6 @@ export default function NominaPage() {
           ) : null}
         </DialogContent>
       </Dialog>
-    </div>
+    </ModuloNomina>
   );
 }

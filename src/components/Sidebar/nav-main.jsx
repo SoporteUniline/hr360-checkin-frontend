@@ -292,10 +292,15 @@ const menuGroups = [
         icon: FolderClosed,
       },
       {
+        // (22/11/2026) Módulo Nómina con sus tres secciones (también son pestañas dentro del módulo).
         title: "Nómina",
-        url: "/panel/nomina",
         rol: "Recruiter",
         icon: Wallet,
+        children: [
+          { title: "Nóminas", url: "/panel/nomina", icon: Wallet },
+          { title: "Bonos y descuentos", url: "/panel/nomina/bonos", icon: Wallet, matchPrefix: true },
+          { title: "Préstamos", url: "/panel/nomina/prestamos", icon: Wallet, matchPrefix: true },
+        ],
       },
       {
         title: "Finiquitos y liquidaciones",

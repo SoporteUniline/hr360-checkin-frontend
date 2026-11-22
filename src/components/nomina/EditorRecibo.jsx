@@ -13,6 +13,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Chip, descargar, mensajeError } from "./comun";
 import { dinero } from "@/lib/nomina/nomina.mjs";
 import AsistenciaRecibo from "./AsistenciaRecibo";
+import FormConcepto, { VACIO } from "./FormConcepto";
+import { Plus } from "lucide-react";
 
 const get = (url) => axios.get(url).then((r) => r.data);
 const plural = (n, palabra) => `${Number(n) || 0} ${palabra}${Number(n) === 1 ? "" : "s"}`;
@@ -36,6 +38,8 @@ export default function EditorRecibo({ recibo, periodo, editable, idEmpresa, alC
   const [manual, setManual] = useState({ concepto: "", tipo: "percepcion", importe: "" });
   const [transferencia, setTransferencia] = useState("");
   const [guardando, setGuardando] = useState(false);
+  const [fijo, setFijo] = useState(true);
+  const [nuevoConcepto, setNuevoConcepto] = useState(null);
   const catalogo = useSWR(editable && idEmpresa ? `/checador/nomina/conceptos?empresa=${idEmpresa}` : null, get);
 
   useEffect(() => {
@@ -52,12 +56,33 @@ export default function EditorRecibo({ recibo, periodo, editable, idEmpresa, alC
       enqueueSnackbar(ok, { variant: "success" });
       setCambios({});
       await alCambiar();
+      return true;
     } catch (e) {
       enqueueSnackbar(mensajeError(e, "No se pudo guardar."), { variant: "error" });
       if (e?.response?.data?.codigo === "VERSION") await alCambiar();
+      return false;
     } finally {
       setGuardando(false);
     }
+  };
+  // (22/11/2026) Asignar o quitar el bono a esta persona para las próximas nóminas (su ficha), sin salir del recibo.
+  const asignarPersona = async (idConcepto, loTiene) => {
+    try {
+      await axios.put(`/checador/nomina/conceptos/${idConcepto}/personas`, { cambios: [{ id_empleado: recibo.id_empleado, lo_tiene: loTiene }] });
+      return true;
+    } catch (e) {
+      enqueueSnackbar(mensajeError(e, "No se pudo cambiar en su ficha."), { variant: "error" });
+      return false;
+    }
+  };
+  const agregarConcepto = async (idConcepto, importe) => {
+    const ok = await enviar({ agregar: [{ id_concepto: Number(idConcepto), importe: Number(importe || 0) }] }, fijo ? "Agregado y asignado para las próximas nóminas." : "Agregado en esta nómina.");
+    if (ok && fijo) await asignarPersona(idConcepto, true);
+    return ok;
+  };
+  const quitarConcepto = async (l, paraSiempre) => {
+    if (paraSiempre && !(await asignarPersona(l.id_concepto, false))) return;
+    await enviar({ lineas: [{ clave: l.clave, importe: 0, motivo: paraSiempre ? "Se le quitó (también de su ficha)" : "Quitado en esta nómina" }] }, paraSiempre ? "Quitado de esta nómina y de su ficha." : "Quitado en esta nómina.");
   };
   const lineasCambiadas = Object.entries(cambios).map(([clave, c]) => ({ clave, importe: Number(c.importe), motivo: c.motivo }));
   const fila = (l) => {
@@ -86,8 +111,14 @@ export default function EditorRecibo({ recibo, periodo, editable, idEmpresa, alC
         {editable && Number(l.editado) && !c ? (
           <button type="button" className="mt-1 text-xs font-semibold text-[#2c56e8] hover:underline" onClick={() => enviar({ lineas: [{ clave: l.clave, importe: 0, volver_al_sugerido: true }] }, "Se regresó al importe sugerido.")}>Volver al sugerido</button>
         ) : null}
-        {editable && l.origen === "manual" ? (
+        {editable && l.origen === "manual" && !l.id_concepto ? (
           <button type="button" className="ml-3 mt-1 text-xs font-semibold text-red-700 hover:underline" onClick={() => enviar({ quitar: l.clave }, "Renglón quitado.")}>Quitar</button>
+        ) : null}
+        {editable && l.id_concepto && Number(l.importe) > 0 && !c ? (
+          <span className="mt-1 flex flex-wrap gap-3">
+            <button type="button" className="text-xs font-semibold text-red-700 hover:underline" onClick={() => quitarConcepto(l, false)}>Quitar en esta nómina</button>
+            <button type="button" className="text-xs font-semibold text-red-700 hover:underline" onClick={() => quitarConcepto(l, true)}>Quitárselo para siempre</button>
+          </span>
         ) : null}
       </li>
     );
@@ -124,7 +155,11 @@ export default function EditorRecibo({ recibo, periodo, editable, idEmpresa, alC
                   {(catalogo.data?.conceptos ?? []).filter((c) => c.activo).map((c) => <option key={c.id} value={c.id}>{c.nombre} ({c.tipo === "descuento" ? "descuento" : "bono"})</option>)}
                 </select>
                 <input aria-label="Importe" type="number" min="0" step="0.01" className="h-9 w-28 rounded-lg border border-gray-300 px-2 text-right" placeholder="$" value={agregar.importe} onChange={(e) => setAgregar({ ...agregar, importe: e.target.value })} />
-                <Button size="sm" variant="outline" disabled={!agregar.id_concepto || guardando} onClick={() => enviar({ agregar: [{ id_concepto: Number(agregar.id_concepto), importe: Number(agregar.importe || 0) }] }, "Concepto agregado.").then(() => setAgregar({ id_concepto: "", importe: "" }))}>Agregar</Button>
+                <Button size="sm" variant="outline" disabled={!agregar.id_concepto || guardando} onClick={() => agregarConcepto(agregar.id_concepto, agregar.importe).then((ok) => ok && setAgregar({ id_concepto: "", importe: "" }))}>Agregar</Button>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label className="flex items-center gap-2 text-[13px]"><input type="checkbox" className="size-4 accent-[#2563eb]" checked={fijo} onChange={(e) => setFijo(e.target.checked)} /> Dejárselo asignado para las próximas nóminas</label>
+                <Button size="sm" variant="outline" disabled={guardando} onClick={() => setNuevoConcepto({ ...VACIO })}><Plus className="size-4" /> Crear uno nuevo</Button>
               </div>
               <div className="flex flex-wrap gap-2">
                 <input aria-label="Concepto a mano" className="h-9 flex-1 rounded-lg border border-gray-300 px-2" placeholder="O escribe un concepto" value={manual.concepto} onChange={(e) => setManual({ ...manual, concepto: e.target.value })} />
@@ -153,6 +188,10 @@ export default function EditorRecibo({ recibo, periodo, editable, idEmpresa, alC
           {recibo.envio_estado ? <p className="text-xs text-gray-500">Envío: {recibo.envio_estado}{recibo.envio_error ? ` — ${recibo.envio_error}` : ""}</p> : null}
           <Button variant="outline" onClick={() => descargar(axios, `/checador/nomina/recibos/${recibo.id}/pdf`, `recibo-${recibo.id}.pdf`, true).catch(() => enqueueSnackbar("No se pudo abrir el PDF.", { variant: "error" }))}>Ver recibo en PDF</Button>
           {!editable && periodo.estado === "borrador" ? <Chip>Solo lectura</Chip> : null}
+          {nuevoConcepto ? (
+            <FormConcepto inicial={nuevoConcepto} idEmpresa={idEmpresa} paraTodosDisponible={catalogo.data?.para_todos_disponible !== false} onCerrar={() => setNuevoConcepto(null)}
+              onGuardado={async (id, cuerpo) => { setNuevoConcepto(null); await catalogo.mutate(); await agregarConcepto(id, cuerpo.valor); }} />
+          ) : null}
         </div>
       </SheetContent>
     </Sheet>
