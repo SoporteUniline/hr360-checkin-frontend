@@ -116,6 +116,7 @@ try {
   });
 
   await page.goto(base + "/panel/registro-asistencia", { waitUntil: "domcontentloaded" });
+  await page.getByRole("tab", { name: "Registros" }).click(); // (22/11/2026) Asistencias abre en «Hoy»
   await page.getByText("Empleado0", { exact: false }).first().waitFor({ timeout: 30000 });
 
   // 1) Horas en minutos: sin tramos del reloj, 08:07–17:20 = 9 h 13 min (la comida no checada no se descuenta);

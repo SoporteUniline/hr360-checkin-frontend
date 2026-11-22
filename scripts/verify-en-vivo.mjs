@@ -69,7 +69,7 @@ try {
     return json({});
   });
   await page.goto(base + "/panel/registro-asistencia", { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: "En vivo", exact: true }).click();
+  await page.getByRole("tab", { name: "Hoy" }).click();
   const vivo = page.getByRole("region", { name: "Asistencia en vivo" });
   await vivo.getByText("Ahora 10:00 a.m.").waitFor({ timeout: 30000 });
   // Carga ayer y hoy (turnos nocturnos que siguen abiertos).
@@ -92,8 +92,8 @@ try {
   await col("Por entrar").getByRole("button", { name: /Beto Prueba/ }).click();
   await page.getByRole("dialog", { name: /Beto Prueba/ }).getByLabel("Entrada").waitFor({ timeout: 15000 });
   await page.keyboard.press("Escape");
-  // Al volver a Lista regresa a «Hoy».
-  await page.getByRole("button", { name: "Lista", exact: true }).click();
+  // Al pasar a «Registros» el rango regresa a «Hoy».
+  await page.getByRole("tab", { name: "Registros" }).click();
   await page.getByRole("button", { name: /^Hoy/ }).first().waitFor();
   // Celular: columnas una debajo de otra, sin desborde.
   await page.setViewportSize({ width: 390, height: 844 });
