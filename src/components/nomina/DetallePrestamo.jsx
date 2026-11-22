@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { MOVIMIENTO, PRESTAMO, avancePrestamo, dinero, fechaCorta } from "@/lib/nomina/nomina.mjs";
 import { Chip, mensajeError } from "./comun";
+import { EncabezadoDetalle } from "./ModuloNomina";
+import { HandCoins } from "lucide-react";
 
 const get = (url) => axios.get(url).then((r) => r.data);
 const campo = "h-10 rounded-lg border border-gray-300 px-2.5 text-sm";
@@ -25,7 +27,7 @@ function Dato({ titulo, valor, clase = "" }) {
   );
 }
 
-export default function DetallePrestamo({ id, onCerrar, onCambio }) {
+export default function DetallePrestamo({ id, onCerrar, onCambio = () => {}, pagina = false }) {
   const { data, error, mutate } = useSWR(id ? `/checador/nomina/prestamos/${id}` : null, get);
   const [accion, setAccion] = useState(null);
   const [f, setF] = useState({});
@@ -61,13 +63,10 @@ export default function DetallePrestamo({ id, onCerrar, onCambio }) {
   const sinFirmaActiva = p?.estado === "por_firmar" && !["pendiente", "abierto", "firmado"].includes(p.firma_estatus);
   const puedeCancelar = p && (["solicitado", "por_firmar"].includes(p.estado) || (p.estado === "vigente" && data.puede_cancelar_vigente));
 
-  return (
-    <Dialog open={Boolean(id)} onOpenChange={(v) => !v && onCerrar()}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle className="flex flex-wrap items-center gap-2">{p ? <><NombreEmpleado id={p.id_empleado}>{p.empleado}</NombreEmpleado> <Chip tono={est.tono}>{est.texto}</Chip></> : "Préstamo"}</DialogTitle>
-          <DialogDescription>{p ? `Préstamo P-${p.id} · ${p.origen === "empleado" ? "lo pidió desde Mi espacio" : `registrado por ${p.solicitado_por_nombre ?? "RH"}`} el ${fechaHora(p.creado_en)}` : "Cargando…"}</DialogDescription>
-        </DialogHeader>
+  const titulo = p ? <span className="flex flex-wrap items-center gap-2"><NombreEmpleado id={p.id_empleado}>{p.empleado}</NombreEmpleado> <Chip tono={est.tono}>{est.texto}</Chip></span> : "Préstamo";
+  const descripcion = p ? `Préstamo P-${p.id} · ${p.origen === "empleado" ? "lo pidió desde Mi espacio" : `registrado por ${p.solicitado_por_nombre ?? "RH"}`} el ${fechaHora(p.creado_en)}` : "Cargando…";
+  const contenido = (
+    <>
         {error ? <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{mensajeError(error, "No se pudo cargar el préstamo.")}</p> : null}
         {p ? (
           <div className="grid gap-4 text-[13px]">
@@ -161,6 +160,26 @@ export default function DetallePrestamo({ id, onCerrar, onCambio }) {
             </section>
           </div>
         ) : null}
+    </>
+  );
+
+  // (22/11/2026) En el módulo Nómina el detalle es una página (clic en el renglón); la ventana queda para otros usos.
+  if (pagina) {
+    return (
+      <div className="space-y-5 p-1">
+        <EncabezadoDetalle regreso="/panel/nomina/prestamos" textoRegreso="Préstamos" icono={HandCoins} titulo={titulo} subtitulo={descripcion} />
+        <div className="max-w-3xl rounded-xl border border-slate-200 bg-white p-4 sm:p-5">{contenido}</div>
+      </div>
+    );
+  }
+  return (
+    <Dialog open={Boolean(id)} onOpenChange={(v) => !v && onCerrar()}>
+      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{titulo}</DialogTitle>
+          <DialogDescription>{descripcion}</DialogDescription>
+        </DialogHeader>
+        {contenido}
       </DialogContent>
     </Dialog>
   );

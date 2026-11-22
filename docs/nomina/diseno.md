@@ -55,3 +55,17 @@ Estado: Vuelta de diseño. **No se construye nada hasta `APROBADO R1`.**
   la respuesta de empleados (`{ data: [...] }`) en vez de la lista, y `empleados.map` tronaba. La prueba no lo vio porque el backend
   simulado devolvía `[]`; ahora devuelve la forma real (reproducido en rojo antes del arreglo). La pantalla de error del panel ahora
   muestra el detalle técnico y, si el error es por una versión nueva publicada con la página abierta, recarga sola.
+
+## Módulo Nómina homologado (22/11/2026, pedido del dueño)
+- Menú «Nómina» con tres secciones (también pestañas): **Nóminas** `/panel/nomina`, **Bonos y descuentos**
+  `/panel/nomina/bonos` (antes `/ajustes`, que redirige) y **Préstamos** `/panel/nomina/prestamos`.
+- Un solo marco (`components/nomina/ModuloNomina.jsx`): encabezado, pestañas, selector de empresa, botón principal,
+  tarjetas, tabla y estado vacío. Clic en cualquier parte del renglón → su detalle (Ctrl/⌘+clic: otra pestaña).
+- Detalles como páginas con «← regreso»: nómina `/panel/nomina/:id`, bono `/panel/nomina/bonos/:id` (quién lo tiene:
+  buscar, marcar/quitar, valor propio, guardar en bloque) y préstamo `/panel/nomina/prestamos/:id`.
+- **Bonos «para todos»** (`para_todos`, migración backend 20261122): aplica a toda la empresa, también a quien entre después;
+  a alguien se le puede quitar. La ficha del empleado lo muestra.
+- **Desde el recibo**: agregar del catálogo y dejarlo asignado para las próximas nóminas, crear uno nuevo ahí mismo, quitar
+  en esta nómina o «para siempre» (también de su ficha).
+- **Persona con buscador** (`SelectorEmpleado`): un campo que filtra por nombre, puesto y departamento (↑ ↓ Enter).
+- Pruebas en navegador: `verify-bonos`, `verify-prestamos`, `verify-nomina`.

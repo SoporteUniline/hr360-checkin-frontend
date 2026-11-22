@@ -2,31 +2,23 @@
 
 // Registrar un préstamo desde RH (Nómina R2). Queda aprobado y se envía el acuerdo para que la persona lo firme en
 // Mi espacio; mientras no firme, no se descuenta. Antes de guardar se piden al backend los avisos (simular).
-import { useEffect, useMemo, useState } from "react";
-import useSWR from "swr";
+import { useEffect, useState } from "react";
 import axios from "@/lib/axios";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { mensajeError } from "./comun";
+import SelectorEmpleado from "./SelectorEmpleado";
 
-const get = (url) => axios.get(url).then((r) => r.data);
-const campo = "h-10 rounded-lg border border-gray-300 px-2.5 text-sm";
-const nombreDe = (e) => [e.nombre, e.apellido_paterno, e.apellido_materno].filter(Boolean).join(" ");
+const campo = "min-h-11 rounded-xl border border-slate-300 px-3 text-base";
 
 export default function RegistrarPrestamo({ abierto, idEmpresa, onCerrar, onListo }) {
-  const { data } = useSWR(abierto && idEmpresa ? `/checador/empleados?empresa=${idEmpresa}&estado=Activo&limit=500&page=1` : null, get);
   const [f, setF] = useState({ id_empleado: "", monto: "", abono: "", motivo: "" });
-  const [buscar, setBuscar] = useState("");
   const [info, setInfo] = useState(null);
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
-  const empleados = useMemo(() => {
-    const q = buscar.trim().toLowerCase();
-    return (data?.data ?? []).filter((e) => !q || nombreDe(e).toLowerCase().includes(q));
-  }, [data, buscar]);
 
   useEffect(() => {
-    if (!abierto) { setF({ id_empleado: "", monto: "", abono: "", motivo: "" }); setBuscar(""); setInfo(null); setError(""); }
+    if (!abierto) { setF({ id_empleado: "", monto: "", abono: "", motivo: "" }); setInfo(null); setError(""); }
   }, [abierto]);
 
   // Avisos y número de pagos mientras se escribe.
@@ -63,14 +55,7 @@ export default function RegistrarPrestamo({ abierto, idEmpresa, onCerrar, onList
           <DialogDescription>Sin intereses. La persona firma el acuerdo en Mi espacio y desde la siguiente nómina se descuenta el abono.</DialogDescription>
         </DialogHeader>
         <form onSubmit={guardar} className="grid gap-4">
-          <div className="grid gap-1.5 text-sm font-medium">
-            <label htmlFor="pr-buscar">Persona</label>
-            <input id="pr-buscar" className={campo} placeholder="Buscar por nombre" value={buscar} onChange={(e) => setBuscar(e.target.value)} />
-            <select aria-label="Elige a la persona" required className={campo} value={f.id_empleado} onChange={(e) => setF({ ...f, id_empleado: e.target.value })}>
-              <option value="">{data ? `Elige (${empleados.length})` : "Cargando…"}</option>
-              {empleados.map((e) => <option key={e.id_empleado} value={e.id_empleado}>{nombreDe(e)}{e.puesto ? ` · ${e.puesto}` : ""}</option>)}
-            </select>
-          </div>
+          {abierto ? <SelectorEmpleado idEmpresa={idEmpresa} value={f.id_empleado} onChange={(v) => setF({ ...f, id_empleado: v })} requerido /> : null}
           <div className="grid grid-cols-2 gap-3">
             <label className="grid gap-1.5 text-sm font-medium">Monto prestado<input className={campo} inputMode="decimal" type="number" min="1" step="0.01" required value={f.monto} onChange={(e) => setF({ ...f, monto: e.target.value })} /></label>
             <label className="grid gap-1.5 text-sm font-medium">Abono por nómina<input className={campo} inputMode="decimal" type="number" min="1" step="0.01" required value={f.abono} onChange={(e) => setF({ ...f, abono: e.target.value })} /></label>
@@ -86,7 +71,7 @@ export default function RegistrarPrestamo({ abierto, idEmpresa, onCerrar, onList
           {error ? <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onCerrar}>Cancelar</Button>
-            <Button type="submit" disabled={guardando}>{guardando ? "Guardando…" : "Registrar y enviar a firma"}</Button>
+            <Button type="submit" disabled={guardando || !f.id_empleado}>{guardando ? "Guardando…" : "Registrar y enviar a firma"}</Button>
           </DialogFooter>
         </form>
       </DialogContent>

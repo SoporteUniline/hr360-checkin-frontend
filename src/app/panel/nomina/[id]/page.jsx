@@ -4,17 +4,16 @@
 // borrador → por autorizar → autorizada (solo el dueño) | cancelada (con motivo). Backend: /checador/nomina.
 import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
 import { Fragment, useState } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import useSWR from "swr";
 import { useSnackbar } from "notistack";
-import { ArrowLeft, Wallet } from "lucide-react";
+import { Wallet } from "lucide-react";
 import axios from "@/lib/axios";
-import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Chip, Kpi, descargar, mensajeError } from "@/components/nomina/comun";
 import EditorRecibo from "@/components/nomina/EditorRecibo";
+import { EncabezadoDetalle } from "@/components/nomina/ModuloNomina";
 import AsistenciaRecibo from "@/components/nomina/AsistenciaRecibo";
 import EditarDiaAsistencia from "@/app/panel/registro-asistencia/EditarDiaAsistencia";
 import { ENVIOS, ESTADOS, acciones, dinero, fechaCorta, horas } from "@/lib/nomina/nomina.mjs";
@@ -67,8 +66,9 @@ export default function DetalleNomina() {
 
   return (
     <div className="space-y-5 p-1">
-      <Link href="/panel/nomina" className="inline-flex items-center gap-1 text-sm font-semibold text-[#2c56e8] hover:underline"><ArrowLeft className="size-4" /> Nóminas</Link>
-      <EncabezadoPagina
+      <EncabezadoDetalle
+        regreso="/panel/nomina"
+        textoRegreso="Nóminas"
         icono={Wallet}
         titulo={`Nómina del ${fechaCorta(periodo.fecha_inicio)} al ${fechaCorta(periodo.fecha_fin)}`}
         subtitulo={`${periodo.periodicidad} · ${periodo.creado_por_nombre ? `Creó ${periodo.creado_por_nombre}` : ""}${periodo.autorizado_por_nombre ? ` · Autorizó ${periodo.autorizado_por_nombre}` : ""}`}
