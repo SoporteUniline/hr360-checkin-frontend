@@ -73,7 +73,11 @@ export default function ControlAsistencia() {
     filtroDiasFestivos: false,
     filtroRequiereAutorizacion: false,
   });
-  const [fechaInicio, setFechaInicio] = useState(initialDate);
+  // (22/11/2026) Asistencias abre en «Hoy» (en vivo: ayer y hoy, por los turnos nocturnos). Si llega con un enlace
+  // a una fecha o persona (desde Horas, Incidencias o el buscador), abre en «Registros».
+  const conEnlace = Boolean(searchParams.get("fecha") || searchParams.get("empleado") || searchParams.get("abrirEmpleado"));
+  const ayerMx = dayjs().tz("America/Mexico_City").subtract(1, "day").format("YYYY-MM-DD");
+  const [fechaInicio, setFechaInicio] = useState(conEnlace ? initialDate : ayerMx);
   const [fechaFin, setFechaFin] = useState(initialDate);
   const [page, setPage] = useState(1);
   // Escritorio arranca en "Todos los registros": se ve el periodo completo y los
@@ -98,8 +102,10 @@ export default function ControlAsistencia() {
 
   // Nueva UX de escritorio: rango con modal, agrupación, columnas y detalle
   const [rangoOpen, setRangoOpen] = useState(false);
-  const [vista, setVista] = useState("lista"); // "lista" | "matriz" | "horas" | "envivo"
-  const [rangoEtiqueta, setRangoEtiqueta] = useState("Hoy");
+  // Pestañas: «Hoy» = envivo · «Registros» = lista o matriz (Calendario) · «Horas de ley» = horas.
+  const [vista, setVista] = useState(conEnlace ? "lista" : "envivo");
+  const [formatoRegistros, setFormatoRegistros] = useState("lista");
+  const [rangoEtiqueta, setRangoEtiqueta] = useState(conEnlace ? "Hoy" : "En vivo");
   const [agrupar, setAgrupar] = useState(null);
   const [visibleColumns, setVisibleColumns] = useState(null);
 
@@ -336,7 +342,7 @@ export default function ControlAsistencia() {
         <EncabezadoPagina
           icono={ClipboardCheck}
           titulo="Asistencias"
-          subtitulo="Registros de entrada y salida por empleado"
+          subtitulo="Quién está hoy, registros de entrada y salida, y horas de ley"
         />
       </div>
 
@@ -349,6 +355,43 @@ export default function ControlAsistencia() {
         />
       )}
 
+      <div role="tablist" aria-label="Vistas de asistencia" className="flex gap-1 border-b border-gray-200">
+        {[
+          ["envivo", "Hoy", Radio, "Quién está, quién falta, quién va tarde y quién debe tiempo"],
+          ["registros", "Registros", List, "Ver y corregir checadas del periodo"],
+          ["horas", "Horas de ley", Clock3, "Horas de la semana contra el límite de la ley y horas extra"],
+        ].map(([clave, texto, Icono, ayuda]) => {
+          const activa = clave === "registros" ? vista === "lista" || vista === "matriz" : vista === clave;
+          return (
+            <button
+              key={clave}
+              type="button"
+              role="tab"
+              aria-selected={activa}
+              title={ayuda}
+              onClick={() => {
+                if (clave === "envivo") {
+                  setVista("envivo");
+                  setFechaInicio(dayjs().tz("America/Mexico_City").subtract(1, "day").format("YYYY-MM-DD"));
+                  setFechaFin(today);
+                  setRangoEtiqueta("En vivo");
+                  setPage(1);
+                } else {
+                  setVista(clave === "registros" ? formatoRegistros : "horas");
+                }
+              }}
+              className={`-mb-px flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-[13.5px] font-semibold transition-colors ${
+                activa ? "border-[#2563EB] text-[#2563EB]" : "border-transparent text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              <Icono className="h-4 w-4" />
+              {texto}
+            </button>
+          );
+        })}
+      </div>
+
+      {(vista === "lista" || vista === "matriz") && (
       <ResumenAsistencia
         totals={data}
         cargando={cargando}
@@ -366,6 +409,7 @@ export default function ControlAsistencia() {
         setFiltroEstadoAsistencia={setFiltroEstadoAsistencia}
         setPage={setPage}
       />
+      )}
 
 
       <div className="flex flex-wrap items-center gap-2.5">
@@ -383,6 +427,7 @@ export default function ControlAsistencia() {
           />
         </div>
 
+        {(vista === "lista" || vista === "matriz") && (
         <Button
           variant="outline"
           onClick={() => setRangoOpen(true)}
@@ -392,66 +437,26 @@ export default function ControlAsistencia() {
           {rangoEtiqueta}
           <ChevronDown className="ml-1 h-3.5 w-3.5 text-gray-400" />
         </Button>
+        )}
 
-        {/* Toggle Lista / Matriz */}
-        <div className="inline-flex overflow-hidden rounded-xl border border-gray-200">
-          <button
-            type="button"
-            onClick={() => setVista("lista")}
-            className={`flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold transition-colors ${
-              vista === "lista"
-                ? "bg-[#2563EB] text-white"
-                : "bg-white text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            <List className="h-4 w-4" />
-            Lista
-          </button>
-          <button
-            type="button"
-            onClick={() => setVista("matriz")}
-            className={`flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold transition-colors ${
-              vista === "matriz"
-                ? "bg-[#2563EB] text-white"
-                : "bg-white text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            <Grid3x3 className="h-4 w-4" />
-            Matriz
-          </button>
-          <button
-            type="button"
-            onClick={() => setVista("horas")}
-            className={`flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold transition-colors ${
-              vista === "horas"
-                ? "bg-[#2563EB] text-white"
-                : "bg-white text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            <Clock3 className="h-4 w-4" />
-            Horas
-          </button>
-          {/* (22/11/2026) En vivo: quién entra, está en jornada, sale pronto y cuánto debe. Siempre ayer y hoy
-              (ayer, para los turnos nocturnos que siguen abiertos). */}
-          <button
-            type="button"
-            onClick={() => {
-              setVista("envivo");
-              setFechaInicio(dayjs().tz("America/Mexico_City").subtract(1, "day").format("YYYY-MM-DD"));
-              setFechaFin(today);
-              setRangoEtiqueta("En vivo");
-              setPage(1);
-            }}
-            className={`flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold transition-colors ${
-              vista === "envivo"
-                ? "bg-[#2563EB] text-white"
-                : "bg-white text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            <Radio className="h-4 w-4" />
-            En vivo
-          </button>
-        </div>
+        {(vista === "lista" || vista === "matriz") && (
+          <div className="inline-flex overflow-hidden rounded-xl border border-gray-200" role="group" aria-label="Formato de registros">
+            {[["lista", "Lista", List], ["matriz", "Calendario", Grid3x3]].map(([valor, texto, Icono]) => (
+              <button
+                key={valor}
+                type="button"
+                aria-pressed={vista === valor}
+                onClick={() => { setVista(valor); setFormatoRegistros(valor); }}
+                className={`flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold transition-colors ${
+                  vista === valor ? "bg-[#2563EB] text-white" : "bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                <Icono className="h-4 w-4" />
+                {texto}
+              </button>
+            ))}
+          </div>
+        )}
 
         {vista === "lista" && (
           <Select
@@ -474,6 +479,7 @@ export default function ControlAsistencia() {
           </Select>
         )}
 
+        {(vista === "lista" || vista === "matriz") && (
         <Button
           onClick={handleResetFilters}
           variant="ghost"
@@ -482,6 +488,7 @@ export default function ControlAsistencia() {
           <RotateCcw className="mr-1.5 h-4 w-4" />
           Limpiar
         </Button>
+        )}
 
         <div className="flex-1" />
 
@@ -494,12 +501,14 @@ export default function ControlAsistencia() {
         )}
       </div>
 
+      {(vista === "lista" || vista === "matriz") && (
       <VistasGuardadas
         hayFiltros={hayFiltrosParaVista}
         obtenerEstado={obtenerEstadoVista}
         onAplicar={aplicarEstadoVista}
         onLimpiar={handleResetFilters}
       />
+      )}
 
       {ui}
 
