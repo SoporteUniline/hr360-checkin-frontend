@@ -10,6 +10,8 @@ import useAsistenciaActions from "@/hooks/useAsistenciaActions";
 import AsistenciaTable from "./AsistenciaTable";
 import AsistenciaMatriz from "./AsistenciaMatriz";
 import VistaHoras from "./VistaHoras";
+import VistaEnVivo from "./VistaEnVivo";
+import EditarDiaAsistencia from "./EditarDiaAsistencia";
 import TablePagination from "@/components/TablePagination";
 import LoadingTable from "@/components/LoadingTable";
 import ErrorPage from "@/components/ErrorPage";
@@ -72,6 +74,7 @@ export default function AsistenciaDataContainer({
     total: 0,
   });
   const [cachedData, setCachedData] = useState(null);
+  const [diaEnVivo, setDiaEnVivo] = useState(null); // vista En vivo: día abierto en la ventana de edición
   const localEvents = useLocalClockEvents({ company: idEmpresa, from: fechaInicio, to: fechaFin, search: debouncedFiltroEmpleado });
 
   const handleResetAll = () => {
@@ -302,6 +305,12 @@ export default function AsistenciaDataContainer({
             fechaFin={fechaFin}
             filtroEmpleado={debouncedFiltroEmpleado || ""}
           />
+        ) : vista === "envivo" ? (
+          <>
+            <VistaEnVivo registros={filasPeriodo} zona={zonaEmpresa} cargando={isLoading}
+              onAbrirDia={(r) => setDiaEnVivo({ idEmpleado: r.id_empleado, nombre: [r.nombre, r.apellido_paterno].filter(Boolean).join(" "), fecha: String(r.fecha ?? "").slice(0, 10) })} />
+            {diaEnVivo ? <EditarDiaAsistencia idEmpresa={idEmpresa} {...diaEnVivo} onCerrar={(huboCambios) => { setDiaEnVivo(null); if (huboCambios) mutate(); }} /> : null}
+          </>
         ) : vista === "matriz" ? (
           <><LocalClockCaptures events={localEvents} /><AsistenciaMatriz
             registros={filasPeriodo}

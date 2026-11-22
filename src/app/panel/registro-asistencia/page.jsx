@@ -22,6 +22,7 @@ import {
   Grid3x3,
   Layers,
   List,
+  Radio,
   RotateCcw,
   Search,
 } from "lucide-react";
@@ -97,7 +98,7 @@ export default function ControlAsistencia() {
 
   // Nueva UX de escritorio: rango con modal, agrupación, columnas y detalle
   const [rangoOpen, setRangoOpen] = useState(false);
-  const [vista, setVista] = useState("lista"); // "lista" | "matriz" | "horas"
+  const [vista, setVista] = useState("lista"); // "lista" | "matriz" | "horas" | "envivo"
   const [rangoEtiqueta, setRangoEtiqueta] = useState("Hoy");
   const [agrupar, setAgrupar] = useState(null);
   const [visibleColumns, setVisibleColumns] = useState(null);
@@ -144,6 +145,15 @@ export default function ControlAsistencia() {
   };
 
   const today = dayjs().tz("America/Mexico_City").format("YYYY-MM-DD");
+  // Al salir de «En vivo» (que carga ayer y hoy) se regresa a «Hoy».
+  useEffect(() => {
+    if (vista !== "envivo" && rangoEtiqueta === "En vivo") {
+      setFechaInicio(today);
+      setFechaFin(today);
+      setRangoEtiqueta("Hoy");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vista]);
 
   const handleResetFilters = () => {
     setEmpresaActiva("all");
@@ -420,6 +430,26 @@ export default function ControlAsistencia() {
           >
             <Clock3 className="h-4 w-4" />
             Horas
+          </button>
+          {/* (22/11/2026) En vivo: quién entra, está en jornada, sale pronto y cuánto debe. Siempre ayer y hoy
+              (ayer, para los turnos nocturnos que siguen abiertos). */}
+          <button
+            type="button"
+            onClick={() => {
+              setVista("envivo");
+              setFechaInicio(dayjs().tz("America/Mexico_City").subtract(1, "day").format("YYYY-MM-DD"));
+              setFechaFin(today);
+              setRangoEtiqueta("En vivo");
+              setPage(1);
+            }}
+            className={`flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold transition-colors ${
+              vista === "envivo"
+                ? "bg-[#2563EB] text-white"
+                : "bg-white text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            <Radio className="h-4 w-4" />
+            En vivo
           </button>
         </div>
 
