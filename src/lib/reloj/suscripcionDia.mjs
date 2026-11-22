@@ -22,6 +22,21 @@ export function validadaHoy(clave, { ahora = new Date(), storage } = {}) {
   }
 }
 
+// (22/11/2026) Para no esperar: si este aparato la validó ACTIVA en los últimos `dias` días, el reloj abre de inmediato
+// y se vuelve a validar en segundo plano (si resultó inactiva, se bloquea en ese momento). Devuelve lo guardado o null.
+export function validadaReciente(clave, { dias = 7, ahora = new Date(), storage } = {}) {
+  try {
+    const crudo = almacen(storage)?.getItem(PREFIJO + clave);
+    if (!crudo) return null;
+    const dato = JSON.parse(crudo);
+    if (dato?.activa !== true || !/^\d{4}-\d{2}-\d{2}$/.test(String(dato.fecha))) return null;
+    const diferencia = (Date.parse(`${hoyMx(ahora)}T00:00:00Z`) - Date.parse(`${dato.fecha}T00:00:00Z`)) / 86400000;
+    return diferencia >= 0 && diferencia <= dias ? dato : null;
+  } catch {
+    return null;
+  }
+}
+
 export function guardarValidada(clave, datos = {}, { ahora = new Date(), storage } = {}) {
   try {
     almacen(storage)?.setItem(PREFIJO + clave, JSON.stringify({ ...datos, activa: true, fecha: hoyMx(ahora) }));

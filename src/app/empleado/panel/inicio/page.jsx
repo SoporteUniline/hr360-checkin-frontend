@@ -10,6 +10,7 @@ import { usePermisosEmpleado } from "@/hooks/usePermisoPorEmpleado";
 import VacationBalance from "@/components/empleado/VacationBalance";
 import AttendanceCard from "@/components/empleado/AttendanceCard";
 import { DataState } from "@/components/empleado/shared";
+import MiTiempoPorReponer from "@/components/empleado/MiTiempoPorReponer";
 
 export default function EmployeeHome() {
   const session = useEmpleadoSesion();
@@ -26,6 +27,7 @@ export default function EmployeeHome() {
       </DataState>
       <Link href="/empleado/reloj-checador" className="mt-5 flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700">Checar entrada o salida</Link>
     </section>
+    <MiTiempoPorReponer idEmpleado={session.id} />
     <VacationBalance />
     <section className="space-y-3"><div className="flex items-center justify-between"><h2 className="font-semibold">Solicitudes recientes</h2><Link href="/empleado/panel/solicitudes" className="flex min-h-11 items-center text-sm font-medium text-blue-600">Ver todas</Link></div><DataState loading={requests.isLoading} error={requests.error} retry={requests.mutate}>{requests.data.length ? requests.data.slice(0, 2).map(row => <Link href="/empleado/panel/solicitudes" key={row.id} className="block rounded-xl border border-slate-200 bg-white p-3.5"><RequestSummary row={row} chevron /></Link>) : <p className="text-sm text-slate-500">Aún no tienes solicitudes.</p>}</DataState></section>
     <Link href="/empleado/panel/solicitudes?nueva=1" className="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-blue-600 text-sm font-medium text-blue-600"><Plus className="size-4" />Solicitar permiso</Link>
