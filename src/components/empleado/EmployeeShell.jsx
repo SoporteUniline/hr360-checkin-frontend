@@ -3,13 +3,14 @@ import Link from "next/link";
 import { SWRConfig } from "swr";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { Home, Clock3, FileText, UserRound } from "lucide-react";
+import { Home, Clock3, FileText, UserRound, ListChecks } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 
 const root = "/empleado/panel";
 const items = [
   ["Inicio", `${root}/inicio`, Home],
   ["Asistencia", `${root}/asistencias`, Clock3],
+  ["Tareas", `${root}/tareas`, ListChecks], // (23/11/2026) prototipo con datos de ejemplo
   ["Solicitudes", `${root}/solicitudes`, FileText],
   ["Mi espacio", `${root}/mi-espacio`, UserRound],
 ];
@@ -33,10 +34,10 @@ export default function EmployeeShell({ children }) {
       </header>
       <main className="mx-auto w-full min-w-0 max-w-3xl px-5 pt-3 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6">{children}</main>
       <nav aria-label="Navegación del colaborador" className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white pb-[env(safe-area-inset-bottom)]">
-        <div className="mx-auto grid max-w-3xl grid-cols-4">
+        <div className="mx-auto grid max-w-3xl grid-cols-5">
           {items.map(([label, href, Icon], i) => {
-            const active = pathname === href || (i === 3 && !items.slice(0, 3).some(([, path]) => pathname === path));
-            return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={`flex min-h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium ${active ? "text-blue-700" : "text-slate-500"}`}><Icon className={`size-5 ${active ? "fill-blue-600 stroke-white" : ""}`} /><span>{label}</span></Link>;
+            const active = pathname === href || (i === items.length - 1 && !items.slice(0, -1).some(([, path]) => pathname === path));
+            return <Link key={href} href={href} aria-current={active ? "page" : undefined} className={`flex min-h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium ${active ? "text-blue-700" : "text-slate-500"}`}><Icon className={`size-5 ${active ? (Icon === ListChecks ? "stroke-blue-700" : "fill-blue-600 stroke-white") : ""}`} /><span>{label}</span></Link>;
           })}
         </div>
       </nav>
