@@ -88,6 +88,13 @@ try {
     if (req.method() === "OPTIONS") return json({});
     const p = url.pathname;
     if (p.endsWith("/users/verify/token")) return json({ user: usuario });
+    // (23/11/2026) ComidaBoton: dos tramos, el primero cerrado con «Salir a comer» → la ventana marca la comida.
+    if (p.endsWith("/checador/reloj/asistencia-por-empleado") && url.searchParams.get("empleado") === String(registros[12].id_empleado)) {
+      return json({ registros: [
+        { id: 91, entrada: "2026-11-13 08:00:00", salida: "2026-11-13 13:00:00", estado: "Cerrado", tipo_cierre: "comida" },
+        { id: 92, entrada: "2026-11-13 14:05:00", salida: "2026-11-13 17:00:00", estado: "Cerrado" },
+      ] });
+    }
     if (p.endsWith("/checador/reloj/asistencia-por-empleado")) return json({ registros: [{ id: 77, entrada: "2026-11-13 08:07:00", entrada_corregida: null, salida: "2026-11-13 13:19:00", salida_corregida: "2026-11-13 17:20:00", estado: "Cerrado" }] });
     if (p.includes("/checador/holidays/")) return json([{ fecha: "2026-11-16", nombre: "Revolución" }]);
     if (p.endsWith("/checador/tiposPermiso")) return json({ tiposPermiso: [{ id: 14, nombre: "Asistencia" }, { id: 2, nombre: "Sin Checar" }] });
@@ -140,6 +147,18 @@ try {
   assert.match(await celdaComida.innerText(), /^1 h 5 min/);
   assert.match(await celdaComida.getAttribute("title"), /1:00 p\.m\.–2:05 p\.m\. · de 60 min/);
   assert.doesNotMatch(await filaBoton.innerText(), /Descanso 1 h 5 min/, "la comida no se repite en Jornada");
+  // Ventana del día: la pausa de «Salir a comer» se ve como Comida (1 h 5 min de 1 h, se pasó 5 min) y sin «Agregar comida».
+  await filaBoton.locator("td").nth(2).click();
+  const panelComida = page.getByRole("dialog", { name: /ComidaBoton Prueba/ });
+  const pausaComida = panelComida.locator('[data-pausa="comida-excedida"]');
+  await pausaComida.waitFor({ timeout: 10000 });
+  assert.match(await pausaComida.innerText(), /Comida[\s\S]*1:00 p\.m\. → 2:05 p\.m\.[\s\S]*1 h 5 min de 1 h[\s\S]*se pasó 5 min/);
+  assert.equal(await panelComida.getByText("Salida a comer").count(), 1);
+  assert.equal(await panelComida.getByText("Regreso de comida").count(), 1);
+  assert.equal(await panelComida.getByRole("button", { name: "+ Agregar comida" }).count(), 0, "ya checó comida: no se ofrece agregarla");
+  if (process.env.CAPTURAS) await page.screenshot({ path: process.env.CAPTURAS + "/ventana-comida.png" });
+  await page.keyboard.press("Escape");
+  await panelComida.waitFor({ state: "hidden", timeout: 10000 });
   assert.equal(await page.getByRole("columnheader", { name: "Comida", exact: true }).count(), 1, "columna «Comida» visible");
   const alertaComida = page.getByRole("button", { name: /No marcaron salida a comer/ });
   assert.match(await alertaComida.innerText(), /No marcaron salida a comer\s*1/);

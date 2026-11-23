@@ -7,11 +7,13 @@
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
-import { Pencil, Save, X } from "lucide-react";
+import { Coffee, Pencil, Save, X } from "lucide-react";
 import useClockCheckData from "@/hooks/useRelojChecador";
 import useEntradaSalida from "@/hooks/useEntradaSalida";
 import { useAuth, useEmpresaTimezone } from "@/context/AuthContext";
 import { hora12 } from "@/lib/hora12.mjs";
+import { pausasDelDia } from "@/lib/asistencia/pausasDelDia.mjs";
+import { minutosComidaHorario, formatearMinutos } from "@/lib/asistencia/jornada.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -53,6 +55,17 @@ export default function ChecadasDelDia({ empleado, activo = true, mutateAsistenc
     ? [...data.registros].sort((a, b) => horaEfectiva(a).localeCompare(horaEfectiva(b)) || Number(a.id) - Number(b.id))
     : [];
 
+  // (23/11/2026) Pausas entre tramos: la de «Salir a comer» se marca como COMIDA (con minutos y si se pasó).
+  const aMin = (v) => (valida(v) ? Math.floor(dayjs.tz(v, DB_TIMEZONE).valueOf() / 60000) : null);
+  const pausas = pausasDelDia(registros, {
+    comida: empleado?.comida_checada,
+    minutosComida: empleado?.comida_checada?.minutos_programados ?? minutosComidaHorario(empleado),
+    aMin,
+    ahora: Math.floor(Date.now() / 60000),
+  });
+  const pausaTras = new Map(pausas.map((p) => [p.despuesDe, p]));
+  const comidaTras = new Set(pausas.filter((p) => p.esComida).map((p) => p.despuesDe));
+
   // Hora original tachada + corregida resaltada (o solo la original).
   const Marca = ({ original, corregida, etiqueta }) => (
     <div className="flex flex-col items-start">
@@ -76,9 +89,11 @@ export default function ChecadasDelDia({ empleado, activo = true, mutateAsistenc
 
   return (
     <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200" aria-label="Checadas del reloj">
-      {registros.map((c, i) => {
+      {registros.flatMap((c, i) => {
         const editando = editingMovimientoId === c.id;
-        return (
+        const pausa = pausaTras.get(i);
+        const filaPausa = pausa ? <FilaPausa key={`pausa-${c.id ?? i}`} p={pausa} horaVer={horaVer} /> : null;
+        return [(
           <li key={c.id ?? i} className="flex items-center gap-3 px-3 py-2.5 text-sm">
             <span className="w-5 text-xs font-semibold text-slate-400">{i + 1}</span>
             {editando ? (
@@ -109,9 +124,9 @@ export default function ChecadasDelDia({ empleado, activo = true, mutateAsistenc
               </>
             ) : (
               <>
-                <Marca etiqueta="Entrada" original={c.entrada} corregida={c.entrada_corregida} />
+                <Marca etiqueta={comidaTras.has(i - 1) ? "Regreso de comida" : "Entrada"} original={c.entrada} corregida={c.entrada_corregida} />
                 <span className="text-slate-300">→</span>
-                <Marca etiqueta="Salida" original={c.salida} corregida={c.salida_corregida} />
+                <Marca etiqueta={comidaTras.has(i) ? "Salida a comer" : "Salida"} original={c.salida} corregida={c.salida_corregida} />
                 <span className={`ml-auto rounded-full px-2 py-0.5 text-[11px] font-semibold ${c.estado === "Abierto" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
                   {c.estado}
                 </span>
@@ -125,8 +140,35 @@ export default function ChecadasDelDia({ empleado, activo = true, mutateAsistenc
               </>
             )}
           </li>
-        );
+        ), filaPausa];
       })}
     </ul>
+  );
+}
+
+// Hueco entre dos tramos. Comida: resaltada en amarillo (rojo si se pasó), con su tiempo; otra pausa: gris.
+function FilaPausa({ p, horaVer }) {
+  const rango = `${horaVer(p.desde)} → ${p.hasta ? horaVer(p.hasta) : "…"}`;
+  if (!p.esComida) {
+    return (
+      <li className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 pl-11 text-xs text-slate-500" data-pausa="pausa">
+        Pausa · {rango}{p.minutos != null ? ` · ${formatearMinutos(p.minutos)}` : ""}
+      </li>
+    );
+  }
+  const pasado = p.excedente > 0;
+  return (
+    <li className={`flex flex-wrap items-center gap-x-2 gap-y-0.5 px-3 py-2 pl-11 text-xs ${pasado ? "bg-red-50 text-red-800" : "bg-amber-50 text-amber-900"}`}
+      data-pausa={pasado ? "comida-excedida" : "comida"}>
+      <Coffee className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+      <span className="font-semibold">{p.enCurso ? "En comida" : "Comida"}</span>
+      <span className="tabular-nums">{rango}</span>
+      {p.minutos != null ? (
+        <span className="tabular-nums font-semibold">
+          · {p.enCurso ? "lleva " : ""}{formatearMinutos(p.minutos)}{p.programados ? ` de ${formatearMinutos(p.programados)}` : ""}
+        </span>
+      ) : null}
+      {pasado ? <span className="rounded-full bg-red-100 px-2 py-0.5 font-semibold text-red-700">se pasó {formatearMinutos(p.excedente)}</span> : null}
+    </li>
   );
 }
