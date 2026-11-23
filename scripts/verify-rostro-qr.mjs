@@ -112,6 +112,9 @@ async function abrirFicha(pg, movil = false) {
   if (movil) {
     // En el teléfono la lista abre la ficha en lectura; «Editar» la deja editable.
     await pg.getByRole("button", { name: /Ana Torres/ }).first().click({ timeout: 30000 });
+    // (23/11/2026) Regresión: en modo «ver» (solo lectura) también está «Continuar desde el celular».
+    await pg.getByRole("tab", { name: "Checador y acceso" }).click({ timeout: 30000 });
+    await pg.getByRole("button", { name: "Continuar desde el celular" }).waitFor({ timeout: 30000 });
     await pg.getByRole("button", { name: "Editar" }).first().click({ timeout: 30000 });
   } else {
     await pg.getByTitle("Editar").first().click({ timeout: 30000 });
