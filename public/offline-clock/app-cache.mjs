@@ -115,8 +115,10 @@ export function installOfflineFetch(base) {
     const isApi = eligibleApi(url);
     const authorization = request.headers.get('authorization');
     const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : cookieToken();
-    const owner = await ownerKey(token);
-    const publicKey = await publicOwner(url);
+    // (23/11/2026) Si el navegador bloquea el almacenamiento (Safari privado, sitio sin permisos), seguir sin caché en
+    // lugar de rechazar la petición con un DOMException.
+    let owner = null, publicKey = null;
+    try { owner = await ownerKey(token); publicKey = await publicOwner(url); } catch { owner = null; publicKey = null; }
     const effectiveOwner = owner || publicKey;
     const isRsc = url.origin === location.origin && request.headers.get('rsc') === '1';
     const navigateStoredPage = () => {
@@ -163,12 +165,14 @@ export function installOfflineFetch(base) {
       const response = await originalFetch(outgoing);
       if (response.status === 401 || response.status === 403) {
         // An explicit server denial always wins over a stored response.
-        if (owner && (response.status === 401 || url.pathname.endsWith('/users/verify/token'))) await caches.delete(cacheName(owner));
-        else if (effectiveOwner) await (await caches.open(cacheName(effectiveOwner))).delete(await cacheKey(kind, url, variant)).catch(() => {});
+        try {
+          if (owner && (response.status === 401 || url.pathname.endsWith('/users/verify/token'))) await caches.delete(cacheName(owner));
+          else if (effectiveOwner) await (await caches.open(cacheName(effectiveOwner))).delete(await cacheKey(kind, url, variant));
+        } catch { /* sin caché disponible */ }
         return response;
       }
       if (response.status >= 500 && get && (isApi || isRsc)) {
-        const cached = await readResponse(effectiveOwner, kind, url, variant);
+        const cached = await readResponse(effectiveOwner, kind, url, variant).catch(() => null);
         if (cached) { reportNetwork(true); return cached; }
       }
       if (get && effectiveOwner && response.ok && (isApi || isRsc) && !url.pathname.includes('/offline/')) {
