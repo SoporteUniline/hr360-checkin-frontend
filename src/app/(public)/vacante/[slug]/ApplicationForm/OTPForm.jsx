@@ -26,7 +26,8 @@ export default function OTPForm({ onSubmit, form }) {
           variant: "success",
         }
       );
-      onSubmit(form.getValues());
+      // (24/11/2026, INC-REC-002) El backend entrega un token de un solo uso que /postulaciones/create exige.
+      onSubmit(form.getValues(), response?.data?.verification_token || "");
       setLoading(false);
     } catch (error) {
       setLoading(false);
