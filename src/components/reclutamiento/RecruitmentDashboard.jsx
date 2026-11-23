@@ -49,16 +49,21 @@ export default function RecruitmentDashboard() {
   );
   const unreviewed = candidates.filter((item) => item.stage === "new");
   const offers = candidates.filter((item) => item.stage === "offer");
-  const interviews = data.interviews.filter((item) =>
-    candidates.some((candidate) => candidate.id === item.candidateId)
+  // Entrevistas = citas reales de la agenda de WhatsApp (sus candidatos llegaron por WhatsApp).
+  const whatsapp = (data.whatsappCandidates || []).filter(
+    (item) => vacancyId === "all" || item.vacancyId === vacancyId
+  );
+  const people = [...candidates, ...whatsapp];
+  const interviews = data.interviews.filter(
+    (item) => vacancyId === "all" || item.vacancyId === vacancyId
   );
   const overdue = interviews.filter((item) => interviewStatus(item) === "pending");
   const upcoming = interviews
     .filter((item) => interviewStatus(item) === "scheduled")
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
-  const events = candidates
-    .flatMap((candidate) => candidate.activity.map((event) => ({ ...event, candidate })))
-    .sort((a, b) => b.at.localeCompare(a.at))
+  const events = data.events
+    .map((event) => ({ ...event, candidate: candidates.find((item) => item.id === event.candidateId) }))
+    .filter((event) => event.candidate)
     .slice(0, 5);
   const stages = STAGES.map((stage) => ({
     ...stage,
@@ -316,11 +321,11 @@ export default function RecruitmentDashboard() {
             {upcoming.length ? (
               <div className={s.stack}>
                 {upcoming.slice(0, 3).map((item) => {
-                  const candidate = candidates.find((person) => person.id === item.candidateId);
+                  const candidate = people.find((person) => person.id === item.candidateId);
                   return (
                     <Link
                       key={item.id}
-                      href={candidateHref(candidate.id, "activity")}
+                      href={candidate ? candidateHref(candidate.id, "activity") : `${base}/entrevistas`}
                       className={m.agendaItem}
                     >
                       <div className={m.dateTile}>
@@ -330,12 +335,9 @@ export default function RecruitmentDashboard() {
                         </span>
                       </div>
                       <div>
-                        <strong>{candidate.name}</strong>
+                        <strong>{candidate?.name || "Candidato de WhatsApp"}</strong>
                         <p>
-                          {
-                            data.vacancies.find((vacancy) => vacancy.id === candidate.vacancyId)
-                              ?.title
-                          }
+                          {data.vacancies.find((vacancy) => vacancy.id === item.vacancyId)?.title}
                         </p>
                         <span>
                           <Clock3 size={12} />
@@ -350,7 +352,7 @@ export default function RecruitmentDashboard() {
               <EmptyState
                 icon={CalendarDays}
                 title="Espacio para conocer talento"
-                description="Programa una entrevista desde la agenda o el expediente del candidato."
+                description="Las entrevistas que agende el asistente de WhatsApp o tu equipo aparecen aquí."
               />
             )}
           </div>
@@ -399,7 +401,7 @@ export default function RecruitmentDashboard() {
               <EmptyState
                 icon={BriefcaseBusiness}
                 title="Da el primer paso"
-                description="Publica una vacante de prueba para comenzar a recibir perfiles."
+                description="Publica una vacante para comenzar a recibir perfiles."
               >
                 <Button className={s.primary} onClick={createVacancy}>
                   Crear vacante

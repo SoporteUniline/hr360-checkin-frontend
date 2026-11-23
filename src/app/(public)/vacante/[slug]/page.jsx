@@ -27,12 +27,17 @@ import { Button } from "@/components/ui/button";
 import axios from "axios";
 import Cookies from "js-cookie";
 import { useSnackbar } from "notistack";
+import PreguntasVacante, { faltantes } from "./ApplicationForm/PreguntasVacante";
+import { respuestasParaEnviar } from "@/lib/reclutamiento/respuestas.mjs";
 
 export default function DetalleVacante() {
   const [openDialog, setOpenDialog] = useState(false);
   const [openSheet, setOpenSheet] = useState(false); // Para controlar el Sheet manualmente
 
   const [showModal, setShowModal] = useState(false);
+  // (03/12/2026) Preguntas propias de la vacante también al postularse con sesión.
+  const [respuestas, setRespuestas] = useState({});
+  const [sinResponder, setSinResponder] = useState([]);
   const { dataUser, isLoggedIn } = useAuth();
   const params = useParams();
   const token = Cookies.get("token");
@@ -92,6 +97,7 @@ export default function DetalleVacante() {
         {
           id_vacante: data.id_vacante,
           id_usuario: dataUser.id_usuario,
+          respuestas: respuestasParaEnviar(data.preguntas_formulario ?? [], respuestas),
         },
         headers
       );
@@ -116,7 +122,7 @@ export default function DetalleVacante() {
       }
     } catch (err) {
       console.error("Error al postularte:", err);
-      enqueueSnackbar("¡Error al postularte!", {
+      enqueueSnackbar(err?.response?.data?.error || "¡Error al postularte!", {
         variant: "error",
       });
     }
@@ -143,12 +149,18 @@ export default function DetalleVacante() {
           <DialogHeader>
             <DialogTitle>¿Estás seguro que deseas postularte?</DialogTitle>
           </DialogHeader>
+          <div className="max-h-[60dvh] overflow-y-auto">
+            <PreguntasVacante preguntas={data?.preguntas_formulario ?? []} valores={respuestas} onCambiar={setRespuestas} errores={sinResponder} />
+          </div>
           <DialogFooter className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setOpenDialog(false)}>
               No
             </Button>
             <Button
               onClick={() => {
+                const pendientes = faltantes(data?.preguntas_formulario ?? [], respuestas);
+                setSinResponder(pendientes);
+                if (pendientes.length) return;
                 setOpenDialog(false);
                 handlePostularme();
               }}

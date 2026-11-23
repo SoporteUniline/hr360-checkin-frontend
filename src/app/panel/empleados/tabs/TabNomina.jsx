@@ -15,9 +15,13 @@ import {
 } from "@/components/ui/select";
 import { FormLabelWithAsterisk } from "@/components/FormLabelWithAsterisk";
 import { BonosEmpleado, MedioPago } from "./PagoNominaEmpleado";
+import { useModulosActivos } from "@/components/modulos/useModulos";
 
 export default function TabNomina({ renderCampos = () => null, form, soloLectura }) {
   const periodoPago = form.watch("periodo_pago");
+  // (03/12/2026) Bonos y descuentos son del módulo de Nómina: con Nómina apagado no se muestran (el sueldo sí, es de la ficha).
+  const { activos } = useModulosActivos();
+  const conNomina = !activos || activos.has("nomina");
 
   const sueldoLabel =
     {
@@ -238,7 +242,7 @@ export default function TabNomina({ renderCampos = () => null, form, soloLectura
         <p className="mb-4 text-sm text-gray-600">Cómo recibe su pago y sus bonos o descuentos de cada periodo.</p>
         <MedioPago form={form} soloLectura={soloLectura} />
         <h4 className="mb-2 mt-6 font-semibold text-gray-900">Bonos y descuentos</h4>
-        <BonosEmpleado idEmpleado={form.watch("id_empleado")} soloLectura={soloLectura} />
+        {conNomina ? <BonosEmpleado idEmpleado={form.watch("id_empleado")} soloLectura={soloLectura} /> : null}
       </div>
     </section>
   );

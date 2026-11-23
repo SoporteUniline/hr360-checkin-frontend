@@ -114,7 +114,7 @@ function StageColumn({ stage, candidates, data, onOpen, onMove }) {
   );
 }
 export default function SelectionBoard() {
-  const { data, openCandidate, changeCandidate, success } = useRecruitment();
+  const { data, openCandidate, changeStage, success } = useRecruitment();
   const params = useSearchParams();
   const [query, setQuery] = useState("");
   const [vacancyId, setVacancyId] = useState(params.get("vacante") || "all");
@@ -130,7 +130,8 @@ export default function SelectionBoard() {
         query
       )
   );
-  const move = (id, stage) => {
+  // Los candidatos de WhatsApp siguen su proceso en la bandeja; aquí solo las postulaciones de la página.
+  const move = async (id, stage) => {
     const candidate = data.candidates.find((item) => item.id === id);
     if (!candidate || candidate.stage === stage || candidate.stage === "hired") return;
     if (stage === "hired") {
@@ -138,8 +139,7 @@ export default function SelectionBoard() {
       return;
     }
     const label = STAGES.find((item) => item.id === stage)?.singular;
-    if (label && changeCandidate(id, { stage }, `Etapa: ${label}`))
-      success(`${candidate.name}: ${label}.`);
+    if (label && (await changeStage(id, stage))) success(`${candidate.name}: ${label}.`);
   };
   const cardProps = (candidate) => ({
     candidate,

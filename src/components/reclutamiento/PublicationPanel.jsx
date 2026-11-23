@@ -3,21 +3,22 @@
 import { useState } from "react";
 import { Copy, ExternalLink, Mail, Check, Link2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { urlVacantePublica } from "@/lib/reclutamiento/adaptador.mjs";
+import { vacancyStatus } from "@/lib/reclutamiento/model";
 import { Field, FilterTabs } from "./RecruitmentUI";
 import s from "./reclutamiento.module.css";
 
-export const previewPath = (workspaceId, vacancyId) =>
-  `/reclutamiento-demo/${encodeURIComponent(workspaceId)}/${encodeURIComponent(vacancyId)}`;
-export default function PublicationPanel({ workspaceId, vacancy, onSave }) {
+// Página pública real de la vacante (la misma de la bolsa de trabajo). Solo existe mientras está publicada.
+export const previewPath = (vacancy) => urlVacantePublica(vacancy.slug);
+export default function PublicationPanel({ vacancy, company, publishesBoard, onSave }) {
   const [emailType, setEmailType] = useState("candidate");
   const [config, setConfig] = useState(vacancy.notifications);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
-  const url = `${typeof window !== "undefined" ? window.location.origin : ""}${previewPath(
-    workspaceId,
-    vacancy.id
-  )}`;
+  const [saving, setSaving] = useState(false);
+  const live = vacancyStatus(vacancy) === "open";
+  const url = `${typeof window !== "undefined" ? window.location.origin : ""}${previewPath(vacancy)}`;
   const change = (patch) => {
     setConfig((current) => ({ ...current, ...patch }));
     setSaved(false);
@@ -42,29 +43,36 @@ export default function PublicationPanel({ workspaceId, vacancy, onSave }) {
             </h2>
           </div>
           <div className={`${s.panelBody} ${s.stack}`}>
-            <p className={s.muted}>Revisa cómo verán el puesto y el formulario desde su celular.</p>
-            <div className={s.urlBox}>{url}</div>
-            <div className={s.row}>
-              <Button className={s.primary} asChild>
-                <a
-                  href={previewPath(workspaceId, vacancy.id)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <ExternalLink size={15} />
-                  Abrir vista pública
-                </a>
-              </Button>
-              <Button variant="outline" onClick={copy}>
-                {copied ? <Check size={15} /> : <Copy size={15} />}
-                {copied ? "Enlace copiado" : "Copiar enlace de prueba"}
-              </Button>
-            </div>
-            <div className={s.formHint}>
-              <strong>Enlace de demostración.</strong> Las vacantes personalizadas y sus respuestas
-              solo están disponibles en este navegador. La URL para compartir con candidatos reales
-              se habilitará con la integración.
-            </div>
+            {live ? (
+              <>
+                <p className={s.muted}>
+                  Comparte este enlace donde quieras: la página muestra el puesto y su formulario.
+                </p>
+                <div className={s.urlBox}>{url}</div>
+                <div className={s.row}>
+                  <Button className={s.primary} asChild>
+                    <a href={previewPath(vacancy)} target="_blank" rel="noopener noreferrer">
+                      <ExternalLink size={15} />
+                      Abrir página de la vacante
+                    </a>
+                  </Button>
+                  <Button variant="outline" onClick={copy}>
+                    {copied ? <Check size={15} /> : <Copy size={15} />}
+                    {copied ? "Enlace copiado" : "Copiar enlace"}
+                  </Button>
+                </div>
+                <div className={s.formHint}>
+                  {publishesBoard
+                    ? "También aparece en la bolsa de trabajo de ADAMIA."
+                    : "No aparece en la bolsa de trabajo de ADAMIA: tu empresa no la tiene activada (se activa en WhatsApp › Enlaces de vacantes)."}
+                </div>
+              </>
+            ) : (
+              <div className={s.formHint}>
+                <strong>La página no está disponible.</strong> Publica o reabre la vacante para
+                compartir su enlace y recibir postulaciones.
+              </div>
+            )}
           </div>
         </section>
         <section className={s.panel}>
@@ -78,16 +86,24 @@ export default function PublicationPanel({ workspaceId, vacancy, onSave }) {
             className={`${s.panelBody} ${s.stack}`}
             onSubmit={(event) => {
               event.preventDefault();
-              if (config.toTeam && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(config.email.trim())) {
+              if (
+                config.toTeam &&
+                config.email.trim() &&
+                !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(config.email.trim())
+              ) {
                 setError("Escribe un correo válido para tu equipo.");
                 return;
               }
-              if (
-                onSave({ ...vacancy, notifications: { ...config, email: config.email.trim() } })
-              ) {
-                setSaved(true);
-                setError("");
-              } else setError("No se guardó la configuración. Vuelve a intentar.");
+              setSaving(true);
+              onSave({ ...vacancy, notifications: { ...config, email: config.email.trim() } }).then(
+                (answer) => {
+                  setSaving(false);
+                  if (answer?.ok) {
+                    setSaved(true);
+                    setError("");
+                  } else setError(answer?.message || "No se guardó la configuración. Vuelve a intentar.");
+                }
+              );
             }}
           >
             <label className={s.check}>
@@ -103,7 +119,7 @@ export default function PublicationPanel({ workspaceId, vacancy, onSave }) {
                 <input
                   {...props}
                   type="email"
-                  required={config.toTeam}
+                  placeholder="Correo de la empresa"
                   disabled={!config.toTeam}
                   value={config.email}
                   onChange={(event) => change({ email: event.target.value })}
@@ -119,8 +135,8 @@ export default function PublicationPanel({ workspaceId, vacancy, onSave }) {
               Enviar confirmación de recepción al candidato
             </label>
             <div className={s.between}>
-              <span className={s.small}>Configuración de prueba. No envía correos.</span>
-              <Button type="submit" variant="outline">
+              <span className={s.small}>Se aplica a las próximas postulaciones.</span>
+              <Button type="submit" variant="outline" loading={saving} disabled={saving}>
                 {saved ? (
                   <>
                     <Check size={14} />
@@ -156,38 +172,39 @@ export default function PublicationPanel({ workspaceId, vacancy, onSave }) {
           <div className={s.email}>
             <div className={s.mailHeader}>
               <strong>Para:</strong>{" "}
-              {emailType === "candidate" ? "candidato@example.test" : config.email || "Tu equipo"}
+              {emailType === "candidate" ? "Correo del candidato" : config.email || "Correo de tu empresa"}
               <br />
               <strong>Asunto:</strong>{" "}
-              {emailType === "candidate" ? "Recibimos tu postulación" : "Nueva postulación"}
+              {emailType === "candidate" ? "Confirmación de Postulación" : "Nueva postulación recibida"}
             </div>
-            <div className={s.eyebrow}>Empresa de ejemplo</div>
-            <h4>
-              {emailType === "candidate"
-                ? "¡Gracias por tu interés!"
-                : "Conoce a tu próximo talento"}
-            </h4>
+            <div className={s.eyebrow}>{company}</div>
             <p className={s.muted}>
               {emailType === "candidate" ? (
                 <>
-                  Recibimos tu postulación para <strong>{vacancy.title}</strong>. Nuestro equipo
-                  revisará tu perfil y te contactará si avanzas a la siguiente etapa.
+                  Hola (nombre del candidato),
+                  <br />
+                  Gracias por postularte a la vacante: <strong>{vacancy.title}</strong>.
                 </>
               ) : (
                 <>
-                  Llegó una postulación para <strong>{vacancy.title}</strong>. Entra a Reclutamiento
-                  para consultar las respuestas y dar seguimiento al candidato.
+                  Se ha recibido una nueva postulación para la vacante:{" "}
+                  <strong>{vacancy.title}</strong>.
+                  <br />
+                  Postulante: (nombre del candidato)
                 </>
               )}
             </p>
             <p className={s.small} style={{ marginTop: 22 }}>
-              Este es un ejemplo del contenido. No se ha enviado.
+              {emailType === "candidate"
+                ? config.toCandidate
+                  ? "Se envía al recibir cada postulación."
+                  : "Desactivado: no se envía."
+                : config.toTeam
+                ? "Se envía al recibir cada postulación."
+                : "Desactivado: no se envía."}
             </p>
           </div>
-          <p className={s.small}>
-            El remitente, los enlaces y el envío se configurarán con el servicio de correo de la
-            empresa.
-          </p>
+          <p className={s.small}>Lo envía ADAMIA en nombre de tu empresa.</p>
         </div>
       </section>
     </div>

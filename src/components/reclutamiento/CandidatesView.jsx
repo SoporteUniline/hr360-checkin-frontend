@@ -39,7 +39,9 @@ export default function CandidatesView({
     () => new Map(data.vacancies.map((item) => [item.id, item])),
     [data.vacancies]
   );
-  const all = data.candidates.filter(
+  // Candidatos incluye a quienes llegaron por WhatsApp (solo lectura; su proceso sigue en la bandeja).
+  const people = hiring ? data.candidates : [...data.candidates, ...(data.whatsappCandidates || [])];
+  const all = people.filter(
     (candidate) =>
       (!vacancyId || candidate.vacancyId === vacancyId) &&
       (!hiring || ["offer", "hired"].includes(candidate.stage)) &&
@@ -76,13 +78,14 @@ export default function CandidatesView({
   };
   const exportRows = () =>
     downloadCsv(
-      hiring ? "contrataciones-prueba.csv" : "candidatos-prueba.csv",
-      ["Nombre", "Correo", "Teléfono", "Vacante", "Etapa", "Postulación", "Ingreso"],
+      hiring ? "contrataciones.csv" : "candidatos.csv",
+      ["Nombre", "Correo", "Teléfono", "Vacante", "Origen", "Etapa", "Postulación", "Ingreso"],
       filtered.map((candidate) => [
         candidate.name,
         candidate.email,
         candidate.phone,
         vacancyById.get(candidate.vacancyId)?.title,
+        candidate.source,
         STAGES.find((item) => item.id === candidate.stage)?.singular,
         formatDate(candidate.submittedAt),
         candidate.hiring.startDate || "",
@@ -184,7 +187,7 @@ export default function CandidatesView({
               ? "Prueba con otro nombre o limpia los filtros para ver a todos."
               : hiring
               ? "Cuando avances a una persona a Oferta podrás preparar su ingreso."
-              : "Abre la vista pública de una vacante y envía una postulación de prueba."
+              : "Publica una vacante y comparte su enlace: las postulaciones de la página y de WhatsApp aparecen aquí."
           }
         >
           {(search || stage !== "all" || vacancy !== "all") && (
@@ -223,7 +226,14 @@ export default function CandidatesView({
                       <Person candidate={candidate} />
                     </button>
                   </td>
-                  <td>{vacancyById.get(candidate.vacancyId)?.title}</td>
+                  <td>
+                    {vacancyById.get(candidate.vacancyId)?.title || "Vacante sin acceso"}
+                    {candidate.origin === "whatsapp" && (
+                      <span className={s.small} style={{ display: "block" }}>
+                        WhatsApp · {candidate.ratingLabel}
+                      </span>
+                    )}
+                  </td>
                   <td>
                     <Badge stage={candidate.stage} />
                   </td>

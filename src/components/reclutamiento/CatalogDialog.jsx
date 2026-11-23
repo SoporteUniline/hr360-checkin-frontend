@@ -1,9 +1,12 @@
 "use client";
 
+// Catálogos de reclutamiento (03/12/2026: reales). Sucursales = catálogo «Sucursales» de la empresa (solo lectura
+// aquí); modalidades = las tres base de ADAMIA más las propias de la empresa.
 import { useState } from "react";
-import { Plus, MapPin, Layers } from "lucide-react";
+import Link from "next/link";
+import { Plus, MapPin, Layers, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { uid, normalize } from "@/lib/reclutamiento/model";
+import { normalize } from "@/lib/reclutamiento/model";
 import { Field, Modal, PageSurface } from "./RecruitmentUI";
 import s from "./reclutamiento.module.css";
 
@@ -12,6 +15,7 @@ export default function CatalogDialog({ data, onSave, onClose, embedded = false 
   const [name, setName] = useState("");
   const [requiresBranch, setRequiresBranch] = useState(true);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
   return (
     <Surface
       title="Catálogos de la vacante"
@@ -20,7 +24,7 @@ export default function CatalogDialog({ data, onSave, onClose, embedded = false 
       footer={
         embedded ? null : (
           <>
-            <span className={s.small}>Catálogos de ejemplo</span>
+            <span className={s.small}>Los cambios los ve todo tu equipo.</span>
             <Button variant="outline" onClick={onClose}>
               Listo
             </Button>
@@ -34,7 +38,12 @@ export default function CatalogDialog({ data, onSave, onClose, embedded = false 
             <MapPin size={16} />
             Sucursales
           </h3>
-          <p className={s.muted}>La ubicación se toma de Sucursales.</p>
+          <p className={s.muted}>La ubicación de la vacante se toma de tus Sucursales.</p>
+          {!data.branches.length && (
+            <p className={s.muted} style={{ marginTop: 12 }}>
+              Aún no tienes sucursales. Agrégalas para publicar vacantes presenciales.
+            </p>
+          )}
           {data.branches.map((branch) => (
             <div key={branch.id} className={s.catalogRow}>
               <div>
@@ -43,10 +52,12 @@ export default function CatalogDialog({ data, onSave, onClose, embedded = false 
               </div>
             </div>
           ))}
-          <div className={s.formHint} style={{ marginTop: 16 }}>
-            Al integrar, se usarán las sucursales de la empresa. No se creará otro catálogo de
-            ubicaciones.
-          </div>
+          <Button variant="outline" asChild style={{ marginTop: 16 }}>
+            <Link href="/panel/catalogos/unidades-de-negocio">
+              <ExternalLink size={14} />
+              Administrar sucursales
+            </Link>
+          </Button>
         </section>
         <section>
           <h3 className={`${s.personName} ${s.row}`}>
@@ -59,26 +70,30 @@ export default function CatalogDialog({ data, onSave, onClose, embedded = false 
               <p className={s.personName}>{modality.name}</p>
               <span className={s.small}>
                 {modality.requiresBranch ? "Con sucursal" : "Sucursal opcional"}
+                {modality.own ? " · propia" : " · base"}
               </span>
             </div>
           ))}
           <form
             className={s.stack}
             style={{ marginTop: 20, gap: 12 }}
-            onSubmit={(event) => {
+            onSubmit={async (event) => {
               event.preventDefault();
-              if (!name.trim()) return;
+              if (!name.trim() || saving) return;
               if (data.modalities.some((item) => normalize(item.name) === normalize(name.trim()))) {
                 setError("Ya existe una modalidad con ese nombre.");
                 return;
               }
-              if (onSave({ id: uid(), name: name.trim(), requiresBranch })) {
+              setSaving(true);
+              const answer = await onSave({ nombre: name.trim(), requiere_sucursal: requiresBranch });
+              setSaving(false);
+              if (answer?.ok) {
                 setName("");
                 setError("");
-              } else setError("No se pudo guardar esta modalidad.");
+              } else setError(answer?.message || "No se pudo guardar esta modalidad.");
             }}
           >
-            <Field label="Agregar modalidad de prueba">
+            <Field label="Agregar modalidad">
               {(props) => (
                 <input
                   {...props}
@@ -103,7 +118,7 @@ export default function CatalogDialog({ data, onSave, onClose, embedded = false 
                 {error}
               </p>
             )}
-            <Button type="submit" variant="outline">
+            <Button type="submit" variant="outline" loading={saving} disabled={saving}>
               <Plus size={14} />
               Agregar modalidad
             </Button>

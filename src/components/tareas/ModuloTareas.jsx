@@ -13,13 +13,15 @@ import axios from "@/lib/axios";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import { SelectorEmpresa, useEmpresaNomina } from "@/components/nomina/comun";
 import { TareasProvider, errorDe, useTareas } from "./store";
-import { botonPrimario } from "./comun";
 import Tablero from "./Tablero";
 import Proyectos from "./Proyectos";
 import Checklists from "./Checklists";
 import Revisar from "./Revisar";
 import Cumplimiento from "./Cumplimiento";
 import DialogTarea from "./DialogTarea";
+import ModuloInactivo from "@/components/modulos/ModuloInactivo";
+import { refrescarModulos } from "@/components/modulos/useModulos";
+import { modulo as catalogoModulo } from "@/lib/modulos/catalogo.mjs";
 
 export const MODULOS = {
   tareas: {
@@ -69,14 +71,12 @@ function Contenido({ clave }) {
     return <Estado titulo={codigo === "SIN_MIGRACION" ? "Falta preparar la base de datos" : "No se pudo cargar Tareas"} texto={errorDe(error, "Intenta de nuevo en un momento.")} />;
   }
   if (cargando || modulo.activo == null) return <p role="status" className="text-sm text-slate-500">Cargando tareas…</p>;
+  // (03/12/2026) Mismo aviso que cualquier módulo apagado (Módulos por empresa). Con derecho, RH lo activa aquí mismo;
+  // sin derecho (su plan no lo incluye), Contratar.
   if (!modulo.activo) {
     return (
-      <Estado titulo="Tareas y Checklists no está activo en esta empresa"
-        texto="Asigna tareas a tu equipo, crea checklists que se califican solos y mide su cumplimiento para dar bonos. La gente lo usa desde su app.">
-        {modulo.puedeActivar
-          ? <button type="button" className={botonPrimario} disabled={activando} onClick={async () => { setActivando(true); await activarModulo(); setActivando(false); }}>{activando ? "Activando…" : "Activar Tareas y Checklists"}</button>
-          : <p className="text-sm font-semibold text-slate-600">Pídele al dueño de la cuenta que lo active.</p>}
-      </Estado>
+      <ModuloInactivo modulo={catalogoModulo("tareas")} sinDerecho={!modulo.puedeActivar} activando={activando}
+        alActivar={async () => { setActivando(true); await activarModulo(); await refrescarModulos(); setActivando(false); }} />
     );
   }
   return (

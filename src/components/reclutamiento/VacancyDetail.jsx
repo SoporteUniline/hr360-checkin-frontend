@@ -1,6 +1,18 @@
 "use client";
 
-import { ArrowLeft, ExternalLink, FileText, ListChecks, Pencil, Share2, Users } from "lucide-react";
+import { useState } from "react";
+import Link from "next/link";
+import {
+  ArrowLeft,
+  CalendarDays,
+  ExternalLink,
+  FileText,
+  ListChecks,
+  MessageCircle,
+  Pencil,
+  Share2,
+  Users,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { vacancyStatus, formatDate, money, textOf } from "@/lib/reclutamiento/model";
@@ -9,12 +21,16 @@ import { RichDescription } from "./RichTextEditor";
 import { VacancyActions } from "./VacanciesView";
 import CandidatesView from "./CandidatesView";
 import PublicationPanel, { previewPath } from "./PublicationPanel";
+// WhatsApp de la vacante: se reutilizan los componentes reales de la bandeja (enlace, entrevista y agenda).
+import { EnlaceVacanteEnLinea } from "@/components/whatsapp/EnlaceWhatsappVacante";
+import EditorEntrevista from "@/components/whatsapp/EditorEntrevista";
+import AgendaVacante from "@/components/whatsapp/AgendaVacante";
 import s from "./reclutamiento.module.css";
 
 export default function VacancyDetail({
   vacancy,
   data,
-  workspaceId,
+  empresa,
   tab,
   setTab,
   onBack,
@@ -22,7 +38,10 @@ export default function VacancyDetail({
   onCandidate,
   onSave,
 }) {
+  const [dialog, setDialog] = useState(null);
   const candidates = data.candidates.filter((item) => item.vacancyId === vacancy.id);
+  const whatsapp = (data.whatsappCandidates || []).filter((item) => item.vacancyId === vacancy.id);
+  const live = vacancyStatus(vacancy) === "open";
   const branch = data.branches.find((item) => item.id === vacancy.branchId);
   const modality = data.modalities.find((item) => item.id === vacancy.modalityId);
   return (
@@ -38,8 +57,10 @@ export default function VacancyDetail({
           <Badge status={vacancyStatus(vacancy)} />
           <h2>{vacancy.title}</h2>
           <p className={s.muted}>
-            {branch?.name || "Sin sucursal"} · {modality?.name} · {vacancy.openings}{" "}
-            {Number(vacancy.openings) === 1 ? "lugar" : "lugares"}
+            {branch?.name || "Sin sucursal"} · {modality?.name || vacancy.modalityText || "Sin modalidad"} ·{" "}
+            {vacancy.unlimited
+              ? "Sin límite de lugares"
+              : `${vacancy.openings} ${Number(vacancy.openings) === 1 ? "lugar" : "lugares"}`}
           </p>
         </div>
         <div className={s.row}>
@@ -47,16 +68,14 @@ export default function VacancyDetail({
             <Pencil size={15} />
             Editar
           </Button>
-          <Button className={s.primary} asChild>
-            <a
-              href={previewPath(workspaceId, vacancy.id)}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <ExternalLink size={15} />
-              Vista pública
-            </a>
-          </Button>
+          {live && vacancy.slug && (
+            <Button className={s.primary} asChild>
+              <a href={previewPath(vacancy)} target="_blank" rel="noopener noreferrer">
+                <ExternalLink size={15} />
+                Página pública
+              </a>
+            </Button>
+          )}
           <VacancyActions vacancy={vacancy} onAction={onAction} />
         </div>
       </div>
@@ -72,7 +91,11 @@ export default function VacancyDetail({
           </TabsTrigger>
           <TabsTrigger value="candidates">
             <Users size={14} />
-            Candidatos <span className={s.count}>{candidates.length}</span>
+            Candidatos <span className={s.count}>{candidates.length + whatsapp.length}</span>
+          </TabsTrigger>
+          <TabsTrigger value="whatsapp">
+            <MessageCircle size={14} />
+            WhatsApp
           </TabsTrigger>
           <TabsTrigger value="publication">
             <Share2 size={14} />
@@ -105,7 +128,7 @@ export default function VacancyDetail({
                     </div>
                     <div>
                       <dt>Modalidad</dt>
-                      <dd>{modality?.name}</dd>
+                      <dd>{modality?.name || vacancy.modalityText || "Sin modalidad"}</dd>
                     </div>
                     <div>
                       <dt>Jornada</dt>
@@ -113,7 +136,11 @@ export default function VacancyDetail({
                     </div>
                     <div>
                       <dt>Lugares</dt>
-                      <dd>{vacancy.openings}</dd>
+                      <dd>
+                        {vacancy.unlimited
+                          ? "Sin límite"
+                          : `${vacancy.remaining} de ${vacancy.openings} disponibles`}
+                      </dd>
                     </div>
                     <div>
                       <dt>Sueldo mensual</dt>
@@ -122,7 +149,7 @@ export default function VacancyDetail({
                           ? `${money(vacancy.salaryFrom)}${
                               vacancy.salaryTo ? ` – ${money(vacancy.salaryTo)}` : ""
                             } MXN`
-                          : "No se muestra"}
+                          : vacancy.salaryText || "No se muestra"}
                       </dd>
                     </div>
                     <div>
@@ -148,7 +175,11 @@ export default function VacancyDetail({
                     </strong>
                   </div>
                   <div className={s.between}>
-                    <span className={s.muted}>Contrataciones de ejemplo</span>
+                    <span className={s.muted}>Llegaron por WhatsApp</span>
+                    <strong>{whatsapp.length}</strong>
+                  </div>
+                  <div className={s.between}>
+                    <span className={s.muted}>Contrataciones</span>
                     <strong>
                       {candidates.filter((candidate) => candidate.stage === "hired").length}
                     </strong>
@@ -203,9 +234,103 @@ export default function VacancyDetail({
         <TabsContent value="publication" className={s.tabContent}>
           <PublicationPanel
             key={vacancy.id}
-            workspaceId={workspaceId}
             vacancy={vacancy}
+            company={data.company}
+            publishesBoard={data.publishesBoard}
             onSave={onSave}
+          />
+        </TabsContent>
+        <TabsContent value="whatsapp" className={s.tabContent}>
+          <div className={s.detailGrid}>
+            <section className={s.panel}>
+              <div className={s.panelHead}>
+                <h2 className={s.row}>
+                  <MessageCircle size={17} />
+                  Enlace de WhatsApp
+                </h2>
+              </div>
+              <div className={`${s.panelBody} ${s.stack}`}>
+                {live ? (
+                  <EnlaceVacanteEnLinea
+                    idVacante={vacancy.id}
+                    titulo={vacancy.title}
+                    slug={vacancy.slug}
+                    acciones={
+                      <>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="min-h-11 md:min-h-9"
+                          onClick={() => setDialog("interview")}
+                        >
+                          <ListChecks size={15} />
+                          Preguntas de la entrevista
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="min-h-11 md:min-h-9"
+                          onClick={() => setDialog("agenda")}
+                        >
+                          <CalendarDays size={15} />
+                          Agenda
+                        </Button>
+                      </>
+                    }
+                  />
+                ) : (
+                  <p className={s.muted}>
+                    Publica la vacante para compartir su enlace de WhatsApp. El asistente solo
+                    entrevista en vacantes abiertas.
+                  </p>
+                )}
+                <p className={s.small}>
+                  Quien escribe con este enlace llega a tu bandeja de WhatsApp; el asistente le hace
+                  las preguntas de la entrevista y agenda según la agenda de la vacante.
+                </p>
+              </div>
+            </section>
+            <section className={s.panel}>
+              <div className={s.panelHead}>
+                <h2>Candidatos de WhatsApp</h2>
+                <strong>{whatsapp.length}</strong>
+              </div>
+              <div className={`${s.panelBody} ${s.stack}`}>
+                {whatsapp.length ? (
+                  whatsapp.slice(0, 6).map((item) => (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={s.between}
+                      onClick={() => onCandidate(item.id)}
+                    >
+                      <span className={s.personName}>{item.name}</span>
+                      <span className={s.small}>{item.ratingLabel}</span>
+                    </button>
+                  ))
+                ) : (
+                  <p className={s.muted}>Aún no llegan candidatos por WhatsApp a esta vacante.</p>
+                )}
+                <Button variant="outline" asChild>
+                  <Link href="/panel/whatsapp">Abrir bandeja de WhatsApp</Link>
+                </Button>
+              </div>
+            </section>
+          </div>
+          <EditorEntrevista
+            abierto={dialog === "interview"}
+            onCambiar={(open) => !open && setDialog(null)}
+            idVacante={vacancy.id}
+            titulo={vacancy.title}
+          />
+          <AgendaVacante
+            abierto={dialog === "agenda"}
+            onCambiar={(open) => !open && setDialog(null)}
+            idVacante={vacancy.id}
+            titulo={vacancy.title}
+            idEmpresa={empresa}
           />
         </TabsContent>
       </Tabs>
