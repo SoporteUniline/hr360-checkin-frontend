@@ -99,6 +99,14 @@ function Secciones({ vista, pathname }) {
   );
 }
 
+// El servidor manda `citas` (todas las de la conversación); se muestra la próxima activa. Acepta también `cita`.
+function citaActiva(hilo) {
+  if (hilo?.cita) return hilo.cita;
+  const activas = (hilo?.citas ?? []).filter((c) => c?.estado === "agendada" || c?.estado === "confirmada");
+  activas.sort((a, b) => String(a.inicio).localeCompare(String(b.inicio)));
+  return activas[0] ?? null;
+}
+
 export default function BandejaWhatsapp() {
   const { dataUser, isAuthChecked } = useAuth();
   const router = useRouter();
@@ -353,7 +361,7 @@ export default function BandejaWhatsapp() {
   const panel = (
     <PanelCandidato entrevista={entrevista} preguntasSinRespuesta={preguntasSinRespuesta} cargando={cargandoHilo && !hilo}
       onAtendido={atender} marcando={marcando} nombreAsistente={nombreAsistente} ahora={ahora}
-      conversacion={conversacion} cita={hilo?.cita ?? null} modoAgenda={agendaEmpresa?.quien_agenda ?? null} onAprobar={aprobar} aprobando={aprobando}
+      conversacion={conversacion} cita={citaActiva(hilo)} modoAgenda={agendaEmpresa?.quien_agenda ?? null} onAprobar={aprobar} aprobando={aprobando}
       onCitaCambio={alCambiarCita} hoy={hoyMx(ahora)} />
   );
 

@@ -214,7 +214,7 @@ async function instalarMocks(ctx, usuario) {
       if (!c) return json({ error: "No existe" }, 404);
       c.no_leidos = 0;
       const cita = S.citasPorConv[c.id];
-      return json({ conversacion: c, mensajes: S.mensajes[c.id], entrevista: S.entrevistas[c.id] ?? null, preguntas_sin_respuesta: S.sinRespuesta[c.id] ?? [], ...(cita ? { cita } : {}) });
+      return json({ conversacion: c, mensajes: S.mensajes[c.id], entrevista: S.entrevistas[c.id] ?? null, preguntas_sin_respuesta: S.sinRespuesta[c.id] ?? [], citas: cita ? [cita] : [] }); // como el servidor: lista «citas»
     }
     if ((m = ruta.match(/^\/conversaciones\/(\d+)\/tomar$/))) {
       const c = conv(m[1]); c.modo = "humano"; c.control = { id_usuario: 7, nombre: "Laura Gómez", correo: "laura@uniline.mx" };
