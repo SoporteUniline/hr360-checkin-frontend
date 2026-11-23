@@ -1,6 +1,7 @@
 "use client";
 
 // WhatsApp de reclutamiento por empresa (solo administradores de ADAMIA, R1).
+// 27/11/2026: paquetes de entrevistas: entrevistas del mes / incluidas, extras e importe estimado del mes.
 import { useMemo, useState } from "react";
 import useSWR from "swr";
 import { enqueueSnackbar } from "notistack";
@@ -12,6 +13,7 @@ import { useAuth } from "@/context/AuthContext";
 import { RUTA_WA, obtener } from "@/components/whatsapp/api";
 import { formatearPrecio, mensajeErrorApi, textoModo } from "@/lib/whatsapp/reglas.mjs";
 import { formatearTelefono } from "@/lib/whatsapp/telefono.mjs";
+import { textoEntrevistasAdmin } from "@/lib/whatsapp/paquete.mjs";
 import DialogoEmpresaWhatsapp from "./DialogoEmpresaWhatsapp";
 
 const ESTILO_MODO = {
@@ -20,6 +22,9 @@ const ESTILO_MODO = {
   propio: "bg-emerald-50 text-emerald-800",
 };
 const normalizar = (s) => String(s ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+
+// Encabezados largos en dos líneas para que la tabla quepa en escritorio sin desplazarse.
+const ENCABEZADO_LARGO = "max-w-28 whitespace-normal text-right leading-tight";
 
 const MODO_CORTO = { apagado: "Apagado", compartido: "Compartido", propio: "Número propio" };
 
@@ -44,6 +49,8 @@ export default function WhatsappAdminPage() {
   }, [empresas, busqueda]);
   const activas = empresas.filter((e) => e.modo && e.modo !== "apagado").length;
   const conversaciones = empresas.reduce((t, e) => t + (Number(e.conversaciones_mes) || 0), 0);
+  const entrevistas = empresas.reduce((t, e) => t + (Number(e.entrevistas_mes) || 0), 0);
+  const importe = empresas.reduce((t, e) => t + (Number(e.importe_estimado) || 0), 0);
 
   const guardado = async (empresa) => {
     enqueueSnackbar(`WhatsApp de ${empresa.nombre_empresa} actualizado.`, { variant: "success" });
@@ -56,16 +63,16 @@ export default function WhatsappAdminPage() {
   }
 
   return (
-    <div className="grid min-w-0 gap-6">
+    <div className="grid min-w-0 grid-cols-1 gap-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold"><MessageCircle className="size-6" /> WhatsApp (reclutamiento)</h1>
-          <p className="text-sm text-muted-foreground">Activa WhatsApp por empresa, con el número compartido de ADAMIA o con el suyo, y define sus precios.</p>
+          <p className="text-sm text-muted-foreground">Activa WhatsApp por empresa, con el número compartido de ADAMIA o con el suyo, y define su paquete de entrevistas.</p>
         </div>
       </header>
 
-      <section className="grid gap-3 sm:grid-cols-3" aria-label="Resumen">
-        {[["Empresas con WhatsApp", activas], ["Conversaciones este mes", conversaciones.toLocaleString("es-MX")], ["Empresas en total", empresas.length]].map(([t, v]) => (
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Resumen">
+        {[["Empresas con WhatsApp", activas], ["Conversaciones este mes", conversaciones.toLocaleString("es-MX")], ["Entrevistas este mes", entrevistas.toLocaleString("es-MX")], ["Importe estimado del mes", formatearPrecio(importe)]].map(([t, v]) => (
           <div key={t} className="rounded-xl border p-4">
             <p className="text-sm text-muted-foreground">{t}</p>
             <p className="text-2xl font-bold">{v}</p>
@@ -93,17 +100,19 @@ export default function WhatsappAdminPage() {
         </div>
       ) : (
         <>
-          <div className="hidden rounded-xl border md:block">
+          <div className="hidden min-w-0 overflow-x-auto rounded-xl border md:block">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Empresa</TableHead>
                   <TableHead>Modo</TableHead>
-                  <TableHead>Cuenta de Zernio</TableHead>
-                  <TableHead>Número</TableHead>
-                  <TableHead className="text-right">Por conversación</TableHead>
-                  <TableHead className="text-right">Mensual</TableHead>
-                  <TableHead className="text-right">Conversaciones del mes</TableHead>
+                  <TableHead>Número y cuenta de Zernio</TableHead>
+                  <TableHead className={ENCABEZADO_LARGO}>Paquete mensual</TableHead>
+                  <TableHead className={ENCABEZADO_LARGO}>Por entrevista extra</TableHead>
+                  <TableHead className={ENCABEZADO_LARGO}>Entrevistas este mes / incluidas</TableHead>
+                  <TableHead className="text-right">Extra</TableHead>
+                  <TableHead className={ENCABEZADO_LARGO}>Importe estimado del mes</TableHead>
+                  <TableHead className={ENCABEZADO_LARGO}>Conversaciones del mes</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -112,10 +121,15 @@ export default function WhatsappAdminPage() {
                   <TableRow key={e.id_empresa}>
                     <TableCell className="font-medium">{e.nombre_empresa}</TableCell>
                     <TableCell><ChipModo modo={e.modo} /></TableCell>
-                    <TableCell className="font-mono text-xs">{e.zernio_account_id || "—"}</TableCell>
-                    <TableCell>{e.numero_whatsapp ? formatearTelefono(e.numero_whatsapp) : "—"}</TableCell>
-                    <TableCell className="text-right tabular-nums">{formatearPrecio(e.precio_conversacion)}</TableCell>
+                    <TableCell>
+                      <span className="block">{e.numero_whatsapp ? formatearTelefono(e.numero_whatsapp) : "—"}</span>
+                      {e.zernio_account_id ? <span className="block font-mono text-xs text-gray-500">{e.zernio_account_id}</span> : null}
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">{formatearPrecio(e.precio_mensual)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{formatearPrecio(e.precio_conversacion)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{textoEntrevistasAdmin(e)}</TableCell>
+                    <TableCell className={`text-right tabular-nums ${Number(e.entrevistas_extra) > 0 ? "font-semibold text-amber-800" : ""}`}>{(Number(e.entrevistas_extra) || 0).toLocaleString("es-MX")}</TableCell>
+                    <TableCell className="text-right tabular-nums font-medium">{formatearPrecio(e.importe_estimado)}</TableCell>
                     <TableCell className="text-right tabular-nums">{(Number(e.conversaciones_mes) || 0).toLocaleString("es-MX")}</TableCell>
                     <TableCell className="text-right">
                       <Button size="sm" variant="outline" onClick={() => setEditando(e)} aria-label={`Editar WhatsApp de ${e.nombre_empresa}`}><Pencil className="size-4" /> Editar</Button>
@@ -134,8 +148,11 @@ export default function WhatsappAdminPage() {
                 </div>
                 <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-[13px]">
                   <dt className="text-gray-500">Número</dt><dd className="text-right">{e.numero_whatsapp ? formatearTelefono(e.numero_whatsapp) : "—"}</dd>
-                  <dt className="text-gray-500">Por conversación</dt><dd className="text-right">{formatearPrecio(e.precio_conversacion)}</dd>
-                  <dt className="text-gray-500">Mensual</dt><dd className="text-right">{formatearPrecio(e.precio_mensual)}</dd>
+                  <dt className="text-gray-500">Paquete mensual</dt><dd className="text-right">{formatearPrecio(e.precio_mensual)}</dd>
+                  <dt className="text-gray-500">Por entrevista extra</dt><dd className="text-right">{formatearPrecio(e.precio_conversacion)}</dd>
+                  <dt className="text-gray-500">Entrevistas este mes / incluidas</dt><dd className="text-right">{textoEntrevistasAdmin(e)}</dd>
+                  <dt className="text-gray-500">Extra</dt><dd className={`text-right ${Number(e.entrevistas_extra) > 0 ? "font-semibold text-amber-800" : ""}`}>{Number(e.entrevistas_extra) || 0}</dd>
+                  <dt className="text-gray-500">Importe estimado del mes</dt><dd className="text-right font-medium">{formatearPrecio(e.importe_estimado)}</dd>
                   <dt className="text-gray-500">Conversaciones del mes</dt><dd className="text-right">{Number(e.conversaciones_mes) || 0}</dd>
                 </dl>
                 <Button variant="outline" onClick={() => setEditando(e)} className="mt-3 h-11 w-full" aria-label={`Editar WhatsApp de ${e.nombre_empresa}`}><Pencil className="size-4" /> Editar</Button>

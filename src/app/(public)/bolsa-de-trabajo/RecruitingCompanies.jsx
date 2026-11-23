@@ -6,9 +6,13 @@ import useSWR from "swr";
 import LoadingCards from "@/components/LoadingCards";
 import ErrorPage from "@/components/ErrorPage";
 
+// 27/11/2026: la bolsa de trabajo es opcional por empresa. ?bolsa=1 trae solo las empresas que publican en la bolsa y
+// tienen vacantes abiertas (el backend filtra); sin el parámetro, /empresas/activas responde como siempre.
+const RUTA_EMPRESAS_BOLSA = "/empresas/activas?bolsa=1&limit=4&page=1";
+
 export default function RecruitingCompanies({ setFilterValues }) {
   const { data, error, isLoading } = useSWR(
-    "/empresas/activas?limit=4&page=1",
+    RUTA_EMPRESAS_BOLSA,
     fetcher,
     swr_config
   );
@@ -25,6 +29,9 @@ export default function RecruitingCompanies({ setFilterValues }) {
         <ErrorPage message={error?.message} />
       </section>
     );
+
+  // Sin empresas publicadas no se muestra una tira vacía.
+  if (!data?.data?.length) return null;
 
   return (
     <section className="p-5 pt-20 md:px-10 lg:px-30 xl:px-40">

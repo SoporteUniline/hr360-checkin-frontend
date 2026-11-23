@@ -39,3 +39,7 @@ export const rutaPreguntas = (idVacante) => (idVacante ? `${RUTA_WA}/vacantes/${
 export const guardarAgente = (empresa, cuerpo) => axios.put(rutaAgente(empresa), cuerpo).then((r) => r.data);
 export const guardarPreguntas = (idVacante, cuerpo) => axios.put(rutaPreguntas(idVacante), cuerpo).then((r) => r.data);
 export const marcarAtendido = (id) => axios.post(`${rutaConversacion(id)}/atendido`).then((r) => r.data);
+
+// ——— Bolsa de trabajo pública (27/11/2026): la empresa decide si sus vacantes aparecen en la bolsa de ADAMIA ———
+export const rutaBolsa = (empresa) => (empresa ? `${RUTA_WA}/bolsa${consulta({ empresa })}` : null);
+export const guardarBolsa = (empresa, publicar) => axios.put(rutaBolsa(empresa), { publicar_bolsa: publicar }).then((r) => r.data);

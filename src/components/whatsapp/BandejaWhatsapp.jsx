@@ -12,6 +12,7 @@ import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import { formatearTelefono } from "@/lib/whatsapp/telefono.mjs";
 import { mensajeErrorApi } from "@/lib/whatsapp/reglas.mjs";
 import { paramsFiltro } from "@/lib/whatsapp/entrevista.mjs";
+import { avisoExtras, textoEntrevistasMes } from "@/lib/whatsapp/paquete.mjs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   devolverAIa, enviarMensaje, marcarAtendido, obtener, reintentarMensaje, rutaAgente, rutaConversacion, rutaConversaciones, rutaEstado, tomarControl,
@@ -63,8 +64,16 @@ function ChipEstado({ estado }) {
       </span>
       {numero ? <span className="text-gray-600">{numero}</span> : null}
       <span className="text-gray-600">{Number(estado.conversaciones_mes) || 0} conversaciones este mes</span>
+      <span className="text-gray-600" data-entrevistas-mes>{textoEntrevistasMes(estado)}</span>
     </div>
   );
+}
+
+// Paquete de entrevistas (27/11/2026): con extras, aviso ámbar de que se cobran aparte. El agente sigue contestando.
+function AvisoExtras({ estado }) {
+  const texto = avisoExtras(estado);
+  if (!texto) return null;
+  return <p role="status" data-aviso-extras className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-medium text-amber-900">{texto}</p>;
 }
 
 export default function BandejaWhatsapp() {
@@ -89,6 +98,8 @@ export default function BandejaWhatsapp() {
     permitido ? rutaEstado(idEmpresa) : null, obtener, { refreshInterval: 60000, refreshWhenHidden: false },
   );
   const activo = estado && estado.modo !== "apagado";
+  // «Enlaces de vacantes» también con WhatsApp apagado (27/11/2026): página de la vacante y bolsa de trabajo no dependen de él.
+  const conEnlaces = !!estado && !errorEstado;
 
   // Búsqueda con espera corta para no pedir en cada tecla.
   const [busqueda, setBusqueda] = useState("");
@@ -296,18 +307,18 @@ export default function BandejaWhatsapp() {
       acciones={
         <div className="hidden items-center gap-3 md:flex">
           {activo ? <BotonAgente onClick={() => setAgenteAbierto(true)} encendido={agente ? agente.activo === true : undefined} /> : null}
-          {activo ? <BotonEnlacesVacantes onClick={() => setVacantesAbierto(true)} /> : null}
+          {conEnlaces ? <BotonEnlacesVacantes onClick={() => setVacantesAbierto(true)} /> : null}
           <SelectorEmpresa empresas={empresas} idEmpresa={idEmpresa} onCambiar={cambiarEmpresa} />
         </div>
       }
     />
   );
   // En teléfono el selector y el botón van en su propia fila para no apretar el título.
-  const filaMovil = empresas.length > 1 || activo ? (
+  const filaMovil = empresas.length > 1 || conEnlaces ? (
     <div className="flex flex-wrap items-center gap-2 md:hidden">
       <SelectorEmpresa empresas={empresas} idEmpresa={idEmpresa} onCambiar={cambiarEmpresa} />
       {activo ? <BotonAgente onClick={() => setAgenteAbierto(true)} encendido={agente ? agente.activo === true : undefined} /> : null}
-      {activo ? <BotonEnlacesVacantes onClick={() => setVacantesAbierto(true)} /> : null}
+      {conEnlaces ? <BotonEnlacesVacantes onClick={() => setVacantesAbierto(true)} /> : null}
     </div>
   ) : null;
 
@@ -324,7 +335,7 @@ export default function BandejaWhatsapp() {
     <div className="flex min-w-0 flex-col gap-3">
       {encabezado}
       {filaMovil}
-      <EnlacesVacantes abierto={vacantesAbierto} onCambiar={setVacantesAbierto} idEmpresa={idEmpresa} />
+      <EnlacesVacantes abierto={vacantesAbierto} onCambiar={setVacantesAbierto} idEmpresa={idEmpresa} whatsappActivo={!!activo} />
       <ConfigurarAgente abierto={agenteAbierto} onCambiar={setAgenteAbierto} idEmpresa={idEmpresa} />
       <Dialog open={evaluacionAbierta && !!abierta} onOpenChange={setEvaluacionAbierta}>
         <DialogContent className={`${DIALOGO_PANTALLA_COMPLETA} sm:max-w-md`}>
@@ -349,11 +360,13 @@ export default function BandejaWhatsapp() {
           <span className="grid size-14 place-items-center rounded-2xl bg-emerald-50 text-emerald-600"><MessageCircle className="size-7" /></span>
           <h2 className="mt-4 text-lg font-bold text-gray-900">WhatsApp aún no está activo para tu empresa</h2>
           <p className="mt-1 max-w-md text-sm text-gray-600">Pídele a ADAMIA que lo active. Cuando esté listo, aquí verás y contestarás los chats con tus candidatos.</p>
+          <p className="mt-2 max-w-md text-sm text-gray-600">Mientras tanto, en «Enlaces de vacantes» puedes copiar la página de cada vacante y decidir si aparecen en la bolsa de trabajo de ADAMIA.</p>
           <p className="mt-3 text-[12.5px] text-gray-500">{Number(estado.conversaciones_mes) || 0} conversaciones este mes</p>
         </div>
       ) : (
         <>
           <ChipEstado estado={estado} />
+          <AvisoExtras estado={estado} />
           {!estado.puede_usar ? (
             <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
               Por ahora tu empresa no puede enviar mensajes por WhatsApp. Pídele a ADAMIA que lo revise.

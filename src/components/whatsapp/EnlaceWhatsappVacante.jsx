@@ -2,14 +2,15 @@
 
 // «Enlace de WhatsApp» de una vacante (R1): el candidato abre el chat con el mensaje que identifica la vacante.
 import { useState } from "react";
-import { Check, Copy, ExternalLink, Loader2, MessageCircle } from "lucide-react";
+import { Check, Copy, ExternalLink, FileText, Loader2, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { enlaceVacante } from "./api";
 import { mensajeErrorApi } from "@/lib/whatsapp/reglas.mjs";
 import { formatearTelefono } from "@/lib/whatsapp/telefono.mjs";
+import { enlacePaginaVacante, origenPublico } from "@/lib/whatsapp/paquete.mjs";
 
-async function copiarTexto(texto) {
+export async function copiarTexto(texto) {
   try {
     await navigator.clipboard.writeText(texto);
     return true;
@@ -53,35 +54,72 @@ function useEnlaceVacante(idVacante) {
   return { estado, copiado, cargar, copiar };
 }
 
-// Fila en línea (lista de «Enlaces de vacantes»): «Copiar enlace» lo pide y lo copia; luego aparece «Abrir».
-// R2: `subtitulo` (conteo de preguntas) va bajo el título y `acciones` (botón «Entrevista») junto a «Copiar enlace».
-export function EnlaceVacanteEnLinea({ idVacante, titulo, subtitulo = null, acciones = null }) {
+// «Copiar enlace de la vacante» (27/11/2026): la página pública de la vacante con su formulario para postularse.
+// No depende de WhatsApp ni de la bolsa de trabajo: sirve aunque la empresa no publique en la bolsa.
+export function BotonCopiarPaginaVacante({ slug, titulo, onCopiado }) {
+  const [copiado, setCopiado] = useState(false);
+  const [error, setError] = useState("");
+  if (!slug) return null;
+  const copiarPagina = async () => {
+    setError("");
+    // Se arma al hacer clic: en el servidor no hay window para el origen de respaldo.
+    const enlace = enlacePaginaVacante(slug, origenPublico());
+    const ok = enlace ? await copiarTexto(enlace) : false;
+    setCopiado(ok);
+    if (ok) {
+      onCopiado?.(enlace);
+      setTimeout(() => setCopiado(false), 2500);
+    } else {
+      setError("No se pudo copiar el enlace. Intenta de nuevo.");
+    }
+  };
+  return (
+    <>
+      <Button type="button" size="sm" variant="outline" onClick={copiarPagina} aria-label={`Copiar enlace de la vacante ${titulo}`} className="min-h-11 md:min-h-9"
+        startIcon={copiado ? <Check className="size-4" /> : <FileText className="size-4 text-blue-600" />}>
+        {copiado ? "Copiado" : "Copiar enlace de la vacante"}
+      </Button>
+      {error ? <span role="alert" className="basis-full text-[12.5px] text-amber-900">{error}</span> : null}
+      <span aria-live="polite" className="sr-only">{copiado ? "Enlace de la vacante copiado" : ""}</span>
+    </>
+  );
+}
+
+// Fila en línea (lista de «Enlaces de vacantes»): «Copiar enlace de WhatsApp» lo pide y lo copia; luego aparece «Abrir».
+// R2: `subtitulo` (conteo de preguntas) va bajo el título y `acciones` (botón «Entrevista») antes de los enlaces.
+// 27/11/2026: `slug` agrega «Copiar enlace de la vacante» (página con formulario), que funciona con WhatsApp apagado.
+export function EnlaceVacanteEnLinea({ idVacante, titulo, slug = null, subtitulo = null, acciones = null }) {
   const { estado, copiado, cargar, copiar } = useEnlaceVacante(idVacante);
+  const [ultimo, setUltimo] = useState("");
   const copiarEnlace = async () => {
     const datos = estado.datos ?? (await cargar());
-    if (datos) await copiar(datos);
+    if (datos) {
+      await copiar(datos);
+      setUltimo(datos.enlace);
+    }
   };
   return (
     <div className="grid gap-2" data-vacante={idVacante}>
+      <div className="min-w-0">
+        <p className="text-sm font-medium text-gray-900 [overflow-wrap:anywhere]">{titulo}</p>
+        {subtitulo}
+      </div>
       <div className="flex flex-wrap items-center gap-2">
-        <div className="min-w-0 flex-1 basis-40">
-          <p className="text-sm font-medium text-gray-900 [overflow-wrap:anywhere]">{titulo}</p>
-          {subtitulo}
-        </div>
         {acciones}
-        <Button type="button" size="sm" onClick={copiarEnlace} loading={estado.cargando} aria-label={`Copiar enlace de ${titulo}`} className="min-h-11 md:min-h-9"
-          startIcon={copiado ? <Check className="size-4" /> : <Copy className="size-4" />}>
-          {copiado ? "Copiado" : "Copiar enlace"}
+        <BotonCopiarPaginaVacante slug={slug} titulo={titulo} onCopiado={setUltimo} />
+        <Button type="button" size="sm" onClick={copiarEnlace} loading={estado.cargando} aria-label={`Copiar enlace de WhatsApp de ${titulo}`} className="min-h-11 md:min-h-9"
+          startIcon={copiado ? <Check className="size-4" /> : <MessageCircle className="size-4" />}>
+          {copiado ? "Copiado" : "Copiar enlace de WhatsApp"}
         </Button>
         {estado.datos?.enlace ? (
           <Button asChild variant="outline" size="sm" className="min-h-11 md:min-h-9">
-            <a href={estado.datos.enlace} target="_blank" rel="noopener noreferrer" aria-label={`Abrir enlace de ${titulo}`}>
+            <a href={estado.datos.enlace} target="_blank" rel="noopener noreferrer" aria-label={`Abrir enlace de WhatsApp de ${titulo}`}>
               <ExternalLink className="size-4" /> Abrir
             </a>
           </Button>
         ) : null}
       </div>
-      {estado.datos?.enlace ? <p className="truncate text-[12px] text-gray-500">{estado.datos.enlace}</p> : null}
+      {ultimo ? <p className="truncate text-[12px] text-gray-500" data-ultimo-enlace>{ultimo}</p> : null}
       {estado.error ? <p role="alert" className="rounded-md border border-amber-200 bg-amber-50 p-2 text-[13px] text-amber-900">{estado.error}</p> : null}
       <p aria-live="polite" className="sr-only">{copiado ? "Enlace copiado" : ""}</p>
     </div>
