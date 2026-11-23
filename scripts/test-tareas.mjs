@@ -164,3 +164,27 @@ test("productividad: las preguntas que más fallan", () => {
   assert.deepEqual([r[0].veces, r[0].promedio, r[0].porcentajeMal], [2, 25, 100]);
   assert.deepEqual([r[1].promedio, r[1].porcentajeMal], [100, 0], "por revisar aún no cuenta");
 });
+
+test("traducción con la API: tareas, preguntas, checklists y respuestas", async () => {
+  const A = await import("../src/lib/tareas/api.mjs");
+  const t = A.deTareaApi({ id: 5, titulo: "X", id_proyecto: null, id_responsable: 15, prioridad: "alta", estado: "en_proceso", fecha_limite: "2026-12-01", pide_foto: 1, version: 3, pasos: [{ id: 9, texto: "a", hecho: 1 }], comentarios: [{ de: "Ana", texto: "ok" }], fotos: ["k"] });
+  assert.deepEqual([t.prioridad, t.persona, t.fecha, t.pideFoto, t.pasos[0].hecho], ["Alta", 15, "2026-12-01", true, true]);
+  const ida = A.aTareaApi({ ...t, pasos: [...t.pasos, { id: "n1", texto: " nuevo " }, { texto: "" }] }, 7);
+  assert.deepEqual([ida.empresa, ida.prioridad, ida.id_responsable, ida.version], [7, "alta", 15, 3]);
+  assert.deepEqual(ida.pasos, [{ id: 9, texto: "a", hecho: true }, { texto: "nuevo", hecho: false }], "los temporales se crean; los vacíos no van");
+  const p = A.dePreguntaApi({ id: 1, texto: "T", tipo: "numero", peso: "2.00", obligatoria: 1, permite_na: 1, pide_foto: 0, minimo: 0, maximo: 5, unidad: "°C", opciones: [] });
+  assert.deepEqual([p.peso, p.permiteNA, p.min, p.max], [2, true, 0, 5]);
+  const vuelta = A.aPreguntaApi({ ...p, id: "nX", min: "", max: 5 });
+  assert.deepEqual([vuelta.id, vuelta.minimo, vuelta.maximo, vuelta.permite_na], [undefined, null, 5, true]);
+  const op = A.aPreguntaApi({ id: 3, texto: "B", tipo: "opcion", peso: 1, opciones: [{ id: 30, texto: "Limpia", valor: "100" }, { id: "t", texto: "Sucia", valor: 0 }] });
+  assert.deepEqual(op.opciones, [{ id: 30, texto: "Limpia", valor: 100 }, { texto: "Sucia", valor: 0 }]);
+  const ck = A.deChecklistApi({ id: 2, nombre: "Apertura", version: 1, frecuencia: "semanal", dias_semana: "1,4", hora_limite: "09:00:00", revisa: "jefe_inmediato", solo_si_checo: 1, asignaciones: [{ tipo: "puesto", id_puesto: 1, sucursal: "Centro" }], preguntas: [] });
+  assert.deepEqual([ck.diasSemana, ck.hora, ck.sucursal, ck.asignaciones], [[1, 4], "09:00", "Centro", [{ tipo: "puesto", valor: 1 }]]);
+  assert.equal(A.textoFrecuencia(ck), "Cada lunes y jueves");
+  assert.equal(A.textoAsignacion(ck, { puestos: [{ id: 1, nombre: "Encargado" }] }), "Puesto: Encargado · Centro");
+  const api = A.aChecklistApi({ ...ck, asignaciones: [{ tipo: "puesto", valor: "1" }, { tipo: "empleado", valor: "" }] }, 7);
+  assert.deepEqual(api.asignaciones, [{ tipo: "puesto", id_puesto: 1, sucursal: "Centro" }]);
+  assert.equal(api.dias_semana, "1,4");
+  assert.deepEqual(A.aRespuestasApi({ 1: { valor: "si" }, 2: { na: true }, 3: { valor: [] }, 4: { valor: 2, foto: "k" }, 5: null }), { 1: { valor: "si" }, 2: { na: true }, 4: { valor: 2, foto: "k" } });
+  assert.equal(A.dePersonaApi({ id: 1, nombre: "Ana Torres", hoy: "sin_checar" }).tono, "rojo");
+});

@@ -1,8 +1,10 @@
 # Tareas y Checklists — diseño (23/11/2026)
 
-Estado: **PROTOTIPO en dev con datos de ejemplo** (`/panel/tareas` y app del empleado → Tareas). Sin tablas todavía:
-el siguiente paso es acordar el SQL. Lógica pura y probada en `src/lib/tareas/reglas.mjs` (`scripts/test-tareas.mjs`);
-prueba en navegador `scripts/verify-tareas.mjs`.
+Estado: **CONECTADO a la API** (23/11/2026, «APROBADO tablas Tareas y Checklists»). Backend: `/api/checador/tareas`
+(ver backend `docs/tareas-checklists.md`). Antes de usar: correr `20261123_tareas_checklists.sql`; el dueño activa el
+módulo desde Tareas («Activar Tareas y Checklists»). Reglas puras en `src/lib/tareas/` (`scripts/test-tareas.mjs`);
+traducción API ↔ pantallas en `api.mjs`; prueba de punta a punta (navegador → frontend → backend real → MariaDB)
+`scripts/verify-tareas-real.mjs`.
 
 ## Decisiones del dueño
 - Enfoque A: jefes que asignan a su equipo operativo, desde el celular, con foto de evidencia.

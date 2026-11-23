@@ -13,21 +13,22 @@ import { Avatar, Barra, botonPrimario, botonSecundario, campo, etiqueta, fechaCo
 const COLORES = ["#2563eb", "#dc2626", "#7c3aed", "#059669", "#d97706", "#0891b2"];
 
 function FormProyecto({ abierto, alCerrar }) {
-  const { despachar, personas, jefe } = useTareas();
-  const [f, setF] = useState({ nombre: "", descripcion: "", responsable: String(jefe.id), fin: "", color: COLORES[3] });
+  const { guardarProyecto, personas } = useTareas();
+  const [f, setF] = useState({ nombre: "", descripcion: "", responsable: "", fin: "", color: COLORES[3] });
+  const [guardando, setGuardando] = useState(false);
   const set = (k) => (e) => setF((v) => ({ ...v, [k]: e.target.value }));
   return (
     <Dialog open={abierto} onOpenChange={(v) => !v && alCerrar()}>
       <DialogContent className="sm:max-w-lg">
         <DialogTitle className="text-lg font-extrabold text-[#080d36]">Nuevo proyecto</DialogTitle>
         <DialogDescription className="text-sm text-slate-500">Agrupa tareas que tienen fin. Luego le agregas sus tareas.</DialogDescription>
-        <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); if (!f.nombre.trim()) return; despachar({ tipo: "guardarProyecto", proyecto: { ...f, responsable: Number(f.responsable) } }); alCerrar(); }}>
+        <form className="space-y-3" onSubmit={async (e) => { e.preventDefault(); if (!f.nombre.trim()) return; setGuardando(true); const r = await guardarProyecto({ ...f, responsable: f.responsable ? Number(f.responsable) : null }); setGuardando(false); if (r.ok) alCerrar(); }}>
           <label className={etiqueta}>Nombre<input autoFocus className={`mt-1 ${campo}`} value={f.nombre} onChange={set("nombre")} placeholder="Ej. Remodelación de cocina" /></label>
           <label className={etiqueta}>Para qué es (opcional)<textarea rows={2} className={`mt-1 ${campo} h-auto py-2`} value={f.descripcion} onChange={set("descripcion")} /></label>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className={etiqueta}>Responsable
               <select className={`mt-1 ${campo}`} value={f.responsable} onChange={set("responsable")}>
-                <option value={jefe.id}>{jefe.nombre}</option>
+                <option value="">Sin responsable</option>
                 {personas.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
               </select>
             </label>
@@ -39,7 +40,7 @@ function FormProyecto({ abierto, alCerrar }) {
                 className={`size-8 rounded-full ${f.color === c ? "ring-2 ring-offset-2 ring-slate-800" : ""}`} style={{ backgroundColor: c }} />
             ))}</div>
           </fieldset>
-          <div className="flex justify-end gap-2"><button type="button" className={botonSecundario} onClick={alCerrar}>Cancelar</button><button type="submit" className={botonPrimario} disabled={!f.nombre.trim()}>Crear proyecto</button></div>
+          <div className="flex justify-end gap-2"><button type="button" className={botonSecundario} onClick={alCerrar}>Cancelar</button><button type="submit" className={botonPrimario} disabled={!f.nombre.trim() || guardando}>{guardando ? "Creando…" : "Crear proyecto"}</button></div>
         </form>
       </DialogContent>
     </Dialog>
@@ -62,7 +63,7 @@ export default function Proyectos({ alAbrirTarea }) {
           <div className="min-w-0 flex-1">
             <h2 className="text-lg font-extrabold text-[#080d36]">{pry.nombre}</h2>
             <p className="text-sm text-slate-500">{pry.descripcion}</p>
-            <p className="mt-1 text-[12.5px] text-slate-600">Responsable: <b>{persona(pry.responsable)?.nombre}</b>{pry.fin ? <> · termina el <b>{fechaCorta(pry.fin)}</b></> : null}</p>
+            <p className="mt-1 text-[12.5px] text-slate-600">Responsable: <b>{persona(pry.responsable)?.nombre ?? "sin asignar"}</b>{pry.fin ? <> · termina el <b>{fechaCorta(pry.fin)}</b></> : null}</p>
           </div>
           <div className="w-56">
             <p className="flex justify-between text-[12.5px] font-semibold"><span>{a.hechas} de {a.total} tareas</span><span>{a.porcentaje}%</span></p>
