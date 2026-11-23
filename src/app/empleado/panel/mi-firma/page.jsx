@@ -3,13 +3,13 @@
 // Mi espacio → Mi firma y PIN (22/11/2026, pedido del dueño). La persona dibuja y guarda su firma y crea un PIN secreto de
 // 6 dígitos; con ese PIN firma sus documentos (se estampa la firma guardada). Puede cambiar ambos cuando quiera.
 // El PIN nunca vuelve del servidor (solo se guarda su hash). Si lo olvidó, lo cambia con la contraseña de su cuenta.
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import { ArrowLeft, KeyRound, PenLine } from "lucide-react";
 import axios from "@/lib/axios";
 import { cardClass, DataState } from "@/components/empleado/shared";
-import LienzoFirma from "@/components/empleado/LienzoFirma";
+import FirmaGrande from "@/components/firma/FirmaGrande";
 import { mensajeError } from "@/components/nomina/comun";
 import { errorPin } from "@/lib/firma/pin.mjs";
 
@@ -24,10 +24,7 @@ function Aviso({ aviso }) {
 }
 
 function SeccionFirma({ estado, alGuardar }) {
-  const lienzo = useRef(null);
   const [editando, setEditando] = useState(!estado.tiene_firma);
-  const [trazada, setTrazada] = useState(false);
-  const [ocupado, setOcupado] = useState(false);
   const [aviso, setAviso] = useState(null);
   const [imagen, setImagen] = useState(null);
 
@@ -43,22 +40,21 @@ function SeccionFirma({ estado, alGuardar }) {
     return () => { vivo = false; if (url) URL.revokeObjectURL(url); };
   }, [estado.tiene_firma, estado.firma_actualizada_en]);
 
-  const guardar = async () => {
-    setOcupado(true);
+  // (23/11/2026) La firma se dibuja con FirmaGrande: en celular a pantalla completa en horizontal.
+  const guardar = async (png) => {
     setAviso(null);
     try {
       const fd = new FormData();
-      fd.append("firma", await lienzo.current.aPng(), "firma.png");
+      fd.append("firma", png, "firma.png");
       // La instancia manda JSON por defecto: sin esto el archivo se pierde (llegaba «{"firma":{}}»).
       await axios.put(`${BASE}/firma`, fd, { headers: { "Content-Type": "multipart/form-data" } });
       setEditando(false);
-      setTrazada(false);
       setAviso({ ok: true, texto: "Listo, tu firma quedó guardada." });
       alGuardar();
+      return true;
     } catch (e) {
       setAviso({ ok: false, texto: mensajeError(e, "No se pudo guardar tu firma.") });
-    } finally {
-      setOcupado(false);
+      return false;
     }
   };
 
@@ -76,10 +72,9 @@ function SeccionFirma({ estado, alGuardar }) {
       ) : (
         <>
           <p className="mt-1 text-sm text-slate-500">Dibújala como aparece en tus documentos. Se usará cuando firmes con tu PIN.</p>
-          <div className="mt-3"><LienzoFirma ref={lienzo} onCambio={setTrazada} deshabilitado={ocupado} /></div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <button type="button" onClick={() => (trazada ? lienzo.current.borrar() : estado.tiene_firma && setEditando(false))} disabled={ocupado || (!trazada && !estado.tiene_firma)} className="min-h-11 rounded-xl border border-slate-300 font-medium disabled:opacity-50">{trazada || !estado.tiene_firma ? "Borrar" : "Cancelar"}</button>
-            <button type="button" onClick={guardar} disabled={!trazada || ocupado} className="min-h-11 rounded-xl bg-blue-600 font-semibold text-white disabled:opacity-50">{ocupado ? "Guardando…" : "Guardar firma"}</button>
+          <div className="mt-3">
+            <FirmaGrande titulo="Mi firma" textoBoton={estado.tiene_firma ? "Registrar nueva firma" : "Registrar firma"} textoGuardar="Guardar firma"
+              onGuardar={guardar} onCancelar={estado.tiene_firma ? () => setEditando(false) : null} />
           </div>
         </>
       )}
