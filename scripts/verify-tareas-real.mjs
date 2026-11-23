@@ -117,14 +117,16 @@ try {
   await captura(pe, "real-app-firma-pin");
   // Y también se puede volver a firmar dibujando.
   await pFirma.getByRole("button", { name: "Volver a firmar" }).click();
-  const lienzo = preg("Firma de quien abre").getByLabel("Firma: Firma de quien abre");
-  await lienzo.evaluate((el) => el.scrollIntoView({ block: "center" })); // que no quede bajo la barra fija de «Enviar»
-  await dormir(200);
-  const cf = await lienzo.boundingBox();
+  // (23/11/2026) En celular, «Firmar» abre la firma a pantalla completa (horizontal) con «Borrar» y «Listo, firmar».
+  await preg("Firma de quien abre").getByRole("button", { name: "Firmar dibujando" }).click();
+  const pantallaFirma = pe.locator("[data-firma-pantalla]");
+  await pantallaFirma.waitFor();
+  const cf = await pantallaFirma.getByLabel("Firma: Firma de quien abre").boundingBox();
   await pe.mouse.move(cf.x + 30, cf.y + 60); await pe.mouse.down();
   for (let k = 1; k <= 10; k++) await pe.mouse.move(cf.x + 30 + k * 22, cf.y + 60 + Math.sin(k) * 25);
   await pe.mouse.up();
-  await preg("Firma de quien abre").getByRole("button", { name: "Listo, firmar" }).click();
+  await pantallaFirma.getByRole("button", { name: "Listo, firmar" }).click();
+  await pantallaFirma.waitFor({ state: "hidden" });
   await preg("Firma de quien abre").getByRole("img", { name: /Firma:/ }).waitFor({ timeout: 15000 });
   const enviar = pe.getByRole("button", { name: /Enviar terminado/ });
   assert.match(await enviar.innerText(), /75%/, "Sí 100 + Regular 50 → 75 %");

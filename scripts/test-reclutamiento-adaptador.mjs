@@ -104,3 +104,30 @@ test("formulario público: preguntas obligatorias y respuestas a enviar", () => 
   assert.deepEqual(faltantes(preguntas, { a: "x", c: ["L"] }), []);
   assert.deepEqual(respuestasParaEnviar(preguntas, { a: "x", b: "", c: ["L"], z: "no" }), { a: "x", c: ["L"] });
 });
+
+// 04/12/2026: candidato de WhatsApp con el mismo proceso (postulación con origen «whatsapp»).
+test("candidato de WhatsApp: postulación con proceso, entrevista, sugerencia y cuerpo de etapa", async () => {
+  const { aCandidato, aCuerpoEtapa, aCandidatoWhatsapp } = await import("../src/lib/reclutamiento/adaptador.mjs");
+  const c = aCandidato({
+    id: 30, id_vacante: 5, nombre: "Mario", telefono: "525522223333", etapa: "nuevo", origen: "whatsapp", contratacion: {},
+    whatsapp: { id_conversacion: 2, id_entrevista: 8, calificacion: "califica", resumen: "Licencia federal", puntajes: { actitud: 5 }, sugerencia: { etapa: "revision", motivo: "Califica" } },
+  });
+  assert.equal(c.origin, "whatsapp");
+  assert.equal(c.readOnly, false, "ya no es de solo lectura");
+  assert.equal(c.conversationId, 2);
+  assert.deepEqual(c.whatsapp.suggestion, { stage: "review", reason: "Califica" });
+  assert.equal(c.whatsapp.ratingLabel, "Califica");
+  assert.equal(c.source, "WhatsApp");
+  const d = aDetalle({ ...{ id: 30, id_vacante: 5, nombre: "Mario", etapa: "oferta", origen: "whatsapp", contratacion: {} },
+    whatsapp: { id_conversacion: 2, id_entrevista: 8, ventana_abierta: false, plantilla_seguimiento: "seguimiento_rh", respuestas: [{ texto_pregunta: "¿Licencia?", respuesta: "Sí", severidad: "ok" }] },
+    sucursales: [{ id: 10, nombre: "Centro" }], vacante: { id: 5, titulo: "Chofer", puestos: 2, contratados: 1 } });
+  assert.ok(!d.answers.some((a) => a.id === "cv"), "por WhatsApp no se pide currículum");
+  assert.deepEqual([d.whatsapp.windowOpen, d.whatsapp.template, d.whatsapp.answers[0].answer], [false, "seguimiento_rh", "Sí"]);
+  assert.deepEqual(d.branches, [{ id: "10", name: "Centro", address: "" }]);
+  assert.deepEqual([d.vacancy.remaining, d.vacancy.unlimited], [1, false]);
+  assert.deepEqual(aCuerpoEtapa("rejected", { motivo: "  sin licencia " }), { etapa: "descartado", motivo: "sin licencia" });
+  assert.deepEqual(aCuerpoEtapa("review", { sugerencia: true }), { etapa: "revision", sugerencia: true });
+  assert.deepEqual(aCuerpoEtapa("interview", { motivo: "x" }), { etapa: "entrevista" }, "el motivo solo al descartar");
+  const sinProceso = aCandidatoWhatsapp({ id: "wa-3", id_entrevista: 3, id_vacante: 5, puede_iniciar: true });
+  assert.deepEqual([sinProceso.readOnly, sinProceso.canStart, sinProceso.interviewId], [true, true, 3]);
+});

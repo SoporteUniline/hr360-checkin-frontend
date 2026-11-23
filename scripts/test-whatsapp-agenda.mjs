@@ -264,6 +264,12 @@ test("selector de horarios: causa cuando no hay horarios", async () => {
   assert.equal(agendaConfigurada({ activa: false, horario: { ...vacio, lun: [{ desde: "09:00", hasta: "13:00" }] } }), false);
   assert.equal(agendaConfigurada({ activa: true, horario: vacio }), false);
   assert.equal(agendaConfigurada(null), false);
+  // Contrato del servidor real: horario_json / bloqueos_json (04/12/2026, la agenda se veía «sin configurar»).
+  assert.equal(agendaConfigurada({ activa: true, horario_json: { ...vacio, mar: [{ desde: "08:00", hasta: "20:00" }] } }), true);
+  const { agendaVacanteDesdeApi } = await import("../src/lib/whatsapp/agenda.mjs");
+  const real = agendaVacanteDesdeApi({ activa: true, horario_json: { lun: [{ desde: "09:00", hasta: "13:00" }] }, bloqueos_json: [{ desde: "2026-12-24 00:00", hasta: "2026-12-26 00:00", motivo: "Navidad" }] });
+  assert.deepEqual(real.horario.lun.map((r) => [r.desde, r.hasta]), [["09:00", "13:00"]], "el editor carga el horario guardado (no lo borra al guardar)");
+  assert.deepEqual(real.bloqueos.map((b) => b.motivo), ["Navidad"]);
   const sinMig = { response: { status: 503, data: { codigo: "SIN_MIGRACION" } } };
   assert.equal(causaSinHorarios({ errorHorarios: sinMig, agenda: { activa: false } }), "sin_migracion");
   assert.equal(causaSinHorarios({ errorAgenda: sinMig }), "sin_migracion");

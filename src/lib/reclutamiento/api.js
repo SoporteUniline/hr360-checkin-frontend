@@ -17,7 +17,16 @@ export const actualizarVacante = (id, cuerpo) => axios.put(vacante(id), cuerpo).
 export const cambiarEstadoVacante = (id, accion) => axios.post(`${vacante(id)}/estado`, { accion }).then((r) => r.data.vacante);
 export const duplicarVacante = (id) => axios.post(`${vacante(id)}/duplicar`).then((r) => r.data.vacante);
 export const crearModalidad = (empresa, cuerpo) => axios.post(conEmpresa(`${RUTA_PANEL}/modalidades`, empresa), cuerpo).then((r) => r.data.modalidad);
-export const cambiarEtapa = (id, etapa) => axios.put(`${postulacion(id)}/etapa`, { etapa }).then((r) => r.data.postulacion);
+// cuerpo: { etapa, motivo?, sugerencia? } (aCuerpoEtapa). Acepta también solo la etapa (texto).
+export const cambiarEtapa = (id, cuerpo) =>
+  axios.put(`${postulacion(id)}/etapa`, typeof cuerpo === "string" ? { etapa: cuerpo } : cuerpo).then((r) => r.data.postulacion);
 export const guardarPreparacion = (id, cuerpo) => axios.put(`${postulacion(id)}/preparacion`, cuerpo).then((r) => r.data.postulacion);
 export const agregarNota = (id, texto) => axios.post(`${postulacion(id)}/notas`, { texto }).then((r) => r.data.postulacion);
 export const contratar = (id, cuerpo) => axios.post(`${postulacion(id)}/contratar`, cuerpo).then((r) => r.data);
+
+// Candidato de WhatsApp (04/12/2026): meter al proceso una entrevista que aceptó el aviso y avisarle por WhatsApp.
+export const iniciarProcesoWhatsapp = (idEntrevista) =>
+  axios.post(`${RUTA_PANEL}/whatsapp/${encodeURIComponent(idEntrevista)}/proceso`).then((r) => r.data.postulacion);
+const conversacionWa = (id) => `/reclutamiento/whatsapp/conversaciones/${encodeURIComponent(id)}`;
+export const iniciarProcesoChat = (idConversacion) => axios.post(`${conversacionWa(idConversacion)}/proceso`).then((r) => r.data.proceso);
+export const avisarPorWhatsapp = (idConversacion, cuerpo) => axios.post(`${conversacionWa(idConversacion)}/aviso-proceso`, cuerpo).then((r) => r.data);

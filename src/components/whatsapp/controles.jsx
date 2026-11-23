@@ -18,6 +18,10 @@ export const TONOS = {
 export const DIALOGO_PANTALLA_COMPLETA =
   "flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl max-sm:inset-0 max-sm:top-0 max-sm:left-0 max-sm:max-h-none! max-sm:overflow-hidden! max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-none max-sm:border-0 [&>button:last-child]:top-2 [&>button:last-child]:right-2 [&>button:last-child]:grid [&>button:last-child]:size-11 [&>button:last-child]:place-items-center [&>button:last-child]:rounded-full";
 
+// 04/12/2026: hoja inferior en teléfono (acciones del proceso de selección desde el chat); centrada en escritorio.
+export const HOJA_INFERIOR =
+  "flex max-h-[88dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-md max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-b-none max-sm:rounded-t-2xl max-sm:border-x-0 max-sm:border-b-0 [&>button:last-child]:top-2 [&>button:last-child]:right-2 [&>button:last-child]:grid [&>button:last-child]:size-11 [&>button:last-child]:place-items-center [&>button:last-child]:rounded-full";
+
 export function ChipCalificacion({ calificacion, className = "" }) {
   const e = etiquetaCalificacion(calificacion);
   if (!e) return null;

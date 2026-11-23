@@ -113,18 +113,65 @@ try {
   pg.on("pageerror", (e) => errores.push(e.message));
   const sinDesborde = async (donde) => assert.ok(await pg.evaluate(() => document.documentElement.scrollWidth <= 390), `sin desborde en ${donde}`);
 
+  // (23/11/2026) Celular ya en horizontal: pantalla completa SIN rotar.
+  const ctxH = await browser.newContext({ viewport: { width: 844, height: 390 }, locale: "es-MX", hasTouch: true });
+  await ctxH.addCookies([{ name: "token", value: jwt("Empleado"), url: base }]);
+  await rutas(ctxH);
+  const ph = await ctxH.newPage();
+  await ph.goto(base + "/empleado/panel/mi-firma", { waitUntil: "domcontentloaded" });
+  await ph.getByRole("button", { name: "Registrar firma" }).click({ timeout: 20000 });
+  assert.equal(await ph.locator("[data-firma-pantalla] [data-rotado]").getAttribute("data-rotado"), "no", "en horizontal no se rota");
+  const cajaH = await ph.locator("[data-firma-pantalla]").evaluate((el) => { const r = el.getBoundingClientRect(); return [r.left, r.top, r.width, r.height, innerWidth, innerHeight]; });
+  assert.deepEqual(cajaH.slice(0, 4).map(Math.round), [0, 0, cajaH[4], cajaH[5]], "cubre toda la pantalla en horizontal");
+  await ph.screenshot({ path: `${process.env.CAPTURAS || "/tmp"}/firma-horizontal-pantalla.png` });
+  await captura(ph, "firma-horizontal-celular");
+  await ctxH.close();
+  // (23/11/2026) Computadora: el lienzo se queda en la página (sin pantalla completa).
+  const ctxPc = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: "es-MX" });
+  await ctxPc.addCookies([{ name: "token", value: jwt("Empleado"), url: base }]);
+  await rutas(ctxPc);
+  const pc = await ctxPc.newPage();
+  await pc.goto(base + "/empleado/panel/mi-firma", { waitUntil: "domcontentloaded" });
+  await pc.getByLabel("Dibuja tu firma con el dedo o el mouse").waitFor({ timeout: 20000 });
+  assert.equal(await pc.getByRole("button", { name: "Registrar firma" }).count(), 0, "en computadora no hay botón de pantalla completa");
+  await ctxPc.close();
   // 1) Mi espacio → Mi firma y PIN: dibujar y guardar la firma.
   await pg.goto(base + "/empleado/panel/mi-espacio", { waitUntil: "domcontentloaded" });
   await pg.getByRole("link", { name: /Mi firma y PIN/ }).click();
   await pg.getByRole("heading", { name: "Mi firma y PIN" }).waitFor({ timeout: 20000 });
-  const guardar = pg.getByRole("button", { name: "Guardar firma" });
+  // (23/11/2026) En celular: botón «Registrar firma» → pantalla completa (horizontal) con «Borrar» y «Guardar firma».
+  assert.equal(await pg.getByLabel("Dibuja tu firma con el dedo o el mouse").count(), 0, "en celular el lienzo no está en la página");
+  await pg.getByRole("button", { name: "Registrar firma" }).click();
+  const pantalla = pg.getByRole("dialog", { name: "Mi firma a pantalla completa" });
+  await pantalla.waitFor();
+  const caja = await pantalla.boundingBox();
+  assert.ok(caja.width >= 389 && caja.height >= 843, "ocupa toda la pantalla");
+  const guardar = pantalla.getByRole("button", { name: "Guardar firma" });
   assert.equal(await guardar.isDisabled(), true, "sin trazo no se guarda");
-  const lienzo = await pg.getByLabel("Dibuja tu firma con el dedo o el mouse").boundingBox();
-  await pg.mouse.move(lienzo.x + 40, lienzo.y + 100);
+  // iPhone en vertical: la firma se muestra rotada 90° (al girar el celular queda horizontal).
+  assert.equal(await pantalla.locator("[data-rotado]").getAttribute("data-rotado"), "si", "en vertical se rota");
+  const lienzo = await pantalla.getByLabel("Dibuja tu firma con el dedo o el mouse").boundingBox();
+  assert.ok(lienzo.height > 500, "lienzo grande (a lo largo de la pantalla)");
+  // Trazo vertical en la pantalla = horizontal en el lienzo rotado. Se comprueba el píxel donde pasó el dedo.
+  const x0 = lienzo.x + lienzo.width * 0.5;
+  await pg.mouse.move(x0, lienzo.y + 120);
   await pg.mouse.down();
-  for (let k = 1; k <= 12; k++) await pg.mouse.move(lienzo.x + 40 + k * 20, lienzo.y + 100 + Math.sin(k) * 30);
+  for (let k = 1; k <= 20; k++) await pg.mouse.move(x0 + Math.sin(k) * 4, lienzo.y + 120 + k * 20);
   await pg.mouse.up();
+  const tinta = await pantalla.getByLabel("Dibuja tu firma con el dedo o el mouse").evaluate((c, { x, y }) => {
+    const r = c.getBoundingClientRect();
+    // Mismo cálculo que el lienzo rotado: x a lo largo (hacia abajo en pantalla), y hacia la izquierda.
+    const lx = ((y - r.top) / r.height) * c.width;
+    const ly = ((r.right - x) / r.width) * c.height;
+    const d = c.getContext("2d").getImageData(Math.round(lx) - 3, Math.round(ly) - 3, 7, 7).data;
+    let oscuro = 0;
+    for (let i = 0; i < d.length; i += 4) if (d[i] < 120 && d[i + 1] < 120) oscuro += 1;
+    return oscuro;
+  }, { x: x0, y: lienzo.y + 320 });
+  assert.ok(tinta > 0, "el trazo quedó donde pasó el dedo (lienzo rotado)");
+  await captura(pg, "firma-pantalla-completa");
   await guardar.click();
+  await pantalla.waitFor({ state: "hidden" });
   await pg.getByText("Listo, tu firma quedó guardada.").waitFor();
   await pg.getByRole("img", { name: "Tu firma guardada" }).waitFor();
 
@@ -205,7 +252,7 @@ try {
 
   assert.deepEqual(errores, []);
   exito = true;
-  console.log("OK firma y PIN: guardar firma, crear PIN (reglas), cambiarlo con contraseña, firmar con PIN sin foto (PIN equivocado avisa), registrar rostro con aviso aceptado");
+  console.log("OK firma y PIN: guardar firma (celular: pantalla completa; computadora: en la página), crear PIN (reglas), cambiarlo con contraseña, firmar con PIN sin foto (PIN equivocado avisa), registrar rostro con aviso aceptado");
 } finally {
   await browser.close();
   try { process.kill(-next.pid); } catch { next.kill(); }

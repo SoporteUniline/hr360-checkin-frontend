@@ -15,6 +15,7 @@ import useReclutamiento from "@/hooks/useReclutamiento";
 import * as api from "@/lib/reclutamiento/api";
 import {
   VISTA_A_ETAPA,
+  aCuerpoEtapa,
   aCuerpoVacante,
   aVacante,
   erroresDeCampos,
@@ -154,12 +155,13 @@ export default function RecruitmentModule({ children }) {
   };
   // Etapa de selección (no «hired»: eso es «Contratar»). true si se guardó.
   // Se ve al instante (sin esperar al servidor); si falla, regresa a la etapa anterior.
-  const changeStage = async (candidateId, stage) => {
+  // opciones (04/12/2026): { motivo } al descartar y { sugerencia: true } al aceptar la sugerencia del agente de WhatsApp.
+  const changeStage = async (candidateId, stage, opciones) => {
     const etapa = VISTA_A_ETAPA[stage];
     try {
       await reload(
         async () => {
-          keepDetail(await api.cambiarEtapa(candidateId, etapa));
+          keepDetail(await api.cambiarEtapa(candidateId, aCuerpoEtapa(stage, opciones)));
           return undefined;
         },
         {
@@ -223,6 +225,19 @@ export default function RecruitmentModule({ children }) {
       };
     }
   };
+  // Candidato de WhatsApp que aceptó el aviso pero aún no tiene proceso: un clic lo mete (04/12/2026). → id o null.
+  const startWhatsapp = async (interviewId) => {
+    try {
+      const postulacion = await api.iniciarProcesoWhatsapp(interviewId);
+      keepDetail(postulacion);
+      await refresh();
+      success("Listo: ya está en el proceso de selección como «Nuevo».");
+      return String(postulacion.id);
+    } catch (cause) {
+      failure(cause, "No se pudo iniciar su proceso.");
+      return null;
+    }
+  };
   const addModality = async (body) => {
     try {
       await api.crearModalidad(empresa, body);
@@ -274,6 +289,7 @@ export default function RecruitmentModule({ children }) {
     addNote,
     savePreparation,
     hire,
+    startWhatsapp,
     addModality,
     stageLabel: (id) => STAGES.find((item) => item.id === id)?.singular,
     openCandidate,

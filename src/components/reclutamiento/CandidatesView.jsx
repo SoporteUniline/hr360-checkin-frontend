@@ -230,7 +230,7 @@ export default function CandidatesView({
                     {vacancyById.get(candidate.vacancyId)?.title || "Vacante sin acceso"}
                     {candidate.origin === "whatsapp" && (
                       <span className={s.small} style={{ display: "block" }}>
-                        WhatsApp · {candidate.ratingLabel}
+                        WhatsApp · {candidate.whatsapp?.ratingLabel || candidate.ratingLabel}
                       </span>
                     )}
                   </td>
