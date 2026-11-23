@@ -4,9 +4,11 @@
 // Guarda los trazos en coordenadas relativas: al girar el teléfono o cambiar el tamaño se vuelve a pintar igual.
 // ref expone: aPng() → Blob PNG, borrar().
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from "react";
+import { puntoEnLienzo } from "@/lib/firma/pantallaFirma.mjs";
 
 // alto: clases de altura del recuadro (por omisión h-44; a pantalla completa «h-full»).
-const LienzoFirma = forwardRef(function LienzoFirma({ onCambio, deshabilitado, etiqueta = "Dibuja tu firma con el dedo o el mouse", alto = "h-44" }, ref) {
+// rotado: el lienzo se muestra girado 90° (iPhone en vertical, FirmaGrande): el toque se traduce a su sistema.
+const LienzoFirma = forwardRef(function LienzoFirma({ onCambio, deshabilitado, etiqueta = "Dibuja tu firma con el dedo o el mouse", alto = "h-44", rotado = false }, ref) {
   const canvasRef = useRef(null);
   const trazos = useRef([]);
   const dibujando = useRef(null);
@@ -14,7 +16,9 @@ const LienzoFirma = forwardRef(function LienzoFirma({ onCambio, deshabilitado, e
   const pintar = useCallback(() => {
     const c = canvasRef.current;
     if (!c) return;
-    const { width, height } = c.getBoundingClientRect();
+    // Tamaño propio del lienzo (sin la rotación): clientWidth/Height no cambian al girarlo con CSS.
+    const width = c.clientWidth;
+    const height = c.clientHeight;
     if (!width || !height) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 3);
     c.width = Math.round(width * dpr);
@@ -48,10 +52,7 @@ const LienzoFirma = forwardRef(function LienzoFirma({ onCambio, deshabilitado, e
     borrar: () => { trazos.current = []; dibujando.current = null; pintar(); onCambio?.(false); },
   }), [pintar, onCambio]);
 
-  const punto = (e) => {
-    const r = canvasRef.current.getBoundingClientRect();
-    return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height };
-  };
+  const punto = (e) => puntoEnLienzo(e, canvasRef.current.getBoundingClientRect(), rotado);
 
   return (
     <div className={`relative ${alto} w-full overflow-hidden rounded-xl border border-slate-300 bg-white`}>
