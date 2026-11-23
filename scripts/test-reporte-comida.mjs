@@ -15,3 +15,20 @@ test("resumen de comidas del periodo", () => {
   assert.deepEqual(resumenComida({ minutos: 50, dias: 1, veces_excedio: 0 }), { valor: "50 min", detalle: "a tiempo", excedio: false });
   assert.deepEqual(resumenComida(undefined), { valor: "0 min", detalle: "sin comida checada", excedio: false });
 });
+
+// (23/11/2026) Comida abierta: cuánto lleva y alerta cuando ya pasó su tiempo.
+test("comida abierta: lleva X de Y min y, si ya se pasó, ⚠ se pasó N min", async () => {
+  const { comidaEnCurso, comidaExcedida, ahoraBase } = await import("../src/lib/reporte/comida.mjs");
+  const abierta = { salida: "2026-11-23 11:34:00", regreso: null, minutos: null, minutos_programados: 60, excedente: 0 };
+  const a = (hhmm) => ahoraBase(new Date(`2026-11-23T${hhmm}:00-06:00`));
+  assert.deepEqual(comidaEnCurso(abierta, a("12:00")), { lleva: 26, programados: 60, excedente: 0 });
+  assert.equal(textoComida(abierta, undefined, a("12:00")), "11:34 a.m.–… · en comida · lleva 26 de 60 min");
+  assert.equal(comidaExcedida(abierta, a("12:00")), false);
+  assert.equal(textoComida(abierta, undefined, a("12:46")), "11:34 a.m.–… · en comida · ⚠ se pasó 12 min");
+  assert.equal(comidaExcedida(abierta, a("12:46")), true);
+  // Sin «ahora» (PDF/Excel viejos) queda como antes; cerrada no cambia.
+  assert.equal(textoComida(abierta), "11:34 a.m.–… · en comida");
+  assert.equal(comidaEnCurso({ ...abierta, regreso: "2026-11-23 12:30:00", minutos: 56 }, a("13:00")), null);
+  // Sin tiempo de comida en su horario: dice cuánto lleva, sin alerta.
+  assert.equal(textoComida({ ...abierta, minutos_programados: null }, undefined, a("12:40")), "11:34 a.m.–… · en comida · lleva 66 min");
+});
