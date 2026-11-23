@@ -4,11 +4,16 @@ import { leerIncluidas } from "./paquete.mjs";
 
 export const LIMITE_TEXTO = 4096;
 export const MENSAJE_VENTANA =
-  "Pasaron más de 24 h desde el último mensaje del candidato: WhatsApp no permite escribirle libremente. Las plantillas para reabrir el chat llegan en una siguiente etapa.";
+  "Pasaron más de 24 h desde el último mensaje del candidato: WhatsApp no permite escribirle libremente. Usa «Enviar seguimiento» para mandarle una plantilla aprobada; cuando conteste, el chat se reabre.";
 export const MENSAJE_APAGADO = "WhatsApp no está activado para tu empresa. Pídele a ADAMIA que lo active.";
 export const MENSAJE_SIN_NUMERO = "Tu empresa todavía no tiene un número de WhatsApp listo. Pídele a ADAMIA que lo configure.";
 export const MENSAJE_NO_REINTENTABLE = "Este mensaje ya no se puede reintentar. Escribe uno nuevo si hace falta.";
 export const MENSAJE_CUENTA_DUPLICADA = "Esa cuenta de Zernio ya la usa otra empresa.";
+// R3: agenda y seguimiento.
+export const MENSAJE_SIN_CUPO = "Ese horario ya se llenó. Elige otro de la lista.";
+export const MENSAJE_VENTANA_ABIERTA = "El chat sigue abierto (el candidato escribió en las últimas 24 h): escríbele directamente, no hace falta plantilla.";
+export const MENSAJE_SIN_PLANTILLA =
+  "No hay plantilla de seguimiento configurada. Escribe su nombre en «Agente → Agenda y recordatorios»; debe estar aprobada en Zernio/Meta.";
 export const MENSAJE_SIN_CONTROL = "Otra persona tiene el control de esta conversación. Pídele que la devuelva o espera a que la IA la retome.";
 
 // Dueño de la cuenta: reclutador principal (no un «usuario con acceso»). Puede escribir aunque otro tenga el control.
@@ -97,6 +102,9 @@ export function mensajeErrorApi(error, porDefecto = "No se pudo completar la acc
     case "WA_SIN_NUMERO": return MENSAJE_SIN_NUMERO;
     case "WA_NO_REINTENTABLE": return MENSAJE_NO_REINTENTABLE;
     case "WA_CUENTA_DUPLICADA": return MENSAJE_CUENTA_DUPLICADA;
+    case "WA_SIN_CUPO": return MENSAJE_SIN_CUPO;
+    case "WA_VENTANA_ABIERTA": return MENSAJE_VENTANA_ABIERTA;
+    case "WA_SIN_PLANTILLA": return MENSAJE_SIN_PLANTILLA;
     default: break;
   }
   return datos.error || datos.mensaje || datos.message || porDefecto;

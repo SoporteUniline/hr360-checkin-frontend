@@ -43,3 +43,22 @@ export const marcarAtendido = (id) => axios.post(`${rutaConversacion(id)}/atendi
 // ——— Bolsa de trabajo pública (27/11/2026): la empresa decide si sus vacantes aparecen en la bolsa de ADAMIA ———
 export const rutaBolsa = (empresa) => (empresa ? `${RUTA_WA}/bolsa${consulta({ empresa })}` : null);
 export const guardarBolsa = (empresa, publicar) => axios.put(rutaBolsa(empresa), { publicar_bolsa: publicar }).then((r) => r.data);
+
+// ——— R3: agenda de entrevistas y recordatorios ———
+export const rutaAgendaEmpresa = (empresa) => (empresa ? `${RUTA_WA}/agenda/empresa${consulta({ empresa })}` : null);
+export const guardarAgendaEmpresa = (empresa, cuerpo) => axios.put(rutaAgendaEmpresa(empresa), cuerpo).then((r) => r.data);
+export const rutaAgendaVacante = (idVacante) => (idVacante ? `${RUTA_WA}/vacantes/${encodeURIComponent(idVacante)}/agenda` : null);
+export const guardarAgendaVacante = (idVacante, cuerpo) => axios.put(rutaAgendaVacante(idVacante), cuerpo).then((r) => r.data);
+export const rutaHorarios = (idVacante, desde, dias = 7) =>
+  idVacante && desde ? `${rutaAgendaVacante(idVacante)}/horarios${consulta({ desde, dias })}` : null;
+export const rutaCitas = (empresa, { desde, hasta, id_vacante, estado } = {}) =>
+  empresa ? `${RUTA_WA}/citas${consulta({ empresa, desde, hasta, id_vacante, estado })}` : null;
+const rutaCita = (id) => `${RUTA_WA}/citas/${encodeURIComponent(id)}`;
+export const crearCita = (cuerpo) => axios.post(`${RUTA_WA}/citas`, cuerpo).then((r) => r.data);
+export const reagendarCita = (id, inicio) => axios.post(`${rutaCita(id)}/reagendar`, { inicio }).then((r) => r.data);
+export const cancelarCita = (id, motivo) => axios.post(`${rutaCita(id)}/cancelar`, { motivo }).then((r) => r.data);
+export const marcarAsistencia = (id, asistio) => axios.post(`${rutaCita(id)}/asistencia`, { asistio }).then((r) => r.data);
+export const confirmarCita = (id) => axios.post(`${rutaCita(id)}/confirmar`).then((r) => r.data);
+export const aprobarAgenda = (id) => axios.post(`${rutaConversacion(id)}/aprobar-agenda`).then((r) => r.data);
+export const enviarSeguimiento = (id, plantilla) =>
+  axios.post(`${rutaConversacion(id)}/seguimiento`, plantilla ? { plantilla } : {}).then((r) => r.data);

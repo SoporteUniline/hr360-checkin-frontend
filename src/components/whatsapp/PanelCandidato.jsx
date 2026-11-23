@@ -2,13 +2,19 @@
 
 // Evaluación del candidato (R2): lo que el agente obtuvo en la entrevista. En escritorio ancho (≥1280 px) es una
 // columna a la derecha del chat; en pantallas menores se abre como hoja con «Ver evaluación».
-import { AlertTriangle, CheckCircle2, HelpCircle, UserRoundCheck } from "lucide-react";
+// R3: «Aprobar para agendar» (según el motivo o el modo de la empresa), la cita vigente con sus acciones y
+// «Agendar entrevista» a mano con el selector de horarios libres de la vacante.
+import { useState } from "react";
+import { AlertTriangle, CalendarCheck2, CalendarPlus, CheckCircle2, HelpCircle, UserRoundCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { tiempoRelativo } from "@/lib/whatsapp/tiempo.mjs";
 import {
   PUNTAJES, etiquetaEtapa, etiquetaSeveridad, normalizarPuntaje, textoConsentimiento, textoPreguntaActual,
 } from "@/lib/whatsapp/entrevista.mjs";
+import { citaActiva, necesitaAprobacionAgenda } from "@/lib/whatsapp/agenda.mjs";
 import { ChipCalificacion } from "./controles";
+import { DialogoHorario, TarjetaCita } from "./citas";
+import { crearCita } from "./api";
 
 const COLOR_SEVERIDAD = { verde: "bg-emerald-100 text-emerald-800", ambar: "bg-amber-100 text-amber-900", rojo: "bg-red-100 text-red-700" };
 
@@ -36,16 +42,51 @@ function Seccion({ titulo, children }) {
   );
 }
 
-export default function PanelCandidato({ entrevista, preguntasSinRespuesta = [], cargando, onAtendido, marcando, nombreAsistente, ahora }) {
+// Cita vigente (o la última) y «Agendar entrevista» a mano. Sin vacante no se puede agendar.
+function SeccionCita({ conversacion, cita, hoy, onCitaCambio }) {
+  const [agendando, setAgendando] = useState(false);
+  const idVacante = conversacion?.vacante?.id_vacante;
+  const activa = citaActiva(cita);
+  return (
+    <Seccion titulo="Cita de entrevista">
+      {cita ? <TarjetaCita cita={cita} hoy={hoy} onCambio={onCitaCambio} conCandidato={false} /> : (
+        <p className="text-[13px] text-gray-500" data-sin-cita>Todavía no tiene cita.</p>
+      )}
+      {!activa && conversacion ? (
+        idVacante ? (
+          <Button type="button" variant="outline" onClick={() => setAgendando(true)} startIcon={<CalendarPlus className="size-4 text-blue-600" />} className="min-h-11 md:min-h-9">
+            Agendar entrevista
+          </Button>
+        ) : <p className="text-[12.5px] text-gray-500">Esta conversación no tiene vacante; no se puede agendar.</p>
+      ) : null}
+      {idVacante ? (
+        <DialogoHorario abierto={agendando} onCambiar={setAgendando} titulo="Agendar entrevista" textoBoton="Agendar" idVacante={idVacante} hoy={hoy}
+          descripcion={`Vacante «${conversacion.vacante.titulo || ""}». El agente le manda al candidato la confirmación por WhatsApp.`}
+          onConfirmar={async (inicio) => {
+            const r = await crearCita({ id_conversacion: conversacion.id, id_vacante: idVacante, inicio });
+            await onCitaCambio?.(r?.cita ?? null);
+          }} />
+      ) : null}
+    </Seccion>
+  );
+}
+
+export default function PanelCandidato({
+  entrevista, preguntasSinRespuesta = [], cargando, onAtendido, marcando, nombreAsistente, ahora,
+  conversacion = null, cita = null, modoAgenda = null, onAprobar = null, aprobando = false, onCitaCambio = null, hoy = "",
+}) {
   const quien = nombreAsistente?.trim() || "El agente";
+  const seccionCita = onCitaCambio && conversacion ? <SeccionCita conversacion={conversacion} cita={cita} hoy={hoy} onCitaCambio={onCitaCambio} /> : null;
   if (!entrevista) {
     return (
-      <div className="grid gap-2 p-4 text-sm text-gray-600" data-panel-candidato="vacio">
+      <div className="grid gap-4 p-4 text-sm text-gray-600" data-panel-candidato="vacio">
         {cargando ? <p>Cargando evaluación…</p> : <p>{quien} aún no entrevista a este candidato.</p>}
+        {!cargando ? seccionCita : null}
         {preguntasSinRespuesta.length ? <SinRespuesta lista={preguntasSinRespuesta} ahora={ahora} /> : null}
       </div>
     );
   }
+  const aprobar = onAprobar && necesitaAprobacionAgenda(entrevista, modoAgenda, cita);
   const respuestas = entrevista.respuestas ?? [];
   return (
     <div className="grid content-start gap-5 p-4" data-panel-candidato="lleno">
@@ -78,6 +119,18 @@ export default function PanelCandidato({ entrevista, preguntasSinRespuesta = [],
           ) : null}
         </div>
       ) : null}
+      {aprobar ? (
+        <div role="status" data-aprobar-agenda className="grid gap-2 rounded-xl border border-blue-200 bg-blue-50 p-3 text-[13px] text-blue-950">
+          <p className="flex items-start gap-1.5 font-semibold"><CalendarCheck2 className="mt-0.5 size-4 shrink-0" aria-hidden="true" /> Espera tu aprobación para agendar</p>
+          <p>{entrevista.calificacion === "con_alerta" && modoAgenda === "califica"
+            ? "Tiene alguna alerta y tu empresa solo agenda directo a quien califica. Si lo apruebas, el agente le ofrece horarios."
+            : "Si lo apruebas, el agente le ofrece horarios libres de la vacante por WhatsApp."}</p>
+          <Button type="button" onClick={onAprobar} loading={aprobando} startIcon={<CalendarCheck2 className="size-4" />} className="min-h-11 bg-blue-700 hover:bg-blue-800 md:min-h-9">
+            Aprobar para agendar
+          </Button>
+        </div>
+      ) : null}
+      {seccionCita}
       {entrevista.resumen ? (
         <Seccion titulo="Resumen">
           <p className="whitespace-pre-wrap text-[13.5px] leading-relaxed text-gray-800 [overflow-wrap:anywhere]">{entrevista.resumen}</p>

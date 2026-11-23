@@ -4,9 +4,10 @@
 // En teléfono el diálogo se pega abajo como hoja; en escritorio es un diálogo centrado.
 // 27/11/2026: interruptor «Publicar mis vacantes en la bolsa de trabajo de ADAMIA» y «Copiar enlace de la vacante»
 // (página con formulario). Ambos funcionan aunque WhatsApp esté apagado; los enlaces de WhatsApp muestran entonces su aviso.
+// R3: cada vacante tiene «Agenda» (dónde, cuándo, cupo, horario, bloqueos y reglas propias) junto a «Entrevista».
 import { useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
-import { Link2, ListChecks, Loader2, Search } from "lucide-react";
+import { CalendarDays, Link2, ListChecks, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { mensajeErrorApi } from "@/lib/whatsapp/reglas.mjs";
@@ -14,6 +15,7 @@ import { contarPreguntas, textoConteoPreguntas } from "@/lib/whatsapp/entrevista
 import { guardarBolsa, obtener, rutaBolsa, rutaPreguntas, rutaVacantes } from "./api";
 import { EnlaceVacanteEnLinea } from "./EnlaceWhatsappVacante";
 import EditorEntrevista from "./EditorEntrevista";
+import AgendaVacante from "./AgendaVacante";
 import { Interruptor } from "./controles";
 
 const normalizar = (s) => String(s ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
@@ -79,6 +81,7 @@ function InterruptorBolsa({ idEmpresa, abierto }) {
 
 export default function EnlacesVacantes({ abierto, onCambiar, idEmpresa, whatsappActivo = true }) {
   const [editando, setEditando] = useState(null);
+  const [agendando, setAgendando] = useState(null);
   const { data, error, isLoading } = useSWR(abierto ? rutaVacantes(idEmpresa) : null, obtener, { revalidateOnFocus: false });
   const [busqueda, setBusqueda] = useState("");
   const vacantes = useMemo(() => data?.vacantes ?? [], [data]);
@@ -126,10 +129,18 @@ export default function EnlacesVacantes({ abierto, onCambiar, idEmpresa, whatsap
                   <EnlaceVacanteEnLinea idVacante={v.id_vacante} titulo={v.titulo} slug={v.slug}
                     subtitulo={<ConteoPreguntas idVacante={v.id_vacante} />}
                     acciones={(
-                      <Button type="button" size="sm" variant="outline" onClick={() => setEditando(v)} aria-label={`Entrevista de ${v.titulo}`}
-                        className="min-h-11 md:min-h-9" startIcon={<ListChecks className="size-4 text-violet-600" />}>
-                        Entrevista
-                      </Button>
+                      <>
+                        <Button type="button" size="sm" variant="outline" onClick={() => setEditando(v)} aria-label={`Entrevista de ${v.titulo}`}
+                          className="min-h-11 md:min-h-9" startIcon={<ListChecks className="size-4 text-violet-600" />}>
+                          Entrevista
+                        </Button>
+                        {whatsappActivo ? (
+                          <Button type="button" size="sm" variant="outline" onClick={() => setAgendando(v)} aria-label={`Agenda de ${v.titulo}`}
+                            className="min-h-11 md:min-h-9" startIcon={<CalendarDays className="size-4 text-blue-600" />}>
+                            Agenda
+                          </Button>
+                        ) : null}
+                      </>
                     )} />
                 </li>
               ))}
@@ -137,6 +148,7 @@ export default function EnlacesVacantes({ abierto, onCambiar, idEmpresa, whatsap
           )}
         </div>
       </DialogContent>
+      <AgendaVacante abierto={!!agendando} onCambiar={(v) => { if (!v) setAgendando(null); }} idVacante={agendando?.id_vacante} titulo={agendando?.titulo} idEmpresa={idEmpresa} />
       <EditorEntrevista abierto={!!editando} onCambiar={(v) => { if (!v) setEditando(null); }} idVacante={editando?.id_vacante} titulo={editando?.titulo} />
     </Dialog>
   );
