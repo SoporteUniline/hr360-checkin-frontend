@@ -139,6 +139,19 @@ test("tipos que solo registran: texto corto, texto largo, fecha, fecha y hora", 
   assert.deepEqual(problemasChecklist("X", pregs.slice(1)).map((p) => p.error), ["Agrega al menos una pregunta que se califique (no solo textos o fechas)."]);
 });
 
+test("estrellas (20 % cada una) y firma (solo registra)", () => {
+  const est = { id: 1, texto: "Atención", tipo: "estrellas", peso: 1 };
+  const fir = { id: 2, texto: "Recibió", tipo: "firma", obligatoria: true };
+  assert.deepEqual([1, 3, 5].map((n) => puntajePregunta(est, { valor: n })), [20, 60, 100]);
+  assert.equal(puntajePregunta(est, { valor: 9 }), 0, "fuera de 1 a 5 no vale");
+  assert.equal(puntajePregunta(est, {}), 0);
+  assert.equal(textoRespuesta(est, { valor: 3 }), "★★★☆☆ (3 de 5)");
+  assert.equal(puntajePregunta(fir, { valor: "blob:x" }), null, "la firma no se califica");
+  assert.equal(textoRespuesta(fir, { valor: "blob:x" }), "Firmado");
+  assert.equal(motivoNoEnviar({ preguntas: [est, fir] }, {}), "Faltan 1 pregunta obligatoria.", "la firma obligatoria se pide");
+  assert.equal(calificarRespuestas([est, fir], { 1: { valor: 4 }, 2: { valor: "blob:x" } }), 80);
+});
+
 test("productividad: las preguntas que más fallan", () => {
   const ck = { id: 1, nombre: "Apertura", preguntas: PREGUNTAS.slice(0, 2) };
   const envios = [

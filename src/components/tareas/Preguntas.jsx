@@ -3,10 +3,12 @@
 // Campo de respuesta de una pregunta de checklist (23/11/2026). El MISMO componente sirve para llenar en la app, para la
 // vista previa al crear el checklist y para que el jefe corrija al revisar. Botones grandes (sin escribir) salvo en número
 // y texto; «No aplica» si la pregunta lo permite; foto de evidencia donde se pide.
-import { AlignLeft, Calendar, CalendarClock, Camera, CheckSquare, CircleDot, Hash, Image as ImageIcon, ListChecks, Type } from "lucide-react";
+import { useRef, useState } from "react";
+import { AlignLeft, Calendar, CalendarClock, Camera, CheckSquare, CircleDot, Hash, Image as ImageIcon, ListChecks, PenLine, Star, Type } from "lucide-react";
+import LienzoFirma from "@/components/empleado/LienzoFirma";
 import { esCalificable, puntajePregunta } from "@/lib/tareas/preguntas.mjs";
 
-export const ICONOS = { si_no: CheckSquare, opcion: CircleDot, multiple: ListChecks, numero: Hash, foto: ImageIcon, texto: Type, texto_largo: AlignLeft, fecha: Calendar, fecha_hora: CalendarClock };
+export const ICONOS = { si_no: CheckSquare, opcion: CircleDot, multiple: ListChecks, numero: Hash, foto: ImageIcon, estrellas: Star, texto: Type, texto_largo: AlignLeft, fecha: Calendar, fecha_hora: CalendarClock, firma: PenLine };
 
 export function IconoTipo({ tipo, className = "size-4" }) {
   const Icono = ICONOS[tipo] ?? Type;
@@ -40,6 +42,43 @@ function SubirFoto({ url, alSubir, etiqueta, deshabilitado }) {
         </label>
       ) : null}
     </span>
+  );
+}
+
+function Estrellas({ valor, onElegir, grande, deshabilitado, etiqueta }) {
+  const n = Number(valor) || 0;
+  return (
+    <div role="radiogroup" aria-label={etiqueta} className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <button key={i} type="button" role="radio" aria-checked={n === i} aria-label={`${i} ${i === 1 ? "estrella" : "estrellas"}`} disabled={deshabilitado} onClick={() => onElegir(i)}
+          className={`grid ${grande ? "size-12" : "size-10"} place-items-center rounded-lg hover:bg-amber-50 disabled:opacity-60`}>
+          <Star className={`${grande ? "size-8" : "size-6"} ${i <= n ? "fill-amber-400 text-amber-500" : "text-slate-300"}`} />
+        </button>
+      ))}
+      {n ? <span className="ml-1 text-sm font-semibold text-slate-600">{n} de 5</span> : null}
+    </div>
+  );
+}
+
+// Firma con el dedo: se dibuja y se confirma con «Listo»; queda la imagen y se puede volver a firmar.
+function Firma({ valor, onFirmar, deshabilitado, etiqueta }) {
+  const lienzo = useRef(null);
+  const [trazada, setTrazada] = useState(false);
+  if (valor) return (
+    <span className="flex flex-wrap items-center gap-2">
+      {valor.startsWith("blob:") ? <img src={valor} alt={`Firma: ${etiqueta}`} className="h-16 rounded-lg border border-slate-200 bg-white object-contain" /> : <span className="grid h-16 w-40 place-items-center rounded-lg border border-slate-200 text-sm italic text-slate-500">Firmado</span>}
+      {!deshabilitado ? <button type="button" onClick={() => onFirmar(null)} className="min-h-10 rounded-lg px-2 text-[13px] font-semibold text-brand">Volver a firmar</button> : null}
+    </span>
+  );
+  if (deshabilitado) return <span className="text-sm text-slate-500">Sin firma</span>;
+  return (
+    <div className="w-full max-w-md space-y-2">
+      <LienzoFirma ref={lienzo} onCambio={setTrazada} etiqueta={`Firma: ${etiqueta}`} />
+      <div className="flex gap-2">
+        <button type="button" disabled={!trazada} onClick={() => { lienzo.current.borrar(); }} className="min-h-10 rounded-lg border border-slate-300 px-3 text-[13px] font-semibold disabled:opacity-50">Borrar</button>
+        <button type="button" disabled={!trazada} onClick={async () => onFirmar(URL.createObjectURL(await lienzo.current.aPng()))} className="min-h-10 rounded-lg bg-blue-600 px-4 text-[13px] font-semibold text-white disabled:opacity-50">Listo, firmar</button>
+      </div>
+    </div>
   );
 }
 
@@ -82,6 +121,8 @@ export function CampoRespuesta({ pregunta: p, respuesta, onChange, grande = fals
             </label>
           ) : null}
           {p.tipo === "foto" ? <SubirFoto url={r.valor} etiqueta="Tomar foto" deshabilitado={deshabilitado} alSubir={(url) => poner({ valor: url })} /> : null}
+          {p.tipo === "estrellas" ? <Estrellas valor={r.valor} grande={grande} deshabilitado={deshabilitado} etiqueta={p.texto || "Calificación"} onElegir={(n) => poner({ valor: n })} /> : null}
+          {p.tipo === "firma" ? <Firma valor={r.valor} deshabilitado={deshabilitado} etiqueta={p.texto || "Firma"} onFirmar={(url) => poner({ valor: url })} /> : null}
           {p.tipo === "texto" ? (
             <input aria-label={p.texto} disabled={deshabilitado} value={r.valor ?? ""} onChange={(e) => poner({ valor: e.target.value })} placeholder="Escribe aquí…"
               className={`${grande ? "h-12" : "h-10"} w-full rounded-xl border border-slate-300 px-3 text-base`} />

@@ -66,7 +66,7 @@ function Panel({ envio, alTerminar }) {
                 <span className="text-sm">
                   {cambio ? <><s className="text-slate-400">{cambio.antes}</s> → <b className="text-[#080d36]">{cambio.despues}</b></> : <b className="text-[#080d36]">{textoRespuesta(pg, rBase)}</b>}
                 </span>
-                <Foto url={pg.tipo === "foto" ? rBase?.valor : rBase?.foto} fecha={envio.fecha} hoy={hoy} />
+                {pg.tipo === "firma" ? (rBase?.valor?.startsWith?.("blob:") ? <img src={rBase.valor} alt={`Firma: ${pg.texto}`} className="h-12 rounded-md border border-slate-200 bg-white object-contain" /> : null) : <Foto url={pg.tipo === "foto" ? rBase?.valor : rBase?.foto} fecha={envio.fecha} hoy={hoy} />}
                 {esCalificable(pg) ? <ChipPuntaje valor={puntaje} /> : null}
                 {esCalificable(pg) && pg.tipo !== "foto" ? (
                   abierta === pg.id ? (

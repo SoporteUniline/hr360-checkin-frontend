@@ -56,6 +56,7 @@ export function datosEjemplo(hoy = hoyMx()) {
         q("¿Qué está listo en los baños?", "multiple", { opciones: op(["Papel", 25], ["Jabón", 25], ["Toallas", 25], ["Piso seco", 25]), obligatoria: true }),
         q("¿Todo el equipo trae uniforme completo?", "si_no", { correcta: "si" }),
         q("Observaciones", "texto_largo"),
+        q("¿Cómo calificas el ánimo del equipo hoy?", "estrellas"),
       ] },
     { id: 2, nombre: "Cierre y corte de caja", frecuencia: "Diario", hora: "23:00", aQuien: "Puesto: Encargado de turno", sucursal: "Todas", revisa: "Su jefe inmediato", soloSiCheco: true, personas: [1, 5],
       preguntas: [
@@ -64,6 +65,7 @@ export function datosEjemplo(hoy = hoyMx()) {
         q("¿Cómo quedó la cocina?", "opcion", { opciones: op(["Limpia", 100], ["Regular", 50], ["Sucia", 0]), pideFoto: true }),
         q("¿Hay basura dentro del local?", "si_no", { correcta: "no" }),
         q("¿Quedó activada la alarma?", "si_no", { correcta: "si", peso: 2, obligatoria: true }),
+        q("Firma de quien entrega la caja", "firma", { obligatoria: true }),
       ] },
     { id: 3, nombre: "Limpieza de cocina (inocuidad)", frecuencia: "Cada lunes", hora: "12:00", aQuien: "Puesto: Cocinera", sucursal: "Centro", revisa: "Su jefe inmediato", soloSiCheco: true, personas: [2],
       preguntas: [
@@ -91,6 +93,8 @@ export function datosEjemplo(hoy = hoyMx()) {
       }
       case "foto": return ok || azar() < 0.5 ? { valor: "ejemplo" } : {};
       case "texto": return azar() < 0.6 ? { valor: "Luis" } : {};
+      case "estrellas": return { valor: ok ? 4 + Math.round(azar()) : 2 + Math.floor(azar() * 2) };
+      case "firma": return { valor: "ejemplo" };
       case "texto_largo": return azar() < 0.3 ? { valor: "El refrigerador 3 hace ruido, ya avisé a mantenimiento." } : {};
       case "fecha": return { valor: d(2 + Math.floor(azar() * 5)) };
       case "fecha_hora": return { valor: `${d(-1)}T${String(14 + Math.floor(azar() * 4)).padStart(2, "0")}:30` };

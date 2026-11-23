@@ -23,6 +23,8 @@ Cada punto del checklist es una pregunta con tipo y valor (`src/lib/tareas/pregu
 - **Varias opciones**: cada elegida suma su %, hasta 100 %; juntas deben sumar al menos 100 %.
 - **Número con rango**: 100 % si está dentro (p. ej. 0 a 5 °C); vacío = sin límite.
 - **Foto**: 100 % si la sube.
+- **Estrellas** (1 a 5): 🧭 cada estrella vale 20 % (3 de 5 = 60 %).
+- **Firma** con el dedo (p. ej. «Recibió»): solo registra; normalmente obligatoria.
 - **Solo registran** (no cuentan en el %): Texto corto, Texto largo, Fecha, Fecha y hora (p. ej. caducidad, hora de
   llegada del proveedor). En el editor aparecen en un grupo aparte de los que «Se califican».
 - Por pregunta: **peso** (se muestra cuánto vale del total), obligatoria, permite «No aplica» (no cuenta en el total),
