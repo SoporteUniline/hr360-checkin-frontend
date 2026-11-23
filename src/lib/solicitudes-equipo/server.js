@@ -270,8 +270,9 @@ export async function vacationDetails(current, row) {
     empresa: current.company,
     id_empresa: current.company,
   });
+  // (23/11/2026) Saldo de esa persona (antes se pedía el reporte de toda la empresa, que al jefe le salía vacío).
   const results = await Promise.allSettled([
-    current.api(`/checador/vacaciones/reporte?empresa=${current.company}`),
+    current.api(`/checador/vacaciones/saldo/${row.id_empleado}`),
     current.api(`/checador/vacaciones/cargados/${row.id_empleado}?${query}`),
   ]);
   if (
@@ -280,12 +281,9 @@ export async function vacationDetails(current, row) {
     )
   )
     throw new TeamError("Tu sesión terminó. Inicia sesión nuevamente.", 401);
+  const saldo = results[0].status === "fulfilled" ? results[0].value?.saldo : null;
   const summary =
-    results[0].status === "fulfilled" && Array.isArray(results[0].value)
-      ? results[0].value.find(
-          (person) => String(person.id_empleado) === String(row.id_empleado),
-        )
-      : null;
+    saldo && String(saldo.id_empleado) === String(row.id_empleado) ? saldo : null;
   const periods =
     results[1].status === "fulfilled" &&
     Array.isArray(results[1].value?.periodos)
@@ -312,7 +310,7 @@ export async function vacationDetails(current, row) {
       : null,
     warning:
       !summary || results[1].status === "rejected"
-        ? "No se pudo consultar todo el saldo o los periodos. El servicio de vacaciones debe permitir su lectura al responsable asignado."
+        ? "No se pudo consultar el saldo o los periodos de vacaciones de esta persona. Actualiza para volver a intentar."
         : null,
   };
 }
@@ -374,12 +372,15 @@ export async function resolveRequest(current, row, state) {
       "La solicitud ya fue resuelta. Actualiza para consultar su estado.",
       409,
     );
-  const pending = await allPages(
-    current.api,
-    "/checador/solicitudes-permiso/por-autorizar",
-    "results",
-  );
+  // (23/11/2026) «Aprobé y no se actualiza»: «por-autorizar» solo responde a sesiones de empleado (jefe/responsable);
+  // para el dueño o RH vinculado a su registro de empleado venía vacío y se rechazaba la aprobación. Para ellos basta que
+  // la solicitud siga pendiente (findRequest la acaba de leer) y el backend valida el permiso al cambiar el estado.
+  const esEmpleado = current.user.tipo_usuario === "Empleado";
+  const pending = esEmpleado
+    ? await allPages(current.api, "/checador/solicitudes-permiso/por-autorizar", "results")
+    : [];
   if (
+    esEmpleado &&
     !pending.some(
       (item) =>
         String(item.id) === String(row.id) &&
