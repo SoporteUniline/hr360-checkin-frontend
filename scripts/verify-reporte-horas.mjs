@@ -36,7 +36,7 @@ const reporte = (e, conExtra) => ({ empleado: { ...e, nombre_empleado: `${e.nomb
     comida: { salida: "2027-01-18 14:00:00", regreso: "2027-01-18 15:10:00", minutos: 70, minutos_programados: 60, excedente: 10 } },
     dia("2027-01-19", 660, conExtra ? { extraMin: 300, estadoExtra: "autorizada", alertas: ["Más de 4 h extra"] } : { extraMin: 60, estadoExtra: "pendiente" })],
   resumen: { totalHoras: "53:00", horasExtrasLaboradas: "11:00", diasTrabajados: 6, promedioHoras: "8:50", comida: { minutos: 70, dias: 1, veces_excedio: 1, minutos_excedidos: 10 } },
-  ley: conExtra ? { trabajado: 3180, programado: 2880, autorizadas: 660, dobles: 540, triples: 120, porAutorizar: 0, alertas: [...semana.alertas, "Más de 4 h extra"], semanas: [semana] }
+  ley: conExtra ? { dias_sin_historial: 2, trabajado: 3180, programado: 2880, autorizadas: 660, dobles: 540, triples: 120, porAutorizar: 0, alertas: [...semana.alertas, "Más de 4 h extra"], semanas: [semana] }
     : { trabajado: 2460, programado: 2400, autorizadas: 0, dobles: 0, triples: 0, porAutorizar: 60, alertas: [], semanas: [{ ...semana, trabajado: 2460, programado: 2400, autorizadas: 0, dobles: 0, triples: 0, porAutorizar: 60, alertas: [] }] } });
 
 const pedidos = [];
@@ -87,6 +87,8 @@ try {
   assert.match(await hoja.locator("thead").innerText(), /HORAS\s*COMIDA\s*ESTADO/i);
   assert.match(await hoja.innerText(), /2:00 p\.m\.–3:10 p\.m\. · 70 de 60 min · \+10 min/);
   assert.match(await hoja.locator('[data-summary-section="true"]').innerText(), /COMIDA\s*1:10 h/i);
+  // (23/11/2026, opción A) Aviso de días medidos con el horario actual (sin historial).
+  assert.match(await hoja.locator('[data-sin-historial="true"]').innerText(), /2 días se midieron con el horario actual/);
   const hojaIvan = page.locator('[data-report-block="true"]').nth(1);
   assert.match(await hojaIvan.innerText(), /\+1 h por autorizar/);
   if (OUT) await page.screenshot({ path: OUT + "/reporte-ley.png", fullPage: true });
@@ -97,5 +99,5 @@ try {
   assert.match(excel, /70 de 60 min · \+10 min/);
   assert.deepEqual(errores, [], "sin errores de JavaScript");
   exito = true;
-  console.log("OK reporte de horas · una sola llamada /horas-ley con sesión · en tiempo real · banda LFT 2027 · totales · alertas · KPIs y columna «Extra / ley» · semana · columna y resumen de comida · Excel con comida");
+  console.log("OK reporte de horas · una sola llamada /horas-ley con sesión · en tiempo real · banda LFT 2027 · totales · alertas · KPIs y columna «Extra / ley» · semana · columna y resumen de comida · Excel con comida · aviso sin historial");
 } finally { await browser.close(); next.kill(); if (!exito) process.exitCode = 1; }

@@ -1617,7 +1617,14 @@ export default function ReporteHorasPage() {
                             </tr>
                           ))}
                           <tr>
-                            <td colSpan={8} className="p-2 text-left text-[11px] text-slate-500">
+                            <td colSpan={9} className="p-2 text-left text-[11px] text-slate-500">
+                              {reporte.ley.dias_sin_historial > 0 && (
+                                // (23/11/2026, opción A) Días anteriores al historial de horarios: se midieron con el horario actual.
+                                <span className="mb-1 block font-semibold text-amber-700" data-sin-historial="true">
+                                  {reporte.ley.dias_sin_historial === 1 ? "1 día se midió" : `${reporte.ley.dias_sin_historial} días se midieron`} con el horario actual
+                                  (sin historial de horarios para esas fechas).
+                                </span>
+                              )}
                               Registro de jornada conforme a la LFT (reforma DOF 1/may/2026). Horas extra: máx. 4 h al día en 4 días por
                               semana; las primeras horas de la semana hasta el tope del año van al doble y el excedente al triple; jornada
                               total máx. 12 h al día. Solo cuentan las autorizadas en Asistencias. Horas, no pesos.
