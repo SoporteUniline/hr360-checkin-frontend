@@ -11,7 +11,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { herramientasHoras } from "@/lib/asistencia/horasEdicion.mjs";
 import {
-  agruparHoy, ahoraEn, describir, diaDesdeRegistro, diasDeHoy, estadoHoy, horaDe, resumenHoy, TARJETAS,
+  agruparHoy, ahoraEn, checadasDelDia, describir, diaDesdeRegistro, diasDeHoy, estadoHoy, horaDe, resumenHoy, TARJETAS,
 } from "@/lib/asistencia/hoy.mjs";
 import { formatearMinutos } from "@/lib/asistencia/jornada.mjs";
 import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
@@ -46,7 +46,7 @@ const TARJETA = {
 };
 // En celular lo urgente va primero (Telefono.dc.html).
 const ORDEN_CELULAR = { trabajando: "max-lg:order-1", no_ha_llegado: "max-lg:order-2", tarde: "max-lg:order-3", en_comida: "max-lg:order-4", falto: "max-lg:order-5", salio_antes: "max-lg:order-6", ya_salio: "max-lg:order-7" };
-const COLUMNAS = "lg:grid lg:grid-cols-[2fr_1.45fr_1.25fr_1.7fr_1.3fr_72px] lg:items-center lg:gap-4";
+const COLUMNAS = "lg:grid lg:grid-cols-[1.7fr_1.25fr_1.9fr_0.85fr_0.85fr_1.25fr_1.15fr_64px] lg:items-center lg:gap-4";
 
 function pieTarjeta(clave, s) {
   switch (clave) {
@@ -79,6 +79,7 @@ function Tarjeta({ t, n, activa, resumen, onClick }) {
 function Renglon({ r, onAbrirDia, debe }) {
   const reg = r.dia.registro;
   const d = describir(r);
+  const c = checadasDelDia(r);
   const nombre = nombreDe(reg);
   const horario = r.entradaProg != null ? `${horaDe(r.entradaProg)} – ${horaDe(r.salidaProg)}` : "Sin horario";
   const chip = <span className={`inline-flex shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${CHIP[d.tono]}`}>{d.chip}</span>;
@@ -100,10 +101,22 @@ function Renglon({ r, onAbrirDia, debe }) {
         <span className="lg:hidden">{chip}</span>
       </div>
       <span className="hidden whitespace-nowrap text-[13px] tabular-nums text-slate-900 lg:block">{horario}</span>
-      <span className="hidden lg:block">{chip}</span>
-      <span className={`text-[13px] ${TEXTO[d.detalleTono] ?? TEXTO.normal}`}>
-        {d.detalle}{d.resaltado ? <> · <b className="text-orange-800">{d.resaltado}</b></> : null}
+      <span className="flex min-w-0 flex-col items-start gap-1">
+        <span className="hidden lg:block">{chip}</span>
+        <span className={`text-[13px] lg:text-xs ${TEXTO[d.detalleTono] ?? TEXTO.normal}`}>
+          {d.detalle}{d.resaltado ? <> · <b className="text-orange-800">{d.resaltado}</b></> : null}
+        </span>
       </span>
+      <span className="hidden whitespace-nowrap text-[13px] tabular-nums text-slate-900 lg:block" data-col="entrada">{c.entrada ?? <span className="text-slate-400">—</span>}</span>
+      <span className="hidden whitespace-nowrap text-[13px] tabular-nums text-slate-900 lg:block" data-col="salida">{c.salida ?? <span className="text-slate-400">—</span>}</span>
+      <span className={`hidden text-[13px] tabular-nums lg:block ${c.enComida ? "font-semibold text-yellow-800" : "text-slate-700"}`} data-col="comida">{c.comida ?? <span className="text-slate-400">—</span>}</span>
+      {c.entrada || c.comida ? (
+        <span className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs tabular-nums text-slate-600 lg:hidden">
+          <span>Entrada <b className="text-slate-900">{c.entrada ?? "—"}</b></span>
+          <span>Salida <b className="text-slate-900">{c.salida ?? "—"}</b></span>
+          {c.comida ? <span>Comida <b className="text-slate-900">{c.comida}</b></span> : null}
+        </span>
+      ) : null}
       {d.jornada ? (
         <span className="flex flex-col gap-1">
           <span role="progressbar" aria-label={textoJornada} aria-valuemin={0} aria-valuemax={100} aria-valuenow={d.avance != null ? Math.round(d.avance * 100) : undefined}
@@ -219,7 +232,7 @@ export default function VistaHoy({ registros, zona, cargando, onAbrirDia }) {
 
       <div aria-label="Empleados de hoy" role="region" className="lg:overflow-hidden lg:rounded-2xl lg:border lg:border-slate-200 lg:bg-white">
         <div aria-hidden="true" className={`hidden border-b border-slate-200 bg-slate-50 px-5 py-3 text-xs font-semibold uppercase tracking-[0.04em] text-slate-600 ${COLUMNAS}`}>
-          <span>Empleado</span><span>Horario</span><span>Estado</span><span>Checada real</span><span>Jornada</span><span />
+          <span>Empleado</span><span>Horario</span><span>Estado</span><span>Entrada</span><span>Salida</span><span>Comida</span><span>Jornada</span><span />
         </div>
         {grupos.length ? (
           <div className="space-y-2 lg:space-y-0">

@@ -45,7 +45,10 @@ function tramosVigentes(registro) {
 }
 
 // Alerta: su horario tiene comida pero solo checó un tramo (no marcó salida a comer).
+// (23/11/2026) Si checó su comida (está en comida ahora o ya regresó), no hay alerta: antes salía mientras comía,
+// porque en ese momento solo existe el tramo de la mañana.
 export function sinSalidaAComer(registro) {
+  if (registro?.comida_checada?.salida) return false;
   const tramos = tramosVigentes(registro);
   return Boolean(tramos && tramos.length === 1 && minutosComidaHorario(registro));
 }
