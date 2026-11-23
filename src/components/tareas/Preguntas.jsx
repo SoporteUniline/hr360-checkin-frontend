@@ -3,9 +3,9 @@
 // Campo de respuesta de una pregunta de checklist (23/11/2026). El MISMO componente sirve para llenar en la app, para la
 // vista previa al crear el checklist y para que el jefe corrija al revisar. Botones grandes (sin escribir) salvo en número
 // y texto; «No aplica» si la pregunta lo permite; foto de evidencia donde se pide.
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { AlignLeft, Calendar, CalendarClock, Camera, CheckSquare, CircleDot, Hash, Image as ImageIcon, KeyRound, ListChecks, PenLine, Star, Type } from "lucide-react";
-import LienzoFirma from "@/components/empleado/LienzoFirma";
+import FirmaGrande from "@/components/firma/FirmaGrande";
 import { FotoSegura } from "./comun";
 import { esCalificable, puntajePregunta } from "@/lib/tareas/preguntas.mjs";
 
@@ -115,16 +115,13 @@ function FirmaConPin({ firmaPin, onFirmar }) {
 
 // Firma con el dedo: se dibuja y se confirma con «Listo»; queda la imagen y se puede volver a firmar.
 function Firma({ valor, onFirmar, deshabilitado, etiqueta, subir, firmaPin = null }) {
-  const lienzo = useRef(null);
-  const [trazada, setTrazada] = useState(false);
-  const [subiendo, setSubiendo] = useState(false);
-  const firmar = async () => {
-    const png = await lienzo.current.aPng();
-    if (!subir) { onFirmar(URL.createObjectURL(png)); return; }
-    setSubiendo(true);
+  // (23/11/2026) Se dibuja con FirmaGrande: en celular a pantalla completa en horizontal; en computadora, aquí mismo.
+  const firmar = async (png) => {
+    if (!subir) { onFirmar(URL.createObjectURL(png)); return true; }
     const llave = await subir(png, { esFirma: true });
-    setSubiendo(false);
-    if (llave) onFirmar(llave);
+    if (!llave) return false;
+    onFirmar(llave);
+    return true;
   };
   if (valor) return (
     <span className="flex flex-wrap items-center gap-2">
@@ -137,16 +134,12 @@ function Firma({ valor, onFirmar, deshabilitado, etiqueta, subir, firmaPin = nul
     <div className="w-full max-w-md space-y-2">
       {firmaPin?.disponible ? <FirmaConPin firmaPin={firmaPin} onFirmar={onFirmar} /> : null}
       {firmaPin?.disponible ? <p className="text-[12.5px] text-slate-500">O dibuja tu firma:</p> : null}
-      <LienzoFirma ref={lienzo} onCambio={setTrazada} etiqueta={`Firma: ${etiqueta}`} />
-      <div className="flex gap-2">
-        <button type="button" disabled={!trazada} onClick={() => { lienzo.current.borrar(); }} className="min-h-10 rounded-lg border border-slate-300 px-3 text-[13px] font-semibold disabled:opacity-50">Borrar</button>
-        <button type="button" disabled={!trazada || subiendo} onClick={firmar} className="min-h-10 rounded-lg bg-blue-600 px-4 text-[13px] font-semibold text-white disabled:opacity-50">{subiendo ? "Guardando…" : "Listo, firmar"}</button>
-      </div>
+      {/* El botón de dibujar no se llama igual que el del PIN («Firmar»): con PIN dice «Firmar dibujando». */}
+      <FirmaGrande titulo={etiqueta} etiqueta={`Firma: ${etiqueta}`} textoBoton={firmaPin?.disponible ? "Firmar dibujando" : "Firmar"} textoGuardar="Listo, firmar" onGuardar={firmar} />
     </div>
   );
 }
 
-// pregunta: ver lib/tareas/preguntas.mjs · respuesta: { valor, na, foto } · onChange(respuestaNueva)
 export function CampoRespuesta({ pregunta: p, respuesta, onChange, grande = false, deshabilitado = false, mostrarPuntaje = true, subir = null, firmaPin = null }) {
   const r = respuesta ?? {};
   const na = Boolean(r.na && p.permiteNA);

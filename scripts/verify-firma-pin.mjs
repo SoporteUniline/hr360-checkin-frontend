@@ -117,14 +117,24 @@ try {
   await pg.goto(base + "/empleado/panel/mi-espacio", { waitUntil: "domcontentloaded" });
   await pg.getByRole("link", { name: /Mi firma y PIN/ }).click();
   await pg.getByRole("heading", { name: "Mi firma y PIN" }).waitFor({ timeout: 20000 });
-  const guardar = pg.getByRole("button", { name: "Guardar firma" });
+  // (23/11/2026) En celular: botón «Registrar firma» → pantalla completa (horizontal) con «Borrar» y «Guardar firma».
+  assert.equal(await pg.getByLabel("Dibuja tu firma con el dedo o el mouse").count(), 0, "en celular el lienzo no está en la página");
+  await pg.getByRole("button", { name: "Registrar firma" }).click();
+  const pantalla = pg.getByRole("dialog", { name: "Mi firma a pantalla completa" });
+  await pantalla.waitFor();
+  const caja = await pantalla.boundingBox();
+  assert.ok(caja.width >= 389 && caja.height >= 843, "ocupa toda la pantalla");
+  const guardar = pantalla.getByRole("button", { name: "Guardar firma" });
   assert.equal(await guardar.isDisabled(), true, "sin trazo no se guarda");
-  const lienzo = await pg.getByLabel("Dibuja tu firma con el dedo o el mouse").boundingBox();
+  const lienzo = await pantalla.getByLabel("Dibuja tu firma con el dedo o el mouse").boundingBox();
+  assert.ok(lienzo.height > 500, "lienzo grande");
   await pg.mouse.move(lienzo.x + 40, lienzo.y + 100);
   await pg.mouse.down();
   for (let k = 1; k <= 12; k++) await pg.mouse.move(lienzo.x + 40 + k * 20, lienzo.y + 100 + Math.sin(k) * 30);
   await pg.mouse.up();
+  await captura(pg, "firma-pantalla-completa");
   await guardar.click();
+  await pantalla.waitFor({ state: "hidden" });
   await pg.getByText("Listo, tu firma quedó guardada.").waitFor();
   await pg.getByRole("img", { name: "Tu firma guardada" }).waitFor();
 
@@ -205,7 +215,17 @@ try {
 
   assert.deepEqual(errores, []);
   exito = true;
-  console.log("OK firma y PIN: guardar firma, crear PIN (reglas), cambiarlo con contraseña, firmar con PIN sin foto (PIN equivocado avisa), registrar rostro con aviso aceptado");
+  // (23/11/2026) Computadora: el lienzo se queda en la página (sin pantalla completa).
+  const ctxPc = await browser.newContext({ viewport: { width: 1280, height: 900 }, locale: "es-MX" });
+  await ctxPc.addCookies([{ name: "token", value: jwt("Empleado"), url: base }]);
+  await rutas(ctxPc);
+  estado.firma = false;
+  const pc = await ctxPc.newPage();
+  await pc.goto(base + "/empleado/panel/mi-firma", { waitUntil: "domcontentloaded" });
+  await pc.getByLabel("Dibuja tu firma con el dedo o el mouse").waitFor({ timeout: 20000 });
+  assert.equal(await pc.getByRole("button", { name: "Registrar firma" }).count(), 0, "en computadora no hay botón de pantalla completa");
+  await ctxPc.close();
+  console.log("OK firma y PIN: guardar firma (celular: pantalla completa; computadora: en la página), crear PIN (reglas), cambiarlo con contraseña, firmar con PIN sin foto (PIN equivocado avisa), registrar rostro con aviso aceptado");
 } finally {
   await browser.close();
   try { process.kill(-next.pid); } catch { next.kill(); }

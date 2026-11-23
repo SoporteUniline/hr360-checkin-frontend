@@ -5,7 +5,8 @@
 // ref expone: aPng() → Blob PNG, borrar().
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef } from "react";
 
-const LienzoFirma = forwardRef(function LienzoFirma({ onCambio, deshabilitado, etiqueta = "Dibuja tu firma con el dedo o el mouse" }, ref) {
+// alto: clases de altura del recuadro (por omisión h-44; a pantalla completa «h-full»).
+const LienzoFirma = forwardRef(function LienzoFirma({ onCambio, deshabilitado, etiqueta = "Dibuja tu firma con el dedo o el mouse", alto = "h-44" }, ref) {
   const canvasRef = useRef(null);
   const trazos = useRef([]);
   const dibujando = useRef(null);
@@ -53,7 +54,7 @@ const LienzoFirma = forwardRef(function LienzoFirma({ onCambio, deshabilitado, e
   };
 
   return (
-    <div className="relative h-44 w-full overflow-hidden rounded-xl border border-slate-300 bg-white">
+    <div className={`relative ${alto} w-full overflow-hidden rounded-xl border border-slate-300 bg-white`}>
       <canvas
         ref={canvasRef}
         aria-label={etiqueta}
