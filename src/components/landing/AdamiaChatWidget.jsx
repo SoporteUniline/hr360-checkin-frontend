@@ -384,7 +384,7 @@ function buildBotReply(userText, ctx) {
     return {
       nextCtx: ctx,
       reply:
-        "Puedes contratar ADAMIA aquí:\nhttps://planes.hr360.mx/contratar-plan\n\nSi me dices cuántos empleados tienes, te doy una referencia rápida.",
+        "Puedes contratar ADAMIA aquí:\nhttps://adamia.com.mx/contratar-plan\n\nSi me dices cuántos empleados tienes, te doy una referencia rápida.",
     };
   }
 
@@ -432,7 +432,7 @@ function buildBotReply(userText, ctx) {
       `- Mensual: $${mensual}/mes\n` +
       `- Semestral (10% off): $${semestral}/mes\n` +
       `- Anual (20% off): $${anual}/mes\n\n` +
-      `Si quieres, puedes iniciar la prueba aquí:\nhttps://planes.hr360.mx/contratar-plan`;
+      `Si quieres, puedes iniciar la prueba aquí:\nhttps://adamia.com.mx/contratar-plan`;
 
     return {
       nextCtx: { ...ctx, empleados: empleadosFinal, nombre: nombreFinal, generoCotizacion: true },
