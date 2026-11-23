@@ -1,12 +1,14 @@
 "use client";
 
-// Módulo Tareas (23/11/2026, conectado a la API). Pestañas: Tablero (tareas de todos los proyectos y sueltas), Proyectos,
-// Checklists (plantillas que se repiten), Revisar (checklists enviados) y Cumplimiento (% por persona, bono, Excel).
-// El módulo se activa por empresa (lo activa el dueño). Mismo marco que Nómina: encabezado, empresa, pestañas.
-import { useState } from "react";
+// Módulos Tareas y Checklists (23/11/2026, conectados a la API). Desde el 23/11/2026 son dos módulos con su entrada en el
+// menú y una dirección por vista (pedido del dueño): Tareas = Tablero y Proyectos; Checklists = Checklists (plantillas que se
+// repiten), Revisar (enviados) y Cumplimiento (% por persona, bono, Excel). Se activan juntos por empresa (lo activa el dueño).
+// Mismo marco que Nómina: encabezado, empresa y pestañas que son enlaces.
+import { useEffect, useState } from "react";
 import useSWR from "swr";
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ListChecks, Plus } from "lucide-react";
+import { ClipboardCheck, ListChecks } from "lucide-react";
 import axios from "@/lib/axios";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import { SelectorEmpresa, useEmpresaNomina } from "@/components/nomina/comun";
@@ -19,13 +21,26 @@ import Revisar from "./Revisar";
 import Cumplimiento from "./Cumplimiento";
 import DialogTarea from "./DialogTarea";
 
-const PESTANAS = [
-  { clave: "tablero", texto: "Tablero", subtitulo: "Las tareas de tu equipo: quién tiene qué y cómo va. Arrastra para moverlas." },
-  { clave: "proyectos", texto: "Proyectos", subtitulo: "Tareas agrupadas que se hacen una vez y tienen fin." },
-  { clave: "checklists", texto: "Checklists", subtitulo: "Lo que se repite cada día o semana: preguntas con respuestas que valen, y su calificación." },
-  { clave: "revisar", texto: "Revisar", subtitulo: "Checklists enviados: revisa cada respuesta, corrígela si hace falta y aprueba o regresa." },
-  { clave: "cumplimiento", texto: "Cumplimiento", subtitulo: "Porcentaje de cada persona en el periodo, para bonos. Exporta a Excel." },
-];
+export const MODULOS = {
+  tareas: {
+    titulo: "Tareas", icono: ListChecks, etiqueta: "Secciones de tareas",
+    pestanas: [
+      { clave: "tablero", href: "/panel/tareas", texto: "Tablero", subtitulo: "Las tareas de tu equipo: quién tiene qué y cómo va. Arrastra para moverlas." },
+      { clave: "proyectos", href: "/panel/tareas/proyectos", texto: "Proyectos", subtitulo: "Tareas agrupadas que se hacen una vez y tienen fin." },
+    ],
+  },
+  checklists: {
+    titulo: "Checklists", icono: ClipboardCheck, etiqueta: "Secciones de checklists",
+    pestanas: [
+      { clave: "checklists", href: "/panel/checklists", texto: "Checklists", subtitulo: "Lo que se repite cada día o semana: preguntas con respuestas que valen, y su calificación." },
+      { clave: "revisar", href: "/panel/checklists/revisar", texto: "Revisar", subtitulo: "Checklists enviados: revisa cada respuesta, corrígela si hace falta y aprueba o regresa." },
+      { clave: "cumplimiento", href: "/panel/checklists/cumplimiento", texto: "Cumplimiento", subtitulo: "Porcentaje de cada persona en el periodo, para bonos. Exporta a Excel." },
+    ],
+  },
+};
+// Direcciones viejas (/panel/tareas?vista=…) → la vista nueva.
+const VISTA_VIEJA = Object.fromEntries(Object.values(MODULOS).flatMap((m) => m.pestanas.map((p) => [p.clave, p.href])));
+const pestanaActual = (modulo, pathname) => [...modulo.pestanas].reverse().find((p) => pathname === p.href || pathname?.startsWith(`${p.href}/`)) ?? modulo.pestanas[0];
 const get = (url) => axios.get(url).then((r) => r.data);
 
 function Estado({ titulo, texto, children }) {
@@ -38,18 +53,16 @@ function Estado({ titulo, texto, children }) {
   );
 }
 
-function Contenido() {
-  const router = useRouter();
+function Contenido({ clave }) {
   const pathname = usePathname();
-  const params = useSearchParams();
+  const config = MODULOS[clave];
   const { idEmpresa, cargando, error, modulo, activarModulo, hoy } = useTareas();
-  const vista = PESTANAS.find((p) => p.clave === params.get("vista")) ?? PESTANAS[0];
+  const vista = pestanaActual(config, pathname);
   const [tarea, setTarea] = useState(null);
   const [activando, setActivando] = useState(false);
   const desde = new Date(Date.parse(`${hoy}T12:00:00Z`) - 30 * 86400000).toISOString().slice(0, 10);
-  const porRevisar = useSWR(modulo.activo ? `/checador/tareas/envios?empresa=${idEmpresa}&desde=${desde}&hasta=${hoy}&estado=por_revisar` : null, get);
+  const porRevisar = useSWR(modulo.activo && clave === "checklists" ? `/checador/tareas/envios?empresa=${idEmpresa}&desde=${desde}&hasta=${hoy}&estado=por_revisar` : null, get);
   const nPorRevisar = porRevisar.data?.envios?.length ?? 0;
-  const ir = (clave) => router.replace(clave === "tablero" ? pathname : `${pathname}?vista=${clave}`, { scroll: false });
 
   if (error) {
     const codigo = error?.response?.data?.codigo;
@@ -68,15 +81,15 @@ function Contenido() {
   }
   return (
     <>
-      <nav aria-label="Secciones de tareas" className="-mt-1 flex gap-1 overflow-x-auto border-b border-slate-200">
-        {PESTANAS.map((p) => {
+      <nav aria-label={config.etiqueta} className="-mt-1 flex gap-1 overflow-x-auto border-b border-slate-200">
+        {config.pestanas.map((p) => {
           const activa = p === vista;
           return (
-            <button key={p.clave} type="button" onClick={() => ir(p.clave)} aria-current={activa ? "page" : undefined}
+            <Link key={p.clave} href={p.href} aria-current={activa ? "page" : undefined}
               className={`inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-[13.5px] font-semibold transition-colors ${activa ? "border-brand text-brand" : "border-transparent text-slate-500 hover:text-slate-800"}`}>
               {p.texto}
               {p.clave === "revisar" && nPorRevisar ? <span className="rounded-full bg-violet-600 px-1.5 text-[11px] font-bold text-white">{nPorRevisar}</span> : null}
-            </button>
+            </Link>
           );
         })}
       </nav>
@@ -90,20 +103,27 @@ function Contenido() {
   );
 }
 
-function Marco() {
+function Marco({ clave }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const params = useSearchParams();
+  const config = MODULOS[clave];
+  const vista = pestanaActual(config, pathname);
   const empresa = useEmpresaNomina();
-  const vista = PESTANAS.find((p) => p.clave === params.get("vista")) ?? PESTANAS[0];
+  const vieja = VISTA_VIEJA[params.get("vista")];
+  useEffect(() => { if (vieja && vieja !== pathname) router.replace(vieja); }, [vieja, pathname, router]);
+  if (vieja && vieja !== pathname) return <p role="status" className="p-6 text-sm text-slate-500">Cargando…</p>;
   return (
     <div className="space-y-4 p-1">
-      <EncabezadoPagina icono={ListChecks} titulo="Tareas" subtitulo={vista.subtitulo} acciones={<SelectorEmpresa {...empresa} />} />
+      <EncabezadoPagina icono={config.icono} titulo={config.titulo} subtitulo={vista.subtitulo} acciones={<SelectorEmpresa {...empresa} />} />
       {empresa.idEmpresa ? (
-        <TareasProvider key={empresa.idEmpresa} modo="panel" idEmpresa={empresa.idEmpresa}><Contenido /></TareasProvider>
+        <TareasProvider key={empresa.idEmpresa} modo="panel" idEmpresa={empresa.idEmpresa}><Contenido clave={clave} /></TareasProvider>
       ) : <p role="status" className="text-sm text-slate-500">Cargando…</p>}
     </div>
   );
 }
 
-export default function ModuloTareas() {
-  return <Marco />;
+// modulo: "tareas" (Tablero, Proyectos) o "checklists" (Checklists, Revisar, Cumplimiento).
+export default function ModuloTareas({ modulo = "tareas" }) {
+  return <Marco clave={modulo} />;
 }
