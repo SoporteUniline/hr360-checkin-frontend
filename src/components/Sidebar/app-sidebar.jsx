@@ -13,29 +13,9 @@ import {
 import Image from "next/image";
 
 // Isotipo compacto (la "A" con degradado de marca) para el modo contraído.
+// (23/11/2026) Menú contraído: la «A» oficial de ADAMIA (recortada de /assets/logo.png), no un dibujo parecido.
 function AdamiaMark() {
-  return (
-    <svg
-      width="26"
-      height="26"
-      viewBox="0 0 26 26"
-      fill="none"
-      aria-hidden="true"
-    >
-      <defs>
-        <linearGradient id="adamia-mark" x1="0" y1="0" x2="26" y2="26">
-          <stop offset="0" stopColor="#38bdf8" />
-          <stop offset="0.5" stopColor="#2563eb" />
-          <stop offset="1" stopColor="#7c3aed" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M13 2 L23 24 H17.5 L13 13.5 L8.5 24 H3 Z"
-        fill="url(#adamia-mark)"
-      />
-      <circle cx="13" cy="16.5" r="2.2" fill="#fff" />
-    </svg>
-  );
+  return <Image alt="" aria-hidden="true" src="/assets/adamia-isotipo.png" width={28} height={28} className="size-7 object-contain" />;
 }
 
 export function AppSidebar({ ...props }) {
