@@ -26,7 +26,7 @@ import { useSnackbar } from "notistack";
 import useHorasExtra from "@/hooks/useHorasExtra";
 import AccionesMasivas from "./AccionesMasivas";
 import { minutosDescanso, sinSalidaAComer } from "@/lib/asistencia/jornada.mjs";
-import { textoComida } from "@/lib/reporte/comida.mjs";
+import { ahoraBase, textoComida } from "@/lib/reporte/comida.mjs";
 import {
   ETIQUETAS_ESTADO, cambiosAutorizar, cambiosNoAutorizar, cambiosQuitar,
   estadoHorasExtra, etiquetaHorasExtra, ordenarPorHorasExtra,
@@ -527,7 +527,7 @@ export default function AsistenciaTable({
       extras_autorizadas_por: fmt("extras_autorizadas_por", r.extras_autorizadas_por),
       hrs_comida: minutosDescanso(r) != null ? formatearMinutos(minutosDescanso(r)) : r.hrs_comida ?? "-",
       sin_salida_comida: sinSalidaAComer(r) ? "Sí" : "No",
-      comida_checada: textoComida(r.comida_checada) || "-",
+      comida_checada: textoComida(r.comida_checada, undefined, ahoraBase()) || "-",
       notas: r.notas ?? "-",
       notas_hrs_extra: r.notas_hrs_extra ?? "-",
       estadoAsistencia: r.estadoAsistencia,
