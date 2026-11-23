@@ -4,17 +4,20 @@ import { formatearFecha } from "@/lib/utils";
 import { sanearHtml } from "@/lib/htmlSeguro.mjs";
 import { ArrowLeft } from "lucide-react";
 import React from "react";
+import EnlaceWhatsappVacante from "@/components/whatsapp/EnlaceWhatsappVacante";
 
 export default function DetalleVacante({ item, setSelected }) {
   return (
     <section>
-      <div className="flex gap-3 items-center">
+      <div className="flex flex-wrap gap-3 items-center">
         <Button
           variant="ghost"
           startIcon={<ArrowLeft />}
           onClick={() => setSelected(null)}
         />
-        <h1 className="text-lg font-semibold text-slate-700">{item.titulo}</h1>
+        <h1 className="min-w-0 flex-1 text-lg font-semibold text-slate-700">{item.titulo}</h1>
+        {/* WhatsApp R1: enlace para que el candidato abra el chat de esta vacante. */}
+        <EnlaceWhatsappVacante idVacante={item.id_vacante} titulo={item.titulo} />
       </div>
       <article className="px-13">
         <p className="text-sm text-gray-600">

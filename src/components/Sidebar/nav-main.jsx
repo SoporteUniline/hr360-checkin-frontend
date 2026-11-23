@@ -61,6 +61,7 @@ import {
   PenLine,
   ClipboardList,
   Settings2,
+  MessageCircle,
 } from "lucide-react";
 import {
   ChevronDown,
@@ -164,6 +165,12 @@ const dashboardItems = [
     url: "/dashboard/cuentas-bancarias",
     rol: "Admin",
     icon: Landmark,
+  },
+  {
+    title: "WhatsApp (reclutamiento)",
+    url: "/dashboard/whatsapp",
+    rol: "Admin",
+    icon: MessageCircle,
   },
   {
     title: "Inicio",
@@ -488,13 +495,22 @@ const menuGroups = [
         {
           group: "RECLUTAMIENTO Y SELECCIÓN",
           groupIcon: BriefcaseBusiness,
-          items: RECRUITMENT_NAV.map((item) => ({
-            title: item.label,
-            url: item.href,
-            icon: item.icon,
-            rol: "Recruiter",
-            matchPrefix: item.matchPrefix,
-          })),
+          items: [
+            ...RECRUITMENT_NAV.map((item) => ({
+              title: item.label,
+              url: item.href,
+              icon: item.icon,
+              rol: "Recruiter",
+              matchPrefix: item.matchPrefix,
+            })),
+            // Bandeja real de WhatsApp (R1): ruta propia, fuera del layout demo de /panel/reclutamiento.
+            {
+              title: "Conversaciones (WhatsApp)",
+              url: "/panel/whatsapp",
+              icon: MessageCircle,
+              rol: "Recruiter",
+            },
+          ],
         },
       ]
     : []),
