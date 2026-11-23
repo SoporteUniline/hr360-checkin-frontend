@@ -41,6 +41,7 @@ import {
   HandCoins,
   Route,
   UserRound,
+  MessageCircle,
 } from "lucide-react";
 
 // ─── Nav items estáticos (espejo del sidebar) ────────────────────────────────
@@ -129,6 +130,13 @@ const ALL_NAV_ITEMS = [
     section: "Admin",
     icon: Landmark,
   },
+  {
+    title: "WhatsApp (reclutamiento)",
+    url: "/dashboard/whatsapp",
+    rol: "Admin",
+    section: "Admin",
+    icon: MessageCircle,
+  },
   // Recruiter — General
   {
     title: "Inicio",
@@ -152,6 +160,13 @@ const ALL_NAV_ITEMS = [
     section: "Reclutamiento y selección",
     icon: item.icon,
   })),
+  {
+    title: "Conversaciones de WhatsApp",
+    url: "/panel/whatsapp",
+    rol: "Recruiter",
+    section: "Reclutamiento y selección",
+    icon: MessageCircle,
+  },
   {
     title: "Panel empleado",
     url: "/panel/panel-empleado",
