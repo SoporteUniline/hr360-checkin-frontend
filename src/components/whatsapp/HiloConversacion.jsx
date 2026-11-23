@@ -3,16 +3,19 @@
 // Hilo de una conversación de WhatsApp (R1): burbujas, control humano/IA y cuadro para escribir.
 // R2: el agente firma con su nombre y, bajo 1280 px, «Ver evaluación» abre el panel del candidato.
 // R3: con la ventana de 24 h cerrada, «Enviar seguimiento» manda la plantilla aprobada (con confirmación, cuenta en el mes).
-import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { AlertCircle, ArrowLeft, Bot, Check, CheckCheck, ClipboardList, Clock, Hand, Loader2, MailPlus, RotateCw, SendHorizontal } from "lucide-react";
+// Chat todo-en-uno: archivos en las burbujas, cuadro con archivos y nota de voz (ComposerChat), arrastrar y soltar un
+// archivo sobre el hilo, cita fija arriba (CitaChat) y líneas de sistema tras cada acción de la cita.
+import { Fragment, useEffect, useRef, useState } from "react";
+import { AlertCircle, ArrowLeft, Bot, Check, CheckCheck, ClipboardList, Clock, Hand, Loader2, Paperclip, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { claveDia, etiquetaDia, horaCorta } from "@/lib/whatsapp/tiempo.mjs";
 import { formatearTelefono, nombreContacto } from "@/lib/whatsapp/telefono.mjs";
-import {
-  LIMITE_TEXTO, MENSAJE_VENTANA, textoArchivo, accionesControl, etiquetaActor, etiquetaEstado, mensajeErrorApi, permisoEscribir,
-} from "@/lib/whatsapp/reglas.mjs";
+import { textoArchivo, accionesControl, etiquetaActor, etiquetaEstado, permisoEscribir } from "@/lib/whatsapp/reglas.mjs";
 import { Avatar, ChipControl } from "./ListaConversaciones";
 import EnlaceWhatsappVacante from "./EnlaceWhatsappVacante";
+import AdjuntoMensaje from "./AdjuntoMensaje";
+import ComposerChat, { useAdjuntoPendiente } from "./ComposerChat";
+import CitaChat from "./CitaChat";
 
 function IconoEstado({ estado }) {
   const etiqueta = etiquetaEstado(estado);
@@ -44,15 +47,17 @@ function Burbuja({ mensaje, onReintentar, reintentando, nombreAsistente }) {
   const estilo = entrante ? ESTILO_BURBUJA.candidato : ESTILO_BURBUJA[mensaje.actor] ?? ESTILO_BURBUJA.reclutador;
   const fallido = mensaje.estado === "fallido";
   const texto = mensaje.texto ?? "";
+  const adjunto = mensaje.adjunto ?? null;
   return (
     <div className={`flex ${entrante ? "justify-start" : "justify-end"}`} data-mensaje={mensaje.id} data-direccion={mensaje.direccion}>
       <div className={`max-w-[85%] rounded-2xl px-3 py-2 shadow-[0_1px_1px_rgba(0,0,0,0.04)] md:max-w-[70%] ${estilo} ${fallido ? "!border-red-300" : ""}`}>
         {!entrante ? <p className="mb-0.5 text-[11px] font-semibold text-gray-500">{etiquetaActor(mensaje, nombreAsistente)}</p> : null}
+        {adjunto ? <div className={texto ? "mb-1.5" : ""} data-adjunto={adjunto.tipo}><AdjuntoMensaje adjunto={adjunto} /></div> : null}
         {texto ? (
           <p className="whitespace-pre-wrap text-[14px] leading-snug [overflow-wrap:anywhere]">{texto}</p>
-        ) : (
+        ) : !adjunto ? (
           <p className="text-[13px] italic text-gray-500">{textoArchivo(mensaje.tipo)}</p>
-        )}
+        ) : null}
         <p className="mt-1 flex items-center justify-end gap-1 text-[11px] text-gray-500">
           <span>{mensaje.estado === "enviando" ? "Enviando…" : horaCorta(mensaje.creado_en)}</span>
           {!entrante ? <IconoEstado estado={mensaje.estado} /> : null}
@@ -77,115 +82,10 @@ function Burbuja({ mensaje, onReintentar, reintentando, nombreAsistente }) {
   );
 }
 
-// Ventana de 24 h cerrada: en lugar de un cuadro bloqueado sin salida, se ofrece mandar la plantilla de seguimiento.
-function Seguimiento({ onSeguimiento }) {
-  const [paso, setPaso] = useState("inicio"); // inicio | confirmar | enviando | enviado
-  const [error, setError] = useState("");
-  const enviar = async () => {
-    setPaso("enviando");
-    setError("");
-    try {
-      await onSeguimiento();
-      setPaso("enviado");
-    } catch (e) {
-      setError(mensajeErrorApi(e, "No se pudo enviar el seguimiento."));
-      setPaso("inicio");
-    }
-  };
-  return (
-    <div role="status" data-seguimiento className="mb-2 grid gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-[13px] text-amber-900">
-      <p>{MENSAJE_VENTANA}</p>
-      {paso === "enviado" ? (
-        <p className="font-semibold text-emerald-800">Seguimiento enviado. Cuando el candidato conteste, podrás escribirle.</p>
-      ) : paso === "confirmar" || paso === "enviando" ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="min-w-0 flex-1 basis-56 font-medium">Se envía la plantilla de seguimiento y cuenta en las plantillas del mes.</span>
-          <Button type="button" variant="outline" size="sm" onClick={() => setPaso("inicio")} disabled={paso === "enviando"} className="min-h-11 bg-white md:min-h-8">Cancelar</Button>
-          <Button type="button" size="sm" onClick={enviar} loading={paso === "enviando"} className="min-h-11 bg-amber-700 hover:bg-amber-800 md:min-h-8">Enviar plantilla</Button>
-        </div>
-      ) : (
-        <div>
-          <Button type="button" size="sm" variant="outline" onClick={() => setPaso("confirmar")} startIcon={<MailPlus className="size-4" />} className="min-h-11 border-amber-300 bg-white md:min-h-8">
-            Enviar seguimiento
-          </Button>
-        </div>
-      )}
-      {error ? <p role="alert" className="rounded-md border border-red-200 bg-white p-2 font-medium text-red-800">{error}</p> : null}
-    </div>
-  );
-}
-
-function Composer({ permiso, onEnviar, enviando, ventanaCerrada = false, onSeguimiento = null }) {
-  const [texto, setTexto] = useState("");
-  const area = useRef(null);
-  const ajustarAltura = () => {
-    const el = area.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 160)}px`;
-  };
-  useLayoutEffect(ajustarAltura, [texto]);
-  const limpio = texto.trim();
-  const puedeEnviar = permiso.puede && limpio.length > 0 && texto.length <= LIMITE_TEXTO && !enviando;
-  const enviar = async () => {
-    if (!puedeEnviar) return;
-    const previo = texto;
-    setTexto("");
-    const ok = await onEnviar(limpio);
-    if (!ok) setTexto(previo);
-    area.current?.focus();
-  };
-  return (
-    <div className="border-t border-gray-200 bg-white px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
-      {ventanaCerrada && onSeguimiento ? <Seguimiento onSeguimiento={onSeguimiento} /> : null}
-      {!permiso.puede && permiso.motivo && !(ventanaCerrada && onSeguimiento) ? (
-        <p role="status" className={`mb-2 rounded-lg border p-2.5 text-[13px] ${permiso.ventanaCerrada ? "border-amber-200 bg-amber-50 text-amber-900" : "border-gray-200 bg-gray-50 text-gray-700"}`}>
-          {permiso.motivo}
-        </p>
-      ) : null}
-      <div className="flex items-end gap-2">
-        <label className="min-w-0 flex-1">
-          <span className="sr-only">Mensaje</span>
-          <textarea
-            ref={area}
-            rows={1}
-            value={texto}
-            disabled={!permiso.puede}
-            maxLength={LIMITE_TEXTO}
-            onChange={(e) => setTexto(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-                e.preventDefault();
-                enviar();
-              }
-            }}
-            placeholder={permiso.puede ? "Escribe un mensaje" : "No puedes escribir en esta conversación"}
-            className="block max-h-40 min-h-11 w-full resize-none rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base leading-snug outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-gray-100 md:text-sm"
-          />
-        </label>
-        <button
-          type="button"
-          onClick={enviar}
-          disabled={!puedeEnviar}
-          aria-label="Enviar mensaje"
-          className="grid size-11 shrink-0 place-items-center rounded-full bg-emerald-600 text-white transition-colors hover:bg-emerald-700 disabled:bg-gray-300"
-        >
-          {enviando ? <Loader2 className="size-5 animate-spin" /> : <SendHorizontal className="size-5" />}
-        </button>
-      </div>
-      {permiso.puede ? (
-        <p className="mt-1 flex justify-between gap-2 text-[11px] text-gray-400">
-          <span className="hidden md:inline">Enter para enviar · Shift + Enter para un salto de línea</span>
-          {texto.length > LIMITE_TEXTO - 600 ? <span className={texto.length >= LIMITE_TEXTO ? "text-red-600" : ""}>{texto.length}/{LIMITE_TEXTO}</span> : null}
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
 export default function HiloConversacion({
   conversacion, mensajes, cargando, error, usuario, onVolver, onTomar, onDevolver, cambiandoControl, onEnviar, enviando, onReintentar, reintentandoId, aviso, anuncio, ahora,
   nombreAsistente = "", onVerEvaluacion = null, requiereAtencion = false, onSeguimiento = null,
+  onEnviarAdjunto = null, citas = null, hoy = "", onCitaCambio = null, ofrecer = null, lineas = [],
 }) {
   const scroll = useRef(null);
   const primeraCarga = useRef(true);
@@ -198,13 +98,37 @@ export default function HiloConversacion({
       el.scrollTop = el.scrollHeight;
       primeraCarga.current = false;
     }
-  }, [total]);
+  }, [total, lineas.length]);
 
   const permiso = permisoEscribir(conversacion, usuario);
   const acciones = accionesControl(conversacion, usuario);
   const contacto = conversacion?.contacto;
+  const pendiente = useAdjuntoPendiente();
+  // Arrastrar un archivo sobre el hilo (escritorio). El contador evita parpadeos al pasar sobre elementos hijos.
+  const [arrastrando, setArrastrando] = useState(false);
+  const capas = useRef(0);
+  const puedeSoltar = permiso.puede && !!onEnviarAdjunto;
+  const conArchivos = (e) => [...(e.dataTransfer?.types ?? [])].includes("Files");
+  const soltar = {
+    onDragEnter: (e) => { if (!puedeSoltar || !conArchivos(e)) return; e.preventDefault(); capas.current += 1; setArrastrando(true); },
+    onDragOver: (e) => { if (!puedeSoltar || !conArchivos(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = "copy"; },
+    onDragLeave: () => { if (!puedeSoltar) return; capas.current = Math.max(0, capas.current - 1); if (!capas.current) setArrastrando(false); },
+    onDrop: (e) => {
+      if (!puedeSoltar || !conArchivos(e)) return;
+      e.preventDefault();
+      capas.current = 0;
+      setArrastrando(false);
+      const f = e.dataTransfer.files?.[0];
+      if (f) pendiente.elegir(f);
+    },
+  };
   return (
-    <section aria-label="Conversación" className="flex min-h-0 flex-1 flex-col bg-white">
+    <section aria-label="Conversación" className="relative flex min-h-0 flex-1 flex-col bg-white" {...soltar}>
+      {arrastrando ? (
+        <div className="pointer-events-none absolute inset-2 z-20 grid place-items-center rounded-2xl border-2 border-dashed border-emerald-500 bg-emerald-50/90 text-emerald-800" data-soltar-archivo>
+          <p className="flex items-center gap-2 text-[15px] font-semibold"><Paperclip className="size-5" aria-hidden="true" /> Suelta el archivo para adjuntarlo</p>
+        </div>
+      ) : null}
       <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-gray-200 px-2 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] md:px-4 md:pt-2">
         <button type="button" onClick={onVolver} aria-label="Volver a la lista" className="grid size-11 shrink-0 place-items-center rounded-full text-gray-600 hover:bg-gray-100 md:hidden">
           <ArrowLeft className="size-5" />
@@ -242,7 +166,10 @@ export default function HiloConversacion({
           </div>
         ) : null}
       </header>
-      <div ref={scroll} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-[#f5f3ef] px-3 py-4 md:px-6" aria-live="polite" aria-busy={cargando}>
+      {conversacion && citas && onCitaCambio ? (
+        <CitaChat conversacion={conversacion} activa={citas.activa} ultima={citas.ultima} hoy={hoy} onCambio={onCitaCambio} ofrecer={ofrecer} />
+      ) : null}
+      <div ref={scroll} data-hilo-scroll className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-[#f5f3ef] px-3 py-4 md:px-6" aria-live="polite" aria-busy={cargando}>
         {error ? (
           <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>
         ) : cargando && !total ? (
@@ -263,6 +190,9 @@ export default function HiloConversacion({
                 </Fragment>
               );
             })}
+            {lineas.map((l) => (
+              <p key={l.id} data-linea-sistema className="my-1 self-center rounded-full bg-blue-50 px-3 py-1 text-center text-[12px] font-medium text-blue-900 ring-1 ring-inset ring-blue-200">{l.texto}</p>
+            ))}
           </div>
         )}
       </div>
@@ -270,7 +200,8 @@ export default function HiloConversacion({
       {aviso ? (
         <p role="alert" className="border-t border-red-200 bg-red-50 px-4 py-2 text-[13px] text-red-800">{aviso}</p>
       ) : null}
-      <Composer permiso={permiso} onEnviar={onEnviar} enviando={enviando} ventanaCerrada={conversacion?.ventana_abierta === false} onSeguimiento={onSeguimiento} />
+      <ComposerChat permiso={permiso} onEnviar={onEnviar} enviando={enviando} ventanaCerrada={conversacion?.ventana_abierta === false} onSeguimiento={onSeguimiento}
+        onEnviarAdjunto={onEnviarAdjunto} pendiente={pendiente} ofrecer={ofrecer} />
     </section>
   );
 }

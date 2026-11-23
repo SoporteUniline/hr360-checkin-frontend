@@ -5,6 +5,8 @@
 // en lugar del SSE del reloj, que no lleva sesión.
 // R3: pestañas «Conversaciones» / «Entrevistas» (?vista=entrevistas), aprobar para agendar, cita en el panel del candidato,
 // «Enviar seguimiento» con la ventana cerrada y plantillas enviadas en el mes.
+// Chat todo-en-uno: envío de archivos y notas de voz (multipart con avance y cancelar), cita fija en el hilo con sus
+// acciones y líneas de sistema, y «Ofrecer horarios». Dentro de la empresa todos ven todas las conversaciones.
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -17,9 +19,10 @@ import { mensajeErrorApi } from "@/lib/whatsapp/reglas.mjs";
 import { paramsFiltro } from "@/lib/whatsapp/entrevista.mjs";
 import { avisoExtras, textoEntrevistasMes } from "@/lib/whatsapp/paquete.mjs";
 import { hoyMx, textoPlantillasMes } from "@/lib/whatsapp/agenda.mjs";
+import { citasDelChat, lineaCita } from "@/lib/whatsapp/adjuntos.mjs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  aprobarAgenda, devolverAIa, enviarMensaje, enviarSeguimiento, marcarAtendido, obtener, reintentarMensaje, rutaAgendaEmpresa, rutaAgente, rutaConversacion,
+  aprobarAgenda, devolverAIa, enviarAdjunto, enviarMensaje, enviarSeguimiento, marcarAtendido, obtener, ofrecerHorarios, reintentarMensaje, rutaAgendaEmpresa, rutaAgente, rutaConversacion,
   rutaConversaciones, rutaEstado, tomarControl,
 } from "./api";
 import ListaConversaciones from "./ListaConversaciones";
@@ -243,9 +246,12 @@ export default function BandejaWhatsapp() {
   const [anuncio, setAnuncio] = useState("");
   const [marcando, setMarcando] = useState(false);
   const [aprobando, setAprobando] = useState(false);
+  const [ofreciendo, setOfreciendo] = useState(false);
+  const [lineas, setLineas] = useState([]);
   useEffect(() => {
     setPendientes([]);
     setAviso("");
+    setLineas([]);
     setEvaluacionAbierta(false);
     if (!abierta) marcadaLeida.current = null;
   }, [abierta]);
@@ -297,6 +303,56 @@ export default function BandejaWhatsapp() {
       return false;
     } finally {
       setEnviando(false);
+    }
+  };
+
+  // Mensaje que devuelve el API (envío de archivo, horarios ofrecidos): se agrega al hilo sin esperar el sondeo.
+  const agregarMensaje = (mensaje) => recargarHilo((actual) => actual && {
+    ...actual, mensajes: [...(actual.mensajes ?? []).filter((m) => String(m.id) !== String(mensaje?.id)), mensaje].filter(Boolean),
+  }, { revalidate: false });
+
+  // Archivo o nota de voz. Cancelar no es error: se conserva el archivo para reintentar.
+  const enviarArchivo = async (datos, opciones) => {
+    setAviso("");
+    try {
+      const { mensaje } = await enviarAdjunto(abierta, datos, opciones);
+      await agregarMensaje(mensaje);
+      recargarLista();
+      setAnuncio(datos.notaVoz ? "Nota de voz enviada." : "Archivo enviado.");
+      return true;
+    } catch (e) {
+      if (e?.code === "ERR_CANCELED" || e?.name === "CanceledError") { setAnuncio("Envío cancelado."); return false; }
+      setAviso(mensajeErrorApi(e, "No se pudo enviar el archivo. Intenta de nuevo."));
+      if ([403, 409].includes(e?.response?.status)) recargarHilo();
+      return false;
+    }
+  };
+
+  const agregarLinea = (texto) => {
+    if (!texto) return;
+    setLineas((l) => [...l, { id: `${Date.now()}-${l.length}`, texto }]);
+    setAnuncio(texto);
+  };
+  // Acción de la cita fija: línea de sistema con la cita que devuelve el API (o la anterior) y se refresca el hilo.
+  const alCambiarCitaChat = async (accion, respuesta, anterior) => {
+    agregarLinea(lineaCita(accion, respuesta?.cita ?? anterior));
+    if (respuesta?.aviso) agregarLinea(String(respuesta.aviso));
+    await recargarHilo();
+    recargarLista();
+  };
+  const ofrecer = async () => {
+    setOfreciendo(true);
+    setAviso("");
+    try {
+      const r = await ofrecerHorarios(abierta);
+      if (r?.mensaje) await agregarMensaje(r.mensaje);
+      agregarLinea(lineaCita("ofrecer"));
+      recargarHilo();
+    } catch (e) {
+      setAviso(mensajeErrorApi(e, "No se pudieron ofrecer los horarios."));
+      if (e?.response?.status === 409) recargarHilo();
+    } finally {
+      setOfreciendo(false);
     }
   };
 
@@ -358,6 +414,13 @@ export default function BandejaWhatsapp() {
     await recargarHilo();
     setAnuncio("Cita actualizada.");
   };
+  // «Ofrecer horarios»: necesita vacante y la ventana de 24 h abierta (el API responde 409 si no).
+  const opcionOfrecer = conversacion ? {
+    disponible: !!conversacion.vacante?.id_vacante && conversacion.ventana_abierta !== false,
+    motivo: !conversacion.vacante?.id_vacante ? "Sin vacante" : conversacion.ventana_abierta === false ? "Chat cerrado (más de 24 h)" : "",
+    cargando: ofreciendo,
+    onOfrecer: ofrecer,
+  } : null;
   const panel = (
     <PanelCandidato entrevista={entrevista} preguntasSinRespuesta={preguntasSinRespuesta} cargando={cargandoHilo && !hilo}
       onAtendido={atender} marcando={marcando} nombreAsistente={nombreAsistente} ahora={ahora}
@@ -486,6 +549,12 @@ export default function BandejaWhatsapp() {
                   onVerEvaluacion={() => setEvaluacionAbierta(true)}
                   requiereAtencion={entrevista?.requiere_atencion === true}
                   onSeguimiento={seguimiento}
+                  onEnviarAdjunto={enviarArchivo}
+                  citas={hilo ? citasDelChat(hilo) : null}
+                  hoy={hoyMx(ahora)}
+                  onCitaCambio={alCambiarCitaChat}
+                  ofrecer={opcionOfrecer}
+                  lineas={lineas}
                 />
               </div>
             ) : null}
