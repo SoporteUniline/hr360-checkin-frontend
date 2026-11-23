@@ -6,6 +6,7 @@ import { useSnackbar } from "notistack";
 import { useAuth } from "@/context/AuthContext";
 import ConsentimientoRostro from "./ConsentimientoRostro";
 import AvisoRostroApp from "./AvisoRostroApp";
+import FirmaPinRh from "./FirmaPinRh";
 
 export default function TabReconocimiento({
   renderCampos = () => null,
@@ -313,6 +314,7 @@ export default function TabReconocimiento({
       {renderCampos("inicio", true)}
       <AvisoRostroApp idEmpleado={valores.id_empleado} />
       <ConsentimientoRostro idEmpresa={idEmpresa} idEmpleado={valores.id_empleado} nombre={nombreEmpleado} empresa={empresaNombre} />
+      <FirmaPinRh idEmpleado={valores.id_empleado} />
       {loadingModels ? (
         <div className="flex flex-col items-center gap-3 py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2563EB]"></div>

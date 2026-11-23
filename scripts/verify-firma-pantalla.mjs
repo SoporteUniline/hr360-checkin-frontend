@@ -110,6 +110,8 @@ try {
   const usuario = { id_usuario: -1, tipo_usuario: "Recruiter", id_empresa: 10, nombre: "RH Prueba", empresas: [10], empresas_detalle: [empresa], zona_horaria: "America/Mexico_City" };
   const emp = { id_empleado: 15, id_empresa: 10, nombre: "Ana", apellido_paterno: "Torres", apellido_materno: "Ruiz", correo: "ana@prueba.mx", estado: "Activo", nip: "1234", horarios: [] };
   let consultas = 0;
+  let pinRh = { ok: true, tiene_firma: true, tiene_pin: true, bloqueado_hasta: new Date(Date.now() + 10 * 60000).toISOString(), intentos_fallidos: 0, historial: [] };
+  const accionesPin = [];
   await rh.route("**/*", async (route) => {
     const req = route.request(); const url = new URL(req.url());
     if (url.origin === base && !url.pathname.startsWith("/api/")) return route.continue();
@@ -120,6 +122,18 @@ try {
     if (p === "/checador/empleados/15") return json(emp);
     if (p === "/checador/empleados") return json({ data: [emp], total: 1, page: 1, totalPages: 1 });
     if (p === "/checador/firma-digital/solicitudes/documento") return json({ success: true, solicitud: { id: 77, estatus: "firmado", signed_at: "2026-11-23 15:04:00", nombre_firmante: "Ana Torres Ruiz", tiene_documento_firmado: true } });
+    // (23/11/2026) Firma y PIN para RH: bloqueado → desbloquear; restablecer borra el PIN. RH nunca manda ni recibe el PIN.
+    if (p === "/checador/mi-espacio/firma/empleado/15" && req.method() === "GET") return json(pinRh);
+    if (p === "/checador/mi-espacio/firma/empleado/15/desbloquear" && req.method() === "POST") {
+      accionesPin.push(["desbloquear", req.postData()]);
+      pinRh = { ...pinRh, bloqueado_hasta: null, intentos_fallidos: 0, historial: [{ accion: "desbloquear", nombre_usuario: "RH Prueba", creado_en: "2026-11-23 20:00:00" }] };
+      return json({ ok: true, mensaje: "PIN desbloqueado. Ya puede volver a intentarlo.", ...pinRh });
+    }
+    if (p === "/checador/mi-espacio/firma/empleado/15/restablecer-pin" && req.method() === "POST") {
+      accionesPin.push(["restablecer", req.postData()]);
+      pinRh = { ...pinRh, tiene_pin: false, historial: [{ accion: "restablecer_pin", nombre_usuario: "RH Prueba", creado_en: "2026-11-23 20:05:00" }, ...pinRh.historial] };
+      return json({ ok: true, mensaje: "PIN restablecido.", ...pinRh });
+    }
     if (p === "/checador/firma-digital/solicitudes/77/evidencia") {
       consultas += 1;
       assert.equal(url.searchParams.get("id_empresa"), "10");
@@ -145,10 +159,35 @@ try {
   assert.deepEqual(fuera, [], "elementos fuera de la ventana «Quién firmó»");
   await d2.getByText(/expediente completo/).waitFor();
   await captura(rh, "quien-firmo");
+  await rh.keyboard.press("Escape");
+  await d2.waitFor({ state: "hidden" });
+
+  // ===== 3) Firma y PIN en la ficha (RH): bloqueado → desbloquear → restablecer, con confirmación =====
+  const sec = rh.locator("[data-firma-pin-rh]");
+  await sec.waitFor({ timeout: 15000 });
+  assert.equal(await sec.locator("[data-pin-estado]").innerText(), "Bloqueado");
+  await sec.getByRole("button", { name: "Desbloquear PIN" }).click();
+  const conf = rh.getByRole("dialog", { name: "Desbloquear PIN" });
+  await conf.getByRole("button", { name: "Desbloquear", exact: true }).click();
+  await conf.waitFor({ state: "hidden" });
+  await sec.locator('[data-pin-estado="Activo"]').waitFor();
+  assert.equal(await sec.getByRole("button", { name: "Desbloquear PIN" }).count(), 0, "ya no está bloqueado");
+  await sec.getByText(/RH Prueba desbloqueó el PIN/).waitFor();
+  await sec.getByRole("button", { name: "Restablecer PIN" }).click();
+  const conf2 = rh.getByRole("dialog", { name: "Restablecer PIN" });
+  await conf2.getByText(/tendrá que crear uno nuevo en su app/).waitFor();
+  await captura(rh, "pin-rh-restablecer");
+  await conf2.getByRole("button", { name: "Restablecer PIN" }).click();
+  await conf2.waitFor({ state: "hidden" });
+  await sec.locator('[data-pin-estado="Sin PIN"]').waitFor();
+  assert.equal(await sec.getByRole("button", { name: /Restablecer PIN|Desbloquear PIN/ }).count(), 0);
+  assert.deepEqual(accionesPin.map((a) => a[0]), ["desbloquear", "restablecer"]);
+  assert.ok(accionesPin.every((a) => !a[1] || !/pin/i.test(a[1])), "RH nunca manda un PIN");
+  await captura(rh, "pin-rh");
 
   assert.deepEqual(errores, []);
   exito = true;
-  console.log("OK: firma a pantalla completa (vertical pide girar, horizontal amplio, botón a la vista), PDF por nuestro servidor, «Quién firmó» con foto para RH");
+  console.log("OK: firma a pantalla completa (vertical pide girar, horizontal amplio, botón a la vista), PDF por nuestro servidor, «Quién firmó» con foto para RH, Firma y PIN para RH (desbloquear y restablecer con confirmación)");
 } finally {
   await browser.close();
   next.kill();
