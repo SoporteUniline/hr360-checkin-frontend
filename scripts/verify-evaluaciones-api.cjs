@@ -514,18 +514,19 @@ const jwt = () => {
     await go(p);
     await page.locator("h1").first().waitFor();
   }
-  // Menos vistas: RH ve Campañas y Plantillas (y «Por responder» porque tiene una asignada) y el engrane.
+  // Menos vistas: RH ve Campañas, Plantillas (y «Por responder» porque tiene una asignada) y Configuración
+  // (23/11/2026: antes era un engrane; ahora es vista propia con su entrada en el menú).
   const pestanas = () => page.locator(".ev-nav a").allInnerTexts();
   await go("");
   await page.getByRole("heading", { name: "Campañas de evaluación" }).waitFor();
-  assert.deepEqual(await pestanas(), ["Campañas", "Plantillas", "Por responder"]);
+  await page.waitForURL("**/panel/evaluaciones/campanas");
+  assert.deepEqual(await pestanas(), ["Campañas", "Plantillas", "Por responder", "Configuración"]);
   assert.equal(await page.locator('.ev-nav a[aria-current="page"]').innerText(), "Campañas");
   await page.getByText("Resumen de todas las campañas").waitFor();
-  assert.equal(await page.getByRole("link", { name: "Ajustes de evaluaciones" }).count(), 1);
-  // Enlaces viejos (Tablero, Resultados, Seguimiento) llevan a la entrada del módulo.
+  // Enlaces viejos (Tablero, Resultados, Seguimiento) llevan a la entrada del módulo, que abre Campañas.
   for (const viejo of ["/tablero", "/resultados", "/seguimiento"]) {
     await page.goto(base + "/panel/evaluaciones" + viejo);
-    await page.waitForURL(base + "/panel/evaluaciones");
+    await page.waitForURL(base + "/panel/evaluaciones/campanas");
   }
   // La campaña en una pantalla: pasos y una fila por persona con su resultado y su plan.
   await go("/campanas/7");
@@ -544,7 +545,7 @@ const jwt = () => {
   await go("/mis-evaluaciones");
   await page.getByText("Acceso limitado", { exact: true }).waitFor();
   assert.deepEqual(await pestanas(), ["Por responder", "Mis resultados"]);
-  assert.equal(await page.getByRole("link", { name: "Ajustes de evaluaciones" }).count(), 0);
+  assert.equal(await page.locator('.ev-nav a', { hasText: "Configuración" }).count(), 0);
   await go("/plantillas");
   await page.getByText("No tienes acceso a esta sección").waitFor();
   console.log("PASS: employee scopes and omitted scores");
