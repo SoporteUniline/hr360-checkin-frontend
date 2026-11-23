@@ -386,9 +386,11 @@ export default function TabReconocimiento({
               )}
             </div>
           )}
-          {!soloLectura ? (
-            <div className="mt-4 grid gap-2 border-t border-slate-100 pt-4">
-              <p className="text-slate-600">¿Es difícil con la cámara de la computadora? La persona puede tomarlo con su celular.</p>
+          {/* (23/11/2026) También en modo «ver»: el QR guarda el rostro directo en el servidor (con su permiso de RH), no
+              depende de guardar la ficha. Antes se ocultaba y en la ficha abierta en solo lectura no aparecía. */}
+          {valores.id_empleado || !soloLectura ? (
+            <div className="mt-4 grid gap-2 border-t border-slate-100 pt-4" data-rostro-celular-bloque>
+              <p className="text-slate-600">{soloLectura ? "¿Registrar o actualizar su rostro? La persona puede tomarlo con su celular." : "¿Es difícil con la cámara de la computadora? La persona puede tomarlo con su celular."}</p>
               {valores.id_empleado ? (
                 <RostroCelular idEmpleado={valores.id_empleado} nombre={nombreEmpleado} onRegistrado={alRegistrarDesdeCelular} onAbrir={stopCamera} />
               ) : (
