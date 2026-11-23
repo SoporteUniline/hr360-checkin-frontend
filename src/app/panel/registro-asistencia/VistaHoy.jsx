@@ -16,6 +16,7 @@ import {
 import { formatearMinutos } from "@/lib/asistencia/jornada.mjs";
 import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
 import { useCuentasHoras } from "./CuentaHorasContext";
+import CeldaComida from "./CeldaComida";
 
 const nombreDe = (r) => [r.nombre, r.apellido_paterno].filter(Boolean).join(" ");
 const iniciales = (r) => `${r.nombre?.[0] ?? ""}${r.apellido_paterno?.[0] ?? ""}`.toUpperCase() || "?";
@@ -109,12 +110,12 @@ function Renglon({ r, onAbrirDia, debe }) {
       </span>
       <span className="hidden whitespace-nowrap text-[13px] tabular-nums text-slate-900 lg:block" data-col="entrada">{c.entrada ?? <span className="text-slate-400">—</span>}</span>
       <span className="hidden whitespace-nowrap text-[13px] tabular-nums text-slate-900 lg:block" data-col="salida">{c.salida ?? <span className="text-slate-400">—</span>}</span>
-      <span className={`hidden text-[13px] tabular-nums lg:block ${c.enComida ? "font-semibold text-yellow-800" : "text-slate-700"}`} data-col="comida">{c.comida ?? <span className="text-slate-400">—</span>}</span>
+      <span className="hidden lg:block" data-col="comida"><CeldaComida c={c.comida} /></span>
       {c.entrada || c.comida ? (
         <span className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs tabular-nums text-slate-600 lg:hidden">
           <span>Entrada <b className="text-slate-900">{c.entrada ?? "—"}</b></span>
           <span>Salida <b className="text-slate-900">{c.salida ?? "—"}</b></span>
-          {c.comida ? <span>Comida <b className="text-slate-900">{c.comida}</b></span> : null}
+          {c.comida ? <span className="inline-flex items-center gap-1">Comida <CeldaComida c={c.comida} /></span> : null}
         </span>
       ) : null}
       {d.jornada ? (

@@ -355,17 +355,29 @@ export function textoFechaHoy(zona, fecha = new Date(), { corto = false } = {}) 
 // (23/11/2026, pedido del dueño) Columnas Entrada / Salida / Comida de la vista Hoy: horas reales del día.
 // - Entrada: la primera checada de entrada.
 // - Salida: la última salida, solo si ya no tiene un tramo abierto ni está en comida (la salida a comer no es su salida).
-// - Comida: «11:34 a.m. – …» mientras come; «11:34 a.m. – 12:30 p.m. · 56 min» cuando regresó.
+// - Comida: solo el tiempo («26 min»), si sigue en comida y si se pasó; las horas en `detalle` (tooltip).
 export function checadasDelDia(r) {
   const d = r.dia;
   const h = (v) => (v ? horaDe(marcaEnMinutos(v)) : null);
   const entrada = h(d.tramos[0]?.entrada ?? d.abierto);
   const enComida = Boolean(d.comida?.salida && !d.comida.regreso);
   const salida = d.hayAbierto || enComida || r.estado === "en_comida" ? null : h(d.tramos.at(-1)?.salida);
+  // Comida: solo el tiempo y si se pasó (misma celda que Registros: { texto, excedida, enCurso, detalle }).
   let comida = null;
   if (d.comida?.salida) {
-    const minutos = d.comida.minutos == null ? NaN : Number(d.comida.minutos);
-    comida = `${h(d.comida.salida)} – ${d.comida.regreso ? h(d.comida.regreso) : "…"}${d.comida.regreso && Number.isFinite(minutos) ? ` · ${minutos} min` : ""}`;
+    const de = Number(d.minutosComida) || null;
+    const detalle = `${h(d.comida.salida)}–${d.comida.regreso ? h(d.comida.regreso) : "…"}${de ? ` · de ${de} min` : ""}`;
+    if (enComida) {
+      const lleva = r.estado === "en_comida" && r.llevaComida != null ? r.llevaComida : null;
+      comida = lleva == null
+        ? { texto: "En comida", excedida: false, enCurso: true, detalle }
+        : { texto: formatearMinutos(lleva), excedida: Boolean(r.sePasoComida), enCurso: true, detalle };
+    } else {
+      const minutos = d.comida.minutos == null ? null : Number(d.comida.minutos);
+      comida = Number.isFinite(minutos)
+        ? { texto: formatearMinutos(minutos), excedida: de != null && minutos > de, enCurso: false, detalle }
+        : null;
+    }
   }
   return { entrada, salida, comida, enComida };
 }

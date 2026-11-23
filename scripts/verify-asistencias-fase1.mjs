@@ -134,7 +134,11 @@ try {
   assert.match(await filaTramos.innerText(), /8 h 13 min de 8 h[\s\S]*Descanso 1 h/);
   assert.doesNotMatch(await filaTramos.innerText(), /No marcó salida a comer/);
   const filaBoton = page.locator("tr", { hasText: "ComidaBoton Prueba" }).first();
-  assert.match(await filaBoton.innerText(), /1:00 p\.m\.–2:05 p\.m\. · 65 de 60 min · \+5 min/);
+  // Comida: solo el tiempo, en rojo porque se pasó; las horas van en el tooltip.
+  const celdaComida = filaBoton.locator("[data-comida]");
+  assert.equal(await celdaComida.getAttribute("data-comida"), "excedida");
+  assert.match(await celdaComida.innerText(), /^1 h 5 min/);
+  assert.match(await celdaComida.getAttribute("title"), /1:00 p\.m\.–2:05 p\.m\. · de 60 min/);
   assert.doesNotMatch(await filaBoton.innerText(), /Descanso 1 h 5 min/, "la comida no se repite en Jornada");
   assert.equal(await page.getByRole("columnheader", { name: "Comida", exact: true }).count(), 1, "columna «Comida» visible");
   const alertaComida = page.getByRole("button", { name: /No marcaron salida a comer/ });
