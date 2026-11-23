@@ -54,6 +54,7 @@ import { toPng } from "html-to-image";
 import { qrComoDataUrl } from "@/lib/qrImagen.mjs";
 import { copiarValores, hayCambiosPendientes, valoresIguales } from "@/lib/cambiosPendientes.mjs";
 import { useGuardiaSalida } from "@/components/cambios/CambiosPendientes";
+import { fechaParaInput } from "@/lib/fechaInput.mjs";
 
 // (23/11/2026) Campos que no cuentan como «cambios sin guardar»: las horas por día y de comida se recalculan solas a
 // partir de los horarios (que sí cuentan) y el rostro se revisa aparte (solo cuenta si RH capturó uno nuevo).
@@ -262,6 +263,8 @@ export default function FormularioEmpleado({
       form.reset({
         ...restoEmpleado,
         campos_personalizados: parseCampos(restoEmpleado.campos_personalizados),
+        fecha_nacimiento: fechaParaInput(restoEmpleado.fecha_nacimiento),
+        fecha_ingreso: fechaParaInput(restoEmpleado.fecha_ingreso),
 
         nip: restoEmpleado.nip ?? "",
         periodo_pago: restoEmpleado.periodo_pago ?? "sin-seleccion",

@@ -32,6 +32,12 @@ const DIAS_SEMANA = [
   "Domingo",
 ];
 
+
+// (23/11/2026) El turno asignado se trae del servidor UNA vez por ficha abierta (por formulario y empleado). Antes se
+// volvía a pedir cada vez que se entraba a la pestaña (la pestaña se desmonta al cambiar) y pisaba el turno que RH
+// acababa de elegir sin guardar.
+const turnoYaCargado = new WeakMap(); // form.control → id del empleado cuyo turno ya se cargó
+
 export default function TabJornada({ renderCampos = () => null, form, soloLectura, empleadoId, sincronizarCampo }) {
   const [diasSeleccionados, setDiasSeleccionados] = useState([]);
   const [entradaComun, setEntradaComun] = useState("");
@@ -203,6 +209,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
 
   useEffect(() => {
     if (!empleadoId) return;
+    if (turnoYaCargado.get(form.control) === empleadoId) return;
 
     // Si el usuario ya cambió manualmente el tipo de horario
     // durante esta edición, no pisamos su selección.
@@ -216,6 +223,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
 
     // (23/11/2026) El turno que ya tiene asignado viene del servidor: es la base de la ficha, no un cambio sin guardar.
     const fijarTurno = (tipo, idTurno) => {
+      turnoYaCargado.set(form.control, empleadoId);
       if (sincronizarCampo) {
         sincronizarCampo("tipo_horario", tipo);
         sincronizarCampo("id_turno", idTurno);

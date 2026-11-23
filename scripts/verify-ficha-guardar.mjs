@@ -260,6 +260,34 @@ try {
   assert.equal(await dialogo(pg).count(), 0, "sin cambios no pregunta");
   assert.ok(largoSinCambios > 0);
   pasos.push("9 guardar limpia");
+
+  // 11) (23/11/2026) Fechas que llegan con hora se ven en el campo; el turno elegido no se pierde al cambiar de pestaña.
+  await abrirDesdeTabla(pg);
+  await pg.getByRole("tab", { name: "Personal" }).click();
+  await pg.waitForFunction(() => document.querySelector('#formulario-empleado input[name="fecha_nacimiento"]')?.value === "1990-05-02", null, { timeout: 5000 })
+    .catch(async () => assert.fail(`fecha de nacimiento visible: «${await ficha(pg).locator('input[name="fecha_nacimiento"]').inputValue()}»`));
+  await pg.getByRole("tab", { name: "Trabajo" }).click();
+  const ingreso = ficha(pg).locator('input[name="fecha_ingreso"]');
+  if (await ingreso.count()) assert.equal(await ingreso.inputValue(), "2024-01-15", "fecha de ingreso visible");
+  await dormir(900);
+  assert.equal(await estado(pg), "sin-cambios", "fechas normalizadas no cuentan como cambio");
+  const personalizado = ficha(pg).getByRole("button", { name: /Horario personalizado/ });
+  const marcado = (b) => b.evaluate((el) => el.className.includes("border-brand"));
+  assert.equal(await marcado(ficha(pg).getByRole("button", { name: /Turno existente/ })), true, "abre con su turno");
+  await personalizado.click();
+  assert.equal(await marcado(personalizado), true);
+  assert.equal(await estado(pg), "pendientes");
+  await pg.getByRole("tab", { name: "Personal" }).click();
+  await dormir(500);
+  await pg.getByRole("tab", { name: "Trabajo" }).click();
+  await dormir(1200); // tiempo de sobra para que llegue el turno del servidor
+  assert.equal(await marcado(ficha(pg).getByRole("button", { name: /Horario personalizado/ })), true, "el cambio de turno se conserva al volver a la pestaña");
+  assert.equal(await estado(pg), "pendientes", "sigue contando como cambio sin guardar");
+  await pg.getByRole("button", { name: "Regresar a la tabla" }).click();
+  await preguntaVisible(pg);
+  await dialogo(pg).getByRole("button", { name: "Salir sin guardar" }).click();
+  await enTabla(pg);
+  pasos.push("11 fechas con hora y turno al cambiar de pestaña");
   await ctx.close();
 
   // 10) Teléfono a 390 px: abre editable desde la lista; barra inferior con Guardar; el diálogo cabe.
