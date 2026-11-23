@@ -44,10 +44,13 @@ export function normalizarPuntaje(valor) {
   return Math.min(5, Math.max(1, n));
 }
 
-// Consentimiento: true (aceptó), false (no aceptó) o null (aún no responde).
+// Consentimiento: el API manda "aceptado" | "rechazado" | "pendiente" (antes true/false/null). Se aceptan las dos formas.
+export function consentimientoAceptado(consentimiento) {
+  return consentimiento === true || consentimiento === "aceptado";
+}
 export function textoConsentimiento(consentimiento) {
-  if (consentimiento === true) return "Aceptó el aviso de privacidad";
-  if (consentimiento === false) return "No aceptó el aviso de privacidad";
+  if (consentimientoAceptado(consentimiento)) return "Aceptó el aviso de privacidad";
+  if (consentimiento === false || consentimiento === "rechazado") return "No aceptó el aviso de privacidad";
   return "Aún no responde al aviso de privacidad";
 }
 

@@ -9,7 +9,7 @@ import { AlertTriangle, CalendarCheck2, CalendarPlus, CheckCircle2, HelpCircle, 
 import { Button } from "@/components/ui/button";
 import { tiempoRelativo } from "@/lib/whatsapp/tiempo.mjs";
 import {
-  PUNTAJES, etiquetaEtapa, etiquetaSeveridad, normalizarPuntaje, textoConsentimiento, textoPreguntaActual,
+  PUNTAJES, etiquetaEtapa, etiquetaSeveridad, normalizarPuntaje, textoConsentimiento, consentimientoAceptado, textoPreguntaActual,
 } from "@/lib/whatsapp/entrevista.mjs";
 import { citaActiva, necesitaAprobacionAgenda } from "@/lib/whatsapp/agenda.mjs";
 import { ChipCalificacion } from "./controles";
@@ -99,7 +99,7 @@ export default function PanelCandidato({
         </div>
         {entrevista.nombre ? <p className="text-[15px] font-bold text-gray-900 [overflow-wrap:anywhere]">{entrevista.nombre}</p> : null}
         <p className="flex items-center gap-1.5 text-[12.5px] text-gray-600">
-          <UserRoundCheck className={`size-4 ${entrevista.consentimiento === true ? "text-emerald-600" : "text-gray-400"}`} aria-hidden="true" />
+          <UserRoundCheck className={`size-4 ${consentimientoAceptado(entrevista.consentimiento) ? "text-emerald-600" : "text-gray-400"}`} aria-hidden="true" />
           {textoConsentimiento(entrevista.consentimiento)}
         </p>
       </div>
