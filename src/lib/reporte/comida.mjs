@@ -39,6 +39,28 @@ export function comidaExcedida(comida, ahora) {
   return (comidaEnCurso(comida, ahora)?.excedente ?? 0) > 0;
 }
 
+// (23/11/2026, pedido del dueño) Celda de comida en pantalla: SOLO el tiempo («26 min», «1 h 12 min») y si se pasó,
+// para pintarla en rojo. Las horas van en `detalle` (tooltip). Excel/PDF siguen con textoComida (más completo).
+const duracion = (min) => {
+  const n = Math.max(0, Math.round(Number(min) || 0));
+  const h = Math.floor(n / 60);
+  const m = n % 60;
+  return h && m ? `${h} h ${m} min` : h ? `${h} h` : `${m} min`;
+};
+export function celdaComida(comida, formatoHora = hhmm, ahora = null) {
+  if (!comida?.salida) return null;
+  const detalle = `${formatoHora(comida.salida)}–${comida.regreso ? formatoHora(comida.regreso) : "…"}`;
+  if (comida.minutos == null) {
+    const c = comidaEnCurso(comida, ahora);
+    if (!c) return { texto: "En comida", excedida: false, enCurso: true, detalle };
+    return { texto: duracion(c.lleva), excedida: c.excedente > 0, enCurso: true, detalle: `${detalle}${c.programados ? ` · de ${c.programados} min` : ""}` };
+  }
+  return {
+    texto: duracion(comida.minutos), excedida: Number(comida.excedente) > 0, enCurso: false,
+    detalle: `${detalle}${comida.minutos_programados ? ` · de ${comida.minutos_programados} min` : ""}`,
+  };
+}
+
 // Texto corto de una comida del día. Sin comida checada → "" (la columna queda vacía).
 // `ahora` (opcional, ahoraBase()): con la comida abierta dice cuánto lleva y cuánto se ha pasado.
 export function textoComida(comida, formatoHora = hhmm, ahora = null) {

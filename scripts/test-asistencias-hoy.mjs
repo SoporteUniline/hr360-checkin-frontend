@@ -256,12 +256,16 @@ test("checadas del día: entrada, salida y comida reales; la salida a comer no e
   const { checadasDelDia } = await import("../src/lib/asistencia/hoy.mjs");
   const base = { tramos: [], hayAbierto: false, abierto: null, comida: null };
   // En comida: un tramo cerrado a las 11:34 y la comida abierta.
-  const comiendo = checadasDelDia({ estado: "en_comida", dia: { ...base, tramos: [{ entrada: "2026-11-23 09:18:00", salida: "2026-11-23 11:34:00" }], comida: { salida: "2026-11-23 11:34:00", regreso: null, minutos: null } } });
-  assert.deepEqual(comiendo, { entrada: "9:18 a.m.", salida: null, comida: "11:34 a.m. – …", enComida: true });
+  const diaComiendo = { ...base, minutosComida: 60, tramos: [{ entrada: "2026-11-23 09:18:00", salida: "2026-11-23 11:34:00" }], comida: { salida: "2026-11-23 11:34:00", regreso: null, minutos: null } };
+  const comiendo = checadasDelDia({ estado: "en_comida", llevaComida: 26, sePasoComida: false, dia: diaComiendo });
+  assert.deepEqual(comiendo, { entrada: "9:18 a.m.", salida: null, enComida: true, comida: { texto: "26 min", excedida: false, enCurso: true, detalle: "11:34 a.m.–… · de 60 min" } });
+  // Ya se pasó: solo el tiempo y excedida (rojo).
+  const pasado = checadasDelDia({ estado: "en_comida", llevaComida: 72, sePasoComida: true, dia: diaComiendo });
+  assert.deepEqual([pasado.comida.texto, pasado.comida.excedida], ["1 h 12 min", true]);
   // Regresó de comer y sigue trabajando (tramo abierto): sin salida, comida con minutos.
-  const regreso = checadasDelDia({ estado: "trabajando", dia: { ...base, tramos: [{ entrada: "2026-11-23 09:00:00", salida: "2026-11-23 13:00:00" }], hayAbierto: true, abierto: "2026-11-23 13:56:00", comida: { salida: "2026-11-23 13:00:00", regreso: "2026-11-23 13:56:00", minutos: 56 } } });
+  const regreso = checadasDelDia({ estado: "trabajando", dia: { ...base, minutosComida: 60, tramos: [{ entrada: "2026-11-23 09:00:00", salida: "2026-11-23 13:00:00" }], hayAbierto: true, abierto: "2026-11-23 13:56:00", comida: { salida: "2026-11-23 13:00:00", regreso: "2026-11-23 13:56:00", minutos: 56 } } });
   assert.equal(regreso.salida, null);
-  assert.equal(regreso.comida, "1:00 p.m. – 1:56 p.m. · 56 min");
+  assert.deepEqual(regreso.comida, { texto: "56 min", excedida: false, enCurso: false, detalle: "1:00 p.m.–1:56 p.m. · de 60 min" });
   // Ya salió.
   const salio = checadasDelDia({ estado: "ya_salio", dia: { ...base, tramos: [{ entrada: "2026-11-23 09:00:00", salida: "2026-11-23 13:00:00" }, { entrada: "2026-11-23 14:00:00", salida: "2026-11-23 18:05:00" }] } });
   assert.deepEqual([salio.entrada, salio.salida, salio.comida], ["9:00 a.m.", "6:05 p.m.", null]);

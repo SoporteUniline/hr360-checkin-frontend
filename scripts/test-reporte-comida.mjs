@@ -32,3 +32,14 @@ test("comida abierta: lleva X de Y min y, si ya se pasó, ⚠ se pasó N min", a
   // Sin tiempo de comida en su horario: dice cuánto lleva, sin alerta.
   assert.equal(textoComida({ ...abierta, minutos_programados: null }, undefined, a("12:40")), "11:34 a.m.–… · en comida · lleva 66 min");
 });
+
+test("celda de comida: solo el tiempo y si se pasó", async () => {
+  const { celdaComida, ahoraBase } = await import("../src/lib/reporte/comida.mjs");
+  const a = (hhmm) => ahoraBase(new Date(`2026-11-23T${hhmm}:00-06:00`));
+  const abierta = { salida: "2026-11-23 11:34:00", regreso: null, minutos: null, minutos_programados: 30, excedente: 0 };
+  assert.deepEqual(celdaComida(abierta, undefined, a("11:50")), { texto: "16 min", excedida: false, enCurso: true, detalle: "11:34 a.m.–… · de 30 min" });
+  assert.deepEqual([celdaComida(abierta, undefined, a("12:24")).texto, celdaComida(abierta, undefined, a("12:24")).excedida], ["50 min", true]);
+  const cerrada = { ...abierta, regreso: "2026-11-23 12:24:00", minutos: 50, excedente: 20 };
+  assert.deepEqual(celdaComida(cerrada), { texto: "50 min", excedida: true, enCurso: false, detalle: "11:34 a.m.–12:24 p.m. · de 30 min" });
+  assert.equal(celdaComida(null), null);
+});

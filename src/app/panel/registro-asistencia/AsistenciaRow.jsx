@@ -15,7 +15,8 @@ import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
 import { useEmpresaTimezone } from "@/context/AuthContext";
 import { calcularResumenJornada, formatearMinutos } from "@/utils/asistenciaHoras";
 import { minutosDescanso, sinSalidaAComer } from "@/lib/asistencia/jornada.mjs";
-import { ahoraBase, comidaExcedida, textoComida } from "@/lib/reporte/comida.mjs";
+import { ahoraBase, celdaComida } from "@/lib/reporte/comida.mjs";
+import CeldaComida from "./CeldaComida";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -271,9 +272,9 @@ export default function AsistenciaRow({
 
             {isColVisible("comida") && (
               // (23/11/2026) Comida marcada con «Salir a comer»: horario, minutos de su tiempo y si se pasó.
-              // Abierta y ya pasó su tiempo → en rojo con cuánto se ha pasado (pedido del 23/11/2026).
-              <TableCell className={`min-w-[150px] text-center text-xs ${comidaExcedida(registro.comida_checada, ahoraBase()) ? "font-semibold text-red-600" : "text-slate-600"}`}>
-                {registro.comida_checada ? textoComida(registro.comida_checada, horaVer, ahoraBase()) : <span className="text-slate-300">—</span>}
+              // Solo el tiempo de comida; en rojo si se pasó (abierta o cerrada). Las horas en el tooltip (23/11/2026).
+              <TableCell className="min-w-[110px] text-center text-xs">
+                <CeldaComida c={celdaComida(registro.comida_checada, horaVer, ahoraBase())} />
               </TableCell>
             )}
 
