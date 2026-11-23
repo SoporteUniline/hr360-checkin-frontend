@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { NavMain } from "./nav-main";
+import { NavMain, NavMainConConsulta } from "./nav-main";
 import { NavUser } from "./nav-user";
 import {
   Sidebar,
@@ -66,7 +66,10 @@ export function AppSidebar({ ...props }) {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain />
+        {/* useSearchParams necesita Suspense; mientras tanto, el menú sin la vista de la URL. */}
+        <React.Suspense fallback={<NavMain />}>
+          <NavMainConConsulta />
+        </React.Suspense>
       </SidebarContent>
       <SidebarFooter>
         <NavUser />

@@ -22,6 +22,7 @@ import { crc32, deflateSync } from "node:zlib";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { hoyMx, inicioSemana, sumarDias } from "../src/lib/whatsapp/agenda.mjs";
+import { lineaAhora, rangoAgenda } from "../src/lib/whatsapp/calendario.mjs";
 import { LIMITE_ADJUNTO, MENSAJE_ARCHIVO_GRANDE, MENSAJE_MICRO_DENEGADO, MENSAJE_TIPO_NO_PERMITIDO, lineaCita } from "../src/lib/whatsapp/adjuntos.mjs";
 import { MENSAJE_SIN_HORARIOS } from "../src/lib/whatsapp/reglas.mjs";
 
@@ -437,6 +438,7 @@ try {
   for (let i = 0; ; i++) { try { if ((await fetch(base + "/login")).status) break; } catch { /* aún no arranca */ } if (i > 200) throw new Error("Next no arrancó"); await dormir(150); }
   const errores = [];
   // SOLO_CHAT=1: corre solo el bloque del chat todo-en-uno (para iterar rápido).
+  if (process.env.SOLO_AGENDA) { await agendaCalendario(browser, errores); assert.deepEqual(errores, []); exito = true; console.log("OK agenda"); throw new Error("__solo__"); }
   if (process.env.SOLO_CHAT) { await chatTodoEnUno(browser, errores); assert.deepEqual(errores, []); exito = true; console.log("OK chat todo-en-uno"); throw new Error("__solo__"); }
 
   // ——— 1. Bandeja en escritorio ———
@@ -1440,10 +1442,11 @@ try {
   await movR3.close();
 
   await chatTodoEnUno(browser, errores);
+  await agendaCalendario(browser, errores);
 
   assert.deepEqual(errores, [], "sin errores de JavaScript");
   exito = true;
-  console.log("OK whatsapp · chat todo-en-uno: imagen con visor (zoom, teclado, Bearer sin token en URL), nota de voz (transcripción, reproducir, velocidad), documento (descargar ?descargar=1, abrir), ubicación (Google Maps), estados descargando/fallido, subida PNG con comentario y PDF arrastrado (multipart archivo/texto, avance), pegar imagen, rechazo 16 MB+ y .exe, 413, cancelar envío, grabadora (webm/opus, cancelar, nota_voz=1, micrófono negado), cita fija (confirmar, no asistió, agendar, mover, cancelar con líneas de sistema), ofrecer horarios (tarjeta y «+», 409 WA_SIN_HORARIOS), selector sin horarios (migración, días vacíos, agenda sin configurar → Configurar agenda), teléfono ≥44 px sin desborde · lista con no leídos y control · abrir chat lo marca leído (GET) · sondeo 3 s · tomar control habilita y envía {texto} con «Enviando…» · Shift+Enter · 403/409 con texto conservado · envío rechazado (200 «fallido») y reintentos · archivos como «[Archivo: tipo]» · invitado con mismo id y otro correo no controla · devolver a IA · ventana 24 h y control ajeno · enlace de vacante copiado y 409 apagado · paginación real (pagina=2, sondeo solo página 1, sin duplicados) · enlaces de vacantes (lista, búsqueda, copiar, 409/503, vacío, hoja en teléfono) · búsqueda q · móvil a pantalla completa con volver · apagado · admin valida, muestra 409 y manda PUT · R2: agente (validación, horario, copiar lunes, palabras, 400, PUT, nombre en burbujas, cambios sin guardar) · entrevista por vacante (conteo perezoso, validación, rango número, opciones descarta/alerta excluyentes, reordenar con foco, máx. 8, 400, PUT) · filtros atencion=1 / calificacion · evaluación (puntajes, respuestas con severidad, sin respuesta) · marcar atendido · hoja <1280 · teléfono ≥44 px sin desborde · 27/11: interruptor de la bolsa (GET, PUT {publicar_bolsa}, falla y regresa, también con WhatsApp apagado) · copiar enlace de la vacante (/vacante/<slug>) · WhatsApp apagado avisa · chip de entrevistas con y sin paquete y aviso de extras · admin: paquete, extras, importe y PUT con entrevistas_incluidas · bolsa pública: /vacantes/filter y tira con ?bolsa=1 (vacía se oculta) · R3: agenda de la empresa (quién agenda, anticipación, días, horarios, recordatorios en minutos, plantillas, mensajes con marcadores en el cursor, vista previa, marcador desconocido, restaurar, 400, PUT) · agenda de la vacante (cupo, varios rangos con empalme, copiar a todos, bloqueo, override null vs valor, vista previa /horarios antes y después de guardar) · Entrevistas (calendario semanal con empalmes, filtros estado/vacante, lista, asistió, reagendar con 409 WA_SIN_CUPO, cancelar con motivo, confirmar, abrir chat) · agendar a mano y cita en el panel · aprobar para agendar · seguimiento con confirmación y 409 WA_SIN_PLANTILLA / WA_VENTANA_ABIERTA · plantillas del mes · teléfono: lista, hojas a pantalla completa, ≥44 px, sin desborde");
+  console.log("OK whatsapp · agenda tipo Google Calendar: menú «Entrevistas» a la vista real (sin maqueta, redirección del enlace viejo), semana/día, minicalendario, línea de ahora, horarios libres de la vacante, agendar aquí (POST /citas), arrastrar a un horario (confirmar, POST reagendar), 409 regresa la cita, selector del chat con la misma rejilla, teléfono con tira de días · chat todo-en-uno: imagen con visor (zoom, teclado, Bearer sin token en URL), nota de voz (transcripción, reproducir, velocidad), documento (descargar ?descargar=1, abrir), ubicación (Google Maps), estados descargando/fallido, subida PNG con comentario y PDF arrastrado (multipart archivo/texto, avance), pegar imagen, rechazo 16 MB+ y .exe, 413, cancelar envío, grabadora (webm/opus, cancelar, nota_voz=1, micrófono negado), cita fija (confirmar, no asistió, agendar, mover, cancelar con líneas de sistema), ofrecer horarios (tarjeta y «+», 409 WA_SIN_HORARIOS), selector sin horarios (migración, días vacíos, agenda sin configurar → Configurar agenda), teléfono ≥44 px sin desborde · lista con no leídos y control · abrir chat lo marca leído (GET) · sondeo 3 s · tomar control habilita y envía {texto} con «Enviando…» · Shift+Enter · 403/409 con texto conservado · envío rechazado (200 «fallido») y reintentos · archivos como «[Archivo: tipo]» · invitado con mismo id y otro correo no controla · devolver a IA · ventana 24 h y control ajeno · enlace de vacante copiado y 409 apagado · paginación real (pagina=2, sondeo solo página 1, sin duplicados) · enlaces de vacantes (lista, búsqueda, copiar, 409/503, vacío, hoja en teléfono) · búsqueda q · móvil a pantalla completa con volver · apagado · admin valida, muestra 409 y manda PUT · R2: agente (validación, horario, copiar lunes, palabras, 400, PUT, nombre en burbujas, cambios sin guardar) · entrevista por vacante (conteo perezoso, validación, rango número, opciones descarta/alerta excluyentes, reordenar con foco, máx. 8, 400, PUT) · filtros atencion=1 / calificacion · evaluación (puntajes, respuestas con severidad, sin respuesta) · marcar atendido · hoja <1280 · teléfono ≥44 px sin desborde · 27/11: interruptor de la bolsa (GET, PUT {publicar_bolsa}, falla y regresa, también con WhatsApp apagado) · copiar enlace de la vacante (/vacante/<slug>) · WhatsApp apagado avisa · chip de entrevistas con y sin paquete y aviso de extras · admin: paquete, extras, importe y PUT con entrevistas_incluidas · bolsa pública: /vacantes/filter y tira con ?bolsa=1 (vacía se oculta) · R3: agenda de la empresa (quién agenda, anticipación, días, horarios, recordatorios en minutos, plantillas, mensajes con marcadores en el cursor, vista previa, marcador desconocido, restaurar, 400, PUT) · agenda de la vacante (cupo, varios rangos con empalme, copiar a todos, bloqueo, override null vs valor, vista previa /horarios antes y después de guardar) · Entrevistas (calendario semanal con empalmes, filtros estado/vacante, lista, asistió, reagendar con 409 WA_SIN_CUPO, cancelar con motivo, confirmar, abrir chat) · agendar a mano y cita en el panel · aprobar para agendar · seguimiento con confirmación y 409 WA_SIN_PLANTILLA / WA_VENTANA_ABIERTA · plantillas del mes · teléfono: lista, hojas a pantalla completa, ≥44 px, sin desborde");
 } catch (e) { if (e?.message !== "__solo__") throw e; } finally { await browser.close(); next.kill(); if (!exito) process.exitCode = 1; }
 
 // ——— 22. Chat todo-en-uno: archivos, envío multipart, grabadora, cita fija, «Ofrecer horarios» y selector sin horarios ———
@@ -1862,6 +1865,171 @@ async function chatTodoEnUno(browser, errores) {
     assert.ok(await tamano(b) >= 44, "objetivo táctil ≥44 px en el visor");
   }
   if (OUT) await tel.screenshot({ path: OUT + "/chat-14-movil-visor.png" });
+  await movil.close();
+  await ctx.close();
+}
+
+// ——— 23. Agenda tipo Google Calendar: menú real, semana/día, minicalendario, horarios libres, agendar aquí, arrastrar ———
+async function agendaCalendario(browser, errores) {
+  S = estadoInicial();
+  S.reagendarComoServidor = true;
+  const hoy = hoyMx();
+  const lunes = inicioSemana(hoy);
+  const d1 = sumarDias(lunes, 1);
+  const d2 = sumarDias(lunes, 2);
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: "es-MX", timezoneId: "America/Mexico_City" });
+  await ctx.addCookies([{ name: "token", value: firmar("Recruiter"), url: base }]);
+  await instalarMocks(ctx, reclutadora);
+  const page = await ctx.newPage();
+  page.on("pageerror", (e) => errores.push(e.message));
+  // Menú «Reclutamiento → Entrevistas» abre la agenda real (no la maqueta) y se resalta solo esa entrada.
+  await page.goto(base + "/panel/whatsapp", { waitUntil: "domcontentloaded" });
+  await page.getByRole("list", { name: "Conversaciones" }).waitFor({ timeout: 30000 });
+  const entradaEntrevistas = page.getByRole("button", { name: "Entrevistas", exact: true });
+  await entradaEntrevistas.click();
+  await page.waitForURL(/\/panel\/whatsapp\?vista=entrevistas$/);
+  const cal = page.locator("[data-calendario-semana]");
+  await cal.locator("[data-bloque-cita]").first().waitFor({ timeout: 15000 });
+  assert.equal(await page.getByText("Vista de diseño").count(), 0, "sin la maqueta");
+  assert.equal(await page.getByText("Ana García").count(), 0, "sin datos de ejemplo");
+  assert.match(await entradaEntrevistas.getAttribute("class"), /bg-|text-/);
+  const claseEnt = await entradaEntrevistas.getAttribute("class");
+  const claseConv = await page.getByRole("button", { name: "Conversaciones (WhatsApp)" }).getAttribute("class");
+  assert.notEqual(claseEnt, claseConv, "en Entrevistas se resalta «Entrevistas» y no «Conversaciones»");
+  // Enlace viejo a la maqueta → agenda real.
+  const vieja = await ctx.newPage();
+  await vieja.goto(base + "/panel/reclutamiento/entrevistas", { waitUntil: "domcontentloaded" });
+  await vieja.waitForURL(/\/panel\/whatsapp\?vista=entrevistas$/, { waitUntil: "commit" });
+  await vieja.close();
+
+  // Semana: 7 columnas, hoy resaltado, línea de ahora (si la hora cae en el rango), bloques de citas y leyenda.
+  assert.equal(await cal.locator("[data-dia-calendario]").count(), 7);
+  assert.equal(await cal.locator(`[data-dia-calendario="${hoy}"][data-hoy]`).count(), 1);
+  const rango = rangoAgenda(S.citas, []);
+  const conLinea = lineaAhora(new Date(), hoy, rango.desde, rango.hasta, 80) !== null;
+  assert.equal(await cal.locator("[data-linea-ahora]").count(), conLinea ? 1 : 0, "línea roja de ahora");
+  assert.equal(await cal.locator("[data-bloque-cita]").count(), 4);
+  assert.match(await cal.locator('[data-bloque-cita="71"]').getAttribute("aria-label"), /Ana Ruiz, 10:00 a\.m\., Operador de montacargas, Confirmada/);
+  assert.match(await page.locator("[data-leyenda]").innerText(), /Agendada[\s\S]*Confirmada[\s\S]*Asistió[\s\S]*No asistió[\s\S]*Cancelada/);
+  assert.equal(await cal.locator("[data-horario-libre]").count(), 0, "sin vacante elegida no hay horarios libres");
+  // Minicalendario: saltar a la semana siguiente y volver con «Hoy».
+  const sigLunes = sumarDias(lunes, 7);
+  await page.locator(`[data-mini-mes] [data-mini-dia="${sigLunes}"]`).click();
+  for (let i = 0; i < 50 && !pedidos.some((x) => x.ruta === "/citas" && x.params.includes(`desde=${sigLunes}`)); i++) await dormir(100);
+  assert.ok(pedidos.some((x) => x.ruta === "/citas" && x.params.includes(`desde=${sigLunes}&hasta=${sumarDias(sigLunes, 6)}`)), "el minicalendario cambia la semana");
+  await page.getByRole("button", { name: "Hoy", exact: true }).click();
+  await cal.locator('[data-bloque-cita="71"]').waitFor();
+  // Vista de día.
+  await page.getByRole("group", { name: "Vista" }).getByRole("button", { name: "Día" }).click();
+  await page.waitForFunction(() => document.querySelectorAll("[data-calendario-semana] [data-dia-calendario]").length === 1);
+  await page.getByRole("button", { name: "Día siguiente" }).waitFor();
+  assert.equal(await cal.locator("[data-bloque-cita]").count(), 3, "el día de hoy tiene 3 citas");
+  if (OUT) await page.screenshot({ path: OUT + "/agenda-02-dia.png" });
+  await page.getByRole("group", { name: "Vista" }).getByRole("button", { name: "Semana" }).click();
+  await page.waitForFunction(() => document.querySelectorAll("[data-calendario-semana] [data-dia-calendario]").length === 7);
+
+  // Vacante elegida: horarios libres «disponible · N lugares» (los llenos no se eligen).
+  await page.getByLabel("Vacante", { exact: true }).selectOption("55");
+  await cal.locator(`button[data-horario-libre="${d1} 09:00"]`).waitFor();
+  assert.ok(pedidos.some((x) => x.ruta === "/vacantes/55/agenda/horarios" && x.params === `?desde=${lunes}&dias=7`), "horarios de la semana visible");
+  assert.match(await cal.locator(`[data-horario-libre="${d2} 10:00"]`).innerText(), /10:00 a\.m\.[\s\S]*Disponible · Quedan 2 lugares/);
+  assert.match(await cal.locator(`[data-horario-lleno="${d1} 09:30"]`).innerText(), /Lleno/);
+  assert.equal(await cal.locator("button[data-horario-lleno]").count(), 0, "un horario lleno no es botón");
+  if (OUT) await page.screenshot({ path: OUT + "/agenda-01-semana.png" });
+  // Clic en un horario libre → «Agendar aquí» con la conversación del candidato → POST /citas.
+  await cal.locator(`button[data-horario-libre="${d2} 10:00"]`).click();
+  const aqui = page.getByRole("dialog", { name: "Agendar entrevista aquí" });
+  await aqui.locator("[data-candidatos]").waitFor();
+  assert.equal(await aqui.getByRole("radio").count(), 1, "solo conversaciones de la vacante");
+  await aqui.getByRole("button", { name: "Agendar aquí" }).click();
+  await aqui.getByRole("alert").filter({ hasText: "Elige al candidato." }).waitFor();
+  await aqui.getByRole("radio", { name: /Ana Ruiz/ }).check();
+  if (OUT) await page.screenshot({ path: OUT + "/agenda-03-agendar-aqui.png" });
+  await aqui.getByRole("button", { name: "Agendar aquí" }).click();
+  await aqui.waitFor({ state: "detached" });
+  assert.deepEqual(pedidos.filter((x) => x.ruta === "/citas" && x.metodo === "POST").at(-1).cuerpo, { id_conversacion: 1, id_vacante: 55, inicio: `${d2} 10:00` });
+  const nuevaId = S.siguienteCita - 1;
+  await cal.locator(`[data-bloque-cita="${nuevaId}"]`).waitFor();
+
+  // Arrastrar la cita 71 a un horario libre → confirmar → POST /citas/71/reagendar.
+  const arrastrar = async (origen, destino) => {
+    await destino.evaluate((el) => el.scrollIntoView({ block: "center", behavior: "instant" })); // la app usa scroll suave
+    const a = await origen.boundingBox();
+    await page.mouse.move(a.x + a.width / 2, a.y + Math.min(10, a.height / 2));
+    await page.mouse.down();
+    await page.mouse.move(a.x + a.width / 2 + 15, a.y + 20, { steps: 3 }); // empieza el arrastre
+    await page.locator("[data-fantasma]").waitFor();
+    const b = await destino.boundingBox();
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 12 });
+    await page.locator("[data-fantasma]").filter({ hasText: /→ \d/ }).waitFor();
+    await page.mouse.up();
+  };
+  await arrastrar(cal.locator('[data-bloque-cita="71"]'), cal.locator(`[data-horario-libre="${d1} 09:00"]`));
+  const conf = page.getByRole("dialog", { name: "Mover entrevista" });
+  await conf.waitFor();
+  assert.match(await conf.innerText(), /¿Mover la entrevista de Ana Ruiz del .* 10:00 a\.m\. al .* 9:00 a\.m\.\?/);
+  assert.equal(cuenta((x) => x.ruta === "/citas/71/reagendar"), 0, "pide confirmación antes de guardar");
+  if (OUT) await page.screenshot({ path: OUT + "/agenda-04-confirmar-mover.png" });
+  await conf.getByRole("button", { name: "Mover", exact: true }).click();
+  await conf.waitFor({ state: "detached" });
+  for (let i = 0; i < 50 && !cuenta((x) => x.ruta === "/citas/71/reagendar"); i++) await dormir(100);
+  assert.deepEqual(pedidos.find((x) => x.ruta === "/citas/71/reagendar").cuerpo, { inicio: `${d1} 09:00` });
+  const movidaId = S.citasPorConv[1]?.id ?? S.citas.at(-1).id;
+  await cal.locator(`[data-bloque-cita][data-inicio="${d1} 09:00"]`).first().waitFor();
+  assert.ok(movidaId);
+  // 409 WA_SIN_CUPO: aviso y la cita regresa a su lugar.
+  S.respuestasCita.push({ status: 409, cuerpo: { codigo: "WA_SIN_CUPO", error: "Sin cupo" } });
+  await arrastrar(cal.locator('[data-bloque-cita="72"]'), cal.locator(`[data-horario-libre="${d2} 10:00"]`));
+  await conf.waitFor();
+  await conf.getByRole("button", { name: "Mover", exact: true }).click();
+  await page.locator("[data-aviso-agenda]").filter({ hasText: "Ese horario ya se llenó. Elige otro de la lista." }).waitFor();
+  assert.equal(await cal.locator('[data-bloque-cita="72"]').getAttribute("data-inicio"), `${hoy} 10:00`, "la cita regresa a su lugar");
+  if (OUT) await page.screenshot({ path: OUT + "/agenda-05-409.png" });
+  // Alternativa sin arrastrar: abrir la cita → «Reagendar» → la misma rejilla con horarios libres.
+  await cal.locator('[data-bloque-cita="72"]').click();
+  const dlgCita = page.getByRole("dialog", { name: "Entrevista" });
+  await dlgCita.getByRole("button", { name: "Reagendar" }).click();
+  const re = page.getByRole("dialog", { name: "Reagendar entrevista" });
+  await re.locator("[data-calendario-horarios]").waitFor();
+  assert.ok(await re.locator("[data-calendario-horarios] input[type=radio]").count() >= 3, "el selector usa la rejilla de la agenda");
+  await re.locator(`[data-dia-horarios="${sumarDias(hoy, 2)}"]`).getByText("10:00 a.m.").click();
+  assert.equal(await re.getByRole("radio", { name: /10:00 a\.m\., Quedan 2 lugares/ }).isChecked(), true);
+  if (OUT) await page.screenshot({ path: OUT + "/agenda-06-selector-rejilla.png" });
+  await re.getByRole("button", { name: "Cancelar" }).click();
+  await re.waitFor({ state: "detached" });
+  await page.keyboard.press("Escape");
+  await page.close();
+
+  // Teléfono: tira de días, lista del día con horarios libres para tocar y «Agendar aquí» a pantalla completa.
+  const movil = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2, locale: "es-MX", timezoneId: "America/Mexico_City" });
+  await movil.addCookies([{ name: "token", value: firmar("Recruiter"), url: base }]);
+  await instalarMocks(movil, reclutadora);
+  const tel = await movil.newPage();
+  tel.on("pageerror", (e) => errores.push(e.message));
+  await tel.goto(base + "/panel/whatsapp?vista=entrevistas", { waitUntil: "domcontentloaded" });
+  const tira = tel.locator("[data-tira-dias]");
+  await tira.waitFor({ timeout: 30000 });
+  assert.equal(await tel.locator("[data-calendario-semana]").count(), 0, "en teléfono no hay rejilla de semana");
+  assert.equal(await tira.locator("[data-chip-dia]").count(), 7);
+  assert.equal(await tira.locator(`[data-chip-dia="${hoy}"]`).getAttribute("aria-pressed"), "true");
+  for (const chip of await tira.locator("[data-chip-dia]").all()) assert.ok(await tamano(chip) >= 44, "chip de día ≥44 px");
+  await tel.getByLabel("Vacante", { exact: true }).selectOption("55");
+  await tira.locator(`[data-chip-dia="${d2}"]`).tap();
+  const slotT = tel.locator(`[data-libres-dia] [data-horario-libre="${d2} 10:00"]`);
+  await slotT.waitFor();
+  assert.ok(await tamano(slotT) >= 44);
+  assert.ok(await sinScrollHorizontal(tel), "agenda en teléfono sin scroll horizontal");
+  if (OUT) await tel.screenshot({ path: OUT + "/agenda-07-movil-dia.png", fullPage: true });
+  await slotT.tap();
+  const aquiT = tel.getByRole("dialog", { name: "Agendar entrevista aquí" });
+  await aquiT.locator("[data-candidatos]").waitFor();
+  await dormir(300);
+  const cajaA = await aquiT.boundingBox();
+  assert.ok(cajaA.x === 0 && cajaA.width === 390, `agendar aquí a pantalla completa: ${JSON.stringify(cajaA)}`);
+  assert.ok(await tamano(aquiT.getByRole("button", { name: "Agendar aquí" })) >= 44);
+  if (OUT) await tel.screenshot({ path: OUT + "/agenda-08-movil-agendar-aqui.png" });
+  await aquiT.getByRole("button", { name: "Cancelar" }).tap();
+  await aquiT.waitFor({ state: "detached" });
   await movil.close();
   await ctx.close();
 }

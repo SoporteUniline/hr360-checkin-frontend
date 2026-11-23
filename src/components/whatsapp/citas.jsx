@@ -14,12 +14,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { mensajeErrorApi } from "@/lib/whatsapp/reglas.mjs";
 import { formatearTelefono } from "@/lib/whatsapp/telefono.mjs";
 import {
-  MENSAJE_AGENDA_SIN_CONFIGURAR, MENSAJE_SIN_MIGRACION_AGENDA, causaSinHorarios, accionesCita, agruparHorarios, etiquetaDiaLargo, etiquetaEstadoCita, fechaHoraCorta, horaTexto, sumarDias, textoLugares,
+  MENSAJE_AGENDA_SIN_CONFIGURAR, MENSAJE_SIN_MIGRACION_AGENDA, causaSinHorarios, accionesCita, agruparHorarios, diasDeSemana, etiquetaDiaLargo, etiquetaEstadoCita, fechaHoraCorta, horaTexto, sumarDias, textoLugares,
 } from "@/lib/whatsapp/agenda.mjs";
 import {
   cancelarCita, confirmarCita, marcarAsistencia, obtener, reagendarCita, rutaAgendaVacante, rutaHorarios,
 } from "./api";
 import AgendaVacante from "./AgendaVacante";
+import CalendarioAgenda, { useAncho } from "./CalendarioAgenda";
+import { rangoAgenda } from "@/lib/whatsapp/calendario.mjs";
 import { CLASE_ENTRADA, DIALOGO_PANTALLA_COMPLETA } from "./controles";
 
 export const TONOS_CITA = {
@@ -55,6 +57,10 @@ export function SelectorHorario({ idVacante, hoy, valor, onCambiar, soloLectura 
   const { data, error, isLoading, mutate } = useSWR(clave, obtener, { revalidateOnFocus: false });
   const { data: agenda, error: errorAgenda } = useSWR(!soloLectura && idVacante ? rutaAgendaVacante(idVacante) : null, obtener, { revalidateOnFocus: false, shouldRetryOnError: false });
   const dias = agruparHorarios(data?.horarios);
+  // Escritorio: semana tipo Google Calendar con los horarios libres para hacer clic; teléfono: lista por día.
+  const ancho = useAncho();
+  const conRejilla = ancho && !soloLectura;
+  const planos = dias.flatMap((d) => d.horarios);
   const hayLibres = dias.some((d) => d.horarios.some((h) => h.libres > 0));
   const causa = soloLectura ? null : causaSinHorarios({ agenda, errorAgenda, errorHorarios: error });
   const elegible = !causa && !error && !isLoading && hayLibres;
@@ -100,6 +106,12 @@ export function SelectorHorario({ idVacante, hoy, valor, onCambiar, soloLectura 
         <p className="rounded-lg border border-dashed border-gray-300 p-4 text-center text-[13px] text-gray-600" data-sin-horarios="vacio">
           No hay horarios en estos días. Revisa la agenda de la vacante (horario, bloqueos y anticipación) o mira los siguientes días.
         </p>
+      ) : conRejilla ? (
+        <div className="grid gap-2">
+          {!hayLibres ? <p className="text-[13px] font-medium text-amber-900">Todos los horarios de estos días están llenos.</p> : null}
+          <CalendarioAgenda dias={diasDeSemana(desde)} hoy={hoy} horarios={planos} {...rangoAgenda([], planos)} altoHora={88} marca="data-calendario-horarios"
+            maxAlto="min(52dvh, 30rem)" modoElegir seleccionado={valor} onHorario={(h) => onCambiar?.(h.inicio)} etiquetaGrupo="Horarios libres" />
+        </div>
       ) : (
         <div className="grid gap-3">
           {!hayLibres && !soloLectura ? <p className="text-[13px] font-medium text-amber-900">Todos los horarios de estos días están llenos.</p> : null}
@@ -173,7 +185,7 @@ export function DialogoHorario({ abierto, onCambiar, titulo, descripcion, idVaca
   };
   return (
     <Dialog open={abierto} onOpenChange={(v) => { if (!guardando) onCambiar(v); }}>
-      <DialogContent className={`${DIALOGO_PANTALLA_COMPLETA} sm:max-w-xl`}>
+      <DialogContent className={`${DIALOGO_PANTALLA_COMPLETA} sm:max-w-xl md:max-w-4xl`}>
         <DialogHeader className="border-b border-gray-200 px-5 pb-3 pt-[max(1rem,env(safe-area-inset-top))] pr-14 text-left">
           <DialogTitle>{titulo}</DialogTitle>
           <DialogDescription>{descripcion}</DialogDescription>
