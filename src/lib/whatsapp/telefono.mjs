@@ -1,6 +1,7 @@
 // Teléfonos de WhatsApp (R1): se guardan como dígitos con lada de país; se muestran legibles.
 
-// «+52 55 1234 5678». Quita el «1» histórico de celulares mexicanos (521…). Otros países: «+<dígitos>».
+// «+52 55 1234 5678». Quita el «1» histórico de celulares mexicanos (521…). EE. UU./Canadá: «+1 323 471 6585».
+// Otros países: «+<dígitos>».
 export function formatearTelefono(valor) {
   const digitos = String(valor ?? "").replace(/\D/g, "");
   if (!digitos) return "";
@@ -14,6 +15,8 @@ export function formatearTelefono(valor) {
     const corte = resto.length - 4;
     return `+52 ${nacional.slice(0, lada)} ${resto.slice(0, corte)} ${resto.slice(corte)}`;
   }
+  // Norteamérica (NANP): «+1 323 471 6585». El número compartido de ADAMIA es de EE. UU.
+  if (digitos.length === 11 && digitos.startsWith("1")) return `+1 ${digitos.slice(1, 4)} ${digitos.slice(4, 7)} ${digitos.slice(7)}`;
   return `+${digitos}`;
 }
 

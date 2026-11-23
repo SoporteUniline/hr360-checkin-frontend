@@ -1,10 +1,12 @@
 "use client";
 
-// Lista de conversaciones de la bandeja de WhatsApp (R1).
+// Lista de conversaciones de la bandeja de WhatsApp (R1). R2: filtros por calificación/atención y chip de calificación.
 import { Loader2, Search, X } from "lucide-react";
 import { tiempoRelativo } from "@/lib/whatsapp/tiempo.mjs";
 import { iniciales, nombreContacto } from "@/lib/whatsapp/telefono.mjs";
 import { etiquetaControl, vistaPrevia } from "@/lib/whatsapp/reglas.mjs";
+import { FILTROS, etiquetaCalificacion } from "@/lib/whatsapp/entrevista.mjs";
+import { ChipCalificacion } from "./controles";
 
 const TONO_CHIP = {
   azul: "bg-blue-50 text-blue-700",
@@ -25,9 +27,32 @@ export function Avatar({ contacto, className = "" }) {
   );
 }
 
+// Chips de filtro: en teléfono una fila que se desliza de lado dentro de la lista (la página no se desborda);
+// desde tableta se acomodan en dos renglones para que todos se vean.
+function FiltrosCalificacion({ filtro, onFiltro }) {
+  return (
+    <div role="group" aria-label="Filtrar conversaciones" className="-mx-3 mt-2 flex gap-1.5 overflow-x-auto px-3 pb-0.5 [scrollbar-width:none] md:flex-wrap md:overflow-visible">
+      {FILTROS.map((f) => {
+        const activo = f.valor === filtro;
+        return (
+          <button key={f.valor} type="button" aria-pressed={activo} onClick={(e) => { e.currentTarget.scrollIntoView({ block: "nearest", inline: "nearest" }); onFiltro(f.valor); }}
+            className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-[12.5px] font-semibold transition-colors md:min-h-8 ${
+              activo ? "border-gray-900 bg-gray-900 text-white" : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+            }`}>
+            {f.valor === "atencion" ? <span aria-hidden="true" className={`size-2 rounded-full ${activo ? "bg-red-400" : "bg-red-500"}`} /> : null}
+            {f.texto}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function ListaConversaciones({
   conversaciones, hayMas, errorMas, cargando, error, busqueda, setBusqueda, q, seleccionada, onAbrir, onMas, cargandoMas, onVacantes, usuario, ahora,
+  filtro = "todos", onFiltro,
 }) {
+  const textoFiltro = FILTROS.find((f) => f.valor === filtro)?.texto;
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="border-b border-gray-200 p-3">
@@ -47,6 +72,7 @@ export default function ListaConversaciones({
             </button>
           ) : null}
         </label>
+        {onFiltro ? <FiltrosCalificacion filtro={filtro} onFiltro={onFiltro} /> : null}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto" aria-busy={cargando}>
         {error ? (
@@ -56,7 +82,14 @@ export default function ListaConversaciones({
         ) : !conversaciones.length ? (
           <div className="p-6 text-center text-sm text-gray-500">
             {q ? (
-              <p>No hay conversaciones que coincidan con «{q}».</p>
+              <p>No hay conversaciones que coincidan con «{q}»{filtro !== "todos" ? ` en «${textoFiltro}»` : ""}.</p>
+            ) : filtro !== "todos" ? (
+              <>
+                <p>No hay conversaciones en «{textoFiltro}».</p>
+                <button type="button" onClick={() => onFiltro("todos")} className="mt-2 inline-flex min-h-11 items-center rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 md:min-h-9">
+                  Ver todas
+                </button>
+              </>
             ) : (
               <>
                 <p className="font-medium text-gray-700">Aún no hay conversaciones.</p>
@@ -75,18 +108,26 @@ export default function ListaConversaciones({
               const activa = String(c.id) === String(seleccionada);
               const noLeidos = Number(c.no_leidos) || 0;
               const nombre = nombreContacto(c.contacto);
+              const calif = etiquetaCalificacion(c.entrevista?.calificacion);
+              const atencion = c.entrevista?.requiere_atencion === true;
+              const motivo = c.entrevista?.motivo_atencion || "Requiere atención";
               return (
                 <li key={c.id}>
                   <button
                     type="button"
                     onClick={() => onAbrir(c.id)}
                     aria-current={activa ? "true" : undefined}
-                    aria-label={`${nombre}${noLeidos ? `, ${noLeidos} sin leer` : ""}`}
+                    aria-label={`${nombre}${noLeidos ? `, ${noLeidos} sin leer` : ""}${calif ? `, ${calif.texto}` : ""}${atencion ? `, requiere atención: ${motivo}` : ""}`}
                     className={`flex w-full min-w-0 items-start gap-3 border-b border-gray-100 px-3 py-3 text-left transition-colors ${
                       activa ? "bg-blue-50" : "hover:bg-gray-50"
                     }`}
                   >
-                    <Avatar contacto={c.contacto} />
+                    <span className="relative shrink-0">
+                      <Avatar contacto={c.contacto} />
+                      {atencion ? (
+                        <span title={motivo} data-atencion={c.id} className="absolute -right-0.5 -top-0.5 size-3.5 rounded-full bg-red-500 ring-2 ring-white" />
+                      ) : null}
+                    </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex items-baseline gap-2">
                         <span className={`min-w-0 flex-1 truncate text-[14px] ${noLeidos ? "font-bold text-gray-900" : "font-semibold text-gray-800"}`}>{nombre}</span>
@@ -103,7 +144,11 @@ export default function ListaConversaciones({
                           </span>
                         ) : null}
                       </span>
-                      <span className="mt-1.5 flex"><ChipControl conversacion={c} usuario={usuario} /></span>
+                      <span className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5">
+                        <ChipControl conversacion={c} usuario={usuario} />
+                        <ChipCalificacion calificacion={c.entrevista?.calificacion} />
+                        {atencion ? <span className="min-w-0 truncate text-[11.5px] font-semibold text-red-700" title={motivo}>{motivo}</span> : null}
+                      </span>
                     </span>
                   </button>
                 </li>

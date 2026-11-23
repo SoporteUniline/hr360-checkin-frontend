@@ -1,4 +1,4 @@
-// Acceso al API de WhatsApp de reclutamiento (R1). Usa la instancia de axios del proyecto, que pone la sesión.
+// Acceso al API de WhatsApp de reclutamiento (R1 bandeja, R2 agente entrevistador). Usa la instancia de axios del proyecto, que pone la sesión.
 import axios from "@/lib/axios";
 
 export const RUTA_WA = "/reclutamiento/whatsapp";
@@ -13,8 +13,9 @@ const consulta = (params) => {
 };
 
 export const rutaEstado = (empresa) => (empresa ? `${RUTA_WA}/estado${consulta({ empresa })}` : null);
-export const rutaConversaciones = (empresa, { q, pagina = 1, limite = 30 } = {}) =>
-  empresa ? `${RUTA_WA}/conversaciones${consulta({ empresa, q, pagina, limite })}` : null;
+// R2: `filtro` son los parámetros del chip elegido ({ calificacion } o { atencion: 1 }).
+export const rutaConversaciones = (empresa, { q, pagina = 1, limite = 30, filtro = {} } = {}) =>
+  empresa ? `${RUTA_WA}/conversaciones${consulta({ empresa, q, pagina, limite, ...filtro })}` : null;
 export const rutaVacantes = (empresa) => (empresa ? `${RUTA_WA}/vacantes${consulta({ empresa })}` : null);
 export const rutaConversacion = (id) => (id ? `${RUTA_WA}/conversaciones/${encodeURIComponent(id)}` : null);
 
@@ -31,3 +32,10 @@ export const enlaceVacante = (idVacante) =>
 export const listarEmpresasAdmin = () => axios.get(`${RUTA_WA}/admin/empresas`).then((r) => r.data);
 export const guardarEmpresaAdmin = (idEmpresa, cuerpo) =>
   axios.put(`${RUTA_WA}/admin/empresas/${encodeURIComponent(idEmpresa)}`, cuerpo).then((r) => r.data);
+
+// ——— R2: agente entrevistador ———
+export const rutaAgente = (empresa) => (empresa ? `${RUTA_WA}/agente${consulta({ empresa })}` : null);
+export const rutaPreguntas = (idVacante) => (idVacante ? `${RUTA_WA}/vacantes/${encodeURIComponent(idVacante)}/preguntas` : null);
+export const guardarAgente = (empresa, cuerpo) => axios.put(rutaAgente(empresa), cuerpo).then((r) => r.data);
+export const guardarPreguntas = (idVacante, cuerpo) => axios.put(rutaPreguntas(idVacante), cuerpo).then((r) => r.data);
+export const marcarAtendido = (id) => axios.post(`${rutaConversacion(id)}/atendido`).then((r) => r.data);

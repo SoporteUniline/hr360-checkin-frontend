@@ -49,7 +49,7 @@ test("teléfonos legibles y nombre del contacto", () => {
   assert.equal(formatearTelefono("525512345678"), "+52 55 1234 5678");
   assert.equal(formatearTelefono("+52 (442) 123-4567"), "+52 442 123 4567");
   assert.equal(formatearTelefono("4421234567"), "+52 442 123 4567");
-  assert.equal(formatearTelefono("+14155550123"), "+14155550123");
+  assert.equal(formatearTelefono("+14155550123"), "+1 415 555 0123", "Norteamérica con formato");
   assert.equal(formatearTelefono(""), "");
   assert.equal(nombreContacto({ nombre: "  Ana Ruiz ", telefono: "5215512345678" }), "Ana Ruiz");
   assert.equal(nombreContacto({ nombre: "", telefono: "5215512345678" }), "+52 55 1234 5678");

@@ -1,5 +1,7 @@
 // Verificación en navegador de WhatsApp en ADAMIA (R1): bandeja, control humano/IA, envío, errores, reintento,
-// móvil, administración por empresa y enlace de vacante. Backend simulado: nada sale a internet.
+// móvil, administración por empresa y enlace de vacante. R2: agente entrevistador (configuración, preguntas por
+// vacante, filtros por calificación, evaluación del candidato y «Marcar como atendido»).
+// Backend simulado: nada sale a internet.
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api NEXT_PUBLIC_RECRUITMENT_ENABLED=true npm run build
 //      CAPTURAS=/ruta/capturas node scripts/verify-whatsapp.mjs
 import { createHmac, randomUUID } from "node:crypto";
@@ -38,6 +40,7 @@ const reclutadora = {
   empresas_detalle: [{ id_empresa: 10, nombre: "Uniline" }, { id_empresa: 11, nombre: "Uniline Norte" }], zona_horaria: "America/Mexico_City",
 };
 const admin = { id_usuario: 1, tipo_usuario: "Admin", nombre: "Soporte ADAMIA" };
+const AVISO = "https://dev.adamia.com.mx/aviso-de-privacidad/uniline";
 const ENLACE = "https://wa.me/525598765432?text=Hola%2C%20me%20interesa%20la%20vacante%20%5BV-AB12%5D";
 
 function estadoInicial() {
@@ -82,8 +85,28 @@ function estadoInicial() {
     { id_vacante: 56, id_empresa: 10, titulo: "Auxiliar de almacén turno nocturno", tiene_enlace: false },
     { id_vacante: 57, id_empresa: 10, titulo: "Chofer repartidor", tiene_enlace: false },
   ];
-  return { conversaciones, mensajes, empresas, vacantes, modo: "compartido", envios: [], siguienteId: 900 };
+  // R2: entrevistas por conversación (detalle completo; la lista recibe el resumen).
+  const entrevistas = {
+    2: { etapa: "preguntas", consentimiento: true, nombre: null, calificacion: "incompleto", resumen: "", puntajes: null, requiere_atencion: false, motivo_atencion: null, pregunta_actual: "¿Tienes licencia tipo C?", respuestas: [] },
+    3: {
+      etapa: "humano", consentimiento: true, nombre: "Carlos Méndez Ortega", calificacion: "no_califica",
+      resumen: "Tiene experiencia en almacén pero no cuenta con licencia tipo C. Pidió hablar con una persona sobre el horario nocturno.",
+      puntajes: { comunicacion: 4, actitud: 5, experiencia: 3, confiabilidad: 2, disponibilidad: 1 },
+      requiere_atencion: true, motivo_atencion: "Pidió hablar con una persona",
+      respuestas: [
+        { texto_pregunta: "¿Cuántos años tienes?", respuesta: "34", severidad: "ok" },
+        { texto_pregunta: "¿Puedes trabajar en turno nocturno?", respuesta: "Solo algunos días", severidad: "alerta" },
+        { texto_pregunta: "¿Tienes licencia tipo C?", respuesta: "No", severidad: "descarta" },
+      ],
+    },
+  };
+  for (let i = 3; i <= 32; i += 3) entrevistas[1000 + i] = { etapa: "cerrada", consentimiento: true, calificacion: "califica", requiere_atencion: false, motivo_atencion: null, respuestas: [] };
+  const sinRespuesta = { 3: [{ pregunta: "¿Dan transporte de personal en la noche?", id_vacante: 56, creado_en: hace(60 * 26 + 5) }] };
+  const agente = { id_empresa: 10, activo: false, nombre_asistente: "", horario_json: null, mensaje_fuera_horario: "", respuestas_frecuentes: "", palabras_humano: "", aviso_privacidad_url: AVISO };
+  const preguntas = { 55: [{ id: 1, orden: 1, texto: "¿Tienes licencia tipo C?", tipo: "si_no", opciones: ["Sí", "No"], descartan: ["No"], alertan: [], activa: true }] };
+  return { conversaciones, mensajes, empresas, vacantes, modo: "compartido", envios: [], siguienteId: 900, entrevistas, sinRespuesta, agente, preguntas, siguientePregunta: 100, errores400: [] };
 }
+const resumenEntrevista = (e) => (e ? { etapa: e.etapa, calificacion: e.calificacion, requiere_atencion: e.requiere_atencion, motivo_atencion: e.motivo_atencion } : null);
 
 const pedidos = [];
 let S = estadoInicial();
@@ -111,7 +134,14 @@ async function instalarMocks(ctx, usuario) {
     if (ruta === "/conversaciones") {
       const q = (url.searchParams.get("q") || "").toLowerCase();
       if (url.searchParams.get("empresa") === "11") return json({ conversaciones: [], total: 0 });
-      const lista = S.conversaciones.filter((c) => !q || `${c.contacto.nombre} ${c.contacto.telefono} ${c.vacante?.titulo ?? ""}`.toLowerCase().includes(q));
+      const calificacion = url.searchParams.get("calificacion");
+      if (calificacion && !["califica", "no_califica", "con_alerta", "incompleto"].includes(calificacion)) return json({ error: "Calificación no válida" }, 400);
+      const atencion = url.searchParams.get("atencion") === "1";
+      const lista = S.conversaciones
+        .map((c) => ({ ...c, entrevista: resumenEntrevista(S.entrevistas[c.id]) }))
+        .filter((c) => !q || `${c.contacto.nombre} ${c.contacto.telefono} ${c.vacante?.titulo ?? ""}`.toLowerCase().includes(q))
+        .filter((c) => !calificacion || c.entrevista?.calificacion === calificacion)
+        .filter((c) => !atencion || c.entrevista?.requiere_atencion === true);
       const pagina = Number(url.searchParams.get("pagina") || 1);
       const limite = Number(url.searchParams.get("limite") || 30);
       return json({ conversaciones: lista.slice((pagina - 1) * limite, pagina * limite), total: lista.length });
@@ -123,7 +153,7 @@ async function instalarMocks(ctx, usuario) {
       const c = conv(m[1]);
       if (!c) return json({ error: "No existe" }, 404);
       c.no_leidos = 0;
-      return json({ conversacion: c, mensajes: S.mensajes[c.id] });
+      return json({ conversacion: c, mensajes: S.mensajes[c.id], entrevista: S.entrevistas[c.id] ?? null, preguntas_sin_respuesta: S.sinRespuesta[c.id] ?? [] });
     }
     if ((m = ruta.match(/^\/conversaciones\/(\d+)\/tomar$/))) {
       const c = conv(m[1]); c.modo = "humano"; c.control = { id_usuario: 7, nombre: "Laura Gómez", correo: "laura@uniline.mx" };
@@ -164,6 +194,29 @@ async function instalarMocks(ctx, usuario) {
       const e = S.empresas.find((x) => String(x.id_empresa) === m[1]);
       Object.assign(e, cuerpo);
       return json(e);
+    }
+    // ——— R2 ———
+    if ((m = ruta.match(/^\/conversaciones\/(\d+)\/atendido$/)) && req.method() === "POST") {
+      const e = S.entrevistas[m[1]];
+      if (e) Object.assign(e, { requiere_atencion: false, motivo_atencion: null });
+      return json({ conversacion: { ...conv(m[1]), entrevista: resumenEntrevista(e) } });
+    }
+    if (ruta === "/agente") {
+      if (req.method() === "PUT") {
+        const error = S.errores400.shift();
+        if (error) return json({ error }, 400);
+        S.agente = { ...S.agente, ...cuerpo };
+      }
+      return json(S.agente);
+    }
+    if ((m = ruta.match(/^\/vacantes\/(\d+)\/preguntas$/))) {
+      if (req.method() === "PUT") {
+        const error = S.errores400.shift();
+        if (error) return json({ error }, 400);
+        if (!Array.isArray(cuerpo?.preguntas) || cuerpo.preguntas.length > 8) return json({ error: "Máximo 8 preguntas." }, 400);
+        S.preguntas[m[1]] = cuerpo.preguntas.map((p) => ({ ...p, id: p.id ?? S.siguientePregunta++ }));
+      }
+      return json({ preguntas: S.preguntas[m[1]] ?? [] });
     }
     return json({ error: "Ruta no simulada" }, 404);
   });
@@ -457,7 +510,299 @@ try {
   if (OUT) await adm.screenshot({ path: OUT + "/09-admin-movil.png", fullPage: true });
   await ctxAdmin.close();
 
+  // ═══════════ R2 · Agente entrevistador ═══════════
+  const ctxR2 = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: "es-MX", timezoneId: "America/Mexico_City" });
+  await ctxR2.addCookies([{ name: "token", value: firmar("Recruiter"), url: base }]);
+  await instalarMocks(ctxR2, reclutadora);
+  const r2 = await ctxR2.newPage();
+  r2.on("pageerror", (e) => errores.push(e.message));
+  await r2.goto(base + "/panel/whatsapp", { waitUntil: "domcontentloaded" });
+  await r2.getByRole("list", { name: "Conversaciones" }).waitFor({ timeout: 30000 });
+  await r2.getByRole("button", { name: "Ana Ruiz" }).click();
+  const hiloR2 = r2.getByRole("region", { name: "Conversación" });
+  await hiloR2.locator('[data-mensaje="102"]').waitFor();
+  assert.match(await hiloR2.locator('[data-mensaje="102"]').innerText(), /^Asistente IA/, "sin nombre configurado: «Asistente IA»");
+  assert.ok(pedidos.some((x) => x.ruta === "/agente" && x.metodo === "GET" && /empresa=10/.test(x.params)), "GET /agente?empresa=10");
+  assert.match(await r2.getByRole("complementary", { name: "Candidato" }).innerText(), /aún no entrevista a este candidato/);
+
+  // ——— 12. Configurar agente: validación, 400 del API y PUT ———
+  await r2.getByRole("button", { name: "Agente", exact: true }).click();
+  const dlgAg = r2.getByRole("dialog", { name: "Configurar agente" });
+  await dlgAg.getByRole("switch", { name: "Agente encendido" }).waitFor();
+  assert.match(await dlgAg.innerText(), /El agente usa tu aviso de privacidad de ADAMIA y nunca pide CURP, datos bancarios ni dinero\./);
+  assert.match(await dlgAg.innerText(), /Escribe lo que el agente puede contestar: horarios, prestaciones, dirección…/);
+  await dlgAg.getByRole("switch", { name: "Agente encendido" }).click();
+  assert.equal(await dlgAg.getByRole("switch", { name: "Agente encendido" }).getAttribute("aria-checked"), "true");
+  assert.equal(await dlgAg.getByRole("switch", { name: "Siempre disponible" }).getAttribute("aria-checked"), "true", "horario_json null = siempre disponible");
+  assert.equal(await dlgAg.getByLabel("Lunes: desde").count(), 0);
+  const avisoLink = dlgAg.locator("[data-aviso-privacidad]");
+  assert.match(await avisoLink.innerText(), /El agente enlaza tu aviso de privacidad: https:\/\/dev\.adamia\.com\.mx\/aviso-de-privacidad\/uniline/);
+  assert.equal(await avisoLink.getByRole("link").getAttribute("href"), AVISO);
+  await dlgAg.getByRole("switch", { name: "Siempre disponible" }).click();
+  await dlgAg.getByRole("button", { name: "Guardar" }).click();
+  await dlgAg.getByText("Escribe cómo se presenta el asistente").waitFor();
+  await r2.waitForFunction(() => document.activeElement?.getAttribute("aria-invalid") === "true");
+  assert.equal(await dlgAg.getByLabel("Nombre del asistente").evaluate((el) => el === document.activeElement), true, "el foco va al primer campo con error");
+  assert.match(await dlgAg.innerText(), /Escribe lo que contesta el agente fuera de horario\./);
+  assert.equal(cuenta((x) => x.ruta === "/agente" && x.metodo === "PUT"), 0, "no manda con errores");
+  await dlgAg.getByLabel("Nombre del asistente").fill("Sofía");
+  await dlgAg.getByLabel("Lunes: desde").fill("08:00");
+  await dlgAg.getByLabel("Lunes: hasta").fill("14:00");
+  await dlgAg.getByRole("button", { name: "Copiar lunes a todos" }).click();
+  assert.equal(await dlgAg.getByLabel("Sábado: desde").inputValue(), "08:00", "copiar lunes enciende y copia el sábado");
+  await dlgAg.getByRole("switch", { name: "Domingo" }).click();
+  assert.equal(await dlgAg.getByLabel("Domingo: desde").count(), 0);
+  await dlgAg.getByLabel("Viernes: hasta").fill("07:00");
+  await dlgAg.getByLabel("Mensaje fuera de horario").fill("¡Gracias por escribir! Te respondemos mañana a partir de las 8:00.");
+  await dlgAg.getByRole("button", { name: "Guardar" }).click();
+  await dlgAg.getByText("Viernes: la hora de fin debe ser después de la de inicio.").waitFor();
+  await r2.waitForFunction(() => document.activeElement?.getAttribute("aria-invalid") === "true");
+  await dlgAg.getByLabel("Viernes: hasta").fill("14:00");
+  await dlgAg.getByLabel("Respuestas frecuentes").fill("Pagamos $9,500 a la quincena.\nLa planta está en Av. Industrial 120, Apodaca.");
+  const palabras = dlgAg.getByLabel("Palabras para pasar a una persona");
+  await palabras.fill("humano, asesor");
+  await palabras.press("Enter");
+  await palabras.fill("Humano");
+  await palabras.press("Enter");
+  await palabras.fill("hablar con alguien");
+  await dlgAg.getByRole("button", { name: "Agregar", exact: true }).click();
+  await dlgAg.getByRole("button", { name: "Quitar «asesor»" }).click();
+  assert.deepEqual(await dlgAg.getByRole("list", { name: "Palabras agregadas" }).getByRole("listitem").allInnerTexts(), ["humano", "hablar con alguien"]);
+  S.errores400.push("El nombre del asistente no puede llevar enlaces.");
+  await dlgAg.getByRole("button", { name: "Guardar" }).click();
+  await dlgAg.getByRole("alert").filter({ hasText: "El nombre del asistente no puede llevar enlaces." }).waitFor();
+  await dlgAg.getByRole("button", { name: "Guardar" }).click();
+  await dlgAg.waitFor({ state: "detached" });
+  const putsAgente = pedidos.filter((x) => x.ruta === "/agente" && x.metodo === "PUT");
+  assert.equal(putsAgente.length, 2);
+  assert.match(putsAgente[1].params, /empresa=10/);
+  const franja = { desde: "08:00", hasta: "14:00" };
+  assert.deepEqual(putsAgente[1].cuerpo, {
+    activo: true, nombre_asistente: "Sofía",
+    horario_json: { lun: franja, mar: franja, mie: franja, jue: franja, vie: franja, sab: franja, dom: null },
+    mensaje_fuera_horario: "¡Gracias por escribir! Te respondemos mañana a partir de las 8:00.",
+    respuestas_frecuentes: "Pagamos $9,500 a la quincena.\nLa planta está en Av. Industrial 120, Apodaca.",
+    palabras_humano: "humano, hablar con alguien",
+  });
+  await hiloR2.locator('[data-mensaje="102"]').getByText("Sofía", { exact: true }).waitFor();
+  // Cambios sin guardar: cerrar pide confirmación y no se pierden por un toque accidental.
+  await r2.getByRole("button", { name: "Agente", exact: true }).click();
+  assert.equal(await dlgAg.getByLabel("Nombre del asistente").inputValue(), "Sofía", "se recarga lo guardado");
+  await dlgAg.getByLabel("Nombre del asistente").fill("Sofía de Uniline");
+  await r2.keyboard.press("Escape");
+  await dlgAg.getByRole("alertdialog", { name: "Cambios sin guardar" }).waitFor();
+  await dlgAg.getByRole("button", { name: "Descartar cambios" }).click();
+  await dlgAg.waitFor({ state: "detached" });
+  assert.equal(cuenta((x) => x.ruta === "/agente" && x.metodo === "PUT"), 2);
+  if (OUT) await r2.screenshot({ path: OUT + "/r2-01-chat-agente-sofia.png" });
+
+  // ——— 13. Preguntas de la entrevista por vacante ———
+  await r2.getByRole("button", { name: "Enlaces de vacantes" }).click();
+  const dlgV = r2.getByRole("dialog", { name: "Enlaces de vacantes" });
+  await dlgV.locator('[data-conteo-preguntas="55"]').getByText("1 pregunta").waitFor();
+  await dlgV.locator('[data-conteo-preguntas="56"]').getByText("Sin entrevista").waitFor();
+  assert.ok(pedidos.some((x) => x.ruta === "/vacantes/55/preguntas" && x.metodo === "GET"), "conteo perezoso con GET de preguntas");
+  await dlgV.getByRole("button", { name: "Entrevista de Operador de montacargas" }).click();
+  const ed = r2.getByRole("dialog", { name: "Entrevista por WhatsApp" });
+  await ed.getByRole("region", { name: "Pregunta 1" }).waitFor();
+  assert.equal(await ed.locator("[data-vista-previa]").first().innerText(), "Ej.: ¿Tienes licencia tipo C? → No descarta");
+  await ed.getByRole("button", { name: "Agregar pregunta (1/8)" }).click();
+  await ed.getByRole("button", { name: "Guardar entrevista" }).click();
+  await ed.getByRole("region", { name: "Pregunta 2" }).getByText("Escribe la pregunta.").waitFor();
+  await r2.waitForFunction(() => document.activeElement?.getAttribute("aria-invalid") === "true");
+  assert.equal(await ed.getByRole("textbox", { name: "Texto de la pregunta 2" }).evaluate((el) => el === document.activeElement), true, "el foco va al primer error");
+  assert.equal(cuenta((x) => x.ruta === "/vacantes/55/preguntas" && x.metodo === "PUT"), 0);
+  const p2 = ed.getByRole("region", { name: "Pregunta 2" });
+  await p2.getByRole("textbox", { name: "Texto de la pregunta 2" }).fill("¿Cuántos años tienes?");
+  await p2.getByRole("combobox", { name: "Tipo de respuesta de la pregunta 2" }).selectOption("numero");
+  // «numero»: rango ACEPTADO; fuera de él descarta o alerta.
+  assert.match(await p2.getByRole("group", { name: "Respuestas que descartan" }).innerText(), /Rango aceptado:\s*de[\s\S]*a[\s\S]*Fuera de este rango descarta/);
+  await p2.getByRole("group", { name: "Respuestas que descartan" }).getByRole("textbox", { name: "Mínimo" }).fill("18");
+  await p2.getByRole("group", { name: "Respuestas que descartan" }).getByRole("textbox", { name: "Máximo" }).fill("17");
+  await p2.getByRole("group", { name: "Respuestas que alertan" }).getByRole("textbox", { name: "Máximo" }).fill("55");
+  await ed.getByRole("button", { name: "Guardar entrevista" }).click();
+  await p2.getByText("el mínimo no puede ser mayor que el máximo").waitFor();
+  const minDesc = p2.getByRole("group", { name: "Respuestas que descartan" }).getByRole("textbox", { name: "Mínimo" });
+  await r2.waitForFunction(() => document.activeElement?.getAttribute("aria-invalid") === "true");
+  assert.equal(await minDesc.evaluate((el) => el === document.activeElement), true, "el foco va al primer campo con error");
+  await p2.getByRole("group", { name: "Respuestas que descartan" }).getByRole("textbox", { name: "Máximo" }).fill("");
+  await p2.locator("[data-vista-previa]").getByText("Ej.: ¿Cuántos años tienes? → menos de 18 descarta · más de 55 alerta", { exact: true }).waitFor({ timeout: 3000 });
+  // Pregunta de opciones: una respuesta no puede descartar y alertar a la vez.
+  await ed.getByRole("button", { name: "Agregar pregunta (2/8)" }).click();
+  const p3 = ed.getByRole("region", { name: "Pregunta 3" });
+  await p3.getByRole("textbox", { name: "Texto de la pregunta 3" }).fill("¿Qué turno prefieres?");
+  await p3.getByRole("combobox", { name: "Tipo de respuesta de la pregunta 3" }).selectOption("opciones");
+  await p3.getByRole("textbox", { name: "Opción 1" }).fill("Matutino");
+  await p3.getByRole("textbox", { name: "Opción 2" }).fill("Nocturno");
+  await p3.getByRole("button", { name: "Agregar opción" }).click();
+  await p3.getByRole("textbox", { name: "Opción 3" }).fill("Mixto");
+  await p3.getByRole("group", { name: "Respuestas que alertan" }).getByRole("checkbox", { name: "Nocturno" }).check();
+  await p3.getByRole("group", { name: "Respuestas que descartan" }).getByRole("checkbox", { name: "Nocturno" }).check();
+  assert.equal(await p3.getByRole("group", { name: "Respuestas que alertan" }).getByRole("checkbox", { name: "Nocturno" }).isChecked(), false, "descartar quita la alerta");
+  await p3.getByRole("group", { name: "Respuestas que alertan" }).getByRole("checkbox", { name: "Mixto" }).check();
+  assert.equal(await p3.locator("[data-vista-previa]").innerText(), "Ej.: ¿Qué turno prefieres? → Nocturno descarta · Mixto alerta");
+  // Reordenar con botones: la edad sube al primer lugar y el foco sigue al botón.
+  await ed.getByRole("button", { name: "Subir pregunta 2" }).click();
+  assert.equal(await ed.getByRole("textbox", { name: "Texto de la pregunta 1" }).inputValue(), "¿Cuántos años tienes?");
+  assert.equal(await ed.getByRole("button", { name: "Bajar pregunta 1" }).evaluate((el) => el === document.activeElement), true, "foco en el botón que sigue disponible");
+  assert.equal(await ed.getByRole("button", { name: "Subir pregunta 1" }).isDisabled(), true);
+  await ed.getByRole("button", { name: "Guardar entrevista" }).click();
+  await ed.waitFor({ state: "detached" });
+  const putP = pedidos.filter((x) => x.ruta === "/vacantes/55/preguntas" && x.metodo === "PUT");
+  assert.equal(putP.length, 1);
+  assert.deepEqual(putP[0].cuerpo, { preguntas: [
+    { orden: 1, texto: "¿Cuántos años tienes?", tipo: "numero", opciones: null, descartan: { min: 18 }, alertan: { max: 55 }, activa: true },
+    { id: 1, orden: 2, texto: "¿Tienes licencia tipo C?", tipo: "si_no", opciones: ["Sí", "No"], descartan: ["No"], alertan: [], activa: true },
+    { orden: 3, texto: "¿Qué turno prefieres?", tipo: "opciones", opciones: ["Matutino", "Nocturno", "Mixto"], descartan: ["Nocturno"], alertan: ["Mixto"], activa: true },
+  ] });
+  await dlgV.locator('[data-conteo-preguntas="55"]').getByText("3 preguntas").waitFor();
+  // Máximo 8, error 400 del API y salida con cambios sin guardar.
+  await dlgV.getByRole("button", { name: "Entrevista de Auxiliar de almacén turno nocturno" }).click();
+  await ed.getByText("Esta vacante aún no tiene entrevista").waitFor();
+  for (let i = 0; i < 8; i++) await ed.getByRole("button", { name: `Agregar pregunta (${i}/8)` }).click();
+  assert.equal(await ed.getByRole("button", { name: "Agregar pregunta (8/8)" }).isDisabled(), true, "máximo 8 preguntas");
+  for (let i = 8; i >= 2; i--) await ed.getByRole("button", { name: `Quitar pregunta ${i}` }).click();
+  await ed.getByRole("textbox", { name: "Texto de la pregunta 1" }).fill("¿Vives cerca de Apodaca?");
+  if (OUT) await r2.screenshot({ path: OUT + "/r2-02-editor-entrevista.png" });
+  S.errores400.push("La vacante ya no está abierta.");
+  await ed.getByRole("button", { name: "Guardar entrevista" }).click();
+  await ed.getByRole("alert").filter({ hasText: "La vacante ya no está abierta." }).waitFor();
+  await ed.getByRole("button", { name: "Cancelar" }).click();
+  await ed.getByRole("button", { name: "Descartar cambios" }).click();
+  await ed.waitFor({ state: "detached" });
+  assert.equal(await dlgV.isVisible(), true, "vuelve a la lista de vacantes");
+  await dlgV.locator('[data-conteo-preguntas="56"]').getByText("Sin entrevista").waitFor();
+  await r2.keyboard.press("Escape");
+  await dlgV.waitFor({ state: "detached" });
+
+  // ——— 14. Filtros por calificación y atención ———
+  const listaR2 = r2.getByRole("list", { name: "Conversaciones" });
+  const carlos = r2.getByRole("button", { name: /^Carlos Méndez/ });
+  assert.match(await carlos.getAttribute("aria-label"), /No califica, requiere atención: Pidió hablar con una persona$/);
+  assert.equal(await carlos.locator('[data-atencion="3"]').getAttribute("title"), "Pidió hablar con una persona");
+  assert.equal(await carlos.locator('[data-calificacion="no_califica"]').innerText(), "No califica");
+  const filtros = r2.getByRole("group", { name: "Filtrar conversaciones" });
+  assert.deepEqual(await filtros.getByRole("button").allInnerTexts(), ["Todos", "Requiere atención", "Califica", "Con alerta", "No califica", "Incompleto"]);
+  await filtros.getByRole("button", { name: "Requiere atención" }).click();
+  await r2.waitForFunction(() => document.querySelectorAll('[aria-label="Conversaciones"] li').length === 1);
+  assert.equal(await filtros.getByRole("button", { name: "Requiere atención" }).getAttribute("aria-pressed"), "true");
+  assert.ok(pedidos.some((x) => x.ruta === "/conversaciones" && /pagina=1&limite=30&atencion=1/.test(x.params)), "atencion=1 desde la página 1");
+  await filtros.getByRole("button", { name: "Califica", exact: true }).click();
+  await r2.waitForFunction(() => document.querySelectorAll('[aria-label="Conversaciones"] li').length === 10);
+  assert.equal(await r2.getByRole("button", { name: "Ver más conversaciones" }).count(), 0, "10 resultados: sin «Ver más»");
+  await filtros.getByRole("button", { name: "No califica" }).click();
+  await r2.waitForFunction(() => document.querySelectorAll('[aria-label="Conversaciones"] li').length === 1);
+  assert.ok(pedidos.some((x) => x.ruta === "/conversaciones" && /pagina=1&limite=30&calificacion=no_califica/.test(x.params)));
+  await filtros.getByRole("button", { name: "Con alerta" }).click();
+  await listaR2.waitFor({ state: "detached" });
+  await r2.getByText("No hay conversaciones en «Con alerta».").waitFor();
+  await r2.getByRole("button", { name: "Ver todas" }).click();
+  await r2.waitForFunction(() => document.querySelectorAll('[aria-label="Conversaciones"] li').length === 30);
+  assert.equal(await filtros.getByRole("button", { name: "Todos" }).getAttribute("aria-pressed"), "true");
+
+  // ——— 15. Evaluación del candidato y «Marcar como atendido» ———
+  await carlos.click();
+  await hiloR2.getByText("Te esperamos el lunes").first().waitFor();
+  const panelC = r2.getByRole("complementary", { name: "Candidato" });
+  await panelC.getByRole("list", { name: "Respuestas del candidato" }).waitFor();
+  assert.equal(await hiloR2.getByRole("button", { name: "Ver evaluación" }).isVisible(), false, "≥1280: columna fija, sin botón");
+  const textoPanel = await panelC.innerText();
+  assert.match(textoPanel, /No califica[\s\S]*Pasó a una persona[\s\S]*Carlos Méndez Ortega[\s\S]*Aceptó el aviso de privacidad/);
+  assert.match(textoPanel, /Requiere atención[\s\S]*Pidió hablar con una persona[\s\S]*no cuenta con licencia tipo C/);
+  assert.deepEqual(await panelC.getByRole("list", { name: "Puntajes" }).getByRole("img").evaluateAll((els) => els.map((e) => e.getAttribute("aria-label"))),
+    ["Comunicación: 4 de 5", "Actitud: 5 de 5", "Experiencia: 3 de 5", "Confiabilidad: 2 de 5", "Disponibilidad: 1 de 5"]);
+  assert.deepEqual(await panelC.locator("[data-severidad]").evaluateAll((els) => els.map((e) => `${e.dataset.severidad}:${e.textContent}`)), [
+    "ok:✓¿Cuántos años tienes?34Sin problema",
+    "alerta:⚠¿Puedes trabajar en turno nocturno?Solo algunos díasAlerta",
+    "descarta:✕¿Tienes licencia tipo C?NoDescarta",
+  ]);
+  assert.match(await panelC.getByRole("list", { name: "Preguntas sin respuesta" }).innerText(), /¿Dan transporte de personal en la noche\?/);
+  if (OUT) await r2.screenshot({ path: OUT + "/r2-03-evaluacion-escritorio.png" });
+  await panelC.getByRole("button", { name: "Marcar como atendido" }).click();
+  await panelC.getByRole("button", { name: "Marcar como atendido" }).waitFor({ state: "detached" });
+  assert.equal(cuenta((x) => x.metodo === "POST" && x.ruta === "/conversaciones/3/atendido"), 1);
+  await r2.locator('[data-atencion="3"]').waitFor({ state: "detached", timeout: 7000 });
+  assert.ok(!pedidos.some((x) => x.ruta === "/conversaciones" && /calificacion=(?!califica|no_califica|con_alerta|incompleto)/.test(x.params)), "solo calificaciones válidas");
+  await r2.getByRole("button", { name: /^\+52 442 123 4567/ }).click();
+  await panelC.locator("[data-pregunta-actual]").getByText("¿Tienes licencia tipo C?").waitFor();
+  assert.match(await panelC.innerText(), /Incompleto[\s\S]*Respondiendo preguntas[\s\S]*Pregunta en curso: ¿Tienes licencia tipo C\?/);
+  await carlos.click();
+  await hiloR2.getByText("Te esperamos el lunes").first().waitFor();
+  // Bajo 1280 px: «Ver evaluación» abre la hoja.
+  await r2.setViewportSize({ width: 1100, height: 900 });
+  assert.equal(await panelC.isVisible(), false);
+  await hiloR2.getByRole("button", { name: "Ver evaluación" }).click();
+  const hojaEv = r2.getByRole("dialog", { name: "Evaluación del candidato" });
+  await hojaEv.getByRole("list", { name: "Respuestas del candidato" }).waitFor();
+  await r2.keyboard.press("Escape");
+  await hojaEv.waitFor({ state: "detached" });
+  await ctxR2.close();
+
+  // ——— 16. R2 en teléfono 390 px ———
+  S.entrevistas[3].requiere_atencion = true;
+  S.entrevistas[3].motivo_atencion = "Pidió hablar con una persona";
+  const movR2 = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2, locale: "es-MX", timezoneId: "America/Mexico_City" });
+  await movR2.addCookies([{ name: "token", value: firmar("Recruiter"), url: base }]);
+  await instalarMocks(movR2, reclutadora);
+  const t2 = await movR2.newPage();
+  t2.on("pageerror", (e) => errores.push(e.message));
+  await t2.goto(base + "/panel/whatsapp", { waitUntil: "domcontentloaded" });
+  await t2.getByRole("list", { name: "Conversaciones" }).waitFor({ timeout: 30000 });
+  const filtrosT = t2.getByRole("group", { name: "Filtrar conversaciones" });
+  for (const nombre of ["Todos", "Requiere atención", "Incompleto"]) assert.ok(await tamano(filtrosT.getByRole("button", { name: nombre, exact: true })) >= 44, `chip ${nombre} ≥44 px`);
+  assert.ok(await tamano(t2.getByRole("button", { name: "Agente", exact: true })) >= 44);
+  assert.ok(await sinScrollHorizontal(t2), "lista con filtros sin scroll horizontal");
+  if (OUT) await t2.screenshot({ path: OUT + "/r2-04-movil-lista-filtros.png" });
+  // Agente a pantalla completa.
+  await t2.getByRole("button", { name: "Agente", exact: true }).tap();
+  const agT = t2.getByRole("dialog", { name: "Configurar agente" });
+  await agT.getByRole("switch", { name: "Agente encendido" }).waitFor();
+  await dormir(300);
+  const cajaAg = await agT.boundingBox();
+  assert.ok(cajaAg.x === 0 && cajaAg.width === 390 && cajaAg.height >= 840, `agente a pantalla completa: ${JSON.stringify(cajaAg)}`);
+  for (const sw of ["Agente encendido", "Siempre disponible", "Lunes", "Domingo"]) assert.ok(await tamano(agT.getByRole("switch", { name: sw })) >= 44, `switch ${sw} ≥44 px`);
+  assert.ok(await tamano(agT.getByRole("button", { name: "Guardar" })) >= 44 && await tamano(agT.getByRole("button", { name: "Close" })) >= 44);
+  assert.ok(await tamano(agT.getByRole("button", { name: "Quitar «humano»" })) >= 44);
+  assert.ok(await sinScrollHorizontal(t2) && await agT.evaluate((el) => [...el.querySelectorAll("*")].every((n) => n.getBoundingClientRect().right <= 391)), "agente sin desborde horizontal");
+  if (OUT) await t2.screenshot({ path: OUT + "/r2-05-movil-agente.png" });
+  await agT.getByRole("button", { name: "Cancelar" }).tap();
+  await agT.waitFor({ state: "detached" });
+  // Editor de entrevista a pantalla completa.
+  await t2.getByRole("button", { name: "Enlaces de vacantes" }).tap();
+  await t2.getByRole("button", { name: "Entrevista de Operador de montacargas" }).tap();
+  const edT = t2.getByRole("dialog", { name: "Entrevista por WhatsApp" });
+  await edT.getByRole("region", { name: "Pregunta 3" }).waitFor();
+  await dormir(300);
+  const cajaEd = await edT.boundingBox();
+  assert.ok(cajaEd.x === 0 && cajaEd.width === 390 && cajaEd.height >= 840, `editor a pantalla completa: ${JSON.stringify(cajaEd)}`);
+  const p3T = edT.getByRole("region", { name: "Pregunta 3" });
+  for (const b of [edT.getByRole("button", { name: "Subir pregunta 2" }), edT.getByRole("button", { name: "Quitar pregunta 2" }), p3T.getByRole("button", { name: "Quitar opción 1" }),
+    p3T.getByRole("group", { name: "Respuestas que descartan" }).locator("label").first(), edT.getByRole("button", { name: "Guardar entrevista" })]) assert.ok(await tamano(b) >= 44, "objetivo táctil ≥44 px en el editor");
+  assert.ok(await edT.evaluate((el) => [...el.querySelectorAll("*")].every((n) => n.getBoundingClientRect().right <= 391)), "editor sin desborde horizontal");
+  if (OUT) await t2.screenshot({ path: OUT + "/r2-06-movil-editor.png" });
+  await edT.getByRole("button", { name: "Cancelar" }).tap();
+  await edT.waitFor({ state: "detached" });
+  await t2.getByRole("dialog", { name: "Enlaces de vacantes" }).getByRole("button", { name: "Close" }).tap();
+  // Chat y evaluación en hoja.
+  await t2.getByRole("button", { name: /^Carlos Méndez/ }).tap();
+  const hiloT = t2.getByRole("region", { name: "Conversación" });
+  await hiloT.getByText("Te esperamos el lunes").first().waitFor();
+  assert.ok(await tamano(hiloT.getByRole("button", { name: /Ver evaluación/ })) >= 40);
+  await hiloT.getByRole("button", { name: /Ver evaluación/ }).tap();
+  const evT = t2.getByRole("dialog", { name: "Evaluación del candidato" });
+  await evT.getByRole("list", { name: "Respuestas del candidato" }).waitFor();
+  await dormir(300); // termina la animación de entrada (zoom 95 %)
+  const cajaEv = await evT.boundingBox();
+  assert.ok(cajaEv.x === 0 && cajaEv.width === 390 && cajaEv.height >= 840, `evaluación a pantalla completa: ${JSON.stringify(cajaEv)}`);
+  assert.ok(await tamano(evT.getByRole("button", { name: "Marcar como atendido" })) >= 44);
+  assert.ok(await evT.evaluate((el) => [...el.querySelectorAll("*")].every((n) => n.getBoundingClientRect().right <= 391)), "evaluación sin desborde horizontal");
+  if (OUT) await t2.screenshot({ path: OUT + "/r2-07-movil-evaluacion.png" });
+  await evT.getByRole("button", { name: "Close" }).tap();
+  await evT.waitFor({ state: "detached" });
+  assert.ok(await sinScrollHorizontal(t2));
+  await movR2.close();
+
   assert.deepEqual(errores, [], "sin errores de JavaScript");
   exito = true;
-  console.log("OK whatsapp · lista con no leídos y control · abrir chat lo marca leído (GET) · sondeo 3 s · tomar control habilita y envía {texto} con «Enviando…» · Shift+Enter · 403/409 con texto conservado · envío rechazado (200 «fallido») y reintentos · archivos como «[Archivo: tipo]» · invitado con mismo id y otro correo no controla · devolver a IA · ventana 24 h y control ajeno · enlace de vacante copiado y 409 apagado · paginación real (pagina=2, sondeo solo página 1, sin duplicados) · enlaces de vacantes (lista, búsqueda, copiar, 409/503, vacío, hoja en teléfono) · búsqueda q · móvil a pantalla completa con volver · apagado · admin valida, muestra 409 y manda PUT");
+  console.log("OK whatsapp · lista con no leídos y control · abrir chat lo marca leído (GET) · sondeo 3 s · tomar control habilita y envía {texto} con «Enviando…» · Shift+Enter · 403/409 con texto conservado · envío rechazado (200 «fallido») y reintentos · archivos como «[Archivo: tipo]» · invitado con mismo id y otro correo no controla · devolver a IA · ventana 24 h y control ajeno · enlace de vacante copiado y 409 apagado · paginación real (pagina=2, sondeo solo página 1, sin duplicados) · enlaces de vacantes (lista, búsqueda, copiar, 409/503, vacío, hoja en teléfono) · búsqueda q · móvil a pantalla completa con volver · apagado · admin valida, muestra 409 y manda PUT · R2: agente (validación, horario, copiar lunes, palabras, 400, PUT, nombre en burbujas, cambios sin guardar) · entrevista por vacante (conteo perezoso, validación, rango número, opciones descarta/alerta excluyentes, reordenar con foco, máx. 8, 400, PUT) · filtros atencion=1 / calificacion · evaluación (puntajes, respuestas con severidad, sin respuesta) · marcar atendido · hoja <1280 · teléfono ≥44 px sin desborde");
 } finally { await browser.close(); next.kill(); if (!exito) process.exitCode = 1; }

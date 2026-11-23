@@ -54,7 +54,8 @@ function useEnlaceVacante(idVacante) {
 }
 
 // Fila en línea (lista de «Enlaces de vacantes»): «Copiar enlace» lo pide y lo copia; luego aparece «Abrir».
-export function EnlaceVacanteEnLinea({ idVacante, titulo }) {
+// R2: `subtitulo` (conteo de preguntas) va bajo el título y `acciones` (botón «Entrevista») junto a «Copiar enlace».
+export function EnlaceVacanteEnLinea({ idVacante, titulo, subtitulo = null, acciones = null }) {
   const { estado, copiado, cargar, copiar } = useEnlaceVacante(idVacante);
   const copiarEnlace = async () => {
     const datos = estado.datos ?? (await cargar());
@@ -63,7 +64,11 @@ export function EnlaceVacanteEnLinea({ idVacante, titulo }) {
   return (
     <div className="grid gap-2" data-vacante={idVacante}>
       <div className="flex flex-wrap items-center gap-2">
-        <p className="min-w-0 flex-1 basis-40 text-sm font-medium text-gray-900 [overflow-wrap:anywhere]">{titulo}</p>
+        <div className="min-w-0 flex-1 basis-40">
+          <p className="text-sm font-medium text-gray-900 [overflow-wrap:anywhere]">{titulo}</p>
+          {subtitulo}
+        </div>
+        {acciones}
         <Button type="button" size="sm" onClick={copiarEnlace} loading={estado.cargando} aria-label={`Copiar enlace de ${titulo}`} className="min-h-11 md:min-h-9"
           startIcon={copiado ? <Check className="size-4" /> : <Copy className="size-4" />}>
           {copiado ? "Copiado" : "Copiar enlace"}
