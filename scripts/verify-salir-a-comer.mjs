@@ -1,7 +1,7 @@
 // Verificación en navegador del botón «Salir a comer» (23/11/2026). Backend simulado.
 // 1) Reloj del empleado por código: el servidor pide decisión → «¿Sales a comer?» con «Salir a comer» / «Registrar salida»;
 //    al elegir comida se manda action=salida_comida y se ve «Salida a comer registrada».
-// 2) Inicio de la app: si está en comida, anillo con el contador, hora de regreso y «Regresar de comer».
+// 2) Inicio de la app: si está en comida, anillo con el contador, hora de regreso y «Regresé de comer».
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npm run build && node scripts/verify-salir-a-comer.mjs
 import assert from "node:assert/strict";
 import { createHmac, randomUUID } from "node:crypto";
@@ -91,7 +91,7 @@ try {
   assert.match(t1, /^00:(19|20|21):\d\d$/, `contador: ${t1}`);
   await pg.waitForFunction((anterior) => document.querySelector('[role="timer"]')?.textContent !== anterior, t1, { timeout: 5000 });
   await tarjeta.getByText(/regresa a las/).waitFor();
-  await tarjeta.getByRole("link", { name: "Regresar de comer" }).waitFor();
+  await tarjeta.getByRole("link", { name: "Regresé de comer" }).waitFor();
   assert.ok(await pg.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "sin desborde");
   await captura(pg, "inicio-comida");
   assert.deepEqual(errores, []);
