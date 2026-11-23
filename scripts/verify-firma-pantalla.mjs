@@ -123,7 +123,7 @@ try {
     if (p === "/checador/firma-digital/solicitudes/77/evidencia") {
       consultas += 1;
       assert.equal(url.searchParams.get("id_empresa"), "10");
-      return json({ success: true, evidencia: { nombre_firmante: "Ana Torres Ruiz", nombre_documento: "Consentimiento de uso del rostro", firmado_en: "2026-11-23 15:04:00", metodo: "dibujada", foto: `data:image/png;base64,${PNG}`, dispositivo: "iPhone · Safari", ip: "10.1.1.1", consultas: [{ nombre: "RH Prueba", fecha: null, actual: true }, { nombre: "Diego Dueño", fecha: "2026-11-23 16:00:00" }] } });
+      return json({ success: true, evidencia: { nombre_firmante: "Ana Torres Ruiz", nombre_documento: "Consentimiento de uso del rostro - Ana Torres Ruiz de la Concepción Hernández (expediente completo)", firmado_en: "2026-11-23 15:04:00", metodo: "dibujada", foto: `data:image/png;base64,${PNG}`, dispositivo: "iPhone · Safari", ip: "::ffff:172.19.0.3", consultas: [{ nombre: "RH Prueba", fecha: null, actual: true }, { nombre: "Diego Dueño", fecha: "2026-11-23 16:00:00" }] } });
     }
     return json({});
   });
@@ -133,10 +133,17 @@ try {
   await rh.getByRole("button", { name: "Quién firmó" }).click({ timeout: 30000 });
   const d2 = rh.getByRole("dialog", { name: "Quién firmó" });
   await d2.getByRole("img", { name: /Foto de Ana Torres Ruiz al firmar/ }).waitFor();
-  await d2.getByText("iPhone · Safari · IP 10.1.1.1").waitFor();
+  await d2.getByText("iPhone · Safari · IP ::ffff:172.19.0.3").waitFor();
   await d2.getByText("Dibujada, con foto").waitFor();
   await d2.getByText(/Diego Dueño/).waitFor();
   assert.equal(consultas, 1);
+  // (23/11/2026) Nada se sale de la ventana aunque el nombre del documento sea largo (antes se desbordaba).
+  const fuera = await d2.evaluate((dlg) => {
+    const caja = dlg.getBoundingClientRect();
+    return [...dlg.querySelectorAll("*")].filter((el) => el.getBoundingClientRect().right > caja.right + 1).map((el) => el.textContent.slice(0, 40));
+  });
+  assert.deepEqual(fuera, [], "elementos fuera de la ventana «Quién firmó»");
+  await d2.getByText(/expediente completo/).waitFor();
   await captura(rh, "quien-firmo");
 
   assert.deepEqual(errores, []);
