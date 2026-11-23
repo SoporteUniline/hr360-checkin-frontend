@@ -95,11 +95,11 @@ export default function FormularioPopup({ abierto, popup, alCerrar, guardar }) {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className={campo}>
-                <Label htmlFor="pv-boton">Texto del botón</Label>
+                <Label htmlFor="pv-boton">Texto del botón que envía los datos</Label>
                 <Input id="pv-boton" value={form.boton_texto} onChange={cambia("boton_texto")} maxLength={60} required />
               </div>
               <div className={campo}>
-                <Label htmlFor="pv-enlace">El botón lleva a</Label>
+                <Label htmlFor="pv-enlace">Después de enviar, «Continuar» lleva a</Label>
                 <select id="pv-enlace" className={select} value={enlaceElegido} onChange={(e) => setForm((f) => ({ ...f, boton_url: e.target.value === OTRA ? "https://" : e.target.value }))}>
                   {ENLACES.map((o) => <option key={o.valor} value={o.valor}>{o.texto}</option>)}
                   <option value={OTRA}>Otra dirección…</option>
