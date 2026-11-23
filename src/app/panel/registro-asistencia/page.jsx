@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth, useEmpresaTimezone } from "@/context/AuthContext";
 import useDebounce from "@/hooks/useDebounce";
 import AsistenciaDataContainer from "./AsistenciaDataContainer";
 import MobileAsistenciaView from "./MobileAsistenciaView";
@@ -18,11 +18,9 @@ import {
   CalendarDays,
   ChevronDown,
   ClipboardCheck,
-  Clock3,
   Grid3x3,
   Layers,
   List,
-  Radio,
   RotateCcw,
   Search,
 } from "lucide-react";
@@ -47,9 +45,36 @@ import ColumnasSelector, {
 import { COLUMNAS_ASISTENCIA } from "./AsistenciaTable";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import { LIMITE_TODOS } from "@/lib/asistencia/consultaPeriodo.mjs";
+import { ahoraEn, textoFechaHoy } from "@/lib/asistencia/hoy.mjs";
+import { hora12 } from "@/lib/hora12.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
+
+// Pestañas de Asistencias (control segmentado de la maqueta «Hoy», 23/11/2026). En celular ocupan el ancho.
+const PESTANAS = [
+  ["envivo", "Hoy", "Quién está, quién falta, quién va tarde y quién salió antes"],
+  ["registros", "Registros", "Ver y corregir checadas del periodo"],
+  ["horas", "Horas de ley", "Horas de la semana contra el límite de la ley y horas extra"],
+];
+function PestanasAsistencia({ vista, onElegir, movil = false }) {
+  return (
+    <div role="tablist" aria-label="Vistas de asistencia"
+      className={`gap-1 rounded-[10px] bg-[#e8ebf3] p-1 ${movil ? "grid grid-cols-3" : "inline-flex"}`}>
+      {PESTANAS.map(([clave, texto, ayuda]) => {
+        const activa = clave === "registros" ? vista === "lista" || vista === "matriz" : vista === clave;
+        return (
+          <button key={clave} type="button" role="tab" aria-selected={activa} title={ayuda} onClick={() => onElegir(clave)}
+            className={`whitespace-nowrap rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${movil ? "min-h-11 px-1 text-[13.5px]" : "min-h-9 px-4 text-sm"} ${
+              activa ? "bg-white font-semibold text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,.08)]" : "font-medium text-slate-600 hover:text-slate-900"
+            }`}>
+            {texto}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function ControlAsistencia() {
   const searchParams = useSearchParams();
@@ -262,35 +287,86 @@ export default function ControlAsistencia() {
     setPage(1);
   };
 
+  // «Hoy» trae a TODOS los de ayer y hoy (busca y filtra por área en pantalla); los filtros de Registros no se pierden
+  // pero no se le aplican. En celular también trae todo para que se refresque con cada checada.
+  const enHoy = vista === "envivo";
   const { ui, data, mutate, localEvents, resumenHorasExtra, totalSinComida, cargando } = AsistenciaDataContainer({
-    sinComida,
+    sinComida: enHoy ? false : sinComida,
     idEmpresa,
     empresaActiva,
     fechaInicio,
     fechaFin,
-    page,
-    limit,
-    debouncedFiltroEmpleado,
-    filtroDepartamento,
-    filtroTipoRegistro,
-    filtroEstadoAsistencia,
+    page: enHoy ? 1 : page,
+    limit: enHoy ? LIMITE_TODOS : limit,
+    debouncedFiltroEmpleado: enHoy ? "" : debouncedFiltroEmpleado,
+    filtroDepartamento: enHoy ? [] : filtroDepartamento,
+    filtroTipoRegistro: enHoy ? "" : filtroTipoRegistro,
+    filtroEstadoAsistencia: enHoy ? "" : filtroEstadoAsistencia,
     setPage,
     onLimitChange: handleLimitChange,
     mostrarCamposExtras,
     abrirFormulario,
     onResetFilters: handleResetFilters,
-    soloPresentes,
-    soloAusentes,
-    horasExtra,
-    sinGoceDeSueldo,
-    diasFestivos,
-    requiereAutorizacion,
+    soloPresentes: enHoy ? false : soloPresentes,
+    soloAusentes: enHoy ? false : soloAusentes,
+    horasExtra: enHoy ? false : horasExtra,
+    sinGoceDeSueldo: enHoy ? false : sinGoceDeSueldo,
+    diasFestivos: enHoy ? false : diasFestivos,
+    requiereAutorizacion: enHoy ? false : requiereAutorizacion,
     sortConfig,
     setSortConfig,
     agrupar,
     visibleColumns,
     vista,
   });
+
+  const elegirPestana = (clave) => {
+    if (clave === "envivo") {
+      setVista("envivo");
+      setFechaInicio(dayjs().tz("America/Mexico_City").subtract(1, "day").format("YYYY-MM-DD"));
+      setFechaFin(today);
+      setRangoEtiqueta("En vivo");
+      setPage(1);
+    } else {
+      setVista(clave === "registros" ? (isMobile ? "lista" : formatoRegistros) : "horas");
+    }
+  };
+  // «Hoy»: fecha y hora de la última actualización (cada checada llega por SSE y recarga los datos).
+  const zonaEmpresa = useEmpresaTimezone(empresaActiva);
+  const [actualizado, setActualizado] = useState(null);
+  useEffect(() => {
+    if (data) setActualizado(new Date());
+  }, [data]);
+  const horaActualizado = actualizado ? hora12(ahoraEn(zonaEmpresa, actualizado).hora) : null;
+
+  // Celular: «Hoy» y «Horas de ley» con encabezado y pestañas; «Registros» es la vista móvil de siempre.
+  if (isMobile && vista !== "lista" && vista !== "matriz") {
+    return (
+      <>
+        {modoFormulario && (
+          <FormularioAsistenciasMasivas
+            values={values}
+            setModoFormulario={setModoFormulario}
+            mutate={mutate}
+            idEmpresa={idEmpresa}
+          />
+        )}
+        <div className="-m-5 h-[calc(100dvh-3.5rem)] overflow-y-auto overflow-x-hidden bg-[#f6f7fb] px-4 pb-8 pt-[max(1rem,env(safe-area-inset-top))]">
+          <div className="space-y-3.5">
+            <ClockNavigation companyId={empresaActiva} />
+            <header className="space-y-0.5">
+              <h1 className="text-[22px] font-bold leading-tight text-slate-900">Asistencias</h1>
+              <p className="text-[13px] text-slate-600">
+                {textoFechaHoy(zonaEmpresa, actualizado ?? new Date(), { corto: true })}{horaActualizado ? ` · ${horaActualizado}` : ""}
+              </p>
+            </header>
+            <PestanasAsistencia vista={vista} onElegir={elegirPestana} movil />
+            {ui}
+          </div>
+        </div>
+      </>
+    );
+  }
 
   // Mobile view: full-height layout overriding panel padding
   if (isMobile) {
@@ -305,7 +381,11 @@ export default function ControlAsistencia() {
             idEmpresa={idEmpresa}
           />
         )}
-        <div className="-m-5 h-[calc(100dvh-3.5rem)] overflow-hidden">
+        <div className="-m-5 flex h-[calc(100dvh-3.5rem)] flex-col overflow-hidden">
+          <div className="shrink-0 bg-white px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
+            <PestanasAsistencia vista={vista} onElegir={elegirPestana} movil />
+          </div>
+          <div className="min-h-0 flex-1">
           <CuentaHorasProvider registros={registros}>
           <MobileAsistenciaView
             localEvents={localEvents}
@@ -340,6 +420,7 @@ export default function ControlAsistencia() {
             setFiltroRapido={setFiltroRapido}
           />
           </CuentaHorasProvider>
+          </div>
         </div>
       </>
     );
@@ -355,7 +436,10 @@ export default function ControlAsistencia() {
         <EncabezadoPagina
           icono={ClipboardCheck}
           titulo="Asistencias"
-          subtitulo="Quién está hoy, registros de entrada y salida, y horas de ley"
+          subtitulo={enHoy
+            ? `${textoFechaHoy(zonaEmpresa, actualizado ?? new Date())}${horaActualizado ? ` · actualizado ${horaActualizado}` : ""} · se refresca solo`
+            : "Quién está hoy, registros de entrada y salida, y horas de ley"}
+          acciones={<PestanasAsistencia vista={vista} onElegir={elegirPestana} />}
         />
       </div>
 
@@ -367,42 +451,6 @@ export default function ControlAsistencia() {
           idEmpresa={idEmpresa}
         />
       )}
-
-      <div role="tablist" aria-label="Vistas de asistencia" className="flex gap-1 border-b border-gray-200">
-        {[
-          ["envivo", "Hoy", Radio, "Quién está, quién falta, quién va tarde y quién debe tiempo"],
-          ["registros", "Registros", List, "Ver y corregir checadas del periodo"],
-          ["horas", "Horas de ley", Clock3, "Horas de la semana contra el límite de la ley y horas extra"],
-        ].map(([clave, texto, Icono, ayuda]) => {
-          const activa = clave === "registros" ? vista === "lista" || vista === "matriz" : vista === clave;
-          return (
-            <button
-              key={clave}
-              type="button"
-              role="tab"
-              aria-selected={activa}
-              title={ayuda}
-              onClick={() => {
-                if (clave === "envivo") {
-                  setVista("envivo");
-                  setFechaInicio(dayjs().tz("America/Mexico_City").subtract(1, "day").format("YYYY-MM-DD"));
-                  setFechaFin(today);
-                  setRangoEtiqueta("En vivo");
-                  setPage(1);
-                } else {
-                  setVista(clave === "registros" ? formatoRegistros : "horas");
-                }
-              }}
-              className={`-mb-px flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-[13.5px] font-semibold transition-colors ${
-                activa ? "border-[#2563EB] text-[#2563EB]" : "border-transparent text-gray-500 hover:text-gray-800"
-              }`}
-            >
-              <Icono className="h-4 w-4" />
-              {texto}
-            </button>
-          );
-        })}
-      </div>
 
       {(vista === "lista" || vista === "matriz") && (
       <ResumenAsistencia
@@ -425,6 +473,7 @@ export default function ControlAsistencia() {
       )}
 
 
+      {!enHoy && (
       <div className="flex flex-wrap items-center gap-2.5">
         <div className="relative min-w-[220px] max-w-[340px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -513,6 +562,7 @@ export default function ControlAsistencia() {
           />
         )}
       </div>
+      )}
 
       {(vista === "lista" || vista === "matriz") && (
       <VistasGuardadas
