@@ -18,6 +18,11 @@ const nextConfig = {
         source: "/internal/diagnostico/reloj",
         destination: "/api/diagnostico/reloj",
       },
+      {
+        // (23/11/2026) «No pudimos cargar tu equipo»: /api/solicitudes-equipo llegaba al backend (HTML «Cannot GET»).
+        source: "/internal/solicitudes-equipo/:path*",
+        destination: "/api/solicitudes-equipo/:path*",
+      },
     ];
   },
   images: {
