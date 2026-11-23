@@ -5,7 +5,7 @@
 // regresar para corregir con comentario.
 import { useMemo, useState } from "react";
 import { Check, Pencil, RotateCcw } from "lucide-react";
-import { aplicarCorrecciones, calificarRespuestas, puntajePregunta, textoRespuesta } from "@/lib/tareas/preguntas.mjs";
+import { aplicarCorrecciones, calificarRespuestas, esCalificable, puntajePregunta, textoRespuesta } from "@/lib/tareas/preguntas.mjs";
 import { cumplimientoPorPersona, fotoVigente } from "@/lib/tareas/reglas.mjs";
 import { masDias } from "@/lib/tareas/demo.mjs";
 import { useTareas } from "./store";
@@ -61,14 +61,14 @@ function Panel({ envio, alTerminar }) {
                 <span className="flex min-w-0 flex-[1_1_240px] items-center gap-2 text-sm">
                   <IconoTipo tipo={pg.tipo} className="size-4 shrink-0 text-slate-400" />
                   <span className="font-medium">{i + 1}. {pg.texto}</span>
-                  {pg.tipo !== "texto" ? <span className="text-[11px] font-semibold text-slate-400">peso {pg.peso}</span> : null}
+                  {esCalificable(pg) ? <span className="text-[11px] font-semibold text-slate-400">peso {pg.peso}</span> : null}
                 </span>
                 <span className="text-sm">
                   {cambio ? <><s className="text-slate-400">{cambio.antes}</s> → <b className="text-[#080d36]">{cambio.despues}</b></> : <b className="text-[#080d36]">{textoRespuesta(pg, rBase)}</b>}
                 </span>
                 <Foto url={pg.tipo === "foto" ? rBase?.valor : rBase?.foto} fecha={envio.fecha} hoy={hoy} />
-                {pg.tipo !== "texto" ? <ChipPuntaje valor={puntaje} /> : null}
-                {pg.tipo !== "texto" && pg.tipo !== "foto" ? (
+                {esCalificable(pg) ? <ChipPuntaje valor={puntaje} /> : null}
+                {esCalificable(pg) && pg.tipo !== "foto" ? (
                   abierta === pg.id ? (
                     <button type="button" onClick={() => setAbierta(null)} className="min-h-9 rounded-lg px-2 text-[12.5px] font-semibold text-brand">Listo</button>
                   ) : (

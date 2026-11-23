@@ -7,16 +7,21 @@
 //   multiple  { opciones: [{ id, texto, valor }] }       Varias: suma el % de las elegidas, hasta 100 %.
 //   numero    { min, max, unidad }                       Número: 100 % si está dentro del rango, si no 0 %.
 //   foto      {}                                         Foto: 100 % si la sube.
-//   texto     {}                                         Texto libre: no se califica.
-// Respuesta: { valor, na } — valor: "si"|"no" · id de opción · [ids] · número · url de foto · texto. na: «No aplica».
+//   texto, texto_largo, fecha, fecha_hora                Solo registran (no se califican): p. ej. «Fecha de caducidad».
+// Respuesta: { valor, na } — valor: "si"|"no" · id de opción · [ids] · número · url de foto · texto · "AAAA-MM-DD" ·
+// "AAAA-MM-DDTHH:MM". na: «No aplica».
 
+// califica: true = cuenta en el %; false = solo registra el dato.
 export const TIPOS = [
-  { clave: "si_no", texto: "Sí / No", ayuda: "La buena vale 100 %" },
-  { clave: "opcion", texto: "Una opción", ayuda: "Cada opción vale un %" },
-  { clave: "multiple", texto: "Varias opciones", ayuda: "Suma lo que elija, hasta 100 %" },
-  { clave: "numero", texto: "Número", ayuda: "Bien si está en el rango" },
-  { clave: "foto", texto: "Foto", ayuda: "Bien si la sube" },
-  { clave: "texto", texto: "Texto", ayuda: "No se califica" },
+  { clave: "si_no", texto: "Sí / No", ayuda: "La buena vale 100 %", califica: true },
+  { clave: "opcion", texto: "Una opción", ayuda: "Lista: elige una; cada opción vale un %", califica: true },
+  { clave: "multiple", texto: "Varias opciones", ayuda: "Lista: elige varias; suma su %, hasta 100 %", califica: true },
+  { clave: "numero", texto: "Número", ayuda: "Bien si está en el rango", califica: true },
+  { clave: "foto", texto: "Foto", ayuda: "Bien si la sube", califica: true },
+  { clave: "texto", texto: "Texto corto", ayuda: "Una línea: un nombre, un folio", califica: false },
+  { clave: "texto_largo", texto: "Texto largo", ayuda: "Párrafo: observaciones", califica: false },
+  { clave: "fecha", texto: "Fecha", ayuda: "P. ej. fecha de caducidad", califica: false },
+  { clave: "fecha_hora", texto: "Fecha y hora", ayuda: "P. ej. cuándo llegó el proveedor", califica: false },
 ];
 
 // Opciones listas para no empezar de cero.
@@ -27,7 +32,7 @@ export const OPCIONES_RAPIDAS = [
   { nombre: "Excelente a Muy mal (5)", opciones: [["Excelente", 100], ["Bien", 75], ["Regular", 50], ["Mal", 25], ["Muy mal", 0]] },
 ];
 
-export const esCalificable = (p) => p.tipo !== "texto";
+export const esCalificable = (p) => TIPOS.find((t) => t.clave === p.tipo)?.califica ?? false;
 const peso = (p) => (Number(p.peso) > 0 ? Number(p.peso) : 1);
 const vacia = (r) => r == null || r.valor == null || r.valor === "" || (Array.isArray(r.valor) && !r.valor.length);
 
@@ -91,7 +96,7 @@ export function problemasChecklist(nombre, preguntas = []) {
     }
     if (p.tipo === "numero" && p.min !== "" && p.max !== "" && p.min != null && p.max != null && Number(p.min) > Number(p.max)) problemas.push({ id: p.id, error: "El mínimo es mayor que el máximo." });
   }
-  if (preguntas.length && !preguntas.some(esCalificable)) problemas.push({ id: null, error: "Agrega al menos una pregunta que se califique (no solo texto)." });
+  if (preguntas.length && !preguntas.some(esCalificable)) problemas.push({ id: null, error: "Agrega al menos una pregunta que se califique (no solo textos o fechas)." });
   return problemas;
 }
 
@@ -121,6 +126,8 @@ export function textoRespuesta(p, r) {
     case "multiple": return (p.opciones ?? []).filter((o) => r.valor.includes(o.id)).map((o) => o.texto).join(", ") || "Ninguna";
     case "numero": return `${r.valor}${p.unidad ? ` ${p.unidad}` : ""}`;
     case "foto": return "Foto";
+    case "fecha": { const [a, m, d] = String(r.valor).split("-"); return `${d}/${m}/${a}`; }
+    case "fecha_hora": { const [f, h] = String(r.valor).split("T"); const [a, m, d] = f.split("-"); return `${d}/${m}/${a} ${h ?? ""}`.trim(); }
     default: return String(r.valor);
   }
 }
