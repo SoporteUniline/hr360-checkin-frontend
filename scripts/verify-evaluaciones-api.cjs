@@ -530,6 +530,11 @@ const jwt = () => {
   }
   // La campaña en una pantalla: pasos y una fila por persona con su resultado y su plan.
   await go("/campanas/7");
+  // Los pasos se pintan con la campaña y luego se completan con resultados y planes («Calculando…»).
+  await page.waitForFunction(() => {
+    const pasos = document.querySelector(".ev-steps");
+    return pasos && !pasos.innerText.includes("Calculando");
+  });
   const pasos = await page.locator(".ev-steps li").allInnerTexts();
   assert.equal(pasos.length, 5);
   assert.match(pasos[1], /2 · Responder\s+1 de 1 \(100 %\)/);
