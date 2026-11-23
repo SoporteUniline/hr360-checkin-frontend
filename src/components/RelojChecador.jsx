@@ -39,6 +39,10 @@ import { hora12 } from "@/lib/hora12.mjs";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
+// (23/11/2026, INC-RELOJ-COMIDA-001) Si una checada guardada no trae las opciones del servidor, se ofrecen las que el
+// servidor acepta para cualquier tipo de cierre (con cierre automático, temporal/cerrar turno cuentan como salida).
+const OPCIONES_SIN_DATOS = ["salida_comida", "salida_temporal", "cerrar_turno"];
+
 export default function RelojChecador({
   idEmpresa,
   modoEmpleado = false,
@@ -848,7 +852,7 @@ export default function RelojChecador({
                   : "Detectamos que ya tienes un turno en proceso. ¿Cuál es el siguiente paso?"}
               </p>
               <div className="flex flex-col gap-3">
-                {(pendiente?.opciones?.length ? pendiente.opciones : ["salida_temporal", "cerrar_turno"]).map((opcion) => {
+                {(pendiente?.opciones?.length ? pendiente.opciones : OPCIONES_SIN_DATOS).map((opcion) => {
                   const estilo = {
                     salida_comida: "bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-200 disabled:bg-amber-300",
                     salida: "bg-white text-blue-700 border-2 border-blue-200 hover:bg-blue-50",

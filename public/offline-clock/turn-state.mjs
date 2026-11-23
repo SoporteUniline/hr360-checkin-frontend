@@ -15,6 +15,10 @@ const invalidCaptureCodes = new Set([
 const legacyInvalidCaptures = new Set([
   'Código no encontrado o ambiguo en esta empresa',
   'Código de empleado incorrecto',
+  // (23/11/2026, INC-RELOJ-COMIDA-001) Opción de salida que no aplicaba al empleado: no se escribió nada; no debe atorar.
+  'El empleado utiliza cierre automático',
+  'Selecciona salida temporal o cierre de turno',
+  'Movimiento inválido',
 ]);
 
 // These attempts were definitively refused before an attendance was written.
