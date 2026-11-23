@@ -40,6 +40,7 @@ const reclutadora = {
   empresas_detalle: [{ id_empresa: 10, nombre: "Uniline" }, { id_empresa: 11, nombre: "Uniline Norte" }], zona_horaria: "America/Mexico_City",
 };
 const admin = { id_usuario: 1, tipo_usuario: "Admin", nombre: "Soporte ADAMIA" };
+const AVISO = "https://dev.adamia.com.mx/aviso-de-privacidad/uniline";
 const ENLACE = "https://wa.me/525598765432?text=Hola%2C%20me%20interesa%20la%20vacante%20%5BV-AB12%5D";
 
 function estadoInicial() {
@@ -86,7 +87,7 @@ function estadoInicial() {
   ];
   // R2: entrevistas por conversación (detalle completo; la lista recibe el resumen).
   const entrevistas = {
-    2: { etapa: "preguntas", consentimiento: true, nombre: null, calificacion: "incompleto", resumen: "", puntajes: null, requiere_atencion: false, motivo_atencion: null, respuestas: [] },
+    2: { etapa: "preguntas", consentimiento: true, nombre: null, calificacion: "incompleto", resumen: "", puntajes: null, requiere_atencion: false, motivo_atencion: null, pregunta_actual: "¿Tienes licencia tipo C?", respuestas: [] },
     3: {
       etapa: "humano", consentimiento: true, nombre: "Carlos Méndez Ortega", calificacion: "no_califica",
       resumen: "Tiene experiencia en almacén pero no cuenta con licencia tipo C. Pidió hablar con una persona sobre el horario nocturno.",
@@ -100,8 +101,8 @@ function estadoInicial() {
     },
   };
   for (let i = 3; i <= 32; i += 3) entrevistas[1000 + i] = { etapa: "cerrada", consentimiento: true, calificacion: "califica", requiere_atencion: false, motivo_atencion: null, respuestas: [] };
-  const sinRespuesta = { 3: [{ pregunta: "¿Dan transporte de personal en la noche?", creado_en: hace(60 * 26 + 5) }] };
-  const agente = { activo: false, nombre_asistente: "", horario: null, mensaje_fuera_horario: "", respuestas_frecuentes: "", palabras_humano: [] };
+  const sinRespuesta = { 3: [{ pregunta: "¿Dan transporte de personal en la noche?", id_vacante: 56, creado_en: hace(60 * 26 + 5) }] };
+  const agente = { id_empresa: 10, activo: false, nombre_asistente: "", horario_json: null, mensaje_fuera_horario: "", respuestas_frecuentes: "", palabras_humano: "", aviso_privacidad_url: AVISO };
   const preguntas = { 55: [{ id: 1, orden: 1, texto: "¿Tienes licencia tipo C?", tipo: "si_no", opciones: ["Sí", "No"], descartan: ["No"], alertan: [], activa: true }] };
   return { conversaciones, mensajes, empresas, vacantes, modo: "compartido", envios: [], siguienteId: 900, entrevistas, sinRespuesta, agente, preguntas, siguientePregunta: 100, errores400: [] };
 }
@@ -134,6 +135,7 @@ async function instalarMocks(ctx, usuario) {
       const q = (url.searchParams.get("q") || "").toLowerCase();
       if (url.searchParams.get("empresa") === "11") return json({ conversaciones: [], total: 0 });
       const calificacion = url.searchParams.get("calificacion");
+      if (calificacion && !["califica", "no_califica", "con_alerta", "incompleto"].includes(calificacion)) return json({ error: "Calificación no válida" }, 400);
       const atencion = url.searchParams.get("atencion") === "1";
       const lista = S.conversaciones
         .map((c) => ({ ...c, entrevista: resumenEntrevista(S.entrevistas[c.id]) }))
@@ -203,7 +205,7 @@ async function instalarMocks(ctx, usuario) {
       if (req.method() === "PUT") {
         const error = S.errores400.shift();
         if (error) return json({ error }, 400);
-        S.agente = { ...cuerpo };
+        S.agente = { ...S.agente, ...cuerpo };
       }
       return json(S.agente);
     }
@@ -531,9 +533,16 @@ try {
   assert.match(await dlgAg.innerText(), /Escribe lo que el agente puede contestar: horarios, prestaciones, dirección…/);
   await dlgAg.getByRole("switch", { name: "Agente encendido" }).click();
   assert.equal(await dlgAg.getByRole("switch", { name: "Agente encendido" }).getAttribute("aria-checked"), "true");
-  await dlgAg.getByRole("switch", { name: "Responder solo en horario" }).click();
+  assert.equal(await dlgAg.getByRole("switch", { name: "Siempre disponible" }).getAttribute("aria-checked"), "true", "horario_json null = siempre disponible");
+  assert.equal(await dlgAg.getByLabel("Lunes: desde").count(), 0);
+  const avisoLink = dlgAg.locator("[data-aviso-privacidad]");
+  assert.match(await avisoLink.innerText(), /El agente enlaza tu aviso de privacidad: https:\/\/dev\.adamia\.com\.mx\/aviso-de-privacidad\/uniline/);
+  assert.equal(await avisoLink.getByRole("link").getAttribute("href"), AVISO);
+  await dlgAg.getByRole("switch", { name: "Siempre disponible" }).click();
   await dlgAg.getByRole("button", { name: "Guardar" }).click();
   await dlgAg.getByText("Escribe cómo se presenta el asistente").waitFor();
+  await r2.waitForFunction(() => document.activeElement?.getAttribute("aria-invalid") === "true");
+  assert.equal(await dlgAg.getByLabel("Nombre del asistente").evaluate((el) => el === document.activeElement), true, "el foco va al primer campo con error");
   assert.match(await dlgAg.innerText(), /Escribe lo que contesta el agente fuera de horario\./);
   assert.equal(cuenta((x) => x.ruta === "/agente" && x.metodo === "PUT"), 0, "no manda con errores");
   await dlgAg.getByLabel("Nombre del asistente").fill("Sofía");
@@ -547,6 +556,7 @@ try {
   await dlgAg.getByLabel("Mensaje fuera de horario").fill("¡Gracias por escribir! Te respondemos mañana a partir de las 8:00.");
   await dlgAg.getByRole("button", { name: "Guardar" }).click();
   await dlgAg.getByText("Viernes: la hora de fin debe ser después de la de inicio.").waitFor();
+  await r2.waitForFunction(() => document.activeElement?.getAttribute("aria-invalid") === "true");
   await dlgAg.getByLabel("Viernes: hasta").fill("14:00");
   await dlgAg.getByLabel("Respuestas frecuentes").fill("Pagamos $9,500 a la quincena.\nLa planta está en Av. Industrial 120, Apodaca.");
   const palabras = dlgAg.getByLabel("Palabras para pasar a una persona");
@@ -569,10 +579,10 @@ try {
   const franja = { desde: "08:00", hasta: "14:00" };
   assert.deepEqual(putsAgente[1].cuerpo, {
     activo: true, nombre_asistente: "Sofía",
-    horario: { lunes: franja, martes: franja, miercoles: franja, jueves: franja, viernes: franja, sabado: franja, domingo: null },
+    horario_json: { lun: franja, mar: franja, mie: franja, jue: franja, vie: franja, sab: franja, dom: null },
     mensaje_fuera_horario: "¡Gracias por escribir! Te respondemos mañana a partir de las 8:00.",
     respuestas_frecuentes: "Pagamos $9,500 a la quincena.\nLa planta está en Av. Industrial 120, Apodaca.",
-    palabras_humano: ["humano", "hablar con alguien"],
+    palabras_humano: "humano, hablar con alguien",
   });
   await hiloR2.locator('[data-mensaje="102"]').getByText("Sofía", { exact: true }).waitFor();
   // Cambios sin guardar: cerrar pide confirmación y no se pierden por un toque accidental.
@@ -599,18 +609,24 @@ try {
   await ed.getByRole("button", { name: "Agregar pregunta (1/8)" }).click();
   await ed.getByRole("button", { name: "Guardar entrevista" }).click();
   await ed.getByRole("region", { name: "Pregunta 2" }).getByText("Escribe la pregunta.").waitFor();
+  await r2.waitForFunction(() => document.activeElement?.getAttribute("aria-invalid") === "true");
   assert.equal(await ed.getByRole("textbox", { name: "Texto de la pregunta 2" }).evaluate((el) => el === document.activeElement), true, "el foco va al primer error");
   assert.equal(cuenta((x) => x.ruta === "/vacantes/55/preguntas" && x.metodo === "PUT"), 0);
   const p2 = ed.getByRole("region", { name: "Pregunta 2" });
   await p2.getByRole("textbox", { name: "Texto de la pregunta 2" }).fill("¿Cuántos años tienes?");
   await p2.getByRole("combobox", { name: "Tipo de respuesta de la pregunta 2" }).selectOption("numero");
-  await p2.getByRole("group", { name: "Respuestas que descartan" }).getByRole("textbox", { name: "Mínimo" }).fill("30");
+  // «numero»: rango ACEPTADO; fuera de él descarta o alerta.
+  assert.match(await p2.getByRole("group", { name: "Respuestas que descartan" }).innerText(), /Rango aceptado:\s*de[\s\S]*a[\s\S]*Fuera de este rango descarta/);
+  await p2.getByRole("group", { name: "Respuestas que descartan" }).getByRole("textbox", { name: "Mínimo" }).fill("18");
   await p2.getByRole("group", { name: "Respuestas que descartan" }).getByRole("textbox", { name: "Máximo" }).fill("17");
-  await p2.getByRole("group", { name: "Respuestas que alertan" }).getByRole("textbox", { name: "Mínimo" }).fill("60");
+  await p2.getByRole("group", { name: "Respuestas que alertan" }).getByRole("textbox", { name: "Máximo" }).fill("55");
   await ed.getByRole("button", { name: "Guardar entrevista" }).click();
   await p2.getByText("el mínimo no puede ser mayor que el máximo").waitFor();
-  await p2.getByRole("group", { name: "Respuestas que descartan" }).getByRole("textbox", { name: "Mínimo" }).fill("");
-  assert.equal(await p2.locator("[data-vista-previa]").innerText(), "Ej.: ¿Cuántos años tienes? → 17 o menos descarta · 60 o más alerta");
+  const minDesc = p2.getByRole("group", { name: "Respuestas que descartan" }).getByRole("textbox", { name: "Mínimo" });
+  await r2.waitForFunction(() => document.activeElement?.getAttribute("aria-invalid") === "true");
+  assert.equal(await minDesc.evaluate((el) => el === document.activeElement), true, "el foco va al primer campo con error");
+  await p2.getByRole("group", { name: "Respuestas que descartan" }).getByRole("textbox", { name: "Máximo" }).fill("");
+  await p2.locator("[data-vista-previa]").getByText("Ej.: ¿Cuántos años tienes? → menos de 18 descarta · más de 55 alerta", { exact: true }).waitFor({ timeout: 3000 });
   // Pregunta de opciones: una respuesta no puede descartar y alertar a la vez.
   await ed.getByRole("button", { name: "Agregar pregunta (2/8)" }).click();
   const p3 = ed.getByRole("region", { name: "Pregunta 3" });
@@ -635,7 +651,7 @@ try {
   const putP = pedidos.filter((x) => x.ruta === "/vacantes/55/preguntas" && x.metodo === "PUT");
   assert.equal(putP.length, 1);
   assert.deepEqual(putP[0].cuerpo, { preguntas: [
-    { orden: 1, texto: "¿Cuántos años tienes?", tipo: "numero", opciones: null, descartan: { max: 17 }, alertan: { min: 60 }, activa: true },
+    { orden: 1, texto: "¿Cuántos años tienes?", tipo: "numero", opciones: null, descartan: { min: 18 }, alertan: { max: 55 }, activa: true },
     { id: 1, orden: 2, texto: "¿Tienes licencia tipo C?", tipo: "si_no", opciones: ["Sí", "No"], descartan: ["No"], alertan: [], activa: true },
     { orden: 3, texto: "¿Qué turno prefieres?", tipo: "opciones", opciones: ["Matutino", "Nocturno", "Mixto"], descartan: ["Nocturno"], alertan: ["Mixto"], activa: true },
   ] });
@@ -706,6 +722,12 @@ try {
   await panelC.getByRole("button", { name: "Marcar como atendido" }).waitFor({ state: "detached" });
   assert.equal(cuenta((x) => x.metodo === "POST" && x.ruta === "/conversaciones/3/atendido"), 1);
   await r2.locator('[data-atencion="3"]').waitFor({ state: "detached", timeout: 7000 });
+  assert.ok(!pedidos.some((x) => x.ruta === "/conversaciones" && /calificacion=(?!califica|no_califica|con_alerta|incompleto)/.test(x.params)), "solo calificaciones válidas");
+  await r2.getByRole("button", { name: /^\+52 442 123 4567/ }).click();
+  await panelC.locator("[data-pregunta-actual]").getByText("¿Tienes licencia tipo C?").waitFor();
+  assert.match(await panelC.innerText(), /Incompleto[\s\S]*Respondiendo preguntas[\s\S]*Pregunta en curso: ¿Tienes licencia tipo C\?/);
+  await carlos.click();
+  await hiloR2.getByText("Te esperamos el lunes").first().waitFor();
   // Bajo 1280 px: «Ver evaluación» abre la hoja.
   await r2.setViewportSize({ width: 1100, height: 900 });
   assert.equal(await panelC.isVisible(), false);
@@ -738,7 +760,7 @@ try {
   await dormir(300);
   const cajaAg = await agT.boundingBox();
   assert.ok(cajaAg.x === 0 && cajaAg.width === 390 && cajaAg.height >= 840, `agente a pantalla completa: ${JSON.stringify(cajaAg)}`);
-  for (const sw of ["Agente encendido", "Responder solo en horario", "Lunes", "Domingo"]) assert.ok(await tamano(agT.getByRole("switch", { name: sw })) >= 44, `switch ${sw} ≥44 px`);
+  for (const sw of ["Agente encendido", "Siempre disponible", "Lunes", "Domingo"]) assert.ok(await tamano(agT.getByRole("switch", { name: sw })) >= 44, `switch ${sw} ≥44 px`);
   assert.ok(await tamano(agT.getByRole("button", { name: "Guardar" })) >= 44 && await tamano(agT.getByRole("button", { name: "Close" })) >= 44);
   assert.ok(await tamano(agT.getByRole("button", { name: "Quitar «humano»" })) >= 44);
   assert.ok(await sinScrollHorizontal(t2) && await agT.evaluate((el) => [...el.querySelectorAll("*")].every((n) => n.getBoundingClientRect().right <= 391)), "agente sin desborde horizontal");

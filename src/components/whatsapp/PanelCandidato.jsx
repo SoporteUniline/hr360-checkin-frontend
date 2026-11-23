@@ -6,7 +6,7 @@ import { AlertTriangle, CheckCircle2, HelpCircle, UserRoundCheck } from "lucide-
 import { Button } from "@/components/ui/button";
 import { tiempoRelativo } from "@/lib/whatsapp/tiempo.mjs";
 import {
-  PUNTAJES, etiquetaEtapa, etiquetaSeveridad, normalizarPuntaje, textoConsentimiento,
+  PUNTAJES, etiquetaEtapa, etiquetaSeveridad, normalizarPuntaje, textoConsentimiento, textoPreguntaActual,
 } from "@/lib/whatsapp/entrevista.mjs";
 import { ChipCalificacion } from "./controles";
 
@@ -62,6 +62,11 @@ export default function PanelCandidato({ entrevista, preguntasSinRespuesta = [],
           {textoConsentimiento(entrevista.consentimiento)}
         </p>
       </div>
+      {entrevista.etapa === "preguntas" && textoPreguntaActual(entrevista.pregunta_actual) ? (
+        <p className="rounded-lg bg-violet-50 p-2.5 text-[13px] text-violet-900 [overflow-wrap:anywhere]" data-pregunta-actual>
+          <span className="font-semibold">Pregunta en curso:</span> {textoPreguntaActual(entrevista.pregunta_actual)}
+        </p>
+      ) : null}
       {entrevista.requiere_atencion ? (
         <div role="status" className="grid gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-[13px] text-red-800">
           <p className="flex items-start gap-1.5 font-semibold"><AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" /> Requiere atención</p>

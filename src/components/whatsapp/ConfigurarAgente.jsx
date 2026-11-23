@@ -85,7 +85,7 @@ function Horario({ form, setForm, errores }) {
           return (
             <li key={clave} className="grid gap-1 px-3 py-1.5" data-dia={clave}>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <Interruptor activo={!!dia} onCambiar={(v) => cambiarDia(clave, v ? { desde: form.horario?.lunes?.desde || "09:00", hasta: form.horario?.lunes?.hasta || "18:00" } : null)} className="w-32">
+                <Interruptor activo={!!dia} onCambiar={(v) => cambiarDia(clave, v ? { desde: form.horario?.lun?.desde || "09:00", hasta: form.horario?.lun?.hasta || "18:00" } : null)} className="w-32">
                   {texto}
                 </Interruptor>
                 {dia ? (
@@ -196,7 +196,15 @@ export default function ConfigurarAgente({ abierto, onCambiar, idEmpresa }) {
               </div>
               <p className="flex gap-2 rounded-xl bg-blue-50 p-3 text-[13px] text-blue-900">
                 <ShieldCheck className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                <span>El agente usa tu aviso de privacidad de ADAMIA y nunca pide CURP, datos bancarios ni dinero.</span>
+                <span className="grid min-w-0 gap-1">
+                  <span>El agente usa tu aviso de privacidad de ADAMIA y nunca pide CURP, datos bancarios ni dinero.</span>
+                  {data?.aviso_privacidad_url ? (
+                    <span className="[overflow-wrap:anywhere]" data-aviso-privacidad>
+                      El agente enlaza tu aviso de privacidad:{" "}
+                      <a href={data.aviso_privacidad_url} target="_blank" rel="noopener noreferrer" className="font-semibold underline underline-offset-2">{data.aviso_privacidad_url}</a>
+                    </span>
+                  ) : null}
+                </span>
               </p>
               <Campo id={id("nombre")} etiqueta="Nombre del asistente" ayuda="Así se presenta y firma sus mensajes. Ej.: Sofía de Uniline." error={errores.nombre_asistente}
                 contador={`${form.nombre_asistente.length}/${LIMITE_NOMBRE}`}>
@@ -206,9 +214,9 @@ export default function ConfigurarAgente({ abierto, onCambiar, idEmpresa }) {
               </Campo>
               <section className="grid gap-2" aria-labelledby={id("horario-t")}>
                 <h3 id={id("horario-t")} className="text-sm font-semibold text-gray-800">Horario</h3>
-                <Interruptor activo={form.usaHorario} onCambiar={(v) => actualizar("usaHorario", v)}>Responder solo en horario</Interruptor>
+                <Interruptor activo={!form.usaHorario} onCambiar={(v) => actualizar("usaHorario", !v)}>Siempre disponible</Interruptor>
                 <p className="text-[12.5px] text-gray-500">
-                  {form.usaHorario ? "Fuera de este horario el agente contesta el mensaje de abajo y retoma la entrevista al día siguiente." : "Apagado: el agente contesta a cualquier hora."}
+                  {form.usaHorario ? "Elige los días y horas en que contesta. Fuera de ese horario envía el mensaje de abajo." : "El agente contesta a cualquier hora, todos los días."}
                 </p>
                 {form.usaHorario ? (
                   <>
@@ -231,7 +239,7 @@ export default function ConfigurarAgente({ abierto, onCambiar, idEmpresa }) {
               </Campo>
               <div className="grid gap-1.5">
                 <label htmlFor={id("palabras")} className="text-sm font-semibold text-gray-800">Palabras para pasar a una persona</label>
-                <p id={`${id("palabras")}-ayuda`} className="text-[12.5px] text-gray-500">Si el candidato escribe alguna, el agente deja de contestar y el chat se marca como «Requiere atención». Enter o coma para agregar.</p>
+                <p id={`${id("palabras")}-ayuda`} className="text-[12.5px] text-gray-500">Si el candidato escribe alguna, el agente deja de contestar y el chat se marca como «Requiere atención». Enter o coma para agregar (hasta 500 caracteres entre todas).</p>
                 <Palabras id={id("palabras")} palabras={form.palabras_humano} onCambiar={(v) => actualizar("palabras_humano", v)} error={errores.palabras_humano} />
               </div>
             </div>

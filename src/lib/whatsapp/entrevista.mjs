@@ -194,15 +194,17 @@ export function validarPreguntas(lista) {
   return { errores, general, valido, cuerpo: { preguntas: salida } };
 }
 
-// «17 o menos», «60 o más», «de 1 a 3».
-export function describirRango(rango) {
+// En «numero» descartan/alertan son el RANGO ACEPTADO: la respuesta FUERA del rango descarta (o alerta).
+// Describe lo que queda fuera: «menos de 18», «más de 60», «fuera de 18 a 60».
+export function describirFueraDeRango(rango) {
   if (!rango) return "";
   const min = leerNumero(rango.min);
   const max = leerNumero(rango.max);
   if (min.invalido || max.invalido || (min.vacio && max.vacio)) return "";
-  if (min.vacio) return `${max.valor} o menos`;
-  if (max.vacio) return `${min.valor} o más`;
-  return min.valor === max.valor ? `${min.valor}` : `de ${min.valor} a ${max.valor}`;
+  if (!min.vacio && !max.vacio && min.valor > max.valor) return ""; // rango inválido: lo marca la validación
+  if (min.vacio) return `más de ${max.valor}`;
+  if (max.vacio) return `menos de ${min.valor}`;
+  return min.valor === max.valor ? `distinto de ${min.valor}` : `fuera de ${min.valor} a ${max.valor}`;
 }
 
 // Línea de ejemplo bajo cada pregunta: «Ej.: ¿Tienes licencia tipo C? → No descarta».
@@ -216,8 +218,8 @@ export function vistaPreviaPregunta(p) {
     if (d.length) partes.push(`${d.join(" o ")} descarta`);
     if (a.length) partes.push(`${a.join(" o ")} alerta`);
   } else if (p?.tipo === "numero") {
-    const d = describirRango(p.descarta);
-    const a = describirRango(p.alerta);
+    const d = describirFueraDeRango(p.descarta);
+    const a = describirFueraDeRango(p.alerta);
     if (d) partes.push(`${d} descarta`);
     if (a) partes.push(`${a} alerta`);
   } else {
@@ -231,31 +233,33 @@ export const textoConteoPreguntas = (n) => (!n ? "Sin entrevista" : n === 1 ? "1
 export const contarPreguntas = (datos) => (Array.isArray(datos?.preguntas) ? datos.preguntas.filter((p) => p?.activa !== false).length : 0);
 
 // ——— Configuración del agente ———
+// Contrato del API: horario_json = {lun..dom: {desde, hasta} | null} o null completo (= siempre disponible);
+// palabras_humano es un texto separado por comas.
 export const DIAS = [
-  { clave: "lunes", texto: "Lunes" },
-  { clave: "martes", texto: "Martes" },
-  { clave: "miercoles", texto: "Miércoles" },
-  { clave: "jueves", texto: "Jueves" },
-  { clave: "viernes", texto: "Viernes" },
-  { clave: "sabado", texto: "Sábado" },
-  { clave: "domingo", texto: "Domingo" },
+  { clave: "lun", texto: "Lunes" },
+  { clave: "mar", texto: "Martes" },
+  { clave: "mie", texto: "Miércoles" },
+  { clave: "jue", texto: "Jueves" },
+  { clave: "vie", texto: "Viernes" },
+  { clave: "sab", texto: "Sábado" },
+  { clave: "dom", texto: "Domingo" },
 ];
-export const LIMITE_NOMBRE = 40;
+export const LIMITE_NOMBRE = 60;
 export const LIMITE_FUERA_HORARIO = 500;
-export const LIMITE_FRECUENTES = 4000;
-export const MAX_PALABRAS = 20;
-export const LIMITE_PALABRA = 40;
+export const LIMITE_FRECUENTES = 8000;
+export const LIMITE_PALABRAS = 500; // largo total del texto separado por comas
+export const LIMITE_PALABRA = 60;
 const HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-// Horario sugerido al activarlo: lunes a viernes 9:00–18:00.
+// Horario sugerido al dejar de estar «Siempre disponible»: lunes a viernes 9:00–18:00.
 export function horarioBase() {
   const h = {};
-  for (const { clave } of DIAS) h[clave] = ["sabado", "domingo"].includes(clave) ? null : { desde: "09:00", hasta: "18:00" };
+  for (const { clave } of DIAS) h[clave] = ["sab", "dom"].includes(clave) ? null : { desde: "09:00", hasta: "18:00" };
   return h;
 }
 
 export function copiarLunesATodos(horario) {
-  const lunes = horario?.lunes ?? null;
+  const lunes = horario?.lun ?? null;
   const h = {};
   for (const { clave } of DIAS) h[clave] = lunes ? { ...lunes } : null;
   return h;
@@ -277,6 +281,10 @@ export function validarHorario(horario) {
   return { errores, horario: salida };
 }
 
+export const textoPalabras = (lista) => (lista ?? []).join(", ");
+// Texto del API («humano, asesor») → lista sin vacíos ni repetidas.
+export const separarPalabras = (texto) => agregarPalabras([], String(texto ?? "")).palabras;
+
 // Agrega palabras (separadas por coma o salto de línea) sin repetir. Devuelve { palabras, error }.
 export function agregarPalabras(actuales, texto) {
   const lista = [...(actuales ?? [])];
@@ -284,7 +292,7 @@ export function agregarPalabras(actuales, texto) {
   for (const p of nuevas) {
     if (p.length > LIMITE_PALABRA) return { palabras: lista, error: `Cada palabra o frase admite hasta ${LIMITE_PALABRA} caracteres.` };
     if (lista.some((x) => mismaOpcion(x, p))) continue;
-    if (lista.length >= MAX_PALABRAS) return { palabras: lista, error: `Máximo ${MAX_PALABRAS} palabras o frases.` };
+    if (textoPalabras([...lista, p]).length > LIMITE_PALABRAS) return { palabras: lista, error: `Entre todas suman más de ${LIMITE_PALABRAS} caracteres; quita alguna.` };
     lista.push(p);
   }
   return { palabras: lista, error: "" };
@@ -292,19 +300,19 @@ export function agregarPalabras(actuales, texto) {
 
 // Respuesta del API → formulario.
 export function agenteDesdeApi(a) {
-  const conHorario = !!a?.horario && typeof a.horario === "object";
+  const conHorario = !!a?.horario_json && typeof a.horario_json === "object";
   return {
     activo: a?.activo === true,
     nombre_asistente: String(a?.nombre_asistente ?? ""),
     usaHorario: conHorario,
-    horario: conHorario ? validarHorario(a.horario).horario : horarioBase(),
+    horario: conHorario ? validarHorario(a.horario_json).horario : horarioBase(),
     mensaje_fuera_horario: String(a?.mensaje_fuera_horario ?? ""),
     respuestas_frecuentes: String(a?.respuestas_frecuentes ?? ""),
-    palabras_humano: Array.isArray(a?.palabras_humano) ? a.palabras_humano.map(String).filter((x) => x.trim()) : [],
+    palabras_humano: Array.isArray(a?.palabras_humano) ? separarPalabras(a.palabras_humano.join(",")) : separarPalabras(a?.palabras_humano),
   };
 }
 
-// Formulario → { errores, valido, cuerpo } con el cuerpo listo para PUT /agente.
+// Formulario → { errores, valido, cuerpo } con el cuerpo listo para PUT /agente (solo campos editables).
 export function validarAgente(form) {
   const errores = {};
   const nombre = String(form?.nombre_asistente ?? "").trim().replace(/\s+/g, " ");
@@ -317,7 +325,7 @@ export function validarAgente(form) {
     const r = validarHorario(form.horario);
     horario = r.horario;
     if (Object.keys(r.errores).length) errores.horario = r.errores;
-    else if (!DIAS.some(({ clave }) => horario[clave])) errores.horario = { general: "Activa al menos un día o desactiva «Responder solo en horario»." };
+    else if (!DIAS.some(({ clave }) => horario[clave])) errores.horario = { general: "Activa al menos un día o marca «Siempre disponible»." };
     if (!fuera) errores.mensaje_fuera_horario = "Escribe lo que contesta el agente fuera de horario.";
   }
   if (fuera.length > LIMITE_FUERA_HORARIO) errores.mensaje_fuera_horario = `Máximo ${LIMITE_FUERA_HORARIO} caracteres.`;
@@ -327,10 +335,13 @@ export function validarAgente(form) {
   const cuerpo = {
     activo: form?.activo === true,
     nombre_asistente: nombre,
-    horario,
+    horario_json: horario,
     mensaje_fuera_horario: fuera,
     respuestas_frecuentes: frecuentes,
-    palabras_humano: palabras.palabras,
+    palabras_humano: textoPalabras(palabras.palabras),
   };
   return { errores, valido: !Object.keys(errores).length, cuerpo };
 }
+
+// Texto de la pregunta en curso (el API puede mandar texto u objeto con «texto»).
+export const textoPreguntaActual = (p) => (typeof p === "string" ? p.trim() : String(p?.texto ?? "").trim());

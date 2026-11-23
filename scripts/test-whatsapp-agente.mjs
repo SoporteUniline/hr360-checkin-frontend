@@ -3,9 +3,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   etiquetaCalificacion, etiquetaEtapa, etiquetaSeveridad, normalizarPuntaje, textoConsentimiento, FILTROS, paramsFiltro,
-  preguntaNueva, cambiarTipo, preguntaDesdeApi, moverPregunta, validarPreguntas, describirRango, vistaPreviaPregunta,
+  preguntaNueva, cambiarTipo, preguntaDesdeApi, moverPregunta, validarPreguntas, describirFueraDeRango, vistaPreviaPregunta,
   textoConteoPreguntas, contarPreguntas, MAX_PREGUNTAS, DIAS, horarioBase, copiarLunesATodos, validarHorario, agregarPalabras,
-  agenteDesdeApi, validarAgente, MAX_PALABRAS,
+  agenteDesdeApi, validarAgente, separarPalabras, textoPalabras, textoPreguntaActual,
 } from "../src/lib/whatsapp/entrevista.mjs";
 import { etiquetaActor } from "../src/lib/whatsapp/reglas.mjs";
 
@@ -55,20 +55,20 @@ test("pregunta del API ↔ formulario ↔ cuerpo del PUT", () => {
   const api = [
     { id: 11, orden: 1, texto: "¿Tienes licencia tipo C?", tipo: "si_no", opciones: ["Sí", "No"], descartan: ["No"], alertan: [], activa: true },
     { id: 12, orden: 2, texto: "¿Qué turno prefieres?", tipo: "opciones", opciones: ["Matutino", "Nocturno", "Mixto"], descartan: [], alertan: ["nocturno"], activa: true },
-    { id: 13, orden: 3, texto: "¿Cuántos años tienes?", tipo: "numero", opciones: null, descartan: { max: 17 }, alertan: { min: 60 }, activa: true },
+    { id: 13, orden: 3, texto: "¿Cuántos años tienes?", tipo: "numero", opciones: null, descartan: { min: 18 }, alertan: { min: 18, max: 55 }, activa: true },
     { id: 14, orden: 4, texto: "Cuéntanos de tu último empleo", tipo: "texto", opciones: null, descartan: null, alertan: null, activa: false },
   ];
   const form = api.map(preguntaDesdeApi);
   assert.deepEqual(form[0].opciones.map((o) => [o.texto, o.efecto]), [["Sí", "ok"], ["No", "descarta"]]);
   assert.deepEqual(form[1].opciones.map((o) => o.efecto), ["ok", "alerta", "ok"], "compara sin mayúsculas");
-  assert.deepEqual(form[2].descarta, { min: "", max: "17" });
-  assert.deepEqual(form[2].alerta, { min: "60", max: "" });
+  assert.deepEqual(form[2].descarta, { min: "18", max: "" });
+  assert.deepEqual(form[2].alerta, { min: "18", max: "55" });
   const r = validarPreguntas(form);
   assert.equal(r.valido, true, JSON.stringify(r.errores));
   assert.deepEqual(r.cuerpo.preguntas, [
     { id: 11, orden: 1, texto: "¿Tienes licencia tipo C?", tipo: "si_no", opciones: ["Sí", "No"], descartan: ["No"], alertan: [], activa: true },
     { id: 12, orden: 2, texto: "¿Qué turno prefieres?", tipo: "opciones", opciones: ["Matutino", "Nocturno", "Mixto"], descartan: [], alertan: ["Nocturno"], activa: true },
-    { id: 13, orden: 3, texto: "¿Cuántos años tienes?", tipo: "numero", opciones: null, descartan: { max: 17 }, alertan: { min: 60 }, activa: true },
+    { id: 13, orden: 3, texto: "¿Cuántos años tienes?", tipo: "numero", opciones: null, descartan: { min: 18 }, alertan: { min: 18, max: 55 }, activa: true },
     { id: 14, orden: 4, texto: "Cuéntanos de tu último empleo", tipo: "texto", opciones: null, descartan: null, alertan: null, activa: false },
   ]);
   // Reordenar cambia el orden del cuerpo.
@@ -129,15 +129,16 @@ test("cambiar tipo conserva el texto y reinicia lo demás", () => {
   assert.deepEqual(cambiarTipo(p, "opciones").opciones.map((o) => o.texto), ["", ""]);
 });
 
-test("vista previa y rangos", () => {
-  assert.equal(describirRango({ min: "", max: "17" }), "17 o menos");
-  assert.equal(describirRango({ min: "60", max: "" }), "60 o más");
-  assert.equal(describirRango({ min: "1", max: "3" }), "de 1 a 3");
-  assert.equal(describirRango({ min: "", max: "" }), "");
+test("vista previa y rangos (rango aceptado: fuera descarta o alerta)", () => {
+  assert.equal(describirFueraDeRango({ min: "18", max: "" }), "menos de 18");
+  assert.equal(describirFueraDeRango({ min: "", max: "60" }), "más de 60");
+  assert.equal(describirFueraDeRango({ min: "1", max: "3" }), "fuera de 1 a 3");
+  assert.equal(describirFueraDeRango({ min: "", max: "" }), "");
+  assert.equal(describirFueraDeRango({ min: "18", max: "17" }), "", "rango inválido no se describe");
   const sn = preguntaDesdeApi({ texto: "¿Tienes licencia tipo C?", tipo: "si_no", descartan: ["No"], alertan: [] });
   assert.equal(vistaPreviaPregunta(sn), "Ej.: ¿Tienes licencia tipo C? → No descarta");
-  const num = preguntaDesdeApi({ texto: "¿Edad?", tipo: "numero", descartan: { max: 17 }, alertan: { min: 60 } });
-  assert.equal(vistaPreviaPregunta(num), "Ej.: ¿Edad? → 17 o menos descarta · 60 o más alerta");
+  const num = preguntaDesdeApi({ texto: "¿Edad?", tipo: "numero", descartan: { min: 18 }, alertan: { min: 18, max: 55 } });
+  assert.equal(vistaPreviaPregunta(num), "Ej.: ¿Edad? → menos de 18 descarta · fuera de 18 a 55 alerta");
   assert.equal(vistaPreviaPregunta(preguntaNueva("opciones")), "Ej.: (escribe la pregunta) → cualquier respuesta pasa");
   assert.equal(vistaPreviaPregunta({ ...preguntaNueva("texto"), texto: "¿Por qué?" }), "Ej.: ¿Por qué? → solo se guarda la respuesta");
 });
@@ -150,55 +151,75 @@ test("conteo de preguntas por vacante", () => {
   assert.equal(contarPreguntas(null), 0);
 });
 
-test("horario del agente", () => {
+test("horario del agente (claves lun..dom)", () => {
   const h = horarioBase();
-  assert.deepEqual(Object.keys(h), DIAS.map((d) => d.clave));
-  assert.deepEqual(h.lunes, { desde: "09:00", hasta: "18:00" });
-  assert.equal(h.domingo, null);
-  const copia = copiarLunesATodos({ ...h, lunes: { desde: "08:00", hasta: "14:00" } });
+  assert.deepEqual(Object.keys(h), ["lun", "mar", "mie", "jue", "vie", "sab", "dom"]);
+  assert.deepEqual(DIAS.map((d) => d.clave), Object.keys(h));
+  assert.deepEqual(h.lun, { desde: "09:00", hasta: "18:00" });
+  assert.equal(h.dom, null);
+  const copia = copiarLunesATodos({ ...h, lun: { desde: "08:00", hasta: "14:00" } });
   assert.ok(DIAS.every(({ clave }) => copia[clave].desde === "08:00" && copia[clave].hasta === "14:00"));
-  assert.ok(DIAS.every(({ clave }) => copiarLunesATodos({ lunes: null })[clave] === null), "lunes cerrado → todos cerrados");
-  assert.deepEqual(validarHorario({ lunes: { desde: "18:00", hasta: "09:00" } }).errores, { lunes: "Lunes: la hora de fin debe ser después de la de inicio." });
-  assert.deepEqual(validarHorario({ martes: { desde: "", hasta: "10:00" } }).errores, { martes: "Martes: escribe la hora de inicio y de fin." });
-  assert.deepEqual(validarHorario({ lunes: { desde: "09:00:00", hasta: "18:00:00" } }).horario.lunes, { desde: "09:00", hasta: "18:00" }, "acepta HH:MM:SS");
+  assert.ok(DIAS.every(({ clave }) => copiarLunesATodos({ lun: null })[clave] === null), "lunes cerrado → todos cerrados");
+  assert.deepEqual(validarHorario({ lun: { desde: "18:00", hasta: "09:00" } }).errores, { lun: "Lunes: la hora de fin debe ser después de la de inicio." });
+  assert.deepEqual(validarHorario({ mar: { desde: "", hasta: "10:00" } }).errores, { mar: "Martes: escribe la hora de inicio y de fin." });
+  assert.deepEqual(validarHorario({ lun: { desde: "09:00:00", hasta: "18:00:00" } }).horario.lun, { desde: "09:00", hasta: "18:00" }, "acepta HH:MM:SS");
 });
 
-test("palabras para pasar a una persona", () => {
+test("palabras para pasar a una persona: texto separado por comas", () => {
   assert.deepEqual(agregarPalabras(["humano"], "asesor, Humano,\npersona real").palabras, ["humano", "asesor", "persona real"]);
-  assert.match(agregarPalabras([], "x".repeat(41)).error, /40 caracteres/);
-  const llenas = Array.from({ length: MAX_PALABRAS }, (_, i) => `p${i}`);
-  assert.match(agregarPalabras(llenas, "otra").error, /Máximo 20/);
-  assert.equal(agregarPalabras(llenas, "p1").error, "", "repetida no cuenta");
+  assert.match(agregarPalabras([], "x".repeat(61)).error, /60 caracteres/);
+  assert.deepEqual(separarPalabras(" humano ,asesor,, Humano "), ["humano", "asesor"]);
+  assert.deepEqual(separarPalabras(null), []);
+  assert.equal(textoPalabras(["humano", "hablar con alguien"]), "humano, hablar con alguien");
+  // Tope de 500 caracteres del texto completo.
+  const muchas = Array.from({ length: 60 }, (_, i) => `palabra${i}`);
+  const r = agregarPalabras([], muchas.join(","));
+  assert.match(r.error, /500 caracteres/);
+  assert.ok(textoPalabras(r.palabras).length <= 500);
 });
 
 test("configuración del agente: API → formulario → PUT", () => {
   const api = {
-    activo: true, nombre_asistente: "Sofía", horario: { lunes: { desde: "09:00", hasta: "18:00" }, martes: null },
-    mensaje_fuera_horario: "Te respondo mañana.", respuestas_frecuentes: "Pagamos quincenal.", palabras_humano: ["humano", "asesor"],
+    id_empresa: 10, activo: true, nombre_asistente: "Sofía", horario_json: { lun: { desde: "09:00", hasta: "18:00" }, mar: null },
+    mensaje_fuera_horario: "Te respondo mañana.", respuestas_frecuentes: "Pagamos quincenal.", palabras_humano: "humano, asesor",
+    aviso_privacidad_url: "https://dev.adamia.com.mx/aviso",
   };
   const form = agenteDesdeApi(api);
   assert.equal(form.usaHorario, true);
-  assert.equal(form.horario.domingo, null);
+  assert.equal(form.horario.dom, null);
+  assert.deepEqual(form.palabras_humano, ["humano", "asesor"]);
   const r = validarAgente(form);
   assert.equal(r.valido, true, JSON.stringify(r.errores));
   assert.deepEqual(r.cuerpo, {
     activo: true, nombre_asistente: "Sofía",
-    horario: { lunes: { desde: "09:00", hasta: "18:00" }, martes: null, miercoles: null, jueves: null, viernes: null, sabado: null, domingo: null },
-    mensaje_fuera_horario: "Te respondo mañana.", respuestas_frecuentes: "Pagamos quincenal.", palabras_humano: ["humano", "asesor"],
+    horario_json: { lun: { desde: "09:00", hasta: "18:00" }, mar: null, mie: null, jue: null, vie: null, sab: null, dom: null },
+    mensaje_fuera_horario: "Te respondo mañana.", respuestas_frecuentes: "Pagamos quincenal.", palabras_humano: "humano, asesor",
   });
-  // Sin horario: horario null y no exige mensaje fuera de horario.
-  const libre = validarAgente({ ...agenteDesdeApi({ activo: false, nombre_asistente: "Ana", horario: null }) });
+  // horario_json null = siempre disponible: no exige mensaje fuera de horario.
+  const libre = validarAgente(agenteDesdeApi({ activo: false, nombre_asistente: "Ana", horario_json: null, palabras_humano: "" }));
   assert.equal(libre.valido, true);
-  assert.equal(libre.cuerpo.horario, null);
+  assert.equal(libre.cuerpo.horario_json, null);
+  assert.equal(libre.cuerpo.palabras_humano, "");
   assert.equal(agenteDesdeApi(null).usaHorario, false);
-  // Errores.
-  const malo = validarAgente({ ...form, nombre_asistente: " ", mensaje_fuera_horario: "", horario: { ...form.horario, martes: { desde: "10:00", hasta: "09:00" } } });
+  // Límites del API: nombre 1–60, fuera de horario ≤500, frecuentes ≤8000.
+  assert.equal(validarAgente({ ...form, nombre_asistente: "x".repeat(60) }).valido, true);
+  assert.match(validarAgente({ ...form, nombre_asistente: "x".repeat(61) }).errores.nombre_asistente, /60/);
+  assert.match(validarAgente({ ...form, respuestas_frecuentes: "x".repeat(8001) }).errores.respuestas_frecuentes, /8000/);
+  assert.equal(validarAgente({ ...form, respuestas_frecuentes: "x".repeat(8000) }).valido, true);
+  assert.match(validarAgente({ ...form, mensaje_fuera_horario: "x".repeat(501) }).errores.mensaje_fuera_horario, /500/);
+  const malo = validarAgente({ ...form, nombre_asistente: " ", mensaje_fuera_horario: "", horario: { ...form.horario, mar: { desde: "10:00", hasta: "09:00" } } });
   assert.equal(malo.valido, false);
   assert.match(malo.errores.nombre_asistente, /Escribe cómo se presenta/);
   assert.match(malo.errores.mensaje_fuera_horario, /fuera de horario/);
-  assert.match(malo.errores.horario.martes, /hora de fin/);
+  assert.match(malo.errores.horario.mar, /hora de fin/);
   const sinDias = validarAgente({ ...form, horario: Object.fromEntries(DIAS.map((d) => [d.clave, null])) });
-  assert.match(sinDias.errores.horario.general, /al menos un día/);
+  assert.match(sinDias.errores.horario.general, /Siempre disponible/);
+});
+
+test("pregunta en curso", () => {
+  assert.equal(textoPreguntaActual(" ¿Edad? "), "¿Edad?");
+  assert.equal(textoPreguntaActual({ texto: "¿Turno?" }), "¿Turno?");
+  assert.equal(textoPreguntaActual(null), "");
 });
 
 test("teléfonos de Norteamérica (número compartido de ADAMIA) sin cambiar los de México", async () => {

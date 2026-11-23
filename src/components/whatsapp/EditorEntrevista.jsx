@@ -47,11 +47,12 @@ function RangoEfecto({ titulo, ayuda, rango, onCambiar, error }) {
   return (
     <fieldset className="grid gap-1.5">
       <legend className="mb-1 text-[13px] font-semibold text-gray-700">{titulo}</legend>
-      <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
-        <span>Entre</span>
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-600">
+        <span className="basis-full">Rango aceptado:</span>
+        <span>de</span>
         <input aria-label="Mínimo" inputMode="decimal" placeholder="Mín." value={rango.min} onChange={(e) => onCambiar({ ...rango, min: e.target.value })}
           aria-invalid={error ? true : undefined} className={entrada} />
-        <span>y</span>
+        <span>a</span>
         <input aria-label="Máximo" inputMode="decimal" placeholder="Máx." value={rango.max} onChange={(e) => onCambiar({ ...rango, max: e.target.value })}
           aria-invalid={error ? true : undefined} className={entrada} />
       </div>
@@ -121,8 +122,8 @@ function TarjetaPregunta({ pregunta: p, indice, total, error = {}, onCambiar, on
         </div>
       ) : p.tipo === "numero" ? (
         <div className="grid gap-3 sm:grid-cols-2">
-          <RangoEfecto titulo="Respuestas que descartan" ayuda="Ej.: edad con máximo 17 descarta a menores de edad." rango={p.descarta} onCambiar={(descarta) => actualizar({ descarta })} error={error.descartan} />
-          <RangoEfecto titulo="Respuestas que alertan" ayuda="Deja vacío el lado que no tenga límite." rango={p.alerta} onCambiar={(alerta) => actualizar({ alerta })} error={error.alertan} />
+          <RangoEfecto titulo="Respuestas que descartan" ayuda="Fuera de este rango descarta. Ej.: edad de 18 (sin máximo) descarta a menores de edad." rango={p.descarta} onCambiar={(descarta) => actualizar({ descarta })} error={error.descartan} />
+          <RangoEfecto titulo="Respuestas que alertan" ayuda="Fuera de este rango alerta. Deja vacío el lado que no tenga límite." rango={p.alerta} onCambiar={(alerta) => actualizar({ alerta })} error={error.alertan} />
         </div>
       ) : (
         <p className="text-[12.5px] text-gray-500">La respuesta libre solo se guarda para que la leas; no descarta ni alerta.</p>
