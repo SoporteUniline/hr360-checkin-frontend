@@ -8,6 +8,10 @@
 // - Computadora: el lienzo se queda en la página con «Borrar» y «Guardar» (como antes).
 // La página de firmar documentos (/firmar/[token]) ya funcionaba así con su propia pantalla.
 // onGuardar(blobPng) → true si quedó guardada (cierra la pantalla completa); false para dejarla abierta.
+// (23/11/2026, INC: «empiezo a escribir y se cierra solo») Firmar empezando cerca del borde activa el gesto «atrás» del
+// sistema: en Android saca de pantalla completa y en iPhone regresa de página. Antes eso cerraba la firma. Ahora solo
+// se cierra con «X» o al guardar: si sale de pantalla completa la firma sigue abierta (rotada si quedó en vertical) y
+// el «atrás» se absorbe con una entrada propia en el historial. Además se dejan márgenes para alejar el trazo del borde.
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Eraser, PenLine, RotateCw, X } from "lucide-react";
 import LienzoFirma from "@/components/empleado/LienzoFirma";
@@ -40,6 +44,7 @@ export default function FirmaGrande({
   const [guardando, setGuardando] = useState(false);
   const [vertical, setVertical] = useState(false);
   const [medidas, setMedidas] = useState({ ancho: 0, alto: 0 });
+  const cerrandoPorBoton = useRef(false);
 
   useEffect(() => { setCelular(detectarCelular()); }, []);
 
@@ -47,7 +52,19 @@ export default function FirmaGrande({
     salirHorizontal();
     setAbierta(false);
     setTrazada(false);
+    // Quita la entrada propia del historial que se puso al abrir.
+    if (window.history.state?.firmaGrande) {
+      cerrandoPorBoton.current = true;
+      window.history.back();
+    }
   }, []);
+
+  const abrir = () => {
+    cerrandoPorBoton.current = false;
+    setAbierta(true);
+    entrarHorizontal();
+    try { window.history.pushState({ ...(window.history.state || {}), firmaGrande: true }, ""); } catch { /* sin historial */ }
+  };
 
   useEffect(() => {
     if (!abierta) return undefined;
@@ -71,17 +88,17 @@ export default function FirmaGrande({
   // Celular en vertical (iPhone, o un Android que no giró): la firma se muestra rotada 90° a pantalla completa.
   const rotado = vertical && medidas.ancho > 0;
 
-  // Si la persona sale de la pantalla completa con el botón del sistema, se cierra también la firma.
+  // Gesto o botón «atrás» con la firma abierta: no se pierde lo dibujado; se vuelve a poner la entrada propia.
+  // (Salir de pantalla completa ya NO cierra la firma: el gesto de borde en Android lo provocaba al empezar a firmar.)
   useEffect(() => {
     if (!abierta) return undefined;
-    let estuvo = Boolean(document.fullscreenElement);
-    const cambio = () => {
-      if (document.fullscreenElement) estuvo = true;
-      else if (estuvo) cerrar();
+    const atras = () => {
+      if (cerrandoPorBoton.current) { cerrandoPorBoton.current = false; return; }
+      try { window.history.pushState({ ...(window.history.state || {}), firmaGrande: true }, ""); } catch { /* nada */ }
     };
-    document.addEventListener("fullscreenchange", cambio);
-    return () => document.removeEventListener("fullscreenchange", cambio);
-  }, [abierta, cerrar]);
+    window.addEventListener("popstate", atras);
+    return () => window.removeEventListener("popstate", atras);
+  }, [abierta]);
 
   const guardar = async () => {
     if (!trazada || guardando) return;
@@ -127,7 +144,7 @@ export default function FirmaGrande({
   return (
     <>
       <div className="grid gap-2" data-firma-grande="boton">
-        <button type="button" disabled={deshabilitado} onClick={() => { setAbierta(true); entrarHorizontal(); }}
+        <button type="button" disabled={deshabilitado} onClick={abrir}
           className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-base font-semibold text-white disabled:opacity-50">
           <PenLine className="size-5" aria-hidden="true" /> {textoBoton}
         </button>
@@ -137,7 +154,9 @@ export default function FirmaGrande({
         <div role="dialog" aria-modal="true" aria-label={`${titulo} a pantalla completa`} data-firma-pantalla className="fixed inset-0 z-[200] overflow-hidden bg-slate-50">
           {/* Mismo árbol rotado o no: así el lienzo no se vuelve a montar y el trazo se conserva al girar. */}
           <div data-rotado={rotado ? "si" : "no"} style={rotado ? estiloRotado(medidas.ancho, medidas.alto) : { position: "absolute", inset: 0 }}
-            className="flex flex-col gap-2 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))]">
+            className={`flex flex-col gap-2 ${rotado
+              ? "px-4 pt-4 pb-7"
+              : "px-[max(2rem,env(safe-area-inset-left))] pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-[max(0.75rem,env(safe-area-inset-top))]"}`}>
             <div className="flex items-center gap-2">
               <strong className="min-w-0 flex-1 truncate text-base text-slate-900">{titulo}</strong>
               <button type="button" onClick={cerrar} disabled={guardando} aria-label="Cerrar sin guardar" className="grid size-11 place-items-center rounded-full text-slate-600 hover:bg-slate-200">
