@@ -73,3 +73,40 @@ export function validoHasta(fechaFin) {
   const fecha = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], 12));
   return fecha.toLocaleDateString("es-MX", { day: "numeric", month: "long", timeZone: "UTC" });
 }
+
+// ── Formulario «Conversemos» del pop-up ──────────────────────────────────────────────────────────────
+// Lada del celular: México por defecto y otros países frecuentes. `digitos` = longitud del número nacional.
+export const LADAS = [
+  { iso: "MX", pais: "México", codigo: "52", bandera: "🇲🇽", digitos: [10], ejemplo: "55 1234 5678" },
+  { iso: "US", pais: "Estados Unidos", codigo: "1", bandera: "🇺🇸", digitos: [10], ejemplo: "212 555 0199" },
+  { iso: "CA", pais: "Canadá", codigo: "1", bandera: "🇨🇦", digitos: [10], ejemplo: "416 555 0199" },
+  { iso: "GT", pais: "Guatemala", codigo: "502", bandera: "🇬🇹", digitos: [8], ejemplo: "5123 4567" },
+  { iso: "CO", pais: "Colombia", codigo: "57", bandera: "🇨🇴", digitos: [10], ejemplo: "321 123 4567" },
+  { iso: "PE", pais: "Perú", codigo: "51", bandera: "🇵🇪", digitos: [9], ejemplo: "912 345 678" },
+  { iso: "CL", pais: "Chile", codigo: "56", bandera: "🇨🇱", digitos: [9], ejemplo: "9 1234 5678" },
+  { iso: "AR", pais: "Argentina", codigo: "54", bandera: "🇦🇷", digitos: [10, 11], ejemplo: "11 2345 6789" },
+  { iso: "ES", pais: "España", codigo: "34", bandera: "🇪🇸", digitos: [9], ejemplo: "612 345 678" },
+];
+export const LADA_PREDETERMINADA = "MX";
+export const ladaDe = (iso) => LADAS.find((l) => l.iso === iso) ?? LADAS[0];
+export const soloDigitos = (v) => String(v ?? "").replace(/\D/g, "");
+export const celularValido = (iso, celular) => ladaDe(iso).digitos.includes(soloDigitos(celular).length);
+export const celularInternacional = (iso, celular) => `+${ladaDe(iso).codigo}${soloDigitos(celular)}`;
+
+// El botón se habilita con nombre (2+ caracteres), celular válido para su lada y el aviso de privacidad aceptado.
+export const datosContactoValidos = ({ nombre, iso, celular, acepta }) =>
+  String(nombre ?? "").trim().length >= 2 && celularValido(iso, celular) && acepta === true;
+
+// Mismo canal que /contacto: los datos llegan al WhatsApp de ventas de ADAMIA.
+export const WHATSAPP_VENTAS = "523171288029";
+export function mensajeContacto({ nombre, iso, celular, titulo, cupon }) {
+  const lada = ladaDe(iso);
+  return [
+    "Hola ADAMIA, quiero conocerla con una llamada.",
+    "",
+    `Nombre: ${String(nombre ?? "").trim()}`,
+    `Celular: +${lada.codigo} ${soloDigitos(celular)} (${lada.pais})`,
+    `Promoción: ${titulo}${cupon ? ` (cupón ${cupon})` : ""}`,
+  ].join("\n");
+}
+export const enlaceWhatsApp = (texto) => `https://wa.me/${WHATSAPP_VENTAS}?text=${encodeURIComponent(texto)}`;

@@ -60,3 +60,39 @@ test("botón a Contratar con el cupón ya escrito y «Válido hasta…»", async
   assert.equal(validoHasta("2026-11-30 23:59:00"), "30 de noviembre");
   assert.equal(validoHasta(null), null);
 });
+
+test("lada y celular: México +52 por defecto con 10 dígitos; otros países con su longitud", async () => {
+  const { LADAS, LADA_PREDETERMINADA, ladaDe, soloDigitos, celularValido, celularInternacional, datosContactoValidos } = await import("../src/lib/popups/reglas.mjs");
+  assert.equal(LADA_PREDETERMINADA, "MX");
+  assert.equal(LADAS[0].iso, "MX");
+  assert.equal(ladaDe("MX").codigo, "52");
+  assert.equal(ladaDe("US").codigo, "1");
+  assert.equal(ladaDe("ZZ").iso, "MX", "una lada desconocida vuelve a México");
+  assert.equal(new Set(LADAS.map((l) => l.iso)).size, LADAS.length, "sin países repetidos");
+  assert.equal(soloDigitos("55 1234-5678"), "5512345678");
+  assert.equal(celularValido("MX", "55 1234 5678"), true);
+  assert.equal(celularValido("MX", "551234567"), false, "9 dígitos no");
+  assert.equal(celularValido("MX", "55123456789"), false, "11 dígitos no");
+  assert.equal(celularValido("MX", ""), false);
+  assert.equal(celularValido("US", "(212) 555-0199"), true);
+  assert.equal(celularValido("ES", "612345678"), true);
+  assert.equal(celularValido("ES", "6123456789"), false);
+  assert.equal(celularInternacional("MX", "55 1234 5678"), "+525512345678");
+  assert.equal(celularInternacional("US", "212-555-0199"), "+12125550199");
+  const ok = { nombre: "Ana López", iso: "MX", celular: "5512345678", acepta: true };
+  assert.equal(datosContactoValidos(ok), true);
+  assert.equal(datosContactoValidos({ ...ok, nombre: " A " }), false, "nombre de al menos 2 letras");
+  assert.equal(datosContactoValidos({ ...ok, celular: "55123" }), false);
+  assert.equal(datosContactoValidos({ ...ok, acepta: false }), false, "sin aceptar el aviso no se envía");
+});
+
+test("mensaje de WhatsApp para el equipo de ventas", async () => {
+  const { mensajeContacto, enlaceWhatsApp } = await import("../src/lib/popups/reglas.mjs");
+  const m = mensajeContacto({ nombre: "  Ana López ", iso: "MX", celular: "55 1234 5678", titulo: "Conoce ADAMIA", cupon: "BUENFIN26" });
+  assert.match(m, /llamada/);
+  assert.match(m, /Nombre: Ana López\n/);
+  assert.match(m, /Celular: \+52 5512345678/);
+  assert.match(m, /Promoción: Conoce ADAMIA \(cupón BUENFIN26\)/);
+  assert.doesNotMatch(mensajeContacto({ nombre: "Ana", iso: "MX", celular: "5512345678", titulo: "X" }), /cupón/);
+  assert.match(enlaceWhatsApp("hola y adiós"), /^https:\/\/wa\.me\/523171288029\?text=hola%20y%20adi%C3%B3s$/);
+});
