@@ -58,6 +58,9 @@ import {
   TriangleAlert,
   Package,
   ListChecks,
+  PenLine,
+  ClipboardList,
+  Settings2,
 } from "lucide-react";
 import {
   ChevronDown,
@@ -71,6 +74,14 @@ import {
   RECRUITMENT_NAV,
   isRecruitmentNavActive,
 } from "@/components/reclutamiento/navigation";
+import { VISTAS_RH } from "@/lib/evaluaciones/vistas.mjs";
+import { useMenuEvaluaciones } from "./useMenuEvaluaciones";
+const ICONOS_EVALUACION = {
+  campanas: ClipboardList,
+  plantillas: LayoutTemplate,
+  "mis-pendientes": PenLine,
+  configuracion: Settings2,
+};
 const recruitmentEnabled =
   process.env.NEXT_PUBLIC_RECRUITMENT_ENABLED === "true";
 const dashboardItems = [
@@ -457,19 +468,20 @@ const menuGroups = [
     ],
   },
   {
-    // (20/11/2026) Antes 4 entradas (Resumen, Campañas, Plantillas, Tablero). Ahora una sola: dentro,
-    // cada quien ve sus pestañas (src/components/evaluaciones/EvaluationModule.jsx).
+    // (23/11/2026) Cada vista con su entrada (pedido del dueño: «separa cada vista en su módulo»). Son las
+    // pestañas de RH del módulo (src/lib/evaluaciones/vistas.mjs) y se ocultan las que el servidor no le
+    // permite a la persona (useMenuEvaluaciones). «Campañas» mantiene resaltado el grupo también en el
+    // resultado de una persona (/panel/evaluaciones/resultados/…), que se abre desde la campaña.
     group: "EVALUACIÓN DE DESEMPEÑO",
     groupIcon: BarChart3,
-    items: [
-      {
-        title: "Evaluaciones",
-        url: "/panel/evaluaciones",
-        matchPrefix: "/panel/evaluaciones",
-        rol: "Recruiter",
-        icon: ClipboardCheck,
-      },
-    ],
+    items: VISTAS_RH.map((v) => ({
+      title: v.texto,
+      url: `/panel/evaluaciones/${v.path}`,
+      matchPrefix: v.path === "campanas" ? "/panel/evaluaciones" : true,
+      rol: "Recruiter",
+      icon: ICONOS_EVALUACION[v.path],
+      vistaEvaluacion: v,
+    })),
   },
   ...(recruitmentEnabled
     ? [
@@ -642,6 +654,16 @@ export function NavMain() {
   const [isNative, setIsNative] = useState(false);
   const effectiveRole =
     dataUser?.tipo_usuario === "User" ? "Recruiter" : dataUser?.tipo_usuario;
+  const vistasEvaluacion = useMenuEvaluaciones(dataUser, effectiveRole === "Recruiter");
+  // Rol, app nativa (sin «Mi suscripción») y, en Evaluaciones, los permisos del servidor. Mientras no se
+  // saben se muestran por rol, salvo «Por responder», que solo aparece si hay evaluaciones asignadas.
+  const itemVisible = (item) => {
+    if (item.rol && item.rol !== effectiveRole) return false;
+    if (isNative && item.url === "/panel/mi-suscripcion") return false;
+    const v = item.vistaEvaluacion;
+    if (!v) return true;
+    return vistasEvaluacion ? vistasEvaluacion.has(v.path) : !v.soloConPendientes;
+  };
   useEffect(() => {
     if (typeof window !== "undefined") {
       setIsNative(
@@ -730,11 +752,7 @@ export function NavMain() {
         ? menuGroups
             .map((g) => ({
               ...g,
-              items: g.items.filter(
-                (item) =>
-                  (!item.rol || item.rol === effectiveRole) &&
-                  (!isNative || item.url !== "/panel/mi-suscripcion"),
-              ),
+              items: g.items.filter(itemVisible),
             }))
             .filter((g) => g.items.length > 0)
         : [];
@@ -830,11 +848,7 @@ export function NavMain() {
                 ? normalizar(group.group).includes(q)
                 : false;
               const itemsVisibles = filtrarItems(
-                group.items.filter(
-                  (item) =>
-                    (!item.rol || item.rol === effectiveRole) &&
-                    (!isNative || item.url !== "/panel/mi-suscripcion"),
-                ),
+                group.items.filter(itemVisible),
                 grupoCoincide,
               );
               if (itemsVisibles.length === 0) return null;

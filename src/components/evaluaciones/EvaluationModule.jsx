@@ -1,6 +1,7 @@
 "use client";
+import { useEffect } from "react";
 import Link from "next/link";
-import { Settings } from "lucide-react";
+import { useRouter } from "next/navigation";
 import {
   useEvaluations,
   useEvaluationQuery,
@@ -19,51 +20,30 @@ import {
 import { ResponseView } from "./ResponseView";
 import { Results, ResultDetail } from "./ResultViews";
 import { SettingsView } from "./SettingsView";
+import {
+  SCOPE_DE_RUTA,
+  esRH,
+  seccionConfiguracion,
+  vistaActual,
+  vistaInicio,
+  vistasVisibles,
+} from "@/lib/evaluaciones/vistas.mjs";
 import "./evaluaciones.css";
-// (20/11/2026, «menos vistas») Antes: 10 pestañas iguales para todos y 4 entradas en el menú.
-// Ahora cada quien ve lo suyo: RH administra (Campañas, Plantillas y el engrane de Ajustes) y los demás
-// responden y consultan. Resultados y planes se abren desde la campaña o desde «Mis resultados».
-const PESTANAS_RH = [
-  { label: "Campañas", path: "campanas", scope: "campaigns" },
-  { label: "Plantillas", path: "plantillas", scope: "templates" },
-];
-const PESTANAS = [
-  { label: "Por responder", path: "mis-pendientes", scope: "assignments" },
-  { label: "Mi equipo", path: "equipo", scope: "team" },
-  { label: "Mis resultados", path: "mis-evaluaciones", scope: "results" },
-];
-// Rutas que existen aunque no sean pestaña (se abren desde otra vista) y el permiso que piden.
-const SCOPE_DE_RUTA = {
-  ...Object.fromEntries(
-    [...PESTANAS_RH, ...PESTANAS].map((n) => [n.path, n.scope])
-  ),
-  responder: "assignments",
-  resultados: "results",
-  configuracion: "settings",
-};
-// RH (y Dirección, que solo consulta) trabaja por campañas; los demás, por lo que tienen que responder.
-const esRH = (capabilities) => !!capabilities.flags?.canViewCampaigns;
-const inicio = (capabilities) =>
-  esRH(capabilities) ? "campanas" : "mis-pendientes";
+// (20/11/2026, «menos vistas») Cada quien ve lo suyo: RH administra y los demás responden y consultan.
+// (23/11/2026, «separa cada vista en su módulo») Cada vista tiene su dirección y su entrada en el menú
+// (Campañas, Plantillas, Por responder y Configuración, con sus secciones). Las vistas y quién ve cada una
+// están en src/lib/evaluaciones/vistas.mjs; el menú lee lo mismo.
 
 export function EvaluationShell({ children }) {
   const { capabilities, href, section, selectorEmpresa } = useEvaluations();
-  const rh = esRH(capabilities);
   // RH solo ve «Por responder» cuando alguien le asignó evaluaciones.
   const suyas = useEvaluationQuery(
     "/my/assignments",
     { page: 1, pageSize: 1 },
-    { enabled: rh }
+    { enabled: esRH(capabilities) }
   );
-  const pestanas = (
-    rh
-      ? [
-          ...PESTANAS_RH,
-          ...(suyas.pagination?.total > 0 ? PESTANAS.slice(0, 1) : []),
-        ]
-      : PESTANAS
-  ).filter((n) => capabilities.scopes.includes(n.scope));
-  const actual = section.split("/")[0] || inicio(capabilities);
+  const pestanas = vistasVisibles(capabilities, suyas.pagination?.total > 0);
+  const actual = vistaActual(section) || vistaInicio(capabilities);
   return (
     <div className="ev-module">
       <div className="ev-topbar">
@@ -74,33 +54,35 @@ export function EvaluationShell({ children }) {
               href={href(n.path)}
               aria-current={actual === n.path ? "page" : undefined}
             >
-              {n.label}
+              {n.texto}
             </Link>
           ))}
         </nav>
-        <div className="ev-topbar-tools">
-          {selectorEmpresa}
-          {capabilities.scopes.includes("settings") && (
-            <Link
-              href={href("configuracion")}
-              className="ev-gear"
-              aria-label="Ajustes de evaluaciones"
-              title="Ajustes de evaluaciones"
-              aria-current={actual === "configuracion" ? "page" : undefined}
-            >
-              <Settings aria-hidden="true" size={18} />
-            </Link>
-          )}
-        </div>
+        {selectorEmpresa && (
+          <div className="ev-topbar-tools">{selectorEmpresa}</div>
+        )}
       </div>
       {children}
     </div>
   );
 }
+// La entrada del módulo lleva a la primera vista de cada quien (así el menú resalta la entrada correcta).
+function IrAInicio() {
+  const { capabilities, href } = useEvaluations(),
+    router = useRouter(),
+    destino = href(vistaInicio(capabilities));
+  useEffect(() => router.replace(destino), [router, destino]);
+  return (
+    <p className="p-8" role="status">
+      Abriendo evaluaciones…
+    </p>
+  );
+}
 export default function EvaluationModule({ segments = [] }) {
   const { capabilities } = useEvaluations(),
     [view, id, third] = segments;
-  const scope = SCOPE_DE_RUTA[view] || null;
+  const scope = SCOPE_DE_RUTA[view] || null,
+    ajuste = view === "configuracion" && seccionConfiguracion(segments.join("/"));
   if (scope && !capabilities.scopes.includes(scope))
     return (
       <Empty
@@ -109,9 +91,7 @@ export default function EvaluationModule({ segments = [] }) {
       />
     );
   let page;
-  if (!view)
-    page =
-      inicio(capabilities) === "campanas" ? <Campaigns /> : <Assignments />;
+  if (!view) page = <IrAInicio />;
   else if (view === "plantillas")
     page = id ? (
       <EditorData key={`template:${id}`} kind="template" id={id}>
@@ -141,7 +121,8 @@ export default function EvaluationModule({ segments = [] }) {
   else if (view === "resultados" && id && third)
     page = <ResultDetail campaignId={id} subjectId={third} />;
   else if (view === "mis-evaluaciones") page = <Results />;
-  else if (view === "configuracion") page = <SettingsView />;
+  else if (view === "configuracion" && ajuste)
+    page = <SettingsView seccion={ajuste} />;
   else page = <Empty title="Vista no encontrada" />;
   return <div key={segments.join("/")}>{page}</div>;
 }
