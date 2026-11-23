@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/context/AuthContext";
+import AvisoLimiteLegal from "@/components/asistencia/AvisoLimiteLegal";
 import {
   Select,
   SelectContent,
@@ -474,6 +475,8 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
           </div>
 
           {renderCampos("tipo_horario", true)}
+
+          <AvisoLimiteLegal horarios={horarios} />
 
           {isSubmitted && errors.horarios && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3">
