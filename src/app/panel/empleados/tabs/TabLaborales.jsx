@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { ScanFace } from "lucide-react";
 import useSWR from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import {
@@ -30,7 +31,10 @@ import { Combobox } from "@/components/Combobox";
 import { useEmpresaDependencias } from "@/hooks/useEmpresaDependencias";
 import { CreatableCombobox } from "@/components/CreatableCombobox";
 
-export default function TabLaborales({ renderCampos = () => null, form, soloLectura, dataUser, editar }) {
+// (23/11/2026) Ficha en 5 pestañas: este componente pinta «Puesto y organización» (seccion="trabajo", pestaña Trabajo) o
+// «Checador y acceso» (seccion="checador"). Los campos personalizados siguen en su clave «laborales».
+export default function TabLaborales({ renderCampos = () => null, form, soloLectura, dataUser, editar, seccion = "todo", cambiarContrasena = null }) {
+  const ver = (s) => seccion === "todo" || seccion === s;
   const { enqueueSnackbar } = useSnackbar();
   const [areas, setAreas] = useState([]);
   const [areasAsignadas, setAreasAsignadas] = useState([]);
@@ -175,10 +179,10 @@ export default function TabLaborales({ renderCampos = () => null, form, soloLect
   return (
     <section className="space-y-6">
       {/* Información laboral */}
-      <div className="bg-emerald-50/60 border-2 border-emerald-100 rounded-xl p-6">
+      <div className="rounded-xl border border-slate-200 bg-white p-6">
         <div className="flex items-center gap-3 mb-5">
-          <div className="bg-emerald-600 p-3 rounded-lg shadow-md">
-            <svg
+          <div className="rounded-lg bg-brand p-3 shadow-md">
+            {seccion === "checador" ? <ScanFace className="w-6 h-6 text-white" /> : <svg
               className="w-6 h-6 text-white"
               fill="none"
               stroke="currentColor"
@@ -190,13 +194,14 @@ export default function TabLaborales({ renderCampos = () => null, form, soloLect
                 strokeWidth={2}
                 d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
               />
-            </svg>
+            </svg>}
           </div>
           <h3 className="text-xl font-bold text-gray-900">
-            Información laboral
+            {seccion === "checador" ? "Checador y acceso" : seccion === "trabajo" ? "Puesto y organización" : "Información laboral"}
           </h3>
         </div>
         <div className="employee-fields">
+          {ver("trabajo") && (<>
           {renderCampos("inicio")}
           <FormField
             name="id_empresa"
@@ -408,7 +413,9 @@ export default function TabLaborales({ renderCampos = () => null, form, soloLect
               )}
             />{renderCampos(name)}</Fragment>
           ))}
+          </>)}
 
+          {ver("checador") && (<>
           <div className="col-span-1 sm:col-span-2">
             <FormField
               name="metodo_chequeo"
@@ -483,6 +490,15 @@ export default function TabLaborales({ renderCampos = () => null, form, soloLect
           {renderCampos("cierre_turno")}
 
 
+          {cambiarContrasena ? (
+            <div className="col-span-1 flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4 sm:col-span-2">
+              <div>
+                <p className="text-base font-medium">Contraseña de la app</p>
+                <p className="text-sm text-muted-foreground">Entra a su app con su correo y esta contraseña.</p>
+              </div>
+              {cambiarContrasena}
+            </div>
+          ) : (<>
           <div className="col-span-1 sm:col-span-2">
             <FormField
               name="new_pass"
@@ -534,6 +550,7 @@ export default function TabLaborales({ renderCampos = () => null, form, soloLect
             />
           </div>
           {renderCampos("confirm_pass")}
+          </>)}
 
           {[{ name: "nip", label: "Código de empleado", required: false }].map(
             ({ name, label, type = "text", required = false }) => (
@@ -562,6 +579,9 @@ export default function TabLaborales({ renderCampos = () => null, form, soloLect
             ),
           )}
 
+          </>)}
+
+          {ver("trabajo") && (<>
           {responsables.map(({ name, label }) => (
             <Fragment key={name}><FormField
               key={name}
@@ -626,6 +646,9 @@ export default function TabLaborales({ renderCampos = () => null, form, soloLect
             )}
           />
           {renderCampos("cc_permisos")}
+          </>)}
+
+          {ver("checador") && (<>
 
           <FormField
             name="checar_gps"
@@ -733,8 +756,9 @@ export default function TabLaborales({ renderCampos = () => null, form, soloLect
               </div>
             </div>
           )}
+          </>)}
         </div>
-        {renderCampos("fin", true)}
+        {ver("trabajo") ? renderCampos("fin", true) : null}
         <ModalArea
           isOpen={mostrarModalArea}
           onClose={() => setMostrarModalArea(false)}
