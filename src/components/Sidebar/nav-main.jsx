@@ -633,6 +633,9 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
     </Popover>
   );
 }
+// «CONTROL DE TIEMPO» → «Control de tiempo» (los nombres de módulo se guardan en mayúsculas).
+const tituloGrupo = (t) => { const s = String(t ?? "").toLocaleLowerCase("es-MX"); return s.charAt(0).toLocaleUpperCase("es-MX") + s.slice(1); };
+
 export function NavMain() {
   const router = useRouter();
   const path = usePathname();
@@ -841,22 +844,32 @@ export function NavMain() {
                 grupoCoincide,
               );
               if (itemsVisibles.length === 0) return null;
+              const grupoActivo = itemsVisibles.some((item) => [item.url, ...(item.children ?? []).map((c) => c.url)].filter(Boolean).some((u) => path === u || path?.startsWith(`${u}/`)) || (typeof item.matchPrefix === "string" && path?.startsWith(item.matchPrefix)));
               // Al buscar siempre se muestra expandido; si no, manda el usuario.
               const abierto = buscando
                 ? true
                 : gruposAbiertos[group.group] !== false;
               return (
-                <div key={group.group} className="mt-3">
+                <div key={group.group} className="mt-1.5">
+                  {/* (23/11/2026) Títulos de módulo más legibles: texto normal en azul marino, su ícono y el módulo donde
+                      estás resaltado (antes: MAYÚSCULAS grises con mucho espaciado). */}
                   <button
                     type="button"
                     onClick={() => toggleGrupo(group.group)}
-                    className="w-full px-1 mb-2 text-[11px] font-semibold uppercase tracking-widest text-gray-500 cursor-pointer flex items-center justify-between select-none transition-colors hover:text-gray-800"
+                    className={`group/titulo mb-0.5 flex w-full cursor-pointer select-none items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left text-[13.5px] font-semibold transition-colors hover:bg-slate-100 ${
+                      grupoActivo ? "text-[#2563EB]" : "text-[#080d36]"
+                    }`}
                     aria-expanded={abierto}
                   >
-                    <span>{group.group}</span>
+                    {group.groupIcon ? (
+                      <span className={`grid size-6 shrink-0 place-items-center rounded-md ${grupoActivo ? "bg-[#2563EB] text-white" : "bg-blue-50 text-[#2563EB]"}`}>
+                        <group.groupIcon size={14} strokeWidth={2.2} />
+                      </span>
+                    ) : null}
+                    <span className="min-w-0 flex-1 truncate">{tituloGrupo(group.group)}</span>
                     <ChevronDown
-                      size={14}
-                      className={`shrink-0 text-gray-400 transition-transform duration-200 ${
+                      size={15}
+                      className={`shrink-0 text-slate-400 transition-transform duration-200 group-hover/titulo:text-slate-600 ${
                         abierto ? "" : "-rotate-90"
                       }`}
                     />

@@ -14,6 +14,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Pencil, Eye, Mail, Phone, UserPlus, Download } from "lucide-react";
 import EstadoEmpleadoDialog from "./EstadoEmpleadoDialog";
+import CambiarContrasenaEmpleado from "./CambiarContrasenaEmpleado";
 import { EstadoBadge } from "@/lib/estados";
 import dayjs from "dayjs";
 import "dayjs/locale/es";
@@ -759,6 +760,7 @@ export default function EmpleadosTable({
                         >
                           <Eye className="h-4 w-4 text-green-600" />
                         </button>
+                        <CambiarContrasenaEmpleado empleado={emp} />
                         <div onClick={(e) => e.stopPropagation()}>
                           <EstadoEmpleadoDialog
                             item={emp}
