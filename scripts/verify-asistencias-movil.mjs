@@ -80,6 +80,8 @@ try {
   const esperarPuts = async (n) => { for (let i = 0; i < 60 && puts.length < n; i++) await dormir(100); assert.equal(puts.length, n, JSON.stringify(puts)); };
 
   await page.goto(base + "/panel/registro-asistencia", { waitUntil: "domcontentloaded" });
+  // (23/11/2026) En celular Asistencias también abre en «Hoy»: la vista móvil de registros está en la pestaña «Registros».
+  await page.getByRole("tab", { name: "Registros" }).click();
   await page.getByText("SinExtra Prueba").first().waitFor({ timeout: 30000 });
 
   // Tarjeta: aviso de horas por autorizar; pestaña «H. extra» con las 3 que tienen tiempo extra.
