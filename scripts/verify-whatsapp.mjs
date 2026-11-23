@@ -4,6 +4,9 @@
 // 27/11/2026: bolsa de trabajo opcional (interruptor, PUT, también con WhatsApp apagado), «Copiar enlace de la vacante»,
 // paquete de entrevistas (chip, aviso de extras, campos del administrador) y la bolsa pública (/vacantes/filter y la tira
 // de empresas con ?bolsa=1).
+// R3: agenda de entrevistas y recordatorios (pestaña «Agenda y recordatorios», agenda por vacante con vista previa de
+// horarios, pantalla «Entrevistas» con calendario y lista, acciones de cita, aprobar para agendar, agendar a mano y
+// «Enviar seguimiento» con la ventana cerrada).
 // Construir con NEXT_PUBLIC_RUTA_DOMAIN=https://dev.adamia.com.mx (el enlace de la vacante usa ese dominio).
 // Backend simulado: nada sale a internet.
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api NEXT_PUBLIC_RECRUITMENT_ENABLED=true npm run build
@@ -13,6 +16,7 @@ import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
+import { hoyMx, inicioSemana, sumarDias } from "../src/lib/whatsapp/agenda.mjs";
 
 const REPO = process.cwd();
 const OUT = process.env.CAPTURAS || null;
@@ -118,7 +122,26 @@ function estadoInicial() {
     empresas: [{ id_empresa: 10, nombre_empresa: "Uniline", url_imagen: null }],
     vacantes: [{ id_vacante: 55, id_empresa: 10, titulo: "Operador de montacargas", slug: "operador-de-montacargas", nombre_empresa: "Uniline", descripcion: "Manejo de montacargas.", horario: "7 a 15 h", salario: "$12,000" }],
   };
+  // R3: agenda de la empresa y por vacante, citas de la semana (relativas a hoy en México) y respuestas forzadas.
+  const hoy = hoyMx();
+  const lunes = inicioSemana(hoy);
+  const otroDia = hoy === lunes ? sumarDias(lunes, 1) : lunes;
+  const vac55 = { id_vacante: 55, titulo: "Operador de montacargas" };
+  const citas = [
+    { id: 71, inicio: `${hoy} 10:00`, fin: `${hoy} 10:30`, estado: "confirmada", origen: "agente", modalidad: "presencial", lugar: "Av. Industrial 120, Apodaca", vacante: vac55, candidato: { nombre: "Ana Ruiz", telefono: "5215512345678" }, id_conversacion: 1 },
+    { id: 72, inicio: `${hoy} 10:00`, fin: `${hoy} 10:30`, estado: "agendada", origen: "agente", modalidad: "presencial", lugar: "Av. Industrial 120, Apodaca", vacante: vac55, candidato: { nombre: "Luis Pérez", telefono: "5215511112222" }, id_conversacion: 1002 },
+    { id: 73, inicio: `${hoy} 16:00`, fin: `${hoy} 16:30`, estado: "cancelada", origen: "manual", modalidad: "video", lugar: "https://meet.google.com/abc-defg-hij", vacante: { id_vacante: 56, titulo: "Auxiliar de almacén turno nocturno" }, candidato: { nombre: "Marta Díaz", telefono: "5215533334444" }, id_conversacion: 1003 },
+    { id: 74, inicio: `${otroDia} 12:00`, fin: `${otroDia} 12:30`, estado: "agendada", origen: "agente", modalidad: "presencial", lugar: "Av. Industrial 120, Apodaca", vacante: vac55, candidato: { nombre: "Jorge Salas", telefono: "5215555556666" }, id_conversacion: 1004 },
+  ];
   return {
+    agendaEmpresa: { quien_agenda: "califica", anticipacion_min_minutos: 120, dias_adelante: 7, horarios_a_ofrecer: 3, recordatorios: [1440], pedir_confirmacion: true, permitir_cambios: true,
+      ofrecer_alternas: false, plantilla_recordatorio: null, plantilla_seguimiento: null, plantilla_idioma: "es_MX", textos: {} },
+    agendasVacante: {
+      55: { activa: true, modalidad: "presencial", direccion: "Av. Industrial 120, Apodaca", referencia: "", enlace_video: "", entrevistador: "Laura Gómez", que_llevar: "INE",
+        duracion_minutos: 30, cupo_por_horario: 2, horario: { lun: [{ desde: "09:00", hasta: "13:00" }], mar: [{ desde: "09:00", hasta: "13:00" }], mie: [], jue: [], vie: [{ desde: "09:00", hasta: "13:00" }], sab: [], dom: [] },
+        bloqueos: [], quien_agenda: null, anticipacion_min_minutos: null, dias_adelante: null },
+    },
+    citas, siguienteCita: 80, citasPorConv: {}, respuestasCita: [], respuestasSeguimiento: [], plantillasMes: 4,
     conversaciones, mensajes, empresas, vacantes, modo: "compartido", envios: [], siguienteId: 900, entrevistas, sinRespuesta, agente, preguntas, siguientePregunta: 100, errores400: [],
     paquetes, bolsa: { 10: false, 11: false }, bolsaFalla: 0, publico,
   };
@@ -157,7 +180,7 @@ async function instalarMocks(ctx, usuario) {
     let m;
     if (ruta === "/estado") {
       const paquete = S.paquetes[url.searchParams.get("empresa")] ?? { entrevistas_mes: 0, entrevistas_incluidas: null, entrevistas_extra: 0 };
-      return json({ modo: S.modo, numero_whatsapp: S.modo === "apagado" ? null : "5215598765432", conversaciones_mes: 12, puede_usar: S.modo !== "apagado", ...paquete });
+      return json({ modo: S.modo, numero_whatsapp: S.modo === "apagado" ? null : "5215598765432", conversaciones_mes: 12, puede_usar: S.modo !== "apagado", plantillas_mes: S.plantillasMes, ...paquete });
     }
     if (ruta === "/bolsa") {
       const empresa = url.searchParams.get("empresa");
@@ -190,7 +213,8 @@ async function instalarMocks(ctx, usuario) {
       const c = conv(m[1]);
       if (!c) return json({ error: "No existe" }, 404);
       c.no_leidos = 0;
-      return json({ conversacion: c, mensajes: S.mensajes[c.id], entrevista: S.entrevistas[c.id] ?? null, preguntas_sin_respuesta: S.sinRespuesta[c.id] ?? [] });
+      const cita = S.citasPorConv[c.id];
+      return json({ conversacion: c, mensajes: S.mensajes[c.id], entrevista: S.entrevistas[c.id] ?? null, preguntas_sin_respuesta: S.sinRespuesta[c.id] ?? [], citas: cita ? [cita] : [] }); // como el servidor: lista «citas»
     }
     if ((m = ruta.match(/^\/conversaciones\/(\d+)\/tomar$/))) {
       const c = conv(m[1]); c.modo = "humano"; c.control = { id_usuario: 7, nombre: "Laura Gómez", correo: "laura@uniline.mx" };
@@ -255,6 +279,74 @@ async function instalarMocks(ctx, usuario) {
         S.preguntas[m[1]] = cuerpo.preguntas.map((p) => ({ ...p, id: p.id ?? S.siguientePregunta++ }));
       }
       return json({ preguntas: S.preguntas[m[1]] ?? [] });
+    }
+    // ——— R3 ———
+    if (ruta === "/agenda/empresa") {
+      if (req.method() === "PUT") {
+        const error = S.errores400.shift();
+        if (error) return json({ error }, 400);
+        S.agendaEmpresa = { ...S.agendaEmpresa, ...cuerpo };
+      }
+      return json(S.agendaEmpresa);
+    }
+    if ((m = ruta.match(/^\/vacantes\/(\d+)\/agenda$/))) {
+      if (req.method() === "PUT") {
+        const error = S.errores400.shift();
+        if (error) return json({ error }, 400);
+        S.agendasVacante[m[1]] = cuerpo;
+      }
+      return json(S.agendasVacante[m[1]] ?? { activa: false, modalidad: "presencial", direccion: "", referencia: "", enlace_video: "", entrevistador: "", que_llevar: "", duracion_minutos: 30,
+        cupo_por_horario: 1, horario: { lun: [], mar: [], mie: [], jue: [], vie: [], sab: [], dom: [] }, bloqueos: [], quien_agenda: null, anticipacion_min_minutos: null, dias_adelante: null });
+    }
+    if ((m = ruta.match(/^\/vacantes\/(\d+)\/agenda\/horarios$/))) {
+      const desde = url.searchParams.get("desde");
+      const cupo = S.agendasVacante[m[1]]?.cupo_por_horario ?? 1;
+      const d1 = sumarDias(desde, 1);
+      const d2 = sumarDias(desde, 2);
+      return json({ horarios: [
+        { inicio: `${d1} 09:00`, fin: `${d1} 09:30`, capacidad: cupo, ocupados: 1 },
+        { inicio: `${d1} 09:30`, fin: `${d1} 10:00`, capacidad: cupo, ocupados: cupo },
+        { inicio: `${d2} 10:00`, fin: `${d2} 10:30`, capacidad: cupo, ocupados: 0 },
+      ] });
+    }
+    if (ruta === "/citas" && req.method() === "GET") {
+      const q = url.searchParams;
+      const lista = S.citas.filter((c) => c.inicio.slice(0, 10) >= q.get("desde") && c.inicio.slice(0, 10) <= q.get("hasta"))
+        .filter((c) => !q.get("id_vacante") || String(c.vacante.id_vacante) === q.get("id_vacante"))
+        .filter((c) => !q.get("estado") || c.estado === q.get("estado"));
+      return json({ citas: lista });
+    }
+    if (ruta === "/citas" && req.method() === "POST") {
+      const forzada = S.respuestasCita.shift();
+      if (forzada) return json(forzada.cuerpo, forzada.status);
+      const c = conv(cuerpo.id_conversacion);
+      const cita = { id: S.siguienteCita++, inicio: cuerpo.inicio, fin: cuerpo.inicio.replace(/(\d\d):(\d\d)$/, (x, h, mm) => `${h}:${String(Number(mm) + 30).padStart(2, "0")}`), estado: "agendada", origen: "manual",
+        modalidad: "presencial", lugar: "Av. Industrial 120, Apodaca", vacante: c.vacante, candidato: { nombre: c.contacto.nombre, telefono: c.contacto.telefono }, id_conversacion: c.id };
+      S.citas.push(cita);
+      S.citasPorConv[c.id] = cita;
+      return json({ cita });
+    }
+    if ((m = ruta.match(/^\/citas\/(\d+)\/(reagendar|cancelar|asistencia|confirmar)$/)) && req.method() === "POST") {
+      const forzada = S.respuestasCita.shift();
+      if (forzada) return json(forzada.cuerpo, forzada.status);
+      const cita = S.citas.find((c) => String(c.id) === m[1]);
+      if (!cita) return json({ error: "No existe" }, 404);
+      if (m[2] === "reagendar") Object.assign(cita, { inicio: cuerpo.inicio, fin: cuerpo.inicio, estado: "reagendada" });
+      if (m[2] === "cancelar") Object.assign(cita, { estado: "cancelada", motivo: cuerpo.motivo });
+      if (m[2] === "asistencia") cita.estado = cuerpo.asistio ? "asistio" : "no_asistio";
+      if (m[2] === "confirmar") cita.estado = "confirmada";
+      return json({ cita });
+    }
+    if ((m = ruta.match(/^\/conversaciones\/(\d+)\/aprobar-agenda$/)) && req.method() === "POST") {
+      const e = S.entrevistas[m[1]];
+      if (e) Object.assign(e, { requiere_atencion: false, motivo_atencion: null, agenda_aprobada: true });
+      return json({ ok: true });
+    }
+    if ((m = ruta.match(/^\/conversaciones\/(\d+)\/seguimiento$/)) && req.method() === "POST") {
+      const forzada = S.respuestasSeguimiento.shift();
+      if (forzada) return json({ codigo: forzada, error: forzada }, 409);
+      S.plantillasMes += 1;
+      return json({ ok: true });
     }
     return json({ error: "Ruta no simulada" }, 404);
   });
@@ -399,7 +491,7 @@ try {
   await page.getByRole("button", { name: "+52 442 123 4567" }).click();
   await hilo.getByText("Gracias").first().waitFor();
   assert.match(await hilo.locator('[data-mensaje="200"]').innerText(), /\[Archivo: imagen\] \(se mostrará en una siguiente etapa\)/);
-  assert.match(await hilo.innerText(), /Pasaron más de 24 h desde el último mensaje del candidato: WhatsApp no permite escribirle libremente\. Las plantillas para reabrir el chat llegan en una siguiente etapa\./);
+  assert.match(await hilo.innerText(), /Pasaron más de 24 h desde el último mensaje del candidato: WhatsApp no permite escribirle libremente\. Usa «Enviar seguimiento» para mandarle una plantilla aprobada; cuando conteste, el chat se reabre\./);
   assert.equal(await hilo.getByRole("textbox", { name: "Mensaje" }).isDisabled(), true);
   await page.getByRole("button", { name: /^Carlos Méndez/ }).click();
   await hilo.getByText("Te esperamos el lunes").first().waitFor();
@@ -934,7 +1026,343 @@ try {
   assert.equal(await pub.getByRole("heading", { name: /Empresas que están contratando/ }).count(), 0, "sin empresas, sin tira");
   await ctxP.close();
 
+  // ═══════════ R3 · Agenda de entrevistas y recordatorios ═══════════
+  const hoyR3 = hoyMx();
+  const lunesR3 = inicioSemana(hoyR3);
+  const ctxR3 = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: "es-MX", timezoneId: "America/Mexico_City" });
+  await ctxR3.addCookies([{ name: "token", value: firmar("Recruiter"), url: base }]);
+  await instalarMocks(ctxR3, reclutadora);
+  const r3 = await ctxR3.newPage();
+  r3.on("pageerror", (e) => errores.push(e.message));
+  await r3.goto(base + "/panel/whatsapp", { waitUntil: "domcontentloaded" });
+  await r3.getByRole("list", { name: "Conversaciones" }).waitFor({ timeout: 30000 });
+  assert.equal(await r3.locator("[data-plantillas-mes]").innerText(), "4 plantillas enviadas este mes");
+  assert.equal(await r3.getByRole("navigation", { name: "Secciones de WhatsApp" }).getByRole("link", { name: "Conversaciones" }).getAttribute("aria-current"), "page");
+
+  // ——— 17. Agenda de la empresa (pestaña del agente) ———
+  await r3.getByRole("button", { name: "Agente", exact: true }).click();
+  const dlgR3 = r3.getByRole("dialog", { name: "Configurar agente" });
+  await dlgR3.getByRole("tab", { name: "Agenda y recordatorios" }).click();
+  const pan = dlgR3.getByRole("tabpanel", { name: "Agenda y recordatorios" });
+  await pan.getByRole("radiogroup", { name: "Quién recibe horarios" }).waitFor();
+  assert.ok(pedidos.some((x) => x.ruta === "/agenda/empresa" && x.metodo === "GET" && /empresa=10/.test(x.params)), "GET /agenda/empresa?empresa=10");
+  assert.equal(await pan.getByRole("radio").count(), 3);
+  assert.equal(await pan.getByRole("radio", { name: "Solo a quien califica" }).isChecked(), true);
+  assert.match(await pan.locator('[data-modo="aprobacion"]').innerText(), /Nadie recibe horarios hasta que presionas «Aprobar para agendar»/);
+  await pan.getByRole("radio", { name: "Tú apruebas cada cita" }).check();
+  await pan.getByLabel("Anticipación mínima (horas)").fill("3");
+  await pan.getByLabel("Días hacia adelante").fill("10");
+  await pan.getByLabel("Horarios a ofrecer").fill("4");
+  const recs = pan.getByRole("list", { name: "Recordatorios" });
+  assert.deepEqual(await recs.getByRole("listitem").allInnerTexts(), ["24 h antes"]);
+  await pan.getByLabel("Tiempo antes de la cita").fill("2");
+  await pan.getByRole("button", { name: "Agregar recordatorio" }).click();
+  await pan.getByLabel("Tiempo antes de la cita").fill("30");
+  await pan.getByLabel("Unidad").selectOption("minutos");
+  await pan.getByLabel("Tiempo antes de la cita").press("Enter");
+  assert.deepEqual(await recs.getByRole("listitem").allInnerTexts(), ["24 h antes", "2 h antes", "30 min antes"]);
+  await pan.getByRole("button", { name: "Quitar recordatorio 30 min antes" }).click();
+  await pan.getByLabel("Unidad").selectOption("horas");
+  await pan.getByLabel("Tiempo antes de la cita").fill("24");
+  await pan.getByRole("button", { name: "Agregar recordatorio" }).click();
+  await pan.getByRole("alert").filter({ hasText: "Ya tienes un recordatorio 24 h antes." }).waitFor();
+  assert.match(await pan.locator("[data-plantillas-sugeridas]").innerText(), /recordatorio_entrevista, seguimiento_candidato, confirmacion_entrevista/);
+  assert.match(await pan.innerText(), /Sin plantilla de recordatorio, WhatsApp solo deja enviar recordatorios si el candidato escribió en las últimas 24 h\./);
+  await pan.getByRole("switch", { name: "Ofrecer otras vacantes si no califica" }).click();
+  await pan.getByLabel("Plantilla de recordatorio").fill("Recordatorio Entrevista");
+  await pan.getByLabel("Plantilla de seguimiento").fill("seguimiento_candidato");
+  // Mensajes: marcador en el cursor, vista previa, marcador desconocido y restaurar.
+  await pan.getByLabel("Mensaje", { exact: true }).selectOption("confirmacion_cita");
+  const areaMsg = pan.getByLabel("Texto de «Cita agendada»");
+  await areaMsg.fill("Hola , tu cita es el {fecha}.");
+  await areaMsg.evaluate((el) => el.setSelectionRange(5, 5));
+  await pan.getByRole("button", { name: "Insertar {nombre} (Nombre del candidato)" }).click();
+  assert.equal(await areaMsg.inputValue(), "Hola {nombre}, tu cita es el {fecha}.");
+  assert.equal(await areaMsg.evaluate((el) => [el === document.activeElement, el.selectionStart]).then(JSON.stringify), JSON.stringify([true, 13]), "foco y cursor después del marcador");
+  assert.equal(await pan.locator("[data-vista-previa]").innerText(), "Hola Ana Ruiz, tu cita es el lunes 30 de noviembre.");
+  await pan.getByLabel("Mensaje", { exact: true }).selectOption("saludo");
+  assert.match(await pan.locator("[data-vista-previa]").innerText(), /^¡Hola Ana Ruiz! Gracias por tu interés en la vacante de Operador de montacargas en Uniline\./, "vacío = texto original con la empresa");
+  await pan.getByLabel("Texto de «Saludo»").fill("Hola {nombr}");
+  await pan.getByText("El agente no conoce {nombr}. Usa los botones de marcadores.").waitFor();
+  await pan.getByRole("button", { name: "Restaurar texto original" }).click();
+  assert.equal(await pan.getByLabel("Texto de «Saludo»").inputValue(), "");
+  await pan.getByRole("button", { name: "Guardar agenda" }).click();
+  await pan.getByText("Usa el nombre exacto de la plantilla: minúsculas, números y guion bajo (_), sin espacios.").waitFor();
+  await r3.waitForFunction(() => document.activeElement?.getAttribute("aria-invalid") === "true");
+  assert.equal(cuenta((x) => x.ruta === "/agenda/empresa" && x.metodo === "PUT"), 0, "no manda con errores");
+  await pan.getByLabel("Plantilla de recordatorio").fill("recordatorio_entrevista");
+  S.errores400.push("La plantilla de recordatorio no existe en Zernio.");
+  await pan.getByRole("button", { name: "Guardar agenda" }).click();
+  await pan.getByRole("alert").filter({ hasText: "La plantilla de recordatorio no existe en Zernio." }).waitFor();
+  if (OUT) await r3.screenshot({ path: OUT + "/r3-01-agenda-empresa.png" });
+  await pan.getByRole("button", { name: "Guardar agenda" }).click();
+  await dlgR3.waitFor({ state: "detached" });
+  const putsAgenda = pedidos.filter((x) => x.ruta === "/agenda/empresa" && x.metodo === "PUT");
+  assert.equal(putsAgenda.length, 2);
+  assert.match(putsAgenda[1].params, /empresa=10/);
+  assert.deepEqual(putsAgenda[1].cuerpo, {
+    quien_agenda: "aprobacion", anticipacion_min_minutos: 180, dias_adelante: 10, horarios_a_ofrecer: 4, recordatorios: [1440, 120],
+    pedir_confirmacion: true, permitir_cambios: true, ofrecer_alternas: true, plantilla_recordatorio: "recordatorio_entrevista", plantilla_seguimiento: "seguimiento_candidato",
+    plantilla_idioma: "es_MX", textos: { confirmacion_cita: "Hola {nombre}, tu cita es el {fecha}." },
+  });
+  // Cambios en ambas pestañas: guardar una deja el diálogo abierto y avisa; cerrar con cambios pide confirmación.
+  await r3.getByRole("button", { name: "Agente", exact: true }).click();
+  await dlgR3.getByRole("tab", { name: "Agenda y recordatorios" }).click();
+  await pan.getByLabel("Días hacia adelante").fill("12");
+  await r3.keyboard.press("Escape");
+  await pan.getByRole("alertdialog", { name: "Cambios sin guardar" }).waitFor();
+  await pan.getByRole("button", { name: "Descartar cambios" }).click();
+  await dlgR3.waitFor({ state: "detached" });
+
+  // ——— 18. Agenda de la vacante ———
+  await r3.getByRole("button", { name: "Enlaces de vacantes" }).click();
+  await r3.getByRole("button", { name: "Agenda de Operador de montacargas" }).click();
+  const dlgAv = r3.getByRole("dialog", { name: "Agenda de entrevistas" });
+  await dlgAv.locator("[data-vista-horarios] [data-horario]").first().waitFor();
+  const horariosAntes = cuenta((x) => /^\/vacantes\/55\/agenda\/horarios$/.test(x.ruta));
+  const pedidoHorarios = pedidos.find((x) => x.ruta === "/vacantes/55/agenda/horarios");
+  assert.equal(pedidoHorarios.params, `?desde=${hoyR3}&dias=7`);
+  assert.equal(await dlgAv.locator("[data-vista-horarios] [data-horario]").count(), 3);
+  assert.match(await dlgAv.locator("[data-vista-horarios]").innerText(), /9:00 a\.m\.[\s\S]*Queda 1 lugar[\s\S]*9:30 a\.m\.[\s\S]*Lleno[\s\S]*10:00 a\.m\.[\s\S]*Quedan 2 lugares/);
+  assert.equal(await dlgAv.getByRole("switch", { name: "Agenda activa" }).getAttribute("aria-checked"), "true");
+  assert.equal(await dlgAv.getByLabel("Dirección").inputValue(), "Av. Industrial 120, Apodaca");
+  assert.match(await dlgAv.getByRole("combobox").filter({ hasText: "Usar el de la empresa" }).locator("option").first().innerText(), /^Usar el de la empresa \(Tú apruebas cada cita\)$/);
+  await dlgAv.getByLabel("Personas por horario").fill("3");
+  await dlgAv.getByRole("button", { name: "Agregar horario al lunes" }).click();
+  assert.equal(await dlgAv.getByLabel("Lunes, horario 2: desde").inputValue(), "13:00", "el rango nuevo empieza donde termina el anterior");
+  await dlgAv.getByLabel("Lunes, horario 2: desde").fill("12:00");
+  await dlgAv.getByLabel("Lunes, horario 2: hasta").fill("18:00");
+  await dlgAv.getByRole("button", { name: "Agregar bloqueo" }).click();
+  await dlgAv.getByLabel("Bloqueo 1: desde").fill("2026-12-25T10:00");
+  await dlgAv.getByLabel("Bloqueo 1: hasta").fill("2026-12-25T09:00");
+  await dlgAv.getByRole("button", { name: "Guardar agenda" }).click();
+  await dlgAv.getByText("Lunes: los horarios 09:00–13:00 y 12:00–18:00 se empalman.").waitFor();
+  await dlgAv.getByText("El fin del bloqueo debe ser después del inicio.").waitFor();
+  await r3.waitForFunction(() => document.activeElement?.getAttribute("aria-invalid") === "true");
+  assert.equal(cuenta((x) => x.ruta === "/vacantes/55/agenda" && x.metodo === "PUT"), 0, "no manda con errores");
+  await dlgAv.getByLabel("Lunes, horario 2: desde").fill("15:00");
+  await dlgAv.getByRole("button", { name: "Copiar horario del lunes a todos los días" }).click();
+  await dlgAv.getByRole("button", { name: "Quitar horario 2 del domingo" }).click();
+  await dlgAv.getByRole("button", { name: "Quitar horario 1 del domingo" }).click();
+  assert.match(await dlgAv.locator('[data-dia="dom"]').innerText(), /Sin entrevistas/);
+  await dlgAv.getByLabel("Bloqueo 1: desde").fill("2026-12-24T00:00");
+  await dlgAv.getByLabel("Bloqueo 1: hasta").fill("2026-12-25T23:59");
+  await dlgAv.getByLabel("Bloqueo 1: motivo").fill("Navidad");
+  await dlgAv.getByRole("combobox").filter({ hasText: "Usar el de la empresa" }).selectOption("califica");
+  await dlgAv.getByRole("switch", { name: "Usar el de la empresa (anticipación mínima)" }).click();
+  await dlgAv.getByLabel("Anticipación mínima", { exact: true }).fill("48");
+  assert.match(await dlgAv.innerText(), /Tienes cambios sin guardar: guarda para ver su efecto aquí\./);
+  await dlgAv.getByRole("button", { name: "Guardar agenda" }).click();
+  await dlgAv.getByRole("status").filter({ hasText: "Agenda guardada. La vista previa ya muestra los horarios nuevos." }).waitFor();
+  const putAv = pedidos.filter((x) => x.ruta === "/vacantes/55/agenda" && x.metodo === "PUT");
+  assert.equal(putAv.length, 1);
+  const dosRangos = [{ desde: "09:00", hasta: "13:00" }, { desde: "15:00", hasta: "18:00" }];
+  assert.deepEqual(putAv[0].cuerpo, {
+    activa: true, modalidad: "presencial", direccion: "Av. Industrial 120, Apodaca", referencia: "", enlace_video: "", entrevistador: "Laura Gómez", que_llevar: "INE",
+    duracion_minutos: 30, cupo_por_horario: 3,
+    horario: { lun: dosRangos, mar: dosRangos, mie: dosRangos, jue: dosRangos, vie: dosRangos, sab: dosRangos, dom: [] },
+    bloqueos: [{ desde: "2026-12-24 00:00", hasta: "2026-12-25 23:59", motivo: "Navidad" }],
+    quien_agenda: "califica", anticipacion_min_minutos: 2880, dias_adelante: null,
+  });
+  await r3.waitForFunction(() => document.querySelector('[data-vista-horarios] [data-horario][data-capacidad="3"]'));
+  assert.ok(cuenta((x) => x.ruta === "/vacantes/55/agenda/horarios") > horariosAntes, "la vista previa se vuelve a pedir tras guardar");
+  if (OUT) await r3.screenshot({ path: OUT + "/r3-02-agenda-vacante.png" });
+  assert.equal(await dlgAv.evaluate((el) => el.scrollTop), 0, "el encabezado del diálogo no se recorta al enfocar campos con error (radios sr-only contenidos en la zona con scroll)");
+  await dlgAv.getByRole("button", { name: "Cerrar" }).click();
+  await dlgAv.waitFor({ state: "detached" });
+  await r3.getByRole("dialog", { name: "Enlaces de vacantes" }).getByRole("button", { name: "Close" }).click();
+
+  // ——— 19. Entrevistas: calendario, filtros, lista y acciones ———
+  await r3.getByRole("navigation", { name: "Secciones de WhatsApp" }).getByRole("link", { name: "Entrevistas" }).click();
+  await r3.waitForURL(/\/panel\/whatsapp\?vista=entrevistas$/);
+  const cal = r3.locator("[data-calendario-semana]");
+  await cal.locator("[data-bloque-cita]").first().waitFor({ timeout: 10000 });
+  const pedidoCitas = pedidos.find((x) => x.ruta === "/citas");
+  assert.equal(pedidoCitas.params, `?empresa=10&desde=${lunesR3}&hasta=${sumarDias(lunesR3, 6)}`);
+  assert.equal(await cal.locator("[data-bloque-cita]").count(), 4);
+  assert.equal(await r3.locator("[data-lista-citas]").isVisible(), false, "en escritorio se ve el calendario");
+  const anchoA = (await cal.locator('[data-bloque-cita="71"]').boundingBox()).width;
+  const anchoD = (await cal.locator('[data-bloque-cita="74"]').boundingBox()).width;
+  assert.ok(anchoA < anchoD * 0.6, `citas empalmadas lado a lado: ${anchoA} vs ${anchoD}`);
+  assert.match(await r3.locator("[data-resumen-semana]").innerText(), /3 entrevistas esta semana · 1 cancelada/);
+  if (OUT) await r3.screenshot({ path: OUT + "/r3-03-entrevistas-calendario.png" });
+  await cal.locator('[data-bloque-cita="71"]').click();
+  const dlgCita = r3.getByRole("dialog", { name: "Entrevista" });
+  await dlgCita.getByRole("button", { name: "Asistió", exact: true }).click();
+  await dlgCita.locator('[data-estado-cita="asistio"]').waitFor();
+  assert.deepEqual(pedidos.find((x) => x.ruta === "/citas/71/asistencia").cuerpo, { asistio: true });
+  assert.equal(await dlgCita.getByRole("button", { name: "Reagendar" }).count(), 0, "ya asistió: sin acciones");
+  await r3.keyboard.press("Escape");
+  await r3.getByLabel("Estado").selectOption("cancelada");
+  await r3.waitForFunction(() => document.querySelectorAll("[data-calendario-semana] [data-bloque-cita]").length === 1);
+  assert.ok(pedidos.some((x) => x.ruta === "/citas" && /estado=cancelada/.test(x.params)));
+  await r3.getByLabel("Estado").selectOption("");
+  await r3.getByLabel("Vacante", { exact: true }).selectOption("56");
+  await r3.waitForFunction(() => document.querySelectorAll("[data-calendario-semana] [data-bloque-cita]").length === 1);
+  assert.ok(pedidos.some((x) => x.ruta === "/citas" && /id_vacante=56/.test(x.params)));
+  await r3.getByLabel("Vacante", { exact: true }).selectOption("");
+  await r3.getByRole("button", { name: "Lista", exact: true }).click();
+  const listaCitas = r3.locator("[data-lista-citas]");
+  await listaCitas.waitFor();
+  // Reagendar con 409 WA_SIN_CUPO y luego con éxito.
+  const citaB = listaCitas.locator('[data-cita="72"]');
+  await citaB.getByRole("button", { name: "Reagendar" }).click();
+  const dlgRe = r3.getByRole("dialog", { name: "Reagendar entrevista" });
+  const diaSlot = sumarDias(hoyR3, 2);
+  await dlgRe.locator(`[data-dia-horarios="${diaSlot}"]`).waitFor();
+  assert.equal(await dlgRe.getByRole("radio", { name: /9:30 a\.m\., Lleno/ }).isDisabled(), true, "horario lleno no se elige");
+  S.respuestasCita.push({ status: 409, cuerpo: { codigo: "WA_SIN_CUPO", error: "Sin cupo" } });
+  await dlgRe.locator(`[data-dia-horarios="${diaSlot}"]`).getByText("10:00 a.m.").click();
+  await dlgRe.getByRole("button", { name: "Reagendar", exact: true }).click();
+  await dlgRe.getByRole("alert").filter({ hasText: "Ese horario ya se llenó. Elige otro de la lista." }).waitFor();
+  await dlgRe.locator(`[data-dia-horarios="${diaSlot}"]`).getByText("10:00 a.m.").click();
+  await dlgRe.getByRole("button", { name: "Reagendar", exact: true }).click();
+  await dlgRe.waitFor({ state: "detached" });
+  const reag = pedidos.filter((x) => x.ruta === "/citas/72/reagendar");
+  assert.equal(reag.length, 2);
+  assert.deepEqual(reag[1].cuerpo, { inicio: `${diaSlot} 10:00` });
+  // Confirmar la reagendada (si cae en esta semana) y cancelar con motivo.
+  const citaD = listaCitas.locator('[data-cita="74"]');
+  await citaD.getByRole("button", { name: "Cancelar" }).click();
+  const dlgCan = r3.getByRole("dialog", { name: "Cancelar entrevista" });
+  await dlgCan.getByRole("button", { name: "Cancelar entrevista" }).click();
+  await dlgCan.getByText("Escribe el motivo; se guarda en el historial de la cita.").waitFor();
+  assert.equal(cuenta((x) => x.ruta === "/citas/74/cancelar"), 0);
+  await dlgCan.getByLabel("Motivo").fill("El candidato avisó que ya no puede asistir.");
+  await dlgCan.getByRole("button", { name: "Cancelar entrevista" }).click();
+  await dlgCan.waitFor({ state: "detached" });
+  assert.deepEqual(pedidos.find((x) => x.ruta === "/citas/74/cancelar").cuerpo, { motivo: "El candidato avisó que ya no puede asistir." });
+  await citaD.locator('[data-estado-cita="cancelada"]').waitFor();
+  S.citas.find((c) => c.id === 72).inicio = `${hoyR3} 11:00`;
+  S.citas.find((c) => c.id === 72).fin = `${hoyR3} 11:30`;
+  await r3.getByRole("button", { name: "Semana siguiente" }).click();
+  await r3.getByRole("button", { name: "Hoy", exact: true }).click();
+  await citaB.getByRole("button", { name: "Confirmar" }).click();
+  await citaB.locator('[data-estado-cita="confirmada"]').waitFor();
+  assert.equal(cuenta((x) => x.ruta === "/citas/72/confirmar" && x.metodo === "POST"), 1);
+  assert.equal(await listaCitas.locator('[data-cita="71"]').getByRole("link", { name: "Abrir chat" }).getAttribute("href"), "/panel/whatsapp?c=1");
+  if (OUT) await r3.screenshot({ path: OUT + "/r3-04-entrevistas-lista.png" });
+
+  // ——— 20. Bandeja: seguimiento con ventana cerrada, aprobar para agendar y agendar a mano ———
+  await listaCitas.locator('[data-cita="71"]').getByRole("link", { name: "Abrir chat" }).click();
+  await r3.waitForURL(/\/panel\/whatsapp\?c=1$/);
+  const hiloR3 = r3.getByRole("region", { name: "Conversación" });
+  await hiloR3.locator('[data-mensaje="101"]').waitFor();
+  const asideR3 = r3.getByRole("complementary", { name: "Candidato" });
+  await asideR3.getByRole("button", { name: "Agendar entrevista" }).click();
+  const dlgAgendar = r3.getByRole("dialog", { name: "Agendar entrevista" });
+  await dlgAgendar.locator(`[data-dia-horarios="${sumarDias(hoyR3, 1)}"]`).getByText("9:00 a.m.").click();
+  await dlgAgendar.getByRole("button", { name: "Agendar", exact: true }).click();
+  await dlgAgendar.waitFor({ state: "detached" });
+  assert.deepEqual(pedidos.find((x) => x.ruta === "/citas" && x.metodo === "POST").cuerpo, { id_conversacion: 1, id_vacante: 55, inicio: `${sumarDias(hoyR3, 1)} 09:00` });
+  await asideR3.locator("[data-cita]").locator('[data-estado-cita="agendada"]').waitFor();
+  assert.equal(await asideR3.getByRole("button", { name: "Agendar entrevista" }).count(), 0, "con cita activa no se ofrece agendar otra");
+  if (OUT) await r3.screenshot({ path: OUT + "/r3-05-chat-cita.png" });
+  // Aprobar para agendar: motivo de agenda (modo «aprobación» guardado arriba).
+  Object.assign(S.entrevistas[3], { calificacion: "con_alerta", requiere_atencion: true, motivo_atencion: "Espera tu aprobación para agendar" });
+  await r3.getByRole("navigation", { name: "Secciones de WhatsApp" }).getByRole("link", { name: "Conversaciones" }).click();
+  await r3.getByRole("button", { name: /^Carlos Méndez/ }).click();
+  const aprobarBox = asideR3.locator("[data-aprobar-agenda]");
+  await aprobarBox.waitFor();
+  await aprobarBox.getByRole("button", { name: "Aprobar para agendar" }).click();
+  await aprobarBox.waitFor({ state: "detached" });
+  assert.equal(cuenta((x) => x.ruta === "/conversaciones/3/aprobar-agenda" && x.metodo === "POST"), 1);
+  // Seguimiento con la ventana cerrada: 409 sin plantilla, 409 ventana abierta y luego enviado.
+  await r3.getByRole("button", { name: "+52 442 123 4567" }).click();
+  const seg = hiloR3.locator("[data-seguimiento]");
+  await seg.waitFor();
+  assert.match(await seg.innerText(), /Usa «Enviar seguimiento» para mandarle una plantilla aprobada/);
+  S.respuestasSeguimiento.push("WA_SIN_PLANTILLA", "WA_VENTANA_ABIERTA");
+  await seg.getByRole("button", { name: "Enviar seguimiento" }).click();
+  assert.match(await seg.innerText(), /Se envía la plantilla de seguimiento y cuenta en las plantillas del mes\./);
+  assert.equal(cuenta((x) => /\/seguimiento$/.test(x.ruta)), 0, "pide confirmación antes de gastar una plantilla");
+  await seg.getByRole("button", { name: "Enviar plantilla" }).click();
+  await seg.getByRole("alert").filter({ hasText: "No hay plantilla de seguimiento configurada. Escribe su nombre en «Agente → Agenda y recordatorios»; debe estar aprobada en Zernio/Meta." }).waitFor();
+  await seg.getByRole("button", { name: "Enviar seguimiento" }).click();
+  await seg.getByRole("button", { name: "Enviar plantilla" }).click();
+  await seg.getByRole("alert").filter({ hasText: "El chat sigue abierto (el candidato escribió en las últimas 24 h): escríbele directamente, no hace falta plantilla." }).waitFor();
+  await seg.getByRole("button", { name: "Enviar seguimiento" }).click();
+  await seg.getByRole("button", { name: "Enviar plantilla" }).click();
+  await seg.getByText("Seguimiento enviado. Cuando el candidato conteste, podrás escribirle.").waitFor();
+  assert.equal(cuenta((x) => x.ruta === "/conversaciones/2/seguimiento" && x.metodo === "POST"), 3);
+  assert.deepEqual(pedidos.filter((x) => x.ruta === "/conversaciones/2/seguimiento").at(-1).cuerpo, {});
+  await r3.locator("[data-plantillas-mes]").getByText("5 plantillas enviadas este mes").waitFor();
+  if (OUT) await r3.screenshot({ path: OUT + "/r3-06-seguimiento.png" });
+  await ctxR3.close();
+
+  // ——— 21. R3 en teléfono 390 px ———
+  const movR3 = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2, locale: "es-MX", timezoneId: "America/Mexico_City" });
+  await movR3.addCookies([{ name: "token", value: firmar("Recruiter"), url: base }]);
+  await instalarMocks(movR3, reclutadora);
+  const t3 = await movR3.newPage();
+  t3.on("pageerror", (e) => errores.push(e.message));
+  await t3.goto(base + "/panel/whatsapp?vista=entrevistas", { waitUntil: "domcontentloaded" });
+  const listaT = t3.locator("[data-lista-citas]");
+  await listaT.waitFor({ timeout: 30000 });
+  assert.equal(await t3.locator("[data-calendario-semana]").isVisible(), false, "en teléfono no se ve el calendario");
+  assert.ok(await listaT.locator("[data-cita]").count() >= 3);
+  for (const b of [t3.getByRole("navigation", { name: "Secciones de WhatsApp" }).getByRole("link", { name: "Entrevistas" }), t3.getByRole("navigation", { name: "Secciones de WhatsApp" }).getByRole("link", { name: "Conversaciones" }), t3.getByRole("button", { name: "Semana anterior" }),
+    t3.getByRole("button", { name: "Semana siguiente" }), t3.getByLabel("Vacante", { exact: true }), t3.getByLabel("Estado"),
+    listaT.getByRole("button", { name: "Reagendar" }).first(), listaT.getByRole("button", { name: "Cancelar" }).first(), listaT.getByRole("link", { name: "Abrir chat" }).first()]) {
+    assert.ok(await tamano(b) >= 44, "objetivo táctil ≥44 px en Entrevistas");
+  }
+  assert.ok(await sinScrollHorizontal(t3), "Entrevistas sin scroll horizontal en teléfono");
+  if (OUT) await t3.screenshot({ path: OUT + "/r3-07-movil-entrevistas.png", fullPage: true });
+  // Reagendar a pantalla completa.
+  await listaT.getByRole("button", { name: "Reagendar" }).first().tap();
+  const reT = t3.getByRole("dialog", { name: "Reagendar entrevista" });
+  await reT.locator("[data-horario]").first().waitFor();
+  await dormir(300);
+  const cajaRe = await reT.boundingBox();
+  assert.ok(cajaRe.x === 0 && cajaRe.width === 390 && cajaRe.height >= 840, `reagendar a pantalla completa: ${JSON.stringify(cajaRe)}`);
+  assert.ok(await tamano(reT.locator("label[data-horario]").first()) >= 44 && await tamano(reT.getByRole("button", { name: "Reagendar", exact: true })) >= 44);
+  assert.ok(await reT.evaluate((el) => [...el.querySelectorAll("*")].every((n) => n.getBoundingClientRect().right <= 391)), "reagendar sin desborde horizontal");
+  if (OUT) await t3.screenshot({ path: OUT + "/r3-08-movil-reagendar.png" });
+  await reT.getByRole("button", { name: "Cancelar" }).tap();
+  await reT.waitFor({ state: "detached" });
+  // Agenda de la empresa en teléfono.
+  await t3.getByRole("navigation", { name: "Secciones de WhatsApp" }).getByRole("link", { name: "Conversaciones" }).tap();
+  await t3.getByRole("list", { name: "Conversaciones" }).waitFor();
+  await t3.getByRole("button", { name: "Agente", exact: true }).tap();
+  const agT3 = t3.getByRole("dialog", { name: "Configurar agente" });
+  await agT3.getByRole("tab", { name: "Agenda y recordatorios" }).tap();
+  const panT = agT3.getByRole("tabpanel", { name: "Agenda y recordatorios" });
+  await panT.getByRole("radiogroup").waitFor();
+  await dormir(300);
+  for (const b of [agT3.getByRole("tab", { name: "Agenda y recordatorios" }), panT.getByRole("button", { name: "Quitar recordatorio 24 h antes" }),
+    panT.getByRole("button", { name: "Insertar {nombre} (Nombre del candidato)" }), panT.getByRole("switch", { name: "Pedir que confirme su asistencia" }),
+    panT.getByRole("button", { name: "Guardar agenda" })]) assert.ok(await tamano(b) >= 44, "objetivo táctil ≥44 px en la agenda de la empresa");
+  assert.ok(await agT3.evaluate((el) => [...el.querySelectorAll("*")].every((n) => n.getBoundingClientRect().right <= 391)), "agenda de la empresa sin desborde horizontal");
+  if (OUT) await t3.screenshot({ path: OUT + "/r3-09-movil-agenda-empresa.png" });
+  await panT.getByRole("button", { name: "Cancelar" }).tap();
+  await agT3.waitFor({ state: "detached" });
+  // Agenda de la vacante en teléfono.
+  await t3.getByRole("button", { name: "Enlaces de vacantes" }).tap();
+  await t3.getByRole("button", { name: "Agenda de Operador de montacargas" }).tap();
+  const avT = t3.getByRole("dialog", { name: "Agenda de entrevistas" });
+  await avT.locator("[data-vista-horarios] [data-horario]").first().waitFor();
+  await dormir(300);
+  const cajaAv = await avT.boundingBox();
+  assert.ok(cajaAv.x === 0 && cajaAv.width === 390 && cajaAv.height >= 840, `agenda de vacante a pantalla completa: ${JSON.stringify(cajaAv)}`);
+  for (const b of [avT.getByRole("switch", { name: "Agenda activa" }), avT.getByRole("button", { name: "Agregar horario al lunes" }), avT.getByRole("button", { name: "Quitar horario 1 del lunes" }),
+    avT.getByLabel("Lunes, horario 1: desde"), avT.getByRole("button", { name: "Agregar bloqueo" }), avT.getByRole("button", { name: "Guardar agenda" })]) {
+    assert.ok(await tamano(b) >= 44, "objetivo táctil ≥44 px en la agenda de la vacante");
+  }
+  assert.ok(await avT.evaluate((el) => [...el.querySelectorAll("*")].every((n) => n.getBoundingClientRect().right <= 391)), "agenda de la vacante sin desborde horizontal");
+  if (OUT) await t3.screenshot({ path: OUT + "/r3-10-movil-agenda-vacante.png" });
+  await avT.getByRole("button", { name: "Cerrar" }).tap();
+  await avT.waitFor({ state: "detached" });
+  // Chat con la ventana cerrada en teléfono: «Enviar seguimiento» ≥44 px.
+  await t3.getByRole("dialog", { name: "Enlaces de vacantes" }).getByRole("button", { name: "Close" }).tap();
+  await t3.getByRole("button", { name: "+52 442 123 4567" }).tap();
+  const segT = t3.locator("[data-seguimiento]");
+  await segT.waitFor();
+  assert.ok(await tamano(segT.getByRole("button", { name: "Enviar seguimiento" })) >= 44);
+  assert.ok(await sinScrollHorizontal(t3));
+  if (OUT) await t3.screenshot({ path: OUT + "/r3-11-movil-seguimiento.png" });
+  await movR3.close();
+
   assert.deepEqual(errores, [], "sin errores de JavaScript");
   exito = true;
-  console.log("OK whatsapp · lista con no leídos y control · abrir chat lo marca leído (GET) · sondeo 3 s · tomar control habilita y envía {texto} con «Enviando…» · Shift+Enter · 403/409 con texto conservado · envío rechazado (200 «fallido») y reintentos · archivos como «[Archivo: tipo]» · invitado con mismo id y otro correo no controla · devolver a IA · ventana 24 h y control ajeno · enlace de vacante copiado y 409 apagado · paginación real (pagina=2, sondeo solo página 1, sin duplicados) · enlaces de vacantes (lista, búsqueda, copiar, 409/503, vacío, hoja en teléfono) · búsqueda q · móvil a pantalla completa con volver · apagado · admin valida, muestra 409 y manda PUT · R2: agente (validación, horario, copiar lunes, palabras, 400, PUT, nombre en burbujas, cambios sin guardar) · entrevista por vacante (conteo perezoso, validación, rango número, opciones descarta/alerta excluyentes, reordenar con foco, máx. 8, 400, PUT) · filtros atencion=1 / calificacion · evaluación (puntajes, respuestas con severidad, sin respuesta) · marcar atendido · hoja <1280 · teléfono ≥44 px sin desborde · 27/11: interruptor de la bolsa (GET, PUT {publicar_bolsa}, falla y regresa, también con WhatsApp apagado) · copiar enlace de la vacante (/vacante/<slug>) · WhatsApp apagado avisa · chip de entrevistas con y sin paquete y aviso de extras · admin: paquete, extras, importe y PUT con entrevistas_incluidas · bolsa pública: /vacantes/filter y tira con ?bolsa=1 (vacía se oculta)");
+  console.log("OK whatsapp · lista con no leídos y control · abrir chat lo marca leído (GET) · sondeo 3 s · tomar control habilita y envía {texto} con «Enviando…» · Shift+Enter · 403/409 con texto conservado · envío rechazado (200 «fallido») y reintentos · archivos como «[Archivo: tipo]» · invitado con mismo id y otro correo no controla · devolver a IA · ventana 24 h y control ajeno · enlace de vacante copiado y 409 apagado · paginación real (pagina=2, sondeo solo página 1, sin duplicados) · enlaces de vacantes (lista, búsqueda, copiar, 409/503, vacío, hoja en teléfono) · búsqueda q · móvil a pantalla completa con volver · apagado · admin valida, muestra 409 y manda PUT · R2: agente (validación, horario, copiar lunes, palabras, 400, PUT, nombre en burbujas, cambios sin guardar) · entrevista por vacante (conteo perezoso, validación, rango número, opciones descarta/alerta excluyentes, reordenar con foco, máx. 8, 400, PUT) · filtros atencion=1 / calificacion · evaluación (puntajes, respuestas con severidad, sin respuesta) · marcar atendido · hoja <1280 · teléfono ≥44 px sin desborde · 27/11: interruptor de la bolsa (GET, PUT {publicar_bolsa}, falla y regresa, también con WhatsApp apagado) · copiar enlace de la vacante (/vacante/<slug>) · WhatsApp apagado avisa · chip de entrevistas con y sin paquete y aviso de extras · admin: paquete, extras, importe y PUT con entrevistas_incluidas · bolsa pública: /vacantes/filter y tira con ?bolsa=1 (vacía se oculta) · R3: agenda de la empresa (quién agenda, anticipación, días, horarios, recordatorios en minutos, plantillas, mensajes con marcadores en el cursor, vista previa, marcador desconocido, restaurar, 400, PUT) · agenda de la vacante (cupo, varios rangos con empalme, copiar a todos, bloqueo, override null vs valor, vista previa /horarios antes y después de guardar) · Entrevistas (calendario semanal con empalmes, filtros estado/vacante, lista, asistió, reagendar con 409 WA_SIN_CUPO, cancelar con motivo, confirmar, abrir chat) · agendar a mano y cita en el panel · aprobar para agendar · seguimiento con confirmación y 409 WA_SIN_PLANTILLA / WA_VENTANA_ABIERTA · plantillas del mes · teléfono: lista, hojas a pantalla completa, ≥44 px, sin desborde");
 } finally { await browser.close(); next.kill(); if (!exito) process.exitCode = 1; }

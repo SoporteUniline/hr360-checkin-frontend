@@ -2,12 +2,15 @@
 
 // Hilo de una conversación de WhatsApp (R1): burbujas, control humano/IA y cuadro para escribir.
 // R2: el agente firma con su nombre y, bajo 1280 px, «Ver evaluación» abre el panel del candidato.
+// R3: con la ventana de 24 h cerrada, «Enviar seguimiento» manda la plantilla aprobada (con confirmación, cuenta en el mes).
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { AlertCircle, ArrowLeft, Bot, Check, CheckCheck, ClipboardList, Clock, Hand, Loader2, RotateCw, SendHorizontal } from "lucide-react";
+import { AlertCircle, ArrowLeft, Bot, Check, CheckCheck, ClipboardList, Clock, Hand, Loader2, MailPlus, RotateCw, SendHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { claveDia, etiquetaDia, horaCorta } from "@/lib/whatsapp/tiempo.mjs";
 import { formatearTelefono, nombreContacto } from "@/lib/whatsapp/telefono.mjs";
-import { LIMITE_TEXTO, textoArchivo, accionesControl, etiquetaActor, etiquetaEstado, permisoEscribir } from "@/lib/whatsapp/reglas.mjs";
+import {
+  LIMITE_TEXTO, MENSAJE_VENTANA, textoArchivo, accionesControl, etiquetaActor, etiquetaEstado, mensajeErrorApi, permisoEscribir,
+} from "@/lib/whatsapp/reglas.mjs";
 import { Avatar, ChipControl } from "./ListaConversaciones";
 import EnlaceWhatsappVacante from "./EnlaceWhatsappVacante";
 
@@ -74,7 +77,45 @@ function Burbuja({ mensaje, onReintentar, reintentando, nombreAsistente }) {
   );
 }
 
-function Composer({ permiso, onEnviar, enviando }) {
+// Ventana de 24 h cerrada: en lugar de un cuadro bloqueado sin salida, se ofrece mandar la plantilla de seguimiento.
+function Seguimiento({ onSeguimiento }) {
+  const [paso, setPaso] = useState("inicio"); // inicio | confirmar | enviando | enviado
+  const [error, setError] = useState("");
+  const enviar = async () => {
+    setPaso("enviando");
+    setError("");
+    try {
+      await onSeguimiento();
+      setPaso("enviado");
+    } catch (e) {
+      setError(mensajeErrorApi(e, "No se pudo enviar el seguimiento."));
+      setPaso("inicio");
+    }
+  };
+  return (
+    <div role="status" data-seguimiento className="mb-2 grid gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-[13px] text-amber-900">
+      <p>{MENSAJE_VENTANA}</p>
+      {paso === "enviado" ? (
+        <p className="font-semibold text-emerald-800">Seguimiento enviado. Cuando el candidato conteste, podrás escribirle.</p>
+      ) : paso === "confirmar" || paso === "enviando" ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="min-w-0 flex-1 basis-56 font-medium">Se envía la plantilla de seguimiento y cuenta en las plantillas del mes.</span>
+          <Button type="button" variant="outline" size="sm" onClick={() => setPaso("inicio")} disabled={paso === "enviando"} className="min-h-11 bg-white md:min-h-8">Cancelar</Button>
+          <Button type="button" size="sm" onClick={enviar} loading={paso === "enviando"} className="min-h-11 bg-amber-700 hover:bg-amber-800 md:min-h-8">Enviar plantilla</Button>
+        </div>
+      ) : (
+        <div>
+          <Button type="button" size="sm" variant="outline" onClick={() => setPaso("confirmar")} startIcon={<MailPlus className="size-4" />} className="min-h-11 border-amber-300 bg-white md:min-h-8">
+            Enviar seguimiento
+          </Button>
+        </div>
+      )}
+      {error ? <p role="alert" className="rounded-md border border-red-200 bg-white p-2 font-medium text-red-800">{error}</p> : null}
+    </div>
+  );
+}
+
+function Composer({ permiso, onEnviar, enviando, ventanaCerrada = false, onSeguimiento = null }) {
   const [texto, setTexto] = useState("");
   const area = useRef(null);
   const ajustarAltura = () => {
@@ -96,7 +137,8 @@ function Composer({ permiso, onEnviar, enviando }) {
   };
   return (
     <div className="border-t border-gray-200 bg-white px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
-      {!permiso.puede && permiso.motivo ? (
+      {ventanaCerrada && onSeguimiento ? <Seguimiento onSeguimiento={onSeguimiento} /> : null}
+      {!permiso.puede && permiso.motivo && !(ventanaCerrada && onSeguimiento) ? (
         <p role="status" className={`mb-2 rounded-lg border p-2.5 text-[13px] ${permiso.ventanaCerrada ? "border-amber-200 bg-amber-50 text-amber-900" : "border-gray-200 bg-gray-50 text-gray-700"}`}>
           {permiso.motivo}
         </p>
@@ -143,7 +185,7 @@ function Composer({ permiso, onEnviar, enviando }) {
 
 export default function HiloConversacion({
   conversacion, mensajes, cargando, error, usuario, onVolver, onTomar, onDevolver, cambiandoControl, onEnviar, enviando, onReintentar, reintentandoId, aviso, anuncio, ahora,
-  nombreAsistente = "", onVerEvaluacion = null, requiereAtencion = false,
+  nombreAsistente = "", onVerEvaluacion = null, requiereAtencion = false, onSeguimiento = null,
 }) {
   const scroll = useRef(null);
   const primeraCarga = useRef(true);
@@ -228,7 +270,7 @@ export default function HiloConversacion({
       {aviso ? (
         <p role="alert" className="border-t border-red-200 bg-red-50 px-4 py-2 text-[13px] text-red-800">{aviso}</p>
       ) : null}
-      <Composer permiso={permiso} onEnviar={onEnviar} enviando={enviando} />
+      <Composer permiso={permiso} onEnviar={onEnviar} enviando={enviando} ventanaCerrada={conversacion?.ventana_abierta === false} onSeguimiento={onSeguimiento} />
     </section>
   );
 }

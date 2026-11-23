@@ -3,25 +3,31 @@
 // Bandeja de WhatsApp de reclutamiento (R1). Conversaciones reales del API (no usa el demo de /panel/reclutamiento).
 // 🧭 Criterio: refresco por sondeo con SWR (lista cada 5 s, chat abierto cada 3 s, en pausa con la pestaña oculta)
 // en lugar del SSE del reloj, que no lleva sesión.
+// R3: pestañas «Conversaciones» / «Entrevistas» (?vista=entrevistas), aprobar para agendar, cita en el panel del candidato,
+// «Enviar seguimiento» con la ventana cerrada y plantillas enviadas en el mes.
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import useSWR from "swr";
-import { MessageCircle, MessagesSquare, RefreshCw } from "lucide-react";
+import { CalendarDays, MessageCircle, MessagesSquare, RefreshCw } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import { formatearTelefono } from "@/lib/whatsapp/telefono.mjs";
 import { mensajeErrorApi } from "@/lib/whatsapp/reglas.mjs";
 import { paramsFiltro } from "@/lib/whatsapp/entrevista.mjs";
 import { avisoExtras, textoEntrevistasMes } from "@/lib/whatsapp/paquete.mjs";
+import { hoyMx, textoPlantillasMes } from "@/lib/whatsapp/agenda.mjs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  devolverAIa, enviarMensaje, marcarAtendido, obtener, reintentarMensaje, rutaAgente, rutaConversacion, rutaConversaciones, rutaEstado, tomarControl,
+  aprobarAgenda, devolverAIa, enviarMensaje, enviarSeguimiento, marcarAtendido, obtener, reintentarMensaje, rutaAgendaEmpresa, rutaAgente, rutaConversacion,
+  rutaConversaciones, rutaEstado, tomarControl,
 } from "./api";
 import ListaConversaciones from "./ListaConversaciones";
 import HiloConversacion from "./HiloConversacion";
 import EnlacesVacantes, { BotonEnlacesVacantes } from "./EnlacesVacantes";
 import ConfigurarAgente, { BotonAgente } from "./ConfigurarAgente";
 import PanelCandidato from "./PanelCandidato";
+import Entrevistas from "./Entrevistas";
 import { DIALOGO_PANTALLA_COMPLETA } from "./controles";
 
 const POR_PAGINA = 30;
@@ -65,6 +71,7 @@ function ChipEstado({ estado }) {
       {numero ? <span className="text-gray-600">{numero}</span> : null}
       <span className="text-gray-600">{Number(estado.conversaciones_mes) || 0} conversaciones este mes</span>
       <span className="text-gray-600" data-entrevistas-mes>{textoEntrevistasMes(estado)}</span>
+      {textoPlantillasMes(estado) ? <span className="text-gray-600" data-plantillas-mes>{textoPlantillasMes(estado)}</span> : null}
     </div>
   );
 }
@@ -76,12 +83,37 @@ function AvisoExtras({ estado }) {
   return <p role="status" data-aviso-extras className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-medium text-amber-900">{texto}</p>;
 }
 
+// Pestañas de la página: enlaces (cambian la URL, así «Atrás» y compartir funcionan).
+function Secciones({ vista, pathname }) {
+  const clase = (activa) => `inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-md px-4 text-[13.5px] font-semibold md:min-h-9 md:flex-none ${
+    activa ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"}`;
+  return (
+    <nav aria-label="Secciones de WhatsApp" className="flex w-full rounded-lg bg-gray-100 p-0.5 md:w-fit">
+      <Link href={pathname} aria-current={vista === "conversaciones" ? "page" : undefined} className={clase(vista === "conversaciones")} scroll={false}>
+        <MessagesSquare className="size-4" aria-hidden="true" /> Conversaciones
+      </Link>
+      <Link href={`${pathname}?vista=entrevistas`} aria-current={vista === "entrevistas" ? "page" : undefined} className={clase(vista === "entrevistas")} scroll={false}>
+        <CalendarDays className="size-4" aria-hidden="true" /> Entrevistas
+      </Link>
+    </nav>
+  );
+}
+
+// El servidor manda `citas` (todas las de la conversación); se muestra la próxima activa. Acepta también `cita`.
+function citaActiva(hilo) {
+  if (hilo?.cita) return hilo.cita;
+  const activas = (hilo?.citas ?? []).filter((c) => c?.estado === "agendada" || c?.estado === "confirmada");
+  activas.sort((a, b) => String(a.inicio).localeCompare(String(b.inicio)));
+  return activas[0] ?? null;
+}
+
 export default function BandejaWhatsapp() {
   const { dataUser, isAuthChecked } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const abierta = params.get("c");
+  const vista = params.get("vista") === "entrevistas" && !abierta ? "entrevistas" : "conversaciones";
   const abrioDesdeLista = useRef(false);
   const { empresas, idEmpresa, setIdEmpresa } = useEmpresa(dataUser);
   const rol = dataUser?.tipo_usuario === "User" ? "Recruiter" : dataUser?.tipo_usuario;
@@ -113,7 +145,7 @@ export default function BandejaWhatsapp() {
   // R2: el chip de filtro viaja como parámetro; al cambiar, la clave cambia y la paginación vuelve a la página 1.
   const [filtro, setFiltro] = useState("todos");
   const filtroParams = useMemo(() => paramsFiltro(filtro), [filtro]);
-  const claveLista = activo ? rutaConversaciones(idEmpresa, { q, pagina: 1, limite: POR_PAGINA, filtro: filtroParams }) : null;
+  const claveLista = activo && vista === "conversaciones" ? rutaConversaciones(idEmpresa, { q, pagina: 1, limite: POR_PAGINA, filtro: filtroParams }) : null;
   const { data: lista, error: errorLista, isLoading: cargandoLista, mutate: recargarLista } = useSWR(
     claveLista, obtener, { refreshInterval: 5000, refreshWhenHidden: false, keepPreviousData: true },
   );
@@ -163,6 +195,9 @@ export default function BandejaWhatsapp() {
   // Configuración del agente: da su nombre a las burbujas y el punto de encendido del botón (misma clave que el diálogo).
   const { data: agente } = useSWR(activo ? rutaAgente(idEmpresa) : null, obtener, { revalidateOnFocus: false, shouldRetryOnError: false });
   const nombreAsistente = agente?.nombre_asistente || "";
+  // R3: modo de agenda de la empresa (misma clave que la pestaña «Agenda y recordatorios»), para «Aprobar para agendar».
+  const { data: agendaEmpresa } = useSWR(activo ? rutaAgendaEmpresa(idEmpresa) : null, obtener, { revalidateOnFocus: false, shouldRetryOnError: false });
+  const nombreEmpresa = empresas.find((e) => e.id === idEmpresa)?.nombre ?? "";
 
   const claveHilo = activo && abierta ? rutaConversacion(abierta) : null;
   const { data: hilo, error: errorHilo, isLoading: cargandoHilo, mutate: recargarHilo } = useSWR(
@@ -207,6 +242,7 @@ export default function BandejaWhatsapp() {
   const [reintentandoId, setReintentandoId] = useState(null);
   const [anuncio, setAnuncio] = useState("");
   const [marcando, setMarcando] = useState(false);
+  const [aprobando, setAprobando] = useState(false);
   useEffect(() => {
     setPendientes([]);
     setAviso("");
@@ -294,9 +330,39 @@ export default function BandejaWhatsapp() {
       setMarcando(false);
     }
   };
+  const aprobar = async () => {
+    setAprobando(true);
+    setAviso("");
+    try {
+      await aprobarAgenda(abierta);
+      await recargarHilo((actual) => actual && { ...actual, entrevista: actual.entrevista && { ...actual.entrevista, agenda_aprobada: true, requiere_atencion: false } }, { revalidate: true });
+      recargarLista();
+      setAnuncio("Aprobado: el agente le ofrecerá horarios al candidato.");
+    } catch (e) {
+      setAviso(mensajeErrorApi(e, "No se pudo aprobar para agendar."));
+    } finally {
+      setAprobando(false);
+    }
+  };
+  // El error lo muestra el cuadro de seguimiento (WA_SIN_PLANTILLA / WA_VENTANA_ABIERTA); aquí solo se refresca.
+  const seguimiento = async () => {
+    try {
+      await enviarSeguimiento(abierta);
+      setAnuncio("Seguimiento enviado.");
+      recargarEstado();
+    } finally {
+      recargarHilo();
+    }
+  };
+  const alCambiarCita = async () => {
+    await recargarHilo();
+    setAnuncio("Cita actualizada.");
+  };
   const panel = (
     <PanelCandidato entrevista={entrevista} preguntasSinRespuesta={preguntasSinRespuesta} cargando={cargandoHilo && !hilo}
-      onAtendido={atender} marcando={marcando} nombreAsistente={nombreAsistente} ahora={ahora} />
+      onAtendido={atender} marcando={marcando} nombreAsistente={nombreAsistente} ahora={ahora}
+      conversacion={conversacion} cita={citaActiva(hilo)} modoAgenda={agendaEmpresa?.quien_agenda ?? null} onAprobar={aprobar} aprobando={aprobando}
+      onCitaCambio={alCambiarCita} hoy={hoyMx(ahora)} />
   );
 
   const encabezado = (
@@ -336,7 +402,7 @@ export default function BandejaWhatsapp() {
       {encabezado}
       {filaMovil}
       <EnlacesVacantes abierto={vacantesAbierto} onCambiar={setVacantesAbierto} idEmpresa={idEmpresa} whatsappActivo={!!activo} />
-      <ConfigurarAgente abierto={agenteAbierto} onCambiar={setAgenteAbierto} idEmpresa={idEmpresa} />
+      <ConfigurarAgente abierto={agenteAbierto} onCambiar={setAgenteAbierto} idEmpresa={idEmpresa} nombreEmpresa={nombreEmpresa} />
       <Dialog open={evaluacionAbierta && !!abierta} onOpenChange={setEvaluacionAbierta}>
         <DialogContent className={`${DIALOGO_PANTALLA_COMPLETA} sm:max-w-md`}>
           <DialogHeader className="border-b border-gray-200 px-5 pb-3 pt-[max(1rem,env(safe-area-inset-top))] pr-14 text-left">
@@ -365,6 +431,7 @@ export default function BandejaWhatsapp() {
         </div>
       ) : (
         <>
+          <Secciones vista={vista} pathname={pathname} />
           <ChipEstado estado={estado} />
           <AvisoExtras estado={estado} />
           {!estado.puede_usar ? (
@@ -372,6 +439,7 @@ export default function BandejaWhatsapp() {
               Por ahora tu empresa no puede enviar mensajes por WhatsApp. Pídele a ADAMIA que lo revise.
             </p>
           ) : null}
+          {vista === "entrevistas" ? <Entrevistas idEmpresa={idEmpresa} ahora={ahora} /> : (
           <div className="flex min-h-0 min-w-0 overflow-hidden md:h-[calc(100dvh-14rem)] md:min-h-[460px] md:rounded-2xl md:border md:border-gray-200 md:bg-white">
             <div className={`flex min-w-0 flex-col md:w-[340px] md:shrink-0 md:border-r md:border-gray-200 lg:w-[380px] ${abierta ? "xl:w-[320px] 2xl:w-[380px]" : ""} max-md:w-auto max-md:flex-1 max-md:rounded-2xl max-md:border max-md:border-gray-200 max-md:bg-white ${abierta ? "max-md:hidden" : ""}`}>
               <ListaConversaciones
@@ -417,6 +485,7 @@ export default function BandejaWhatsapp() {
                   nombreAsistente={nombreAsistente}
                   onVerEvaluacion={() => setEvaluacionAbierta(true)}
                   requiereAtencion={entrevista?.requiere_atencion === true}
+                  onSeguimiento={seguimiento}
                 />
               </div>
             ) : null}
@@ -433,6 +502,7 @@ export default function BandejaWhatsapp() {
               </div>
             )}
           </div>
+          )}
         </>
       )}
     </div>
