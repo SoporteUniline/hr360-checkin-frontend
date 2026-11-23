@@ -11,6 +11,7 @@ import Link from "next/link";
 import { iniciarAnimaciones } from "./animaciones";
 import HeroCarrusel from "./HeroCarrusel";
 import SeccionLey from "./SeccionLey";
+import MosaicoModulos from "./MosaicoModulos";
 import SitioEncabezado from "./SitioEncabezado";
 import SitioPie from "./SitioPie";
 import "./landing-home.css";
@@ -91,6 +92,7 @@ export default function LandingHome() {
             </div>
             <div className="marq" aria-hidden="true"><div className="marq-in" id="marq"><span>Reconocimiento facial</span><span>Validación GPS</span><span>Funciona sin internet</span><span>Horas extra según la LFT</span><span>Vacaciones y permisos</span><span>Aprobación por WhatsApp</span><span>Contratos y actas</span><span>Activos y uniformes</span><span>Aguinaldos y finiquitos</span><span>Evaluaciones 360°</span><span>Varias sucursales</span><span aria-hidden="true">Reconocimiento facial</span><span aria-hidden="true">Validación GPS</span><span aria-hidden="true">Funciona sin internet</span><span aria-hidden="true">Horas extra según la LFT</span><span aria-hidden="true">Vacaciones y permisos</span><span aria-hidden="true">Aprobación por WhatsApp</span><span aria-hidden="true">Contratos y actas</span><span aria-hidden="true">Activos y uniformes</span><span aria-hidden="true">Aguinaldos y finiquitos</span><span aria-hidden="true">Evaluaciones 360°</span><span aria-hidden="true">Varias sucursales</span></div></div>
           </section>
+          <MosaicoModulos />
           <section className="fullband gris" id="producto">
             <div className="wrap row2">
               <div className="txt reveal">
