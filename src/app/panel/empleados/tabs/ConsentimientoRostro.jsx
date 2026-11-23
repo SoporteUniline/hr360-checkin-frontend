@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSnackbar } from "notistack";
 import { firmaDigitalAdminApi } from "@/lib/firmaDigitalApi";
+import EvidenciaFirma from "@/components/firma/EvidenciaFirma";
 import { CONSENTIMIENTO_BIOMETRICO as C } from "@/lib/legal/documentos";
 import { estadoConsentimiento } from "@/lib/legal/consentimientoRostro.mjs";
 
@@ -132,6 +133,7 @@ export default function ConsentimientoRostro({ idEmpresa, idEmpleado, nombre, em
           {solicitud?.tiene_documento_firmado ? (
             <button type="button" onClick={verFirmado} className="font-semibold underline underline-offset-2">Ver documento firmado</button>
           ) : null}
+          {solicitud?.tiene_documento_firmado ? <EvidenciaFirma idSolicitud={solicitud.id} idEmpresa={idEmpresa} /> : null}
         </div>
       ) : estado.tipo === "esperando" ? (
         <div className="mt-2 grid gap-2">

@@ -88,6 +88,15 @@ export const firmaDigitalAdminApi = {
     return res.data;
   },
 
+  // (23/11/2026) Foto, fecha, método y dispositivo de quien firmó. Solo RH y dueño; cada consulta queda registrada.
+  async obtenerEvidencia({ idSolicitud, idEmpresa }) {
+    const res = await firmaDigitalPublicApi.get(
+      `/checador/firma-digital/solicitudes/${encodeURIComponent(idSolicitud)}/evidencia`,
+      { params: { id_empresa: idEmpresa }, headers: authHeaders() },
+    );
+    return res.data;
+  },
+
   async crearSolicitud({
     idEmpresa,
     idEmpleado,

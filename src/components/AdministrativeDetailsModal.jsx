@@ -21,6 +21,7 @@ import { useEffect, useState } from "react";
 import { useSnackbar } from "notistack";
 import { administrativeMinutesApi } from "@/lib/administrativeMinutesApi";
 import { firmaDigitalAdminApi } from "@/lib/firmaDigitalApi";
+import EvidenciaFirma from "@/components/firma/EvidenciaFirma";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -1039,6 +1040,9 @@ export const AdministrativeDetailsModal = ({
                         ? "Abriendo..."
                         : "Ver PDF firmado"}
                     </Button>
+                  )}
+                  {estadoFirma.tiene_documento_firmado && (
+                    <EvidenciaFirma idSolicitud={estadoFirma.id} idEmpresa={acta.id_empresa} />
                   )}
                 </div>
               </div>

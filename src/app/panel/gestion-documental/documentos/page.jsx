@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { fetcherWithToken } from "@/lib/fetcher";
 import { docGeneradosApi } from "@/lib/gestionDocumentalApi";
 import { firmaDigitalAdminApi } from "@/lib/firmaDigitalApi";
+import EvidenciaFirma from "@/components/firma/EvidenciaFirma";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -546,6 +547,9 @@ function DocumentosContent({ empresa }) {
                           ? "Abriendo..."
                           : "Ver PDF firmado"}
                       </Button>
+                    )}
+                    {estadoFirma.tiene_documento_firmado && (
+                      <EvidenciaFirma idSolicitud={estadoFirma.id} idEmpresa={viewingDoc.id_empresa} />
                     )}
                   </div>
                 </div>

@@ -14,7 +14,9 @@ import {
 } from "lucide-react";
 import styles from "./firma.module.css";
 
-export default function DocumentoReader({ url, nombre, onReady }) {
+// (23/11/2026) url = el PDF servido por nuestro servidor (en algunos celulares el enlace directo al almacenamiento no
+// abría); urlExterna = el enlace para abrirlo aparte si el lector no puede.
+export default function DocumentoReader({ url, urlExterna, nombre, onReady }) {
   const viewportRef = useRef(null);
   const canvasRef = useRef(null);
   const expandButtonRef = useRef(null);
@@ -261,7 +263,7 @@ export default function DocumentoReader({ url, nombre, onReady }) {
             {ampliado ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
           </button>
           <a
-            href={url}
+            href={urlExterna || url}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Abrir PDF original en otra pestaña"
@@ -279,7 +281,7 @@ export default function DocumentoReader({ url, nombre, onReady }) {
             Puedes leer el PDF en otra pestaña.
           </p>
           <a
-            href={url}
+            href={urlExterna || url}
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => setAbiertoExterno(true)}
