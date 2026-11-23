@@ -15,6 +15,7 @@ const consulta = (params) => {
 export const rutaEstado = (empresa) => (empresa ? `${RUTA_WA}/estado${consulta({ empresa })}` : null);
 export const rutaConversaciones = (empresa, { q, pagina = 1, limite = 30 } = {}) =>
   empresa ? `${RUTA_WA}/conversaciones${consulta({ empresa, q, pagina, limite })}` : null;
+export const rutaVacantes = (empresa) => (empresa ? `${RUTA_WA}/vacantes${consulta({ empresa })}` : null);
 export const rutaConversacion = (id) => (id ? `${RUTA_WA}/conversaciones/${encodeURIComponent(id)}` : null);
 
 export const obtener = (url) => axios.get(url).then((r) => r.data);

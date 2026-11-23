@@ -26,7 +26,7 @@ export function Avatar({ contacto, className = "" }) {
 }
 
 export default function ListaConversaciones({
-  conversaciones, total, cargando, error, busqueda, setBusqueda, q, seleccionada, onAbrir, onMas, cargandoMas, usuario, ahora,
+  conversaciones, hayMas, errorMas, cargando, error, busqueda, setBusqueda, q, seleccionada, onAbrir, onMas, cargandoMas, onVacantes, usuario, ahora,
 }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -60,7 +60,12 @@ export default function ListaConversaciones({
             ) : (
               <>
                 <p className="font-medium text-gray-700">Aún no hay conversaciones.</p>
-                <p className="mt-1">Comparte el enlace de WhatsApp de tus vacantes para que los candidatos te escriban.</p>
+                <p className="mt-1">Comparte el enlace de una vacante para recibir mensajes.</p>
+                {onVacantes ? (
+                  <button type="button" onClick={onVacantes} className="mt-3 inline-flex min-h-11 items-center rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white hover:bg-emerald-700 md:min-h-9">
+                    Ver enlaces de vacantes
+                  </button>
+                ) : null}
               </>
             )}
           </div>
@@ -106,10 +111,11 @@ export default function ListaConversaciones({
             })}
           </ul>
         )}
-        {conversaciones.length > 0 && total > conversaciones.length ? (
-          <div className="p-3">
+        {conversaciones.length > 0 && hayMas ? (
+          <div className="grid gap-2 p-3">
+            {errorMas ? <p role="alert" className="text-[13px] text-red-700">{errorMas}</p> : null}
             <button type="button" onClick={onMas} disabled={cargandoMas} className="h-11 w-full rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60">
-              {cargandoMas ? "Cargando…" : `Ver más (${total - conversaciones.length})`}
+              {cargandoMas ? "Cargando…" : "Ver más conversaciones"}
             </button>
           </div>
         ) : null}

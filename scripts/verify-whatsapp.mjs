@@ -71,7 +71,18 @@ function estadoInicial() {
     { id_empresa: 11, nombre_empresa: "Uniline Norte", modo: "apagado", zernio_account_id: null, numero_whatsapp: null, precio_conversacion: null, precio_mensual: null, conversaciones_mes: 0 },
     { id_empresa: 12, nombre_empresa: "Transportes Sur", modo: "propio", zernio_account_id: "acc_sur", numero_whatsapp: "5213312345678", precio_conversacion: 1, precio_mensual: 499, conversaciones_mes: 87 },
   ];
-  return { conversaciones, mensajes, empresas, modo: "compartido", envios: [], siguienteId: 900 };
+  // 32 conversaciones viejas de relleno: con limite=30 hay 2 páginas (35 en total).
+  for (let i = 1; i <= 32; i++) {
+    conversaciones.push({ id: 1000 + i, id_empresa: 10, contacto: { id: 2000 + i, nombre: `Candidato ${i}`, telefono: `52155000000${String(i).padStart(2, "0")}` },
+      vacante: { id_vacante: 57, titulo: "Chofer repartidor" }, modo: "ia", control: null, no_leidos: 0,
+      ultimo_mensaje: { texto: "Gracias por la información", direccion: "entrante", creado_en: hace(60 * 24 * 10 + i) }, ultimo_entrante_en: hace(60 * 24 * 10 + i), ventana_abierta: false });
+  }
+  const vacantes = [
+    { id_vacante: 55, id_empresa: 10, titulo: "Operador de montacargas", tiene_enlace: true },
+    { id_vacante: 56, id_empresa: 10, titulo: "Auxiliar de almacén turno nocturno", tiene_enlace: false },
+    { id_vacante: 57, id_empresa: 10, titulo: "Chofer repartidor", tiene_enlace: false },
+  ];
+  return { conversaciones, mensajes, empresas, vacantes, modo: "compartido", envios: [], siguienteId: 900 };
 }
 
 const pedidos = [];
@@ -99,8 +110,14 @@ async function instalarMocks(ctx, usuario) {
     if (ruta === "/estado") return json({ modo: S.modo, numero_whatsapp: S.modo === "apagado" ? null : "5215598765432", conversaciones_mes: 12, puede_usar: S.modo !== "apagado" });
     if (ruta === "/conversaciones") {
       const q = (url.searchParams.get("q") || "").toLowerCase();
+      if (url.searchParams.get("empresa") === "11") return json({ conversaciones: [], total: 0 });
       const lista = S.conversaciones.filter((c) => !q || `${c.contacto.nombre} ${c.contacto.telefono} ${c.vacante?.titulo ?? ""}`.toLowerCase().includes(q));
-      return json({ conversaciones: lista, total: lista.length });
+      const pagina = Number(url.searchParams.get("pagina") || 1);
+      const limite = Number(url.searchParams.get("limite") || 30);
+      return json({ conversaciones: lista.slice((pagina - 1) * limite, pagina * limite), total: lista.length });
+    }
+    if (ruta === "/vacantes") {
+      return json({ vacantes: url.searchParams.get("empresa") === "11" ? [] : S.vacantes });
     }
     if ((m = ruta.match(/^\/conversaciones\/(\d+)$/))) {
       const c = conv(m[1]);
@@ -138,6 +155,7 @@ async function instalarMocks(ctx, usuario) {
     }
     if ((m = ruta.match(/^\/vacantes\/(\d+)\/enlace$/))) {
       if (m[1] === "56") return json({ codigo: "WA_APAGADO", error: "Apagado" }, 409);
+      if (m[1] === "57") return json({ codigo: "WA_SIN_NUMERO", error: "Sin número" }, 503);
       return json({ token: "V-AB12", numero: "5215598765432", enlace: ENLACE });
     }
     if (ruta === "/admin/empresas" && req.method() === "GET") return json(S.empresas);
@@ -174,7 +192,7 @@ try {
   assert.match(await page.locator('[data-estado-wa="compartido"]').innerText(), /Activo · número compartido de ADAMIA[\s\S]*\+52 55 9876 5432[\s\S]*12 conversaciones este mes/);
   assert.equal(await page.getByLabel("Empresa").filter({ visible: true }).count(), 1, "selector de empresa con 2 empresas");
   const items = lista.getByRole("listitem");
-  assert.equal(await items.count(), 3);
+  assert.equal(await items.count(), 30, "primera página de 30");
   const anaItem = page.getByRole("button", { name: "Ana Ruiz, 2 sin leer" });
   assert.match(await anaItem.innerText(), /Ana Ruiz[\s\S]*hace 3 min[\s\S]*Operador de montacargas[\s\S]*¿Sigue disponible la vacante\?[\s\S]*2[\s\S]*IA/);
   assert.match(await items.nth(1).innerText(), /\+52 442 123 4567[\s\S]*Sin vacante[\s\S]*Tú tienes el control/);
@@ -182,6 +200,18 @@ try {
   const listaInicial = pedidos.find((x) => x.ruta === "/conversaciones");
   assert.match(listaInicial.params, /empresa=10/);
   assert.match(listaInicial.token, /^Bearer .+/);
+  assert.match(listaInicial.params, /pagina=1&limite=30/);
+  // Paginación real: «Ver más» pide pagina=2 y la agrega; el sondeo solo refresca la página 1.
+  await page.getByRole("button", { name: "Ver más conversaciones" }).click();
+  await page.waitForFunction(() => document.querySelectorAll('[aria-label="Conversaciones"] li').length === 35);
+  assert.equal(cuenta((x) => x.ruta === "/conversaciones" && /pagina=2&limite=30/.test(x.params)), 1);
+  assert.equal(await page.getByRole("button", { name: "Ver más conversaciones" }).count(), 0, "sin más páginas");
+  const paginasUno = cuenta((x) => x.ruta === "/conversaciones" && /pagina=1&/.test(x.params));
+  await dormir(5600);
+  assert.ok(cuenta((x) => x.ruta === "/conversaciones" && /pagina=1&/.test(x.params)) > paginasUno, "el sondeo refresca la página 1");
+  assert.equal(cuenta((x) => x.ruta === "/conversaciones" && /pagina=2&/.test(x.params)), 1, "el sondeo no vuelve a pedir la página 2");
+  assert.equal(await items.count(), 35, "las páginas agregadas se conservan tras el sondeo");
+  assert.equal(new Set(await items.evaluateAll((li) => li.map((x) => x.textContent))).size, 35, "sin duplicados");
   // Menú lateral: entrada real fuera del demo.
   const entradaMenu = page.getByRole("button", { name: "Conversaciones (WhatsApp)" });
   assert.equal(await entradaMenu.count(), 1, "entrada en el menú de reclutamiento");
@@ -294,12 +324,41 @@ try {
   await page.waitForFunction(() => document.querySelectorAll('[aria-label="Conversaciones"] li').length === 1);
   assert.ok(pedidos.some((x) => x.ruta === "/conversaciones" && /q=montacargas/.test(x.params)));
   await page.getByRole("button", { name: "Limpiar búsqueda" }).click();
+  // «Enlaces de vacantes» desde el encabezado: lista, búsqueda, copiar y errores por vacante.
+  await page.getByRole("button", { name: "Enlaces de vacantes" }).click();
+  const dlgVac = page.getByRole("dialog", { name: "Enlaces de vacantes" });
+  const listaVac = dlgVac.getByRole("list", { name: "Vacantes abiertas" });
+  await listaVac.waitFor();
+  assert.equal(await listaVac.getByRole("listitem").count(), 3);
+  assert.ok(pedidos.some((x) => x.ruta === "/vacantes" && /empresa=10/.test(x.params)), "GET /vacantes?empresa=10");
+  await dlgVac.getByRole("searchbox", { name: "Buscar vacante" }).fill("chofer");
+  assert.equal(await listaVac.getByRole("listitem").count(), 1);
+  await dlgVac.getByRole("searchbox", { name: "Buscar vacante" }).fill("");
+  const enlacesAntes = cuenta((x) => x.ruta === "/vacantes/55/enlace");
+  await dlgVac.getByRole("button", { name: "Copiar enlace de Operador de montacargas" }).click();
+  await dlgVac.getByRole("button", { name: "Copiar enlace de Operador de montacargas" }).filter({ hasText: "Copiado" }).waitFor();
+  assert.equal(cuenta((x) => x.ruta === "/vacantes/55/enlace"), enlacesAntes + 1);
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), ENLACE);
+  assert.equal(await dlgVac.getByRole("link", { name: "Abrir enlace de Operador de montacargas" }).getAttribute("href"), ENLACE);
+  await dlgVac.getByRole("button", { name: "Copiar enlace de Auxiliar de almacén turno nocturno" }).click();
+  await dlgVac.getByRole("alert").filter({ hasText: "WhatsApp no está activado para tu empresa. Pídele a ADAMIA que lo active." }).waitFor();
+  await dlgVac.getByRole("button", { name: "Copiar enlace de Chofer repartidor" }).click();
+  await dlgVac.getByRole("alert").filter({ hasText: "todavía no tiene un número de WhatsApp listo" }).waitFor();
+  if (OUT) await page.screenshot({ path: OUT + "/10-enlaces-vacantes.png" });
+  await page.keyboard.press("Escape");
+  await dlgVac.waitFor({ state: "detached" });
   // Cambiar de empresa consulta el estado y la lista de esa empresa y cierra el chat abierto.
   await page.getByLabel("Empresa").filter({ visible: true }).selectOption("11");
   await page.waitForURL(/\/panel\/whatsapp$/);
   for (let i = 0; i < 50 && !pedidos.some((x) => x.ruta === "/conversaciones" && /empresa=11/.test(x.params)); i++) await dormir(100);
   assert.ok(pedidos.some((x) => x.ruta === "/estado" && /empresa=11/.test(x.params)), "estado de la otra empresa");
   assert.ok(pedidos.some((x) => x.ruta === "/conversaciones" && /empresa=11/.test(x.params)), "lista de la otra empresa");
+  // Bandeja vacía: invita a compartir el enlace de una vacante.
+  await page.getByText("Comparte el enlace de una vacante para recibir mensajes.").waitFor();
+  await page.getByRole("button", { name: "Ver enlaces de vacantes" }).click();
+  await page.getByRole("dialog", { name: "Enlaces de vacantes" }).getByText("No hay vacantes abiertas.").waitFor();
+  assert.ok(pedidos.some((x) => x.ruta === "/vacantes" && /empresa=11/.test(x.params)), "GET /vacantes?empresa=11");
+  await page.keyboard.press("Escape");
   await page.close();
 
   // ——— 9. Teléfono 390 px ———
@@ -313,7 +372,18 @@ try {
   assert.ok(await sinScrollHorizontal(tel), "lista sin scroll horizontal");
   assert.equal(await tel.getByLabel("Empresa").filter({ visible: true }).count(), 1, "selector de empresa visible en teléfono");
   assert.ok(await tamano(tel.getByRole("button", { name: "Ana Ruiz" })) >= 44);
-  if (OUT) await tel.screenshot({ path: OUT + "/04-movil-lista.png", fullPage: true });
+  if (OUT) await tel.screenshot({ path: OUT + "/04-movil-lista.png" });
+  // En teléfono «Enlaces de vacantes» se abre como hoja pegada abajo.
+  await tel.getByRole("button", { name: "Enlaces de vacantes" }).tap();
+  const hoja = tel.getByRole("dialog", { name: "Enlaces de vacantes" });
+  await hoja.getByRole("list", { name: "Vacantes abiertas" }).waitFor();
+  await dormir(300);
+  const cajaHoja = await hoja.boundingBox();
+  assert.ok(Math.abs(cajaHoja.y + cajaHoja.height - 844) <= 2 && cajaHoja.width === 390, `hoja abajo: ${JSON.stringify(cajaHoja)}`);
+  assert.ok(await tamano(hoja.getByRole("button", { name: "Copiar enlace de Chofer repartidor" })) >= 44);
+  if (OUT) await tel.screenshot({ path: OUT + "/11-movil-enlaces-vacantes.png" });
+  await hoja.getByRole("button", { name: "Close" }).tap();
+  await hoja.waitFor({ state: "detached" });
   await tel.getByRole("button", { name: "Ana Ruiz" }).tap();
   await tel.waitForURL(/\?c=1$/);
   const hiloTel = tel.getByRole("region", { name: "Conversación" });
@@ -389,5 +459,5 @@ try {
 
   assert.deepEqual(errores, [], "sin errores de JavaScript");
   exito = true;
-  console.log("OK whatsapp · lista con no leídos y control · abrir chat lo marca leído (GET) · sondeo 3 s · tomar control habilita y envía {texto} con «Enviando…» · Shift+Enter · 403/409 con texto conservado · envío rechazado (200 «fallido») y reintentos · archivos como «[Archivo: tipo]» · invitado con mismo id y otro correo no controla · devolver a IA · ventana 24 h y control ajeno · enlace de vacante copiado y 409 apagado · búsqueda q · móvil a pantalla completa con volver · apagado · admin valida, muestra 409 y manda PUT");
+  console.log("OK whatsapp · lista con no leídos y control · abrir chat lo marca leído (GET) · sondeo 3 s · tomar control habilita y envía {texto} con «Enviando…» · Shift+Enter · 403/409 con texto conservado · envío rechazado (200 «fallido») y reintentos · archivos como «[Archivo: tipo]» · invitado con mismo id y otro correo no controla · devolver a IA · ventana 24 h y control ajeno · enlace de vacante copiado y 409 apagado · paginación real (pagina=2, sondeo solo página 1, sin duplicados) · enlaces de vacantes (lista, búsqueda, copiar, 409/503, vacío, hoja en teléfono) · búsqueda q · móvil a pantalla completa con volver · apagado · admin valida, muestra 409 y manda PUT");
 } finally { await browser.close(); next.kill(); if (!exito) process.exitCode = 1; }

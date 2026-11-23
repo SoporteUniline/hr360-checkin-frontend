@@ -16,6 +16,7 @@ import {
 } from "./api";
 import ListaConversaciones from "./ListaConversaciones";
 import HiloConversacion from "./HiloConversacion";
+import EnlacesVacantes, { BotonEnlacesVacantes } from "./EnlacesVacantes";
 
 const POR_PAGINA = 30;
 
@@ -91,14 +92,53 @@ export default function BandejaWhatsapp() {
     const t = setTimeout(() => setQ(busqueda.trim()), 300);
     return () => clearTimeout(t);
   }, [busqueda]);
-  const [paginas, setPaginas] = useState(1);
-  useEffect(() => setPaginas(1), [q, idEmpresa]);
-
-  const claveLista = activo ? rutaConversaciones(idEmpresa, { q, pagina: 1, limite: POR_PAGINA * paginas }) : null;
-  const { data: lista, error: errorLista, isLoading: cargandoLista, isValidating: validandoLista, mutate: recargarLista } = useSWR(
+  // Paginación real: el sondeo solo refresca la página 1; «Ver más» pide pagina=2,3… y se agrega sin duplicados
+  // (una conversación con actividad nueva sube a la página 1 y ahí se toma la versión fresca).
+  const claveLista = activo ? rutaConversaciones(idEmpresa, { q, pagina: 1, limite: POR_PAGINA }) : null;
+  const { data: lista, error: errorLista, isLoading: cargandoLista, mutate: recargarLista } = useSWR(
     claveLista, obtener, { refreshInterval: 5000, refreshWhenHidden: false, keepPreviousData: true },
   );
-  const conversaciones = lista?.conversaciones ?? [];
+  const [extras, setExtras] = useState([]);
+  const [paginasCargadas, setPaginasCargadas] = useState(1);
+  const [cargandoMas, setCargandoMas] = useState(false);
+  const [errorMas, setErrorMas] = useState("");
+  const claveVigente = useRef(claveLista);
+  useEffect(() => {
+    claveVigente.current = claveLista;
+    setExtras([]);
+    setPaginasCargadas(1);
+    setErrorMas("");
+  }, [claveLista]);
+  const conversaciones = useMemo(() => {
+    const primera = lista?.conversaciones ?? [];
+    const ids = new Set(primera.map((c) => String(c.id)));
+    const resto = [];
+    for (const c of extras) {
+      if (ids.has(String(c.id))) continue;
+      ids.add(String(c.id));
+      resto.push(c);
+    }
+    return [...primera, ...resto];
+  }, [lista, extras]);
+  const totalLista = Number(lista?.total) || 0;
+  const hayMas = paginasCargadas * POR_PAGINA < totalLista;
+  const verMas = async () => {
+    const clave = claveLista;
+    const pagina = paginasCargadas + 1;
+    setCargandoMas(true);
+    setErrorMas("");
+    try {
+      const r = await obtener(rutaConversaciones(idEmpresa, { q, pagina, limite: POR_PAGINA }));
+      if (claveVigente.current !== clave) return; // cambió la búsqueda o la empresa mientras llegaba
+      setExtras((x) => [...x, ...(r?.conversaciones ?? [])]);
+      setPaginasCargadas(pagina);
+    } catch (e) {
+      setErrorMas(mensajeErrorApi(e, "No se pudieron cargar más conversaciones."));
+    } finally {
+      setCargandoMas(false);
+    }
+  };
+  const [vacantesAbierto, setVacantesAbierto] = useState(false);
 
   const claveHilo = activo && abierta ? rutaConversacion(abierta) : null;
   const { data: hilo, error: errorHilo, isLoading: cargandoHilo, mutate: recargarHilo } = useSWR(
@@ -110,6 +150,7 @@ export default function BandejaWhatsapp() {
   useEffect(() => {
     if (!hilo || !abierta || marcadaLeida.current === abierta) return;
     marcadaLeida.current = abierta;
+    setExtras((x) => x.map((c) => (String(c.id) === String(abierta) ? { ...c, no_leidos: 0 } : c)));
     recargarLista((actual) => actual && {
       ...actual,
       conversaciones: (actual.conversaciones ?? []).map((c) => (String(c.id) === String(abierta) ? { ...c, no_leidos: 0 } : c)),
@@ -216,12 +257,20 @@ export default function BandejaWhatsapp() {
       icono={MessagesSquare}
       titulo="Conversaciones de WhatsApp"
       subtitulo="Chats con candidatos. La IA responde y tú tomas el control cuando lo necesites."
-      acciones={empresas.length > 1 ? <div className="hidden md:block"><SelectorEmpresa empresas={empresas} idEmpresa={idEmpresa} onCambiar={cambiarEmpresa} /></div> : null}
+      acciones={
+        <div className="hidden items-center gap-3 md:flex">
+          {activo ? <BotonEnlacesVacantes onClick={() => setVacantesAbierto(true)} /> : null}
+          <SelectorEmpresa empresas={empresas} idEmpresa={idEmpresa} onCambiar={cambiarEmpresa} />
+        </div>
+      }
     />
   );
-  // En teléfono el selector va en su propia fila para no apretar el título.
-  const selectorMovil = empresas.length > 1 ? (
-    <div className="md:hidden"><SelectorEmpresa empresas={empresas} idEmpresa={idEmpresa} onCambiar={cambiarEmpresa} /></div>
+  // En teléfono el selector y el botón van en su propia fila para no apretar el título.
+  const filaMovil = empresas.length > 1 || activo ? (
+    <div className="flex flex-wrap items-center gap-2 md:hidden">
+      <SelectorEmpresa empresas={empresas} idEmpresa={idEmpresa} onCambiar={cambiarEmpresa} />
+      {activo ? <BotonEnlacesVacantes onClick={() => setVacantesAbierto(true)} /> : null}
+    </div>
   ) : null;
 
   if (isAuthChecked && dataUser && !permitido) {
@@ -236,7 +285,8 @@ export default function BandejaWhatsapp() {
   return (
     <div className="flex min-w-0 flex-col gap-3">
       {encabezado}
-      {selectorMovil}
+      {filaMovil}
+      <EnlacesVacantes abierto={vacantesAbierto} onCambiar={setVacantesAbierto} idEmpresa={idEmpresa} />
       {errorEstado ? (
         <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           <span className="flex-1">{mensajeErrorApi(errorEstado, "No se pudo consultar el estado de WhatsApp.")}</span>
@@ -265,7 +315,9 @@ export default function BandejaWhatsapp() {
             <div className={`flex min-w-0 flex-col md:w-[340px] md:shrink-0 md:border-r md:border-gray-200 lg:w-[380px] max-md:w-auto max-md:flex-1 max-md:rounded-2xl max-md:border max-md:border-gray-200 max-md:bg-white ${abierta ? "max-md:hidden" : ""}`}>
               <ListaConversaciones
                 conversaciones={conversaciones}
-                total={Number(lista?.total) || 0}
+                hayMas={hayMas}
+                errorMas={errorMas}
+                onVacantes={() => setVacantesAbierto(true)}
                 cargando={cargandoLista}
                 error={errorLista ? mensajeErrorApi(errorLista, "No se pudieron cargar las conversaciones.") : ""}
                 busqueda={busqueda}
@@ -273,8 +325,8 @@ export default function BandejaWhatsapp() {
                 q={q}
                 seleccionada={abierta}
                 onAbrir={irA}
-                onMas={() => setPaginas((p) => p + 1)}
-                cargandoMas={validandoLista && paginas > 1}
+                onMas={verMas}
+                cargandoMas={cargandoMas}
                 usuario={dataUser}
                 ahora={ahora}
               />

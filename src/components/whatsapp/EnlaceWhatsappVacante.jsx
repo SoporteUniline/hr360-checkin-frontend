@@ -28,28 +28,68 @@ async function copiarTexto(texto) {
   }
 }
 
-export default function EnlaceWhatsappVacante({ idVacante, titulo, variante = "outline", className = "" }) {
-  const [abierto, setAbierto] = useState(false);
+// Pide el enlace al API (una vez) y lo copia. Compartido por el botón con diálogo y por la fila en línea.
+function useEnlaceVacante(idVacante) {
   const [estado, setEstado] = useState({ cargando: false, datos: null, error: "" });
   const [copiado, setCopiado] = useState(false);
-
-  const abrir = async () => {
-    setAbierto(true);
+  const cargar = async () => {
     setCopiado(false);
     setEstado({ cargando: true, datos: null, error: "" });
     try {
       const datos = await enlaceVacante(idVacante);
       setEstado({ cargando: false, datos, error: "" });
+      return datos;
     } catch (e) {
       setEstado({ cargando: false, datos: null, error: mensajeErrorApi(e, "No se pudo obtener el enlace. Intenta de nuevo.") });
+      return null;
     }
   };
-
-  const copiar = async () => {
-    if (!estado.datos?.enlace) return;
-    const ok = await copiarTexto(estado.datos.enlace);
+  const copiar = async (datos = estado.datos) => {
+    if (!datos?.enlace) return;
+    const ok = await copiarTexto(datos.enlace);
     setCopiado(ok);
     if (ok) setTimeout(() => setCopiado(false), 2500);
+  };
+  return { estado, copiado, cargar, copiar };
+}
+
+// Fila en línea (lista de «Enlaces de vacantes»): «Copiar enlace» lo pide y lo copia; luego aparece «Abrir».
+export function EnlaceVacanteEnLinea({ idVacante, titulo }) {
+  const { estado, copiado, cargar, copiar } = useEnlaceVacante(idVacante);
+  const copiarEnlace = async () => {
+    const datos = estado.datos ?? (await cargar());
+    if (datos) await copiar(datos);
+  };
+  return (
+    <div className="grid gap-2" data-vacante={idVacante}>
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="min-w-0 flex-1 basis-40 text-sm font-medium text-gray-900 [overflow-wrap:anywhere]">{titulo}</p>
+        <Button type="button" size="sm" onClick={copiarEnlace} loading={estado.cargando} aria-label={`Copiar enlace de ${titulo}`} className="min-h-11 md:min-h-9"
+          startIcon={copiado ? <Check className="size-4" /> : <Copy className="size-4" />}>
+          {copiado ? "Copiado" : "Copiar enlace"}
+        </Button>
+        {estado.datos?.enlace ? (
+          <Button asChild variant="outline" size="sm" className="min-h-11 md:min-h-9">
+            <a href={estado.datos.enlace} target="_blank" rel="noopener noreferrer" aria-label={`Abrir enlace de ${titulo}`}>
+              <ExternalLink className="size-4" /> Abrir
+            </a>
+          </Button>
+        ) : null}
+      </div>
+      {estado.datos?.enlace ? <p className="truncate text-[12px] text-gray-500">{estado.datos.enlace}</p> : null}
+      {estado.error ? <p role="alert" className="rounded-md border border-amber-200 bg-amber-50 p-2 text-[13px] text-amber-900">{estado.error}</p> : null}
+      <p aria-live="polite" className="sr-only">{copiado ? "Enlace copiado" : ""}</p>
+    </div>
+  );
+}
+
+export default function EnlaceWhatsappVacante({ idVacante, titulo, variante = "outline", className = "" }) {
+  const [abierto, setAbierto] = useState(false);
+  const { estado, copiado, cargar, copiar } = useEnlaceVacante(idVacante);
+
+  const abrir = async () => {
+    setAbierto(true);
+    await cargar();
   };
 
   if (!idVacante) return null;
@@ -87,7 +127,7 @@ export default function EnlaceWhatsappVacante({ idVacante, titulo, variante = "o
                 <p className="text-xs text-gray-500">Número que recibe los mensajes: {formatearTelefono(estado.datos.numero)}</p>
               ) : null}
               <div className="grid grid-cols-2 gap-2">
-                <Button type="button" onClick={copiar} className="h-11">
+                <Button type="button" onClick={() => copiar()} className="h-11">
                   {copiado ? <Check className="size-4" /> : <Copy className="size-4" />} {copiado ? "Copiado" : "Copiar enlace"}
                 </Button>
                 <Button asChild variant="outline" className="h-11">
