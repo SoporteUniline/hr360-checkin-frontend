@@ -59,7 +59,7 @@ export default function FirmaPinRh({ idEmpleado }) {
   };
 
   return (
-    <section aria-labelledby="firma-pin-rh" className="w-full max-w-md rounded-xl border border-slate-200 bg-white p-4 text-sm" data-firma-pin-rh>
+    <section aria-labelledby="firma-pin-rh" className="w-full rounded-xl border border-slate-200 bg-white p-4 text-sm" data-firma-pin-rh>
       <h3 id="firma-pin-rh" className="flex items-center gap-2 font-semibold text-slate-900"><KeyRound className="size-4 text-brand" /> Firma y PIN</h3>
       <dl className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-2">
         <dt className="text-slate-500">Firma</dt>
