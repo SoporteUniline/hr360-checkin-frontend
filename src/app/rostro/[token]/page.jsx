@@ -4,6 +4,8 @@
 // rostro con la cámara frontal de su celular. Sin sesión. Muestra solo su nombre, la empresa y el aviso de uso del rostro
 // (el mismo texto y versión de Mi espacio). La cámara, las 3 lecturas y su promedio son los de Mi rostro
 // (useCapturaRostro). Backend: /checador/rostro-celular/publico/:token. Errores: src/lib/rostro/enlaceCelular.mjs.
+// (23/11/2026) Guía en vivo con color (óvalo y mensaje), «Registrar mi rostro» solo con la cara bien colocada y
+// confirmación final con la calidad de la toma («✅ Rostro correcto»).
 import { use, useEffect, useState } from "react";
 import Image from "next/image";
 import axios from "axios";
@@ -11,6 +13,8 @@ import { AlertCircle, Camera, CheckCircle2, ShieldCheck } from "lucide-react";
 import { CONSENTIMIENTO_BIOMETRICO as C } from "@/lib/legal/documentos";
 import { useCapturaRostro } from "@/components/rostro/useCapturaRostro";
 import { cuentaRegresiva, errorPublico, segundosHasta, venceEn } from "@/lib/rostro/enlaceCelular.mjs";
+import { TONO_GUIA } from "@/lib/rostro/guia.mjs";
+import { porcentaje } from "@/lib/rostro/lecturas.mjs";
 
 // Instancia sin sesión: este enlace no usa ni manda la sesión del navegador.
 const api = axios.create({ baseURL: process.env.NEXT_PUBLIC_RUTA_BACKEND });
@@ -32,13 +36,14 @@ function Marco({ children }) {
   );
 }
 
-function Final({ exito, titulo, texto }) {
+function Final({ exito, titulo, texto, detalle }) {
   const Icono = exito ? CheckCircle2 : AlertCircle;
   return (
     <section role={exito ? "status" : "alert"} className={`rounded-2xl border p-5 ${exito ? "border-green-200 bg-green-50 text-green-900" : "border-amber-200 bg-amber-50 text-amber-950"}`} data-final={exito ? "listo" : "error"}>
       <Icono className={`size-8 ${exito ? "text-green-600" : "text-amber-600"}`} aria-hidden="true" />
       <h1 className="mt-3 text-xl font-bold">{titulo}</h1>
       <p className="mt-1 text-[15px] leading-relaxed">{texto}</p>
+      {detalle ? <p className="mt-2 text-sm leading-relaxed opacity-90" data-calidad>{detalle}</p> : null}
     </section>
   );
 }
@@ -50,7 +55,8 @@ export default function RostroDesdeCelular({ params }) {
   const [acepto, setAcepto] = useState(false);
   const [vence, setVence] = useState(null);
   const [ahora, setAhora] = useState(() => Date.now());
-  const { videoRef, fase, guia, aviso, encender, cancelar, registrar: leer, apagar, camaraVisible } = useCapturaRostro();
+  const { videoRef, fase, guia, nivel, listo, calidad, aviso, encender, cancelar, registrar: leer, apagar, camaraVisible } = useCapturaRostro();
+  const tono = TONO_GUIA[nivel] ?? TONO_GUIA.info;
 
   useEffect(() => {
     let vivo = true;
@@ -80,7 +86,13 @@ export default function RostroDesdeCelular({ params }) {
   );
 
   if (fase === "listo") {
-    return <Marco><Final exito titulo="Listo, ya puedes cerrar esta página" texto={`${info?.nombre ? `${info.nombre}, tu` : "Tu"} rostro quedó registrado${info?.empresa ? ` en ${info.empresa}` : ""}. Ya puedes checar con él.`} /></Marco>;
+    return (
+      <Marco>
+        <Final exito titulo="✅ Rostro correcto: quedó bien registrado"
+          texto={`${info?.nombre ? `${info.nombre}, tu` : "Tu"} rostro quedó registrado${info?.empresa ? ` en ${info.empresa}` : ""}. Ya puedes checar con él y cerrar esta página.`}
+          detalle={calidad != null ? `Las 3 lecturas coinciden entre sí (${porcentaje(calidad)} %): la toma salió bien.` : null} />
+      </Marco>
+    );
   }
   if (fin) return <Marco><Final titulo={fin.titulo} texto={fin.texto} /></Marco>;
   if (!info) {
@@ -119,15 +131,16 @@ export default function RostroDesdeCelular({ params }) {
       <section className={camaraVisible ? "mt-5 space-y-3" : "hidden"} aria-label="Cámara">
         <div className="relative mx-auto aspect-[3/4] w-full max-w-sm overflow-hidden rounded-3xl bg-slate-900">
           <video ref={videoRef} muted playsInline autoPlay aria-label="Vista de tu cámara frontal" className="size-full -scale-x-100 object-cover" />
-          <span className="pointer-events-none absolute inset-x-[17%] inset-y-[14%] rounded-[50%] border-[3px] border-white/80 shadow-[0_0_0_999px_rgba(15,23,42,0.35)]" aria-hidden="true" />
+          <span className={`pointer-events-none absolute inset-x-[17%] inset-y-[14%] rounded-[50%] border-[3px] shadow-[0_0_0_999px_rgba(15,23,42,0.35)] transition-colors ${tono.ovalo}`} aria-hidden="true" data-ovalo={nivel} />
         </div>
-        <p role="status" className="min-h-6 text-center text-[15px] font-medium text-slate-700">{guia}</p>
+        <p role="status" aria-live="polite" className={`min-h-12 rounded-xl border px-3 py-2.5 text-center text-[15px] font-semibold ${tono.caja}`} data-guia={nivel}>{guia}</p>
         <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-2">
           <button type="button" onClick={cancelar} disabled={fase !== "camara"} className="min-h-12 rounded-xl border border-slate-300 bg-white px-4 font-medium disabled:opacity-50">Cancelar</button>
-          <button type="button" onClick={registrar} disabled={fase !== "camara"} className="min-h-12 rounded-xl bg-[#2563EB] px-4 text-base font-semibold text-white disabled:opacity-50">
+          <button type="button" onClick={registrar} disabled={!listo} className="min-h-12 rounded-xl bg-[#2563EB] px-4 text-base font-semibold text-white disabled:opacity-50">
             {fase === "leyendo" ? "Leyendo…" : fase === "guardando" ? "Guardando…" : "Registrar mi rostro"}
           </button>
         </div>
+        {fase === "camara" && !listo ? <p className="text-center text-xs text-slate-500">El botón se activa cuando tu rostro esté bien colocado dentro del óvalo.</p> : null}
       </section>
       {aviso ? <p role="alert" className="mt-3 rounded-xl bg-red-50 p-3 text-[15px] text-red-700">{aviso.texto}</p> : null}
       <p className="mt-6 text-center text-xs leading-relaxed text-slate-500">Solo se guarda el patrón numérico de tu rostro, no la foto. Si tienes dudas, pregunta a Recursos Humanos.</p>

@@ -8,12 +8,20 @@ import { readFile } from "node:fs/promises";
 const raiz = new URL("../", import.meta.url).pathname;
 
 test("las vistas de vacante solo insertan HTML saneado", async () => {
-  for (const archivo of ["src/app/(public)/vacante/[slug]/page.jsx", "src/app/panel/empleados/DetalleVacante.jsx"]) {
+  // 23/11/2026: la vista pública de la vacante se movió a VacanteDetalle.jsx; page.jsx (servidor) solo inserta el JSON-LD.
+  for (const archivo of ["src/app/(public)/vacante/[slug]/VacanteDetalle.jsx", "src/app/panel/empleados/DetalleVacante.jsx"]) {
     const texto = await readFile(`${raiz}${archivo}`, "utf8");
     const usos = [...texto.matchAll(/dangerouslySetInnerHTML=\{\{\s*__html:\s*([^}]+?)\s*\}\}/g)].map((m) => m[1]);
     assert.ok(usos.length > 0, `${archivo} sin HTML insertado`);
     for (const uso of usos) assert.match(uso, /^sanearHtml\(/, `${archivo}: ${uso} sin sanear`);
   }
+});
+
+test("la página de servidor de la vacante solo inserta JSON-LD serializado con jsonLdSeguro", async () => {
+  const texto = await readFile(`${raiz}src/app/(public)/vacante/[slug]/page.jsx`, "utf8");
+  const usos = [...texto.matchAll(/dangerouslySetInnerHTML=\{\{\s*__html:\s*([^}]+?)\s*\}\}/g)].map((m) => m[1]);
+  assert.ok(usos.length > 0);
+  for (const uso of usos) assert.match(uso, /^jsonLdSeguro\(/, `page.jsx: ${uso} sin serializar con jsonLdSeguro`);
 });
 
 const { sanearHtml: s } = await import("../src/lib/htmlSeguro.mjs").catch(() => ({ sanearHtml: null }));

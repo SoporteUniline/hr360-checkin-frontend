@@ -13,6 +13,10 @@ import { cardClass, DataState } from "@/components/empleado/shared";
 import { mensajeError } from "@/components/nomina/comun";
 import { CONSENTIMIENTO_BIOMETRICO as C } from "@/lib/legal/documentos";
 import { useCapturaRostro } from "@/components/rostro/useCapturaRostro";
+import { TONO_GUIA } from "@/lib/rostro/guia.mjs";
+
+// (23/11/2026) Misma guía en vivo que el celular; el óvalo de esta pantalla deja 14 % por lado.
+const OVALO = { x: 0.14, y: 0.14 };
 
 const BASE = "/checador/mi-espacio/rostro";
 const get = (url) => axios.get(url).then((r) => r.data);
@@ -23,7 +27,8 @@ export default function MiRostro() {
   const { data, error, isLoading, mutate } = useSWR(BASE, get);
   const [acepto, setAcepto] = useState(false);
   // Cámara, lecturas y promedio: compartidos con la página del celular (/rostro/[token]).
-  const { videoRef, fase, guia, aviso, encender, cancelar, registrar: leer, camaraVisible } = useCapturaRostro();
+  const { videoRef, fase, guia, nivel, listo, aviso, encender, cancelar, registrar: leer, camaraVisible } = useCapturaRostro({ ovalo: OVALO });
+  const tono = TONO_GUIA[nivel] ?? TONO_GUIA.info;
 
   const registrar = async () => {
     const ok = await leer(
@@ -73,12 +78,12 @@ export default function MiRostro() {
             <div className={camaraVisible ? "space-y-3" : "hidden"}>
               <div className="relative mx-auto aspect-square w-full max-w-xs overflow-hidden rounded-2xl bg-slate-900">
                 <video ref={videoRef} muted playsInline autoPlay aria-label="Vista de tu cámara" className="size-full -scale-x-100 object-cover" />
-                <span className="pointer-events-none absolute inset-[14%] rounded-[45%] border-2 border-white/70" />
+                <span className={`pointer-events-none absolute inset-[14%] rounded-[45%] border-2 transition-colors ${tono.ovalo}`} aria-hidden="true" />
               </div>
-              <p role="status" className="text-center text-sm font-medium text-slate-700">{guia}</p>
+              <p role="status" aria-live="polite" className={`rounded-xl border px-3 py-2 text-center text-sm font-semibold ${tono.caja}`}>{guia}</p>
               <div className="grid grid-cols-2 gap-2">
                 <button type="button" onClick={cancelar} disabled={fase !== "camara"} className="min-h-12 rounded-xl border border-slate-300 font-medium disabled:opacity-50">Cancelar</button>
-                <button type="button" onClick={registrar} disabled={fase !== "camara"} className="min-h-12 rounded-xl bg-blue-600 font-semibold text-white disabled:opacity-50">
+                <button type="button" onClick={registrar} disabled={!listo} className="min-h-12 rounded-xl bg-blue-600 font-semibold text-white disabled:opacity-50">
                   {fase === "leyendo" ? "Leyendo…" : fase === "guardando" ? "Guardando…" : "Registrar mi rostro"}
                 </button>
               </div>

@@ -2,6 +2,9 @@
 // «Continuar desde el celular»: QR + enlace, el celular abre el enlace, acepta el aviso y guarda el rostro, el escritorio
 // lo detecta solo, y el enlace usado o vencido muestra el error. Backend simulado; cámara falsa de Chromium y face-api
 // simulado en el celular (como scripts/verify-firma-pin.mjs).
+// (23/11/2026) Guía en vivo en el celular (sin rostro, fuera del óvalo, bien → botón deshabilitado/habilitado), toma
+// inconsistente («La toma no salió bien…»), «✅ Rostro correcto» al terminar y, en la ficha, estado con fecha y origen y
+// «Probar rostro» con coincide y no coincide (sin guardar nada). window.__escena elige lo que «ve» el face-api simulado.
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api NEXT_PUBLIC_RUTA_DOMAIN=https://dev.adamia.com.mx npm run build
 //      && CAPTURAS=/ruta node scripts/verify-rostro-qr.mjs
 import assert from "node:assert/strict";
@@ -39,6 +42,7 @@ const porId = (id) => [...enlaces.values()].find((e) => e.id === id);
 let guardado = null;
 const cambiosRostro = [];
 const pedidos = [];
+const escrituras = []; // POST/PUT de la ficha (Probar rostro no debe hacer ninguno)
 
 async function rutasRh(ctx) {
   await ctx.route("**/*", async (route) => {
@@ -49,7 +53,8 @@ async function rutasRh(ctx) {
     const json = (d, s = 200) => route.fulfill({ status: s, contentType: "application/json", headers: cors, body: JSON.stringify(d) });
     const p = url.pathname.replace("/api", "");
     if (p.endsWith("/users/verify/token")) return json({ user: usuario });
-    if (p === "/checador/empleados/15") return json(emp);
+    if (req.method() !== "GET") escrituras.push(`${req.method()} ${p}`);
+    if (p === "/checador/empleados/15") return json(guardado ? { ...emp, descriptor_facial: guardado.descriptor_facial } : emp);
     if (p === "/checador/empleados") return json({ data: [emp], total: 1, page: 1, totalPages: 1 });
     if (p === "/checador/firma-digital/solicitudes/documento") return json({ success: true, solicitud: { id: 77, estatus: "firmado", signed_at: "2026-11-23 15:04:00", nombre_firmante: "Ana Torres Ruiz", tiene_documento_firmado: true } });
     if (p === "/checador/mi-espacio/firma/empleado/15") return json({ ok: true, tiene_firma: true, tiene_pin: true, bloqueado_hasta: null, intentos_fallidos: 0, historial: [] });
@@ -95,27 +100,48 @@ async function rutasCelular(ctx) {
   });
 }
 
-// face-api simulado: siempre una cara con la misma huella (ligeramente distinta en cada lectura).
+// face-api simulado. window.__escena: "bien" (una cara centrada, de frente), "ninguna", "fuera" (en la esquina),
+// "inestable" (las lecturas alternan dos huellas) u "otra" (otra persona). La huella de «bien» es la misma en cada
+// lectura, con un ruido mínimo. Cajas y puntos en píxeles del video, como face-api.
 const faceapiFalso = () => {
   let n = 0;
-  const huella = () => Float32Array.from({ length: 128 }, (_, i) => Math.sin(i + 1) * 0.1 + Math.cos(i * ++n) * 0.0005);
+  window.__escena = window.__escena ?? "bien";
+  const propia = () => Float32Array.from({ length: 128 }, (_, i) => Math.sin(i + 1) * 0.1 + Math.cos(i * ++n) * 0.0005);
+  const ajena = () => Float32Array.from({ length: 128 }, (_, i) => Math.cos(i * 3 + 2) * 0.1);
+  let lectura = 0;
+  const huella = () => (window.__escena === "otra" || (window.__escena === "inestable" && lectura++ % 2) ? ajena() : propia());
+  const caras = (input) => {
+    const e = window.__escena;
+    if (e === "ninguna") return [];
+    const vw = input?.videoWidth || 640, vh = input?.videoHeight || 480;
+    const w = Math.round(Math.min(vw, vh) * 0.35), h = Math.round(w * 1.1);
+    const x = e === "fuera" ? 0 : (vw - w) / 2, y = e === "fuera" ? 0 : (vh - h) / 2;
+    const positions = Array.from({ length: 68 }, () => ({ x: x + w / 2, y: y + h * 0.6 }));
+    for (let i = 36; i < 42; i++) positions[i] = { x: x + w * 0.3, y: y + h * 0.4 };
+    for (let i = 42; i < 48; i++) positions[i] = { x: x + w * 0.7, y: y + h * 0.4 };
+    positions[30] = { x: x + w / 2, y: y + h * 0.6 };
+    return [{ detection: { box: { x, y, width: w, height: h }, score: 0.9 }, landmarks: { positions } }];
+  };
+  const tarea = (valor) => ({ then: (ok, mal) => Promise.resolve(valor()).then(ok, mal) });
   window.faceapi = {
     nets: { tinyFaceDetector: { params: {} }, faceLandmark68Net: { params: {}, detectLandmarks: async () => null }, faceRecognitionNet: { params: {}, computeFaceDescriptor: async () => null } },
     TinyFaceDetectorOptions: class {},
     detectSingleFace: async () => null,
-    detectAllFaces: () => ({ withFaceLandmarks: () => ({ withFaceDescriptors: async () => [{ descriptor: huella() }] }) }),
+    detectAllFaces: (input) => ({
+      withFaceLandmarks: () => ({
+        ...tarea(() => caras(input)),
+        withFaceDescriptors: async () => caras(input).map((c) => ({ ...c, descriptor: huella() })),
+      }),
+    }),
   };
 };
 
 async function abrirFicha(pg, movil = false) {
   await pg.goto(base + "/panel/empleados", { waitUntil: "domcontentloaded" });
   if (movil) {
-    // En el teléfono la lista abre la ficha en lectura; «Editar» la deja editable.
+    // En el teléfono la lista abre la ficha ya editable (23/11/2026: sin el paso de solo lectura con «Editar»).
     await pg.getByRole("button", { name: /Ana Torres/ }).first().click({ timeout: 30000 });
-    // (23/11/2026) Regresión: en modo «ver» (solo lectura) también está «Continuar desde el celular».
-    await pg.getByRole("tab", { name: "Checador y acceso" }).click({ timeout: 30000 });
-    await pg.getByRole("button", { name: "Continuar desde el celular" }).waitFor({ timeout: 30000 });
-    await pg.getByRole("button", { name: "Editar" }).first().click({ timeout: 30000 });
+    await pg.locator("[data-boton-guardar]:visible").waitFor({ timeout: 30000 });
   } else {
     await pg.getByTitle("Editar").first().click({ timeout: 30000 });
   }
@@ -154,6 +180,7 @@ try {
 
   // ===== 1b) Ficha a 1440 px: 3 columnas alineadas arriba =====
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 }, locale: "es-MX", timezoneId: "America/Mexico_City", permissions: ["camera", "clipboard-read", "clipboard-write"] });
+  await ctx.addInitScript(faceapiFalso); // «Probar rostro» usa el face-api del reloj (window.faceapi)
   await ctx.addCookies([{ name: "token", value: jwtRh(), url: base }]);
   await rutasRh(ctx);
   const rh = await ctx.newPage();
@@ -197,6 +224,7 @@ try {
 
   // ===== 3) El celular abre el enlace, acepta el aviso y guarda el rostro =====
   const ctxC = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2, locale: "es-MX", permissions: ["camera"] });
+  await ctxC.addInitScript(() => { window.__escena = "ninguna"; });
   await ctxC.addInitScript(faceapiFalso);
   await rutasCelular(ctxC);
   const cel = await ctxC.newPage();
@@ -211,15 +239,44 @@ try {
   await captura(cel, "celular-1-aviso");
   await cel.getByText("Acepto, de forma expresa").click();
   await continuar.click();
-  await cel.getByText("Mira de frente, con buena luz").waitFor({ timeout: 20000 });
+  // Guía en vivo: sin rostro → rojo y botón deshabilitado.
+  const registrarBtn = cel.getByRole("button", { name: "Registrar mi rostro" });
+  const guiaCel = cel.locator("[data-guia]");
+  await cel.getByText("No se detecta rostro").waitFor({ timeout: 20000 });
+  assert.equal(await guiaCel.getAttribute("data-guia"), "error");
+  assert.equal(await registrarBtn.isDisabled(), true, "sin rostro: botón deshabilitado");
+  await cel.getByText("El botón se activa cuando tu rostro esté bien colocado").waitFor();
+  await captura(cel, "celular-2a-sin-rostro");
+  await cel.evaluate(() => { window.__escena = "fuera"; });
+  await cel.getByText("Coloca tu rostro dentro del óvalo").waitFor({ timeout: 10000 });
+  assert.equal(await guiaCel.getAttribute("data-guia"), "aviso");
+  assert.equal(await registrarBtn.isDisabled(), true, "fuera del óvalo: botón deshabilitado");
+  await captura(cel, "celular-2b-fuera-del-ovalo");
+  await cel.evaluate(() => { window.__escena = "bien"; });
+  await cel.getByText("Rostro detectado ✅").waitFor({ timeout: 10000 });
+  assert.equal(await guiaCel.getAttribute("data-guia"), "ok");
+  assert.equal(await cel.locator("[data-ovalo]").getAttribute("data-ovalo"), "ok", "el óvalo se pinta de verde");
+  await registrarBtn.waitFor({ state: "attached" });
+  for (let i = 0; i < 30 && await registrarBtn.isDisabled(); i++) await dormir(100);
+  assert.equal(await registrarBtn.isDisabled(), false, "rostro bien colocado: botón habilitado");
   const video = await cel.getByLabel("Vista de tu cámara frontal").boundingBox();
   assert.ok(video.width >= 340 && video.height > video.width, `cámara grande: ${video.width}×${video.height}`);
   const botones = await cel.getByRole("button").evaluateAll((bs) => bs.filter((b) => b.offsetParent).map((b) => Math.round(b.getBoundingClientRect().height)));
   assert.ok(botones.every((h) => h >= 44), `botones ≥ 44 px: ${botones}`);
   assert.ok(await cel.evaluate(() => document.documentElement.scrollWidth <= 390), "sin desborde (cámara)");
-  await captura(cel, "celular-2-camara");
-  await cel.getByRole("button", { name: "Registrar mi rostro" }).click();
-  await cel.getByRole("heading", { name: "Listo, ya puedes cerrar esta página" }).waitFor({ timeout: 20000 });
+  await captura(cel, "celular-2c-rostro-detectado");
+  // Toma inconsistente: no se envía y lo dice.
+  await cel.evaluate(() => { window.__escena = "inestable"; });
+  await registrarBtn.click();
+  await cel.getByText("La toma no salió bien, intenta de nuevo con más luz.").waitFor({ timeout: 20000 });
+  assert.equal(guardado, null, "una toma mala no se envía");
+  await captura(cel, "celular-2d-toma-mala");
+  await cel.evaluate(() => { window.__escena = "bien"; });
+  await cel.getByText("Rostro detectado ✅").waitFor({ timeout: 10000 });
+  for (let i = 0; i < 30 && await registrarBtn.isDisabled(); i++) await dormir(100);
+  await registrarBtn.click();
+  await cel.getByRole("heading", { name: "✅ Rostro correcto: quedó bien registrado" }).waitFor({ timeout: 20000 });
+  assert.match(await cel.locator("[data-calidad]").innerText(), /^Las 3 lecturas coinciden entre sí \((9[5-9]|100) %\): la toma salió bien\.$/);
   assert.equal(guardado.descriptor_facial.length, 128);
   assert.equal(await cel.evaluate(() => document.querySelector("video")?.srcObject ?? null), null, "apaga la cámara");
   await captura(cel, "celular-3-listo");
@@ -230,6 +287,28 @@ try {
   assert.equal(await rh.locator("[data-rostro-estado]").innerText(), "Registrado desde el celular");
   await rh.getByText(/actualizó su rostro desde su celular/).waitFor({ timeout: 10000 });
   await captura(rh, "ficha-1440-registrado");
+
+  // ===== 4b) Estado con fecha y origen, y «Probar rostro»: coincide / no coincide, sin guardar nada =====
+  assert.match(await rh.locator("[data-rostro-detalle]").innerText(), /^Registrado desde el celular el 5 dic, \d{1,2}:\d\d [ap]\.m\.$/);
+  escrituras.length = 0;
+  await rh.evaluate(() => { window.__escena = "bien"; });
+  await rh.getByRole("button", { name: "Probar rostro" }).click();
+  const prueba = rh.getByRole("dialog", { name: "Probar el rostro de Ana" });
+  await prueba.waitFor();
+  await prueba.getByText("Rostro detectado ✅").waitFor({ timeout: 20000 });
+  const comparar = prueba.getByRole("button", { name: "Comparar" });
+  for (let i = 0; i < 30 && await comparar.isDisabled(); i++) await dormir(100);
+  await comparar.click();
+  await prueba.getByText(/^✅ Coincide: es Ana Torres Ruiz \(similitud (9[5-9]|100) %\)$/).waitFor({ timeout: 20000 });
+  await captura(rh, "ficha-probar-coincide", false);
+  await rh.evaluate(() => { window.__escena = "otra"; });
+  await prueba.getByRole("button", { name: "Probar otra vez" }).click();
+  await prueba.getByText(/^❌ No coincide con el rostro registrado \(similitud \d+ %\)\. Vuelve a registrarlo$/).waitFor({ timeout: 20000 });
+  await captura(rh, "ficha-probar-no-coincide", false);
+  await prueba.getByRole("button", { name: "Cerrar" }).click();
+  await prueba.waitFor({ state: "hidden" });
+  assert.deepEqual(escrituras, [], "Probar rostro no guarda nada");
+  assert.equal(await rh.locator("[data-rostro-estado]").innerText(), "Registrado desde el celular", "no marca captura sin guardar");
 
   // ===== 5) Enlace usado y enlace vencido muestran el error =====
   await cel.goto(`${base}/rostro/${token}`, { waitUntil: "domcontentloaded" });
@@ -249,7 +328,7 @@ try {
 
   assert.deepEqual(errores, []);
   exito = true;
-  console.log("OK rostro QR: ficha en 3 columnas (1440) y apilada (390, sin desborde, botones ≥ 44 px); QR + enlace + copiar + generar otro (invalida el anterior); celular acepta el aviso y guarda el rostro; el escritorio lo detecta y avisa; enlace usado y vencido muestran el error");
+  console.log("OK rostro QR (guía en vivo: sin rostro/fuera/bien, botón deshabilitado→habilitado; toma mala; «✅ Rostro correcto»; Probar rostro coincide/no coincide sin guardar): ficha en 3 columnas (1440) y apilada (390, sin desborde, botones ≥ 44 px); QR + enlace + copiar + generar otro (invalida el anterior); celular acepta el aviso y guarda el rostro; el escritorio lo detecta y avisa; enlace usado y vencido muestran el error");
 } finally {
   await browser.close();
   try { process.kill(-next.pid); } catch { next.kill(); }
