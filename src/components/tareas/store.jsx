@@ -89,6 +89,16 @@ export function TareasProvider({ modo = "panel", idEmpresa = null, children }) {
         return null;
       }
     },
+    // (23/11/2026) Pregunta «Firma» con el PIN: el servidor estampa la firma guardada. → { key } o { error } (se muestra
+    // junto al campo del PIN, no como aviso flotante).
+    firmarConPinEnvio: async (idEnvio, pin) => {
+      try {
+        const r = await axios.post(`${BASE}/envios/${idEnvio}/firma-pin`, { pin });
+        return { key: r.data.key };
+      } catch (e) {
+        return { error: errorDe(e, "No se pudo firmar con tu PIN. Intenta de nuevo.") };
+      }
+    },
     enviarChecklist: (idEnvio, respuestas, nota) => ejecutar(() => axios.post(`${BASE}/envios/${idEnvio}/enviar`, { respuestas: aRespuestasApi(respuestas), nota })),
   }), [ejecutar, cambiarLocal, idEmpresa, enqueueSnackbar]);
 

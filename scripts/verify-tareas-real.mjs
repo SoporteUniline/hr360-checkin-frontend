@@ -105,6 +105,18 @@ try {
   await preg("¿Cómo está el comedor?").getByRole("button", { name: "Regular", exact: true }).click();
   await preg("¿Cómo está el comedor?").locator('input[type="file"]').setInputFiles({ name: "comedor.png", mimeType: "image/png", buffer: PNG });
   await preg("¿Cómo está el comedor?").getByRole("img", { name: "Foto de evidencia" }).waitFor({ timeout: 15000 }); // ya subida y servida por el backend
+  // (23/11/2026) Firma con PIN: Ana tiene firma guardada y PIN (482915). PIN incorrecto → aviso; correcto → firma estampada.
+  const pFirma = preg("Firma de quien abre");
+  await pFirma.getByRole("button", { name: "Firmar con mi PIN" }).click();
+  await pFirma.getByLabel("Tu PIN de 6 dígitos").fill("135790");
+  await pFirma.getByRole("button", { name: "Firmar", exact: true }).click();
+  await pFirma.getByRole("alert").filter({ hasText: /PIN incorrecto/ }).waitFor({ timeout: 15000 });
+  await pFirma.getByLabel("Tu PIN de 6 dígitos").fill("482915");
+  await pFirma.getByRole("button", { name: "Firmar", exact: true }).click();
+  await pFirma.getByRole("img", { name: /Firma:/ }).waitFor({ timeout: 15000 });
+  await captura(pe, "real-app-firma-pin");
+  // Y también se puede volver a firmar dibujando.
+  await pFirma.getByRole("button", { name: "Volver a firmar" }).click();
   const lienzo = preg("Firma de quien abre").getByLabel("Firma: Firma de quien abre");
   await lienzo.evaluate((el) => el.scrollIntoView({ block: "center" })); // que no quede bajo la barra fija de «Enviar»
   await dormir(200);
@@ -166,7 +178,7 @@ try {
 
   assert.deepEqual(errores, []);
   exito = true;
-  console.log("OK de punta a punta: activar módulo, proyecto y tarea, checklist con opción+foto+firma, la persona lo llena (75 %) y manda su tarea con foto, el jefe corrige (50 %) y aprueba, tarea hecha, cumplimiento y fallas, la persona ve el aprobado");
+  console.log("OK de punta a punta: activar módulo, proyecto y tarea, checklist con opción+foto+firma (con PIN: incorrecto y correcto; y dibujada), la persona lo llena (75 %) y manda su tarea con foto, el jefe corrige (50 %) y aprueba, tarea hecha, cumplimiento y fallas, la persona ve el aprobado");
 } finally {
   await browser.close();
   try { process.kill(-next.pid); } catch { next.kill(); }

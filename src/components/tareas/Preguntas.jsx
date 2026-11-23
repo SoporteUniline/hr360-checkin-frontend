@@ -4,7 +4,7 @@
 // vista previa al crear el checklist y para que el jefe corrija al revisar. Botones grandes (sin escribir) salvo en número
 // y texto; «No aplica» si la pregunta lo permite; foto de evidencia donde se pide.
 import { useRef, useState } from "react";
-import { AlignLeft, Calendar, CalendarClock, Camera, CheckSquare, CircleDot, Hash, Image as ImageIcon, ListChecks, PenLine, Star, Type } from "lucide-react";
+import { AlignLeft, Calendar, CalendarClock, Camera, CheckSquare, CircleDot, Hash, Image as ImageIcon, KeyRound, ListChecks, PenLine, Star, Type } from "lucide-react";
 import LienzoFirma from "@/components/empleado/LienzoFirma";
 import { FotoSegura } from "./comun";
 import { esCalificable, puntajePregunta } from "@/lib/tareas/preguntas.mjs";
@@ -70,8 +70,51 @@ function Estrellas({ valor, onElegir, grande, deshabilitado, etiqueta }) {
   );
 }
 
+// (23/11/2026) Firmar con el PIN de Mi espacio: el servidor verifica el PIN (con su candado de intentos) y estampa la
+// firma guardada; aquí solo se pide el código. Los errores (PIN incorrecto, bloqueado) se muestran junto al campo.
+function FirmaConPin({ firmaPin, onFirmar }) {
+  const [abierto, setAbierto] = useState(false);
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState("");
+  const [firmando, setFirmando] = useState(false);
+  const listo = /^\d{6}$/.test(pin);
+  const firmar = async () => {
+    if (!listo || firmando) return;
+    setFirmando(true);
+    setError("");
+    const r = await firmaPin.firmar(pin);
+    setFirmando(false);
+    setPin("");
+    if (r?.key) onFirmar(r.key);
+    else setError(r?.error || "No se pudo firmar con tu PIN.");
+  };
+  if (!abierto) {
+    return (
+      <button type="button" onClick={() => setAbierto(true)} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-[14px] font-semibold text-white">
+        <KeyRound className="size-4" aria-hidden="true" /> Firmar con mi PIN
+      </button>
+    );
+  }
+  return (
+    <div className="space-y-2 rounded-xl border border-blue-200 bg-blue-50 p-3">
+      <label className="block text-[13px] font-semibold text-slate-800">Tu PIN de 6 dígitos
+        <input type="password" inputMode="numeric" autoComplete="off" maxLength={6} value={pin} autoFocus
+          onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); firmar(); } }}
+          className="mt-1 block h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-center text-lg tracking-[0.4em] tabular-nums" />
+      </label>
+      {error ? <p role="alert" className="text-[13px] font-semibold text-red-700">{error}</p> : null}
+      <p className="text-[12px] text-slate-600">Se pondrá la firma que guardaste en Mi espacio.</p>
+      <div className="flex gap-2">
+        <button type="button" onClick={() => { setAbierto(false); setPin(""); setError(""); }} className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-[13px] font-semibold">Cancelar</button>
+        <button type="button" disabled={!listo || firmando} onClick={firmar} className="min-h-11 flex-1 rounded-lg bg-blue-600 px-4 text-[13px] font-semibold text-white disabled:opacity-50">{firmando ? "Firmando…" : "Firmar"}</button>
+      </div>
+    </div>
+  );
+}
+
 // Firma con el dedo: se dibuja y se confirma con «Listo»; queda la imagen y se puede volver a firmar.
-function Firma({ valor, onFirmar, deshabilitado, etiqueta, subir }) {
+function Firma({ valor, onFirmar, deshabilitado, etiqueta, subir, firmaPin = null }) {
   const lienzo = useRef(null);
   const [trazada, setTrazada] = useState(false);
   const [subiendo, setSubiendo] = useState(false);
@@ -92,6 +135,8 @@ function Firma({ valor, onFirmar, deshabilitado, etiqueta, subir }) {
   if (deshabilitado) return <span className="text-sm text-slate-500">Sin firma</span>;
   return (
     <div className="w-full max-w-md space-y-2">
+      {firmaPin?.disponible ? <FirmaConPin firmaPin={firmaPin} onFirmar={onFirmar} /> : null}
+      {firmaPin?.disponible ? <p className="text-[12.5px] text-slate-500">O dibuja tu firma:</p> : null}
       <LienzoFirma ref={lienzo} onCambio={setTrazada} etiqueta={`Firma: ${etiqueta}`} />
       <div className="flex gap-2">
         <button type="button" disabled={!trazada} onClick={() => { lienzo.current.borrar(); }} className="min-h-10 rounded-lg border border-slate-300 px-3 text-[13px] font-semibold disabled:opacity-50">Borrar</button>
@@ -102,7 +147,7 @@ function Firma({ valor, onFirmar, deshabilitado, etiqueta, subir }) {
 }
 
 // pregunta: ver lib/tareas/preguntas.mjs · respuesta: { valor, na, foto } · onChange(respuestaNueva)
-export function CampoRespuesta({ pregunta: p, respuesta, onChange, grande = false, deshabilitado = false, mostrarPuntaje = true, subir = null }) {
+export function CampoRespuesta({ pregunta: p, respuesta, onChange, grande = false, deshabilitado = false, mostrarPuntaje = true, subir = null, firmaPin = null }) {
   const r = respuesta ?? {};
   const na = Boolean(r.na && p.permiteNA);
   const poner = (cambios) => onChange({ ...r, na: false, ...cambios });
@@ -141,7 +186,7 @@ export function CampoRespuesta({ pregunta: p, respuesta, onChange, grande = fals
           ) : null}
           {p.tipo === "foto" ? <SubirFoto url={r.valor} etiqueta="Tomar foto" deshabilitado={deshabilitado} subir={subir} alSubir={(url) => poner({ valor: url })} /> : null}
           {p.tipo === "estrellas" ? <Estrellas valor={r.valor} grande={grande} deshabilitado={deshabilitado} etiqueta={p.texto || "Calificación"} onElegir={(n) => poner({ valor: n })} /> : null}
-          {p.tipo === "firma" ? <Firma valor={r.valor} deshabilitado={deshabilitado} subir={subir} etiqueta={p.texto || "Firma"} onFirmar={(url) => poner({ valor: url })} /> : null}
+          {p.tipo === "firma" ? <Firma valor={r.valor} deshabilitado={deshabilitado} subir={subir} firmaPin={firmaPin} etiqueta={p.texto || "Firma"} onFirmar={(url) => poner({ valor: url })} /> : null}
           {p.tipo === "texto" ? (
             <input aria-label={p.texto} disabled={deshabilitado} value={r.valor ?? ""} onChange={(e) => poner({ valor: e.target.value })} placeholder="Escribe aquí…"
               className={`${grande ? "h-12" : "h-10"} w-full rounded-xl border border-slate-300 px-3 text-base`} />

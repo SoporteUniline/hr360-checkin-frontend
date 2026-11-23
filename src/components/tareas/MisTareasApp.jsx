@@ -4,6 +4,8 @@
 // abajo sus tareas por estado. Detalle con pasos, foto y comentarios, y «Mandar a revisión». El checklist se llena
 // pregunta por pregunta, con fotos y firma que se suben al momento; el servidor califica.
 import { useState } from "react";
+import axios from "@/lib/axios";
+import useSWR from "swr";
 import { ArrowLeft, Camera, Check, ChevronRight, ListChecks } from "lucide-react";
 import { avancePasos, motivoNoMover } from "@/lib/tareas/reglas.mjs";
 import { calificarRespuestas, motivoNoEnviar } from "@/lib/tareas/preguntas.mjs";
@@ -84,8 +86,13 @@ function DetalleTarea({ id, alVolver }) {
 }
 
 function LlenarChecklist({ item, alVolver }) {
-  const { enviarChecklist, subirArchivoEnvio } = useTareas();
+  const { enviarChecklist, subirArchivoEnvio, firmarConPinEnvio } = useTareas();
   const { envio, checklist } = item;
+  // ¿Puede firmar con su PIN? (firma guardada + PIN en Mi espacio). Si falla la consulta, solo se ofrece dibujar.
+  const { data: miFirma } = useSWR("/checador/mi-espacio/firma", (url) => axios.get(url).then((r) => r.data));
+  const firmaPin = miFirma?.tiene_firma && miFirma?.tiene_pin
+    ? { disponible: true, bloqueadoHasta: miFirma.bloqueado_hasta ?? null, firmar: (pin) => firmarConPinEnvio(envio.id, pin) }
+    : null;
   const preguntas = checklist.preguntas.map(dePreguntaApi);
   const [respuestas, setRespuestas] = useState(() => (envio.estado === "regresado" ? Object.fromEntries((envio.respuestas ?? []).map((r) => [r.id_pregunta, r.respuesta])) : {}));
   const [nota, setNota] = useState(envio.nota ?? "");
@@ -125,7 +132,7 @@ function LlenarChecklist({ item, alVolver }) {
           <li key={p.id} className="space-y-3 rounded-2xl border border-slate-200 p-4">
             <p className="text-[15.5px] font-semibold leading-snug">{i + 1}. {p.texto}{p.obligatoria ? <span className="ml-1 text-red-600" aria-label="obligatoria">*</span> : null}</p>
             <CampoRespuesta grande pregunta={p} respuesta={respuestas[p.id]} onChange={(r) => setRespuestas((x) => ({ ...x, [p.id]: r }))}
-              subir={(archivo, opciones) => subirArchivoEnvio(envio.id, archivo, opciones)} />
+              subir={(archivo, opciones) => subirArchivoEnvio(envio.id, archivo, opciones)} firmaPin={firmaPin} />
           </li>
         ))}
       </ol>
