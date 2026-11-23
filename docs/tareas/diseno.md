@@ -16,6 +16,21 @@ prueba en navegador `scripts/verify-tareas.mjs`.
 - **Fotos 3 meses** y se borran; la calificación, la hora y quién lo hizo se quedan.
 - Venta por módulos: segundo escenario (ver abajo).
 
+## Preguntas configurables (23/11/2026, decisión del dueño: «muy completo y muy fácil»)
+Cada punto del checklist es una pregunta con tipo y valor (`src/lib/tareas/preguntas.mjs`, 10 pruebas):
+- **Sí / No**: se elige cuál es la buena (100 %), la otra 0 %.
+- **Una opción**: cada opción vale un % (p. ej. Limpia 100 · Regular 50 · Sucia 0); alguna debe valer 100 %.
+- **Varias opciones**: cada elegida suma su %, hasta 100 %; juntas deben sumar al menos 100 %.
+- **Número con rango**: 100 % si está dentro (p. ej. 0 a 5 °C); vacío = sin límite.
+- **Foto**: 100 % si la sube. **Texto**: no se califica.
+- Por pregunta: **peso** (se muestra cuánto vale del total), obligatoria, permite «No aplica» (no cuenta en el total),
+  pide foto de evidencia. Opciones listas (Limpia/Regular/Sucia, Bueno/Regular/Malo…), plantillas copiando otro checklist,
+  validación junto a cada pregunta y **vista previa del celular** que se contesta de prueba.
+- **Decisión A**: el jefe puede **corregir** una respuesta al revisar; la calificación se recalcula y queda
+  «Respondió X → corregido a Y por Fulano». La persona lo ve en su app.
+- Productividad: «Preguntas que más fallan» (promedio y % de veces que salió mal), por checklist y sucursal, con Excel.
+- Calificación = promedio ponderado por peso de las preguntas que cuentan; sin contestar = 0 %.
+
 ## 🧭 Criterio aplicado (avisado al dueño)
 - «Tarde» se marca aparte y no baja el %; los «por revisar» aún no cuentan en el promedio.
 - Revisa el jefe inmediato de la ficha; aviso en la app y por correo.

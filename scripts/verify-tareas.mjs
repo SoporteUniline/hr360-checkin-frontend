@@ -100,36 +100,81 @@ try {
   await pg.getByRole("button", { name: "Todos los proyectos" }).click();
   await captura(pg, "tareas-proyectos");
 
-  // Checklists: editor con peso → «Vale» en %.
+  // Checklists: el peso de cada pregunta se ve en % del total.
   await pg.getByRole("button", { name: "Checklists", exact: true }).click();
   await pg.getByRole("button", { name: /Cierre y corte de caja/ }).click();
-  await pg.getByText("El peso dice cuánto vale cada punto").waitFor();
-  const vale = await pg.locator("tbody tr").first().locator("td").nth(4).innerText();
-  assert.equal(vale.trim(), "33.3%", "corte de caja pesa 3 de 9");
-  await captura(pg, "tareas-checklist-editor");
+  await pg.getByText("= 33.3% del checklist").waitFor(); // corte de caja: peso 3 de 9
   await pg.getByRole("button", { name: "Cancelar" }).click();
 
-  // Revisar: marcar un punto «No cumple» baja la calificación; aprobar.
+  // Crear un checklist nuevo con varios tipos de pregunta.
+  await pg.getByRole("button", { name: "Nuevo checklist" }).first().click();
+  await pg.getByRole("button", { name: "Empezar en blanco" }).click();
+  await pg.getByRole("button", { name: "Guardar y asignar" }).click();
+  await pg.getByText("Ponle nombre al checklist.").waitFor();
+  await pg.getByText("Escribe la pregunta.").waitFor();
+  await pg.getByLabel("Nombre del checklist").fill("Revisión de baños");
+  await pg.getByLabel("Pregunta 1", { exact: true }).fill("¿El área está ordenada?");
+  const agregar = (tipo) => pg.getByRole("region", { name: "Preguntas" }).getByRole("button", { name: tipo, exact: true }).last().click();
+  await agregar("Una opción");
+  await pg.getByLabel("Pregunta 2", { exact: true }).fill("¿Cómo está el área B?");
+  await agregar("Varias opciones");
+  await pg.getByLabel("Pregunta 3", { exact: true }).fill("¿Qué tiene el baño?");
+  await pg.getByLabel("Opción 1", { exact: true }).last().fill("Papel");
+  await pg.getByLabel("Opción 2", { exact: true }).last().fill("Jabón");
+  await agregar("Número");
+  await pg.getByLabel("Pregunta 4", { exact: true }).fill("Temperatura del agua");
+  await pg.getByLabel("Mínimo de la pregunta 4").fill("30");
+  await pg.getByLabel("Máximo de la pregunta 4").fill("40");
+  await pg.getByLabel("Unidad de la pregunta 4").fill("°C");
+  await agregar("Texto");
+  await pg.getByLabel("Pregunta 5", { exact: true }).fill("Observaciones");
+  // Una opción sin 100 %: no deja guardar.
+  await pg.getByLabel("Valor de la opción 1").first().fill("80");
+  await pg.getByRole("button", { name: "Guardar y asignar" }).click();
+  await pg.getByText("Alguna opción debe valer 100 % (la respuesta ideal).").waitFor();
+  await pg.getByLabel("Valor de la opción 1").first().fill("100");
+  // Vista previa: se contesta de prueba y da su %.
+  const previa = pg.getByRole("complementary", { name: "Vista previa en el celular" });
+  const pr = (texto) => previa.getByRole("listitem").filter({ hasText: texto });
+  await pr("¿El área está ordenada?").getByRole("button", { name: "Sí", exact: true }).click();
+  await pr("¿Cómo está el área B?").getByRole("button", { name: "Sucia", exact: true }).click();
+  await pr("¿Qué tiene el baño?").getByRole("button", { name: "Papel" }).click();
+  await pr("¿Qué tiene el baño?").getByRole("button", { name: "Jabón" }).click();
+  await pr("Temperatura del agua").getByRole("spinbutton").fill("35");
+  await previa.getByText("75%", { exact: true }).waitFor(); // 4 preguntas de peso 1; área B «Sucia» = 0
+  await captura(pg, "tareas-checklist-editor");
+  await pg.getByRole("button", { name: "Guardar y asignar" }).click();
+  await pg.getByText("«Revisión de baños» quedó creado y asignado.").waitFor();
+  await pg.getByRole("button", { name: /Revisión de baños/ }).waitFor();
+
+  // Revisar: corregir una respuesta (decisión A) recalcula y queda el historial.
   await pg.getByRole("button", { name: /^Revisar/ }).click();
   await pg.getByRole("list", { name: "Por revisar" }).waitFor();
-  const panelCalif = async () => Number((await pg.locator("p.text-2xl").first().innerText()).replace("%", ""));
-  const antes = await panelCalif();
-  const grupo = pg.getByRole("group", { name: /¿Cumple/ }).first();
-  await grupo.getByRole("button", { name: "Cumple", exact: true }).click();
-  const conTodo = await panelCalif();
-  await grupo.getByRole("button", { name: "No cumple" }).click();
-  const sinUno = await panelCalif();
-  assert.ok(sinUno < conTodo, `no cumple baja la calificación (${antes} → ${conTodo} → ${sinUno})`);
+  const calif = async () => Number((await pg.locator("[data-calificacion]").innerText()).replace("%", ""));
+  const antes = await calif();
+  await pg.getByRole("button", { name: "Corregir «¿Cómo está el comedor?»" }).click();
+  await pg.getByRole("button", { name: "Sucio", exact: true }).click();
+  await pg.getByText(/tú lo corriges a «Sucio»/).waitFor();
+  const despues = await calif();
+  assert.ok(despues < antes || antes === 0, `corregir a «Sucio» baja la calificación (${antes} → ${despues})`);
+  await pg.getByText(/con tus correcciones/).waitFor();
   await captura(pg, "tareas-revisar");
   const pendientesAntes = await pg.getByRole("list", { name: "Por revisar" }).getByRole("listitem").count();
   await pg.getByRole("button", { name: /Aprobar con/ }).click();
-  await pg.getByText(/Aprobado con/).waitFor();
+  await pg.getByText(/Aprobado con .*corregiste 1/).waitFor();
   assert.equal(await pg.getByRole("list", { name: "Por revisar" }).getByRole("listitem").count(), pendientesAntes - 1);
 
   // Cumplimiento + Excel.
   await pg.getByRole("button", { name: "Cumplimiento", exact: true }).click();
   await pg.getByRole("cell", { name: /Ana Torres/ }).waitFor();
+  const fallas = pg.getByRole("region", { name: "Preguntas que más fallan" });
+  await fallas.getByRole("cell", { name: "¿Cómo está el comedor?" }).waitFor();
+  await pg.getByLabel("Sucursal").selectOption("Norte");
+  assert.equal(await pg.getByRole("cell", { name: /Ana Torres/ }).count(), 0, "filtra por sucursal");
+  await pg.getByLabel("Sucursal").selectOption("todas");
   await captura(pg, "tareas-cumplimiento");
+  const [descargaPreguntas] = await Promise.all([pg.waitForEvent("download"), fallas.getByRole("button", { name: "Exportar preguntas" }).click()]);
+  assert.match(descargaPreguntas.suggestedFilename(), /^Fallas por pregunta .*\.xlsx$/);
   const [descarga] = await Promise.all([pg.waitForEvent("download"), pg.getByRole("button", { name: "Exportar a Excel" }).click()]);
   assert.match(descarga.suggestedFilename(), /Cumplimiento checklists.*\.xlsx$/);
   assert.ok(await pg.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), "sin desborde en escritorio");
@@ -157,15 +202,21 @@ try {
   await pe.getByText("Listo, tu jefe ya puede revisarla.").waitFor();
   await pe.getByRole("button", { name: "Mis tareas" }).click();
 
-  // Checklist de cierre: obligatorios + foto, y enviar.
+  // Checklist de cierre: preguntas de varios tipos, obligatorias y foto; la calificación se ve en vivo.
   await pe.getByRole("button", { name: /Cierre y corte de caja/ }).click();
   const enviar = pe.getByRole("button", { name: /Enviar terminado/ });
-  await pe.getByText("Faltan 3 puntos obligatorios.").waitFor();
-  for (const t of ["Corte de caja cuadrado", "Gas cerrado", "Alarma activada", "Basura fuera"]) await pe.getByText(t, { exact: true }).click();
-  await pe.getByText("Faltan 1 foto.").waitFor();
-  await pe.locator('input[type="file"]').first().setInputFiles({ name: "gas.png", mimeType: "image/png", buffer: PNG });
-  await pe.getByRole("img", { name: "Foto de Gas cerrado" }).waitFor();
-  assert.match(await enviar.innerText(), /88.9%/, "pesos 3+2+2+1 de 9: cocina limpia sin marcar");
+  await pe.getByText("Faltan 3 preguntas obligatorias.").waitFor();
+  const preg = (t) => pe.getByRole("listitem").filter({ hasText: t });
+  await preg("¿El corte de caja cuadró?").getByRole("button", { name: "Sí", exact: true }).click();
+  await preg("Foto de las llaves del gas").locator('input[type="file"]').setInputFiles({ name: "gas.png", mimeType: "image/png", buffer: PNG });
+  await preg("¿Cómo quedó la cocina?").getByRole("button", { name: "Limpia", exact: true }).click();
+  await pe.getByText("Faltan 1 pregunta obligatoria y 1 foto.").waitFor();
+  await preg("¿Cómo quedó la cocina?").locator('input[type="file"]').setInputFiles({ name: "cocina.png", mimeType: "image/png", buffer: PNG });
+  await preg("¿Hay basura dentro del local?").getByRole("button", { name: "No", exact: true }).click();
+  await preg("¿Quedó activada la alarma?").getByRole("button", { name: "Sí", exact: true }).click();
+  assert.match(await enviar.innerText(), /100%/);
+  await preg("¿Cómo quedó la cocina?").getByRole("button", { name: "Regular", exact: true }).click();
+  assert.match(await enviar.innerText(), /94\.4%/, "cocina «Regular» (50 %) con peso 1 de 9");
   await captura(pe, "app-checklist");
   assert.ok(await pe.evaluate(() => document.documentElement.scrollWidth <= 390), "sin desborde en celular");
   await enviar.click();
@@ -174,7 +225,7 @@ try {
 
   assert.deepEqual(errores, []);
   exito = true;
-  console.log("OK prototipo tareas: tablero (arrastrar, aprobar, crear, filtro por proyecto), proyectos, checklist con peso, revisar recalcula y aprueba, cumplimiento + Excel; app: mandar a revisión, checklist con obligatorios y foto");
+  console.log("OK prototipo tareas: tablero (arrastrar, aprobar, crear, filtro), proyectos, crear checklist con 5 tipos (validación y vista previa 75 %), revisar corrigiendo una respuesta, cumplimiento por sucursal + preguntas que más fallan + Excel; app: mandar a revisión, checklist con tipos, obligatorias, fotos y % en vivo");
 } finally {
   await browser.close();
   try { process.kill(-next.pid); } catch { next.kill(); }

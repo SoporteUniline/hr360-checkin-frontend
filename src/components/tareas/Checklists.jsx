@@ -1,89 +1,242 @@
 "use client";
 
-// Checklists (prototipo 23/11/2026): el dueño los crea una vez y se repiten (diario o semanal). Cada punto tiene peso
-// (cuánto vale en la calificación), puede pedir foto y ser obligatorio. Se asignan por puesto o persona, con hora límite,
-// y los revisa el jefe inmediato.
-import { useState } from "react";
-import { ArrowDown, ArrowUp, Camera, Plus, Trash2 } from "lucide-react";
+// Checklists (prototipo 23/11/2026, pedido del dueño: «muy fácil de crear, de entender, de llenar y de calificar»).
+// Cada punto es una PREGUNTA con tipo (Sí/No, una opción, varias, número con rango, foto, texto), cuánto vale cada
+// respuesta y cuánto pesa la pregunta. A la derecha, la vista previa del celular: se puede contestar de prueba y ver el %.
+// Reglas y validación: lib/tareas/preguntas.mjs.
+import { useMemo, useRef, useState } from "react";
+import { ArrowDown, ArrowUp, Copy, Plus, Smartphone, Trash2 } from "lucide-react";
+import { OPCIONES_RAPIDAS, TIPOS, calificarRespuestas, problemasChecklist, valorDePregunta } from "@/lib/tareas/preguntas.mjs";
 import { useTareas } from "./store";
-import { botonPrimario, botonSecundario, campo, etiqueta } from "./comun";
+import { CampoRespuesta, IconoTipo } from "./Preguntas";
+import { botonPrimario, botonSecundario, campo, campoBase, colorCalificacion, etiqueta } from "./comun";
 
 const FRECUENCIAS = ["Diario", "Cada lunes", "Cada viernes", "Una sola vez"];
 
-function Editor({ inicial, alCerrar }) {
-  const { despachar, personas } = useTareas();
-  const [f, setF] = useState(() => inicial ?? {
-    nombre: "", frecuencia: "Diario", hora: "09:00", aQuien: "Puesto: Encargado de turno", sucursal: "Todas", revisa: "Su jefe inmediato", soloSiCheco: true, personas: [],
-    puntos: [{ texto: "", peso: 1, pideFoto: false, obligatorio: false }],
-  });
-  const set = (k) => (e) => setF((v) => ({ ...v, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
-  const punto = (i, k, val) => setF((v) => ({ ...v, puntos: v.puntos.map((p, j) => (j === i ? { ...p, [k]: val } : p)) }));
-  const mover = (i, d) => setF((v) => { const ps = [...v.puntos]; const [x] = ps.splice(i, 1); ps.splice(i + d, 0, x); return { ...v, puntos: ps }; });
-  const validos = f.puntos.filter((p) => p.texto.trim());
-  const pesoTotal = validos.reduce((s, p) => s + (Number(p.peso) || 1), 0);
-  const listo = f.nombre.trim() && validos.length;
-  const puestos = [...new Set(personas.map((p) => p.puesto))];
+function useIds() {
+  const n = useRef(0);
+  return () => `n${Date.now().toString(36)}${(n.current += 1)}`;
+}
 
+function configInicial(tipo, nuevoId, previa = {}) {
+  if (tipo === "si_no") return { correcta: previa.correcta ?? "si" };
+  if (tipo === "opcion") return { opciones: previa.opciones?.length ? previa.opciones : OPCIONES_RAPIDAS[0].opciones.map(([texto, valor]) => ({ id: nuevoId(), texto, valor })) };
+  if (tipo === "multiple") return { opciones: previa.opciones?.length ? previa.opciones : [["Opción 1", 50], ["Opción 2", 50]].map(([texto, valor]) => ({ id: nuevoId(), texto, valor })) };
+  if (tipo === "numero") return { min: previa.min ?? "", max: previa.max ?? "", unidad: previa.unidad ?? "" };
+  return {};
+}
+
+function SelectorTipo({ valor, onElegir, etiquetaGrupo }) {
   return (
-    <form className="space-y-4 rounded-xl border border-slate-200 bg-white p-5" onSubmit={(e) => {
-      e.preventDefault(); if (!listo) return;
-      const asignadas = f.aQuien.startsWith("Puesto: ") ? personas.filter((p) => p.puesto === f.aQuien.slice(8)).map((p) => p.id) : f.personas;
-      despachar({ tipo: "guardarChecklist", checklist: { ...f, personas: asignadas, puntos: validos.map((p) => ({ ...p, peso: Number(p.peso) || 1 })) } });
-      alCerrar();
-    }}>
-      <label className={etiqueta}>Nombre del checklist<input autoFocus className={`mt-1 ${campo} text-base font-semibold`} value={f.nombre} onChange={set("nombre")} placeholder="Ej. Apertura de restaurante" /></label>
+    <div role="group" aria-label={etiquetaGrupo} className="flex flex-wrap gap-1.5">
+      {TIPOS.map((t) => (
+        <button key={t.clave} type="button" aria-pressed={valor === t.clave} title={t.ayuda} onClick={() => onElegir(t.clave)}
+          className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-2.5 text-[12.5px] font-semibold ${valor === t.clave ? "border-brand bg-blue-50 text-brand" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"}`}>
+          <IconoTipo tipo={t.clave} className="size-3.5" />{t.texto}
+        </button>
+      ))}
+    </div>
+  );
+}
 
-      <fieldset>
-        <legend className={`${etiqueta} flex w-full items-center`}>Puntos a revisar <span className="ml-auto font-normal text-slate-500">El peso dice cuánto vale cada punto en la calificación</span></legend>
-        <div className="mt-1.5 overflow-x-auto rounded-lg border border-slate-200">
-          <table className="w-full min-w-[640px] text-sm">
-            <thead><tr className="bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-500">
-              <th className="px-2 py-1.5">Punto</th><th className="w-20 px-2">Peso</th><th className="w-24 px-2 text-center">Pide foto</th><th className="w-24 px-2 text-center">Obligatorio</th><th className="w-28 px-2 text-right">Vale</th><th className="w-28" />
-            </tr></thead>
-            <tbody>
-              {f.puntos.map((p, i) => (
-                <tr key={p.id ?? `n${i}`} className="border-t border-slate-100">
-                  <td className="px-2 py-1.5"><input aria-label={`Punto ${i + 1}`} className={campo} value={p.texto} onChange={(e) => punto(i, "texto", e.target.value)} placeholder="Ej. Piso limpio y seco" /></td>
-                  <td className="px-2"><input aria-label={`Peso del punto ${i + 1}`} type="number" min="1" max="10" className={campo} value={p.peso} onChange={(e) => punto(i, "peso", e.target.value)} /></td>
-                  <td className="px-2 text-center"><input aria-label={`Pide foto en el punto ${i + 1}`} type="checkbox" className="size-4 accent-blue-600" checked={p.pideFoto} onChange={(e) => punto(i, "pideFoto", e.target.checked)} /></td>
-                  <td className="px-2 text-center"><input aria-label={`Punto ${i + 1} obligatorio`} type="checkbox" className="size-4 accent-blue-600" checked={p.obligatorio} onChange={(e) => punto(i, "obligatorio", e.target.checked)} /></td>
-                  <td className="px-2 text-right tabular-nums text-slate-600">{p.texto.trim() && pesoTotal ? `${Math.round(((Number(p.peso) || 1) / pesoTotal) * 1000) / 10}%` : "—"}</td>
-                  <td className="px-1 text-right">
-                    <button type="button" aria-label={`Subir punto ${i + 1}`} disabled={i === 0} onClick={() => mover(i, -1)} className="rounded p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-30"><ArrowUp className="size-4" /></button>
-                    <button type="button" aria-label={`Bajar punto ${i + 1}`} disabled={i === f.puntos.length - 1} onClick={() => mover(i, 1)} className="rounded p-1.5 text-slate-400 hover:bg-slate-100 disabled:opacity-30"><ArrowDown className="size-4" /></button>
-                    <button type="button" aria-label={`Quitar punto ${i + 1}`} onClick={() => setF((v) => ({ ...v, puntos: v.puntos.filter((_, j) => j !== i) }))} className="rounded p-1.5 text-slate-400 hover:bg-slate-100 hover:text-red-600"><Trash2 className="size-4" /></button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <button type="button" onClick={() => setF((v) => ({ ...v, puntos: [...v.puntos, { texto: "", peso: 1, pideFoto: false, obligatorio: false }] }))} className="mt-1.5 inline-flex min-h-9 items-center gap-1 text-sm font-semibold text-brand"><Plus className="size-4" /> Agregar punto</button>
-      </fieldset>
+function EditorOpciones({ p, cambiar, nuevoId }) {
+  const ops = p.opciones ?? [];
+  const suma = ops.reduce((s, o) => s + (Number(o.valor) || 0), 0);
+  const setOp = (i, k, v) => cambiar({ opciones: ops.map((o, j) => (j === i ? { ...o, [k]: v } : o)) });
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-center gap-2 text-[12.5px] text-slate-600">
+        <span>{p.tipo === "opcion" ? "Elige una. Cada opción vale un %; la ideal vale 100 %." : "Puede elegir varias. Cada una suma su %, hasta 100 %."}</span>
+        <select aria-label="Usar opciones listas" className={`${campoBase} ml-auto h-8 text-[12.5px]`} value=""
+          onChange={(e) => { const r = OPCIONES_RAPIDAS[Number(e.target.value)]; if (r) cambiar({ opciones: r.opciones.map(([texto, valor]) => ({ id: nuevoId(), texto, valor })) }); }}>
+          <option value="">Usar opciones listas…</option>
+          {OPCIONES_RAPIDAS.map((r, i) => <option key={r.nombre} value={i}>{r.nombre}</option>)}
+        </select>
+      </div>
+      <ul className="space-y-1.5">
+        {ops.map((o, i) => (
+          <li key={o.id} className="flex items-center gap-2">
+            <span className={`size-3.5 shrink-0 border-2 border-slate-400 ${p.tipo === "opcion" ? "rounded-full" : "rounded"}`} aria-hidden="true" />
+            <input aria-label={`Opción ${i + 1}`} className={campo} value={o.texto} onChange={(e) => setOp(i, "texto", e.target.value)} placeholder={`Opción ${i + 1}`} />
+            <label className="flex shrink-0 items-center gap-1 text-[12.5px] font-semibold text-slate-600">vale
+              <input aria-label={`Valor de la opción ${i + 1}`} type="number" min="0" max="100" className={`${campoBase} w-20 text-right`} value={o.valor} onChange={(e) => setOp(i, "valor", e.target.value === "" ? "" : Number(e.target.value))} />%
+            </label>
+            <button type="button" aria-label={`Quitar opción ${i + 1}`} disabled={ops.length <= 2} onClick={() => cambiar({ opciones: ops.filter((_, j) => j !== i) })} className="rounded p-2 text-slate-400 hover:bg-slate-100 hover:text-red-600 disabled:opacity-30"><Trash2 className="size-4" /></button>
+          </li>
+        ))}
+      </ul>
+      <div className="flex items-center justify-between">
+        <button type="button" onClick={() => cambiar({ opciones: [...ops, { id: nuevoId(), texto: "", valor: 0 }] })} className="inline-flex min-h-9 items-center gap-1 text-sm font-semibold text-brand"><Plus className="size-4" /> Opción</button>
+        {p.tipo === "multiple" ? <span className={`text-[12px] font-semibold ${suma >= 100 ? "text-green-700" : "text-amber-700"}`}>Suman {suma}%{suma > 100 ? " (cuenta hasta 100 %)" : ""}</span> : null}
+      </div>
+    </div>
+  );
+}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <label className={etiqueta}>¿A quién?
-          <select className={`mt-1 ${campo}`} value={f.aQuien} onChange={set("aQuien")}>
-            {puestos.map((p) => <option key={p} value={`Puesto: ${p}`}>Puesto: {p}</option>)}
-          </select>
-        </label>
-        <label className={etiqueta}>¿Cada cuándo?
-          <select className={`mt-1 ${campo}`} value={f.frecuencia} onChange={set("frecuencia")}>{FRECUENCIAS.map((x) => <option key={x}>{x}</option>)}</select>
-        </label>
-        <label className={etiqueta}>¿Antes de qué hora?<input type="time" className={`mt-1 ${campo}`} value={f.hora} onChange={set("hora")} /></label>
-        <label className={etiqueta}>¿Quién lo revisa?
-          <select className={`mt-1 ${campo}`} value={f.revisa} onChange={set("revisa")}><option>Su jefe inmediato</option><option>El dueño</option><option>Nadie, solo registrar</option></select>
-        </label>
-        <label className={etiqueta}>¿Dónde?
-          <select className={`mt-1 ${campo}`} value={f.sucursal} onChange={set("sucursal")}><option>Todas</option><option>Centro</option><option>Norte</option></select>
-        </label>
-        <label className="flex min-h-10 items-end gap-2 pb-2 text-sm font-medium text-slate-700"><input type="checkbox" className="size-4 accent-blue-600" checked={f.soloSiCheco} onChange={set("soloSiCheco")} /> Solo los días que checó entrada</label>
+function TarjetaPregunta({ p, i, total, preguntas, cambiar, mover, duplicar, quitar, nuevoId, error }) {
+  const vale = valorDePregunta(preguntas, p);
+  return (
+    <li className={`space-y-3 rounded-xl border bg-white p-4 ${error ? "border-red-300" : "border-slate-200"}`}>
+      <div className="flex items-start gap-2">
+        <span className="mt-2 grid size-6 shrink-0 place-items-center rounded-full bg-slate-100 text-[12px] font-bold text-slate-600">{i + 1}</span>
+        <input aria-label={`Pregunta ${i + 1}`} className={`${campo} text-[15px] font-semibold`} value={p.texto} onChange={(e) => cambiar({ texto: e.target.value })} placeholder="Escribe la pregunta, p. ej. ¿El área está ordenada?" />
+        <span className="flex shrink-0">
+          <button type="button" aria-label={`Subir pregunta ${i + 1}`} disabled={i === 0} onClick={() => mover(-1)} className="rounded p-2 text-slate-400 hover:bg-slate-100 disabled:opacity-30"><ArrowUp className="size-4" /></button>
+          <button type="button" aria-label={`Bajar pregunta ${i + 1}`} disabled={i === total - 1} onClick={() => mover(1)} className="rounded p-2 text-slate-400 hover:bg-slate-100 disabled:opacity-30"><ArrowDown className="size-4" /></button>
+          <button type="button" aria-label={`Duplicar pregunta ${i + 1}`} onClick={duplicar} className="rounded p-2 text-slate-400 hover:bg-slate-100"><Copy className="size-4" /></button>
+          <button type="button" aria-label={`Quitar pregunta ${i + 1}`} onClick={quitar} className="rounded p-2 text-slate-400 hover:bg-slate-100 hover:text-red-600"><Trash2 className="size-4" /></button>
+        </span>
+      </div>
+      <SelectorTipo valor={p.tipo} etiquetaGrupo={`Tipo de respuesta de la pregunta ${i + 1}`} onElegir={(tipo) => cambiar({ tipo, ...configInicial(tipo, nuevoId, p), ...(tipo === "foto" || tipo === "texto" ? { pideFoto: false } : {}) })} />
+
+      <div className="rounded-lg bg-slate-50 p-3">
+        {p.tipo === "si_no" ? (
+          <div className="flex flex-wrap items-center gap-2 text-[13px] font-semibold text-slate-700">La respuesta buena es
+            {["si", "no"].map((v) => (
+              <button key={v} type="button" aria-pressed={p.correcta === v} onClick={() => cambiar({ correcta: v })}
+                className={`min-h-9 rounded-lg border px-3 ${p.correcta === v ? "border-green-600 bg-green-600 text-white" : "border-slate-300 bg-white text-slate-700"}`}>{v === "si" ? "Sí" : "No"}</button>
+            ))}
+            <span className="font-normal text-slate-500">· vale 100 %; la otra, 0 %</span>
+          </div>
+        ) : null}
+        {p.tipo === "opcion" || p.tipo === "multiple" ? <EditorOpciones p={p} cambiar={cambiar} nuevoId={nuevoId} /> : null}
+        {p.tipo === "numero" ? (
+          <div className="flex flex-wrap items-end gap-3 text-[12.5px]">
+            <label className="font-semibold text-slate-700">Mínimo<input aria-label={`Mínimo de la pregunta ${i + 1}`} type="number" className={`mt-1 block ${campoBase} w-28`} value={p.min} onChange={(e) => cambiar({ min: e.target.value === "" ? "" : Number(e.target.value) })} /></label>
+            <label className="font-semibold text-slate-700">Máximo<input aria-label={`Máximo de la pregunta ${i + 1}`} type="number" className={`mt-1 block ${campoBase} w-28`} value={p.max} onChange={(e) => cambiar({ max: e.target.value === "" ? "" : Number(e.target.value) })} /></label>
+            <label className="font-semibold text-slate-700">Unidad<input aria-label={`Unidad de la pregunta ${i + 1}`} className={`mt-1 block ${campoBase} w-28`} value={p.unidad} onChange={(e) => cambiar({ unidad: e.target.value })} placeholder="°C, pesos…" /></label>
+            <span className="pb-2.5 text-slate-500">Vale 100 % si está dentro del rango; si no, 0 %. Vacío = sin límite.</span>
+          </div>
+        ) : null}
+        {p.tipo === "foto" ? <p className="text-[13px] text-slate-600">Vale 100 % si sube la foto.</p> : null}
+        {p.tipo === "texto" ? <p className="text-[13px] text-slate-600">Para comentarios u observaciones. No se califica.</p> : null}
       </div>
 
-      <p className="rounded-lg bg-blue-50 px-3.5 py-2.5 text-[13px] leading-relaxed text-blue-950">
-        Así quedará: <b>{f.frecuencia === "Diario" ? "cada día que trabaje" : f.frecuencia.toLowerCase()}</b>, a quien tenga el {f.aQuien.toLowerCase()} {f.sucursal === "Todas" ? "en cada sucursal" : `en ${f.sucursal}`} le llega «{f.nombre || "este checklist"}» en su app y por correo. Lo llena antes de las <b>{f.hora}</b>, lo envía y <b>{f.revisa === "Nadie, solo registrar" ? "queda registrado" : `lo revisa ${f.revisa.toLowerCase()}`}</b>. Su calificación es el % de puntos que cumplen, según su peso.
-      </p>
-      <div className="flex justify-end gap-2"><button type="button" className={botonSecundario} onClick={alCerrar}>Cancelar</button><button type="submit" className={botonPrimario} disabled={!listo}>Guardar y asignar</button></div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px]">
+        {p.tipo !== "texto" ? (
+          <label className="flex items-center gap-2 font-semibold text-slate-700">Peso
+            <input aria-label={`Peso de la pregunta ${i + 1}`} type="number" min="1" max="10" className={`${campoBase} h-9 w-16`} value={p.peso} onChange={(e) => cambiar({ peso: e.target.value === "" ? "" : Number(e.target.value) })} />
+            <span className="font-normal text-slate-500">= {vale ?? 0}% del checklist</span>
+          </label>
+        ) : null}
+        <label className="flex items-center gap-1.5 font-medium text-slate-700"><input type="checkbox" className="size-4 accent-blue-600" checked={p.obligatoria} onChange={(e) => cambiar({ obligatoria: e.target.checked })} /> Obligatoria</label>
+        {p.tipo !== "texto" ? <label className="flex items-center gap-1.5 font-medium text-slate-700" title="Si no aplica ese día (p. ej. la terraza cerrada), no cuenta en la calificación"><input type="checkbox" className="size-4 accent-blue-600" checked={p.permiteNA} onChange={(e) => cambiar({ permiteNA: e.target.checked })} /> Permite «No aplica»</label> : null}
+        {p.tipo !== "foto" && p.tipo !== "texto" ? <label className="flex items-center gap-1.5 font-medium text-slate-700"><input type="checkbox" className="size-4 accent-blue-600" checked={p.pideFoto} onChange={(e) => cambiar({ pideFoto: e.target.checked })} /> Pide foto de evidencia</label> : null}
+      </div>
+      {error ? <p role="alert" className="text-[13px] font-semibold text-red-700">{error}</p> : null}
+    </li>
+  );
+}
+
+function VistaPrevia({ nombre, hora, preguntas }) {
+  const [respuestas, setRespuestas] = useState({});
+  const calif = calificarRespuestas(preguntas, respuestas);
+  return (
+    <aside aria-label="Vista previa en el celular" className="sticky top-4 space-y-2">
+      <p className="flex items-center gap-1.5 text-[12.5px] font-semibold text-slate-600"><Smartphone className="size-4" /> Así lo verá en su celular · contéstalo de prueba</p>
+      <div className="mx-auto max-h-[72vh] w-full max-w-[360px] overflow-y-auto rounded-[28px] border-[6px] border-slate-800 bg-white p-4 shadow-xl">
+        <p className="text-lg font-extrabold leading-tight text-[#080d36]">{nombre || "Nombre del checklist"}</p>
+        <p className="text-[12px] text-slate-500">Antes de las {hora}</p>
+        <ol className="mt-3 space-y-4">
+          {preguntas.map((p, i) => (
+            <li key={p.id} className="space-y-2 border-t border-slate-100 pt-3 first:border-0 first:pt-0">
+              <p className="text-[14px] font-semibold text-[#080d36]">{i + 1}. {p.texto || "Pregunta sin texto"}{p.obligatoria ? <span className="ml-1 text-red-600" aria-label="obligatoria">*</span> : null}</p>
+              <CampoRespuesta pregunta={p} respuesta={respuestas[p.id]} onChange={(r) => setRespuestas((x) => ({ ...x, [p.id]: r }))} />
+            </li>
+          ))}
+        </ol>
+        <div className="sticky bottom-0 -mx-4 -mb-4 mt-4 border-t border-slate-200 bg-white px-4 py-3 text-center">
+          <p className="text-[12px] text-slate-500">Calificación de prueba</p>
+          <p className={`text-2xl font-extrabold tabular-nums ${colorCalificacion(calif)}`}>{calif ?? "—"}%</p>
+          <button type="button" onClick={() => setRespuestas({})} className="text-[12px] font-semibold text-brand">Borrar respuestas de prueba</button>
+        </div>
+      </div>
+    </aside>
+  );
+}
+
+function Editor({ inicial, alCerrar }) {
+  const { despachar, personas, checklists } = useTareas();
+  const nuevoId = useIds();
+  const [f, setF] = useState(() => inicial ?? {
+    nombre: "", frecuencia: "Diario", hora: "09:00", aQuien: "Puesto: Encargado de turno", sucursal: "Todas", revisa: "Su jefe inmediato", soloSiCheco: true, personas: [],
+    preguntas: [],
+  });
+  const [intento, setIntento] = useState(false);
+  const [eligiendo, setEligiendo] = useState(!inicial);
+  const set = (k) => (e) => setF((v) => ({ ...v, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value }));
+  const problemas = useMemo(() => problemasChecklist(f.nombre, f.preguntas), [f.nombre, f.preguntas]);
+  const errorDe = (id) => (intento ? problemas.find((x) => x.id === id)?.error : null);
+  const generales = intento ? problemas.filter((x) => x.id == null) : [];
+  const puestos = [...new Set(personas.map((p) => p.puesto))];
+  const cambiarPregunta = (i, cambios) => setF((v) => ({ ...v, preguntas: v.preguntas.map((p, j) => (j === i ? { ...p, ...cambios } : p)) }));
+  const agregar = (tipo) => setF((v) => ({ ...v, preguntas: [...v.preguntas, { id: nuevoId(), texto: "", tipo, peso: 1, obligatoria: true, permiteNA: false, pideFoto: false, ...configInicial(tipo, nuevoId) }] }));
+  const usarPlantilla = (c) => setF((v) => ({ ...v, nombre: v.nombre || `${c.nombre} (copia)`, preguntas: c.preguntas.map((p) => ({ ...p, id: nuevoId(), opciones: p.opciones?.map((o) => ({ ...o, id: nuevoId() })) })) }));
+
+  const guardar = (e) => {
+    e.preventDefault();
+    setIntento(true);
+    if (problemas.length) return;
+    const asignadas = f.aQuien.startsWith("Puesto: ") ? personas.filter((p) => p.puesto === f.aQuien.slice(8)).map((p) => p.id) : f.personas;
+    const preguntas = f.preguntas.map((p) => ({ ...p, peso: Number(p.peso) > 0 ? Number(p.peso) : 1, opciones: p.opciones?.map((o) => ({ ...o, valor: Number(o.valor) || 0 })) }));
+    despachar({ tipo: "guardarChecklist", checklist: { ...f, personas: asignadas, preguntas } });
+    alCerrar(f.id ? "Cambios guardados." : `«${f.nombre}» quedó creado y asignado.`);
+  };
+
+  return (
+    <form onSubmit={guardar} className="space-y-4" noValidate>
+      <div className="rounded-xl border border-slate-200 bg-white p-4">
+        <label className={etiqueta}>Nombre del checklist<input autoFocus className={`mt-1 ${campo} text-base font-semibold`} value={f.nombre} onChange={set("nombre")} placeholder="Ej. Apertura de restaurante" /></label>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <label className={etiqueta}>¿A quién?
+            <select className={`mt-1 ${campo}`} value={f.aQuien} onChange={set("aQuien")}>{puestos.map((p) => <option key={p} value={`Puesto: ${p}`}>Puesto: {p}</option>)}</select>
+          </label>
+          <label className={etiqueta}>¿Cada cuándo?<select className={`mt-1 ${campo}`} value={f.frecuencia} onChange={set("frecuencia")}>{FRECUENCIAS.map((x) => <option key={x}>{x}</option>)}</select></label>
+          <label className={etiqueta}>¿Antes de qué hora?<input type="time" className={`mt-1 ${campo}`} value={f.hora} onChange={set("hora")} /></label>
+          <label className={etiqueta}>¿Quién lo revisa?<select className={`mt-1 ${campo}`} value={f.revisa} onChange={set("revisa")}><option>Su jefe inmediato</option><option>El dueño</option><option>Nadie, solo registrar</option></select></label>
+          <label className={etiqueta}>¿Dónde?<select className={`mt-1 ${campo}`} value={f.sucursal} onChange={set("sucursal")}><option>Todas</option><option>Centro</option><option>Norte</option></select></label>
+          <label className="flex min-h-10 items-end gap-2 pb-2 text-sm font-medium text-slate-700"><input type="checkbox" className="size-4 accent-blue-600" checked={f.soloSiCheco} onChange={set("soloSiCheco")} /> Solo los días que checó entrada</label>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap items-start gap-5">
+        <section aria-label="Preguntas" className="min-w-0 flex-[999_1_560px] space-y-3">
+          {eligiendo && !f.preguntas.length ? (
+            <div className="rounded-xl border border-dashed border-slate-300 bg-white p-5">
+              <p className="font-semibold text-[#080d36]">¿Cómo quieres empezar?</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {checklists.map((c) => <button key={c.id} type="button" className={botonSecundario} onClick={() => { usarPlantilla(c); setEligiendo(false); }}>Copiar «{c.nombre}»</button>)}
+                <button type="button" className={botonPrimario} onClick={() => { agregar("si_no"); setEligiendo(false); }}>Empezar en blanco</button>
+              </div>
+            </div>
+          ) : null}
+          <ol className="space-y-3">
+            {f.preguntas.map((p, i) => (
+              <TarjetaPregunta key={p.id} p={p} i={i} total={f.preguntas.length} preguntas={f.preguntas} nuevoId={nuevoId} error={errorDe(p.id)}
+                cambiar={(c) => cambiarPregunta(i, c)}
+                mover={(d) => setF((v) => { const ps = [...v.preguntas]; const [x] = ps.splice(i, 1); ps.splice(i + d, 0, x); return { ...v, preguntas: ps }; })}
+                duplicar={() => setF((v) => { const ps = [...v.preguntas]; ps.splice(i + 1, 0, { ...p, id: nuevoId(), opciones: p.opciones?.map((o) => ({ ...o, id: nuevoId() })) }); return { ...v, preguntas: ps }; })}
+                quitar={() => setF((v) => ({ ...v, preguntas: v.preguntas.filter((_, j) => j !== i) }))} />
+            ))}
+          </ol>
+          {!eligiendo || f.preguntas.length ? (
+            <div className="rounded-xl border border-dashed border-slate-300 bg-white p-3">
+              <p className="mb-2 text-[12.5px] font-semibold text-slate-600">Agregar pregunta</p>
+              <div className="flex flex-wrap gap-1.5">
+                {TIPOS.map((t) => (
+                  <button key={t.clave} type="button" onClick={() => agregar(t.clave)} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[13px] font-semibold text-slate-700 hover:border-blue-300 hover:text-brand">
+                    <Plus className="size-3.5" /><IconoTipo tipo={t.clave} className="size-3.5" />{t.texto}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {generales.map((g) => <p key={g.error} role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm font-semibold text-red-700">{g.error}</p>)}
+          {intento && problemas.length ? <p role="alert" className="text-sm font-semibold text-red-700">Revisa {problemas.length === 1 ? "lo marcado" : `las ${problemas.length} cosas marcadas`} en rojo.</p> : null}
+          <div className="flex justify-end gap-2"><button type="button" className={botonSecundario} onClick={() => alCerrar()}>Cancelar</button><button type="submit" className={botonPrimario}>Guardar y asignar</button></div>
+        </section>
+        <div className="min-w-0 flex-[1_1_340px]"><VistaPrevia nombre={f.nombre} hora={f.hora} preguntas={f.preguntas} /></div>
+      </div>
     </form>
   );
 }
@@ -91,21 +244,26 @@ function Editor({ inicial, alCerrar }) {
 export default function Checklists() {
   const { checklists, envios, hoy } = useTareas();
   const [editando, setEditando] = useState(null); // null | "nuevo" | checklist
-  if (editando) return <Editor inicial={editando === "nuevo" ? null : editando} alCerrar={() => setEditando(null)} />;
+  const [aviso, setAviso] = useState("");
+  if (editando) return <Editor key={editando === "nuevo" ? "nuevo" : editando.id} inicial={editando === "nuevo" ? null : editando} alCerrar={(t) => { setEditando(null); setAviso(t ?? ""); }} />;
   return (
     <div className="space-y-3">
-      <div className="flex justify-end"><button type="button" className={botonPrimario} onClick={() => setEditando("nuevo")}><Plus className="size-4" /> Nuevo checklist</button></div>
+      <div className="flex items-center gap-3">
+        {aviso ? <p role="status" className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-800">{aviso}</p> : null}
+        <button type="button" className={`${botonPrimario} ml-auto`} onClick={() => { setAviso(""); setEditando("nuevo"); }}><Plus className="size-4" /> Nuevo checklist</button>
+      </div>
       <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         {checklists.map((c) => {
           const deHoy = envios.filter((e) => e.checklist === c.id && e.fecha === hoy);
           const enviados = deHoy.filter((e) => e.estado !== "no_enviado").length;
+          const tipos = [...new Set(c.preguntas.map((p) => p.tipo))];
           return (
             <li key={c.id}>
-              <button type="button" onClick={() => setEditando(c)} className="flex h-full w-full flex-col gap-2 rounded-xl border border-slate-200 bg-white p-4 text-left hover:border-blue-300">
+              <button type="button" onClick={() => { setAviso(""); setEditando(c); }} className="flex h-full w-full flex-col gap-2 rounded-xl border border-slate-200 bg-white p-4 text-left hover:border-blue-300">
                 <b className="text-[15px] text-[#080d36]">{c.nombre}</b>
-                <span className="text-[13px] text-slate-500">{c.puntos.length} puntos · {c.frecuencia.toLowerCase()}, antes de las {c.hora}</span>
+                <span className="text-[13px] text-slate-500">{c.preguntas.length} preguntas · {c.frecuencia.toLowerCase()}, antes de las {c.hora}</span>
                 <span className="text-[12.5px] text-slate-600">{c.aQuien} · {c.sucursal === "Todas" ? "todas las sucursales" : c.sucursal}</span>
-                <span className="flex items-center gap-1 text-[12px] text-slate-500"><Camera className="size-3.5" /> {c.puntos.filter((p) => p.pideFoto).length} piden foto</span>
+                <span className="flex flex-wrap gap-1.5">{tipos.map((t) => <span key={t} className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600"><IconoTipo tipo={t} className="size-3" />{TIPOS.find((x) => x.clave === t)?.texto}</span>)}</span>
                 <span className={`mt-auto text-[12.5px] font-semibold ${deHoy.length && enviados === deHoy.length ? "text-green-700" : "text-slate-600"}`}>
                   {deHoy.length ? `Hoy: ${enviados} de ${deHoy.length} enviados` : "Hoy no toca"}
                 </span>
@@ -114,7 +272,7 @@ export default function Checklists() {
           );
         })}
         <li>
-          <button type="button" onClick={() => setEditando("nuevo")} className="flex h-full min-h-36 w-full flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-500 hover:border-blue-300 hover:text-brand">
+          <button type="button" onClick={() => { setAviso(""); setEditando("nuevo"); }} className="flex h-full min-h-36 w-full flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-slate-300 p-4 text-sm text-slate-500 hover:border-blue-300 hover:text-brand">
             <b>Nuevo checklist</b><span className="text-[12.5px]">Apertura, cierre, limpieza, inocuidad…</span>
           </button>
         </li>

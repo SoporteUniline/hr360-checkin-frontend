@@ -2,10 +2,11 @@
 
 // Cumplimiento de checklists (prototipo 23/11/2026): % promedio por persona en el periodo (lo que el jefe aprobó, según el
 // peso de cada punto; no enviado = 0 %), cuántos a tiempo y tarde, y si gana el bono (si la empresa tiene Nómina, el bono
-// se aplica solo en su recibo). Se exporta a Excel.
+// se aplica solo en su recibo). Abajo, productividad: las preguntas que más fallan (por checklist y sucursal). Excel.
 import { useMemo, useState } from "react";
 import { Download } from "lucide-react";
 import { cumplimientoPorPersona, ganaBono } from "@/lib/tareas/reglas.mjs";
+import { fallasPorPregunta } from "@/lib/tareas/preguntas.mjs";
 import { masDias } from "@/lib/tareas/demo.mjs";
 import { exportToExcel } from "@/utils/exportExcelJS";
 import { useTareas } from "./store";
@@ -18,9 +19,14 @@ export default function Cumplimiento() {
   const [periodo, setPeriodo] = useState("14");
   const [checklist, setChecklist] = useState("todos");
   const [minimo, setMinimo] = useState(90);
+  const [sucursal, setSucursal] = useState("todas");
   const desde = periodo === "quincena" ? `${hoy.slice(0, 8)}${Number(hoy.slice(8)) <= 15 ? "01" : "16"}` : masDias(hoy, -(Number(periodo) - 1));
-  const filas = useMemo(() => cumplimientoPorPersona(envios.filter((e) => checklist === "todos" || String(e.checklist) === checklist), { desde, hasta: hoy })
-    .map((r) => ({ ...r, p: persona(r.persona) })), [envios, checklist, desde, hoy, persona]);
+  const delPeriodo = useMemo(() => envios.filter((e) => e.fecha >= desde && e.fecha <= hoy
+    && (checklist === "todos" || String(e.checklist) === checklist)
+    && (sucursal === "todas" || persona(e.persona)?.sucursal === sucursal)), [envios, desde, hoy, checklist, sucursal, persona]);
+  const filas = useMemo(() => cumplimientoPorPersona(delPeriodo).map((r) => ({ ...r, p: persona(r.persona) })), [delPeriodo, persona]);
+  const fallas = useMemo(() => fallasPorPregunta(delPeriodo, checklists), [delPeriodo, checklists]);
+  const sucursales = [...new Set(envios.map((e) => persona(e.persona)?.sucursal).filter(Boolean))];
   const ganan = filas.filter((r) => ganaBono(r.promedio, minimo)).length;
 
   const exportar = () => exportToExcel(
@@ -29,12 +35,21 @@ export default function Cumplimiento() {
     `Cumplimiento checklists ${desde} a ${hoy}`, { sheetName: "Cumplimiento" },
   );
 
+  const exportarFallas = () => exportToExcel(
+    fallas.map((f) => ({ pregunta: f.pregunta, checklist: f.checklist, promedio: f.promedio, veces: f.veces, mal: f.porcentajeMal })),
+    [{ header: "Pregunta", key: "pregunta", width: 40 }, { header: "Checklist", key: "checklist", width: 28 }, { header: "Promedio %", key: "promedio", width: 12 }, { header: "Veces", key: "veces", width: 8 }, { header: "% salió mal", key: "mal", width: 12 }],
+    `Fallas por pregunta ${desde} a ${hoy}`, { sheetName: "Preguntas" }, // sin acentos: con «más» Chromium nombró el archivo «download»
+  );
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <select aria-label="Periodo" className={campoBase} value={periodo} onChange={(e) => setPeriodo(e.target.value)}>{PERIODOS.map(([v, t]) => <option key={v} value={v}>{t}</option>)}</select>
         <select aria-label="Checklist" className={campoBase} value={checklist} onChange={(e) => setChecklist(e.target.value)}>
           <option value="todos">Todos los checklists</option>{checklists.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+        </select>
+        <select aria-label="Sucursal" className={campoBase} value={sucursal} onChange={(e) => setSucursal(e.target.value)}>
+          <option value="todas">Todas las sucursales</option>{sucursales.map((x) => <option key={x}>{x}</option>)}
         </select>
         <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">Bono desde
           <input aria-label="Porcentaje mínimo para el bono" type="number" min="50" max="100" className={`${campoBase} w-20`} value={minimo} onChange={(e) => setMinimo(Number(e.target.value) || 0)} />%
@@ -63,6 +78,35 @@ export default function Cumplimiento() {
           </tbody>
         </table>
       </div>
+
+      <section aria-label="Preguntas que más fallan" className="space-y-2 pt-3">
+        <div className="flex flex-wrap items-end gap-2">
+          <div>
+            <h3 className="text-[15px] font-bold text-[#080d36]">Preguntas que más fallan</h3>
+            <p className="text-[12.5px] text-slate-500">Promedio de cada pregunta en los checklists revisados del periodo: dónde está el problema.</p>
+          </div>
+          <button type="button" className={`${botonSecundario} ml-auto`} disabled={!fallas.length} onClick={exportarFallas}><Download className="size-4" /> Exportar preguntas</button>
+        </div>
+        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+          <table className="w-full min-w-[720px] text-[13px] tabular-nums">
+            <thead><tr className="border-b border-slate-200 bg-slate-50/70 text-left text-[10.5px] font-semibold uppercase tracking-[0.07em] text-slate-500">
+              <th className="px-3 py-2">Pregunta</th><th className="px-3">Checklist</th><th className="px-3">Promedio</th><th className="px-3 text-right">Veces</th><th className="px-3 text-right">Salió mal</th>
+            </tr></thead>
+            <tbody>
+              {fallas.slice(0, 10).map((f) => (
+                <tr key={`${f.checklist}-${f.pregunta}`} className="border-b border-slate-100 last:border-0">
+                  <td className="px-3 py-2.5 font-medium">{f.pregunta}</td>
+                  <td className="px-3 text-slate-500">{f.checklist}</td>
+                  <td className="w-56 px-3"><span className="flex items-center gap-2"><span className="w-28"><Barra porcentaje={f.promedio} alto="h-2" color={f.promedio >= 90 ? "bg-green-600" : f.promedio >= 75 ? "bg-amber-500" : "bg-red-500"} /></span><b className={colorCalificacion(f.promedio)}>{f.promedio}%</b></span></td>
+                  <td className="px-3 text-right">{f.veces}</td>
+                  <td className={`px-3 text-right font-semibold ${f.porcentajeMal >= 20 ? "text-red-700" : "text-slate-600"}`}>{f.porcentajeMal}% de las veces</td>
+                </tr>
+              ))}
+              {!fallas.length ? <tr><td colSpan={5} className="px-3 py-6 text-center text-slate-500">Aún no hay checklists revisados en este periodo.</td></tr> : null}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }

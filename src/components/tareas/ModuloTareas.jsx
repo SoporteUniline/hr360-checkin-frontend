@@ -19,8 +19,8 @@ import DialogTarea from "./DialogTarea";
 const PESTANAS = [
   { clave: "tablero", texto: "Tablero", subtitulo: "Las tareas de tu equipo: quién tiene qué y cómo va. Arrastra para moverlas." },
   { clave: "proyectos", texto: "Proyectos", subtitulo: "Tareas agrupadas que se hacen una vez y tienen fin." },
-  { clave: "checklists", texto: "Checklists", subtitulo: "Lo que se repite cada día o semana, con puntos que se califican." },
-  { clave: "revisar", texto: "Revisar", subtitulo: "Checklists enviados: califica cada punto y aprueba o regresa." },
+  { clave: "checklists", texto: "Checklists", subtitulo: "Lo que se repite cada día o semana: preguntas con respuestas que valen, y su calificación." },
+  { clave: "revisar", texto: "Revisar", subtitulo: "Checklists enviados: revisa cada respuesta, corrígela si hace falta y aprueba o regresa." },
   { clave: "cumplimiento", texto: "Cumplimiento", subtitulo: "Porcentaje de cada persona en el periodo, para bonos. Exporta a Excel." },
 ];
 

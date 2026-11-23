@@ -5,7 +5,9 @@
 // revisión». El checklist se llena punto por punto, con foto donde se pide, y se envía a su jefe.
 import { useState } from "react";
 import { ArrowLeft, Camera, Check, ChevronRight, ListChecks } from "lucide-react";
-import { avancePasos, calificar, motivoNoEnviar, motivoNoMover } from "@/lib/tareas/reglas.mjs";
+import { avancePasos, motivoNoMover } from "@/lib/tareas/reglas.mjs";
+import { calificarRespuestas, motivoNoEnviar } from "@/lib/tareas/preguntas.mjs";
+import { CampoRespuesta } from "./Preguntas";
 import { TareasProvider, useTareas } from "./store";
 import { AvisoPrototipo, Barra, ChipPrioridad, fechaRelativa } from "./comun";
 
@@ -87,55 +89,48 @@ function LlenarChecklist({ id, alVolver }) {
   const { checklist, envios, despachar, hoy, persona } = useTareas();
   const ck = checklist(id);
   const previo = envios.find((e) => e.checklist === id && e.persona === YO && e.fecha === hoy && e.estado !== "no_enviado");
-  const [marcas, setMarcas] = useState(() => (previo?.estado === "regresado" ? { ...previo.marcas } : {}));
-  const [fotos, setFotos] = useState({});
-  const [nota, setNota] = useState("");
+  const [respuestas, setRespuestas] = useState(() => (previo?.estado === "regresado" ? { ...previo.respuestas } : {}));
   const [enviado, setEnviado] = useState(previo?.estado === "por_revisar" || previo?.estado === "aprobado");
-  const hechos = ck.puntos.filter((p) => marcas[p.id]).length;
-  const motivo = motivoNoEnviar(ck, marcas, fotos);
+  const contestadas = ck.preguntas.filter((p) => { const r = respuestas[p.id]; return r?.na || (r?.valor != null && r.valor !== "" && !(Array.isArray(r.valor) && !r.valor.length)); }).length;
+  const motivo = motivoNoEnviar(ck, respuestas);
+  const calif = calificarRespuestas(ck.preguntas, respuestas);
   if (enviado) return (
     <div className="space-y-4">
       <button type="button" onClick={alVolver} className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-slate-600"><ArrowLeft className="size-4" /> Mis tareas</button>
       <div role="status" className="rounded-2xl border border-green-200 bg-green-50 p-5 text-green-900">
         <p className="flex items-center gap-2 text-lg font-bold"><Check className="size-5" /> Checklist enviado</p>
-        <p className="mt-1 text-sm">Tu jefe lo va a revisar. Te avisaremos si hay algo que corregir.</p>
+        <p className="mt-1 text-sm">{previo?.estado === "aprobado" ? `Tu jefe lo aprobó con ${previo.calificacion}%.` : "Tu jefe lo va a revisar. Te avisaremos si hay algo que corregir."}</p>
+        {previo?.cambios?.length ? <p className="mt-2 text-sm">Tu jefe corrigió: {previo.cambios.map((c) => `«${c.texto}» de ${c.antes} a ${c.despues}`).join("; ")}.</p> : null}
       </div>
     </div>
   );
   return (
-    <div className="space-y-4 pb-36">
+    <div className="space-y-4 pb-40">
       <button type="button" onClick={alVolver} className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-slate-600"><ArrowLeft className="size-4" /> Mis tareas</button>
       <div>
         <h1 className="text-2xl font-extrabold tracking-tight">{ck.nombre}</h1>
         <p className="mt-1 text-sm text-slate-500">{persona(YO).sucursal} · antes de las {ck.hora} · lo revisa Diego</p>
-        {previo?.estado === "regresado" && previo.comentarioJefe ? <p className="mt-2 rounded-xl bg-red-50 p-3 text-sm text-red-800"><b>Tu jefe lo regresó:</b> {previo.comentarioJefe}</p> : null}
+        {previo?.estado === "regresado" ? (
+          <div className="mt-2 rounded-xl bg-red-50 p-3 text-sm text-red-800">
+            <b>Tu jefe lo regresó.</b> {previo.comentarioJefe}
+            {previo.cambios?.length ? <span className="mt-1 block">Corrigió: {previo.cambios.map((c) => `«${c.texto}» de ${c.antes} a ${c.despues}`).join("; ")}.</span> : null}
+          </div>
+        ) : null}
       </div>
-      <div className="flex items-center gap-3"><Barra porcentaje={(hechos / ck.puntos.length) * 100} color="bg-green-600" alto="h-2" /><b className="shrink-0 text-sm tabular-nums">{hechos} de {ck.puntos.length}</b></div>
-      <ul className="overflow-hidden rounded-2xl border border-slate-200">
-        {ck.puntos.map((p) => (
-          <li key={p.id} className="space-y-2 border-t border-slate-100 px-4 py-3 first:border-0">
-            <label className="flex items-center gap-3 text-[15px]">
-              <input type="checkbox" className="size-[22px] shrink-0 accent-green-600" checked={Boolean(marcas[p.id])} onChange={(e) => setMarcas((m) => ({ ...m, [p.id]: e.target.checked }))} />
-              <span className={`flex-1 ${marcas[p.id] ? "text-slate-500" : ""}`}>{p.texto}</span>
-              {p.obligatorio ? <span className="text-[11px] font-bold text-indigo-700">Obligatorio</span> : null}
-            </label>
-            {p.pideFoto && marcas[p.id] ? (
-              <div className="flex items-center gap-2 pl-9">
-                {fotos[p.id] ? <img src={fotos[p.id]} alt={`Foto de ${p.texto}`} className="size-14 rounded-lg object-cover" /> : null}
-                <BotonFoto etiqueta={fotos[p.id] ? "Cambiar foto" : "Tomar foto"} alTomar={(url) => setFotos((f) => ({ ...f, [p.id]: url }))} />
-              </div>
-            ) : null}
+      <div className="flex items-center gap-3"><Barra porcentaje={(contestadas / ck.preguntas.length) * 100} color="bg-green-600" alto="h-2" /><b className="shrink-0 text-sm tabular-nums">{contestadas} de {ck.preguntas.length}</b></div>
+      <ol className="space-y-3">
+        {ck.preguntas.map((p, i) => (
+          <li key={p.id} className="space-y-3 rounded-2xl border border-slate-200 p-4">
+            <p className="text-[15.5px] font-semibold leading-snug">{i + 1}. {p.texto}{p.obligatoria ? <span className="ml-1 text-red-600" aria-label="obligatoria">*</span> : null}</p>
+            <CampoRespuesta grande pregunta={p} respuesta={respuestas[p.id]} onChange={(r) => setRespuestas((x) => ({ ...x, [p.id]: r }))} />
           </li>
         ))}
-      </ul>
-      <label className="block text-[13px] font-semibold text-slate-700">Nota para tu jefe (opcional)
-        <textarea rows={2} className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-base" placeholder="Ej. el refrigerador 3 hace ruido" value={nota} onChange={(e) => setNota(e.target.value)} />
-      </label>
+      </ol>
       <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 border-t border-slate-200 bg-white px-5 py-3">
         <div className="mx-auto max-w-3xl">
-          <button type="button" disabled={Boolean(motivo)} onClick={() => { despachar({ tipo: "enviarChecklist", checklist: ck.id, persona: YO, fecha: hoy, marcas, fotos, nota, hora: ahoraHHMM() }); setEnviado(true); }}
-            className="min-h-12 w-full rounded-xl bg-blue-600 text-base font-bold text-white disabled:bg-blue-300">Enviar terminado · {calificar(ck.puntos, marcas)}%</button>
-          <p className="mt-1 text-center text-[12.5px] text-slate-500">{motivo ?? "Lo que no marques cuenta como «no cumple»."}</p>
+          <button type="button" disabled={Boolean(motivo)} onClick={() => { despachar({ tipo: "enviarChecklist", checklist: ck.id, persona: YO, fecha: hoy, respuestas, hora: ahoraHHMM() }); setEnviado(true); }}
+            className="min-h-12 w-full rounded-xl bg-blue-600 text-base font-bold text-white disabled:bg-blue-300">Enviar terminado{calif != null ? ` · ${calif}%` : ""}</button>
+          <p className="mt-1 text-center text-[12.5px] text-slate-500">{motivo ?? "Lo que no contestes cuenta como 0 %."}</p>
         </div>
       </div>
     </div>
@@ -156,7 +151,7 @@ function Lista({ alAbrirTarea, alAbrirChecklist }) {
       </div>
       {misChecklists.map((c) => {
         const e = envios.find((x) => x.checklist === c.id && x.persona === YO && x.fecha === hoy && x.estado !== "no_enviado");
-        const estado = !e ? `Antes de las ${c.hora} · ${c.puntos.length} puntos` : e.estado === "regresado" ? "Tu jefe lo regresó: corrígelo" : e.estado === "por_revisar" ? "Enviado · en revisión" : `Aprobado · ${e.calificacion}%`;
+        const estado = !e ? `Antes de las ${c.hora} · ${c.preguntas.length} preguntas` : e.estado === "regresado" ? "Tu jefe lo regresó: corrígelo" : e.estado === "por_revisar" ? "Enviado · en revisión" : `Aprobado · ${e.calificacion}%`;
         const pendiente = !e || e.estado === "regresado";
         return (
           <button key={c.id} type="button" onClick={() => alAbrirChecklist(c.id)}
