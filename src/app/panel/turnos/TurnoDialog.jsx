@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, CalendarClock } from "lucide-react";
+import AvisoLimiteLegal from "@/components/asistencia/AvisoLimiteLegal";
 
 const DIAS = [
   "Lunes",
@@ -572,6 +573,8 @@ export default function TurnoDialog({
             </div>
           </div>
         </div>
+
+        <AvisoLimiteLegal horarios={dias} className="shrink-0" />
 
         {error && (
           <div className="shrink-0 rounded-lg border border-red-100 bg-red-50 p-3 text-sm text-red-700">

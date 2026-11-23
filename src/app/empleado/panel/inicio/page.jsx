@@ -12,6 +12,7 @@ import AttendanceCard from "@/components/empleado/AttendanceCard";
 import { DataState } from "@/components/empleado/shared";
 import MiTiempoPorReponer from "@/components/empleado/MiTiempoPorReponer";
 import ComidaEnCurso from "@/components/empleado/ComidaEnCurso";
+import MiSemana from "@/components/empleado/MiSemana";
 
 export default function EmployeeHome() {
   const session = useEmpleadoSesion();
@@ -31,6 +32,7 @@ export default function EmployeeHome() {
     </section>
     <MiTiempoPorReponer idEmpleado={session.id} />
     <VacationBalance />
+    <MiSemana />
     <section className="space-y-3"><div className="flex items-center justify-between"><h2 className="font-semibold">Solicitudes recientes</h2><Link href="/empleado/panel/solicitudes" className="flex min-h-11 items-center text-sm font-medium text-blue-600">Ver todas</Link></div><DataState loading={requests.isLoading} error={requests.error} retry={requests.mutate}>{requests.data.length ? requests.data.slice(0, 2).map(row => <Link href="/empleado/panel/solicitudes" key={row.id} className="block rounded-xl border border-slate-200 bg-white p-3.5"><RequestSummary row={row} chevron /></Link>) : <p className="text-sm text-slate-500">Aún no tienes solicitudes.</p>}</DataState></section>
     <Link href="/empleado/panel/solicitudes?nueva=1" className="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-blue-600 text-sm font-medium text-blue-600"><Plus className="size-4" />Solicitar permiso</Link>
   </div>;
