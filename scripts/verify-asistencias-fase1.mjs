@@ -57,6 +57,9 @@ Object.assign(registros[8], { nombre: "SinComida", ...comidaHorario,
 Object.assign(registros[9], { nombre: "DosTramos", ...comidaHorario,
   tramos_checadas: [{ entrada: "2026-11-13 08:07:00", salida: "2026-11-13 13:00:00" }, { entrada: "2026-11-13 14:00:00", salida: "2026-11-13 17:20:00" }],
   minutos_trabajados_checadas: 493, minutos_descanso_checadas: 60 });
+// (23/11/2026) Comida marcada con «Salir a comer»: columna propia «Comida».
+Object.assign(registros[12], { nombre: "ComidaBoton",
+  comida_checada: { salida: "2026-11-13 13:00:00", regreso: "2026-11-13 14:05:00", minutos: 65, minutos_programados: 60, excedente: 5 } });
 Object.assign(registros[3], { nombre: "Editado", correccion: 1, valores_originales: JSON.stringify({ salida: "2026-11-13 13:19:00", id_tipo_permiso: 2 }) });
 
 const puts = [];
@@ -130,6 +133,10 @@ try {
   const filaTramos = page.locator("tr", { hasText: "DosTramos Prueba" }).first();
   assert.match(await filaTramos.innerText(), /8 h 13 min de 8 h[\s\S]*Descanso 1 h/);
   assert.doesNotMatch(await filaTramos.innerText(), /No marcó salida a comer/);
+  const filaBoton = page.locator("tr", { hasText: "ComidaBoton Prueba" }).first();
+  assert.match(await filaBoton.innerText(), /1:00 p\.m\.–2:05 p\.m\. · 65 de 60 min · \+5 min/);
+  assert.doesNotMatch(await filaBoton.innerText(), /Descanso 1 h 5 min/, "la comida no se repite en Jornada");
+  assert.equal(await page.getByRole("columnheader", { name: "Comida", exact: true }).count(), 1, "columna «Comida» visible");
   const alertaComida = page.getByRole("button", { name: /No marcaron salida a comer/ });
   assert.match(await alertaComida.innerText(), /No marcaron salida a comer\s*1/);
   await alertaComida.click();
