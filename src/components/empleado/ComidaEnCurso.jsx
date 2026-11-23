@@ -51,7 +51,7 @@ export default function ComidaEnCurso({ comida, timezone }) {
         </div>
       </div>
       <Link href="/empleado/reloj-checador" className="mt-4 flex min-h-11 items-center justify-center gap-2 rounded-lg bg-amber-500 px-4 text-sm font-semibold text-white hover:bg-amber-600">
-        <Play className="size-4" /> Regresar de comer
+        <Play className="size-4" /> Regresé de comer
       </Link>
     </section>
   );
