@@ -2,10 +2,14 @@
 
 // WhatsApp de reclutamiento por empresa (solo administradores de ADAMIA, R1).
 // 27/11/2026: paquetes de entrevistas: entrevistas del mes / incluidas, extras e importe estimado del mes.
-import { useMemo, useState } from "react";
+// P7 (01/12/2026): pestaña «Salud y cobro» (?vista=salud): semáforo del agente por empresa, última falla, costo de IA del
+// mes, entrevistas contra paquete y extras a cobrar. El aviso por correo de fallas enlaza aquí.
+import { Suspense, useMemo, useState } from "react";
+import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import { enqueueSnackbar } from "notistack";
-import { MessageCircle, Pencil, Search } from "lucide-react";
+import { Activity, Building2, MessageCircle, Pencil, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import LoadingTable from "@/components/LoadingTable";
@@ -15,6 +19,7 @@ import { formatearPrecio, mensajeErrorApi, textoModo } from "@/lib/whatsapp/regl
 import { formatearTelefono } from "@/lib/whatsapp/telefono.mjs";
 import { textoEntrevistasAdmin } from "@/lib/whatsapp/paquete.mjs";
 import DialogoEmpresaWhatsapp from "./DialogoEmpresaWhatsapp";
+import SaludAdmin from "./SaludAdmin";
 
 const ESTILO_MODO = {
   apagado: "bg-slate-100 text-slate-700",
@@ -36,10 +41,54 @@ function ChipModo({ modo }) {
   );
 }
 
-export default function WhatsappAdminPage() {
+// Pestañas como enlaces (la URL cambia: «Atrás» y el enlace del correo de alerta funcionan).
+function Pestanas({ vista, pathname }) {
+  const clase = (activa) => `inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-md px-3 text-[13.5px] font-semibold md:min-h-9 md:flex-none md:px-4 ${
+    activa ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"}`;
+  return (
+    <nav aria-label="Secciones de WhatsApp" className="flex w-full rounded-lg bg-gray-100 p-0.5 md:w-fit">
+      <Link href={pathname} scroll={false} aria-current={vista === "empresas" ? "page" : undefined} className={clase(vista === "empresas")}>
+        <Building2 className="size-4" aria-hidden="true" /> Empresas
+      </Link>
+      <Link href={`${pathname}?vista=salud`} scroll={false} aria-current={vista === "salud" ? "page" : undefined} className={clase(vista === "salud")}>
+        <Activity className="size-4" aria-hidden="true" /> Salud y cobro
+      </Link>
+    </nav>
+  );
+}
+
+function PaginaAdmin() {
   const { dataUser } = useAuth();
   const esAdmin = dataUser?.tipo_usuario === "Admin";
-  const { data, error, isLoading, mutate } = useSWR(esAdmin ? `${RUTA_WA}/admin/empresas` : null, obtener);
+  const pathname = usePathname();
+  const vista = useSearchParams().get("vista") === "salud" ? "salud" : "empresas";
+  if (dataUser && !esAdmin) {
+    return <p role="alert" className="rounded-xl border p-6 text-sm">Esta sección es solo para administradores de ADAMIA.</p>;
+  }
+  return (
+    <div className="grid min-w-0 grid-cols-1 gap-6">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="flex items-center gap-2 text-2xl font-bold"><MessageCircle className="size-6" /> WhatsApp (reclutamiento)</h1>
+          <p className="text-sm text-muted-foreground">Activa WhatsApp por empresa, con el número compartido de ADAMIA o con el suyo, define su paquete de entrevistas y revisa la salud del agente.</p>
+        </div>
+      </header>
+      <Pestanas vista={vista} pathname={pathname} />
+      {esAdmin ? (vista === "salud" ? <SaludAdmin /> : <EmpresasAdmin />) : null}
+    </div>
+  );
+}
+
+export default function WhatsappAdminPage() {
+  return (
+    <Suspense fallback={<p className="text-sm text-gray-500">Cargando…</p>}>
+      <PaginaAdmin />
+    </Suspense>
+  );
+}
+
+function EmpresasAdmin() {
+  const { data, error, isLoading, mutate } = useSWR(`${RUTA_WA}/admin/empresas`, obtener);
   const [busqueda, setBusqueda] = useState("");
   const [editando, setEditando] = useState(null);
   const empresas = useMemo(() => (Array.isArray(data) ? data : data?.empresas ?? []), [data]);
@@ -58,19 +107,8 @@ export default function WhatsappAdminPage() {
     await mutate();
   };
 
-  if (dataUser && !esAdmin) {
-    return <p role="alert" className="rounded-xl border p-6 text-sm">Esta sección es solo para administradores de ADAMIA.</p>;
-  }
-
   return (
     <div className="grid min-w-0 grid-cols-1 gap-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold"><MessageCircle className="size-6" /> WhatsApp (reclutamiento)</h1>
-          <p className="text-sm text-muted-foreground">Activa WhatsApp por empresa, con el número compartido de ADAMIA o con el suyo, y define su paquete de entrevistas.</p>
-        </div>
-      </header>
-
       <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Resumen">
         {[["Empresas con WhatsApp", activas], ["Conversaciones este mes", conversaciones.toLocaleString("es-MX")], ["Entrevistas este mes", entrevistas.toLocaleString("es-MX")], ["Importe estimado del mes", formatearPrecio(importe)]].map(([t, v]) => (
           <div key={t} className="rounded-xl border p-4">

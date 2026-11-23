@@ -7,11 +7,13 @@
 // «Enviar seguimiento» con la ventana cerrada y plantillas enviadas en el mes.
 // Chat todo-en-uno: envío de archivos y notas de voz (multipart con avance y cancelar), cita fija en el hilo con sus
 // acciones y líneas de sistema, y «Ofrecer horarios». Dentro de la empresa todos ven todas las conversaciones.
+// P7 (monitoreo): pestaña «Salud del agente» (?vista=salud) y, si GET /estado trae salud.estado distinto de «ok», un aviso
+// discreto arriba («El agente falló 3 veces en las últimas 24 h · Ver detalle»).
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import useSWR from "swr";
-import { CalendarDays, MessageCircle, MessagesSquare, RefreshCw } from "lucide-react";
+import { Activity, AlertTriangle, CalendarDays, MessageCircle, MessagesSquare, RefreshCw } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import { formatearTelefono } from "@/lib/whatsapp/telefono.mjs";
@@ -20,6 +22,7 @@ import { paramsFiltro } from "@/lib/whatsapp/entrevista.mjs";
 import { avisoExtras, textoEntrevistasMes } from "@/lib/whatsapp/paquete.mjs";
 import { hoyMx, textoPlantillasMes } from "@/lib/whatsapp/agenda.mjs";
 import { CHAT_ADJUNTOS_ACTIVO, citasDelChat, lineaCita } from "@/lib/whatsapp/adjuntos.mjs";
+import { avisoBandeja } from "@/lib/whatsapp/salud.mjs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   aprobarAgenda, devolverAIa, enviarAdjunto, enviarMensaje, enviarSeguimiento, marcarAtendido, obtener, ofrecerHorarios, reintentarMensaje, rutaAgendaEmpresa, rutaAgente, rutaConversacion,
@@ -31,6 +34,7 @@ import EnlacesVacantes, { BotonEnlacesVacantes } from "./EnlacesVacantes";
 import ConfigurarAgente, { BotonAgente } from "./ConfigurarAgente";
 import PanelCandidato from "./PanelCandidato";
 import Entrevistas from "./Entrevistas";
+import SaludAgente from "./SaludAgente";
 import { DIALOGO_PANTALLA_COMPLETA } from "./controles";
 
 const POR_PAGINA = 30;
@@ -86,9 +90,25 @@ function AvisoExtras({ estado }) {
   return <p role="status" data-aviso-extras className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm font-medium text-amber-900">{texto}</p>;
 }
 
+// P7: aviso discreto de fallas del agente en 24 h con enlace a la pestaña «Salud del agente».
+function AvisoSalud({ salud, pathname }) {
+  const aviso = avisoBandeja(salud);
+  if (!aviso) return null;
+  const rojo = aviso.tono === "rojo";
+  return (
+    <p role="status" data-aviso-salud={aviso.tono}
+      className={`flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border px-3 py-2 text-[13.5px] ${rojo ? "border-red-200 bg-red-50 text-red-800" : "border-amber-200 bg-amber-50 text-amber-900"}`}>
+      <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />
+      <span className="min-w-0 font-medium">{aviso.texto}</span>
+      <span aria-hidden="true">·</span>
+      <Link href={`${pathname}?vista=salud`} scroll={false} className="inline-flex min-h-11 items-center font-semibold underline underline-offset-2 md:min-h-0">Ver detalle</Link>
+    </p>
+  );
+}
+
 // Pestañas de la página: enlaces (cambian la URL, así «Atrás» y compartir funcionan).
 function Secciones({ vista, pathname }) {
-  const clase = (activa) => `inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-md px-4 text-[13.5px] font-semibold md:min-h-9 md:flex-none ${
+  const clase = (activa) => `inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-md px-2 text-[13.5px] font-semibold sm:px-4 md:min-h-9 md:flex-none ${
     activa ? "bg-white text-gray-900 shadow-sm" : "text-gray-600 hover:text-gray-900"}`;
   return (
     <nav aria-label="Secciones de WhatsApp" className="flex w-full rounded-lg bg-gray-100 p-0.5 md:w-fit">
@@ -97,6 +117,9 @@ function Secciones({ vista, pathname }) {
       </Link>
       <Link href={`${pathname}?vista=entrevistas`} aria-current={vista === "entrevistas" ? "page" : undefined} className={clase(vista === "entrevistas")} scroll={false}>
         <CalendarDays className="size-4" aria-hidden="true" /> Entrevistas
+      </Link>
+      <Link href={`${pathname}?vista=salud`} aria-current={vista === "salud" ? "page" : undefined} className={clase(vista === "salud")} scroll={false}>
+        <Activity className="size-4" aria-hidden="true" /> <span className="sm:hidden">Salud</span><span className="max-sm:hidden">Salud del agente</span>
       </Link>
     </nav>
   );
@@ -116,7 +139,8 @@ export default function BandejaWhatsapp() {
   const pathname = usePathname();
   const params = useSearchParams();
   const abierta = params.get("c");
-  const vista = params.get("vista") === "entrevistas" && !abierta ? "entrevistas" : "conversaciones";
+  const vistaUrl = params.get("vista");
+  const vista = !abierta && (vistaUrl === "entrevistas" || vistaUrl === "salud") ? vistaUrl : "conversaciones";
   const abrioDesdeLista = useRef(false);
   const { empresas, idEmpresa, setIdEmpresa } = useEmpresa(dataUser);
   const rol = dataUser?.tipo_usuario === "User" ? "Recruiter" : dataUser?.tipo_usuario;
@@ -500,12 +524,13 @@ export default function BandejaWhatsapp() {
           <Secciones vista={vista} pathname={pathname} />
           <ChipEstado estado={estado} />
           <AvisoExtras estado={estado} />
+          {vista !== "salud" ? <AvisoSalud salud={estado.salud} pathname={pathname} /> : null}
           {!estado.puede_usar ? (
             <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
               Por ahora tu empresa no puede enviar mensajes por WhatsApp. Pídele a ADAMIA que lo revise.
             </p>
           ) : null}
-          {vista === "entrevistas" ? <Entrevistas idEmpresa={idEmpresa} ahora={ahora} /> : (
+          {vista === "entrevistas" ? <Entrevistas idEmpresa={idEmpresa} ahora={ahora} /> : vista === "salud" ? <SaludAgente idEmpresa={idEmpresa} ahora={ahora} pathname={pathname} /> : (
           <div className="flex min-h-0 min-w-0 overflow-hidden md:h-[calc(100dvh-14rem)] md:min-h-[460px] md:rounded-2xl md:border md:border-gray-200 md:bg-white">
             <div className={`flex min-w-0 flex-col md:w-[340px] md:shrink-0 md:border-r md:border-gray-200 lg:w-[380px] ${abierta ? "xl:w-[320px] 2xl:w-[380px]" : ""} max-md:w-auto max-md:flex-1 max-md:rounded-2xl max-md:border max-md:border-gray-200 max-md:bg-white ${abierta ? "max-md:hidden" : ""}`}>
               <ListaConversaciones
