@@ -16,7 +16,9 @@ export default function PreguntasVacante({ preguntas = [], valores, onCambiar, e
       <h3 id="preguntas-vacante" className="text-lg font-bold text-slate-700">Preguntas del puesto</h3>
       {preguntas.map((p) => {
         const id = `pregunta-${p.id}`;
-        const error = errores.includes(p.id);
+        const valorActual = valores[p.id];
+        // El aviso se quita en cuanto se responde (antes seguía en rojo hasta volver a enviar).
+        const error = errores.includes(p.id) && (valorActual == null || valorActual === "" || (Array.isArray(valorActual) && !valorActual.length));
         const comun = { id, disabled, "aria-invalid": error || undefined, "aria-describedby": error ? `${id}-error` : undefined };
         const valor = valores[p.id] ?? (p.type === "multiselect" ? [] : "");
         return (
