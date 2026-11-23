@@ -48,11 +48,17 @@ export default function CambiarContrasenaEmpleado({ empleado, conTexto = false }
     if (!puede) return;
     setGuardando(true);
     try {
-      const r = await axios.put(`/checador/empleados/${empleado.id_empleado}/contrasena`, { contrasena: nueva });
+      // (23/11/2026) Con tiempo límite: si el servidor no está disponible no se queda en «Guardando…» para siempre.
+      const r = await axios.put(`/checador/empleados/${empleado.id_empleado}/contrasena`, { contrasena: nueva }, { timeout: 20000 });
       setListo({ correo: r.data?.correo, contrasena: nueva });
       enqueueSnackbar("Contraseña actualizada.", { variant: "success" });
     } catch (err) {
-      enqueueSnackbar(err?.response?.data?.error || "No se pudo cambiar la contraseña.", { variant: "error" });
+      const estado = err?.response?.status;
+      const sinServidor = !err?.response || estado === 502 || estado === 503 || estado === 504 || err?.code === "ECONNABORTED";
+      enqueueSnackbar(
+        sinServidor ? "El servidor no respondió (puede estar actualizándose). La contraseña no se cambió; intenta de nuevo en un minuto." : err?.response?.data?.error || "No se pudo cambiar la contraseña.",
+        { variant: "error" },
+      );
     } finally {
       setGuardando(false);
     }

@@ -49,7 +49,12 @@ try {
     const json = (data, status = 200) => route.fulfill({ status, contentType: "application/json", headers: cors, body: JSON.stringify(data) });
     const p = url.pathname.replace("/api", "");
     if (p.endsWith("/users/verify/token")) return json({ user: usuario });
-    if (p === "/checador/empleados/15/contrasena" && req.method() === "PUT") { puts.push(req.postDataJSON()); return json({ ok: true, correo: "ana@prueba.mx" }); }
+    if (p === "/checador/empleados/15/contrasena" && req.method() === "PUT") {
+      puts.push(req.postDataJSON());
+      // (23/11/2026) La primera vez el servidor no está disponible (503): no debe quedarse en «Guardando…».
+      if (puts.length === 1) return route.fulfill({ status: 503, contentType: "text/html", headers: cors, body: "<html>503</html>" });
+      return json({ ok: true, correo: "ana@prueba.mx" });
+    }
     if (p === "/checador/empleados") return json({ data: [emp], total: 1, page: 1, totalPages: 1 });
     return json({});
   });
@@ -67,9 +72,12 @@ try {
   const generada = await dlg.getByLabel("Nueva contraseña").inputValue();
   assert.match(generada, /^(?=.*[A-Za-z])(?=.*\d).{10}$/, `generada: ${generada}`);
   await dlg.getByRole("button", { name: "Cambiar contraseña" }).click();
+  await page.getByText(/El servidor no respondió/).waitFor({ timeout: 10000 });
+  assert.equal(await dlg.getByRole("button", { name: "Cambiar contraseña" }).isDisabled(), false, "no se queda en «Guardando…»");
+  await dlg.getByRole("button", { name: "Cambiar contraseña" }).click();
   await dlg.getByText("Listo. Ya puede entrar con:").waitFor();
   await dlg.getByText("ana@prueba.mx").waitFor();
-  assert.deepEqual(puts, [{ contrasena: generada }], "solo manda la contraseña");
+  assert.deepEqual(puts, [{ contrasena: generada }, { contrasena: generada }], "solo manda la contraseña");
   await captura(page, "cambiar-contrasena");
   await dlg.getByRole("button", { name: "Cerrar" }).click();
   await dormir(400);
