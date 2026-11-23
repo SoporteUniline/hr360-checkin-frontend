@@ -7,6 +7,7 @@ import DiagnosticoReloj from "@/components/DiagnosticoReloj";
 import { useNativeBackButton } from "@/hooks/Capacitor/useNativeBackButton";
 import OfflineExperience from '@/components/OfflineExperience';
 import FaceReferenceSync from '@/components/Clock/FaceReferenceSync';
+import { CambiosPendientesProvider } from '@/components/cambios/CambiosPendientes';
 
 export function ClientProviders({ children }) {
   useNativeBackButton();
@@ -18,8 +19,11 @@ export function ClientProviders({ children }) {
       <OfflineExperience />
       <FaceReferenceSync />
       <FaceApiPreloader />
-      {children}
-      <CommandPalette />
+      {/* Guardia común de «cambios sin guardar»: cubre el panel, el menú lateral y el buscador. */}
+      <CambiosPendientesProvider>
+        {children}
+        <CommandPalette />
+      </CambiosPendientesProvider>
     </AuthProvider>
   );
 }

@@ -32,7 +32,7 @@ const DIAS_SEMANA = [
   "Domingo",
 ];
 
-export default function TabJornada({ renderCampos = () => null, form, soloLectura, empleadoId }) {
+export default function TabJornada({ renderCampos = () => null, form, soloLectura, empleadoId, sincronizarCampo }) {
   const [diasSeleccionados, setDiasSeleccionados] = useState([]);
   const [entradaComun, setEntradaComun] = useState("");
   const [salidaComun, setSalidaComun] = useState("");
@@ -214,6 +214,17 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
 
     let cancelado = false;
 
+    // (23/11/2026) El turno que ya tiene asignado viene del servidor: es la base de la ficha, no un cambio sin guardar.
+    const fijarTurno = (tipo, idTurno) => {
+      if (sincronizarCampo) {
+        sincronizarCampo("tipo_horario", tipo);
+        sincronizarCampo("id_turno", idTurno);
+        return;
+      }
+      form.setValue("tipo_horario", tipo, { shouldDirty: false, shouldValidate: false });
+      form.setValue("id_turno", idTurno, { shouldDirty: false, shouldValidate: false });
+    };
+
     const cargarTurnoEmpleado = async () => {
       try {
         setCargandoTurnoEmpleado(true);
@@ -232,39 +243,15 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
         const turnoId = turno?.id_turno;
 
         if (turnoId) {
-          form.setValue("tipo_horario", "turno", {
-            shouldDirty: false,
-            shouldValidate: false,
-          });
-
-          form.setValue("id_turno", String(turnoId), {
-            shouldDirty: false,
-            shouldValidate: false,
-          });
+          fijarTurno("turno", String(turnoId));
         } else {
-          form.setValue("tipo_horario", "personalizado", {
-            shouldDirty: false,
-            shouldValidate: false,
-          });
-
-          form.setValue("id_turno", null, {
-            shouldDirty: false,
-            shouldValidate: false,
-          });
+          fijarTurno("personalizado", null);
         }
       } catch (error) {
         if (cancelado) return;
 
         if (error?.response?.status === 404) {
-          form.setValue("tipo_horario", "personalizado", {
-            shouldDirty: false,
-            shouldValidate: false,
-          });
-
-          form.setValue("id_turno", null, {
-            shouldDirty: false,
-            shouldValidate: false,
-          });
+          fijarTurno("personalizado", null);
         } else {
           console.error("Error cargando turno del empleado:", error);
         }
@@ -280,7 +267,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
     return () => {
       cancelado = true;
     };
-  }, [empleadoId, form]);
+  }, [empleadoId, form, sincronizarCampo]);
 
   const seleccionarTurno = async (valor) => {
     try {

@@ -184,19 +184,24 @@ try {
   assert.deepEqual(estado.ediciones.at(-1).lineas, [{ clave: "concepto:1", importe: 0, motivo: "Se le quitó (también de su ficha)" }]);
   await page.keyboard.press("Escape");
 
-  // 2b) Clic en el NOMBRE: abre aquí mismo su ficha (la misma de Empleados), con «Editar»; Ctrl+clic sería otra pestaña.
+  // 2b) Clic en el NOMBRE: abre aquí mismo su ficha (la misma de Empleados), ya editable (23/11/2026); Ctrl+clic sería
+  // otra pestaña.
   const enlace = page.getByRole("row", { name: /Ana Torres/ }).first().getByRole("link", { name: "Ana Torres" });
   assert.equal(await enlace.getAttribute("href"), "/panel/empleados?id=15");
   await enlace.click();
   const ficha = page.getByRole("dialog", { name: "Ficha de Ana Torres Paz" });
-  await ficha.getByRole("button", { name: "Editar" }).first().waitFor({ timeout: 20000 });
+  await ficha.getByRole("button", { name: "Guardar" }).first().waitFor({ timeout: 20000 });
   assert.ok(page.url().endsWith("/panel/nomina/5"), "no salió de la nómina");
   assert.equal(estado.fichas, 1);
   await dormir(400);
   await captura(page, "ficha-flotante");
-  await ficha.getByRole("button", { name: "Editar" }).first().click();
-  await ficha.getByRole("button", { name: "Actualizar" }).first().waitFor();
+  assert.equal(await ficha.getByRole("button", { name: "Editar", exact: true }).count(), 0, "abre editable, sin «Editar»");
+  assert.equal(await ficha.locator("[data-boton-guardar]:visible").isDisabled(), true, "sin cambios, Guardar deshabilitado");
+  // Con cambios, cerrar la ventana pregunta antes («Salir sin guardar» la cierra).
+  await ficha.locator('input[name="telefono"]').fill("8110000000");
   await ficha.getByRole("button", { name: "Cerrar" }).first().click();
+  await page.getByRole("alertdialog").getByText("Tienes cambios sin guardar").waitFor();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Salir sin guardar" }).click();
   await ficha.waitFor({ state: "detached" });
   await page.getByRole("region", { name: "Asistencia de Ana Torres" }).waitFor(); // la fila desplegada sigue igual
 

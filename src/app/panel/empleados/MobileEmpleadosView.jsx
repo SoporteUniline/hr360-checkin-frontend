@@ -205,7 +205,7 @@ export default function MobileEmpleadosView({
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-2xl font-bold tracking-tight">Empleados</h1>
           <button
-            onClick={() => abrirFormulario(null, false, false)}
+            onClick={() => abrirFormulario(null)}
             className="flex min-h-10 items-center gap-1.5 bg-brand hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold px-3.5 rounded-xl transition-colors"
           >
             <Plus className="w-4 h-4" />
@@ -294,7 +294,7 @@ export default function MobileEmpleadosView({
           </div>
         ) : (
           filtered.map((emp) => (
-            <EmpleadoCard key={emp.id_empleado} emp={emp} onClick={(e) => abrirFormulario(e, false, true)} />
+            <EmpleadoCard key={emp.id_empleado} emp={emp} onClick={(e) => abrirFormulario(e)} />
           ))
         )}
       </div>
