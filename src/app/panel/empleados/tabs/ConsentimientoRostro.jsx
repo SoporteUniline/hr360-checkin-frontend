@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSnackbar } from "notistack";
 import { firmaDigitalAdminApi } from "@/lib/firmaDigitalApi";
+import { FileCheck2 } from "lucide-react";
 import EvidenciaFirma from "@/components/firma/EvidenciaFirma";
 import { estadoConsentimiento } from "@/lib/legal/consentimientoRostro.mjs";
 import { dibujarConsentimientoRostro } from "@/lib/legal/consentimientoRostroPdf.mjs";
@@ -99,7 +100,7 @@ export default function ConsentimientoRostro({ idEmpresa, idEmpleado, nombre, em
 
   if (!idEmpleado) {
     return (
-      <section className={`w-full max-w-md rounded-xl border p-4 text-sm ${ESTILO.pendiente}`} aria-label="Consentimiento del rostro">
+      <section className={`w-full rounded-xl border p-4 text-sm ${ESTILO.pendiente}`} aria-label="Consentimiento del rostro">
         <b>Consentimiento del rostro</b>
         <p className="mt-1">Guarda primero al empleado para generar su consentimiento de uso del rostro.</p>
       </section>
@@ -107,27 +108,31 @@ export default function ConsentimientoRostro({ idEmpresa, idEmpleado, nombre, em
   }
 
   return (
-    <section className={`w-full max-w-md rounded-xl border p-4 text-sm ${ESTILO[estado.tipo]}`} aria-label="Consentimiento del rostro" aria-busy={cargando}>
+    <section className={`w-full rounded-xl border p-4 text-sm ${ESTILO[estado.tipo]}`} aria-label="Consentimiento del rostro" aria-busy={cargando}>
       <div className="flex items-start justify-between gap-3">
         <b>Consentimiento del rostro</b>
         <span className="rounded-full bg-white/80 px-2 py-0.5 text-xs font-semibold">{cargando ? "Revisando…" : estado.etiqueta}</span>
       </div>
       {cargando ? null : estado.tipo === "firmado" ? (
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <span>{estado.detalle}</span>
+        <div className="mt-2 grid gap-3">
+          <p className="m-0">{estado.detalle}</p>
           {solicitud?.tiene_documento_firmado ? (
-            <button type="button" onClick={verFirmado} className="font-semibold underline underline-offset-2">Ver documento firmado</button>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={verFirmado} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-[13px] font-semibold text-slate-700 hover:bg-slate-50">
+                <FileCheck2 className="size-4 text-brand" aria-hidden="true" /> Ver documento firmado
+              </button>
+              <EvidenciaFirma idSolicitud={solicitud.id} idEmpresa={idEmpresa} className="min-h-11!" />
+            </div>
           ) : null}
-          {solicitud?.tiene_documento_firmado ? <EvidenciaFirma idSolicitud={solicitud.id} idEmpresa={idEmpresa} /> : null}
         </div>
       ) : estado.tipo === "esperando" ? (
         <div className="mt-2 grid gap-2">
           <p className="m-0">{estado.detalle} Comparte el enlace con el empleado o ábrelo aquí para que firme en esta pantalla.</p>
           {enlace ? (
             <div className="flex flex-wrap gap-2">
-              <button type="button" onClick={copiar} className="rounded-lg bg-white px-3 py-2 font-semibold shadow-sm">Copiar enlace</button>
-              <a href={enlace} target="_blank" rel="noopener noreferrer" className="rounded-lg bg-white px-3 py-2 font-semibold shadow-sm">Firmar aquí</a>
-              <a href={`https://wa.me/?text=${encodeURIComponent(`Firma tu consentimiento de uso del rostro para checar: ${enlace}`)}`} target="_blank" rel="noopener noreferrer" className="rounded-lg bg-white px-3 py-2 font-semibold shadow-sm">Enviar por WhatsApp</a>
+              <button type="button" onClick={copiar} className="inline-flex min-h-11 items-center rounded-lg bg-white px-3 font-semibold shadow-sm">Copiar enlace</button>
+              <a href={enlace} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded-lg bg-white px-3 font-semibold shadow-sm">Firmar aquí</a>
+              <a href={`https://wa.me/?text=${encodeURIComponent(`Firma tu consentimiento de uso del rostro para checar: ${enlace}`)}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center rounded-lg bg-white px-3 font-semibold shadow-sm">Enviar por WhatsApp</a>
             </div>
           ) : null}
         </div>
@@ -136,7 +141,7 @@ export default function ConsentimientoRostro({ idEmpresa, idEmpleado, nombre, em
           <p className="m-0">
             {estado.detalle} No es obligatorio para checar, pero es la constancia de que el empleado aceptó el uso de su rostro (dato sensible).
           </p>
-          <button type="button" onClick={generar} disabled={generando} className="justify-self-start rounded-lg bg-[#2c56e8] px-3 py-2 font-semibold text-white disabled:opacity-60">
+          <button type="button" onClick={generar} disabled={generando} className="min-h-11 justify-self-start rounded-lg bg-[#2c56e8] px-3 font-semibold text-white disabled:opacity-60">
             {generando ? "Generando…" : "Generar consentimiento para firmar"}
           </button>
         </div>
