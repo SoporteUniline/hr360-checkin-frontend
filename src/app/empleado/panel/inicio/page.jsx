@@ -11,6 +11,7 @@ import VacationBalance from "@/components/empleado/VacationBalance";
 import AttendanceCard from "@/components/empleado/AttendanceCard";
 import { DataState } from "@/components/empleado/shared";
 import MiTiempoPorReponer from "@/components/empleado/MiTiempoPorReponer";
+import ComidaEnCurso from "@/components/empleado/ComidaEnCurso";
 
 export default function EmployeeHome() {
   const session = useEmpleadoSesion();
@@ -20,6 +21,7 @@ export default function EmployeeHome() {
   const rows = Array.isArray(data?.registrosHoy) ? data.registrosHoy : [];
   return <div className="space-y-4">
     <div><h1 className="text-3xl font-bold tracking-tight">Hola, {session.dataUser?.nombre?.split(" ")[0] || "bienvenido"}</h1><p className="mt-1 text-base first-letter:uppercase text-slate-500">{new Intl.DateTimeFormat("es-MX", { weekday: "long", day: "numeric", month: "long", timeZone: timezone }).format(new Date())}</p></div>
+    <ComidaEnCurso comida={data?.comida} timezone={data?.zona_horaria || timezone} />
     <section className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
       <h2 className="mb-3 font-semibold">Tu jornada de hoy</h2>
       <DataState loading={session.isLoading || isLoading} error={session.error || error} retry={mutate}>

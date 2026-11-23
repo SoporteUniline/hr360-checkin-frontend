@@ -153,7 +153,7 @@ export default function Home() {
       );
 
       if (data.requiereDecision) {
-        enqueueSnackbar('Selecciona salida temporal o cerrar turno en las checadas pendientes.', { variant: 'info' });
+        enqueueSnackbar(`${data.message || 'Elige qué registrar'}: elige la opción en las checadas pendientes.`, { variant: 'info' });
         return;
       }
 

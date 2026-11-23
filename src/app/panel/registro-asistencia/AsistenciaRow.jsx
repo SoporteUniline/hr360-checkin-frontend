@@ -260,9 +260,16 @@ export default function AsistenciaRow({
                         />
                       </div>
                     )}
-                    {detalleTramos && (
+                    {registro.comida_checada ? (
+                      // (23/11/2026) Comida marcada con «Salir a comer»: horario, minutos y si se pasó de su tiempo.
+                      <span className={`mt-1 block text-[11px] ${registro.comida_checada.excedente > 0 ? "font-semibold text-red-600" : "text-slate-500"}`}>
+                        Comida {horaVer(registro.comida_checada.salida)}–{registro.comida_checada.regreso ? horaVer(registro.comida_checada.regreso) : "…"}
+                        {registro.comida_checada.minutos != null ? ` · ${registro.comida_checada.minutos} min${registro.comida_checada.minutos_programados ? ` de ${registro.comida_checada.minutos_programados}` : ""}` : " · en comida"}
+                        {registro.comida_checada.excedente > 0 ? ` · se pasó ${registro.comida_checada.excedente} min` : ""}
+                      </span>
+                    ) : detalleTramos ? (
                       <span className="mt-1 block text-[11px] text-slate-400">Descanso {formatearMinutos(descansoTomado)}</span>
-                    )}
+                    ) : null}
                   </div>
                 )}
               </TableCell>

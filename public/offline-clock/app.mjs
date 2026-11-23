@@ -1,7 +1,7 @@
 import { getConfig, listEvents, saveEvent, readToken, fingerprint, ownEvents, syncEvents, syncCompanyEvents } from './store.mjs?v=4';
 
 const $ = id => document.getElementById(id);
-const labels = { entrada: 'Entrada', salida: 'Salida', salida_temporal: 'Salida temporal', cerrar_turno: 'Cerrar turno' };
+const labels = { entrada: 'Entrada', salida: 'Salida', salida_comida: 'Salir a comer', salida_temporal: 'Salida temporal', cerrar_turno: 'Cerrar turno' };
 let profile;
 let stream;
 let busy = false;
@@ -170,7 +170,8 @@ try {
   if (!profile) throw new Error('Primero abre el reloj de empresa o el del empleado con internet y pulsa “Preparar reloj offline”.');
   await currentSession();
   $('employee').textContent = profile.nombre;
-  const actions = profile.scope === 'company' ? ['entrada', 'salida', 'salida_temporal', 'cerrar_turno'] : profile.cierre_turno === 'Manual' ? ['entrada', 'salida_temporal', 'cerrar_turno'] : ['entrada', 'salida'];
+  // (23/11/2026) «Salir a comer» disponible sin conexión para cierre manual y automático.
+  const actions = profile.scope === 'company' ? ['entrada', 'salida', 'salida_comida', 'salida_temporal', 'cerrar_turno'] : profile.cierre_turno === 'Manual' ? ['entrada', 'salida_comida', 'salida_temporal', 'cerrar_turno'] : ['entrada', 'salida_comida', 'salida'];
   for (const action of actions) $('action').add(new Option(labels[action], action));
   const methods = ['codigo'];
   for (const method of methods) $('method').add(new Option(method === 'codigo' ? 'Código / contenido numérico del QR' : 'Reconocimiento facial', method));

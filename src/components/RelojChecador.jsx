@@ -298,7 +298,7 @@ export default function RelojChecador({
       }
 
       if (data.requiereDecision) {
-        setPendiente({ tipo: "codigo", codigo, offline_event: data.offline_event });
+        setPendiente({ tipo: "codigo", codigo, offline_event: data.offline_event, opciones: data.opciones, mensaje: data.message });
         setMostrarModalTurno(true);
         setRegistrando(false);
         return;
@@ -368,6 +368,8 @@ export default function RelojChecador({
         tipo: "facial",
         descriptor_facial: data.descriptor_facial,
         offline_event: data.offline_event,
+        opciones: data.opciones,
+        mensaje: data.message,
       });
       setMostrarModalTurno(true);
     } else {
@@ -385,7 +387,7 @@ export default function RelojChecador({
         // Cierre manual: después de «Sí, registrar» pregunta «salida temporal / cerrar turno»; la decisión
         // conserva repetir y el tipo (código o rostro) para no volver a chocar con el candado.
         const { codigo, descriptor_facial } = pregunta.reintentar;
-        setPendiente({ tipo: codigo ? "codigo" : "facial", codigo, descriptor_facial, offline_event: data.offline_event, repetir: true });
+        setPendiente({ tipo: codigo ? "codigo" : "facial", codigo, descriptor_facial, offline_event: data.offline_event, repetir: true, opciones: data.opciones, mensaje: data.message });
         setMostrarModalTurno(true);
       } else {
         mostrarResultado(data);
@@ -836,29 +838,31 @@ export default function RelojChecador({
           <div className="fixed inset-0 z-110 flex items-end md:items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
             <div className="bg-white rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl p-8 w-full max-w-sm animate-in slide-in-from-bottom-10 duration-300">
               <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6 md:hidden" />
+              {/* (23/11/2026) Opciones que manda el servidor: «Salir a comer» / «Registrar salida» o las de cierre manual. */}
               <h2 className="text-2xl font-black text-slate-800 mb-2 tracking-tight">
-                Turno abierto
+                {pendiente?.opciones?.includes("salida_comida") ? "¿Sales a comer?" : "Turno abierto"}
               </h2>
               <p className="text-slate-500 text-sm font-medium mb-8 leading-relaxed">
-                Detectamos que ya tienes un turno en proceso. ¿Cuál es el
-                siguiente paso?
+                {pendiente?.opciones?.includes("salida_comida")
+                  ? "Elige si sales a comer (tu jornada sigue abierta) o si terminas tu jornada."
+                  : "Detectamos que ya tienes un turno en proceso. ¿Cuál es el siguiente paso?"}
               </p>
               <div className="flex flex-col gap-3">
-                <Button
-                  onClick={() => registrarConAccion("salida_temporal")}
-                  disabled={registrando}
-                  className="w-full py-7 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold border-none transition-all disabled:opacity-50"
-                >
-                  {registrando ? "Procesando..." : "Salida temporal"}
-                </Button>
-
-                <Button
-                  onClick={() => registrarConAccion("cerrar_turno")}
-                  disabled={registrando}
-                  className="w-full py-7 rounded-2xl bg-red-500 text-white hover:bg-red-600 font-bold shadow-lg shadow-red-200 transition-all border-none disabled:bg-red-300"
-                >
-                  {registrando ? "Cerrando..." : "Cerrar turno"}
-                </Button>
+                {(pendiente?.opciones?.length ? pendiente.opciones : ["salida_temporal", "cerrar_turno"]).map((opcion) => {
+                  const estilo = {
+                    salida_comida: "bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-200 disabled:bg-amber-300",
+                    salida: "bg-white text-blue-700 border-2 border-blue-200 hover:bg-blue-50",
+                    salida_temporal: "bg-slate-100 hover:bg-slate-200 text-slate-900 border-none",
+                    cerrar_turno: "bg-red-500 text-white hover:bg-red-600 shadow-lg shadow-red-200 border-none disabled:bg-red-300",
+                  }[opcion] || "bg-slate-100 text-slate-900";
+                  const texto = { salida_comida: "Salir a comer", salida: "Registrar salida", salida_temporal: "Salida temporal", cerrar_turno: "Cerrar turno" }[opcion] || opcion;
+                  return (
+                    <Button key={opcion} onClick={() => registrarConAccion(opcion)} disabled={registrando}
+                      className={`w-full py-7 rounded-2xl font-bold transition-all disabled:opacity-50 ${estilo}`}>
+                      {registrando ? "Procesando..." : texto}
+                    </Button>
+                  );
+                })}
 
                 <Button
                   onClick={() => {

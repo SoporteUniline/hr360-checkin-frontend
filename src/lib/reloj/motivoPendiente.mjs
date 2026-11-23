@@ -27,5 +27,6 @@ export function preguntaRepetida(rebote, mensaje) {
 
 export function textoChecada(accion, mensaje) {
   if (accion === 'ignorada') return mensaje || 'Ya estaba registrada hace menos de 5 minutos';
+  if (accion === 'salida_comida') return 'Salida a comer registrada. ¡Buen provecho!';
   return accion === 'entrada' ? 'Entrada registrada' : 'Salida registrada';
 }

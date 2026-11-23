@@ -2,7 +2,7 @@ import { TableRow, TableCell } from '@/components/ui/table';
 import { Clock4 } from 'lucide-react';
 import { motivoPendiente, errorDelServidor } from '@/lib/reloj/motivoPendiente.mjs';
 
-const actions = { entrada: 'Entrada', salida: 'Salida', salida_temporal: 'Salida temporal', cerrar_turno: 'Cerrar turno', auto: 'Entrada / salida por confirmar' };
+const actions = { entrada: 'Entrada', salida: 'Salida', salida_comida: 'Salida a comer', salida_temporal: 'Salida temporal', cerrar_turno: 'Cerrar turno', auto: 'Entrada / salida por confirmar' };
 const states = { pending: 'Pendiente de sincronizar', review: 'Requiere revisión', decision: 'Requiere decisión de turno' };
 
 export default function LocalClockRows({ events, columns, timezone }) {
