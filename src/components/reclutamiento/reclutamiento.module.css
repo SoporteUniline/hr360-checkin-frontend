@@ -1244,3 +1244,20 @@
     animation: none !important;
   }
 }
+/* 03/12/2026 · Celular: todo control del módulo (y de sus diálogos) mide al menos 44 px de alto para el dedo. */
+@media (max-width: 767px) {
+  .root :is(button, select, textarea, [role="tab"], input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"])) {
+    min-height: 44px;
+  }
+  .root a {
+    min-height: 44px;
+  }
+  .root a:not([class]),
+  .root a[class*="textLink"] {
+    display: inline-flex;
+    align-items: center;
+  }
+  .root .check {
+    min-height: 44px;
+  }
+}

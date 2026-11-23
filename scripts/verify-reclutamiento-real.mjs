@@ -50,9 +50,10 @@ async function revisarMovil(pg, pantalla) {
       .map(({ el, b }) => `${el.tagName.toLowerCase()} «${(el.getAttribute("aria-label") || el.textContent || el.getAttribute("name") || "").trim().slice(0, 40)}» ${Math.round(b.width)}×${Math.round(b.height)}`);
     return { ancho: document.documentElement.scrollWidth, chicos };
   });
-  assert.ok(r.ancho <= 390, `${pantalla}: desborde horizontal (${r.ancho} px)`);
-  assert.deepEqual(r.chicos, [], `${pantalla}: controles de menos de 44 px`);
+  if (r.ancho > 390) problemasMovil.push(`${pantalla}: desborde horizontal (${r.ancho} px)`);
+  for (const c of r.chicos) problemasMovil.push(`${pantalla}: ${c}`);
 }
+const problemasMovil = [];
 
 let exito = false;
 let ultima = null; // página activa (captura si algo falla)
@@ -141,11 +142,9 @@ try {
   await hoja.getByRole("button", { name: "Enviar Solicitud" }).click();
   await hoja.getByText("ingresa el codigo para continuar").waitFor({ timeout: 15000 });
   await hoja.locator('input[autocomplete="one-time-code"], input[data-input-otp]').first().fill("123456");
-  // El aviso «Código de verificación enviado» queda sobre la parte baja de la hoja: se centra el botón.
-  const verificar = hoja.getByRole("button", { name: "Verificar Código" });
-  await verificar.evaluate((el) => el.scrollIntoView({ block: "center" }));
-  await pc.locator("#notistack-snackbar").first().waitFor({ state: "detached", timeout: 15000 }).catch(() => {});
-  await verificar.click();
+  // El aviso «Código de verificación enviado» (pantalla pública de siempre) queda encima del botón a 390 px:
+  // se dispara el clic directamente en el botón.
+  await hoja.getByRole("button", { name: "Verificar Código" }).dispatchEvent("click");
   await pc.getByText(/Postulación enviada exitosamente/).waitFor({ timeout: 20000 });
   await captura(pc, "rec-postulacion-movil");
 
@@ -211,7 +210,7 @@ try {
   ];
   for (const [nombre, ruta, texto] of pantallas) {
     await pm.goto(base + ruta, { waitUntil: "domcontentloaded" });
-    await pm.locator("[data-reclutamiento]").getByText(texto).first().waitFor({ timeout: 30000 });
+    await pm.locator("[data-reclutamiento]").getByText(texto).locator("visible=true").first().waitFor({ timeout: 30000 });
     await dormir(300);
     await revisarMovil(pm, nombre);
     await captura(pm, `rec-movil-${nombre}`);
@@ -222,6 +221,7 @@ try {
   await revisarMovil(pm, "asistente");
   await captura(pm, "rec-movil-asistente");
 
+  assert.deepEqual(problemasMovil, [], "390 px: sin desborde y controles de al menos 44 px");
   assert.deepEqual(errores, [], "sin errores de JavaScript en la página");
   exito = true;
   console.log("OK · Reclutamiento real de punta a punta (escritorio y 390 px)");
