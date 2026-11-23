@@ -33,6 +33,8 @@ import RangoFechasModal from "@/components/filtros/RangoFechasModal";
 import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import { fetchImageAsDataUrl } from "@/lib/pdfCompanyLogo";
+import { loadAdamiaMarca, dibujarPieAdamia } from "@/lib/pdfAdamiaTheme";
+import { nombreArchivoPdf } from "@/lib/nombreArchivo.mjs";
 import { BarChart3, FileDown, FileSpreadsheet, Search } from "lucide-react";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import ResumenLey, { Chip } from "./ResumenLey";
@@ -56,13 +58,16 @@ function humanDate(isoDate) {
   });
 }
 
-function fileDate(isoDate) {
-  // Devuelve DD_MM_YYYY para nombre de archivo
-  const d = new Date(isoDate + "T00:00:00Z");
-  const dd = String(d.getUTCDate()).padStart(2, "0");
-  const mm = String(d.getUTCMonth() + 1).padStart(2, "0");
-  const yy = d.getUTCFullYear();
-  return `${dd}_${mm}_${yy}`;
+// Nombre de los archivos del reporte (PDF y Excel): documento, número de
+// empleado (si es uno solo) y periodo; nunca el nombre del empleado.
+function nombreArchivoReporte(reportes, fechaInicio, fechaFin, extension) {
+  const unico = reportes.length === 1 ? reportes[0]?.empleado : null;
+  return nombreArchivoPdf({
+    documento: "Reporte horas",
+    empleado: unico,
+    periodo: { inicio: fechaInicio, fin: fechaFin },
+    extension,
+  });
 }
 
 function EstadoPill({ value }) {
@@ -579,20 +584,7 @@ export default function ReporteHorasPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      let xlsName = "reporte_horas_multiples.xls";
-      if (reportes.length === 1) {
-        const emp = (reportes[0]?.empleado?.nombre_empleado || "empleado")
-          .replace(/[\\/:*?"<>|]/g, "")
-          .replace(/\s+/g, " ")
-          .trim();
-        const fi = fileDate(fechaInicio);
-        const ff = fileDate(fechaFin);
-        xlsName = `${emp}_${fi}_al_${ff}.xls`;
-      } else {
-        const fi = fileDate(fechaInicio);
-        const ff = fileDate(fechaFin);
-        xlsName = `reporte_horas_${fi}_al_${ff}.xls`;
-      }
+      const xlsName = nombreArchivoReporte(reportes, fechaInicio, fechaFin, "xls");
       a.download = xlsName;
       document.body.appendChild(a);
       a.click();
@@ -666,6 +658,7 @@ export default function ReporteHorasPage() {
 
       // Logotipo oficial (mismo asset del sitio); proporción 2160x1000.
       const logoDataUrl = await fetchImageAsDataUrl("/assets/adamia.png");
+      const marcaAdamia = await loadAdamiaMarca(); // logotipo del pie homologado
       const LOGO_RATIO = 2160 / 1000;
 
       const pageWidth = pdf.internal.pageSize.getWidth();
@@ -1040,46 +1033,15 @@ export default function ReporteHorasPage() {
         drawSignatures(afterY + 56);
       });
 
-      // Pie de página en todas las hojas: línea degradada, marca y numeración.
-      const totalPages = pdf.getNumberOfPages();
-      for (let page = 1; page <= totalPages; page++) {
-        pdf.setPage(page);
-        const lineY = pageHeight - footerReserved + 6;
-        const textY = lineY + 14;
-        gradientLine(marginX, pageWidth - marginX, lineY, 0.8);
-        pdf.setFont(FONT, "bold");
-        pdf.setFontSize(7.5);
-        pdf.setTextColor(...BLUE);
-        pdf.text("Adamia", marginX, textY);
-        const brandW = pdf.getTextWidth("Adamia");
-        pdf.setFont(FONT, "normal");
-        pdf.setTextColor(...MUTED);
-        pdf.text("  ·  Reporte de Horas", marginX + brandW, textY);
-        pdf.text(
-          `Página ${page} de ${totalPages}`,
-          pageWidth - marginX,
-          textY,
-          {
-            align: "right",
-          },
-        );
-      }
+      // Pie homologado ADAMIA en cada hoja (logotipo, fecha, Página X de Y).
+      dibujarPieAdamia(pdf, {
+        font: FONT,
+        logo: marcaAdamia,
+        documento: "Reporte de horas trabajadas",
+        margenMm: (marginX * 25.4) / 72,
+      });
 
-      const r0 = reportes[0];
-      let filename = "reporte_horas_multiples.pdf";
-      if (reportes.length === 1) {
-        const emp = (r0?.empleado?.nombre_empleado || "empleado")
-          .replace(/[\\/:*?"<>|]/g, "")
-          .replace(/\s+/g, " ")
-          .trim();
-        const fi = fileDate(fechaInicio);
-        const ff = fileDate(fechaFin);
-        filename = `${emp}_${fi}_al_${ff}.pdf`;
-      } else {
-        const fi = fileDate(fechaInicio);
-        const ff = fileDate(fechaFin);
-        filename = `reporte_horas_${fi}_al_${ff}.pdf`;
-      }
+      const filename = nombreArchivoReporte(reportes, fechaInicio, fechaFin, "pdf");
       pdf.save(filename);
       enqueueSnackbar("PDF guardado", { variant: "success" });
     } catch (err) {
