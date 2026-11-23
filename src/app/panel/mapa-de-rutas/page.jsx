@@ -43,7 +43,14 @@ import {
   fetchImageAsDataUrl,
   tryAddCompanyMarkToPdf,
 } from "@/lib/pdfCompanyLogo";
-import { ADAMIA, gradientLine, applyAdamiaFont } from "@/lib/pdfAdamiaTheme";
+import {
+  ADAMIA,
+  gradientLine,
+  applyAdamiaFont,
+  loadAdamiaMarca,
+  dibujarPieAdamia,
+} from "@/lib/pdfAdamiaTheme";
+import { nombreArchivoPdf } from "@/lib/nombreArchivo.mjs";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import {
   Route,
@@ -1243,6 +1250,7 @@ export default function PageMapaDeRutas() {
     const doc = new jsPDF("p", "mm", "a4");
     // Tipografía Poppins (fallback helvetica). Los tamaños siguen siendo pt.
     const FONT = await applyAdamiaFont(doc);
+    const marcaAdamia = await loadAdamiaMarca();
 
     const margin = 25;
     const pageWidth = 210;
@@ -1543,57 +1551,31 @@ export default function PageMapaDeRutas() {
     );
     doc.setFontSize(8);
     doc.setTextColor(...ADAMIA.text2);
+    // Antes decía siempre «Uniline Innovacion en la Nube»: ahora la empresa real.
     doc.text(
-      "Uniline Innovacion en la Nube",
+      String(companyName || "—").slice(0, 40),
       pageWidth - margin - 37.5,
       yPos + 11,
       { align: "center" },
     );
 
-    // FOOTER en todas las hojas: línea degradada, marca y numeración
-    const totalPages = doc.internal.getNumberOfPages();
-    const fechaGenerado = new Date().toLocaleDateString("es-MX", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
+    // Pie homologado ADAMIA en cada página (logotipo, fecha, Página X de Y).
+    dibujarPieAdamia(doc, {
+      font: FONT,
+      logo: marcaAdamia,
+      documento: "Reporte de asistencia (ruta)",
+      detalle: formatearFechaLarga(diaPdf.fecha),
+      margenMm: margin,
     });
-    const horaGenerado = new Date().toLocaleTimeString("es-MX", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hourCycle: "h12",
-    });
-    for (let i = 1; i <= totalPages; i++) {
-      doc.setPage(i);
-      const lineY = pageHeight - 15;
-      const textY = pageHeight - 10;
-      gradientLine(doc, margin, pageWidth - margin, lineY, 0.35);
 
-      doc.setFont(FONT, "bold");
-      doc.setFontSize(7.5);
-      doc.setTextColor(...ADAMIA.blue);
-      doc.text("Adamia", margin, textY);
-      const brandW = doc.getTextWidth("Adamia");
-      doc.setFont(FONT, "normal");
-      doc.setTextColor(...ADAMIA.muted);
-      doc.text(" · Reporte de Asistencia", margin + brandW, textY);
-
-      doc.setFontSize(7);
-      doc.text(
-        `Generado el ${fechaGenerado} a las ${horaGenerado}`,
-        pageWidth / 2,
-        textY,
-        { align: "center" },
-      );
-      doc.setFontSize(7.5);
-      doc.text(`Página ${i} de ${totalPages}`, pageWidth - margin, textY, {
-        align: "right",
-      });
-    }
-
-    const nombreArchivo = `Reporte_Asistencia_${String(
-      diaPdf.empleado || "Empleado",
-    ).replace(/ /g, "_")}_${diaPdf.fecha}.pdf`;
-    doc.save(nombreArchivo);
+    // Nombre sin datos personales: documento, número de empleado y fecha.
+    doc.save(
+      nombreArchivoPdf({
+        documento: "Reporte ruta",
+        empleado: diaPdf.movimientos?.[0]?.id_empleado ?? empleadoId,
+        fecha: diaPdf.fecha,
+      }),
+    );
   };
 
   return (

@@ -317,6 +317,7 @@ export default function AsistenciaDataContainer({
             fechaInicio={fechaInicio}
             fechaFin={fechaFin}
             cargando={isLoading && filasPeriodo.length === 0}
+            idEmpresa={idEmpresa}
           /></>
         ) : (
         <>

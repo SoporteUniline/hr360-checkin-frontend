@@ -26,7 +26,10 @@ import {
   gradientLine,
   lerpColor,
   loadAdamiaLogo,
+  loadAdamiaMarca,
+  dibujarPieAdamia,
 } from "@/lib/pdfAdamiaTheme";
+import { nombreArchivoPdf } from "@/lib/nombreArchivo.mjs";
 
 const COUNTRY_CODES = [
   { code: "+52", label: "MX (+52)" },
@@ -498,8 +501,8 @@ export default function CotizaPage() {
       // Poppins. Si logo o fuentes no cargan, hay fallback tipográfico.
       const FONT = await applyAdamiaFont(doc);
       const logo = await loadAdamiaLogo();
+      const marcaAdamia = await loadAdamiaMarca(); // logotipo del pie homologado
       const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
       const left = 14;
       const right = pageWidth - 14;
       const contentW = right - left;
@@ -703,30 +706,17 @@ export default function CotizaPage() {
         align: "right",
       });
 
-      // Pie de página en todas las hojas: línea degradada, marca y numeración.
-      const totalPages = doc.getNumberOfPages();
-      for (let page = 1; page <= totalPages; page++) {
-        doc.setPage(page);
-        const footerLineY = pageHeight - 14;
-        const footerTextY = footerLineY + 5;
-        gradientLine(doc, left, right, footerLineY, 0.3);
-        doc.setFont(FONT, "bold");
-        doc.setFontSize(8);
-        doc.setTextColor(...ADAMIA.blue);
-        doc.text("Adamia", left, footerTextY);
-        const brandW = doc.getTextWidth("Adamia");
-        doc.setFont(FONT, "normal");
-        doc.setTextColor(...ADAMIA.muted);
-        doc.text("  ·  Cotización", left + brandW, footerTextY);
-        doc.text(`Página ${page} de ${totalPages}`, right, footerTextY, {
-          align: "right",
-        });
-      }
+      // Pie homologado ADAMIA en cada hoja (logotipo, fecha, Página X de Y).
+      dibujarPieAdamia(doc, {
+        font: FONT,
+        logo: marcaAdamia,
+        documento: "Cotización",
+        detalle: planNombre,
+        margenMm: 14,
+      });
 
-      const fileName = `Cotizacion_ADAMIA_${form.empresa.replace(
-        /\s+/g,
-        "_",
-      )}_${planNombre}.pdf`;
+      // Nombre homologado (sin acentos ni datos del prospecto).
+      const fileName = nombreArchivoPdf({ documento: `Cotizacion ADAMIA ${planNombre}` });
       const pdfDataUri = doc.output("datauristring");
       const pdfBase64 = (pdfDataUri.split(",")[1] || "").trim();
       doc.save(fileName);
