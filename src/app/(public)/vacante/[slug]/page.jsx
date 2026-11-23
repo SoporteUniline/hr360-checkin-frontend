@@ -6,6 +6,8 @@ import { twMerge } from "tailwind-merge";
 import ApplicationForm from "./ApplicationForm";
 import ErrorPage from "@/components/ErrorPage";
 import { formatearFecha } from "@/lib/utils";
+// HTML de la vacante saneado antes de insertarlo (INC-REC-003).
+import { sanearHtml } from "@/lib/htmlSeguro.mjs";
 import useSWR, { mutate } from "swr";
 import { fetcher, fetcherWithToken, swr_config } from "@/lib/fetcher";
 import EllipsisLoader from "@/components/loading/EllipsisLoader";
@@ -294,7 +296,7 @@ export default function DetalleVacante() {
                 <strong>🎓 Escolaridad Requerida:</strong>{" "}
                 <div
                   className="prose prose-sm prose-slate max-w-none [&_ul]:list-disc [&_ul]:ml-5 [&_li]:mb-1"
-                  dangerouslySetInnerHTML={{ __html: data.escolaridad }}
+                  dangerouslySetInnerHTML={{ __html: sanearHtml(data.escolaridad) }}
                 />
               </CardContent>
             </Card>
@@ -307,7 +309,7 @@ export default function DetalleVacante() {
                 <strong>📈 Experiencia Requerida:</strong>
                 <div
                   className="prose prose-sm prose-slate max-w-none [&_ul]:list-disc [&_ul]:ml-5 [&_li]:mb-1"
-                  dangerouslySetInnerHTML={{ __html: data.experiencia }}
+                  dangerouslySetInnerHTML={{ __html: sanearHtml(data.experiencia) }}
                 />
               </CardContent>
             </Card>
@@ -320,7 +322,7 @@ export default function DetalleVacante() {
                 <strong>🧠 Habilidades:</strong>
                 <div
                   className="prose prose-sm prose-slate max-w-none [&_ul]:list-disc [&_ul]:ml-5 [&_li]:mb-1"
-                  dangerouslySetInnerHTML={{ __html: data.habilidades }}
+                  dangerouslySetInnerHTML={{ __html: sanearHtml(data.habilidades) }}
                 />
               </CardContent>
             </Card>
@@ -343,7 +345,7 @@ export default function DetalleVacante() {
           <section>
             <div
               className="prose prose-sm prose-slate max-w-none"
-              dangerouslySetInnerHTML={{ __html: data.descripcion }}
+              dangerouslySetInnerHTML={{ __html: sanearHtml(data.descripcion) }}
             />
           </section>
 
@@ -355,7 +357,7 @@ export default function DetalleVacante() {
           <section>
             <div
               className="prose prose-sm prose-slate max-w-none [&_ul]:list-disc [&_ul]:ml-5 [&_li]:mb-1"
-              dangerouslySetInnerHTML={{ __html: data.responsabilidades }}
+              dangerouslySetInnerHTML={{ __html: sanearHtml(data.responsabilidades) }}
             />
           </section>
 

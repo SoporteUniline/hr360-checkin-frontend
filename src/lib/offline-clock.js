@@ -66,7 +66,7 @@ async function registerLocalFace(payload, context, profile, original = null) {
   let event;
   if (old) {
     event = { ...old, action: payload.accion || old.action, status: 'pending', error: '', ...(payload.repetir === true ? { repetir: true } : {}) };
-    if (!['entrada', 'salida', 'salida_temporal', 'cerrar_turno'].includes(event.action)) throw new Error('Selecciona cómo cerrar el turno');
+    if (!['entrada', 'salida', 'salida_temporal', 'cerrar_turno', 'salida_comida'].includes(event.action)) throw new Error('Selecciona cómo cerrar el turno');
   } else {
     const dataset = await localFaceStatus(context);
     const { employee, score } = engine.matchFace(payload.descriptor_facial, dataset);
@@ -92,7 +92,7 @@ async function registerLocalFace(payload, context, profile, original = null) {
   event = await engine.signEvent(event, store);
   await store.saveEvent(event);
   notify();
-  if (event.status === 'decision') return { data: { requiereDecision: true, offline_event: event, empleado: { nombre: event.employeeName } } };
+  if (event.status === 'decision') return { data: { requiereDecision: true, opciones: event.opciones, message: event.error, offline_event: event, empleado: { nombre: event.employeeName } } };
   if (navigator.onLine && window.__adamiaOffline !== true) {
     // Keep the original online confirmation: show success only after the
     // server acknowledges this UUID, using the already recognized local face.
@@ -113,7 +113,7 @@ async function registerLocalFace(payload, context, profile, original = null) {
     if (current?.status === 'review') throw Object.assign(new Error(current.error), {
       response: { status: current.httpStatus || 422, data: { error: current.error, code: current.errorCode } },
     });
-    if (current?.status === 'decision') return { data: { requiereDecision: true, offline_event: current, empleado: { nombre: current.employeeName || event.employeeName } } };
+    if (current?.status === 'decision') return { data: { requiereDecision: true, opciones: current.opciones, message: current.error, offline_event: current, empleado: { nombre: current.employeeName || event.employeeName } } };
   }
   const guardado = (await store.listEvents()).find(saved => saved.id === event.id) || event;
   return { data: { pending: true, local_validated: true, offline_event: event, motivo: motivoPendiente(guardado), errorServidor: errorDelServidor(guardado), empleado: { nombre: event.employeeName, apellido_paterno: '' }, movimiento: errorDelServidor(guardado) ? 'Rostro reconocido · el servidor no la aceptó todavía' : `${event.action === 'auto' ? 'Checada' : event.action === 'entrada' ? 'Entrada' : 'Salida'} reconocida en este dispositivo · pendiente de subir` } };
@@ -237,13 +237,13 @@ export async function registerClockMovement(payload, { company, employee = null,
     if (current?.status === 'synced' && current.resolvedAction === 'ignorada') return repetida(payload, current.employeeName || event.alias, current.resolvedRebote, current.resolvedMessage);
     if (current?.status === 'synced') return { data: { empleado: { nombre: current.employeeName || event.alias, apellido_paterno: '' }, movimiento: textoChecada(current.resolvedAction) } };
     if (current?.status === 'review') throw Object.assign(new Error(current.error), { response: { status: current.httpStatus || 422, data: { error: current.error, code: current.errorCode } } });
-    if (current?.status === 'decision') return { data: { requiereDecision: true, offline_event: event, descriptor_facial: event.descriptor } };
+    if (current?.status === 'decision') return { data: { requiereDecision: true, opciones: current.opciones, message: current.error, offline_event: event, descriptor_facial: event.descriptor } };
     return queued();
   }
   try {
     const { data } = await sendEvent(event);
     if (data.requiereDecision) {
-      await store.saveEvent({ ...event, status: 'decision', error: 'Selecciona cómo cerrar el turno' }); notify();
+      await store.saveEvent({ ...event, status: 'decision', opciones: data.opciones, error: data.message || 'Selecciona cómo cerrar el turno' }); notify();
       return { data: { ...data, offline_event: event, descriptor_facial: payload.descriptor_facial } };
     }
     await store.saveEvent({ ...event, status: 'synced', employeeName: data.employee?.nombre, resolvedAction: data.action, code: undefined, descriptor: undefined, grant: undefined });

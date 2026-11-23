@@ -20,7 +20,14 @@ import {
   fetchImageAsDataUrl,
   tryAddCompanyMarkToPdf,
 } from "@/lib/pdfCompanyLogo";
-import { ADAMIA, gradientLine, applyAdamiaFont } from "@/lib/pdfAdamiaTheme";
+import {
+  ADAMIA,
+  gradientLine,
+  applyAdamiaFont,
+  loadAdamiaMarca,
+  dibujarPieAdamia,
+} from "@/lib/pdfAdamiaTheme";
+import { nombreArchivoPdf } from "@/lib/nombreArchivo.mjs";
 import { Download, FileText, Loader2, Printer } from "lucide-react";
 
 dayjs.extend(utc);
@@ -301,6 +308,7 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
 
     // Tipografía corporativa Adamia (Poppins con fallback a Helvetica).
     const FONT = await applyAdamiaFont(doc);
+    const marcaAdamia = await loadAdamiaMarca();
 
     const pageWidth = 210;
     const pageHeight = 297;
@@ -663,16 +671,6 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
     y += 18;
 
     const totalPages = doc.internal.getNumberOfPages();
-    const fechaGenerado = new Date().toLocaleDateString("es-MX", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-    const horaGenerado = new Date().toLocaleTimeString("es-MX", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
     for (let p = 1; p <= totalPages; p++) {
       doc.setPage(p);
       if (p === totalPages) {
@@ -723,35 +721,23 @@ export default function ContratoViewDialog({ open, setOpen, item }) {
           },
         );
       }
-
-      const footerLineY = pageHeight - 14;
-      const footerTextY = pageHeight - 9;
-      gradientLine(doc, marginLeft, pageWidth - marginRight, footerLineY, 0.35);
-      doc.setFont(FONT, "bold");
-      doc.setFontSize(7.5);
-      doc.setTextColor(...ADAMIA.blue);
-      doc.text("Adamia", marginLeft, footerTextY);
-      const brandW = doc.getTextWidth("Adamia");
-      doc.setFont(FONT, "normal");
-      doc.setTextColor(...ADAMIA.muted);
-      doc.text(" · Contratos", marginLeft + brandW, footerTextY);
-      doc.setFontSize(6.5);
-      doc.text(
-        `Generado el ${fechaGenerado} a las ${horaGenerado} · ${systemLabel} · Folio #${folio}`,
-        pageWidth / 2,
-        footerTextY,
-        { align: "center" },
-      );
-      doc.setFontSize(7.5);
-      doc.text(`Página ${p} de ${totalPages}`, pageWidth - marginRight, footerTextY, {
-        align: "right",
-      });
     }
 
-    const nombreArchivo = `Contrato_${String(folio).replace(
-      /[^a-zA-Z0-9_-]/g,
-      "_",
-    )}_${dayjs().format("YYYY-MM-DD")}.pdf`;
+    // Pie homologado ADAMIA en cada página (logotipo, fecha, Página X de Y).
+    dibujarPieAdamia(doc, {
+      font: FONT,
+      logo: marcaAdamia,
+      documento: "Contrato",
+      detalle: `Folio #${folio}`,
+      margenMm: marginLeft,
+    });
+
+    // Nombre sin datos personales: documento, folio, número de empleado y fecha.
+    const nombreArchivo = nombreArchivoPdf({
+      documento: "Contrato",
+      folio: item.folio || item.id,
+      empleado: item,
+    });
     return { doc, nombreArchivo };
   }
 

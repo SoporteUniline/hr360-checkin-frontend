@@ -1,5 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { formatearFecha } from "@/lib/utils";
+// HTML de la vacante saneado antes de insertarlo (INC-REC-003).
+import { sanearHtml } from "@/lib/htmlSeguro.mjs";
 import { ArrowLeft } from "lucide-react";
 import React from "react";
 
@@ -22,7 +24,7 @@ export default function DetalleVacante({ item, setSelected }) {
 
         <div
           className="my-2 text-sm [&_ul]:list-disc [&_ul]:ml-5 [&_li]:mb-1"
-          dangerouslySetInnerHTML={{ __html: item.descripcion }}
+          dangerouslySetInnerHTML={{ __html: sanearHtml(item.descripcion) }}
         />
 
         <div className="my-5 border-b border-gray-200" />
@@ -33,7 +35,7 @@ export default function DetalleVacante({ item, setSelected }) {
           </span>
           <div
             className="my-2 text-sm [&_ul]:list-disc [&_ul]:ml-5 [&_li]:mb-1"
-            dangerouslySetInnerHTML={{ __html: item.responsabilidades }}
+            dangerouslySetInnerHTML={{ __html: sanearHtml(item.responsabilidades) }}
           />
         </div>
         <p className="my-2">
@@ -54,14 +56,14 @@ export default function DetalleVacante({ item, setSelected }) {
           <span className="font-semibold text-slate-700">Escolaridad: </span>
           <div
             className="my-2 text-sm [&_ul]:list-disc [&_ul]:ml-5 [&_li]:mb-1"
-            dangerouslySetInnerHTML={{ __html: item.escolaridad }}
+            dangerouslySetInnerHTML={{ __html: sanearHtml(item.escolaridad) }}
           />
         </div>
         <div className="my-2">
           <span className="font-semibold text-slate-700">Experiencia: </span>
           <div
             className="my-2 text-sm [&_ul]:list-disc [&_ul]:ml-5 [&_li]:mb-1"
-            dangerouslySetInnerHTML={{ __html: item.experiencia }}
+            dangerouslySetInnerHTML={{ __html: sanearHtml(item.experiencia) }}
           />
         </div>
         <p className="my-2">
@@ -72,7 +74,7 @@ export default function DetalleVacante({ item, setSelected }) {
           <span className="font-semibold text-slate-700">Habilidades: </span>
           <div
             className="my-2 text-sm [&_ul]:list-disc [&_ul]:ml-5 [&_li]:mb-1"
-            dangerouslySetInnerHTML={{ __html: item.habilidades }}
+            dangerouslySetInnerHTML={{ __html: sanearHtml(item.habilidades) }}
           />
         </div>
         <p className="my-2">

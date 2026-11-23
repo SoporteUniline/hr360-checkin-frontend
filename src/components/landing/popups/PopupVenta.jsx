@@ -10,6 +10,7 @@ import { paginaDe, elegirPopup, esperaSegundos, leerHistorial, guardarVisto } fr
 
 const API = `${process.env.NEXT_PUBLIC_RUTA_BACKEND ?? ""}/checador/popups/publicos`;
 const vistosEnVisita = [];
+const ENFOCABLES = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 function evento(id, tipo) {
   fetch(`${API}/${id}/evento`, {
@@ -34,6 +35,7 @@ export default function PopupVenta() {
   const [abierto, setAbierto] = useState(false);
   const cerrarRef = useRef(null);
   const antesRef = useRef(null);
+  const dialogoRef = useRef(null);
 
   useEffect(() => {
     const pagina = paginaDe(ruta);
@@ -92,11 +94,31 @@ export default function PopupVenta() {
   useEffect(() => {
     if (!abierto) return undefined;
     cerrarRef.current?.focus();
+    const desplazamiento = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    // Escape cierra; Tab y Mayús+Tab no salen del pop-up (foco atrapado).
     const tecla = (e) => {
-      if (e.key === "Escape") cerrar();
+      if (e.key === "Escape") return cerrar();
+      if (e.key !== "Tab" || !dialogoRef.current) return undefined;
+      const enfocables = [...dialogoRef.current.querySelectorAll(ENFOCABLES)].filter((el) => el.offsetParent !== null);
+      if (!enfocables.length) return undefined;
+      const primero = enfocables[0];
+      const ultimo = enfocables[enfocables.length - 1];
+      const dentro = dialogoRef.current.contains(document.activeElement);
+      if (e.shiftKey && (document.activeElement === primero || !dentro)) {
+        e.preventDefault();
+        ultimo.focus();
+      } else if (!e.shiftKey && (document.activeElement === ultimo || !dentro)) {
+        e.preventDefault();
+        primero.focus();
+      }
+      return undefined;
     };
     document.addEventListener("keydown", tecla);
-    return () => document.removeEventListener("keydown", tecla);
+    return () => {
+      document.removeEventListener("keydown", tecla);
+      document.body.style.overflow = desplazamiento;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- cerrar solo usa estado estable del pop-up abierto
   }, [abierto]);
 
@@ -110,15 +132,15 @@ export default function PopupVenta() {
 
   return (
     <div className="pv-fondo" onClick={(e) => e.target === e.currentTarget && cerrar()}>
-      <div role="dialog" aria-modal="true" aria-labelledby="pv-titulo" className="pv-dialogo">
+      <div ref={dialogoRef} role="dialog" aria-modal="true" aria-labelledby="pv-titulo" className="pv-dialogo">
         <PopupTarjeta
           popup={popup}
+          tituloId="pv-titulo"
           cerrarRef={cerrarRef}
           alCerrar={cerrar}
-          alClic={() => {
-            evento(popup.id, "clic");
-            setAbierto(false);
-          }}
+          alEnviar={() => evento(popup.id, "clic")}
+          // Se cierra después del clic: el enlace sigue en la página mientras el navegador navega.
+          alContinuar={() => window.setTimeout(() => setAbierto(false), 0)}
         />
       </div>
     </div>
