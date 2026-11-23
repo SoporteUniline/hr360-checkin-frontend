@@ -8,6 +8,7 @@ import ConsentimientoRostro from "./ConsentimientoRostro";
 import AvisoRostroApp from "./AvisoRostroApp";
 import FirmaPinRh from "./FirmaPinRh";
 import RostroCelular from "./RostroCelular";
+import ProbarRostro from "./ProbarRostro";
 import { useSWRConfig } from "swr";
 import { ScanFace } from "lucide-react";
 import { mensajeListo } from "@/lib/rostro/enlaceCelular.mjs";
@@ -350,6 +351,7 @@ export default function TabReconocimiento({
               {rostroCelular ? "Registrado desde el celular" : descriptorReady ? "Capturado: falta guardar" : tieneRostro ? "Rostro registrado" : "Sin rostro"}
             </span>
           </div>
+          {valores.id_empleado ? <ProbarRostro idEmpleado={valores.id_empleado} nombre={nombreEmpleado} tieneRostro={tieneRostro} sinGuardar={descriptorReady} onAbrir={stopCamera} /> : null}
           <p className="mt-1 text-slate-600">Rostro al centro del cuadro, con buena luz y sin otras personas atrás.</p>
           {rostroCelular ? (
             <p role="status" className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3 text-green-800">{mensajeListo(nombreEmpleado)} Ya lo usa para checar.</p>
