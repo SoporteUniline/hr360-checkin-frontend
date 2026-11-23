@@ -25,12 +25,13 @@ import QuestionBuilder from "./QuestionBuilder";
 import s from "./reclutamiento.module.css";
 
 export default function VacancyWizard({ vacancy, data, onSave, onClose, initialStep = 0 }) {
-  const initial = useRef(clone(vacancy || newVacancy()));
+  const initial = useRef(clone(vacancy || newVacancy(data.modalities[0]?.id || "")));
   const [draft, setDraft] = useState(initial.current);
   const [step, setStep] = useState(initialStep);
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState("");
   const [discard, setDiscard] = useState(false);
+  const [saving, setSaving] = useState(false);
   const patch = (value) => {
     setDraft((current) => ({ ...current, ...value }));
     setErrors((current) =>
@@ -74,7 +75,8 @@ export default function VacancyWizard({ vacancy, data, onSave, onClose, initialS
     }
     setStep(target);
   };
-  const save = (publish) => {
+  const save = async (publish) => {
+    if (saving) return;
     if (!draft.title.trim()) {
       setErrors({ title: "Escribe al menos el nombre del puesto para guardarlo." });
       setStep(0);
@@ -111,20 +113,24 @@ export default function VacancyWizard({ vacancy, data, onSave, onClose, initialS
         ? { options: question.options.map((option) => option.trim()).filter(Boolean) }
         : {}),
     }));
-    const changed = JSON.stringify(questions) !== JSON.stringify(initial.current.questions);
+    // El servidor valida de nuevo, sube la versión del formulario si cambian las preguntas y fija el estado.
     const result = {
       ...draft,
       title: draft.title.trim(),
       questions,
       openings: Number(draft.openings) || 1,
-      formVersion: initial.current.formVersion + (changed && vacancy ? 1 : 0),
-      status: publish ? "open" : draft.status,
-      ...(publish ? { publishedAt: draft.publishedAt || new Date().toISOString() } : {}),
     };
-    if (!onSave(result, publish))
-      setFormError(
-        "No se guardó el cambio. Revisa el espacio disponible en tu navegador y vuelve a intentar."
-      );
+    setSaving(true);
+    const answer = await onSave(result, publish);
+    setSaving(false);
+    if (!answer?.ok) {
+      const fieldErrors = answer?.errors || {};
+      if (Object.keys(fieldErrors).length) {
+        setErrors(fieldErrors);
+        setStep(fieldErrors.questions ? 1 : fieldErrors.email && Object.keys(fieldErrors).length === 1 ? 2 : 0);
+      }
+      setFormError(fieldErrors.questions || answer?.message || "No se guardó la vacante. Intenta de nuevo.");
+    }
   };
   const controls = (
     <>
@@ -137,7 +143,7 @@ export default function VacancyWizard({ vacancy, data, onSave, onClose, initialS
         {step ? "Atrás" : "Cancelar"}
       </button>
       <div className={s.row}>
-        <Button type="button" variant="outline" onClick={() => save(false)}>
+        <Button type="button" variant="outline" onClick={() => save(false)} disabled={saving}>
           <Save size={14} />
           <span>{vacancy ? "Guardar" : "Guardar borrador"}</span>
         </Button>
@@ -147,9 +153,9 @@ export default function VacancyWizard({ vacancy, data, onSave, onClose, initialS
             <ArrowRight size={14} />
           </Button>
         ) : (
-          <Button className={s.primary} onClick={() => save(true)}>
+          <Button className={s.primary} onClick={() => save(true)} loading={saving} disabled={saving}>
             <Rocket size={14} />
-            {vacancy?.status === "open" ? "Guardar publicación" : "Publicar prueba"}
+            {vacancy?.status === "open" ? "Guardar publicación" : "Publicar vacante"}
           </Button>
         )}
       </div>
@@ -221,6 +227,7 @@ export default function VacancyWizard({ vacancy, data, onSave, onClose, initialS
                     value={draft.modalityId}
                     onChange={(event) => patch({ modalityId: event.target.value })}
                   >
+                    {!draft.modalityId && <option value="">Selecciona una modalidad</option>}
                     {data.modalities.map((item) => (
                       <option key={item.id} value={item.id}>
                         {item.name}
@@ -287,7 +294,7 @@ export default function VacancyWizard({ vacancy, data, onSave, onClose, initialS
               <Field
                 label="Fecha de cierre · opcional"
                 error={errors.closesOn}
-                hint="Después de esta fecha dejará de recibir postulaciones de prueba."
+                hint="Después de esta fecha la página de la vacante deja de recibir postulaciones."
               >
                 {(props) => (
                   <input
@@ -357,8 +364,8 @@ export default function VacancyWizard({ vacancy, data, onSave, onClose, initialS
               </Field>
             </div>
             <div className={s.formHint}>
-              Los catálogos de esta vista contienen ejemplos. En la integración, Sucursal usará la
-              tabla existente y Modalidad su catálogo independiente.
+              Las sucursales salen de tu catálogo de Sucursales y las modalidades de Catálogos de
+              reclutamiento.
             </div>
           </>
         )}
@@ -373,8 +380,8 @@ export default function VacancyWizard({ vacancy, data, onSave, onClose, initialS
             <div className={s.demo}>
               <Eye size={18} />
               <div>
-                <strong>Así está quedando tu vacante.</strong> Al publicar esta prueba podrás abrir
-                el formulario completo. Todavía no recibe postulaciones reales.
+                <strong>Así está quedando tu vacante.</strong> Al publicarla, su página empieza a
+                recibir postulaciones y aparece en la bolsa de trabajo si tu empresa la usa.
               </div>
             </div>
             <div className={s.panel}>
@@ -401,13 +408,16 @@ export default function VacancyWizard({ vacancy, data, onSave, onClose, initialS
             <div className={s.formGrid}>
               <div className={s.span2}>
                 <h3 className={s.personName}>Avisos de nuevas postulaciones</h3>
-                <p className={s.muted}>Deja preparada la configuración de correo.</p>
+                <p className={s.muted}>
+                  Sin correo propio, el aviso llega al correo de tu empresa.
+                </p>
               </div>
               <Field label="Correo de tu equipo" error={errors.email}>
                 {(props) => (
                   <input
                     {...props}
                     type="email"
+                    placeholder="Correo de la empresa"
                     disabled={!draft.notifications.toTeam}
                     value={draft.notifications.email}
                     onChange={(event) =>

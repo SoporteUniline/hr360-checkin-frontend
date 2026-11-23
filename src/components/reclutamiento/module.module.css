@@ -540,3 +540,10 @@
     display: block;
   }
 }
+/* 03/12/2026 · Celular: el selector de etapa de cada tarjeta también mide 44 px. */
+@media (max-width: 767px) {
+  .candidateCard select {
+    height: 44px !important;
+    min-height: 44px !important;
+  }
+}

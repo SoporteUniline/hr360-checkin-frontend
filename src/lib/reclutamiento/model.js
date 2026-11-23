@@ -1,4 +1,4 @@
-// Modelo de la demostración. Los nombres definitivos de la API los confirma Luis.
+// Modelo de las pantallas de Reclutamiento (03/12/2026: datos reales; la traducción con el API está en ./adaptador.mjs).
 export const VACANCY_STATUSES = {
   draft: { label: "Borrador", tone: "neutral" },
   open: { label: "Publicada", tone: "green" },
@@ -21,7 +21,6 @@ export const QUESTION_TYPES = [
   ["multiselect", "Varias opciones"],
   ["number", "Número"],
   ["date", "Fecha"],
-  ["file", "Archivo"],
 ];
 export const uid = () => globalThis.crypto.randomUUID();
 export const clone = (value) => JSON.parse(JSON.stringify(value));
@@ -73,14 +72,15 @@ export const defaultQuestions = () => [
     required: true,
     options: ["Sin experiencia", "Menos de 1 año", "1 a 3 años", "Más de 3 años"],
   },
-  { id: "cv", label: "Currículum", type: "file", required: false },
+  { id: "cv", label: "Currículum", type: "file", required: true, base: true },
 ];
-export function newVacancy() {
+// Vacante nueva (id null = aún no existe en el servidor). La modalidad la elige el asistente (la primera del catálogo).
+export function newVacancy(modalityId = "") {
   return {
-    id: uid(),
+    id: null,
     title: "",
     branchId: "",
-    modalityId: "presencial",
+    modalityId,
     openings: 1,
     employmentType: "Tiempo completo",
     salaryFrom: "",
@@ -91,8 +91,8 @@ export function newVacancy() {
     questions: defaultQuestions(),
     formVersion: 1,
     status: "draft",
-    createdAt: new Date().toISOString(),
-    notifications: { email: "talento@example.test", toTeam: true, toCandidate: true },
+    createdAt: "",
+    notifications: { email: "", toTeam: true, toCandidate: true },
   };
 }
 export function vacancyErrors(vacancy, modalities) {
@@ -118,9 +118,11 @@ export function vacancyErrors(vacancy, modalities) {
       (vacancy.salaryTo && Number(vacancy.salaryTo) < Number(vacancy.salaryFrom)))
   )
     errors.salaryFrom = "Indica un sueldo válido; el máximo debe ser igual o mayor al mínimo.";
+  // Sin correo, los avisos van al correo de la empresa.
   if (
     vacancy.notifications.toTeam &&
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(vacancy.notifications.email)
+    vacancy.notifications.email.trim() &&
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(vacancy.notifications.email.trim())
   )
     errors.email = "Escribe un correo válido para los avisos.";
   return errors;
@@ -150,149 +152,6 @@ export function questionErrors(questions) {
   )
     return "Evita opciones repetidas en una misma pregunta.";
   return "";
-}
-export function makeSeed() {
-  const now = new Date();
-  const tomorrow = new Date(now);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  tomorrow.setHours(10, 30, 0, 0);
-  const ago = (days) => new Date(now.getTime() - days * 86400000).toISOString();
-  const first = {
-    ...newVacancy(),
-    id: "auxiliar-administrativo",
-    title: "Auxiliar administrativo",
-    branchId: "centro",
-    salaryFrom: "12000",
-    salaryTo: "15000",
-    showSalary: true,
-    status: "open",
-    createdAt: ago(8),
-    publishedAt: ago(7),
-    description: [
-      paragraph(
-        "Buscamos a alguien organizado, con atención al detalle y ganas de crecer junto a nuestro equipo."
-      ),
-      { type: "h3", children: [{ text: "¿Qué harás en tu día a día?" }] },
-      {
-        type: "ul",
-        children: [
-          "Dar seguimiento a documentos y expedientes.",
-          "Apoyar en la atención a clientes y proveedores.",
-          "Mantener la información del equipo al día.",
-        ].map((text) => ({ type: "li", children: [{ text }] })),
-      },
-      { type: "h3", children: [{ text: "Lo que encontrarás aquí" }] },
-      paragraph(
-        "Un equipo cercano, capacitación desde el primer día y oportunidades de desarrollo. Lunes a viernes, de 9:00 a 18:00 h."
-      ),
-    ],
-  };
-  const vacancies = [
-    first,
-    {
-      ...clone(first),
-      id: "asesor-comercial",
-      title: "Asesor comercial",
-      branchId: "norte",
-      openings: 2,
-      salaryFrom: "14000",
-      salaryTo: "18000",
-      createdAt: ago(4),
-    },
-    {
-      ...clone(first),
-      id: "disenador-digital",
-      title: "Diseñador digital",
-      branchId: "",
-      modalityId: "remoto",
-      status: "paused",
-      salaryFrom: "18000",
-      salaryTo: "22000",
-      createdAt: ago(3),
-    },
-    {
-      ...newVacancy(),
-      id: "auxiliar-almacen",
-      title: "Auxiliar de almacén",
-      branchId: "norte",
-      createdAt: ago(1),
-    },
-    {
-      ...clone(first),
-      id: "recepcionista",
-      title: "Recepcionista",
-      status: "closed",
-      createdAt: ago(20),
-    },
-  ];
-  const candidates = [
-    ["ana", "Ana García", "auxiliar-administrativo", "new", 0],
-    ["daniel", "Daniel Torres", "auxiliar-administrativo", "interview", 2],
-    ["mariana", "Mariana López", "auxiliar-administrativo", "offer", 4],
-    ["luis", "Luis Hernández", "asesor-comercial", "review", 1],
-    ["paola", "Paola Rivera", "asesor-comercial", "new", 0],
-    ["sofia", "Sofía Martínez", "recepcionista", "hired", 10],
-  ].map(([id, name, vacancyId, stage, days]) => ({
-    id,
-    name,
-    vacancyId,
-    stage,
-    email: `${id}@example.test`,
-    phone: "000 000 0000",
-    submittedAt: ago(days),
-    source: "Página de empleo · ejemplo",
-    formVersion: 1,
-    answers: [
-      { id: "name", label: "Nombre completo", type: "text", value: name },
-      { id: "email", label: "Correo electrónico", type: "email", value: `${id}@example.test` },
-      { id: "phone", label: "Teléfono", type: "tel", value: "000 000 0000" },
-      {
-        id: "experience",
-        label: "¿Cuánta experiencia tienes en un puesto similar?",
-        type: "select",
-        value: "1 a 3 años",
-      },
-      { id: "cv", label: "Currículum", type: "file", value: null },
-    ],
-    notes: [],
-    activity: [{ id: `received-${id}`, text: "Postulación recibida (ejemplo)", at: ago(days) }],
-    hiring:
-      stage === "hired"
-        ? {
-            startDate: localDate(now),
-            branchId: "centro",
-            checklist: ["data", "offer", "documents"],
-            completedAt: ago(1),
-          }
-        : { startDate: "", branchId: "", checklist: [] },
-  }));
-  return {
-    version: 1,
-    company: "Empresa de ejemplo",
-    branches: [
-      { id: "centro", name: "Sucursal Centro", address: "Guadalajara, Jalisco" },
-      { id: "norte", name: "Sucursal Norte", address: "Zapopan, Jalisco" },
-    ],
-    modalities: [
-      { id: "presencial", name: "Presencial", requiresBranch: true },
-      { id: "hibrido", name: "Híbrida", requiresBranch: true },
-      { id: "remoto", name: "Remota", requiresBranch: false },
-    ],
-    vacancies,
-    candidates,
-    interviews: [
-      {
-        id: "entrevista-daniel",
-        candidateId: "daniel",
-        startsAt: tomorrow.toISOString(),
-        duration: 30,
-        location: "Videollamada",
-        interviewer: "Equipo de talento",
-        notes: "Conocer su experiencia y resolver dudas del puesto.",
-        status: "scheduled",
-      },
-    ],
-  };
 }
 export const formatDateTime = (value) =>
   new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" }).format(
