@@ -51,6 +51,7 @@ import TabGPS from "./tabs/TabGPS";
 import PanelEmpleadoDocumentos from "@/app/panel/panel-empleado/components/PanelEmpleadoDocumentos";
 import BotonCredencial from "@/components/BotonCredencial";
 import { toPng } from "html-to-image";
+import { qrComoDataUrl } from "@/lib/qrImagen.mjs";
 
 export default function FormularioEmpleado({
   modoFormulario,
@@ -866,7 +867,7 @@ export default function FormularioEmpleado({
                       Acceso QR
                     </span>
                     <img
-                      src={`https://api.qrserver.com/v1/create-qr-code/?data=${nipActual}&size=150x150`}
+                      src={qrComoDataUrl(nipActual, { celda: 6 })}
                       alt="QR Empleado"
                       className="w-24 h-24 lg:w-32 lg:h-32 object-contain"
                       key={nipActual}
@@ -887,7 +888,7 @@ export default function FormularioEmpleado({
               {(editar || soloLectura) && nipActual && (
                 <div className="md:hidden mt-3 flex items-center gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100">
                   <img
-                    src={`https://api.qrserver.com/v1/create-qr-code/?data=${nipActual}&size=80x80`}
+                    src={qrComoDataUrl(nipActual, { celda: 4 })}
                     alt="QR Empleado"
                     className="w-12 h-12 object-contain shrink-0"
                     key={nipActual}

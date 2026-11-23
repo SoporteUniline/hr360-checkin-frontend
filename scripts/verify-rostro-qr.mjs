@@ -158,6 +158,10 @@ try {
   await abrirFicha(rh);
   const c3 = await columnas(rh);
   assert.ok(c3[0].x < c3[1].x && c3[1].x < c3[2].x, `3 columnas: ${JSON.stringify(c3)}`);
+  // (23/11/2026) El QR del código de acceso (NIP) se genera en el navegador: ningún tercero recibe el NIP.
+  const qrNip = rh.getByAltText("QR Empleado").first();
+  assert.match(await qrNip.getAttribute("src"), /^data:image\/gif;base64,/, "QR del código generado localmente");
+  assert.ok(await qrNip.evaluate((img) => img.complete && img.naturalWidth > 20), "la imagen del QR carga");
   assert.ok(c3.every((c) => Math.abs(c.y - c3[0].y) <= 1), "alineadas arriba");
   assert.ok(c3.every((c) => c.w >= 280), "columnas con ancho útil");
   const ancho = await rh.locator("[data-reconocimiento-columnas]").evaluate((el) => el.getBoundingClientRect().width);
