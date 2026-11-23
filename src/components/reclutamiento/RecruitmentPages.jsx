@@ -43,10 +43,10 @@ export function VacanciesPage() {
   );
 }
 export function VacancyRecord({ vacancyId }) {
-  const { data, id, action, openCandidate, saveVacancy } = useRecruitment();
+  const { data, empresa, action, openCandidate, saveVacancy } = useRecruitment();
   const router = useRouter();
   const params = useSearchParams();
-  const tab = ["vacancy", "form", "candidates", "publication"].includes(params.get("seccion"))
+  const tab = ["vacancy", "form", "candidates", "publication", "whatsapp"].includes(params.get("seccion"))
     ? params.get("seccion")
     : "vacancy";
   const vacancy = data.vacancies.find((item) => item.id === vacancyId);
@@ -55,7 +55,7 @@ export function VacancyRecord({ vacancyId }) {
     <VacancyDetail
       vacancy={vacancy}
       data={data}
-      workspaceId={id}
+      empresa={empresa}
       tab={tab}
       setTab={(value) => router.replace(vacancyHref(vacancyId, value), { scroll: false })}
       onBack={() => router.push(`${base}/vacantes`)}
@@ -102,10 +102,12 @@ export function CandidatesPage({ hiring = false }) {
   );
 }
 export function CandidateRecord({ candidateId }) {
-  const { data, changeCandidate, scheduleInterview } = useRecruitment();
+  const { data } = useRecruitment();
   const router = useRouter();
   const params = useSearchParams();
-  const candidate = data.candidates.find((item) => item.id === candidateId);
+  const candidate =
+    data.candidates.find((item) => item.id === candidateId) ||
+    data.whatsappCandidates.find((item) => item.id === candidateId);
   if (!candidate) return <MissingRecord href={`${base}/candidatos`} label="Volver a candidatos" />;
   const tab = ["profile", "activity", "hiring"].includes(params.get("seccion"))
     ? params.get("seccion")
@@ -122,8 +124,6 @@ export function CandidateRecord({ candidateId }) {
         candidate={candidate}
         vacancy={data.vacancies.find((item) => item.id === candidate.vacancyId)}
         data={data}
-        onChange={changeCandidate}
-        onScheduleInterview={scheduleInterview}
         onClose={() => router.push(`${base}/candidatos`)}
         initialTab={tab}
       />
@@ -131,27 +131,14 @@ export function CandidateRecord({ candidateId }) {
   );
 }
 export function CatalogsPage() {
-  const { data, update, success } = useRecruitment();
-  return (
-    <CatalogDialog
-      embedded
-      data={data}
-      onSave={(modality) => {
-        const ok = update((current) => ({
-          ...current,
-          modalities: [...current.modalities, modality],
-        }));
-        if (ok) success("Modalidad agregada al catálogo de prueba.");
-        return ok;
-      }}
-    />
-  );
+  const { data, addModality } = useRecruitment();
+  return <CatalogDialog embedded data={data} onSave={addModality} />;
 }
 function MissingRecord({ href, label }) {
   return (
     <EmptyState
       title="No encontramos este registro"
-      description="Puede pertenecer a otra prueba o a otro navegador. Consulta el listado para continuar."
+      description="Puede que lo hayan quitado o que pertenezca a otra empresa. Consulta el listado para continuar."
     >
       <Button asChild variant="outline">
         <Link href={href}>{label}</Link>

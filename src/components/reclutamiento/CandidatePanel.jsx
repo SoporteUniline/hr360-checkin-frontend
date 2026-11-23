@@ -1,11 +1,35 @@
 "use client";
 
-import { useState } from "react";
-import { CalendarDays, FileText, MessageSquare, UserCheck, CheckCircle2, Plus } from "lucide-react";
+// Expediente del candidato (03/12/2026: datos reales). Postulaciones de la página: respuestas, notas, historial,
+// etapa y «Contratar» (crea o enlaza su ficha de empleado). Candidatos de WhatsApp: resumen de la entrevista del
+// agente y enlace a su conversación (su proceso sigue en la bandeja de WhatsApp).
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import {
+  CalendarDays,
+  FileText,
+  MessageSquare,
+  MessageCircle,
+  UserCheck,
+  CheckCircle2,
+  Plus,
+  ExternalLink,
+  Loader2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { STAGES, uid, formatDate } from "@/lib/reclutamiento/model";
+import { STAGES, formatDate, formatDateTime } from "@/lib/reclutamiento/model";
+import {
+  aCuerpoContratacion,
+  dividirNombre,
+  mensajeError,
+  urlConversacion,
+  urlEmpleado,
+} from "@/lib/reclutamiento/adaptador.mjs";
+import { usePostulacion } from "@/hooks/useReclutamiento";
 import { Badge, Field, Modal, PageSurface } from "./RecruitmentUI";
+import { useRecruitment } from "./RecruitmentContext";
+import { ENTREVISTAS_REAL } from "./navigation";
 import s from "./reclutamiento.module.css";
 
 const CHECKLIST = [
@@ -13,61 +37,332 @@ const CHECKLIST = [
   ["offer", "Oferta aceptada"],
   ["documents", "Documentación verificada"],
 ];
+const initials = (name) =>
+  name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word[0])
+    .join("");
+
+function WhatsappCandidate({ candidate, vacancy, Surface, onClose, embedded }) {
+  return (
+    <Surface
+      title="Candidato de WhatsApp"
+      description={`${vacancy?.title || "Vacante"} · entrevista del asistente`}
+      onClose={onClose}
+      footer={
+        <>
+          <span className={s.small}>Su proceso continúa en la bandeja de WhatsApp.</span>
+          <Button variant="outline" onClick={onClose}>
+            {embedded ? "Volver a candidatos" : "Cerrar"}
+          </Button>
+        </>
+      }
+    >
+      <div className={s.stack}>
+        <div className={s.between}>
+          <div className={s.candidateHero} style={{ marginBottom: 0 }}>
+            <span className={s.avatar}>{initials(candidate.name)}</span>
+            <div>
+              <h3>{candidate.name}</h3>
+              <p className={s.small}>Escribió el {formatDate(candidate.submittedAt)}</p>
+            </div>
+          </div>
+          <span className={s.badge} data-tone={candidate.rating === "califica" ? "green" : candidate.rating === "no_califica" ? "neutral" : "amber"}>
+            {candidate.ratingLabel}
+          </span>
+        </div>
+        <dl className={s.answers}>
+          <div>
+            <dt>Teléfono</dt>
+            <dd>{candidate.phone || "Sin teléfono"}</dd>
+          </div>
+          <div>
+            <dt>Resumen de la entrevista</dt>
+            <dd>{candidate.summary || "El asistente aún no termina la entrevista."}</dd>
+          </div>
+        </dl>
+        <div className={s.row}>
+          <Button className={s.primary} asChild>
+            <Link href={urlConversacion(candidate.conversationId)}>
+              <MessageCircle size={15} />
+              Abrir conversación
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href={ENTREVISTAS_REAL}>
+              <CalendarDays size={15} />
+              Ver agenda de entrevistas
+            </Link>
+          </Button>
+        </div>
+      </div>
+    </Surface>
+  );
+}
+
+function HiringForm({ person, data, vacancy, onHired }) {
+  const { savePreparation, hire, changeStage } = useRecruitment();
+  const names = dividirNombre(person.name);
+  const [form, setForm] = useState(() => ({
+    startDate: person.hiring.startDate,
+    branchId: person.hiring.branchId || vacancy?.branchId || "",
+    checklist: person.hiring.checklist,
+    ...names,
+    email: person.email,
+    phone: person.phone,
+  }));
+  const [errors, setErrors] = useState({});
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const hasOffer = person.stage === "offer";
+  const full = vacancy && !vacancy.unlimited && vacancy.remaining === 0;
+  const patch = (value, persist) => {
+    setForm((current) => ({ ...current, ...value }));
+    setErrors({});
+    setMessage("");
+    // Fecha, sucursal y lista se guardan al momento: cualquiera del equipo ve la preparación.
+    if (persist) savePreparation(person.id, persist);
+  };
+  const ready =
+    form.startDate &&
+    form.branchId &&
+    form.firstName.trim() &&
+    form.lastName.trim() &&
+    CHECKLIST.every(([id]) => form.checklist.includes(id));
+  const submit = async () => {
+    setBusy(true);
+    const r = await hire(person.id, aCuerpoContratacion(form));
+    setBusy(false);
+    if (r.ok) onHired?.(r.result);
+    else {
+      setErrors(r.errors || {});
+      setMessage(r.message);
+    }
+  };
+  return (
+    <div className={s.stack}>
+      <div className={s.formHint}>
+        <strong>Prepara su llegada al equipo</strong>
+        <p>
+          Al completar la contratación se crea su ficha de empleado con estos datos (o se enlaza con
+          la que ya tenga en tu empresa por correo o teléfono) y se ocupa un lugar de la vacante.
+        </p>
+      </div>
+      {full && (
+        <p className={s.error} role="alert">
+          Ya se ocuparon todos los lugares de esta vacante. Edita la vacante y aumenta los lugares
+          para contratar a alguien más.
+        </p>
+      )}
+      {!hasOffer && (
+        <div className={s.between}>
+          <p className={s.muted}>Primero confirma que la persona está en Oferta.</p>
+          <Button variant="outline" onClick={() => changeStage(person.id, "offer")}>
+            Mover a Oferta
+          </Button>
+        </div>
+      )}
+      <div className={s.formGrid}>
+        <Field label="Fecha de ingreso *" error={errors.startDate}>
+          {(props) => (
+            <input
+              {...props}
+              type="date"
+              value={form.startDate}
+              onChange={(event) =>
+                patch({ startDate: event.target.value }, { fecha_ingreso: event.target.value })
+              }
+            />
+          )}
+        </Field>
+        <Field
+          label="Sucursal de alta *"
+          error={errors.branchId}
+          hint={data.branches.length ? undefined : "Da de alta tus sucursales en Catálogos."}
+        >
+          {(props) => (
+            <select
+              {...props}
+              value={form.branchId}
+              onChange={(event) =>
+                patch(
+                  { branchId: event.target.value },
+                  { id_sucursal: event.target.value ? Number(event.target.value) : null }
+                )
+              }
+            >
+              <option value="">Selecciona una sucursal</option>
+              {data.branches.map((branch) => (
+                <option key={branch.id} value={branch.id}>
+                  {branch.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </Field>
+        <Field label="Nombre(s) *" error={errors.firstName}>
+          {(props) => (
+            <input
+              {...props}
+              value={form.firstName}
+              maxLength={60}
+              autoComplete="off"
+              onChange={(event) => patch({ firstName: event.target.value })}
+            />
+          )}
+        </Field>
+        <Field label="Apellido paterno *" error={errors.lastName}>
+          {(props) => (
+            <input
+              {...props}
+              value={form.lastName}
+              maxLength={60}
+              autoComplete="off"
+              onChange={(event) => patch({ lastName: event.target.value })}
+            />
+          )}
+        </Field>
+        <Field label="Apellido materno" error={errors.secondLastName}>
+          {(props) => (
+            <input
+              {...props}
+              value={form.secondLastName}
+              maxLength={60}
+              autoComplete="off"
+              onChange={(event) => patch({ secondLastName: event.target.value })}
+            />
+          )}
+        </Field>
+        <Field
+          label="Correo del empleado"
+          error={errors.email}
+          hint="Opcional. Debe ser distinto de una cuenta de usuario de ADAMIA."
+        >
+          {(props) => (
+            <input
+              {...props}
+              type="email"
+              inputMode="email"
+              value={form.email}
+              maxLength={150}
+              onChange={(event) => patch({ email: event.target.value })}
+            />
+          )}
+        </Field>
+        <Field label="Teléfono" error={errors.phone}>
+          {(props) => (
+            <input
+              {...props}
+              type="tel"
+              inputMode="tel"
+              value={form.phone}
+              maxLength={20}
+              onChange={(event) => patch({ phone: event.target.value })}
+            />
+          )}
+        </Field>
+      </div>
+      <div className={s.stack} style={{ gap: 12 }}>
+        {CHECKLIST.map(([id, label]) => (
+          <label className={s.check} key={id}>
+            <input
+              type="checkbox"
+              checked={form.checklist.includes(id)}
+              onChange={(event) => {
+                const checklist = event.target.checked
+                  ? [...form.checklist, id]
+                  : form.checklist.filter((item) => item !== id);
+                patch({ checklist }, { checklist });
+              }}
+            />
+            {label}
+          </label>
+        ))}
+      </div>
+      {message && (
+        <p className={s.error} role="alert">
+          {message}
+        </p>
+      )}
+      <div className={s.between}>
+        <span className={s.small}>La fecha, la sucursal y la lista se guardan al cambiarlas.</span>
+        <Button
+          className={s.primary}
+          disabled={!ready || !hasOffer || full || busy}
+          loading={busy}
+          onClick={submit}
+        >
+          <UserCheck size={15} />
+          Completar contratación
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function CandidatePanel({
   candidate,
   vacancy,
   data,
-  onChange,
   onClose,
   initialTab = "profile",
   embedded = false,
-  onScheduleInterview,
 }) {
   const Surface = embedded ? PageSurface : Modal;
+  if (candidate.origin === "whatsapp")
+    return (
+      <WhatsappCandidate
+        candidate={candidate}
+        vacancy={vacancy}
+        Surface={Surface}
+        onClose={onClose}
+        embedded={embedded}
+      />
+    );
+  return (
+    <WebCandidate
+      candidate={candidate}
+      vacancy={vacancy}
+      data={data}
+      onClose={onClose}
+      initialTab={initialTab}
+      embedded={embedded}
+      Surface={Surface}
+    />
+  );
+}
+
+function WebCandidate({ candidate, vacancy, data, onClose, initialTab, embedded, Surface }) {
+  const { changeStage, addNote } = useRecruitment();
+  const { detail, error: detailError, isLoading } = usePostulacion(candidate.id, candidate);
+  const person = detail || candidate;
   const [tab, setTab] = useState(initialTab);
   const [note, setNote] = useState("");
-  const [interview, setInterview] = useState("");
-  const [location, setLocation] = useState("");
   const [discard, setDiscard] = useState(false);
-  const [error, setError] = useState("");
-  const hiring = candidate.hiring;
-  const save = (patch, activity) => {
-    const ok = onChange(candidate.id, patch, activity);
-    if (!ok) setError("No se pudo guardar el cambio. Revisa el almacenamiento de este navegador.");
-    else setError("");
-    return ok;
-  };
-  const addNote = () => {
+  const [savingStage, setSavingStage] = useState(false);
+  const [savingNote, setSavingNote] = useState(false);
+  useEffect(() => setTab(initialTab), [initialTab]);
+  const saveNote = async () => {
     if (!note.trim()) return;
-    if (
-      save(
-        {
-          notes: [
-            ...candidate.notes,
-            { id: uid(), text: note.trim(), at: new Date().toISOString() },
-          ],
-        },
-        "Nota interna agregada"
-      )
-    )
-      setNote("");
+    setSavingNote(true);
+    if (await addNote(person.id, note.trim())) setNote("");
+    setSavingNote(false);
   };
   const close = () => {
-    if (note.trim() || interview || location.trim()) setDiscard(true);
+    if (note.trim()) setDiscard(true);
     else onClose();
   };
-  const ready =
-    hiring.startDate && hiring.branchId && CHECKLIST.every(([id]) => hiring.checklist.includes(id));
-  const hasOffer = candidate.stage === "offer";
+  const hired = person.stage === "hired";
   return (
     <Surface
       title="Expediente del candidato"
-      description={`${vacancy?.title || "Vacante"} · ${candidate.source}`}
+      description={`${vacancy?.title || "Vacante"} · ${person.source}`}
       onClose={close}
       footer={
         discard ? (
           <>
-            <span className={s.small}>Tienes una nota o entrevista sin guardar.</span>
+            <span className={s.small}>Tienes una nota sin guardar.</span>
             <div className={s.row}>
               <Button variant="outline" onClick={() => setDiscard(false)}>
                 Continuar
@@ -79,7 +374,7 @@ export default function CandidatePanel({
           </>
         ) : (
           <>
-            <span className={s.small}>Prueba local · no se envían notificaciones</span>
+            <span className={s.small}>Los cambios los ve todo tu equipo.</span>
             <Button variant="outline" onClick={close}>
               {embedded ? "Volver a candidatos" : "Cerrar"}
             </Button>
@@ -90,45 +385,38 @@ export default function CandidatePanel({
       <div className={s.stack}>
         <div className={s.between}>
           <div className={s.candidateHero} style={{ marginBottom: 0 }}>
-            <span className={s.avatar}>
-              {candidate.name
-                .split(/\s+/)
-                .slice(0, 2)
-                .map((word) => word[0])
-                .join("")}
-            </span>
+            <span className={s.avatar}>{initials(person.name)}</span>
             <div>
-              <h3>{candidate.name}</h3>
-              <p className={s.small}>Postulación del {formatDate(candidate.submittedAt)}</p>
+              <h3>{person.name}</h3>
+              <p className={s.small}>Postulación del {formatDate(person.submittedAt)}</p>
             </div>
           </div>
-          <Badge stage={candidate.stage} />
+          <Badge stage={person.stage} />
         </div>
-        {error && (
+        {detailError && (
           <p className={s.error} role="alert">
-            {error}
+            {mensajeError(detailError, "No se pudo cargar el expediente completo.")}
           </p>
         )}
         <div className={s.formGrid}>
           <Field
             label="Etapa del proceso"
             hint={
-              candidate.stage === "hired"
-                ? "Contratación de ejemplo completada."
+              hired
+                ? "Contratación completada."
                 : "Para contratar, pasa a Oferta y abre la pestaña Contratar."
             }
           >
             {(props) => (
               <select
                 {...props}
-                value={candidate.stage}
-                disabled={candidate.stage === "hired"}
-                onChange={(event) =>
-                  save(
-                    { stage: event.target.value },
-                    `Etapa: ${STAGES.find((stage) => stage.id === event.target.value)?.singular}`
-                  )
-                }
+                value={person.stage}
+                disabled={hired || savingStage}
+                onChange={async (event) => {
+                  setSavingStage(true);
+                  await changeStage(person.id, event.target.value);
+                  setSavingStage(false);
+                }}
               >
                 {STAGES.map((stage) => (
                   <option key={stage.id} value={stage.id} disabled={stage.id === "hired"}>
@@ -141,9 +429,9 @@ export default function CandidatePanel({
           <div className={s.field}>
             <span>Contacto</span>
             <p className={s.muted} style={{ overflowWrap: "anywhere" }}>
-              {candidate.email}
+              {person.email || "Sin correo"}
               <br />
-              {candidate.phone}
+              {person.phone || "Sin teléfono"}
             </p>
           </div>
         </div>
@@ -163,47 +451,41 @@ export default function CandidatePanel({
             </TabsTrigger>
           </TabsList>
           <TabsContent value="profile" className={s.tabContent}>
-            <div className={s.stack}>
-              <p className={s.small}>
-                Formulario versión {candidate.formVersion}. Estas respuestas conservan las preguntas
-                tal como se enviaron.
+            {!detail && isLoading ? (
+              <p className={`${s.row} ${s.muted}`} role="status">
+                <Loader2 className="size-4 animate-spin" /> Cargando respuestas…
               </p>
-              <dl className={s.answers}>
-                {candidate.answers.map((answer) => (
-                  <div key={answer.id}>
-                    <dt>{answer.label}</dt>
-                    <dd>
-                      {answer.type === "file" ? (
-                        answer.value?.name ? (
-                          <>
-                            <span className={s.row}>
-                              <FileText size={15} />
-                              {answer.value.name}
-                            </span>
-                            <span className={s.small}>
-                              Solo nombre de prueba; archivo no almacenado.
-                            </span>
-                          </>
-                        ) : (
-                          "Sin archivo adjunto"
-                        )
-                      ) : Array.isArray(answer.value) ? (
-                        answer.value.join(", ") || "Sin respuesta"
-                      ) : (
-                        String(answer.value ?? "") || "Sin respuesta"
-                      )}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
+            ) : (
+              <div className={s.stack}>
+                <p className={s.small}>
+                  Formulario versión {person.formVersion}. Estas respuestas conservan las preguntas
+                  tal como se enviaron.
+                </p>
+                <dl className={s.answers}>
+                  {person.answers.map((answer) => (
+                    <div key={answer.id}>
+                      <dt>{answer.label}</dt>
+                      <dd>
+                        {answer.type === "file"
+                          ? answer.value
+                            ? "Currículum recibido (se consulta en el expediente de la postulación)."
+                            : "Sin archivo adjunto"
+                          : Array.isArray(answer.value)
+                          ? answer.value.join(", ") || "Sin respuesta"
+                          : String(answer.value ?? "") || "Sin respuesta"}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            )}
           </TabsContent>
           <TabsContent value="activity" className={s.tabContent}>
             <div className={s.stack}>
               <section className={s.panel}>
                 <div className={s.panelHead}>
                   <h3>Notas del equipo</h3>
-                  <span className={s.small}>Internas</span>
+                  <span className={s.small}>Internas · el candidato no las ve</span>
                 </div>
                 <div className={`${s.panelBody} ${s.stack}`}>
                   <Field label="Agregar una nota">
@@ -219,8 +501,9 @@ export default function CandidatePanel({
                   </Field>
                   <div className={s.row}>
                     <Button
-                      onClick={addNote}
-                      disabled={!note.trim()}
+                      onClick={saveNote}
+                      disabled={!note.trim() || savingNote}
+                      loading={savingNote}
                       className={s.primary}
                       size="sm"
                     >
@@ -228,11 +511,12 @@ export default function CandidatePanel({
                       Guardar nota
                     </Button>
                   </div>
-                  {[...candidate.notes].reverse().map((item) => (
+                  {[...person.notes].reverse().map((item) => (
                     <div key={item.id} className={s.note}>
                       {item.text}
                       <div className={s.small} style={{ marginTop: 7 }}>
-                        {formatDate(item.at)}
+                        {item.author ? `${item.author} · ` : ""}
+                        {formatDateTime(item.at)}
                       </div>
                     </div>
                   ))}
@@ -240,197 +524,78 @@ export default function CandidatePanel({
               </section>
               <section className={s.panel}>
                 <div className={s.panelHead}>
-                  <h3>Programar entrevista de prueba</h3>
+                  <h3>Entrevistas</h3>
                   <CalendarDays size={17} />
                 </div>
-                <form
-                  className={`${s.panelBody} ${s.stack}`}
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    if (!interview) return;
-                    if (new Date(interview).getTime() <= Date.now()) {
-                      setError("La entrevista debe ser en una fecha y hora futuras.");
-                      return;
-                    }
-                    if (
-                      onScheduleInterview?.({
-                        candidateId: candidate.id,
-                        startsAt: new Date(interview).toISOString(),
-                        duration: 30,
-                        location: location.trim(),
-                        interviewer: "Equipo de talento",
-                        notes: "",
-                      })
-                    ) {
-                      setInterview("");
-                      setLocation("");
-                      setError("");
-                    } else
-                      setError(
-                        "No se pudo guardar la entrevista. Revisa los datos y vuelve a intentar."
-                      );
-                  }}
-                >
-                  <div className={s.formGrid}>
-                    <Field label="Fecha y hora">
-                      {(props) => (
-                        <input
-                          {...props}
-                          type="datetime-local"
-                          required
-                          value={interview}
-                          onChange={(event) => setInterview(event.target.value)}
-                        />
-                      )}
-                    </Field>
-                    <Field label="Lugar o medio">
-                      {(props) => (
-                        <input
-                          {...props}
-                          value={location}
-                          maxLength={200}
-                          placeholder="Ej. Videollamada"
-                          onChange={(event) => setLocation(event.target.value)}
-                        />
-                      )}
-                    </Field>
-                  </div>
+                <div className={`${s.panelBody} ${s.stack}`}>
+                  <p className={s.muted}>
+                    Las entrevistas se agendan en la agenda de WhatsApp de la vacante. Mueve a la
+                    persona a «Entrevista» para llevar el seguimiento aquí.
+                  </p>
                   <div className={s.row}>
-                    <Button
-                      type="submit"
-                      variant="outline"
-                      disabled={["hired", "rejected"].includes(candidate.stage)}
-                    >
-                      Guardar entrevista
+                    <Button variant="outline" asChild>
+                      <Link href={ENTREVISTAS_REAL}>
+                        <ExternalLink size={14} />
+                        Abrir agenda de entrevistas
+                      </Link>
                     </Button>
-                    <span className={s.small}>
-                      Se registra en el historial; no envía invitaciones.
-                    </span>
                   </div>
-                </form>
+                </div>
               </section>
               <section className={s.stack}>
                 <h3 className={s.personName}>Historial del proceso</h3>
                 <div className={s.timeline}>
-                  {[...candidate.activity].reverse().map((event) => (
+                  {[...person.activity].reverse().map((event) => (
                     <div key={event.id} className={s.timelineItem}>
                       {event.text}
-                      <div className={s.small}>{formatDate(event.at)}</div>
+                      <div className={s.small}>
+                        {event.author ? `${event.author} · ` : ""}
+                        {formatDateTime(event.at)}
+                      </div>
                     </div>
                   ))}
+                  {!person.activity.length && (
+                    <p className={s.muted}>{isLoading ? "Cargando historial…" : "Sin movimientos."}</p>
+                  )}
                 </div>
               </section>
             </div>
           </TabsContent>
           <TabsContent value="hiring" className={s.tabContent}>
-            {candidate.stage === "hired" ? (
+            {hired ? (
               <div className={s.success}>
                 <CheckCircle2 />
-                <h3 className={s.applyTitle}>Contratación de ejemplo completada</h3>
+                <h3 className={s.applyTitle}>Contratación completada</h3>
                 <p className={s.muted}>
-                  Ingreso: {formatDate(hiring.startDate)} ·{" "}
-                  {data.branches.find((branch) => branch.id === hiring.branchId)?.name}
+                  Ingreso: {formatDate(person.hiring.startDate)}
+                  {data.branches.find((branch) => branch.id === person.hiring.branchId)
+                    ? ` · ${data.branches.find((branch) => branch.id === person.hiring.branchId).name}`
+                    : ""}
                 </p>
-                <p className={s.small}>
-                  No se creó un empleado real. La integración continuará con el alta y expediente
-                  existentes.
-                </p>
+                {person.hiring.employeeId && (
+                  <>
+                    <p className={s.small}>
+                      {person.hiring.existingEmployee
+                        ? "Se enlazó con su ficha de empleado existente."
+                        : "Se creó su ficha de empleado."}{" "}
+                      {person.employee?.name ? `${person.employee.name} · ${person.employee.status}` : ""}
+                    </p>
+                    <Button variant="outline" asChild>
+                      <Link href={urlEmpleado(person.hiring.employeeId)}>
+                        <ExternalLink size={14} />
+                        Ver ficha del empleado
+                      </Link>
+                    </Button>
+                  </>
+                )}
               </div>
             ) : (
-              <div className={s.stack}>
-                <div className={s.formHint}>
-                  <strong>Prepara su llegada al equipo</strong>
-                  <p>
-                    Revisa estos datos antes de completar la contratación de prueba. El alta real de
-                    empleado y el contrato se conectarán con los módulos existentes.
-                  </p>
-                </div>
-                {!hasOffer && (
-                  <div className={s.between}>
-                    <p className={s.muted}>Primero confirma que el candidato está en Oferta.</p>
-                    <Button
-                      variant="outline"
-                      onClick={() => save({ stage: "offer" }, "Etapa: Oferta")}
-                    >
-                      Mover a Oferta
-                    </Button>
-                  </div>
-                )}
-                <div className={s.formGrid}>
-                  <Field label="Fecha de ingreso *">
-                    {(props) => (
-                      <input
-                        {...props}
-                        type="date"
-                        value={hiring.startDate}
-                        onChange={(event) =>
-                          save({ hiring: { ...hiring, startDate: event.target.value } })
-                        }
-                      />
-                    )}
-                  </Field>
-                  <Field label="Sucursal de alta *">
-                    {(props) => (
-                      <select
-                        {...props}
-                        value={hiring.branchId}
-                        onChange={(event) =>
-                          save({ hiring: { ...hiring, branchId: event.target.value } })
-                        }
-                      >
-                        <option value="">Selecciona una sucursal</option>
-                        {data.branches.map((branch) => (
-                          <option key={branch.id} value={branch.id}>
-                            {branch.name}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </Field>
-                </div>
-                <div className={s.stack} style={{ gap: 12 }}>
-                  {CHECKLIST.map(([id, label]) => (
-                    <label className={s.check} key={id}>
-                      <input
-                        type="checkbox"
-                        checked={hiring.checklist.includes(id)}
-                        onChange={(event) =>
-                          save({
-                            hiring: {
-                              ...hiring,
-                              checklist: event.target.checked
-                                ? [...hiring.checklist, id]
-                                : hiring.checklist.filter((item) => item !== id),
-                            },
-                          })
-                        }
-                      />
-                      {label}
-                    </label>
-                  ))}
-                </div>
-                <div className={s.between}>
-                  <span className={s.small}>
-                    La preparación se guarda automáticamente en esta prueba.
-                  </span>
-                  <Button
-                    className={s.primary}
-                    disabled={!ready || !hasOffer}
-                    onClick={() =>
-                      save(
-                        {
-                          stage: "hired",
-                          hiring: { ...hiring, completedAt: new Date().toISOString() },
-                        },
-                        "Contratación de ejemplo completada; no se creó un empleado real"
-                      )
-                    }
-                  >
-                    <UserCheck size={15} />
-                    Completar contratación de prueba
-                  </Button>
-                </div>
-              </div>
+              <HiringForm
+                key={`${person.id}-${person.stage}`}
+                person={person}
+                data={data}
+                vacancy={vacancy}
+              />
             )}
           </TabsContent>
         </Tabs>

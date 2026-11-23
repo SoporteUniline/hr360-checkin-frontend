@@ -31,6 +31,8 @@ import { useSnackbar } from "notistack";
 import OTPForm from "./OTPForm";
 import axios from "axios";
 import CargaCV from "./CargaCV";
+import PreguntasVacante, { faltantes } from "./PreguntasVacante";
+import { respuestasParaEnviar } from "@/lib/reclutamiento/respuestas.mjs";
 
 export default function ApplicationForm({
   selectedJob,
@@ -42,6 +44,11 @@ export default function ApplicationForm({
   const [loading, setLoading] = React.useState(false);
   const [files, setFiles] = React.useState([]);
   const [showOTP, setShowOTP] = React.useState(false);
+  // (03/12/2026) Preguntas propias de la vacante (Reclutamiento real).
+  const preguntas = React.useMemo(() => selectedJob?.preguntas_formulario ?? [], [selectedJob]);
+  const [respuestas, setRespuestas] = React.useState({});
+  const [sinResponder, setSinResponder] = React.useState([]);
+  const cerrada = selectedJob?.recibe_postulaciones === false;
   const { enqueueSnackbar } = useSnackbar();
 
   const form = useForm({
@@ -102,6 +109,13 @@ export default function ApplicationForm({
       return;
     }
 
+    const pendientes = faltantes(preguntas, respuestas);
+    setSinResponder(pendientes);
+    if (pendientes.length) {
+      enqueueSnackbar("Responde las preguntas del puesto marcadas.", { variant: "error" });
+      return;
+    }
+
     if (!showOTP) return sendOTP(data.telefono);
     //crear formData
     const formData = new FormData();
@@ -116,6 +130,7 @@ export default function ApplicationForm({
       "telefono_verificacion_token",
       typeof telefonoVerificacionToken === "string" ? telefonoVerificacionToken : "",
     );
+    if (preguntas.length) formData.append("respuestas", JSON.stringify(respuestasParaEnviar(preguntas, respuestas)));
     // agregar el cv a formdata
     if (files.length > 0) formData.append("cv", files[0].file);
 
@@ -134,6 +149,7 @@ export default function ApplicationForm({
       setLoading(false);
       form.reset();
       setFiles([]);
+      setRespuestas({});
       setOpen(false);
     } catch (error) {
       setLoading(false);
@@ -147,8 +163,12 @@ export default function ApplicationForm({
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
+      {cerrada ? (
+        <p className="text-sm text-slate-600" role="status">Esta vacante ya cerró su periodo de postulaciones.</p>
+      ) : null}
       <Button
         className="bg-slate-700 text-white px-4 py-2 rounded-lg hover:bg-slate-600 w-full"
+        disabled={cerrada}
         onClick={() => {
           if (isLoggedIn) {
             setOpenDialog(true); //Descomentar esta línea a futuro
@@ -210,6 +230,7 @@ export default function ApplicationForm({
                   </AccordionContent>
                 </AccordionItem> */}
               </Accordion>
+              <PreguntasVacante preguntas={preguntas} valores={respuestas} onCambiar={setRespuestas} errores={sinResponder} disabled={loading} />
               <CargaCV files={files} setFiles={setFiles} />
               <FormField
                 control={form.control}

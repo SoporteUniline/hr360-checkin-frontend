@@ -38,7 +38,8 @@ function QuestionRow({ question, index, count, onChange, onMove, onDelete, editi
   });
   const typeLabel =
     QUESTION_TYPES.find(([type]) => type === question.type)?.[1] ||
-    (question.type === "email" ? "Correo electrónico" : "Teléfono");
+    ({ email: "Correo electrónico", tel: "Teléfono", file: "Archivo · currículum" }[question.type] ||
+      "Respuesta corta");
   return (
     <div
       ref={setNodeRef}

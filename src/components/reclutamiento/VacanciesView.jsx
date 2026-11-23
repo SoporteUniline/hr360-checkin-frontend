@@ -107,14 +107,14 @@ export default function VacanciesView({ data, filters, setFilters, onAction, onO
   ];
   const exportRows = () =>
     downloadCsv(
-      "vacantes-prueba.csv",
+      "vacantes.csv",
       ["Vacante", "Estado", "Sucursal", "Modalidad", "Lugares", "Candidatos", "Cierre"],
       filtered.map((vacancy) => [
         vacancy.title,
         VACANCY_STATUSES[vacancyStatus(vacancy)].label,
         data.branches.find((branch) => branch.id === vacancy.branchId)?.name || "",
-        data.modalities.find((item) => item.id === vacancy.modalityId)?.name,
-        vacancy.openings,
+        data.modalities.find((item) => item.id === vacancy.modalityId)?.name || vacancy.modalityText,
+        vacancy.unlimited ? "Sin límite" : vacancy.openings,
         data.candidates.filter((candidate) => candidate.vacancyId === vacancy.id).length,
         vacancy.closesOn,
       ])
@@ -159,12 +159,12 @@ export default function VacanciesView({ data, filters, setFilters, onAction, onO
           title={
             data.vacancies.length
               ? "No encontramos vacantes con estos filtros"
-              : "Tu próximo equipo empieza aquí"
+              : "Aún no tienes vacantes"
           }
           description={
             data.vacancies.length
               ? "Busca otro puesto o limpia los filtros para ver todas las vacantes."
-              : "Crea una vacante, prepara tu formulario y revisa la página que compartirás."
+              : "Crea una vacante, prepara su formulario y comparte su página o su enlace de WhatsApp."
           }
         >
           {data.vacancies.length ? (
@@ -177,7 +177,7 @@ export default function VacanciesView({ data, filters, setFilters, onAction, onO
           ) : (
             <Button className={s.primary} onClick={onCreate}>
               <Plus size={15} />
-              Crear mi primera vacante
+              Crear vacante
             </Button>
           )}
         </EmptyState>
@@ -187,6 +187,9 @@ export default function VacanciesView({ data, filters, setFilters, onAction, onO
             const candidates = data.candidates.filter(
               (candidate) => candidate.vacancyId === vacancy.id
             );
+            const viaWhatsapp = (data.whatsappCandidates || []).filter(
+              (candidate) => candidate.vacancyId === vacancy.id
+            ).length;
             const newCount = candidates.filter((candidate) => candidate.stage === "new").length;
             const branch = data.branches.find((item) => item.id === vacancy.branchId);
             return (
@@ -207,7 +210,10 @@ export default function VacanciesView({ data, filters, setFilters, onAction, onO
                   </span>
                   <span>
                     <BriefcaseBusiness size={13} />
-                    {data.modalities.find((item) => item.id === vacancy.modalityId)?.name} ·{" "}
+                    {data.modalities.find((item) => item.id === vacancy.modalityId)?.name ||
+                      vacancy.modalityText ||
+                      "Sin modalidad"}{" "}
+                    ·{" "}
                     {vacancy.employmentType}
                   </span>
                   <span>
@@ -220,8 +226,11 @@ export default function VacanciesView({ data, filters, setFilters, onAction, onO
                 <div className={s.cardBottom}>
                   <div className={s.row}>
                     <span className={s.small}>
-                      {vacancy.openings}{" "}
-                      {Number(vacancy.openings) === 1 ? "lugar disponible" : "lugares disponibles"}
+                      {vacancy.unlimited
+                        ? "Sin límite de lugares"
+                        : `${vacancy.remaining} de ${vacancy.openings} ${
+                            Number(vacancy.openings) === 1 ? "lugar disponible" : "lugares disponibles"
+                          }`}
                     </span>
                     {newCount > 0 && (
                       <span className={s.badge} data-tone="blue">
@@ -232,7 +241,7 @@ export default function VacanciesView({ data, filters, setFilters, onAction, onO
                   <div className={s.cardFoot}>
                     <button onClick={() => onOpen(vacancy.id, "candidates")}>
                       <Users size={15} />
-                      {candidates.length} candidatos
+                      {candidates.length + viaWhatsapp} candidatos
                     </button>
                     <button onClick={() => onOpen(vacancy.id)}>
                       Ver vacante
