@@ -7,6 +7,8 @@
 //   multiple  { opciones: [{ id, texto, valor }] }       Varias: suma el % de las elegidas, hasta 100 %.
 //   numero    { min, max, unidad }                       Número: 100 % si está dentro del rango, si no 0 %.
 //   foto      {}                                         Foto: 100 % si la sube.
+//   estrellas {}                                         De 1 a 5 estrellas: cada una vale 20 % (3 de 5 = 60 %).
+//   firma     {}                                         Firma con el dedo: solo registra (p. ej. «Recibió»).
 //   texto, texto_largo, fecha, fecha_hora                Solo registran (no se califican): p. ej. «Fecha de caducidad».
 // Respuesta: { valor, na } — valor: "si"|"no" · id de opción · [ids] · número · url de foto · texto · "AAAA-MM-DD" ·
 // "AAAA-MM-DDTHH:MM". na: «No aplica».
@@ -18,10 +20,12 @@ export const TIPOS = [
   { clave: "multiple", texto: "Varias opciones", ayuda: "Lista: elige varias; suma su %, hasta 100 %", califica: true },
   { clave: "numero", texto: "Número", ayuda: "Bien si está en el rango", califica: true },
   { clave: "foto", texto: "Foto", ayuda: "Bien si la sube", califica: true },
+  { clave: "estrellas", texto: "Estrellas", ayuda: "De 1 a 5; cada estrella vale 20 %", califica: true },
   { clave: "texto", texto: "Texto corto", ayuda: "Una línea: un nombre, un folio", califica: false },
   { clave: "texto_largo", texto: "Texto largo", ayuda: "Párrafo: observaciones", califica: false },
   { clave: "fecha", texto: "Fecha", ayuda: "P. ej. fecha de caducidad", califica: false },
   { clave: "fecha_hora", texto: "Fecha y hora", ayuda: "P. ej. cuándo llegó el proveedor", califica: false },
+  { clave: "firma", texto: "Firma", ayuda: "Firma con el dedo, p. ej. «Recibió»", califica: false },
 ];
 
 // Opciones listas para no empezar de cero.
@@ -56,6 +60,7 @@ export function puntajePregunta(p, r) {
       return n >= min && n <= max ? 100 : 0;
     }
     case "foto": return 100;
+    case "estrellas": { const n = Math.round(Number(r.valor)); return n >= 1 && n <= 5 ? n * 20 : 0; }
     default: return 0;
   }
 }
@@ -126,6 +131,8 @@ export function textoRespuesta(p, r) {
     case "multiple": return (p.opciones ?? []).filter((o) => r.valor.includes(o.id)).map((o) => o.texto).join(", ") || "Ninguna";
     case "numero": return `${r.valor}${p.unidad ? ` ${p.unidad}` : ""}`;
     case "foto": return "Foto";
+    case "estrellas": { const n = Math.max(0, Math.min(5, Math.round(Number(r.valor)) || 0)); return `${"★".repeat(n)}${"☆".repeat(5 - n)} (${n} de 5)`; }
+    case "firma": return "Firmado";
     case "fecha": { const [a, m, d] = String(r.valor).split("-"); return `${d}/${m}/${a}`; }
     case "fecha_hora": { const [f, h] = String(r.valor).split("T"); const [a, m, d] = f.split("-"); return `${d}/${m}/${a} ${h ?? ""}`.trim(); }
     default: return String(r.valor);

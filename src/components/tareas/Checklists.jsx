@@ -117,6 +117,8 @@ function TarjetaPregunta({ p, i, total, preguntas, cambiar, mover, duplicar, qui
           </div>
         ) : null}
         {p.tipo === "foto" ? <p className="text-[13px] text-slate-600">Vale 100 % si sube la foto.</p> : null}
+        {p.tipo === "estrellas" ? <p className="text-[13px] text-slate-600">De 1 a 5 estrellas: cada una vale 20 % (3 de 5 = 60 %).</p> : null}
+        {p.tipo === "firma" ? <p className="text-[13px] text-slate-600">Firma con el dedo (p. ej. «Recibió»). Solo se registra; no cuenta en el %.</p> : null}
         {p.tipo === "texto" ? <p className="text-[13px] text-slate-600">Una línea (un nombre, un folio). Solo se registra; no cuenta en el %.</p> : null}
         {p.tipo === "texto_largo" ? <p className="text-[13px] text-slate-600">Párrafo para observaciones. Solo se registra; no cuenta en el %.</p> : null}
         {p.tipo === "fecha" ? <p className="text-[13px] text-slate-600">Elige una fecha del calendario (p. ej. caducidad). Solo se registra; no cuenta en el %.</p> : null}
@@ -232,7 +234,7 @@ function Editor({ inicial, alCerrar }) {
           </ol>
           {!eligiendo || f.preguntas.length ? (
             <div className="rounded-xl border border-dashed border-slate-300 bg-white p-3">
-              <p className="mb-2 text-[12.5px] font-semibold text-slate-600">Agregar pregunta <span className="font-normal text-slate-400">· las primeras 5 se califican; las demás solo registran</span></p>
+              <p className="mb-2 text-[12.5px] font-semibold text-slate-600">Agregar pregunta <span className="font-normal text-slate-400">· las primeras 6 se califican; las demás solo registran</span></p>
               <div className="flex flex-wrap gap-1.5">
                 {TIPOS.map((t) => (
                   <button key={t.clave} type="button" onClick={() => agregar(t.clave)} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[13px] font-semibold text-slate-700 hover:border-blue-300 hover:text-brand">

@@ -128,10 +128,12 @@ try {
   await pg.getByLabel("Unidad de la pregunta 4").fill("°C");
   await agregar("Texto largo");
   await pg.getByLabel("Pregunta 5", { exact: true }).fill("Observaciones");
+  await agregar("Estrellas");
+  await pg.getByLabel("Pregunta 6", { exact: true }).fill("¿Qué tan limpio se ve?");
   await agregar("Fecha");
-  await pg.getByLabel("Pregunta 6", { exact: true }).fill("Caducidad del jabón");
+  await pg.getByLabel("Pregunta 7", { exact: true }).fill("Caducidad del jabón");
   await pg.getByText("Solo se registra; no cuenta en el %.").first().waitFor();
-  assert.equal(await pg.getByLabel("Peso de la pregunta 6").count(), 0, "una fecha no tiene peso");
+  assert.equal(await pg.getByLabel("Peso de la pregunta 7").count(), 0, "una fecha no tiene peso");
   // Una opción sin 100 %: no deja guardar.
   await pg.getByLabel("Valor de la opción 1").first().fill("80");
   await pg.getByRole("button", { name: "Guardar y asignar" }).click();
@@ -146,7 +148,8 @@ try {
   await pr("¿Qué tiene el baño?").getByRole("button", { name: "Jabón" }).click();
   await pr("Temperatura del agua").getByRole("spinbutton").fill("35");
   await pr("Caducidad del jabón").locator('input[type="date"]').fill("2026-12-31");
-  await previa.getByText("75%", { exact: true }).waitFor(); // 4 preguntas de peso 1; área B «Sucia» = 0; la fecha no cuenta
+  await pr("¿Qué tan limpio se ve?").getByRole("radio", { name: "4 estrellas" }).click();
+  await previa.getByText("76%", { exact: true }).waitFor(); // 5 de peso 1: 100+0+100+100+80 = 380/5; la fecha no cuenta
   await captura(pg, "tareas-checklist-editor");
   await pg.getByRole("button", { name: "Guardar y asignar" }).click();
   await pg.getByText("«Revisión de baños» quedó creado y asignado.").waitFor();
@@ -210,15 +213,24 @@ try {
   // Checklist de cierre: preguntas de varios tipos, obligatorias y foto; la calificación se ve en vivo.
   await pe.getByRole("button", { name: /Cierre y corte de caja/ }).click();
   const enviar = pe.getByRole("button", { name: /Enviar terminado/ });
-  await pe.getByText("Faltan 3 preguntas obligatorias.").waitFor();
+  await pe.getByText("Faltan 4 preguntas obligatorias.").waitFor();
   const preg = (t) => pe.getByRole("listitem").filter({ hasText: t });
   await preg("¿El corte de caja cuadró?").getByRole("button", { name: "Sí", exact: true }).click();
   await preg("Foto de las llaves del gas").locator('input[type="file"]').setInputFiles({ name: "gas.png", mimeType: "image/png", buffer: PNG });
   await preg("¿Cómo quedó la cocina?").getByRole("button", { name: "Limpia", exact: true }).click();
-  await pe.getByText("Faltan 1 pregunta obligatoria y 1 foto.").waitFor();
+  await pe.getByText("Faltan 2 preguntas obligatorias y 1 foto.").waitFor();
   await preg("¿Cómo quedó la cocina?").locator('input[type="file"]').setInputFiles({ name: "cocina.png", mimeType: "image/png", buffer: PNG });
   await preg("¿Hay basura dentro del local?").getByRole("button", { name: "No", exact: true }).click();
   await preg("¿Quedó activada la alarma?").getByRole("button", { name: "Sí", exact: true }).click();
+  // Firma con el dedo (obligatoria).
+  const lienzo = preg("Firma de quien entrega la caja").getByLabel("Firma: Firma de quien entrega la caja");
+  await lienzo.scrollIntoViewIfNeeded();
+  const cf = await lienzo.boundingBox();
+  await pe.mouse.move(cf.x + 30, cf.y + 60); await pe.mouse.down();
+  for (let k = 1; k <= 10; k++) await pe.mouse.move(cf.x + 30 + k * 22, cf.y + 60 + Math.sin(k) * 25);
+  await pe.mouse.up();
+  await preg("Firma de quien entrega la caja").getByRole("button", { name: "Listo, firmar" }).click();
+  await preg("Firma de quien entrega la caja").getByRole("img", { name: /Firma:/ }).waitFor();
   assert.match(await enviar.innerText(), /100%/);
   await preg("¿Cómo quedó la cocina?").getByRole("button", { name: "Regular", exact: true }).click();
   assert.match(await enviar.innerText(), /94\.4%/, "cocina «Regular» (50 %) con peso 1 de 9");
@@ -230,7 +242,7 @@ try {
 
   assert.deepEqual(errores, []);
   exito = true;
-  console.log("OK prototipo tareas: tablero (arrastrar, aprobar, crear, filtro), proyectos, crear checklist con 5 tipos (validación y vista previa 75 %), revisar corrigiendo una respuesta, cumplimiento por sucursal + preguntas que más fallan + Excel; app: mandar a revisión, checklist con tipos, obligatorias, fotos y % en vivo");
+  console.log("OK prototipo tareas: tablero (arrastrar, aprobar, crear, filtro), proyectos, crear checklist con 7 tipos (validación y vista previa 76 % con estrellas), revisar corrigiendo una respuesta, cumplimiento por sucursal + preguntas que más fallan + Excel; app: mandar a revisión, checklist con tipos, obligatorias, fotos, firma y % en vivo");
 } finally {
   await browser.close();
   try { process.kill(-next.pid); } catch { next.kill(); }
