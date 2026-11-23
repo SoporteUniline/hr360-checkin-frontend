@@ -3,10 +3,9 @@
 // ubicación y las líneas de sistema de la cita. Sin navegador: se prueban con node --test (scripts/test-whatsapp-adjuntos.mjs).
 import { fechaHoraCorta } from "./agenda.mjs";
 
-// Mientras el servidor de adjuntos y «Ofrecer horarios» no esté en dev, la bandeja esconde esos botones (los mensajes con
-// adjunto que lleguen sí se pintan). Se enciende con NEXT_PUBLIC_WA_ADJUNTOS=true; al fusionar el servidor se cambia el
-// valor por defecto a encendido.
-export const CHAT_ADJUNTOS_ACTIVO = process.env.NEXT_PUBLIC_WA_ADJUNTOS === "true";
+// Adjuntos, notas de voz y «Ofrecer horarios» en la bandeja. Encendido; NEXT_PUBLIC_WA_ADJUNTOS=false los esconde
+// (por ejemplo, si un ambiente aún no tiene la migración 20261130_whatsapp_adjuntos).
+export const CHAT_ADJUNTOS_ACTIVO = process.env.NEXT_PUBLIC_WA_ADJUNTOS !== "false";
 
 export const LIMITE_ADJUNTO = 16 * 1024 * 1024; // 16 MB, igual que el API
 export const LIMITE_PIE = 1024; // comentario (caption) de un archivo en WhatsApp

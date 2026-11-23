@@ -414,10 +414,13 @@ export default function BandejaWhatsapp() {
     await recargarHilo();
     setAnuncio("Cita actualizada.");
   };
-  // «Ofrecer horarios»: necesita vacante y la ventana de 24 h abierta (el API responde 409 si no).
+  // «Ofrecer horarios»: necesita vacante, la ventana de 24 h abierta y que no tenga ya una cita activa (el API responde
+  // 409 si no; también si la agenda de la empresa está apagada, eso se avisa con el texto del API).
+  const citasHilo = hilo ? citasDelChat(hilo) : null;
+  const yaTieneCita = Boolean(citasHilo?.activa);
   const opcionOfrecer = conversacion && CHAT_ADJUNTOS_ACTIVO ? {
-    disponible: !!conversacion.vacante?.id_vacante && conversacion.ventana_abierta !== false,
-    motivo: !conversacion.vacante?.id_vacante ? "Sin vacante" : conversacion.ventana_abierta === false ? "Chat cerrado (más de 24 h)" : "",
+    disponible: !!conversacion.vacante?.id_vacante && conversacion.ventana_abierta !== false && !yaTieneCita,
+    motivo: !conversacion.vacante?.id_vacante ? "Sin vacante" : conversacion.ventana_abierta === false ? "Chat cerrado (más de 24 h)" : yaTieneCita ? "Ya tiene una cita" : "",
     cargando: ofreciendo,
     onOfrecer: ofrecer,
   } : null;
@@ -550,7 +553,7 @@ export default function BandejaWhatsapp() {
                   requiereAtencion={entrevista?.requiere_atencion === true}
                   onSeguimiento={seguimiento}
                   onEnviarAdjunto={CHAT_ADJUNTOS_ACTIVO ? enviarArchivo : undefined}
-                  citas={hilo ? citasDelChat(hilo) : null}
+                  citas={citasHilo}
                   hoy={hoyMx(ahora)}
                   onCitaCambio={alCambiarCitaChat}
                   ofrecer={opcionOfrecer}
