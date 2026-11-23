@@ -1,0 +1,147 @@
+"use client";
+import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import { ensureOfflineCache } from '@/lib/axios';
+import { clockStore, installOfflineWorker, initializeClock, warmOfflineAssets, synchronizeClockQueue, resolveClockDecision, retryClockEvent, discardClockEvent } from '@/lib/offline-clock';
+import { isTurnConflict } from '../../public/offline-clock/turn-state.mjs';
+
+// (23/11/2026) Opciones que manda el servidor al cerrar un tramo (incluye «Salir a comer»).
+const ETIQUETA_ACCION = { salida_comida: 'Salir a comer', salida: 'Registrar salida', salida_temporal: 'Salida temporal', cerrar_turno: 'Cerrar turno' };
+
+export default function OfflineExperience() {
+  const { dataUser } = useAuth();
+  const pathname = usePathname();
+  const [offline, setOffline] = useState(false);
+  const [events, setEvents] = useState([]);
+  const [compact, setCompact] = useState(true);
+  const [corner, setCorner] = useState(0);
+  const [actionError, setActionError] = useState('');
+  const [syncing, setSyncing] = useState(false);
+  const syncNow = async () => {
+    setActionError('');
+    setSyncing(true);
+    try { await synchronizeClockQueue(); }
+    catch { setActionError('No se pudo completar la sincronización. Las capturas siguen guardadas en este dispositivo.'); }
+    finally { setSyncing(false); }
+  };
+  const positions = ['bottom-24 right-3', 'top-20 right-3', 'top-20 left-3', 'bottom-24 left-3'];
+  const discard = async event => {
+    setActionError('');
+    try { await discardClockEvent(event); }
+    catch { setActionError('No se pudo descartar la captura. Intenta de nuevo.'); }
+  };
+  // Descarta de una vez todas las capturas rechazadas de este dispositivo (no tocan el servidor).
+  const [discardingAll, setDiscardingAll] = useState(false);
+  const discardAllReviews = async () => {
+    const revision = events.filter(event => event.status === 'review');
+    if (!revision.length || !window.confirm(`¿Descartar las ${revision.length} capturas para revisión de este dispositivo? No registran asistencia y no se pueden recuperar.`)) return;
+    setActionError('');
+    setDiscardingAll(true);
+    let fallidas = 0;
+    for (const event of revision) {
+      try { await discardClockEvent(event); } catch { fallidas++; }
+    }
+    setDiscardingAll(false);
+    if (fallidas) setActionError(`No se pudieron descartar ${fallidas} captura(s). Intenta de nuevo.`);
+  };
+  useEffect(() => {
+    let disposed = false;
+    const refresh = async () => {
+      const store = await clockStore();
+      const all = await store.listEvents();
+      const own = all.filter(event => event.status !== 'synced' && event.status !== 'rejected' && (event.scope === 'company' || (event.employee === Number(dataUser?.id_empleado) && event.company === Number(dataUser?.id_empresa))));
+      if (!disposed) setEvents(own);
+    };
+    const network = event => setOffline(event.detail?.offline ?? !navigator.onLine);
+    const workerMessage = event => {
+      if (event.data?.type === 'CLOCK_QUEUE_UPDATED') window.dispatchEvent(new Event('adamia-queue'));
+    };
+    const online = () => { window.__adamiaOffline = false; setOffline(false); void synchronizeClockQueue().catch(() => {}); };
+    const lost = () => { window.__adamiaOffline = true; setOffline(true); };
+    const visible = () => { if (!document.hidden) { void refresh().catch(() => {}); if (navigator.onLine) void synchronizeClockQueue().catch(() => {}); } };
+    const follow = event => {
+      if (!navigator.onLine || offline) {
+        const link = event.target.closest?.('a[href]');
+        if (!link || link.target === '_blank' || link.hasAttribute('download') || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) return;
+        const url = new URL(link.href, location.origin);
+        if (url.pathname === location.pathname && url.search === location.search && url.hash) return;
+        if (url.origin === location.origin) {
+          event.preventDefault(); event.stopPropagation(); location.assign(url.href);
+        }
+      }
+    };
+    setOffline(!navigator.onLine);
+    void refresh().catch(() => {});
+    window.addEventListener('adamia-network', network);
+    navigator.serviceWorker?.addEventListener('message', workerMessage);
+    window.addEventListener('adamia-queue', refresh);
+    window.addEventListener('online', online);
+    window.addEventListener('offline', lost);
+    document.addEventListener('visibilitychange', visible);
+    document.addEventListener('click', follow, true);
+    const timer = setInterval(() => { void synchronizeClockQueue().catch(() => {}); }, 30000);
+    return () => {
+      disposed = true; clearInterval(timer);
+      window.removeEventListener('adamia-network', network);
+      navigator.serviceWorker?.removeEventListener('message', workerMessage);
+      window.removeEventListener('adamia-queue', refresh);
+      window.removeEventListener('online', online);
+      window.removeEventListener('offline', lost);
+      document.removeEventListener('visibilitychange', visible);
+      document.removeEventListener('click', follow, true);
+    };
+  }, [dataUser?.id_empleado, dataUser?.id_empresa, offline]);
+
+  useEffect(() => {
+    if (!dataUser) return;
+    let disposed = false;
+    const prepare = async () => {
+      await ensureOfflineCache();
+      if (dataUser.tipo_usuario === 'Empleado') void initializeClock({ company: dataUser.id_empresa, employee: dataUser.id_empleado }).catch(() => {});
+      await installOfflineWorker();
+      if (disposed) return;
+      await warmOfflineAssets();
+      const cache = await ensureOfflineCache();
+      await cache?.snapshotPage();
+      await synchronizeClockQueue();
+    };
+    const timer = setTimeout(() => { void prepare().catch(() => {}); }, 1200);
+    const refresh = () => { void prepare().catch(() => {}); };
+    window.addEventListener('online', refresh);
+    return () => { disposed = true; clearTimeout(timer); window.removeEventListener('online', refresh); };
+  }, [pathname, dataUser]);
+
+  if (!offline && !events.length) return null;
+  const reviews = events.filter(event => event.status === 'review').length;
+  const pending = events.filter(event => event.status === 'pending').length;
+  return <aside role="status" aria-live="polite" className={`fixed ${positions[corner]} z-[100] max-h-[70dvh] overflow-y-auto rounded-xl border border-blue-300 bg-blue-50 p-3 text-sm text-blue-950 shadow-lg ${compact ? "w-auto max-w-[calc(100vw-1.5rem)]" : "w-80 max-w-[calc(100vw-1.5rem)]"}`}>
+    <div className="mb-1 flex items-center justify-between gap-3">
+      <span className="text-xs font-semibold">{offline ? 'Sin conexión' : 'Checadas'} · {pending} pendiente(s){reviews ? ` · ${reviews} para revisión` : ''}</span>
+      <div className="flex gap-2">
+        <button type="button" onClick={() => setCorner(value => (value + 1) % positions.length)} className="rounded border border-blue-400 px-2 py-1 text-xs" aria-label="Mover aviso a otra esquina" title="Mover a otra esquina">Mover</button>
+        <button type="button" onClick={() => setCompact(value => !value)} aria-expanded={!compact} className="rounded border border-blue-400 px-2 py-1 text-xs">{compact ? 'Ampliar' : 'Reducir'}</button>
+      </div>
+    </div>
+    {!compact && <>
+    <p className="font-semibold">{offline ? 'Sin conexión · Usando información guardada en este celular' : reviews ? 'Con conexión · Hay checadas rechazadas para revisión' : 'Con conexión · Checadas pendientes de subir'}</p>
+    {offline && <p className="mt-1 text-xs">Puedes consultar lo ya descargado y registrar checadas. Los demás cambios necesitan conexión.</p>}
+    {reviews > 1 && <button type="button" disabled={discardingAll} onClick={() => { void discardAllReviews(); }} className="mt-2 mr-2 rounded border border-blue-400 px-2 py-1 disabled:opacity-50">{discardingAll ? 'Descartando...' : `Descartar las ${reviews} de revisión`}</button>}
+    {pending > 0 && <button type="button" disabled={offline || syncing} onClick={() => { void syncNow(); }} className="mt-2 rounded border border-blue-400 px-2 py-1 disabled:opacity-50">{syncing ? 'Comprobando pendientes...' : 'Sincronizar ahora'}</button>}
+    {!!events.length && <details className="mt-2"><summary className="cursor-pointer">{events.length - reviews} pendiente(s){reviews ? ` · ${reviews} para revisión` : ''}</summary><p className="mt-1 text-xs">Las pendientes se subirán al recuperar conexión. Las rechazadas se conservan para revisión de RH. Las decisiones de turno aparecen aquí.</p><ul className="max-h-52 space-y-2 overflow-y-auto pt-2">
+      {events.slice(0, 30).map(event => <li key={event.id} className="border-t border-blue-200 pt-2">
+        <p>{event.employeeName || event.alias || 'Checada'} · {new Date(event.captured_at).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short', hourCycle: 'h12' })}</p>
+        {event.status === 'review' && <p className="font-semibold">No aceptada · Se conserva para revisión</p>}
+        <p className="text-xs">{event.error || 'Se enviará automáticamente al recuperar conexión.'}</p>
+        {event.status === 'review' && isTurnConflict(event) && <p className="mt-1 text-xs">{offline ? 'Conéctate para actualizar el estado del turno y continuar.' : 'Puedes registrar una nueva checada. Esta captura se conserva para revisión de RH.'}</p>}
+        {event.status === 'review' && !isTurnConflict(event) && !['GPS_INACCURATE', 'GPS_REFRESH_REQUIRED'].includes(event.errorCode) && <button type="button" disabled={offline} onClick={() => { void retryClockEvent(event).catch(() => {}); }} className="mt-1 rounded border border-blue-400 px-2 py-1 disabled:opacity-50">Reintentar envío</button>}
+        {event.status === 'review' && ['GPS_INACCURATE', 'GPS_REFRESH_REQUIRED'].includes(event.errorCode) && <p className="mt-1 text-xs">Reintentar conserva la misma ubicación. Descarta esta captura y realiza una nueva checada con ubicación precisa.</p>}
+        {event.status === 'review' && <button type="button" onClick={() => { void discard(event); }} className="mt-1 ml-2 rounded border border-blue-400 px-2 py-1">Descartar captura</button>}
+        {event.status === 'decision' && <div className="mt-1 flex flex-wrap gap-2">{(event.opciones?.length ? event.opciones : ['salida_temporal', 'cerrar_turno']).map((action) => [action, ETIQUETA_ACCION[action] || action]).map(([action, label]) => <button key={action} type="button" onClick={() => { void resolveClockDecision(event, action).catch(() => {}); }} className="rounded border border-blue-400 px-2 py-1">{label}</button>)}</div>}
+      </li>)}
+    </ul></details>}
+    <p className="mt-2 text-xs">Las capturas descartadas no registran asistencia.</p>
+    {actionError && <p role="alert" className="mt-2 text-xs font-semibold">{actionError}</p>}
+    </>}
+  </aside>;
+}

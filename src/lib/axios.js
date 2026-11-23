@@ -1,6 +1,15 @@
 import axios from "axios";
 import Cookies from "js-cookie";
+import { fetchSeguro } from "./fetchSeguro.mjs";
 
+let offlineReady;
+export function ensureOfflineCache() {
+  if (typeof window === 'undefined') return Promise.resolve();
+  if (!offlineReady) offlineReady = import(/* webpackIgnore: true */ '/offline-clock/app-cache.mjs?v=5')
+    .then(module => { module.installOfflineFetch(process.env.NEXT_PUBLIC_RUTA_BACKEND); return module; })
+    .catch(() => { offlineReady = null; });
+  return offlineReady;
+}
 // (20/11/2026) El backend ya pide sesión en catálogos (festivos, departamentos, unidades de negocio…)
 // y en la ficha del empleado. Las pantallas que usan `axios` directo (no la instancia de abajo) también
 // mandan el token, pero solo cuando la petición va a nuestro backend y no trae ya su Authorization.
@@ -15,7 +24,10 @@ function agregarTokenAlBackend(config) {
 }
 
 if (typeof window !== 'undefined') {
-  axios.interceptors.request.use(agregarTokenAlBackend);
+  axios.defaults.adapter = 'fetch';
+  // (23/11/2026) fetch que no deja pasar DOMException a axios (ver ./fetchSeguro.mjs).
+  axios.defaults.env = { ...(axios.defaults.env || {}), fetch: fetchSeguro };
+  axios.interceptors.request.use(async config => { await ensureOfflineCache(); return agregarTokenAlBackend(config); });
 }
 
 const instance = axios.create({
@@ -23,6 +35,7 @@ const instance = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  ...(typeof window !== 'undefined' ? { adapter: 'fetch', env: { ...(axios.defaults.env || {}), fetch: fetchSeguro } } : {}),
 });
 
 export const setAuthToken = (token) => {
@@ -33,7 +46,8 @@ export const setAuthToken = (token) => {
   }
 };
 
-instance.interceptors.request.use((config) => {
+instance.interceptors.request.use(async (config) => {
+  await ensureOfflineCache();
   const token = Cookies.get("token");
 
   if (token) {

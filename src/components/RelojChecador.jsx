@@ -12,10 +12,11 @@ import {
   Menu,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { validadaHoy, guardarValidada, olvidarValidada } from "@/lib/reloj/suscripcionDia.mjs";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import ErrorPage from "@/components/ErrorPage";
-import axiosInstance from "@/lib/axios";
 import { useSnackbar } from "notistack";
 import FacialRecognitionPanel from "./FacialRecognitionPanel";
 import { loadBrowserFaceApi } from "@/lib/faceapi-browser";
@@ -31,11 +32,16 @@ import timezone from "dayjs/plugin/timezone";
 import { useAuth } from "@/context/AuthContext";
 import QRScanner from "./QRScanner";
 import { Button } from "./ui/button";
+import { initializeClock, registerClockMovement, localFaceStatus } from '@/lib/offline-clock';
 import ClockNavigation from './Clock/ClockNavigation';
 import { hora12 } from "@/lib/hora12.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
+
+// (23/11/2026, INC-RELOJ-COMIDA-001) Si una checada guardada no trae las opciones del servidor, se ofrecen las que el
+// servidor acepta para cualquier tipo de cierre (con cierre automático, temporal/cerrar turno cuentan como salida).
+const OPCIONES_SIN_DATOS = ["salida_comida", "salida_temporal", "cerrar_turno"];
 
 export default function RelojChecador({
   idEmpresa,
@@ -66,6 +72,16 @@ export default function RelojChecador({
     try { localStorage.setItem(claveCamara, actual ? "0" : "1"); } catch { /* solo esta sesión */ }
     return !actual;
   });
+  const [offline, setOffline] = useState(false);
+  const [localFacesReady, setLocalFacesReady] = useState(false);
+  useEffect(() => {
+    const update = event => setOffline(event.type === 'online' ? false : event.detail?.offline ?? (!navigator.onLine || window.__adamiaOffline === true));
+    update({});
+    window.addEventListener('online', update);
+    window.addEventListener('offline', update);
+    window.addEventListener('adamia-network', update);
+    return () => { window.removeEventListener('online', update); window.removeEventListener('offline', update); window.removeEventListener('adamia-network', update); };
+  }, []);
   const [isMobile, setIsMobile] = useState(false);
   const [mostrarModalTurno, setMostrarModalTurno] = useState(false);
   const [pendiente, setPendiente] = useState(null);
@@ -88,10 +104,16 @@ export default function RelojChecador({
   const { getCurrentLocation, loading: loadingGPS } = useGPS();
   // All methods identify the person checking in within this company. The
   // signed-in employee only controls which history is visible on this page.
-  const submitMovement = (payload) => axiosInstance.post(
-    payload.descriptor_facial ? "/checador/reloj/registrar-facial" : "/checador/reloj/registrar",
-    payload,
-  );
+  const submitMovement = payload => registerClockMovement(payload, { company: idEmpresa, employee: null, slug: companySlug });
+  useEffect(() => {
+    let active = true;
+    const context = { company: idEmpresa, slug: companySlug };
+    const refresh = () => { void localFaceStatus(context).then(dataset => { if (active) setLocalFacesReady(!!dataset?.employees?.length); }).catch(() => { if (active) setLocalFacesReady(false); }); };
+    void initializeClock(context).catch(() => {}).finally(refresh);
+    refresh();
+    window.addEventListener('adamia-face-ready', refresh);
+    return () => { active = false; window.removeEventListener('adamia-face-ready', refresh); };
+  }, [idEmpresa, idEmpleado, modoEmpleado, companySlug, dataUser?.tipo_usuario]);
 
   // Prepare recognition while subscription and clock data are being checked.
   // Camera and GPS permissions are requested only by the visible facial panel.
@@ -190,8 +212,12 @@ export default function RelojChecador({
   }, []);
 
   useEffect(() => {
-    if (metodo !== "facial") setMostrarCamara(false);
-  }, [metodo]);
+    if (offline && !localFacesReady) {
+      setMostrarCamara(false);
+      if (metodo === 'facial') setMetodo('codigo');
+    }
+    else if (metodo !== "facial") setMostrarCamara(false);
+  }, [metodo, offline, localFacesReady]);
 
   useEffect(() => {
     setCodigoEmpleado("");
@@ -200,15 +226,28 @@ export default function RelojChecador({
   // Tarjeta del resultado. Un solo temporizador: con el reloj fijo, el aviso de la persona siguiente ya no
   // se cierra antes de tiempo por el temporizador de la anterior. Con motivo de «pendiente», más tiempo.
   const temporizadorPopup = useRef(null);
+  const router = useRouter();
+  useEffect(() => () => clearTimeout(temporizadorPopup.current), []);
   const mostrarResultado = (data) => {
     clearTimeout(temporizadorPopup.current);
+    // (21/11/2026) App del empleado: al checar regresa a su Inicio (ahí ve su jornada actualizada). Con error del
+    // servidor se queda para que lo vea y avise a RH; los errores al registrar no pasan por aquí (se quedan en el reloj).
+    const volverAInicio = modoEmpleado && !data.errorServidor;
     setPopupInfo({
+      volviendo: volverAInicio,
       nombre: `${data.empleado?.nombre ?? ""} ${data.empleado?.apellido_paterno ?? ""}`.trim(),
       foto_perfil: data.empleado?.foto_perfil || "/assets/user.png",
       movimiento: data.movimiento || data.message,
-      success: true,
+      pending: Boolean(data.pending),
+      motivo: data.motivo || "",
+      errorServidor: Boolean(data.errorServidor),
+      localValidated: Boolean(data.local_validated),
+      success: !data.pending,
     });
-    temporizadorPopup.current = setTimeout(() => setPopupInfo(null), 2500);
+    temporizadorPopup.current = setTimeout(() => {
+      setPopupInfo(null);
+      if (volverAInicio) router.replace("/empleado/panel/inicio");
+    }, data.pending && data.motivo ? 8000 : 2500);
     mutate();
   };
 
@@ -232,6 +271,12 @@ export default function RelojChecador({
 
     try {
       const payload = { codigo, id_empresa: idEmpresa, captured_at };
+      if (!navigator.onLine) {
+        const pos = await getCurrentLocation();
+        setUbicacionGPS(pos);
+        if (pos) Object.assign(payload, {latitud_actual: pos.lat, longitud_actual: pos.lng,
+          precision_metros: pos.accuracy, ubicacion_timestamp: pos.timestamp, captured_at: new Date().toISOString()});
+      }
       let response;
       try {
         response = await submitMovement(payload);
@@ -257,7 +302,7 @@ export default function RelojChecador({
       }
 
       if (data.requiereDecision) {
-        setPendiente({ tipo: "codigo", codigo });
+        setPendiente({ tipo: "codigo", codigo, offline_event: data.offline_event, opciones: data.opciones, mensaje: data.message });
         setMostrarModalTurno(true);
         setRegistrando(false);
         return;
@@ -284,6 +329,7 @@ export default function RelojChecador({
       const payload = {
         id_empresa: idEmpresa,
         accion,
+        offline_event: pendiente.offline_event,
         ...(pendiente.repetir ? { repetir: true } : {}),
       };
 
@@ -325,6 +371,9 @@ export default function RelojChecador({
       setPendiente({
         tipo: "facial",
         descriptor_facial: data.descriptor_facial,
+        offline_event: data.offline_event,
+        opciones: data.opciones,
+        mensaje: data.message,
       });
       setMostrarModalTurno(true);
     } else {
@@ -342,7 +391,7 @@ export default function RelojChecador({
         // Cierre manual: después de «Sí, registrar» pregunta «salida temporal / cerrar turno»; la decisión
         // conserva repetir y el tipo (código o rostro) para no volver a chocar con el candado.
         const { codigo, descriptor_facial } = pregunta.reintentar;
-        setPendiente({ tipo: codigo ? "codigo" : "facial", codigo, descriptor_facial, repetir: true });
+        setPendiente({ tipo: codigo ? "codigo" : "facial", codigo, descriptor_facial, offline_event: data.offline_event, repetir: true, opciones: data.opciones, mensaje: data.message });
         setMostrarModalTurno(true);
       } else {
         mostrarResultado(data);
@@ -356,6 +405,7 @@ export default function RelojChecador({
   };
 
   const abrirCamara = () => {
+    if (offline && !localFacesReady) return;
     setMostrarQR(false);
     setMostrarCamara(true);
   };
@@ -371,6 +421,12 @@ export default function RelojChecador({
   useEffect(() => {
     const validarSuscripcion = async () => {
       if (!idEmpresa) return;
+      // (21/11/2026) Una vez al día: si hoy ya se validó en este dispositivo, entra directo sin preguntar al servidor.
+      if (validadaHoy(`empresa:${idEmpresa}`)) {
+        setSubscriptionActive(true);
+        setSubscriptionLoading(false);
+        return;
+      }
 
       try {
         setSubscriptionLoading(true);
@@ -384,11 +440,16 @@ export default function RelojChecador({
         const data = await response.json();
 
         setSubscriptionActive(Boolean(data.hasActivePlan));
+        if (data.hasActivePlan) guardarValidada(`empresa:${idEmpresa}`);
+        else olvidarValidada(`empresa:${idEmpresa}`);
         globalThis.__adamiaDiag?.marca("suscripcion_fin", { activa: Boolean(data.hasActivePlan) });
       } catch (error) {
         console.error("Error validando suscripción:", error);
         globalThis.__adamiaDiag?.marca("suscripcion_fin", { error: true });
-        setSubscriptionActive(false);
+        try {
+          const profile = await initializeClock({ company: idEmpresa, slug: companySlug });
+          setSubscriptionActive(Date.now() - Date.parse(profile.prepared_at) < 7 * 86400000);
+        } catch { setSubscriptionActive(false); }
       } finally {
         setSubscriptionLoading(false);
       }
@@ -409,7 +470,7 @@ export default function RelojChecador({
     medir();
     window.addEventListener("resize", medir);
     return () => window.removeEventListener("resize", medir);
-  }, [subscriptionLoading, subscriptionActive, menuMovil, ajustesCamara, metodo]);
+  }, [subscriptionLoading, subscriptionActive, menuMovil]);
 
   // 12 horas con a.m./p.m. (19/11/2026): «4:49 p.m.».
   const horaCorta = horaActual ? horaActual.replace(/:\d{2} /, " ") : "";
@@ -446,7 +507,7 @@ export default function RelojChecador({
     );
   }
 
-  if (error)
+  if (error && !offline)
     return <ErrorPage message="No se pudieron cargar los registros." />;
 
   return (
@@ -454,7 +515,7 @@ export default function RelojChecador({
       <main className="bg-slate-50 md:min-h-screen md:p-4">
         <div className="mx-auto max-w-7xl md:space-y-6">
           <div className="hidden md:block"><ClockNavigation companyId={idEmpresa} companySlug={companySlug} /></div>
-          <div className="hidden md:block rounded-xl border border-blue-100 bg-linear-to-r from-indigo-50 to-blue-50 p-6">
+          <div className="hidden md:block rounded-xl border border-blue-100 bg-indigo-50/60 p-6">
             <div className="flex items-center gap-3">
               <div className="rounded-lg bg-blue-600 p-2.5">
                 <Clock4 className="w-5 h-5 text-white" />
@@ -467,6 +528,7 @@ export default function RelojChecador({
                   Registro de entradas y salidas con validación por código, QR y
                   reconocimiento facial.
                 </p>
+                <p role="status" className="mt-2 inline-flex rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">{offline ? localFacesReady ? 'Sin conexión · Reconocimiento local listo · Pendiente de subir' : 'Sin conexión · Código / QR · Rostro sin preparar' : localFacesReady ? 'Reconocimiento offline preparado en este dispositivo' : 'Los rostros de la empresa se descargan automáticamente con internet, sin iniciar sesión.'}</p>
               </div>
             </div>
           </div>
@@ -495,8 +557,10 @@ export default function RelojChecador({
             </div>
 
             <div className="lg:col-span-8 md:col-span-7 md:space-y-6">
-              {/* Franja con la marca ADAMIA (19/11/2026): logo y colores de marca, sin nombre de la empresa. */}
-              <div className="md:hidden flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-2">
+              {/* Franja con la marca ADAMIA (19/11/2026): logo y colores de marca, sin nombre de la empresa.
+                  (21/11/2026) En la app del iPhone la hora y la batería del sistema quedaban encima: deja el espacio de la
+                  muesca (safe area) y se queda fija arriba al desplazar. */}
+              <div className="md:hidden sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 pb-2 pt-[calc(env(safe-area-inset-top)+0.5rem)]">
                 <span className="flex min-w-0 items-center gap-2">
                   {dataUser && (
                     <button type="button" onClick={() => setMenuMovil((v) => !v)} aria-expanded={menuMovil} aria-label="Menú"
@@ -507,7 +571,8 @@ export default function RelojChecador({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src="/assets/adamia-logo-reloj.png" alt="ADAMIA" width={600} height={159} className="h-7 w-auto" />
                 </span>
-                <span onClick={tocarHora} className="shrink-0 select-none bg-linear-to-r from-brand to-brand-accent bg-clip-text text-lg font-bold tabular-nums text-transparent">{horaCorta}</span>
+                {offline && <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">{localFacesReady ? "Sin conexión · rostro listo" : "Sin conexión"}</span>}
+                <span onClick={tocarHora} className="shrink-0 select-none text-brand text-lg font-bold tabular-nums ">{horaCorta}</span>
               </div>
               {menuMovil && dataUser && (
                 <div className="md:hidden border-b border-slate-200 bg-white px-3 py-3 space-y-2">
@@ -536,6 +601,7 @@ export default function RelojChecador({
                 ].map((tab) => (
                   <button
                     key={tab.id}
+                    disabled={offline && !localFacesReady && tab.id === 'facial'}
                     onClick={() => {
                       setMetodo(tab.id);
                       if (tab.id === "facial") abrirCamara();
@@ -590,7 +656,7 @@ export default function RelojChecador({
 
               <div ref={areaRef} style={altoArea ? { height: altoArea } : undefined}
                 className="relative overflow-y-auto md:min-h-75 md:overflow-visible">
-                {(metodo === "facial" || !isMobile) && (
+                {(!offline || localFacesReady) && (metodo === "facial" || !isMobile) && (
                   <div
                     className={
                       metodo === "facial"
@@ -699,22 +765,24 @@ export default function RelojChecador({
         )}
 
         {popupInfo && (() => {
-          const tono = popupInfo.success ? "green" : "red";
-          const colores = { green: "text-green-700 bg-green-50", red: "text-red-700 bg-red-50" }[tono];
-          const estado = popupInfo.success ? (popupInfo.movimiento || "Registrada") : "No se registró · avisa a RH";
+          const tono = popupInfo.pending ? (popupInfo.errorServidor ? "amber" : "blue") : popupInfo.success ? "green" : "red";
+          const colores = { amber: "text-amber-700 bg-amber-50", blue: "text-blue-700 bg-blue-50", green: "text-green-700 bg-green-50", red: "text-red-700 bg-red-50" }[tono];
+          const estado = popupInfo.pending ? (popupInfo.errorServidor ? "Error del servidor · avisa a RH" : "Pendiente de subir") : popupInfo.success ? (popupInfo.movimiento || "Registrada") : "No se registró · avisa a RH";
           const iniciales = String(popupInfo.nombre || "").trim().split(/\s+/).slice(0, 2).map((p) => p[0] || "").join("").toUpperCase();
           // Celular: tarjeta sobre la cámara, sin tapar la pantalla (maqueta aprobada).
           return (
             <div role="status" aria-live="polite" className="md:hidden fixed inset-x-3 z-100 bottom-[calc(5.5rem+env(safe-area-inset-bottom))] flex items-center gap-3 rounded-2xl bg-white p-3 shadow-2xl animate-in slide-in-from-bottom-4 fade-in duration-200">
               {popupInfo.foto_perfil && !popupInfo.foto_perfil.endsWith("/assets/user.png")
                 ? <img src={popupInfo.foto_perfil} alt="" className="size-12 shrink-0 rounded-full object-cover" />
-                : <span className="grid size-12 shrink-0 place-items-center rounded-full bg-linear-to-br from-brand to-brand-accent font-bold text-white">{iniciales || "?"}</span>}
+                : <span className="grid size-12 shrink-0 place-items-center rounded-full bg-brand font-bold text-white">{iniciales || "?"}</span>}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-base font-bold text-slate-900">{popupInfo.nombre}</p>
                 <p className={`mt-0.5 inline-flex max-w-full items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-semibold ${colores}`}>
-                  {popupInfo.success ? <CheckCircle className="size-3.5 shrink-0" /> : <XCircle className="size-3.5 shrink-0" />}
+                  {popupInfo.pending ? <Clock4 className="size-3.5 shrink-0" /> : popupInfo.success ? <CheckCircle className="size-3.5 shrink-0" /> : <XCircle className="size-3.5 shrink-0" />}
                   <span className="truncate">{estado}</span>
                 </p>
+                {popupInfo.pending && popupInfo.motivo && <p className="mt-1 text-xs text-amber-700">{popupInfo.motivo}</p>}
+                {popupInfo.volviendo && <p className="mt-1 text-xs text-slate-500">Regresando a tu inicio…</p>}
               </div>
               <span className="shrink-0 text-lg font-bold tabular-nums text-slate-900">{horaCorta}</span>
             </div>
@@ -732,10 +800,12 @@ export default function RelojChecador({
                 />
                 <div
                   className={`absolute bottom-0 right-1/4 w-10 h-10 rounded-full flex items-center justify-center shadow-lg border-4 border-white ${
-                    popupInfo.success ? "bg-green-500" : "bg-red-500"
+                    popupInfo.pending ? (popupInfo.errorServidor ? "bg-amber-500" : "bg-blue-500") : popupInfo.success ? "bg-green-500" : "bg-red-500"
                   }`}
                 >
-                  {popupInfo.success ? (
+                  {popupInfo.pending ? (
+                    <Clock4 className="w-5 h-5 text-white" />
+                  ) : popupInfo.success ? (
                     <CheckCircle className="w-5 h-5 text-white" />
                   ) : (
                     <XCircle className="w-5 h-5 text-white" />
@@ -748,47 +818,55 @@ export default function RelojChecador({
               <p className="text-slate-500 font-bold uppercase text-xs tracking-widest mb-6">
                 {popupInfo.movimiento}
               </p>
+              {popupInfo.pending && popupInfo.motivo && (
+                <p className="-mt-3 mb-5 text-sm font-medium text-amber-700">{popupInfo.motivo}</p>
+              )}
+              {popupInfo.volviendo && <p className="-mt-3 mb-5 text-sm text-slate-500">Regresando a tu inicio…</p>}
               <div
                 className={`py-3 px-6 rounded-2xl inline-flex items-center gap-2 ${
-                  popupInfo.success
+                  popupInfo.pending
+                    ? popupInfo.errorServidor ? "bg-amber-50 text-amber-800" : "bg-blue-50 text-blue-800"
+                    : popupInfo.success
                     ? "bg-green-50 text-green-600"
                     : "bg-red-50 text-red-600"
                 }`}
               >
-                <CheckCircle className="w-5 h-5" />
-                <span className="font-black text-sm uppercase">¡Éxito!</span>
+                {popupInfo.pending ? <Clock4 className="w-5 h-5" /> : popupInfo.success ? <CheckCircle className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+                <span className="font-black text-sm uppercase">{popupInfo.pending ? (popupInfo.errorServidor ? 'Error del servidor · avisa a RH' : 'Pendiente de subir') : popupInfo.success ? '¡Éxito!' : 'No se registró · avisa a RH'}</span>
               </div>
             </div>
           </div>
         )}
 
         {mostrarModalTurno && (
-          <div className="fixed inset-0 z-110 flex items-end md:items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
+          <div className="fixed inset-0 z-110 flex items-end md:items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
             <div className="bg-white rounded-t-[2.5rem] md:rounded-[2.5rem] shadow-2xl p-8 w-full max-w-sm animate-in slide-in-from-bottom-10 duration-300">
               <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6 md:hidden" />
+              {/* (23/11/2026) Opciones que manda el servidor: «Salir a comer» / «Registrar salida» o las de cierre manual. */}
               <h2 className="text-2xl font-black text-slate-800 mb-2 tracking-tight">
-                Turno abierto
+                {pendiente?.opciones?.includes("salida_comida") ? "¿Sales a comer?" : "Turno abierto"}
               </h2>
               <p className="text-slate-500 text-sm font-medium mb-8 leading-relaxed">
-                Detectamos que ya tienes un turno en proceso. ¿Cuál es el
-                siguiente paso?
+                {pendiente?.opciones?.includes("salida_comida")
+                  ? "Elige si sales a comer (tu jornada sigue abierta) o si terminas tu jornada."
+                  : "Detectamos que ya tienes un turno en proceso. ¿Cuál es el siguiente paso?"}
               </p>
               <div className="flex flex-col gap-3">
-                <Button
-                  onClick={() => registrarConAccion("salida_temporal")}
-                  disabled={registrando}
-                  className="w-full py-7 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold border-none transition-all disabled:opacity-50"
-                >
-                  {registrando ? "Procesando..." : "Salida temporal"}
-                </Button>
-
-                <Button
-                  onClick={() => registrarConAccion("cerrar_turno")}
-                  disabled={registrando}
-                  className="w-full py-7 rounded-2xl bg-red-500 text-white hover:bg-red-600 font-bold shadow-lg shadow-red-200 transition-all border-none disabled:bg-red-300"
-                >
-                  {registrando ? "Cerrando..." : "Cerrar turno"}
-                </Button>
+                {(pendiente?.opciones?.length ? pendiente.opciones : OPCIONES_SIN_DATOS).map((opcion) => {
+                  const estilo = {
+                    salida_comida: "bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-200 disabled:bg-amber-300",
+                    salida: "bg-white text-blue-700 border-2 border-blue-200 hover:bg-blue-50",
+                    salida_temporal: "bg-slate-100 hover:bg-slate-200 text-slate-900 border-none",
+                    cerrar_turno: "bg-red-500 text-white hover:bg-red-600 shadow-lg shadow-red-200 border-none disabled:bg-red-300",
+                  }[opcion] || "bg-slate-100 text-slate-900";
+                  const texto = { salida_comida: "Salir a comer", salida: "Registrar salida", salida_temporal: "Salida temporal", cerrar_turno: "Cerrar turno" }[opcion] || opcion;
+                  return (
+                    <Button key={opcion} onClick={() => registrarConAccion(opcion)} disabled={registrando}
+                      className={`w-full py-7 rounded-2xl font-bold transition-all disabled:opacity-50 ${estilo}`}>
+                      {registrando ? "Procesando..." : texto}
+                    </Button>
+                  );
+                })}
 
                 <Button
                   onClick={() => {

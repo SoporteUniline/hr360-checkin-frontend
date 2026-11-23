@@ -40,7 +40,7 @@ export default function CambiarEstadoDialog({ open, setOpen, estadoActual, onCon
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md p-0 overflow-hidden">
         <DialogHeader className="p-0">
-          <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white p-6">
+          <div className="bg-brand text-white p-6">
             <div className="flex items-center gap-3">
               <div className="bg-white/20 p-3 rounded-lg backdrop-blur-sm">
                 <Pencil className="h-6 w-6 text-white" />

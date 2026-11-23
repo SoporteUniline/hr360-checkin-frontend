@@ -93,3 +93,4 @@ export function enlaceAsistencia(registro) {
   });
   return `/panel/registro-asistencia?${p.toString()}`;
 }
+

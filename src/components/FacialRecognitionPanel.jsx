@@ -338,7 +338,9 @@ const FacialRecognitionPanel = ({
           const repetida = yaRegistrado(recientesRef.current, detection.descriptor, Date.now());
           if (repetida) {
             setError("");
-            setAvisoRepetido(`${repetida.nombre}: ya registrado hace ${repetida.hace} s`);
+            setAvisoRepetido(repetida.pendiente
+              ? `${repetida.nombre}: checada pendiente de subir`
+              : `${repetida.nombre}: ya registrado hace ${repetida.hace} s`);
             lastCheckTimeRef.current = Date.now();
             retryIntervalRef.current = NO_MATCH_INTERVAL;
             return;
@@ -434,10 +436,10 @@ const FacialRecognitionPanel = ({
       diag("checada_exitosa");
       diagApi()?.terminar?.("checada registrada");
       setError("");
-      if (!data?.requiereDecision) setResultadoChecada(data?.repetida ? "repetida" : "registrada");
+      if (!data?.requiereDecision) setResultadoChecada(data?.repetida ? "repetida" : data?.pending ? (data?.errorServidor ? "error_servidor" : "pendiente") : "registrada");
       if (!data?.requiereDecision) {
         recientesRef.current = recordarChecada(recientesRef.current, detection.descriptor,
-          data?.empleado ? `${data.empleado.nombre ?? ""} ${data.empleado.apellido_paterno ?? ""}`.trim() : "", Date.now());
+          data?.empleado ? `${data.empleado.nombre ?? ""} ${data.empleado.apellido_paterno ?? ""}`.trim() : "", Date.now(), Boolean(data?.pending));
       }
       onSuccess(data);
       if (continuoRef.current && !data?.requiereDecision) {
@@ -494,7 +496,9 @@ const FacialRecognitionPanel = ({
       return { text: "Procesando reconocimiento...", color: "bg-gray-700" };
     if (!cameraReady)
       return { text: "Iniciando cámara...", color: "bg-gray-700" };
+    if (resultadoChecada === "pendiente") return { text: "Checada pendiente de subir", color: "bg-amber-600" };
     if (resultadoChecada === "repetida") return { text: "Ya estaba registrada · confirma abajo", color: "bg-amber-600" };
+    if (resultadoChecada === "error_servidor") return { text: "El servidor no aceptó la checada · avisa a RH", color: "bg-amber-600" };
     if (resultadoChecada === "registrada")
       return {
         text: "¡Listo! Esperando siguiente empleado...",

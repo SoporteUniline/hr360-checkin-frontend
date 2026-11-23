@@ -1,5 +1,6 @@
 "use client";
 
+import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
 import { horarioPermiso } from "@/lib/asistencia/permisoHoras.mjs";
 import { useEffect, useState } from "react";
 import {
@@ -22,7 +23,14 @@ import {
   fetchImageAsDataUrl,
   tryAddCompanyMarkToPdf,
 } from "@/lib/pdfCompanyLogo";
-import { ADAMIA, gradientLine, applyAdamiaFont } from "@/lib/pdfAdamiaTheme";
+import {
+  ADAMIA,
+  gradientLine,
+  applyAdamiaFont,
+  loadAdamiaMarca,
+  dibujarPieAdamia,
+} from "@/lib/pdfAdamiaTheme";
+import { nombreArchivoPdf } from "@/lib/nombreArchivo.mjs";
 import { calcDiasTotalesYHabiles } from "@/lib/permisosDias";
 import styles from "./permisos-theme.module.css";
 import { CalendarDays, Download, Loader2, Printer } from "lucide-react";
@@ -303,6 +311,7 @@ export default function PermisoViewDialog({
     const doc = new jsPDF("p", "mm", "a4");
     // Tipografía corporativa Poppins (fallback: helvetica). Ver pdfAdamiaTheme.
     const FONT = await applyAdamiaFont(doc);
+    const marcaAdamia = await loadAdamiaMarca();
 
     const pageWidth = 210;
     const pageHeight = 297;
@@ -631,16 +640,6 @@ export default function PermisoViewDialog({
     y += 18;
 
     const totalPages = doc.internal.getNumberOfPages();
-    const fechaGenerado = new Date().toLocaleDateString("es-MX", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-    const horaGenerado = new Date().toLocaleTimeString("es-MX", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
     for (let p = 1; p <= totalPages; p++) {
       doc.setPage(p);
       if (p === totalPages) {
@@ -691,47 +690,23 @@ export default function PermisoViewDialog({
           },
         );
       }
-
-      // Pie de página Adamia: línea degradada + marca a la izquierda,
-      // fecha de generación al centro y paginación a la derecha.
-      gradientLine(
-        doc,
-        marginLeft,
-        pageWidth - marginRight,
-        pageHeight - 14,
-        0.35,
-      );
-      doc.setFont(FONT, "bold");
-      doc.setFontSize(7.5);
-      doc.setTextColor(...ADAMIA.blue);
-      doc.text("Adamia", marginLeft, pageHeight - 9);
-      const adamiaBrandW = doc.getTextWidth("Adamia");
-      doc.setFont(FONT, "normal");
-      doc.setFontSize(7.5);
-      doc.setTextColor(...ADAMIA.muted);
-      doc.text(" · Permisos", marginLeft + adamiaBrandW, pageHeight - 9);
-      doc.setFontSize(7);
-      doc.text(
-        `Generado el ${fechaGenerado} a las ${horaGenerado} · Folio ${folio}`,
-        pageWidth / 2,
-        pageHeight - 9,
-        { align: "center" },
-      );
-      doc.text(
-        `Página ${p} de ${totalPages}`,
-        pageWidth - marginRight,
-        pageHeight - 9,
-        { align: "right" },
-      );
     }
 
-    const nombreArchivo = `Permiso_${empleado.replace(
-      / /g,
-      "_",
-    )}_${dayjs().format("YYYY-MM-DD")}_${String(item.id || "").padStart(
-      3,
-      "0",
-    )}.pdf`;
+    // Pie homologado ADAMIA en cada página (logotipo, fecha, Página X de Y).
+    dibujarPieAdamia(doc, {
+      font: FONT,
+      logo: marcaAdamia,
+      documento: isVacaciones ? "Solicitud de vacaciones" : "Solicitud de permiso",
+      detalle: `Folio ${folio}`,
+      margenMm: marginLeft,
+    });
+
+    // Nombre sin datos personales: documento, folio, número de empleado y fecha.
+    const nombreArchivo = nombreArchivoPdf({
+      documento: isVacaciones ? "Solicitud vacaciones" : "Solicitud permiso",
+      folio: item.id,
+      empleado: item,
+    });
     return { doc, nombreArchivo };
   }
 
@@ -771,7 +746,7 @@ export default function PermisoViewDialog({
          - max-h-[85vh] overflow-y-auto: evita desbordes verticales y permite scroll.
          Relación: abierto desde `src/app/panel/permisos/page.jsx`. */}
       <DialogContent className="p-0 overflow-hidden max-w-[95vw] sm:max-w-2xl">
-        <DialogHeader className="p-5 bg-gradient-to-r from-indigo-600 to-blue-600 text-white">
+        <DialogHeader className="p-5 bg-brand text-white">
           <DialogTitle className="flex items-center justify-between gap-3 text-base font-bold">
             <span className="flex items-center gap-2">
               <span className="grid size-9 place-items-center rounded-lg bg-white/15">
@@ -793,7 +768,7 @@ export default function PermisoViewDialog({
               <div>
                 <div className="text-sm text-gray-600">Empleado</div>
                 <div className="text-sm font-semibold text-gray-900">
-                  {item.empleado_nombre || `ID ${item.id_empleado}`}
+                  <NombreEmpleado id={item.id_empleado}>{item.empleado_nombre || `ID ${item.id_empleado}`}</NombreEmpleado>
                 </div>
               </div>
               <div>

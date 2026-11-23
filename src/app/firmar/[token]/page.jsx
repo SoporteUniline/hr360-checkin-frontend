@@ -8,13 +8,17 @@ import {
   ArrowLeft,
   ArrowRight,
   Camera,
+  RotateCw,
+  X,
   Check,
   CheckCircle2,
   Eraser,
   FileCheck2,
   FileSignature,
   FileText,
+  KeyRound,
   Loader2,
+  PenLine,
   LockKeyhole,
   ShieldCheck,
   UserRound,
@@ -115,6 +119,15 @@ export default function FirmarDocumentoPage({ params }) {
   const [documentoListo, setDocumentoListo] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [firmado, setFirmado] = useState(false);
+  // (22/11/2026) Firmar con PIN: null = aún no elige; true = con su PIN (firma guardada, sin cámara); false = dibujar + foto.
+  const [pinInfo, setPinInfo] = useState(null);
+  const [conPin, setConPin] = useState(null);
+  const [pin, setPin] = useState("");
+  // (23/11/2026, pedido del dueño) La firma se dibuja a pantalla completa, en horizontal, y ahí mismo se firma.
+  const [pantallaFirma, setPantallaFirma] = useState(false);
+  const [vertical, setVertical] = useState(false);
+  const [vistaFirma, setVistaFirma] = useState("");
+  const camaraOk = conPin === true || camaraActiva;
 
   const detenerCamara = useCallback(() => {
     cameraRequestRef.current += 1;
@@ -136,7 +149,11 @@ export default function FirmarDocumentoPage({ params }) {
         setCargando(true);
         setError(null);
         const data = await firmaDigitalApi.obtenerSolicitudPublica(token);
-        if (activo) setSolicitud(data.solicitud);
+        if (activo) {
+          setSolicitud(data.solicitud);
+          setPinInfo(data.firma_con_pin ?? null);
+          if (!data.firma_con_pin?.disponible) setConPin(false);
+        }
       } catch (err) {
         if (!activo) return;
         const estados = {
@@ -204,16 +221,53 @@ export default function FirmarDocumentoPage({ params }) {
   }, []);
 
   useEffect(() => {
-    if (paso !== 2 || !solicitud || firmado) return;
+    if (!pantallaFirma || !solicitud || firmado) return;
     repintarFirma();
     const observer = new ResizeObserver(repintarFirma);
     if (canvasRef.current) observer.observe(canvasRef.current);
     return () => observer.disconnect();
-  }, [paso, solicitud, firmado, repintarFirma]);
+  }, [pantallaFirma, solicitud, firmado, repintarFirma]);
+
+  // Pantalla completa + horizontal donde el navegador lo permite (Android/Chrome). En iPhone no se puede girar por
+  // código: se pide girar el celular, y si no, se firma igual en vertical.
+  const abrirPantallaFirma = async () => {
+    setErrorEnvio("");
+    setPantallaFirma(true);
+    try {
+      if (document.fullscreenEnabled && !document.fullscreenElement) await document.documentElement.requestFullscreen({ navigationUI: "hide" });
+    } catch { /* sin pantalla completa */ }
+    try { await screen.orientation?.lock?.("landscape"); } catch { /* el navegador no deja girar */ }
+  };
+  const cerrarPantallaFirma = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (canvas && strokesRef.current.length) {
+      try { setVistaFirma(canvas.toDataURL("image/png")); } catch { /* sin vista previa */ }
+    }
+    try { screen.orientation?.unlock?.(); } catch { /* nada */ }
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+    drawingRef.current = null;
+    setPantallaFirma(false);
+  }, []);
+  useEffect(() => {
+    if (!pantallaFirma) return;
+    const consulta = window.matchMedia("(orientation: portrait) and (pointer: coarse)");
+    const ver = () => setVertical(consulta.matches);
+    ver();
+    consulta.addEventListener?.("change", ver);
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const tecla = (e) => { if (e.key === "Escape") cerrarPantallaFirma(); };
+    document.addEventListener("keydown", tecla);
+    return () => {
+      consulta.removeEventListener?.("change", ver);
+      document.body.style.overflow = overflow;
+      document.removeEventListener("keydown", tecla);
+    };
+  }, [pantallaFirma, cerrarPantallaFirma]);
 
   const cambiarPaso = (siguiente) => {
     if (enviando || siguiente > ultimoPaso + 1) return;
-    if (siguiente > 0 && !camaraActiva) return;
+    if (siguiente > 0 && !camaraOk) return;
     if (siguiente === 2 && !documentoListo) return;
     drawingRef.current = null;
     setPaso(siguiente);
@@ -264,6 +318,7 @@ export default function FirmarDocumentoPage({ params }) {
     strokesRef.current = [];
     drawingRef.current = null;
     setTieneFirma(false);
+    setVistaFirma("");
     repintarFirma();
   };
 
@@ -323,7 +378,39 @@ export default function FirmarDocumentoPage({ params }) {
         calidad
       );
     });
+  const elegirMetodo = (usarPin) => {
+    setErrorEnvio("");
+    setConsentimiento(false);
+    setConPin(usarPin);
+    if (usarPin) {
+      detenerCamara();
+      setErrorCamara("");
+      setPaso(1);
+      setUltimoPaso((anterior) => Math.max(anterior, 1));
+    } else {
+      setPin("");
+      setPaso(0);
+    }
+    requestAnimationFrame(() => headingRef.current?.focus({ preventScroll: true }));
+  };
+
+  const firmarConPin = async () => {
+    if (!consentimiento || !/^\d{6}$/.test(pin) || !documentoListo || enviando) return;
+    try {
+      setEnviando(true);
+      setErrorEnvio("");
+      await firmaDigitalApi.firmarConPin(token, pin);
+      setFirmado(true);
+    } catch (err) {
+      setPin("");
+      setErrorEnvio(err?.response?.data?.error || "No fue posible completar la firma. Intenta nuevamente.");
+    } finally {
+      setEnviando(false);
+    }
+  };
+
   const firmarDocumento = async () => {
+    if (conPin) return firmarConPin();
     if (
       !consentimiento ||
       !tieneFirma ||
@@ -357,6 +444,7 @@ export default function FirmarDocumentoPage({ params }) {
       const evidencia = await canvasABlob(foto, "image/jpeg", 0.88);
       detenerCamara();
       await firmaDigitalApi.firmarSolicitud(token, { firma, evidencia });
+      cerrarPantallaFirma();
       setFirmado(true);
     } catch (err) {
       detenerCamara();
@@ -393,7 +481,7 @@ export default function FirmarDocumentoPage({ params }) {
       <EstadoFinal
         exito
         titulo="Tu documento está firmado"
-        mensaje="La firma y la fotografía se registraron correctamente. Ya puedes cerrar esta ventana."
+        mensaje={conPin ? "Tu firma guardada se estampó con tu PIN. Ya puedes cerrar esta ventana." : "La firma y la fotografía se registraron correctamente. Ya puedes cerrar esta ventana."}
       >
         <div className={styles.signedDocument}>
           <FileCheck2 />
@@ -408,33 +496,44 @@ export default function FirmarDocumentoPage({ params }) {
     );
 
   const nombre = solicitud.nombre_firmante || "Empleado";
-  const puedeFirmar =
-    consentimiento && tieneFirma && camaraActiva && documentoListo && !enviando;
+  const puedeFirmar = conPin
+    ? consentimiento && /^\d{6}$/.test(pin) && documentoListo && !enviando
+    : consentimiento && tieneFirma && camaraActiva && documentoListo && !enviando;
   const puedeContinuar =
     paso === 0
-      ? !activandoCamara
+      ? conPin !== null && !activandoCamara
       : paso === 1
-      ? documentoListo && camaraActiva
-      : puedeFirmar;
+      ? documentoListo && camaraOk
+      : conPin
+      ? puedeFirmar
+      : camaraActiva && documentoListo && !enviando;
   const accionPrincipal =
     paso === 0
-      ? camaraActiva
+      ? camaraOk
         ? () => cambiarPaso(1)
         : activarCamara
       : paso === 1
       ? () => cambiarPaso(2)
-      : firmarDocumento;
+      : conPin
+      ? firmarDocumento
+      : abrirPantallaFirma;
   const textoAccion = activandoCamara
     ? "Activando cámara…"
     : enviando
     ? "Registrando firma…"
     : paso === 0
-    ? camaraActiva
+    ? conPin === null
+      ? "Elige cómo firmar"
+      : camaraOk
       ? "Ver documento"
       : "Activar cámara"
     : paso === 1
     ? "Continuar a la firma"
-    : "Firmar documento";
+    : conPin
+    ? "Firmar documento"
+    : tieneFirma
+    ? "Revisar y firmar"
+    : "Firmar";
 
   return (
     <main className={styles.page}>
@@ -466,7 +565,10 @@ export default function FirmarDocumentoPage({ params }) {
             </p>
           </div>
           <nav aria-label="Pasos para firmar" className={styles.steps}>
-            {PASOS.map(({ titulo, descripcion }, index) => (
+            {PASOS.map(({ titulo, descripcion }, index) => ({
+              titulo: index === 0 && conPin !== false ? "Cómo firmar" : index === 2 && conPin ? "Tu PIN" : titulo,
+              descripcion: index === 0 && conPin !== false ? (conPin ? "Con tu PIN" : "PIN o firma dibujada") : index === 2 && conPin ? "Confirma y termina" : descripcion,
+            })).map(({ titulo, descripcion }, index) => (
               <button
                 key={titulo}
                 type="button"
@@ -474,7 +576,7 @@ export default function FirmarDocumentoPage({ params }) {
                 disabled={
                   enviando ||
                   index > ultimoPaso ||
-                  (index > 0 && !camaraActiva) ||
+                  (index > 0 && !camaraOk) ||
                   (index === 2 && !documentoListo)
                 }
                 aria-current={paso === index ? "step" : undefined}
@@ -523,17 +625,52 @@ export default function FirmarDocumentoPage({ params }) {
               )}
             </div>
             <h2 ref={headingRef} tabIndex={-1} id="paso-titulo">
-              {TITULOS[paso]}
+              {paso === 0 && conPin === null ? "¿Cómo quieres firmar?" : paso === 2 && conPin ? "Tu PIN, el último paso" : TITULOS[paso]}
             </h2>
-            <p>{DESCRIPCIONES[paso]}</p>
+            <p>
+              {paso === 0 && conPin === null
+                ? "Con tu PIN se usa la firma que guardaste en Mi espacio, sin cámara."
+                : paso === 2 && conPin
+                ? "Escribe tu PIN secreto para estampar tu firma guardada."
+                : DESCRIPCIONES[paso]}
+            </p>
           </div>
 
           {/* The same video stays mounted and playing throughout the three steps. */}
+          {paso === 0 && conPin === null && (
+            <div className={styles.methodChoice} role="group" aria-label="Cómo quieres firmar">
+              <button type="button" className={styles.methodOption} onClick={() => elegirMetodo(true)}>
+                <KeyRound size={22} />
+                <span>
+                  <strong>Firmar con mi PIN</strong>
+                  <small>Se estampa la firma que guardaste. No necesitas cámara.</small>
+                  {pinInfo?.bloqueado_hasta && new Date(pinInfo.bloqueado_hasta) > new Date() ? (
+                    <small className={styles.methodWarning}>Tu PIN está bloqueado unos minutos por intentos fallidos.</small>
+                  ) : null}
+                </span>
+                <ArrowRight size={18} />
+              </button>
+              <button type="button" className={styles.methodOption} onClick={() => elegirMetodo(false)}>
+                <PenLine size={22} />
+                <span>
+                  <strong>Dibujar mi firma</strong>
+                  <small>Firmas con el dedo y se toma una fotografía como evidencia.</small>
+                </span>
+                <ArrowRight size={18} />
+              </button>
+            </div>
+          )}
+          {paso === 0 && conPin === false && pinInfo?.disponible && (
+            <button type="button" className={styles.methodSwitch} onClick={() => elegirMetodo(true)}>
+              <KeyRound size={16} /> Mejor firmar con mi PIN
+            </button>
+          )}
+
           <div
             className={styles.cameraStage}
-            aria-hidden={paso !== 0}
+            aria-hidden={paso !== 0 || conPin !== false}
             style={
-              paso === 0
+              paso === 0 && conPin === false
                 ? undefined
                 : {
                     position: "fixed",
@@ -601,7 +738,8 @@ export default function FirmarDocumentoPage({ params }) {
               </div>
               {solicitud.documento_url ? (
                 <DocumentoReader
-                  url={solicitud.documento_url}
+                  url={`${process.env.NEXT_PUBLIC_RUTA_BACKEND}/checador/firma-digital/publica/${encodeURIComponent(token)}/documento`}
+                  urlExterna={solicitud.documento_url}
                   nombre={solicitud.nombre_documento}
                   onReady={setDocumentoListo}
                 />
@@ -636,8 +774,44 @@ export default function FirmarDocumentoPage({ params }) {
                   Revisar
                 </button>
               </div>
+              {conPin ? (
+                <>
+                  <label className={styles.pinLabel} htmlFor="pin-firma">Tu PIN secreto</label>
+                  <input
+                    id="pin-firma"
+                    className={styles.pinInput}
+                    type="password"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    onKeyDown={(e) => e.key === "Enter" && puedeFirmar && firmarConPin()}
+                    disabled={enviando}
+                    aria-describedby="pin-ayuda"
+                  />
+                  <p id="pin-ayuda" className={styles.pinHelp}>
+                    6 dígitos. ¿Lo olvidaste? Cámbialo en la app: Mi espacio → Mi firma y PIN.
+                  </p>
+                  <span className={styles.signatureOwner}>{nombre}</span>
+                  <label className={styles.consent}>
+                    <input
+                      type="checkbox"
+                      checked={consentimiento}
+                      onChange={(event) => setConsentimiento(event.target.checked)}
+                      disabled={enviando}
+                    />
+                    <span>
+                      Confirmo que revisé el documento y que lo firmo con mi firma guardada y mi PIN personal.
+                    </span>
+                  </label>
+                  <button type="button" className={styles.methodSwitch} onClick={() => elegirMetodo(false)} disabled={enviando}>
+                    <PenLine size={16} /> Prefiero dibujar mi firma
+                  </button>
+                </>
+              ) : (
+              <>
               <div className={styles.signatureLabel}>
-                <label htmlFor="firma-manuscrita">Tu firma</label>
+                <span className={styles.signatureLabelText}>Tu firma</span>
                 <button
                   type="button"
                   onClick={limpiarFirma}
@@ -647,27 +821,16 @@ export default function FirmarDocumentoPage({ params }) {
                   Borrar
                 </button>
               </div>
-              <div className={styles.signatureBox}>
-                <canvas
-                  id="firma-manuscrita"
-                  ref={canvasRef}
-                  aria-label="Dibuja tu firma con el dedo o el mouse"
-                  onPointerDown={iniciarTrazo}
-                  onPointerMove={dibujar}
-                  onPointerUp={terminarTrazo}
-                  onPointerCancel={terminarTrazo}
-                  onLostPointerCapture={() => {
-                    drawingRef.current = null;
-                  }}
-                />
-                {!tieneFirma && (
+              <button type="button" className={styles.signatureBox} onClick={abrirPantallaFirma} disabled={enviando || !camaraActiva}
+                aria-label={tieneFirma ? "Ver o cambiar tu firma a pantalla completa" : "Abrir la firma a pantalla completa"}>
+                {vistaFirma ? <img src={vistaFirma} alt="Tu firma" className={styles.signaturePreview} /> : (
                   <span className={styles.signaturePlaceholder}>
                     <FileSignature size={27} strokeWidth={1.4} />
-                    Firma aquí con tu dedo o mouse
+                    Toca para firmar a pantalla completa
                   </span>
                 )}
                 <span className={styles.signatureLine} />
-              </div>
+              </button>
               <span className={styles.signatureOwner}>{nombre}</span>
               <label className={styles.consent}>
                 <input
@@ -688,6 +851,8 @@ export default function FirmarDocumentoPage({ params }) {
                   momento.
                 </span>
               </div>
+              </>
+              )}
             </div>
           )}
 
@@ -697,7 +862,7 @@ export default function FirmarDocumentoPage({ params }) {
               <span>{errorEnvio || errorCamara}</span>
             </div>
           )}
-          {paso > 0 && !camaraActiva && !enviando && (
+          {paso > 0 && !camaraOk && !enviando && (
             <button
               type="button"
               className={styles.reactivate}
@@ -719,6 +884,8 @@ export default function FirmarDocumentoPage({ params }) {
                   ? "Tú decides cuándo firmar"
                   : paso === 1
                   ? "Aún no has firmado"
+                  : conPin
+                  ? "Tu PIN nunca se muestra ni se guarda en el documento"
                   : "Firma y fotografía en un solo paso"}
               </span>
             </div>
@@ -743,7 +910,7 @@ export default function FirmarDocumentoPage({ params }) {
               >
                 {activandoCamara || enviando ? (
                   <Loader2 size={18} className={styles.spin} />
-                ) : paso === 0 && !camaraActiva ? (
+                ) : paso === 0 && conPin === false && !camaraActiva ? (
                   <Camera size={18} />
                 ) : paso === 2 ? (
                   <FileSignature size={18} />
@@ -751,12 +918,63 @@ export default function FirmarDocumentoPage({ params }) {
                 {textoAccion}
                 {paso < 2 &&
                   !activandoCamara &&
-                  (paso !== 0 || camaraActiva) && <ArrowRight size={18} />}
+                  (paso !== 0 || camaraOk) && <ArrowRight size={18} />}
               </button>
             </div>
           </div>
         </section>
       </div>
+      {pantallaFirma && !conPin ? (
+        <div className={styles.firmaPantalla} role="dialog" aria-modal="true" aria-label="Firma a pantalla completa">
+          <div className={styles.firmaPantallaBarra}>
+            <strong>{solicitud.nombre_documento}</strong>
+            <button type="button" className={styles.firmaPantallaBoton} onClick={limpiarFirma} disabled={!tieneFirma || enviando}>
+              <Eraser size={16} /> Borrar
+            </button>
+            <button type="button" className={styles.firmaPantallaBoton} onClick={cerrarPantallaFirma} disabled={enviando} aria-label="Cerrar sin firmar">
+              <X size={18} />
+            </button>
+          </div>
+          <div className={styles.firmaPantallaLienzo}>
+            <canvas
+              id="firma-manuscrita"
+              ref={canvasRef}
+              aria-label="Dibuja tu firma con el dedo o el mouse"
+              onPointerDown={iniciarTrazo}
+              onPointerMove={dibujar}
+              onPointerUp={terminarTrazo}
+              onPointerCancel={terminarTrazo}
+              onLostPointerCapture={() => {
+                drawingRef.current = null;
+              }}
+            />
+            {!tieneFirma && (
+              <span className={styles.signaturePlaceholder}>
+                {vertical ? <RotateCw size={30} strokeWidth={1.5} /> : <FileSignature size={30} strokeWidth={1.4} />}
+                {vertical ? "Gira tu celular para tener más espacio, o firma aquí" : "Firma aquí con tu dedo"}
+              </span>
+            )}
+            <span className={styles.signatureLine} />
+            <span className={styles.firmaPantallaNombre}>{nombre}</span>
+          </div>
+          {errorEnvio ? (
+            <div className={styles.inlineError} role="alert">
+              <AlertCircle size={18} />
+              <span>{errorEnvio}</span>
+            </div>
+          ) : null}
+          <div className={styles.firmaPantallaPie}>
+            <label className={styles.firmaPantallaConsent}>
+              <input type="checkbox" checked={consentimiento} onChange={(event) => setConsentimiento(event.target.checked)} disabled={enviando} />
+              <span>Revisé el documento, la firma es mía y autorizo una foto como evidencia (se toma al firmar).</span>
+            </label>
+            <button type="button" className={`${styles.primaryButton} ${styles.firmaPantallaFirmar}`} onClick={firmarDocumento} disabled={!puedeFirmar}>
+              {enviando ? <Loader2 size={18} className={styles.spin} /> : <FileSignature size={18} />}
+              {enviando ? "Registrando firma…" : "Firmar documento"}
+            </button>
+          </div>
+        </div>
+      ) : null}
       <footer className={styles.footer}>
         ADAMIA
         <span />

@@ -106,7 +106,7 @@ export default function DepartamentoFormDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">
-            <div className="bg-gradient-to-br from-[#2563EB] to-[#1d4ed8] p-3 rounded-lg shadow-md">
+            <div className="bg-brand p-3 rounded-lg shadow-md">
               <svg
                 className="w-6 h-6 text-white"
                 fill="none"

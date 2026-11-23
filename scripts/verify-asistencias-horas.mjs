@@ -77,7 +77,7 @@ try {
     return json({});
   });
   await page.goto(base + "/panel/registro-asistencia", { waitUntil: "domcontentloaded" });
-  await page.getByRole("button", { name: "Horas", exact: true }).click();
+  await page.getByRole("tab", { name: "Horas de ley" }).click();
   const vista = page.getByRole("region", { name: "Horas de la semana" });
   await vista.getByRole("row", { name: "Excede Prueba", exact: true }).waitFor({ timeout: 30000 });
   // Pide la semana legal completa que contiene hoy (con «Hoy» elegido arriba).

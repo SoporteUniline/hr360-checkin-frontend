@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import RelojChecador from "@/components/RelojChecador";
 import Navbar from "@/components/Navbar";
 import Link from "next/link";
+import OfflineClockSetup from '@/components/Clock/OfflineClockSetup';
 
 export default function EmpleadoInicioPage() {
   const { dataUser, isLoggedIn } = useAuth();
@@ -85,6 +86,7 @@ export default function EmpleadoInicioPage() {
         <div className="hidden md:block"><Navbar /></div>
         <div className="md:pt-14">
           <Link href="/empleado/panel/inicio" className="hidden md:flex min-h-12 items-center bg-white px-5 font-semibold text-blue-700">← Volver a mi inicio</Link>
+          <OfflineClockSetup />
           <RelojChecador
             idEmpresa={dataUser.id_empresa}
             modoEmpleado={true}

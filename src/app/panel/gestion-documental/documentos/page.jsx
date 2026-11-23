@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { fetcherWithToken } from "@/lib/fetcher";
 import { docGeneradosApi } from "@/lib/gestionDocumentalApi";
 import { firmaDigitalAdminApi } from "@/lib/firmaDigitalApi";
+import EvidenciaFirma from "@/components/firma/EvidenciaFirma";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -52,6 +53,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSnackbar } from "notistack";
 import { htmlToPdf } from "@/lib/htmlToPdf";
+import { nombreArchivoPdf } from "@/lib/nombreArchivo.mjs";
 import { empresasDocumentales } from "@/lib/plantillasAdamia";
 
 /* ─── Constantes ─── */
@@ -61,6 +63,16 @@ const ESTATUSES = [
   { value: "firmado",  label: "Firmado",   color: "bg-green-50 text-green-700 border-green-200" },
   { value: "anulado",  label: "Anulado",   color: "bg-red-50 text-red-700 border-red-200" },
 ];
+
+// Nombre del PDF: plantilla, folio y número de empleado (nombre_documento
+// lleva el nombre del empleado, así que no se usa para el archivo).
+function nombreArchivoDocumento(doc) {
+  return nombreArchivoPdf({
+    documento: doc?.nombre_plantilla || "Documento",
+    folio: doc?.folio || doc?.id_documento,
+    empleado: doc,
+  });
+}
 
 function getEstatusInfo(e) {
   return ESTATUSES.find((s) => s.value === e) || ESTATUSES[0];
@@ -247,7 +259,9 @@ function DocumentosContent({ empresa }) {
     const htmlContent = viewingDoc?.contenido_html;
     if (!htmlContent) return;
     try {
-      await htmlToPdf(htmlContent, viewingDoc?.nombre_documento || "documento");
+      await htmlToPdf(htmlContent, viewingDoc?.nombre_documento || "documento", {
+        nombreArchivo: nombreArchivoDocumento(viewingDoc),
+      });
       enqueueSnackbar("PDF descargado correctamente", { variant: "success" });
     } catch (err) {
       console.error("PDF error:", err);
@@ -301,10 +315,9 @@ function DocumentosContent({ empresa }) {
     setEnlaceCopiado(false);
 
     try {
-      const nombreArchivo = viewingDoc.nombre_documento || "documento";
       const documento = await htmlToPdf(
         viewingDoc.contenido_html,
-        nombreArchivo,
+        viewingDoc.nombre_documento || "documento",
         { download: false },
       );
 
@@ -314,7 +327,7 @@ function DocumentosContent({ empresa }) {
         tipoDocumento: "DOCUMENTO_GENERADO",
         referenciaId: viewingDoc.id_documento,
         documento,
-        nombreArchivo: `${nombreArchivo}.pdf`,
+        nombreArchivo: nombreArchivoDocumento(viewingDoc),
         expiracionHoras: 72,
       });
 
@@ -546,6 +559,9 @@ function DocumentosContent({ empresa }) {
                           ? "Abriendo..."
                           : "Ver PDF firmado"}
                       </Button>
+                    )}
+                    {estadoFirma.tiene_documento_firmado && (
+                      <EvidenciaFirma idSolicitud={estadoFirma.id} idEmpresa={viewingDoc.id_empresa} />
                     )}
                   </div>
                 </div>

@@ -632,3 +632,79 @@
 
 /* Encabezado fijo en las páginas públicas que no son el inicio (el contenedor .lh solo envuelve el encabezado). */
 .lh.sitio-fijo { position: sticky; top: 0; z-index: 40; overflow: visible; background: transparent; }
+
+/* ── Mosaico de módulos (23/11/2026, ver MosaicoModulos.jsx) ───────────────────────────────────────────── */
+.lh .mz { padding: 96px 0 40px; }
+.lh .mz-encabezado { display: grid; gap: 10px; max-width: 62ch; margin-bottom: 36px; }
+.lh .mz-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 18px; }
+.lh .mz-m { position: relative; display: grid; grid-template-rows: auto 1fr; gap: 18px; min-width: 0; min-height: 420px; overflow: hidden; padding: 28px 28px 0; border-radius: 26px; background: var(--soft); }
+.lh .mz-g4 { grid-column: span 4; } .lh .mz-g2 { grid-column: span 2; } .lh .mz-g6 { grid-column: span 6; min-height: 0; }
+.lh .mz-cab { display: grid; gap: 4px; padding-right: 50px; }
+.lh .mz-cab h3 { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 30px; font-weight: 500; letter-spacing: -0.03em; }
+.lh .mz-sub { font-family: var(--fh); font-size: 18px; color: var(--body); letter-spacing: -0.01em; }
+.lh .mz-sub b { font-weight: 700; color: var(--ink); }
+.lh .mz-cab p { margin: 6px 0 0; max-width: 38ch; font-size: 15px; line-height: 1.55; color: var(--body); }
+.lh .mz-etq { padding-left: 12px; border-left: 1px solid currentColor; font: 600 11px/1.2 var(--f); letter-spacing: .12em; text-transform: uppercase; }
+.lh .mz-flecha { position: absolute; top: 24px; right: 24px; display: grid; place-items: center; width: 40px; height: 40px; border: 1.5px solid var(--line); border-radius: 50%; color: var(--ink); transition: transform .2s var(--ease), background .2s; }
+.lh .mz-flecha svg { width: 15px; height: 15px; }
+.lh .mz-flecha:hover { transform: rotate(45deg); background: #fff; }
+.lh .mz-flecha:focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+.lh .mz-principal { background: linear-gradient(180deg, var(--blue) 0%, var(--violet) 62%, #ece8ff 100%); }
+.lh .mz-principal h3, .lh .mz-principal .mz-sub b { color: #fff; }
+.lh .mz-principal .mz-sub, .lh .mz-principal .mz-cab p { color: #e4e9ff; }
+.lh .mz-principal .mz-etq { color: #d9f99d; }
+.lh .mz-principal .mz-flecha { border-color: #d9f99d; background: #d9f99d; color: #1a2e05; }
+.lh .mz-mini { display: grid; align-self: end; justify-self: center; gap: 10px; width: min(100%, 340px); margin-bottom: 30px; padding: 18px; border-radius: 16px; background: #fff; color: var(--ink); font-size: 13px; box-shadow: 0 18px 40px -18px rgba(11, 16, 51, .35), 0 0 0 6px rgba(255, 255, 255, .55); }
+.lh .mz-fila { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.lh .mz-fila span { color: var(--body); }
+.lh .mz-fila b, .lh .mz-tramo b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.lh .mz-grande { font-size: 18px; }
+.lh .mz-tit { font-size: 14px; }
+.lh .mz-boton { display: grid; place-items: center; min-height: 42px; margin-top: 4px; border-radius: 10px; background: var(--blue); color: #fff; font-weight: 600; font-size: 13.5px; }
+.lh .mz-avatares { display: flex; }
+.lh .mz-avatares i { display: grid; place-items: center; width: 24px; height: 24px; margin-left: -6px; border: 2px solid #fff; border-radius: 50%; color: #fff; font: 700 9.5px var(--f); font-style: normal; }
+.lh .mz-tramo { display: flex; justify-content: space-between; padding: 8px 10px; border-radius: 9px; }
+.lh .mz-gris { background: var(--soft); }
+.lh .mz-nota { padding: 8px 10px; border-radius: 9px; background: var(--blue-soft); color: var(--blue-ink); font-weight: 500; }
+.lh .mz-verif { display: flex; align-items: center; gap: 10px; }
+.lh .mz-cara { position: relative; flex: none; width: 54px; height: 54px; border-radius: 14px; background: linear-gradient(135deg, #c7d2fe, #a5b4fc); }
+.lh .mz-cara::after { content: ""; position: absolute; inset: 9px 13px 12px; border-radius: 50% 50% 45% 45%; background: #6366f1; opacity: .35; }
+.lh .mz-ok { color: var(--green); font-weight: 600; }
+.lh .mz-barra { height: 8px; overflow: hidden; border-radius: 999px; background: var(--soft); }
+.lh .mz-barra > i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--blue), var(--violet)); }
+.lh .mz-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.lh .mz-chip { padding: 3px 8px; border-radius: 999px; background: var(--blue-soft); color: var(--blue-ink) !important; font-size: 11px; font-weight: 600; }
+.lh .mz-firma { display: grid; place-items: center; height: 54px; border: 1px dashed var(--line); border-radius: 10px; color: var(--ink); }
+.lh .mz-firma svg { width: 150px; height: 40px; }
+.lh .mz-ia { grid-template-columns: 1fr 1.1fr; grid-template-rows: none; align-items: center; gap: 24px; padding: 30px; background: var(--ink); }
+.lh .mz-ia h3, .lh .mz-ia .mz-sub b { color: #fff; }
+.lh .mz-ia .mz-sub, .lh .mz-ia .mz-cab p { color: #c9d1f2; }
+.lh .mz-ia .mz-flecha { border-color: #2c3566; color: #fff; }
+.lh .mz-ia .mz-flecha:hover { background: #1b2350; }
+.lh .mz-chat { display: grid; gap: 10px; }
+.lh .mz-burbuja { max-width: 92%; padding: 10px 13px; border-radius: 14px; font-size: 13.5px; line-height: 1.5; }
+.lh .mz-yo { justify-self: end; border-bottom-right-radius: 4px; background: var(--blue); color: #fff; }
+.lh .mz-ai { border: 1px solid #2c3566; border-bottom-left-radius: 4px; background: #161c4a; color: #e9edff; }
+.lh .mz-cita { display: inline-block; margin-top: 6px; padding: 2px 8px; border: 1px solid #3a4580; border-radius: 999px; color: #a5b4fc; font-size: 11.5px; font-weight: 600; }
+@media (max-width: 960px) {
+  .lh .mz-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .lh .mz-g4, .lh .mz-g6 { grid-column: span 2; } .lh .mz-g2 { grid-column: span 1; }
+  .lh .mz-ia { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 640px) {
+  .lh .mz { padding-top: 64px; }
+  .lh .mz-grid { grid-template-columns: minmax(0, 1fr); }
+  .lh .mz-g4, .lh .mz-g2, .lh .mz-g6 { grid-column: span 1; }
+  .lh .mz-m { min-height: 0; padding: 22px 20px 0; }
+  .lh .mz-ia { padding: 22px 20px 24px; }
+  .lh .mz-cab h3 { font-size: 26px; }
+}
+/* Movimiento del mosaico: la tarjeta se eleva y su mini pantalla se acerca al pasar el cursor (como en Crehana:
+   transform + sombra con la curva .2,.7,.2,1). Sin movimiento si la persona lo pidió. */
+@media (prefers-reduced-motion: no-preference) and (hover: hover) {
+  .lh .mz-m { transition: transform .25s cubic-bezier(.2, .7, .2, 1), box-shadow .25s cubic-bezier(.2, .7, .2, 1); }
+  .lh .mz-mini, .lh .mz-chat { transition: transform .45s cubic-bezier(.16, 1, .3, 1); }
+  .lh .mz-m:hover { transform: translateY(-4px); box-shadow: 0 24px 48px -28px rgba(11, 16, 51, .35); }
+  .lh .mz-m:hover .mz-mini { transform: translateY(-6px) scale(1.02); }
+  .lh .mz-m:hover .mz-chat { transform: translateY(-3px); }
+}

@@ -94,7 +94,7 @@ export default function ApplicationForm({
     }
   };
 
-  const onSubmit = async (data) => {
+  const onSubmit = async (data, telefonoVerificacionToken = "") => {
     if (!files.length) {
       enqueueSnackbar("CV es obligatorio", {
         variant: "error",
@@ -110,6 +110,12 @@ export default function ApplicationForm({
     for (const key in data) {
       formData.append(key, data[key]);
     }
+    // Prueba de que el teléfono se verificó; el backend la valida y la consume (INC-REC-002).
+    // (handleSubmit de react-hook-form pasa el evento como 2º argumento: solo vale un texto.)
+    formData.append(
+      "telefono_verificacion_token",
+      typeof telefonoVerificacionToken === "string" ? telefonoVerificacionToken : "",
+    );
     // agregar el cv a formdata
     if (files.length > 0) formData.append("cv", files[0].file);
 

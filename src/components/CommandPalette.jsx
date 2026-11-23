@@ -41,6 +41,7 @@ import {
   HandCoins,
   Route,
   UserRound,
+  MessageCircle,
 } from "lucide-react";
 
 // ─── Nav items estáticos (espejo del sidebar) ────────────────────────────────
@@ -49,6 +50,7 @@ const ALL_NAV_ITEMS = [
   {title:"Evaluación de desempeño",url:"/panel/evaluaciones",rol:"Recruiter",section:"Evaluaciones",icon:ClipboardCheck},
   {title:"Campañas de evaluación",url:"/panel/evaluaciones/campanas",rol:"Recruiter",section:"Evaluaciones",icon:ClipboardCheck},
   {title:"Plantillas de evaluación",url:"/panel/evaluaciones/plantillas",rol:"Recruiter",section:"Evaluaciones",icon:ClipboardCheck},
+  {title:"Configuración de evaluaciones",url:"/panel/evaluaciones/configuracion",rol:"Recruiter",section:"Evaluaciones",icon:ClipboardCheck},
   {title:"Mis evaluaciones",url:"/empleado/panel/evaluaciones",rol:"Empleado",section:"Evaluaciones",icon:ClipboardCheck},
   {
     title: "Solicitudes de mi equipo",
@@ -128,6 +130,13 @@ const ALL_NAV_ITEMS = [
     section: "Admin",
     icon: Landmark,
   },
+  {
+    title: "WhatsApp (reclutamiento)",
+    url: "/dashboard/whatsapp",
+    rol: "Admin",
+    section: "Admin",
+    icon: MessageCircle,
+  },
   // Recruiter — General
   {
     title: "Inicio",
@@ -151,6 +160,13 @@ const ALL_NAV_ITEMS = [
     section: "Reclutamiento y selección",
     icon: item.icon,
   })),
+  {
+    title: "Conversaciones de WhatsApp",
+    url: "/panel/whatsapp",
+    rol: "Recruiter",
+    section: "Reclutamiento y selección",
+    icon: MessageCircle,
+  },
   {
     title: "Panel empleado",
     url: "/panel/panel-empleado",

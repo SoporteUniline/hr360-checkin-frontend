@@ -1,0 +1,143 @@
+import { blocksQueue } from './turn-state.mjs?v=2';
+export { isTurnConflict } from './turn-state.mjs?v=2';
+const DB_NAME = 'adamia-offline-clock-v1';
+let opening;
+
+export function database() {
+  if (!opening) opening = new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onupgradeneeded = () => {
+      request.result.createObjectStore('config');
+      request.result.createObjectStore('events', { keyPath: 'id' });
+    };
+    request.onsuccess = () => {
+      request.result.onversionchange = () => { request.result.close(); opening = undefined; };
+      resolve(request.result);
+    };
+    request.onerror = () => { opening = undefined; reject(request.error); };
+    request.onblocked = () => { opening = undefined; reject(new Error('Cierra otras ventanas del reloj e intenta de nuevo.')); };
+  });
+  return opening;
+}
+
+export async function transaction(store, mode, operation) {
+  const db = await database();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(store, mode);
+    const request = operation(tx.objectStore(store));
+    tx.oncomplete = () => resolve(request?.result);
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error || new Error('No se pudo guardar en el celular'));
+  });
+}
+
+export const getConfig = () => transaction('config', 'readonly', store => store.get('profile'));
+export const setConfig = config => transaction('config', 'readwrite', store => store.put(config, 'profile'));
+export const clearConfig = () => transaction('config', 'readwrite', store => {
+  const request = store.delete('profile');
+  const cursor = store.openCursor();
+  cursor.onsuccess = () => {
+    const entry = cursor.result;
+    if (!entry) return;
+    // Company snapshots belong to the prepared kiosk. Personal biometrics must
+    // leave the device session on logout; signed pending events remain intact.
+    if (typeof entry.key === 'string' && entry.key.startsWith('faces:employee:')) entry.delete();
+    entry.continue();
+  };
+  return request;
+});
+export const getValue = key => transaction('config', 'readonly', store => store.get(key));
+export const setValue = (key, value) => transaction('config', 'readwrite', store => store.put(value, key));
+export const allValues = () => transaction('config', 'readonly', store => store.getAll());
+export const listEvents = () => transaction('events', 'readonly', store => store.getAll());
+export async function scheduleBackgroundSync() {
+  try {
+    const registration = await globalThis.navigator?.serviceWorker?.getRegistration('/');
+    await registration?.sync?.register('adamia-clock-upload');
+  } catch { /* Unsupported or denied: the page retains its normal sync flow. */ }
+}
+export async function saveEvent(event) {
+  await transaction('events', 'readwrite', store => store.put(event));
+  if (event.status === 'pending') await scheduleBackgroundSync();
+}
+
+export function discardReviewedEvent(id) {
+  return transaction('events', 'readwrite', store => {
+    const request = store.get(id);
+    request.onsuccess = () => {
+      const event = request.result;
+      if (event?.status !== 'review') return;
+      store.put({ ...event, status: 'rejected', discarded_at: new Date().toISOString(),
+        error: 'Captura descartada manualmente', code: undefined, descriptor: undefined, grant: undefined });
+    };
+    return request;
+  });
+}
+
+// Preserve compatibility with screens still using the former facial-only action.
+export const discardUnmatchedFace = discardReviewedEvent;
+
+export function readToken() {
+  return document.cookie.split('; ').find(value => value.startsWith('token='))?.slice(6);
+}
+
+export async function fingerprint(token) {
+  if (!token) return null;
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(decodeURIComponent(token)));
+  return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+export function ownEvents(events, profile) {
+  return events.filter(event => event.company === profile.id_empresa && (profile.scope === 'company' ? event.scope === 'company' : event.scope !== 'company' && event.employee === profile.id_empleado))
+    .sort((a, b) => a.captured_at.localeCompare(b.captured_at) || a.id.localeCompare(b.id));
+}
+
+export function syncFailure(event, error) {
+  const status = error.response?.status;
+  const code = error.response?.data?.code;
+  const reason = error.response?.data?.error;
+  const review = [400, 403, 404, 409, 422].includes(status);
+  const unmatched = code === 'FACE_NOT_MATCHED';
+  return { ...event, status: review ? 'review' : 'pending', httpStatus: status, errorCode: code,
+    blocksFollowing: blocksQueue({ errorCode: code, error: reason }),
+    ...(error.response?.data?.clock_state ? { clock_state: error.response.data.clock_state } : {}),
+    ...(unmatched ? { alias: 'Rostro no reconocido' } : {}),
+    error: typeof reason === 'string' ? reason : error.message || 'No se pudo enviar la checada',
+  };
+}
+
+// Stop on uncertain delivery or decisions; definitively refused attempts can be skipped.
+export async function syncEvents(events, send, persist) {
+  for (const event of events.filter(event => event.status !== 'synced' && event.status !== 'rejected')) {
+    try {
+      if (event.status === 'decision') break;
+      if (event.status === 'review') { if (blocksQueue(event)) break; else continue; }
+      const receipt = await send(event);
+      if (receipt?.requiereDecision) {
+        // (23/11/2026, INC-RELOJ-COMIDA-001) Conservar las opciones del servidor («Salir a comer» / «Registrar salida»…);
+        // sin ellas la pantalla ofrecía salida temporal/cerrar turno a empleados con cierre automático.
+        await persist({ ...event, status: 'decision', opciones: Array.isArray(receipt.opciones) ? receipt.opciones : undefined, clock_state: receipt.clock_state || event.clock_state, employeeName: receipt.empleado?.nombre || event.employeeName, error: receipt.message || 'Elige cómo registrar esta salida.' });
+        break;
+      }
+      if (receipt?.id !== event.id || receipt?.status !== 'synced') throw new Error('El servidor no confirmó esta checada. Se conservará pendiente.');
+      await persist({ ...event, resolvedAction: receipt.action || event.resolvedAction, resolvedMessage: receipt.message, resolvedRebote: receipt.rebote, clock_state: receipt.clock_state || event.clock_state, confirmed_at: receipt.confirmed_at || new Date().toISOString(), employeeName: receipt.employee?.nombre || event.employeeName, status: 'synced', error: '', code: undefined, descriptor: undefined, grant: undefined, local_verification: undefined });
+    } catch (error) {
+      const failure = syncFailure(event, error);
+      await persist(failure);
+      if (failure.status === 'review' && failure.blocksFollowing === false) continue;
+      break;
+    }
+  }
+}
+
+// A rejected code must not block other employees using the same company clock.
+// Facial events remain ordered as a group until the server identifies each face.
+export async function syncCompanyEvents(events, send, persist) {
+  const groups = new Map();
+  for (const event of events.filter(event => event.status !== 'synced')) {
+    const key = event.identity || (event.method === 'codigo' ? `code:${event.code}` : 'facial');
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(event);
+  }
+  for (const group of groups.values()) await syncEvents(group, send, persist);
+}

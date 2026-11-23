@@ -131,9 +131,9 @@ export default function EmpresaForm({ idEmpresa }) {
   return (
     <div className="max-w-4xl space-y-6">
       {/* Sección de logo con diseño ADAMIA */}
-      <div className="bg-gradient-to-br from-cyan-50 via-white to-cyan-50 border-2 border-cyan-100 rounded-xl p-6">
+      <div className="bg-cyan-50/60 border-2 border-cyan-100 rounded-xl p-6">
         <div className="flex items-center gap-3 mb-5">
-          <div className="bg-gradient-to-br from-cyan-500 to-cyan-600 p-3 rounded-lg shadow-md">
+          <div className="bg-cyan-600 p-3 rounded-lg shadow-md">
             <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
@@ -147,9 +147,9 @@ export default function EmpresaForm({ idEmpresa }) {
       </div>
 
       {/* Información de empresa con diseño ADAMIA */}
-      <div className="bg-gradient-to-br from-orange-50 via-white to-orange-50 border-2 border-orange-100 rounded-xl p-6">
+      <div className="bg-orange-50/60 border-2 border-orange-100 rounded-xl p-6">
         <div className="flex items-center gap-3 mb-5">
-          <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-3 rounded-lg shadow-md">
+          <div className="bg-orange-500 p-3 rounded-lg shadow-md">
             <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>

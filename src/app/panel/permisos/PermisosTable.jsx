@@ -1,5 +1,6 @@
 "use client";
 
+import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
 import { horarioPermiso } from "@/lib/asistencia/permisoHoras.mjs";
 import React, { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
@@ -159,7 +160,7 @@ export default function PermisosTable({
           <div className="flex justify-end">
             <Button
               onClick={onCreate}
-              className="bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white"
+              className="bg-brand font-semibold text-white"
             >
               <Plus className="h-4 w-4 mr-2" /> Nuevo permiso
             </Button>
@@ -186,7 +187,7 @@ export default function PermisosTable({
         <div className="flex justify-end">
           <Button
             onClick={onCreate}
-            className="bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white"
+            className="bg-brand font-semibold text-white"
           >
             <Plus className="h-4 w-4 mr-2" /> Nuevo permiso
           </Button>
@@ -336,7 +337,7 @@ export default function PermisosTable({
                         </div>
                         <div className="min-w-0">
                           <div className="font-semibold leading-tight text-gray-900 truncate">
-                            {row.empleado_nombre}
+                            <NombreEmpleado id={row.id_empleado}>{row.empleado_nombre}</NombreEmpleado>
                           </div>
                           <div className="text-xs text-gray-500">
                             ID empleado: {row.id_empleado}

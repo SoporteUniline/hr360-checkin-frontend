@@ -49,7 +49,7 @@ export default function RequestDetail({
   onHistory,
 }) {
   const { data, error, isLoading, mutate } = useSWR(
-    [`/api/solicitudes-equipo/${selected.id}`, identity],
+    [`/internal/solicitudes-equipo/${selected.id}`, identity],
     teamFetcher,
     { shouldRetryOnError: false },
   );
@@ -77,7 +77,7 @@ export default function RequestDetail({
     setBusy(true);
     setActionError("");
     try {
-      await teamFetcher(`/api/solicitudes-equipo/${row.id}`, {
+      await teamFetcher(`/internal/solicitudes-equipo/${row.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ estado: confirmation }),

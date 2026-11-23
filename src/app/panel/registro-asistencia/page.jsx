@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth, useEmpresaTimezone } from "@/context/AuthContext";
 import useDebounce from "@/hooks/useDebounce";
 import AsistenciaDataContainer from "./AsistenciaDataContainer";
 import MobileAsistenciaView from "./MobileAsistenciaView";
@@ -18,7 +18,6 @@ import {
   CalendarDays,
   ChevronDown,
   ClipboardCheck,
-  Clock3,
   Grid3x3,
   Layers,
   List,
@@ -46,9 +45,36 @@ import ColumnasSelector, {
 import { COLUMNAS_ASISTENCIA } from "./AsistenciaTable";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import { LIMITE_TODOS } from "@/lib/asistencia/consultaPeriodo.mjs";
+import { ahoraEn, textoFechaHoy } from "@/lib/asistencia/hoy.mjs";
+import { hora12 } from "@/lib/hora12.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
+
+// Pestañas de Asistencias (control segmentado de la maqueta «Hoy», 23/11/2026). En celular ocupan el ancho.
+const PESTANAS = [
+  ["envivo", "Hoy", "Quién está, quién falta, quién va tarde y quién salió antes"],
+  ["registros", "Registros", "Ver y corregir checadas del periodo"],
+  ["horas", "Horas de ley", "Horas de la semana contra el límite de la ley y horas extra"],
+];
+function PestanasAsistencia({ vista, onElegir, movil = false }) {
+  return (
+    <div role="tablist" aria-label="Vistas de asistencia"
+      className={`gap-1 rounded-[10px] bg-[#e8ebf3] p-1 ${movil ? "grid grid-cols-3" : "inline-flex"}`}>
+      {PESTANAS.map(([clave, texto, ayuda]) => {
+        const activa = clave === "registros" ? vista === "lista" || vista === "matriz" : vista === clave;
+        return (
+          <button key={clave} type="button" role="tab" aria-selected={activa} title={ayuda} onClick={() => onElegir(clave)}
+            className={`whitespace-nowrap rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${movil ? "min-h-11 px-1 text-[13.5px]" : "min-h-9 px-4 text-sm"} ${
+              activa ? "bg-white font-semibold text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,.08)]" : "font-medium text-slate-600 hover:text-slate-900"
+            }`}>
+            {texto}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function ControlAsistencia() {
   const searchParams = useSearchParams();
@@ -72,7 +98,11 @@ export default function ControlAsistencia() {
     filtroDiasFestivos: false,
     filtroRequiereAutorizacion: false,
   });
-  const [fechaInicio, setFechaInicio] = useState(initialDate);
+  // (22/11/2026) Asistencias abre en «Hoy» (en vivo: ayer y hoy, por los turnos nocturnos). Si llega con un enlace
+  // a una fecha o persona (desde Horas, Incidencias o el buscador), abre en «Registros».
+  const conEnlace = Boolean(searchParams.get("fecha") || searchParams.get("empleado") || searchParams.get("abrirEmpleado"));
+  const ayerMx = dayjs().tz("America/Mexico_City").subtract(1, "day").format("YYYY-MM-DD");
+  const [fechaInicio, setFechaInicio] = useState(conEnlace ? initialDate : ayerMx);
   const [fechaFin, setFechaFin] = useState(initialDate);
   const [page, setPage] = useState(1);
   // Escritorio arranca en "Todos los registros": se ve el periodo completo y los
@@ -97,14 +127,29 @@ export default function ControlAsistencia() {
 
   // Nueva UX de escritorio: rango con modal, agrupación, columnas y detalle
   const [rangoOpen, setRangoOpen] = useState(false);
-  const [vista, setVista] = useState("lista"); // "lista" | "matriz" | "horas"
-  const [rangoEtiqueta, setRangoEtiqueta] = useState("Hoy");
+  // Pestañas: «Hoy» = envivo · «Registros» = lista o matriz (Calendario) · «Horas de ley» = horas.
+  const [vista, setVista] = useState(conEnlace ? "lista" : "envivo");
+  const [formatoRegistros, setFormatoRegistros] = useState("lista");
+  const [rangoEtiqueta, setRangoEtiqueta] = useState(conEnlace ? "Hoy" : "En vivo");
   const [agrupar, setAgrupar] = useState(null);
   const [visibleColumns, setVisibleColumns] = useState(null);
 
   // Las columnas guardadas se cargan en cliente (localStorage no existe en SSR)
   useEffect(() => {
-    setVisibleColumns(cargarColumnasGuardadas(COLUMNAS_ASISTENCIA));
+    const columnas = cargarColumnasGuardadas(COLUMNAS_ASISTENCIA);
+    // (23/11/2026) Columna nueva «Comida»: se muestra una vez aunque haya columnas guardadas; si la quitan, se respeta.
+    try {
+      if (!window.localStorage.getItem("adamia-asistencia-col-comida")) {
+        window.localStorage.setItem("adamia-asistencia-col-comida", "1");
+        if (!columnas.includes("comida")) {
+          const i = columnas.indexOf("jornada");
+          columnas.splice(i >= 0 ? i + 1 : columnas.length, 0, "comida");
+        }
+      }
+    } catch {
+      // sin almacenamiento local: se usan las columnas cargadas
+    }
+    setVisibleColumns(columnas);
   }, []);
 
   const DEFAULT_SORT_CONFIG = {
@@ -144,6 +189,15 @@ export default function ControlAsistencia() {
   };
 
   const today = dayjs().tz("America/Mexico_City").format("YYYY-MM-DD");
+  // Al salir de «En vivo» (que carga ayer y hoy) se regresa a «Hoy».
+  useEffect(() => {
+    if (vista !== "envivo" && rangoEtiqueta === "En vivo") {
+      setFechaInicio(today);
+      setFechaFin(today);
+      setRangoEtiqueta("Hoy");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vista]);
 
   const handleResetFilters = () => {
     setEmpresaActiva("all");
@@ -233,35 +287,86 @@ export default function ControlAsistencia() {
     setPage(1);
   };
 
-  const { ui, data, mutate, resumenHorasExtra, totalSinComida, cargando } = AsistenciaDataContainer({
-    sinComida,
+  // «Hoy» trae a TODOS los de ayer y hoy (busca y filtra por área en pantalla); los filtros de Registros no se pierden
+  // pero no se le aplican. En celular también trae todo para que se refresque con cada checada.
+  const enHoy = vista === "envivo";
+  const { ui, data, mutate, localEvents, resumenHorasExtra, totalSinComida, cargando } = AsistenciaDataContainer({
+    sinComida: enHoy ? false : sinComida,
     idEmpresa,
     empresaActiva,
     fechaInicio,
     fechaFin,
-    page,
-    limit,
-    debouncedFiltroEmpleado,
-    filtroDepartamento,
-    filtroTipoRegistro,
-    filtroEstadoAsistencia,
+    page: enHoy ? 1 : page,
+    limit: enHoy ? LIMITE_TODOS : limit,
+    debouncedFiltroEmpleado: enHoy ? "" : debouncedFiltroEmpleado,
+    filtroDepartamento: enHoy ? [] : filtroDepartamento,
+    filtroTipoRegistro: enHoy ? "" : filtroTipoRegistro,
+    filtroEstadoAsistencia: enHoy ? "" : filtroEstadoAsistencia,
     setPage,
     onLimitChange: handleLimitChange,
     mostrarCamposExtras,
     abrirFormulario,
     onResetFilters: handleResetFilters,
-    soloPresentes,
-    soloAusentes,
-    horasExtra,
-    sinGoceDeSueldo,
-    diasFestivos,
-    requiereAutorizacion,
+    soloPresentes: enHoy ? false : soloPresentes,
+    soloAusentes: enHoy ? false : soloAusentes,
+    horasExtra: enHoy ? false : horasExtra,
+    sinGoceDeSueldo: enHoy ? false : sinGoceDeSueldo,
+    diasFestivos: enHoy ? false : diasFestivos,
+    requiereAutorizacion: enHoy ? false : requiereAutorizacion,
     sortConfig,
     setSortConfig,
     agrupar,
     visibleColumns,
     vista,
   });
+
+  const elegirPestana = (clave) => {
+    if (clave === "envivo") {
+      setVista("envivo");
+      setFechaInicio(dayjs().tz("America/Mexico_City").subtract(1, "day").format("YYYY-MM-DD"));
+      setFechaFin(today);
+      setRangoEtiqueta("En vivo");
+      setPage(1);
+    } else {
+      setVista(clave === "registros" ? (isMobile ? "lista" : formatoRegistros) : "horas");
+    }
+  };
+  // «Hoy»: fecha y hora de la última actualización (cada checada llega por SSE y recarga los datos).
+  const zonaEmpresa = useEmpresaTimezone(empresaActiva);
+  const [actualizado, setActualizado] = useState(null);
+  useEffect(() => {
+    if (data) setActualizado(new Date());
+  }, [data]);
+  const horaActualizado = actualizado ? hora12(ahoraEn(zonaEmpresa, actualizado).hora) : null;
+
+  // Celular: «Hoy» y «Horas de ley» con encabezado y pestañas; «Registros» es la vista móvil de siempre.
+  if (isMobile && vista !== "lista" && vista !== "matriz") {
+    return (
+      <>
+        {modoFormulario && (
+          <FormularioAsistenciasMasivas
+            values={values}
+            setModoFormulario={setModoFormulario}
+            mutate={mutate}
+            idEmpresa={idEmpresa}
+          />
+        )}
+        <div className="-m-5 h-[calc(100dvh-3.5rem)] overflow-y-auto overflow-x-hidden bg-[#f6f7fb] px-4 pb-8 pt-[max(1rem,env(safe-area-inset-top))]">
+          <div className="space-y-3.5">
+            <ClockNavigation companyId={empresaActiva} />
+            <header className="space-y-0.5">
+              <h1 className="text-[22px] font-bold leading-tight text-slate-900">Asistencias</h1>
+              <p className="text-[13px] text-slate-600">
+                {textoFechaHoy(zonaEmpresa, actualizado ?? new Date(), { corto: true })}{horaActualizado ? ` · ${horaActualizado}` : ""}
+              </p>
+            </header>
+            <PestanasAsistencia vista={vista} onElegir={elegirPestana} movil />
+            {ui}
+          </div>
+        </div>
+      </>
+    );
+  }
 
   // Mobile view: full-height layout overriding panel padding
   if (isMobile) {
@@ -276,9 +381,14 @@ export default function ControlAsistencia() {
             idEmpresa={idEmpresa}
           />
         )}
-        <div className="-m-5 h-[calc(100dvh-3.5rem)] overflow-hidden">
+        <div className="-m-5 flex h-[calc(100dvh-3.5rem)] flex-col overflow-hidden">
+          <div className="shrink-0 bg-white px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
+            <PestanasAsistencia vista={vista} onElegir={elegirPestana} movil />
+          </div>
+          <div className="min-h-0 flex-1">
           <CuentaHorasProvider registros={registros}>
           <MobileAsistenciaView
+            localEvents={localEvents}
             registros={registros}
             data={data}
             mutate={mutate}
@@ -310,6 +420,7 @@ export default function ControlAsistencia() {
             setFiltroRapido={setFiltroRapido}
           />
           </CuentaHorasProvider>
+          </div>
         </div>
       </>
     );
@@ -325,7 +436,10 @@ export default function ControlAsistencia() {
         <EncabezadoPagina
           icono={ClipboardCheck}
           titulo="Asistencias"
-          subtitulo="Registros de entrada y salida por empleado"
+          subtitulo={enHoy
+            ? `${textoFechaHoy(zonaEmpresa, actualizado ?? new Date())}${horaActualizado ? ` · actualizado ${horaActualizado}` : ""} · se refresca solo`
+            : "Quién está hoy, registros de entrada y salida, y horas de ley"}
+          acciones={<PestanasAsistencia vista={vista} onElegir={elegirPestana} />}
         />
       </div>
 
@@ -338,6 +452,7 @@ export default function ControlAsistencia() {
         />
       )}
 
+      {(vista === "lista" || vista === "matriz") && (
       <ResumenAsistencia
         totals={data}
         cargando={cargando}
@@ -355,8 +470,10 @@ export default function ControlAsistencia() {
         setFiltroEstadoAsistencia={setFiltroEstadoAsistencia}
         setPage={setPage}
       />
+      )}
 
 
+      {!enHoy && (
       <div className="flex flex-wrap items-center gap-2.5">
         <div className="relative min-w-[220px] max-w-[340px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -372,6 +489,7 @@ export default function ControlAsistencia() {
           />
         </div>
 
+        {(vista === "lista" || vista === "matriz") && (
         <Button
           variant="outline"
           onClick={() => setRangoOpen(true)}
@@ -381,46 +499,26 @@ export default function ControlAsistencia() {
           {rangoEtiqueta}
           <ChevronDown className="ml-1 h-3.5 w-3.5 text-gray-400" />
         </Button>
+        )}
 
-        {/* Toggle Lista / Matriz */}
-        <div className="inline-flex overflow-hidden rounded-xl border border-gray-200">
-          <button
-            type="button"
-            onClick={() => setVista("lista")}
-            className={`flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold transition-colors ${
-              vista === "lista"
-                ? "bg-[#2563EB] text-white"
-                : "bg-white text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            <List className="h-4 w-4" />
-            Lista
-          </button>
-          <button
-            type="button"
-            onClick={() => setVista("matriz")}
-            className={`flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold transition-colors ${
-              vista === "matriz"
-                ? "bg-[#2563EB] text-white"
-                : "bg-white text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            <Grid3x3 className="h-4 w-4" />
-            Matriz
-          </button>
-          <button
-            type="button"
-            onClick={() => setVista("horas")}
-            className={`flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold transition-colors ${
-              vista === "horas"
-                ? "bg-[#2563EB] text-white"
-                : "bg-white text-gray-600 hover:bg-gray-50"
-            }`}
-          >
-            <Clock3 className="h-4 w-4" />
-            Horas
-          </button>
-        </div>
+        {(vista === "lista" || vista === "matriz") && (
+          <div className="inline-flex overflow-hidden rounded-xl border border-gray-200" role="group" aria-label="Formato de registros">
+            {[["lista", "Lista", List], ["matriz", "Calendario", Grid3x3]].map(([valor, texto, Icono]) => (
+              <button
+                key={valor}
+                type="button"
+                aria-pressed={vista === valor}
+                onClick={() => { setVista(valor); setFormatoRegistros(valor); }}
+                className={`flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold transition-colors ${
+                  vista === valor ? "bg-[#2563EB] text-white" : "bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                <Icono className="h-4 w-4" />
+                {texto}
+              </button>
+            ))}
+          </div>
+        )}
 
         {vista === "lista" && (
           <Select
@@ -443,6 +541,7 @@ export default function ControlAsistencia() {
           </Select>
         )}
 
+        {(vista === "lista" || vista === "matriz") && (
         <Button
           onClick={handleResetFilters}
           variant="ghost"
@@ -451,6 +550,7 @@ export default function ControlAsistencia() {
           <RotateCcw className="mr-1.5 h-4 w-4" />
           Limpiar
         </Button>
+        )}
 
         <div className="flex-1" />
 
@@ -462,13 +562,16 @@ export default function ControlAsistencia() {
           />
         )}
       </div>
+      )}
 
+      {(vista === "lista" || vista === "matriz") && (
       <VistasGuardadas
         hayFiltros={hayFiltrosParaVista}
         obtenerEstado={obtenerEstadoVista}
         onAplicar={aplicarEstadoVista}
         onLimpiar={handleResetFilters}
       />
+      )}
 
       {ui}
 

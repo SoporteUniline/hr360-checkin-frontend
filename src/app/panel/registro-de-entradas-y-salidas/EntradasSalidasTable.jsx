@@ -7,6 +7,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import EntradasSalidasRow from "./EntradasSalidasRow";
+import LocalClockRows from '@/components/Clock/LocalClockRows';
 import { exportToExcel } from "@/utils/exportExcelJS";
 import { Button } from "@/components/ui/button";
 import { FileSpreadsheet } from "lucide-react";
@@ -42,6 +43,7 @@ const TH_STICKY = "sticky top-0 z-10 bg-gray-50";
 
 export default function EntradasSalidasTable({
   registros,
+  localEvents = [],
   fecha,
   editingMovimientoId,
   editingMovimientoData,
@@ -532,7 +534,8 @@ export default function EntradasSalidasTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {displayedRows.length === 0 ? (
+              <LocalClockRows events={localEvents} columns={visibleColumnCount} timezone={userTimezone} />
+              {displayedRows.length === 0 ? (localEvents.length ? null : (
                 <TableRow>
                   <TableCell
                     colSpan={visibleColumnCount}
@@ -541,7 +544,7 @@ export default function EntradasSalidasTable({
                     No hay registros para los filtros seleccionados.
                   </TableCell>
                 </TableRow>
-              ) : groupedRows ? (
+              )) : groupedRows ? (
                 groupedRows.map(([groupName, rows]) => {
                   const isCollapsed = collapsedGroups.has(groupName);
                   return (

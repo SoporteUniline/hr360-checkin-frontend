@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, CalendarClock } from "lucide-react";
+import AvisoLimiteLegal from "@/components/asistencia/AvisoLimiteLegal";
 
 const DIAS = [
   "Lunes",
@@ -272,8 +273,8 @@ export default function TurnoDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden sm:max-w-[900px]">
         <DialogHeader className="shrink-0">
-          <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-indigo-50">
-            <CalendarClock className="h-5 w-5 text-indigo-600" />
+          <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-full bg-blue-50">
+            <CalendarClock className="h-5 w-5 text-brand" />
           </div>
 
           <DialogTitle>
@@ -324,7 +325,7 @@ export default function TurnoDialog({
               </p>
             </div>
 
-            <div className="rounded-xl border border-indigo-100 bg-indigo-50/50 p-4">
+            <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4">
               <div className="mb-3">
                 <p className="text-sm font-semibold text-gray-900">
                   Aplicar horario a varios días
@@ -384,7 +385,7 @@ export default function TurnoDialog({
                       onClick={() => toggleDiaRapido(dia)}
                       className={`rounded-md border px-3 py-1.5 text-xs font-medium transition-colors ${
                         seleccionado
-                          ? "border-indigo-600 bg-indigo-600 text-white"
+                          ? "border-brand bg-brand text-white"
                           : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
                       }`}
                     >
@@ -456,7 +457,7 @@ export default function TurnoDialog({
                 <Button
                   type="button"
                   onClick={aplicarHorarioRapido}
-                  className="bg-indigo-600 hover:bg-indigo-700"
+                  className="bg-brand hover:bg-blue-700"
                 >
                   Aplicar horario
                 </Button>
@@ -573,6 +574,8 @@ export default function TurnoDialog({
           </div>
         </div>
 
+        <AvisoLimiteLegal horarios={dias} className="shrink-0" />
+
         {error && (
           <div className="shrink-0 rounded-lg border border-red-100 bg-red-50 p-3 text-sm text-red-700">
             {error}
@@ -593,7 +596,7 @@ export default function TurnoDialog({
             type="button"
             onClick={guardar}
             disabled={guardando}
-            className="bg-indigo-600 hover:bg-indigo-700"
+            className="bg-brand hover:bg-blue-700"
           >
             {guardando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
 

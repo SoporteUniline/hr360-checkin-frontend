@@ -167,7 +167,7 @@ export default function LoginClient({ initialIsNative = false }) {
             <Button
               type="submit"
               loading={loading}
-              className="w-full h-12 rounded-xl text-base font-semibold cursor-pointer text-white shadow-md shadow-blue-500/20 bg-gradient-to-r from-[var(--adamia-blue)] to-[var(--adamia-purple)] hover:opacity-95 active:scale-[0.99] transition-all"
+              className="w-full h-12 rounded-xl text-base font-semibold cursor-pointer text-white shadow-md shadow-blue-500/20 bg-brand hover:opacity-95 active:scale-[0.99] transition-all"
             >
               {loading ? "Ingresando..." : "Ingresar"}
             </Button>
