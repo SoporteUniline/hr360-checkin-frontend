@@ -73,6 +73,7 @@ import {
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useModulosActivos } from "@/components/modulos/useModulos";
+import { useConfirmarSalida } from "@/components/cambios/CambiosPendientes";
 import { filtrarGrupos, rutaPermitida } from "@/lib/modulos/menu.mjs";
 import {
   RECRUITMENT_NAV,
@@ -685,6 +686,8 @@ export function NavMain({ consulta = "" } = {}) {
   const path = usePathname();
   const { dataUser } = useAuth();
   const { state: sidebarState, isMobile, setOpenMobile } = useSidebar();
+  // (23/11/2026) Con cambios sin guardar (p. ej. la ficha del empleado) pregunta antes de navegar.
+  const confirmarSalida = useConfirmarSalida();
   const [open, setOpen] = useState();
   const [busqueda, setBusqueda] = useState("");
   // Colapso por módulo: todos abiertos por defecto; se recuerda en localStorage.
@@ -763,8 +766,12 @@ export function NavMain({ consulta = "" } = {}) {
       }
       return false;
     });
-  const handleClick = async (href) => {
+  const handleClick = (href) => {
     if (isMobile) setOpenMobile(false);
+    confirmarSalida(({ reemplazar }) => { navegar(href, reemplazar); }, { navega: true });
+  };
+  // reemplazar: la guardia de cambios pide reemplazar su entrada extra del historial en vez de agregar otra.
+  const navegar = async (href, reemplazar = false) => {
     // These items are buttons, so the global offline link handler cannot see them.
     if (!navigator.onLine || window.__adamiaOffline === true) {
       if (href === '/seleccionar-reloj') {
@@ -776,10 +783,12 @@ export function NavMain({ consulta = "" } = {}) {
           } catch { /* The offline gate still offers the available destinations. */ }
         }
       }
-      window.location.assign(href);
+      if (reemplazar) window.location.replace(href);
+      else window.location.assign(href);
       return;
     }
-    router.push(href);
+    if (reemplazar) router.replace(href);
+    else router.push(href);
   };
   let perfilRoute = "/home/cuenta";
   if (effectiveRole === "Recruiter") {

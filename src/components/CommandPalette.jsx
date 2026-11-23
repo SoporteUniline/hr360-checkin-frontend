@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useConfirmarSalida } from "@/components/cambios/CambiosPendientes";
 import { Command } from "cmdk";
 import axiosInstance from "@/lib/axios";
 import { useAuth } from "@/context/AuthContext";
@@ -514,6 +515,7 @@ export function CommandPalette() {
   const [isNative, setIsNative] = useState(false);
   const debounceRef = useRef(null);
   const router = useRouter();
+  const confirmarSalida = useConfirmarSalida();
   const { dataUser } = useAuth();
 
   useEffect(() => {
@@ -594,7 +596,7 @@ export function CommandPalette() {
 
   const handleSelect = (route) => {
     setOpen(false);
-    router.push(route);
+    confirmarSalida(({ reemplazar }) => (reemplazar ? router.replace(route) : router.push(route)), { navega: true });
   };
 
   if (!open) return null;

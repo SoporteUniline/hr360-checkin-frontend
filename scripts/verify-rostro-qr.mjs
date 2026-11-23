@@ -110,12 +110,9 @@ const faceapiFalso = () => {
 async function abrirFicha(pg, movil = false) {
   await pg.goto(base + "/panel/empleados", { waitUntil: "domcontentloaded" });
   if (movil) {
-    // En el teléfono la lista abre la ficha en lectura; «Editar» la deja editable.
+    // En el teléfono la lista abre la ficha ya editable (23/11/2026: sin el paso de solo lectura con «Editar»).
     await pg.getByRole("button", { name: /Ana Torres/ }).first().click({ timeout: 30000 });
-    // (23/11/2026) Regresión: en modo «ver» (solo lectura) también está «Continuar desde el celular».
-    await pg.getByRole("tab", { name: "Checador y acceso" }).click({ timeout: 30000 });
-    await pg.getByRole("button", { name: "Continuar desde el celular" }).waitFor({ timeout: 30000 });
-    await pg.getByRole("button", { name: "Editar" }).first().click({ timeout: 30000 });
+    await pg.locator("[data-boton-guardar]:visible").waitFor({ timeout: 30000 });
   } else {
     await pg.getByTitle("Editar").first().click({ timeout: 30000 });
   }
