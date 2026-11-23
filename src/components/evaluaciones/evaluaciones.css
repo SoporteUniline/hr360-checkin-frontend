@@ -76,19 +76,6 @@
   background: #fff;
   font-size: 13px;
 }
-.ev-gear {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  color: #334155;
-}
-.ev-gear[aria-current="page"] {
-  border-color: #2563eb;
-  color: #2563eb;
-}
 .ev-nav {
   display: flex;
   gap: 24px;
@@ -910,4 +897,9 @@ details.ev-panel > summary {
   .ev-table td .ev-person small {
     margin-top: 4px;
   }
+}
+/* (23/11/2026) Secciones de Configuración (Valores iniciales · Niveles · Acceso al módulo): enlaces bajo el título. */
+.ev-subnav {
+  border-bottom: 1px solid var(--ev-border);
+  margin: -8px 0 20px;
 }
