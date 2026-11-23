@@ -125,6 +125,16 @@ try {
   const nomina = page.locator('li[data-modulo="nomina"]');
   await nomina.waitFor({ timeout: 30000 });
   await menu.getByRole("button", { name: "Nóminas", exact: true }).waitFor();
+  // (23/11/2026) Regresión: contraer el menú tronaba la página («consulta is not defined»). Y el menú contraído muestra
+  // la «A» oficial de ADAMIA.
+  await page.locator('[data-sidebar="trigger"]').first().click();
+  await page.locator('[data-state="collapsed"]').first().waitFor({ timeout: 10000 });
+  await page.locator('img[src*="adamia-isotipo"]').first().waitFor({ state: "visible", timeout: 10000 });
+  assert.equal(await page.getByText("Application error").count(), 0, "contraer el menú no truena");
+  if (process.env.CAPTURAS) await page.screenshot({ path: `${process.env.CAPTURAS}/menu-contraido.png` });
+  assert.deepEqual(errores, [], "sin errores al contraer el menú");
+  await page.locator('[data-sidebar="trigger"]').first().click();
+  await menu.getByRole("button", { name: "Nóminas", exact: true }).waitFor();
   assert.equal(await menu.getByRole("button", { name: "Módulos", exact: true }).count(), 1, "Ajustes → Módulos en el menú");
   assert.match(await page.locator('li[data-modulo="asistencias"]').innerText(), /Incluido siempre/);
   assert.equal(await page.locator('li[data-modulo="asistencias"] [role="switch"]').count(), 0, "lo base no se apaga");

@@ -578,7 +578,9 @@ const ITEM_ACTIVO =
 const ITEM_NORMAL =
   "text-gray-700 [&_svg]:text-gray-400 hover:[&_svg]:text-[#2563EB]";
 // Módulo del rail contraído: icono + panel flotante con todos sus items.
-function RailModule({ icon: Icon, title, items, path, onNavigate }) {
+// (23/11/2026) `consulta` llega como prop: antes no estaba definida aquí y contraer el menú tronaba la página
+// («consulta is not defined» → «Application error»).
+function RailModule({ icon: Icon, title, items, path, onNavigate, consulta = "" }) {
   const [open, setOpen] = useState(false);
   const cierreRef = useRef(null);
   const abrir = () => {
@@ -808,6 +810,7 @@ export function NavMain({ consulta = "" } = {}) {
                 title={item.title}
                 items={[item]}
                 path={path}
+                consulta={consulta}
                 onNavigate={handleClick}
               />
             ))}
@@ -821,6 +824,7 @@ export function NavMain({ consulta = "" } = {}) {
               title={g.group}
               items={g.items}
               path={path}
+              consulta={consulta}
               onNavigate={handleClick}
             />
           ))}
