@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { finiquitosApi } from "@/lib/finiquitosApi";
 import { firmaDigitalAdminApi } from "@/lib/firmaDigitalApi";
+import EvidenciaFirma from "@/components/firma/EvidenciaFirma";
 import styles from "./finiquitos-theme.module.css";
 import FiniquitoResumen, { money } from "./FiniquitoResumen";
 import { jsPDF } from "jspdf";
@@ -1003,6 +1004,7 @@ export default function FiniquitoViewDialog({
                         ? "Abriendo…"
                         : "Ver PDF firmado"}
                     </Button>
+                    <EvidenciaFirma idSolicitud={estadoFirma.id || estadoFirma.id_solicitud} idEmpresa={idEmpresa} />
                   </>
                 ) : pending ? (
                   <>
