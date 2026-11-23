@@ -54,7 +54,7 @@ try {
   await pg.getByText("Aún no hay tareas.").waitFor({ timeout: 15000 });
 
   // 2) Proyecto y tareas.
-  await pg.getByRole("button", { name: "Proyectos", exact: true }).click();
+  await pg.getByRole("navigation", { name: "Secciones de tareas" }).getByRole("link", { name: "Proyectos", exact: true }).click();
   await pg.getByRole("button", { name: "Nuevo proyecto" }).first().click();
   await pg.getByLabel("Nombre").fill("Apertura sucursal Norte");
   await pg.getByRole("button", { name: "Crear proyecto" }).click();
@@ -73,7 +73,7 @@ try {
   await pg.getByText("1 de 1 tareas").or(pg.getByText("0 de 1 tareas")).first().waitFor();
 
   // 3) Checklist con preguntas de varios tipos, asignado al puesto de encargado.
-  await pg.getByRole("button", { name: "Checklists", exact: true }).click();
+  await pg.goto(base + "/panel/checklists", { waitUntil: "domcontentloaded" }); // otro módulo (23/11/2026)
   await pg.getByRole("button", { name: "Nuevo checklist" }).first().click();
   await pg.getByRole("button", { name: "Empezar en blanco" }).click();
   await pg.getByLabel("Nombre del checklist").fill("Apertura");
@@ -135,7 +135,7 @@ try {
   assert.ok(await pe.evaluate(() => document.documentElement.scrollWidth <= 390), "sin desborde en celular");
 
   // ===== El jefe revisa =====
-  await pg.getByRole("button", { name: /^Revisar/ }).click();
+  await pg.getByRole("navigation", { name: "Secciones de checklists" }).getByRole("link", { name: /^Revisar/ }).click();
   await pg.getByRole("list", { name: "Por revisar" }).getByText("Ana Torres").waitFor({ timeout: 15000 });
   await pg.getByRole("img", { name: "Foto: ¿Cómo está el comedor?" }).waitFor({ timeout: 15000 });
   await pg.getByRole("img", { name: "Firma: Firma de quien abre" }).waitFor();
@@ -146,14 +146,14 @@ try {
   await pg.getByRole("button", { name: /Aprobar con/ }).click();
   await pg.getByText(/Aprobado con 50%.*corregiste 1/).waitFor({ timeout: 15000 });
 
-  await pg.getByRole("button", { name: "Tablero", exact: true }).click();
+  await pg.goto(base + "/panel/tareas", { waitUntil: "domcontentloaded" });
   await pg.getByRole("region", { name: "En revisión", exact: true }).getByRole("button", { name: /Revisar extintores/ }).click();
   await dlg.getByRole("img", { name: "Evidencia 1" }).waitFor({ timeout: 15000 });
   await dlg.getByRole("button", { name: "Aprobar y terminar" }).click();
   await pg.keyboard.press("Escape");
   await pg.getByRole("region", { name: "Hecho", exact: true }).getByRole("button", { name: /Revisar extintores/ }).waitFor({ timeout: 15000 });
 
-  await pg.getByRole("button", { name: "Cumplimiento", exact: true }).click();
+  await pg.goto(base + "/panel/checklists/cumplimiento", { waitUntil: "domcontentloaded" });
   await pg.getByRole("cell", { name: /Ana Torres/ }).waitFor({ timeout: 15000 });
   const filaAna = (await pg.getByRole("row", { name: /Ana Torres/ }).innerText()).replace(/\s+/g, " ");
   assert.match(filaAna, /50%/, `Ana: ${filaAna}`);

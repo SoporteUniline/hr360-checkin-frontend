@@ -293,34 +293,24 @@ const menuGroups = [
         icon: FolderClosed,
       },
       {
-        // (22/11/2026) Módulo Nómina con sus tres secciones (también son pestañas dentro del módulo).
-        title: "Nómina",
-        rol: "Recruiter",
-        icon: Wallet,
-        children: [
-          { title: "Nóminas", url: "/panel/nomina", icon: Wallet },
-          { title: "Bonos y descuentos", url: "/panel/nomina/bonos", icon: Wallet, matchPrefix: true },
-          { title: "Préstamos", url: "/panel/nomina/prestamos", icon: Wallet, matchPrefix: true },
-        ],
-      },
-      {
-        title: "Finiquitos y liquidaciones",
-        url: "/panel/finiquitos-y-liquidaciones",
-        rol: "Recruiter",
-        icon: HandCoins,
-      },
-      {
-        title: "Aguinaldos",
-        url: "/panel/aguinaldos",
-        rol: "Recruiter",
-        icon: Gift,
-      },
-      {
         title: "Mapa de rutas",
         url: "/panel/mapa-de-rutas",
         rol: "Recruiter",
         icon: Route,
       },
+    ],
+  },
+  {
+    // (23/11/2026) Nómina es su propio módulo (antes un submenú dentro de Gestión de personal). Incluye Finiquitos y
+    // Aguinaldos porque también son pagos (decisión del dueño). Nóminas/Bonos/Préstamos también son pestañas del módulo.
+    group: "NÓMINA",
+    groupIcon: Wallet,
+    items: [
+      { title: "Nóminas", url: "/panel/nomina", rol: "Recruiter", icon: Wallet },
+      { title: "Bonos y descuentos", url: "/panel/nomina/bonos", matchPrefix: true, rol: "Recruiter", icon: ReceiptText },
+      { title: "Préstamos", url: "/panel/nomina/prestamos", matchPrefix: true, rol: "Recruiter", icon: Landmark },
+      { title: "Finiquitos y liquidaciones", url: "/panel/finiquitos-y-liquidaciones", rol: "Recruiter", icon: HandCoins },
+      { title: "Aguinaldos", url: "/panel/aguinaldos", rol: "Recruiter", icon: Gift },
     ],
   },
   {
@@ -449,17 +439,21 @@ const menuGroups = [
     ],
   },
   {
-    // (23/11/2026) Tareas y Checklists: PROTOTIPO con datos de ejemplo para aprobar el diseño (aún sin base de datos).
+    // (23/11/2026) Tareas y Checklists son dos módulos, cada uno con su entrada y sus vistas (pedido del dueño).
     group: "TAREAS",
     groupIcon: ListChecks,
     items: [
-      {
-        title: "Tareas y checklists",
-        url: "/panel/tareas",
-        matchPrefix: "/panel/tareas",
-        rol: "Recruiter",
-        icon: ListChecks,
-      },
+      { title: "Tablero", url: "/panel/tareas", rol: "Recruiter", icon: LayoutDashboard },
+      { title: "Proyectos", url: "/panel/tareas/proyectos", matchPrefix: true, rol: "Recruiter", icon: FolderClosed },
+    ],
+  },
+  {
+    group: "CHECKLISTS",
+    groupIcon: ClipboardCheck,
+    items: [
+      { title: "Checklists", url: "/panel/checklists", rol: "Recruiter", icon: ListChecks },
+      { title: "Revisar", url: "/panel/checklists/revisar", matchPrefix: true, rol: "Recruiter", icon: ShieldCheck },
+      { title: "Cumplimiento", url: "/panel/checklists/cumplimiento", matchPrefix: true, rol: "Recruiter", icon: BarChart3 },
     ],
   },
   {
