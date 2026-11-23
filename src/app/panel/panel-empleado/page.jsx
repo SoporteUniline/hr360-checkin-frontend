@@ -55,6 +55,7 @@ import { fetcherWithToken } from "@/lib/fetcher";
 import { Combobox } from "@/components/Combobox";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
+import { useModulosActivos } from "@/components/modulos/useModulos";
 
 // Estilo homologado de los triggers de tabs (Adamia): texto gris → azul activo,
 // subrayado azul de 2px solo en el tab activo, sin fondos ni sombras.
@@ -70,6 +71,9 @@ const TAB_TRIGGER_CLASS =
  */
 export default function PanelEmpleadoPage() {
   const { dataUser } = useAuth();
+  // (03/12/2026) Módulos por empresa: pestañas de Vacaciones, Finiquitos y Aguinaldos solo si su módulo está activo.
+  const { activos: modulosActivos } = useModulosActivos();
+  const conModulo = (clave) => !modulosActivos || modulosActivos.has(clave);
   const router = useRouter();
   const searchParams = useSearchParams();
   const [unidadActiva, setUnidadActiva] = useState("");
@@ -443,6 +447,7 @@ export default function PanelEmpleadoPage() {
                         <Briefcase className="mr-1.5 h-3.5 w-3.5 flex-shrink-0" />
                         Contratos
                       </TabsTrigger>
+                      {conModulo("vacaciones") && (
                       <TabsTrigger
                         value="vacaciones"
                         className={TAB_TRIGGER_CLASS}
@@ -450,6 +455,7 @@ export default function PanelEmpleadoPage() {
                         <Plane className="mr-1.5 h-3.5 w-3.5 flex-shrink-0" />
                         Vacaciones
                       </TabsTrigger>
+                      )}
                       <TabsTrigger
                         value="documentos"
                         className={TAB_TRIGGER_CLASS}
@@ -458,6 +464,7 @@ export default function PanelEmpleadoPage() {
                         Documentos
                       </TabsTrigger>
 
+                      {conModulo("nomina") && (
                       <TabsTrigger
                         value="finiquitos"
                         className={TAB_TRIGGER_CLASS}
@@ -465,12 +472,14 @@ export default function PanelEmpleadoPage() {
                         <ReceiptText className="mr-1.5 h-3.5 w-3.5 flex-shrink-0" />
                         Finiquitos
                       </TabsTrigger>
+                      )}
 
                       <TabsTrigger value="actas" className={TAB_TRIGGER_CLASS}>
                         <FileWarning className="mr-1.5 h-3.5 w-3.5 flex-shrink-0" />
                         Actas
                       </TabsTrigger>
 
+                      {conModulo("nomina") && (
                       <TabsTrigger
                         value="aguinaldos"
                         className={TAB_TRIGGER_CLASS}
@@ -478,6 +487,7 @@ export default function PanelEmpleadoPage() {
                         <Gift className="mr-1.5 h-3.5 w-3.5 flex-shrink-0" />
                         Aguinaldos
                       </TabsTrigger>
+                      )}
                       <TabsTrigger
                         value="activos"
                         className={TAB_TRIGGER_CLASS}

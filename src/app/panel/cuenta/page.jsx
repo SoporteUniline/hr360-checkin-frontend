@@ -7,7 +7,8 @@ import { Icon } from "@iconify/react";
 import useSWR from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import PasswordChange from "./Contrasena";
-import { Building, KeyRound, User, UserCog } from "lucide-react";
+import { Building, KeyRound, User, UserCog, LayoutGrid, ChevronRight } from "lucide-react";
+import Link from "next/link";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import EmpresaInfoForm from "./Empresa/EmpresaForm";
 import ErrorPage from "@/components/ErrorPage";
@@ -113,6 +114,12 @@ export default function MyAccountReclutador() {
                   </div>
                 </div>
               )}
+              {/* (03/12/2026) Módulos por empresa: se configuran en su propia pantalla. */}
+              <Link href="/panel/modulos" className="mb-5 flex min-h-11 items-center gap-3 rounded-xl border border-blue-100 bg-blue-50/60 p-3 text-sm text-blue-800 hover:bg-blue-50">
+                <LayoutGrid className="size-5 shrink-0" aria-hidden="true" />
+                <span className="min-w-0 flex-1"><strong>Módulos de tu empresa</strong>: prende o apaga lo que usan, o contrata más.</span>
+                <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
+              </Link>
               <EmpresaInfoForm idEmpresa={idEmpresaActiva} />
             </TabsContent>
           </div>

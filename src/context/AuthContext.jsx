@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 
 const AuthContext = createContext({
   dataUser: null,
+  modulosSesion: null,
   isLoggedIn: false,
   isAuthChecked: false,
   login: () => {},
@@ -18,6 +19,9 @@ export function AuthProvider({ children }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAuthChecked, setIsAuthChecked] = useState(false);
   const [dataUser, setDataUser] = useState(null);
+  // (03/12/2026) Módulos activos de las empresas de la sesión (los manda /users/verify/token). Llegan junto con el
+  // usuario, así el menú se arma de una vez (sin mostrar y luego ocultar). null = servidor viejo: no se filtra nada.
+  const [modulosSesion, setModulosSesion] = useState(null);
   const router = useRouter();
 
   const verifyToken = async () => {
@@ -37,6 +41,7 @@ export function AuthProvider({ children }) {
       const res = await axios.get("/users/verify/token");
 
       if (res.status === 200) {
+        setModulosSesion(res.data.modulos ?? null);
         setDataUser(res.data.user);
         setIsLoggedIn(true);
       }
@@ -72,6 +77,7 @@ export function AuthProvider({ children }) {
     setAuthToken(null);
     setIsLoggedIn(false);
     setDataUser(null);
+    setModulosSesion(null);
     router.push("/login");
   };
 
@@ -81,6 +87,7 @@ export function AuthProvider({ children }) {
         isLoggedIn,
         isAuthChecked,
         dataUser,
+        modulosSesion,
         login,
         logout,
       }}

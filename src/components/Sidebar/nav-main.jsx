@@ -62,6 +62,7 @@ import {
   ClipboardList,
   Settings2,
   MessageCircle,
+  LayoutGrid,
 } from "lucide-react";
 import {
   ChevronDown,
@@ -71,6 +72,8 @@ import {
 } from "lucide-react";
 import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { useModulosActivos } from "@/components/modulos/useModulos";
+import { filtrarGrupos, rutaPermitida } from "@/lib/modulos/menu.mjs";
 import {
   RECRUITMENT_NAV,
   isRecruitmentNavActive,
@@ -83,8 +86,6 @@ const ICONOS_EVALUACION = {
   "mis-pendientes": PenLine,
   configuracion: Settings2,
 };
-const recruitmentEnabled =
-  process.env.NEXT_PUBLIC_RECRUITMENT_ENABLED === "true";
 const dashboardItems = [
   {
     title: "Mis activos y uniformes",
@@ -171,6 +172,13 @@ const dashboardItems = [
     url: "/dashboard/whatsapp",
     rol: "Admin",
     icon: MessageCircle,
+  },
+  // (03/12/2026) Módulos por empresa: qué incluye cada plan (los extras de una empresa, en su detalle).
+  {
+    title: "Módulos por plan",
+    url: "/dashboard/modulos",
+    rol: "Admin",
+    icon: LayoutGrid,
   },
   {
     title: "Inicio",
@@ -490,30 +498,28 @@ const menuGroups = [
       vistaEvaluacion: v,
     })),
   },
-  ...(recruitmentEnabled
-    ? [
-        {
-          group: "RECLUTAMIENTO Y SELECCIÓN",
-          groupIcon: BriefcaseBusiness,
-          items: [
-            ...RECRUITMENT_NAV.map((item) => ({
-              title: item.label,
-              url: item.href,
-              icon: item.icon,
-              rol: "Recruiter",
-              matchPrefix: item.matchPrefix,
-            })),
-            // Bandeja real de WhatsApp (R1): ruta propia, fuera del layout demo de /panel/reclutamiento.
-            {
-              title: "Conversaciones (WhatsApp)",
-              url: "/panel/whatsapp",
-              icon: MessageCircle,
-              rol: "Recruiter",
-            },
-          ],
-        },
-      ]
-    : []),
+  // (03/12/2026) Reclutamiento depende del módulo de la empresa (antes de NEXT_PUBLIC_RECRUITMENT_ENABLED, global por
+  // build). La variable solo queda como interruptor de emergencia: "false" lo oculta para todos (filtrarGrupos).
+  {
+    group: "RECLUTAMIENTO Y SELECCIÓN",
+    groupIcon: BriefcaseBusiness,
+    items: [
+      ...RECRUITMENT_NAV.map((item) => ({
+        title: item.label,
+        url: item.href,
+        icon: item.icon,
+        rol: "Recruiter",
+        matchPrefix: item.matchPrefix,
+      })),
+      // Bandeja real de WhatsApp (R1): ruta propia, fuera del layout demo de /panel/reclutamiento.
+      {
+        title: "Conversaciones (WhatsApp)",
+        url: "/panel/whatsapp",
+        icon: MessageCircle,
+        rol: "Recruiter",
+      },
+    ],
+  },
   {
     group: "AJUSTES",
     groupIcon: SlidersHorizontal,
@@ -535,6 +541,13 @@ const menuGroups = [
         url: "/panel/configuracion-checador",
         rol: "Recruiter",
         icon: SlidersHorizontal,
+      },
+      // (03/12/2026) Qué módulos usa la empresa: prender, apagar y contratar.
+      {
+        title: "Módulos",
+        url: "/panel/modulos",
+        rol: "Recruiter",
+        icon: LayoutGrid,
       },
       {
         title: "Usuarios con acceso",
@@ -677,7 +690,11 @@ export function NavMain({ consulta = "" } = {}) {
   const [isNative, setIsNative] = useState(false);
   const effectiveRole =
     dataUser?.tipo_usuario === "User" ? "Recruiter" : dataUser?.tipo_usuario;
-  const vistasEvaluacion = useMenuEvaluaciones(dataUser, effectiveRole === "Recruiter");
+  // (03/12/2026) Módulos por empresa: fuera lo que la empresa no tiene activo. Llega junto con la sesión (sin parpadeo).
+  const { activos, opciones: opcionesModulo } = useModulosActivos();
+  const grupos = filtrarGrupos(menuGroups, activos, opcionesModulo);
+  const itemsInicio = dashboardItems.filter((item) => rutaPermitida(item.url, activos, opcionesModulo));
+  const vistasEvaluacion = useMenuEvaluaciones(dataUser, effectiveRole === "Recruiter" && rutaPermitida("/panel/evaluaciones", activos, opcionesModulo));
   // Rol, app nativa (sin «Mi suscripción») y, en Evaluaciones, los permisos del servidor. Mientras no se
   // saben se muestran por rol, salvo «Por responder», que solo aparece si hay evaluaciones asignadas.
   const itemVisible = (item) => {
@@ -721,12 +738,12 @@ export function NavMain({ consulta = "" } = {}) {
     );
   };
   // ¿Hay al menos un módulo contraído? (para alternar expandir/contraer todo)
-  const hayContraidos = menuGroups.some(
+  const hayContraidos = grupos.some(
     (g) => gruposAbiertos[g.group] === false,
   );
   const toggleTodos = () => {
     const next = {};
-    menuGroups.forEach((g) => {
+    grupos.forEach((g) => {
       next[g.group] = hayContraidos ? true : false;
     });
     setGruposAbiertos(persistirGrupos(next));
@@ -772,7 +789,7 @@ export function NavMain({ consulta = "" } = {}) {
   if (sidebarState === "collapsed" && !isMobile) {
     const gruposVisibles =
       effectiveRole !== "Admin"
-        ? menuGroups
+        ? grupos
             .map((g) => ({
               ...g,
               items: g.items.filter(itemVisible),
@@ -782,7 +799,7 @@ export function NavMain({ consulta = "" } = {}) {
     return (
       <SidebarGroup>
         <SidebarGroupContent className="flex flex-col items-center gap-1 pt-1">
-          {dashboardItems
+          {itemsInicio
             .filter((item) => !item.rol || item.rol === effectiveRole)
             .map((item) => (
               <RailModule
@@ -843,7 +860,7 @@ export function NavMain({ consulta = "" } = {}) {
           </div>
         )}
         <SidebarMenu>
-          {dashboardItems.map((item) => {
+          {itemsInicio.map((item) => {
             if (item.rol && item.rol !== effectiveRole) return null;
             if (buscando && !normalizar(item.title).includes(q)) return null;
             return (
@@ -866,7 +883,7 @@ export function NavMain({ consulta = "" } = {}) {
             );
           })}
           {effectiveRole !== "Admin" &&
-            menuGroups.map((group) => {
+            grupos.map((group) => {
               const grupoCoincide = buscando
                 ? normalizar(group.group).includes(q)
                 : false;
