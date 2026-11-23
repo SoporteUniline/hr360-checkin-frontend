@@ -83,3 +83,9 @@ export const enviarAdjunto = (id, { archivo, nombre, texto, notaVoz = false }, {
 export const descargarAdjunto = (ruta, { signal } = {}) => axios.get(ruta, { adapter: "xhr", responseType: "blob", signal, timeout: 0 }).then((r) => r.data);
 export const ofrecerHorarios = (id, cuantos) =>
   axios.post(`${rutaConversacion(id)}/ofrecer-horarios`, cuantos ? { cuantos } : {}).then((r) => r.data);
+
+// ——— P7: salud del agente y cobro ———
+export const rutaSalud = (empresa, { desde, hasta } = {}) => (empresa ? `${RUTA_WA}/salud${consulta({ empresa, desde, hasta })}` : null);
+export const rutaEventosSalud = (empresa, { pagina = 1, severidad, tipo } = {}) =>
+  empresa ? `${RUTA_WA}/salud/eventos${consulta({ empresa, pagina, severidad, tipo })}` : null;
+export const RUTA_ADMIN_SALUD = `${RUTA_WA}/admin/salud`;
