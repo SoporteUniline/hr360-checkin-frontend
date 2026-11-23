@@ -70,7 +70,7 @@ export default function TabPersonales({ renderCampos = () => null, form, soloLec
   return (
     <section className="space-y-6">
       {/* Información personal */}
-      <div className="bg-blue-50/60 border-2 border-blue-100 rounded-xl p-6">
+      <div className="border border-slate-200 bg-white rounded-xl p-6">
         <div className="flex items-center gap-3 mb-5">
           <div className="bg-brand p-3 rounded-lg shadow-md">
             <svg
@@ -229,6 +229,11 @@ export default function TabPersonales({ renderCampos = () => null, form, soloLec
             )}
           />
           {renderCampos("nss")}
+          {/* (23/11/2026) CURP, RFC y NSS salían dos veces (aquí y en «Documentos oficiales»). Quedan una sola vez; los campos
+              personalizados que estaban colocados en aquella sección se muestran aquí. */}
+          {renderCampos("documento_curp")}
+          {renderCampos("documento_rfc")}
+          {renderCampos("documento_nss")}
 
           <FormField
             name="sexo"
@@ -271,7 +276,7 @@ export default function TabPersonales({ renderCampos = () => null, form, soloLec
                 <FormLabel>Estado civil</FormLabel>
 
                 <CreatableCombobox
-                  value={field.value ?? ""}
+                  value={field.value === "sin-seleccion" ? "" : field.value ?? ""}
                   compareBy="label"
                   displayValueAsLabel
                   disabled={soloLectura || !idEmpresa}
@@ -327,94 +332,7 @@ export default function TabPersonales({ renderCampos = () => null, form, soloLec
           {renderCampos("direccion")}
         </div>
       </div>
-
-      {/* Documentos oficiales */}
-      <div className="bg-purple-50/60 border-2 border-purple-100 rounded-xl p-6">
-        <div className="flex items-center gap-3 mb-5">
-          <div className="bg-brand-accent p-3 rounded-lg shadow-md">
-            <svg
-              className="w-6 h-6 text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
-          </div>
-          <h3 className="text-xl font-bold text-gray-900">
-            Documentos oficiales
-          </h3>
-        </div>
-        <div className="employee-fields">
-          <FormField
-            name="curp"
-            control={form.control}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700">
-                  CURP
-                </FormLabel>
-                <FormControl>
-                  <Input
-                    {...field}
-                    disabled={soloLectura}
-                    maxLength={18}
-                    className="uppercase"
-                    placeholder="Ej. GOLA850705HDFRRN09"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          {renderCampos("documento_curp")}
-          <FormField
-            name="rfc"
-            control={form.control}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700">
-                  RFC
-                </FormLabel>
-                <FormControl>
-                  <Input
-                    {...field}
-                    disabled={soloLectura}
-                    maxLength={13}
-                    className="uppercase"
-                    placeholder="Ej. GOLA8507052A1"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          {renderCampos("documento_rfc")}
-
-          <FormField
-            name="nss"
-            control={form.control}
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel className="text-sm font-medium text-gray-700">
-                  NSS
-                </FormLabel>
-                <FormControl>
-                  <Input {...field} disabled={soloLectura} maxLength={11} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          {renderCampos("documento_nss")}
-          {renderCampos("fin")}
-        </div>
-      </div>
+      <div className="employee-fields">{renderCampos("fin")}</div>
     </section>
   );
 }

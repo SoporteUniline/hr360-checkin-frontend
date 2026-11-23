@@ -31,9 +31,9 @@ export default function TabNomina({ renderCampos = () => null, form, soloLectura
 
   return (
     <section className="space-y-6">
-      <div className="bg-green-50/60 border-2 border-green-100 rounded-xl p-6">
+      <div className="border border-slate-200 bg-white rounded-xl p-6">
         <div className="flex items-center gap-3 mb-5">
-          <div className="bg-green-600 p-3 rounded-lg shadow-md">
+          <div className="bg-brand p-3 rounded-lg shadow-md">
             <svg
               className="w-6 h-6 text-white"
               fill="none"

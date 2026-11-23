@@ -116,7 +116,7 @@ export default function ImageUpload({
               : "cursor-pointer flex justify-center"
           }
         >
-          <Avatar className="w-48 h-48">
+          <Avatar className="h-24 w-24 sm:h-28 sm:w-28">
             <AvatarImage src={tieneImagenValida ? imagePreview : undefined} />
             <AvatarFallback>👤</AvatarFallback>
           </Avatar>

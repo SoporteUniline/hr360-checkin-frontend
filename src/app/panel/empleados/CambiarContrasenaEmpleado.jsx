@@ -29,7 +29,8 @@ function generar() {
   return c.sort(() => (crypto.getRandomValues(new Uint8Array(1))[0] % 2 ? 1 : -1)).join("");
 }
 
-export default function CambiarContrasenaEmpleado({ empleado }) {
+// conTexto: botón con texto (en la ficha); sin él, solo el ícono (en la tabla).
+export default function CambiarContrasenaEmpleado({ empleado, conTexto = false }) {
   const { enqueueSnackbar } = useSnackbar();
   const [abierto, setAbierto] = useState(false);
   const [nueva, setNueva] = useState("");
@@ -63,10 +64,16 @@ export default function CambiarContrasenaEmpleado({ empleado }) {
   // Todo dentro de un contenedor que corta los clics: la ventana flotante no debe abrir la ficha del renglón.
   return (
     <span onClick={(e) => e.stopPropagation()} className="contents">
-      <button type="button" onClick={() => setAbierto(true)} title="Cambiar contraseña" aria-label={`Cambiar contraseña de ${nombre}`}
-        className="rounded-lg bg-amber-50 p-2 transition-colors hover:bg-amber-100">
-        <KeyRound className="h-4 w-4 text-amber-700" />
-      </button>
+      {conTexto ? (
+        <button type="button" onClick={() => setAbierto(true)} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+          <KeyRound className="size-4 text-amber-700" /> Cambiar contraseña
+        </button>
+      ) : (
+        <button type="button" onClick={() => setAbierto(true)} title="Cambiar contraseña" aria-label={`Cambiar contraseña de ${nombre}`}
+          className="rounded-lg bg-amber-50 p-2 transition-colors hover:bg-amber-100">
+          <KeyRound className="h-4 w-4 text-amber-700" />
+        </button>
+      )}
       <Dialog open={abierto} onOpenChange={(v) => (v ? setAbierto(true) : cerrar())}>
         <DialogContent className="sm:max-w-md" onClick={(e) => e.stopPropagation()}>
           <DialogTitle className="text-lg font-extrabold text-[#080d36]">Cambiar contraseña</DialogTitle>
