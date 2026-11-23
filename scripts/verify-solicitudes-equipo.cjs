@@ -241,7 +241,7 @@ function token(role = "Empleado") {
 let server, browser, page;
 const pageErrors = [];
 async function api(pathname = "", options = {}) {
-  return fetch(base + "/api/solicitudes-equipo" + pathname, {
+  return fetch(base + "/internal/solicitudes-equipo" + pathname, {
     ...options,
     headers: { Cookie: `token=${token()}`, Origin: base, ...options.headers },
   });
@@ -360,7 +360,7 @@ async function main() {
   omitTotal = true;
   assert.equal((await (await api()).json()).requests.length, 18);
   omitTotal = false;
-  assert.equal((await fetch(base + "/api/solicitudes-equipo")).status, 401);
+  assert.equal((await fetch(base + "/internal/solicitudes-equipo")).status, 401);
   for (const id of [800, 801, 802, 803, 804, 999])
     assert.equal((await api(`/${id}`)).status, 404);
   assert.equal(
