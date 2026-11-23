@@ -44,7 +44,8 @@ export default function EvidenciaFirma({ idSolicitud, idEmpresa, className = "" 
         <UserRoundCheck className="size-4 text-brand" /> Quién firmó
       </button>
       <Dialog open={abierto} onOpenChange={setAbierto}>
-        <DialogContent className="sm:max-w-md">
+        {/* (23/11/2026) Columna con minmax(0,1fr): un texto largo ya no ensancha la ventana (se desbordaba). */}
+        <DialogContent className="grid-cols-[minmax(0,1fr)] sm:max-w-md">
           <DialogTitle className="text-lg font-extrabold text-[#080d36]">Quién firmó</DialogTitle>
           <DialogDescription className="text-sm text-slate-500">
             Evidencia privada: solo la ven RH y el dueño, y cada consulta queda registrada.
@@ -54,8 +55,8 @@ export default function EvidenciaFirma({ idSolicitud, idEmpresa, className = "" 
           ) : error ? (
             <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>
           ) : datos ? (
-            <div className="space-y-4">
-              <div className="flex items-start gap-4">
+            <div className="min-w-0 space-y-4">
+              <div className="flex min-w-0 items-start gap-4">
                 {datos.foto ? (
                   <img src={datos.foto} alt={`Foto de ${datos.nombre_firmante || "quien firmó"} al firmar`} className="size-28 shrink-0 rounded-xl border border-slate-200 object-cover" />
                 ) : (
@@ -64,18 +65,18 @@ export default function EvidenciaFirma({ idSolicitud, idEmpresa, className = "" 
                   </span>
                 )}
                 <dl className="min-w-0 space-y-1.5 text-sm">
-                  <div><dt className="text-[11.5px] font-semibold uppercase tracking-wide text-slate-400">Firmó</dt><dd className="font-semibold text-[#080d36]">{datos.nombre_firmante}</dd></div>
+                  <div><dt className="text-[11.5px] font-semibold uppercase tracking-wide text-slate-400">Firmó</dt><dd className="break-words font-semibold text-[#080d36]">{datos.nombre_firmante}</dd></div>
                   <div><dt className="text-[11.5px] font-semibold uppercase tracking-wide text-slate-400">Cuándo</dt><dd>{fechaHora(datos.firmado_en)}</dd></div>
                   <div><dt className="text-[11.5px] font-semibold uppercase tracking-wide text-slate-400">Cómo</dt>
                     <dd className="flex items-center gap-1.5">{datos.metodo === "pin" ? <><Fingerprint className="size-4 text-slate-500" /> Firma guardada + PIN</> : <><Camera className="size-4 text-slate-500" /> Dibujada, con foto</>}</dd></div>
-                  {datos.dispositivo ? <div><dt className="text-[11.5px] font-semibold uppercase tracking-wide text-slate-400">Dispositivo</dt><dd className="flex items-center gap-1.5"><Smartphone className="size-4 text-slate-500" /> {datos.dispositivo}{datos.ip ? ` · IP ${datos.ip}` : ""}</dd></div> : null}
+                  {datos.dispositivo ? <div><dt className="text-[11.5px] font-semibold uppercase tracking-wide text-slate-400">Dispositivo</dt><dd className="flex items-start gap-1.5"><Smartphone className="mt-0.5 size-4 shrink-0 text-slate-500" /> <span className="min-w-0 break-all">{datos.dispositivo}{datos.ip ? ` · IP ${datos.ip}` : ""}</span></dd></div> : null}
                 </dl>
               </div>
-              <p className="truncate text-[12.5px] text-slate-500">Documento: {datos.nombre_documento}</p>
+              <p className="break-words text-[12.5px] text-slate-500">Documento: {datos.nombre_documento}</p>
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
                 <p className="mb-1.5 flex items-center gap-1.5 text-[12.5px] font-semibold text-slate-700"><ShieldCheck className="size-4 text-brand" /> Quién ha consultado esta evidencia</p>
                 <ul className="space-y-0.5 text-[12.5px] text-slate-600">
-                  {datos.consultas.map((c, i) => <li key={i}>{c.nombre} · {c.actual ? "ahora" : fechaHora(c.fecha)}</li>)}
+                  {datos.consultas.map((c, i) => <li key={i} className="break-words">{c.nombre} · {c.actual ? "ahora" : fechaHora(c.fecha)}</li>)}
                 </ul>
               </div>
             </div>
