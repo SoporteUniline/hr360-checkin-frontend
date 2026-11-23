@@ -1,5 +1,6 @@
 // Reglas de pantalla de WhatsApp (R1): quién puede escribir, textos de estado y errores del API.
 // El backend es quien decide; esto solo evita ofrecer acciones que el servidor va a rechazar.
+import { leerIncluidas } from "./paquete.mjs";
 
 export const LIMITE_TEXTO = 4096;
 export const MENSAJE_VENTANA =
@@ -119,15 +120,20 @@ const textoONulo = (v) => {
 };
 
 // Devuelve { errores: {campo: texto}, cuerpo } con el cuerpo listo para PUT /admin/empresas/:id.
+// Paquetes (27/11/2026): precio_mensual = precio del paquete; precio_conversacion = precio por entrevista extra;
+// entrevistas_incluidas = entrevistas incluidas al mes (vacío = sin paquete).
 export function validarConfigEmpresa(form) {
+  const incluidas = leerIncluidas(form?.entrevistas_incluidas);
   const cuerpo = {
     modo: form?.modo,
     zernio_account_id: textoONulo(form?.zernio_account_id),
     numero_whatsapp: textoONulo(form?.numero_whatsapp)?.replace(/\D/g, "") || null,
     precio_conversacion: numeroONulo(form?.precio_conversacion),
     precio_mensual: numeroONulo(form?.precio_mensual),
+    entrevistas_incluidas: incluidas.error ? null : incluidas.valor,
   };
   const errores = {};
+  if (incluidas.error) errores.entrevistas_incluidas = incluidas.error;
   if (!MODOS.some((m) => m.valor === cuerpo.modo)) errores.modo = "Elige cómo funciona WhatsApp para esta empresa.";
   if (cuerpo.modo === "propio") {
     if (!cuerpo.zernio_account_id) errores.zernio_account_id = "Con número propio, escribe el ID de la cuenta de Zernio.";

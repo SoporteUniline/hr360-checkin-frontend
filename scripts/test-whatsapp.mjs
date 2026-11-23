@@ -8,6 +8,9 @@ import {
   mensajeErrorApi, validarConfigEmpresa, formatearPrecio, esDuenoCuenta, MENSAJE_VENTANA, MENSAJE_APAGADO,
   MENSAJE_SIN_NUMERO, MENSAJE_SIN_CONTROL, MENSAJE_NO_REINTENTABLE, MENSAJE_CUENTA_DUPLICADA, textoModo, textoArchivo, controlaConversacion,
 } from "../src/lib/whatsapp/reglas.mjs";
+import {
+  textoEntrevistasMes, avisoExtras, textoEntrevistasAdmin, enlacePaginaVacante, origenPublico, leerIncluidas,
+} from "../src/lib/whatsapp/paquete.mjs";
 
 // «Ahora» fijo: lunes 23/11/2026 12:00 en Ciudad de México (18:00 UTC).
 const AHORA = new Date("2026-11-23T18:00:00Z");
@@ -126,7 +129,7 @@ test("errores del API en palabras claras", () => {
 test("validación del alta de WhatsApp por empresa", () => {
   const ok = validarConfigEmpresa({ modo: "propio", zernio_account_id: " acc_1 ", numero_whatsapp: "+52 55 1234 5678", precio_conversacion: "1.50", precio_mensual: "$1,200" });
   assert.deepEqual(ok.errores, {});
-  assert.deepEqual(ok.cuerpo, { modo: "propio", zernio_account_id: "acc_1", numero_whatsapp: "525512345678", precio_conversacion: 1.5, precio_mensual: 1200 });
+  assert.deepEqual(ok.cuerpo, { modo: "propio", zernio_account_id: "acc_1", numero_whatsapp: "525512345678", precio_conversacion: 1.5, precio_mensual: 1200, entrevistas_incluidas: null });
   const faltan = validarConfigEmpresa({ modo: "propio" });
   assert.ok(faltan.errores.zernio_account_id && faltan.errores.numero_whatsapp);
   const compartido = validarConfigEmpresa({ modo: "compartido", precio_conversacion: "" });
@@ -139,4 +142,44 @@ test("validación del alta de WhatsApp por empresa", () => {
   assert.equal(textoModo("compartido"), "Número compartido de ADAMIA");
   assert.equal(formatearPrecio(null), "—");
   assert.match(formatearPrecio(1200), /1,200\.00/);
+});
+
+// ——— 27/11/2026: paquetes de entrevistas y enlace de la página de la vacante ———
+test("paquete: textos del chip, aviso de extras y columna del administrador", () => {
+  assert.equal(textoEntrevistasMes({ entrevistas_mes: 32, entrevistas_incluidas: 200, entrevistas_extra: 0 }), "32 de 200 entrevistas este mes");
+  assert.equal(textoEntrevistasMes({ entrevistas_mes: 1, entrevistas_incluidas: 200 }), "1 de 200 entrevistas este mes");
+  assert.equal(textoEntrevistasMes({ entrevistas_mes: 7, entrevistas_incluidas: null }), "7 entrevistas este mes", "sin paquete");
+  assert.equal(textoEntrevistasMes({ entrevistas_mes: 1 }), "1 entrevista este mes");
+  assert.equal(textoEntrevistasMes({ entrevistas_mes: 1500, entrevistas_incluidas: 1000 }), "1,500 de 1,000 entrevistas este mes");
+  assert.equal(textoEntrevistasMes({}), "0 entrevistas este mes", "estado de un backend anterior");
+  assert.equal(textoEntrevistasMes(null), "0 entrevistas este mes");
+  assert.equal(avisoExtras({ entrevistas_extra: 12 }), "Llevas 12 entrevistas extra este mes. Cada una se cobra aparte.");
+  assert.equal(avisoExtras({ entrevistas_extra: 1 }), "Llevas 1 entrevista extra este mes. Se cobra aparte.");
+  assert.equal(avisoExtras({ entrevistas_extra: 0 }), null);
+  assert.equal(avisoExtras({}), null);
+  assert.equal(textoEntrevistasAdmin({ entrevistas_mes: 212, entrevistas_incluidas: 200 }), "212 / 200");
+  assert.equal(textoEntrevistasAdmin({ entrevistas_mes: 3, entrevistas_incluidas: null }), "3 / sin paquete");
+});
+
+test("paquete: entrevistas incluidas del administrador (entero de 0 a 100,000 o vacío)", () => {
+  assert.deepEqual(leerIncluidas(""), { valor: null });
+  assert.deepEqual(leerIncluidas(" 200 "), { valor: 200 });
+  assert.deepEqual(leerIncluidas("1,000"), { valor: 1000 });
+  assert.deepEqual(leerIncluidas(0), { valor: 0 });
+  for (const malo of ["-1", "1.5", "100001", "abc"]) assert.ok(leerIncluidas(malo).error, malo);
+  const ok = validarConfigEmpresa({ modo: "compartido", precio_mensual: "1500", precio_conversacion: "30", entrevistas_incluidas: "200" });
+  assert.deepEqual(ok.errores, {});
+  assert.deepEqual(ok.cuerpo, { modo: "compartido", zernio_account_id: null, numero_whatsapp: null, precio_conversacion: 30, precio_mensual: 1500, entrevistas_incluidas: 200 });
+  const malo = validarConfigEmpresa({ modo: "compartido", entrevistas_incluidas: "2.5" });
+  assert.match(malo.errores.entrevistas_incluidas, /número entero de 0 a 100,000/);
+});
+
+test("enlace de la página de la vacante (/vacante/<slug>) con el dominio configurado o el del navegador", () => {
+  assert.equal(enlacePaginaVacante("chofer-repartidor", "https://dev.adamia.com.mx/"), "https://dev.adamia.com.mx/vacante/chofer-repartidor");
+  assert.equal(enlacePaginaVacante("año nuevo", "https://adamia.com.mx"), "https://adamia.com.mx/vacante/a%C3%B1o%20nuevo");
+  assert.equal(enlacePaginaVacante("", "https://adamia.com.mx"), null);
+  assert.equal(enlacePaginaVacante("x", ""), null);
+  assert.equal(enlacePaginaVacante("x", "javascript:alert(1)"), null);
+  assert.equal(origenPublico("https://dev.adamia.com.mx/"), "https://dev.adamia.com.mx");
+  assert.equal(origenPublico(""), "", "en Node no hay window: sin dominio no hay origen");
 });

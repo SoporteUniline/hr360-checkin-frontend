@@ -1,6 +1,10 @@
 // Verificación en navegador de WhatsApp en ADAMIA (R1): bandeja, control humano/IA, envío, errores, reintento,
 // móvil, administración por empresa y enlace de vacante. R2: agente entrevistador (configuración, preguntas por
 // vacante, filtros por calificación, evaluación del candidato y «Marcar como atendido»).
+// 27/11/2026: bolsa de trabajo opcional (interruptor, PUT, también con WhatsApp apagado), «Copiar enlace de la vacante»,
+// paquete de entrevistas (chip, aviso de extras, campos del administrador) y la bolsa pública (/vacantes/filter y la tira
+// de empresas con ?bolsa=1).
+// Construir con NEXT_PUBLIC_RUTA_DOMAIN=https://dev.adamia.com.mx (el enlace de la vacante usa ese dominio).
 // Backend simulado: nada sale a internet.
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api NEXT_PUBLIC_RECRUITMENT_ENABLED=true npm run build
 //      CAPTURAS=/ruta/capturas node scripts/verify-whatsapp.mjs
@@ -42,6 +46,7 @@ const reclutadora = {
 const admin = { id_usuario: 1, tipo_usuario: "Admin", nombre: "Soporte ADAMIA" };
 const AVISO = "https://dev.adamia.com.mx/aviso-de-privacidad/uniline";
 const ENLACE = "https://wa.me/525598765432?text=Hola%2C%20me%20interesa%20la%20vacante%20%5BV-AB12%5D";
+const PAGINA_VACANTE = "https://dev.adamia.com.mx/vacante/operador-de-montacargas";
 
 function estadoInicial() {
   const conversaciones = [
@@ -70,9 +75,12 @@ function estadoInicial() {
     ],
   };
   const empresas = [
-    { id_empresa: 10, nombre_empresa: "Uniline", modo: "compartido", zernio_account_id: null, numero_whatsapp: "5215598765432", precio_conversacion: 1.5, precio_mensual: 0, conversaciones_mes: 12 },
-    { id_empresa: 11, nombre_empresa: "Uniline Norte", modo: "apagado", zernio_account_id: null, numero_whatsapp: null, precio_conversacion: null, precio_mensual: null, conversaciones_mes: 0 },
-    { id_empresa: 12, nombre_empresa: "Transportes Sur", modo: "propio", zernio_account_id: "acc_sur", numero_whatsapp: "5213312345678", precio_conversacion: 1, precio_mensual: 499, conversaciones_mes: 87 },
+    { id_empresa: 10, nombre_empresa: "Uniline", modo: "compartido", zernio_account_id: null, numero_whatsapp: "5215598765432", precio_conversacion: 1.5, precio_mensual: 0, conversaciones_mes: 12,
+      entrevistas_incluidas: null, entrevistas_mes: 9, entrevistas_extra: 0, importe_estimado: 0 },
+    { id_empresa: 11, nombre_empresa: "Uniline Norte", modo: "apagado", zernio_account_id: null, numero_whatsapp: null, precio_conversacion: null, precio_mensual: null, conversaciones_mes: 0,
+      entrevistas_incluidas: null, entrevistas_mes: 0, entrevistas_extra: 0, importe_estimado: null },
+    { id_empresa: 12, nombre_empresa: "Transportes Sur", modo: "propio", zernio_account_id: "acc_sur", numero_whatsapp: "5213312345678", precio_conversacion: 1, precio_mensual: 499, conversaciones_mes: 87,
+      entrevistas_incluidas: 200, entrevistas_mes: 212, entrevistas_extra: 12, importe_estimado: 511 },
   ];
   // 32 conversaciones viejas de relleno: con limite=30 hay 2 páginas (35 en total).
   for (let i = 1; i <= 32; i++) {
@@ -81,9 +89,9 @@ function estadoInicial() {
       ultimo_mensaje: { texto: "Gracias por la información", direccion: "entrante", creado_en: hace(60 * 24 * 10 + i) }, ultimo_entrante_en: hace(60 * 24 * 10 + i), ventana_abierta: false });
   }
   const vacantes = [
-    { id_vacante: 55, id_empresa: 10, titulo: "Operador de montacargas", tiene_enlace: true },
-    { id_vacante: 56, id_empresa: 10, titulo: "Auxiliar de almacén turno nocturno", tiene_enlace: false },
-    { id_vacante: 57, id_empresa: 10, titulo: "Chofer repartidor", tiene_enlace: false },
+    { id_vacante: 55, id_empresa: 10, titulo: "Operador de montacargas", slug: "operador-de-montacargas", tiene_enlace: true },
+    { id_vacante: 56, id_empresa: 10, titulo: "Auxiliar de almacén turno nocturno", slug: "auxiliar-de-almacen-turno-nocturno", tiene_enlace: false },
+    { id_vacante: 57, id_empresa: 10, titulo: "Chofer repartidor", slug: "chofer-repartidor", tiene_enlace: false },
   ];
   // R2: entrevistas por conversación (detalle completo; la lista recibe el resumen).
   const entrevistas = {
@@ -104,11 +112,21 @@ function estadoInicial() {
   const sinRespuesta = { 3: [{ pregunta: "¿Dan transporte de personal en la noche?", id_vacante: 56, creado_en: hace(60 * 26 + 5) }] };
   const agente = { id_empresa: 10, activo: false, nombre_asistente: "", horario_json: null, mensaje_fuera_horario: "", respuestas_frecuentes: "", palabras_humano: "", aviso_privacidad_url: AVISO };
   const preguntas = { 55: [{ id: 1, orden: 1, texto: "¿Tienes licencia tipo C?", tipo: "si_no", opciones: ["Sí", "No"], descartan: ["No"], alertan: [], activa: true }] };
-  return { conversaciones, mensajes, empresas, vacantes, modo: "compartido", envios: [], siguienteId: 900, entrevistas, sinRespuesta, agente, preguntas, siguientePregunta: 100, errores400: [] };
+  // 27/11/2026: paquete por empresa (10 con paquete, 11 sin paquete), bolsa de trabajo y respuestas públicas.
+  const paquetes = { 10: { entrevistas_mes: 32, entrevistas_incluidas: 200, entrevistas_extra: 0 }, 11: { entrevistas_mes: 3, entrevistas_incluidas: null, entrevistas_extra: 0 } };
+  const publico = {
+    empresas: [{ id_empresa: 10, nombre_empresa: "Uniline", url_imagen: null }],
+    vacantes: [{ id_vacante: 55, id_empresa: 10, titulo: "Operador de montacargas", slug: "operador-de-montacargas", nombre_empresa: "Uniline", descripcion: "Manejo de montacargas.", horario: "7 a 15 h", salario: "$12,000" }],
+  };
+  return {
+    conversaciones, mensajes, empresas, vacantes, modo: "compartido", envios: [], siguienteId: 900, entrevistas, sinRespuesta, agente, preguntas, siguientePregunta: 100, errores400: [],
+    paquetes, bolsa: { 10: false, 11: false }, bolsaFalla: 0, publico,
+  };
 }
 const resumenEntrevista = (e) => (e ? { etapa: e.etapa, calificacion: e.calificacion, requiere_atencion: e.requiere_atencion, motivo_atencion: e.motivo_atencion } : null);
 
 const pedidos = [];
+const publicos = []; // llamadas al API fuera de WhatsApp (bolsa de trabajo pública)
 let S = estadoInicial();
 
 async function instalarMocks(ctx, usuario) {
@@ -123,14 +141,33 @@ async function instalarMocks(ctx, usuario) {
     if (req.method() === "OPTIONS") return json({});
     const p = url.pathname.replace(/^\/api/, "");
     if (p === "/users/verify/token") return json({ user: usuario });
-    if (!p.startsWith("/reclutamiento/whatsapp")) return json({});
+    if (!p.startsWith("/reclutamiento/whatsapp")) {
+      publicos.push({ ruta: p, params: url.search });
+      if (p === "/empresas/activas") return json({ total: S.publico.empresas.length, page: 1, limit: 4, data: S.publico.empresas });
+      if (p === "/vacantes/filter") return json({ total: S.publico.vacantes.length, page: 1, limit: 10, data: S.publico.vacantes });
+      if (p === "/vacantes/entidades") return json({ entidades: ["Nuevo León"], ciudades: ["Monterrey"], paises: ["México"] });
+      if (p === "/empresas/giros") return json({ giros: ["Logística"] });
+      return json({});
+    }
     const ruta = p.slice("/reclutamiento/whatsapp".length);
     let cuerpo = null;
     try { cuerpo = req.postData() ? JSON.parse(req.postData()) : null; } catch { cuerpo = req.postData(); }
     pedidos.push({ metodo: req.method(), ruta, params: url.search, cuerpo, token: req.headers().authorization || "" });
     const conv = (id) => S.conversaciones.find((c) => String(c.id) === String(id));
     let m;
-    if (ruta === "/estado") return json({ modo: S.modo, numero_whatsapp: S.modo === "apagado" ? null : "5215598765432", conversaciones_mes: 12, puede_usar: S.modo !== "apagado" });
+    if (ruta === "/estado") {
+      const paquete = S.paquetes[url.searchParams.get("empresa")] ?? { entrevistas_mes: 0, entrevistas_incluidas: null, entrevistas_extra: 0 };
+      return json({ modo: S.modo, numero_whatsapp: S.modo === "apagado" ? null : "5215598765432", conversaciones_mes: 12, puede_usar: S.modo !== "apagado", ...paquete });
+    }
+    if (ruta === "/bolsa") {
+      const empresa = url.searchParams.get("empresa");
+      if (req.method() === "PUT") {
+        if (S.bolsaFalla > 0) { S.bolsaFalla -= 1; return json({ error: "No se pudo guardar la bolsa." }, 500); }
+        if (typeof cuerpo?.publicar_bolsa !== "boolean") return json({ error: "publicar_bolsa debe ser true o false." }, 400);
+        S.bolsa[empresa] = cuerpo.publicar_bolsa;
+      }
+      return json({ id_empresa: Number(empresa), publicar_bolsa: S.bolsa[empresa] === true });
+    }
     if (ruta === "/conversaciones") {
       const q = (url.searchParams.get("q") || "").toLowerCase();
       if (url.searchParams.get("empresa") === "11") return json({ conversaciones: [], total: 0 });
@@ -184,6 +221,7 @@ async function instalarMocks(ctx, usuario) {
       return json({ mensaje: msg });
     }
     if ((m = ruta.match(/^\/vacantes\/(\d+)\/enlace$/))) {
+      if (S.modo === "apagado") return json({ codigo: "WA_APAGADO", error: "Apagado" }, 409);
       if (m[1] === "56") return json({ codigo: "WA_APAGADO", error: "Apagado" }, 409);
       if (m[1] === "57") return json({ codigo: "WA_SIN_NUMERO", error: "Sin número" }, 503);
       return json({ token: "V-AB12", numero: "5215598765432", enlace: ENLACE });
@@ -242,7 +280,8 @@ try {
   const lista = page.getByRole("list", { name: "Conversaciones" });
   await lista.waitFor({ timeout: 30000 });
   assert.equal(await page.getByRole("heading", { name: "Conversaciones de WhatsApp" }).count(), 1);
-  assert.match(await page.locator('[data-estado-wa="compartido"]').innerText(), /Activo · número compartido de ADAMIA[\s\S]*\+52 55 9876 5432[\s\S]*12 conversaciones este mes/);
+  assert.match(await page.locator('[data-estado-wa="compartido"]').innerText(), /Activo · número compartido de ADAMIA[\s\S]*\+52 55 9876 5432[\s\S]*12 conversaciones este mes[\s\S]*32 de 200 entrevistas este mes/);
+  assert.equal(await page.locator("[data-aviso-extras]").count(), 0, "sin extras no hay aviso");
   assert.equal(await page.getByLabel("Empresa").filter({ visible: true }).count(), 1, "selector de empresa con 2 empresas");
   const items = lista.getByRole("listitem");
   assert.equal(await items.count(), 30, "primera página de 30");
@@ -388,14 +427,36 @@ try {
   assert.equal(await listaVac.getByRole("listitem").count(), 1);
   await dlgVac.getByRole("searchbox", { name: "Buscar vacante" }).fill("");
   const enlacesAntes = cuenta((x) => x.ruta === "/vacantes/55/enlace");
-  await dlgVac.getByRole("button", { name: "Copiar enlace de Operador de montacargas" }).click();
-  await dlgVac.getByRole("button", { name: "Copiar enlace de Operador de montacargas" }).filter({ hasText: "Copiado" }).waitFor();
+  await dlgVac.getByRole("button", { name: "Copiar enlace de WhatsApp de Operador de montacargas" }).click();
+  await dlgVac.getByRole("button", { name: "Copiar enlace de WhatsApp de Operador de montacargas" }).filter({ hasText: "Copiado" }).waitFor();
   assert.equal(cuenta((x) => x.ruta === "/vacantes/55/enlace"), enlacesAntes + 1);
   assert.equal(await page.evaluate(() => navigator.clipboard.readText()), ENLACE);
-  assert.equal(await dlgVac.getByRole("link", { name: "Abrir enlace de Operador de montacargas" }).getAttribute("href"), ENLACE);
-  await dlgVac.getByRole("button", { name: "Copiar enlace de Auxiliar de almacén turno nocturno" }).click();
+  assert.equal(await dlgVac.getByRole("link", { name: "Abrir enlace de WhatsApp de Operador de montacargas" }).getAttribute("href"), ENLACE);
+  // 27/11/2026: «Copiar enlace de la vacante» copia la página pública con su formulario, sin pedir nada al API.
+  const enlacesAntesPagina = pedidos.length;
+  await dlgVac.getByRole("button", { name: "Copiar enlace de la vacante Operador de montacargas" }).click();
+  await dlgVac.getByRole("button", { name: "Copiar enlace de la vacante Operador de montacargas" }).filter({ hasText: "Copiado" }).waitFor();
+  assert.equal(await page.evaluate(() => navigator.clipboard.readText()), PAGINA_VACANTE);
+  assert.equal(pedidos.slice(enlacesAntesPagina).filter((x) => /enlace/.test(x.ruta)).length, 0, "la página de la vacante no depende del API de WhatsApp");
+  // Interruptor de la bolsa: GET al abrir; PUT {publicar_bolsa}; si el PUT falla, vuelve al valor anterior.
+  const bolsa = dlgVac.getByRole("switch", { name: "Publicar mis vacantes en la bolsa de trabajo de ADAMIA" });
+  await dlgVac.locator('[data-bolsa="no"]').waitFor();
+  assert.ok(pedidos.some((x) => x.ruta === "/bolsa" && x.metodo === "GET" && /empresa=10/.test(x.params)), "GET /bolsa?empresa=10");
+  assert.equal(await bolsa.getAttribute("aria-checked"), "false");
+  assert.match(await dlgVac.innerText(), /Si está apagado, tus vacantes no aparecen en la bolsa, pero puedes compartir sus enlaces donde quieras\./);
+  await bolsa.click();
+  await dlgVac.getByRole("status").filter({ hasText: "Tus vacantes abiertas ya aparecen en la bolsa de trabajo." }).waitFor();
+  assert.equal(await bolsa.getAttribute("aria-checked"), "true");
+  const putBolsa = pedidos.filter((x) => x.ruta === "/bolsa" && x.metodo === "PUT");
+  assert.deepEqual([putBolsa.length, putBolsa[0].cuerpo, /empresa=10/.test(putBolsa[0].params)], [1, { publicar_bolsa: true }, true]);
+  S.bolsaFalla = 1;
+  await bolsa.click();
+  await dlgVac.getByRole("status").filter({ hasText: "No se pudo guardar la bolsa." }).waitFor();
+  assert.equal(await bolsa.getAttribute("aria-checked"), "true", "si falla, vuelve a como estaba");
+  assert.equal(S.bolsa[10], true);
+  await dlgVac.getByRole("button", { name: "Copiar enlace de WhatsApp de Auxiliar de almacén turno nocturno" }).click();
   await dlgVac.getByRole("alert").filter({ hasText: "WhatsApp no está activado para tu empresa. Pídele a ADAMIA que lo active." }).waitFor();
-  await dlgVac.getByRole("button", { name: "Copiar enlace de Chofer repartidor" }).click();
+  await dlgVac.getByRole("button", { name: "Copiar enlace de WhatsApp de Chofer repartidor" }).click();
   await dlgVac.getByRole("alert").filter({ hasText: "todavía no tiene un número de WhatsApp listo" }).waitFor();
   if (OUT) await page.screenshot({ path: OUT + "/10-enlaces-vacantes.png" });
   await page.keyboard.press("Escape");
@@ -405,6 +466,7 @@ try {
   await page.waitForURL(/\/panel\/whatsapp$/);
   for (let i = 0; i < 50 && !pedidos.some((x) => x.ruta === "/conversaciones" && /empresa=11/.test(x.params)); i++) await dormir(100);
   assert.ok(pedidos.some((x) => x.ruta === "/estado" && /empresa=11/.test(x.params)), "estado de la otra empresa");
+  await page.locator("[data-entrevistas-mes]").filter({ hasText: /^3 entrevistas este mes$/ }).waitFor();
   assert.ok(pedidos.some((x) => x.ruta === "/conversaciones" && /empresa=11/.test(x.params)), "lista de la otra empresa");
   // Bandeja vacía: invita a compartir el enlace de una vacante.
   await page.getByText("Comparte el enlace de una vacante para recibir mensajes.").waitFor();
@@ -433,7 +495,10 @@ try {
   await dormir(300);
   const cajaHoja = await hoja.boundingBox();
   assert.ok(Math.abs(cajaHoja.y + cajaHoja.height - 844) <= 2 && cajaHoja.width === 390, `hoja abajo: ${JSON.stringify(cajaHoja)}`);
-  assert.ok(await tamano(hoja.getByRole("button", { name: "Copiar enlace de Chofer repartidor" })) >= 44);
+  assert.ok(await tamano(hoja.getByRole("button", { name: "Copiar enlace de WhatsApp de Chofer repartidor" })) >= 44);
+  assert.ok(await tamano(hoja.getByRole("button", { name: "Copiar enlace de la vacante Chofer repartidor" })) >= 44);
+  assert.ok(await tamano(hoja.getByRole("switch", { name: "Publicar mis vacantes en la bolsa de trabajo de ADAMIA" })) >= 44);
+  assert.ok(await sinScrollHorizontal(tel), "hoja de enlaces sin scroll horizontal");
   if (OUT) await tel.screenshot({ path: OUT + "/11-movil-enlaces-vacantes.png" });
   await hoja.getByRole("button", { name: "Close" }).tap();
   await hoja.waitFor({ state: "detached" });
@@ -465,6 +530,26 @@ try {
   assert.match(await tel.locator('[data-estado-wa="apagado"]').innerText(), /Pídele a ADAMIA que lo active/);
   assert.equal(await tel.getByRole("list", { name: "Conversaciones" }).count(), 0);
   if (OUT) await tel.screenshot({ path: OUT + "/06-movil-apagado.png" });
+  // 27/11/2026: con WhatsApp apagado «Enlaces de vacantes» sigue: bolsa y página de la vacante funcionan; WhatsApp avisa.
+  await tel.getByRole("button", { name: "Enlaces de vacantes" }).tap();
+  const hojaApagada = tel.getByRole("dialog", { name: "Enlaces de vacantes" });
+  await hojaApagada.getByRole("list", { name: "Vacantes abiertas" }).waitFor();
+  assert.match(await hojaApagada.innerText(), /Los enlaces de WhatsApp funcionan cuando ADAMIA active WhatsApp para tu empresa\./);
+  const bolsaApagada = hojaApagada.getByRole("switch", { name: "Publicar mis vacantes en la bolsa de trabajo de ADAMIA" });
+  await hojaApagada.locator('[data-bolsa="si"]').waitFor();
+  await bolsaApagada.tap();
+  await hojaApagada.getByRole("status").filter({ hasText: "Tus vacantes ya no aparecen en la bolsa de trabajo." }).waitFor();
+  assert.deepEqual(pedidos.filter((x) => x.ruta === "/bolsa" && x.metodo === "PUT").at(-1).cuerpo, { publicar_bolsa: false });
+  assert.equal(S.bolsa[10], false);
+  await hojaApagada.getByRole("button", { name: "Copiar enlace de WhatsApp de Chofer repartidor" }).tap();
+  await hojaApagada.getByRole("alert").filter({ hasText: "WhatsApp no está activado para tu empresa. Pídele a ADAMIA que lo active." }).waitFor();
+  await movil.grantPermissions(["clipboard-read", "clipboard-write"], { origin: base });
+  await hojaApagada.getByRole("button", { name: "Copiar enlace de la vacante Chofer repartidor" }).tap();
+  await hojaApagada.getByRole("button", { name: "Copiar enlace de la vacante Chofer repartidor" }).filter({ hasText: "Copiado" }).waitFor();
+  assert.equal(await tel.evaluate(() => navigator.clipboard.readText()), "https://dev.adamia.com.mx/vacante/chofer-repartidor");
+  assert.ok(await sinScrollHorizontal(tel), "hoja con WhatsApp apagado sin scroll horizontal");
+  if (OUT) await tel.screenshot({ path: OUT + "/12-movil-apagado-enlaces.png" });
+  await hojaApagada.getByRole("button", { name: "Close" }).tap();
   S.modo = "compartido";
   await movil.close();
 
@@ -478,7 +563,15 @@ try {
   await adm.getByRole("heading", { name: "WhatsApp (reclutamiento)" }).waitFor({ timeout: 30000 });
   await adm.getByRole("cell", { name: "Transportes Sur", exact: true }).waitFor();
   assert.equal(await adm.getByRole("button", { name: "WhatsApp (reclutamiento)" }).count(), 1, "entrada en el menú de administración");
-  assert.match(await adm.getByRole("row").filter({ hasText: "Transportes Sur" }).innerText(), /Número propio[\s\S]*acc_sur[\s\S]*\+52 33 1234 5678[\s\S]*\$1\.00[\s\S]*\$499\.00[\s\S]*87/);
+  assert.match(await adm.getByRole("row").filter({ hasText: "Transportes Sur" }).innerText(), /Número propio[\s\S]*\+52 33 1234 5678[\s\S]*acc_sur[\s\S]*\$499\.00[\s\S]*\$1\.00[\s\S]*212 \/ 200[\s\S]*12[\s\S]*\$511\.00[\s\S]*87/);
+  assert.match(await adm.getByRole("row").filter({ hasText: "Uniline Norte" }).innerText(), /0 \/ sin paquete/);
+  assert.ok(await sinScrollHorizontal(adm), "administración sin scroll horizontal de la página en escritorio");
+  const cajaEditar = await adm.getByRole("button", { name: "Editar WhatsApp de Uniline Norte" }).boundingBox();
+  assert.ok(cajaEditar && cajaEditar.x + cajaEditar.width <= 1440, `la tabla cabe en 1440 px (Editar visible): ${JSON.stringify(cajaEditar)}`);
+  for (const t of ["Paquete mensual", "Por entrevista extra", "Entrevistas este mes / incluidas", "Extra", "Importe estimado del mes"]) {
+    assert.equal(await adm.getByRole("columnheader", { name: t, exact: true }).count(), 1, `columna «${t}»`);
+  }
+  assert.match(await adm.getByRole("region", { name: "Resumen" }).innerText(), /Entrevistas este mes[\s\S]*221[\s\S]*Importe estimado del mes[\s\S]*\$511\.00/);
   await adm.getByRole("searchbox", { name: "Buscar empresa" }).fill("norte");
   assert.equal(await adm.getByRole("row").count(), 2, "encabezado + 1 empresa");
   if (OUT) await adm.screenshot({ path: OUT + "/07-admin-escritorio.png" });
@@ -488,21 +581,26 @@ try {
   await dlg.getByRole("button", { name: "Guardar" }).click();
   await dlg.getByText("Con número propio, escribe el ID de la cuenta de Zernio.").waitFor();
   assert.match(await dlg.innerText(), /Con número propio, escribe el número de WhatsApp\./);
-  assert.equal(cuenta((x) => x.metodo === "PUT"), 0, "no manda si falta lo obligatorio");
+  assert.equal(cuenta((x) => x.metodo === "PUT" && x.ruta.startsWith("/admin/")), 0, "no manda si falta lo obligatorio");
   await dlg.getByLabel("ID de cuenta de Zernio").fill("acc_sur");
   await dlg.getByLabel("Número de WhatsApp").fill("+52 81 5555 0000");
-  await dlg.getByLabel("Precio por conversación (MXN)").fill("1.25");
-  await dlg.getByLabel("Precio mensual (MXN)").fill("$1,200");
+  await dlg.getByLabel("Precio por entrevista extra (MXN)").fill("1.25");
+  await dlg.getByLabel("Precio del paquete (mensual, MXN)").fill("$1,200");
+  await dlg.getByLabel("Entrevistas incluidas al mes").fill("2.5");
+  await dlg.getByRole("button", { name: "Guardar" }).click();
+  await dlg.getByText("Escribe un número entero de 0 a 100,000, o déjalo vacío si no tiene paquete.").waitFor();
+  assert.equal(cuenta((x) => x.metodo === "PUT" && x.ruta.startsWith("/admin/")), 0, "entrevistas incluidas inválidas: no manda");
+  await dlg.getByLabel("Entrevistas incluidas al mes").fill("200");
   await dlg.getByRole("button", { name: "Guardar" }).click();
   await dlg.getByRole("alert").filter({ hasText: "Esa cuenta de Zernio ya la usa otra empresa." }).waitFor();
   if (OUT) await adm.screenshot({ path: OUT + "/08-admin-dialogo.png" });
   await dlg.getByLabel("ID de cuenta de Zernio").fill("acc_norte");
   await dlg.getByRole("button", { name: "Guardar" }).click();
   await dlg.waitFor({ state: "detached" });
-  const puts = pedidos.filter((x) => x.metodo === "PUT");
+  const puts = pedidos.filter((x) => x.metodo === "PUT" && x.ruta.startsWith("/admin/"));
   assert.equal(puts.length, 2);
   assert.equal(puts[1].ruta, "/admin/empresas/11");
-  assert.deepEqual(puts[1].cuerpo, { modo: "propio", zernio_account_id: "acc_norte", numero_whatsapp: "528155550000", precio_conversacion: 1.25, precio_mensual: 1200 });
+  assert.deepEqual(puts[1].cuerpo, { modo: "propio", zernio_account_id: "acc_norte", numero_whatsapp: "528155550000", precio_conversacion: 1.25, precio_mensual: 1200, entrevistas_incluidas: 200 });
   await adm.getByRole("row").filter({ hasText: "Uniline Norte" }).getByText("acc_norte").waitFor();
   await adm.setViewportSize({ width: 390, height: 844 });
   await adm.getByRole("searchbox", { name: "Buscar empresa" }).fill("");
@@ -802,7 +900,41 @@ try {
   assert.ok(await sinScrollHorizontal(t2));
   await movR2.close();
 
+  // ═══════════ 27/11/2026 · Paquete con extras y bolsa de trabajo pública ═══════════
+  S.paquetes[10] = { entrevistas_mes: 212, entrevistas_incluidas: 200, entrevistas_extra: 12 };
+  const ctxP = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: "es-MX", timezoneId: "America/Mexico_City" });
+  await ctxP.addCookies([{ name: "token", value: firmar("Recruiter"), url: base }]);
+  await instalarMocks(ctxP, reclutadora);
+  const pq = await ctxP.newPage();
+  pq.on("pageerror", (e) => errores.push(e.message));
+  await pq.goto(base + "/panel/whatsapp", { waitUntil: "domcontentloaded" });
+  await pq.locator("[data-aviso-extras]").waitFor({ timeout: 30000 });
+  assert.equal(await pq.locator("[data-aviso-extras]").innerText(), "Llevas 12 entrevistas extra este mes. Cada una se cobra aparte.");
+  assert.equal(await pq.locator("[data-entrevistas-mes]").innerText(), "212 de 200 entrevistas este mes");
+  if (OUT) await pq.screenshot({ path: OUT + "/13-paquete-extras.png" });
+  await pq.close();
+
+  // Bolsa pública: /vacantes/filter igual que siempre; la tira de empresas pide ?bolsa=1 (nunca la lista global).
+  const pub = await ctxP.newPage();
+  pub.on("pageerror", (e) => errores.push(e.message));
+  await pub.goto(base + "/bolsa-de-trabajo", { waitUntil: "domcontentloaded" });
+  await pub.getByRole("heading", { name: /Empresas que están contratando/ }).waitFor({ timeout: 30000 });
+  await pub.getByText("Operador de montacargas").first().waitFor();
+  assert.ok(publicos.some((x) => x.ruta === "/vacantes/filter" && /page=1&limit=10/.test(x.params)), "GET /vacantes/filter sin cambios");
+  assert.ok(publicos.some((x) => x.ruta === "/empresas/activas" && x.params === "?bolsa=1&limit=4&page=1"), "la tira pide ?bolsa=1");
+  assert.equal(publicos.filter((x) => x.ruta === "/empresas/activas" && !/bolsa=1/.test(x.params)).length, 0, "la bolsa no pide la lista global");
+  if (OUT) await pub.screenshot({ path: OUT + "/14-bolsa-publica.png" });
+  // Sin empresas publicadas no se muestra una tira vacía.
+  S.publico.empresas = [];
+  const tirasAntes = publicos.filter((x) => x.ruta === "/empresas/activas").length;
+  await pub.reload({ waitUntil: "domcontentloaded" });
+  for (let i = 0; i < 100 && publicos.filter((x) => x.ruta === "/empresas/activas").length === tirasAntes; i++) await dormir(100);
+  await pub.getByText("Operador de montacargas").first().waitFor();
+  await dormir(500);
+  assert.equal(await pub.getByRole("heading", { name: /Empresas que están contratando/ }).count(), 0, "sin empresas, sin tira");
+  await ctxP.close();
+
   assert.deepEqual(errores, [], "sin errores de JavaScript");
   exito = true;
-  console.log("OK whatsapp · lista con no leídos y control · abrir chat lo marca leído (GET) · sondeo 3 s · tomar control habilita y envía {texto} con «Enviando…» · Shift+Enter · 403/409 con texto conservado · envío rechazado (200 «fallido») y reintentos · archivos como «[Archivo: tipo]» · invitado con mismo id y otro correo no controla · devolver a IA · ventana 24 h y control ajeno · enlace de vacante copiado y 409 apagado · paginación real (pagina=2, sondeo solo página 1, sin duplicados) · enlaces de vacantes (lista, búsqueda, copiar, 409/503, vacío, hoja en teléfono) · búsqueda q · móvil a pantalla completa con volver · apagado · admin valida, muestra 409 y manda PUT · R2: agente (validación, horario, copiar lunes, palabras, 400, PUT, nombre en burbujas, cambios sin guardar) · entrevista por vacante (conteo perezoso, validación, rango número, opciones descarta/alerta excluyentes, reordenar con foco, máx. 8, 400, PUT) · filtros atencion=1 / calificacion · evaluación (puntajes, respuestas con severidad, sin respuesta) · marcar atendido · hoja <1280 · teléfono ≥44 px sin desborde");
+  console.log("OK whatsapp · lista con no leídos y control · abrir chat lo marca leído (GET) · sondeo 3 s · tomar control habilita y envía {texto} con «Enviando…» · Shift+Enter · 403/409 con texto conservado · envío rechazado (200 «fallido») y reintentos · archivos como «[Archivo: tipo]» · invitado con mismo id y otro correo no controla · devolver a IA · ventana 24 h y control ajeno · enlace de vacante copiado y 409 apagado · paginación real (pagina=2, sondeo solo página 1, sin duplicados) · enlaces de vacantes (lista, búsqueda, copiar, 409/503, vacío, hoja en teléfono) · búsqueda q · móvil a pantalla completa con volver · apagado · admin valida, muestra 409 y manda PUT · R2: agente (validación, horario, copiar lunes, palabras, 400, PUT, nombre en burbujas, cambios sin guardar) · entrevista por vacante (conteo perezoso, validación, rango número, opciones descarta/alerta excluyentes, reordenar con foco, máx. 8, 400, PUT) · filtros atencion=1 / calificacion · evaluación (puntajes, respuestas con severidad, sin respuesta) · marcar atendido · hoja <1280 · teléfono ≥44 px sin desborde · 27/11: interruptor de la bolsa (GET, PUT {publicar_bolsa}, falla y regresa, también con WhatsApp apagado) · copiar enlace de la vacante (/vacante/<slug>) · WhatsApp apagado avisa · chip de entrevistas con y sin paquete y aviso de extras · admin: paquete, extras, importe y PUT con entrevistas_incluidas · bolsa pública: /vacantes/filter y tira con ?bolsa=1 (vacía se oculta)");
 } finally { await browser.close(); next.kill(); if (!exito) process.exitCode = 1; }
