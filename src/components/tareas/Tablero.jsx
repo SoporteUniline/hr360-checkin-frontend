@@ -3,10 +3,10 @@
 // Tablero (kanban) de tareas del equipo (prototipo 23/11/2026). Arrastra una tarjeta a otra columna (o ábrela y usa
 // «Mover a»). Filtros: proyecto, persona, texto y solo vencidas. A la derecha, «Mi equipo hoy» con quién vino y su carga.
 import { useMemo, useState } from "react";
-import { Camera, MessageSquare, Search } from "lucide-react";
+import { Camera, MessageSquare, Plus, Search } from "lucide-react";
 import { COLUMNAS, avancePasos, motivoNoMover } from "@/lib/tareas/reglas.mjs";
 import { useTareas } from "./store";
-import { Avatar, Barra, ChipPrioridad, campo, campoBase, fechaRelativa } from "./comun";
+import { Avatar, Barra, ChipPrioridad, botonPrimario, campo, campoBase, fechaRelativa } from "./comun";
 
 function Tarjeta({ t, alAbrir }) {
   const { persona, proyecto, hoy } = useTareas();
@@ -36,7 +36,7 @@ function Tarjeta({ t, alAbrir }) {
 }
 
 function EquipoHoy({ tareas }) {
-  const { personas, envios, hoy } = useTareas();
+  const { personas, enviosHoy, hoy } = useTareas();
   const tono = { verde: "bg-green-500", rojo: "bg-red-500", gris: "bg-slate-400" };
   return (
     <aside aria-label="Mi equipo hoy" className="space-y-1 rounded-xl border border-slate-200 bg-white p-4">
@@ -44,9 +44,9 @@ function EquipoHoy({ tareas }) {
       <p className="pb-1 text-[12px] text-slate-500">Quién vino (por sus checadas) y lo que trae abierto.</p>
       {personas.map((p) => {
         const abiertas = tareas.filter((t) => t.persona === p.id && t.estado !== "hecho");
-        const vencidas = abiertas.filter((t) => t.fecha < hoy).length;
+        const vencidas = abiertas.filter((t) => t.fecha && t.fecha < hoy).length;
         const paraHoy = abiertas.filter((t) => t.fecha === hoy).length;
-        const checklistHoy = envios.find((e) => e.persona === p.id && e.fecha === hoy && e.estado !== "no_enviado");
+        const checklistHoy = enviosHoy.find((e) => e.id_empleado === p.id && ["por_revisar", "aprobado", "regresado"].includes(e.estado));
         return (
           <div key={p.id} className="flex items-center gap-2.5 border-t border-slate-100 py-2">
             <span className="relative"><Avatar persona={p} tam="size-8" /><span className={`absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full ring-2 ring-white ${tono[p.tono]}`} /></span>
@@ -68,8 +68,8 @@ function EquipoHoy({ tareas }) {
   );
 }
 
-export default function Tablero({ alAbrir, proyectoFijo = null, sinEquipo = false }) {
-  const { tareas, proyectos, personas, persona, despachar, hoy } = useTareas();
+export default function Tablero({ alAbrir, alNueva, proyectoFijo = null, sinEquipo = false }) {
+  const { tareas, proyectos, personas, persona, moverTarea, hoy } = useTareas();
   const [filtroProyecto, setFiltroProyecto] = useState(proyectoFijo ? String(proyectoFijo) : "todos");
   const [filtroPersona, setFiltroPersona] = useState("todos");
   const [texto, setTexto] = useState("");
@@ -80,11 +80,11 @@ export default function Tablero({ alAbrir, proyectoFijo = null, sinEquipo = fals
   const visibles = useMemo(() => tareas.filter((t) => {
     if (filtroProyecto === "sueltas" ? t.proyecto != null : filtroProyecto !== "todos" && String(t.proyecto) !== filtroProyecto) return false;
     if (filtroPersona !== "todos" && String(t.persona) !== filtroPersona) return false;
-    if (soloVencidas && !(t.estado !== "hecho" && t.fecha < hoy)) return false;
+    if (soloVencidas && !(t.estado !== "hecho" && t.fecha && t.fecha < hoy)) return false;
     const q = texto.trim().toLowerCase();
     return !q || t.titulo.toLowerCase().includes(q) || persona(t.persona)?.nombre.toLowerCase().includes(q);
   }), [tareas, filtroProyecto, filtroPersona, soloVencidas, texto, hoy, persona]);
-  const vencidas = tareas.filter((t) => t.estado !== "hecho" && t.fecha < hoy).length;
+  const vencidas = tareas.filter((t) => t.estado !== "hecho" && t.fecha && t.fecha < hoy).length;
 
   const soltar = (e, destino) => {
     e.preventDefault();
@@ -94,7 +94,7 @@ export default function Tablero({ alAbrir, proyectoFijo = null, sinEquipo = fals
     const motivo = motivoNoMover(t, destino, "jefe");
     if (motivo) { setAviso(motivo); return; }
     setAviso(destino === "hecho" && t.estado !== "hecho" ? `«${t.titulo}» quedó como hecha.` : "");
-    despachar({ tipo: "mover", id: t.id, estado: destino });
+    moverTarea(t, destino);
   };
 
   return (
@@ -118,13 +118,19 @@ export default function Tablero({ alAbrir, proyectoFijo = null, sinEquipo = fals
         </select>
         <button type="button" aria-pressed={soloVencidas} onClick={() => setSoloVencidas((v) => !v)}
           className={`min-h-10 rounded-lg border px-3 text-sm font-semibold ${soloVencidas ? "border-red-600 bg-red-600 text-white" : "border-red-200 bg-red-50 text-red-700"}`}>Vencidas · {vencidas}</button>
+        {alNueva ? <button type="button" className={`${botonPrimario} ml-auto`} onClick={alNueva}><Plus className="size-4" /> Nueva tarea</button> : null}
       </div>
+      {!tareas.length && !proyectoFijo ? (
+        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-6 text-center text-sm text-slate-600">
+          Aún no hay tareas. Crea la primera con «Nueva tarea»: elige a quién, para cuándo y sus pasos. A la persona le llega en su app.
+        </div>
+      ) : null}
       {aviso ? <p role="status" className="rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-900">{aviso}</p> : null}
 
       <div className="flex flex-wrap items-start gap-4">
         <div className="grid min-w-0 flex-[999_1_720px] grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {COLUMNAS.map((c) => {
-            const lista = visibles.filter((t) => t.estado === c.clave).sort((a, b) => a.fecha.localeCompare(b.fecha));
+            const lista = visibles.filter((t) => t.estado === c.clave).sort((a, b) => (a.fecha || "9").localeCompare(b.fecha || "9"));
             return (
               <section key={c.clave} aria-label={c.texto}
                 onDragOver={(e) => { e.preventDefault(); setSobre(c.clave); }} onDragLeave={() => setSobre((v) => (v === c.clave ? null : v))} onDrop={(e) => soltar(e, c.clave)}

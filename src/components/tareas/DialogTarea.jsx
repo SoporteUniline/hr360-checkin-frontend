@@ -3,13 +3,13 @@
 // Ventana de una tarea (prototipo 23/11/2026): ver su avance, palomear pasos, comentar, aprobar o regresar si está en
 // revisión, y crear o editar (título, proyecto, responsable, fecha, prioridad, pasos, pide foto).
 import { useState } from "react";
-import { Camera, Check, MessageSquare, Pencil, Plus, Trash2, Undo2 } from "lucide-react";
+import { Archive, Camera, Check, History, MessageSquare, Pencil, Plus, Trash2, Undo2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { COLUMNAS, PRIORIDADES, avancePasos } from "@/lib/tareas/reglas.mjs";
 import { useTareas } from "./store";
-import { Avatar, Barra, ChipPrioridad, botonPrimario, botonSecundario, campo, campoBase, etiqueta, fechaRelativa } from "./comun";
+import { Avatar, Barra, ChipPrioridad, FotoSegura, botonPrimario, botonSecundario, campo, campoBase, etiqueta, fechaRelativa } from "./comun";
 
-function Formulario({ tarea, alGuardar, alCancelar }) {
+function Formulario({ tarea, alGuardar, alCancelar, alArchivar, guardando }) {
   const { personas, proyectos } = useTareas();
   const [f, setF] = useState(() => ({
     titulo: tarea?.titulo ?? "", descripcion: tarea?.descripcion ?? "", proyecto: tarea?.proyecto ?? null, persona: tarea?.persona ?? "",
@@ -66,8 +66,9 @@ function Formulario({ tarea, alGuardar, alCancelar }) {
         <input type="checkbox" className="size-4 accent-blue-600" checked={f.pideFoto} onChange={set("pideFoto")} /> Pide foto de evidencia para mandarla a revisión
       </label>
       <div className="flex justify-end gap-2 pt-1">
-        <button type="button" className={botonSecundario} onClick={alCancelar}>Cancelar</button>
-        <button type="submit" className={botonPrimario} disabled={!listo}>{tarea?.id ? "Guardar cambios" : "Crear y asignar"}</button>
+        {tarea?.id && alArchivar ? <button type="button" className={`${botonSecundario} mr-auto text-red-700`} onClick={alArchivar} disabled={guardando}><Archive className="size-4" /> Archivar</button> : null}
+        <button type="button" className={botonSecundario} onClick={alCancelar} disabled={guardando}>Cancelar</button>
+        <button type="submit" className={botonPrimario} disabled={!listo || guardando}>{guardando ? "Guardando…" : tarea?.id ? "Guardar cambios" : "Crear y asignar"}</button>
       </div>
       {!tarea?.id ? <p className="text-xs text-slate-500">A la persona le llegará aviso en su app y por correo.</p> : null}
     </form>
@@ -75,14 +76,14 @@ function Formulario({ tarea, alGuardar, alCancelar }) {
 }
 
 function Detalle({ tarea, alEditar }) {
-  const { despachar, persona, proyecto, jefe, hoy } = useTareas();
+  const { marcarPaso, comentar: comentarApi, moverTarea, persona, proyecto, hoy } = useTareas();
   const [comentario, setComentario] = useState("");
   const responsable = persona(tarea.persona);
   const pry = proyecto(tarea.proyecto);
   const avance = avancePasos(tarea.pasos);
   const fecha = fechaRelativa(tarea.fecha, hoy, tarea.estado === "hecho");
   const columna = COLUMNAS.find((c) => c.clave === tarea.estado);
-  const comentar = () => { if (comentario.trim()) { despachar({ tipo: "comentar", id: tarea.id, de: jefe.nombre, texto: comentario.trim() }); setComentario(""); } };
+  const comentar = async () => { const t = comentario.trim(); if (!t) return; setComentario(""); const r = await comentarApi(tarea, t); if (!r.ok) setComentario(t); };
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -104,7 +105,7 @@ function Detalle({ tarea, alEditar }) {
           {tarea.pasos.map((p) => (
             <li key={p.id}>
               <label className="flex min-h-11 cursor-pointer items-center gap-3 border-b border-slate-50 px-3 text-sm last:border-0">
-                <input type="checkbox" className="size-4 accent-green-600" checked={p.hecho} onChange={() => despachar({ tipo: "paso", id: tarea.id, paso: p.id })} />
+                <input type="checkbox" className="size-4 accent-green-600" checked={p.hecho} onChange={() => marcarPaso(tarea, p, !p.hecho)} />
                 <span className={p.hecho ? "text-slate-400 line-through" : ""}>{p.texto}</span>
               </label>
             </li>
@@ -116,7 +117,7 @@ function Detalle({ tarea, alEditar }) {
         <section aria-label="Evidencia" className="flex items-center gap-2 text-sm">
           <Camera className="size-4 text-slate-500" />
           {tarea.fotos.length ? (
-            <span className="flex gap-2">{tarea.fotos.map((f, i) => <span key={i} className="grid h-12 w-16 place-items-center rounded-md bg-slate-200 text-[10px] text-slate-600">Foto {i + 1}</span>)}</span>
+            <span className="flex flex-wrap gap-2">{tarea.fotos.map((f, i) => <FotoSegura key={f} llave={f} alt={`Evidencia ${i + 1}`} className="h-16 w-20 rounded-md object-cover" />)}</span>
           ) : <span className="text-slate-500">Aún no sube foto de evidencia.</span>}
         </section>
       ) : null}
@@ -130,14 +131,21 @@ function Detalle({ tarea, alEditar }) {
         </div>
       </section>
 
+      {tarea.historial?.length ? (
+        <details className="text-[12.5px] text-slate-600">
+          <summary className="inline-flex cursor-pointer items-center gap-1 font-semibold"><History className="size-3.5" /> Historial</summary>
+          <ul className="mt-1 space-y-0.5 pl-5">{tarea.historial.map((h, i) => <li key={i}>{h.texto.replace("por_hacer", "Por hacer").replace("en_proceso", "En proceso").replace("revision", "En revisión").replace("hecho", "Hecho")} · {h.de}</li>)}</ul>
+        </details>
+      ) : null}
+
       {tarea.estado === "revision" ? (
         <div className="flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-3">
-          <button type="button" className={botonSecundario} onClick={() => despachar({ tipo: "mover", id: tarea.id, estado: "en_proceso" })}><Undo2 className="size-4" /> Regresar para corregir</button>
-          <button type="button" className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-green-600 px-4 text-sm font-semibold text-white hover:bg-green-700" onClick={() => despachar({ tipo: "mover", id: tarea.id, estado: "hecho" })}><Check className="size-4" /> Aprobar y terminar</button>
+          <button type="button" className={botonSecundario} onClick={() => moverTarea(tarea, "en_proceso")}><Undo2 className="size-4" /> Regresar para corregir</button>
+          <button type="button" className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-green-600 px-4 text-sm font-semibold text-white hover:bg-green-700" onClick={() => moverTarea(tarea, "hecho")}><Check className="size-4" /> Aprobar y terminar</button>
         </div>
       ) : (
         <label className="flex items-center justify-end gap-2 border-t border-slate-100 pt-3 text-sm font-semibold text-slate-700">Mover a
-          <select className={campoBase} value={tarea.estado} onChange={(e) => despachar({ tipo: "mover", id: tarea.id, estado: e.target.value })}>
+          <select className={campoBase} value={tarea.estado} onChange={(e) => moverTarea(tarea, e.target.value)}>
             {COLUMNAS.map((c) => <option key={c.clave} value={c.clave}>{c.texto}</option>)}
           </select>
         </label>
@@ -148,18 +156,26 @@ function Detalle({ tarea, alEditar }) {
 
 // tarea: objeto existente, o { nueva: true, proyecto? } para crear.
 export default function DialogTarea({ tarea, alCerrar }) {
-  const { despachar, tareas } = useTareas();
+  const { guardarTarea, archivarTarea, tareas } = useTareas();
   const [editando, setEditando] = useState(Boolean(tarea?.nueva));
+  const [guardando, setGuardando] = useState(false);
   const actual = tarea?.id ? tareas.find((t) => t.id === tarea.id) : tarea;
+  const guardar = async (datos) => {
+    setGuardando(true);
+    const r = await guardarTarea(actual.nueva ? datos : { ...datos, id: actual.id, version: actual.version });
+    setGuardando(false);
+    if (!r.ok) return;
+    if (actual.nueva) alCerrar(); else setEditando(false);
+  };
   return (
     <Dialog open={Boolean(tarea)} onOpenChange={(v) => !v && alCerrar()}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
-        <DialogTitle className="pr-6 text-lg font-extrabold text-[#080d36]">{tarea?.nueva ? "Nueva tarea" : actual?.titulo}</DialogTitle>
+        <DialogTitle className="pr-6 text-lg font-extrabold text-[#080d36]">{tarea?.nueva ? "Nueva tarea" : actual?.titulo ?? "Tarea"}</DialogTitle>
         <DialogDescription className="sr-only">Detalle de la tarea</DialogDescription>
-        {actual ? (editando
-          ? <Formulario tarea={actual.nueva ? { proyecto: actual.proyecto } : actual} alCancelar={() => (actual.nueva ? alCerrar() : setEditando(false))}
-              alGuardar={(datos) => { despachar({ tipo: "guardarTarea", tarea: actual.nueva ? datos : { ...datos, id: actual.id } }); if (actual.nueva) alCerrar(); else setEditando(false); }} />
-          : <Detalle tarea={actual} alEditar={() => setEditando(true)} />) : null}
+        {!actual ? <p className="text-sm text-slate-500">Esta tarea ya no está en el tablero.</p> : editando
+          ? <Formulario tarea={actual.nueva ? { proyecto: actual.proyecto } : actual} guardando={guardando} alCancelar={() => (actual.nueva ? alCerrar() : setEditando(false))} alGuardar={guardar}
+              alArchivar={async () => { setGuardando(true); const r = await archivarTarea(actual); setGuardando(false); if (r.ok) alCerrar(); }} />
+          : <Detalle tarea={actual} alEditar={() => setEditando(true)} />}
       </DialogContent>
     </Dialog>
   );

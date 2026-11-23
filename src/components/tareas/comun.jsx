@@ -1,8 +1,8 @@
 "use client";
 
 // Piezas comunes del módulo Tareas (prototipo 23/11/2026).
-import { FlaskConical, RotateCcw } from "lucide-react";
-import { useTareas } from "./store";
+import { useEffect, useState } from "react";
+import axios from "@/lib/axios";
 
 const MESES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
 export function fechaCorta(fecha) {
@@ -46,18 +46,24 @@ export function colorCalificacion(p) {
   return p >= 90 ? "text-green-700" : p >= 75 ? "text-amber-700" : "text-red-700";
 }
 
-// Franja que deja claro que es un prototipo con datos de ejemplo.
-export function AvisoPrototipo() {
-  const { reiniciar } = useTareas();
-  return (
-    <div role="note" className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-violet-200 bg-violet-50 px-3.5 py-2 text-[12.5px] text-violet-900">
-      <FlaskConical className="size-4 shrink-0" />
-      <span><b>Vista previa · datos de ejemplo.</b> Puedes mover, crear y revisar; nada se guarda en la base de datos.</span>
-      <button type="button" onClick={reiniciar} className="ml-auto inline-flex min-h-8 items-center gap-1 font-semibold text-violet-800 hover:underline">
-        <RotateCcw className="size-3.5" /> Volver a empezar
-      </button>
-    </div>
-  );
+// Foto o firma guardada en el servidor: se pide con la sesión (solo si quien la ve tiene permiso) y se guarda en memoria
+// mientras la página esté abierta. Después de 3 meses ya no existe y lo dice.
+const cacheFotos = new Map();
+export function FotoSegura({ llave, alt = "Foto de evidencia", className = "h-12 w-16 rounded-md object-cover" }) {
+  const [estado, setEstado] = useState(() => cacheFotos.get(llave) ?? null);
+  useEffect(() => {
+    if (!llave || cacheFotos.has(llave)) { setEstado(cacheFotos.get(llave) ?? null); return undefined; }
+    if (/^(blob|data):/.test(llave)) { setEstado({ url: llave }); return undefined; }
+    let vivo = true;
+    axios.get(`/checador/tareas/archivo?key=${encodeURIComponent(llave)}`, { responseType: "blob" })
+      .then((r) => { const v = { url: URL.createObjectURL(r.data) }; cacheFotos.set(llave, v); if (vivo) setEstado(v); })
+      .catch((e) => { const v = { vencida: e?.response?.status === 404 }; if (vivo) setEstado(v); });
+    return () => { vivo = false; };
+  }, [llave]);
+  if (!llave) return null;
+  if (estado?.url) return <img src={estado.url} alt={alt} className={className} />;
+  if (estado?.vencida) return <span className="text-[11px] text-slate-400">Foto borrada (más de 3 meses)</span>;
+  return <span className={`${className} grid place-items-center bg-slate-200 text-[10px] text-slate-500`} aria-label="Cargando foto">…</span>;
 }
 
 // campoBase: sin ancho (filtros en línea); campo: ocupa todo el ancho (formularios).

@@ -6,6 +6,7 @@
 import { useRef, useState } from "react";
 import { AlignLeft, Calendar, CalendarClock, Camera, CheckSquare, CircleDot, Hash, Image as ImageIcon, ListChecks, PenLine, Star, Type } from "lucide-react";
 import LienzoFirma from "@/components/empleado/LienzoFirma";
+import { FotoSegura } from "./comun";
 import { esCalificable, puntajePregunta } from "@/lib/tareas/preguntas.mjs";
 
 export const ICONOS = { si_no: CheckSquare, opcion: CircleDot, multiple: ListChecks, numero: Hash, foto: ImageIcon, estrellas: Star, texto: Type, texto_largo: AlignLeft, fecha: Calendar, fecha_hora: CalendarClock, firma: PenLine };
@@ -31,14 +32,23 @@ function Chip({ activo, onClick, children, deshabilitado, tono = "azul", grande 
   );
 }
 
-function SubirFoto({ url, alSubir, etiqueta, deshabilitado }) {
+function SubirFoto({ url, alSubir, etiqueta, deshabilitado, subir }) {
+  const [subiendo, setSubiendo] = useState(false);
+  const elegir = async (archivo) => {
+    if (!archivo) return;
+    if (!subir) { alSubir(URL.createObjectURL(archivo)); return; }
+    setSubiendo(true);
+    const llave = await subir(archivo);
+    setSubiendo(false);
+    if (llave) alSubir(llave);
+  };
   return (
     <span className="flex flex-wrap items-center gap-2">
-      {url ? (url.startsWith("blob:") || url.startsWith("data:") ? <img src={url} alt="Foto de evidencia" className="size-14 rounded-lg object-cover" /> : <span className="grid size-14 place-items-center rounded-lg bg-slate-300 text-[10px] text-slate-700">Foto</span>) : null}
+      {url ? (/^(blob|data):/.test(url) ? <img src={url} alt="Foto de evidencia" className="size-14 rounded-lg object-cover" /> : <FotoSegura llave={url} className="size-14 rounded-lg object-cover" />) : null}
       {!deshabilitado ? (
-        <label className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-xl border-[1.5px] border-dashed border-amber-400 bg-amber-50 px-3 text-[13px] font-semibold text-amber-900">
-          <Camera className="size-4" /> {url ? "Cambiar foto" : etiqueta}
-          <input type="file" accept="image/*" capture="environment" className="sr-only" onChange={(e) => { const f = e.target.files?.[0]; if (f) alSubir(URL.createObjectURL(f)); }} />
+        <label className={`inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-xl border-[1.5px] border-dashed border-amber-400 bg-amber-50 px-3 text-[13px] font-semibold text-amber-900 ${subiendo ? "opacity-60" : ""}`}>
+          <Camera className="size-4" /> {subiendo ? "Subiendo…" : url ? "Cambiar foto" : etiqueta}
+          <input type="file" accept="image/*" capture="environment" className="sr-only" disabled={subiendo} onChange={(e) => { elegir(e.target.files?.[0]); e.target.value = ""; }} />
         </label>
       ) : null}
     </span>
@@ -61,12 +71,21 @@ function Estrellas({ valor, onElegir, grande, deshabilitado, etiqueta }) {
 }
 
 // Firma con el dedo: se dibuja y se confirma con «Listo»; queda la imagen y se puede volver a firmar.
-function Firma({ valor, onFirmar, deshabilitado, etiqueta }) {
+function Firma({ valor, onFirmar, deshabilitado, etiqueta, subir }) {
   const lienzo = useRef(null);
   const [trazada, setTrazada] = useState(false);
+  const [subiendo, setSubiendo] = useState(false);
+  const firmar = async () => {
+    const png = await lienzo.current.aPng();
+    if (!subir) { onFirmar(URL.createObjectURL(png)); return; }
+    setSubiendo(true);
+    const llave = await subir(png, { esFirma: true });
+    setSubiendo(false);
+    if (llave) onFirmar(llave);
+  };
   if (valor) return (
     <span className="flex flex-wrap items-center gap-2">
-      {valor.startsWith("blob:") ? <img src={valor} alt={`Firma: ${etiqueta}`} className="h-16 rounded-lg border border-slate-200 bg-white object-contain" /> : <span className="grid h-16 w-40 place-items-center rounded-lg border border-slate-200 text-sm italic text-slate-500">Firmado</span>}
+      {valor.startsWith("blob:") ? <img src={valor} alt={`Firma: ${etiqueta}`} className="h-16 rounded-lg border border-slate-200 bg-white object-contain" /> : <FotoSegura llave={valor} alt={`Firma: ${etiqueta}`} className="h-16 rounded-lg border border-slate-200 bg-white object-contain" />}
       {!deshabilitado ? <button type="button" onClick={() => onFirmar(null)} className="min-h-10 rounded-lg px-2 text-[13px] font-semibold text-brand">Volver a firmar</button> : null}
     </span>
   );
@@ -76,14 +95,14 @@ function Firma({ valor, onFirmar, deshabilitado, etiqueta }) {
       <LienzoFirma ref={lienzo} onCambio={setTrazada} etiqueta={`Firma: ${etiqueta}`} />
       <div className="flex gap-2">
         <button type="button" disabled={!trazada} onClick={() => { lienzo.current.borrar(); }} className="min-h-10 rounded-lg border border-slate-300 px-3 text-[13px] font-semibold disabled:opacity-50">Borrar</button>
-        <button type="button" disabled={!trazada} onClick={async () => onFirmar(URL.createObjectURL(await lienzo.current.aPng()))} className="min-h-10 rounded-lg bg-blue-600 px-4 text-[13px] font-semibold text-white disabled:opacity-50">Listo, firmar</button>
+        <button type="button" disabled={!trazada || subiendo} onClick={firmar} className="min-h-10 rounded-lg bg-blue-600 px-4 text-[13px] font-semibold text-white disabled:opacity-50">{subiendo ? "Guardando…" : "Listo, firmar"}</button>
       </div>
     </div>
   );
 }
 
 // pregunta: ver lib/tareas/preguntas.mjs · respuesta: { valor, na, foto } · onChange(respuestaNueva)
-export function CampoRespuesta({ pregunta: p, respuesta, onChange, grande = false, deshabilitado = false, mostrarPuntaje = true }) {
+export function CampoRespuesta({ pregunta: p, respuesta, onChange, grande = false, deshabilitado = false, mostrarPuntaje = true, subir = null }) {
   const r = respuesta ?? {};
   const na = Boolean(r.na && p.permiteNA);
   const poner = (cambios) => onChange({ ...r, na: false, ...cambios });
@@ -120,9 +139,9 @@ export function CampoRespuesta({ pregunta: p, respuesta, onChange, grande = fals
               {(p.min !== "" && p.min != null) || (p.max !== "" && p.max != null) ? <span className="text-[12px] text-slate-500">Bien: {p.min === p.max ? p.min : `${p.min ?? "…"} a ${p.max ?? "…"}`}</span> : null}
             </label>
           ) : null}
-          {p.tipo === "foto" ? <SubirFoto url={r.valor} etiqueta="Tomar foto" deshabilitado={deshabilitado} alSubir={(url) => poner({ valor: url })} /> : null}
+          {p.tipo === "foto" ? <SubirFoto url={r.valor} etiqueta="Tomar foto" deshabilitado={deshabilitado} subir={subir} alSubir={(url) => poner({ valor: url })} /> : null}
           {p.tipo === "estrellas" ? <Estrellas valor={r.valor} grande={grande} deshabilitado={deshabilitado} etiqueta={p.texto || "Calificación"} onElegir={(n) => poner({ valor: n })} /> : null}
-          {p.tipo === "firma" ? <Firma valor={r.valor} deshabilitado={deshabilitado} etiqueta={p.texto || "Firma"} onFirmar={(url) => poner({ valor: url })} /> : null}
+          {p.tipo === "firma" ? <Firma valor={r.valor} deshabilitado={deshabilitado} subir={subir} etiqueta={p.texto || "Firma"} onFirmar={(url) => poner({ valor: url })} /> : null}
           {p.tipo === "texto" ? (
             <input aria-label={p.texto} disabled={deshabilitado} value={r.valor ?? ""} onChange={(e) => poner({ valor: e.target.value })} placeholder="Escribe aquí…"
               className={`${grande ? "h-12" : "h-10"} w-full rounded-xl border border-slate-300 px-3 text-base`} />
@@ -139,7 +158,7 @@ export function CampoRespuesta({ pregunta: p, respuesta, onChange, grande = fals
       ) : <p className="text-sm font-semibold text-slate-500">No aplica: no cuenta en la calificación.</p>}
 
       <div className="flex flex-wrap items-center gap-2">
-        {p.pideFoto && !na && p.tipo !== "foto" && contestada ? <SubirFoto url={r.foto} etiqueta="Foto de evidencia" deshabilitado={deshabilitado} alSubir={(url) => onChange({ ...r, foto: url })} /> : null}
+        {p.pideFoto && !na && p.tipo !== "foto" && contestada ? <SubirFoto url={r.foto} etiqueta="Foto de evidencia" deshabilitado={deshabilitado} subir={subir} alSubir={(url) => onChange({ ...r, foto: url })} /> : null}
         {p.permiteNA && !deshabilitado ? (
           <button type="button" aria-pressed={na} onClick={() => onChange(na ? { ...r, na: false } : { na: true })}
             className={`min-h-9 rounded-lg px-2.5 text-[12.5px] font-semibold ${na ? "bg-slate-700 text-white" : "text-slate-500 underline-offset-2 hover:underline"}`}>
