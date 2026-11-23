@@ -92,6 +92,7 @@ try {
   await pg.waitForFunction((anterior) => document.querySelector('[role="timer"]')?.textContent !== anterior, t1, { timeout: 5000 });
   await tarjeta.getByText(/regresa a las/).waitFor();
   await tarjeta.getByRole("link", { name: "Regresé de comer" }).waitFor();
+  assert.equal(await pg.getByRole("link", { name: "Checar entrada o salida" }).count(), 0, "en comida no se ofrece «Checar entrada o salida»");
   assert.ok(await pg.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "sin desborde");
   await captura(pg, "inicio-comida");
   assert.deepEqual(errores, []);

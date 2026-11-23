@@ -226,6 +226,7 @@ export default function ComposerChat({
         <BarraGrabacion segundos={grabadora.segundos} onCancelar={grabadora.cancelar} onDetener={grabadora.detener} />
       ) : (
         <div className="flex items-end gap-1.5 md:gap-2">
+          {onEnviarAdjunto || ofrecer ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button type="button" aria-label="Más acciones" className={ICONO}><Plus className="size-5" aria-hidden="true" /></button>
@@ -245,9 +246,12 @@ export default function ComposerChat({
               ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
-          <button type="button" onClick={abrirSelector} disabled={!sePuedeAdjuntar} aria-label="Adjuntar archivo" className={`${ICONO} max-sm:hidden`}>
-            <Paperclip className="size-5" aria-hidden="true" />
-          </button>
+          ) : null}
+          {onEnviarAdjunto ? (
+            <button type="button" onClick={abrirSelector} disabled={!sePuedeAdjuntar} aria-label="Adjuntar archivo" className={`${ICONO} max-sm:hidden`}>
+              <Paperclip className="size-5" aria-hidden="true" />
+            </button>
+          ) : null}
           <label className="min-w-0 flex-1">
             <span className="sr-only">{adjunto ? "Comentario del archivo" : "Mensaje"}</span>
             <textarea
@@ -268,9 +272,11 @@ export default function ComposerChat({
               className="block max-h-40 min-h-11 w-full resize-none rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-base leading-snug outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-gray-100 md:text-sm"
             />
           </label>
-          <button type="button" onClick={grabadora.iniciar} disabled={!sePuedeAdjuntar || !!adjunto} aria-label="Grabar nota de voz" className={ICONO}>
-            <Mic className="size-5" aria-hidden="true" />
-          </button>
+          {onEnviarAdjunto ? (
+            <button type="button" onClick={grabadora.iniciar} disabled={!sePuedeAdjuntar || !!adjunto} aria-label="Grabar nota de voz" className={ICONO}>
+              <Mic className="size-5" aria-hidden="true" />
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={enviar}
@@ -284,7 +290,7 @@ export default function ComposerChat({
       )}
       {permiso.puede ? (
         <p className="mt-1 flex justify-between gap-2 text-[11px] text-gray-400">
-          <span className="hidden md:inline">Enter para enviar · Shift + Enter para un salto de línea · Arrastra o pega un archivo para adjuntarlo</span>
+          <span className="hidden md:inline">Enter para enviar · Shift + Enter para un salto de línea{onEnviarAdjunto ? " · Arrastra o pega un archivo para adjuntarlo" : ""}</span>
           {texto.length > limite - 600 ? <span className={texto.length >= limite ? "text-red-600" : ""}>{texto.length}/{limite}</span> : null}
         </p>
       ) : null}

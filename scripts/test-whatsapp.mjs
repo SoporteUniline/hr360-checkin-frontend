@@ -185,3 +185,15 @@ test("enlace de la página de la vacante (/vacante/<slug>) con el dominio config
   assert.equal(origenPublico("https://dev.adamia.com.mx/"), "https://dev.adamia.com.mx");
   assert.equal(origenPublico(""), "", "en Node no hay window: sin dominio no hay origen");
 });
+
+// El API manda el consentimiento como texto ("aceptado" | "rechazado" | "pendiente"); el panel decía «Aún no responde»
+// aunque el candidato ya había aceptado y la entrevista avanzaba (23/11/2026).
+test("consentimiento: el texto del API se muestra como aceptado o rechazado", async () => {
+  const { textoConsentimiento, consentimientoAceptado } = await import("../src/lib/whatsapp/entrevista.mjs");
+  assert.equal(textoConsentimiento("aceptado"), "Aceptó el aviso de privacidad");
+  assert.equal(textoConsentimiento("rechazado"), "No aceptó el aviso de privacidad");
+  assert.equal(textoConsentimiento("pendiente"), "Aún no responde al aviso de privacidad");
+  assert.equal(textoConsentimiento(true), "Aceptó el aviso de privacidad");
+  assert.equal(consentimientoAceptado("aceptado"), true);
+  assert.equal(consentimientoAceptado("pendiente"), false);
+});

@@ -28,7 +28,8 @@ export default function EmployeeHome() {
       <DataState loading={session.isLoading || isLoading} error={session.error || error} retry={mutate}>
         {rows.length ? <div className="space-y-3">{rows.map((row, index) => <AttendanceCard key={row.id || index} row={row} timezone={data?.zona_horaria || timezone} today compact />)}</div> : <p className="flex items-center gap-3 text-sm text-slate-500"><Clock3 className="size-5" />Sin registros</p>}
       </DataState>
-      <Link href="/empleado/reloj-checador" className="mt-5 flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700">Checar entrada o salida</Link>
+      {/* (23/11/2026) En comida, el único botón es «Regresé de comer» (tarjeta de arriba): no se ofrece checar otra cosa. */}
+      {data?.comida?.en_comida ? null : <Link href="/empleado/reloj-checador" className="mt-5 flex min-h-11 items-center justify-center rounded-lg bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700">Checar entrada o salida</Link>}
     </section>
     <MiTiempoPorReponer idEmpleado={session.id} />
     <VacationBalance />

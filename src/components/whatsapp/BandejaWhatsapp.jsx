@@ -19,7 +19,7 @@ import { mensajeErrorApi } from "@/lib/whatsapp/reglas.mjs";
 import { paramsFiltro } from "@/lib/whatsapp/entrevista.mjs";
 import { avisoExtras, textoEntrevistasMes } from "@/lib/whatsapp/paquete.mjs";
 import { hoyMx, textoPlantillasMes } from "@/lib/whatsapp/agenda.mjs";
-import { citasDelChat, lineaCita } from "@/lib/whatsapp/adjuntos.mjs";
+import { CHAT_ADJUNTOS_ACTIVO, citasDelChat, lineaCita } from "@/lib/whatsapp/adjuntos.mjs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   aprobarAgenda, devolverAIa, enviarAdjunto, enviarMensaje, enviarSeguimiento, marcarAtendido, obtener, ofrecerHorarios, reintentarMensaje, rutaAgendaEmpresa, rutaAgente, rutaConversacion,
@@ -415,7 +415,7 @@ export default function BandejaWhatsapp() {
     setAnuncio("Cita actualizada.");
   };
   // «Ofrecer horarios»: necesita vacante y la ventana de 24 h abierta (el API responde 409 si no).
-  const opcionOfrecer = conversacion ? {
+  const opcionOfrecer = conversacion && CHAT_ADJUNTOS_ACTIVO ? {
     disponible: !!conversacion.vacante?.id_vacante && conversacion.ventana_abierta !== false,
     motivo: !conversacion.vacante?.id_vacante ? "Sin vacante" : conversacion.ventana_abierta === false ? "Chat cerrado (más de 24 h)" : "",
     cargando: ofreciendo,
@@ -549,7 +549,7 @@ export default function BandejaWhatsapp() {
                   onVerEvaluacion={() => setEvaluacionAbierta(true)}
                   requiereAtencion={entrevista?.requiere_atencion === true}
                   onSeguimiento={seguimiento}
-                  onEnviarAdjunto={enviarArchivo}
+                  onEnviarAdjunto={CHAT_ADJUNTOS_ACTIVO ? enviarArchivo : undefined}
                   citas={hilo ? citasDelChat(hilo) : null}
                   hoy={hoyMx(ahora)}
                   onCitaCambio={alCambiarCitaChat}
