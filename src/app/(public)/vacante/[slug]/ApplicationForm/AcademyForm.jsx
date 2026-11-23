@@ -28,7 +28,7 @@ export default function AcademyForm({ form, loading }) {
           rules={{ required: "Selecciona un nivel" }}
           render={({ field }) => (
             <FormItem>
-              <FormLabel required>Nivel de Estudios</FormLabel>
+              <FormLabel required>Nivel de estudios</FormLabel>
               <FormControl>
                 <Select
                   disabled={loading}
@@ -59,7 +59,7 @@ export default function AcademyForm({ form, loading }) {
         />
 
         <FormItem>
-          <FormLabel required>Institución Educativa:</FormLabel>
+          <FormLabel required>Institución educativa</FormLabel>
           <FormControl>
             <Input
               disabled={loading}
@@ -71,7 +71,7 @@ export default function AcademyForm({ form, loading }) {
           <FormMessage>{formState.errors.institucion?.message}</FormMessage>
         </FormItem>
         <FormItem>
-          <FormLabel required>Carrera:</FormLabel>
+          <FormLabel required>Carrera</FormLabel>
           <FormControl>
             <Input
               disabled={loading}
@@ -83,7 +83,7 @@ export default function AcademyForm({ form, loading }) {
           <FormMessage>{formState.errors.carrera?.message}</FormMessage>
         </FormItem>
         <FormItem>
-          <FormLabel>Año de Término:</FormLabel>
+          <FormLabel>Año de término</FormLabel>
           <FormControl>
             <Input disabled={loading} {...register("anio_termino")} />
           </FormControl>

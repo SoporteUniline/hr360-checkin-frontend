@@ -3,18 +3,13 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetDescription,
-  SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { X } from "lucide-react";
+import { outfit } from "@/fonts";
 import {
   Form,
   FormField,
@@ -40,6 +35,7 @@ export default function ApplicationForm({
   setOpen,
   isLoggedIn,
   setOpenDialog,
+  onEnviada,
 }) {
   const [loading, setLoading] = React.useState(false);
   const [files, setFiles] = React.useState([]);
@@ -150,7 +146,9 @@ export default function ApplicationForm({
       form.reset();
       setFiles([]);
       setRespuestas({});
+      setShowOTP(false);
       setOpen(false);
+      onEnviada?.();
     } catch (error) {
       setLoading(false);
       const errorMessage =
@@ -161,13 +159,16 @@ export default function ApplicationForm({
     }
   };
 
+  // 23/11/2026 (rediseño): las secciones van abiertas una tras otra (antes en acordeón cerrado: los errores de un
+  // campo obligatorio quedaban escondidos). Mismos campos, validaciones, OTP y envío.
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       {cerrada ? (
-        <p className="text-sm text-slate-600" role="status">Esta vacante ya cerró su periodo de postulaciones.</p>
+        <p className="vc-aviso" role="status">Esta vacante ya cerró su periodo de postulaciones.</p>
       ) : null}
-      <Button
-        className="bg-slate-700 text-white px-4 py-2 rounded-lg hover:bg-slate-600 w-full"
+      <button
+        type="button"
+        className="btn btn-primary vc-btn-postular"
         disabled={cerrada}
         onClick={() => {
           if (isLoggedIn) {
@@ -178,106 +179,84 @@ export default function ApplicationForm({
           }
         }}
       >
-        Postularme Ahora
-      </Button>
+        Postularme ahora
+      </button>
 
-      <SheetContent className="min-w-[100vw] md:min-w-[60vw] lg:min-w-[50vw]">
-        <SheetHeader>
-          <SheetTitle className="flex flex-col text-slate-700">
-            <span className="font-extrabold text-xl">Solicitud de Empleo</span>
-            <span className="text-sm">
-              Puesto solicitado: {selectedJob.titulo}
-            </span>
-          </SheetTitle>
-          <SheetDescription className="flex flex-col">
-            Llena el siguiente formulario con tus datos
-          </SheetDescription>
-        </SheetHeader>
-        <div className="mt-3 h-[85vh] overflow-y-auto">
+      <SheetContent className={`lh vc-hoja ${outfit.variable}`}>
+        <div className="vc-hoja-cab">
+          <div>
+            <SheetTitle className="vc-hoja-titulo">Solicitud de empleo</SheetTitle>
+            <SheetDescription className="vc-hoja-sub">
+              {selectedJob.titulo}{selectedJob.nombre_empresa ? ` en ${selectedJob.nombre_empresa}` : ""}
+            </SheetDescription>
+          </div>
+          <SheetClose className="vc-cerrar" aria-label="Cerrar solicitud"><X aria-hidden="true" /></SheetClose>
+        </div>
+        <div className="vc-hoja-cuerpo">
           <Form {...form}>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <Accordion type="multiple">
-                <AccordionItem value="item-1">
-                  <AccordionTrigger className="font-bold text-lg text-slate-700">
-                    Información Personal
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <PersonalForm loading={loading} form={form} />
-                  </AccordionContent>
-                </AccordionItem>
-                <AccordionItem value="item-2">
-                  <AccordionTrigger className="font-bold text-lg text-slate-700">
-                    Formación Académica
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <AcademyForm loading={loading} form={form} />
-                  </AccordionContent>
-                </AccordionItem>
-                <AccordionItem value="item-3">
-                  <AccordionTrigger className="font-bold text-lg text-slate-700">
-                    Experiencia Laboral
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <ExperienceForm loading={loading} form={form} />
-                  </AccordionContent>
-                </AccordionItem>
-                {/* <AccordionItem value="item-4">
-                  <AccordionTrigger className="font-bold text-lg text-slate-700">
-                    Vacante Solicitada
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <PositionForm loading={loading} form={form} />
-                  </AccordionContent>
-                </AccordionItem> */}
-              </Accordion>
-              <PreguntasVacante preguntas={preguntas} valores={respuestas} onCambiar={setRespuestas} errores={sinResponder} disabled={loading} />
-              <CargaCV files={files} setFiles={setFiles} />
+            <form onSubmit={handleSubmit(onSubmit)} className="vc-form">
+              <p className="vc-nota">Los campos con <span aria-hidden="true">*</span><span className="sr-only">asterisco</span> son obligatorios. Al final te enviaremos un código por SMS para verificar tu teléfono.</p>
+              <section className="vc-sec" aria-labelledby="sec-personal">
+                <h3 id="sec-personal">Información personal</h3>
+                <PersonalForm loading={loading} form={form} />
+              </section>
+              <section className="vc-sec" aria-labelledby="sec-estudios">
+                <h3 id="sec-estudios">Formación académica</h3>
+                <AcademyForm loading={loading} form={form} />
+              </section>
+              <section className="vc-sec" aria-labelledby="sec-experiencia">
+                <h3 id="sec-experiencia">Experiencia laboral</h3>
+                <ExperienceForm loading={loading} form={form} />
+              </section>
+              {preguntas.length ? (
+                <section className="vc-sec">
+                  <PreguntasVacante preguntas={preguntas} valores={respuestas} onCambiar={setRespuestas} errores={sinResponder} disabled={loading} />
+                </section>
+              ) : null}
+              <section className="vc-sec">
+                <CargaCV files={files} setFiles={setFiles} />
+              </section>
               <FormField
                 control={form.control}
                 name="accepted"
                 rules={{ required: "Debes aceptar los términos" }}
                 render={({ field }) => (
-                  <FormItem className="flex items-start space-x-2 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        disabled={loading}
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <div className="leading-none text-sm">
-                      Acepto los{" "}
-                      <a
-                        href="/terminos-condiciones"
-                        className="underline text-blue-500"
-                        target="_blank"
-                      >
-                        Términos y Condiciones
-                      </a>{" "}
-                      y el{" "}
-                      <a
-                        href="/aviso-privacidad"
-                        className="underline text-blue-500"
-                        target="_blank"
-                      >
-                        Aviso de Privacidad
-                      </a>
-                      .
+                  <FormItem className="vc-acepto">
+                    <div className="vc-acepto-fila">
+                      <FormControl>
+                        <Checkbox
+                          aria-labelledby="vc-acepto-txt"
+                          disabled={loading}
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <div className="vc-acepto-txt" id="vc-acepto-txt">
+                        Acepto los{" "}
+                        <a href="/terminos-condiciones" target="_blank" rel="noopener noreferrer">
+                          Términos y condiciones
+                        </a>{" "}
+                        y el{" "}
+                        <a href="/aviso-privacidad" target="_blank" rel="noopener noreferrer">
+                          Aviso de privacidad
+                        </a>
+                        .
+                      </div>
                     </div>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <div className="flex justify-center my-5">
+              <div className="vc-enviar">
                 {showOTP ? (
-                  <OTPForm onSubmit={onSubmit} form={form} />
+                  <OTPForm onSubmit={onSubmit} form={form} onCambiarTelefono={() => setShowOTP(false)} />
                 ) : (
                   <Button
                     type="submit"
-                    className="bg-slate-700 w-full mt-10"
+                    className="vc-btn-enviar"
                     loading={loading}
                   >
-                    Enviar Solicitud
+                    Enviar solicitud
                   </Button>
                 )}
               </div>

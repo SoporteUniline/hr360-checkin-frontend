@@ -23,10 +23,11 @@ export default function PersonalForm({ form, loading }) {
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
         <FormItem>
-          <FormLabel required>Nombre Completo</FormLabel>
+          <FormLabel required>Nombre completo</FormLabel>
           <FormControl>
             <Input
               disabled={loading}
+              autoComplete="name"
               {...register("nombre_completo", {
                 required: "Campo obligatorio",
               })}
@@ -35,11 +36,12 @@ export default function PersonalForm({ form, loading }) {
           <FormMessage>{formState.errors.nombre_completo?.message}</FormMessage>
         </FormItem>
         <FormItem>
-          <FormLabel required>Correo Electrónico:</FormLabel>
+          <FormLabel required>Correo electrónico</FormLabel>
           <FormControl>
             <Input
               disabled={loading}
               type="email"
+              autoComplete="email"
               {...register("correo", {
                 required: "Campo obligatorio",
               })}
@@ -48,11 +50,13 @@ export default function PersonalForm({ form, loading }) {
           <FormMessage>{formState.errors.correo?.message}</FormMessage>
         </FormItem>
         <FormItem>
-          <FormLabel required>Teléfono:</FormLabel>
+          <FormLabel required>Teléfono celular</FormLabel>
           <FormControl>
             <Input
               type="tel"
-              placeholder="Teléfono a 10 dígitos"
+              inputMode="numeric"
+              autoComplete="tel-national"
+              placeholder="10 dígitos, ej. 3312345678"
               disabled={loading}
               {...register("telefono", {
                 required: "Campo obligatorio",
@@ -66,7 +70,7 @@ export default function PersonalForm({ form, loading }) {
           <FormMessage>{formState.errors.telefono?.message}</FormMessage>
         </FormItem>
         <FormItem>
-          <FormLabel>Fecha de Nacimiento:</FormLabel>
+          <FormLabel>Fecha de nacimiento</FormLabel>
           <FormControl>
             <Input
               type="date"
@@ -86,7 +90,7 @@ export default function PersonalForm({ form, loading }) {
           <FormMessage>{formState.errors.edad?.message}</FormMessage>
         </FormItem>
         <FormItem>
-          <FormLabel required>Sexo:</FormLabel>
+          <FormLabel required>Sexo</FormLabel>
           <FormControl>
             <Input
               disabled={loading}
@@ -103,7 +107,7 @@ export default function PersonalForm({ form, loading }) {
           rules={{ required: "Selecciona uno" }}
           render={({ field }) => (
             <FormItem>
-              <FormLabel required>Estado Civil:</FormLabel>
+              <FormLabel required>Estado civil</FormLabel>
               <FormControl>
                 <Select
                   disabled={loading}
@@ -132,10 +136,12 @@ export default function PersonalForm({ form, loading }) {
           )}
         />
         <FormItem>
-          <FormLabel required>CURP:</FormLabel>
+          <FormLabel required>CURP</FormLabel>
           <FormControl>
             <Input
               disabled={loading}
+              autoCapitalize="characters"
+              placeholder="18 caracteres en mayúsculas"
               {...register("curp", {
                 required: "Campo obligatorio",
                 pattern: {

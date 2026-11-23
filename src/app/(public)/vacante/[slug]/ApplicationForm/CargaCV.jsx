@@ -1,8 +1,10 @@
 "use client";
+/* eslint-disable @next/next/no-img-element -- vista previa local (blob:) del CV elegido */
 import React from "react";
+import { FileText } from "lucide-react";
 import UploadFiles from "@/components/UploadFiles";
-import { Button } from "@/components/ui/button";
 
+// CV obligatorio (PDF o imagen). La validación de «CV es obligatorio» sigue en el envío del formulario.
 export default function CargaCV({ files, setFiles }) {
   const handleDrop = (acceptedFiles) => {
     const withPreview = acceptedFiles.map((file) => {
@@ -13,52 +15,33 @@ export default function CargaCV({ files, setFiles }) {
   };
 
   return (
-    <div className="pb-5">
-      <h3 className="text-lg font-bold text-slate-700 mb-2">
-        Curriculum Vitae
+    <div className="vc-cv">
+      <h3>
+        Tu CV <span className="vc-req-marca" aria-hidden="true">*</span>
       </h3>
+      <p className="vc-nota">PDF o foto de tu solicitud o currículum.</p>
 
       {files.length > 0 ? (
-        <div className="space-y-4">
-          <ul className="space-y-4">
-            {files.map(({ file, preview }, idx) => (
-              <li key={idx}>
-                <span className="flex gap-3 items-center">
-                  <strong>{file.name}</strong>
-                  <Button onClick={() => setFiles([])}>
-                    Cargar nuevamente
-                  </Button>
-                </span>
-                <div className="mt-2">
-                  {file.type.startsWith("image/") ? (
-                    <img
-                      src={preview}
-                      alt={file.name}
-                      className="max-w-full max-h-64 rounded-lg border"
-                    />
-                  ) : file.type === "application/pdf" ? (
-                    <iframe
-                      src={preview}
-                      className="w-full h-64 border rounded-lg"
-                      title={file.name}
-                    />
-                  ) : (
-                    <a
-                      href={preview}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 underline"
-                    >
-                      Ver archivo
-                    </a>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <ul className="vc-cv-lista">
+          {files.map(({ file, preview }, idx) => (
+            <li key={idx}>
+              <div className="vc-cv-archivo">
+                <FileText aria-hidden="true" />
+                <strong>{file.name}</strong>
+                <button type="button" className="vc-texto-btn" onClick={() => setFiles([])}>
+                  Cambiar archivo
+                </button>
+              </div>
+              {file.type.startsWith("image/") ? (
+                <img src={preview} alt={`Vista previa de ${file.name}`} className="vc-cv-vista" />
+              ) : file.type === "application/pdf" ? (
+                <iframe src={preview} className="vc-cv-vista" title={`Vista previa de ${file.name}`} />
+              ) : null}
+            </li>
+          ))}
+        </ul>
       ) : (
-        <UploadFiles onDrop={handleDrop} />
+        <UploadFiles onDrop={handleDrop} className="vc-cv-zona" text="Toca para elegir tu CV o arrástralo aquí" />
       )}
     </div>
   );
