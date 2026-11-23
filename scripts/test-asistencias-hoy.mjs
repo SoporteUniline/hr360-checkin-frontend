@@ -250,3 +250,24 @@ test("hora actual y fecha en la zona de la empresa", async () => {
   assert.equal(textoFechaHoy("America/Mexico_City", d), "Lunes 23 de noviembre");
   assert.equal(textoFechaHoy("America/Mexico_City", d, { corto: true }), "Lun 23 nov");
 });
+
+// Columnas Entrada / Salida / Comida (pedido del 23/11/2026).
+test("checadas del día: entrada, salida y comida reales; la salida a comer no es su salida", async () => {
+  const { checadasDelDia } = await import("../src/lib/asistencia/hoy.mjs");
+  const base = { tramos: [], hayAbierto: false, abierto: null, comida: null };
+  // En comida: un tramo cerrado a las 11:34 y la comida abierta.
+  const comiendo = checadasDelDia({ estado: "en_comida", dia: { ...base, tramos: [{ entrada: "2026-11-23 09:18:00", salida: "2026-11-23 11:34:00" }], comida: { salida: "2026-11-23 11:34:00", regreso: null, minutos: null } } });
+  assert.deepEqual(comiendo, { entrada: "9:18 a.m.", salida: null, comida: "11:34 a.m. – …", enComida: true });
+  // Regresó de comer y sigue trabajando (tramo abierto): sin salida, comida con minutos.
+  const regreso = checadasDelDia({ estado: "trabajando", dia: { ...base, tramos: [{ entrada: "2026-11-23 09:00:00", salida: "2026-11-23 13:00:00" }], hayAbierto: true, abierto: "2026-11-23 13:56:00", comida: { salida: "2026-11-23 13:00:00", regreso: "2026-11-23 13:56:00", minutos: 56 } } });
+  assert.equal(regreso.salida, null);
+  assert.equal(regreso.comida, "1:00 p.m. – 1:56 p.m. · 56 min");
+  // Ya salió.
+  const salio = checadasDelDia({ estado: "ya_salio", dia: { ...base, tramos: [{ entrada: "2026-11-23 09:00:00", salida: "2026-11-23 13:00:00" }, { entrada: "2026-11-23 14:00:00", salida: "2026-11-23 18:05:00" }] } });
+  assert.deepEqual([salio.entrada, salio.salida, salio.comida], ["9:00 a.m.", "6:05 p.m.", null]);
+  // Trabajando sin comida (solo entrada).
+  const trabajando = checadasDelDia({ estado: "trabajando", dia: { ...base, hayAbierto: true, abierto: "2026-11-23 08:56:00" } });
+  assert.deepEqual([trabajando.entrada, trabajando.salida], ["8:56 a.m.", null]);
+  // No ha llegado.
+  assert.deepEqual(checadasDelDia({ estado: "no_ha_llegado", dia: base }), { entrada: null, salida: null, comida: null, enComida: false });
+});

@@ -27,7 +27,7 @@ siga abierto o no llegue su hora de salida. Varios tramos: se suman los cerrados
 - Búsqueda y área en pantalla (no cambian los filtros de «Registros»). Lista agrupada: Requieren atención (Faltó, No ha
   llegado, Salió antes, comida pasada) → En comida → Trabajando → Próximos → Ya salieron → No laboran hoy.
 - Renglón: iniciales, nombre (abre la ficha), área (y «debe X» de la cuenta de horas, antes columna «Debe tiempo»),
-  horario, estado, checada real, jornada y «Ver día» (la ventana de edición de Registros).
+  horario, estado (con el detalle), entrada, salida, comida, jornada y «Ver día» (la ventana de edición de Registros).
 - Celular (≤ 768 px): encabezado propio con las tres pestañas, tarjetas con desplazamiento horizontal (lo urgente
   primero) y renglones como tarjetas; toda la tarjeta abre el día (≥ 44 px). «Registros» en celular sigue siendo la
   vista móvil de siempre, ahora con las pestañas arriba.

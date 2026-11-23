@@ -81,7 +81,7 @@ export function diaDesdeRegistro(r, aLocal = (v) => v) {
     tramos,
     hayAbierto,
     abierto,
-    comida: r?.comida_checada ? { salida: local(r.comida_checada.salida), regreso: local(r.comida_checada.regreso) } : null,
+    comida: r?.comida_checada ? { salida: local(r.comida_checada.salida), regreso: local(r.comida_checada.regreso), minutos: r.comida_checada.minutos ?? null } : null,
     permisos: permisos
       .filter((p) => ["llega_tarde", "sale_antes", "sale_regresa"].includes(p?.tipo_horas))
       .map((p) => ({ tipo: p.tipo_horas, inicio: hhmm(p.hora_inicio), fin: hhmm(p.hora_fin) })),
@@ -350,4 +350,22 @@ export function textoFechaHoy(zona, fecha = new Date(), { corto = false } = {}) 
   const dia = String(p.weekday ?? "").replace(/\.$/, "");
   const mes = String(p.month ?? "").replace(/\.$/, "");
   return `${dia.charAt(0).toUpperCase()}${dia.slice(1)} ${p.day}${corto ? " " : " de "}${mes}`;
+}
+
+// (23/11/2026, pedido del dueño) Columnas Entrada / Salida / Comida de la vista Hoy: horas reales del día.
+// - Entrada: la primera checada de entrada.
+// - Salida: la última salida, solo si ya no tiene un tramo abierto ni está en comida (la salida a comer no es su salida).
+// - Comida: «11:34 a.m. – …» mientras come; «11:34 a.m. – 12:30 p.m. · 56 min» cuando regresó.
+export function checadasDelDia(r) {
+  const d = r.dia;
+  const h = (v) => (v ? horaDe(marcaEnMinutos(v)) : null);
+  const entrada = h(d.tramos[0]?.entrada ?? d.abierto);
+  const enComida = Boolean(d.comida?.salida && !d.comida.regreso);
+  const salida = d.hayAbierto || enComida || r.estado === "en_comida" ? null : h(d.tramos.at(-1)?.salida);
+  let comida = null;
+  if (d.comida?.salida) {
+    const minutos = d.comida.minutos == null ? NaN : Number(d.comida.minutos);
+    comida = `${h(d.comida.salida)} – ${d.comida.regreso ? h(d.comida.regreso) : "…"}${d.comida.regreso && Number.isFinite(minutos) ? ` · ${minutos} min` : ""}`;
+  }
+  return { entrada, salida, comida, enComida };
 }

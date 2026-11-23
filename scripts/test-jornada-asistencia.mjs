@@ -118,3 +118,11 @@ test("captura nocturna: salida menor o igual a la entrada cae al día siguiente"
   assert.equal(sumarDias("2026-11-13T00:00:00", 1), "2026-11-14");
   assert.equal(horaAMinutos("25:00"), null);
 });
+
+test("en comida (o ya regresó de comer) no sale «No marcó salida a comer»", () => {
+  // Alondra: entró, checó salida a comer a las 11:34 y sigue comiendo → un solo tramo, pero sí marcó su comida.
+  const r = { ...reg(comida), salida: "2026-11-13 11:34:00", ...tramos([["2026-11-13 08:00:00", "2026-11-13 11:34:00"]]) };
+  assert.equal(sinSalidaAComer(r), true, "sin dato de comida, un tramo sigue alertando");
+  assert.equal(sinSalidaAComer({ ...r, comida_checada: { salida: "2026-11-13 11:34:00", regreso: null, minutos: null } }), false);
+  assert.equal(sinSalidaAComer({ ...r, comida_checada: { salida: "2026-11-13 11:34:00", regreso: "2026-11-13 12:30:00", minutos: 56 } }), false);
+});
