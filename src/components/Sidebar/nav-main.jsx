@@ -57,6 +57,7 @@ import {
   CalendarClock,
   TriangleAlert,
   Package,
+  ListChecks,
 } from "lucide-react";
 import {
   ChevronDown,
@@ -444,6 +445,20 @@ const menuGroups = [
         matchPrefix: "/panel/activos",
         rol: "Recruiter",
         icon: LayoutDashboard,
+      },
+    ],
+  },
+  {
+    // (23/11/2026) Tareas y Checklists: PROTOTIPO con datos de ejemplo para aprobar el diseño (aún sin base de datos).
+    group: "TAREAS",
+    groupIcon: ListChecks,
+    items: [
+      {
+        title: "Tareas y checklists",
+        url: "/panel/tareas",
+        matchPrefix: "/panel/tareas",
+        rol: "Recruiter",
+        icon: ListChecks,
       },
     ],
   },
