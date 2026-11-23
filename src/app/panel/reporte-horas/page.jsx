@@ -39,6 +39,7 @@ import { BarChart3, FileDown, FileSpreadsheet, Search } from "lucide-react";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import ResumenLey, { Chip } from "./ResumenLey";
 import { formatearMinutos } from "@/lib/asistencia/jornada.mjs";
+import { textoComida, resumenComida } from "@/lib/reporte/comida.mjs";
 
 function fmtDate(d) {
   const dd = new Date(d);
@@ -468,6 +469,7 @@ export default function ReporteHorasPage() {
               <td style="text-align:center">${e}</td>
               <td style="text-align:center">${s}</td>
               <td style="text-align:center">${totalHorasTrabajadas}</td>
+              <td style="text-align:center${d.comida?.excedente > 0 ? ';color:#dc2626' : ''}">${textoComida(d.comida)}</td>
               <td style="text-align:center"><span class="badge ${badge}">${
                 d.estado || ""
               }</span></td>
@@ -478,7 +480,7 @@ export default function ReporteHorasPage() {
               Array.isArray(d.movimientos) && d.movimientos.length > 1
                 ? `
               <tr>
-                <td colspan="7" class="details">
+                <td colspan="8" class="details">
                   ${d.movimientos
                     .filter((m) => m.entrada && m.salida)
                     .map((m) => {
@@ -542,6 +544,7 @@ export default function ReporteHorasPage() {
                   <th>Entrada</th>
                   <th>Salida</th>
                   <th>Horas</th>
+                  <th>Comida</th>
                   <th>Estado</th>
                   <th>Motivo</th>
                   <th>Notas</th>
@@ -564,6 +567,9 @@ export default function ReporteHorasPage() {
                   <td><div class="h">Horas Extra</div><div class="v">${
                     r.resumen.horasExtrasLaboradas || "0:00"
                   }</div><div class="s">autorizadas</div></td>
+                  <td><div class="h">Comida</div><div class="v">${
+                    resumenComida(r.resumen.comida).valor
+                  }</div><div class="s">${resumenComida(r.resumen.comida).detalle}</div></td>
                 </tr>
               </table>
             </div>
@@ -819,9 +825,14 @@ export default function ReporteHorasPage() {
             value: r.resumen?.horasExtrasLaboradas || "0:00",
             sub: "autorizadas",
           },
+          {
+            label: "Comida",
+            value: resumenComida(r.resumen?.comida).valor,
+            sub: resumenComida(r.resumen?.comida).detalle,
+          },
         ];
         const boxH = 52;
-        const boxW = contentW / 4;
+        const boxW = contentW / items.length;
         pdf.setDrawColor(...HAIRLINE);
         pdf.setLineWidth(0.6);
         pdf.line(marginX, y, pageWidth - marginX, y);
@@ -906,6 +917,7 @@ export default function ReporteHorasPage() {
             fmtHora(primeraEntrada),
             fmtHora(ultimaSalida),
             totalHorasTrabajadas || "0:00",
+            textoComida(d.comida) || "—",
             estado,
             stripEmojis(d.motivo) || "—",
             String(d.notas || "—"),
@@ -925,7 +937,7 @@ export default function ReporteHorasPage() {
               rows.push([
                 {
                   content: detalle,
-                  colSpan: 7,
+                  colSpan: 8,
                   styles: {
                     font: FONT,
                     fontStyle: "normal",
@@ -982,6 +994,7 @@ export default function ReporteHorasPage() {
               "Entrada",
               "Salida",
               "Horas",
+              "Comida",
               "Estado",
               "Motivo",
               "Notas",
@@ -1013,9 +1026,10 @@ export default function ReporteHorasPage() {
             0: { cellWidth: 62 },
             1: { cellWidth: 60, halign: "center" },
             2: { cellWidth: 60, halign: "center" },
-            3: { cellWidth: 42, halign: "center" },
-            4: { cellWidth: 56, halign: "center" },
-            5: { cellWidth: 80 },
+            3: { cellWidth: 38, halign: "center" },
+            4: { cellWidth: 70, halign: "center", fontSize: 6.6 },
+            5: { cellWidth: 50, halign: "center" },
+            6: { cellWidth: 66 },
           },
           didParseCell: (data) => {
             if (data.section === "head") {
@@ -1341,7 +1355,7 @@ export default function ReporteHorasPage() {
                     <div className="lg:col-span-4">
                       <section
                         data-summary-section="true"
-                        className={`grid ${reporte.ley ? "grid-cols-5" : "grid-cols-4"} gap-0 border border-gray-300 rounded-sm overflow-hidden bg-gray-50`}
+                        className={`grid ${reporte.ley ? "grid-cols-6" : "grid-cols-5"} gap-0 border border-gray-300 rounded-sm overflow-hidden bg-gray-50`}
                         aria-label="Resumen del periodo"
                       >
                         {(reporte.ley
@@ -1351,12 +1365,14 @@ export default function ReporteHorasPage() {
                               ["Extra dobles", formatearMinutos(reporte.ley.dobles)],
                               ["Extra triples", formatearMinutos(reporte.ley.triples)],
                               ["Por autorizar", formatearMinutos(reporte.ley.porAutorizar)],
+                              ["Comida", resumenComida(reporte.resumen?.comida).valor],
                             ]
                           : [
                               ["Total Horas", reporte.resumen?.totalHoras || "0:00"],
                               ["Días", reporte.resumen?.diasTrabajados || "0"],
                               ["Promedio", reporte.resumen?.promedioHoras || "0:00"],
                               ["Horas Extra", reporte.resumen?.horasExtrasLaboradas || "0:00"],
+                              ["Comida", resumenComida(reporte.resumen?.comida).valor],
                             ]
                         ).map(([etiqueta, valor], i) => (
                           <div key={etiqueta} className={`text-center px-2 py-3 bg-gray-50 ${i ? "border-l border-gray-300" : ""}`}>
@@ -1386,6 +1402,9 @@ export default function ReporteHorasPage() {
                           </th>
                           <th className="p-2 border text-xs uppercase font-semibold text-gray-700">
                             Horas
+                          </th>
+                          <th className="p-2 border text-xs uppercase font-semibold text-gray-700">
+                            Comida
                           </th>
                           <th className="p-2 border text-xs uppercase font-semibold text-gray-700">
                             Estado
@@ -1485,6 +1504,9 @@ export default function ReporteHorasPage() {
                                 <td className="p-2 border text-center align-top">
                                   {totalHorasTrabajadas}
                                 </td>
+                                <td className={`p-2 border text-center align-top text-xs ${d.comida?.excedente > 0 ? "font-semibold text-red-600" : "text-zinc-600"}`}>
+                                  {textoComida(d.comida) || <span className="text-zinc-400">—</span>}
+                                </td>
                                 <td className="p-2 border text-center align-top">
                                   <EstadoPill value={d.estado} />
                                 </td>
@@ -1527,7 +1549,7 @@ export default function ReporteHorasPage() {
                                   data-detail-row="true"
                                 >
                                   <td
-                                    colSpan={reporte.ley ? 8 : 7}
+                                    colSpan={reporte.ley ? 9 : 8}
                                     className="p-2 pl-6 border-t text-xs text-zinc-600 font-mono"
                                   >
                                     <div

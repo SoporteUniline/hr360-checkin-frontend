@@ -26,6 +26,7 @@ import { useSnackbar } from "notistack";
 import useHorasExtra from "@/hooks/useHorasExtra";
 import AccionesMasivas from "./AccionesMasivas";
 import { minutosDescanso, sinSalidaAComer } from "@/lib/asistencia/jornada.mjs";
+import { textoComida } from "@/lib/reporte/comida.mjs";
 import {
   ETIQUETAS_ESTADO, cambiosAutorizar, cambiosNoAutorizar, cambiosQuitar,
   estadoHorasExtra, etiquetaHorasExtra, ordenarPorHorasExtra,
@@ -48,6 +49,7 @@ export const COLUMNAS_ASISTENCIA = [
   { key: "entrada", label: "Entrada", extra: false },
   { key: "salida", label: "Salida", extra: false },
   { key: "jornada", label: "Jornada", extra: false },
+  { key: "comida", label: "Comida", extra: false },
   { key: "hrs_diferencia", label: "Balance del día", extra: false },
   { key: "autorizado_por", label: "Autorizado por", extra: true },
   { key: "asistio", label: "Asistió", extra: false },
@@ -447,6 +449,7 @@ export default function AsistenciaTable({
     { header: "Entrada", key: "entrada" },
     { header: "Salida", key: "salida" },
     { header: "Jornada", key: "jornada" },
+    { header: "Comida (botón «Salir a comer»)", key: "comida_checada" },
     { header: "Balance del día", key: "hrs_diferencia" },
     { header: "Autorizado por", key: "autorizado_por" },
     { header: "¿Asistió?", key: "asistencia" },
@@ -524,6 +527,7 @@ export default function AsistenciaTable({
       extras_autorizadas_por: fmt("extras_autorizadas_por", r.extras_autorizadas_por),
       hrs_comida: minutosDescanso(r) != null ? formatearMinutos(minutosDescanso(r)) : r.hrs_comida ?? "-",
       sin_salida_comida: sinSalidaAComer(r) ? "Sí" : "No",
+      comida_checada: textoComida(r.comida_checada) || "-",
       notas: r.notas ?? "-",
       notas_hrs_extra: r.notas_hrs_extra ?? "-",
       estadoAsistencia: r.estadoAsistencia,
@@ -938,6 +942,13 @@ export default function AsistenciaTable({
                   >
                     Jornada{" "}
                     <span className="font-medium normal-case tracking-normal text-slate-400">trabajado de programado</span>
+                  </TableHead>
+                )}
+                {colVisible("comida") && (
+                  <TableHead
+                    className={`${TH_STICKY} text-[10px] font-semibold uppercase tracking-[0.05em] text-slate-500 text-center`}
+                  >
+                    Comida
                   </TableHead>
                 )}
 

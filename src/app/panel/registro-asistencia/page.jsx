@@ -111,7 +111,20 @@ export default function ControlAsistencia() {
 
   // Las columnas guardadas se cargan en cliente (localStorage no existe en SSR)
   useEffect(() => {
-    setVisibleColumns(cargarColumnasGuardadas(COLUMNAS_ASISTENCIA));
+    const columnas = cargarColumnasGuardadas(COLUMNAS_ASISTENCIA);
+    // (23/11/2026) Columna nueva «Comida»: se muestra una vez aunque haya columnas guardadas; si la quitan, se respeta.
+    try {
+      if (!window.localStorage.getItem("adamia-asistencia-col-comida")) {
+        window.localStorage.setItem("adamia-asistencia-col-comida", "1");
+        if (!columnas.includes("comida")) {
+          const i = columnas.indexOf("jornada");
+          columnas.splice(i >= 0 ? i + 1 : columnas.length, 0, "comida");
+        }
+      }
+    } catch {
+      // sin almacenamiento local: se usan las columnas cargadas
+    }
+    setVisibleColumns(columnas);
   }, []);
 
   const DEFAULT_SORT_CONFIG = {
