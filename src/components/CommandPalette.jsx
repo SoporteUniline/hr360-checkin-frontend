@@ -6,6 +6,8 @@ import { Command } from "cmdk";
 import axiosInstance from "@/lib/axios";
 import { useAuth } from "@/context/AuthContext";
 import { RECRUITMENT_NAV } from "@/components/reclutamiento/navigation";
+import { useModulosActivos } from "@/components/modulos/useModulos";
+import { rutaPermitida } from "@/lib/modulos/menu.mjs";
 import { isNativeClient } from "@/lib/native-app";
 import {
   Users,
@@ -520,6 +522,7 @@ export function CommandPalette() {
     }
   }, []);
 
+  const { activos: activosModulo, opciones: opcionesModulo } = useModulosActivos();
   // Rol efectivo: "User" → "Recruiter", igual que en NavMain
   const effectiveRole =
     dataUser?.tipo_usuario === "User" ? "Recruiter" : dataUser?.tipo_usuario;
@@ -531,11 +534,12 @@ export function CommandPalette() {
     return ALL_NAV_ITEMS.filter(
       (item) =>
         item.rol === effectiveRole &&
+        rutaPermitida(item.url, activosModulo, opcionesModulo) && // (03/12/2026) módulos por empresa
         (!isNative || item.url !== "/panel/mi-suscripcion") &&
         (item.title.toLowerCase().includes(q) ||
           item.section.toLowerCase().includes(q)),
     ).slice(0, 6);
-  }, [query, effectiveRole, isNative]);
+  }, [query, effectiveRole, isNative, activosModulo, opcionesModulo]);
 
   // Abrir/cerrar con Cmd+K / Ctrl+K
   useEffect(() => {

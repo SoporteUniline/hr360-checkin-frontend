@@ -47,9 +47,9 @@ try {
   const pg = await ctx.newPage();
   pg.on("pageerror", (e) => errores.push(e.message));
 
-  // 1) El dueño activa el módulo.
+  // 1) El dueño activa el módulo (03/12/2026: aviso común de «Módulos por empresa», con «Activar» ahí mismo).
   await pg.goto(base + "/panel/tareas", { waitUntil: "domcontentloaded" });
-  await pg.getByText("Tareas y Checklists no está activo en esta empresa").waitFor({ timeout: 30000 });
+  await pg.locator("[data-modulo-inactivo='tareas']").getByText("Este módulo no está activo para tu empresa").waitFor({ timeout: 30000 });
   await pg.getByRole("button", { name: "Activar Tareas y Checklists" }).click();
   await pg.getByText("Aún no hay tareas.").waitFor({ timeout: 15000 });
 

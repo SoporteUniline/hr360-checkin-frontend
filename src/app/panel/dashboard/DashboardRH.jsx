@@ -49,6 +49,8 @@ import {
   formatTimeMexico,
   getAnniversaryYears,
 } from "./lib/format";
+import { useModulosActivos } from "@/components/modulos/useModulos";
+import { rutaPermitida } from "@/lib/modulos/menu.mjs";
 
 const hasOwn = (object, key) =>
   Boolean(object) && Object.prototype.hasOwnProperty.call(object, key);
@@ -1019,9 +1021,11 @@ const QUICK_ACTIONS = [
 ];
 
 function QuickActions() {
+  // (03/12/2026) Módulos por empresa: solo accesos a lo que la empresa tiene activo (p. ej. Permisos).
+  const { activos, opciones } = useModulosActivos();
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-      {QUICK_ACTIONS.map(({ href, label, icon: Icon }) => (
+      {QUICK_ACTIONS.filter(({ href }) => rutaPermitida(href, activos, opciones)).map(({ href, label, icon: Icon }) => (
         <Link
           key={href}
           href={href}

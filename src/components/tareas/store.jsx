@@ -106,7 +106,7 @@ export function TareasProvider({ modo = "panel", idEmpresa = null, children }) {
     modo, idEmpresa, hoy: datos?.hoy ?? misChecklists.data?.hoy ?? p.hoy,
     cargando: esPanel ? (p.modulo.isLoading || (p.modulo.data?.activo && p.panel.isLoading)) : misTareas.isLoading || misChecklists.isLoading,
     error: esPanel ? p.modulo.error || p.panel.error : misTareas.error || misChecklists.error,
-    modulo: esPanel ? { activo: p.modulo.data?.activo ?? null, puedeActivar: Boolean(p.modulo.data?.puede_activar) } : { activo: true },
+    modulo: esPanel ? { activo: p.modulo.data?.activo ?? null, puedeActivar: p.modulo.data?.derecho ?? Boolean(p.modulo.data?.puede_activar) } : { activo: true },
     activarModulo: () => ejecutar(() => axios.post(`${BASE}/modulo`, { empresa: idEmpresa }), { exito: "Listo, el módulo de Tareas quedó activo." }).then((r) => { p.modulo.mutate(); return r; }),
     tareas, proyectos, personas, checklists,
     puestos: datos?.puestos ?? [], sucursales: datos?.sucursales ?? [], departamentos: datos?.departamentos ?? [],
