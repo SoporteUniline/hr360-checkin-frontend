@@ -123,7 +123,8 @@ export default function PanelEditarAsistencia({
               <p className="text-[11px] text-slate-400">Con el lápiz corriges una checada; la hora original del reloj queda tachada.</p>
               {/* Agregar comida: disponible cuando el día tiene entrada y salida y un solo tramo
                   (o el servidor aún no manda tramos). Se valida otra vez en el servidor. */}
-              {registro.entrada && registro.salida &&
+              {/* (23/11/2026) Si ya checó su comida («Salir a comer»), no se ofrece agregarla. */}
+              {registro.entrada && registro.salida && !registro.comida_checada?.salida &&
                 (!Array.isArray(registro.tramos_checadas) || registro.tramos_checadas.length <= 1) && (
                 <BotonAgregarComida
                   variante="boton"
