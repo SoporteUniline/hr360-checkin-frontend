@@ -187,9 +187,9 @@ export default function VacanciesView({ data, filters, setFilters, onAction, onO
             const candidates = data.candidates.filter(
               (candidate) => candidate.vacancyId === vacancy.id
             );
-            const viaWhatsapp = (data.whatsappCandidates || []).filter(
-              (candidate) => candidate.vacancyId === vacancy.id
-            ).length;
+            const viaWhatsapp =
+              (data.whatsappCandidates || []).filter((candidate) => candidate.vacancyId === vacancy.id).length +
+              candidates.filter((candidate) => candidate.origin === "whatsapp").length;
             const newCount = candidates.filter((candidate) => candidate.stage === "new").length;
             const branch = data.branches.find((item) => item.id === vacancy.branchId);
             return (
