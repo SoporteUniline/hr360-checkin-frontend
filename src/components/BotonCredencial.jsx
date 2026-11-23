@@ -1,6 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@iconify/react";
+import { qrComoDataUrl } from "@/lib/qrImagen.mjs";
 
 const BotonCredencial = ({ empleado, imagePreview }) => {
   const generarCredencial = async () => {
@@ -29,10 +30,8 @@ const BotonCredencial = ({ empleado, imagePreview }) => {
 
       // Cargar código QR en la posición de la foto
       try {
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${
-          empleado.nip || "000000"
-        }&size=1000x1000`;
-        const qrImg = await cargarImagen(qrUrl);
+        // (23/11/2026) QR generado aquí mismo (antes api.qrserver.com recibía el NIP de cada empleado).
+        const qrImg = await cargarImagen(qrComoDataUrl(empleado.nip || "000000", { celda: 20, margen: 1 }));
 
         const qrSize = 300;
         const qrX = 100;
@@ -42,8 +41,10 @@ const BotonCredencial = ({ empleado, imagePreview }) => {
         ctx.fillStyle = "#ffffff";
         ctx.fillRect(qrX - 10, qrY - 10, qrSize + 20, qrSize + 20);
 
-        // Dibujar QR
+        // Dibujar QR (sin suavizado: bordes nítidos para que lo lean los checadores)
+        ctx.imageSmoothingEnabled = false;
         ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+        ctx.imageSmoothingEnabled = true;
 
         // Borde del QR
         ctx.strokeStyle = "#2563eb";
