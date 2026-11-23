@@ -3,10 +3,10 @@
 // Campo de respuesta de una pregunta de checklist (23/11/2026). El MISMO componente sirve para llenar en la app, para la
 // vista previa al crear el checklist y para que el jefe corrija al revisar. Botones grandes (sin escribir) salvo en número
 // y texto; «No aplica» si la pregunta lo permite; foto de evidencia donde se pide.
-import { Camera, CheckSquare, CircleDot, Hash, Image as ImageIcon, ListChecks, Type } from "lucide-react";
-import { puntajePregunta } from "@/lib/tareas/preguntas.mjs";
+import { AlignLeft, Calendar, CalendarClock, Camera, CheckSquare, CircleDot, Hash, Image as ImageIcon, ListChecks, Type } from "lucide-react";
+import { esCalificable, puntajePregunta } from "@/lib/tareas/preguntas.mjs";
 
-export const ICONOS = { si_no: CheckSquare, opcion: CircleDot, multiple: ListChecks, numero: Hash, foto: ImageIcon, texto: Type };
+export const ICONOS = { si_no: CheckSquare, opcion: CircleDot, multiple: ListChecks, numero: Hash, foto: ImageIcon, texto: Type, texto_largo: AlignLeft, fecha: Calendar, fecha_hora: CalendarClock };
 
 export function IconoTipo({ tipo, className = "size-4" }) {
   const Icono = ICONOS[tipo] ?? Type;
@@ -83,8 +83,16 @@ export function CampoRespuesta({ pregunta: p, respuesta, onChange, grande = fals
           ) : null}
           {p.tipo === "foto" ? <SubirFoto url={r.valor} etiqueta="Tomar foto" deshabilitado={deshabilitado} alSubir={(url) => poner({ valor: url })} /> : null}
           {p.tipo === "texto" ? (
-            <textarea aria-label={p.texto} rows={2} disabled={deshabilitado} value={r.valor ?? ""} onChange={(e) => poner({ valor: e.target.value })} placeholder="Escribe aquí…"
+            <input aria-label={p.texto} disabled={deshabilitado} value={r.valor ?? ""} onChange={(e) => poner({ valor: e.target.value })} placeholder="Escribe aquí…"
+              className={`${grande ? "h-12" : "h-10"} w-full rounded-xl border border-slate-300 px-3 text-base`} />
+          ) : null}
+          {p.tipo === "texto_largo" ? (
+            <textarea aria-label={p.texto} rows={3} disabled={deshabilitado} value={r.valor ?? ""} onChange={(e) => poner({ valor: e.target.value })} placeholder="Escribe aquí…"
               className="w-full rounded-xl border border-slate-300 px-3 py-2 text-base" />
+          ) : null}
+          {p.tipo === "fecha" || p.tipo === "fecha_hora" ? (
+            <input aria-label={p.texto} type={p.tipo === "fecha" ? "date" : "datetime-local"} disabled={deshabilitado} value={r.valor ?? ""} onChange={(e) => poner({ valor: e.target.value || null })}
+              className={`${grande ? "h-12" : "h-10"} rounded-xl border border-slate-300 px-3 text-base`} />
           ) : null}
         </div>
       ) : <p className="text-sm font-semibold text-slate-500">No aplica: no cuenta en la calificación.</p>}
@@ -97,7 +105,7 @@ export function CampoRespuesta({ pregunta: p, respuesta, onChange, grande = fals
             {na ? "Quitar «No aplica»" : "No aplica"}
           </button>
         ) : null}
-        {mostrarPuntaje && contestada ? <span className="ml-auto"><ChipPuntaje valor={puntaje} /></span> : null}
+        {mostrarPuntaje && contestada && esCalificable(p) ? <span className="ml-auto"><ChipPuntaje valor={puntaje} /></span> : null}
       </div>
     </div>
   );

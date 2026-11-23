@@ -22,7 +22,9 @@ Cada punto del checklist es una pregunta con tipo y valor (`src/lib/tareas/pregu
 - **Una opción**: cada opción vale un % (p. ej. Limpia 100 · Regular 50 · Sucia 0); alguna debe valer 100 %.
 - **Varias opciones**: cada elegida suma su %, hasta 100 %; juntas deben sumar al menos 100 %.
 - **Número con rango**: 100 % si está dentro (p. ej. 0 a 5 °C); vacío = sin límite.
-- **Foto**: 100 % si la sube. **Texto**: no se califica.
+- **Foto**: 100 % si la sube.
+- **Solo registran** (no cuentan en el %): Texto corto, Texto largo, Fecha, Fecha y hora (p. ej. caducidad, hora de
+  llegada del proveedor). En el editor aparecen en un grupo aparte de los que «Se califican».
 - Por pregunta: **peso** (se muestra cuánto vale del total), obligatoria, permite «No aplica» (no cuenta en el total),
   pide foto de evidencia. Opciones listas (Limpia/Regular/Sucia, Bueno/Regular/Malo…), plantillas copiando otro checklist,
   validación junto a cada pregunta y **vista previa del celular** que se contesta de prueba.

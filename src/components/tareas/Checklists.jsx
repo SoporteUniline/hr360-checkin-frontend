@@ -6,7 +6,7 @@
 // Reglas y validación: lib/tareas/preguntas.mjs.
 import { useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, Copy, Plus, Smartphone, Trash2 } from "lucide-react";
-import { OPCIONES_RAPIDAS, TIPOS, calificarRespuestas, problemasChecklist, valorDePregunta } from "@/lib/tareas/preguntas.mjs";
+import { OPCIONES_RAPIDAS, TIPOS, calificarRespuestas, esCalificable, problemasChecklist, valorDePregunta } from "@/lib/tareas/preguntas.mjs";
 import { useTareas } from "./store";
 import { CampoRespuesta, IconoTipo } from "./Preguntas";
 import { botonPrimario, botonSecundario, campo, campoBase, colorCalificacion, etiqueta } from "./comun";
@@ -26,15 +26,23 @@ function configInicial(tipo, nuevoId, previa = {}) {
   return {};
 }
 
+// Tipos en dos grupos para que se entienda a simple vista qué cuenta en la calificación.
 function SelectorTipo({ valor, onElegir, etiquetaGrupo }) {
-  return (
-    <div role="group" aria-label={etiquetaGrupo} className="flex flex-wrap gap-1.5">
-      {TIPOS.map((t) => (
+  const grupo = (califica, titulo) => (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="w-full text-[11px] font-semibold uppercase tracking-[0.06em] text-slate-400 sm:w-auto sm:pr-1">{titulo}</span>
+      {TIPOS.filter((t) => t.califica === califica).map((t) => (
         <button key={t.clave} type="button" aria-pressed={valor === t.clave} title={t.ayuda} onClick={() => onElegir(t.clave)}
           className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg border px-2.5 text-[12.5px] font-semibold ${valor === t.clave ? "border-brand bg-blue-50 text-brand" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"}`}>
           <IconoTipo tipo={t.clave} className="size-3.5" />{t.texto}
         </button>
       ))}
+    </div>
+  );
+  return (
+    <div role="group" aria-label={etiquetaGrupo} className="space-y-1.5">
+      {grupo(true, "Se califican")}
+      {grupo(false, "Solo registran")}
     </div>
   );
 }
@@ -87,7 +95,7 @@ function TarjetaPregunta({ p, i, total, preguntas, cambiar, mover, duplicar, qui
           <button type="button" aria-label={`Quitar pregunta ${i + 1}`} onClick={quitar} className="rounded p-2 text-slate-400 hover:bg-slate-100 hover:text-red-600"><Trash2 className="size-4" /></button>
         </span>
       </div>
-      <SelectorTipo valor={p.tipo} etiquetaGrupo={`Tipo de respuesta de la pregunta ${i + 1}`} onElegir={(tipo) => cambiar({ tipo, ...configInicial(tipo, nuevoId, p), ...(tipo === "foto" || tipo === "texto" ? { pideFoto: false } : {}) })} />
+      <SelectorTipo valor={p.tipo} etiquetaGrupo={`Tipo de respuesta de la pregunta ${i + 1}`} onElegir={(tipo) => cambiar({ tipo, ...configInicial(tipo, nuevoId, p), ...(tipo === "foto" || !TIPOS.find((t) => t.clave === tipo)?.califica ? { pideFoto: false, permiteNA: false } : {}) })} />
 
       <div className="rounded-lg bg-slate-50 p-3">
         {p.tipo === "si_no" ? (
@@ -109,19 +117,22 @@ function TarjetaPregunta({ p, i, total, preguntas, cambiar, mover, duplicar, qui
           </div>
         ) : null}
         {p.tipo === "foto" ? <p className="text-[13px] text-slate-600">Vale 100 % si sube la foto.</p> : null}
-        {p.tipo === "texto" ? <p className="text-[13px] text-slate-600">Para comentarios u observaciones. No se califica.</p> : null}
+        {p.tipo === "texto" ? <p className="text-[13px] text-slate-600">Una línea (un nombre, un folio). Solo se registra; no cuenta en el %.</p> : null}
+        {p.tipo === "texto_largo" ? <p className="text-[13px] text-slate-600">Párrafo para observaciones. Solo se registra; no cuenta en el %.</p> : null}
+        {p.tipo === "fecha" ? <p className="text-[13px] text-slate-600">Elige una fecha del calendario (p. ej. caducidad). Solo se registra; no cuenta en el %.</p> : null}
+        {p.tipo === "fecha_hora" ? <p className="text-[13px] text-slate-600">Fecha y hora (p. ej. cuándo llegó el proveedor). Solo se registra; no cuenta en el %.</p> : null}
       </div>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px]">
-        {p.tipo !== "texto" ? (
+        {esCalificable(p) ? (
           <label className="flex items-center gap-2 font-semibold text-slate-700">Peso
             <input aria-label={`Peso de la pregunta ${i + 1}`} type="number" min="1" max="10" className={`${campoBase} h-9 w-16`} value={p.peso} onChange={(e) => cambiar({ peso: e.target.value === "" ? "" : Number(e.target.value) })} />
             <span className="font-normal text-slate-500">= {vale ?? 0}% del checklist</span>
           </label>
         ) : null}
         <label className="flex items-center gap-1.5 font-medium text-slate-700"><input type="checkbox" className="size-4 accent-blue-600" checked={p.obligatoria} onChange={(e) => cambiar({ obligatoria: e.target.checked })} /> Obligatoria</label>
-        {p.tipo !== "texto" ? <label className="flex items-center gap-1.5 font-medium text-slate-700" title="Si no aplica ese día (p. ej. la terraza cerrada), no cuenta en la calificación"><input type="checkbox" className="size-4 accent-blue-600" checked={p.permiteNA} onChange={(e) => cambiar({ permiteNA: e.target.checked })} /> Permite «No aplica»</label> : null}
-        {p.tipo !== "foto" && p.tipo !== "texto" ? <label className="flex items-center gap-1.5 font-medium text-slate-700"><input type="checkbox" className="size-4 accent-blue-600" checked={p.pideFoto} onChange={(e) => cambiar({ pideFoto: e.target.checked })} /> Pide foto de evidencia</label> : null}
+        {esCalificable(p) ? <label className="flex items-center gap-1.5 font-medium text-slate-700" title="Si no aplica ese día (p. ej. la terraza cerrada), no cuenta en la calificación"><input type="checkbox" className="size-4 accent-blue-600" checked={p.permiteNA} onChange={(e) => cambiar({ permiteNA: e.target.checked })} /> Permite «No aplica»</label> : null}
+        {esCalificable(p) && p.tipo !== "foto" ? <label className="flex items-center gap-1.5 font-medium text-slate-700"><input type="checkbox" className="size-4 accent-blue-600" checked={p.pideFoto} onChange={(e) => cambiar({ pideFoto: e.target.checked })} /> Pide foto de evidencia</label> : null}
       </div>
       {error ? <p role="alert" className="text-[13px] font-semibold text-red-700">{error}</p> : null}
     </li>
@@ -221,7 +232,7 @@ function Editor({ inicial, alCerrar }) {
           </ol>
           {!eligiendo || f.preguntas.length ? (
             <div className="rounded-xl border border-dashed border-slate-300 bg-white p-3">
-              <p className="mb-2 text-[12.5px] font-semibold text-slate-600">Agregar pregunta</p>
+              <p className="mb-2 text-[12.5px] font-semibold text-slate-600">Agregar pregunta <span className="font-normal text-slate-400">· las primeras 5 se califican; las demás solo registran</span></p>
               <div className="flex flex-wrap gap-1.5">
                 {TIPOS.map((t) => (
                   <button key={t.clave} type="button" onClick={() => agregar(t.clave)} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[13px] font-semibold text-slate-700 hover:border-blue-300 hover:text-brand">

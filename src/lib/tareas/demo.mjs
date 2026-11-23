@@ -55,7 +55,7 @@ export function datosEjemplo(hoy = hoyMx()) {
         q("Temperatura del refrigerador", "numero", { min: 0, max: 5, unidad: "°C", peso: 2, obligatoria: true }),
         q("¿Qué está listo en los baños?", "multiple", { opciones: op(["Papel", 25], ["Jabón", 25], ["Toallas", 25], ["Piso seco", 25]), obligatoria: true }),
         q("¿Todo el equipo trae uniforme completo?", "si_no", { correcta: "si" }),
-        q("Observaciones", "texto"),
+        q("Observaciones", "texto_largo"),
       ] },
     { id: 2, nombre: "Cierre y corte de caja", frecuencia: "Diario", hora: "23:00", aQuien: "Puesto: Encargado de turno", sucursal: "Todas", revisa: "Su jefe inmediato", soloSiCheco: true, personas: [1, 5],
       preguntas: [
@@ -71,6 +71,9 @@ export function datosEjemplo(hoy = hoyMx()) {
         q("¿Qué contenedores tienen etiqueta de fecha?", "multiple", { opciones: op(["Carnes", 40], ["Lácteos", 30], ["Verduras", 30]) }),
         q("¿Las tablas de colores están separadas?", "si_no", { correcta: "si" }),
         q("Temperatura del congelador", "numero", { min: -25, max: -18, unidad: "°C", peso: 2, obligatoria: true }),
+        q("Caducidad más próxima en el refrigerador", "fecha"),
+        q("¿Cuándo se limpió la trampa de grasa?", "fecha_hora"),
+        q("Quién ayudó con la limpieza", "texto"),
       ] },
   ];
 
@@ -87,7 +90,10 @@ export function datosEjemplo(hoy = hoyMx()) {
         return { valor: ok ? Math.round(min + (max - min) * azar()) : max + 1 + Math.floor(azar() * 4) };
       }
       case "foto": return ok || azar() < 0.5 ? { valor: "ejemplo" } : {};
-      case "texto": return azar() < 0.3 ? { valor: "El refrigerador 3 hace ruido, ya avisé a mantenimiento." } : {};
+      case "texto": return azar() < 0.6 ? { valor: "Luis" } : {};
+      case "texto_largo": return azar() < 0.3 ? { valor: "El refrigerador 3 hace ruido, ya avisé a mantenimiento." } : {};
+      case "fecha": return { valor: d(2 + Math.floor(azar() * 5)) };
+      case "fecha_hora": return { valor: `${d(-1)}T${String(14 + Math.floor(azar() * 4)).padStart(2, "0")}:30` };
       default: return {};
     }
   };

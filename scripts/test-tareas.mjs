@@ -103,7 +103,7 @@ test("validación al crear un checklist", () => {
   assert.deepEqual(errores([{ id: 1, texto: "a", tipo: "multiple", opciones: [{ id: 1, texto: "x", valor: 40 }, { id: 2, texto: "y", valor: 30 }] }]), ["Las opciones juntas deben sumar al menos 100 %."]);
   assert.deepEqual(errores([{ id: 1, texto: "a", tipo: "opcion", opciones: [{ id: 1, texto: "x", valor: 100 }, { id: 2, texto: "", valor: 0 }] }]), ["Hay una opción sin texto."]);
   assert.deepEqual(errores([{ id: 1, texto: "a", tipo: "numero", min: 9, max: 2 }]), ["El mínimo es mayor que el máximo."]);
-  assert.deepEqual(errores([{ id: 1, texto: "a", tipo: "texto" }]), ["Agrega al menos una pregunta que se califique (no solo texto)."]);
+  assert.deepEqual(errores([{ id: 1, texto: "a", tipo: "texto" }]), ["Agrega al menos una pregunta que se califique (no solo textos o fechas)."]);
 });
 
 test("enviar: obligatorias contestadas (o no aplica) y foto donde se pide", () => {
@@ -123,6 +123,20 @@ test("corrección del jefe: cambia la respuesta, recalcula y deja historial", ()
   assert.equal(textoRespuesta(PREGUNTAS[2], { valor: ["p", "b"] }), "Piso, Barra");
   assert.equal(textoRespuesta(PREGUNTAS[3], { valor: 4 }), "4 °C");
   assert.equal(textoRespuesta(PREGUNTAS[3], { na: true }), "No aplica");
+});
+
+test("tipos que solo registran: texto corto, texto largo, fecha, fecha y hora", () => {
+  const pregs = [
+    { id: 1, texto: "¿Ordenada?", tipo: "si_no", correcta: "si", peso: 1 },
+    { id: 2, texto: "Folio", tipo: "texto" }, { id: 3, texto: "Notas", tipo: "texto_largo" },
+    { id: 4, texto: "Caducidad", tipo: "fecha", obligatoria: true }, { id: 5, texto: "Llegó", tipo: "fecha_hora" },
+  ];
+  for (const p of pregs.slice(1)) assert.equal(puntajePregunta(p, { valor: "x" }), null, `${p.tipo} no se califica`);
+  assert.equal(calificarRespuestas(pregs, { 1: { valor: "si" } }), 100, "solo cuenta la que califica");
+  assert.equal(textoRespuesta(pregs[3], { valor: "2026-12-05" }), "05/12/2026");
+  assert.equal(textoRespuesta(pregs[4], { valor: "2026-12-05T08:30" }), "05/12/2026 08:30");
+  assert.equal(motivoNoEnviar({ preguntas: pregs }, { 1: { valor: "si" } }), "Faltan 1 pregunta obligatoria.", "una fecha obligatoria se pide");
+  assert.deepEqual(problemasChecklist("X", pregs.slice(1)).map((p) => p.error), ["Agrega al menos una pregunta que se califique (no solo textos o fechas)."]);
 });
 
 test("productividad: las preguntas que más fallan", () => {

@@ -114,7 +114,7 @@ try {
   await pg.getByText("Escribe la pregunta.").waitFor();
   await pg.getByLabel("Nombre del checklist").fill("Revisión de baños");
   await pg.getByLabel("Pregunta 1", { exact: true }).fill("¿El área está ordenada?");
-  const agregar = (tipo) => pg.getByRole("region", { name: "Preguntas" }).getByRole("button", { name: tipo, exact: true }).last().click();
+  const agregar = (tipo) => pg.getByRole("region", { name: "Preguntas" }).getByRole("button", { name: tipo, exact: true }).last().click(); // botones «Agregar pregunta» (los últimos)
   await agregar("Una opción");
   await pg.getByLabel("Pregunta 2", { exact: true }).fill("¿Cómo está el área B?");
   await agregar("Varias opciones");
@@ -126,8 +126,12 @@ try {
   await pg.getByLabel("Mínimo de la pregunta 4").fill("30");
   await pg.getByLabel("Máximo de la pregunta 4").fill("40");
   await pg.getByLabel("Unidad de la pregunta 4").fill("°C");
-  await agregar("Texto");
+  await agregar("Texto largo");
   await pg.getByLabel("Pregunta 5", { exact: true }).fill("Observaciones");
+  await agregar("Fecha");
+  await pg.getByLabel("Pregunta 6", { exact: true }).fill("Caducidad del jabón");
+  await pg.getByText("Solo se registra; no cuenta en el %.").first().waitFor();
+  assert.equal(await pg.getByLabel("Peso de la pregunta 6").count(), 0, "una fecha no tiene peso");
   // Una opción sin 100 %: no deja guardar.
   await pg.getByLabel("Valor de la opción 1").first().fill("80");
   await pg.getByRole("button", { name: "Guardar y asignar" }).click();
@@ -141,7 +145,8 @@ try {
   await pr("¿Qué tiene el baño?").getByRole("button", { name: "Papel" }).click();
   await pr("¿Qué tiene el baño?").getByRole("button", { name: "Jabón" }).click();
   await pr("Temperatura del agua").getByRole("spinbutton").fill("35");
-  await previa.getByText("75%", { exact: true }).waitFor(); // 4 preguntas de peso 1; área B «Sucia» = 0
+  await pr("Caducidad del jabón").locator('input[type="date"]').fill("2026-12-31");
+  await previa.getByText("75%", { exact: true }).waitFor(); // 4 preguntas de peso 1; área B «Sucia» = 0; la fecha no cuenta
   await captura(pg, "tareas-checklist-editor");
   await pg.getByRole("button", { name: "Guardar y asignar" }).click();
   await pg.getByText("«Revisión de baños» quedó creado y asignado.").waitFor();
