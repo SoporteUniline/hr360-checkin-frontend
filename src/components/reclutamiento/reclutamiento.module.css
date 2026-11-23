@@ -1261,3 +1261,12 @@
     min-height: 44px;
   }
 }
+/* 04/12/2026 · Candidato de WhatsApp: botones de acción del proceso (también fuera de .root, en el chat). */
+.touch {
+  min-height: 36px;
+}
+@media (max-width: 767px) {
+  .touch {
+    min-height: 44px;
+  }
+}

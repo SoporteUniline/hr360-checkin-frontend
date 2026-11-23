@@ -125,13 +125,35 @@ export function aVacante(v, modalidades = []) {
   };
 }
 
+const CALIFICACION = { califica: "Califica", con_alerta: "Con alerta", no_califica: "No califica", incompleto: "Entrevista incompleta" };
 const contratacionVacia = () => ({ startDate: "", branchId: "", checklist: [], completedAt: null, employeeId: null, existingEmployee: false });
+
+// 04/12/2026: una postulación de WhatsApp (origen «whatsapp») tiene el mismo proceso que la de la página, más los datos
+// de su entrevista con el agente (calificación, resumen, puntajes), su conversación y la sugerencia de etapa del agente.
+function datosWhatsapp(w) {
+  if (!w) return null;
+  return {
+    conversationId: w.id_conversacion,
+    interviewId: w.id_entrevista,
+    linkedToWeb: Boolean(w.ligada_a_pagina),
+    rating: w.calificacion || "incompleto",
+    ratingLabel: CALIFICACION[w.calificacion] || CALIFICACION.incompleto,
+    summary: texto(w.resumen),
+    scores: w.puntajes && typeof w.puntajes === "object" ? w.puntajes : null,
+    suggestion: w.sugerencia?.etapa && ETAPA_A_VISTA[w.sugerencia.etapa] ? { stage: ETAPA_A_VISTA[w.sugerencia.etapa], reason: texto(w.sugerencia.motivo) } : null,
+    answers: Array.isArray(w.respuestas) ? w.respuestas.map((r) => ({ question: texto(r.texto_pregunta), answer: texto(r.respuesta), severity: r.severidad || "ok" })) : [],
+    windowOpen: w.ventana_abierta !== false,
+    template: w.plantilla_seguimiento || null,
+    mode: w.modo || null,
+  };
+}
 
 export function aCandidato(c) {
   const k = c.contratacion || {};
+  const wa = c.origen === "whatsapp" ? datosWhatsapp(c.whatsapp) : null;
   return {
     id: String(c.id),
-    origin: "web",
+    origin: wa ? "whatsapp" : "web",
     readOnly: false,
     name: texto(c.nombre) || "Sin nombre",
     vacancyId: String(c.id_vacante),
@@ -139,8 +161,10 @@ export function aCandidato(c) {
     email: texto(c.correo),
     phone: texto(c.telefono),
     submittedAt: c.recibida_en || "",
-    source: "Página de empleo",
+    source: wa ? (wa.linkedToWeb ? "Página de empleo y WhatsApp" : "WhatsApp") : "Página de empleo",
     hasCv: Boolean(c.tiene_cv),
+    whatsapp: wa,
+    conversationId: wa?.conversationId ?? null,
     formVersion: 1,
     answers: [],
     notes: [],
@@ -156,13 +180,16 @@ export function aCandidato(c) {
   };
 }
 
-const CALIFICACION = { califica: "Califica", con_alerta: "Con alerta", no_califica: "No califica", incompleto: "Entrevista incompleta" };
+// Entrevistas de WhatsApp SIN proceso (aún no aceptan el aviso o son de antes): solo lectura; canStart = aceptó el aviso
+// y RH puede meterlo al proceso con un clic («Iniciar proceso»).
 export function aCandidatoWhatsapp(w) {
   const descartado = w.calificacion === "no_califica" || w.etapa_whatsapp === "rechazada";
   return {
     id: String(w.id),
     origin: "whatsapp",
     readOnly: true,
+    canStart: Boolean(w.puede_iniciar),
+    interviewId: w.id_entrevista ?? null,
     name: texto(w.nombre) || "Candidato de WhatsApp",
     vacancyId: String(w.id_vacante),
     stage: descartado ? "rejected" : ["califica", "con_alerta"].includes(w.calificacion) ? "review" : "new",
@@ -222,12 +249,14 @@ export function aDatos(r) {
 // Expediente completo: respuestas (base + propias), notas, historial y empleado.
 export function aDetalle(d, base) {
   const candidato = { ...(base || aCandidato(d)), ...aCandidato(d) };
+  const porWhatsapp = candidato.origin === "whatsapp" && !candidato.whatsapp?.linkedToWeb;
   const respuestas = [
     { id: "name", label: "Nombre completo", type: "text", value: texto(d.nombre) },
     { id: "email", label: "Correo electrónico", type: "email", value: texto(d.correo) },
     { id: "phone", label: "Teléfono", type: "tel", value: texto(d.telefono) },
     ...(d.respuestas || []).map((r) => ({ id: r.id, label: r.label, type: r.type, value: r.value })),
-    { id: "cv", label: "Currículum", type: "file", value: d.tiene_cv ? { name: "Currículum recibido" } : null },
+    // Por WhatsApp no se pide currículum (sus respuestas son las de la entrevista con el agente).
+    ...(porWhatsapp ? [] : [{ id: "cv", label: "Currículum", type: "file", value: d.tiene_cv ? { name: "Currículum recibido" } : null }]),
   ];
   return {
     ...candidato,
@@ -236,6 +265,14 @@ export function aDetalle(d, base) {
     notes: (d.notas || []).map((n) => ({ id: String(n.id), text: texto(n.texto), at: n.en || "", author: texto(n.autor) })),
     activity: (d.eventos || []).map((e) => ({ id: String(e.id), text: texto(e.texto), at: e.en || "", author: texto(e.autor) })),
     employee: d.empleado ? { id: d.empleado.id, name: texto(d.empleado.nombre), status: texto(d.empleado.estado) } : null,
+    // Para «Contratar» fuera de Reclutamiento (chat de WhatsApp): sucursales y lugares de la vacante.
+    branches: (d.sucursales || []).map((s) => ({ id: String(s.id), name: texto(s.nombre), address: texto(s.direccion) })),
+    vacancy: d.vacante
+      ? {
+        id: String(d.vacante.id), title: texto(d.vacante.titulo), unlimited: d.vacante.puestos == null, openings: d.vacante.puestos == null ? null : Number(d.vacante.puestos),
+        remaining: d.vacante.puestos == null ? null : Math.max(0, Number(d.vacante.puestos) - (Number(d.vacante.contratados) || 0)),
+      }
+      : null,
   };
 }
 
@@ -257,6 +294,14 @@ export function aCuerpoVacante(v, publicar = false) {
     avisos: { email: texto(v.notifications?.email).trim(), toTeam: v.notifications?.toTeam !== false, toCandidate: v.notifications?.toCandidate !== false },
     publicar,
   };
+}
+
+// Etapa (pantalla) → cuerpo de PUT /etapa. opciones: { motivo } al descartar, { sugerencia: true } al aceptar la del agente.
+export function aCuerpoEtapa(stage, { motivo, sugerencia } = {}) {
+  const cuerpo = { etapa: VISTA_A_ETAPA[stage] };
+  if (stage === "rejected" && texto(motivo).trim()) cuerpo.motivo = texto(motivo).trim().slice(0, 300);
+  if (sugerencia === true) cuerpo.sugerencia = true;
+  return cuerpo;
 }
 
 export function aCuerpoContratacion(f) {

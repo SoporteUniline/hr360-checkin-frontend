@@ -1,8 +1,9 @@
 "use client";
 
-// Expediente del candidato (03/12/2026: datos reales). Postulaciones de la página: respuestas, notas, historial,
-// etapa y «Contratar» (crea o enlaza su ficha de empleado). Candidatos de WhatsApp: resumen de la entrevista del
-// agente y enlace a su conversación (su proceso sigue en la bandeja de WhatsApp).
+// Expediente del candidato (03/12/2026: datos reales). Postulaciones de la página y de WhatsApp (04/12/2026, mismo
+// proceso): respuestas, notas, historial, etapa y «Contratar» (crea o enlaza su ficha de empleado). Las de WhatsApp
+// agregan la entrevista del agente, «Abrir chat», la sugerencia de etapa del agente (un clic) y avisarle por WhatsApp al
+// contratar, descartar u ofrecer. Solo los de WhatsApp que aún no tienen proceso se ven en solo lectura.
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -19,24 +20,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { STAGES, formatDate, formatDateTime } from "@/lib/reclutamiento/model";
-import {
-  aCuerpoContratacion,
-  dividirNombre,
-  mensajeError,
-  urlConversacion,
-  urlEmpleado,
-} from "@/lib/reclutamiento/adaptador.mjs";
+import { mensajeError, urlConversacion, urlEmpleado } from "@/lib/reclutamiento/adaptador.mjs";
 import { usePostulacion } from "@/hooks/useReclutamiento";
 import { Badge, Field, Modal, PageSurface } from "./RecruitmentUI";
 import { useRecruitment } from "./RecruitmentContext";
+import HiringForm from "./HiringForm";
+import { AvisoWhatsapp, DialogoDescartar, EntrevistaAgente, SugerenciaAgente } from "./ProcesoWhatsapp";
 import { ENTREVISTAS_REAL } from "./navigation";
 import s from "./reclutamiento.module.css";
 
-const CHECKLIST = [
-  ["data", "Datos del candidato revisados"],
-  ["offer", "Oferta aceptada"],
-  ["documents", "Documentación verificada"],
-];
 const initials = (name) =>
   name
     .split(/\s+/)
@@ -45,6 +37,14 @@ const initials = (name) =>
     .join("");
 
 function WhatsappCandidate({ candidate, vacancy, Surface, onClose, embedded }) {
+  const { startWhatsapp, openCandidate } = useRecruitment();
+  const [starting, setStarting] = useState(false);
+  const start = async () => {
+    setStarting(true);
+    const id = await startWhatsapp(candidate.interviewId);
+    setStarting(false);
+    if (id) openCandidate(id);
+  };
   return (
     <Surface
       title="Candidato de WhatsApp"
@@ -52,7 +52,11 @@ function WhatsappCandidate({ candidate, vacancy, Surface, onClose, embedded }) {
       onClose={onClose}
       footer={
         <>
-          <span className={s.small}>Su proceso continúa en la bandeja de WhatsApp.</span>
+          <span className={s.small}>
+            {candidate.canStart
+              ? "Aceptó el aviso de privacidad: puedes llevarlo en el proceso de selección."
+              : "Aún no acepta el aviso de privacidad; su conversación sigue en la bandeja de WhatsApp."}
+          </span>
           <Button variant="outline" onClick={onClose}>
             {embedded ? "Volver a candidatos" : "Cerrar"}
           </Button>
@@ -83,7 +87,13 @@ function WhatsappCandidate({ candidate, vacancy, Surface, onClose, embedded }) {
           </div>
         </dl>
         <div className={s.row}>
-          <Button className={s.primary} asChild>
+          {candidate.canStart ? (
+            <Button className={s.primary} onClick={start} loading={starting} disabled={starting} data-iniciar-proceso="">
+              <Plus size={15} />
+              Iniciar proceso
+            </Button>
+          ) : null}
+          <Button className={candidate.canStart ? undefined : s.primary} variant={candidate.canStart ? "outline" : undefined} asChild>
             <Link href={urlConversacion(candidate.conversationId)}>
               <MessageCircle size={15} />
               Abrir conversación
@@ -101,206 +111,6 @@ function WhatsappCandidate({ candidate, vacancy, Surface, onClose, embedded }) {
   );
 }
 
-function HiringForm({ person, data, vacancy, onHired }) {
-  const { savePreparation, hire, changeStage } = useRecruitment();
-  const names = dividirNombre(person.name);
-  const [form, setForm] = useState(() => ({
-    startDate: person.hiring.startDate,
-    branchId: person.hiring.branchId || vacancy?.branchId || "",
-    checklist: person.hiring.checklist,
-    ...names,
-    email: person.email,
-    phone: person.phone,
-  }));
-  const [errors, setErrors] = useState({});
-  const [message, setMessage] = useState("");
-  const [busy, setBusy] = useState(false);
-  const hasOffer = person.stage === "offer";
-  const full = vacancy && !vacancy.unlimited && vacancy.remaining === 0;
-  const patch = (value, persist) => {
-    setForm((current) => ({ ...current, ...value }));
-    setErrors({});
-    setMessage("");
-    // Fecha, sucursal y lista se guardan al momento: cualquiera del equipo ve la preparación.
-    if (persist) savePreparation(person.id, persist);
-  };
-  const ready =
-    form.startDate &&
-    form.branchId &&
-    form.firstName.trim() &&
-    form.lastName.trim() &&
-    CHECKLIST.every(([id]) => form.checklist.includes(id));
-  const submit = async () => {
-    setBusy(true);
-    const r = await hire(person.id, aCuerpoContratacion(form));
-    setBusy(false);
-    if (r.ok) onHired?.(r.result);
-    else {
-      setErrors(r.errors || {});
-      setMessage(r.message);
-    }
-  };
-  return (
-    <div className={s.stack}>
-      <div className={s.formHint}>
-        <strong>Prepara su llegada al equipo</strong>
-        <p>
-          Al completar la contratación se crea su ficha de empleado con estos datos (o se enlaza con
-          la que ya tenga en tu empresa por correo o teléfono) y se ocupa un lugar de la vacante.
-        </p>
-      </div>
-      {full && (
-        <p className={s.error} role="alert">
-          Ya se ocuparon todos los lugares de esta vacante. Edita la vacante y aumenta los lugares
-          para contratar a alguien más.
-        </p>
-      )}
-      {!hasOffer && (
-        <div className={s.between}>
-          <p className={s.muted}>Primero confirma que la persona está en Oferta.</p>
-          <Button variant="outline" onClick={() => changeStage(person.id, "offer")}>
-            Mover a Oferta
-          </Button>
-        </div>
-      )}
-      <div className={s.formGrid}>
-        <Field label="Fecha de ingreso *" error={errors.startDate}>
-          {(props) => (
-            <input
-              {...props}
-              type="date"
-              value={form.startDate}
-              onChange={(event) =>
-                patch({ startDate: event.target.value }, { fecha_ingreso: event.target.value })
-              }
-            />
-          )}
-        </Field>
-        <Field
-          label="Sucursal de alta *"
-          error={errors.branchId}
-          hint={data.branches.length ? undefined : "Da de alta tus sucursales en Catálogos."}
-        >
-          {(props) => (
-            <select
-              {...props}
-              value={form.branchId}
-              onChange={(event) =>
-                patch(
-                  { branchId: event.target.value },
-                  { id_sucursal: event.target.value ? Number(event.target.value) : null }
-                )
-              }
-            >
-              <option value="">Selecciona una sucursal</option>
-              {data.branches.map((branch) => (
-                <option key={branch.id} value={branch.id}>
-                  {branch.name}
-                </option>
-              ))}
-            </select>
-          )}
-        </Field>
-        <Field label="Nombre(s) *" error={errors.firstName}>
-          {(props) => (
-            <input
-              {...props}
-              value={form.firstName}
-              maxLength={60}
-              autoComplete="off"
-              onChange={(event) => patch({ firstName: event.target.value })}
-            />
-          )}
-        </Field>
-        <Field label="Apellido paterno *" error={errors.lastName}>
-          {(props) => (
-            <input
-              {...props}
-              value={form.lastName}
-              maxLength={60}
-              autoComplete="off"
-              onChange={(event) => patch({ lastName: event.target.value })}
-            />
-          )}
-        </Field>
-        <Field label="Apellido materno" error={errors.secondLastName}>
-          {(props) => (
-            <input
-              {...props}
-              value={form.secondLastName}
-              maxLength={60}
-              autoComplete="off"
-              onChange={(event) => patch({ secondLastName: event.target.value })}
-            />
-          )}
-        </Field>
-        <Field
-          label="Correo del empleado"
-          error={errors.email}
-          hint="Opcional. Debe ser distinto de una cuenta de usuario de ADAMIA."
-        >
-          {(props) => (
-            <input
-              {...props}
-              type="email"
-              inputMode="email"
-              value={form.email}
-              maxLength={150}
-              onChange={(event) => patch({ email: event.target.value })}
-            />
-          )}
-        </Field>
-        <Field label="Teléfono" error={errors.phone}>
-          {(props) => (
-            <input
-              {...props}
-              type="tel"
-              inputMode="tel"
-              value={form.phone}
-              maxLength={20}
-              onChange={(event) => patch({ phone: event.target.value })}
-            />
-          )}
-        </Field>
-      </div>
-      <div className={s.stack} style={{ gap: 12 }}>
-        {CHECKLIST.map(([id, label]) => (
-          <label className={s.check} key={id}>
-            <input
-              type="checkbox"
-              checked={form.checklist.includes(id)}
-              onChange={(event) => {
-                const checklist = event.target.checked
-                  ? [...form.checklist, id]
-                  : form.checklist.filter((item) => item !== id);
-                patch({ checklist }, { checklist });
-              }}
-            />
-            {label}
-          </label>
-        ))}
-      </div>
-      {message && (
-        <p className={s.error} role="alert">
-          {message}
-        </p>
-      )}
-      <div className={s.between}>
-        <span className={s.small}>La fecha, la sucursal y la lista se guardan al cambiarlas.</span>
-        <Button
-          className={s.primary}
-          disabled={!ready || !hasOffer || full || busy}
-          loading={busy}
-          onClick={submit}
-        >
-          <UserCheck size={15} />
-          Completar contratación
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 export default function CandidatePanel({
   candidate,
   vacancy,
@@ -310,7 +120,7 @@ export default function CandidatePanel({
   embedded = false,
 }) {
   const Surface = embedded ? PageSurface : Modal;
-  if (candidate.origin === "whatsapp")
+  if (candidate.readOnly)
     return (
       <WhatsappCandidate
         candidate={candidate}
@@ -334,15 +144,34 @@ export default function CandidatePanel({
 }
 
 function WebCandidate({ candidate, vacancy, data, onClose, initialTab, embedded, Surface }) {
-  const { changeStage, addNote } = useRecruitment();
+  const recruitment = useRecruitment();
+  const { changeStage, addNote } = recruitment;
   const { detail, error: detailError, isLoading } = usePostulacion(candidate.id, candidate);
   const person = detail || candidate;
+  const wa = person.origin === "whatsapp" ? person.whatsapp : null;
   const [tab, setTab] = useState(initialTab);
   const [note, setNote] = useState("");
   const [discard, setDiscard] = useState(false);
   const [savingStage, setSavingStage] = useState(false);
   const [savingNote, setSavingNote] = useState(false);
+  const [askDiscard, setAskDiscard] = useState(false);
+  // Aviso por WhatsApp pendiente de confirmar (después de contratar, descartar u ofrecer).
+  const [notice, setNotice] = useState(null);
   useEffect(() => setTab(initialTab), [initialTab]);
+  const moveTo = async (stage, options) => {
+    setSavingStage(true);
+    const ok = await changeStage(person.id, stage, options);
+    setSavingStage(false);
+    if (ok && wa && (stage === "offer" || stage === "rejected")) setNotice(stage === "offer" ? "oferta" : "descartado");
+    return ok;
+  };
+  const noticeData = {
+    nombre: person.name,
+    vacante: vacancy?.title,
+    empresa: data.company,
+    fechaIngreso: person.hiring.startDate,
+    sucursal: data.branches.find((branch) => branch.id === person.hiring.branchId)?.name,
+  };
   const saveNote = async () => {
     if (!note.trim()) return;
     setSavingNote(true);
@@ -375,9 +204,19 @@ function WebCandidate({ candidate, vacancy, data, onClose, initialTab, embedded,
         ) : (
           <>
             <span className={s.small}>Los cambios los ve todo tu equipo.</span>
-            <Button variant="outline" onClick={close}>
-              {embedded ? "Volver a candidatos" : "Cerrar"}
-            </Button>
+            <div className={s.row}>
+              {wa?.conversationId ? (
+                <Button variant="outline" asChild>
+                  <Link href={urlConversacion(wa.conversationId)} data-abrir-chat="">
+                    <MessageCircle size={15} />
+                    Abrir chat
+                  </Link>
+                </Button>
+              ) : null}
+              <Button variant="outline" onClick={close}>
+                {embedded ? "Volver a candidatos" : "Cerrar"}
+              </Button>
+            </div>
           </>
         )
       }
@@ -388,11 +227,31 @@ function WebCandidate({ candidate, vacancy, data, onClose, initialTab, embedded,
             <span className={s.avatar}>{initials(person.name)}</span>
             <div>
               <h3>{person.name}</h3>
-              <p className={s.small}>Postulación del {formatDate(person.submittedAt)}</p>
+              <p className={s.small}>
+                {wa ? "Llegó por WhatsApp el" : "Postulación del"} {formatDate(person.submittedAt)}
+              </p>
             </div>
           </div>
           <Badge stage={person.stage} />
         </div>
+        {wa?.suggestion && !hired ? (
+          <SugerenciaAgente
+            suggestion={wa.suggestion}
+            busy={savingStage}
+            onAccept={() => moveTo(wa.suggestion.stage, { sugerencia: true })}
+          />
+        ) : null}
+        {notice && wa ? (
+          <AvisoWhatsapp
+            key={notice}
+            tipo={notice}
+            conversationId={wa.conversationId}
+            windowOpen={wa.windowOpen}
+            template={wa.template}
+            datos={noticeData}
+            onDone={(sent) => { if (!sent) setNotice(null); }}
+          />
+        ) : null}
         {detailError && (
           <p className={s.error} role="alert">
             {mensajeError(detailError, "No se pudo cargar el expediente completo.")}
@@ -412,10 +271,10 @@ function WebCandidate({ candidate, vacancy, data, onClose, initialTab, embedded,
                 {...props}
                 value={person.stage}
                 disabled={hired || savingStage}
-                onChange={async (event) => {
-                  setSavingStage(true);
-                  await changeStage(person.id, event.target.value);
-                  setSavingStage(false);
+                onChange={(event) => {
+                  // Descartar pide el motivo (opcional) antes de guardar.
+                  if (event.target.value === "rejected") setAskDiscard(true);
+                  else moveTo(event.target.value);
                 }}
               >
                 {STAGES.map((stage) => (
@@ -451,6 +310,7 @@ function WebCandidate({ candidate, vacancy, data, onClose, initialTab, embedded,
             </TabsTrigger>
           </TabsList>
           <TabsContent value="profile" className={s.tabContent}>
+            {wa ? <div style={{ marginBottom: 16 }}><EntrevistaAgente whatsapp={wa} /></div> : null}
             {!detail && isLoading ? (
               <p className={`${s.row} ${s.muted}`} role="status">
                 <Loader2 className="size-4 animate-spin" /> Cargando respuestas…
@@ -593,13 +453,23 @@ function WebCandidate({ candidate, vacancy, data, onClose, initialTab, embedded,
               <HiringForm
                 key={`${person.id}-${person.stage}`}
                 person={person}
-                data={data}
+                branches={data.branches}
                 vacancy={vacancy}
+                actions={recruitment}
+                onHired={() => wa && setNotice("contratado")}
               />
             )}
           </TabsContent>
         </Tabs>
       </div>
+      {askDiscard ? (
+        <DialogoDescartar
+          name={person.name}
+          whatsapp={Boolean(wa)}
+          onClose={() => setAskDiscard(false)}
+          onConfirm={(motivo) => moveTo("rejected", { motivo })}
+        />
+      ) : null}
     </Surface>
   );
 }

@@ -7,6 +7,8 @@ import { iniciales, nombreContacto } from "@/lib/whatsapp/telefono.mjs";
 import { etiquetaControl, vistaPrevia } from "@/lib/whatsapp/reglas.mjs";
 import { FILTROS, etiquetaCalificacion } from "@/lib/whatsapp/entrevista.mjs";
 import { ChipCalificacion } from "./controles";
+import { FILTROS_ETAPA, textoEtapa } from "@/lib/reclutamiento/procesoWhatsapp.mjs";
+import { ChipEtapa } from "./ProcesoChat";
 
 const TONO_CHIP = {
   azul: "bg-blue-50 text-blue-700",
@@ -50,9 +52,11 @@ function FiltrosCalificacion({ filtro, onFiltro }) {
 
 export default function ListaConversaciones({
   conversaciones, hayMas, errorMas, cargando, error, busqueda, setBusqueda, q, seleccionada, onAbrir, onMas, cargandoMas, onVacantes, usuario, ahora,
-  filtro = "todos", onFiltro,
+  filtro = "todos", onFiltro, etapa = "", onEtapa,
 }) {
-  const textoFiltro = FILTROS.find((f) => f.valor === filtro)?.texto;
+  const textoFiltro = [FILTROS.find((f) => f.valor === filtro && f.valor !== "todos")?.texto, FILTROS_ETAPA.find((f) => f.valor && f.valor === etapa)?.texto]
+    .filter(Boolean).join(" · ") || FILTROS[0].texto;
+  const conFiltro = filtro !== "todos" || Boolean(etapa);
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="border-b border-gray-200 p-3">
@@ -73,6 +77,15 @@ export default function ListaConversaciones({
           ) : null}
         </label>
         {onFiltro ? <FiltrosCalificacion filtro={filtro} onFiltro={onFiltro} /> : null}
+        {onEtapa ? (
+          <label className="mt-2 flex items-center gap-2 text-[12.5px] text-gray-600">
+            <span className="shrink-0 font-semibold">Etapa</span>
+            <select value={etapa} onChange={(e) => onEtapa(e.target.value)} data-filtro-etapa=""
+              className="h-11 min-w-0 flex-1 rounded-lg border border-gray-300 bg-white px-2 text-base text-gray-800 md:h-8 md:text-[13px]">
+              {FILTROS_ETAPA.map((f) => <option key={f.valor || "todas"} value={f.valor}>{f.texto}</option>)}
+            </select>
+          </label>
+        ) : null}
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto" aria-busy={cargando}>
         {error ? (
@@ -82,11 +95,11 @@ export default function ListaConversaciones({
         ) : !conversaciones.length ? (
           <div className="p-6 text-center text-sm text-gray-500">
             {q ? (
-              <p>No hay conversaciones que coincidan con «{q}»{filtro !== "todos" ? ` en «${textoFiltro}»` : ""}.</p>
-            ) : filtro !== "todos" ? (
+              <p>No hay conversaciones que coincidan con «{q}»{conFiltro ? ` en «${textoFiltro}»` : ""}.</p>
+            ) : conFiltro ? (
               <>
                 <p>No hay conversaciones en «{textoFiltro}».</p>
-                <button type="button" onClick={() => onFiltro("todos")} className="mt-2 inline-flex min-h-11 items-center rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 md:min-h-9">
+                <button type="button" onClick={() => { onFiltro?.("todos"); onEtapa?.(""); }} className="mt-2 inline-flex min-h-11 items-center rounded-lg border border-gray-300 px-3 text-sm font-medium text-gray-700 hover:bg-gray-50 md:min-h-9">
                   Ver todas
                 </button>
               </>
@@ -117,7 +130,7 @@ export default function ListaConversaciones({
                     type="button"
                     onClick={() => onAbrir(c.id)}
                     aria-current={activa ? "true" : undefined}
-                    aria-label={`${nombre}${noLeidos ? `, ${noLeidos} sin leer` : ""}${calif ? `, ${calif.texto}` : ""}${atencion ? `, requiere atención: ${motivo}` : ""}`}
+                    aria-label={`${nombre}${noLeidos ? `, ${noLeidos} sin leer` : ""}${c.proceso?.etapa ? `, etapa ${textoEtapa(c.proceso.etapa)}` : ""}${calif ? `, ${calif.texto}` : ""}${atencion ? `, requiere atención: ${motivo}` : ""}`}
                     className={`flex w-full min-w-0 items-start gap-3 border-b border-gray-100 px-3 py-3 text-left transition-colors ${
                       activa ? "bg-blue-50" : "hover:bg-gray-50"
                     }`}
@@ -146,6 +159,7 @@ export default function ListaConversaciones({
                       </span>
                       <span className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5">
                         <ChipControl conversacion={c} usuario={usuario} />
+                        <ChipEtapa etapa={c.proceso?.etapa} />
                         <ChipCalificacion calificacion={c.entrevista?.calificacion} />
                         {atencion ? <span className="min-w-0 truncate text-[11.5px] font-semibold text-red-700" title={motivo}>{motivo}</span> : null}
                       </span>

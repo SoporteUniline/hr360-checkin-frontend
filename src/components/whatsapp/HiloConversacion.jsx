@@ -16,6 +16,7 @@ import EnlaceWhatsappVacante from "./EnlaceWhatsappVacante";
 import AdjuntoMensaje from "./AdjuntoMensaje";
 import ComposerChat, { useAdjuntoPendiente } from "./ComposerChat";
 import CitaChat from "./CitaChat";
+import { ChipEtapa } from "./ProcesoChat";
 
 function IconoEstado({ estado }) {
   const etiqueta = etiquetaEstado(estado);
@@ -86,6 +87,7 @@ export default function HiloConversacion({
   conversacion, mensajes, cargando, error, usuario, onVolver, onTomar, onDevolver, cambiandoControl, onEnviar, enviando, onReintentar, reintentandoId, aviso, anuncio, ahora,
   nombreAsistente = "", onVerEvaluacion = null, requiereAtencion = false, onSeguimiento = null,
   onEnviarAdjunto = null, citas = null, hoy = "", onCitaCambio = null, ofrecer = null, lineas = [],
+  proceso = null, onVerProceso = null, sugerencia = null,
 }) {
   const scroll = useRef(null);
   const primeraCarga = useRef(true);
@@ -154,6 +156,14 @@ export default function HiloConversacion({
                 Devolver a IA
               </Button>
             ) : null}
+            {onVerProceso ? (
+              <Button type="button" size="sm" variant="outline" onClick={onVerProceso} data-ver-proceso="" className="min-h-10 xl:hidden md:min-h-8"
+                aria-label={`Proceso de selección: ${proceso ? "etapa actual" : "sin proceso"}`}>
+                <span aria-hidden="true">Proceso</span>
+                {proceso ? <ChipEtapa etapa={proceso.etapa} /> : <span className="text-[11px] text-gray-500">—</span>}
+                {proceso?.sugerencia ? <span className="size-2 rounded-full bg-violet-500" aria-label="sugerencia del agente" role="img" /> : null}
+              </Button>
+            ) : null}
             {onVerEvaluacion ? (
               <Button type="button" size="sm" variant="outline" onClick={onVerEvaluacion} startIcon={<ClipboardList className="size-4 text-violet-600" />} className="min-h-10 xl:hidden md:min-h-8">
                 Ver evaluación
@@ -169,6 +179,7 @@ export default function HiloConversacion({
       {conversacion && citas && onCitaCambio ? (
         <CitaChat conversacion={conversacion} activa={citas.activa} ultima={citas.ultima} hoy={hoy} onCambio={onCitaCambio} ofrecer={ofrecer} />
       ) : null}
+      {sugerencia}
       <div ref={scroll} data-hilo-scroll className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden bg-[#f5f3ef] px-3 py-4 md:px-6" aria-live="polite" aria-busy={cargando}>
         {error ? (
           <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>

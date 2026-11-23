@@ -309,10 +309,15 @@ export const rangoNuevo = (anterior) => {
   return { clave: claveLocal(), desde: "09:00", hasta: "13:00" };
 };
 
+// El servidor real (GET /vacantes/:id/agenda) responde `horario_json` y `bloqueos_json`; los mocks de antes, `horario` y
+// `bloqueos`. Se aceptan los dos (04/12/2026: con el servidor real la agenda se veía vacía y «sin configurar»).
+const horarioDeApi = (a) => a?.horario ?? a?.horario_json ?? null;
+const bloqueosDeApi = (a) => a?.bloqueos ?? a?.bloqueos_json ?? null;
+
 export function agendaVacanteDesdeApi(a) {
   const horario = horarioVacanteVacio();
   for (const { clave } of DIAS) {
-    const dia = a?.horario?.[clave];
+    const dia = horarioDeApi(a)?.[clave];
     horario[clave] = (Array.isArray(dia) ? dia : dia ? [dia] : []).map((r) => ({ clave: claveLocal(), desde: String(r?.desde ?? "").slice(0, 5), hasta: String(r?.hasta ?? "").slice(0, 5) }));
   }
   return {
@@ -326,7 +331,7 @@ export function agendaVacanteDesdeApi(a) {
     duracion_minutos: String(a?.duracion_minutos ?? 30),
     cupo_por_horario: String(a?.cupo_por_horario ?? 1),
     horario,
-    bloqueos: (Array.isArray(a?.bloqueos) ? a.bloqueos : []).map((b) => ({ clave: claveLocal(), desde: aDatetimeLocal(b?.desde), hasta: aDatetimeLocal(b?.hasta), motivo: String(b?.motivo ?? "") })),
+    bloqueos: (Array.isArray(bloqueosDeApi(a)) ? bloqueosDeApi(a) : []).map((b) => ({ clave: claveLocal(), desde: aDatetimeLocal(b?.desde), hasta: aDatetimeLocal(b?.hasta), motivo: String(b?.motivo ?? "") })),
     quien_agenda: MODOS_AGENDA.some((m) => m.valor === a?.quien_agenda) ? a.quien_agenda : "",
     usa_anticipacion_empresa: a?.anticipacion_min_minutos === null || a?.anticipacion_min_minutos === undefined,
     anticipacion_horas: horasDesdeMinutos(a?.anticipacion_min_minutos),
@@ -586,7 +591,7 @@ export const MENSAJE_SIN_MIGRACION_AGENDA = "Falta correr la migración de la ag
 export const MENSAJE_AGENDA_SIN_CONFIGURAR = "La agenda de esta vacante no está configurada";
 export function agendaConfigurada(agenda) {
   if (!agenda || agenda.activa !== true) return false;
-  return Object.values(agenda.horario ?? {}).some((rangos) => Array.isArray(rangos) && rangos.length > 0);
+  return Object.values(horarioDeApi(agenda) ?? {}).some((rangos) => Array.isArray(rangos) && rangos.length > 0);
 }
 export function causaSinHorarios({ agenda, errorAgenda, errorHorarios } = {}) {
   const codigo = (e) => e?.response?.data?.codigo;

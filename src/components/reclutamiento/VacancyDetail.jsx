@@ -40,7 +40,9 @@ export default function VacancyDetail({
 }) {
   const [dialog, setDialog] = useState(null);
   const candidates = data.candidates.filter((item) => item.vacancyId === vacancy.id);
-  const whatsapp = (data.whatsappCandidates || []).filter((item) => item.vacancyId === vacancy.id);
+  // Sin proceso (solo lectura) + los de WhatsApp que ya son postulaciones (04/12/2026: mismo proceso que la página).
+  const waReadOnly = (data.whatsappCandidates || []).filter((item) => item.vacancyId === vacancy.id);
+  const whatsapp = [...candidates.filter((item) => item.origin === "whatsapp"), ...waReadOnly];
   const live = vacancyStatus(vacancy) === "open";
   const branch = data.branches.find((item) => item.id === vacancy.branchId);
   const modality = data.modalities.find((item) => item.id === vacancy.modalityId);
@@ -91,7 +93,7 @@ export default function VacancyDetail({
           </TabsTrigger>
           <TabsTrigger value="candidates">
             <Users size={14} />
-            Candidatos <span className={s.count}>{candidates.length + whatsapp.length}</span>
+            Candidatos <span className={s.count}>{candidates.length + waReadOnly.length}</span>
           </TabsTrigger>
           <TabsTrigger value="whatsapp">
             <MessageCircle size={14} />
@@ -307,7 +309,7 @@ export default function VacancyDetail({
                       onClick={() => onCandidate(item.id)}
                     >
                       <span className={s.personName}>{item.name}</span>
-                      <span className={s.small}>{item.ratingLabel}</span>
+                      <span className={s.small}>{item.whatsapp?.ratingLabel || item.ratingLabel}</span>
                     </button>
                   ))
                 ) : (

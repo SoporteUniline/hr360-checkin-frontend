@@ -23,6 +23,7 @@ import { avisoExtras, textoEntrevistasMes } from "@/lib/whatsapp/paquete.mjs";
 import { hoyMx, textoPlantillasMes } from "@/lib/whatsapp/agenda.mjs";
 import { CHAT_ADJUNTOS_ACTIVO, citasDelChat, lineaCita } from "@/lib/whatsapp/adjuntos.mjs";
 import { avisoBandeja } from "@/lib/whatsapp/salud.mjs";
+import { paramsEtapa } from "@/lib/reclutamiento/procesoWhatsapp.mjs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   aprobarAgenda, devolverAIa, enviarAdjunto, enviarMensaje, enviarSeguimiento, marcarAtendido, obtener, ofrecerHorarios, reintentarMensaje, rutaAgendaEmpresa, rutaAgente, rutaConversacion,
@@ -35,7 +36,8 @@ import ConfigurarAgente, { BotonAgente } from "./ConfigurarAgente";
 import PanelCandidato from "./PanelCandidato";
 import Entrevistas from "./Entrevistas";
 import SaludAgente from "./SaludAgente";
-import { DIALOGO_PANTALLA_COMPLETA } from "./controles";
+import { DIALOGO_PANTALLA_COMPLETA, HOJA_INFERIOR } from "./controles";
+import ProcesoChat, { BannerSugerencia } from "./ProcesoChat";
 
 const POR_PAGINA = 30;
 
@@ -171,7 +173,9 @@ export default function BandejaWhatsapp() {
   // (una conversación con actividad nueva sube a la página 1 y ahí se toma la versión fresca).
   // R2: el chip de filtro viaja como parámetro; al cambiar, la clave cambia y la paginación vuelve a la página 1.
   const [filtro, setFiltro] = useState("todos");
-  const filtroParams = useMemo(() => paramsFiltro(filtro), [filtro]);
+  // 04/12/2026: filtro por etapa del proceso de selección (se combina con el chip).
+  const [etapa, setEtapa] = useState("");
+  const filtroParams = useMemo(() => ({ ...paramsFiltro(filtro), ...paramsEtapa(etapa) }), [filtro, etapa]);
   const claveLista = activo && vista === "conversaciones" ? rutaConversaciones(idEmpresa, { q, pagina: 1, limite: POR_PAGINA, filtro: filtroParams }) : null;
   const { data: lista, error: errorLista, isLoading: cargandoLista, mutate: recargarLista } = useSWR(
     claveLista, obtener, { refreshInterval: 5000, refreshWhenHidden: false, keepPreviousData: true },
@@ -219,6 +223,7 @@ export default function BandejaWhatsapp() {
   const [vacantesAbierto, setVacantesAbierto] = useState(false);
   const [agenteAbierto, setAgenteAbierto] = useState(false);
   const [evaluacionAbierta, setEvaluacionAbierta] = useState(false);
+  const [procesoAbierto, setProcesoAbierto] = useState(false);
   // Configuración del agente: da su nombre a las burbujas y el punto de encendido del botón (misma clave que el diálogo).
   const { data: agente } = useSWR(activo ? rutaAgente(idEmpresa) : null, obtener, { revalidateOnFocus: false, shouldRetryOnError: false });
   const nombreAsistente = agente?.nombre_asistente || "";
@@ -277,6 +282,7 @@ export default function BandejaWhatsapp() {
     setAviso("");
     setLineas([]);
     setEvaluacionAbierta(false);
+    setProcesoAbierto(false);
     if (!abierta) marcadaLeida.current = null;
   }, [abierta]);
 
@@ -448,6 +454,17 @@ export default function BandejaWhatsapp() {
     cargando: ofreciendo,
     onOfrecer: ofrecer,
   } : null;
+  // 04/12/2026: proceso de selección del candidato (misma postulación que en Reclutamiento).
+  const alCambiarProceso = useCallback(async (texto) => {
+    await recargarHilo();
+    recargarLista();
+    if (texto) setAnuncio(texto);
+  }, [recargarHilo, recargarLista]);
+  const proceso = hilo?.proceso ?? null;
+  const procesoChat = (atajos, enHoja = false) => hilo ? (
+    <ProcesoChat key={`${abierta}-${proceso?.id_postulacion ?? "sin"}`} proceso={proceso} puedeIniciar={hilo.puede_iniciar_proceso === true}
+      conversacion={conversacion} empresa={nombreEmpresa} onCambio={alCambiarProceso} atajos={atajos} enHoja={enHoja} />
+  ) : null;
   const panel = (
     <PanelCandidato entrevista={entrevista} preguntasSinRespuesta={preguntasSinRespuesta} cargando={cargandoHilo && !hilo}
       onAtendido={atender} marcando={marcando} nombreAsistente={nombreAsistente} ahora={ahora}
@@ -493,6 +510,15 @@ export default function BandejaWhatsapp() {
       {filaMovil}
       <EnlacesVacantes abierto={vacantesAbierto} onCambiar={setVacantesAbierto} idEmpresa={idEmpresa} whatsappActivo={!!activo} />
       <ConfigurarAgente abierto={agenteAbierto} onCambiar={setAgenteAbierto} idEmpresa={idEmpresa} nombreEmpresa={nombreEmpresa} />
+      <Dialog open={procesoAbierto && !!abierta} onOpenChange={setProcesoAbierto}>
+        <DialogContent className={HOJA_INFERIOR} data-hoja-proceso="">
+          <DialogHeader className="border-b border-gray-200 px-4 pb-3 pt-4 pr-14 text-left">
+            <DialogTitle>Proceso de selección</DialogTitle>
+            <DialogDescription>{conversacion ? `${conversacion.contacto?.nombre || "Candidato"} · ${conversacion.vacante?.titulo || "Sin vacante"}` : ""}</DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">{procesoChat(false, true)}</div>
+        </DialogContent>
+      </Dialog>
       <Dialog open={evaluacionAbierta && !!abierta} onOpenChange={setEvaluacionAbierta}>
         <DialogContent className={`${DIALOGO_PANTALLA_COMPLETA} sm:max-w-md`}>
           <DialogHeader className="border-b border-gray-200 px-5 pb-3 pt-[max(1rem,env(safe-area-inset-top))] pr-14 text-left">
@@ -551,6 +577,8 @@ export default function BandejaWhatsapp() {
                 ahora={ahora}
                 filtro={filtro}
                 onFiltro={setFiltro}
+                etapa={etapa}
+                onEtapa={setEtapa}
               />
             </div>
             {abierta ? (
@@ -583,13 +611,19 @@ export default function BandejaWhatsapp() {
                   onCitaCambio={alCambiarCitaChat}
                   ofrecer={opcionOfrecer}
                   lineas={lineas}
+                  proceso={proceso}
+                  onVerProceso={hilo ? () => setProcesoAbierto(true) : null}
+                  sugerencia={<BannerSugerencia proceso={proceso} onCambio={alCambiarProceso} />}
                 />
               </div>
             ) : null}
             {abierta ? (
               <aside aria-label="Candidato" className="hidden w-[300px] shrink-0 2xl:w-[340px] flex-col border-l border-gray-200 bg-white xl:flex">
                 <h2 className="border-b border-gray-200 px-4 py-3 text-[15px] font-bold text-gray-900">Candidato</h2>
-                <div className="min-h-0 flex-1 overflow-y-auto">{panel}</div>
+                <div className="min-h-0 flex-1 overflow-y-auto">
+                  <div className="px-4 pt-4">{procesoChat(true)}</div>
+                  {panel}
+                </div>
               </aside>
             ) : (
               <div className="hidden flex-1 flex-col items-center justify-center gap-2 bg-[#f5f3ef] p-8 text-center md:flex">
