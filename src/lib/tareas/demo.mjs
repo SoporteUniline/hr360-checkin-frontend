@@ -1,6 +1,6 @@
 // Datos de EJEMPLO del prototipo de Tareas y Checklists (23/11/2026). No son datos reales: sirven para ver y aprobar las
 // pantallas antes de crear las tablas. Fechas relativas a hoy (Ciudad de México) para que siempre se vean vigentes.
-import { calificar } from "./reglas.mjs";
+import { aplicarCorrecciones, calificarRespuestas } from "./preguntas.mjs";
 
 export const hoyMx = (d = new Date()) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Mexico_City" }).format(d);
 export const masDias = (fecha, n) => new Date(Date.parse(`${fecha}T12:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
@@ -42,17 +42,57 @@ export function datosEjemplo(hoy = hoyMx()) {
     t({ titulo: "Pedir garrafones de agua", proyecto: null, persona: 3, prioridad: "Baja", estado: "hecho", fecha: d(-1), pasos: pasos(["Llamar al proveedor", true]) }),
   ];
 
-  const p = (texto, peso = 1, extra = {}) => ({ id: ++id, texto, peso, pideFoto: false, obligatorio: false, ...extra });
+  // Preguntas de los checklists de ejemplo (todos los tipos).
+  const op = (...pares) => pares.map(([texto, valor]) => ({ id: ++id, texto, valor }));
+  const q = (texto, tipo, extra = {}) => ({ id: ++id, texto, tipo, peso: 1, obligatoria: false, permiteNA: false, pideFoto: false, ...extra });
   const checklists = [
     { id: 1, nombre: "Apertura de restaurante", frecuencia: "Diario", hora: "09:00", aQuien: "Puesto: Encargado de turno", sucursal: "Todas", revisa: "Su jefe inmediato", soloSiCheco: true, personas: [1, 5],
-      puntos: [p("Abrir cortina y encender luces"), p("Contar fondo de caja ($1,000)", 2, { obligatorio: true }), p("Piso limpio y seco", 1, { pideFoto: true }), p("Mesas montadas", 1, { pideFoto: true }), p("Refrigeradores a menos de 5 °C", 2, { pideFoto: true, obligatorio: true }), p("Baño limpio y con papel"), p("Uniforme completo del equipo"), p("Revisar reservaciones del día")] },
+      preguntas: [
+        q("¿Se abrió la cortina y se encendieron las luces?", "si_no", { correcta: "si", obligatoria: true }),
+        q("Fondo de caja contado", "numero", { min: 1000, max: 1000, unidad: "pesos", peso: 2, obligatoria: true }),
+        q("¿Cómo está el comedor?", "opcion", { opciones: op(["Limpio", 100], ["Regular", 50], ["Sucio", 0]), peso: 2, pideFoto: true, obligatoria: true }),
+        q("¿Cómo está la terraza?", "opcion", { opciones: op(["Limpia", 100], ["Regular", 50], ["Sucia", 0]), permiteNA: true, pideFoto: true }),
+        q("Temperatura del refrigerador", "numero", { min: 0, max: 5, unidad: "°C", peso: 2, obligatoria: true }),
+        q("¿Qué está listo en los baños?", "multiple", { opciones: op(["Papel", 25], ["Jabón", 25], ["Toallas", 25], ["Piso seco", 25]), obligatoria: true }),
+        q("¿Todo el equipo trae uniforme completo?", "si_no", { correcta: "si" }),
+        q("Observaciones", "texto"),
+      ] },
     { id: 2, nombre: "Cierre y corte de caja", frecuencia: "Diario", hora: "23:00", aQuien: "Puesto: Encargado de turno", sucursal: "Todas", revisa: "Su jefe inmediato", soloSiCheco: true, personas: [1, 5],
-      puntos: [p("Corte de caja cuadrado", 3, { obligatorio: true }), p("Gas cerrado", 2, { obligatorio: true, pideFoto: true }), p("Cocina limpia", 1, { pideFoto: true }), p("Basura fuera"), p("Alarma activada", 2, { obligatorio: true })] },
+      preguntas: [
+        q("¿El corte de caja cuadró?", "si_no", { correcta: "si", peso: 3, obligatoria: true }),
+        q("Foto de las llaves del gas cerradas", "foto", { peso: 2, obligatoria: true }),
+        q("¿Cómo quedó la cocina?", "opcion", { opciones: op(["Limpia", 100], ["Regular", 50], ["Sucia", 0]), pideFoto: true }),
+        q("¿Hay basura dentro del local?", "si_no", { correcta: "no" }),
+        q("¿Quedó activada la alarma?", "si_no", { correcta: "si", peso: 2, obligatoria: true }),
+      ] },
     { id: 3, nombre: "Limpieza de cocina (inocuidad)", frecuencia: "Cada lunes", hora: "12:00", aQuien: "Puesto: Cocinera", sucursal: "Centro", revisa: "Su jefe inmediato", soloSiCheco: true, personas: [2],
-      puntos: [p("Campana desengrasada", 2, { pideFoto: true }), p("Trampa de grasa limpia", 2, { pideFoto: true }), p("Etiquetas de fecha en contenedores"), p("Tablas de colores separadas"), p("Bitácora de temperaturas llena", 2)] },
+      preguntas: [
+        q("¿Cómo está la campana?", "opcion", { opciones: op(["Desengrasada", 100], ["Con grasa", 30], ["Muy sucia", 0]), peso: 2, pideFoto: true, obligatoria: true }),
+        q("¿Qué contenedores tienen etiqueta de fecha?", "multiple", { opciones: op(["Carnes", 40], ["Lácteos", 30], ["Verduras", 30]) }),
+        q("¿Las tablas de colores están separadas?", "si_no", { correcta: "si" }),
+        q("Temperatura del congelador", "numero", { min: -25, max: -18, unidad: "°C", peso: 2, obligatoria: true }),
+      ] },
   ];
 
-  // Historial de 14 días (determinista): cada persona asignada llena su checklist diario.
+  // Respuesta de ejemplo: «buena» con probabilidad `bien`, si no una mala o regular.
+  const responder = (pg, bien, azar) => {
+    const ok = azar() < bien;
+    switch (pg.tipo) {
+      case "si_no": return { valor: ok ? pg.correcta : pg.correcta === "si" ? "no" : "si" };
+      case "opcion": { const ord = [...pg.opciones].sort((a, b) => b.valor - a.valor); return { valor: (ok ? ord[0] : ord[1 + Math.floor(azar() * (ord.length - 1))]).id, foto: pg.pideFoto ? "ejemplo" : undefined }; }
+      case "multiple": return { valor: pg.opciones.filter(() => ok || azar() < 0.6).map((o) => o.id) };
+      case "numero": {
+        if (pg.permiteNA && azar() < 0.2) return { na: true };
+        const min = Number(pg.min), max = Number(pg.max);
+        return { valor: ok ? Math.round(min + (max - min) * azar()) : max + 1 + Math.floor(azar() * 4) };
+      }
+      case "foto": return ok || azar() < 0.5 ? { valor: "ejemplo" } : {};
+      case "texto": return azar() < 0.3 ? { valor: "El refrigerador 3 hace ruido, ya avisé a mantenimiento." } : {};
+      default: return {};
+    }
+  };
+
+  // Historial de 14 días (determinista): cada persona asignada llena su checklist.
   const envios = [];
   let semilla = 7;
   const azar = () => { semilla = (semilla * 9301 + 49297) % 233280; return semilla / 233280; };
@@ -64,16 +104,24 @@ export function datosEjemplo(hoy = hoyMx()) {
         const perfil = { 1: 0.95, 5: 0.8, 2: 0.88 }[persona] ?? 0.9;
         if (dia === 0 && ck.id === 2) continue; // el cierre de hoy aún no toca
         if (azar() > perfil + 0.08) { envios.push({ id: ++id, checklist: ck.id, persona, fecha, estado: "no_enviado" }); continue; }
-        const marcas = Object.fromEntries(ck.puntos.map((pt) => [pt.id, azar() < perfil + 0.04]));
+        let respuestas = Object.fromEntries(ck.preguntas.map((pg) => [pg.id, responder(pg, perfil, azar)]));
+        if (persona === 1 && ck.id === 1 && dia === 0) respuestas = { ...respuestas, [ck.preguntas[7].id]: { valor: "El refrigerador 3 hace ruido, ya avisé a mantenimiento." } };
         const porRevisar = dia === 0 || (dia === -1 && persona === 5);
-        const calif = calificar(ck.puntos, marcas);
+        let cambios = [];
+        let finales = respuestas;
+        // Algunos revisados con corrección del jefe (p. ej. dijo «Limpio» y en la foto se veía regular).
+        if (!porRevisar && persona === 5 && ck.id === 1 && azar() < 0.4) {
+          const pg = ck.preguntas[2];
+          ({ finales, cambios } = aplicarCorrecciones(ck.preguntas, respuestas, { [pg.id]: { valor: pg.opciones[1].id } }));
+          cambios = cambios.map((c) => ({ ...c, por: "Diego (encargado)" }));
+        }
+        const calificacion = calificarRespuestas(ck.preguntas, finales);
         envios.push({
-          id: ++id, checklist: ck.id, persona, fecha, marcas, calificacion: calif,
+          id: ++id, checklist: ck.id, persona, fecha, respuestas: finales, respuestasPersona: respuestas, cambios, calificacion,
           hora: `${String(Math.floor(azar() * 2) + Number(ck.hora.slice(0, 2)) - 1).padStart(2, "0")}:${String(Math.floor(azar() * 59)).padStart(2, "0")}`,
           aTiempo: azar() < perfil + 0.05,
-          estado: porRevisar ? "por_revisar" : calif < 75 ? "regresado" : "aprobado",
-          nota: porRevisar && persona === 1 ? "El refrigerador 3 hace ruido, ya avisé a mantenimiento." : "",
-          fotos: Object.fromEntries(ck.puntos.filter((pt) => pt.pideFoto && marcas[pt.id]).map((pt) => [pt.id, "ejemplo"])),
+          estado: porRevisar ? "por_revisar" : calificacion < 75 ? "regresado" : "aprobado",
+          comentarioJefe: cambios.length ? "En la foto el comedor no se ve limpio." : "",
         });
       }
     }

@@ -4,8 +4,9 @@
 // - TAREA: se hace una vez, puede pertenecer a un PROYECTO (o ir suelta), tiene pasos, fecha y responsable, y puede pedir
 //   foto. Flujo: por_hacer → en_proceso → revision → hecho. La persona la manda a revisión; solo el jefe la da por hecha
 //   (o la regresa a en_proceso).
-// - CHECKLIST: plantilla que se repite (diario / semanal) con puntos que pesan. Cada vez que toca, la persona llena un
-//   ENVÍO; el jefe lo revisa punto por punto (cumple / no cumple) y eso da su calificación en %.
+// - CHECKLIST: plantilla que se repite (diario / semanal) con PREGUNTAS configurables (sí/no, opciones con valor, número
+//   con rango, foto, texto) que pesan. Cada vez que toca, la persona llena un ENVÍO; el jefe lo revisa, puede corregir
+//   respuestas (queda registrado) y eso da su calificación en %. Calificación: preguntas.mjs.
 
 export const COLUMNAS = [
   { clave: "por_hacer", texto: "Por hacer", color: "#64748b" },
@@ -46,15 +47,6 @@ export function avanceProyecto(tareas = [], hoy) {
   return { total, hechas, vencidas, porcentaje: total ? Math.round((hechas / total) * 100) : 0 };
 }
 
-// Calificación de un envío de checklist, ponderada por peso: lo que el jefe aceptó (o, si aún no revisa, lo que la
-// persona palomeó). puntos: [{ id, peso }]; marcas: { [id]: true | false }. Devuelve 0–100 con un decimal.
-export function calificar(puntos = [], marcas = {}) {
-  const total = puntos.reduce((s, p) => s + (Number(p.peso) > 0 ? Number(p.peso) : 1), 0);
-  if (!total) return 0;
-  const bien = puntos.reduce((s, p) => s + (marcas[p.id] ? (Number(p.peso) > 0 ? Number(p.peso) : 1) : 0), 0);
-  return Math.round((bien / total) * 1000) / 10;
-}
-
 // Cumplimiento por persona en un periodo. envios: [{ persona, fecha, estado: "aprobado"|"regresado"|"por_revisar"|
 // "no_enviado", calificacion, aTiempo }]. Un «no enviado» cuenta 0 %. Los «por revisar» aún no cuentan.
 export function cumplimientoPorPersona(envios = [], { desde, hasta } = {}) {
@@ -88,13 +80,3 @@ export function fotoVigente(fechaEnvio, hoy) {
   return d <= DIAS_FOTOS;
 }
 
-// ¿Puede la persona enviar el checklist? Los puntos obligatorios deben estar hechos, y todo punto marcado que pide foto
-// necesita su foto. Los no obligatorios sin marcar se permiten (cuentan como «no cumple»). Devuelve null o el motivo.
-export function motivoNoEnviar(checklist, marcas = {}, fotos = {}) {
-  const faltanObligatorios = checklist.puntos.filter((p) => p.obligatorio && !marcas[p.id]).length;
-  const faltanFotos = checklist.puntos.filter((p) => p.pideFoto && marcas[p.id] && !fotos[p.id]).length;
-  const partes = [];
-  if (faltanObligatorios) partes.push(`${faltanObligatorios} ${faltanObligatorios === 1 ? "punto obligatorio" : "puntos obligatorios"}`);
-  if (faltanFotos) partes.push(`${faltanFotos} ${faltanFotos === 1 ? "foto" : "fotos"}`);
-  return partes.length ? `Faltan ${partes.join(" y ")}.` : null;
-}

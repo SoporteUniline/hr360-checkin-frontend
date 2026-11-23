@@ -5,9 +5,9 @@
 // se reemplaza por llamadas a la API con las mismas acciones.
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer } from "react";
 import { datosEjemplo, hoyMx, PERSONAS, JEFE } from "@/lib/tareas/demo.mjs";
-import { calificar } from "@/lib/tareas/reglas.mjs";
+import { aplicarCorrecciones, calificarRespuestas } from "@/lib/tareas/preguntas.mjs";
 
-const CLAVE = "adamia-tareas-prototipo-v1";
+const CLAVE = "adamia-tareas-prototipo-v2";
 const Contexto = createContext(null);
 
 function reductor(s, a) {
@@ -29,23 +29,26 @@ function reductor(s, a) {
       return { ...s, siguienteId: s.siguienteId + 1, proyectos: [...s.proyectos, { ...a.proyecto, id: nuevoId() }] };
     }
     case "guardarChecklist": {
-      let sig = nuevoId();
-      const puntos = a.checklist.puntos.map((p) => (p.id ? p : { ...p, id: sig++ }));
-      if (a.checklist.id) return { ...s, siguienteId: sig, checklists: s.checklists.map((c) => (c.id === a.checklist.id ? { ...a.checklist, puntos } : c)) };
-      return { ...s, siguienteId: sig + 1, checklists: [...s.checklists, { ...a.checklist, puntos, id: sig }] };
+      // Las preguntas y opciones nuevas traen id temporal (texto) del editor; se conservan tal cual.
+      if (a.checklist.id) return { ...s, checklists: s.checklists.map((c) => (c.id === a.checklist.id ? a.checklist : c)) };
+      return { ...s, siguienteId: s.siguienteId + 1, checklists: [...s.checklists, { ...a.checklist, id: nuevoId() }] };
     }
     case "revisar": {
+      // Decisión A: el jefe puede corregir respuestas; queda quién, de qué a qué, y la calificación se recalcula.
       return { ...s, envios: s.envios.map((e) => {
         if (e.id !== a.id) return e;
         const ck = s.checklists.find((c) => c.id === e.checklist);
-        return { ...e, marcas: a.marcas, calificacion: calificar(ck.puntos, a.marcas), estado: a.aprobar ? "aprobado" : "regresado", comentarioJefe: a.comentario };
+        const base = e.respuestasPersona ?? e.respuestas;
+        const { finales, cambios } = aplicarCorrecciones(ck.preguntas, base, a.correcciones ?? {});
+        return { ...e, respuestas: finales, cambios: cambios.map((c) => ({ ...c, por: a.por })), calificacion: calificarRespuestas(ck.preguntas, finales),
+          estado: a.aprobar ? "aprobado" : "regresado", comentarioJefe: a.comentario };
       }) };
     }
     case "enviarChecklist": {
       const ck = s.checklists.find((c) => c.id === a.checklist);
       const existente = s.envios.find((e) => e.checklist === a.checklist && e.persona === a.persona && e.fecha === a.fecha);
-      const envio = { checklist: a.checklist, persona: a.persona, fecha: a.fecha, marcas: a.marcas, fotos: a.fotos, nota: a.nota, hora: a.hora,
-        aTiempo: a.hora <= ck.hora, calificacion: calificar(ck.puntos, a.marcas), estado: "por_revisar" };
+      const envio = { checklist: a.checklist, persona: a.persona, fecha: a.fecha, respuestas: a.respuestas, respuestasPersona: a.respuestas, cambios: [], hora: a.hora,
+        aTiempo: a.hora <= ck.hora, calificacion: calificarRespuestas(ck.preguntas, a.respuestas), estado: "por_revisar", comentarioJefe: "" };
       if (existente) return { ...s, envios: s.envios.map((e) => (e === existente ? { ...e, ...envio } : e)) };
       return { ...s, siguienteId: s.siguienteId + 1, envios: [...s.envios, { ...envio, id: nuevoId() }] };
     }

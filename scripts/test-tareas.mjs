@@ -1,7 +1,8 @@
 // Reglas de Tareas y Checklists (src/lib/tareas/reglas.mjs). node --test scripts/test-tareas.mjs
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { motivoNoMover, avancePasos, avanceProyecto, calificar, cumplimientoPorPersona, ganaBono, fotoVigente } from "../src/lib/tareas/reglas.mjs";
+import { motivoNoMover, avancePasos, avanceProyecto, cumplimientoPorPersona, ganaBono, fotoVigente } from "../src/lib/tareas/reglas.mjs";
+import { puntajePregunta, calificarRespuestas, valorDePregunta, problemasChecklist, motivoNoEnviar, textoRespuesta, aplicarCorrecciones, fallasPorPregunta } from "../src/lib/tareas/preguntas.mjs";
 
 test("mover tareas: la persona manda a revisión solo con pasos y foto; solo el jefe la da por hecha", () => {
   const t = { estado: "en_proceso", pasos: [{ hecho: true }, { hecho: false }], pideFoto: true, fotos: [] };
@@ -21,15 +22,6 @@ test("avance de pasos y de proyecto", () => {
   assert.deepEqual(avancePasos([]), { hechos: 0, total: 0, porcentaje: 0 });
   const p = avanceProyecto([{ estado: "hecho" }, { estado: "en_proceso", fecha: "2026-11-20" }, { estado: "por_hacer", fecha: "2026-11-30" }], "2026-11-23");
   assert.deepEqual(p, { total: 3, hechas: 1, vencidas: 1, porcentaje: 33 });
-});
-
-test("calificación ponderada por peso", () => {
-  const puntos = [{ id: 1, peso: 1 }, { id: 2, peso: 1 }, { id: 3, peso: 2 }];
-  assert.equal(calificar(puntos, { 1: true, 2: true, 3: true }), 100);
-  assert.equal(calificar(puntos, { 1: true, 2: true, 3: false }), 50, "el punto que pesa doble resta la mitad");
-  assert.equal(calificar(puntos, { 3: true }), 50);
-  assert.equal(calificar([{ id: 1 }, { id: 2 }, { id: 3 }], { 1: true, 2: true }), 66.7, "sin peso cuentan 1");
-  assert.equal(calificar([], {}), 0);
 });
 
 test("cumplimiento por persona: no enviado cuenta 0, por revisar aún no cuenta, filtro por periodo", () => {
@@ -59,11 +51,89 @@ test("fotos: 3 meses", () => {
   assert.equal(fotoVigente("2026-08-24", "2026-11-23"), false);
 });
 
-test("enviar checklist: obligatorios hechos y foto en los marcados que la piden", async () => {
-  const { motivoNoEnviar } = await import("../src/lib/tareas/reglas.mjs");
-  const ck = { puntos: [{ id: 1, obligatorio: true }, { id: 2, pideFoto: true }, { id: 3 }, { id: 4, obligatorio: true, pideFoto: true }] };
-  assert.equal(motivoNoEnviar(ck, {}, {}), "Faltan 2 puntos obligatorios.");
-  assert.equal(motivoNoEnviar(ck, { 1: true, 4: true, 2: true }, {}), "Faltan 2 fotos.");
-  assert.equal(motivoNoEnviar(ck, { 1: true, 4: true }, { 4: "f" }), null, "un no obligatorio sin marcar se permite");
-  assert.equal(motivoNoEnviar(ck, { 4: true }, {}), "Faltan 1 punto obligatorio y 1 foto.");
+const PREGUNTAS = [
+  { id: 1, texto: "¿El área está ordenada?", tipo: "si_no", correcta: "si", peso: 1 },
+  { id: 2, texto: "¿Cómo está el área B?", tipo: "opcion", peso: 2, opciones: [{ id: "a", texto: "Limpia", valor: 100 }, { id: "b", texto: "Regular", valor: 50 }, { id: "c", texto: "Sucia", valor: 0 }] },
+  { id: 3, texto: "¿Qué está limpio?", tipo: "multiple", peso: 1, opciones: [{ id: "p", texto: "Piso", valor: 40 }, { id: "m", texto: "Mesas", valor: 30 }, { id: "b", texto: "Barra", valor: 30 }, { id: "x", texto: "Extra", valor: 30 }] },
+  { id: 4, texto: "Temperatura", tipo: "numero", min: 0, max: 5, unidad: "°C", peso: 2, permiteNA: true },
+  { id: 5, texto: "Foto del gas", tipo: "foto", peso: 1 },
+  { id: 6, texto: "Observaciones", tipo: "texto" },
+  { id: 7, texto: "¿Hay fugas?", tipo: "si_no", correcta: "no", peso: 1 },
+];
+
+test("puntaje por tipo de pregunta", () => {
+  const [sn, op, mu, nu, fo, tx, neg] = PREGUNTAS;
+  assert.equal(puntajePregunta(sn, { valor: "si" }), 100);
+  assert.equal(puntajePregunta(sn, { valor: "no" }), 0);
+  assert.equal(puntajePregunta(neg, { valor: "no" }), 100, "la buena puede ser «No»");
+  assert.equal(puntajePregunta(op, { valor: "b" }), 50);
+  assert.equal(puntajePregunta(mu, { valor: ["p", "m"] }), 70);
+  assert.equal(puntajePregunta(mu, { valor: ["p", "m", "b", "x"] }), 100, "varias: tope 100");
+  assert.equal(puntajePregunta(nu, { valor: 4 }), 100);
+  assert.equal(puntajePregunta(nu, { valor: 0 }), 100, "el límite cuenta");
+  assert.equal(puntajePregunta(nu, { valor: 7 }), 0);
+  assert.equal(puntajePregunta(nu, { na: true }), null, "no aplica no cuenta");
+  assert.equal(puntajePregunta(sn, { na: true }), 0, "si no permite N/A, cuenta como sin contestar");
+  assert.equal(puntajePregunta(fo, { valor: "url" }), 100);
+  assert.equal(puntajePregunta(fo, {}), 0);
+  assert.equal(puntajePregunta(tx, { valor: "hola" }), null, "el texto no se califica");
+  assert.equal(puntajePregunta(op, undefined), 0, "sin contestar = 0");
+});
+
+test("calificación ponderada y valor de cada pregunta", () => {
+  const todo = { 1: { valor: "si" }, 2: { valor: "a" }, 3: { valor: ["p", "m", "b"] }, 4: { valor: 3 }, 5: { valor: "u" }, 6: { valor: "ok" }, 7: { valor: "no" } };
+  assert.equal(calificarRespuestas(PREGUNTAS, todo), 100);
+  // Área B «Sucia» (peso 2 de 8) → 75 %.
+  assert.equal(calificarRespuestas(PREGUNTAS, { ...todo, 2: { valor: "c" } }), 75);
+  // Temperatura «no aplica» sale del total: 6 pesos restantes, todos bien.
+  assert.equal(calificarRespuestas(PREGUNTAS, { ...todo, 4: { na: true } }), 100);
+  assert.equal(calificarRespuestas(PREGUNTAS, { ...todo, 4: { na: true }, 2: { valor: "c" } }), 66.7);
+  assert.equal(calificarRespuestas([PREGUNTAS[5]], {}), null, "solo texto: no hay calificación");
+  assert.equal(valorDePregunta(PREGUNTAS, PREGUNTAS[1]), 25);
+  assert.equal(valorDePregunta(PREGUNTAS, PREGUNTAS[5]), null);
+});
+
+test("validación al crear un checklist", () => {
+  assert.deepEqual(problemasChecklist("Apertura", PREGUNTAS), []);
+  const errores = (pregs) => problemasChecklist("X", pregs).map((p) => p.error);
+  assert.deepEqual(problemasChecklist("", []).map((p) => p.error), ["Ponle nombre al checklist.", "Agrega al menos una pregunta."]);
+  assert.deepEqual(errores([{ id: 1, texto: "", tipo: "si_no" }]), ["Escribe la pregunta."]);
+  assert.deepEqual(errores([{ id: 1, texto: "a", tipo: "opcion", opciones: [{ id: 1, texto: "x", valor: 100 }] }]), ["Pon al menos 2 opciones."]);
+  assert.deepEqual(errores([{ id: 1, texto: "a", tipo: "opcion", opciones: [{ id: 1, texto: "x", valor: 80 }, { id: 2, texto: "y", valor: 0 }] }]), ["Alguna opción debe valer 100 % (la respuesta ideal)."]);
+  assert.deepEqual(errores([{ id: 1, texto: "a", tipo: "multiple", opciones: [{ id: 1, texto: "x", valor: 40 }, { id: 2, texto: "y", valor: 30 }] }]), ["Las opciones juntas deben sumar al menos 100 %."]);
+  assert.deepEqual(errores([{ id: 1, texto: "a", tipo: "opcion", opciones: [{ id: 1, texto: "x", valor: 100 }, { id: 2, texto: "", valor: 0 }] }]), ["Hay una opción sin texto."]);
+  assert.deepEqual(errores([{ id: 1, texto: "a", tipo: "numero", min: 9, max: 2 }]), ["El mínimo es mayor que el máximo."]);
+  assert.deepEqual(errores([{ id: 1, texto: "a", tipo: "texto" }]), ["Agrega al menos una pregunta que se califique (no solo texto)."]);
+});
+
+test("enviar: obligatorias contestadas (o no aplica) y foto donde se pide", () => {
+  const ck = { preguntas: [{ id: 1, tipo: "si_no", obligatoria: true }, { id: 2, tipo: "opcion", pideFoto: true }, { id: 3, tipo: "numero", obligatoria: true, permiteNA: true }, { id: 4, tipo: "texto" }] };
+  assert.equal(motivoNoEnviar(ck, {}), "Faltan 2 preguntas obligatorias.");
+  assert.equal(motivoNoEnviar(ck, { 1: { valor: "si" }, 3: { na: true } }), null, "no aplica cuenta como contestada; la opcional sin contestar se permite");
+  assert.equal(motivoNoEnviar(ck, { 1: { valor: "si" }, 2: { valor: "a" }, 3: { valor: 3 } }), "Faltan 1 foto.");
+  assert.equal(motivoNoEnviar(ck, { 1: { valor: "si" }, 2: { valor: "a", foto: "f" }, 3: { valor: 3 } }), null);
+});
+
+test("corrección del jefe: cambia la respuesta, recalcula y deja historial", () => {
+  const resp = { 1: { valor: "si" }, 2: { valor: "a", foto: "f" }, 3: { valor: ["p", "m", "b"] }, 4: { valor: 3 }, 5: { valor: "u" }, 7: { valor: "no" } };
+  const { finales, cambios } = aplicarCorrecciones(PREGUNTAS, resp, { 2: { valor: "c" }, 1: { valor: "si" } });
+  assert.deepEqual(cambios, [{ pregunta: 2, texto: "¿Cómo está el área B?", antes: "Limpia", despues: "Sucia" }], "solo lo que cambió");
+  assert.equal(finales[2].foto, "f", "conserva la foto de la persona");
+  assert.equal(calificarRespuestas(PREGUNTAS, finales), 75);
+  assert.equal(textoRespuesta(PREGUNTAS[2], { valor: ["p", "b"] }), "Piso, Barra");
+  assert.equal(textoRespuesta(PREGUNTAS[3], { valor: 4 }), "4 °C");
+  assert.equal(textoRespuesta(PREGUNTAS[3], { na: true }), "No aplica");
+});
+
+test("productividad: las preguntas que más fallan", () => {
+  const ck = { id: 1, nombre: "Apertura", preguntas: PREGUNTAS.slice(0, 2) };
+  const envios = [
+    { checklist: 1, estado: "aprobado", respuestas: { 1: { valor: "si" }, 2: { valor: "c" } } },
+    { checklist: 1, estado: "regresado", respuestas: { 1: { valor: "si" }, 2: { valor: "b" } } },
+    { checklist: 1, estado: "por_revisar", respuestas: { 1: { valor: "no" }, 2: { valor: "c" } } },
+  ];
+  const r = fallasPorPregunta(envios, [ck]);
+  assert.equal(r[0].pregunta, "¿Cómo está el área B?");
+  assert.deepEqual([r[0].veces, r[0].promedio, r[0].porcentajeMal], [2, 25, 100]);
+  assert.deepEqual([r[1].promedio, r[1].porcentajeMal], [100, 0], "por revisar aún no cuenta");
 });
