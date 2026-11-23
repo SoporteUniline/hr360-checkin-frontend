@@ -256,3 +256,22 @@ test("plantillas del mes y errores del API de agenda", () => {
   assert.match(mensajeErrorApi(err(409, { codigo: "WA_SIN_PLANTILLA" })), /Agenda y recordatorios/);
   assert.match(MENSAJE_VENTANA, /Enviar seguimiento/);
 });
+
+test("selector de horarios: causa cuando no hay horarios", async () => {
+  const { agendaConfigurada, causaSinHorarios, MENSAJE_SIN_MIGRACION_AGENDA, MENSAJE_AGENDA_SIN_CONFIGURAR } = await import("../src/lib/whatsapp/agenda.mjs");
+  const vacio = { lun: [], mar: [], mie: [], jue: [], vie: [], sab: [], dom: [] };
+  assert.equal(agendaConfigurada({ activa: true, horario: { ...vacio, lun: [{ desde: "09:00", hasta: "13:00" }] } }), true);
+  assert.equal(agendaConfigurada({ activa: false, horario: { ...vacio, lun: [{ desde: "09:00", hasta: "13:00" }] } }), false);
+  assert.equal(agendaConfigurada({ activa: true, horario: vacio }), false);
+  assert.equal(agendaConfigurada(null), false);
+  const sinMig = { response: { status: 503, data: { codigo: "SIN_MIGRACION" } } };
+  assert.equal(causaSinHorarios({ errorHorarios: sinMig, agenda: { activa: false } }), "sin_migracion");
+  assert.equal(causaSinHorarios({ errorAgenda: sinMig }), "sin_migracion");
+  assert.equal(causaSinHorarios({ agenda: { activa: false, horario: vacio } }), "sin_agenda");
+  assert.equal(causaSinHorarios({ agenda: { activa: true, horario: vacio } }), "sin_agenda");
+  assert.equal(causaSinHorarios({ agenda: { activa: true, horario: { ...vacio, vie: [{ desde: "09:00", hasta: "10:00" }] } } }), null);
+  assert.equal(causaSinHorarios({ errorHorarios: { response: { status: 500, data: {} } } }), null);
+  assert.equal(causaSinHorarios(), null);
+  assert.equal(MENSAJE_SIN_MIGRACION_AGENDA, "Falta correr la migración de la agenda (R3)");
+  assert.equal(MENSAJE_AGENDA_SIN_CONFIGURAR, "La agenda de esta vacante no está configurada");
+});

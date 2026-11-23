@@ -110,7 +110,9 @@ test("estados, actores y vista previa", () => {
   assert.equal(vistaPrevia({ texto: "Hola\n¿sigue\tdisponible?", direccion: "entrante" }), "Hola ¿sigue disponible?");
   assert.equal(vistaPrevia({ texto: "Claro", direccion: "saliente" }), "Enviado: Claro");
   assert.equal(vistaPrevia({ texto: "", direccion: "entrante" }), "[Archivo]");
-  assert.equal(textoArchivo("imagen"), "[Archivo: imagen] (se mostrará en una siguiente etapa)");
+  assert.equal(textoArchivo("imagen"), "[Archivo: imagen] (no disponible)");
+  assert.equal(vistaPrevia({ texto: "", direccion: "entrante", adjunto: { tipo: "audio", nota_voz: true } }), "Nota de voz");
+  assert.equal(vistaPrevia({ texto: "", direccion: "saliente", adjunto: { tipo: "documento", nombre: "cv.pdf" } }), "Enviado: Documento: cv.pdf");
 });
 
 test("errores del API en palabras claras", () => {

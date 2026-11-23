@@ -62,3 +62,24 @@ export const confirmarCita = (id) => axios.post(`${rutaCita(id)}/confirmar`).the
 export const aprobarAgenda = (id) => axios.post(`${rutaConversacion(id)}/aprobar-agenda`).then((r) => r.data);
 export const enviarSeguimiento = (id, plantilla) =>
   axios.post(`${rutaConversacion(id)}/seguimiento`, plantilla ? { plantilla } : {}).then((r) => r.data);
+
+// ——— Chat todo-en-uno: adjuntos y «Ofrecer horarios» ———
+// Envío multipart con progreso. Se fuerza el adaptador XHR (el de fetch no reporta el avance de subida) y el tipo
+// multipart para que axios no convierta el FormData a JSON; el navegador pone el «boundary».
+export const enviarAdjunto = (id, { archivo, nombre, texto, notaVoz = false }, { onProgreso, signal } = {}) => {
+  const form = new FormData();
+  form.append("archivo", archivo, nombre || archivo?.name || "archivo");
+  if (texto) form.append("texto", texto);
+  if (notaVoz) form.append("nota_voz", "1");
+  return axios.post(`${rutaConversacion(id)}/adjuntos`, form, {
+    adapter: "xhr",
+    headers: { "Content-Type": "multipart/form-data" },
+    signal,
+    timeout: 0,
+    onUploadProgress: (e) => onProgreso?.(e.total ? Math.min(1, e.loaded / e.total) : null),
+  }).then((r) => r.data);
+};
+// Bytes de un adjunto (ruta relativa ya validada con rutaAdjuntoSegura). El token va en el encabezado, nunca en la URL.
+export const descargarAdjunto = (ruta, { signal } = {}) => axios.get(ruta, { adapter: "xhr", responseType: "blob", signal, timeout: 0 }).then((r) => r.data);
+export const ofrecerHorarios = (id, cuantos) =>
+  axios.post(`${rutaConversacion(id)}/ofrecer-horarios`, cuantos ? { cuantos } : {}).then((r) => r.data);

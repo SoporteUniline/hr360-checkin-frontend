@@ -7,16 +7,24 @@
 // R3: agenda de entrevistas y recordatorios (pestaña «Agenda y recordatorios», agenda por vacante con vista previa de
 // horarios, pantalla «Entrevistas» con calendario y lista, acciones de cita, aprobar para agendar, agendar a mano y
 // «Enviar seguimiento» con la ventana cerrada).
+// Chat todo-en-uno: archivos en burbujas (imagen con visor, nota de voz con transcripción, documento, ubicación, estados),
+// envío multipart (clip, arrastrar, pegar, cancelar, 413), rechazos en el navegador (16 MB+, .exe), grabadora con un
+// MediaRecorder simulado, cita fija con sus acciones y líneas de sistema, «Ofrecer horarios» y el selector de horarios
+// sin horarios (agenda sin configurar, falta migración, días vacíos).
 // Construir con NEXT_PUBLIC_RUTA_DOMAIN=https://dev.adamia.com.mx (el enlace de la vacante usa ese dominio).
 // Backend simulado: nada sale a internet.
-// Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api NEXT_PUBLIC_RECRUITMENT_ENABLED=true npm run build
+// Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api NEXT_PUBLIC_RECRUITMENT_ENABLED=true NEXT_PUBLIC_WA_ADJUNTOS=true npm run build
 //      CAPTURAS=/ruta/capturas node scripts/verify-whatsapp.mjs
 import { createHmac, randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
+import { crc32, deflateSync } from "node:zlib";
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { hoyMx, inicioSemana, sumarDias } from "../src/lib/whatsapp/agenda.mjs";
+import { lineaAhora, rangoAgenda } from "../src/lib/whatsapp/calendario.mjs";
+import { LIMITE_ADJUNTO, MENSAJE_ARCHIVO_GRANDE, MENSAJE_MICRO_DENEGADO, MENSAJE_TIPO_NO_PERMITIDO, lineaCita } from "../src/lib/whatsapp/adjuntos.mjs";
+import { MENSAJE_SIN_HORARIOS } from "../src/lib/whatsapp/reglas.mjs";
 
 const REPO = process.cwd();
 const OUT = process.env.CAPTURAS || null;
@@ -32,6 +40,31 @@ const base = `http://127.0.0.1:${port}`;
 const next = spawn(process.execPath, [REPO + "/node_modules/next/dist/bin/next", "start", "-p", String(port), "-H", "127.0.0.1"],
   { cwd: REPO, stdio: "ignore", env: { ...process.env, JWT_SECRET: secret } });
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
+// PNG de color liso (para miniaturas visibles) y WAV de silencio de 3 s (el reproductor sí puede sonar).
+function png(ancho, alto, [r, g, b]) {
+  const trozo = (tipo, datos) => {
+    const largo = Buffer.alloc(4); largo.writeUInt32BE(datos.length);
+    const td = Buffer.concat([Buffer.from(tipo), datos]);
+    const c = Buffer.alloc(4); c.writeUInt32BE(crc32(td) >>> 0);
+    return Buffer.concat([largo, td, c]);
+  };
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(ancho, 0); ihdr.writeUInt32BE(alto, 4); ihdr[8] = 8; ihdr[9] = 2;
+  const fila = Buffer.alloc(1 + ancho * 3);
+  for (let x = 0; x < ancho; x++) { fila[1 + x * 3] = r; fila[2 + x * 3] = g; fila[3 + x * 3] = b; }
+  const crudo = Buffer.concat(Array.from({ length: alto }, () => fila));
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), trozo("IHDR", ihdr), trozo("IDAT", deflateSync(crudo)), trozo("IEND", Buffer.alloc(0))]);
+}
+function wav(segundos = 3, tasa = 8000) {
+  const datos = Buffer.alloc(segundos * tasa, 128);
+  const h = Buffer.alloc(44);
+  h.write("RIFF", 0); h.writeUInt32LE(36 + datos.length, 4); h.write("WAVE", 8); h.write("fmt ", 12); h.writeUInt32LE(16, 16); h.writeUInt16LE(1, 20); h.writeUInt16LE(1, 22);
+  h.writeUInt32LE(tasa, 24); h.writeUInt32LE(tasa, 28); h.writeUInt16LE(1, 32); h.writeUInt16LE(8, 34); h.write("data", 36); h.writeUInt32LE(datos.length, 40);
+  return Buffer.concat([h, datos]);
+}
+const PNG_INE = png(240, 160, [37, 99, 235]);
+const PNG_SUBIR = png(64, 64, [16, 185, 129]);
+const WAV = wav();
+const PDF = Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n");
 const firmar = (tipo) => {
   const head = Buffer.from('{"alg":"HS256","typ":"JWT"}').toString("base64url");
   const payload = Buffer.from(JSON.stringify({ tipo_usuario: tipo, id_usuario: -1, exp: Math.floor(Date.now() / 1000) + 3600 })).toString("base64url");
@@ -144,6 +177,8 @@ function estadoInicial() {
     citas, siguienteCita: 80, citasPorConv: {}, respuestasCita: [], respuestasSeguimiento: [], plantillasMes: 4,
     conversaciones, mensajes, empresas, vacantes, modo: "compartido", envios: [], siguienteId: 900, entrevistas, sinRespuesta, agente, preguntas, siguientePregunta: 100, errores400: [],
     paquetes, bolsa: { 10: false, 11: false }, bolsaFalla: 0, publico,
+    // Chat todo-en-uno.
+    adjuntoResp: [], subidas: [], descargas: [], ofrecerResp: [], horariosModo: "normal", reagendarComoServidor: false,
   };
 }
 const resumenEntrevista = (e) => (e ? { etapa: e.etapa, calificacion: e.calificacion, requiere_atencion: e.requiere_atencion, motivo_atencion: e.motivo_atencion } : null);
@@ -174,7 +209,8 @@ async function instalarMocks(ctx, usuario) {
     }
     const ruta = p.slice("/reclutamiento/whatsapp".length);
     let cuerpo = null;
-    try { cuerpo = req.postData() ? JSON.parse(req.postData()) : null; } catch { cuerpo = req.postData(); }
+    const multipart = /multipart\/form-data/.test(req.headers()["content-type"] || "");
+    if (!multipart) { try { cuerpo = req.postData() ? JSON.parse(req.postData()) : null; } catch { cuerpo = req.postData(); } }
     pedidos.push({ metodo: req.method(), ruta, params: url.search, cuerpo, token: req.headers().authorization || "" });
     const conv = (id) => S.conversaciones.find((c) => String(c.id) === String(id));
     let m;
@@ -215,6 +251,37 @@ async function instalarMocks(ctx, usuario) {
       c.no_leidos = 0;
       const cita = S.citasPorConv[c.id];
       return json({ conversacion: c, mensajes: S.mensajes[c.id], entrevista: S.entrevistas[c.id] ?? null, preguntas_sin_respuesta: S.sinRespuesta[c.id] ?? [], citas: cita ? [cita] : [] }); // como el servidor: lista «citas»
+    }
+    // ——— Chat todo-en-uno ———
+    if ((m = ruta.match(/^\/conversaciones\/(\d+)\/adjuntos\/(\d+)$/)) && req.method() === "GET") {
+      S.descargas.push({ id: m[2], params: url.search, token: req.headers().authorization || "" });
+      const archivos = { 1: ["image/png", PNG_INE], 2: ["audio/wav", WAV], 3: ["application/pdf", PDF], 9: ["image/png", PNG_SUBIR] };
+      const [tipo, bytes] = archivos[m[2]] ?? ["image/png", PNG_SUBIR];
+      return route.fulfill({ status: 200, contentType: tipo, headers: cors, body: bytes });
+    }
+    if ((m = ruta.match(/^\/conversaciones\/(\d+)\/adjuntos$/)) && req.method() === "POST") {
+      const cuerpoCrudo = req.postDataBuffer()?.toString("latin1") ?? "";
+      S.subidas.push({ tipo: req.headers()["content-type"] || "", cuerpo: cuerpoCrudo, token: req.headers().authorization || "" });
+      const forzada = S.adjuntoResp.shift();
+      if (forzada === "413") return json({ codigo: "WA_ARCHIVO_GRANDE", error: "Grande" }, 413);
+      await dormir(forzada === "lento" ? 5000 : 900); // deja ver la barra de avance
+      const parte = (nombre) => new RegExp(`name="${nombre}"(?:; filename="([^"]*)")?\\r\\n(?:Content-Type: ([^\\r]+)\\r\\n)?\\r\\n([\\s\\S]*?)\\r\\n--`).exec(cuerpoCrudo);
+      const archivo = parte("archivo");
+      const texto = parte("texto")?.[3] ?? "";
+      const mime = archivo?.[2] ?? "application/octet-stream";
+      const tipo = mime.startsWith("image/") ? "imagen" : mime.startsWith("audio/") ? "audio" : "documento";
+      const idAdj = 9;
+      const msg = { id: S.siguienteId++, direccion: "saliente", actor: "reclutador", tipo, texto: Buffer.from(texto, "latin1").toString("utf8"), estado: "enviado", error: null, creado_en: hace(0), usuario: { nombre: "Laura Gómez" },
+        adjunto: { id: idAdj, tipo, mime, nombre: archivo?.[1] ?? "archivo", tamano: archivo?.[3]?.length ?? 0, url: `/reclutamiento/whatsapp/conversaciones/${m[1]}/adjuntos/${idAdj}`, transcripcion: null, estado: "listo", lat: null, lng: null, nota_voz: parte("nota_voz")?.[3] === "1" } };
+      S.mensajes[m[1]].push(msg);
+      return json({ mensaje: msg });
+    }
+    if ((m = ruta.match(/^\/conversaciones\/(\d+)\/ofrecer-horarios$/)) && req.method() === "POST") {
+      const forzada = S.ofrecerResp.shift();
+      if (forzada) return json({ codigo: forzada, error: forzada }, 409);
+      const msg = { id: S.siguienteId++, direccion: "saliente", actor: "ia", tipo: "interactivo", texto: "Tengo estos horarios para tu entrevista. Elige uno:", estado: "enviado", error: null, creado_en: hace(0), usuario: null, adjunto: null };
+      S.mensajes[m[1]].push(msg);
+      return json({ mensaje: msg });
     }
     if ((m = ruta.match(/^\/conversaciones\/(\d+)\/tomar$/))) {
       const c = conv(m[1]); c.modo = "humano"; c.control = { id_usuario: 7, nombre: "Laura Gómez", correo: "laura@uniline.mx" };
@@ -299,6 +366,8 @@ async function instalarMocks(ctx, usuario) {
         cupo_por_horario: 1, horario: { lun: [], mar: [], mie: [], jue: [], vie: [], sab: [], dom: [] }, bloqueos: [], quien_agenda: null, anticipacion_min_minutos: null, dias_adelante: null });
     }
     if ((m = ruta.match(/^\/vacantes\/(\d+)\/agenda\/horarios$/))) {
+      if (S.horariosModo === "sin_migracion") return json({ codigo: "SIN_MIGRACION", error: "Falta la migración" }, 503);
+      if (S.horariosModo === "vacio") return json({ horarios: [] });
       const desde = url.searchParams.get("desde");
       const cupo = S.agendasVacante[m[1]]?.cupo_por_horario ?? 1;
       const d1 = sumarDias(desde, 1);
@@ -331,6 +400,13 @@ async function instalarMocks(ctx, usuario) {
       if (forzada) return json(forzada.cuerpo, forzada.status);
       const cita = S.citas.find((c) => String(c.id) === m[1]);
       if (!cita) return json({ error: "No existe" }, 404);
+      if (m[2] === "reagendar" && S.reagendarComoServidor) { // como el servidor: crea otra cita y deja la anterior «reagendada»
+        const nueva = { ...cita, id: S.siguienteCita++, inicio: cuerpo.inicio, fin: cuerpo.inicio, estado: "agendada" };
+        cita.estado = "reagendada";
+        S.citas.push(nueva);
+        if (cita.id_conversacion) S.citasPorConv[cita.id_conversacion] = nueva;
+        return json({ cita: nueva, anterior: cita.id });
+      }
       if (m[2] === "reagendar") Object.assign(cita, { inicio: cuerpo.inicio, fin: cuerpo.inicio, estado: "reagendada" });
       if (m[2] === "cancelar") Object.assign(cita, { estado: "cancelada", motivo: cuerpo.motivo });
       if (m[2] === "asistencia") cita.estado = cuerpo.asistio ? "asistio" : "no_asistio";
@@ -361,6 +437,9 @@ const browser = await chromium.launch();
 try {
   for (let i = 0; ; i++) { try { if ((await fetch(base + "/login")).status) break; } catch { /* aún no arranca */ } if (i > 200) throw new Error("Next no arrancó"); await dormir(150); }
   const errores = [];
+  // SOLO_CHAT=1: corre solo el bloque del chat todo-en-uno (para iterar rápido).
+  if (process.env.SOLO_AGENDA) { await agendaCalendario(browser, errores); assert.deepEqual(errores, []); exito = true; console.log("OK agenda"); throw new Error("__solo__"); }
+  if (process.env.SOLO_CHAT) { await chatTodoEnUno(browser, errores); assert.deepEqual(errores, []); exito = true; console.log("OK chat todo-en-uno"); throw new Error("__solo__"); }
 
   // ——— 1. Bandeja en escritorio ———
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: "es-MX", timezoneId: "America/Mexico_City", permissions: ["clipboard-read", "clipboard-write"] });
@@ -490,7 +569,7 @@ try {
   // ——— 8. Ventana de 24 h cerrada y control de otra persona ———
   await page.getByRole("button", { name: "+52 442 123 4567" }).click();
   await hilo.getByText("Gracias").first().waitFor();
-  assert.match(await hilo.locator('[data-mensaje="200"]').innerText(), /\[Archivo: imagen\] \(se mostrará en una siguiente etapa\)/);
+  assert.match(await hilo.locator('[data-mensaje="200"]').innerText(), /\[Archivo: imagen\] \(no disponible\)/);
   assert.match(await hilo.innerText(), /Pasaron más de 24 h desde el último mensaje del candidato: WhatsApp no permite escribirle libremente\. Usa «Enviar seguimiento» para mandarle una plantilla aprobada; cuando conteste, el chat se reabre\./);
   assert.equal(await hilo.getByRole("textbox", { name: "Mensaje" }).isDisabled(), true);
   await page.getByRole("button", { name: /^Carlos Méndez/ }).click();
@@ -1362,7 +1441,595 @@ try {
   if (OUT) await t3.screenshot({ path: OUT + "/r3-11-movil-seguimiento.png" });
   await movR3.close();
 
+  await chatTodoEnUno(browser, errores);
+  await agendaCalendario(browser, errores);
+
   assert.deepEqual(errores, [], "sin errores de JavaScript");
   exito = true;
-  console.log("OK whatsapp · lista con no leídos y control · abrir chat lo marca leído (GET) · sondeo 3 s · tomar control habilita y envía {texto} con «Enviando…» · Shift+Enter · 403/409 con texto conservado · envío rechazado (200 «fallido») y reintentos · archivos como «[Archivo: tipo]» · invitado con mismo id y otro correo no controla · devolver a IA · ventana 24 h y control ajeno · enlace de vacante copiado y 409 apagado · paginación real (pagina=2, sondeo solo página 1, sin duplicados) · enlaces de vacantes (lista, búsqueda, copiar, 409/503, vacío, hoja en teléfono) · búsqueda q · móvil a pantalla completa con volver · apagado · admin valida, muestra 409 y manda PUT · R2: agente (validación, horario, copiar lunes, palabras, 400, PUT, nombre en burbujas, cambios sin guardar) · entrevista por vacante (conteo perezoso, validación, rango número, opciones descarta/alerta excluyentes, reordenar con foco, máx. 8, 400, PUT) · filtros atencion=1 / calificacion · evaluación (puntajes, respuestas con severidad, sin respuesta) · marcar atendido · hoja <1280 · teléfono ≥44 px sin desborde · 27/11: interruptor de la bolsa (GET, PUT {publicar_bolsa}, falla y regresa, también con WhatsApp apagado) · copiar enlace de la vacante (/vacante/<slug>) · WhatsApp apagado avisa · chip de entrevistas con y sin paquete y aviso de extras · admin: paquete, extras, importe y PUT con entrevistas_incluidas · bolsa pública: /vacantes/filter y tira con ?bolsa=1 (vacía se oculta) · R3: agenda de la empresa (quién agenda, anticipación, días, horarios, recordatorios en minutos, plantillas, mensajes con marcadores en el cursor, vista previa, marcador desconocido, restaurar, 400, PUT) · agenda de la vacante (cupo, varios rangos con empalme, copiar a todos, bloqueo, override null vs valor, vista previa /horarios antes y después de guardar) · Entrevistas (calendario semanal con empalmes, filtros estado/vacante, lista, asistió, reagendar con 409 WA_SIN_CUPO, cancelar con motivo, confirmar, abrir chat) · agendar a mano y cita en el panel · aprobar para agendar · seguimiento con confirmación y 409 WA_SIN_PLANTILLA / WA_VENTANA_ABIERTA · plantillas del mes · teléfono: lista, hojas a pantalla completa, ≥44 px, sin desborde");
-} finally { await browser.close(); next.kill(); if (!exito) process.exitCode = 1; }
+  console.log("OK whatsapp · agenda tipo Google Calendar: menú «Entrevistas» a la vista real (sin maqueta, redirección del enlace viejo), semana/día, minicalendario, línea de ahora, horarios libres de la vacante, agendar aquí (POST /citas), arrastrar a un horario (confirmar, POST reagendar), 409 regresa la cita, selector del chat con la misma rejilla, teléfono con tira de días · chat todo-en-uno: imagen con visor (zoom, teclado, Bearer sin token en URL), nota de voz (transcripción, reproducir, velocidad), documento (descargar ?descargar=1, abrir), ubicación (Google Maps), estados descargando/fallido, subida PNG con comentario y PDF arrastrado (multipart archivo/texto, avance), pegar imagen, rechazo 16 MB+ y .exe, 413, cancelar envío, grabadora (webm/opus, cancelar, nota_voz=1, micrófono negado), cita fija (confirmar, no asistió, agendar, mover, cancelar con líneas de sistema), ofrecer horarios (tarjeta y «+», 409 WA_SIN_HORARIOS), selector sin horarios (migración, días vacíos, agenda sin configurar → Configurar agenda), teléfono ≥44 px sin desborde · lista con no leídos y control · abrir chat lo marca leído (GET) · sondeo 3 s · tomar control habilita y envía {texto} con «Enviando…» · Shift+Enter · 403/409 con texto conservado · envío rechazado (200 «fallido») y reintentos · archivos como «[Archivo: tipo]» · invitado con mismo id y otro correo no controla · devolver a IA · ventana 24 h y control ajeno · enlace de vacante copiado y 409 apagado · paginación real (pagina=2, sondeo solo página 1, sin duplicados) · enlaces de vacantes (lista, búsqueda, copiar, 409/503, vacío, hoja en teléfono) · búsqueda q · móvil a pantalla completa con volver · apagado · admin valida, muestra 409 y manda PUT · R2: agente (validación, horario, copiar lunes, palabras, 400, PUT, nombre en burbujas, cambios sin guardar) · entrevista por vacante (conteo perezoso, validación, rango número, opciones descarta/alerta excluyentes, reordenar con foco, máx. 8, 400, PUT) · filtros atencion=1 / calificacion · evaluación (puntajes, respuestas con severidad, sin respuesta) · marcar atendido · hoja <1280 · teléfono ≥44 px sin desborde · 27/11: interruptor de la bolsa (GET, PUT {publicar_bolsa}, falla y regresa, también con WhatsApp apagado) · copiar enlace de la vacante (/vacante/<slug>) · WhatsApp apagado avisa · chip de entrevistas con y sin paquete y aviso de extras · admin: paquete, extras, importe y PUT con entrevistas_incluidas · bolsa pública: /vacantes/filter y tira con ?bolsa=1 (vacía se oculta) · R3: agenda de la empresa (quién agenda, anticipación, días, horarios, recordatorios en minutos, plantillas, mensajes con marcadores en el cursor, vista previa, marcador desconocido, restaurar, 400, PUT) · agenda de la vacante (cupo, varios rangos con empalme, copiar a todos, bloqueo, override null vs valor, vista previa /horarios antes y después de guardar) · Entrevistas (calendario semanal con empalmes, filtros estado/vacante, lista, asistió, reagendar con 409 WA_SIN_CUPO, cancelar con motivo, confirmar, abrir chat) · agendar a mano y cita en el panel · aprobar para agendar · seguimiento con confirmación y 409 WA_SIN_PLANTILLA / WA_VENTANA_ABIERTA · plantillas del mes · teléfono: lista, hojas a pantalla completa, ≥44 px, sin desborde");
+} catch (e) { if (e?.message !== "__solo__") throw e; } finally { await browser.close(); next.kill(); if (!exito) process.exitCode = 1; }
+
+// ——— 22. Chat todo-en-uno: archivos, envío multipart, grabadora, cita fija, «Ofrecer horarios» y selector sin horarios ———
+// MediaRecorder simulado (solo «graba» webm/opus, para probar la segunda opción) y micrófono que se puede negar.
+function GRABADORA_FALSA() {
+  class GrabadoraFalsa {
+    static isTypeSupported(t) { return t === "audio/webm;codecs=opus"; }
+    constructor(stream, opciones) { this.stream = stream; this.mimeType = opciones?.mimeType || "audio/webm"; this.state = "inactive"; window.__grabadora = this; }
+    start() { this.state = "recording"; }
+    stop() {
+      this.state = "inactive";
+      setTimeout(() => {
+        this.ondataavailable?.({ data: new Blob([new Uint8Array(2048).fill(7)], { type: this.mimeType }) });
+        this.onstop?.();
+      }, 10);
+    }
+  }
+  window.MediaRecorder = GrabadoraFalsa;
+  window.__pistasDetenidas = 0;
+  Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: {
+    getUserMedia: async () => {
+      if (window.__negarMicro) throw new DOMException("Permiso negado", "NotAllowedError");
+      return { getTracks: () => [{ stop: () => { window.__pistasDetenidas += 1; } }] };
+    },
+  } });
+}
+
+async function chatTodoEnUno(browser, errores) {
+  S = estadoInicial();
+  const hoy = hoyMx();
+  const manana = sumarDias(hoy, 1);
+  const vac55 = { id_vacante: 55, titulo: "Operador de montacargas" };
+  const adj = (id, extra) => ({ id, url: `/reclutamiento/whatsapp/conversaciones/4/adjuntos/${id}`, estado: "listo", transcripcion: null, lat: null, lng: null, nota_voz: false, ...extra });
+  S.conversaciones.unshift({ id: 4, id_empresa: 10, contacto: { id: 504, nombre: "Rosa Torres", telefono: "5215566667777" }, vacante: vac55,
+    modo: "humano", control: { id_usuario: 7, nombre: "Laura Gómez", correo: "laura@uniline.mx" }, no_leidos: 1,
+    ultimo_mensaje: { texto: "", direccion: "entrante", creado_en: hace(1), adjunto: { tipo: "audio", nota_voz: true } }, ultimo_entrante_en: hace(1), ventana_abierta: true });
+  const ent = (id, tipo, adjunto, texto = "") => ({ id, direccion: "entrante", actor: "candidato", tipo, texto, estado: "recibido", error: null, creado_en: hace(10 - id + 400), usuario: null, adjunto });
+  S.mensajes[4] = [
+    ent(401, "imagen", adj(1, { tipo: "imagen", mime: "image/png", nombre: "ine.png", tamano: 120000 }), "Mi INE"),
+    ent(402, "audio", adj(2, { tipo: "audio", mime: "audio/ogg", nombre: "nota.ogg", tamano: 24044, nota_voz: true, transcripcion: "Hola, sí puedo ir el martes a la entrevista." })),
+    ent(403, "documento", adj(3, { tipo: "documento", mime: "application/pdf", nombre: "cv.pdf", tamano: Math.round(2.3 * 1024 * 1024) })),
+    ent(404, "ubicacion", adj(4, { tipo: "ubicacion", mime: null, nombre: null, tamano: null, url: null, lat: 25.6866, lng: -100.3161 }), "Aquí vivo"),
+    ent(405, "video", adj(5, { tipo: "video", mime: "video/mp4", nombre: "video.mp4", tamano: 900000, estado: "descargando" })),
+    ent(406, "imagen", adj(6, { tipo: "imagen", mime: "image/jpeg", nombre: "foto.jpg", tamano: 50000, estado: "fallido" })),
+  ];
+  const cita = { id: 90, inicio: `${hoy} 12:00`, fin: `${hoy} 12:30`, estado: "agendada", origen: "agente", modalidad: "presencial", lugar: "Av. Industrial 120, Apodaca", vacante: vac55,
+    candidato: { nombre: "Rosa Torres", telefono: "5215566667777" }, id_conversacion: 4 };
+  S.citas.push(cita);
+  S.citasPorConv[4] = cita;
+  S.reagendarComoServidor = true;
+
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: "es-MX", timezoneId: "America/Mexico_City", acceptDownloads: true });
+  await ctx.addInitScript(GRABADORA_FALSA);
+  await ctx.addCookies([{ name: "token", value: firmar("Recruiter"), url: base }]);
+  await instalarMocks(ctx, reclutadora);
+  const page = await ctx.newPage();
+  page.on("pageerror", (e) => errores.push(e.message));
+  if (process.env.DEPURAR) { page.on("console", (m) => console.log("consola:", m.text())); page.on("requestfailed", (r) => console.log("falló:", r.method(), r.url(), r.failure()?.errorText)); }
+  await page.goto(base + "/panel/whatsapp", { waitUntil: "domcontentloaded" });
+  const lista = page.getByRole("list", { name: "Conversaciones" });
+  await lista.waitFor({ timeout: 30000 });
+  assert.match(await page.getByRole("button", { name: /^Rosa Torres/ }).innerText(), /Nota de voz/, "la lista dice «Nota de voz» en lugar de [Archivo]");
+  await page.getByRole("button", { name: /^Rosa Torres/ }).click();
+  const hilo = page.getByRole("region", { name: "Conversación" });
+  await hilo.locator('[data-mensaje="401"]').waitFor();
+
+  // Imagen: miniatura con el token en el encabezado (nunca en la URL), visor con zoom y teclado.
+  const mini = hilo.locator('[data-mensaje="401"] img[data-miniatura]');
+  await hilo.locator('[data-mensaje="401"]').scrollIntoViewIfNeeded(); // las miniaturas se piden al acercarse a la vista
+  await mini.waitFor();
+  await page.waitForFunction(() => document.querySelector('[data-mensaje="401"] img[data-miniatura]')?.naturalWidth === 240);
+  assert.match(await hilo.locator('[data-mensaje="401"]').innerText(), /Mi INE/, "el comentario va bajo la imagen");
+  const dImg = S.descargas.find((d) => d.id === "1");
+  assert.ok(dImg && /^Bearer .+/.test(dImg.token) && !/token/i.test(dImg.params), "blob con Bearer y sin token en la URL");
+  assert.ok(await mini.evaluate((el) => el.src.startsWith("blob:")), "la miniatura usa una URL local");
+  await hilo.getByRole("button", { name: "Ver imagen ine.png" }).focus();
+  await page.keyboard.press("Enter");
+  const visor = page.getByRole("dialog", { name: "ine.png" });
+  await visor.waitFor();
+  assert.equal(await visor.getByText("100%").count(), 1);
+  await visor.getByRole("button", { name: "Acercar" }).click();
+  await visor.getByText("150%").waitFor();
+  await page.keyboard.press("+");
+  await visor.getByText("200%").waitFor();
+  await page.keyboard.press("-");
+  await visor.getByText("150%").waitFor();
+  assert.equal(await visor.getByRole("button", { name: "Descargar ine.png" }).count(), 1, "el visor ofrece descargar");
+  if (OUT) await page.screenshot({ path: OUT + "/chat-02-visor-imagen.png" });
+  await page.keyboard.press("Escape");
+  await visor.waitFor({ state: "detached" });
+
+  // Nota de voz: etiqueta, transcripción plegable, reproducir (blob simulado) y velocidad.
+  const audio = hilo.locator('[data-mensaje="402"] [data-audio]');
+  assert.match(await audio.innerText(), /Nota de voz/);
+  assert.equal(await audio.locator("[data-transcripcion]").isVisible(), false, "la transcripción empieza plegada");
+  await audio.getByRole("button", { name: "Transcripción" }).click();
+  assert.equal(await audio.getByRole("button", { name: "Ocultar transcripción" }).getAttribute("aria-expanded"), "true");
+  assert.equal(await audio.locator("[data-transcripcion]").innerText(), "Hola, sí puedo ir el martes a la entrevista.");
+  assert.equal(S.descargas.filter((d) => d.id === "2").length, 0, "el audio no se descarga hasta reproducirlo");
+  await audio.getByRole("button", { name: "Reproducir nota de voz" }).click();
+  await page.waitForFunction(() => (document.querySelector('[data-mensaje="402"] audio')?.currentTime ?? 0) > 0.2, null, { timeout: 15000 });
+  assert.equal(await audio.getByRole("button", { name: "Pausar nota de voz" }).count(), 1);
+  await audio.getByRole("button", { name: "Velocidad 1x" }).click();
+  await audio.getByRole("button", { name: "Velocidad 1.5x" }).waitFor();
+  assert.equal(await audio.locator("audio").evaluate((el) => el.playbackRate), 1.5);
+  await audio.getByRole("button", { name: "Velocidad 1.5x" }).click();
+  await audio.getByRole("button", { name: "Velocidad 2x" }).waitFor();
+  await audio.getByRole("button", { name: "Pausar nota de voz" }).click();
+  await audio.getByRole("button", { name: "Reproducir nota de voz" }).waitFor();
+  assert.match(await audio.locator("[data-tiempo-audio]").innerText(), /^0:0\d \/ 0:03$/);
+
+  // Documento: tarjeta con tipo y tamaño; «Descargar» pide ?descargar=1 y guarda con su nombre.
+  const doc = hilo.locator('[data-mensaje="403"] [data-documento]');
+  assert.match(await doc.innerText(), /cv\.pdf[\s\S]*PDF · 2\.3 MB[\s\S]*Abrir[\s\S]*Descargar/);
+  const [descarga] = await Promise.all([page.waitForEvent("download"), doc.getByRole("button", { name: "Descargar cv.pdf" }).click()]);
+  assert.equal(descarga.suggestedFilename(), "cv.pdf");
+  assert.ok(S.descargas.some((d) => d.id === "3" && d.params === "?descargar=1"), "descarga como adjunto");
+  const [ventana] = await Promise.all([ctx.waitForEvent("page"), doc.getByRole("button", { name: "Abrir cv.pdf" }).click()]);
+  // «Abrir» abre una ventana en el clic y la lleva al archivo local (en headless no hay visor de PDF: se queda en blanco y descarga).
+  for (let i = 0; i < 50 && !S.descargas.some((d) => d.id === "3" && d.params === ""); i++) await dormir(100);
+  assert.ok(S.descargas.some((d) => d.id === "3" && d.params === ""), "«Abrir» pide el archivo (sin ?descargar=1)");
+  await ventana.close().catch(() => {});
+
+  // Ubicación con enlace a Google Maps (sin mapa incrustado) y estados del archivo.
+  const ubi = hilo.locator('[data-mensaje="404"] [data-ubicacion]');
+  const maps = ubi.getByRole("link", { name: "Abrir en Google Maps" });
+  assert.equal(await maps.getAttribute("href"), "https://www.google.com/maps?q=25.6866,-100.3161");
+  assert.equal(await maps.getAttribute("target"), "_blank");
+  assert.match(await ubi.innerText(), /25\.68660, -100\.31610/);
+  assert.match(await hilo.locator('[data-mensaje="404"]').innerText(), /Aquí vivo/);
+  assert.match(await hilo.locator('[data-mensaje="405"]').innerText(), /Descargando…/);
+  assert.match(await hilo.locator('[data-mensaje="406"]').innerText(), /No se pudo descargar el archivo/);
+  assert.equal(S.descargas.filter((d) => ["5", "6"].includes(d.id)).length, 0, "sin pedir archivos que aún no están listos");
+  if (OUT) await page.screenshot({ path: OUT + "/chat-01-burbujas-escritorio.png" });
+
+  // Subir una PNG con comentario: multipart con «archivo» y «texto», barra de avance, burbuja nueva.
+  const selector = hilo.locator("[data-selector-archivo]");
+  assert.match(await selector.getAttribute("accept"), /image\/png.*application\/pdf.*\.docx/);
+  await selector.setInputFiles({ name: "foto.png", mimeType: "image/png", buffer: PNG_SUBIR });
+  await hilo.locator('[data-adjunto-pendiente="imagen"] img').waitFor();
+  assert.match(await hilo.locator('[data-adjunto-pendiente="imagen"]').innerText(), /foto\.png[\s\S]*KB|B/);
+  const caja = hilo.getByRole("textbox", { name: "Comentario del archivo" });
+  await caja.fill("Mi comprobante de domicilio");
+  if (OUT) await page.screenshot({ path: OUT + "/chat-03-adjunto-pendiente.png" });
+  const subidasAntes = S.subidas.length;
+  await hilo.getByRole("button", { name: "Enviar archivo" }).click();
+  await hilo.locator("[data-subiendo]").waitFor({ timeout: 3000 });
+  assert.equal(await hilo.getByRole("progressbar", { name: "Avance del envío" }).count(), 1);
+  if (OUT) await page.screenshot({ path: OUT + "/chat-04-subiendo.png" });
+  await hilo.locator("[data-subiendo]").waitFor({ state: "detached", timeout: 8000 });
+  const sub1 = S.subidas[subidasAntes];
+  assert.match(sub1.tipo, /^multipart\/form-data; boundary=/);
+  assert.match(sub1.token, /^Bearer .+/);
+  assert.match(sub1.cuerpo, /name="archivo"; filename="foto\.png"\r\nContent-Type: image\/png/);
+  assert.ok(sub1.cuerpo.includes(`name="texto"\r\n\r\n${Buffer.from("Mi comprobante de domicilio").toString("latin1")}\r\n`));
+  assert.ok(!sub1.cuerpo.includes('name="nota_voz"'), "un archivo elegido no es nota de voz");
+  const nuevo = hilo.locator('[data-mensaje="900"]');
+  await nuevo.locator('[data-adjunto="imagen"] img[data-miniatura]').waitFor();
+  assert.match(await nuevo.innerText(), /Mi comprobante de domicilio/);
+  assert.equal(await hilo.locator("[data-adjunto-pendiente]").count(), 0, "se limpia tras enviar");
+  assert.equal(await hilo.getByRole("textbox", { name: "Mensaje" }).inputValue(), "");
+
+  // PDF arrastrado sobre el hilo, sin comentario (no manda «texto»).
+  const dt = await page.evaluateHandle(() => {
+    const d = new DataTransfer();
+    d.items.add(new File(["%PDF-1.4 propuesta"], "propuesta.pdf", { type: "application/pdf" }));
+    return d;
+  });
+  await hilo.dispatchEvent("dragenter", { dataTransfer: dt });
+  await hilo.locator("[data-soltar-archivo]").waitFor();
+  if (OUT) await page.screenshot({ path: OUT + "/chat-05-soltar-archivo.png" });
+  await hilo.dispatchEvent("drop", { dataTransfer: dt });
+  await hilo.locator('[data-adjunto-pendiente="documento"]').waitFor();
+  assert.equal(await hilo.locator("[data-soltar-archivo]").count(), 0);
+  await hilo.getByRole("textbox", { name: "Comentario del archivo" }).press("Enter");
+  await hilo.locator('[data-mensaje="901"] [data-documento]').waitFor({ timeout: 8000 });
+  const sub2 = S.subidas.at(-1);
+  assert.match(sub2.cuerpo, /name="archivo"; filename="propuesta\.pdf"\r\nContent-Type: application\/pdf/);
+  assert.ok(!sub2.cuerpo.includes('name="texto"'), "sin comentario no se manda «texto»");
+
+  // Pegar una imagen del portapapeles y quitarla.
+  await hilo.getByRole("textbox", { name: "Mensaje" }).evaluate((el) => {
+    const d = new DataTransfer();
+    d.items.add(new File([new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10, 1, 2, 3])], "image.png", { type: "image/png" }));
+    el.dispatchEvent(new ClipboardEvent("paste", { clipboardData: d, bubbles: true, cancelable: true }));
+  });
+  await hilo.locator('[data-adjunto-pendiente="imagen"]').waitFor();
+  await hilo.getByRole("button", { name: "Quitar archivo" }).click();
+  assert.equal(await hilo.locator("[data-adjunto-pendiente]").count(), 0);
+
+  // Rechazos en el navegador: más de 16 MB y .exe (no se sube nada).
+  const subidasRechazo = S.subidas.length;
+  await selector.setInputFiles({ name: "grande.mp4", mimeType: "video/mp4", buffer: Buffer.alloc(LIMITE_ADJUNTO + 1) });
+  await hilo.locator("[data-error-adjunto]").filter({ hasText: MENSAJE_ARCHIVO_GRANDE }).waitFor();
+  assert.equal(await hilo.locator("[data-adjunto-pendiente]").count(), 0);
+  await selector.setInputFiles({ name: "setup.exe", mimeType: "application/x-msdownload", buffer: Buffer.from("MZ") });
+  await hilo.locator("[data-error-adjunto]").filter({ hasText: MENSAJE_TIPO_NO_PERMITIDO }).waitFor();
+  assert.equal(await hilo.locator("[data-adjunto-pendiente]").count(), 0);
+  assert.equal(S.subidas.length, subidasRechazo, "nada rechazado llega al API");
+  if (OUT) await page.screenshot({ path: OUT + "/chat-06-rechazo-tipo.png" });
+  await hilo.getByRole("button", { name: "Cerrar aviso" }).click();
+
+  // 413 del API: aviso con el texto y el archivo se conserva. Luego cancelar a media subida.
+  S.adjuntoResp.push("413");
+  await selector.setInputFiles({ name: "foto.png", mimeType: "image/png", buffer: PNG_SUBIR });
+  await hilo.getByRole("button", { name: "Enviar archivo" }).click();
+  await hilo.getByRole("alert").filter({ hasText: MENSAJE_ARCHIVO_GRANDE }).waitFor();
+  assert.equal(await hilo.locator('[data-adjunto-pendiente="imagen"]').count(), 1, "tras el 413 el archivo sigue ahí");
+  S.adjuntoResp.push("lento");
+  const mensajesAntes = S.mensajes[4].length;
+  await hilo.getByRole("button", { name: "Enviar archivo" }).click();
+  await hilo.locator("[data-subiendo]").waitFor();
+  await hilo.getByRole("button", { name: "Cancelar envío" }).click();
+  await hilo.locator("[data-subiendo]").waitFor({ state: "detached" });
+  assert.equal(await hilo.locator('[data-adjunto-pendiente="imagen"]').count(), 1, "al cancelar se conserva el archivo");
+  await dormir(300);
+  assert.equal(await hilo.locator(`[data-mensaje="${S.siguienteId}"]`).count(), 0, "sin burbuja del envío cancelado");
+  assert.ok(S.mensajes[4].length >= mensajesAntes);
+  await hilo.getByRole("button", { name: "Quitar archivo" }).click();
+
+  // Grabadora (MediaRecorder simulado): tiempo, cancelar sin enviar y «Detener y enviar» con nota_voz=1 en webm/opus.
+  const subidasVoz = S.subidas.length;
+  await hilo.getByRole("button", { name: "Grabar nota de voz" }).click();
+  const barra = hilo.locator("[data-grabando]");
+  await barra.waitFor();
+  await barra.locator("[data-tiempo-grabacion]").filter({ hasText: "0:01" }).waitFor({ timeout: 4000 });
+  if (OUT) await page.screenshot({ path: OUT + "/chat-07-grabando.png" });
+  await barra.getByRole("button", { name: "Cancelar grabación" }).click();
+  await barra.waitFor({ state: "detached" });
+  await dormir(200);
+  assert.equal(S.subidas.length, subidasVoz, "cancelar no envía");
+  assert.ok(await page.evaluate(() => window.__pistasDetenidas) >= 1, "cancelar suelta el micrófono");
+  await hilo.getByRole("button", { name: "Grabar nota de voz" }).click();
+  await barra.waitFor();
+  assert.equal(await page.evaluate(() => window.__grabadora.mimeType), "audio/webm;codecs=opus", "sin ogg se usa webm/opus");
+  await barra.getByRole("button", { name: "Detener y enviar" }).click();
+  await hilo.locator("[data-subiendo]").waitFor();
+  await hilo.locator("[data-subiendo]").waitFor({ state: "detached", timeout: 8000 });
+  const voz = S.subidas.at(-1);
+  assert.match(voz.cuerpo, /name="archivo"; filename="nota-de-voz-\d{14}\.webm"\r\nContent-Type: audio\/webm\r\n/);
+  assert.match(voz.cuerpo, /name="nota_voz"\r\n\r\n1\r\n/);
+  await hilo.locator('[data-adjunto="audio"]').last().getByText("Nota de voz").waitFor();
+  // Micrófono negado.
+  await page.evaluate(() => { window.__negarMicro = true; });
+  await hilo.getByRole("button", { name: "Grabar nota de voz" }).click();
+  await hilo.locator("[data-error-adjunto]").filter({ hasText: MENSAJE_MICRO_DENEGADO }).waitFor();
+  await hilo.getByRole("button", { name: "Cerrar aviso" }).click();
+
+  // Cita fija: confirmar, no asistió, agendar, mover y cancelar, cada una con su línea de sistema.
+  const tarjeta = hilo.getByRole("region", { name: "Cita de entrevista" });
+  await tarjeta.locator('[data-estado-cita="agendada"]').waitFor();
+  assert.match(await tarjeta.innerText(), /12:00 p\.m\.[\s\S]*Agendada[\s\S]*Av\. Industrial 120, Apodaca/);
+  const linea = (texto) => hilo.locator("[data-linea-sistema]").filter({ hasText: texto }).waitFor();
+  await tarjeta.getByRole("button", { name: "Confirmar" }).click();
+  await linea(lineaCita("confirmar", cita));
+  await tarjeta.locator('[data-estado-cita="confirmada"]').waitFor();
+  assert.equal(cuenta((x) => x.ruta === "/citas/90/confirmar" && x.metodo === "POST"), 1);
+  await tarjeta.getByRole("button", { name: "No asistió" }).click();
+  await linea(lineaCita("no_asistio"));
+  assert.deepEqual(pedidos.find((x) => x.ruta === "/citas/90/asistencia").cuerpo, { asistio: false });
+  await tarjeta.getByText("Sin entrevista agendada").waitFor();
+  assert.match(await tarjeta.innerText(), /Última: No asistió/);
+  await tarjeta.getByRole("button", { name: "Agendar", exact: true }).click();
+  const dlgAg = page.getByRole("dialog", { name: "Agendar entrevista" });
+  await dlgAg.locator(`[data-dia-horarios="${manana}"]`).waitFor();
+  // Con horarios: «Agendar» sin elegir sí avisa (y solo entonces).
+  assert.equal(await dlgAg.getByText("Elige un horario.").count(), 0, "sin aviso antes de intentar");
+  await dlgAg.getByRole("button", { name: "Agendar", exact: true }).click();
+  await dlgAg.getByRole("alert").filter({ hasText: "Elige un horario." }).waitFor();
+  await dlgAg.locator(`[data-dia-horarios="${manana}"]`).getByText("9:00 a.m.").click();
+  await dlgAg.getByRole("button", { name: "Agendar", exact: true }).click();
+  await dlgAg.waitFor({ state: "detached" });
+  assert.deepEqual(pedidos.filter((x) => x.ruta === "/citas" && x.metodo === "POST").at(-1).cuerpo, { id_conversacion: 4, id_vacante: 55, inicio: `${manana} 09:00` });
+  await linea(lineaCita("agendar", { inicio: `${manana} 09:00` }));
+  await tarjeta.locator('[data-estado-cita="agendada"]').waitFor();
+  const idNueva = S.citasPorConv[4].id;
+  await tarjeta.getByRole("button", { name: "Mover" }).click();
+  const dlgMo = page.getByRole("dialog", { name: "Mover entrevista" });
+  const pasado = sumarDias(hoy, 2);
+  await dlgMo.locator(`[data-dia-horarios="${pasado}"]`).getByText("10:00 a.m.").click();
+  await dlgMo.getByRole("button", { name: "Mover", exact: true }).click();
+  await dlgMo.waitFor({ state: "detached" });
+  assert.deepEqual(pedidos.find((x) => x.ruta === `/citas/${idNueva}/reagendar`).cuerpo, { inicio: `${pasado} 10:00` });
+  await linea(lineaCita("mover", { inicio: `${pasado} 10:00` }));
+  await tarjeta.locator("[data-cita-cuando]").filter({ hasText: "10:00 a.m." }).waitFor();
+  if (OUT) await page.screenshot({ path: OUT + "/chat-08-cita-fija.png" });
+  const idMovida = S.citasPorConv[4].id;
+  await tarjeta.getByRole("button", { name: "Cancelar" }).click();
+  const dlgCa = page.getByRole("dialog", { name: "Cancelar entrevista" });
+  await dlgCa.getByLabel("Motivo").fill("Encontró otro empleo.");
+  await dlgCa.getByRole("button", { name: "Cancelar entrevista" }).click();
+  await dlgCa.waitFor({ state: "detached" });
+  assert.deepEqual(pedidos.find((x) => x.ruta === `/citas/${idMovida}/cancelar`).cuerpo, { motivo: "Encontró otro empleo." });
+  await linea(lineaCita("cancelar", { inicio: `${pasado} 10:00` }));
+  await tarjeta.getByText("Sin entrevista agendada").waitFor();
+
+  // «Ofrecer horarios» desde la tarjeta (manda los botones de horario) y desde «+» con 409 WA_SIN_HORARIOS.
+  await tarjeta.getByRole("button", { name: "Ofrecer horarios" }).click();
+  await linea(lineaCita("ofrecer"));
+  assert.equal(cuenta((x) => x.ruta === "/conversaciones/4/ofrecer-horarios" && x.metodo === "POST"), 1);
+  assert.deepEqual(pedidos.find((x) => x.ruta === "/conversaciones/4/ofrecer-horarios").cuerpo, {});
+  await hilo.getByText("Tengo estos horarios para tu entrevista. Elige uno:").waitFor();
+  S.ofrecerResp.push("WA_SIN_HORARIOS");
+  await hilo.getByRole("button", { name: "Más acciones" }).click();
+  await page.getByRole("menuitem", { name: "Ofrecer horarios" }).click();
+  await hilo.getByRole("alert").filter({ hasText: MENSAJE_SIN_HORARIOS }).waitFor();
+  assert.equal(cuenta((x) => x.ruta === "/conversaciones/4/ofrecer-horarios"), 2);
+  await hilo.getByRole("button", { name: "Más acciones" }).click();
+  assert.equal(await page.getByRole("menuitem", { name: "Adjuntar archivo" }).isDisabled(), false);
+  await page.keyboard.press("Escape");
+  if (OUT) await page.screenshot({ path: OUT + "/chat-09-lineas-sistema.png" });
+
+  // Selector sin horarios (pedido del dueño): falta migración, días vacíos y agenda sin configurar.
+  // Vacante 57 (nunca consultada): la caché sin conexión de la app responde con lo último guardado ante un 5xx.
+  const abrirAgendar = async (t = tarjeta) => {
+    await t.getByRole("button", { name: "Agendar", exact: true }).click();
+    const d = page.getByRole("dialog", { name: "Agendar entrevista" });
+    await d.waitFor();
+    return d;
+  };
+  await page.getByRole("button", { name: "Candidato 1", exact: true }).click();
+  await hilo.getByText("Sin entrevista agendada").waitFor();
+  S.horariosModo = "sin_migracion";
+  let dlg = await abrirAgendar();
+  await dlg.locator('[data-sin-horarios="sin_migracion"]').filter({ hasText: "Falta correr la migración de la agenda (R3)" }).waitFor();
+  assert.equal(await dlg.getByRole("button", { name: "Agendar", exact: true }).isDisabled(), true, "sin horarios no se puede agendar");
+  assert.equal(await dlg.getByText("Elige un horario.").count(), 0);
+  await dlg.getByRole("button", { name: "Cancelar" }).click();
+  await dlg.waitFor({ state: "detached" });
+  S.horariosModo = "vacio";
+  S.agendasVacante[57] = { ...S.agendasVacante[55], activa: true };
+  await dormir(2200); // fuera de la ventana de deduplicación de SWR
+  dlg = await abrirAgendar();
+  await dlg.locator('[data-sin-horarios="vacio"]').filter({ hasText: "No hay horarios en estos días" }).waitFor();
+  assert.equal(await dlg.getByRole("button", { name: "Agendar", exact: true }).isDisabled(), true);
+  assert.equal(await dlg.getByRole("button", { name: "Siguientes" }).isDisabled(), false, "se pueden ver los siguientes días");
+  assert.equal(await dlg.getByText("Elige un horario.").count(), 0);
+  await dlg.getByRole("button", { name: "Cancelar" }).click();
+  await dlg.waitFor({ state: "detached" });
+  await page.getByRole("button", { name: /^Rosa Torres/ }).click();
+  await tarjeta.getByText("Sin entrevista agendada").waitFor();
+  S.horariosModo = "normal";
+  S.agendasVacante[55] = { ...S.agendasVacante[55], activa: false };
+  dlg = await abrirAgendar();
+  const sinAgenda = dlg.locator('[data-sin-horarios="sin_agenda"]');
+  await sinAgenda.filter({ hasText: "La agenda de esta vacante no está configurada" }).waitFor();
+  assert.equal(await dlg.getByRole("button", { name: "Agendar", exact: true }).isDisabled(), true);
+  assert.equal(await dlg.getByText("Elige un horario.").count(), 0);
+  if (OUT) await page.screenshot({ path: OUT + "/chat-10-agenda-sin-configurar.png" });
+  await sinAgenda.getByRole("button", { name: "Configurar agenda" }).click();
+  const editor = page.getByRole("dialog", { name: "Agenda de entrevistas" });
+  await editor.getByRole("switch", { name: "Agenda activa" }).waitFor();
+  assert.match(await editor.innerText(), /Vacante «Operador de montacargas»/);
+  await editor.getByRole("switch", { name: "Agenda activa" }).click();
+  await editor.getByRole("button", { name: "Guardar agenda" }).click();
+  await editor.waitFor({ state: "detached" });
+  assert.equal(pedidos.filter((x) => x.ruta === "/vacantes/55/agenda" && x.metodo === "PUT").at(-1).cuerpo.activa, true);
+  await dlg.locator(`[data-dia-horarios="${manana}"]`).waitFor({ timeout: 8000 });
+  assert.equal(await dlg.getByRole("button", { name: "Agendar", exact: true }).isDisabled(), false, "con la agenda activa ya hay horarios");
+  await dlg.getByRole("button", { name: "Cancelar" }).click();
+  await dlg.waitFor({ state: "detached" });
+  await page.close();
+
+  // Teléfono 390 px: sin desborde, objetivos ≥44 px, acciones de la cita plegadas y visor a pantalla completa.
+  const movil = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2, locale: "es-MX", timezoneId: "America/Mexico_City" });
+  await movil.addInitScript(GRABADORA_FALSA);
+  await movil.addCookies([{ name: "token", value: firmar("Recruiter"), url: base }]);
+  await instalarMocks(movil, reclutadora);
+  S.citasPorConv[4] = { ...cita, id: 95, inicio: `${hoy} 18:00`, fin: `${hoy} 18:30`, estado: "agendada" };
+  S.citas.push(S.citasPorConv[4]);
+  const tel = await movil.newPage();
+  tel.on("pageerror", (e) => errores.push(e.message));
+  await tel.goto(base + "/panel/whatsapp?c=4", { waitUntil: "domcontentloaded" });
+  const hiloT = tel.getByRole("region", { name: "Conversación" });
+  await hiloT.locator('[data-mensaje="401"]').waitFor({ timeout: 30000 });
+  await hiloT.locator('[data-mensaje="401"]').scrollIntoViewIfNeeded();
+  await hiloT.locator('[data-mensaje="401"] img[data-miniatura]').waitFor();
+  const tarjetaT = hiloT.getByRole("region", { name: "Cita de entrevista" });
+  assert.equal(await tarjetaT.getByRole("button", { name: "Mover" }).isVisible(), false, "en teléfono las acciones empiezan plegadas");
+  await tarjetaT.getByRole("button", { name: "Acciones" }).tap();
+  await tarjetaT.getByRole("button", { name: "Mover" }).waitFor();
+  for (const b of [hiloT.getByRole("button", { name: "Más acciones" }), hiloT.getByRole("button", { name: "Grabar nota de voz" }), hiloT.getByRole("button", { name: "Enviar mensaje" }),
+    tarjetaT.getByRole("button", { name: "Acciones" }), tarjetaT.getByRole("button", { name: "Mover" }), tarjetaT.getByRole("button", { name: "Cancelar" }),
+    tarjetaT.getByRole("button", { name: "Asistió", exact: true }), tarjetaT.getByRole("button", { name: "Confirmar" }),
+    hiloT.locator('[data-mensaje="402"]').getByRole("button", { name: "Reproducir nota de voz" }), hiloT.locator('[data-mensaje="402"]').getByRole("button", { name: "Velocidad 1x" }),
+    hiloT.locator('[data-mensaje="402"]').getByRole("button", { name: "Transcripción" }),
+    hiloT.getByRole("button", { name: "Abrir cv.pdf" }), hiloT.getByRole("button", { name: "Descargar cv.pdf" }), hiloT.getByRole("link", { name: "Abrir en Google Maps" }),
+    hiloT.getByRole("button", { name: "Ver imagen ine.png" })]) {
+    await b.scrollIntoViewIfNeeded();
+    assert.ok(await tamano(b) >= 44, `objetivo táctil ≥44 px en el chat: ${await b.getAttribute("aria-label") || await b.innerText()}`);
+  }
+  assert.ok(await sinScrollHorizontal(tel), "chat con archivos sin scroll horizontal");
+  assert.ok(await hiloT.evaluate((el) => [...el.querySelectorAll("*")].every((n) => n.getBoundingClientRect().right <= 391)), "nada se sale a la derecha");
+  await hiloT.locator('[data-mensaje="403"]').scrollIntoViewIfNeeded();
+  if (OUT) await tel.screenshot({ path: OUT + "/chat-11-movil-burbujas.png" });
+  await hiloT.locator("[data-selector-archivo]").setInputFiles({ name: "foto.png", mimeType: "image/png", buffer: PNG_SUBIR });
+  await hiloT.locator('[data-adjunto-pendiente="imagen"]').waitFor();
+  assert.ok(await tamano(hiloT.getByRole("button", { name: "Quitar archivo" })) >= 44 && await tamano(hiloT.getByRole("button", { name: "Enviar archivo" })) >= 44);
+  assert.ok(await sinScrollHorizontal(tel));
+  if (OUT) await tel.screenshot({ path: OUT + "/chat-12-movil-adjunto.png" });
+  await hiloT.getByRole("button", { name: "Quitar archivo" }).tap();
+  await hiloT.getByRole("button", { name: "Grabar nota de voz" }).tap();
+  const barraT = hiloT.locator("[data-grabando]");
+  await barraT.waitFor();
+  assert.ok(await tamano(barraT.getByRole("button", { name: "Cancelar grabación" })) >= 44 && await tamano(barraT.getByRole("button", { name: "Detener y enviar" })) >= 44);
+  assert.ok(await sinScrollHorizontal(tel));
+  if (OUT) await tel.screenshot({ path: OUT + "/chat-13-movil-grabando.png" });
+  await barraT.getByRole("button", { name: "Cancelar grabación" }).tap();
+  await hiloT.getByRole("button", { name: "Ver imagen ine.png" }).tap();
+  const visorT = tel.getByRole("dialog", { name: "ine.png" });
+  await visorT.waitFor();
+  await dormir(300);
+  const cajaV = await visorT.boundingBox();
+  assert.ok(cajaV.x === 0 && cajaV.width === 390 && cajaV.height >= 840, `visor a pantalla completa: ${JSON.stringify(cajaV)}`);
+  for (const b of [visorT.getByRole("button", { name: "Acercar" }), visorT.getByRole("button", { name: "Alejar" }), visorT.getByRole("button", { name: "Descargar ine.png" })]) {
+    assert.ok(await tamano(b) >= 44, "objetivo táctil ≥44 px en el visor");
+  }
+  if (OUT) await tel.screenshot({ path: OUT + "/chat-14-movil-visor.png" });
+  await movil.close();
+  await ctx.close();
+}
+
+// ——— 23. Agenda tipo Google Calendar: menú real, semana/día, minicalendario, horarios libres, agendar aquí, arrastrar ———
+async function agendaCalendario(browser, errores) {
+  S = estadoInicial();
+  S.reagendarComoServidor = true;
+  const hoy = hoyMx();
+  const lunes = inicioSemana(hoy);
+  const d1 = sumarDias(lunes, 1);
+  const d2 = sumarDias(lunes, 2);
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: "es-MX", timezoneId: "America/Mexico_City" });
+  await ctx.addCookies([{ name: "token", value: firmar("Recruiter"), url: base }]);
+  await instalarMocks(ctx, reclutadora);
+  const page = await ctx.newPage();
+  page.on("pageerror", (e) => errores.push(e.message));
+  // Menú «Reclutamiento → Entrevistas» abre la agenda real (no la maqueta) y se resalta solo esa entrada.
+  await page.goto(base + "/panel/whatsapp", { waitUntil: "domcontentloaded" });
+  await page.getByRole("list", { name: "Conversaciones" }).waitFor({ timeout: 30000 });
+  const entradaEntrevistas = page.getByRole("button", { name: "Entrevistas", exact: true });
+  await entradaEntrevistas.click();
+  await page.waitForURL(/\/panel\/whatsapp\?vista=entrevistas$/);
+  const cal = page.locator("[data-calendario-semana]");
+  await cal.locator("[data-bloque-cita]").first().waitFor({ timeout: 15000 });
+  assert.equal(await page.getByText("Vista de diseño").count(), 0, "sin la maqueta");
+  assert.equal(await page.getByText("Ana García").count(), 0, "sin datos de ejemplo");
+  assert.match(await entradaEntrevistas.getAttribute("class"), /bg-|text-/);
+  const claseEnt = await entradaEntrevistas.getAttribute("class");
+  const claseConv = await page.getByRole("button", { name: "Conversaciones (WhatsApp)" }).getAttribute("class");
+  assert.notEqual(claseEnt, claseConv, "en Entrevistas se resalta «Entrevistas» y no «Conversaciones»");
+  // Enlace viejo a la maqueta → agenda real.
+  const vieja = await ctx.newPage();
+  await vieja.goto(base + "/panel/reclutamiento/entrevistas", { waitUntil: "domcontentloaded" });
+  await vieja.waitForURL(/\/panel\/whatsapp\?vista=entrevistas$/, { waitUntil: "commit" });
+  await vieja.close();
+
+  // Semana: 7 columnas, hoy resaltado, línea de ahora (si la hora cae en el rango), bloques de citas y leyenda.
+  assert.equal(await cal.locator("[data-dia-calendario]").count(), 7);
+  assert.equal(await cal.locator(`[data-dia-calendario="${hoy}"][data-hoy]`).count(), 1);
+  const rango = rangoAgenda(S.citas, []);
+  const conLinea = lineaAhora(new Date(), hoy, rango.desde, rango.hasta, 80) !== null;
+  assert.equal(await cal.locator("[data-linea-ahora]").count(), conLinea ? 1 : 0, "línea roja de ahora");
+  assert.equal(await cal.locator("[data-bloque-cita]").count(), 4);
+  assert.match(await cal.locator('[data-bloque-cita="71"]').getAttribute("aria-label"), /Ana Ruiz, 10:00 a\.m\., Operador de montacargas, Confirmada/);
+  assert.match(await page.locator("[data-leyenda]").innerText(), /Agendada[\s\S]*Confirmada[\s\S]*Asistió[\s\S]*No asistió[\s\S]*Cancelada/);
+  assert.equal(await cal.locator("[data-horario-libre]").count(), 0, "sin vacante elegida no hay horarios libres");
+  // Minicalendario: saltar a la semana siguiente y volver con «Hoy».
+  const sigLunes = sumarDias(lunes, 7);
+  await page.locator(`[data-mini-mes] [data-mini-dia="${sigLunes}"]`).click();
+  for (let i = 0; i < 50 && !pedidos.some((x) => x.ruta === "/citas" && x.params.includes(`desde=${sigLunes}`)); i++) await dormir(100);
+  assert.ok(pedidos.some((x) => x.ruta === "/citas" && x.params.includes(`desde=${sigLunes}&hasta=${sumarDias(sigLunes, 6)}`)), "el minicalendario cambia la semana");
+  await page.getByRole("button", { name: "Hoy", exact: true }).click();
+  await cal.locator('[data-bloque-cita="71"]').waitFor();
+  // Vista de día.
+  await page.getByRole("group", { name: "Vista" }).getByRole("button", { name: "Día" }).click();
+  await page.waitForFunction(() => document.querySelectorAll("[data-calendario-semana] [data-dia-calendario]").length === 1);
+  await page.getByRole("button", { name: "Día siguiente" }).waitFor();
+  assert.equal(await cal.locator("[data-bloque-cita]").count(), 3, "el día de hoy tiene 3 citas");
+  if (OUT) await page.screenshot({ path: OUT + "/agenda-02-dia.png" });
+  await page.getByRole("group", { name: "Vista" }).getByRole("button", { name: "Semana" }).click();
+  await page.waitForFunction(() => document.querySelectorAll("[data-calendario-semana] [data-dia-calendario]").length === 7);
+
+  // Vacante elegida: horarios libres «disponible · N lugares» (los llenos no se eligen).
+  await page.getByLabel("Vacante", { exact: true }).selectOption("55");
+  await cal.locator(`button[data-horario-libre="${d1} 09:00"]`).waitFor();
+  assert.ok(pedidos.some((x) => x.ruta === "/vacantes/55/agenda/horarios" && x.params === `?desde=${lunes}&dias=7`), "horarios de la semana visible");
+  assert.match(await cal.locator(`[data-horario-libre="${d2} 10:00"]`).innerText(), /10:00 a\.m\.[\s\S]*Disponible · Quedan 2 lugares/);
+  assert.match(await cal.locator(`[data-horario-lleno="${d1} 09:30"]`).innerText(), /Lleno/);
+  assert.equal(await cal.locator("button[data-horario-lleno]").count(), 0, "un horario lleno no es botón");
+  if (OUT) await page.screenshot({ path: OUT + "/agenda-01-semana.png" });
+  // Clic en un horario libre → «Agendar aquí» con la conversación del candidato → POST /citas.
+  await cal.locator(`button[data-horario-libre="${d2} 10:00"]`).click();
+  const aqui = page.getByRole("dialog", { name: "Agendar entrevista aquí" });
+  await aqui.locator("[data-candidatos]").waitFor();
+  assert.equal(await aqui.getByRole("radio").count(), 1, "solo conversaciones de la vacante");
+  await aqui.getByRole("button", { name: "Agendar aquí" }).click();
+  await aqui.getByRole("alert").filter({ hasText: "Elige al candidato." }).waitFor();
+  await aqui.getByRole("radio", { name: /Ana Ruiz/ }).check();
+  if (OUT) await page.screenshot({ path: OUT + "/agenda-03-agendar-aqui.png" });
+  await aqui.getByRole("button", { name: "Agendar aquí" }).click();
+  await aqui.waitFor({ state: "detached" });
+  assert.deepEqual(pedidos.filter((x) => x.ruta === "/citas" && x.metodo === "POST").at(-1).cuerpo, { id_conversacion: 1, id_vacante: 55, inicio: `${d2} 10:00` });
+  const nuevaId = S.siguienteCita - 1;
+  await cal.locator(`[data-bloque-cita="${nuevaId}"]`).waitFor();
+
+  // Arrastrar la cita 71 a un horario libre → confirmar → POST /citas/71/reagendar.
+  const arrastrar = async (origen, destino) => {
+    await destino.evaluate((el) => el.scrollIntoView({ block: "center", behavior: "instant" })); // la app usa scroll suave
+    const a = await origen.boundingBox();
+    await page.mouse.move(a.x + a.width / 2, a.y + Math.min(10, a.height / 2));
+    await page.mouse.down();
+    await page.mouse.move(a.x + a.width / 2 + 15, a.y + 20, { steps: 3 }); // empieza el arrastre
+    await page.locator("[data-fantasma]").waitFor();
+    const b = await destino.boundingBox();
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2, { steps: 12 });
+    await page.locator("[data-fantasma]").filter({ hasText: /→ \d/ }).waitFor();
+    await page.mouse.up();
+  };
+  await arrastrar(cal.locator('[data-bloque-cita="71"]'), cal.locator(`[data-horario-libre="${d1} 09:00"]`));
+  const conf = page.getByRole("dialog", { name: "Mover entrevista" });
+  await conf.waitFor();
+  assert.match(await conf.innerText(), /¿Mover la entrevista de Ana Ruiz del .* 10:00 a\.m\. al .* 9:00 a\.m\.\?/);
+  assert.equal(cuenta((x) => x.ruta === "/citas/71/reagendar"), 0, "pide confirmación antes de guardar");
+  if (OUT) await page.screenshot({ path: OUT + "/agenda-04-confirmar-mover.png" });
+  await conf.getByRole("button", { name: "Mover", exact: true }).click();
+  await conf.waitFor({ state: "detached" });
+  for (let i = 0; i < 50 && !cuenta((x) => x.ruta === "/citas/71/reagendar"); i++) await dormir(100);
+  assert.deepEqual(pedidos.find((x) => x.ruta === "/citas/71/reagendar").cuerpo, { inicio: `${d1} 09:00` });
+  const movidaId = S.citasPorConv[1]?.id ?? S.citas.at(-1).id;
+  await cal.locator(`[data-bloque-cita][data-inicio="${d1} 09:00"]`).first().waitFor();
+  assert.ok(movidaId);
+  // 409 WA_SIN_CUPO: aviso y la cita regresa a su lugar.
+  S.respuestasCita.push({ status: 409, cuerpo: { codigo: "WA_SIN_CUPO", error: "Sin cupo" } });
+  await arrastrar(cal.locator('[data-bloque-cita="72"]'), cal.locator(`[data-horario-libre="${d2} 10:00"]`));
+  await conf.waitFor();
+  await conf.getByRole("button", { name: "Mover", exact: true }).click();
+  await page.locator("[data-aviso-agenda]").filter({ hasText: "Ese horario ya se llenó. Elige otro de la lista." }).waitFor();
+  assert.equal(await cal.locator('[data-bloque-cita="72"]').getAttribute("data-inicio"), `${hoy} 10:00`, "la cita regresa a su lugar");
+  if (OUT) await page.screenshot({ path: OUT + "/agenda-05-409.png" });
+  // Alternativa sin arrastrar: abrir la cita → «Reagendar» → la misma rejilla con horarios libres.
+  await cal.locator('[data-bloque-cita="72"]').click();
+  const dlgCita = page.getByRole("dialog", { name: "Entrevista" });
+  await dlgCita.getByRole("button", { name: "Reagendar" }).click();
+  const re = page.getByRole("dialog", { name: "Reagendar entrevista" });
+  await re.locator("[data-calendario-horarios]").waitFor();
+  assert.ok(await re.locator("[data-calendario-horarios] input[type=radio]").count() >= 3, "el selector usa la rejilla de la agenda");
+  await re.locator(`[data-dia-horarios="${sumarDias(hoy, 2)}"]`).getByText("10:00 a.m.").click();
+  assert.equal(await re.getByRole("radio", { name: /10:00 a\.m\., Quedan 2 lugares/ }).isChecked(), true);
+  if (OUT) await page.screenshot({ path: OUT + "/agenda-06-selector-rejilla.png" });
+  await re.getByRole("button", { name: "Cancelar" }).click();
+  await re.waitFor({ state: "detached" });
+  await page.keyboard.press("Escape");
+  await page.close();
+
+  // Teléfono: tira de días, lista del día con horarios libres para tocar y «Agendar aquí» a pantalla completa.
+  const movil = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2, locale: "es-MX", timezoneId: "America/Mexico_City" });
+  await movil.addCookies([{ name: "token", value: firmar("Recruiter"), url: base }]);
+  await instalarMocks(movil, reclutadora);
+  const tel = await movil.newPage();
+  tel.on("pageerror", (e) => errores.push(e.message));
+  await tel.goto(base + "/panel/whatsapp?vista=entrevistas", { waitUntil: "domcontentloaded" });
+  const tira = tel.locator("[data-tira-dias]");
+  await tira.waitFor({ timeout: 30000 });
+  assert.equal(await tel.locator("[data-calendario-semana]").count(), 0, "en teléfono no hay rejilla de semana");
+  assert.equal(await tira.locator("[data-chip-dia]").count(), 7);
+  assert.equal(await tira.locator(`[data-chip-dia="${hoy}"]`).getAttribute("aria-pressed"), "true");
+  for (const chip of await tira.locator("[data-chip-dia]").all()) assert.ok(await tamano(chip) >= 44, "chip de día ≥44 px");
+  await tel.getByLabel("Vacante", { exact: true }).selectOption("55");
+  await tira.locator(`[data-chip-dia="${d2}"]`).tap();
+  const slotT = tel.locator(`[data-libres-dia] [data-horario-libre="${d2} 10:00"]`);
+  await slotT.waitFor();
+  assert.ok(await tamano(slotT) >= 44);
+  assert.ok(await sinScrollHorizontal(tel), "agenda en teléfono sin scroll horizontal");
+  if (OUT) await tel.screenshot({ path: OUT + "/agenda-07-movil-dia.png", fullPage: true });
+  await slotT.tap();
+  const aquiT = tel.getByRole("dialog", { name: "Agendar entrevista aquí" });
+  await aquiT.locator("[data-candidatos]").waitFor();
+  await dormir(300);
+  const cajaA = await aquiT.boundingBox();
+  assert.ok(cajaA.x === 0 && cajaA.width === 390, `agendar aquí a pantalla completa: ${JSON.stringify(cajaA)}`);
+  assert.ok(await tamano(aquiT.getByRole("button", { name: "Agendar aquí" })) >= 44);
+  if (OUT) await tel.screenshot({ path: OUT + "/agenda-08-movil-agendar-aqui.png" });
+  await aquiT.getByRole("button", { name: "Cancelar" }).tap();
+  await aquiT.waitFor({ state: "detached" });
+  await movil.close();
+  await ctx.close();
+}

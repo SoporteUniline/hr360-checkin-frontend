@@ -69,7 +69,7 @@ import {
   ChevronsUpDown,
   Search,
 } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   RECRUITMENT_NAV,
@@ -577,8 +577,8 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
   };
   const moduloActivo = items.some((item) =>
     item.children
-      ? item.children.some((child) => isRecruitmentNavActive(path, child))
-      : isRecruitmentNavActive(path, item),
+      ? item.children.some((child) => isRecruitmentNavActive(path, child, consulta))
+      : isRecruitmentNavActive(path, item, consulta),
   );
   const enlace = (it) => (
     <button
@@ -589,7 +589,7 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
         onNavigate(it.url);
       }}
       className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[12.5px] font-medium transition-colors ${
-        isRecruitmentNavActive(path, it)
+        isRecruitmentNavActive(path, it, consulta)
           ? "bg-[#f0f5ff] font-semibold text-[#1d4ed8]"
           : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
       }`}
@@ -598,7 +598,7 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
         <it.icon
           size={15}
           className={
-            isRecruitmentNavActive(path, it)
+            isRecruitmentNavActive(path, it, consulta)
               ? "text-[#2563EB]"
               : "text-gray-400"
           }
@@ -658,7 +658,14 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
 // «CONTROL DE TIEMPO» → «Control de tiempo» (los nombres de módulo se guardan en mayúsculas).
 const tituloGrupo = (t) => { const s = String(t ?? "").toLocaleLowerCase("es-MX"); return s.charAt(0).toLocaleUpperCase("es-MX") + s.slice(1); };
 
-export function NavMain() {
+// `consulta`: la vista de la URL (?vista=…), para resaltar «Entrevistas» y no «Conversaciones» en /panel/whatsapp.
+export function NavMainConConsulta() {
+  const params = useSearchParams();
+  const vista = params?.get("vista");
+  return <NavMain consulta={vista ? `vista=${vista}` : ""} />;
+}
+
+export function NavMain({ consulta = "" } = {}) {
   const router = useRouter();
   const path = usePathname();
   const { dataUser } = useAuth();
@@ -845,7 +852,7 @@ export function NavMain() {
                   tooltip={item.title}
                   onClick={() => handleClick(item.url)}
                   className={`${
-                    isRecruitmentNavActive(path, item)
+                    isRecruitmentNavActive(path, item, consulta)
                       ? ITEM_ACTIVO
                       : ITEM_NORMAL
                   } cursor-pointer flex justify-between`}
@@ -914,7 +921,7 @@ export function NavMain() {
                               }
                             }}
                             className={`${
-                              isRecruitmentNavActive(path, item)
+                              isRecruitmentNavActive(path, item, consulta)
                                 ? ITEM_ACTIVO
                                 : ITEM_NORMAL
                             } cursor-pointer flex justify-between`}
@@ -946,7 +953,7 @@ export function NavMain() {
                                       tooltip={child.title}
                                       onClick={() => handleClick(child.url)}
                                       className={`${
-                                        isRecruitmentNavActive(path, child)
+                                        isRecruitmentNavActive(path, child, consulta)
                                           ? ITEM_ACTIVO
                                           : ITEM_NORMAL
                                       } cursor-pointer flex items-center gap-2 text-sm`}

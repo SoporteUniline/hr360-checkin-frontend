@@ -578,3 +578,19 @@ export function textoPlantillasMes(estado) {
   const t = Math.floor(n).toLocaleString("es-MX");
   return n === 1 ? "1 plantilla enviada este mes" : `${t} plantillas enviadas este mes`;
 }
+
+// Selector de horarios (pedido del dueño 23/11/2026): ¿por qué no hay horarios? Se distingue la causa para no dejar a la
+// persona ante una lista vacía. Precedencia: falta la migración (503 SIN_MIGRACION) → agenda sin configurar
+// (activa=false u horario sin rangos) → días sin horarios (se puede ver «Siguientes»).
+export const MENSAJE_SIN_MIGRACION_AGENDA = "Falta correr la migración de la agenda (R3)";
+export const MENSAJE_AGENDA_SIN_CONFIGURAR = "La agenda de esta vacante no está configurada";
+export function agendaConfigurada(agenda) {
+  if (!agenda || agenda.activa !== true) return false;
+  return Object.values(agenda.horario ?? {}).some((rangos) => Array.isArray(rangos) && rangos.length > 0);
+}
+export function causaSinHorarios({ agenda, errorAgenda, errorHorarios } = {}) {
+  const codigo = (e) => e?.response?.data?.codigo;
+  if ((errorHorarios?.response?.status === 503 && codigo(errorHorarios) === "SIN_MIGRACION") || codigo(errorAgenda) === "SIN_MIGRACION") return "sin_migracion";
+  if (agenda && !agendaConfigurada(agenda)) return "sin_agenda";
+  return null;
+}

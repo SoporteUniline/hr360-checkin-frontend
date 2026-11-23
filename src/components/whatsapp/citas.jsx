@@ -14,11 +14,14 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { mensajeErrorApi } from "@/lib/whatsapp/reglas.mjs";
 import { formatearTelefono } from "@/lib/whatsapp/telefono.mjs";
 import {
-  accionesCita, agruparHorarios, etiquetaDiaLargo, etiquetaEstadoCita, fechaHoraCorta, horaTexto, sumarDias, textoLugares,
+  MENSAJE_AGENDA_SIN_CONFIGURAR, MENSAJE_SIN_MIGRACION_AGENDA, causaSinHorarios, accionesCita, agruparHorarios, diasDeSemana, etiquetaDiaLargo, etiquetaEstadoCita, fechaHoraCorta, horaTexto, sumarDias, textoLugares,
 } from "@/lib/whatsapp/agenda.mjs";
 import {
-  cancelarCita, confirmarCita, marcarAsistencia, obtener, reagendarCita, rutaHorarios,
+  cancelarCita, confirmarCita, marcarAsistencia, obtener, reagendarCita, rutaAgendaVacante, rutaHorarios,
 } from "./api";
+import AgendaVacante from "./AgendaVacante";
+import CalendarioAgenda, { useAncho } from "./CalendarioAgenda";
+import { rangoAgenda } from "@/lib/whatsapp/calendario.mjs";
 import { CLASE_ENTRADA, DIALOGO_PANTALLA_COMPLETA } from "./controles";
 
 export const TONOS_CITA = {
@@ -41,14 +44,46 @@ const esEnlace = (t) => /^https:\/\//i.test(String(t ?? "").trim());
 const recargarHorarios = (mutate) => mutate((k) => typeof k === "string" && k.includes("/agenda/horarios"));
 
 // Horarios libres de una vacante, de 7 en 7 días a partir de hoy. Radios agrupados por día; los llenos se ven pero no se eligen.
-export function SelectorHorario({ idVacante, hoy, valor, onCambiar, soloLectura = false }) {
+// Sin horarios se explica la causa: falta la migración (503 SIN_MIGRACION), la agenda de la vacante no está configurada
+// («Configurar agenda» abre el editor ahí mismo) o simplemente no hay en estos días («Siguientes»).
+// `onEstado(hayLibres)` avisa al diálogo si hay algo que elegir. En modo solo lectura (vista previa del editor) no se
+// consulta la agenda: el propio editor la está mostrando.
+export function SelectorHorario({ idVacante, hoy, valor, onCambiar, soloLectura = false, onEstado, tituloVacante = "", idEmpresa = null }) {
   const nombre = useId();
   const [desde, setDesde] = useState(hoy);
+  const [configurando, setConfigurando] = useState(false);
   useEffect(() => setDesde(hoy), [hoy, idVacante]);
   const clave = rutaHorarios(idVacante, desde, 7);
   const { data, error, isLoading, mutate } = useSWR(clave, obtener, { revalidateOnFocus: false });
+  const { data: agenda, error: errorAgenda } = useSWR(!soloLectura && idVacante ? rutaAgendaVacante(idVacante) : null, obtener, { revalidateOnFocus: false, shouldRetryOnError: false });
   const dias = agruparHorarios(data?.horarios);
+  // Escritorio: semana tipo Google Calendar con los horarios libres para hacer clic; teléfono: lista por día.
+  const ancho = useAncho();
+  const conRejilla = ancho && !soloLectura;
+  const planos = dias.flatMap((d) => d.horarios);
   const hayLibres = dias.some((d) => d.horarios.some((h) => h.libres > 0));
+  const causa = soloLectura ? null : causaSinHorarios({ agenda, errorAgenda, errorHorarios: error });
+  const elegible = !causa && !error && !isLoading && hayLibres;
+  useEffect(() => { onEstado?.(elegible); }, [elegible, onEstado]);
+  if (causa === "sin_migracion") {
+    return (
+      <p role="alert" className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-[13px] font-medium text-amber-900" data-sin-horarios="sin_migracion">
+        {MENSAJE_SIN_MIGRACION_AGENDA}. Pídele a ADAMIA que la corra; mientras tanto no se pueden agendar entrevistas.
+      </p>
+    );
+  }
+  if (causa === "sin_agenda") {
+    return (
+      <div className="grid justify-items-center gap-2 rounded-lg border border-dashed border-gray-300 p-4 text-center text-[13px] text-gray-700" data-sin-horarios="sin_agenda">
+        <p className="font-semibold text-gray-900">{MENSAJE_AGENDA_SIN_CONFIGURAR}</p>
+        <p>Activa la agenda y define los días y horas en que entrevistas para que aparezcan horarios.</p>
+        <Button type="button" variant="outline" onClick={() => setConfigurando(true)} className="min-h-11 md:min-h-9" startIcon={<CalendarClock className="size-4 text-blue-600" />}>
+          Configurar agenda
+        </Button>
+        <AgendaVacante abierto={configurando} onCambiar={setConfigurando} idVacante={idVacante} titulo={tituloVacante} idEmpresa={idEmpresa} />
+      </div>
+    );
+  }
   return (
     <div className="grid gap-3" data-selector-horario={idVacante} aria-busy={isLoading}>
       <div className="flex items-center gap-2">
@@ -68,9 +103,15 @@ export function SelectorHorario({ idVacante, hoy, valor, onCambiar, soloLectura 
       ) : isLoading ? (
         <p className="flex items-center gap-2 text-sm text-gray-500"><Loader2 className="size-4 animate-spin" /> Buscando horarios…</p>
       ) : !dias.length ? (
-        <p className="rounded-lg border border-dashed border-gray-300 p-4 text-center text-[13px] text-gray-600" data-sin-horarios>
+        <p className="rounded-lg border border-dashed border-gray-300 p-4 text-center text-[13px] text-gray-600" data-sin-horarios="vacio">
           No hay horarios en estos días. Revisa la agenda de la vacante (horario, bloqueos y anticipación) o mira los siguientes días.
         </p>
+      ) : conRejilla ? (
+        <div className="grid gap-2">
+          {!hayLibres ? <p className="text-[13px] font-medium text-amber-900">Todos los horarios de estos días están llenos.</p> : null}
+          <CalendarioAgenda dias={diasDeSemana(desde)} hoy={hoy} horarios={planos} {...rangoAgenda([], planos)} altoHora={88} marca="data-calendario-horarios"
+            maxAlto="min(52dvh, 30rem)" modoElegir seleccionado={valor} onHorario={(h) => onCambiar?.(h.inicio)} etiquetaGrupo="Horarios libres" />
+        </div>
       ) : (
         <div className="grid gap-3">
           {!hayLibres && !soloLectura ? <p className="text-[13px] font-medium text-amber-900">Todos los horarios de estos días están llenos.</p> : null}
@@ -117,13 +158,15 @@ export function SelectorHorario({ idVacante, hoy, valor, onCambiar, soloLectura 
 }
 
 // Diálogo para elegir un horario (agendar o reagendar). `onConfirmar(inicio)` lanza el error del API; 409 WA_SIN_CUPO refresca.
-export function DialogoHorario({ abierto, onCambiar, titulo, descripcion, idVacante, hoy, textoBoton, onConfirmar }) {
+// «Agendar» queda deshabilitado mientras no haya horarios libres; «Elige un horario.» solo sale si se pulsa sin elegir.
+export function DialogoHorario({ abierto, onCambiar, titulo, descripcion, idVacante, hoy, textoBoton, onConfirmar, tituloVacante = "", idEmpresa = null }) {
   const { mutate } = useSWRConfig();
   const [inicio, setInicio] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [aviso, setAviso] = useState("");
+  const [hayLibres, setHayLibres] = useState(false);
   useEffect(() => {
-    if (!abierto) { setInicio(""); setAviso(""); }
+    if (!abierto) { setInicio(""); setAviso(""); setHayLibres(false); }
   }, [abierto]);
   const confirmar = async () => {
     if (!inicio) { setAviso("Elige un horario."); return; }
@@ -142,20 +185,21 @@ export function DialogoHorario({ abierto, onCambiar, titulo, descripcion, idVaca
   };
   return (
     <Dialog open={abierto} onOpenChange={(v) => { if (!guardando) onCambiar(v); }}>
-      <DialogContent className={`${DIALOGO_PANTALLA_COMPLETA} sm:max-w-xl`}>
+      <DialogContent className={`${DIALOGO_PANTALLA_COMPLETA} sm:max-w-xl md:max-w-4xl`}>
         <DialogHeader className="border-b border-gray-200 px-5 pb-3 pt-[max(1rem,env(safe-area-inset-top))] pr-14 text-left">
           <DialogTitle>{titulo}</DialogTitle>
           <DialogDescription>{descripcion}</DialogDescription>
         </DialogHeader>
         <div className="relative min-h-0 flex-1 overflow-y-auto px-5 py-4">
-          {abierto ? <SelectorHorario idVacante={idVacante} hoy={hoy} valor={inicio} onCambiar={(v) => { setInicio(v); setAviso(""); }} /> : null}
+          {abierto ? <SelectorHorario idVacante={idVacante} hoy={hoy} valor={inicio} onCambiar={(v) => { setInicio(v); setAviso(""); }}
+            onEstado={setHayLibres} tituloVacante={tituloVacante} idEmpresa={idEmpresa} /> : null}
         </div>
         <div className="grid gap-2 border-t border-gray-200 bg-white px-5 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3">
           {aviso ? <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-2.5 text-[13px] text-red-800">{aviso}</p> : null}
           <div className="flex items-center justify-end gap-2">
             {inicio ? <span className="mr-auto hidden text-[13px] font-medium text-gray-700 sm:inline">{fechaHoraCorta(inicio)}</span> : null}
             <Button type="button" variant="outline" onClick={() => onCambiar(false)} disabled={guardando} className="min-h-11 flex-1 sm:flex-none md:min-h-9">Cancelar</Button>
-            <Button type="button" onClick={confirmar} loading={guardando} className="min-h-11 flex-1 sm:flex-none md:min-h-9">{textoBoton}</Button>
+            <Button type="button" onClick={confirmar} loading={guardando} disabled={!hayLibres && !inicio} className="min-h-11 flex-1 sm:flex-none md:min-h-9">{textoBoton}</Button>
           </div>
         </div>
       </DialogContent>
@@ -163,7 +207,7 @@ export function DialogoHorario({ abierto, onCambiar, titulo, descripcion, idVaca
   );
 }
 
-function DialogoCancelar({ abierto, onCambiar, cita, onConfirmar }) {
+export function DialogoCancelar({ abierto, onCambiar, cita, onConfirmar }) {
   const id = useId();
   const [motivo, setMotivo] = useState("");
   const [error, setError] = useState("");
@@ -263,7 +307,7 @@ export function AccionesCita({ cita, hoy, onCambio, conChat = false }) {
       {a.reagendar ? (
         <DialogoHorario abierto={reagendando} onCambiar={setReagendando} titulo="Reagendar entrevista" textoBoton="Reagendar"
           descripcion={`${cita.candidato?.nombre || "Candidato"} · ${cita.vacante?.titulo || "vacante"}. Ahora: ${fechaHoraCorta(cita.inicio)}. El agente le avisa del cambio por WhatsApp.`}
-          idVacante={cita.vacante?.id_vacante} hoy={hoy}
+          idVacante={cita.vacante?.id_vacante} hoy={hoy} tituloVacante={cita.vacante?.titulo || ""} idEmpresa={cita.id_empresa ?? null}
           onConfirmar={async (inicio) => { const r = await reagendarCita(cita.id, inicio); await onCambio?.(r?.cita ?? null); }} />
       ) : null}
       {a.cancelar ? (

@@ -1,6 +1,7 @@
 // Reglas de pantalla de WhatsApp (R1): quién puede escribir, textos de estado y errores del API.
 // El backend es quien decide; esto solo evita ofrecer acciones que el servidor va a rechazar.
 import { leerIncluidas } from "./paquete.mjs";
+import { MENSAJE_ARCHIVO_GRANDE, MENSAJE_TIPO_NO_PERMITIDO, etiquetaAdjunto } from "./adjuntos.mjs";
 
 export const LIMITE_TEXTO = 4096;
 export const MENSAJE_VENTANA =
@@ -14,6 +15,9 @@ export const MENSAJE_SIN_CUPO = "Ese horario ya se llenó. Elige otro de la list
 export const MENSAJE_VENTANA_ABIERTA = "El chat sigue abierto (el candidato escribió en las últimas 24 h): escríbele directamente, no hace falta plantilla.";
 export const MENSAJE_SIN_PLANTILLA =
   "No hay plantilla de seguimiento configurada. Escribe su nombre en «Agente → Agenda y recordatorios»; debe estar aprobada en Zernio/Meta.";
+// Chat todo-en-uno: «Ofrecer horarios».
+export const MENSAJE_AGENDA_INACTIVA = "La vacante no tiene la agenda de entrevistas activa. Actívala en «Enlaces de vacantes → Agenda» para ofrecer horarios.";
+export const MENSAJE_SIN_HORARIOS = "No hay horarios libres en los próximos días. Revisa la agenda de la vacante (horario, bloqueos y cupo).";
 export const MENSAJE_SIN_CONTROL = "Otra persona tiene el control de esta conversación. Pídele que la devuelva o espera a que la IA la retome.";
 
 // Dueño de la cuenta: reclutador principal (no un «usuario con acceso»). Puede escribir aunque otro tenga el control.
@@ -70,8 +74,8 @@ const ESTADOS = {
 };
 export const etiquetaEstado = (estado) => ESTADOS[estado] ?? "";
 
-// Texto de un mensaje que no es de texto (R1 aún no muestra archivos).
-export const textoArchivo = (tipo) => `[Archivo: ${tipo || "desconocido"}] (se mostrará en una siguiente etapa)`;
+// Texto de un mensaje que no es de texto y llegó sin `adjunto` (mensajes anteriores al chat con archivos).
+export const textoArchivo = (tipo) => `[Archivo: ${tipo || "desconocido"}] (no disponible)`;
 
 // Etiqueta pequeña sobre las burbujas que no son del candidato. Con R2 el agente firma con su nombre si se conoce.
 export function etiquetaActor(mensaje, nombreAsistente = "") {
@@ -84,7 +88,7 @@ export function etiquetaActor(mensaje, nombreAsistente = "") {
 // Vista previa del último mensaje en la lista.
 export function vistaPrevia(ultimo) {
   if (!ultimo) return "Sin mensajes todavía";
-  const texto = String(ultimo.texto ?? "").replace(/\s+/g, " ").trim() || "[Archivo]";
+  const texto = String(ultimo.texto ?? "").replace(/\s+/g, " ").trim() || etiquetaAdjunto(ultimo.adjunto) || "[Archivo]";
   return ultimo.direccion === "saliente" ? `Enviado: ${texto}` : texto;
 }
 
@@ -105,6 +109,10 @@ export function mensajeErrorApi(error, porDefecto = "No se pudo completar la acc
     case "WA_SIN_CUPO": return MENSAJE_SIN_CUPO;
     case "WA_VENTANA_ABIERTA": return MENSAJE_VENTANA_ABIERTA;
     case "WA_SIN_PLANTILLA": return MENSAJE_SIN_PLANTILLA;
+    case "WA_ARCHIVO_GRANDE": return MENSAJE_ARCHIVO_GRANDE;
+    case "WA_TIPO_NO_PERMITIDO": return MENSAJE_TIPO_NO_PERMITIDO;
+    case "WA_AGENDA_INACTIVA": return MENSAJE_AGENDA_INACTIVA;
+    case "WA_SIN_HORARIOS": return MENSAJE_SIN_HORARIOS;
     default: break;
   }
   return datos.error || datos.mensaje || datos.message || porDefecto;

@@ -61,6 +61,7 @@ function SeccionCita({ conversacion, cita, hoy, onCitaCambio }) {
       ) : null}
       {idVacante ? (
         <DialogoHorario abierto={agendando} onCambiar={setAgendando} titulo="Agendar entrevista" textoBoton="Agendar" idVacante={idVacante} hoy={hoy}
+          tituloVacante={conversacion.vacante?.titulo || ""} idEmpresa={conversacion.id_empresa ?? null}
           descripcion={`Vacante «${conversacion.vacante.titulo || ""}». El agente le manda al candidato la confirmación por WhatsApp.`}
           onConfirmar={async (inicio) => {
             const r = await crearCita({ id_conversacion: conversacion.id, id_vacante: idVacante, inicio });
