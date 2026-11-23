@@ -1,5 +1,5 @@
 // src/app/panel/reportes-personalizados/page.jsx
-// Panel principal de Reportes Personalizados — Adamia HR360
+// Panel principal de Reportes Personalizados — ADAMIA
 // Plantillas persistidas en BD (tabla reporte_plantillas) vía API REST.
 // Relacionado con: reportesPersonalizadosApi.js, ReporteDialog, ReporteCard, ReporteResultados
 
