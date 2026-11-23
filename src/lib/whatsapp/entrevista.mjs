@@ -344,4 +344,9 @@ export function validarAgente(form) {
 }
 
 // Texto de la pregunta en curso (el API puede mandar texto u objeto con «texto»).
-export const textoPreguntaActual = (p) => (typeof p === "string" ? p.trim() : String(p?.texto ?? "").trim());
+// El servidor manda el número de la pregunta (su orden); también se aceptan texto u objeto con texto.
+export const textoPreguntaActual = (p) => {
+  if (typeof p === "number" && Number.isFinite(p)) return `Pregunta ${p}`;
+  if (typeof p === "string") return /^\d+$/.test(p.trim()) ? `Pregunta ${p.trim()}` : p.trim();
+  return String(p?.texto ?? "").trim();
+};

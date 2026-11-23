@@ -232,3 +232,11 @@ test("teléfonos de Norteamérica (número compartido de ADAMIA) sin cambiar los
   assert.equal(formatearTelefono("5512345678"), "+52 55 1234 5678");
   assert.equal(formatearTelefono("447700900123"), "+447700900123", "otros países sin formato");
 });
+
+test("pregunta actual: el servidor manda el número de la pregunta", async () => {
+  const { textoPreguntaActual } = await import("../src/lib/whatsapp/entrevista.mjs");
+  assert.equal(textoPreguntaActual(2), "Pregunta 2");
+  assert.equal(textoPreguntaActual("3"), "Pregunta 3");
+  assert.equal(textoPreguntaActual({ texto: "¿Tienes licencia?" }), "¿Tienes licencia?");
+  assert.equal(textoPreguntaActual(null), "");
+});
