@@ -1,8 +1,9 @@
 "use client";
 
 // Hilo de una conversación de WhatsApp (R1): burbujas, control humano/IA y cuadro para escribir.
+// R2: el agente firma con su nombre y, bajo 1280 px, «Ver evaluación» abre el panel del candidato.
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { AlertCircle, ArrowLeft, Bot, Check, CheckCheck, Clock, Hand, Loader2, RotateCw, SendHorizontal } from "lucide-react";
+import { AlertCircle, ArrowLeft, Bot, Check, CheckCheck, ClipboardList, Clock, Hand, Loader2, RotateCw, SendHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { claveDia, etiquetaDia, horaCorta } from "@/lib/whatsapp/tiempo.mjs";
 import { formatearTelefono, nombreContacto } from "@/lib/whatsapp/telefono.mjs";
@@ -35,7 +36,7 @@ const ESTILO_BURBUJA = {
   sistema: "bg-gray-100 border border-gray-200 text-gray-700 rounded-br-md",
 };
 
-function Burbuja({ mensaje, onReintentar, reintentando }) {
+function Burbuja({ mensaje, onReintentar, reintentando, nombreAsistente }) {
   const entrante = mensaje.direccion === "entrante";
   const estilo = entrante ? ESTILO_BURBUJA.candidato : ESTILO_BURBUJA[mensaje.actor] ?? ESTILO_BURBUJA.reclutador;
   const fallido = mensaje.estado === "fallido";
@@ -43,7 +44,7 @@ function Burbuja({ mensaje, onReintentar, reintentando }) {
   return (
     <div className={`flex ${entrante ? "justify-start" : "justify-end"}`} data-mensaje={mensaje.id} data-direccion={mensaje.direccion}>
       <div className={`max-w-[85%] rounded-2xl px-3 py-2 shadow-[0_1px_1px_rgba(0,0,0,0.04)] md:max-w-[70%] ${estilo} ${fallido ? "!border-red-300" : ""}`}>
-        {!entrante ? <p className="mb-0.5 text-[11px] font-semibold text-gray-500">{etiquetaActor(mensaje)}</p> : null}
+        {!entrante ? <p className="mb-0.5 text-[11px] font-semibold text-gray-500">{etiquetaActor(mensaje, nombreAsistente)}</p> : null}
         {texto ? (
           <p className="whitespace-pre-wrap text-[14px] leading-snug [overflow-wrap:anywhere]">{texto}</p>
         ) : (
@@ -142,6 +143,7 @@ function Composer({ permiso, onEnviar, enviando }) {
 
 export default function HiloConversacion({
   conversacion, mensajes, cargando, error, usuario, onVolver, onTomar, onDevolver, cambiandoControl, onEnviar, enviando, onReintentar, reintentandoId, aviso, anuncio, ahora,
+  nombreAsistente = "", onVerEvaluacion = null, requiereAtencion = false,
 }) {
   const scroll = useRef(null);
   const primeraCarga = useRef(true);
@@ -174,7 +176,7 @@ export default function HiloConversacion({
           </p>
         </div>
         {conversacion ? (
-          <div className="flex w-full flex-wrap items-center gap-2 md:w-auto">
+          <div className="flex w-full flex-wrap items-center gap-2 md:w-auto xl:w-full 2xl:w-auto">
             <ChipControl conversacion={conversacion} usuario={usuario} />
             {acciones.tomar ? (
               <Button type="button" size="sm" onClick={onTomar} loading={cambiandoControl} startIcon={<Hand className="size-4" />} className="min-h-10 md:min-h-8">
@@ -184,6 +186,12 @@ export default function HiloConversacion({
             {acciones.devolver ? (
               <Button type="button" size="sm" variant="outline" onClick={onDevolver} loading={cambiandoControl} startIcon={<Bot className="size-4" />} className="min-h-10 md:min-h-8">
                 Devolver a IA
+              </Button>
+            ) : null}
+            {onVerEvaluacion ? (
+              <Button type="button" size="sm" variant="outline" onClick={onVerEvaluacion} startIcon={<ClipboardList className="size-4 text-violet-600" />} className="min-h-10 xl:hidden md:min-h-8">
+                Ver evaluación
+                {requiereAtencion ? <span className="size-2 rounded-full bg-red-500" aria-label="requiere atención" role="img" /> : null}
               </Button>
             ) : null}
             {conversacion.vacante?.id_vacante ? (
@@ -209,7 +217,7 @@ export default function HiloConversacion({
                   {nuevoDia ? (
                     <p className="my-2 self-center rounded-full bg-white/90 px-3 py-0.5 text-[11.5px] font-medium text-gray-600 shadow-sm">{etiquetaDia(m.creado_en, ahora)}</p>
                   ) : null}
-                  <Burbuja mensaje={m} onReintentar={m.estado === "fallido" && !m.temporal ? onReintentar : null} reintentando={String(reintentandoId) === String(m.id)} />
+                  <Burbuja mensaje={m} onReintentar={m.estado === "fallido" && !m.temporal ? onReintentar : null} reintentando={String(reintentandoId) === String(m.id)} nombreAsistente={nombreAsistente} />
                 </Fragment>
               );
             })}

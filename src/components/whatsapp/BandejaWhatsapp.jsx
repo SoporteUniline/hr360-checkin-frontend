@@ -11,12 +11,17 @@ import { useAuth } from "@/context/AuthContext";
 import EncabezadoPagina from "@/components/tabla/EncabezadoPagina";
 import { formatearTelefono } from "@/lib/whatsapp/telefono.mjs";
 import { mensajeErrorApi } from "@/lib/whatsapp/reglas.mjs";
+import { paramsFiltro } from "@/lib/whatsapp/entrevista.mjs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  devolverAIa, enviarMensaje, obtener, reintentarMensaje, rutaConversacion, rutaConversaciones, rutaEstado, tomarControl,
+  devolverAIa, enviarMensaje, marcarAtendido, obtener, reintentarMensaje, rutaAgente, rutaConversacion, rutaConversaciones, rutaEstado, tomarControl,
 } from "./api";
 import ListaConversaciones from "./ListaConversaciones";
 import HiloConversacion from "./HiloConversacion";
 import EnlacesVacantes, { BotonEnlacesVacantes } from "./EnlacesVacantes";
+import ConfigurarAgente, { BotonAgente } from "./ConfigurarAgente";
+import PanelCandidato from "./PanelCandidato";
+import { DIALOGO_PANTALLA_COMPLETA } from "./controles";
 
 const POR_PAGINA = 30;
 
@@ -94,7 +99,10 @@ export default function BandejaWhatsapp() {
   }, [busqueda]);
   // Paginación real: el sondeo solo refresca la página 1; «Ver más» pide pagina=2,3… y se agrega sin duplicados
   // (una conversación con actividad nueva sube a la página 1 y ahí se toma la versión fresca).
-  const claveLista = activo ? rutaConversaciones(idEmpresa, { q, pagina: 1, limite: POR_PAGINA }) : null;
+  // R2: el chip de filtro viaja como parámetro; al cambiar, la clave cambia y la paginación vuelve a la página 1.
+  const [filtro, setFiltro] = useState("todos");
+  const filtroParams = useMemo(() => paramsFiltro(filtro), [filtro]);
+  const claveLista = activo ? rutaConversaciones(idEmpresa, { q, pagina: 1, limite: POR_PAGINA, filtro: filtroParams }) : null;
   const { data: lista, error: errorLista, isLoading: cargandoLista, mutate: recargarLista } = useSWR(
     claveLista, obtener, { refreshInterval: 5000, refreshWhenHidden: false, keepPreviousData: true },
   );
@@ -128,7 +136,7 @@ export default function BandejaWhatsapp() {
     setCargandoMas(true);
     setErrorMas("");
     try {
-      const r = await obtener(rutaConversaciones(idEmpresa, { q, pagina, limite: POR_PAGINA }));
+      const r = await obtener(rutaConversaciones(idEmpresa, { q, pagina, limite: POR_PAGINA, filtro: filtroParams }));
       if (claveVigente.current !== clave) return; // cambió la búsqueda o la empresa mientras llegaba
       setExtras((x) => [...x, ...(r?.conversaciones ?? [])]);
       setPaginasCargadas(pagina);
@@ -139,6 +147,11 @@ export default function BandejaWhatsapp() {
     }
   };
   const [vacantesAbierto, setVacantesAbierto] = useState(false);
+  const [agenteAbierto, setAgenteAbierto] = useState(false);
+  const [evaluacionAbierta, setEvaluacionAbierta] = useState(false);
+  // Configuración del agente: da su nombre a las burbujas y el punto de encendido del botón (misma clave que el diálogo).
+  const { data: agente } = useSWR(activo ? rutaAgente(idEmpresa) : null, obtener, { revalidateOnFocus: false, shouldRetryOnError: false });
+  const nombreAsistente = agente?.nombre_asistente || "";
 
   const claveHilo = activo && abierta ? rutaConversacion(abierta) : null;
   const { data: hilo, error: errorHilo, isLoading: cargandoHilo, mutate: recargarHilo } = useSWR(
@@ -182,9 +195,11 @@ export default function BandejaWhatsapp() {
   const [cambiandoControl, setCambiandoControl] = useState(false);
   const [reintentandoId, setReintentandoId] = useState(null);
   const [anuncio, setAnuncio] = useState("");
+  const [marcando, setMarcando] = useState(false);
   useEffect(() => {
     setPendientes([]);
     setAviso("");
+    setEvaluacionAbierta(false);
     if (!abierta) marcadaLeida.current = null;
   }, [abierta]);
 
@@ -252,6 +267,27 @@ export default function BandejaWhatsapp() {
     }
   };
 
+  const entrevista = hilo?.entrevista ?? null;
+  const preguntasSinRespuesta = hilo?.preguntas_sin_respuesta ?? [];
+  const atender = async () => {
+    setMarcando(true);
+    setAviso("");
+    try {
+      await marcarAtendido(abierta);
+      await recargarHilo((actual) => actual && { ...actual, entrevista: actual.entrevista && { ...actual.entrevista, requiere_atencion: false } }, { revalidate: true });
+      recargarLista();
+      setAnuncio("Conversación marcada como atendida.");
+    } catch (e) {
+      setAviso(mensajeErrorApi(e, "No se pudo marcar como atendida."));
+    } finally {
+      setMarcando(false);
+    }
+  };
+  const panel = (
+    <PanelCandidato entrevista={entrevista} preguntasSinRespuesta={preguntasSinRespuesta} cargando={cargandoHilo && !hilo}
+      onAtendido={atender} marcando={marcando} nombreAsistente={nombreAsistente} ahora={ahora} />
+  );
+
   const encabezado = (
     <EncabezadoPagina
       icono={MessagesSquare}
@@ -259,6 +295,7 @@ export default function BandejaWhatsapp() {
       subtitulo="Chats con candidatos. La IA responde y tú tomas el control cuando lo necesites."
       acciones={
         <div className="hidden items-center gap-3 md:flex">
+          {activo ? <BotonAgente onClick={() => setAgenteAbierto(true)} encendido={agente ? agente.activo === true : undefined} /> : null}
           {activo ? <BotonEnlacesVacantes onClick={() => setVacantesAbierto(true)} /> : null}
           <SelectorEmpresa empresas={empresas} idEmpresa={idEmpresa} onCambiar={cambiarEmpresa} />
         </div>
@@ -269,6 +306,7 @@ export default function BandejaWhatsapp() {
   const filaMovil = empresas.length > 1 || activo ? (
     <div className="flex flex-wrap items-center gap-2 md:hidden">
       <SelectorEmpresa empresas={empresas} idEmpresa={idEmpresa} onCambiar={cambiarEmpresa} />
+      {activo ? <BotonAgente onClick={() => setAgenteAbierto(true)} encendido={agente ? agente.activo === true : undefined} /> : null}
       {activo ? <BotonEnlacesVacantes onClick={() => setVacantesAbierto(true)} /> : null}
     </div>
   ) : null;
@@ -287,6 +325,16 @@ export default function BandejaWhatsapp() {
       {encabezado}
       {filaMovil}
       <EnlacesVacantes abierto={vacantesAbierto} onCambiar={setVacantesAbierto} idEmpresa={idEmpresa} />
+      <ConfigurarAgente abierto={agenteAbierto} onCambiar={setAgenteAbierto} idEmpresa={idEmpresa} />
+      <Dialog open={evaluacionAbierta && !!abierta} onOpenChange={setEvaluacionAbierta}>
+        <DialogContent className={`${DIALOGO_PANTALLA_COMPLETA} sm:max-w-md`}>
+          <DialogHeader className="border-b border-gray-200 px-5 pb-3 pt-[max(1rem,env(safe-area-inset-top))] pr-14 text-left">
+            <DialogTitle>Evaluación del candidato</DialogTitle>
+            <DialogDescription>Lo que {nombreAsistente || "el agente"} obtuvo en la entrevista por WhatsApp.</DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto pb-[env(safe-area-inset-bottom)]">{panel}</div>
+        </DialogContent>
+      </Dialog>
       {errorEstado ? (
         <div role="alert" className="flex flex-wrap items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           <span className="flex-1">{mensajeErrorApi(errorEstado, "No se pudo consultar el estado de WhatsApp.")}</span>
@@ -312,7 +360,7 @@ export default function BandejaWhatsapp() {
             </p>
           ) : null}
           <div className="flex min-h-0 min-w-0 overflow-hidden md:h-[calc(100dvh-14rem)] md:min-h-[460px] md:rounded-2xl md:border md:border-gray-200 md:bg-white">
-            <div className={`flex min-w-0 flex-col md:w-[340px] md:shrink-0 md:border-r md:border-gray-200 lg:w-[380px] max-md:w-auto max-md:flex-1 max-md:rounded-2xl max-md:border max-md:border-gray-200 max-md:bg-white ${abierta ? "max-md:hidden" : ""}`}>
+            <div className={`flex min-w-0 flex-col md:w-[340px] md:shrink-0 md:border-r md:border-gray-200 lg:w-[380px] ${abierta ? "xl:w-[320px] 2xl:w-[380px]" : ""} max-md:w-auto max-md:flex-1 max-md:rounded-2xl max-md:border max-md:border-gray-200 max-md:bg-white ${abierta ? "max-md:hidden" : ""}`}>
               <ListaConversaciones
                 conversaciones={conversaciones}
                 hayMas={hayMas}
@@ -329,6 +377,8 @@ export default function BandejaWhatsapp() {
                 cargandoMas={cargandoMas}
                 usuario={dataUser}
                 ahora={ahora}
+                filtro={filtro}
+                onFiltro={setFiltro}
               />
             </div>
             {abierta ? (
@@ -351,8 +401,17 @@ export default function BandejaWhatsapp() {
                   aviso={aviso}
                   anuncio={anuncio}
                   ahora={ahora}
+                  nombreAsistente={nombreAsistente}
+                  onVerEvaluacion={() => setEvaluacionAbierta(true)}
+                  requiereAtencion={entrevista?.requiere_atencion === true}
                 />
               </div>
+            ) : null}
+            {abierta ? (
+              <aside aria-label="Candidato" className="hidden w-[300px] shrink-0 2xl:w-[340px] flex-col border-l border-gray-200 bg-white xl:flex">
+                <h2 className="border-b border-gray-200 px-4 py-3 text-[15px] font-bold text-gray-900">Candidato</h2>
+                <div className="min-h-0 flex-1 overflow-y-auto">{panel}</div>
+              </aside>
             ) : (
               <div className="hidden flex-1 flex-col items-center justify-center gap-2 bg-[#f5f3ef] p-8 text-center md:flex">
                 <MessageCircle className="size-10 text-emerald-600" />

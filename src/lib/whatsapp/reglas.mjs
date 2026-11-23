@@ -67,9 +67,9 @@ export const etiquetaEstado = (estado) => ESTADOS[estado] ?? "";
 // Texto de un mensaje que no es de texto (R1 aún no muestra archivos).
 export const textoArchivo = (tipo) => `[Archivo: ${tipo || "desconocido"}] (se mostrará en una siguiente etapa)`;
 
-// Etiqueta pequeña sobre las burbujas que no son del candidato.
-export function etiquetaActor(mensaje) {
-  if (mensaje?.actor === "ia") return "Asistente IA";
+// Etiqueta pequeña sobre las burbujas que no son del candidato. Con R2 el agente firma con su nombre si se conoce.
+export function etiquetaActor(mensaje, nombreAsistente = "") {
+  if (mensaje?.actor === "ia") return String(nombreAsistente ?? "").trim() || "Asistente IA";
   if (mensaje?.actor === "sistema") return "Sistema";
   if (mensaje?.actor === "reclutador") return mensaje?.usuario?.nombre || "Reclutador";
   return "";
