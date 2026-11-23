@@ -9,10 +9,16 @@
  * - Tipografía Poppins dentro del iframe (public/fonts) con fallback sans.
  * - Encabezado y pie vectoriales (nítidos, no rasterizados) dibujados con
  *   jsPDF sobre cada página: marca, título del documento, línea degradada
- *   azul → morado y numeración "Página X de N".
+ *   azul → morado y el pie homologado («Generado con ADAMIA · fecha ·
+ *   Página X de Y», src/lib/pdfMarcaAdamia.mjs).
  *
  * @param {string} html       - HTML a renderizar (contenido_html del documento)
- * @param {string} filename   - Nombre del archivo sin extensión
+ * @param {string} filename   - Título del documento (encabezado del PDF)
+ * @param {object} [opciones]
+ * @param {boolean} [opciones.download=true]
+ * @param {string} [opciones.nombreArchivo] - Nombre del archivo descargado
+ *   (usar `nombreArchivoPdf` de src/lib/nombreArchivo.mjs: sin nombre del
+ *   empleado). Por omisión «Documento-<fecha>.pdf».
  */
 
 import { calcularPaginasPdf } from "@/lib/documentos/paginacionPdf";
@@ -23,12 +29,15 @@ import {
   applyAdamiaFont,
   gradientLine,
   loadAdamiaLogo,
+  loadAdamiaMarca,
+  dibujarPieAdamia,
 } from "@/lib/pdfAdamiaTheme";
+import { nombreArchivoPdf } from "@/lib/nombreArchivo.mjs";
 
 export async function htmlToPdf(
   html,
   filename = "documento",
-  { download = true } = {},
+  { download = true, nombreArchivo } = {},
 ) {
   const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
     import("html2canvas"),
@@ -139,6 +148,7 @@ export async function htmlToPdf(
         const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4", compress: true });
         const FONT = await applyAdamiaFont(pdf);
         const logo = await loadAdamiaLogo(); // DataURL o null (fallback texto)
+        const marcaAdamia = await loadAdamiaMarca(); // logotipo del pie homologado
 
         const pageW = pdf.internal.pageSize.getWidth();   // 210 mm
         const pageH = pdf.internal.pageSize.getHeight();  // 297 mm
@@ -209,23 +219,6 @@ export async function htmlToPdf(
           gradientLine(pdf, margin, pageW - margin, 14, 0.55);
         };
 
-        const drawFooter = (page) => {
-          const lineY = pageH - footerBand + 3;
-          const textY = lineY + 4.5;
-          gradientLine(pdf, margin, pageW - margin, lineY, 0.35);
-          pdf.setFont(FONT, "bold");
-          pdf.setFontSize(7.5);
-          pdf.setTextColor(...ADAMIA.blue);
-          pdf.text("Adamia", margin, textY);
-          const brandW = pdf.getTextWidth("Adamia");
-          pdf.setFont(FONT, "normal");
-          pdf.setTextColor(...ADAMIA.muted);
-          pdf.text("  ·  Gestión Documental", margin + brandW, textY);
-          pdf.text(`Página ${page} de ${totalPages}`, pageW - margin, textY, {
-            align: "right",
-          });
-        };
-
         for (let page = 0; page < totalPages; page++) {
           if (page > 0) pdf.addPage();
 
@@ -238,13 +231,18 @@ export async function htmlToPdf(
           recorte.width = recorte.height = 0;
 
           drawHeader();
-          drawFooter(page + 1);
         }
+        dibujarPieAdamia(pdf, {
+          font: FONT,
+          logo: marcaAdamia,
+          documento: "Gestión documental",
+          margenMm: margin,
+        });
 
         const blob = pdf.output("blob");
 
         if (download) {
-          pdf.save(`${filename}.pdf`);
+          pdf.save(nombreArchivo || nombreArchivoPdf({ documento: "Documento" }));
         }
 
         resolve(blob);

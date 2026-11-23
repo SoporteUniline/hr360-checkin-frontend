@@ -37,3 +37,10 @@ Frontend: `node --test scripts/test-check-location.mjs scripts/test-gps-on-deman
 Backend: `node --test tests/geofence.test.cjs`
 
 Estas pruebas utilizan dependencias simuladas y no escriben asistencias ni se conectan a una base de datos.
+
+
+## Integración con las ramas de desarrollo
+
+El reloj de desarrollo utiliza la cola offline también cuando hay conexión. La cola conserva precisión y hora de medición; el servidor compara la antigüedad de la ubicación contra la hora de captura de la checada, para permitir la sincronización posterior. Los registros pendientes antiguos que no tengan precisión disponible requieren revisión si el empleado exige GPS.
+
+Comprobar también `scripts/test-offline-clock.mjs` y `scripts/test-offline-app-cache.mjs` en frontend, y `scripts/test-offline-clock.cjs` y `scripts/test-company-offline-clock.cjs` en backend.

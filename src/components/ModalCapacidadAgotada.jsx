@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 
 export default function ModalCapacidadAgotada({ open, onClose, mensaje }) {
-  const whatsappNumber = "5213171035768";
+  const whatsappNumber = "5213171288029";
   const texto = encodeURIComponent(
     "Hola, necesito apoyo para mejorar mi plan en Adamia. ¿Me podrían ayudar?",
   );

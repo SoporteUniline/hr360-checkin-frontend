@@ -26,6 +26,7 @@ import { Icon } from "@iconify/react";
 import ErrorPage from "@/components/ErrorPage";
 import { isNativeClient } from "@/lib/native-app";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import CambiarContrasenaEmpleado from "./CambiarContrasenaEmpleado";
 import {
   Select,
   SelectContent,
@@ -33,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BriefcaseBusiness, Hammer, User, FolderOpen } from "lucide-react";
+import { BriefcaseBusiness, User, FolderOpen, ScanFace, Wallet } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ComboboxSucursal } from "@/components/ComboboxSucursal";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -63,6 +64,9 @@ export default function FormularioEmpleado({
   setSoloLectura,
   onClose,
   mutate,
+  // (21/11/2026) Ficha flotante desde otras pantallas (components/empleado/FichaEmpleado.jsx).
+  textoRegresar = "Regresar a la tabla",
+  enVentana = false,
 }) {
   const DIAS_SEMANA = React.useMemo(
     () => [
@@ -90,8 +94,12 @@ export default function FormularioEmpleado({
   );
 
   const [contactosEmergencia, setContactosEmergencia] = useState([]);
-  const [tab, setTab] = useState("personales");
+  // (23/11/2026) 5 pestañas: personal · trabajo · checador · pago · documentos.
+  const [tab, setTab] = useState("personal");
   const fueDesdeLectura = useRef(false);
+  // (22/11/2026) Al editar, el rostro solo se envía si RH capturó uno nuevo: así guardar la ficha no pisa el rostro que la
+  // persona haya actualizado desde su app mientras la ficha estaba abierta.
+  const rostroCapturado = useRef(false);
   const nombreInputRef = useRef(null);
 
   const { enqueueSnackbar } = useSnackbar();
@@ -116,7 +124,7 @@ export default function FormularioEmpleado({
       curp: "",
       departamento: "",
       direccion: "",
-      estado_civil: "sin-seleccion",
+      estado_civil: "", // (23/11/2026) es texto (combobox): «sin-seleccion» se mostraba tal cual
       fecha_ingreso: "",
       fecha_nacimiento: "",
       hrs_de_comida: "",
@@ -133,6 +141,8 @@ export default function FormularioEmpleado({
       periodo_pago: "sin-seleccion",
       forma_pago: "sin-seleccion",
       forma_calculo: "sin-seleccion",
+      medio_pago: "",
+      monto_transferencia: "",
       banco: "",
       otro_banco: "",
       tipo_cuenta: "Cuenta",
@@ -236,6 +246,8 @@ export default function FormularioEmpleado({
         periodo_pago: restoEmpleado.periodo_pago ?? "sin-seleccion",
         forma_pago: restoEmpleado.forma_pago ?? "sin-seleccion",
         forma_calculo: restoEmpleado.forma_calculo ?? "sin-seleccion",
+        medio_pago: restoEmpleado.medio_pago ?? "",
+        monto_transferencia: restoEmpleado.monto_transferencia ?? "",
 
         cc_vacaciones: restoEmpleado.cc_vacaciones ?? "",
         cc_permisos: restoEmpleado.cc_permisos ?? "",
@@ -284,7 +296,7 @@ export default function FormularioEmpleado({
       });
 
       if (!fueDesdeLectura.current) {
-        setTab("personales");
+        setTab("personal");
       }
 
       fueDesdeLectura.current = false;
@@ -376,7 +388,7 @@ export default function FormularioEmpleado({
     enqueueSnackbar(`⚠️ ${mensaje}`, { variant: "warning" });
 
     const tabsConErrores = {
-      personales: [
+      personal: [
         "nombre",
         "apellido_paterno",
         "apellido_materno",
@@ -386,16 +398,18 @@ export default function FormularioEmpleado({
         "telefono",
         "rfc",
       ],
-      laborales: ["puesto", "sucursal", "new_pass", "confirm_pass"],
-      jornada: ["hrs_por_dia", "hrs_de_comida", "horarios"],
-      nomina: [
+      trabajo: ["id_empresa", "puesto", "sucursal", "hrs_por_dia", "hrs_de_comida", "horarios"],
+      checador: ["new_pass", "confirm_pass", "nip"],
+      pago: [
         "periodo_pago",
         "forma_pago",
         "forma_calculo",
         "sueldo",
         "porcentaje",
+        "medio_pago",
+        "monto_transferencia",
+        "banco", "otro_banco", "numero_cuenta", "tipo_cuenta",
       ],
-      cuentas: ["banco", "otro_banco", "numero_cuenta", "tipo_cuenta"],
     };
 
     const tabConError = Object.entries(tabsConErrores).find(([_, campos]) =>
@@ -427,7 +441,7 @@ export default function FormularioEmpleado({
       enqueueSnackbar("Debes seleccionar una empresa", {
         variant: "warning",
       });
-      setTab("laborales");
+      setTab("trabajo");
       return;
     }
 
@@ -487,7 +501,7 @@ export default function FormularioEmpleado({
         enqueueSnackbar("Debes seleccionar un turno", {
           variant: "warning",
         });
-        setTab("jornada");
+        setTab("trabajo");
         return;
       }
 
@@ -498,6 +512,7 @@ export default function FormularioEmpleado({
       const formData = new FormData();
 
       delete data.nombre_empresa;
+      if (editar && !rostroCapturado.current) delete data.descriptor_facial;
 
       [
         "id_jefe_inmediato",
@@ -626,13 +641,13 @@ export default function FormularioEmpleado({
           variant: "success",
         });
 
-        setTab("personales");
+        setTab("personal");
       } else {
         enqueueSnackbar("Empleado registrado", {
           variant: "success",
         });
 
-        setTab("personales");
+        setTab("personal");
         onClose?.();
         setModoFormulario(false);
       }
@@ -694,6 +709,11 @@ export default function FormularioEmpleado({
 
   if (error) return <ErrorPage message={error?.message} />;
 
+  // Los campos personalizados siguen guardados con su pestaña original (personales, laborales, jornada…): cada sección
+  // los pinta con su clave aunque ahora viva dentro de otra pestaña. Así no se mueve ningún dato.
+  const renderCamposDe = (pestana) => function camposDePestana(despuesDe, agrupar = false) {
+    return <CamposEmpleado form={form} campos={camposConfigurados} soloLectura={soloLectura} pestana={pestana} despuesDe={despuesDe} agrupar={agrupar} />;
+  };
   const renderCampos = (despuesDe, agrupar = false) => (
     <CamposEmpleado
       form={form}
@@ -708,16 +728,16 @@ export default function FormularioEmpleado({
   return (
     <Form {...form}>
       {/* Contenedor principal: columna fija en mobile, flujo normal en desktop */}
-      <div className="flex flex-col h-[calc(100dvh-3.5rem)] sm:block sm:h-auto">
+      <div className={`flex flex-col sm:block sm:h-auto ${enVentana ? "h-full" : "h-[calc(100dvh-3.5rem)]"}`}>
         {/* ── Header mobile (oscuro, fijo arriba) ── */}
-        <div className="sm:hidden bg-gray-900 text-white px-4 pt-4 pb-3 shrink-0">
+        <div className="sm:hidden bg-white text-[#080d36] border-b border-slate-200 px-4 pt-3 pb-3 shrink-0">
           <div className="flex items-center justify-between gap-2">
             <button
               type="button"
-              className="flex items-center gap-2 text-white active:opacity-70 min-w-0"
+              className="flex min-h-11 items-center gap-2 text-[#080d36] active:opacity-70 min-w-0"
               onClick={() => {
                 setModoFormulario(false);
-                setTab("personales");
+                setTab("personal");
               }}
             >
               <Icon
@@ -737,7 +757,7 @@ export default function FormularioEmpleado({
             {soloLectura && (
               <button
                 type="button"
-                className="shrink-0 bg-white/10 active:bg-white/20 text-white text-sm font-medium px-3 py-1.5 rounded-lg"
+                className="shrink-0 min-h-10 border border-brand text-brand active:bg-blue-50 text-sm font-semibold px-3.5 rounded-xl"
                 onClick={() => {
                   fueDesdeLectura.current = true;
                   setEditar(true);
@@ -758,11 +778,11 @@ export default function FormularioEmpleado({
               className="flex items-center gap-2 text-[#2563EB] hover:text-[#1d4ed8] transition-colors font-medium"
               onClick={() => {
                 setModoFormulario(false);
-                setTab("personales");
+                setTab("personal");
               }}
             >
               <Icon icon="material-symbols:arrow-back" width={20} height={20} />
-              <span className="text-sm">Regresar a la tabla</span>
+              <span className="text-sm">{textoRegresar}</span>
             </button>
 
             <div className="flex items-center gap-3">
@@ -889,62 +909,21 @@ export default function FormularioEmpleado({
               <div className="bg-white sm:rounded-xl sm:shadow-sm sm:border sm:border-gray-100 overflow-hidden sm:mb-6">
                 <div className="overflow-x-auto">
                   <TabsList className="flex-nowrap w-max min-w-full bg-gray-50 rounded-none border-b border-gray-200 p-0 h-auto">
-                    <TabsTrigger
-                      value="personales"
-                      className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-6 font-medium"
-                    >
+                    <TabsTrigger value="personal" className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-5 font-medium">
                       <User className="h-4 w-4 sm:mr-2" />
-                      <span className="hidden sm:inline">Datos personales</span>
+                      <span className="ml-1.5 whitespace-nowrap text-[13px] sm:ml-0 sm:text-sm">Personal</span>
                     </TabsTrigger>
-                    <TabsTrigger
-                      value="emergencia"
-                      className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-6 font-medium"
-                    >
-                      <Icon icon="mdi:account-alert-outline" className="h-4 w-4 sm:mr-2" />
-                      <span className="hidden sm:inline">Contactos de emergencia</span>
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="laborales"
-                      className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-6 font-medium"
-                    >
+                    <TabsTrigger value="trabajo" className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-5 font-medium">
                       <BriefcaseBusiness className="h-4 w-4 sm:mr-2" />
-                      <span className="hidden sm:inline">Datos laborales</span>
+                      <span className="ml-1.5 whitespace-nowrap text-[13px] sm:ml-0 sm:text-sm">Trabajo</span>
                     </TabsTrigger>
-                    <TabsTrigger
-                      value="jornada"
-                      className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-6 font-medium"
-                    >
-                      <Hammer className="h-4 w-4 sm:mr-2" />
-                      <span className="hidden sm:inline">Jornada laboral</span>
+                    <TabsTrigger value="checador" className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-5 font-medium">
+                      <ScanFace className="h-4 w-4 sm:mr-2" />
+                      <span className="ml-1.5 whitespace-nowrap text-[13px] sm:ml-0 sm:text-sm">Checador y acceso</span>
                     </TabsTrigger>
-                    <TabsTrigger
-                      value="nomina"
-                      className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-6 font-medium"
-                    >
-                      <Icon icon="mdi:cash" className="h-4 w-4 sm:mr-2" />
-                      <span className="hidden sm:inline">Datos de nómina</span>
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="cuentas"
-                      className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-6 font-medium"
-                    >
-                      <Icon
-                        icon="rivet-icons:money"
-                        className="h-4 w-4 sm:mr-2"
-                      />
-                      <span className="hidden sm:inline">
-                        Cuentas bancarias
-                      </span>
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="reconocimiento"
-                      className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-6 font-medium"
-                    >
-                      <Icon
-                        icon="mdi:face-recognition"
-                        className="h-4 w-4 sm:mr-2"
-                      />
-                      <span className="hidden sm:inline">Escanear rostro</span>
+                    <TabsTrigger value="pago" className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-5 font-medium">
+                      <Wallet className="h-4 w-4 sm:mr-2" />
+                      <span className="ml-1.5 whitespace-nowrap text-[13px] sm:ml-0 sm:text-sm">Pago</span>
                     </TabsTrigger>
                     {(values?.id_empleado || camposConfigurados.some(c => c.activo && c.formulario && c.pestana === "documentos")) && (
                       <TabsTrigger
@@ -952,7 +931,7 @@ export default function FormularioEmpleado({
                         className="data-[state=active]:bg-white data-[state=active]:text-[#2563EB] data-[state=active]:border-b-2 data-[state=active]:border-[#2563EB] rounded-none py-2.5 px-3 sm:py-4 sm:px-6 font-medium"
                       >
                         <FolderOpen className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">Documentos</span>
+                        <span className="ml-1.5 whitespace-nowrap text-[13px] sm:ml-0 sm:text-sm">Documentos</span>
                       </TabsTrigger>
                     )}
                   </TabsList>
@@ -970,57 +949,46 @@ export default function FormularioEmpleado({
                       transition={{ duration: 0.3 }}
                       className="relative w-full overflow-hidden"
                     >
-                      {tab === "personales" && (
-                        <TabPersonales renderCampos={renderCampos} form={form} soloLectura={soloLectura} />
+                      {tab === "personal" && (
+                        <div className="space-y-6">
+                          <TabPersonales renderCampos={renderCamposDe("personales")} form={form} soloLectura={soloLectura} />
+                          <TabContactosEmergencia
+                            renderCampos={renderCamposDe("emergencia")}
+                            empleadoId={values?.id_empleado}
+                            soloLectura={soloLectura}
+                            borradores={contactosEmergencia}
+                            setBorradores={setContactosEmergencia}
+                          />
+                        </div>
                       )}
-
-                      {tab === "emergencia" && (
-                        <TabContactosEmergencia
-                          renderCampos={renderCampos}
-                          empleadoId={values?.id_empleado}
-                          soloLectura={soloLectura}
-                          borradores={contactosEmergencia}
-                          setBorradores={setContactosEmergencia}
-                        />
+                      {tab === "trabajo" && (
+                        <div className="space-y-6">
+                          <BajaEmpleadoInfo empleado={values} />
+                          <TabLaborales seccion="trabajo" renderCampos={renderCamposDe("laborales")} form={form} soloLectura={soloLectura} dataUser={dataUser} />
+                          <TabJornada renderCampos={renderCamposDe("jornada")} form={form} soloLectura={soloLectura} empleadoId={values?.id_empleado} />
+                        </div>
                       )}
-                      {tab === "laborales" && (
-                        <>
-                        <BajaEmpleadoInfo empleado={values} />
-                        <TabLaborales renderCampos={renderCampos} form={form} soloLectura={soloLectura} dataUser={dataUser} />
-                        </>
+                      {tab === "checador" && (
+                        <div className="space-y-6">
+                          <TabLaborales seccion="checador" renderCampos={renderCamposDe("laborales")} form={form} soloLectura={soloLectura} dataUser={dataUser}
+                            cambiarContrasena={values?.id_empleado && !soloLectura ? <CambiarContrasenaEmpleado empleado={values} conTexto /> : null} />
+                          <TabReconocimiento
+                            renderCampos={renderCamposDe("reconocimiento")}
+                            form={form}
+                            soloLectura={soloLectura}
+                            active={tab === "checador"}
+                            setDescriptor={(descriptor) => {
+                              rostroCapturado.current = true;
+                              form.setValue("descriptor_facial", descriptor);
+                            }}
+                          />
+                        </div>
                       )}
-
-                      {tab === "jornada" && (
-                        <TabJornada
-                          renderCampos={renderCampos}
-                          form={form}
-                          soloLectura={soloLectura}
-                          empleadoId={values?.id_empleado}
-                        />
-                      )}
-
-                      {tab === "nomina" && (
-                        <TabNomina renderCampos={renderCampos} form={form} soloLectura={soloLectura} />
-                      )}
-
-                      {tab === "cuentas" && (
-                        <TabCuentasBancarias
-                          renderCampos={renderCampos}
-                          form={form}
-                          soloLectura={soloLectura}
-                        />
-                      )}
-
-                      {tab === "reconocimiento" && (
-                        <TabReconocimiento
-                          renderCampos={renderCampos}
-                          form={form}
-                          soloLectura={soloLectura}
-                          active={tab === "reconocimiento"}
-                          setDescriptor={(descriptor) =>
-                            form.setValue("descriptor_facial", descriptor)
-                          }
-                        />
+                      {tab === "pago" && (
+                        <div className="space-y-6">
+                          <TabNomina renderCampos={renderCamposDe("nomina")} form={form} soloLectura={soloLectura} />
+                          <TabCuentasBancarias renderCampos={renderCamposDe("cuentas")} form={form} soloLectura={soloLectura} />
+                        </div>
                       )}
 
                       {tab === "documentos" && values?.id_empleado && (
@@ -1051,7 +1019,7 @@ export default function FormularioEmpleado({
             <button
               type="submit"
               form="formulario-empleado"
-              className="w-full bg-gray-900 active:bg-gray-700 text-white text-sm font-bold py-3 rounded-xl"
+              className="w-full bg-brand active:bg-blue-800 text-white text-sm font-bold py-3 rounded-xl"
             >
               {editar ? "Actualizar empleado" : "Registrar empleado"}
             </button>

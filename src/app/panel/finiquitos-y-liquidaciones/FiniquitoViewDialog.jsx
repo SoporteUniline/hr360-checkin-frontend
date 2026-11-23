@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { finiquitosApi } from "@/lib/finiquitosApi";
 import { firmaDigitalAdminApi } from "@/lib/firmaDigitalApi";
+import EvidenciaFirma from "@/components/firma/EvidenciaFirma";
 import styles from "./finiquitos-theme.module.css";
 import FiniquitoResumen, { money } from "./FiniquitoResumen";
 import { jsPDF } from "jspdf";
@@ -20,7 +21,14 @@ import { useAuth } from "@/context/AuthContext";
 import useSWR from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { fetchImageAsDataUrl } from "@/lib/pdfCompanyLogo";
-import { ADAMIA, gradientLine, applyAdamiaFont } from "@/lib/pdfAdamiaTheme";
+import {
+  ADAMIA,
+  gradientLine,
+  applyAdamiaFont,
+  loadAdamiaMarca,
+  dibujarPieAdamia,
+} from "@/lib/pdfAdamiaTheme";
+import { nombreArchivoPdf } from "@/lib/nombreArchivo.mjs";
 import {
   Check,
   Copy,
@@ -163,6 +171,7 @@ export default function FiniquitoViewDialog({
     });
     // Tipografía corporativa Adamia (Poppins con fallback Helvetica).
     const FONT = await applyAdamiaFont(doc);
+    const marcaAdamia = await loadAdamiaMarca();
     const pageWidth = 210;
     const pageHeight = 297;
     const marginLeft = 20;
@@ -405,16 +414,6 @@ export default function FiniquitoViewDialog({
     });
 
     const totalPages = doc.internal.getNumberOfPages();
-    const fechaGenerado = new Date().toLocaleDateString("es-MX", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-    const horaGenerado = new Date().toLocaleTimeString("es-MX", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
     for (let p = 1; p <= totalPages; p++) {
       doc.setPage(p);
       if (p === totalPages) {
@@ -465,42 +464,23 @@ export default function FiniquitoViewDialog({
           }
         );
       }
-      const lineY = pageHeight - 14;
-      const footerTextY = pageHeight - 9;
-      gradientLine(doc, marginLeft, pageWidth - marginRight, lineY, 0.35);
-      doc.setFont(FONT, "bold");
-      doc.setFontSize(7.5);
-      doc.setTextColor(...ADAMIA.blue);
-      doc.text("Adamia", marginLeft, footerTextY);
-      const brandW = doc.getTextWidth("Adamia");
-      doc.setFont(FONT, "normal");
-      doc.setTextColor(...ADAMIA.muted);
-      doc.text(
-        " · Finiquitos y Liquidaciones",
-        marginLeft + brandW,
-        footerTextY
-      );
-      doc.setFontSize(6.5);
-      doc.text(
-        `Generado el ${fechaGenerado} a las ${horaGenerado} · Folio #${folio}`,
-        pageWidth / 2 + 12,
-        footerTextY,
-        { align: "center" }
-      );
-      doc.setFontSize(7.5);
-      doc.text(
-        `Página ${p} de ${totalPages}`,
-        pageWidth - marginRight,
-        footerTextY,
-        {
-          align: "right",
-        }
-      );
     }
 
-    const nombreArchivo = `${
-      det.es_liquidacion ? "LIQUIDACION" : "FINIQUITO"
-    }_${String(det.nombre_completo || "Empleado").replace(/\s+/g, "_")}.pdf`;
+    // Pie homologado ADAMIA en cada página (logotipo, fecha, Página X de Y).
+    dibujarPieAdamia(doc, {
+      font: FONT,
+      logo: marcaAdamia,
+      documento: det.es_liquidacion ? "Liquidación" : "Finiquito",
+      detalle: `Folio #${folio}`,
+      margenMm: marginLeft,
+    });
+
+    // Nombre sin datos personales: documento, folio, número de empleado y fecha.
+    const nombreArchivo = nombreArchivoPdf({
+      documento: det.es_liquidacion ? "Liquidacion" : "Finiquito",
+      folio,
+      empleado: det,
+    });
 
     return { doc, nombreArchivo };
   };
@@ -1003,6 +983,7 @@ export default function FiniquitoViewDialog({
                         ? "Abriendo…"
                         : "Ver PDF firmado"}
                     </Button>
+                    <EvidenciaFirma idSolicitud={estadoFirma.id || estadoFirma.id_solicitud} idEmpresa={idEmpresa} />
                   </>
                 ) : pending ? (
                   <>

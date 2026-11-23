@@ -33,7 +33,7 @@ export const VACIO = {
   nombre: "",
   titulo: "",
   texto: "",
-  boton_texto: "Cotizar ahora",
+  boton_texto: "Conversemos",
   boton_url: "/cotiza",
   cupon: "",
   paginas: ["todas"],

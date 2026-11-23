@@ -6,7 +6,8 @@
 // tipografía Poppins y acentos con el degradado azul → morado.
 // Relacionado con: ReporteResultados.jsx, useReportePersonalizado.js
 
-import { ADAMIA, gradientLine, applyAdamiaFont } from "@/lib/pdfAdamiaTheme";
+import { applyAdamiaFont, loadAdamiaMarca, dibujarPieAdamia } from "@/lib/pdfAdamiaTheme";
+import { nombreArchivoPdf } from "@/lib/nombreArchivo.mjs";
 
 /**
  * Exporta el contenido del div referenciado por `containerRef` a un PDF A4.
@@ -46,6 +47,7 @@ export async function exportReportePersonalizadoPDF({
     });
     // Tipografía Poppins para los textos nativos (footer); fallback Helvetica.
     const FONT = await applyAdamiaFont(pdf);
+    const marcaAdamia = await loadAdamiaMarca();
     // pageWidth y pageHeight se toman del objeto jsPDF para que sean correctos
     // independientemente de la orientación.
     // Portrait:  pageWidth=595pt, pageHeight=842pt
@@ -299,45 +301,26 @@ export async function exportReportePersonalizadoPDF({
       }
     }
 
-    // ── Footer Adamia en todas las páginas: línea degradada, marca y folio ───
-    const totalPages = pdf.getNumberOfPages();
+    // ── Pie homologado ADAMIA en cada página (logotipo, fecha, Página X de Y) ──
+    const documento =
+      tipoReporte === "asistencia" ? "Reporte de asistencia" : "Reporte de reloj checador";
+    dibujarPieAdamia(pdf, {
+      font: FONT,
+      logo: marcaAdamia,
+      documento,
+      margenMm: 25,
+    });
 
-    if (totalPages > 0) {
-      const footerAreaTop = pageHeight - marginBottom - footerReserved;
-
-      for (let page = 1; page <= totalPages; page++) {
-        pdf.setPage(page);
-        const lineY = footerAreaTop + 8;
-        const textY = footerAreaTop + 22;
-
-        gradientLine(pdf, marginLeft, pageWidth - marginRight, lineY, 0.8);
-
-        pdf.setFont(FONT, "bold");
-        pdf.setFontSize(7.5);
-        pdf.setTextColor(...ADAMIA.blue);
-        pdf.text("Adamia", marginLeft, textY);
-        const brandWidth = pdf.getTextWidth("Adamia");
-
-        pdf.setFont(FONT, "normal");
-        pdf.setTextColor(...ADAMIA.muted);
-        pdf.text("  ·  Reportes Personalizados", marginLeft + brandWidth, textY);
-
-        const rightText = `Página ${page} de ${totalPages}`;
-        const textWidth = pdf.getTextWidth(rightText);
-        pdf.text(rightText, pageWidth - marginRight - textWidth, textY);
-      }
-    }
-
-    // ── Nombre del archivo ────────────────────────────────────────────────────
-    const tipoLabel =
-      tipoReporte === "asistencia" ? "asistencia" : "reloj_checador";
-    const fi = filtros.fechaInicio
-      ? filtros.fechaInicio.replace(/-/g, "_")
-      : "inicio";
-    const ff = filtros.fechaFin
-      ? filtros.fechaFin.replace(/-/g, "_")
-      : "fin";
-    pdf.save(`reporte_${tipoLabel}_${fi}_al_${ff}.pdf`);
+    // ── Nombre del archivo: documento y periodo (sin datos personales) ──────
+    pdf.save(
+      nombreArchivoPdf({
+        documento: tipoReporte === "asistencia" ? "Reporte asistencia" : "Reporte reloj checador",
+        periodo:
+          filtros.fechaInicio || filtros.fechaFin
+            ? { inicio: filtros.fechaInicio, fin: filtros.fechaFin }
+            : undefined,
+      }),
+    );
 
     onEnd?.(null);
   } catch (err) {

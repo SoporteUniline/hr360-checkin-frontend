@@ -129,7 +129,7 @@ const page = () => {
           acciones={
             <Button
               onClick={() => setOpenNewActa(true)}
-              className="bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white"
+              className="bg-brand font-semibold text-white"
             >
               <PlusIcon className="w-4 h-4 mr-2" />
               Nueva acta
@@ -232,7 +232,7 @@ const page = () => {
           onOpenChange={(open) => !open && setDeleteRow(null)}
         >
           <AlertDialogContent className="sm:max-w-[425px] p-0">
-            <AlertDialogHeader className="bg-gradient-to-r from-red-500 to-red-600 text-white p-6 rounded-t-lg">
+            <AlertDialogHeader className="bg-red-600 text-white p-6 rounded-t-lg">
               <div className="flex items-center gap-3">
                 <AlertTriangle className="h-6 w-6" />
                 <AlertDialogTitle className="text-white">

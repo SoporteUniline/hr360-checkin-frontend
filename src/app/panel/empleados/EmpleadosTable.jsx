@@ -14,6 +14,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Pencil, Eye, Mail, Phone, UserPlus, Download } from "lucide-react";
 import EstadoEmpleadoDialog from "./EstadoEmpleadoDialog";
+import CambiarContrasenaEmpleado from "./CambiarContrasenaEmpleado";
 import { EstadoBadge } from "@/lib/estados";
 import dayjs from "dayjs";
 import "dayjs/locale/es";
@@ -56,19 +57,6 @@ const getInitials = (nombreCompleto = "") => {
     .join("");
 };
 
-// Función para generar color de fondo basado en iniciales
-const getAvatarColor = (nombreCompleto = "") => {
-  const colors = [
-    "bg-blue-500",
-    "bg-purple-500",
-    "bg-green-500",
-    "bg-pink-500",
-    "bg-indigo-500",
-    "bg-teal-500",
-  ];
-  const charCode = nombreCompleto.charCodeAt(0) || 0;
-  return colors[charCode % colors.length];
-};
 
 const SincronizacionBadge = ({ sincronizacion }) => {
   const estado = sincronizacion?.estado;
@@ -446,7 +434,7 @@ export default function EmpleadosTable({
         </Button>
         <Button
           onClick={() => abrirFormulario(null, false, false)}
-          className="h-9 rounded-md bg-gradient-to-br from-brand to-[#4f46e5] font-semibold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
+          className="h-9 rounded-md bg-brand font-semibold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95"
         >
           <UserPlus className="w-4 h-4 mr-2" />
           Nuevo empleado
@@ -543,11 +531,8 @@ export default function EmpleadosTable({
                     alt={nombreCompleto}
                   />
                 ) : null}
-                <AvatarFallback
-                  className={`${getAvatarColor(
-                    nombreCompleto,
-                  )} text-white font-semibold text-sm`}
-                >
+                {/* Avatar como en la app del empleado: azul claro con iniciales azules (antes colores al azar). */}
+                <AvatarFallback className="bg-blue-50 text-blue-700 font-semibold text-sm">
                   {getInitials(nombreCompleto)}
                 </AvatarFallback>
               </Avatar>
@@ -775,6 +760,7 @@ export default function EmpleadosTable({
                         >
                           <Eye className="h-4 w-4 text-green-600" />
                         </button>
+                        <CambiarContrasenaEmpleado empleado={emp} />
                         <div onClick={(e) => e.stopPropagation()}>
                           <EstadoEmpleadoDialog
                             item={emp}

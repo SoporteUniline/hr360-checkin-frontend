@@ -19,7 +19,7 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:4491';
     for (const width of [320, 390, 768, 1280]) {
       const context = await browser.newContext({ viewport: { width, height: 780 }, isMobile: true, deviceScaleFactor: 1 });
       await context.addCookies([{ name: 'token', value: token, url: base }]);
-      let posts = 0, failHistory = false;
+      let posts = 0, failHistory = false, checadas = 0, suscripcionLenta = false;
       const requests = [{ id: 1, id_empleado: 101, id_tipo_permiso: 2, tipo_permiso_nombre: 'Vacaciones', fecha_inicio: '2026-11-02', fecha_fin: '2026-11-04', estado: 'Pendiente', motivo: 'Descanso', dias_trabajo: 'Lunes,Martes,Miércoles,Jueves,Viernes', descuenta_vacaciones: 1 }];
       for (let i=2;i<=13;i++) requests.push({ ...requests[0], id:i, estado:i===13?'Rechazado':'Aprobado', motivo:'Solicitud anterior '+i });
       await context.route('**/*', async route => {
@@ -34,13 +34,24 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:4491';
         if (p.endsWith('/vacaciones/mi-saldo')) return json({ dias_disponibles: 8, dias_cargados: 12, dias_tomados: 4 });
         if (p.includes('/solicitudes-permiso/empleado/101')) { const pageNo=Number(new URL(route.request().url()).searchParams.get('page') || 1); return json({results:requests.slice((pageNo-1)*5,pageNo*5),total:requests.length}); }
         if(p.includes('/holidays/')) return json({festivos:[]});
-        if (p.endsWith('/tiposPermiso')) return json({ tiposPermiso: [{ id: 2, nombre: 'Vacaciones', es_permiso: 0, descuenta_vacaciones: 1 }] });
+        // Reloj del empleado (21/11/2026): perfil del dispositivo y checada por código.
+        if (p.startsWith('/api/empresas/check-subscription/')) { if (suscripcionLenta) await new Promise(r => setTimeout(r, 3000)); return json({ hasActivePlan: true }); }
+        if (p.endsWith('/empresas/id/10/slug')) return json({ slug: 'empresa-prueba' });
+        if (p.endsWith('/reloj/offline/empresa/perfil') || p.endsWith('/reloj/offline/perfil')) return json({ id_empresa: 10, id_empleado: 101, slug: 'empresa-prueba', nombre: 'Diego León', metodo: 'codigo', grant: 'g', prepared_at: new Date().toISOString() });
+        if (p.endsWith('/reloj/offline/empresa/sincronizar') || p.endsWith('/reloj/offline/sincronizar')) { checadas++; return json({ action: 'entrada', employee: { nombre: 'Diego León' }, message: 'Entrada registrada' }); }
+        if (p.endsWith('/tiposPermiso')) return json({ tiposPermiso: [{ id: 2, nombre: 'Vacaciones', es_permiso: 0, descuenta_vacaciones: 1 }, { id: 3, nombre: 'Permiso personal', es_permiso: 1, descuenta_vacaciones: 0 }] });
         if (p.endsWith('/solicitudes-permiso') && route.request().method() === 'POST') {
           posts++;
           const payload = route.request().postDataJSON();
+          if (payload.modalidad === 'horas') {
+            // Permiso por horas desde Mi espacio (21/11/2026): un día, tipo, hora y cómo se cubre.
+            assert.deepEqual([payload.id_empleado, payload.id_tipo_permiso, payload.tipo_horas, payload.hora_inicio, payload.hora_fin, payload.tratamiento, payload.fecha_inicio, payload.fecha_fin], [101, 3, 'sale_antes', '15:00', null, 'repone', '2026-11-23', '2026-11-23']);
+            requests.unshift({ ...payload, id: 98, tipo_permiso_nombre: 'Permiso personal', estado: 'Pendiente' });
+            return json({ id: 3 });
+          }
           assert.equal(payload.id_empleado, 101); assert.equal(payload.id_tipo_permiso, 2);
           assert.equal(payload.fecha_inicio, '2026-11-09'); assert.equal(payload.fecha_fin, '2026-11-10');
-          await new Promise(resolve => setTimeout(resolve, 400));
+          await new Promise(resolve => setTimeout(resolve, 1500)); // deja ver «Enviando…» (con 0.4 s la prueba fallaba a veces)
           requests.unshift({ ...payload, id: 99, tipo_permiso_nombre: 'Vacaciones' });
           return json({ id: 2 });
         }
@@ -52,18 +63,18 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:4491';
       const noOverflow = async () => assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Horizontal overflow at ${width}`);
       await page.goto(`${base}/empleado`);
       await page.getByRole('heading', { name: 'Hola, Diego' }).waitFor();
-      await page.getByText('09:00', { exact: true }).waitFor();
-      await page.screenshot({ path: `/tmp/employee-home-${width}.png`, fullPage: true });
+      await page.getByText('09:00 a.m.', { exact: true }).waitFor();
+      await page.screenshot({ path: `/tmp/employee-home-${width}.png`, fullPage: true }).catch(() => {}); // solo de apoyo: si falla la captura no tumba la prueba
       assert.equal(await page.locator('section').filter({hasText:'Solicitudes recientes'}).getByRole('heading', {level:2}).count(), 3, 'Home shows only two recent requests');
       await noOverflow();
       await page.getByRole('link', { name: 'Asistencia', exact: true }).click();
       await page.getByLabel('Ir a fecha').fill('2026-10-22');
-      await page.getByText('08:58', { exact: true }).waitFor();
+      await page.getByText(/^0?8:58( a\.m\.)?$/).first().waitFor();
       const compactRow = await page.locator('summary').first().boundingBox();
       assert(compactRow.height <= 68, 'Attendance remains one compact row');
       await page.getByLabel('Estado de asistencia').selectOption('Tardanza');
-      assert.equal(await page.getByText('08:58', {exact:true}).count(),0);
-      await page.getByText('09:12',{exact:true}).waitFor();
+      assert.equal(await page.getByText(/^0?8:58( a\.m\.)?$/).count(),0);
+      await page.getByText(/^0?9:12( a\.m\.)?$/).first().waitFor();
       await page.getByLabel('Estado de asistencia').selectOption('Todos');
       await page.locator('summary').first().click();
       await page.getByText('Entrada original: 08:58').waitFor();
@@ -102,9 +113,43 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:4491';
       await page.getByText('Solicitud de prueba', { exact: true }).waitFor();
       assert.equal(await page.getByRole('button', { name: 'Enviar solicitud' }).count(), 0);
       await page.getByRole('button', { name: 'Cerrar', exact: true }).click();
+      // Permiso por horas: «Unas horas» cambia las fechas por día, tipo y hora (mismos campos que el panel de RH).
+      await page.getByRole('button', { name: 'Nueva solicitud' }).click();
+      await page.getByLabel('Tipo de permiso', { exact: true }).click();
+      await page.getByRole('option', { name: 'Permiso personal' }).click();
+      await page.getByRole('radio', { name: 'Unas horas' }).click();
+      assert.equal(await page.getByLabel('Fecha inicial').count(), 0, 'por horas no pide rango de fechas');
+      await page.getByRole('dialog').locator('input[type=date]').fill('2026-11-23');
+      await page.getByLabel('Tipo de permiso por horas').selectOption('sale_antes');
+      await page.getByLabel('Desde qué hora').fill('15:00');
+      await page.getByRole('radio', { name: /Se repone/ }).click();
+      await page.getByLabel('Motivo', { exact: true }).fill('Cita médica');
+      await noOverflow();
+      await page.getByRole('button', { name: 'Enviar solicitud' }).click();
+      await page.getByRole('dialog').waitFor({ state: 'hidden' });
+      assert.equal(posts, 2);
+      await page.getByText('Sale antes · desde 3:00 p.m.').first().waitFor();
       await page.getByRole('link', { name: 'Mi espacio', exact: true }).click();
       await page.getByRole('link', { name: /Mis activos y uniformes/ }).waitFor();
       await noOverflow();
+      // Checar desde la app del empleado: al registrar regresa a su Inicio (no se queda en el reloj).
+      if (width === 390) {
+        await page.goto(`${base}/empleado/reloj-checador`);
+        await page.getByRole('button', { name: /Código/ }).first().click();
+        await page.getByPlaceholder('Ingresa tu código').locator('visible=true').first().fill('1234');
+        await page.getByRole('button', { name: /Registrar Entrada/ }).locator('visible=true').first().click();
+        await page.getByText('Regresando a tu inicio…').first().waitFor();
+        await page.waitForURL('**/empleado/panel/inicio', { timeout: 10000 });
+        assert.equal(checadas, 1);
+        await page.getByRole('heading', { name: 'Hola, Diego' }).waitFor();
+        // Una vez al día: la segunda entrada al reloj abre directo. Aunque el servidor tarde 3 s en contestar la
+        // suscripción, el reloj aparece antes (antes se quedaba en «Validando suscripción…» hasta la respuesta).
+        suscripcionLenta = true;
+        await page.goto(`${base}/empleado/reloj-checador`, { waitUntil: 'domcontentloaded' });
+        await page.getByRole('button', { name: /Código/ }).first().waitFor({ timeout: 2000 });
+        assert.equal(await page.getByText('Validando suscripción').count(), 0);
+        suscripcionLenta = false;
+      }
       failHistory = true;
       await page.goto(`${base}/empleado/panel/asistencias`);
       await page.getByRole('alert').filter({ hasText: 'No pudimos consultar esta información' }).waitFor();

@@ -112,6 +112,7 @@ let requests = [
 ];
 let rosterDenied = false,
   balanceDenied = false,
+  ownerSession = false,
   holidaysDenied = false,
   omitTotal = false,
   emptyTeam = false;
@@ -139,13 +140,14 @@ const fixture = http.createServer(async (req, res) => {
   reads.push(url.pathname);
   if (url.pathname.endsWith("/users/verify/token"))
     return send({
+      // (23/11/2026) ownerSession: el dueño/RH vinculado a su registro de empleado (no es sesión de empleado).
       user: {
         id_usuario: 10,
         id_empleado: 1,
         id_empresa: 10,
         empresas: [10],
-        tipo_usuario: "Empleado",
-        esEmpleado: true,
+        tipo_usuario: ownerSession ? "Recruiter" : "Empleado",
+        esEmpleado: !ownerSession,
         nombre: "Responsable",
         zona_horaria: "America/Mexico_City",
       },
@@ -164,6 +166,9 @@ const fixture = http.createServer(async (req, res) => {
         "results",
       ),
     );
+  // Como el backend real: «por-autorizar» solo responde a sesiones de empleado.
+  if (url.pathname.endsWith("/por-autorizar") && ownerSession)
+    return send({ results: [], total: 0 });
   if (url.pathname.endsWith("/por-autorizar"))
     return send(
       paginate(
@@ -191,18 +196,18 @@ const fixture = http.createServer(async (req, res) => {
     writes.push({ id: row.id, ...body });
     return send({ success: true });
   }
+  // (23/11/2026) El saldo se pide por persona (antes, el reporte de toda la empresa).
   if (url.pathname.endsWith("/vacaciones/reporte"))
+    return send({ error: "No debe pedirse el reporte de toda la empresa" }, 500);
+  if (url.pathname.includes("/vacaciones/saldo/"))
     return balanceDenied
       ? send({}, 403)
-      : send([
-          {
-            id_empleado: 2,
-            dias_cargados: 16,
-            dias_tomados: 4,
-            dias_disponibles: 12,
-          },
-          { id_empleado: 4, dias_disponibles: 999 },
-        ]);
+      : send({
+          saldo:
+            url.pathname.endsWith("/2")
+              ? { id_empleado: 2, dias_cargados: 16, dias_tomados: 4, dias_disponibles: 12 }
+              : { id_empleado: Number(url.pathname.split("/").pop()), dias_disponibles: 0 },
+        });
   if (url.pathname.includes("/vacaciones/cargados/"))
     return send({
       periodos: [
@@ -241,7 +246,7 @@ function token(role = "Empleado") {
 let server, browser, page;
 const pageErrors = [];
 async function api(pathname = "", options = {}) {
-  return fetch(base + "/api/solicitudes-equipo" + pathname, {
+  return fetch(base + "/internal/solicitudes-equipo" + pathname, {
     ...options,
     headers: { Cookie: `token=${token()}`, Origin: base, ...options.headers },
   });
@@ -360,7 +365,7 @@ async function main() {
   omitTotal = true;
   assert.equal((await (await api()).json()).requests.length, 18);
   omitTotal = false;
-  assert.equal((await fetch(base + "/api/solicitudes-equipo")).status, 401);
+  assert.equal((await fetch(base + "/internal/solicitudes-equipo")).status, 401);
   for (const id of [800, 801, 802, 803, 804, 999])
     assert.equal((await api(`/${id}`)).status, 404);
   assert.equal(
@@ -385,6 +390,14 @@ async function main() {
   rosterDenied = true;
   assert.equal((await api()).status, 403);
   rosterDenied = false;
+  // (23/11/2026) El dueño/RH vinculado a su empleado también puede aprobar (antes: «ya no está pendiente a tu cargo»).
+  ownerSession = true;
+  const ownerApproval = await api("/103", { method: "POST", body: JSON.stringify({ estado: "Rechazado" }) });
+  assert.equal(ownerApproval.status, 200, await ownerApproval.text());
+  assert.deepEqual(writes.at(-1), { id: 103, estado: "Rechazado", actualizado_por: 10 });
+  writes.length = 0;
+  requests.find((row) => row.id === 103).estado = "Pendiente";
+  ownerSession = false;
   balanceDenied = true;
   const unavailable = await (await api("/101")).json();
   assert.equal(unavailable.balance, null);

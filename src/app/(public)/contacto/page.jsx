@@ -16,7 +16,7 @@ const canales = [
   {
     title: "Teléfono y WhatsApp",
     value: "+52 317 128 8029",
-    href: "tel:+523173887959",
+    href: "tel:+523171288029",
     description: "Atención comercial y operativa.",
     icon: "📱",
   },
@@ -38,7 +38,7 @@ export default function ContactoPage() {
   });
 
   const [aceptaAviso, setAceptaAviso] = useState(false);
-  const whatsappNumber = "523173887959";
+  const whatsappNumber = "523171288029";
 
   const handleChange = (field) => (event) => {
     setForm((prev) => ({ ...prev, [field]: event.target.value }));

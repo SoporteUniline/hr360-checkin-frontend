@@ -5,6 +5,7 @@ import { faceapi, loadFaceApiModels, isFaceApiReady } from "@/lib/faceapi";
 import { useSnackbar } from "notistack";
 import { useAuth } from "@/context/AuthContext";
 import ConsentimientoRostro from "./ConsentimientoRostro";
+import AvisoRostroApp from "./AvisoRostroApp";
 
 export default function TabReconocimiento({
   renderCampos = () => null,
@@ -310,6 +311,7 @@ export default function TabReconocimiento({
   return (
     <div className="flex flex-col items-center gap-6 py-4">
       {renderCampos("inicio", true)}
+      <AvisoRostroApp idEmpleado={valores.id_empleado} />
       <ConsentimientoRostro idEmpresa={idEmpresa} idEmpleado={valores.id_empleado} nombre={nombreEmpleado} empresa={empresaNombre} />
       {loadingModels ? (
         <div className="flex flex-col items-center gap-3 py-12">
@@ -339,7 +341,7 @@ export default function TabReconocimiento({
 
           {/* Video con marco mejorado */}
           <div className="relative">
-            <div className="absolute -inset-4 bg-gradient-to-r from-blue-400 to-purple-400 rounded-2xl blur opacity-20"></div>
+            <div className="absolute -inset-4 bg-brand rounded-2xl blur opacity-20"></div>
             <div className="relative bg-white p-4 rounded-2xl shadow-lg">
               <div className="relative w-[300px] h-[300px] rounded-xl overflow-hidden bg-gray-900">
                 <video

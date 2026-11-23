@@ -14,6 +14,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useAuth } from "@/context/AuthContext";
+import { clockStore } from '@/lib/offline-clock';
 import { Capacitor } from "@capacitor/core";
 import {
   UsersIcon,
@@ -29,6 +30,7 @@ import {
   Store,
   HeartHandshake,
   Gift,
+  Wallet,
   Megaphone,
   HandCoins,
   MapPin,
@@ -55,6 +57,11 @@ import {
   CalendarClock,
   TriangleAlert,
   Package,
+  ListChecks,
+  PenLine,
+  ClipboardList,
+  Settings2,
+  MessageCircle,
 } from "lucide-react";
 import {
   ChevronDown,
@@ -62,12 +69,20 @@ import {
   ChevronsUpDown,
   Search,
 } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import {
   RECRUITMENT_NAV,
   isRecruitmentNavActive,
 } from "@/components/reclutamiento/navigation";
+import { VISTAS_RH } from "@/lib/evaluaciones/vistas.mjs";
+import { useMenuEvaluaciones } from "./useMenuEvaluaciones";
+const ICONOS_EVALUACION = {
+  campanas: ClipboardList,
+  plantillas: LayoutTemplate,
+  "mis-pendientes": PenLine,
+  configuracion: Settings2,
+};
 const recruitmentEnabled =
   process.env.NEXT_PUBLIC_RECRUITMENT_ENABLED === "true";
 const dashboardItems = [
@@ -150,6 +165,12 @@ const dashboardItems = [
     url: "/dashboard/cuentas-bancarias",
     rol: "Admin",
     icon: Landmark,
+  },
+  {
+    title: "WhatsApp (reclutamiento)",
+    url: "/dashboard/whatsapp",
+    rol: "Admin",
+    icon: MessageCircle,
   },
   {
     title: "Inicio",
@@ -290,23 +311,24 @@ const menuGroups = [
         icon: FolderClosed,
       },
       {
-        title: "Finiquitos y liquidaciones",
-        url: "/panel/finiquitos-y-liquidaciones",
-        rol: "Recruiter",
-        icon: HandCoins,
-      },
-      {
-        title: "Aguinaldos",
-        url: "/panel/aguinaldos",
-        rol: "Recruiter",
-        icon: Gift,
-      },
-      {
         title: "Mapa de rutas",
         url: "/panel/mapa-de-rutas",
         rol: "Recruiter",
         icon: Route,
       },
+    ],
+  },
+  {
+    // (23/11/2026) Nómina es su propio módulo (antes un submenú dentro de Gestión de personal). Incluye Finiquitos y
+    // Aguinaldos porque también son pagos (decisión del dueño). Nóminas/Bonos/Préstamos también son pestañas del módulo.
+    group: "NÓMINA",
+    groupIcon: Wallet,
+    items: [
+      { title: "Nóminas", url: "/panel/nomina", rol: "Recruiter", icon: Wallet },
+      { title: "Bonos y descuentos", url: "/panel/nomina/bonos", matchPrefix: true, rol: "Recruiter", icon: ReceiptText },
+      { title: "Préstamos", url: "/panel/nomina/prestamos", matchPrefix: true, rol: "Recruiter", icon: Landmark },
+      { title: "Finiquitos y liquidaciones", url: "/panel/finiquitos-y-liquidaciones", rol: "Recruiter", icon: HandCoins },
+      { title: "Aguinaldos", url: "/panel/aguinaldos", rol: "Recruiter", icon: Gift },
     ],
   },
   {
@@ -435,32 +457,60 @@ const menuGroups = [
     ],
   },
   {
-    // (20/11/2026) Antes 4 entradas (Resumen, Campañas, Plantillas, Tablero). Ahora una sola: dentro,
-    // cada quien ve sus pestañas (src/components/evaluaciones/EvaluationModule.jsx).
+    // (23/11/2026) Tareas y Checklists son dos módulos, cada uno con su entrada y sus vistas (pedido del dueño).
+    group: "TAREAS",
+    groupIcon: ListChecks,
+    items: [
+      { title: "Tablero", url: "/panel/tareas", rol: "Recruiter", icon: LayoutDashboard },
+      { title: "Proyectos", url: "/panel/tareas/proyectos", matchPrefix: true, rol: "Recruiter", icon: FolderClosed },
+    ],
+  },
+  {
+    group: "CHECKLISTS",
+    groupIcon: ClipboardCheck,
+    items: [
+      { title: "Checklists", url: "/panel/checklists", rol: "Recruiter", icon: ListChecks },
+      { title: "Revisar", url: "/panel/checklists/revisar", matchPrefix: true, rol: "Recruiter", icon: ShieldCheck },
+      { title: "Cumplimiento", url: "/panel/checklists/cumplimiento", matchPrefix: true, rol: "Recruiter", icon: BarChart3 },
+    ],
+  },
+  {
+    // (23/11/2026) Cada vista con su entrada (pedido del dueño: «separa cada vista en su módulo»). Son las
+    // pestañas de RH del módulo (src/lib/evaluaciones/vistas.mjs) y se ocultan las que el servidor no le
+    // permite a la persona (useMenuEvaluaciones). «Campañas» mantiene resaltado el grupo también en el
+    // resultado de una persona (/panel/evaluaciones/resultados/…), que se abre desde la campaña.
     group: "EVALUACIÓN DE DESEMPEÑO",
     groupIcon: BarChart3,
-    items: [
-      {
-        title: "Evaluaciones",
-        url: "/panel/evaluaciones",
-        matchPrefix: "/panel/evaluaciones",
-        rol: "Recruiter",
-        icon: ClipboardCheck,
-      },
-    ],
+    items: VISTAS_RH.map((v) => ({
+      title: v.texto,
+      url: `/panel/evaluaciones/${v.path}`,
+      matchPrefix: v.path === "campanas" ? "/panel/evaluaciones" : true,
+      rol: "Recruiter",
+      icon: ICONOS_EVALUACION[v.path],
+      vistaEvaluacion: v,
+    })),
   },
   ...(recruitmentEnabled
     ? [
         {
           group: "RECLUTAMIENTO Y SELECCIÓN",
           groupIcon: BriefcaseBusiness,
-          items: RECRUITMENT_NAV.map((item) => ({
-            title: item.label,
-            url: item.href,
-            icon: item.icon,
-            rol: "Recruiter",
-            matchPrefix: item.matchPrefix,
-          })),
+          items: [
+            ...RECRUITMENT_NAV.map((item) => ({
+              title: item.label,
+              url: item.href,
+              icon: item.icon,
+              rol: "Recruiter",
+              matchPrefix: item.matchPrefix,
+            })),
+            // Bandeja real de WhatsApp (R1): ruta propia, fuera del layout demo de /panel/reclutamiento.
+            {
+              title: "Conversaciones (WhatsApp)",
+              url: "/panel/whatsapp",
+              icon: MessageCircle,
+              rol: "Recruiter",
+            },
+          ],
         },
       ]
     : []),
@@ -527,8 +577,8 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
   };
   const moduloActivo = items.some((item) =>
     item.children
-      ? item.children.some((child) => isRecruitmentNavActive(path, child))
-      : isRecruitmentNavActive(path, item),
+      ? item.children.some((child) => isRecruitmentNavActive(path, child, consulta))
+      : isRecruitmentNavActive(path, item, consulta),
   );
   const enlace = (it) => (
     <button
@@ -539,7 +589,7 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
         onNavigate(it.url);
       }}
       className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-[12.5px] font-medium transition-colors ${
-        isRecruitmentNavActive(path, it)
+        isRecruitmentNavActive(path, it, consulta)
           ? "bg-[#f0f5ff] font-semibold text-[#1d4ed8]"
           : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
       }`}
@@ -548,7 +598,7 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
         <it.icon
           size={15}
           className={
-            isRecruitmentNavActive(path, it)
+            isRecruitmentNavActive(path, it, consulta)
               ? "text-[#2563EB]"
               : "text-gray-400"
           }
@@ -605,7 +655,17 @@ function RailModule({ icon: Icon, title, items, path, onNavigate }) {
     </Popover>
   );
 }
-export function NavMain() {
+// «CONTROL DE TIEMPO» → «Control de tiempo» (los nombres de módulo se guardan en mayúsculas).
+const tituloGrupo = (t) => { const s = String(t ?? "").toLocaleLowerCase("es-MX"); return s.charAt(0).toLocaleUpperCase("es-MX") + s.slice(1); };
+
+// `consulta`: la vista de la URL (?vista=…), para resaltar «Entrevistas» y no «Conversaciones» en /panel/whatsapp.
+export function NavMainConConsulta() {
+  const params = useSearchParams();
+  const vista = params?.get("vista");
+  return <NavMain consulta={vista ? `vista=${vista}` : ""} />;
+}
+
+export function NavMain({ consulta = "" } = {}) {
   const router = useRouter();
   const path = usePathname();
   const { dataUser } = useAuth();
@@ -617,6 +677,16 @@ export function NavMain() {
   const [isNative, setIsNative] = useState(false);
   const effectiveRole =
     dataUser?.tipo_usuario === "User" ? "Recruiter" : dataUser?.tipo_usuario;
+  const vistasEvaluacion = useMenuEvaluaciones(dataUser, effectiveRole === "Recruiter");
+  // Rol, app nativa (sin «Mi suscripción») y, en Evaluaciones, los permisos del servidor. Mientras no se
+  // saben se muestran por rol, salvo «Por responder», que solo aparece si hay evaluaciones asignadas.
+  const itemVisible = (item) => {
+    if (item.rol && item.rol !== effectiveRole) return false;
+    if (isNative && item.url === "/panel/mi-suscripcion") return false;
+    const v = item.vistaEvaluacion;
+    if (!v) return true;
+    return vistasEvaluacion ? vistasEvaluacion.has(v.path) : !v.soloConPendientes;
+  };
   useEffect(() => {
     if (typeof window !== "undefined") {
       setIsNative(
@@ -674,8 +744,22 @@ export function NavMain() {
       }
       return false;
     });
-  const handleClick = (href) => {
+  const handleClick = async (href) => {
     if (isMobile) setOpenMobile(false);
+    // These items are buttons, so the global offline link handler cannot see them.
+    if (!navigator.onLine || window.__adamiaOffline === true) {
+      if (href === '/seleccionar-reloj') {
+        const assigned = [...new Set([...(dataUser?.empresas || []), ...(dataUser?.empresas_detalle || []).map(company => company.id_empresa)].map(Number))].filter(id => Number.isInteger(id) && id > 0);
+        if (assigned.length === 1) {
+          try {
+            const profile = await (await clockStore()).getValue(`clock:company:${assigned[0]}`);
+            if (profile?.slug) { window.location.assign(`/${encodeURIComponent(profile.slug)}`); return; }
+          } catch { /* The offline gate still offers the available destinations. */ }
+        }
+      }
+      window.location.assign(href);
+      return;
+    }
     router.push(href);
   };
   let perfilRoute = "/home/cuenta";
@@ -691,11 +775,7 @@ export function NavMain() {
         ? menuGroups
             .map((g) => ({
               ...g,
-              items: g.items.filter(
-                (item) =>
-                  (!item.rol || item.rol === effectiveRole) &&
-                  (!isNative || item.url !== "/panel/mi-suscripcion"),
-              ),
+              items: g.items.filter(itemVisible),
             }))
             .filter((g) => g.items.length > 0)
         : [];
@@ -772,7 +852,7 @@ export function NavMain() {
                   tooltip={item.title}
                   onClick={() => handleClick(item.url)}
                   className={`${
-                    isRecruitmentNavActive(path, item)
+                    isRecruitmentNavActive(path, item, consulta)
                       ? ITEM_ACTIVO
                       : ITEM_NORMAL
                   } cursor-pointer flex justify-between`}
@@ -791,30 +871,36 @@ export function NavMain() {
                 ? normalizar(group.group).includes(q)
                 : false;
               const itemsVisibles = filtrarItems(
-                group.items.filter(
-                  (item) =>
-                    (!item.rol || item.rol === effectiveRole) &&
-                    (!isNative || item.url !== "/panel/mi-suscripcion"),
-                ),
+                group.items.filter(itemVisible),
                 grupoCoincide,
               );
               if (itemsVisibles.length === 0) return null;
+              const grupoActivo = itemsVisibles.some((item) => [item.url, ...(item.children ?? []).map((c) => c.url)].filter(Boolean).some((u) => path === u || path?.startsWith(`${u}/`)) || (typeof item.matchPrefix === "string" && path?.startsWith(item.matchPrefix)));
               // Al buscar siempre se muestra expandido; si no, manda el usuario.
               const abierto = buscando
                 ? true
                 : gruposAbiertos[group.group] !== false;
               return (
-                <div key={group.group} className="mt-3">
+                <div key={group.group} className="mt-1.5">
+                  {/* (23/11/2026) Títulos de módulo más legibles: texto normal en azul marino, su ícono y el módulo donde
+                      estás resaltado (antes: MAYÚSCULAS grises con mucho espaciado). */}
                   <button
                     type="button"
                     onClick={() => toggleGrupo(group.group)}
-                    className="w-full px-1 mb-2 text-[11px] font-semibold uppercase tracking-widest text-gray-500 cursor-pointer flex items-center justify-between select-none transition-colors hover:text-gray-800"
+                    className={`group/titulo mb-0.5 flex w-full cursor-pointer select-none items-center gap-2.5 rounded-lg px-1.5 py-1.5 text-left text-[13.5px] font-semibold transition-colors hover:bg-slate-100 ${
+                      grupoActivo ? "text-[#2563EB]" : "text-[#080d36]"
+                    }`}
                     aria-expanded={abierto}
                   >
-                    <span>{group.group}</span>
+                    {group.groupIcon ? (
+                      <span className={`grid size-6 shrink-0 place-items-center rounded-md ${grupoActivo ? "bg-[#2563EB] text-white" : "bg-blue-50 text-[#2563EB]"}`}>
+                        <group.groupIcon size={14} strokeWidth={2.2} />
+                      </span>
+                    ) : null}
+                    <span className="min-w-0 flex-1 truncate">{tituloGrupo(group.group)}</span>
                     <ChevronDown
-                      size={14}
-                      className={`shrink-0 text-gray-400 transition-transform duration-200 ${
+                      size={15}
+                      className={`shrink-0 text-slate-400 transition-transform duration-200 group-hover/titulo:text-slate-600 ${
                         abierto ? "" : "-rotate-90"
                       }`}
                     />
@@ -835,7 +921,7 @@ export function NavMain() {
                               }
                             }}
                             className={`${
-                              isRecruitmentNavActive(path, item)
+                              isRecruitmentNavActive(path, item, consulta)
                                 ? ITEM_ACTIVO
                                 : ITEM_NORMAL
                             } cursor-pointer flex justify-between`}
@@ -867,7 +953,7 @@ export function NavMain() {
                                       tooltip={child.title}
                                       onClick={() => handleClick(child.url)}
                                       className={`${
-                                        isRecruitmentNavActive(path, child)
+                                        isRecruitmentNavActive(path, child, consulta)
                                           ? ITEM_ACTIVO
                                           : ITEM_NORMAL
                                       } cursor-pointer flex items-center gap-2 text-sm`}

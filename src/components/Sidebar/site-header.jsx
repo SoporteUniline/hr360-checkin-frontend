@@ -2,6 +2,7 @@
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Search } from "lucide-react";
+import AdamiaAI from "@/components/ia/AdamiaAI";
 
 export function SiteHeader() {
   const openPalette = () =>
@@ -25,6 +26,8 @@ export function SiteHeader() {
             ⌘K
           </kbd>
         </button>
+        {/* (23/11/2026) Adamia AI: solo RH y dueño (el componente no se muestra a empleados). */}
+        <AdamiaAI />
       </div>
     </header>
   );

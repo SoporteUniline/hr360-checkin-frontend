@@ -91,3 +91,28 @@ test("pasos: el primero sin terminar es el actual", () => {
   assert.deepEqual(estados(cerrada, publicados, [{ subjectId: 2 }]), ["hecho", "hecho", "hecho", "hecho", "actual"]);
   assert.equal(pasosCampana(cerrada, filasCampana(cerrada, publicados, [{ subjectId: 2 }]))[4].detalle, "1 con plan");
 });
+
+// (23/11/2026) Cada vista con su dirección y su entrada en el menú (src/lib/evaluaciones/vistas.mjs).
+test("vistas por perfil: RH, Dirección, jefe y colaborador ven lo mismo que antes, y Configuración es vista propia", async () => {
+  const { vistasVisibles, vistaInicio, vistaActual, seccionConfiguracion, SCOPE_DE_RUTA } = await import("../src/lib/evaluaciones/vistas.mjs");
+  const rh = { flags: { canViewCampaigns: true }, scopes: ["templates", "settings", "campaigns", "assignments", "team", "results", "plans"] };
+  const direccion = { flags: { canViewCampaigns: true }, scopes: ["catalogs", "people", "campaigns", "results", "dashboard", "plans"] };
+  const jefe = { flags: {}, scopes: ["people", "assignments", "team", "results", "plans"] };
+  const colaborador = { flags: {}, scopes: ["people", "assignments", "results", "plans"] };
+  const paths = (c, p) => vistasVisibles(c, p).map((v) => v.path);
+  assert.deepEqual(paths(rh, false), ["campanas", "plantillas", "configuracion"]);
+  assert.deepEqual(paths(rh, true), ["campanas", "plantillas", "mis-pendientes", "configuracion"]);
+  assert.deepEqual(paths(direccion, true), ["campanas"]);
+  assert.deepEqual(paths(jefe, false), ["mis-pendientes", "equipo", "mis-evaluaciones"]);
+  assert.deepEqual(paths(colaborador, false), ["mis-pendientes", "mis-evaluaciones"]);
+  assert.deepEqual([rh, direccion, jefe, colaborador].map(vistaInicio), ["campanas", "campanas", "mis-pendientes", "mis-pendientes"]);
+  assert.equal(vistaActual("campanas/7/editar"), "campanas");
+  assert.equal(vistaActual("responder/15"), "mis-pendientes");
+  assert.equal(vistaActual("configuracion/niveles"), "configuracion");
+  assert.equal(seccionConfiguracion("configuracion").texto, "Valores iniciales");
+  assert.equal(seccionConfiguracion("configuracion/niveles").texto, "Niveles");
+  assert.equal(seccionConfiguracion("configuracion/acceso/").texto, "Acceso al módulo");
+  assert.equal(seccionConfiguracion("configuracion/otra"), null);
+  assert.equal(SCOPE_DE_RUTA.configuracion, "settings");
+  assert.equal(SCOPE_DE_RUTA.responder, "assignments");
+});

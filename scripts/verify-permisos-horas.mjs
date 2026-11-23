@@ -100,6 +100,7 @@ try {
 
   // 1) Asistencias: etiqueta del permiso y «Repone» solo para quien debe horas.
   await page.goto(base + "/panel/registro-asistencia", { waitUntil: "domcontentloaded" });
+  await page.getByRole("tab", { name: "Registros" }).click(); // (22/11/2026) Asistencias abre en «Hoy»
   await page.getByText("Juan", { exact: false }).first().waitFor({ timeout: 30000 });
   const filaPermiso = page.locator("tr", { hasText: "Permiso · por reponer 3 h" });
   await filaPermiso.waitFor({ timeout: 15000 });

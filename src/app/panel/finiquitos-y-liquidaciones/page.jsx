@@ -1007,7 +1007,7 @@ export default function PageFiniquitosLiquidaciones() {
         onOpenChange={(open) => !open && setDeleteRow(null)}
       >
         <AlertDialogContent className="sm:max-w-[425px] p-0">
-          <AlertDialogHeader className="bg-gradient-to-r from-red-500 to-red-600 text-white p-6 rounded-t-lg">
+          <AlertDialogHeader className="bg-red-600 text-white p-6 rounded-t-lg">
             <div className="flex items-center gap-3">
               <AlertTriangle className="h-6 w-6" />
               <AlertDialogTitle className="text-white">

@@ -44,7 +44,7 @@ function SiNo({ valor, onChange, disabled }) {
           disabled={disabled}
           onClick={() => onChange(v === "1" ? 1 : 0)}
           className={`rounded-md px-3 py-1 text-xs font-semibold ${
-            (si(valor) ? "1" : "0") === v ? "bg-slate-900 text-white" : "text-slate-500"
+            (si(valor) ? "1" : "0") === v ? "bg-brand text-white" : "text-slate-500"
           } disabled:opacity-60`}
         >
           {t}
@@ -123,7 +123,8 @@ export default function PanelEditarAsistencia({
               <p className="text-[11px] text-slate-400">Con el lápiz corriges una checada; la hora original del reloj queda tachada.</p>
               {/* Agregar comida: disponible cuando el día tiene entrada y salida y un solo tramo
                   (o el servidor aún no manda tramos). Se valida otra vez en el servidor. */}
-              {registro.entrada && registro.salida &&
+              {/* (23/11/2026) Si ya checó su comida («Salir a comer»), no se ofrece agregarla. */}
+              {registro.entrada && registro.salida && !registro.comida_checada?.salida &&
                 (!Array.isArray(registro.tramos_checadas) || registro.tramos_checadas.length <= 1) && (
                 <BotonAgregarComida
                   variante="boton"

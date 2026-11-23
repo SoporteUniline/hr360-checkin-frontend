@@ -55,7 +55,14 @@ import AccesosRapidos from "@/components/AccesosRapidos";
 import useSWR from "swr";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { fetchImageAsDataUrl } from "@/lib/pdfCompanyLogo";
-import { ADAMIA, gradientLine, applyAdamiaFont } from "@/lib/pdfAdamiaTheme";
+import {
+  ADAMIA,
+  gradientLine,
+  applyAdamiaFont,
+  loadAdamiaMarca,
+  dibujarPieAdamia,
+} from "@/lib/pdfAdamiaTheme";
+import { nombreArchivoPdf } from "@/lib/nombreArchivo.mjs";
 import HeaderMultiFilter from "@/components/tabla/HeaderMultiFilter";
 import ActiveFilterChips from "@/components/tabla/ActiveFilterChips";
 import { Combobox } from "@/components/Combobox";
@@ -884,6 +891,7 @@ export default function PageAguinaldos() {
 
     const doc = new jsPDF("p", "mm", "a4");
     const FONT = await applyAdamiaFont(doc);
+    const marcaAdamia = await loadAdamiaMarca();
     const pageWidth = 210;
     const pageHeight = 297;
     const marginLeft = 20;
@@ -1112,15 +1120,6 @@ export default function PageAguinaldos() {
     });
 
     const totalPages = doc.internal.getNumberOfPages();
-    const fechaGenerado = new Date().toLocaleDateString("es-MX", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-    const horaGenerado = new Date().toLocaleTimeString("es-MX", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
 
     for (let p = 1; p <= totalPages; p++) {
       doc.setPage(p);
@@ -1169,42 +1168,24 @@ export default function PageAguinaldos() {
           },
         );
       }
-      gradientLine(
-        doc,
-        marginLeft,
-        pageWidth - marginRight,
-        pageHeight - 14,
-        0.35,
-      );
-      doc.setFont(FONT, "bold");
-      doc.setFontSize(7.5);
-      doc.setTextColor(...ADAMIA.blue);
-      doc.text("Adamia", marginLeft, pageHeight - 9);
-      const adamiaW = doc.getTextWidth("Adamia");
-      doc.setFont(FONT, "normal");
-      doc.setTextColor(...ADAMIA.muted);
-      doc.text(" · Aguinaldos", marginLeft + adamiaW, pageHeight - 9);
-      doc.setFontSize(7);
-      doc.text(
-        `Generado el ${fechaGenerado} a las ${horaGenerado}`,
-        pageWidth / 2,
-        pageHeight - 9,
-        { align: "center" },
-      );
-      doc.text(
-        `Página ${p} de ${totalPages}`,
-        pageWidth - marginRight,
-        pageHeight - 9,
-        {
-          align: "right",
-        },
-      );
     }
 
-    const nombreArchivo = `Aguinaldo_${
-      resultadoCalculo.año_fiscal || "NA"
-    }_${String(empleado).replace(/\s+/g, "_")}.pdf`;
-    doc.save(nombreArchivo);
+    // Pie homologado ADAMIA en cada página (logotipo, fecha, Página X de Y).
+    dibujarPieAdamia(doc, {
+      font: FONT,
+      logo: marcaAdamia,
+      documento: "Recibo de aguinaldo",
+      detalle: `Año fiscal ${resultadoCalculo.año_fiscal || "—"}`,
+      margenMm: marginLeft,
+    });
+
+    // Nombre sin datos personales: documento, número de empleado y fecha.
+    doc.save(
+      nombreArchivoPdf({
+        documento: `Aguinaldo ${resultadoCalculo.año_fiscal || ""}`,
+        empleado: emp,
+      }),
+    );
   };
 
   const generarPDFMasivo = () => {
@@ -1386,6 +1367,7 @@ export default function PageAguinaldos() {
 
     const doc = new jsPDF("p", "mm", "a4");
     const FONT = await applyAdamiaFont(doc);
+    const marcaAdamia = await loadAdamiaMarca();
     const pageWidth = 210;
     const pageHeight = 297;
     const marginLeft = 20;
@@ -1575,15 +1557,6 @@ export default function PageAguinaldos() {
     });
 
     const totalPages = doc.internal.getNumberOfPages();
-    const fechaGenerado = new Date().toLocaleDateString("es-MX", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-    const horaGenerado = new Date().toLocaleTimeString("es-MX", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
 
     for (let p = 1; p <= totalPages; p++) {
       doc.setPage(p);
@@ -1623,42 +1596,22 @@ export default function PageAguinaldos() {
           },
         );
       }
-      gradientLine(
-        doc,
-        marginLeft,
-        pageWidth - marginRight,
-        pageHeight - 14,
-        0.35,
-      );
-      doc.setFont(FONT, "bold");
-      doc.setFontSize(7.5);
-      doc.setTextColor(...ADAMIA.blue);
-      doc.text("Adamia", marginLeft, pageHeight - 9);
-      const adamiaW = doc.getTextWidth("Adamia");
-      doc.setFont(FONT, "normal");
-      doc.setTextColor(...ADAMIA.muted);
-      doc.text(" · Aguinaldos", marginLeft + adamiaW, pageHeight - 9);
-      doc.setFontSize(7);
-      doc.text(
-        `Generado el ${fechaGenerado} a las ${horaGenerado}`,
-        pageWidth / 2,
-        pageHeight - 9,
-        { align: "center" },
-      );
-      doc.text(
-        `Página ${p} de ${totalPages}`,
-        pageWidth - marginRight,
-        pageHeight - 9,
-        {
-          align: "right",
-        },
-      );
     }
 
-    const nombreArchivo = `Nomina_Aguinaldos_${
-      resultadoCalculo.año_fiscal || "NA"
-    }.pdf`;
-    doc.save(nombreArchivo.replace(/\s+/g, "_"));
+    // Pie homologado ADAMIA en cada página (logotipo, fecha, Página X de Y).
+    dibujarPieAdamia(doc, {
+      font: FONT,
+      logo: marcaAdamia,
+      documento: "Nómina de aguinaldos",
+      detalle: `Año fiscal ${resultadoCalculo.año_fiscal || "—"}`,
+      margenMm: marginLeft,
+    });
+
+    doc.save(
+      nombreArchivoPdf({
+        documento: `Nomina aguinaldos ${resultadoCalculo.año_fiscal || ""}`,
+      }),
+    );
   };
 
   const eliminarCalculo = (row) => {
@@ -2253,7 +2206,7 @@ export default function PageAguinaldos() {
                   <Button
                     onClick={calcularAguinaldos}
                     disabled={empleadosSeleccionados.length === 0}
-                    className="h-[38px] rounded-md bg-gradient-to-br from-brand to-[#4f46e5] font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95 disabled:opacity-50"
+                    className="h-[38px] rounded-md bg-brand font-bold text-white shadow-[0_8px_20px_rgba(37,99,235,0.32)] hover:opacity-95 disabled:opacity-50"
                   >
                     <Calculator className="h-4 w-4 mr-2" /> Calcular
                   </Button>
@@ -2486,7 +2439,7 @@ export default function PageAguinaldos() {
         onOpenChange={(open) => !open && setDeleteRow(null)}
       >
         <AlertDialogContent className="sm:max-w-[425px] p-0">
-          <AlertDialogHeader className="bg-gradient-to-r from-red-500 to-red-600 text-white p-6 rounded-t-lg">
+          <AlertDialogHeader className="bg-red-600 text-white p-6 rounded-t-lg">
             <div className="flex items-center gap-3">
               <AlertTriangle className="h-6 w-6" />
               <AlertDialogTitle className="text-white">

@@ -27,6 +27,12 @@ try {
   const errores = [];
   page.on("pageerror", (e) => errores.push(e.message));
   await page.goto(base + "/", { waitUntil: "domcontentloaded" });
+  // (23/11/2026) Mosaico de módulos: seis tarjetas con submarca, mini pantalla y flecha a su página.
+  const mosaico = page.locator("#modulos-adamia");
+  await mosaico.getByRole("heading", { name: "Todo el día de tu equipo, en una sola plataforma." }).waitFor();
+  assert.deepEqual(await mosaico.locator("h3").evaluateAll((hs) => hs.map((h) => h.firstChild.textContent.trim())), ["Nómina", "Asistencia", "Checador", "Tareas y checklists", "Documentos y firma", "Adamia AI"]);
+  assert.equal(await mosaico.getByRole("link", { name: /^Conocer / }).count(), 6);
+  assert.equal(await mosaico.getByRole("link", { name: "Conocer el Checador" }).getAttribute("href"), "/funcionalidades/reloj-checador");
 
   // Portada: el título y las fotos.
   await page.getByRole("heading", { level: 1, name: /Tu gente checa\.\s*Tú tienes el control\./ }).waitFor();

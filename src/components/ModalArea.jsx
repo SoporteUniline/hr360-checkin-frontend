@@ -55,7 +55,7 @@ export default function ModalArea({
         className="bg-white rounded-xl overflow-hidden max-w-4xl w-full max-h-[90vh] border border-gray-100 shadow-xl flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-5 bg-linear-to-r from-indigo-600 to-blue-600 text-white">
+        <div className="p-5 bg-brand text-white">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-2">
               <span className="grid size-9 place-items-center rounded-lg bg-white/15">

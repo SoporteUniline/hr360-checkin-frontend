@@ -35,7 +35,7 @@ export default function PermisoDeleteDialog({ open, setOpen, deleteId, onDeleted
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="p-0 overflow-hidden sm:max-w-lg">
-        <DialogHeader className="p-5 bg-gradient-to-r from-red-600 to-red-700 text-white">
+        <DialogHeader className="p-5 bg-red-600 text-white">
           <DialogTitle className="flex items-center gap-2 text-base font-bold">
             <span className="grid size-9 place-items-center rounded-lg bg-white/15">
               <AlertTriangle className="size-5 text-white" />

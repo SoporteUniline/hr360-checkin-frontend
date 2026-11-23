@@ -39,16 +39,16 @@ const clockSource = await readFile(new URL('../src/components/RelojChecador.jsx'
 const {code: clockCode} = babel.transformSync(clockSource,{configFile:false,babelrc:false,presets,plugins:[() => ({visitor:{
   Program:{exit(p){
     const component=p.node.body.find(n=>n.type==='ExportDefaultDeclaration').declaration;
-    p.node.body=component.body.body.filter(n=>n.type==='VariableDeclaration'&&n.declarations.some(d=>['submitMovement','registrarMovimiento','registrarConAccion'].includes(d.id.name)));
+    p.node.body=component.body.body.filter(n=>n.type==='VariableDeclaration'&&n.declarations.some(d=>['registrarMovimiento','registrarConAccion'].includes(d.id.name)));
   }},
 }})]});
 
 for (const gpsRequired of [false,true]) test(`code clock requests location only when required (${gpsRequired})`,async()=>{
   let gpsCalls=0, writes=0;const requests=[];
-  const ctx={registrando:false,codigoEmpleado:'123',idEmpresa:1,
-    mostrarResultado(){},setRegistrando(){},setUbicacionGPS(){},setPendiente(){},setMostrarModalTurno(){},setPopupInfo(){},setCodigoEmpleado(){},mutate(){},setTimeout(){},enqueueSnackbar(){},
+  const ctx={navigator:{onLine:true},registrando:false,codigoEmpleado:'123',idEmpresa:1,
+    setRegistrando(){},setUbicacionGPS(){},setPendiente(){},setMostrarModalTurno(){},setPopupInfo(){},setCodigoEmpleado(){},mutate(){},setTimeout(){},enqueueSnackbar(){},
     getCurrentLocation:async()=>{gpsCalls++;return {lat:19,lng:-99,accuracy:8,timestamp:12345}},
-    axiosInstance:{post:async(url,body)=>{requests.push(body);if(gpsRequired&&!body.latitud_actual)throw {response:{data:{error:'Faltan coordenadas de ubicación'}}};writes++;return {data:{empleado:{nombre:'Test',apellido_paterno:'User'}}}}},
+    submitMovement:async(body)=>{requests.push(body);if(gpsRequired&&!body.latitud_actual)throw {response:{data:{error:'Faltan coordenadas de ubicación'}}};writes++;return {data:{empleado:{nombre:'Test',apellido_paterno:'User'}}}},
   };
   vm.createContext(ctx);vm.runInContext(clockCode+'\nglobalThis.register=registrarMovimiento;',ctx);
   await ctx.register('123');
@@ -58,12 +58,37 @@ for (const gpsRequired of [false,true]) test(`code clock requests location only 
 
 test('code clock retries after denied GPS without a sticky previous error',async()=>{
   let calls=0,writes=0;
-  const ctx={registrando:false,codigoEmpleado:'123',idEmpresa:1,gpsError:'old failure',
-    mostrarResultado(){},setRegistrando(){},setUbicacionGPS(){},setPendiente(){},setMostrarModalTurno(){},setPopupInfo(){},setCodigoEmpleado(){},mutate(){},setTimeout(){},enqueueSnackbar(){},
+  const ctx={navigator:{onLine:true},registrando:false,codigoEmpleado:'123',idEmpresa:1,gpsError:'old failure',
+    setRegistrando(){},setUbicacionGPS(){},setPendiente(){},setMostrarModalTurno(){},setPopupInfo(){},setCodigoEmpleado(){},mutate(){},setTimeout(){},enqueueSnackbar(){},
     getCurrentLocation:async()=>++calls===1?null:{lat:19,lng:-99,accuracy:8,timestamp:12345},
-    axiosInstance:{post:async(url,body)=>{if(!body.latitud_actual)throw {response:{data:{error:'Faltan coordenadas de ubicación'}}};writes++;return {data:{empleado:{nombre:'Test',apellido_paterno:'User'}}}}},
+    submitMovement:async(body)=>{if(!body.latitud_actual)throw {response:{data:{error:'Faltan coordenadas de ubicación'}}};writes++;return {data:{empleado:{nombre:'Test',apellido_paterno:'User'}}}},
   };
   vm.createContext(ctx);vm.runInContext(clockCode+'\nglobalThis.register=registrarMovimiento;',ctx);
   await ctx.register('123');assert.equal(writes,0);
   await ctx.register('123');assert.equal(writes,1);assert.equal(calls,2);
+});
+
+
+test('offline transport preserves precision and original location for a manual decision', async () => {
+  const source = await readFile(new URL('../src/lib/offline-clock.js', import.meta.url), 'utf8');
+  const {code} = babel.transformSync(source,{configFile:false,babelrc:false,plugins:[() => ({visitor:{
+    Program:{exit(p){p.node.body=p.node.body.flatMap(n=>{
+      const fn=n.type==='ExportNamedDeclaration'?n.declaration:n;
+      return fn?.type==='FunctionDeclaration'&&['registerClockMovement','sendEvent'].includes(fn.id.name)?[fn]:[];
+    })}},
+  }})]});
+  const sent=[],saved=[];
+  const store={saveEvent:async e=>saved.push(e),listEvents:async()=>[],fingerprint:async()=> 'code-hash'};
+  const ctx={window:{__adamiaOffline:false},navigator:{onLine:true},crypto:{randomUUID:()=> 'f74c30f4-735b-43e4-8652-7be9388b5caf'},
+    clockStore:async()=>store,initializeClock:async()=>({prepared_at:new Date().toISOString(),grant:'test-grant'}),notify(){},
+    axios:{post:async(url,body)=>{sent.push(body);return {data:{action:'entrada',employee:{nombre:'Test'}}}}},
+  };
+  vm.createContext(ctx);vm.runInContext(code+'\nglobalThis.register=registerClockMovement;',ctx);
+  const timestamp=Date.now();
+  await ctx.register({codigo:'123',latitud_actual:19,longitud_actual:-99,precision_metros:8,ubicacion_timestamp:timestamp},{company:1});
+  assert.equal(sent[0].precision_metros,8);assert.equal(sent[0].ubicacion_timestamp,timestamp);
+  const old=saved[0];
+  await ctx.register({codigo:'123',accion:'cerrar_turno',offline_event:old},{company:1});
+  assert.equal(sent[1].id,old.id);assert.equal(sent[1].captured_at,old.captured_at);
+  assert.equal(sent[1].latitude,19);assert.equal(sent[1].precision_metros,8);assert.equal(sent[1].ubicacion_timestamp,timestamp);
 });

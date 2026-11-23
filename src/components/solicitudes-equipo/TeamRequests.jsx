@@ -58,7 +58,7 @@ export default function TeamRequests() {
 
 function TeamRequestsContent({ identity }) {
   const { data, error, isLoading, isValidating, mutate } = useSWR(
-    ["/api/solicitudes-equipo", identity],
+    ["/internal/solicitudes-equipo", identity],
     teamFetcher,
     { shouldRetryOnError: false, refreshInterval: 60000 },
   );

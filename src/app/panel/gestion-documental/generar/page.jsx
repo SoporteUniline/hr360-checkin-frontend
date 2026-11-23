@@ -36,6 +36,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useSnackbar } from "notistack";
 import { motion, AnimatePresence } from "framer-motion";
 import { htmlToPdf } from "@/lib/htmlToPdf";
+import { nombreArchivoPdf } from "@/lib/nombreArchivo.mjs";
 import { Combobox } from "@/components/Combobox";
 import useUnidadesNegocio from "@/hooks/useUnidadesNegocio";
 import CatalogoAdamia from "@/components/documentos/CatalogoAdamia";
@@ -374,15 +375,21 @@ function GenerarDocumentoContent({ empresa, plantillaInicial, codigoInicial, for
   /* ─── Descargar PDF ─── */
   const handleDescargarPDF = useCallback(async () => {
     if (!htmlPreview) return;
-    const nombreArchivo = docGuardado?.nombre_documento || plantillaSeleccionada?.nombre || "documento";
+    const titulo = docGuardado?.nombre_documento || plantillaSeleccionada?.nombre || "documento";
+    // Archivo sin el nombre de la persona: plantilla, folio y número de empleado.
+    const nombreArchivo = nombreArchivoPdf({
+      documento: plantillaSeleccionada?.nombre || "Documento",
+      folio: docGuardado?.folio || docGuardado?.id_documento || docGuardado?.id,
+      empleado: docGuardado?.soloPDF ? null : empleadoId,
+    });
     try {
-      await htmlToPdf(docGuardado?.contenido_html || htmlPreview, nombreArchivo);
+      await htmlToPdf(docGuardado?.contenido_html || htmlPreview, titulo, { nombreArchivo });
       enqueueSnackbar("PDF descargado correctamente", { variant: "success" });
     } catch (err) {
       console.error("PDF error:", err);
       enqueueSnackbar("Error al generar el PDF", { variant: "error" });
     }
-  }, [htmlPreview, docGuardado, plantillaSeleccionada, enqueueSnackbar]);
+  }, [htmlPreview, docGuardado, plantillaSeleccionada, empleadoId, enqueueSnackbar]);
 
   const handleImprimir = () => window.print();
 

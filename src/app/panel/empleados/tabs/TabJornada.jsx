@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/context/AuthContext";
+import AvisoLimiteLegal from "@/components/asistencia/AvisoLimiteLegal";
 import {
   Select,
   SelectContent,
@@ -316,9 +317,9 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
   return (
     <section className="space-y-6">
       {/* Header de la sección */}
-      <div className="bg-gradient-to-br from-orange-50 via-white to-orange-50 border-2 border-orange-100 rounded-xl p-6">
+      <div className="border border-slate-200 bg-white rounded-xl p-6">
         <div className="flex items-center gap-3 mb-5">
-          <div className="bg-gradient-to-br from-orange-500 to-orange-600 p-3 rounded-lg shadow-md">
+          <div className="bg-brand p-3 rounded-lg shadow-md">
             <svg
               className="w-6 h-6 text-white"
               fill="none"
@@ -385,7 +386,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
                 }}
                 className={`rounded-lg border-2 p-4 text-left transition ${
                   tipoHorario === "turno"
-                    ? "border-indigo-500 bg-indigo-50"
+                    ? "border-brand bg-blue-50"
                     : "border-gray-200 bg-white hover:border-gray-300"
                 }`}
               >
@@ -412,7 +413,7 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
                 }}
                 className={`rounded-lg border-2 p-4 text-left transition ${
                   tipoHorario === "personalizado"
-                    ? "border-indigo-500 bg-indigo-50"
+                    ? "border-brand bg-blue-50"
                     : "border-gray-200 bg-white hover:border-gray-300"
                 }`}
               >
@@ -474,6 +475,8 @@ export default function TabJornada({ renderCampos = () => null, form, soloLectur
           </div>
 
           {renderCampos("tipo_horario", true)}
+
+          <AvisoLimiteLegal horarios={horarios} />
 
           {isSubmitted && errors.horarios && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3">

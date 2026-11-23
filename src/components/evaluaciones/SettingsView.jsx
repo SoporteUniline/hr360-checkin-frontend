@@ -1,5 +1,7 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
+import { SECCIONES_CONFIGURACION } from "@/lib/evaluaciones/vistas.mjs";
 import { useEvaluations, useEvaluationQuery } from "./EvaluationContext";
 import {
   Heading,
@@ -26,22 +28,38 @@ const labels = {
   anonymousPeers: "Respuestas de pares anónimas",
   anonymousAscending: "Respuestas ascendentes anónimas",
 };
-export function SettingsView() {
-  const query = useEvaluationQuery("/settings");
+// (23/11/2026) Configuración separada en tres vistas con su dirección: Valores iniciales (/configuracion),
+// Niveles (/configuracion/niveles) y Acceso al módulo (/configuracion/acceso). Cada sección es la misma de antes.
+export function SettingsView({ seccion = SECCIONES_CONFIGURACION[0] }) {
+  const { href } = useEvaluations();
   return (
     <>
-      <Heading
-        title="Configuración de evaluaciones"
-        description="Valores iniciales para nuevas campañas, niveles y acceso al módulo."
-      />
-      <QueryState query={query}>
-        {query.data && (
-          <SettingsEditor key={query.data.version} initial={query.data} />
-        )}
-      </QueryState>
-      <Levels />
-      <Permissions />
+      <Heading title="Configuración de evaluaciones" description={seccion.descripcion} />
+      <nav className="ev-nav ev-subnav" aria-label="Secciones de configuración">
+        {SECCIONES_CONFIGURACION.map((s) => (
+          <Link
+            key={s.path}
+            href={href(s.path)}
+            aria-current={s.path === seccion.path ? "page" : undefined}
+          >
+            {s.texto}
+          </Link>
+        ))}
+      </nav>
+      {seccion.path === "configuracion" && <InitialSettings />}
+      {seccion.path === "configuracion/niveles" && <Levels />}
+      {seccion.path === "configuracion/acceso" && <Permissions />}
     </>
+  );
+}
+function InitialSettings() {
+  const query = useEvaluationQuery("/settings");
+  return (
+    <QueryState query={query}>
+      {query.data && (
+        <SettingsEditor key={query.data.version} initial={query.data} />
+      )}
+    </QueryState>
   );
 }
 function SettingsEditor({ initial }) {

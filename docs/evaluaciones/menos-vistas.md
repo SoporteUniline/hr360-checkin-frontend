@@ -45,3 +45,30 @@ Pendientes:
   módulo; la prueba lo cuenta y avisa sin ocultar otros errores.
 - Decisión de negocio sin confirmar: al cerrar una campaña incompleta, ¿RH quita al evaluador que falta y
   se recalcula?
+
+## Cada vista en su entrada del menú (23/11/2026)
+
+Pedido del dueño: «separa cada vista en su módulo en Evaluación de desempeño: una vista de plantillas, otra de
+config, etc.». Las vistas y quién ve cada una no cambian; cambia dónde viven:
+
+| Entrada del menú (grupo «Evaluación de desempeño») | Dirección | Quién la ve (permiso del servidor) |
+|---|---|---|
+| Campañas | `/panel/evaluaciones/campanas` (+ `/nueva`, `/:id`, `/:id/editar`) | `campaigns` (RH y Dirección) |
+| Plantillas | `/panel/evaluaciones/plantillas` (+ `/:id`) | `templates` (RH) |
+| Por responder | `/panel/evaluaciones/mis-pendientes` (+ `/responder/:id`) | RH solo si tiene evaluaciones asignadas |
+| Configuración | `/panel/evaluaciones/configuracion` · `/configuracion/niveles` · `/configuracion/acceso` | `settings` (RH) |
+
+- Configuración (antes un engrane y una sola página larga) es vista propia, con tres secciones que son enlaces:
+  **Valores iniciales** (lo que tendrán las campañas nuevas), **Niveles** (niveles jerárquicos y nivel de cada
+  colaborador) y **Acceso al módulo** (permisos de RH y Dirección). Cada sección es la misma de antes.
+- Una sola fuente para pestañas y menú: `src/lib/evaluaciones/vistas.mjs`. El menú consulta `/capabilities`
+  (y `/my/assignments` para «Por responder») de la empresa con la que abre el módulo
+  (`src/components/Sidebar/useMenuEvaluaciones.js`). Mientras carga o si falla, muestra las entradas por rol
+  (sin «Por responder»); las rutas siguen protegidas en el módulo y en el servidor.
+- `/panel/evaluaciones` (la entrada vieja) lleva a la primera vista de cada quien (RH: Campañas); `/tablero`,
+  `/resultados` y `/seguimiento` siguen llevando ahí. `/configuracion` sigue abriendo lo mismo que antes arriba
+  (Valores iniciales).
+- Portal del empleado (`/empleado/panel/evaluaciones`): sin cambios, una entrada con sus pestañas por rol.
+
+Pruebas: `node --test scripts/test-evaluaciones.mjs` (vistas por perfil) y `node scripts/verify-evaluaciones-vistas.mjs`
+(navegador: menú por permisos, cada ruta, resaltado, direcciones viejas, sin permiso no hay entrada ni ruta).

@@ -5,6 +5,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { checkSubscriptionDirect } from "@/lib/db-queries";
 import { cookies, headers } from "next/headers";
 import SubscriptionRequiredView from "@/components/SubscriptionRequiredView";
+import { FichaEmpleadoProvider } from "@/components/empleado/FichaEmpleado";
 
 // Rutas del panel que siempre se muestran aunque no haya suscripción activa
 const RUTAS_SIN_RESTRICCION = ["/panel/mi-suscripcion"];
@@ -52,7 +53,7 @@ export default async function LayoutPanel({ children }) {
         <SiteHeader />
 
         <div className="panel-modules-content flex flex-1 flex-col p-5 text-sm text-gray-900">
-          {!hasActivePlan ? <SubscriptionRequiredView /> : children}
+          {!hasActivePlan ? <SubscriptionRequiredView /> : <FichaEmpleadoProvider>{children}</FichaEmpleadoProvider>}
         </div>
       </SidebarInset>
     </SidebarProvider>

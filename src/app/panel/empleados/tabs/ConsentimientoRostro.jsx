@@ -6,8 +6,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSnackbar } from "notistack";
 import { firmaDigitalAdminApi } from "@/lib/firmaDigitalApi";
-import { CONSENTIMIENTO_BIOMETRICO as C } from "@/lib/legal/documentos";
+import EvidenciaFirma from "@/components/firma/EvidenciaFirma";
 import { estadoConsentimiento } from "@/lib/legal/consentimientoRostro.mjs";
+import { dibujarConsentimientoRostro } from "@/lib/legal/consentimientoRostroPdf.mjs";
+import { prepararMarcaAdamia } from "@/lib/pdfAdamiaTheme";
+import { nombreArchivoPdf } from "@/lib/nombreArchivo.mjs";
 
 const TIPO = "CONSENTIMIENTO_BIOMETRICO";
 const ESTILO = {
@@ -16,30 +19,13 @@ const ESTILO = {
   pendiente: "border-slate-200 bg-slate-50 text-slate-800",
 };
 
+// (23/11/2026) Formato homologado ADAMIA (logotipo, encabezado y pie con «Página X de Y»):
+// src/lib/legal/consentimientoRostroPdf.mjs.
 async function generarPdf({ nombre, empresa }) {
   const { jsPDF } = await import("jspdf");
   const doc = new jsPDF({ unit: "mm", format: "letter" });
-  const ancho = 175;
-  let y = 24;
-  doc.setFont("helvetica", "bold").setFontSize(15).text(C.titulo, 20, y);
-  y += 10;
-  doc.setFont("helvetica", "normal").setFontSize(10.5);
-  const lineas = [
-    `Empresa (responsable de mis datos): ${empresa}`,
-    `Empleado: ${nombre}`,
-    `Fecha de emisión: ${new Date().toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" })}`,
-    "",
-    ...C.texto,
-    "",
-    `${C.acepto}. Firmo este documento de forma electrónica.`,
-    "",
-    `Versión del texto: ${C.version}.`,
-  ];
-  for (const l of lineas) {
-    const partes = l ? doc.splitTextToSize(l, ancho) : [""];
-    doc.text(partes, 20, y);
-    y += partes.length * 5.5 + (l ? 2 : 0);
-  }
+  const { font, logo } = await prepararMarcaAdamia(doc);
+  dibujarConsentimientoRostro(doc, { nombre, empresa, font, logo });
   return doc.output("blob");
 }
 
@@ -79,7 +65,7 @@ export default function ConsentimientoRostro({ idEmpresa, idEmpleado, nombre, em
         tipoDocumento: TIPO,
         referenciaId: idEmpleado,
         documento,
-        nombreArchivo: "consentimiento-rostro.pdf",
+        nombreArchivo: nombreArchivoPdf({ documento: "Consentimiento rostro", empleado: idEmpleado }),
         expiracionHoras: 720,
       });
       enqueueSnackbar("Consentimiento listo para firmar.", { variant: "success" });
@@ -132,6 +118,7 @@ export default function ConsentimientoRostro({ idEmpresa, idEmpleado, nombre, em
           {solicitud?.tiene_documento_firmado ? (
             <button type="button" onClick={verFirmado} className="font-semibold underline underline-offset-2">Ver documento firmado</button>
           ) : null}
+          {solicitud?.tiene_documento_firmado ? <EvidenciaFirma idSolicitud={solicitud.id} idEmpresa={idEmpresa} /> : null}
         </div>
       ) : estado.tipo === "esperando" ? (
         <div className="mt-2 grid gap-2">

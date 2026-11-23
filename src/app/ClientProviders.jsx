@@ -2,18 +2,21 @@
 
 import { AuthProvider } from "@/context/AuthContext";
 import { CommandPalette } from "@/components/CommandPalette";
-import DiagnosticoReloj from "@/components/DiagnosticoReloj";
 import FaceApiPreloader from "@/components/FaceApiPreloader";
-import RetireOfflineWorker from "@/components/RetireOfflineWorker";
+import DiagnosticoReloj from "@/components/DiagnosticoReloj";
 import { useNativeBackButton } from "@/hooks/Capacitor/useNativeBackButton";
+import OfflineExperience from '@/components/OfflineExperience';
+import FaceReferenceSync from '@/components/Clock/FaceReferenceSync';
 
 export function ClientProviders({ children }) {
   useNativeBackButton();
 
   return (
     <AuthProvider>
-      <RetireOfflineWorker />
+      {/* Antes de la precarga facial para medirla desde el inicio. */}
       <DiagnosticoReloj />
+      <OfflineExperience />
+      <FaceReferenceSync />
       <FaceApiPreloader />
       {children}
       <CommandPalette />

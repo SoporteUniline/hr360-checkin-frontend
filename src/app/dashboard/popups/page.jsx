@@ -85,7 +85,7 @@ export default function PopupsPage() {
       </header>
 
       <section className="grid gap-3 sm:grid-cols-3" aria-label="Resumen">
-        {[["Activos", activos.length], ["Vistas", vistas.toLocaleString("es-MX")], ["Clics (de las vistas)", `${clics.toLocaleString("es-MX")} · ${porcentaje(clics, vistas)}`]].map(([t, v]) => (
+        {[["Activos", activos.length], ["Vistas", vistas.toLocaleString("es-MX")], ["Datos enviados (de las vistas)", `${clics.toLocaleString("es-MX")} · ${porcentaje(clics, vistas)}`]].map(([t, v]) => (
           <div key={t} className="rounded-xl border p-4">
             <p className="text-sm text-muted-foreground">{t}</p>
             <p className="text-2xl font-bold">{v}</p>
@@ -110,7 +110,7 @@ export default function PopupsPage() {
                 <TableHead>Dónde y cuándo</TableHead>
                 <TableHead>Vigencia</TableHead>
                 <TableHead className="text-right">Vistas</TableHead>
-                <TableHead className="text-right">Clics</TableHead>
+                <TableHead className="text-right">Envíos</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
