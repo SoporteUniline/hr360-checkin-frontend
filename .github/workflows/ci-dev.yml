@@ -164,6 +164,28 @@ jobs:
     outputs:
       deploy_sha: ${{ github.sha }}
     steps:
+      # (23/11/2026, «CONFIRMO limpieza automática en dev») El disco del servidor se llenó y los despliegues fallaron
+      # («No space left on device»). Antes de cada despliegue: conservar solo las 3 versiones más recientes del
+      # frontend en ~/adamia/releases y borrar imágenes/capas de Docker sin usar de más de 72 h. Docker nunca borra la
+      # imagen de un contenedor existente (en marcha o detenido), así que no toca lo que está corriendo.
+      - name: Liberar espacio en Lightsail
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.LIGHTSAIL_HOST }}
+          username: ${{ secrets.LIGHTSAIL_USER }}
+          key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          command_timeout: 10m
+          script: |
+            set -u
+            echo "Espacio antes:"; df -h / | tail -1
+            releases="$HOME/adamia/releases"
+            if [ -d "$releases" ]; then
+              ls -1dt "$releases"/frontend-dev-* 2>/dev/null | tail -n +4 | xargs -r rm -rf --
+            fi
+            docker image prune -af --filter "until=72h" || true
+            docker builder prune -af --filter "until=72h" || true
+            echo "Espacio después:"; df -h / | tail -1
+
       - name: Download prebuilt frontend image
         uses: actions/download-artifact@v4
         with:
