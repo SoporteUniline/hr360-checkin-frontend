@@ -2,9 +2,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  agregarComida, agregarRegistro, aMin, conAutoriza, cuerpoPut, desdeApi, diaFila, durTexto, editado, errorDe, errores,
+  agregarComida, agregarRegistro, aMin, claseEstado, resumenServidor, conAutoriza, cuerpoPut, desdeApi, diaFila, durTexto, editado, errorDe, errores,
   erroresPorRenglon, estadoFila, extraFila, horarioNormal, minDeCampo, minutosProgramados, nuevoRenglon, ordenar,
-  origenTexto, planMasivo, puedeComida, quitarORestaurar, requisitoEstado, resumen, separarExtra, tiposEstadoDia,
+  origenTexto, etiquetaQuitar, planMasivo, puedeComida, quitarORestaurar, requisitoEstado, resumen, separarExtra, tiposEstadoDia,
 } from "../src/lib/asistencia/relojDia.mjs";
 
 const F = "2026-11-23";
@@ -40,10 +40,10 @@ test("resumen: retardo, comida, trabajadas y extra sin separar", () => {
 });
 
 test("resumen: sin salida, salió antes, permiso del catálogo y día sin checadas", () => {
-  assert.equal(resumen(cargar([api(1, "08:55", null)]), horario).estado.clave, "sin_salida");
+  assert.equal(resumen(cargar([api(1, "08:55", null)]), horario).estado.clave, "sinsalida");
   assert.equal(resumen(cargar([api(1, "09:00", "10:30")]), horario).estado.texto, "Salió antes −5 h 30 min");
   const conPermiso = cargar([api(1, "09:24", "16:05", { motivo: "tp:31" })]);
-  assert.equal(resumen(conPermiso, horario).estado.texto, "Entró tarde con permiso");
+  assert.deepEqual(resumen(conPermiso, horario).estado, { texto: "Entró tarde con permiso", clave: "just" });
   assert.equal(resumen([], horario, { estadoDia: { texto: "Vacaciones", clave: "vacaciones" } }).estado.texto, "Vacaciones");
   assert.equal(resumen(cargar([api(1, "09:05", "16:00")]), horario, { tolerancia: 0 }).estado.texto, "Retardo +5 min", "tolerancia de la empresa");
 });
@@ -69,7 +69,11 @@ test("validación por renglón como el mockup: motivo, salida > entrada, encimad
   assert.equal(errorDe(agregado[0], agregado), "Falta la salida.");
   assert.equal(errorDe(cargar([api(1, "09:00", null)])[0], []), "", "lo del reloj sin salida y sin tocar puede quedar abierto");
   const quitado = quitarORestaurar(agregado, agregado[0].k);
-  assert.equal(quitado.length, 0, "lo agregado se quita, no se anula");
+  assert.equal(quitado.length, 0, "lo agregado y no guardado se quita (no se manda)");
+  const guardado = cargar([api(9, "18:00", "19:00", { origen: "manual", motivo: "olvido" })]);
+  const quitadoGuardado = quitarORestaurar(guardado, "r9");
+  assert.equal(etiquetaQuitar(guardado[0]), "Quitar");
+  assert.equal(cuerpoPut(quitadoGuardado, { fecha: F, zona: Z }).registros[0].anulado, true, "lo agregado ya guardado viaja con anulado: true");
 });
 
 test("cargar horario, agregar, comida y separar extra", () => {
@@ -127,7 +131,7 @@ test("estado del día: catálogo sin asistencia, qué pide cada tipo y masivos",
   assert.deepEqual(tiposEstadoDia(tipos).map((t) => t.id), [2, 3, 4, 5]);
   assert.deepEqual(tiposEstadoDia(tipos).map(requisitoEstado), [null, "motivo", "folio", null]);
   const filas = [{ id: 1, checadas_vivas: 0 }, { id: 2, checadas_vivas: 2, entrada: "x", salida: "y" },
-    { id: 3, checadas_vivas: 1, entrada: "x", salida: null, estado_calculado: { clave: "sin_salida" } }, { id: 4, entrada: null, salida: null }];
+    { id: 3, checadas_vivas: 1, entrada: "x", salida: null, estado_calculado: { clave: "sinsalida" } }, { id: 4, entrada: null, salida: null }];
   assert.deepEqual(planMasivo(filas, "estado").aplican.map((f) => f.id), [1, 4]);
   assert.deepEqual(planMasivo(filas, "estado").omitidos.map((o) => o.fila.id), [2, 3]);
   assert.deepEqual(planMasivo(filas, "horario").aplican.map((f) => f.id), [1, 3, 4]);
@@ -136,9 +140,13 @@ test("estado del día: catálogo sin asistencia, qué pide cada tipo y masivos",
 test("fila de la tabla: estado, día y horas extra (con respaldo de campos viejos)", () => {
   assert.deepEqual(estadoFila({ estado_calculado: { clave: "retardo", texto: "Retardo +18 min" } }), { texto: "Retardo +18 min", clave: "retardo" });
   assert.deepEqual(estadoFila({ estadoAsistencia: "Ausente" }), { texto: "Ausente", clave: "falta" });
+  assert.equal(claseEstado("sinsalida"), "bg-amber-50 text-amber-800");
+  assert.deepEqual(resumenServidor({ minutos_trabajados: 371, minutos_comida: 40, minutos_extra: 0, minutos_extra_por_autorizar: 0,
+    checadas_vivas: 3, estado: { clave: "ok", texto: "Asistió", atencion: false } }).estado, { texto: "Asistió", clave: "ok" });
+  assert.equal(resumenServidor(undefined), null);
   assert.equal(diaFila({ dia: { tipo: "domingo", nombre: "Domingo", pago: "Prima dominical 25% (art. 71)" } }).pago, "Prima dominical 25% (art. 71)");
   assert.equal(diaFila({ es_festivo: 1 }).tipo, "festivo_oficial");
   assert.deepEqual(extraFila({ minutos_extra: 182, minutos_extra_por_autorizar: 182 }), { tipo: "pendiente", texto: "3 h 02 min por autorizar" });
-  assert.equal(extraFila({ minutos_extra: 60, minutos_extra_por_autorizar: 0 }).tipo, "autorizada");
+  assert.deepEqual(extraFila({ minutos_extra: 60, minutos_extra_por_autorizar: 0 }), { tipo: "autorizada", texto: "1 h autorizadas" });
   assert.equal(extraFila({}).tipo, "nada");
 });

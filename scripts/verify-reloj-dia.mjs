@@ -47,22 +47,22 @@ const fila = (id, nombre, apellido, depto, o = {}) => ({
 });
 const filas = () => [
   fila(501, "Alondra", "Munguía", "Ventas", { entrada: `${F} 09:18:00`, salida: `${F} 16:08:00`, checadas_vivas: 3, minutos_trabajados: 370,
-    minutos_comida: 40, estado_calculado: { clave: "retardo", texto: "Retardo +18 min" }, motivos_resumen: "1 corregido en reloj · Laura M." }),
+    minutos_comida: 40, estado_calculado: { clave: "retardo", texto: "Retardo +18 min", atencion: true }, motivos_resumen: "1 corregido en reloj · Laura M." }),
   fila(502, "Armando", "González", "Contaduría", { id_tipo_permiso: 2, tipo_registro_nombre: "Falta injustificada", asistencia: 0,
-    estado_calculado: { clave: "falta", texto: "Falta injustificada" }, estadoAsistencia: "Ausente" }),
+    estado_calculado: { clave: "falta", texto: "Falta injustificada", atencion: true }, estadoAsistencia: "Ausente" }),
   fila(503, "Juan", "Pérez", "Producción", { id_tipo_permiso: 2, tipo_registro_nombre: "Falta injustificada", asistencia: 0,
-    estado_calculado: { clave: "falta", texto: "Falta injustificada" }, estadoAsistencia: "Ausente" }),
+    estado_calculado: { clave: "falta", texto: "Falta injustificada", atencion: true }, estadoAsistencia: "Ausente" }),
   fila(504, "Mario", "Gómez", "Almacén", { hora_entrada_programada: "08:00:00", hora_salida_programada: "17:00:00",
-    entrada: `${F} 07:51:00`, salida: `${F} 20:02:00`, checadas_vivas: 3, minutos_trabajados: 480, minutos_comida: 60, minutos_extra: 182,
-    minutos_extra_por_autorizar: 182, estado_calculado: { clave: "asistio", texto: "Asistió" } }),
+    entrada: `${F} 07:51:00`, salida: `${F} 20:02:00`, checadas_vivas: 3, minutos_trabajados: 480, minutos_comida: 60, minutos_extra: 0,
+    minutos_extra_por_autorizar: 182, estado_calculado: { clave: "ok", texto: "Asistió", atencion: false } }),
   fila(505, "Pedro", "Salas", "Almacén", { fecha: "2026-11-16", entrada: "2026-11-16 08:00:00", salida: "2026-11-16 17:00:00", checadas_vivas: 1,
     hora_entrada_programada: "08:00:00", hora_salida_programada: "17:00:00", minutos_trabajados: 480, minutos_comida: 60,
     dia: { tipo: "festivo_oficial", nombre: "Festivo oficial", pago: "Salario doble además del día (art. 75)" },
-    estado_calculado: { clave: "asistio", texto: "Asistió" } }),
+    estado_calculado: { clave: "ok", texto: "Asistió", atencion: false } }),
   fila(506, "Sofía", "Ramos", "Tienda", { fecha: "2026-11-22", entrada: "2026-11-22 08:58:00", salida: "2026-11-22 14:03:00", checadas_vivas: 1,
     hora_salida_programada: "14:00:00", hora_salida_comida_programada: null, hora_regreso_comida_programada: null, minutos_trabajados: 305,
-    dia: { tipo: "domingo", nombre: "Domingo", pago: "Prima dominical 25% (art. 71)" }, estado_calculado: { clave: "asistio", texto: "Asistió" } }),
-  fila(507, "Diego", "León", "Administración", { entrada: `${F} 08:55:00`, checadas_vivas: 1, estado_calculado: { clave: "sin_salida", texto: "Sin salida" } }),
+    dia: { tipo: "domingo", nombre: "Domingo", pago: "Prima dominical 25% (art. 71)" }, estado_calculado: { clave: "ok", texto: "Asistió", atencion: false } }),
+  fila(507, "Diego", "León", "Administración", { entrada: `${F} 08:55:00`, checadas_vivas: 1, estado_calculado: { clave: "sinsalida", texto: "Sin salida", atencion: true } }),
 ];
 const tiposPermiso = [
   { id: 1, nombre: "Asistencia", cuenta_como_asistencia: 1 }, { id: 2, nombre: "Falta injustificada", cuenta_como_asistencia: 0 },
@@ -124,13 +124,18 @@ async function simular(page) {
         pet.reloj.push({ id: idA, cuerpo: c });
         if (idA === 502 && rechazarArmando) {
           rechazarArmando = false;
-          return json({ error: "Revisa los registros marcados.", errores: [{ indice: 1, error: "La comida no puede empezar antes de las 13:30 (regla del servidor)." }] }, 400);
+          return json({ ok: false, error: "Revisa los registros marcados.", errores: [{ indice: 1, error: "La comida no puede empezar antes de las 13:30 (regla del servidor)." }] }, 400);
         }
         return json({ ok: true, asistencia: { ...f, checadas_vivas: c.registros.filter((r) => !r.anulado).length } });
       }
       const r = relojes[idA] ?? { horario: relojes[502].horario, registros: [] };
       return json({ ok: true, asistencia: { id: idA, id_empleado: idA, nombre: `${f.nombre} ${f.apellido_paterno}`, departamento: f.departamento, fecha: f.fecha },
-        horario: r.horario, dia: r.dia ?? NORMAL, registros: r.registros, motivos, autorizadores });
+        horario: r.horario, dia: r.dia ?? NORMAL, registros: r.registros, motivos, autorizadores,
+        resumen: { minutos_trabajados: f.minutos_trabajados ?? 0, minutos_comida: f.minutos_comida ?? 0, minutos_extra: f.minutos_extra,
+          minutos_extra_por_autorizar: f.minutos_extra_por_autorizar, checadas_vivas: f.checadas_vivas, abierto: f.estado_calculado?.clave === "sinsalida",
+          estado: f.estado_calculado, estado_calculado: f.estado_calculado },
+        // Sofía: la migración aún no corre en su base → el reloj se ve en solo lectura.
+        migracion: idA !== 506 });
     }
     m = /\/checador\/asistencias\/(\d+)\/estado-dia$/.exec(p);
     if (m && req.method() === "PUT") {
@@ -307,6 +312,12 @@ try {
     assert.match(await cal.innerText(), txt);
     assert.equal(await cal.locator("input,select,button").count(), 0, `${n}: calendario solo lectura`);
     assert.equal(await d.getByText(/Pago triple|Prima dominical %|% día festivo|Hrs comida/).count(), 0);
+    if (n === "Sofía Ramos") {
+      await d.locator("[data-reloj-solo-lectura]").waitFor();
+      assert.equal(await d.getByLabel("Entrada").first().isDisabled(), true, "migración pendiente: solo lectura");
+      assert.equal(await d.getByRole("button", { name: "Agregar registro" }).isDisabled(), true);
+      assert.equal(await d.getByRole("button", { name: "Guardar" }).isDisabled(), true);
+    }
     await d.getByRole("button", { name: "Cancelar" }).click();
     await d.waitFor({ state: "detached", timeout: 10000 });
   }
@@ -377,7 +388,7 @@ try {
   assert.deepEqual(errores, [], "sin errores de JavaScript");
   exito = true;
   console.log("OK · columnas y ocultar · estado en fila (motivo, directo) · «Sí vino» → reloj vacío → horario normal · 400 por renglón · "
-    + "hora editada exige motivo · separar extra exige autoriza · PUT exactos · festivo/domingo solo lectura · masivos · sin «Registrar "
+    + "hora editada exige motivo · separar extra exige autoriza · PUT exactos · festivo/domingo solo lectura · migración pendiente = solo lectura · masivos · sin «Registrar "
     + "asistencia masiva» · horas-extra → Asistencias con aviso · 1440 y 390 sin desbordes ni recortes · sin errores de JS");
 } finally {
   await browser.close();

@@ -207,21 +207,21 @@ export function resumen(regs, horario, { tolerancia = TOLERANCIA_MIN, estadoDia 
   const ultima = jornada.slice().sort((a, b) => (b.fin ?? 0) - (a.fin ?? 0))[0];
   let estado;
   if (!v.length) {
-    estado = { texto: estadoDia?.texto || "Sin checadas", clave: estadoDia?.clave || "sin_checadas" };
+    estado = { texto: estadoDia?.texto || "Sin checadas", clave: estadoDia?.clave || "falta" };
   } else if (abierto) {
-    estado = { texto: "Sin salida", clave: "sin_salida" };
+    estado = { texto: "Sin salida", clave: "sinsalida" };
   } else if (!h) {
-    estado = { texto: "Asistió", clave: "asistio" };
+    estado = { texto: "Asistió", clave: "ok" };
   } else {
     const retardo = entrada - h.pe;
     const antes = ultimaJornada != null ? h.ps - ultimaJornada : 0;
     const permTarde = primera && esPermiso(primera.motivo);
     const permAntes = ultima && esPermiso(ultima.motivo);
     if (retardo > tolerancia && !permTarde) estado = { texto: `Retardo +${retardo} min`, clave: "retardo" };
-    else if (antes > tolerancia && !permAntes) estado = { texto: `Salió antes −${durTexto(antes)}`, clave: "salio_antes" };
-    else if (retardo > tolerancia) estado = { texto: "Entró tarde con permiso", clave: "permiso" };
-    else if (antes > tolerancia) estado = { texto: "Salió antes con permiso", clave: "permiso" };
-    else estado = { texto: "Asistió", clave: "asistio" };
+    else if (antes > tolerancia && !permAntes) estado = { texto: `Salió antes −${durTexto(antes)}`, clave: "antes" };
+    else if (retardo > tolerancia) estado = { texto: "Entró tarde con permiso", clave: "just" };
+    else if (antes > tolerancia) estado = { texto: "Salió antes con permiso", clave: "just" };
+    else estado = { texto: "Asistió", clave: "ok" };
   }
   return { entrada, salida, abierto, comida, extraMin, extraPorAutorizar, extraNoAut, sinSeparar, trabajadas,
     estado, hayRegs: v.length > 0, programadas: minutosProgramados(horario) };
@@ -273,7 +273,8 @@ export function quitarORestaurar(regs, k) {
   if (r.origen === "manual" && r.nuevo) return regs.filter((x) => x.k !== k);
   return regs.map((x) => (x.k === k ? { ...x, anulado: !x.anulado } : x));
 }
-export const etiquetaQuitar = (r) => (r.origen === "manual" && r.nuevo ? "Quitar" : r.anulado ? "Restaurar" : "Anular checada");
+// Lo agregado a mano se «quita» (si ya estaba guardado viaja con anulado: true); lo del reloj se anula.
+export const etiquetaQuitar = (r) => (r.anulado ? "Restaurar" : r.origen === "manual" ? "Quitar" : "Anular checada");
 
 // Texto bajo la hora: «reloj», «reloj: 9:18 a.m.» o «agregado».
 export function origenTexto(r, lado = "ini") {
@@ -299,7 +300,7 @@ export function requisitoEstado(tipo) {
   return "motivo";
 }
 export const checadasVivas = (fila) => (fila?.checadas_vivas != null ? Number(fila.checadas_vivas) : fila?.entrada || fila?.salida ? 1 : 0);
-const sinSalida = (fila) => fila?.estado_calculado?.clave === "sin_salida" || (Boolean(fila?.entrada) && !fila?.salida);
+const sinSalida = (fila) => fila?.estado_calculado?.clave === "sinsalida" || (Boolean(fila?.entrada) && !fila?.salida);
 
 // Barra masiva: a quién aplica cada acción y por qué se omite el resto.
 export function planMasivo(filas, accion) {
@@ -315,23 +316,25 @@ export function planMasivo(filas, accion) {
 }
 
 // ——— Lo que se ve en la fila (lo calcula el servidor; respaldo con los campos de siempre) ———
+// Claves del servidor: ok | retardo | antes | just | sinsalida | falta (el descanso sale como ok).
 const PILLS = {
-  asistio: "bg-emerald-50 text-emerald-700", retardo: "bg-amber-50 text-amber-800", salio_antes: "bg-rose-50 text-rose-700",
-  sin_salida: "bg-amber-50 text-amber-800", permiso: "bg-violet-50 text-violet-700", falta: "bg-rose-50 text-rose-700",
-  justificada: "bg-violet-50 text-violet-700", descanso: "bg-slate-100 text-slate-600", sin_checadas: "bg-slate-100 text-slate-600",
+  ok: "bg-emerald-50 text-emerald-700", retardo: "bg-amber-50 text-amber-800", antes: "bg-rose-50 text-rose-700",
+  sinsalida: "bg-amber-50 text-amber-800", just: "bg-violet-50 text-violet-700", falta: "bg-rose-50 text-rose-700",
 };
-export function claseEstado(clave) {
-  const c = String(clave ?? "");
-  if (PILLS[c]) return PILLS[c];
-  if (/falta|ausen/.test(c)) return PILLS.falta;
-  if (/vacacion|incapacidad|justific|permiso/.test(c)) return PILLS.justificada;
-  return PILLS.sin_checadas;
-}
+export const claseEstado = (clave) => PILLS[String(clave ?? "")] ?? "bg-slate-100 text-slate-600";
 export function estadoFila(fila) {
   if (fila?.estado_calculado?.texto) return { texto: fila.estado_calculado.texto, clave: fila.estado_calculado.clave };
   const e = fila?.estadoAsistencia;
-  const clave = { Presente: "asistio", Tardanza: "retardo", Ausente: "falta", Vacaciones: "justificada", Permiso: "permiso" }[e] ?? "sin_checadas";
+  const clave = { Presente: "ok", Tardanza: "retardo", Ausente: "falta", Vacaciones: "just", Permiso: "just" }[e] ?? "";
   return { texto: e || fila?.tipo_registro_nombre || "—", clave };
+}
+// Lo que calculó el servidor (GET /:id/reloj → resumen) con la forma de resumen(); null si no vino.
+export function resumenServidor(r) {
+  if (!r || r.minutos_trabajados === undefined) return null;
+  const e = r.estado ?? r.estado_calculado ?? {};
+  return { trabajadas: Number(r.minutos_trabajados ?? 0), comida: Number(r.minutos_comida ?? 0), extraAutorizada: Number(r.minutos_extra ?? 0),
+    extraPorAutorizar: Number(r.minutos_extra_por_autorizar ?? 0), abierto: Boolean(r.abierto), hayRegs: Number(r.checadas_vivas ?? 0) > 0,
+    estado: { texto: e.texto ?? "—", clave: e.clave ?? "" } };
 }
 export function diaFila(fila) {
   if (fila?.dia?.tipo) return fila.dia;
@@ -339,11 +342,12 @@ export function diaFila(fila) {
   if (Number(fila?.es_domingo)) return { tipo: "domingo", nombre: "Domingo", pago: "" };
   return { tipo: "normal", nombre: "Día normal", pago: "" };
 }
-// Columna «Horas extra»: por autorizar (botón que abre el reloj), autorizadas o nada.
+// Columna «Horas extra»: por autorizar (botón que abre el reloj; incluye la que falta separar), autorizadas o nada.
+// minutos_extra del servidor cuenta solo la extra autorizada.
 export function extraFila(fila) {
   const pend = Number(fila?.minutos_extra_por_autorizar ?? 0);
-  const total = Number(fila?.minutos_extra ?? 0);
+  const aut = Number(fila?.minutos_extra ?? 0);
   if (pend > 0) return { tipo: "pendiente", texto: `${durTexto(pend)} por autorizar` };
-  if (total > 0) return { tipo: "autorizada", texto: `${durTexto(total)}` };
+  if (aut > 0) return { tipo: "autorizada", texto: `${durTexto(aut)} autorizadas` };
   return { tipo: "nada", texto: "—" };
 }

@@ -20,7 +20,7 @@ import {
   CONCEPTOS, TOLERANCIA_MIN, aHHMM, aMin, agregarComida, agregarRegistro, autorizaValor, claseEstado, conAutoriza,
   cuerpoPut, desdeApi, diaFila, durTexto, editado, errores as validar, erroresPorRenglon, estadoFila, etiquetaQuitar,
   fechaTxt, hora12Txt, horarioMin, horarioNormal, minDeCampo, ordenar, origenTexto, puedeComida, quitarORestaurar,
-  resumen, separarExtra, vivos,
+  resumen, resumenServidor, separarExtra, vivos,
 } from "@/lib/asistencia/relojDia.mjs";
 
 const CAMPO = "h-9 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-2.5 text-[13.5px] text-slate-900 "
@@ -147,6 +147,13 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
     [data, fecha, zona]);
   const hayCambios = regs != null && firma(lista) !== inicial;
   const hayErrores = Object.keys(errs).length > 0;
+  // Sin cambios se muestra lo que calculó el servidor; al editar, el cálculo en vivo (misma regla).
+  const delServidor = !hayCambios ? resumenServidor(data?.resumen) : null;
+  const vista = delServidor ?? { trabajadas: calc.trabajadas, comida: calc.comida, abierto: calc.abierto, hayRegs: calc.hayRegs,
+    extraAutorizada: calc.extraMin - calc.extraNoAut - (calc.extraPorAutorizar - calc.sinSeparar), extraPorAutorizar: calc.extraPorAutorizar,
+    estado: calc.estado };
+  // Si la migración de la base de datos aún no corre, el reloj se ve pero no se puede corregir.
+  const soloLectura = data?.migracion === false;
 
   const cambiar = (fn) => { setRegs((prev) => fn(prev ?? [])); setServidor((s) => (s.general || Object.keys(s.renglones).length ? { general: "", renglones: {} } : s)); };
   const guardar = async () => {
@@ -201,7 +208,12 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
             <p role="status" className="py-10 text-center text-[14px] text-slate-500">Cargando las checadas del reloj…</p>
           ) : (
             <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
-              <div className="flex min-w-0 flex-col gap-4">
+              <fieldset disabled={soloLectura} className="m-0 flex min-w-0 flex-col gap-4 border-0 p-0">
+                {soloLectura ? (
+                  <p role="status" data-reloj-solo-lectura className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13.5px] text-amber-900">
+                    Por ahora el reloj solo se puede ver: falta aplicar la actualización de la base de datos para poder corregirlo.
+                  </p>
+                ) : null}
                 <section className="flex flex-col gap-2">
                   <h3 className={TITULO}>Horario del día</h3>
                   <div className="grid grid-cols-2 gap-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
@@ -243,22 +255,22 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
                   </div>
                   <p className="text-[12.5px] text-slate-500">Lo que marcó el reloj nunca se borra: queda tachado o como «reloj: hora» y en el historial con tu nombre y el motivo.</p>
                 </section>
-              </div>
+              </fieldset>
 
               <aside className="flex flex-col gap-4">
                 <section data-calculo className="flex flex-col gap-1">
                   <h3 className={TITULO}>Cálculo automático</h3>
                   <Fila etiqueta="Trabajadas">
-                    {calc.hayRegs && !calc.abierto ? durTexto(calc.trabajadas) : "—"}
+                    {vista.hayRegs && !vista.abierto ? durTexto(vista.trabajadas) : "—"}
                     {calc.programadas ? <span className="block text-[12px] font-normal text-slate-400">de {durTexto(calc.programadas)} programado</span> : null}
                   </Fila>
-                  <Fila etiqueta="Comida">{durTexto(calc.comida)}</Fila>
+                  <Fila etiqueta="Comida">{durTexto(vista.comida)}</Fila>
                   <Fila etiqueta="Horas extra">
-                    <span className="text-violet-700">{durTexto(calc.extraMin - calc.extraNoAut)}</span>
-                    {calc.extraPorAutorizar > 0 ? <span className="block text-[12px] font-normal text-violet-700">{durTexto(calc.extraPorAutorizar)} por autorizar</span> : null}
+                    <span className="text-violet-700">{vista.extraAutorizada > 0 ? `${durTexto(vista.extraAutorizada)} autorizadas` : "—"}</span>
+                    {vista.extraPorAutorizar > 0 ? <span className="block text-[12px] font-normal text-violet-700">{durTexto(vista.extraPorAutorizar)} por autorizar</span> : null}
                   </Fila>
                   <Fila etiqueta="Estado">
-                    <span data-estado-calculado className={`inline-block rounded-full px-2.5 py-0.5 text-[12.5px] font-semibold ${claseEstado(calc.estado.clave)}`}>{calc.estado.texto}</span>
+                    <span data-estado-calculado className={`inline-block rounded-full px-2.5 py-0.5 text-[12.5px] font-semibold ${claseEstado(vista.estado.clave)}`}>{vista.estado.texto}</span>
                   </Fila>
                 </section>
                 <section data-calendario className="flex flex-col gap-2">
@@ -280,7 +292,7 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
         <div className="flex shrink-0 items-center justify-end gap-2.5 border-t border-slate-200 px-6 py-3.5 max-sm:flex-wrap max-sm:px-4 max-sm:pb-[max(0.875rem,env(safe-area-inset-bottom))]">
           <span role={mensajeError ? "alert" : undefined} className="min-w-0 flex-1 text-[13px] text-rose-700 max-sm:basis-full">{mensajeError}</span>
           <button type="button" onClick={cerrar} disabled={guardando} className={cn(BOTON, "max-sm:flex-1 max-sm:justify-center")}>Cancelar</button>
-          <button type="button" onClick={guardar} disabled={guardando || hayErrores || !hayCambios || regs == null}
+          <button type="button" onClick={guardar} disabled={guardando || hayErrores || !hayCambios || regs == null || soloLectura}
             className={cn(BOTON, "border-blue-600 bg-blue-600 text-white hover:bg-blue-700 max-sm:flex-1 max-sm:justify-center")}>
             {guardando ? "Guardando…" : "Guardar"}
           </button>
