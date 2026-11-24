@@ -7,7 +7,8 @@
 //   completa (se gira el celular y queda horizontal); si lo giran de verdad, se endereza sin perder el trazo.
 // - Computadora: el lienzo se queda en la página con «Borrar» y «Guardar» (como antes).
 // La página de firmar documentos (/firmar/[token]) ya funcionaba así con su propia pantalla.
-// onGuardar(blobPng) → true si quedó guardada (cierra la pantalla completa); false para dejarla abierta.
+// onGuardar(blobPng) → true si el servidor confirmó (cierra la pantalla completa); false para dejarla abierta; si lanza
+// un Error, su mensaje se muestra aquí mismo (role="alert") sin cerrar la firma ni borrar el trazo.
 // (23/11/2026, INC: «empiezo a escribir y se cierra solo») Firmar empezando cerca del borde activa el gesto «atrás» del
 // sistema: en Android saca de pantalla completa y en iPhone regresa de página. Antes eso cerraba la firma. Ahora solo
 // se cierra con «X» o al guardar: si sale de pantalla completa la firma sigue abierta (rotada si quedó en vertical) y
@@ -42,6 +43,7 @@ export default function FirmaGrande({
   const [abierta, setAbierta] = useState(false);
   const [trazada, setTrazada] = useState(false);
   const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState("");
   const [vertical, setVertical] = useState(false);
   const [medidas, setMedidas] = useState({ ancho: 0, alto: 0 });
   const cerrandoPorBoton = useRef(false);
@@ -52,6 +54,7 @@ export default function FirmaGrande({
     salirHorizontal();
     setAbierta(false);
     setTrazada(false);
+    setError("");
     // Quita la entrada propia del historial que se puso al abrir.
     if (window.history.state?.firmaGrande) {
       cerrandoPorBoton.current = true;
@@ -61,6 +64,7 @@ export default function FirmaGrande({
 
   const abrir = () => {
     cerrandoPorBoton.current = false;
+    setError("");
     setAbierta(true);
     entrarHorizontal();
     try { window.history.pushState({ ...(window.history.state || {}), firmaGrande: true }, ""); } catch { /* sin historial */ }
@@ -103,16 +107,24 @@ export default function FirmaGrande({
   const guardar = async () => {
     if (!trazada || guardando) return;
     setGuardando(true);
+    setError("");
     try {
       const ok = await onGuardar?.(await lienzo.current.aPng());
       if (ok !== false) {
         lienzo.current?.borrar();
         if (abierta) cerrar();
       }
+    } catch (e) {
+      // Sin confirmación del servidor no se cierra ni se borra: el trazo queda para reintentar.
+      setError(e?.message || "No se pudo guardar la firma. Intenta de nuevo.");
     } finally {
       setGuardando(false);
     }
   };
+
+  const avisoError = error ? (
+    <p role="alert" className="rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700">{error}</p>
+  ) : null;
 
   const botones = (grande) => (
     <div className={`grid ${onCancelar && !grande ? "grid-cols-3" : "grid-cols-2"} gap-2`}>
@@ -135,6 +147,7 @@ export default function FirmaGrande({
     return (
       <div className="w-full space-y-3" data-firma-grande="pagina">
         <LienzoFirma ref={lienzo} onCambio={setTrazada} deshabilitado={deshabilitado || guardando} etiqueta={etiqueta} />
+        {avisoError}
         {botones(false)}
       </div>
     );
@@ -174,6 +187,7 @@ export default function FirmaGrande({
                 </span>
               ) : null}
             </div>
+            {avisoError}
             {botones(true)}
           </div>
         </div>

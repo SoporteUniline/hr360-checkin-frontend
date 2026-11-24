@@ -118,8 +118,9 @@ function Firma({ valor, onFirmar, deshabilitado, etiqueta, subir, firmaPin = nul
   // (23/11/2026) Se dibuja con FirmaGrande: en celular a pantalla completa en horizontal; en computadora, aquí mismo.
   const firmar = async (png) => {
     if (!subir) { onFirmar(URL.createObjectURL(png)); return true; }
+    // Si la subida falla, `subir` lanza el error y FirmaGrande lo muestra sin cerrar ni perder el trazo.
     const llave = await subir(png, { esFirma: true });
-    if (!llave) return false;
+    if (!llave) throw new Error("No se pudo subir tu firma. Intenta de nuevo.");
     onFirmar(llave);
     return true;
   };

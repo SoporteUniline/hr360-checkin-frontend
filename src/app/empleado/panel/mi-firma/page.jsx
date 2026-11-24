@@ -53,8 +53,8 @@ function SeccionFirma({ estado, alGuardar }) {
       alGuardar();
       return true;
     } catch (e) {
-      setAviso({ ok: false, texto: mensajeError(e, "No se pudo guardar tu firma.") });
-      return false;
+      // FirmaGrande muestra el error junto al lienzo (también a pantalla completa, donde este aviso no se ve).
+      throw new Error(mensajeError(e, "No se pudo guardar tu firma."));
     }
   };
 

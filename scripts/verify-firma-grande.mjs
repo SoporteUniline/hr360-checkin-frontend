@@ -1,6 +1,7 @@
 // Regresión (23/11/2026, «empiezo a escribir y se cierra solo»): la firma a pantalla completa del celular NO debe
 // cerrarse cuando el sistema saca de pantalla completa o hace «atrás» (gesto de borde de Android/iPhone al empezar a
-// firmar). Solo se cierra con «X» o al guardar, y conserva lo dibujado. Backend simulado en memoria.
+// firmar). Solo se cierra con «X» o al guardar, y conserva lo dibujado. Si el PUT falla (500), el error se ve
+// (role="alert"), la firma sigue abierta y el trazo se conserva; no se muestra éxito. Backend simulado en memoria.
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api npm run build && node scripts/verify-firma-grande.mjs
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
@@ -21,16 +22,17 @@ const c = `${b64({ alg: "HS256", typ: "JWT" })}.${b64({ tipo_usuario: "Empleado"
 const jwt = `${c}.${crypto.createHmac("sha256", secreto).update(c).digest("base64url")}`;
 const next = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "-p", String(port), "-H", "127.0.0.1"], { stdio: "ignore", detached: true, env: { ...process.env, JWT_SECRET: secreto } });
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
-const estado = { firma: false, puts: 0 };
+const estado = { firma: false, puts: 0, fallar: false };
 
 const browser = await chromium.launch();
 try {
   for (let i = 0; ; i++) { try { if ((await fetch(base + "/login")).status) break; } catch {} if (i > 200) throw new Error("Next no arrancó"); await dormir(150); }
   const cors = { "Access-Control-Allow-Origin": base, "Access-Control-Allow-Credentials": "true", "Access-Control-Allow-Headers": "authorization,content-type", "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS" };
-  const probar = async (viewport, nombre) => {
-    const ctx = await browser.newContext({ viewport, locale: "es-MX", hasTouch: true, isMobile: true });
+  const nuevoContexto = async (opciones) => {
+    const ctx = await browser.newContext({ locale: "es-MX", ...opciones });
     await ctx.addCookies([{ name: "token", value: jwt, url: base }]);
     estado.firma = false;
+    estado.fallar = false;
     await ctx.route("**/*", async (route) => {
       const req = route.request();
       const url = new URL(req.url());
@@ -40,10 +42,26 @@ try {
       const ok = (json) => route.fulfill({ status: 200, json, headers: cors });
       const p = url.pathname.replace("/api", "");
       if (p.endsWith("/users/verify/token")) return ok({ user: { id_usuario: 15, id_empleado: 15, tipo_usuario: "Empleado", nombre: "Ana Torres", empresas: [7] } });
-      if (p === "/checador/mi-espacio/firma" && req.method() === "PUT") { estado.puts += 1; estado.firma = true; return ok({ ok: true }); }
+      if (p === "/checador/mi-espacio/firma" && req.method() === "PUT") {
+        estado.puts += 1;
+        if (estado.fallar) return route.fulfill({ status: 500, json: { error: "Falla simulada del servidor" }, headers: cors });
+        estado.firma = true;
+        return ok({ ok: true });
+      }
       if (p === "/checador/mi-espacio/firma") return ok({ ok: true, tiene_firma: estado.firma, tiene_pin: false, firma_actualizada_en: estado.firma ? "2026-11-23 18:00:00" : null, pin_actualizado_en: null, bloqueado_hasta: null });
       return ok({});
     });
+    return ctx;
+  };
+  const trazar = async (pg, lienzo) => {
+    const r = await lienzo.boundingBox();
+    await pg.mouse.move(r.x + r.width * 0.2, r.y + r.height * 0.5);
+    await pg.mouse.down();
+    await pg.mouse.move(r.x + r.width * 0.6, r.y + r.height * 0.4, { steps: 8 });
+    await pg.mouse.up();
+  };
+  const probar = async (viewport, nombre) => {
+    const ctx = await nuevoContexto({ viewport, hasTouch: true, isMobile: true });
     const pg = await ctx.newPage();
     const errores = [];
     pg.on("pageerror", (e) => errores.push(e.message));
@@ -78,18 +96,25 @@ try {
     assert.equal(new URL(pg.url()).pathname, ruta, `${nombre}: «X» no se va de la página`);
     assert.ok(!(await pg.evaluate(() => window.history.state?.firmaGrande)), `${nombre}: sin entrada propia en el historial`);
 
-    // Abrir, dibujar y guardar: se manda y se cierra.
+    // Abrir, dibujar y guardar con el servidor fallando (500): error visible, sigue abierta, trazo intacto.
     const antes = estado.puts;
     await pg.getByRole("button", { name: "Registrar firma" }).click();
     await dialogo.waitFor();
-    const r2 = await lienzo.boundingBox();
-    await pg.mouse.move(r2.x + r2.width * 0.2, r2.y + r2.height * 0.5);
-    await pg.mouse.down();
-    await pg.mouse.move(r2.x + r2.width * 0.6, r2.y + r2.height * 0.4, { steps: 8 });
-    await pg.mouse.up();
+    await trazar(pg, lienzo);
+    estado.fallar = true;
+    await guardar.click();
+    const alerta = dialogo.getByRole("alert");
+    await alerta.waitFor();
+    assert.match(await alerta.innerText(), /Falla simulada del servidor/, `${nombre}: muestra el error del servidor`);
+    assert.ok(await dialogo.isVisible(), `${nombre}: la firma sigue abierta tras el 500`);
+    assert.ok(await guardar.isEnabled(), `${nombre}: conserva el trazo tras el 500`);
+    assert.equal(await pg.getByText("Listo, tu firma quedó guardada.").count(), 0, `${nombre}: sin éxito antes de confirmar`);
+
+    // Reintento con el mismo trazo: se manda y se cierra.
+    estado.fallar = false;
     await guardar.click();
     await dialogo.waitFor({ state: "detached" });
-    assert.equal(estado.puts, antes + 1, `${nombre}: guardó una vez`);
+    assert.equal(estado.puts, antes + 2, `${nombre}: un intento fallido y uno bueno`);
     await pg.getByText("Listo, tu firma quedó guardada.").waitFor();
     assert.equal(new URL(pg.url()).pathname, ruta, `${nombre}: sigue en la página tras guardar`);
     assert.deepEqual(errores, [], `${nombre}: sin errores de página`);
@@ -97,7 +122,27 @@ try {
   };
   await probar({ width: 390, height: 844 }, "vertical");
   await probar({ width: 844, height: 390 }, "horizontal");
-  console.log("OK verify-firma-grande: salir de pantalla completa o «atrás» no cierra la firma ni pierde el trazo (vertical y horizontal); «X» y «Guardar» sí cierran, historial limpio.");
+
+  // Computadora (lienzo en la página): el 500 también se ve y el trazo se conserva.
+  {
+    const ctx = await nuevoContexto({ viewport: { width: 1280, height: 800 } });
+    const pg = await ctx.newPage();
+    await pg.goto(base + "/empleado/panel/mi-firma", { waitUntil: "domcontentloaded" });
+    const zona = pg.locator('[data-firma-grande="pagina"]');
+    await zona.waitFor({ timeout: 20000 });
+    await trazar(pg, zona.locator("canvas"));
+    const guardar = zona.getByRole("button", { name: "Guardar firma" });
+    estado.fallar = true;
+    await guardar.click();
+    await zona.getByRole("alert").filter({ hasText: "Falla simulada del servidor" }).waitFor();
+    assert.ok(await guardar.isEnabled(), "escritorio: conserva el trazo tras el 500");
+    assert.equal(await pg.getByText("Listo, tu firma quedó guardada.").count(), 0, "escritorio: sin éxito antes de confirmar");
+    estado.fallar = false;
+    await guardar.click();
+    await pg.getByText("Listo, tu firma quedó guardada.").waitFor();
+    await ctx.close();
+  }
+  console.log("OK verify-firma-grande: salir de pantalla completa o «atrás» no cierra la firma ni pierde el trazo (vertical y horizontal); «X» y «Guardar» sí cierran, historial limpio; un 500 al guardar se avisa sin cerrar ni perder el trazo (celular y computadora).");
 } finally {
   await browser.close();
   try { process.kill(-next.pid); } catch { /* ya terminó */ }
