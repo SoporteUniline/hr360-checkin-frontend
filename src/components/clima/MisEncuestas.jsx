@@ -4,6 +4,7 @@
 //   - el empleado: /empleado/panel/encuestas (app del empleado);
 //   - RH o el dueño que también son empleados: /panel/mis-encuestas (panel), con la empresa de cada encuesta.
 // Quién contesta lo decide el servidor con la sesión; aquí solo va la empresa (validada contra la sesión).
+import { useEffect } from "react";
 import Link from "next/link";
 import useSWR, { useSWRConfig } from "swr";
 import { ClipboardList } from "lucide-react";
@@ -20,7 +21,9 @@ const AVISO_ANONIMA = "Tu opinión cuenta y es anónima: nadie de tu empresa ve 
 
 function Lista({ base, enPanel }) {
   const { dataUser } = useAuth();
-  const { data, error } = useSWR(LLAVE_MIS_ENCUESTAS, get, { shouldRetryOnError: false });
+  const { data, error } = useSWR(LLAVE_MIS_ENCUESTAS, get, {
+    shouldRetryOnError: false,
+  });
   if (error)
     return codigoDe(error) === "SIN_FICHA" || codigoDe(error) === "FICHA_DUPLICADA" ? (
       <Vacio titulo="No encontramos tu ficha de empleado" texto={errorDe(error)} />
@@ -71,18 +74,56 @@ function Lista({ base, enPanel }) {
   );
 }
 
+// Contestar ocupa toda la pantalla (encima del menú y de la barra de la app) para que se lea grande y nada tape
+// «Anterior / Siguiente». «‹ Encuestas» regresa a la lista.
+function PantallaCompleta({ base, titulo, children }) {
+  useEffect(() => {
+    const previo = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previo;
+    };
+  }, []);
+  return (
+    <div className="fixed inset-0 z-[70] flex flex-col overflow-y-auto bg-white" data-encuesta-pantalla-completa>
+      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white pt-[env(safe-area-inset-top)]">
+        <div className="mx-auto flex w-full max-w-xl items-center gap-3 px-4 py-2">
+          <Link href={base} className="inline-flex min-h-11 shrink-0 items-center text-[17px] font-semibold text-brand">
+            ‹ Encuestas
+          </Link>
+          <p className="min-w-0 flex-1 truncate text-right text-[15px] font-bold text-slate-700">{titulo}</p>
+        </div>
+      </header>
+      <div className="mx-auto flex w-full max-w-xl flex-1 flex-col">{children}</div>
+    </div>
+  );
+}
+
 function Encuesta({ id, empresa, base }) {
   const { mutate } = useSWRConfig();
   const sufijo = empresa ? `?empresa=${empresa}` : "";
-  const { data, error } = useSWR(`${BASE}/encuestas/${id}${sufijo}`, get, { revalidateOnFocus: false, shouldRetryOnError: false });
+  const { data, error } = useSWR(`${BASE}/encuestas/${id}${sufijo}`, get, {
+    revalidateOnFocus: false,
+    shouldRetryOnError: false,
+  });
   const volver = (
     <Link href={base} className="font-semibold text-brand">
       Volver
     </Link>
   );
-  if (error) return <Vacio titulo="No se pudo abrir la encuesta" texto={errorDe(error)}>{volver}</Vacio>;
+  if (error)
+    return (
+      <Vacio titulo="No se pudo abrir la encuesta" texto={errorDe(error)}>
+        {volver}
+      </Vacio>
+    );
   if (!data) return <Cargando />;
-  if (data.contestada) return <Vacio titulo="Ya contestaste esta encuesta" texto="¡Gracias por tu tiempo!">{volver}</Vacio>;
+  if (data.contestada)
+    return (
+      <Vacio titulo="Ya contestaste esta encuesta" texto="¡Gracias por tu tiempo!">
+        {volver}
+      </Vacio>
+    );
   // Al enviar se actualiza la lista, el aviso y el número del menú (misma llave SWR).
   const enviar = (cuerpo) =>
     axios.post(`${BASE}/encuestas/${id}/respuestas${sufijo}`, cuerpo).then((r) => {
@@ -90,12 +131,9 @@ function Encuesta({ id, empresa, base }) {
       return r;
     });
   return (
-    <div className="mx-auto max-w-xl pb-24">
-      <Link href={base} className="mx-4 mt-3 inline-block text-sm font-semibold text-brand">
-        ‹ Encuestas
-      </Link>
-      <Contestar encuesta={data.encuesta} alEnviar={enviar} />
-    </div>
+    <PantallaCompleta base={base} titulo={data.encuesta.nombre}>
+      <Contestar encuesta={data.encuesta} alEnviar={enviar} pantallaCompleta />
+    </PantallaCompleta>
   );
 }
 

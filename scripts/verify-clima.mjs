@@ -69,6 +69,44 @@ async function sesion(usuario, viewport) {
 }
 const captura = (pg, nombre) =>
   process.env.CAPTURAS ? pg.screenshot({ path: `${process.env.CAPTURAS}/${nombre}.png`, fullPage: true }) : null;
+// (25/11/2026) Contestar en el celular: la encuesta ocupa toda la pantalla (la barra de la app no tapa nada), la
+// pregunta se lee grande y «Anterior / Siguiente» quedan completos y tocables dentro de la pantalla.
+async function pantallaCompletaLegible(pg, nombre, enApp = true) {
+  const r = await pg.evaluate(() => {
+    const vh = window.innerHeight;
+    const botones = [...document.querySelectorAll("button")].filter((b) =>
+      /^(Anterior|Siguiente|Enviar respuestas|Enviando…)$/.test(b.innerText.trim())
+    );
+    const visibles = botones.map((b) => {
+      const c = b.getBoundingClientRect();
+      const arriba = document.elementFromPoint(c.left + c.width / 2, c.top + c.height / 2);
+      return {
+        texto: b.innerText.trim(),
+        dentro: c.top >= 0 && c.bottom <= vh + 0.5,
+        alto: c.height,
+        propio: b === arriba || b.contains(arriba),
+      };
+    });
+    const h2 = document.querySelector("#pregunta-actual");
+    const opcion = document.querySelector('[role="group"] button');
+    return {
+      visibles,
+      pregunta: h2 ? parseFloat(getComputedStyle(h2).fontSize) : 0,
+      opcion: opcion ? parseFloat(getComputedStyle(opcion).fontSize) : 0,
+      completa: Boolean(document.querySelector("[data-encuesta-pantalla-completa]")),
+    };
+  });
+  assert.equal(r.visibles.length, 2, `${nombre}: Anterior y Siguiente/Enviar`);
+  for (const v of r.visibles) {
+    assert.ok(v.dentro, `${nombre}: «${v.texto}» completo dentro de la pantalla`);
+    assert.ok(v.propio, `${nombre}: nada tapa «${v.texto}»`);
+    assert.ok(v.alto >= 44, `${nombre}: «${v.texto}» tocable`);
+  }
+  assert.ok(r.pregunta >= 24, `${nombre}: pregunta en letra grande (${r.pregunta}px)`);
+  assert.ok(r.opcion >= 17, `${nombre}: opciones en letra grande (${r.opcion}px)`);
+  if (enApp) assert.ok(r.completa, `${nombre}: en pantalla completa`);
+}
+
 async function sinDesborde(pg, nombre) {
   await dormir(150);
   const r = await pg.evaluate(() => ({ ancho: document.documentElement.scrollWidth, ventana: window.innerWidth }));
@@ -270,6 +308,7 @@ try {
   await ana.getByText("Pregunta 1 de 6").waitFor({ timeout: 30000 });
   await ana.getByText("Anónima", { exact: true }).waitFor();
   await sinDesborde(ana, "390-contestar");
+  await pantallaCompletaLegible(ana, "390-contestar");
   await ana.getByRole("button", { name: "9", exact: true }).click();
   await ana.getByText("Pregunta 2 de 6").waitFor();
   await captura(ana, "390-contestar");
@@ -320,6 +359,7 @@ try {
     await dormir(260);
   }
   await sinDesborde(ana, "390-nom035-pregunta");
+  await pantallaCompletaLegible(ana, "390-nom035-pregunta");
   await captura(ana, "390-nom035-pregunta");
   await ana.getByRole("button", { name: "Enviar respuestas" }).click();
   await ana.getByText("¡Gracias por contestar!").waitFor({ timeout: 15000 });
@@ -334,6 +374,7 @@ try {
   await ir(pub, `/encuesta/${S.TOKEN}`);
   await pub.getByText("Pregunta 1 de 6").waitFor({ timeout: 30000 });
   await sinDesborde(pub, "390-liga");
+  await pantallaCompletaLegible(pub, "390-liga", false);
   await captura(pub, "390-liga-personal");
   console.log("PASS: liga personal sin contraseña");
 
