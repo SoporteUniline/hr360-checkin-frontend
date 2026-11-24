@@ -1,4 +1,4 @@
-// Asistencias → Hoy: UN estado por persona a esta hora, en orden de prioridad.
+// Monitor: UN estado por persona a esta hora, en orden de prioridad. Tarjetas, grupos y textos de fila en monitor.mjs.
 // Funciones puras (sin React ni zona del navegador). Probado en scripts/test-asistencias-hoy.mjs.
 //
 // Escala de tiempo: «minutos absolutos» de la hora de pared en la zona de la empresa (fechaHora.minutosAbsolutos):
@@ -84,8 +84,20 @@ export function diaDesdeRegistro(r, aLocal = (v) => v) {
     comida: r?.comida_checada ? { salida: local(r.comida_checada.salida), regreso: local(r.comida_checada.regreso), minutos: r.comida_checada.minutos ?? null } : null,
     permisos: permisos
       .filter((p) => ["llega_tarde", "sale_antes", "sale_regresa"].includes(p?.tipo_horas))
-      .map((p) => ({ tipo: p.tipo_horas, inicio: hhmm(p.hora_inicio), fin: hhmm(p.hora_fin) })),
+      .map((p) => ({ tipo: p.tipo_horas, inicio: hhmm(p.hora_inicio), fin: hhmm(p.hora_fin), motivo: textoOpcional(p.motivo) })),
+    salidaExtra: salidaExtraDe(r?.horas_extra_autorizadas_dia),
   };
+}
+
+const textoOpcional = (v) => (typeof v === "string" && v.trim() ? v.trim() : null);
+
+// Horas extra autorizadas ANTES de que ocurran («se queda hasta las 20:00»). El backend aún no manda este campo:
+// sin él la persona no entra en «Saldrán tarde». Contrato esperado: { hasta: "HH:mm", minutos?, motivo? }.
+export function salidaExtraDe(valor) {
+  const hasta = hhmm(valor?.hasta);
+  if (!hasta) return null;
+  const minutos = Number(valor.minutos);
+  return { hasta, minutos: Number.isFinite(minutos) && minutos > 0 ? Math.round(minutos) : null, motivo: textoOpcional(valor.motivo) };
 }
 
 // Estado del día a la hora `ahora` (minutos absolutos en la zona de la empresa).
@@ -105,6 +117,9 @@ export function estadoHoy(dia, ahora) {
   const llegaTarde = normal ? dia.permisos.find((p) => p.tipo === "llega_tarde" && p.fin) : null;
   const llegaHasta = llegaTarde ? Math.max(entradaProg, enTurno(llegaTarde.fin)) : null;
   const entradaEsperada = llegaHasta ?? entradaProg;
+  let salidaExtraHasta = normal && dia.salidaExtra ? enTurno(dia.salidaExtra.hasta) : null;
+  if (salidaExtraHasta != null && salidaExtraHasta <= salidaProg) salidaExtraHasta += MIN_DIA; // pasa de medianoche
+  if (salidaExtraHasta != null && salidaExtraHasta - salidaProg >= MIN_DIA) salidaExtraHasta = null; // hora ilegible
 
   const tramos = dia.tramos
     .map((t) => ({ desde: marcaEnMinutos(t.entrada), hasta: marcaEnMinutos(t.salida) }))
@@ -112,7 +127,7 @@ export function estadoHoy(dia, ahora) {
     .sort((a, b) => a.desde - b.desde);
   const abierto = dia.hayAbierto ? marcaEnMinutos(dia.abierto) : null;
   const checo = tramos.length > 0 || dia.hayAbierto;
-  const base = { dia, entradaProg, salidaProg, programados, permisoLlegada: llegaHasta };
+  const base = { dia, entradaProg, salidaProg, programados, permisoLlegada: llegaHasta, salidaExtraHasta };
 
   if (!checo) {
     if (!normal) return { ...base, estado: dia.tipo?.clase !== "normal" ? dia.tipo.clase : "sin_horario", grupo: "no_laboran" };
@@ -133,7 +148,9 @@ export function estadoHoy(dia, ahora) {
   const conChecadas = { ...base, primeraEntrada: Number.isFinite(primeraEntrada) ? primeraEntrada : null, trabajados, llegoTarde };
 
   if (dia.hayAbierto) {
-    const debiaSalirHace = salidaProg != null && ahora > salidaProg + AVISO_SIN_SALIDA ? ahora - salidaProg : null;
+    // Con horas extra autorizadas, el aviso «debía salir» cuenta desde la hora autorizada y no desde su horario.
+    const limite = salidaExtraHasta ?? salidaProg;
+    const debiaSalirHace = limite != null && ahora > limite + AVISO_SIN_SALIDA ? ahora - limite : null;
     return { ...conChecadas, estado: "trabajando", grupo: "trabajando", debiaSalirHace, orden: primeraEntrada };
   }
 
