@@ -28,6 +28,7 @@ import { sumarDias } from "@/lib/fechaHora.mjs";
 import { cambiosRegistro } from "@/lib/asistencia/cambios.mjs";
 import { crearFormateadorCambios } from "./CeldaEditado";
 import HorasExtraMovil from "./HorasExtraMovil";
+import EditarDiaAsistencia from "./EditarDiaAsistencia";
 import { quienCuando } from "@/lib/asistencia/historial.mjs";
 import useHorasExtra from "@/hooks/useHorasExtra";
 import {
@@ -145,6 +146,8 @@ export default function MobileEmpleadoDetalle({
 
   // Local copy of registro for optimistic updates after save
   const [localRegistro, setLocalRegistro] = useState(registro);
+  // El panel del día completo (horas extra con horario, comida manual): el mismo que abren Asistencias y Monitor.
+  const [diaCompleto, setDiaCompleto] = useState(null);
 
   const {
     editingRowId,
@@ -319,6 +322,10 @@ export default function MobileEmpleadoDetalle({
   };
 
   return (
+    <>
+    {diaCompleto ? (
+      <EditarDiaAsistencia {...diaCompleto} onCerrar={(huboCambios) => { setDiaCompleto(null); if (huboCambios) mutateAsistencia?.(); }} />
+    ) : null}
     <Drawer open={open} onOpenChange={onOpenChange} direction="bottom">
       <DrawerContent className="h-[95dvh] mt-0 flex flex-col bg-white p-0 rounded-t-3xl overflow-hidden">
         <DrawerTitle className="sr-only">Detalle de empleado</DrawerTitle>
@@ -742,6 +749,19 @@ export default function MobileEmpleadoDetalle({
               </div>
             </div>
 
+            <div className="mx-4 mb-3">
+              <button type="button"
+                onClick={() => {
+                  setDiaCompleto({ idEmpresa: display.id_empresa ?? dataUser?.id_empresa, idEmpleado: display.id_empleado, nombre: display.nombre,
+                    fecha: String(display.fecha).slice(0, 10) });
+                  onOpenChange?.(false);
+                }}
+                className="flex min-h-12 w-full items-center justify-center rounded-xl border border-blue-200 bg-blue-50 px-4 text-sm font-semibold
+                  text-blue-800">
+                Abrir el día: horas extra con horario y comida
+              </button>
+            </div>
+
             <HorasExtraMovil
               key={`${display.id}-${infoExtra.estado}`}
               registro={display}
@@ -828,5 +848,6 @@ export default function MobileEmpleadoDetalle({
         )}
       </DrawerContent>
     </Drawer>
+    </>
   );
 }

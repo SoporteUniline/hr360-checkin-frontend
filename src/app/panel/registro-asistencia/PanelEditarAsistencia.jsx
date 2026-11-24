@@ -1,16 +1,28 @@
 "use client";
 
-// Ventana de la asistencia (clic en la fila): horario, checadas del reloj y edición juntos.
-// Usa el estado y guardado de useAsistenciaActions: solo se envían los campos cambiados.
+// Ventana de la asistencia (clic en la fila): horario, checadas del reloj y edición juntos. La abren Asistencias y Monitor.
+// Usa el estado y guardado de useAsistenciaActions: solo se envían los campos cambiados. Las horas extra con su horario
+// (useHorasExtraDia) se guardan con el mismo botón Guardar, antes que la asistencia; la guardia de cambios sin guardar
+// pregunta al cerrar si hay algo pendiente.
 
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { calcularResumenJornada, formatearMinutos } from "@/utils/asistenciaHoras";
-import { ETIQUETAS_ESTADO, FORMAS_PAGO, estadoHorasExtra } from "@/lib/asistencia/horasExtra.mjs";
+import { puedeAgregarComida } from "@/lib/asistencia/jornada.mjs";
+import useHorasExtraDia from "@/hooks/useHorasExtraDia";
+import { useGuardiaSalida } from "@/components/cambios/CambiosPendientes";
+import EstadoCambios from "@/components/cambios/EstadoCambios";
 import ChecadasDelDia from "./ChecadasDelDia";
 import BotonAgregarComida from "./BotonAgregarComida";
+import HorasExtraDia from "./HorasExtraDia";
+
+// Campos que el panel deja editar (para saber si hay cambios sin guardar).
+const EDITABLES = ["entrada", "salida", "id_tipo_permiso", "asistencia", "goce_sueldo", "hrs_comida", "autorizado_por", "notas", "es_festivo",
+  "pago_triple", "prima_dominical", "porcentaje_dia_festivo"];
+const vacio = (v) => v == null || v === "";
+const igual = (a, b) => String(a ?? "") === String(b ?? "") || (!vacio(a) && !vacio(b) && Number.isFinite(Number(a)) && Number(a) === Number(b));
 
 const si = (v) => Boolean(Number(v));
 
@@ -78,16 +90,26 @@ export default function PanelEditarAsistencia({
   handleRestoreOriginal,
   mutateAsistencia,
 }) {
+  const extra = useHorasExtraDia({ registro, activo: abierto && Boolean(registro), zona, aBaseDeDatos: horas?.aBaseDeDatos });
+  const asistenciaCambiada = Boolean(registro) && EDITABLES.some((c) => Object.hasOwn(datos ?? {}, c) && !igual(datos[c], registro[c]));
+  const hayCambios = Boolean(abierto && registro) && (extra.sucio || asistenciaCambiada);
+  const guardarTodo = async () => {
+    if (!(await extra.guardar())) return false;
+    if (extra.sucio) await mutateAsistencia?.();
+    await handleSaveClick();
+    return true;
+  };
+  const confirmarSalida = useGuardiaSalida({ hayCambios, guardar: guardarTodo });
+  const cerrar = () => confirmarSalida(() => handleCancelEdit());
   if (!registro) return null;
   const { horaLocal, aBaseDeDatos, salidaParaHoras, mismaMarca, salidaDiaSiguiente, fechaBase } = horas;
   const { minutosTrabajados, minutosProgramados, minutosDiferencia } = calcularResumenJornada(datos);
-  const extra = estadoHorasExtra(datos, zona);
   const corta = (h) => String(h ?? "").slice(0, 5);
   const horario = [registro.hora_entrada_programada, registro.hora_salida_programada].map(corta).filter(Boolean).join("–");
   const comidaHorario = [registro.hora_salida_comida_programada, registro.hora_regreso_comida_programada].map(corta).filter(Boolean).join("–");
 
   return (
-    <Dialog open={abierto} onOpenChange={(v) => !v && handleCancelEdit()}>
+    <Dialog open={abierto} onOpenChange={(v) => !v && cerrar()}>
       <DialogContent className="flex max-h-[90vh] flex-col gap-0 overflow-hidden bg-white p-0 sm:max-w-[960px]" data-no-row-click>
         <DialogHeader className="shrink-0 border-b border-slate-200 px-6 py-4 text-left">
           <DialogTitle>{registro.nombre} {registro.apellido_paterno}</DialogTitle>
@@ -120,11 +142,9 @@ export default function PanelEditarAsistencia({
             <ChecadasDelDia empleado={registro} activo={abierto} mutateAsistencia={mutateAsistencia} />
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-[11px] text-slate-400">Con el lápiz corriges una checada; la hora original del reloj queda tachada.</p>
-              {/* Agregar comida: disponible cuando el día tiene entrada y salida y un solo tramo
-                  (o el servidor aún no manda tramos). Se valida otra vez en el servidor. */}
-              {/* Si ya checó su comida («Salir a comer»), no se ofrece agregarla. */}
-              {registro.entrada && registro.salida && !registro.comida_checada?.salida &&
-                (!Array.isArray(registro.tramos_checadas) || registro.tramos_checadas.length <= 1) && (
+              {/* Agregar comida: con entrada y salida, sin comida (checada o manual) y sin una pausa real dentro de su comida.
+                  El servidor aplica la misma regla. */}
+              {puedeAgregarComida(registro) && (
                 <BotonAgregarComida
                   variante="boton"
                   registro={registro}
@@ -184,60 +204,6 @@ export default function PanelEditarAsistencia({
 
           </div>
           <div className="space-y-5">
-          <Seccion titulo="Horas extra">
-            {/* Solo se editan si ese día hay tiempo extra (o ya estaban autorizadas, para poder quitarlas). */}
-            {extra.estado === "sin" && !Number(datos.hrs_extra) ? (
-              <p className="rounded-xl border border-dashed border-slate-200 px-3 py-2.5 text-sm text-slate-500">
-                Sin horas extra este día: no salió después de su horario.
-              </p>
-            ) : (
-              <>
-            <Dato
-              etiqueta={ETIQUETAS_ESTADO[extra.estado]}
-              valor={extra.minutos > 0 ? formatearMinutos(extra.minutos) : "—"}
-            />
-            <div className="grid grid-cols-2 gap-3">
-              <Campo label="Autorizadas">
-                <SiNo valor={datos.hrs_extra} onChange={(v) => handleFieldChange("hrs_extra", v)} />
-              </Campo>
-              <Campo label="Forma de pago">
-                <select
-                  aria-label="Forma de pago"
-                  value={datos.forma_pago_extras || ""}
-                  onChange={(e) => handleFieldChange("forma_pago_extras", e.target.value || null)}
-                  className="h-9 rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-800"
-                >
-                  <option value="">—</option>
-                  {FORMAS_PAGO.map((f) => <option key={f}>{f}</option>)}
-                </select>
-              </Campo>
-            </div>
-            <Campo label="Autorizadas por">
-              <Select
-                value={datos.extras_autorizadas_por ? String(datos.extras_autorizadas_por) : ""}
-                onValueChange={(v) => handleFieldChange("extras_autorizadas_por", v)}
-              >
-                <SelectTrigger aria-label="Autorizadas por"><SelectValue placeholder="Autorizadas por" /></SelectTrigger>
-                <SelectContent className="max-h-60 overflow-y-auto">
-                  {empleados?.map((emp) => (
-                    <SelectItem key={emp.id_empleado} value={String(emp.id_empleado)}>
-                      {emp.nombre} {emp.apellido_paterno}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Campo>
-            <Campo label="Nota de horas extra">
-              <Textarea
-                rows={2}
-                value={datos.notas_hrs_extra || ""}
-                onChange={(e) => handleFieldChange("notas_hrs_extra", e.target.value)}
-              />
-            </Campo>
-              </>
-            )}
-          </Seccion>
-
           <Seccion titulo="Registro">
             <div className="grid grid-cols-2 gap-3">
               <Campo label="Tipo de registro" nota="Asistió y Goce los define el tipo.">
@@ -313,6 +279,12 @@ export default function PanelEditarAsistencia({
           </Seccion>
           </div>
           </div>
+          {/* Ancho completo: filas por día con desde, hasta, horas y motivo (Dia.dc.html). */}
+          <div className="mt-6 border-t border-slate-100 pt-5">
+            <Seccion titulo="Horas extra">
+              <HorasExtraDia extra={extra} empleados={empleados} />
+            </Seccion>
+          </div>
         </div>
 
         <DialogFooter className="shrink-0 flex-row items-center justify-between gap-2 border-t border-slate-200 px-6 py-3 sm:justify-between">
@@ -324,14 +296,15 @@ export default function PanelEditarAsistencia({
               </button>
             )}
           </div>
-          <div className="flex gap-2">
-            <button type="button" onClick={handleCancelEdit} disabled={isSaving}
+          <div className="flex items-center gap-2">
+            <EstadoCambios hayCambios={hayCambios} />
+            <button type="button" onClick={cerrar} disabled={isSaving || extra.guardando}
               className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
               Cancelar
             </button>
-            <button type="button" onClick={handleSaveClick} disabled={isSaving}
+            <button type="button" onClick={guardarTodo} disabled={isSaving || extra.guardando}
               className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
-              {isSaving ? "Guardando…" : "Guardar"}
+              {isSaving || extra.guardando ? "Guardando…" : "Guardar"}
             </button>
           </div>
         </DialogFooter>
