@@ -5,7 +5,10 @@ import {
   agregarComida, agregarRegistro, aMin, claseEstado, resumenServidor, conAutoriza, cuerpoPut, desdeApi, diaFila, durTexto, editado, errorDe, errores,
   erroresPorRenglon, estadoFila, extraFila, horarioNormal, minDeCampo, minutosProgramados, nuevoRenglon, ordenar,
   origenTexto, etiquetaQuitar, planMasivo, puedeComida, quitarORestaurar, requisitoEstado, resumen, separarExtra, textoConIcono, tiposEstadoDia, gruposEstadoDia,
+  esMotivoOtro, errorMotivoOtro, motivoOtro, textoMotivoOtro, MAX_TEXTO_OTRO,
 } from "../src/lib/asistencia/relojDia.mjs";
+import { CAMPOS_HORA, ajustarPorPermiso, errorHoraPermiso, horasDeChecadas, horasPermiso, horasValidas } from "../src/lib/asistencia/horaPermiso.mjs";
+import { minutosNoTrabajados } from "../src/lib/asistencia/tiposGoce.mjs";
 
 const F = "2026-11-23";
 const Z = "America/Mexico_City";
@@ -170,4 +173,74 @@ test("fila sin checadas: todos los tipos del catálogo; los que cuentan como asi
   assert.deepEqual(g.sinHoras.map((t) => t.id), [2, 6, 7]);
   assert.deepEqual(g.conHoras.map((t) => t.id), [4, 5]);
   assert.deepEqual(g.sinHoras.map(requisitoEstado), [null, null, "motivo"]);
+});
+
+// ——— (24/11/2026) Hora obligatoria del permiso parcial y motivo de corrección «Otro» ———
+const tramo = (rs) => rs.filter((r) => !r.anulado).map((r) => [r.ini, r.fin, r.concepto, r.motivo]).sort((a, b) => a[0] - b[0]);
+const hm = (h) => aMin(h);
+
+test("Salida temprano: sin hora (horario normal completo) no deja guardar; a las 2:00 p.m. ajusta la última salida", () => {
+  const normal = horarioNormal(horario, "olvido");
+  const min0 = minutosNoTrabajados("salida", normal, horario);
+  assert.equal(min0, 0);
+  const horas0 = horasPermiso({}, "salida", normal, horario);
+  assert.deepEqual(horas0, { desde: "", hasta: "" });
+  assert.equal(errorHoraPermiso({ nombre: "Salida temprano", alcance: "salida", horas: horas0, horario, minutos: min0 }),
+    "Salida temprano: indica a qué hora salió (debe ser antes de las 4:00 p.m.)");
+  const aj = ajustarPorPermiso(normal, "salida", { desde: "15:00" }, horario);
+  assert.deepEqual(tramo(aj), [[hm("09:00"), hm("13:00"), "jornada", "olvido"], [hm("13:00"), hm("14:00"), "comida", "olvido"],
+    [hm("14:00"), hm("15:00"), "jornada", "permiso"]]);
+  assert.equal(minutosNoTrabajados("salida", aj, horario), 60);
+  assert.equal(errorHoraPermiso({ nombre: "Salida temprano", alcance: "salida", horas: { desde: "15:00" }, horario, minutos: 60 }), "");
+  // Sin checadas: horario normal ya ajustado, salida a las 2:00 p.m. (justo al regresar de comer: no hay tramo después).
+  assert.deepEqual(tramo(ajustarPorPermiso([], "salida", { desde: "14:00" }, horario)),
+    [[hm("09:00"), hm("13:00"), "jornada", "permiso"], [hm("13:00"), hm("14:00"), "comida", "permiso"]]);
+  // Fuera de la jornada: error aunque haya minutos.
+  assert.match(errorHoraPermiso({ nombre: "Salida temprano", alcance: "salida", horas: { desde: "17:00" }, horario, minutos: 60 }), /antes de las 4:00 p\.m\./);
+  assert.equal(horasValidas("salida", { desde: "16:30" }, horario), false);
+  // El motivo que el usuario eligió se respeta.
+  const elegido = normal.map((r, i) => (i === 2 ? { ...r, motivo: "fuera", motivoElegido: true } : r));
+  const aj2 = ajustarPorPermiso(elegido, "salida", { desde: "15:30" }, horario);
+  assert.deepEqual(tramo(aj2).at(-1), [hm("14:00"), hm("15:30"), "jornada", "fuera"]);
+});
+
+test("sin checadas: se carga el horario normal ya ajustado; Entrada tarde 11:00 ajusta la entrada", () => {
+  const aj = ajustarPorPermiso([], "entrada", { hasta: "11:00" }, horario);
+  assert.deepEqual(tramo(aj), [[hm("11:00"), hm("13:00"), "jornada", "permiso"], [hm("13:00"), hm("14:00"), "comida", "permiso"],
+    [hm("14:00"), hm("16:00"), "jornada", "permiso"]]);
+  assert.equal(minutosNoTrabajados("entrada", aj, horario), 120);
+  // Del reloj: la checada se corrige (no se borra) con el motivo «permiso».
+  const reloj = cargar([api(1, "09:05", "13:00"), api(2, "13:00", "14:00", { concepto: "comida" }), api(3, "14:00", "16:00")]);
+  const aj2 = ajustarPorPermiso(reloj, "entrada", { hasta: "11:00" }, horario);
+  assert.deepEqual(aj2.find((r) => r.id === 1), { ...reloj[0], ini: hm("11:00"), motivo: "permiso" });
+  assert.deepEqual(horasDeChecadas("entrada", aj2, horario), { hasta: "11:00" });
+  assert.equal(ajustarPorPermiso(reloj, "entrada", { hasta: "08:00" }, horario), reloj, "fuera de la jornada no ajusta");
+});
+
+test("Salir en medio turno 12:00–1:00 parte el renglón que cubre ese rango", () => {
+  const sinComida = { entrada: "09:00", salida: "16:00" };
+  const reloj = cargar([api(1, "09:00", "16:00")]);
+  const aj = ajustarPorPermiso(reloj, "medio", { desde: "12:00", hasta: "13:00" }, sinComida);
+  assert.deepEqual(tramo(aj), [[hm("09:00"), hm("12:00"), "jornada", "permiso"], [hm("13:00"), hm("16:00"), "jornada", "permiso"]]);
+  assert.equal(minutosNoTrabajados("medio", aj, sinComida), 60);
+  assert.deepEqual(horasDeChecadas("medio", aj, sinComida), { desde: "12:00", hasta: "13:00" });
+  assert.equal(horasValidas("medio", { desde: "13:00", hasta: "12:00" }, sinComida), false);
+  assert.match(errorHoraPermiso({ nombre: "Salir en medio turno", alcance: "medio", horas: { desde: "", hasta: "" }, horario: sinComida, minutos: 0 }),
+    /^Salir en medio turno: indica a qué hora salió y a qué hora regresó \(entre las 9:00 a\.m\. y las 4:00 p\.m\.\)$/);
+  assert.deepEqual(CAMPOS_HORA.medio.map(([, e]) => e), ["Salió a las", "Regresó a las"]);
+});
+
+test("motivo de corrección «Otro»: viaja como «otro: <texto>», al menos 3 letras, 34 como máximo", () => {
+  assert.equal(motivoOtro("Junta en planta"), "otro: Junta en planta");
+  assert.equal(motivoOtro("x".repeat(50)).length, 40);
+  assert.equal(esMotivoOtro("otro: algo") && esMotivoOtro("otro") && !esMotivoOtro("otros"), true);
+  assert.equal(textoMotivoOtro("otro: Junta"), "Junta");
+  assert.equal(errorMotivoOtro("otro: ab"), "Escribe el motivo (al menos 3 letras).");
+  assert.equal(errorMotivoOtro("otro: Junta"), "");
+  const r = { ...nuevoRenglon(540, 600, "jornada", "otro: "), k: "x" };
+  assert.equal(errorDe(r, [r]), "Escribe el motivo (al menos 3 letras).");
+  const ok = { ...r, motivo: "otro:  Junta en planta " };
+  assert.equal(errorDe(ok, [ok]), "");
+  assert.equal(cuerpoPut([ok], { fecha: F, zona: Z }).registros[0].motivo, "otro: Junta en planta");
+  assert.equal(MAX_TEXTO_OTRO, 34);
 });

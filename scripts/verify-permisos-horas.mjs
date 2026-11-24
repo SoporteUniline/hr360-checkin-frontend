@@ -6,6 +6,7 @@ import { createHmac, randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { createRequire } from "node:module";
+import { elegir, textosOpciones, valorDe } from "./lib/desplegable.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE_PATH || "playwright");
@@ -126,15 +127,15 @@ try {
     await page.getByRole("option", { name: "Empresa prueba" }).click();
   }
   // (24/11/2026) «Qué pasó» + «Motivo» (verify-quepaso-motivo.mjs): un tipo propio marcado como permiso se sigue pidiendo.
-  await dialogo.getByLabel("Qué pasó").selectOption({ label: "Permiso personal" });
+  await elegir(dialogo.getByLabel("Qué pasó"), { label: "Permiso personal" });
   await dialogo.getByText("Juan Prueba").waitFor({ timeout: 10000 });
   await dialogo.getByRole("checkbox").first().check();
   await dialogo.locator('input[type="date"]').fill("2026-11-24");
-  await dialogo.getByLabel("Tipo de permiso por horas").selectOption("sale_regresa");
+  await elegir(dialogo.getByLabel("Tipo de permiso por horas"), "sale_regresa");
   await dialogo.getByLabel("Desde qué hora").fill("10:00");
   await dialogo.getByLabel("Hasta qué hora").fill("12:00");
   await dialogo.getByRole("radio", { name: /Se repone/ }).click();
-  await dialogo.getByLabel("Motivo", { exact: true }).selectOption({ label: "Visita al médico" });
+  await elegir(dialogo.getByLabel("Motivo", { exact: true }), { label: "Visita al médico" });
   if (process.env.CAPTURAS) await page.screenshot({ path: process.env.CAPTURAS + "/permiso-horas-form.png" });
   await dialogo.getByRole("button", { name: "Guardar" }).click();
   for (let i = 0; i < 60 && !posts.length; i++) await dormir(100);

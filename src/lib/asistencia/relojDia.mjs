@@ -117,6 +117,18 @@ export function minDeCampo(valor, { referencia = null, nocturno = false } = {}) 
   return m;
 }
 
+// Motivo de corrección «Otro (escribe el motivo)»: viaja como «otro: <texto>» (motivo_correccion VARCHAR(40) en el
+// servidor: 6 + 34 letras como máximo; al menos 3 letras).
+export const MAX_TEXTO_OTRO = 34;
+export const esMotivoOtro = (m) => /^otro(:|$)/.test(String(m ?? ""));
+export const textoMotivoOtro = (m) => String(m ?? "").replace(/^otro:? ?/, "");
+export const motivoOtro = (texto) => `otro: ${String(texto ?? "").slice(0, MAX_TEXTO_OTRO)}`;
+const motivoFinal = (m) => (esMotivoOtro(m) ? `otro: ${textoMotivoOtro(m).trim()}` : m);
+export function errorMotivoOtro(m) {
+  if (!esMotivoOtro(m)) return "";
+  return (textoMotivoOtro(m).match(/\p{L}/gu) ?? []).length < 3 ? "Escribe el motivo (al menos 3 letras)." : "";
+}
+
 // Cuerpo exacto del PUT /:id/reloj, en el mismo orden en que se ven los renglones (los errores vuelven por índice).
 export function cuerpoPut(renglones, { fecha, zona } = {}) {
   return {
@@ -125,7 +137,7 @@ export function cuerpoPut(renglones, { fecha, zona } = {}) {
       entrada: r.ini == null ? null : aBD(fecha, r.ini, zona),
       salida: r.fin == null ? null : aBD(fecha, r.fin, zona),
       concepto: r.concepto,
-      motivo: r.motivo ? r.motivo : null,
+      motivo: r.motivo ? motivoFinal(r.motivo) : null,
       anulado: Boolean(r.anulado),
       id_autoriza: r.autoriza_no ? null : r.id_autoriza ?? null,
       autoriza_no: Boolean(r.autoriza_no),
@@ -162,6 +174,7 @@ export const conAutoriza = (valor) => (valor === "no" ? { autoriza_no: true, id_
 const sinAutoriza = (r) => r.id_autoriza == null && !r.autoriza_no;
 
 export function errorDe(r, todos) {
+  if (errorMotivoOtro(r.motivo)) return errorMotivoOtro(r.motivo);
   if (r.anulado) return !r.anuladoAntes && !r.motivo ? "Para anular una checada del reloj elige el motivo." : "";
   if (r.ini == null) return "Falta la entrada.";
   if (r.fin == null && (editado(r) || r.origen === "manual")) return "Falta la salida.";

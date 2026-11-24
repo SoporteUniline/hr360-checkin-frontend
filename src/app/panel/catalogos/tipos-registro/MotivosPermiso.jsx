@@ -14,20 +14,30 @@ import axios from "@/lib/axios";
 import { fetcherWithToken, swr_config } from "@/lib/fetcher";
 import { GOCES, HORAS } from "@/lib/asistencia/tiposGoce.mjs";
 import { normalizarMotivo } from "@/lib/asistencia/quePasoMotivo.mjs";
+import SelectConIconos from "@/components/ui/SelectConIconos";
+import { ICONO_CAMBIA, ICONO_GOCE, ICONO_HORAS, iconoMotivo, textoLimpio } from "@/components/asistencia/iconosAsistencia";
 
 export const CLAVE_MOTIVOS = "/checador/motivos-permiso";
 const CAMPO = "h-9 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-2.5 text-[13.5px] text-slate-900 "
   + "focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:bg-slate-50 max-sm:h-11 max-sm:text-base";
-const COLUMNAS = "sm:grid-cols-[minmax(0,1fr)_130px_250px_160px_40px]";
+const COLUMNAS = "sm:grid-cols-[minmax(0,1fr)_150px_290px_190px_40px]";
 const NUEVO = { nombre: "", goce: "sin", horas: "reponen", cambia: true };
+const OP_GOCE = GOCES.map(([v, t]) => ({ valor: v, texto: t, ...ICONO_GOCE[v] }));
+const OP_HORAS = HORAS.map(([v, t]) => ({ valor: v, texto: t, ...ICONO_HORAS[v] }));
+const OP_CAMBIA = [{ valor: "1", texto: "Sí, RH lo cambia", ...ICONO_CAMBIA.si }, { valor: "0", texto: "No", ...ICONO_CAMBIA.no }];
 
 function Campo({ etiqueta, children }) {
   return (
-    <label className="flex min-w-0 flex-col gap-1">
-      <span className="text-[12px] font-medium text-slate-500 sm:sr-only">{etiqueta}</span>
+    <div className="flex min-w-0 flex-col gap-1">
+      <span className="text-[12px] font-medium text-slate-500 sm:sr-only" aria-hidden>{etiqueta}</span>
       {children}
-    </label>
+    </div>
   );
+}
+
+function IconoMotivo({ nombre, otro }) {
+  const { icono: I, tono } = iconoMotivo(nombre, { otro });
+  return <span aria-hidden className={`inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${tono}`}><I className="h-3.5 w-3.5" /></span>;
 }
 
 export default function MotivosPermiso({ empresa = "", variasEmpresas = false }) {
@@ -87,28 +97,22 @@ export default function MotivosPermiso({ empresa = "", variasEmpresas = false })
           <div key={m.id} data-motivo={m.nombre}
             className={`grid grid-cols-1 items-center gap-2.5 border-b border-slate-100 py-2.5 last:border-b-0 ${COLUMNAS}`}>
             <span className="flex min-w-0 flex-wrap items-center gap-1.5 text-[13.5px] font-medium text-slate-900">
-              <span className="break-words">{m.nombre}</span>
+              <IconoMotivo nombre={m.nombre} otro={m.otro} />
+              <span className="break-words">{textoLimpio(m.nombre)}</span>
               {m.global ? <Lock className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-label="Del sistema: el nombre no cambia" /> : null}
               {m.personalizado ? <span data-personalizado className="rounded-full bg-blue-50 px-2 py-0.5 text-[12px] font-medium text-blue-700">Personalizado</span> : null}
             </span>
             <Campo etiqueta="Goce">
-              <select aria-label={`Goce de ${m.nombre}`} value={m.goce ?? "sin"} disabled={guardando} className={CAMPO}
-                onChange={(e) => editar(m, { goce: e.target.value }, `«${m.nombre}»: ${e.target.value === "con" ? "con" : "sin"} goce.`)}>
-                {GOCES.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
-              </select>
+              <SelectConIconos aria={`Goce de ${m.nombre}`} valor={m.goce ?? "sin"} disabled={guardando} opciones={OP_GOCE}
+                onCambio={(v) => editar(m, { goce: v }, `«${m.nombre}»: ${v === "con" ? "con" : "sin"} goce.`)} />
             </Campo>
             <Campo etiqueta="Horas no trabajadas">
-              <select aria-label={`Horas no trabajadas de ${m.nombre}`} value={m.horas ?? "reponen"} disabled={guardando} className={CAMPO}
-                onChange={(e) => editar(m, { horas: e.target.value }, `«${m.nombre}»: horas actualizadas.`)}>
-                {HORAS.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
-              </select>
+              <SelectConIconos aria={`Horas no trabajadas de ${m.nombre}`} valor={m.horas ?? "reponen"} disabled={guardando} opciones={OP_HORAS}
+                onCambio={(v) => editar(m, { horas: v }, `«${m.nombre}»: horas actualizadas.`)} />
             </Campo>
             <Campo etiqueta="Se cambia al aplicar">
-              <select aria-label={`Se cambia al aplicar ${m.nombre}`} value={m.cambia ? "1" : "0"} disabled={guardando} className={CAMPO}
-                onChange={(e) => editar(m, { cambia_al_aplicar: Number(e.target.value) }, `«${m.nombre}»: actualizado.`)}>
-                <option value="1">Sí, RH lo cambia</option>
-                <option value="0">No (🔒)</option>
-              </select>
+              <SelectConIconos aria={`Se cambia al aplicar ${m.nombre}`} valor={m.cambia ? "1" : "0"} disabled={guardando} opciones={OP_CAMBIA}
+                onCambio={(v) => editar(m, { cambia_al_aplicar: Number(v) }, `«${m.nombre}»: actualizado.`)} />
             </Campo>
             <span className="flex justify-end">
               <button type="button" disabled={guardando} onClick={() => ocultar(m, true)} aria-label={`Ocultar ${m.nombre}`} title="Ocultar"
@@ -126,25 +130,18 @@ export default function MotivosPermiso({ empresa = "", variasEmpresas = false })
           <input aria-label="Nuevo motivo" placeholder="Ej. Boda, Mudanza…" value={nuevo.nombre} maxLength={120}
             onChange={(e) => setNuevo((n) => ({ ...n, nombre: e.target.value }))} onKeyDown={(e) => { if (e.key === "Enter") agregar(); }} className={CAMPO} />
         </label>
-        <label className="flex min-w-0 flex-col gap-1">
-          <span className="text-[12px] font-medium text-slate-500">Goce</span>
-          <select aria-label="Goce del nuevo motivo" value={nuevo.goce} onChange={(e) => setNuevo((n) => ({ ...n, goce: e.target.value }))} className={CAMPO}>
-            {GOCES.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
-          </select>
-        </label>
-        <label className="flex min-w-0 flex-col gap-1">
-          <span className="text-[12px] font-medium text-slate-500">Horas no trabajadas</span>
-          <select aria-label="Horas del nuevo motivo" value={nuevo.horas} onChange={(e) => setNuevo((n) => ({ ...n, horas: e.target.value }))} className={CAMPO}>
-            {HORAS.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
-          </select>
-        </label>
-        <label className="flex min-w-0 flex-col gap-1">
-          <span className="text-[12px] font-medium text-slate-500">Se cambia al aplicar</span>
-          <select aria-label="Se cambia al aplicar el nuevo motivo" value={nuevo.cambia ? "1" : "0"} onChange={(e) => setNuevo((n) => ({ ...n, cambia: e.target.value === "1" }))} className={CAMPO}>
-            <option value="1">Sí, RH lo cambia</option>
-            <option value="0">No (🔒)</option>
-          </select>
-        </label>
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="text-[12px] font-medium text-slate-500" aria-hidden>Goce</span>
+          <SelectConIconos aria="Goce del nuevo motivo" valor={nuevo.goce} onCambio={(v) => setNuevo((n) => ({ ...n, goce: v }))} opciones={OP_GOCE} />
+        </div>
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="text-[12px] font-medium text-slate-500" aria-hidden>Horas no trabajadas</span>
+          <SelectConIconos aria="Horas del nuevo motivo" valor={nuevo.horas} onCambio={(v) => setNuevo((n) => ({ ...n, horas: v }))} opciones={OP_HORAS} />
+        </div>
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="text-[12px] font-medium text-slate-500" aria-hidden>Se cambia al aplicar</span>
+          <SelectConIconos aria="Se cambia al aplicar el nuevo motivo" valor={nuevo.cambia ? "1" : "0"} onCambio={(v) => setNuevo((n) => ({ ...n, cambia: v === "1" }))} opciones={OP_CAMBIA} />
+        </div>
         <button type="button" onClick={agregar} disabled={guardando || !nuevo.nombre.trim() || existe(nuevo.nombre)} aria-label="Agregar"
           className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-blue-600 bg-blue-600 px-2 text-[13.5px] font-semibold text-white hover:bg-blue-700 disabled:opacity-50 max-sm:h-11">
           <Plus className="h-4 w-4" aria-hidden /><span className="sm:sr-only">Agregar</span>
