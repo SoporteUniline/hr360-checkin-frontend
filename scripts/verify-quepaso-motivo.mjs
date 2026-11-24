@@ -316,7 +316,9 @@ try {
     "Vacaciones", "Incapacidad IMSS", "Día de descanso", "Suspensión disciplinaria"], "sin tipos ocultos ni del sistema");
   assert.equal(await page.getByLabel("Motivo de Diego León").count(), 0, "sin tipo elegido no hay motivo");
   // Solo lectura: «⌚ Entrada tarde · Visita al médico · 2 h · las repone».
-  assert.equal(await filaDe("Marta Díaz").locator("[data-estado-motivo]").innerText(), "⌚ Entrada tarde · Visita al médico · 2 h · las repone");
+  // (24/11/2026) Estado y Motivo son columnas separadas: qué pasó | por qué y cómo se paga.
+  assert.equal(await filaDe("Marta Díaz").locator("[data-columna-estado]").innerText(), "⌚ Entrada tarde");
+  assert.match(await filaDe("Marta Díaz").locator("[data-columna-motivo]").innerText(), /^Visita al médico · 2 h · las repone/);
   // Guardados: Pablo (injustificada, con su acta) y Raúl (Permiso personal, sin goce).
   assert.equal(await valorDe(page.getByLabel("Qué pasó de Pablo Soto")), "2");
   assert.equal(await valorDe(page.getByLabel("Motivo de Pablo Soto")), "");
@@ -327,9 +329,11 @@ try {
   // Registro viejo con un tipo oculto: se ve tal cual.
   assert.equal(await page.getByLabel("Qué pasó de Sofía Ramos").innerText(), "Visita al Médico");
   await parAlineado(filaDe("Raúl Vega"), "fila Raúl");
-  // La columna fija «Estado · motivo» no crece de más (la tabla ya se desplaza a lo ancho con sus columnas fijas).
-  const anchoEstado = await page.locator("thead th", { hasText: "Estado · motivo" }).evaluate((th) => th.getBoundingClientRect().width);
-  assert.ok(anchoEstado <= 320, `columna Estado · motivo de ${anchoEstado}px`);
+  // Las columnas fijas «Estado» y «Motivo» no crecen de más (la tabla ya se desplaza a lo ancho con sus columnas fijas).
+  for (const col of ["Estado", "Motivo"]) {
+    const ancho = await page.locator("thead th", { hasText: new RegExp(`^${col}`) }).first().evaluate((th) => th.getBoundingClientRect().width);
+    assert.ok(ancho <= 260, `columna ${col} de ${ancho}px`);
+  }
   await sinDesborde(page.locator("html"), "asistencias 1440");
   await celdasSinRecorte(page, "asistencias 1440");
   await selectsSinRecorte(page.locator("tbody"), "asistencias 1440");
