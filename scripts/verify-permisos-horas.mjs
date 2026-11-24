@@ -63,7 +63,9 @@ try {
     if (req.method() === "OPTIONS") return json({});
     const p = url.pathname;
     if (p.endsWith("/users/verify/token")) return json({ user: usuario });
-    if (p.endsWith("/checador/tiposPermiso")) return json({ tiposPermiso: [{ id: 14, nombre: "Asistencia" }, { id: 30, nombre: "Permiso personal", es_permiso: 1 }] });
+    if (p.endsWith("/checador/tiposPermiso")) return json({ tiposPermiso: [{ id: 14, nombre: "Asistencia" }, { id: 30, nombre: "Permiso personal", es_permiso: 1, goce_sueldo: 1 }] });
+    // (24/11/2026) Motivo del catálogo de motivos (tipos de registro con goce; ver verify-tipos-goce.mjs).
+    if (p.endsWith("/checador/motivos-permiso")) return json({ ok: true, motivos: [{ id: 1, nombre: "Visita al médico", global: true }, { id: 6, nombre: "Otro", global: true }] });
     if (p.endsWith("/checador/asistencias") && req.method() === "GET") return json({ registros, total: registros.length, page: 1, aplicarPaginacion: false });
     if (/\/checador\/asistencias\/\d+$/.test(p) && req.method() === "PUT") {
       const cuerpo = JSON.parse(req.postData() || "{}");
@@ -132,12 +134,14 @@ try {
   await dialogo.getByLabel("Desde qué hora").fill("10:00");
   await dialogo.getByLabel("Hasta qué hora").fill("12:00");
   await dialogo.getByRole("radio", { name: /Se repone/ }).click();
+  await dialogo.getByLabel("Motivo del permiso").selectOption("Visita al médico");
   if (process.env.CAPTURAS) await page.screenshot({ path: process.env.CAPTURAS + "/permiso-horas-form.png" });
   await dialogo.getByRole("button", { name: "Guardar" }).click();
   for (let i = 0; i < 60 && !posts.length; i++) await dormir(100);
   assert.deepEqual(posts[0], {
     id_empleado: 300, id_tipo_permiso: 30, motivo: null, modalidad: "horas", tipo_horas: "sale_regresa", tratamiento: "repone",
     hora_inicio: "10:00", hora_fin: "12:00", fecha_inicio: "2026-11-24", fecha_fin: "2026-11-24",
+    motivo_permiso: "Visita al médico", goce: "con",
   });
 
   // 3) Cuenta de horas en la ficha: debe 3 h, condonar 1 h con nota.

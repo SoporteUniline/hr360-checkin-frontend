@@ -27,7 +27,7 @@ const estado = { periodos: [], ediciones: [], posts: [], asistencias: [], person
 const recibo = () => ({
   id: 11, id_empleado: 15, estado: "vigente", envio_estado: null, transferencia_editada: null,
   datos: { empleado: { nombre: "Ana Torres", puesto: "Empacadora", medio_pago: "Mixto", monto_transferencia: 1000 }, resumen: { diasPagados: 4.67, diasRango: 7, diasTrabajados: 4, minTrabajados: 2040, minExtra: 120, minDobles: 120, minTriples: 0, faltas: 2, sinGoce: 0, retardos: 1, domingos: 0, festivosTrab: 0, sueldo: 210000, diario: 30000, periodoPago: "Semanal" }, alertas: [],
-    dias: [["2026-11-16", "trabajado", 600, 120, false], ["2026-11-17", "trabajado", 480, 0, false], ["2026-11-18", "trabajado", 480, 0, true], ["2026-11-19", "trabajado", 480, 0, false], ["2026-11-20", "falta", 0, 0, false], ["2026-11-21", "falta", 0, 0, false], ["2026-11-22", "descanso", 0, 0, false]].map(([fecha, estado, min, extra, retardo]) => ({ fecha, estado, min, extra, retardo, programado: estado === "descanso" ? 0 : 480, entrada: min ? (retardo ? "09:10" : "09:00") : null, salida: min ? (extra ? "19:00" : "17:00") : null, pagos: extra ? [{ texto: "2 h extra al doble", importe: 15000 }] : undefined })) },
+    dias: [["2026-11-16", "trabajado", 600, 120, false], ["2026-11-17", "trabajado", 480, 0, false], ["2026-11-18", "trabajado", 480, 0, true], ["2026-11-19", "trabajado", 480, 0, false], ["2026-11-20", "falta", 0, 0, false], ["2026-11-21", "falta", 0, 0, false], ["2026-11-22", "descanso", 0, 0, false]].map(([fecha, estado, min, extra, retardo]) => ({ fecha, estado, min, extra, retardo, programado: estado === "descanso" ? 0 : 480, entrada: min ? (retardo ? "09:10" : "09:00") : null, salida: min ? (extra ? "19:00" : "17:00") : null, pagos: extra ? [{ texto: "2 h extra al doble", importe: 15000 }] : fecha === "2026-11-17" ? [{ texto: "2 h no trabajadas · se descuentan", importe: -12000 }] : undefined })) },
   total_percepciones: 1600, total_descuentos: 0, neto: 1600, transferencia: 1000, efectivo: 600,
   lineas: [
     { clave: "sueldo", concepto: "Sueldo (días pagados)", tipo: "percepcion", cantidad: 4.67, importe: 1400, importe_sugerido: 1400, editado: 0, origen: "calculo" },
@@ -142,6 +142,10 @@ try {
   for (const t of ["Trabajó", "Retardo", "09:10", "17:00", "8 h"]) assert.ok((await mie.innerText()).includes(t), `miércoles con ${t}`);
   const lun = await asistencia.getByRole("row", { name: /lun 16/ }).innerText();
   for (const t of ["2 h extra autorizada", "+$150.00", "2 h extra al doble"]) assert.ok(lun.includes(t), `lunes con ${t}`);
+  // (24/11/2026) Descuento de horas no trabajadas («se descuentan»): renglón de pagos con importe negativo, en rojo y con «−».
+  const mar = asistencia.getByRole("row", { name: /mar 17/ });
+  assert.ok((await mar.innerText()).includes("−$120.00 2 h no trabajadas · se descuentan"), await mar.innerText());
+  assert.match(await mar.locator("[data-pago-dia] b").getAttribute("class"), /text-rose-700/);
   assert.ok((await asistencia.getByRole("row", { name: /vie 20/ }).innerText()).includes("Falta"));
   await asistencia.getByText(/\$2,100\.00 semanal × 4\.67 días pagados ÷ 7 días del periodo/).waitFor();
   await captura(page, "nomina-desplegado");

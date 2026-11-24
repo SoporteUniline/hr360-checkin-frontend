@@ -66,9 +66,13 @@ const filas = () => [
 ];
 const tiposPermiso = [
   { id: 1, nombre: "Asistencia", cuenta_como_asistencia: 1 }, { id: 2, nombre: "Falta injustificada", cuenta_como_asistencia: 0 },
-  { id: 3, nombre: "Falta justificada", cuenta_como_asistencia: 0 }, { id: 4, nombre: "Incapacidad IMSS", cuenta_como_asistencia: 0 },
-  { id: 5, nombre: "Día de descanso", cuenta_como_asistencia: 0 }, { id: 6, nombre: "Vacaciones", cuenta_como_asistencia: 0 },
+  { id: 3, nombre: "Falta justificada", cuenta_como_asistencia: 0, goce_sueldo: 0, cambia_al_aplicar: 1 },
+  { id: 4, nombre: "Incapacidad IMSS", cuenta_como_asistencia: 0, fijo_ley: 1 },
+  { id: 5, nombre: "Día de descanso", cuenta_como_asistencia: 0, goce_sueldo: 1, fijo_ley: 1 },
+  { id: 6, nombre: "Vacaciones", cuenta_como_asistencia: 0, fijo_ley: 1, descuenta_vacaciones: 1 },
 ];
+// (24/11/2026) Motivos del catálogo «motivos_permiso» (tipos de registro con goce; ver verify-tipos-goce.mjs).
+const motivosPermiso = [{ id: 1, nombre: "Visita al médico", global: true }, { id: 2, nombre: "Permiso personal", global: true }, { id: 6, nombre: "Otro", global: true }];
 const motivos = {
   permisos: [{ clave: "tp:31", nombre: "Permiso: entrada tarde" }, { clave: "tp:32", nombre: "Permiso: salida antes" }],
   correccion: [{ clave: "olvido", nombre: "Olvidó checar" }, { clave: "reloj", nombre: "Falla del reloj" }, { clave: "captura", nombre: "Error de captura" },
@@ -110,6 +114,7 @@ async function simular(page) {
     const cuerpo = () => JSON.parse(req.postData() || "{}");
     if (p.endsWith("/users/verify/token")) return json({ user: usuario });
     if (p.endsWith("/checador/tiposPermiso")) return json({ tiposPermiso });
+    if (p.endsWith("/checador/motivos-permiso")) return json({ ok: true, motivos: motivosPermiso });
     if (p.endsWith("/checador/empleados")) return json({ data: [{ id_empleado: 7, nombre: "Laura", apellido_paterno: "Méndez" }], total: 1 });
     if (p.endsWith("/checador/asistencias") && req.method() === "GET") {
       const regs = filas();
@@ -227,15 +232,17 @@ try {
   assert.ok(!sinComida.includes("COMIDA"), "Comida oculta");
   assert.ok(!JSON.parse(await page.evaluate(() => localStorage.getItem("asistencias-columnas-visibles"))).includes("comida"), "preferencia guardada");
 
-  // 3) Estado en la fila: «Falta justificada» pide motivo (OK bloqueado hasta escribirlo); «Día de descanso» se guarda directo.
+  // 3) Estado en la fila: «Falta justificada» pide motivo del catálogo (OK bloqueado hasta elegirlo; «Otro…» deja
+  // escribirlo) y su goce (se cambia al aplicar); «Día de descanso» (fijo de ley) se guarda directo.
   await page.getByLabel("Estado de Juan Pérez").selectOption("3");
-  const motivoJuan = filaDe("Juan Pérez").getByLabel("Motivo (obligatorio)");
+  const motivoJuan = filaDe("Juan Pérez").getByLabel("Motivo");
   await motivoJuan.waitFor();
   assert.equal(await filaDe("Juan Pérez").getByRole("button", { name: "OK" }).isDisabled(), true);
-  await motivoJuan.fill("Cita médica con comprobante");
+  await motivoJuan.selectOption("__otro");
+  await filaDe("Juan Pérez").getByLabel("Escribe el motivo").fill("Cita médica con comprobante");
   await filaDe("Juan Pérez").getByRole("button", { name: "OK" }).click();
   await esperar(() => pet.estado.length === 1, "PUT estado-dia");
-  assert.deepEqual(pet.estado[0], { id: 503, cuerpo: { id_tipo_permiso: 3, motivo: "Cita médica con comprobante" } });
+  assert.deepEqual(pet.estado[0], { id: 503, cuerpo: { id_tipo_permiso: 3, motivo: "Cita médica con comprobante", motivo_permiso: "Cita médica con comprobante", goce: "sin" } });
   await page.getByLabel("Estado de Armando González").selectOption("5");
   await esperar(() => pet.estado.length === 2, "PUT estado-dia descanso");
   assert.deepEqual(pet.estado[1], { id: 502, cuerpo: { id_tipo_permiso: 5 } });
