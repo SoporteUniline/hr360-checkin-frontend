@@ -197,14 +197,17 @@ try {
   await filaDe("Alondra Munguía").waitFor({ timeout: 30000 });
 
   // 1) Tabla: columnas del reloj; sin Tipo/Editado/pagos editables; sin «Registrar asistencia masiva»; menú sin «Control de horas extra».
-  const encabezados = (await page.locator("thead th").allInnerTexts()).map((t) => t.replace(/\s+/g, " ").trim().toUpperCase());
-  for (const c of ["EMPLEADO", "DEPARTAMENTO", "FECHA", "ENTRADA", "SALIDA", "TRABAJADAS", "COMIDA", "HORAS EXTRA", "DÍA", "ESTADO · MOTIVO", "RELOJ"]) {
+  // Encabezados en letra normal en todo el sistema (no MAYÚSCULAS).
+  const crudos = (await page.locator("thead th").allInnerTexts()).map((t) => t.replace(/\s+/g, " ").trim()).filter(Boolean);
+  assert.ok(crudos.includes("Entrada") && crudos.includes("Salida"), `encabezados en letra normal: ${crudos.join(" | ")}`);
+  const encabezados = crudos.map((t) => t.toUpperCase());
+  for (const c of ["EMPLEADO", "DEPARTAMENTO", "FECHA", "ENTRADA", "SALIDA", "JORNADA TRABAJADO DE PROGRAMADO", "COMIDA", "HORAS EXTRA", "DÍA", "ESTADO · MOTIVO", "RELOJ"]) {
     assert.ok(encabezados.some((h) => h.startsWith(c)), `falta la columna ${c}: ${encabezados.join(" | ")}`);
   }
   for (const c of ["TIPO", "EDITADO", "PAGO TRIPLE", "PRIMA DOM.", "% FESTIVO", "HRS COMIDA", "¿AUTORIZAR?"]) assert.ok(!encabezados.includes(c), `sobra ${c}`);
   assert.equal(await page.getByRole("button", { name: /Registrar asistencia masiva/ }).count(), 0, "sin «Registrar asistencia masiva»");
   assert.equal(await page.locator("[data-sidebar=menu-button]", { hasText: "Control de horas extra" }).count(), 0, "fuera del menú");
-  assert.match(await filaDe("Alondra Munguía").innerText(), /6 h 10 min[\s\S]*de 6 h programado[\s\S]*Retardo \+18 min[\s\S]*1 corregido en reloj · Laura M\./);
+  assert.match(await filaDe("Alondra Munguía").innerText(), /6 h 10 min[\s\S]*de 6 h[\s\S]*🕒 Retardo \+18 min[\s\S]*1 corregido en reloj · Laura M\./);
   assert.match(await filaDe("Pedro Salas").innerText(), /Festivo oficial[\s\S]*Salario doble además del día \(art\. 75\)/);
   assert.match(await filaDe("Sofía Ramos").innerText(), /Domingo[\s\S]*Prima dominical 25% \(art\. 71\)/);
   assert.equal(await filaDe("Pedro Salas").locator("td", { hasText: "Festivo oficial" }).locator("input,select").count(), 0, "festivo solo lectura");

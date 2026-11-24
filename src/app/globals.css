@@ -452,3 +452,17 @@ html.adamia-native .adamia-web-only {
     overflow-y: auto;
   }
 }
+
+/* Encabezados de tabla en letra normal en todo el sistema («Entrada», no «ENTRADA»): se leen mejor.
+   Fuera de @layer a propósito: le gana a las clases `uppercase`/`tracking-*`/`text-[10px]` de cada tabla. */
+th,
+[data-slot="table-head"] {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 12.5px;
+}
+th *,
+[data-slot="table-head"] * {
+  text-transform: none;
+  letter-spacing: normal;
+}

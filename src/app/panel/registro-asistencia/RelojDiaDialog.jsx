@@ -182,6 +182,8 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
   const especial = dia?.tipo && dia.tipo !== "normal";
   const sinVivos = regs != null && vivos(lista).length === 0;
   const motivoOlvido = (data?.motivos?.correccion ?? []).find((m) => m.clave === "olvido")?.clave ?? "";
+  // Desde la fila «Sí vino → <permiso>»: las horas que se carguen llevan ese motivo (p. ej. visita al médico).
+  const motivoCarga = (data?.motivos?.permisos ?? []).some((m) => m.clave === registro?._motivoInicial) ? registro._motivoInicial : motivoOlvido;
   const programado = h ? `${hora12Txt(aHHMM(h.pe))} – ${hora12Txt(aHHMM(h.ps))}` : "Sin horario";
   const comidaProg = h?.sc != null ? `${hora12Txt(aHHMM(h.sc))} – ${hora12Txt(aHHMM(h.rc))}` : "Sin comida";
   const mensajeError = servidor.general || (hayErrores ? "Corrige lo marcado en rojo para guardar." : "");
@@ -228,7 +230,7 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
                     <div data-reloj-vacio className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3.5">
                       <b className="text-[14px] text-amber-900">No tiene checadas. ¿De qué hora a qué hora trabajó?</b>
                       <div className="flex flex-wrap gap-2.5">
-                        <button type="button" disabled={!h} onClick={() => cambiar((p) => [...p, ...horarioNormal(horario, motivoOlvido)])}
+                        <button type="button" disabled={!h} onClick={() => cambiar((p) => [...p, ...horarioNormal(horario, motivoCarga)])}
                           className={cn(BOTON, "border-blue-600 bg-blue-600 text-white hover:bg-blue-700")}>Cargar su horario normal</button>
                         <button type="button" onClick={() => cambiar((p) => agregarRegistro(p, horario))} className={BOTON}>Escribir las horas</button>
                       </div>

@@ -78,12 +78,21 @@ async function rutas(ctx, usuario) {
       estado.periodos[0].version += 1;
       return ok({ ok: true });
     }
-    // Asistencias (la ventana de edición que se abre desde «Corregir»).
+    // Asistencias (la ventana del reloj del día que se abre desde «Corregir»).
     if (p === "/checador/asistencias" && req.method() === "GET") {
       assert.deepEqual([url.searchParams.get("fechaInicio"), url.searchParams.get("fechaFin"), url.searchParams.get("filtroEmpleado")], ["2026-11-18", "2026-11-18", "Ana Torres"]);
       return ok({ registros: [{ id: 501, id_empleado: 15, nombre: "Ana", apellido_paterno: "Torres", fecha: "2026-11-18", entrada: "2026-11-18 09:10:00", salida: "2026-11-18 17:00:00", asistencia: 1, hora_entrada_programada: "09:00:00", hora_salida_programada: "17:00:00", zona_horaria: "America/Mexico_City", tipo_registro_nombre: "Asistencia" }], total: 1, page: 1 });
     }
     if (/^\/checador\/asistencias\/501$/.test(p) && req.method() === "PUT") { estado.asistencias.push(req.postDataJSON()); return ok({ ok: true }); }
+    // El día se corrige en el reloj (la misma ventana que en Asistencias y el Monitor).
+    if (/^\/checador\/asistencias\/501\/reloj$/.test(p) && req.method() === "GET") {
+      return ok({ ok: true, migracion: true, asistencia: { id: 501, id_empleado: 15, nombre: "Ana Torres", departamento: "Empaque", fecha: "2026-11-18" },
+        horario: { entrada: "09:00", salida: "17:00", salida_comida: null, regreso_comida: null }, dia: { tipo: "normal", nombre: "Día normal", pago: "" },
+        registros: [{ id: 81, entrada: "2026-11-18 09:10:00", salida: "2026-11-18 17:00:00", entrada_reloj: "2026-11-18 09:10:00", salida_reloj: "2026-11-18 17:00:00",
+          concepto: "jornada", motivo: null, origen: "reloj", anulado: false, id_autoriza: null, autoriza_no: false }],
+        motivos: { permisos: [], correccion: [{ clave: "olvido", nombre: "Olvidó checar" }, { clave: "reloj", nombre: "Falla del reloj" }] }, autorizadores: [] });
+    }
+    if (/^\/checador\/asistencias\/501\/reloj$/.test(p) && req.method() === "PUT") { estado.asistencias.push(req.postDataJSON()); return ok({ ok: true, asistencia: {} }); }
     // Misma forma que el backend real ({ data: [...] }): la ventana necesita la lista, no el objeto.
     if (p === "/checador/empleados") return ok({ data: [{ id_empleado: 15, nombre: "Ana", apellido_paterno: "Torres" }, { id_empleado: 3, nombre: "Luis", apellido_paterno: "Jefe" }], total: 2 });
     if (p === "/checador/tiposPermiso") return ok({ tiposPermiso: [{ id: 1, nombre: "Asistencia" }] });
@@ -145,9 +154,11 @@ try {
   await dormir(500);
   await captura(page, "nomina-corregir");
   await ventana.getByLabel("Entrada").fill("09:00");
+  await ventana.getByLabel("Motivo").selectOption("reloj"); // cambiar una hora en el reloj pide motivo
   await ventana.getByRole("button", { name: "Guardar" }).click();
   await page.getByText(/Asistencia corregida: la nómina se recalculó/).waitFor();
-  assert.equal(estado.asistencias[0].entrada, "2026-11-18 09:00:00");
+  assert.equal(estado.asistencias[0].registros[0].entrada, "2026-11-18 09:00:00");
+  assert.equal(estado.asistencias[0].registros[0].motivo, "reloj");
   assert.deepEqual(estado.posts.at(-1).accion, "calcular");
   estado.posts.length = 0;
   // Otro clic lo cierra; el botón abre el recibo para ajustar importes.
@@ -177,6 +188,8 @@ try {
   await page.getByText("Agregado y asignado para las próximas nóminas.").waitFor();
   assert.deepEqual([estado.conceptosNuevos[0].nombre, estado.conceptosNuevos[0].valor], ["Bono de productividad", 500]);
   assert.deepEqual(estado.ediciones.at(-1).agregar, [{ id_concepto: 9, importe: 500 }]);
+  // La asignación a su ficha va después de guardar el recibo: se espera a que llegue.
+  for (let i = 0; i < 50 && !estado.personas.length; i++) await dormir(100);
   assert.deepEqual(estado.personas.at(-1), { id: 9, cambios: [{ id_empleado: 15, lo_tiene: true }] });
   await panelRecibo.getByRole("button", { name: "Quitárselo para siempre" }).first().click();
   await page.getByText("Quitado de esta nómina y de su ficha.").waitFor();

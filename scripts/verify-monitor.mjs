@@ -1,6 +1,6 @@
 // Verificación en navegador del Monitor con hora fija (11:12 CDMX) y backend simulado: /panel lleva al Monitor, menú
 // («Monitor» arriba en Control de tiempo), tarjetas y pies, grupos en orden con la razón en texto, filtro por tarjeta,
-// «ver todos», búsqueda/área, clic en la fila → ventana del día, botón «Reloj checador» (escritorio y celular, 44 px)
+// «ver todos», búsqueda/área, clic en la fila → reloj del día, botón «Reloj checador» (escritorio y celular, 44 px)
 // hacia el reloj de la empresa, Asistencias abre en Registros › Tabla sin «Hoy / En vivo» y el enlace viejo
 // ?vista=envivo lleva al Monitor; sin desborde a 1440 ni a 390 px y sin errores de JS.
 // Uso: npm run build && node scripts/verify-monitor.mjs   (CAPTURAS=carpeta para guardar capturas)
@@ -113,6 +113,12 @@ async function contexto(viewport) {
     if (p.endsWith("/users/verify/token")) return json({ user: usuario });
     if (p.endsWith("/checador/asistencias")) return json({ registros, total: registros.length, page: 1, aplicarPaginacion: false });
     if (p.endsWith("/checador/cuenta-horas")) return json({ ok: true, data: { 2: 90 } });
+    // Reloj del día (la misma ventana que en Asistencias): sin checadas, ofrece cargar el horario.
+    if (/\/checador\/asistencias\/\d+\/reloj$/.test(p)) {
+      return json({ ok: true, migracion: true, horario: { entrada: "09:00", salida: "16:00", salida_comida: null, regreso_comida: null },
+        dia: { tipo: "normal", nombre: "Día normal", pago: "" }, registros: [], motivos: { permisos: [], correccion: [{ clave: "olvido", nombre: "Olvidó checar" }] },
+        autorizadores: [] });
+    }
     if (p.includes("eventos-checada")) return route.abort();
     return json({});
   });
@@ -211,9 +217,9 @@ try {
   assert.equal(await cuentaDe(vista, "En jornada"), 2, "las tarjetas cuentan con el filtro de área");
   await vista.getByLabel("Área").selectOption("");
 
-  // Clic en la fila: la ventana de edición del día (la misma de Asistencias), sin salir del Monitor.
+  // Clic en la fila: el reloj del día (la misma ventana de Asistencias), sin salir del Monitor.
   await lista.getByRole("button", { name: "Ver día de Armando González" }).click();
-  await page.getByRole("dialog", { name: /Armando González/ }).getByLabel("Entrada").waitFor({ timeout: 15000 });
+  await page.getByRole("dialog", { name: /Armando González/ }).getByRole("button", { name: "Cargar su horario normal" }).waitFor({ timeout: 15000 });
   await page.keyboard.press("Escape");
   await page.getByRole("dialog").waitFor({ state: "detached", timeout: 10000 });
   assert.match(page.url(), /\/panel\/monitor$/);
@@ -303,7 +309,7 @@ try {
   assert.deepEqual(errores, []);
   exito = true;
   console.log("OK Monitor: /panel → Monitor, menú, 7 tarjetas con pies, grupos y razones, ver todos, no laboran plegado, filtro por tarjeta, "
-    + "búsqueda y área, fila → ventana del día, Reloj checador (escritorio y celular 44 px) → reloj de la empresa, Asistencias en Registros › Tabla "
+    + "búsqueda y área, fila → reloj del día, Reloj checador (escritorio y celular 44 px) → reloj de la empresa, Asistencias en Registros › Tabla "
     + "sin «En vivo», ?vista=envivo → Monitor, celular Tabla | Matriz, sin desborde a 1440 y 390, sin errores de JS");
 } finally {
   await browser.close();
