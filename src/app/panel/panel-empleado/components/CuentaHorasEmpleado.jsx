@@ -12,6 +12,7 @@ import { fetcherWithToken } from "@/lib/fetcher";
 import { formatearFechaCorta } from "@/lib/formatDate";
 import { formatearMinutos } from "@/lib/asistencia/jornada.mjs";
 import { movimientosCuenta, TIPOS_CIERRE } from "@/lib/asistencia/permisoHoras.mjs";
+import { validarCierre } from "@/lib/asistencia/horasPorReponer.mjs";
 
 const auth = () => ({ headers: { Authorization: `Bearer ${Cookies.get("token")}` } });
 
@@ -33,7 +34,7 @@ function FormCierre({ debe, onGuardar, guardando }) {
       </div>
     );
   }
-  const error = total <= 0 ? "Indica el tiempo." : total > debe ? `No puede pasar de ${formatearMinutos(debe)}.` : tipo === "otro" && !nota.trim() ? "Escribe el motivo." : "";
+  const error = validarCierre({ tipo, minutos: total, debe, nota });
   return (
     <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-3">
       <p className="text-xs font-semibold text-slate-700">{TIPOS_CIERRE.find((t) => t.valor === tipo)?.texto} · debe {formatearMinutos(debe)}</p>

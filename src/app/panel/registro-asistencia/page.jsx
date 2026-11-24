@@ -8,6 +8,7 @@ import useDebounce from "@/hooks/useDebounce";
 import AsistenciaDataContainer from "./AsistenciaDataContainer";
 import MobileAsistenciaView from "./MobileAsistenciaView";
 import { CuentaHorasProvider } from "./CuentaHorasContext";
+import VistaHorasReponer, { usePorReponer } from "./horas-reponer/VistaHorasReponer";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -54,7 +55,11 @@ dayjs.extend(timezone);
 const PESTANAS = [
   ["registros", "Registros", "Ver, corregir y exportar checadas del periodo"],
   ["horas", "Horas de ley", "Horas de la semana contra el límite de la ley y horas extra"],
+  // (25/11/2026) Quién debe horas de permisos por horas y qué hacer con ellas (?vista=reponer).
+  ["reponer", "Horas por reponer", "Quién te debe horas de permisos y qué hacer con ellas"],
 ];
+// Pestaña que abre el enlace (?vista=reponer | horas); lo demás abre Registros.
+const VISTAS_URL = ["reponer", "horas"];
 // Formato de Registros: tabla (con filtros por columna y exportar) o matriz (personas × días).
 const FORMATOS = [["lista", "Tabla", List], ["matriz", "Matriz", Grid3x3]];
 function FormatoRegistros({ vista, onElegir, movil = false }) {
@@ -73,18 +78,23 @@ function FormatoRegistros({ vista, onElegir, movil = false }) {
     </div>
   );
 }
-function PestanasAsistencia({ vista, onElegir, movil = false }) {
+function PestanasAsistencia({ vista, onElegir, movil = false, conteos = {} }) {
   return (
     <div role="tablist" aria-label="Vistas de asistencia"
-      className={`gap-1 rounded-[10px] bg-[#e8ebf3] p-1 ${movil ? "grid grid-cols-2" : "inline-flex"}`}>
+      className={`gap-1 rounded-[10px] bg-[#e8ebf3] p-1 ${movil ? "grid grid-cols-3" : "inline-flex"}`}>
       {PESTANAS.map(([clave, texto, ayuda]) => {
         const activa = clave === "registros" ? vista === "lista" || vista === "matriz" : vista === clave;
+        const n = Number(conteos[clave]) || 0;
         return (
-          <button key={clave} type="button" role="tab" aria-selected={activa} title={ayuda} onClick={() => onElegir(clave)}
-            className={`whitespace-nowrap rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${movil ? "min-h-11 px-1 text-[13.5px]" : "min-h-9 px-4 text-sm"} ${
+          <button key={clave} type="button" role="tab" aria-selected={activa} title={ayuda} onClick={() => onElegir(clave)} data-pestana={clave}
+            className={`rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand ${movil ? "min-h-11 px-1 text-[13px] leading-tight" : "min-h-9 whitespace-nowrap px-4 text-sm"} ${
               activa ? "bg-white font-semibold text-slate-900 shadow-[0_1px_2px_rgba(15,23,42,.08)]" : "font-medium text-slate-600 hover:text-slate-900"
             }`}>
             {texto}
+            {n > 0 && (
+              <span data-conteo={clave} aria-label={`${n} ${n === 1 ? "persona" : "personas"}`}
+                className="ml-1.5 inline-block rounded-full bg-[#2563EB] px-1.5 text-[11.5px] font-bold leading-[18px] text-white">{n}</span>
+            )}
           </button>
         );
       })}
@@ -166,7 +176,7 @@ export default function ControlAsistencia() {
   // Nueva UX de escritorio: rango con modal, agrupación, columnas y detalle
   const [rangoOpen, setRangoOpen] = useState(false);
   // Pestañas: «Registros» = lista (Tabla) o matriz · «Horas de ley» = horas.
-  const [vista, setVista] = useState("lista");
+  const [vista, setVista] = useState(() => (VISTAS_URL.includes(searchParams.get("vista")) ? searchParams.get("vista") : "lista"));
   const [formatoRegistros, setFormatoRegistros] = useState("lista");
   const [rangoEtiqueta, setRangoEtiqueta] = useState(desdeParam && hastaParam
     ? `${desdeParam.split("-").reverse().join("/")} – ${hastaParam.split("-").reverse().join("/")}` : "Hoy");
@@ -369,8 +379,21 @@ export default function ControlAsistencia() {
     ocultarRegistroMasivo: true,
   });
 
+  // Número de personas que deben horas (pestaña «Horas por reponer»); la vista usa la misma consulta.
+  const { data: porReponer } = usePorReponer(empresaActiva);
+  const conteos = { reponer: porReponer?.data?.totales?.personas ?? 0 };
+
   const elegirPestana = (clave) => {
-    setVista(clave === "registros" ? formatoRegistros : "horas");
+    setVista(clave === "registros" ? formatoRegistros : clave);
+    // La pestaña queda en el enlace (?vista=reponer) para poder abrirla o compartirla.
+    try {
+      const u = new URL(window.location.href);
+      if (VISTAS_URL.includes(clave)) u.searchParams.set("vista", clave);
+      else u.searchParams.delete("vista");
+      window.history.replaceState(window.history.state, "", u);
+    } catch {
+      // sin URL: solo cambia la pestaña
+    }
   };
   const elegirFormato = (valor) => {
     setVista(valor);
@@ -404,7 +427,7 @@ export default function ControlAsistencia() {
               <h1 className="text-[22px] font-bold leading-tight text-slate-900">Asistencias</h1>
               <p className="text-[13px] text-slate-600">Historial: corrige, exporta y revisa por periodo</p>
             </header>
-            <PestanasAsistencia vista={vista} onElegir={elegirPestana} movil />
+            <PestanasAsistencia vista={vista} onElegir={elegirPestana} movil conteos={conteos} />
             {vista === "matriz" ? (
               <div className="space-y-2">
                 <FormatoRegistros vista={vista} onElegir={elegirFormato} movil />
@@ -415,7 +438,7 @@ export default function ControlAsistencia() {
                 </Button>
               </div>
             ) : null}
-            {ui}
+            {vista === "reponer" ? <VistaHorasReponer idEmpresa={empresaActiva} movil /> : ui}
           </div>
         </div>
         {vista === "matriz" ? modalRango : null}
@@ -430,7 +453,7 @@ export default function ControlAsistencia() {
       <>
         <div className="-m-5 flex h-[calc(100dvh-3.5rem)] flex-col overflow-hidden">
           <div className="shrink-0 bg-white px-4 pt-[max(0.75rem,env(safe-area-inset-top))]">
-            <PestanasAsistencia vista={vista} onElegir={elegirPestana} movil />
+            <PestanasAsistencia vista={vista} onElegir={elegirPestana} movil conteos={conteos} />
             <div className="mt-2"><AvisoMovido clave={searchParams.get("aviso")} /></div>
             <div className="mt-2"><FormatoRegistros vista={vista} onElegir={elegirFormato} movil /></div>
           </div>
@@ -486,7 +509,7 @@ export default function ControlAsistencia() {
           icono={ClipboardCheck}
           titulo="Asistencias"
           subtitulo="Historial completo: corrige, exporta y revisa por periodo"
-          acciones={<PestanasAsistencia vista={vista} onElegir={elegirPestana} />}
+          acciones={<PestanasAsistencia vista={vista} onElegir={elegirPestana} conteos={conteos} />}
         />
       </div>
 
@@ -514,6 +537,7 @@ export default function ControlAsistencia() {
       )}
 
 
+      {vista !== "reponer" && (
       <div className="flex flex-wrap items-center gap-2.5">
         <div className="relative min-w-[220px] max-w-[340px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -586,6 +610,7 @@ export default function ControlAsistencia() {
           />
         )}
       </div>
+      )}
 
       {(vista === "lista" || vista === "matriz") && (
       <VistasGuardadas
@@ -596,7 +621,7 @@ export default function ControlAsistencia() {
       />
       )}
 
-      {ui}
+      {vista === "reponer" ? <VistaHorasReponer idEmpresa={empresaActiva} /> : ui}
 
       {modalRango}
 
