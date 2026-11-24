@@ -81,6 +81,7 @@ import {
 } from "@/components/reclutamiento/navigation";
 import { VISTAS_RH } from "@/lib/evaluaciones/vistas.mjs";
 import { useMenuEvaluaciones } from "./useMenuEvaluaciones";
+import useMonitorEquipo from "@/hooks/useMonitorEquipo";
 const ICONOS_EVALUACION = {
   campanas: ClipboardList,
   plantillas: LayoutTemplate,
@@ -107,6 +108,14 @@ const dashboardItems = [
     url: "/empleado/panel/solicitudes-equipo",
     rol: "Empleado",
     icon: ClipboardCheck,
+  },
+  {
+    // Solo si es jefe (GET /checador/mi-equipo/hoy dice es_jefe).
+    title: "Monitor de mi equipo",
+    url: "/empleado/panel/monitor-equipo",
+    rol: "Empleado",
+    icon: UsersIcon,
+    soloJefe: true,
   },
   {
     title: "Empresas",
@@ -694,7 +703,9 @@ export function NavMain({ consulta = "" } = {}) {
   // Módulos por empresa: fuera lo que la empresa no tiene activo. Llega junto con la sesión (sin parpadeo).
   const { activos, opciones: opcionesModulo } = useModulosActivos();
   const grupos = filtrarGrupos(menuGroups, activos, opcionesModulo);
-  const itemsInicio = dashboardItems.filter((item) => rutaPermitida(item.url, activos, opcionesModulo));
+  // «Monitor de mi equipo» solo para jefes (lo decide el servidor con la sesión).
+  const { esJefe } = useMonitorEquipo();
+  const itemsInicio = dashboardItems.filter((item) => rutaPermitida(item.url, activos, opcionesModulo) && (!item.soloJefe || esJefe));
   const vistasEvaluacion = useMenuEvaluaciones(dataUser, effectiveRole === "Recruiter" && rutaPermitida("/panel/evaluaciones", activos, opcionesModulo));
   // Rol, app nativa (sin «Mi suscripción») y, en Evaluaciones, los permisos del servidor. Mientras no se
   // saben se muestran por rol, salvo «Por responder», que solo aparece si hay evaluaciones asignadas.
