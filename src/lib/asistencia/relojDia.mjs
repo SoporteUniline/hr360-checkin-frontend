@@ -99,8 +99,21 @@ export function desdeApi(registros, { fecha, zona } = {}) {
       motivo: r.motivo ?? "", origen: manual ? "manual" : "reloj", anulado: Boolean(r.anulado), anuladoAntes: Boolean(r.anulado),
       motivoAntes: r.motivo ?? "",
       id_autoriza: r.id_autoriza ?? null, autoriza_no: Boolean(r.autoriza_no),
+      // Tramo cerrado con el botón «Salir a comer» del reloj: la pausa que sigue es la comida.
+      salioAComer: r.tipo_cierre === "comida",
     };
   });
+}
+
+// Comida marcada con «Salir a comer» (sin renglón de comida): la pausa entre ese tramo y la siguiente checada. Es lo
+// mismo que ya cuenta el cálculo (minutos_comida); aquí solo se dibuja. Con un renglón «comida» ese manda y no se repite.
+export function pausaComidaTras(orden, i) {
+  const r = orden?.[i];
+  if (!r || !r.salioAComer || r.anulado || r.fin == null) return null;
+  if (orden.some((x) => !x.anulado && x.concepto === "comida")) return null;
+  const sig = orden.slice(i + 1).find((x) => !x.anulado && x.ini != null);
+  const hasta = sig ? sig.ini : null;
+  return { desde: r.fin, hasta, minutos: hasta != null ? Math.max(0, hasta - r.fin) : null };
 }
 
 export function nuevoRenglon(ini, fin, concepto = "jornada", motivo = "") {

@@ -72,6 +72,9 @@ const filas = () => [
     hora_salida_comida_programada: "11:00:00", hora_regreso_comida_programada: "11:30:00", estado_calculado: { clave: "ok", texto: "Asistió", atencion: false } }),
   fila(509, "Tomás", "Ruiz", "Ventas", { entrada: `${F} 09:00:00`, salida: `${F} 16:00:00`, checadas_vivas: 1, minutos_trabajados: 420,
     hora_salida_comida_programada: null, hora_regreso_comida_programada: null, estado_calculado: { clave: "ok", texto: "Asistió", atencion: false } }),
+  // (25/11/2026) Salió con «Salir a comer» a las 11:21 y regresó 11:46: el reloj dibuja la comida entre los dos tramos.
+  fila(510, "Frida", "Serrano", "Ventas", { entrada: `${F} 08:56:00`, salida: null, checadas_vivas: 2, minutos_trabajados: 145, minutos_comida: 25,
+    estado_calculado: { clave: "ok", texto: "Asistencia · en jornada", atencion: false } }),
 ];
 const tiposPermiso = [
   // (24/11/2026) «Qué pasó» + «Motivo»: rol y captura del servidor; «Falta justificada» quedó solo para el historial.
@@ -102,6 +105,8 @@ const autorizadores = [{ id: 3, nombre: "Laura Méndez (RH)" }, { id: 9, nombre:
 const chec = (id, e, s, o = {}) => ({ id, entrada: e, salida: s, entrada_reloj: e, salida_reloj: s, concepto: "jornada", motivo: null,
   origen: "reloj", anulado: false, id_autoriza: null, autoriza_no: false, ...o });
 const relojes = {
+  510: { horario: { entrada: "09:00", salida: "16:00", salida_comida: "11:00", regreso_comida: "11:30" },
+    registros: [chec(7801, `${F} 08:56:00`, `${F} 11:21:00`, { tipo_cierre: "comida" }), chec(7802, `${F} 11:46:00`, null)] },
   501: { horario: { entrada: "09:00", salida: "16:00", salida_comida: "13:00", regreso_comida: "14:00" },
     registros: [chec(7001, `${F} 09:18:00`, `${F} 13:00:00`), chec(7002, `${F} 13:00:00`, `${F} 13:40:00`, { concepto: "comida" }), chec(7003, `${F} 13:40:00`, `${F} 16:08:00`)] },
   502: { horario: { entrada: "09:00", salida: "16:00", salida_comida: "13:00", regreso_comida: "14:00" }, registros: [] },
@@ -481,6 +486,16 @@ try {
     ],
     permiso_dia: { id_tipo: 33, id_motivo: 1, motivo: "Visita al médico", horas: "reponen" },
   } });
+
+  // 7c) (25/11/2026) Comida marcada con «Salir a comer»: se dibuja entre los tramos (antes no aparecía en el reloj).
+  await page.getByRole("button", { name: "Abrir el reloj de Frida Serrano" }).click();
+  const dlgFrida = page.getByRole("dialog");
+  const comidaReloj = dlgFrida.locator("[data-comida-reloj]");
+  await comidaReloj.waitFor({ timeout: 15000 });
+  assert.match(await comidaReloj.innerText(), /11:21 a\.m\. → 11:46 a\.m\. · 25 min/);
+  assert.equal(await comidaReloj.count(), 1);
+  await page.keyboard.press("Escape");
+  await dlgFrida.waitFor({ state: "detached", timeout: 10000 });
 
   // 8) Masivos: «Marcar como…» (solo sin checadas) y «Cargar horario normal…» (sin checadas o sin salida), motivo obligatorio.
   await page.getByLabel("Elegir a Juan Pérez").check();
