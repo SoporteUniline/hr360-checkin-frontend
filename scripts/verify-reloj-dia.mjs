@@ -1,5 +1,5 @@
 // Verificación en navegador real (Chromium + Next compilado) de «el día se corrige en el reloj» en Asistencias:
-// tabla con sus columnas y ocultar columnas; estado en la fila (falta justificada pide motivo); «Sí vino» abre el reloj y
+// tabla con sus columnas y ocultar columnas; estado en la fila («Qué pasó» + «Motivo», verify-quepaso-motivo.mjs); «Asistencia» abre el reloj y
 // carga el horario; editar una hora exige motivo; separar la extra exige quién autoriza; PUT con el cuerpo exacto del
 // contrato; errores 400 por renglón; festivo/domingo solo lectura; masivos «Marcar como…» y «Cargar horario normal…»;
 // sin «Registrar asistencia masiva»; «Control de horas extra» fuera del menú y su ruta lleva a Asistencias con aviso;
@@ -65,8 +65,9 @@ const filas = () => [
   fila(507, "Diego", "León", "Administración", { entrada: `${F} 08:55:00`, checadas_vivas: 1, estado_calculado: { clave: "sinsalida", texto: "Sin salida", atencion: true } }),
 ];
 const tiposPermiso = [
-  { id: 1, nombre: "Asistencia", cuenta_como_asistencia: 1 }, { id: 2, nombre: "Falta injustificada", cuenta_como_asistencia: 0 },
-  { id: 3, nombre: "Falta justificada", cuenta_como_asistencia: 0, goce_sueldo: 0, cambia_al_aplicar: 1 },
+  // (24/11/2026) «Qué pasó» + «Motivo»: rol y captura del servidor; «Falta justificada» quedó solo para el historial.
+  { id: 1, nombre: "Asistencia", cuenta_como_asistencia: 1, rol: "asistencia", captura: 1 }, { id: 2, nombre: "Inasistencia", cuenta_como_asistencia: 0, rol: "inasistencia", captura: 1 },
+  { id: 3, nombre: "Falta justificada", cuenta_como_asistencia: 0, goce_sueldo: 0, cambia_al_aplicar: 1, rol: "heredado", captura: 0 },
   { id: 4, nombre: "Incapacidad IMSS", cuenta_como_asistencia: 0, fijo_ley: 1 },
   { id: 5, nombre: "Día de descanso", cuenta_como_asistencia: 0, goce_sueldo: 1, fijo_ley: 1 },
   { id: 6, nombre: "Vacaciones", cuenta_como_asistencia: 0, fijo_ley: 1, descuenta_vacaciones: 1 },
@@ -167,7 +168,7 @@ async function selectsSinRecorte(raiz, etiqueta) {
       if (!s.offsetParent) continue;
       const cs = getComputedStyle(s);
       ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
-      const libre = s.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - 18;
+      const libre = s.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight) - (cs.appearance === "none" ? -2 : 18); // con flecha propia el padding ya la incluye
       const textos = [s.options[s.selectedIndex]?.text ?? ""];
       if (s.getAttribute("aria-label") === "Motivo") textos.push(...[...s.options].map((o) => o.text));
       for (const t of textos) if (ctx.measureText(t).width > libre) out.push(`${s.getAttribute("aria-label")}: «${t}» (${Math.round(ctx.measureText(t).width)} > ${Math.round(libre)})`);
@@ -232,30 +233,29 @@ try {
   assert.ok(!sinComida.includes("COMIDA"), "Comida oculta");
   assert.ok(!JSON.parse(await page.evaluate(() => localStorage.getItem("asistencias-columnas-visibles"))).includes("comida"), "preferencia guardada");
 
-  // 3) Estado en la fila: «Falta justificada» pide motivo del catálogo (OK bloqueado hasta elegirlo; «Otro…» deja
-  // escribirlo) y su goce (se cambia al aplicar); «Día de descanso» (fijo de ley) se guarda directo.
-  await page.getByLabel("Estado de Juan Pérez").selectOption("3");
-  const motivoJuan = filaDe("Juan Pérez").getByLabel("Motivo");
-  await motivoJuan.waitFor();
+  // 3) Estado en la fila: el motivo «Otro…» pide escribirlo; «Día de descanso» (de ley) sin motivo, con OK.
+  // (24/11/2026) Juan ya tiene «Inasistencia» (injustificada); se le pone el motivo «Otro…» escrito: OK bloqueado sin el texto.
+  const motivoJuan = page.getByLabel("Motivo de Juan Pérez");
+  await motivoJuan.selectOption({ label: "Otro…" });
   assert.equal(await filaDe("Juan Pérez").getByRole("button", { name: "OK" }).isDisabled(), true);
-  await motivoJuan.selectOption("__otro");
   await filaDe("Juan Pérez").getByLabel("Escribe el motivo").fill("Cita médica con comprobante");
   await filaDe("Juan Pérez").getByRole("button", { name: "OK" }).click();
   await esperar(() => pet.estado.length === 1, "PUT estado-dia");
-  assert.deepEqual(pet.estado[0], { id: 503, cuerpo: { id_tipo_permiso: 3, motivo: "Cita médica con comprobante", motivo_permiso: "Cita médica con comprobante", goce: "sin" } });
-  await page.getByLabel("Estado de Armando González").selectOption("5");
+  assert.deepEqual(pet.estado[0], { id: 503, cuerpo: { id_tipo_permiso: 2, id_motivo: 6, motivo_permiso: "Cita médica con comprobante", goce: "sin" } });
+  await page.getByLabel("Qué pasó de Armando González").selectOption("5");
+  await filaDe("Armando González").getByRole("button", { name: "OK" }).click();
   await esperar(() => pet.estado.length === 2, "PUT estado-dia descanso");
   assert.deepEqual(pet.estado[1], { id: 502, cuerpo: { id_tipo_permiso: 5 } });
 
-  // 4) «Sí vino» abre el reloj vacío; «Cargar su horario normal»; 400 del servidor por renglón; luego guarda.
-  await page.getByLabel("Estado de Armando González").selectOption("si_vino");
+  // 4) «Asistencia» abre el reloj vacío; «Cargar su horario normal»; 400 del servidor por renglón; luego guarda.
+  await page.getByLabel("Qué pasó de Armando González").selectOption("__asistencia");
   const dlgA = page.getByRole("dialog", { name: /Armando González/ });
   await dlgA.locator("[data-reloj-vacio]").waitFor({ timeout: 10000 });
   assert.match(await dlgA.locator("[data-reloj-vacio]").innerText(), /No tiene checadas\. ¿De qué hora a qué hora trabajó\?/);
-  // Sin checadas, el reloj ofrece el mismo desplegable que la fila: «No vino» y «Sí vino» en «Qué pasó».
+  // Sin checadas, el reloj ofrece el mismo par que la fila: «Qué pasó» con Asistencia, Inasistencia y los días de ley.
   const quePaso = dlgA.locator("[data-reloj-que-paso]");
   const opcionesQuePaso = await quePaso.locator("select").first().locator("option").allInnerTexts();
-  assert.ok(opcionesQuePaso.some((t) => /Falta justificada/.test(t)) && opcionesQuePaso.some((t) => /Sí vino/.test(t)), `opciones de «Qué pasó»: ${opcionesQuePaso.join(" | ")}`);
+  assert.ok(opcionesQuePaso.includes("Inasistencia") && opcionesQuePaso.includes("Asistencia") && !opcionesQuePaso.includes("Falta justificada"), `opciones de «Qué pasó»: ${opcionesQuePaso.join(" | ")}`);
   await dormir(500);
   const cajaA = await dlgA.boundingBox();
   assert.ok(cajaA.width >= 1000 && cajaA.width <= 1080, `modal amplio (${cajaA.width}px)`);
@@ -389,11 +389,11 @@ try {
   await hoja.getByRole("button", { name: "Cerrar el reloj" }).click();
   await hoja.waitFor({ state: "detached", timeout: 10000 });
   await page.getByText("Armando González").first().click();
-  const estadoMovil = page.getByLabel("Estado de Armando González");
+  const estadoMovil = page.getByLabel("Qué pasó de Armando González");
   await estadoMovil.waitFor({ timeout: 10000 });
   assert.ok((await estadoMovil.boundingBox()).height >= 43.5, "select de estado de 44 px");
   if (capturas) { await dormir(400); await page.screenshot({ path: `${capturas}/390-detalle-estado.png` }); }
-  await estadoMovil.selectOption("si_vino");
+  await estadoMovil.selectOption("__asistencia");
   const hojaVacia = page.getByRole("dialog", { name: /Armando González/ });
   await hojaVacia.locator("[data-reloj-vacio]").waitFor({ timeout: 15000 });
   await sinDesborde(hojaVacia.locator(".overflow-y-auto").first(), "hoja vacía 390");
@@ -401,7 +401,7 @@ try {
 
   assert.deepEqual(errores, [], "sin errores de JavaScript");
   exito = true;
-  console.log("OK · columnas y ocultar · estado en fila (motivo, directo) · «Sí vino» → reloj vacío → horario normal · 400 por renglón · "
+  console.log("OK · columnas y ocultar · estado en fila (Qué pasó + Motivo) · «Asistencia» → reloj vacío → horario normal · 400 por renglón · "
     + "hora editada exige motivo · separar extra exige autoriza · PUT exactos · festivo/domingo solo lectura · migración pendiente = solo lectura · masivos · sin «Registrar "
     + "asistencia masiva» · horas-extra → Asistencias con aviso · 1440 y 390 sin desbordes ni recortes · sin errores de JS");
 } finally {

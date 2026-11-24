@@ -125,8 +125,8 @@ try {
     await empresaSel.click();
     await page.getByRole("option", { name: "Empresa prueba" }).click();
   }
-  await dialogo.getByRole("combobox").filter({ hasText: "Seleccionar tipo" }).click();
-  await page.getByRole("option", { name: "Permiso personal" }).click();
+  // (24/11/2026) «Qué pasó» + «Motivo» (verify-quepaso-motivo.mjs): un tipo propio marcado como permiso se sigue pidiendo.
+  await dialogo.getByLabel("Qué pasó").selectOption({ label: "Permiso personal" });
   await dialogo.getByText("Juan Prueba").waitFor({ timeout: 10000 });
   await dialogo.getByRole("checkbox").first().check();
   await dialogo.locator('input[type="date"]').fill("2026-11-24");
@@ -134,14 +134,14 @@ try {
   await dialogo.getByLabel("Desde qué hora").fill("10:00");
   await dialogo.getByLabel("Hasta qué hora").fill("12:00");
   await dialogo.getByRole("radio", { name: /Se repone/ }).click();
-  await dialogo.getByLabel("Motivo del permiso").selectOption("Visita al médico");
+  await dialogo.getByLabel("Motivo", { exact: true }).selectOption({ label: "Visita al médico" });
   if (process.env.CAPTURAS) await page.screenshot({ path: process.env.CAPTURAS + "/permiso-horas-form.png" });
   await dialogo.getByRole("button", { name: "Guardar" }).click();
   for (let i = 0; i < 60 && !posts.length; i++) await dormir(100);
   assert.deepEqual(posts[0], {
     id_empleado: 300, id_tipo_permiso: 30, motivo: null, modalidad: "horas", tipo_horas: "sale_regresa", tratamiento: "repone",
     hora_inicio: "10:00", hora_fin: "12:00", fecha_inicio: "2026-11-24", fecha_fin: "2026-11-24",
-    motivo_permiso: "Visita al médico", goce: "con",
+    id_motivo_permiso: 1, goce: "con",
   });
 
   // 3) Cuenta de horas en la ficha: debe 3 h, condonar 1 h con nota.

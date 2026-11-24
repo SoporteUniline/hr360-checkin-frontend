@@ -27,8 +27,9 @@ export function alcanceDe(t) {
   if (ALCANCES.includes(t?.alcance)) return t.alcance;
   const n = sinAcentos(`${t?.clave ?? ""} ${t?.nombre ?? ""}`);
   if (/entrada despues|llega tarde|entrada tarde/.test(n)) return "entrada";
+  if (/salida temprano/.test(n)) return "salida";
   if (/salida antes|sale antes/.test(n)) return "salida";
-  if (/entre jornada|permiso por horas|sale y regresa/.test(n)) return "medio";
+  if (/entre jornada|permiso por horas|sale y regresa|medio turno|entre horarios/.test(n)) return "medio";
   return "dia";
 }
 export const esParcial = (t) => alcanceDe(t) !== "dia";

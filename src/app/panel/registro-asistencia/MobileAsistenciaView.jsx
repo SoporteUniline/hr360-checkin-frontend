@@ -20,6 +20,7 @@ import MobileEmpleadoDetalle from "./MobileEmpleadoDetalle";
 import EtiquetaPermisoHoras from "./EtiquetaPermisoHoras";
 import { estadoHorasExtra } from "@/lib/asistencia/horasExtra.mjs";
 import { permisoFila } from "@/lib/asistencia/tiposGoce.mjs";
+import { estadoMotivo } from "@/lib/asistencia/quePasoMotivo.mjs";
 import { actaFila } from "@/lib/actasEstatus.mjs";
 import { formatearMinutos, sinSalidaAComer } from "@/lib/asistencia/jornada.mjs";
 import ClockNavigation from '@/components/Clock/ClockNavigation';
@@ -122,7 +123,9 @@ function EmpleadoCard({ registro, index, totalCount, onClick }) {
 
   const esTarde = registro.estadoAsistencia === "Tardanza";
   const extra = infoExtra(registro);
-  const permiso = permisoFila(registro);
+  // «⌚ Entrada tarde · Visita al médico · 2 h · las repone» / «📝 Inasistencia · Permiso personal · sin goce».
+  const linea = estadoMotivo(registro, null, { ley: false });
+  const permiso = linea ? null : permisoFila(registro);
   const acta = actaFila(registro);
 
   return (
@@ -153,6 +156,7 @@ function EmpleadoCard({ registro, index, totalCount, onClick }) {
           <p className="mt-0.5 truncate text-[11px] font-semibold text-amber-700">⚠ No marcó salida a comer</p>
         )}
         {registro.permiso_horas && <EtiquetaPermisoHoras permiso={registro.permiso_horas} className="mt-1" />}
+        {linea ? <p data-permiso-movil className="mt-0.5 whitespace-normal break-words text-[12px] font-medium leading-snug text-slate-700">{linea}</p> : null}
         {permiso ? (
           <p data-permiso-movil className="mt-0.5 whitespace-normal break-words text-[12px] leading-snug text-slate-500">
             {permiso.tipo ? <span className="font-medium text-slate-700">{permiso.tipo}</span> : null}
