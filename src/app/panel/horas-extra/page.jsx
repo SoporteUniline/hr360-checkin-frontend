@@ -1,11 +1,7 @@
 "use client";
 
-// Control de horas extra (maquetas aprobadas 19/11/2026).
-// «Por fechas» (predeterminada): días arriba, horas abajo; clic en un día abre sus registros.
-// «Lista»: la tabla de Asistencias filtrada a quien tiene horas extra (edición, acciones masivas,
-// Excel, historial). Lo que se cambia aquí ES la asistencia.
-// Arriba: periodo (semana legal, quincena, mes o rango), tarjetas que filtran y el tope semanal de la LFT.
-// Lógica: lib/asistencia/controlHorasExtra.mjs y lib/asistencia/matrizHorasExtra.mjs.
+// Control de horas extra: «Por fechas» (predeterminada) o «Lista» (la tabla de Asistencias filtrada; lo que se cambia
+// aquí ES la asistencia). Lógica: lib/asistencia/controlHorasExtra.mjs y matrizHorasExtra.mjs.
 import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import useSWR from "swr";

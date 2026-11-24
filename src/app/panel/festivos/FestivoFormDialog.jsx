@@ -42,11 +42,8 @@ export default function FestivoFormDialog({
     } else {
       setFecha("");
       setDescripcion("");
-      // Lógica de pre-selección:
-      // Si el filtro de la página es una empresa específica, la usamos.
-      // Si es "all", dejamos que el usuario elija o ponemos la primera de la lista.
-      // (20/11/2026) Con una sola empresa el selector no se muestra: se usa esa empresa
-      // (antes el alta pedía «Debes seleccionar una empresa» sin forma de elegirla).
+      // Preselección: la empresa del filtro de la página; con "all", la primera de la lista.
+      // Con una sola empresa el selector no se muestra, así que se usa esa.
       const preseleccionada = id_empresa === "all" ? empresaUnica : id_empresa;
       setIdEmpresaSeleccionada(preseleccionada);
     }

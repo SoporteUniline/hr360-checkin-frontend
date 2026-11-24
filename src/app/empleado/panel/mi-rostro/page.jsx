@@ -1,9 +1,7 @@
 "use client";
 
-// Mi espacio → Mi rostro (22/11/2026, pedido del dueño): la persona registra o actualiza su rostro para checar desde la app.
-// Decisión A: se usa de inmediato y RH ve el aviso en su ficha. Antes de usar la cámara acepta, de forma expresa, el aviso
-// de uso del rostro (CONSENTIMIENTO_BIOMETRICO); el servidor guarda la versión aceptada. Solo se envía la huella numérica
-// (128 números), nunca la foto. Se toman 3 lecturas seguidas y se promedian para que el registro sea estable.
+// Mi rostro: se pide aceptar el aviso biométrico antes de la cámara y solo se envía la huella numérica (128 números),
+// nunca la foto. Se promedian 3 lecturas seguidas para que el registro sea estable.
 import { useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
@@ -15,7 +13,7 @@ import { CONSENTIMIENTO_BIOMETRICO as C } from "@/lib/legal/documentos";
 import { useCapturaRostro } from "@/components/rostro/useCapturaRostro";
 import { TONO_GUIA } from "@/lib/rostro/guia.mjs";
 
-// (23/11/2026) Misma guía en vivo que el celular; el óvalo de esta pantalla deja 14 % por lado.
+// Misma guía en vivo que el celular; el óvalo de esta pantalla deja 14 % por lado.
 const OVALO = { x: 0.14, y: 0.14 };
 
 const BASE = "/checador/mi-espacio/rostro";

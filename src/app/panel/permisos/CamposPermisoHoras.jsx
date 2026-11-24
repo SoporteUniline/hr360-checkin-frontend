@@ -1,7 +1,6 @@
 "use client";
 
-// Campos del permiso por horas (R1, 20/11/2026): tipo, horas y si se repone o se rebaja.
-// Un permiso por horas es de un solo día. Las horas se capturan en HH:mm (<input type="time">).
+// Campos del permiso por horas: tipo, horas y si se repone o se rebaja. Es de un solo día; horas en HH:mm.
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TIPOS_HORAS, TRATAMIENTOS } from "@/lib/asistencia/permisoHoras.mjs";

@@ -1,6 +1,6 @@
 "use client";
 
-// Preguntas propias de la vacante (03/12/2026, Reclutamiento real): las define RH en el asistente del panel. El
+// Preguntas propias de la vacante: las define RH en el asistente del panel. El
 // servidor las vuelve a validar y guarda la respuesta con el texto de la pregunta tal como se envió.
 import { faltantes } from "@/lib/reclutamiento/respuestas.mjs";
 
@@ -17,7 +17,7 @@ export default function PreguntasVacante({ preguntas = [], valores, onCambiar, e
       {preguntas.map((p) => {
         const id = `pregunta-${p.id}`;
         const valorActual = valores[p.id];
-        // El aviso se quita en cuanto se responde (antes seguía en rojo hasta volver a enviar).
+        // El aviso se quita en cuanto se responde, sin esperar a volver a enviar.
         const error = errores.includes(p.id) && (valorActual == null || valorActual === "" || (Array.isArray(valorActual) && !valorActual.length));
         const comun = { id, disabled, "aria-invalid": error || undefined, "aria-describedby": error ? `${id}-error` : undefined };
         const valor = valores[p.id] ?? (p.type === "multiselect" ? [] : "");

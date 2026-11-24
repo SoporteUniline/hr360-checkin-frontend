@@ -111,8 +111,8 @@ export default function AsistenciaDataContainer({
     mutateRef.current = mutate;
   }, [mutate]);
   useEffect(() => {
-    // Solo recarga cuando cambió la cola de checadas; preparar el reloj ('perfil') no cambia datos
-    // (antes provocaba una segunda descarga completa del periodo al abrir la vista).
+    // Solo recarga cuando cambió la cola de checadas: preparar el reloj ('perfil') no cambia datos y
+    // provocaría una segunda descarga completa del periodo.
     const refresh = (event) => {
       if (event?.detail?.motivo === 'perfil') return;
       if (navigator.onLine && window.__adamiaOffline !== true) void mutateRef.current().catch(() => {});
@@ -266,7 +266,7 @@ export default function AsistenciaDataContainer({
 
   // «Abrir en Asistencias» desde Control de horas extra: ?abrir=<id> abre su ventana de edición una vez.
   const searchParams = useSearchParams();
-  // Desde la pestaña Horas (19/11/2026): ?abrirEmpleado=<id_empleado>&fecha=YYYY-MM-DD abre el registro de ese día.
+  // Desde la pestaña Horas: ?abrirEmpleado=<id_empleado>&fecha=YYYY-MM-DD abre el registro de ese día.
   const abrirId = searchParams?.get("abrir");
   const abrirEmpleado = searchParams?.get("abrirEmpleado");
   const abrirFecha = searchParams?.get("fecha");
@@ -283,10 +283,8 @@ export default function AsistenciaDataContainer({
   }, [abrirId, abrirEmpleado, abrirFecha, registros, handleEditClick]);
 
 
-  // (19/11/2026) La página desestructura { ui, ... }: antes se devolvía el JSX suelto y, mientras
-  // cargaba, la tabla desaparecía (y el mensaje de error nunca se veía). Además, antes de saber la
-  // empresa (idEmpresa aún nulo) se pintaba «No hay registros». Ahora: un solo esqueleto hasta
-  // tener datos, con la misma forma de respuesta.
+  // Devuelve { ui, ... } con un solo esqueleto hasta tener datos (y empresa): así la tabla no desaparece al
+  // recargar, el error se ve y no se pinta «No hay registros» antes de saber la empresa.
   const sinDatosAun = !effectiveData && !localEvents.length && (isLoading || !idEmpresa);
   const base = { data: effectiveData, resumenHorasExtra, totalSinComida, control, cargando: true, localEvents, mutate };
   if (sinDatosAun) return { ...base, ui: <LoadingTable cols={9} rows={10} /> };

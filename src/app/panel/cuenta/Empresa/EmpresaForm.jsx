@@ -1,6 +1,6 @@
 "use client";
 
-// Pestaña «Mi empresa» (24/11/2026, rediseño): a la izquierda el logo (y lo que la página ponga en `lateral`, como el
+// Pestaña «Mi empresa»: a la izquierda el logo (y lo que la página ponga en `lateral`, como el
 // acceso a Módulos); a la derecha los datos en secciones: datos generales, contacto, redes sociales y registro automático
 // de asistencias, con barra «Sin cambios» / «Guardar». Mismos campos y mismo guardado: PUT /empresas/:id.
 import React, { useEffect } from "react";
@@ -109,14 +109,13 @@ export default function EmpresaForm({ idEmpresa, lateral = null }) {
       enqueueSnackbar("Se guardaron los cambios exitosamente!", {
         variant: "success",
       });
-      // (24/11/2026) Queda lo guardado en el formulario (antes se vaciaba hasta que volvía a llegar la empresa).
+      // Se deja lo guardado en el formulario para no vaciarlo mientras vuelve a llegar la empresa.
       form.reset(data);
       setBase(copiarValores(data));
       setLoading(false);
       await mutate(`/empresas/${empresaId}`);
       return true;
     } catch (error) {
-      console.log(error);
       setLoading(false);
       const errorMessage =
         error.response?.data?.error ||

@@ -1,10 +1,10 @@
 "use client";
 
-// «Continuar desde el celular» (05/12/2026, pedido del dueño): la persona abre el enlace QR que le generó RH y registra su
+// «Continuar desde el celular»: la persona abre el enlace QR que le generó RH y registra su
 // rostro con la cámara frontal de su celular. Sin sesión. Muestra solo su nombre, la empresa y el aviso de uso del rostro
 // (el mismo texto y versión de Mi espacio). La cámara, las 3 lecturas y su promedio son los de Mi rostro
 // (useCapturaRostro). Backend: /checador/rostro-celular/publico/:token. Errores: src/lib/rostro/enlaceCelular.mjs.
-// (23/11/2026) Guía en vivo con color (óvalo y mensaje), «Registrar mi rostro» solo con la cara bien colocada y
+// Guía en vivo con color (óvalo y mensaje), «Registrar mi rostro» solo con la cara bien colocada y
 // confirmación final con la calidad de la toma («✅ Rostro correcto»).
 import { use, useEffect, useState } from "react";
 import Image from "next/image";

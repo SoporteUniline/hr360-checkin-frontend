@@ -1,8 +1,8 @@
 "use client";
 
-// Ficha → Reconocimiento (22/11/2026, decisión A): si la persona registró o actualizó su rostro desde la app, RH lo ve
+// Ficha → Reconocimiento: si la persona registró o actualizó su rostro desde la app, RH lo ve
 // aquí (cuándo y qué versión del aviso de uso aceptó). Al abrirlo queda como visto. Sin la migración no muestra nada.
-// (05/12/2026) También lo registrado con el enlace del celular que genera RH (origen «celular»).
+// También lo registrado con el enlace del celular que genera RH (origen «celular»).
 import useSWR from "swr";
 import { ScanFace } from "lucide-react";
 import axios from "@/lib/axios";

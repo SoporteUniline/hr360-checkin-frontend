@@ -1,9 +1,7 @@
 "use client";
 
-// Acciones masivas de Asistencias (maqueta aprobada 19/11/2026): barra flotante cuando hay filas
-// elegidas y una ventana por acción con vista previa (antes → después, y a quién se omite y por qué).
-// Lógica: lib/asistencia/masivo.mjs. Guardado: el mismo PUT de la edición de una fila (historial,
-// checada original y «Deshacer»); la comida usa POST /asistencias/:id/comida.
+// Acciones masivas de Asistencias: barra flotante con filas elegidas y vista previa por acción. Lógica:
+// lib/asistencia/masivo.mjs; guarda con el mismo PUT de una fila (historial y «Deshacer»), la comida con POST /comida.
 
 import { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";

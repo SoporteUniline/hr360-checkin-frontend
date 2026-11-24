@@ -775,7 +775,7 @@ export default function CotizaPage() {
   const campo =
     "h-11 w-full rounded-xl border border-[#c9cde0] bg-white px-3 text-[15px] text-[#0b1033] outline-none transition focus:border-[#2c56e8] focus:ring-2 focus:ring-[#2c56e8]/20";
 
-  // Diseño del 21/11/2026: mismo estilo que el inicio (bloques de color sólido, lado a lado). La lógica no cambió.
+  // Mismo estilo que el inicio (bloques de color sólido, lado a lado). La lógica no cambió.
   return (
     <main className="lh cz">
       <section className="cz-hero">

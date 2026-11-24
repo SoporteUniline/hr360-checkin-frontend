@@ -321,8 +321,7 @@ export default function ReporteHorasPage() {
       const auth = {
         headers: { Authorization: `Bearer ${Cookies.get("token") || ""}` },
       };
-      // Una sola llamada para todos los empleados, con el cálculo de la LFT por semana
-      // (antes: una llamada por empleado).
+      // Una sola llamada para todos los empleados, con el cálculo de la LFT por semana.
       const { data: respuesta } = await axios.get(`/checador/reportes/horas-ley`, {
         params: { fechaInicio, fechaFin, empleados: ids.join(",") },
         ...auth,
@@ -1619,7 +1618,7 @@ export default function ReporteHorasPage() {
                           <tr>
                             <td colSpan={9} className="p-2 text-left text-[11px] text-slate-500">
                               {reporte.ley.dias_sin_historial > 0 && (
-                                // (23/11/2026, opción A) Días anteriores al historial de horarios: se midieron con el horario actual.
+                                // Días anteriores al historial de horarios: se midieron con el horario actual.
                                 <span className="mb-1 block font-semibold text-amber-700" data-sin-historial="true">
                                   {reporte.ley.dias_sin_historial === 1 ? "1 día se midió" : `${reporte.ley.dias_sin_historial} días se midieron`} con el horario actual
                                   (sin historial de horarios para esas fechas).

@@ -1,7 +1,7 @@
 "use client";
 
 // Edición de WhatsApp de una empresa (solo administradores de ADAMIA). El API valida de nuevo y manda sus mensajes.
-// 27/11/2026: paquete de entrevistas (precio del paquete, entrevistas incluidas al mes y precio por entrevista extra).
+// Paquete de entrevistas (precio del paquete, entrevistas incluidas al mes y precio por entrevista extra).
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";

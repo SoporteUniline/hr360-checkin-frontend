@@ -1,9 +1,8 @@
 "use client";
 /* eslint-disable @next/next/no-img-element -- logos de las empresas (S3) con tamaño fijo; next/image exige dominios */
 
-// 27/11/2026: la bolsa de trabajo es opcional por empresa. ?bolsa=1 trae solo las empresas que publican en la bolsa y
-// tienen vacantes abiertas (el backend filtra); sin el parámetro, /empresas/activas responde como siempre.
-// 23/11/2026 (rediseño): la tira es secundaria; si falla o no hay empresas, no se muestra (antes pintaba el error crudo).
+// ?bolsa=1 trae solo las empresas que publican en la bolsa con vacantes abiertas (filtra el backend).
+// La tira es secundaria: si falla o no hay empresas, no se muestra.
 export const RUTA_EMPRESAS_BOLSA = "/empresas/activas?bolsa=1&limit=4&page=1";
 
 export default function EmpresasContratando({ empresas, cargando, idEmpresa, onElegir }) {

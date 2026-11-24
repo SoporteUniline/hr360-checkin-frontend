@@ -28,7 +28,7 @@ import PreguntasVacante, { faltantes } from "./ApplicationForm/PreguntasVacante"
 import { respuestasParaEnviar } from "@/lib/reclutamiento/respuestas.mjs";
 import { formatoSueldo, haceCuanto, textoPlano, ubicacionVacante } from "@/lib/bolsaTrabajo.mjs";
 
-// Página pública de una vacante (rediseño 23/11/2026, estilo ADAMIA). La lógica de postulación no cambia: sin sesión,
+// Página pública de una vacante. La lógica de postulación no cambia: sin sesión,
 // formulario con verificación del teléfono (OTP) y preguntas propias; con sesión de candidato, confirmación con las
 // mismas preguntas y POST /postulaciones/postulacion-auth.
 
@@ -103,7 +103,7 @@ export default function VacanteDetalle() {
   const [enviada, setEnviada] = useState(false);
 
   const [showModal, setShowModal] = useState(false);
-  // (03/12/2026) Preguntas propias de la vacante también al postularse con sesión.
+  // Preguntas propias de la vacante también al postularse con sesión.
   const [respuestas, setRespuestas] = useState({});
   const [sinResponder, setSinResponder] = useState([]);
   const { dataUser, isLoggedIn } = useAuth();

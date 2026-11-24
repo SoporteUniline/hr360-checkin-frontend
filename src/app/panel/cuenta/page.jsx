@@ -1,9 +1,6 @@
 "use client";
-// Mi cuenta del panel (24/11/2026, rediseño pedido por el dueño: «hazlo igual de bonito como todo lo que tenemos»).
-// Mismo marco que Nómina, Tareas y la ficha del empleado: encabezado de página, pestañas con subrayado de marca, tarjetas
-// blancas con borde sutil y barra «Sin cambios» / «Guardar». Escritorio en 2 columnas; teléfono en una.
-// Las pestañas visitadas se conservan montadas (ocultas) para no perder lo escrito al cambiar de pestaña; la guardia de
-// salida (GuardiaCuenta) pregunta antes de salir si algo quedó sin guardar. Endpoints y guardado: los de siempre.
+// Mi cuenta del panel. Las pestañas visitadas siguen montadas (ocultas) para no perder lo escrito al cambiar de
+// pestaña; GuardiaCuenta pregunta antes de salir si algo quedó sin guardar.
 import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/context/AuthContext";
@@ -69,7 +66,7 @@ export default function MyAccountReclutador() {
   const empresa = nombreEmpresaActiva(dataUser);
 
   const accesoModulos = (
-    // (03/12/2026) Módulos por empresa: se configuran en su propia pantalla.
+    // Módulos por empresa: se configuran en su propia pantalla.
     <Link href="/panel/modulos" className="flex min-h-11 items-center gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-700 transition-colors hover:border-brand/40 hover:bg-blue-50/40">
       <LayoutGrid className="size-5 shrink-0 text-brand" aria-hidden="true" />
       <span className="min-w-0 flex-1">

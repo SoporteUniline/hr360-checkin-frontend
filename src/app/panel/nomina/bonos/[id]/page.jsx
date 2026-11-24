@@ -1,6 +1,6 @@
 "use client";
 
-// Detalle de un bono o descuento (22/11/2026): sus datos y quién lo tiene. Se asigna o se quita a cada persona (o a todas
+// Detalle de un bono o descuento: sus datos y quién lo tiene. Se asigna o se quita a cada persona (o a todas
 // las que se ven con el buscador) y se pone su valor propio; «Se lo ganan todos» lo aplica a toda la empresa.
 import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";

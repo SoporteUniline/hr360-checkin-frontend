@@ -40,7 +40,7 @@ export default function ApplicationForm({
   const [loading, setLoading] = React.useState(false);
   const [files, setFiles] = React.useState([]);
   const [showOTP, setShowOTP] = React.useState(false);
-  // (03/12/2026) Preguntas propias de la vacante (Reclutamiento real).
+  // Preguntas propias de la vacante (Reclutamiento real).
   const preguntas = React.useMemo(() => selectedJob?.preguntas_formulario ?? [], [selectedJob]);
   const [respuestas, setRespuestas] = React.useState({});
   const [sinResponder, setSinResponder] = React.useState([]);
@@ -159,8 +159,7 @@ export default function ApplicationForm({
     }
   };
 
-  // 23/11/2026 (rediseño): las secciones van abiertas una tras otra (antes en acordeón cerrado: los errores de un
-  // campo obligatorio quedaban escondidos). Mismos campos, validaciones, OTP y envío.
+  // Secciones abiertas una tras otra: en acordeón cerrado los errores de un campo obligatorio quedaban ocultos.
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       {cerrada ? (

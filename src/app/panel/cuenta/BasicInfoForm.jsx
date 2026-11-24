@@ -1,6 +1,6 @@
 "use client";
 
-// Pestaña «Mi cuenta» (24/11/2026, rediseño): a la izquierda la tarjeta de identidad con la foto; a la derecha la
+// Pestaña «Mi cuenta»: a la izquierda la tarjeta de identidad con la foto; a la derecha la
 // información básica con barra «Sin cambios» / «Guardar». Mismo guardado: PUT /users/:id con { nombre, correo }.
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";

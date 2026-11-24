@@ -1,6 +1,6 @@
 "use client";
 
-// Detalle de un préstamo (22/11/2026: clic en el renglón de Préstamos → su página).
+// Detalle de un préstamo (se abre con clic en el renglón de Préstamos).
 import { useParams } from "next/navigation";
 import DetallePrestamo from "@/components/nomina/DetallePrestamo";
 

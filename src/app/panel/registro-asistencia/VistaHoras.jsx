@@ -1,7 +1,6 @@
 "use client";
 
-// Pestaña «Horas» de Asistencias (maqueta aprobada 19/11/2026): horas de la semana legal de cada
-// empleado contra el límite de la LFT, quién se está excediendo o va a pasar, extras y alertas.
+// Pestaña «Horas»: horas de la semana legal por empleado contra el límite de la LFT.
 // Datos: GET /checador/reportes/horas-ley (semana completa elegida). Lógica: lib/asistencia/semanaHoras.mjs
 
 import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
@@ -15,7 +14,7 @@ import { fetcherWithToken } from "@/lib/fetcher";
 import { duracionCorta, formatearMinutos } from "@/lib/asistencia/jornada.mjs";
 import { ordenarFilas, resumenSemana, semanaInicial, semanasDelRango } from "@/lib/asistencia/semanaHoras.mjs";
 
-// (19/11/2026) Clic en un día (o en su alerta) abre el registro de ese día en la Lista para corregirlo.
+// Clic en un día (o en su alerta) abre el registro de ese día en la Lista para corregirlo.
 export const enlaceDia = (idEmpleado, nombre, fecha) =>
   `/panel/registro-asistencia?${new URLSearchParams({ fecha, empleado: nombre ?? "", abrirEmpleado: String(idEmpleado ?? "") })}`;
 const irAlDia = (e, idEmpleado, nombre, fecha) => {

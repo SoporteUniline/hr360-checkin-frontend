@@ -1,6 +1,6 @@
 "use client";
 
-// Logo de la empresa (24/11/2026, rediseño): logo grande en cuadro, «Cambiar logo» y vista previa antes de guardar.
+// Logo de la empresa: logo grande en cuadro, «Cambiar logo» y vista previa antes de guardar.
 // Mismo guardado de siempre: PUT /empresas/:id/upload-image (campo «imagen»). También se usa en el alta de empresas del
 // dashboard (keepData): ahí la guardia de Mi cuenta no aplica.
 import { useEffect, useRef, useState } from "react";

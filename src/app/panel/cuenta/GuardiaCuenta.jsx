@@ -1,6 +1,6 @@
 "use client";
 
-// Guardia de salida de Mi cuenta (24/11/2026). La pantalla tiene varios formularios que se guardan por separado (foto,
+// Guardia de salida de Mi cuenta. La pantalla tiene varios formularios que se guardan por separado (foto,
 // información básica, contraseña, logo y datos de la empresa). La guardia común (components/cambios/CambiosPendientes)
 // guarda UNA guardia al elegir «Guardar y salir»; por eso aquí se juntan todas en una sola: si hay cambios en varias,
 // «Guardar y salir» las guarda una por una y solo sale si todas se guardaron bien.

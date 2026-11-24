@@ -1,6 +1,6 @@
 "use client";
 
-// Pestaña «Seguridad» (24/11/2026, rediseño): nueva contraseña y confirmación con mostrar/ocultar, recomendaciones que
+// Pestaña «Seguridad»: nueva contraseña y confirmación con mostrar/ocultar, recomendaciones que
 // se marcan en vivo y aviso de si coinciden. Mismo guardado y misma validación de siempre (ambos campos y que coincidan):
 // PUT /users/update-password/:id con { password, confirmPassword }. Las recomendaciones son guía, no bloquean.
 import { useState } from "react";

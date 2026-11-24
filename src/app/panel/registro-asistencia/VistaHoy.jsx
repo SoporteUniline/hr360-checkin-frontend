@@ -1,6 +1,6 @@
 "use client";
 
-// Asistencias → Hoy (23/11/2026, maqueta aprobada por el dueño): a esta hora, un estado por persona y lo urgente primero.
+// Asistencias → Hoy: a esta hora, un estado por persona y lo urgente primero.
 // Tarjetas = filtros (Trabajando, Llegaron tarde, No han llegado, En comida, Ya salieron, Salieron antes, Faltaron);
 // búsqueda y área en pantalla; lista agrupada: Requieren atención → En comida → Trabajando → Próximos → Ya salieron →
 // No laboran hoy (plegado). «Ver día» abre la ventana de edición del día (la misma de Registros).

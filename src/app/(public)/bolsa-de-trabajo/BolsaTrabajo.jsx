@@ -20,7 +20,7 @@ const Flecha = () => (
   </svg>
 );
 
-// Bolsa de trabajo pública (rediseño 23/11/2026). Contratos del API sin cambios: /vacantes/filter (misma consulta),
+// Bolsa de trabajo pública. Contratos del API sin cambios: /vacantes/filter (misma consulta),
 // /vacantes/entidades, /empresas/giros y /empresas/activas?bolsa=1&limit=4&page=1. Los filtros viven en la dirección
 // (?q=…&estado=…) para compartir la búsqueda y volver de una vacante sin perderla.
 export default function BolsaTrabajo() {
