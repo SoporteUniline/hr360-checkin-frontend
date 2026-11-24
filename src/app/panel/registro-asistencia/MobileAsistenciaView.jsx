@@ -19,6 +19,8 @@ import MobileFiltersDrawer from "./MobileFiltersDrawer";
 import MobileEmpleadoDetalle from "./MobileEmpleadoDetalle";
 import EtiquetaPermisoHoras from "./EtiquetaPermisoHoras";
 import { estadoHorasExtra } from "@/lib/asistencia/horasExtra.mjs";
+import { permisoFila } from "@/lib/asistencia/tiposGoce.mjs";
+import { actaFila } from "@/lib/actasEstatus.mjs";
 import { formatearMinutos, sinSalidaAComer } from "@/lib/asistencia/jornada.mjs";
 import ClockNavigation from '@/components/Clock/ClockNavigation';
 import LocalClockCaptures from '@/components/Clock/LocalClockCaptures';
@@ -120,6 +122,8 @@ function EmpleadoCard({ registro, index, totalCount, onClick }) {
 
   const esTarde = registro.estadoAsistencia === "Tardanza";
   const extra = infoExtra(registro);
+  const permiso = permisoFila(registro);
+  const acta = actaFila(registro);
 
   return (
     <button
@@ -149,6 +153,13 @@ function EmpleadoCard({ registro, index, totalCount, onClick }) {
           <p className="mt-0.5 truncate text-[11px] font-semibold text-amber-700">⚠ No marcó salida a comer</p>
         )}
         {registro.permiso_horas && <EtiquetaPermisoHoras permiso={registro.permiso_horas} className="mt-1" />}
+        {permiso ? (
+          <p data-permiso-movil className="mt-0.5 whitespace-normal break-words text-[12px] leading-snug text-slate-500">
+            {permiso.tipo ? <span className="font-medium text-slate-700">{permiso.tipo}</span> : null}
+            {permiso.tipo && permiso.detalle ? " · " : ""}{permiso.detalle}
+          </p>
+        ) : null}
+        {acta ? <p data-acta-movil className="mt-0.5 text-[12px] font-medium text-blue-700">{acta.texto}</p> : null}
       </div>
 
       {/* Times */}

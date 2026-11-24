@@ -16,7 +16,8 @@ import { mutate } from "swr";
 import { useSnackbar } from "notistack";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Combobox } from "@/components/Combobox";
-import { BookOpen, Info, Save } from "lucide-react";
+import { BookOpen, Info } from "lucide-react";
+import { ALCANCES, ALCANCE_TXT, GOCES, HORAS, normalizarTipo } from "@/lib/asistencia/tiposGoce.mjs";
 
 export default function TipoRegistroFormDialog({
   open,
@@ -26,6 +27,9 @@ export default function TipoRegistroFormDialog({
   mutateKey,
   empresas = [],
   id_empresa_defecto,
+  empresaConfig = "",
+  nombreEmpresaConfig = "",
+  variasEmpresas = false,
 }) {
   const { enqueueSnackbar } = useSnackbar();
   const [loading, setLoading] = useState(false);
@@ -42,14 +46,22 @@ export default function TipoRegistroFormDialog({
     es_festivo: 0,
     aplica_a_empresa: "Todas",
     id_empresa: "",
+    alcance: "dia",
+    horas_no_trabajadas: null,
+    cambia_al_aplicar: 1,
   });
 
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (editRegistro) {
+      const t = normalizarTipo(editRegistro);
       setForm({
         ...editRegistro,
+        alcance: t.alcance,
+        horas_no_trabajadas: t.horas,
+        goce_sueldo: t.goce === "con" ? 1 : 0,
+        cambia_al_aplicar: t.cambia ? 1 : 0,
         id_empresa:
           editRegistro.id_empresa ||
           (id_empresa_defecto === "all" ? "" : id_empresa_defecto),
@@ -67,10 +79,20 @@ export default function TipoRegistroFormDialog({
         es_festivo: 0,
         aplica_a_empresa: "Todas",
         id_empresa: id_empresa_defecto === "all" ? "" : id_empresa_defecto,
+        alcance: "dia",
+        horas_no_trabajadas: null,
+        cambia_al_aplicar: 1,
       });
     }
     setError("");
   }, [editRegistro, open, id_empresa_defecto]);
+
+  // Tipos base (del sistema, compartidos por todas las empresas): nombre, clave y alcance en solo lectura; goce, horas y
+  // «se cambia al aplicar» se guardan como configuración de la empresa (PUT solo con esos campos).
+  const delSistema = Boolean(editRegistro && (editRegistro.es_base != null ? editRegistro.es_base : editRegistro.id <= 18));
+  const parcial = form.alcance !== "dia";
+  const cambiarAlcance = (v) => setForm((prev) => ({ ...prev, alcance: v,
+    horas_no_trabajadas: v === "dia" ? null : prev.horas_no_trabajadas || "reponen" }));
 
   const handleChange = (field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -78,7 +100,8 @@ export default function TipoRegistroFormDialog({
   };
 
   const handleSubmit = async () => {
-    if (!form.clave.trim() || !form.nombre.trim() || !form.id_empresa) {
+    // Un tipo del sistema es global (sin empresa): solo se configura cómo se paga.
+    if (!String(form.clave ?? "").trim() || !String(form.nombre ?? "").trim() || (!form.id_empresa && !delSistema)) {
       setError("Clave, nombre y empresa son obligatorios.");
       return;
     }
@@ -104,7 +127,18 @@ export default function TipoRegistroFormDialog({
 
       const method = editRegistro ? "put" : "post";
 
-      await axios[method](url, form);
+      const config = {
+        goce_sueldo: Number(form.goce_sueldo) ? 1 : 0,
+        horas_no_trabajadas: parcial ? form.horas_no_trabajadas || "reponen" : null,
+        cambia_al_aplicar: Number(form.cambia_al_aplicar) ? 1 : 0,
+      };
+      await axios[method](url, delSistema ? { ...config, ...(variasEmpresas && empresaConfig ? { id_empresa: Number(empresaConfig) } : {}) } : {
+        ...form,
+        goce_sueldo: Number(form.goce_sueldo) ? 1 : 0,
+        alcance: form.alcance,
+        horas_no_trabajadas: parcial ? form.horas_no_trabajadas || "reponen" : null,
+        cambia_al_aplicar: Number(form.cambia_al_aplicar) ? 1 : 0,
+      });
 
       enqueueSnackbar(
         `Registro ${editRegistro ? "actualizado" : "agregado"} con éxito`,
@@ -156,6 +190,7 @@ export default function TipoRegistroFormDialog({
               <Label htmlFor="clave">Clave del Registro</Label>
               <Input
                 id="clave"
+                disabled={delSistema}
                 placeholder="Ingrese clave"
                 value={form.clave}
                 onChange={(e) => handleChange("clave", e.target.value)}
@@ -165,6 +200,7 @@ export default function TipoRegistroFormDialog({
               <Label htmlFor="nombre">Nombre</Label>
               <Input
                 id="nombre"
+                disabled={delSistema}
                 placeholder="Ingrese nombre"
                 value={form.nombre}
                 onChange={(e) => handleChange("nombre", e.target.value)}
@@ -174,6 +210,7 @@ export default function TipoRegistroFormDialog({
               <Label htmlFor="desc">Descripción</Label>
               <Input
                 id="desc"
+                disabled={delSistema}
                 placeholder="Ingrese la descripción (Opcional)"
                 value={form.descripcion}
                 onChange={(e) => handleChange("descripcion", e.target.value)}
@@ -181,8 +218,8 @@ export default function TipoRegistroFormDialog({
             </div>
           </div>
 
-          {/* SECCIÓN 2: ASIGNACIÓN */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* SECCIÓN 2: ASIGNACIÓN (un tipo del sistema no tiene empresa propietaria) */}
+          {delSistema ? null : <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Empresa Propietaria</Label>
               <Combobox
@@ -204,19 +241,43 @@ export default function TipoRegistroFormDialog({
                 }
               />
             </div>
+          </div>}
+
+          {/* SECCIÓN 3: QUÉ ABARCA Y CUÁNTO SE PAGA (mockup Tipos.dc.html) */}
+          <div data-seccion-goce className="space-y-3 rounded-lg border border-slate-200 p-4">
+            <p className="text-[13.5px] font-semibold text-slate-800">Qué abarca y cuánto se paga</p>
+            {delSistema ? (
+              <p data-config-empresa className="rounded-md bg-blue-50 px-3 py-2 text-[12.5px] text-blue-900">
+                Configuración de tu empresa{nombreEmpresaConfig ? ` (${nombreEmpresaConfig})` : ""} (el tipo es del sistema).
+              </p>
+            ) : null}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <CampoSelect id="alcance" etiqueta="Abarca" value={form.alcance} onChange={cambiarAlcance} disabled={delSistema}
+                opciones={ALCANCES.map((a) => [a, ALCANCE_TXT[a]])} />
+              <CampoSelect id="goce" etiqueta="Goce del día" value={Number(form.goce_sueldo) ? "con" : "sin"}
+                onChange={(v) => handleChange("goce_sueldo", v === "con" ? 1 : 0)} opciones={GOCES} />
+              {parcial ? (
+                <CampoSelect id="horas" etiqueta="Horas no trabajadas" value={form.horas_no_trabajadas || "reponen"}
+                  onChange={(v) => handleChange("horas_no_trabajadas", v)} opciones={HORAS} />
+              ) : null}
+              <label className="flex items-center gap-2 self-end pb-2 text-[13.5px] text-slate-800">
+                <Checkbox id="cambia" checked={!!Number(form.cambia_al_aplicar)}
+                  onCheckedChange={(v) => handleChange("cambia_al_aplicar", v ? 1 : 0)} />
+                Se cambia al aplicar
+              </label>
+            </div>
+            <p className="text-[12px] text-slate-500">
+              «Se cambia al aplicar»: RH puede elegir otro goce {parcial ? "u otro trato de las horas " : ""}en cada caso.
+              «Entrada antes de tiempo» y «salida después» no son permisos: los calcula el reloj.
+            </p>
           </div>
 
-          {/* SECCIÓN 3: CONFIGURACIÓN Y REGLAS */}
-          <div>
+          {/* SECCIÓN 4: CONFIGURACIÓN Y REGLAS (las de un tipo del sistema no se cambian) */}
+          {delSistema ? null : <div>
             <Label className="text-[#37495E] font-semibold mb-3 block">
               Reglas y Comportamiento
             </Label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 bg-slate-50 p-4 rounded-lg border border-slate-100">
-              <CheckboxItem
-                label="Goce de Sueldo"
-                checked={form.goce_sueldo}
-                onChecked={(v) => handleChange("goce_sueldo", v)}
-              />
               <CheckboxItem
                 label="Cuenta como Asistencia"
                 checked={form.cuenta_como_asistencia}
@@ -245,7 +306,7 @@ export default function TipoRegistroFormDialog({
                 onChecked={(v) => handleChange("es_festivo", v)}
               />
             </div>
-          </div>
+          </div>}
 
           {error && (
             <div className="bg-red-50 border-l-4 border-red-500 p-3">
@@ -294,6 +355,18 @@ function CheckboxItem({ label, checked, onChecked }) {
       >
         {label}
       </Label>
+    </div>
+  );
+}
+
+function CampoSelect({ id, etiqueta, value, onChange, opciones, disabled = false }) {
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={id}>{etiqueta}</Label>
+      <select id={id} value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)}
+        className="h-9 disabled:bg-slate-50 disabled:text-slate-500 w-full rounded-md border border-input bg-white px-2.5 text-[13.5px] text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+        {opciones.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
+      </select>
     </div>
   );
 }

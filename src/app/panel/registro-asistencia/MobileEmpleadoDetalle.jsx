@@ -186,7 +186,7 @@ export default function MobileEmpleadoDetalle({
   return (
     <>
     {relojAbierto ? (
-      <RelojDiaDialog registro={display} onCerrar={() => setRelojAbierto(false)}
+      <RelojDiaDialog registro={typeof relojAbierto === "string" ? { ...display, _tipoParcial: relojAbierto } : display} onCerrar={() => setRelojAbierto(false)}
         onGuardado={async (asistencia) => { if (asistencia) setLocalRegistro((prev) => ({ ...prev, ...asistencia })); await mutateAsistencia?.(); }} />
     ) : null}
     <Drawer open={open} onOpenChange={onOpenChange} direction="bottom">
@@ -408,7 +408,7 @@ export default function MobileEmpleadoDetalle({
             <div className="mx-4 mb-3 flex flex-col gap-2.5 rounded-2xl border border-gray-100 bg-white p-4 shadow-sm" data-estado-movil>
               <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Estado del día</p>
               <CeldaEstadoDia registro={display} tiposPermiso={tiposPermisoData} movil
-                onAbrirReloj={() => { setRelojAbierto(true); onOpenChange?.(false); }}
+                onAbrirReloj={(r) => { setRelojAbierto(r?._tipoParcial ? String(r._tipoParcial) : true); onOpenChange?.(false); }}
                 onGuardado={async (asistencia) => { if (asistencia) setLocalRegistro((prev) => ({ ...prev, ...asistencia })); await mutateAsistencia?.(); }} />
               {extraFila(display).tipo === "pendiente" ? (
                 <button type="button" onClick={() => { setRelojAbierto(true); onOpenChange?.(false); }}

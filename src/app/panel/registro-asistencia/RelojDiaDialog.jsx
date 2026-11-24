@@ -22,6 +22,9 @@ import {
   fechaTxt, hora12Txt, horarioMin, horarioNormal, minDeCampo, ordenar, origenTexto, puedeComida, quitarORestaurar,
   resumen, resumenServidor, separarExtra, vivos,
 } from "@/lib/asistencia/relojDia.mjs";
+import { cuerpoPermisoDia, errorPermiso, normalizarTipo, permisoInicial } from "@/lib/asistencia/tiposGoce.mjs";
+import PermisoDelDia from "./PermisoDelDia";
+import { avisosRespuesta } from "@/lib/actasEstatus.mjs";
 
 const CAMPO = "h-9 w-full min-w-0 rounded-lg border border-slate-200 bg-white px-2.5 text-[13.5px] text-slate-900 "
   + "focus:outline-none focus:ring-2 focus:ring-blue-500/30 disabled:bg-slate-50 disabled:text-slate-400 max-sm:h-11 max-sm:text-base";
@@ -44,7 +47,9 @@ function Campo({ etiqueta, children, nota, className = "" }) {
 function Renglon({ r, n, error, motivos, autorizadores, nocturno, onCambio, onQuitar }) {
   const ed = editado(r);
   const pideMotivo = ed || (r.anulado && !r.anuladoAntes);
-  const motivosConocidos = [...(motivos.permisos ?? []), ...(motivos.correccion ?? [])].map((m) => m.clave);
+  const motivosConocidos = (motivos.correccion ?? []).map((m) => m.clave);
+  // Los «tp:<id>» ya guardados (permiso como motivo de renglón, antes de «Permiso del día») se muestran con su nombre.
+  const nombreGuardado = (motivos.permisos ?? []).find((m) => m.clave === r.motivo)?.nombre ?? r.motivo;
   const fondo = r.anulado ? "bg-slate-50" : ed ? "bg-amber-50/50" : r.concepto === "extra" ? "bg-violet-50/50" : r.concepto === "comida" ? "bg-slate-50/70" : "bg-white";
   const tachado = r.anulado ? "line-through" : "";
   const duracion = r.ini != null && r.fin != null && r.fin > r.ini ? durTexto(r.fin - r.ini) : r.fin == null && r.ini != null ? "Sin salida" : "";
@@ -84,10 +89,7 @@ function Renglon({ r, n, error, motivos, autorizadores, nocturno, onCambio, onQu
           <select aria-label="Motivo" value={r.motivo} onChange={(e) => onCambio({ motivo: e.target.value })}
             className={cn(CAMPO, pideMotivo && !r.motivo && ROJO)}>
             <option value="">{pideMotivo ? "Elige el motivo…" : "Sin motivo"}</option>
-            {r.motivo && !motivosConocidos.includes(r.motivo) ? <option value={r.motivo}>{r.motivo}</option> : null}
-            {motivos.permisos?.length ? (
-              <optgroup label="Permisos">{motivos.permisos.map((m) => <option key={m.clave} value={m.clave}>{m.nombre}</option>)}</optgroup>
-            ) : null}
+            {r.motivo && !motivosConocidos.includes(r.motivo) ? <option value={r.motivo}>{nombreGuardado}</option> : null}
             <optgroup label="Corrección">{(motivos.correccion ?? []).map((m) => <option key={m.clave} value={m.clave}>{m.nombre}</option>)}</optgroup>
           </select>
         </Campo>
@@ -129,9 +131,15 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
   const [regs, setRegs] = useState(null);
   const [servidor, setServidor] = useState({ general: "", renglones: {} });
   const [guardando, setGuardando] = useState(false);
+  // «Permiso del día»: undefined = aún no se carga; null = sin permiso.
+  const [permiso, setPermiso] = useState(undefined);
+  const tiposParciales = useMemo(() => (Array.isArray(data?.tipos_parciales) ? data.tipos_parciales : []), [data]);
+  const permisoGuardado = useMemo(() => permisoInicial(data?.permiso_dia, tiposParciales), [data, tiposParciales]);
   useEffect(() => {
     if (data?.registros && regs == null) setRegs(desdeApi(data.registros, { fecha, zona }));
-  }, [data, regs, fecha, zona]);
+    // Desde la fila «Sí vino → <tipo parcial>»: ese tipo queda puesto en «Permiso del día».
+    if (data && permiso === undefined) setPermiso(permisoInicial(data.permiso_dia, tiposParciales, data.permiso_dia ? null : registro?._tipoParcial));
+  }, [data, regs, fecha, zona, permiso, tiposParciales, registro?._tipoParcial]);
 
   const horario = data?.horario ?? null;
   const h = useMemo(() => horarioMin(horario), [horario]);
@@ -139,14 +147,23 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
   const orden = useMemo(() => ordenar(lista), [lista]);
   const errs = useMemo(() => validar(lista), [lista]);
   const estadoSin = estadoFila(registro);
-  const calc = resumen(lista, horario, { tolerancia: Number(horario?.tolerancia_min ?? TOLERANCIA_MIN), estadoDia: estadoSin });
+  const tipoPermiso = permiso ? tiposParciales.find((t) => String(t.id) === String(permiso.id_tipo)) : null;
+  const calc = resumen(lista, horario, { tolerancia: Number(horario?.tolerancia_min ?? TOLERANCIA_MIN), estadoDia: estadoSin,
+    permiso: tipoPermiso ? { alcance: normalizarTipo(tipoPermiso).alcance } : null });
+  // permiso_dia viaja solo si hay permiso o si había uno guardado (null = quitarlo): así el cuerpo de siempre no cambia.
+  const cuerpoPermiso = permiso ? cuerpoPermisoDia(permiso, tipoPermiso) : null;
+  const llevaPermiso = Boolean(permiso) || Boolean(permisoGuardado);
+  const cambioPermiso = permiso !== undefined && JSON.stringify(cuerpoPermiso) !== JSON.stringify(permisoGuardado ? cuerpoPermisoDia(permisoGuardado, tiposParciales.find((t) => String(t.id) === String(permisoGuardado.id_tipo))) : null);
+  // El servidor responde 400 a un permiso parcial sin checadas: se avisa antes.
+  const errorDelPermiso = errorPermiso(permiso) || (permiso && regs != null && vivos(lista).length === 0
+    ? "Si no vino, usa el estado del día en la fila (falta, vacaciones…), o carga sus horas." : "");
   // Cambios = el cuerpo del PUT ya no es el que se cargó.
   const firma = (rs) => JSON.stringify(cuerpoPut(ordenar(rs), { fecha, zona }));
   const inicial = useMemo(() => (data?.registros ? firma(desdeApi(data.registros, { fecha, zona })) : ""),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [data, fecha, zona]);
-  const hayCambios = regs != null && firma(lista) !== inicial;
-  const hayErrores = Object.keys(errs).length > 0;
+  const hayCambios = regs != null && (firma(lista) !== inicial || cambioPermiso);
+  const hayErrores = Object.keys(errs).length > 0 || Boolean(errorDelPermiso);
   // Sin cambios se muestra lo que calculó el servidor; al editar, el cálculo en vivo (misma regla).
   const delServidor = !hayCambios ? resumenServidor(data?.resumen) : null;
   const vista = delServidor ?? { trabajadas: calc.trabajadas, comida: calc.comida, abierto: calc.abierto, hayRegs: calc.hayRegs,
@@ -160,8 +177,10 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
     if (hayErrores || guardando) return false;
     setGuardando(true);
     try {
-      const res = await axios.put(`/checador/asistencias/${id}/reloj`, cuerpoPut(orden, { fecha, zona }));
+      const res = await axios.put(`/checador/asistencias/${id}/reloj`,
+        { ...cuerpoPut(orden, { fecha, zona }), ...(llevaPermiso ? { permiso_dia: cuerpoPermiso } : {}) });
       enqueueSnackbar("Reloj guardado. Horas, comida, extra y estado se recalcularon; lo original queda en el historial.", { variant: "success" });
+      for (const a of avisosRespuesta(res.data)) enqueueSnackbar(a, { variant: "info" });
       await onGuardado?.(res.data?.asistencia);
       onCerrar?.(true);
       return true;
@@ -182,11 +201,12 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
   const especial = dia?.tipo && dia.tipo !== "normal";
   const sinVivos = regs != null && vivos(lista).length === 0;
   const motivoOlvido = (data?.motivos?.correccion ?? []).find((m) => m.clave === "olvido")?.clave ?? "";
-  // Desde la fila «Sí vino → <permiso>»: las horas que se carguen llevan ese motivo (p. ej. visita al médico).
-  const motivoCarga = (data?.motivos?.permisos ?? []).some((m) => m.clave === registro?._motivoInicial) ? registro._motivoInicial : motivoOlvido;
+  // Las horas que se cargan a mano llevan el motivo de corrección; el permiso va aparte en «Permiso del día».
+  const motivoCarga = motivoOlvido;
   const programado = h ? `${hora12Txt(aHHMM(h.pe))} – ${hora12Txt(aHHMM(h.ps))}` : "Sin horario";
   const comidaProg = h?.sc != null ? `${hora12Txt(aHHMM(h.sc))} – ${hora12Txt(aHHMM(h.rc))}` : "Sin comida";
-  const mensajeError = servidor.general || (hayErrores ? "Corrige lo marcado en rojo para guardar." : "");
+  const mensajeError = servidor.general || (Object.keys(errs).length ? "Corrige lo marcado en rojo para guardar."
+    : errorDelPermiso && hayCambios ? errorDelPermiso : "");
 
   return (
     <Dialog open onOpenChange={(v) => !v && cerrar()}>
@@ -223,6 +243,12 @@ export default function RelojDiaDialog({ registro, onCerrar, onGuardado }) {
                     <div><p className="text-[11.5px] font-semibold uppercase tracking-wide text-slate-500">Comida</p><p className="text-[14px] font-semibold tabular-nums text-slate-900">{comidaProg}</p></div>
                   </div>
                 </section>
+
+                {tiposParciales.length || permiso ? (
+                  <PermisoDelDia permiso={permiso ?? null} onCambio={(p) => { setPermiso(p); setServidor({ general: "", renglones: {} }); }}
+                    tipos={tiposParciales} motivos={data?.motivos_permiso} regs={lista} horario={horario} error={permiso ? errorDelPermiso : ""}
+                    origen={data?.permiso_dia?.origen === "permiso" ? data.permiso_dia.id_solicitud ?? true : null} />
+                ) : null}
 
                 <section className="flex flex-col gap-3">
                   <h3 className={TITULO}>Checadas del reloj</h3>

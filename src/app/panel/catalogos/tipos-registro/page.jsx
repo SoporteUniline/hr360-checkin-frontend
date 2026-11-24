@@ -8,6 +8,7 @@ import { BookOpen, Filter, Plus } from "lucide-react";
 import TiposRegistroTable from "./TiposRegistroTable";
 import TipoRegistroFormDialog from "./TipoRegistroFormDialog";
 import TipoRegistroDeleteDialog from "./TipoRegistroDeleteDialog";
+import MotivosPermiso from "./MotivosPermiso";
 import AccesosRapidos from "@/components/AccesosRapidos";
 import { useAuth } from "@/context/AuthContext";
 import useDebounce from "@/hooks/useDebounce";
@@ -45,7 +46,11 @@ export default function TiposRegistro() {
     setPage(1);
   };
 
-  const key = `/checador/tiposPermiso?id_empresa=${empresaActiva}&clave=${debouncedFilter}`;
+  // Los tipos base (del sistema) se configuran por empresa: goce, horas y «se cambia al aplicar» son los de la empresa
+  // activa del selector o, con «Todas», los de la empresa de la sesión. El servidor responde con esos valores.
+  const empresaConfig = empresaActiva !== "all" ? empresaActiva : String(dataUser?.id_empresa ?? dataUser?.empresas?.[0] ?? "");
+  const nombreEmpresaConfig = dataUser?.empresas_detalle?.find((e) => String(e.id_empresa) === empresaConfig)?.nombre ?? "";
+  const key = `/checador/tiposPermiso?id_empresa=${empresaActiva}&empresa=${empresaConfig}&clave=${debouncedFilter}`;
 
   return (
     <div className="space-y-6">
@@ -54,7 +59,7 @@ export default function TiposRegistro() {
         <EncabezadoPagina
           icono={BookOpen}
           titulo="Tipos de registro"
-          subtitulo="Catálogo para asistencias/permisos (crear, editar y eliminar)."
+          subtitulo="Qué pasó (el tipo), por qué (el motivo) y cuánto se paga. Los que tienen 🔒 los fija la ley o el sistema."
         />
       </div>
 
@@ -119,6 +124,8 @@ export default function TiposRegistro() {
         }}
       />
 
+      <MotivosPermiso />
+
       <TipoRegistroFormDialog
         open={openForm}
         setOpen={setOpenForm}
@@ -127,6 +134,9 @@ export default function TiposRegistro() {
         empresas={dataUser?.empresas_detalle}
         registros={registros}
         mutateKey={key}
+        empresaConfig={empresaConfig}
+        nombreEmpresaConfig={nombreEmpresaConfig}
+        variasEmpresas={(dataUser?.empresas?.length ?? 0) > 1}
       />
 
       <TipoRegistroDeleteDialog

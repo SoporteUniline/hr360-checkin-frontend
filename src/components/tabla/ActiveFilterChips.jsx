@@ -85,7 +85,7 @@ export default function ActiveFilterChips({ groups = [], onClearAll }) {
                     className="flex items-center gap-2 w-full px-2 py-1.5 text-xs hover:bg-gray-100 rounded text-left cursor-pointer"
                   >
                     <Checkbox checked={checked} />
-                    <span>{option}</span>
+                    <span>{group.formatOption ? group.formatOption(option) : option}</span>
                   </div>
                 );
               })}

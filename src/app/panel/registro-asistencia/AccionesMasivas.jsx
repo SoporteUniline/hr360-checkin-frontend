@@ -8,6 +8,7 @@ import { useSnackbar } from "notistack";
 import axios from "@/lib/axios";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { planMasivo, tiposEstadoDia } from "@/lib/asistencia/relojDia.mjs";
+import { avisosRespuesta } from "@/lib/actasEstatus.mjs";
 
 const CAMPO = "h-9 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-[14px] text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 max-sm:h-11 max-sm:text-base";
 const nombre = (r) => `${r.nombre ?? ""} ${r.apellido_paterno ?? ""}`.trim();
@@ -36,6 +37,8 @@ export default function AccionesMasivas({ filas, tiposPermiso, onLimpiar, onGuar
       const omitidos = Array.isArray(res.data?.omitidos) ? res.data.omitidos : [];
       enqueueSnackbar(`Aplicado a ${aplicados}${omitidos.length ? ` · se omitieron ${omitidos.length}` : ""}. Queda en el historial con tu nombre y el motivo.`,
         { variant: omitidos.length ? "warning" : "success" });
+      // Avisos del servidor (p. ej. actas en borrador creadas por faltas injustificadas).
+      for (const a of avisosRespuesta(res.data)) enqueueSnackbar(a, { variant: "info" });
       await onGuardado?.();
       setAccion(null);
       onLimpiar?.();

@@ -28,6 +28,11 @@ import { CalendarCheck2, Save } from "lucide-react";
 // validación que el panel de RH. RH confirma o cambia «se repone / se rebaja» al aprobar.
 import CamposPermisoHoras, { datosPermisoHoras, erroresPermisoHoras } from "@/app/panel/permisos/CamposPermisoHoras";
 import { horarioPermiso } from "@/lib/asistencia/permisoHoras.mjs";
+// Tipos de registro con goce: el empleado elige tipo y motivo; el goce y el trato de las horas los decide RH.
+import useSWR from "swr";
+import { fetcherWithToken } from "@/lib/fetcher";
+import CamposMotivoGoce from "@/app/panel/permisos/CamposMotivoGoce";
+import { camposSolicitud, esParcial, motivoAOpcion, motivoFinal, tipoHorasDe, tiposParaPermiso } from "@/lib/asistencia/tiposGoce.mjs";
 
 const CAMPOS_HORAS = { modalidad: "dias", tipo_horas: "", tratamiento: "", hora_inicio: "", hora_fin: "" };
 const corta = (h) => (h ? String(h).slice(0, 5) : "");
@@ -42,6 +47,7 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
     motivo: "",
     estado: "Pendiente",
     id_empleado: dataUser?.id_empleado ?? "",
+    motivoSel: { opcion: "", texto: "" },
     ...CAMPOS_HORAS,
   };
 
@@ -51,7 +57,7 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
   const savingRef = useRef(false);
 
   const isReadOnly = mode === "ver";
-  const porHoras = form.modalidad === "horas";
+  const { data: dataMotivos } = useSWR(open ? "/checador/motivos-permiso" : null, fetcherWithToken, { revalidateOnFocus: false });
   const isEdit = mode === "editar";
   const isCreate = mode === "crear";
 
@@ -70,6 +76,7 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
           tratamiento: selected.tratamiento ?? "",
           hora_inicio: corta(selected.hora_inicio),
           hora_fin: corta(selected.hora_fin),
+          motivoSel: motivoAOpcion(selected.motivo_permiso, null),
         });
       } else {
         setForm(initialForm);
@@ -84,12 +91,19 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
   const { data: tiposPermisoResponse, error: tiposError, isLoading: tiposLoading } = useTiposPermisoData();
 
   const arrayTiposPermiso = tiposPermisoResponse?.tiposPermiso;
+  const tipoSel = (arrayTiposPermiso ?? []).find((t) => String(t.id) === String(form.id_tipo_permiso)) ?? null;
+  // Un tipo que abarca parte del día ya dice si llega tarde, sale antes o sale y regresa.
+  const parcial = Boolean(tipoSel && esParcial(tipoSel));
+  const porHoras = parcial || form.modalidad === "horas";
+  const nuevos = () => camposSolicitud(tipoSel, { motivo: motivoFinal(form.motivoSel), rh: false });
 
   const validateForm = () => {
     const validationErrors = [];
     if (!form.id_tipo_permiso)
       validationErrors.push("Selecciona el tipo de permiso.");
-    if (form.modalidad === "horas") return [...validationErrors, ...erroresPermisoHoras(form)];
+    // Las vacaciones no llevan motivo (descuentan del saldo).
+    if (tipoSel && Number(tipoSel.descuenta_vacaciones) !== 1 && !motivoFinal(form.motivoSel)) validationErrors.push("Elige el motivo del permiso.");
+    if (porHoras) return [...validationErrors, ...erroresPermisoHoras(form, { conTipo: parcial })];
     if (!form.fecha_inicio)
       validationErrors.push("La fecha de inicio es obligatoria.");
     if (!form.fecha_fin) validationErrors.push("La fecha fin es obligatoria.");
@@ -179,7 +193,8 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
         motivo: form.motivo || null,
         estado: "Pendiente",
         id_empleado: empleadoId,
-        ...(form.modalidad === "horas" ? datosPermisoHoras(form) : { modalidad: "dias" }),
+        ...(porHoras ? datosPermisoHoras(form) : { modalidad: "dias" }),
+        ...nuevos(),
       };
 
       await axios.post(`/checador/solicitudes-permiso`, payload, {
@@ -234,7 +249,8 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
         motivo: form.motivo || null,
         id_empleado: empleadoId,
         estado: "Pendiente",
-        ...(form.modalidad === "horas" ? datosPermisoHoras(form) : { modalidad: "dias" }),
+        ...(porHoras ? datosPermisoHoras(form) : { modalidad: "dias" }),
+        ...nuevos(),
       };
 
       await axios.put(`/checador/solicitudes-permiso/${selected.id}`, payload, {
@@ -260,9 +276,8 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
     }
   };
 
-  const arrayFiltered = arrayTiposPermiso?.filter((permiso) => {
-    return Number(permiso.es_permiso) === 1 || Number(permiso.descuenta_vacaciones) === 1;
-  });
+  const pedibles = new Set(tiposParaPermiso(arrayTiposPermiso ?? []).map((t) => t.id));
+  const arrayFiltered = arrayTiposPermiso?.filter((permiso) => pedibles.has(permiso.id) || Number(permiso.descuenta_vacaciones) === 1);
 
   return (
     <Dialog open={open} onOpenChange={(value) => { if (!savingRef.current) setOpen(value); }}>
@@ -290,7 +305,7 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
           {tiposError && <p role="alert" className="text-sm text-red-700">No pudimos cargar los tipos de permiso. Cierra e intenta de nuevo.</p>}
           {isReadOnly && <p className="text-sm font-medium">Estado: {selected?.estado} · {selected?.tipo_permiso_nombre}</p>}
           {isReadOnly && porHoras ? <p className="rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-900">{horarioPermiso({ ...selected, hora_inicio: form.hora_inicio, hora_fin: form.hora_fin })} · {form.fecha_inicio?.split("-").reverse().join("/")}</p> : null}
-          {!isReadOnly ? (
+          {!isReadOnly && !parcial ? (
             <div className="space-y-2">
               <Label>¿Por cuánto tiempo?</Label>
               <div className="grid grid-cols-2 overflow-hidden rounded-xl border border-slate-200" role="radiogroup" aria-label="Duración del permiso">
@@ -310,12 +325,14 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
               <Label htmlFor="request-type">Tipo de permiso</Label>
               <Select
                 value={form.id_tipo_permiso}
-                onValueChange={(val) =>
+                onValueChange={(val) => {
+                  const t = (arrayTiposPermiso ?? []).find((x) => String(x.id) === val);
                   setForm((prev) => ({
                     ...prev,
                     id_tipo_permiso: val,
-                  }))
-                }
+                    ...(t && esParcial(t) ? { modalidad: "horas", tipo_horas: tipoHorasDe(t) } : {}),
+                  }));
+                }}
                 disabled={isReadOnly || saving}
               >
                 <SelectTrigger id="request-type" className="h-auto w-full min-h-11 whitespace-normal bg-white text-left text-base [&>span]:line-clamp-none">
@@ -368,10 +385,15 @@ export const PermissionDialog = ({ open, setOpen, mutate, mode, selected }) => {
             </>)}
           </div>
 
-          {porHoras && !isReadOnly ? <CamposPermisoHoras form={form} setForm={setForm} /> : null}
+          {porHoras && !isReadOnly ? <CamposPermisoHoras form={form} setForm={setForm} tipoFijo={parcial} sinTratamiento={parcial} /> : null}
+
+          {tipoSel ? (
+            <CamposMotivoGoce tipo={tipoSel} motivos={dataMotivos} motivo={form.motivoSel} conGoce={false} disabled={isReadOnly || saving}
+              onMotivo={(m) => setForm((f) => ({ ...f, motivoSel: m }))} />
+          ) : null}
 
           <div className="space-y-2">
-            <Label htmlFor="request-reason">Motivo</Label>
+            <Label htmlFor="request-reason">Observaciones</Label>
             <Textarea
               id="request-reason"
               rows={4}
