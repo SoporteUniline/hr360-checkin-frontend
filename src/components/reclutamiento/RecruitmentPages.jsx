@@ -10,6 +10,7 @@ import { useRecruitment } from "./RecruitmentContext";
 import { EmptyState } from "./RecruitmentUI";
 import { RECRUITMENT_BASE as base, vacancyHref } from "./navigation";
 import VacanciesView from "./VacanciesView";
+import { InterruptorBolsa } from "@/components/whatsapp/EnlacesVacantes";
 import VacancyDetail from "./VacancyDetail";
 import CandidatesView from "./CandidatesView";
 import CandidatePanel from "./CandidatePanel";
@@ -17,7 +18,7 @@ import CatalogDialog from "./CatalogDialog";
 import s from "./reclutamiento.module.css";
 
 export function VacanciesPage() {
-  const { data, vacancyFilters, setVacancyFilters, action, openVacancy, createVacancy } =
+  const { data, empresa, vacancyFilters, setVacancyFilters, action, openVacancy, createVacancy } =
     useRecruitment();
   const params = useSearchParams();
   const status = params.get("estado");
@@ -31,15 +32,20 @@ export function VacanciesPage() {
         page: 1,
       });
   }, [status, query, setVacancyFilters]);
+  // «Publicar mis vacantes en la bolsa de trabajo» a la vista, donde se crean las vacantes (antes solo estaba en
+  // Conversaciones → Enlaces de vacantes, que sigue igual).
   return (
-    <VacanciesView
-      data={data}
-      filters={vacancyFilters}
-      setFilters={setVacancyFilters}
-      onAction={action}
-      onOpen={openVacancy}
-      onCreate={createVacancy}
-    />
+    <div className="space-y-3">
+      {empresa ? <InterruptorBolsa idEmpresa={empresa} /> : null}
+      <VacanciesView
+        data={data}
+        filters={vacancyFilters}
+        setFilters={setVacancyFilters}
+        onAction={action}
+        onOpen={openVacancy}
+        onCreate={createVacancy}
+      />
+    </div>
   );
 }
 export function VacancyRecord({ vacancyId }) {
