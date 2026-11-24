@@ -86,7 +86,18 @@ export function minutosDeMas(registro) {
   return trabajados == null || programados == null ? null : trabajados - programados;
 }
 
+// Horas extra registradas con su horario en el panel del día (horas_extra_registradas): mandan sobre el cálculo.
+export function minutosRegistrados(registro) {
+  const lista = Array.isArray(registro?.horas_extra_registradas) ? registro.horas_extra_registradas : [];
+  return lista.length ? lista.reduce((t, r) => t + (Number(r.minutos) || 0), 0) : null;
+}
+
 export function estadoHorasExtra(registro, zona = DB_TZ) {
+  const registradas = minutosRegistrados(registro);
+  if (registradas != null) {
+    const reposicion = registro.horas_extra_registradas.every((r) => r.forma_pago === FORMA_REPOSICION);
+    return { estado: reposicion ? "reposicion" : "autorizada", minutos: registradas, registradas: true };
+  }
   const minutos = minutosDeMas(registro);
   if (Number(registro?.hrs_extra)) {
     const estado = registro?.forma_pago_extras === FORMA_REPOSICION ? "reposicion" : "autorizada";
