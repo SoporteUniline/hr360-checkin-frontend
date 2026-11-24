@@ -330,6 +330,21 @@ try {
   const encabezadosQP = (await page.locator("thead th").allInnerTexts()).map((t) => t.trim());
   assert.ok(encabezadosQP.includes("Goce") && encabezadosQP.includes("Editado"), `columnas Goce y Editado: ${encabezadosQP.join(" | ")}`);
   assert.ok(!/goce/i.test(await filaDe("Raúl Vega").locator("[data-columna-motivo]").innerText()), "el goce ya no se repite en Motivo");
+  // Filtro de «Estado»: sus opciones son literalmente lo que se ve en la columna, y filtra por eso.
+  const thEstado = page.locator("thead th", { hasText: /^Estado/ }).first();
+  await thEstado.getByRole("button").first().click();
+  const opcionesEstado = await page.locator("[data-radix-popper-content-wrapper] div[role=button]").allInnerTexts();
+  assert.ok(opcionesEstado.map((t) => t.trim()).includes("⌚ Entrada tarde"), `opciones del filtro Estado: ${opcionesEstado.join(" | ")}`);
+  assert.ok(!opcionesEstado.some((t) => /Asistencia · en jornada|· /.test(t)), `sin textos que no sean de la columna: ${opcionesEstado.join(" | ")}`);
+  await page.locator("[data-radix-popper-content-wrapper] div[role=button]", { hasText: "⌚ Entrada tarde" }).click();
+  await page.keyboard.press("Escape");
+  // Con «Hoy» la tabla se divide por situación: se cuentan solo las filas de personas (no los encabezados de grupo).
+  const nombresFiltrados = await page.locator("tbody tr:not([data-grupo])").allInnerTexts();
+  assert.ok(nombresFiltrados.length === 1 && /Marta Díaz/.test(nombresFiltrados[0]), `filtrado por «⌚ Entrada tarde»: ${nombresFiltrados.length} filas`);
+  await thEstado.getByRole("button").first().click();
+  await page.getByRole("button", { name: "Limpiar filtro" }).click();
+  await page.keyboard.press("Escape");
+  await filaDe("Diego León").waitFor({ timeout: 10000 });
   // Registro viejo con un tipo oculto: se ve tal cual.
   assert.equal(await page.getByLabel("Qué pasó de Sofía Ramos").innerText(), "Visita al Médico");
   await parAlineado(filaDe("Raúl Vega"), "fila Raúl");

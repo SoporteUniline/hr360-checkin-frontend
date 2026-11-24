@@ -91,8 +91,8 @@ export function diaDesdeRegistro(r, aLocal = (v) => v) {
 
 const textoOpcional = (v) => (typeof v === "string" && v.trim() ? v.trim() : null);
 
-// Horas extra autorizadas ANTES de que ocurran («se queda hasta las 20:00»). El backend aún no manda este campo:
-// sin él la persona no entra en «Saldrán tarde». Contrato esperado: { hasta: "HH:mm", minutos?, motivo? }.
+// Horas extra autorizadas del día («se queda hasta las 20:00»), tal como las manda /checador/asistencias en
+// `horas_extra_autorizadas_dia`: { hasta: "HH:mm", minutos?, motivo? } o null.
 export function salidaExtraDe(valor) {
   const hasta = hhmm(valor?.hasta);
   if (!hasta) return null;

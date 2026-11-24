@@ -35,7 +35,8 @@ import {
 
 import { FIJA_RELOJ, derechaEstado, derechaMotivo, fijaEstado, fijaMotivo } from "./columnasFijas";
 import { permisoFila } from "@/lib/asistencia/tiposGoce.mjs";
-import { estadoMotivo } from "@/lib/asistencia/quePasoMotivo.mjs";
+import { estadoMotivo, textoColumnaEstado } from "@/lib/asistencia/quePasoMotivo.mjs";
+import { AGRUPAR_SITUACION, agruparPorSituacion } from "@/lib/asistencia/situacionHoy.mjs";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -245,9 +246,9 @@ export default function AsistenciaTable({
   const estadoAsistenciaOptions = useMemo(
     () =>
       uniqueOptions(
-        optionSourceRows.map((registro) => estadoFila(registro).texto),
+        optionSourceRows.map((registro) => textoColumnaEstado(registro, tiposPermiso)),
       ),
-    [optionSourceRows],
+    [optionSourceRows, tiposPermiso],
   );
   const autorizacionOptions = useMemo(
     () =>
@@ -304,7 +305,7 @@ export default function AsistenciaTable({
       autorizacionSeleccionada.includes(toAutorizacion(registro));
     const pasaEstadoAsistencia =
       estadoAsistenciaSeleccionado.length === 0 ||
-      estadoAsistenciaSeleccionado.includes(estadoFila(registro).texto);
+      estadoAsistenciaSeleccionado.includes(textoColumnaEstado(registro, tiposPermiso));
 
     return (
       pasaEmpleado &&
@@ -336,6 +337,7 @@ export default function AsistenciaTable({
       festivoSeleccionado,
       autorizacionSeleccionada,
       estadoAsistenciaSeleccionado,
+      tiposPermiso,
       soloHorasExtra,
       soloSinComida,
     ],
@@ -369,8 +371,18 @@ export default function AsistenciaTable({
 
   // Agrupación de los renglones YA calculados para la página (no altera
   // filtrado ni paginación). Conserva el orden de aparición.
+  // «Situación de hoy» cambia con la hora (alguien pasa de «Por entrar» a «No ha llegado»): se recalcula cada minuto.
+  const porSituacion = agrupar === AGRUPAR_SITUACION;
+  const [ahoraMs, setAhoraMs] = useState(() => Date.now());
+  useEffect(() => {
+    if (!porSituacion) return undefined;
+    setAhoraMs(Date.now());
+    const t = setInterval(() => setAhoraMs(Date.now()), 60000);
+    return () => clearInterval(t);
+  }, [porSituacion]);
   const groupedRows = useMemo(() => {
     if (!agrupar) return null;
+    if (porSituacion) return agruparPorSituacion(displayedRows, fallbackTimezone, ahoraMs);
     const getGroupName = (registro) => {
       switch (agrupar) {
         case "unidad":
@@ -397,7 +409,7 @@ export default function AsistenciaTable({
       map.get(name).push(registro);
     }
     return [...map.entries()];
-  }, [agrupar, displayedRows]);
+  }, [agrupar, displayedRows, porSituacion, fallbackTimezone, ahoraMs]);
 
   const toggleGroup = (name) => {
     setCollapsedGroups((prev) => {
@@ -984,6 +996,8 @@ export default function AsistenciaTable({
                   return (
                     <Fragment key={groupName}>
                       <TableRow
+                        data-grupo={groupName}
+                        aria-expanded={!isCollapsed}
                         onClick={() => toggleGroup(groupName)}
                         className="cursor-pointer select-none border-b border-slate-100 bg-blue-50/40 hover:bg-blue-50/60"
                       >
@@ -1000,11 +1014,10 @@ export default function AsistenciaTable({
                             <span className="text-[13px] font-semibold text-slate-800">
                               {groupName}
                             </span>
-                            <span className="text-xs text-slate-400">
-                              · {rows.length} empleado
-                              {rows.length === 1 ? "" : "s"}
+                            <span className="text-xs text-slate-400" data-grupo-cuenta>
+                              {porSituacion ? `· ${rows.length}` : `· ${rows.length} empleado${rows.length === 1 ? "" : "s"}`}
                             </span>
-                            {agrupar !== "estado" && (
+                            {agrupar !== "estado" && !porSituacion && (
                               <span className="ml-auto text-xs font-bold text-blue-600">
                                 {porcentajeAsistencia}% asistencia
                               </span>
