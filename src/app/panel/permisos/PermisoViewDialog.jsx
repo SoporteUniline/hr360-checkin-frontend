@@ -1,5 +1,6 @@
 "use client";
 
+import { HORAS_TXT, goceDe, textoResumen } from "@/lib/asistencia/tiposGoce.mjs";
 import { NombreEmpleado } from "@/components/empleado/FichaEmpleado";
 import { horarioPermiso } from "@/lib/asistencia/permisoHoras.mjs";
 import { useEffect, useState } from "react";
@@ -777,9 +778,14 @@ export default function PermisoViewDialog({
                   {item.tipo_permiso_nombre}
                   {item.modalidad === "horas" && (
                     <span className="block text-xs font-normal text-slate-600">
-                      {horarioPermiso(item)} · {item.tratamiento === "rebaja" ? "se rebaja" : "se repone"}
+                      {horarioPermiso(item)} · {item.horas_no_trabajadas ? HORAS_TXT[item.horas_no_trabajadas]?.toLowerCase() : item.tratamiento === "rebaja" ? "se rebaja" : "se repone"}
                     </span>
                   )}
+                  {item.motivo_permiso || goceDe(item.goce ?? item.goce_sueldo) ? (
+                    <span data-permiso-resumen className="block text-xs font-normal text-slate-600">
+                      {textoResumen({ motivo: item.motivo_permiso, goce: item.goce ?? item.goce_sueldo })}
+                    </span>
+                  ) : null}
                 </div>
               </div>
               <div>

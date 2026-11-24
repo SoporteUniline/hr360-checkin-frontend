@@ -183,7 +183,8 @@ export function errores(regs) {
 const esPermiso = (motivo) => /^tp:/.test(String(motivo ?? ""));
 
 // Cálculo del día (mockup resumen()). estadoDia: { texto, clave } del día sin checadas (falta, descanso, vacaciones…).
-export function resumen(regs, horario, { tolerancia = TOLERANCIA_MIN, estadoDia = null } = {}) {
+// permiso: { alcance } del «Permiso del día» (tipo parcial): justifica la entrada tarde o la salida antes.
+export function resumen(regs, horario, { tolerancia = TOLERANCIA_MIN, estadoDia = null, permiso = null } = {}) {
   const v = vivos(regs);
   const h = horarioMin(horario);
   const largo = (r) => (r.ini != null && r.fin != null && r.fin > r.ini ? r.fin - r.ini : 0);
@@ -215,8 +216,8 @@ export function resumen(regs, horario, { tolerancia = TOLERANCIA_MIN, estadoDia 
   } else {
     const retardo = entrada - h.pe;
     const antes = ultimaJornada != null ? h.ps - ultimaJornada : 0;
-    const permTarde = primera && esPermiso(primera.motivo);
-    const permAntes = ultima && esPermiso(ultima.motivo);
+    const permTarde = (primera && esPermiso(primera.motivo)) || permiso?.alcance === "entrada";
+    const permAntes = (ultima && esPermiso(ultima.motivo)) || permiso?.alcance === "salida";
     if (retardo > tolerancia && !permTarde) estado = { texto: `Retardo +${retardo} min`, clave: "retardo" };
     else if (antes > tolerancia && !permAntes) estado = { texto: `Salió antes −${durTexto(antes)}`, clave: "antes" };
     else if (retardo > tolerancia) estado = { texto: "Entró tarde con permiso", clave: "just" };

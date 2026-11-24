@@ -4,6 +4,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TIPOS_HORAS, TRATAMIENTOS } from "@/lib/asistencia/permisoHoras.mjs";
+import { HORAS } from "@/lib/asistencia/tiposGoce.mjs";
 
 const opcion = (activa) =>
   `flex-1 rounded-lg border px-3 py-2 text-left text-sm transition ${
@@ -11,11 +12,12 @@ const opcion = (activa) =>
   }`;
 
 // Validación del formulario (mensajes para el usuario). Devuelve [] si todo está bien.
-export function erroresPermisoHoras(form) {
+// conTipo: el tipo del catálogo ya dice qué parte del día abarca y qué pasa con las horas (tipos de registro con goce).
+export function erroresPermisoHoras(form, { conTipo = false } = {}) {
   const errs = [];
   if (!form.fecha_inicio) errs.push("Indica el día del permiso.");
   if (!form.tipo_horas) errs.push("Elige el tipo de permiso por horas.");
-  if (!form.tratamiento) errs.push("Elige si el tiempo se repone o se rebaja.");
+  if (!conTipo && !form.tratamiento) errs.push("Elige si el tiempo se repone o se rebaja.");
   if (form.tipo_horas && form.tipo_horas !== "llega_tarde" && !form.hora_inicio) errs.push("Indica desde qué hora.");
   if (form.tipo_horas && form.tipo_horas !== "sale_antes" && !form.hora_fin) errs.push("Indica hasta qué hora.");
   if (form.tipo_horas === "sale_regresa" && form.hora_inicio && form.hora_fin && form.hora_fin <= form.hora_inicio) {
@@ -37,7 +39,10 @@ export function datosPermisoHoras(form) {
   };
 }
 
-export default function CamposPermisoHoras({ form, setForm }) {
+// tipoFijo: la parte del día la fija el tipo del catálogo (no se elige aquí).
+// horas: { valor, bloqueado, onChange } → «Horas no trabajadas» (se reponen / se descuentan / se pagan) en lugar de
+// «se repone / se rebaja»; null = no se muestra (el empleado no lo decide).
+export default function CamposPermisoHoras({ form, setForm, tipoFijo = false, horas, sinTratamiento = false }) {
   const set = (campo) => (e) => setForm((f) => ({ ...f, [campo]: e?.target ? e.target.value : e }));
   return (
     <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50/60 p-4">
@@ -46,7 +51,7 @@ export default function CamposPermisoHoras({ form, setForm }) {
           <Label className="text-sm font-medium text-gray-700">Día</Label>
           <Input type="date" value={form.fecha_inicio} onChange={set("fecha_inicio")} className="bg-white" />
         </div>
-        <div className="space-y-2">
+        {tipoFijo ? null : <div className="space-y-2">
           <Label className="text-sm font-medium text-gray-700">Tipo</Label>
           <select
             aria-label="Tipo de permiso por horas"
@@ -57,7 +62,7 @@ export default function CamposPermisoHoras({ form, setForm }) {
             <option value="">Seleccionar…</option>
             {TIPOS_HORAS.map((t) => <option key={t.valor} value={t.valor}>{t.texto}</option>)}
           </select>
-        </div>
+        </div>}
       </div>
 
       {form.tipo_horas && (
@@ -77,18 +82,30 @@ export default function CamposPermisoHoras({ form, setForm }) {
         </div>
       )}
 
-      <div className="space-y-2">
-        <Label className="text-sm font-medium text-gray-700">¿Cómo se cubre el tiempo?</Label>
-        <div className="flex flex-col gap-2 sm:flex-row" role="radiogroup" aria-label="Cómo se cubre el tiempo">
-          {TRATAMIENTOS.map((t) => (
-            <button key={t.valor} type="button" role="radio" aria-checked={form.tratamiento === t.valor}
-              onClick={() => set("tratamiento")(t.valor)} className={opcion(form.tratamiento === t.valor)}>
-              <span className="block">{t.texto}</span>
-              <span className="block text-xs font-normal text-slate-500">{t.ayuda}</span>
-            </button>
-          ))}
+      {horas ? (
+        <div className="space-y-2">
+          <Label htmlFor="horas-no-trabajadas" className="text-sm font-medium text-gray-700">Horas no trabajadas</Label>
+          <select id="horas-no-trabajadas" aria-label="Horas no trabajadas" value={horas.valor} disabled={horas.bloqueado}
+            onChange={(e) => horas.onChange(e.target.value)}
+            className="h-9 w-full rounded-md border border-input bg-white px-3 text-[13.5px] disabled:bg-slate-50 disabled:text-slate-500">
+            {HORAS.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
+          </select>
+          {horas.bloqueado ? <p className="text-xs text-slate-500">🔒 Lo fija el tipo de registro.</p> : null}
         </div>
-      </div>
+      ) : sinTratamiento ? null : (
+      <div className="space-y-2">
+          <Label className="text-sm font-medium text-gray-700">¿Cómo se cubre el tiempo?</Label>
+          <div className="flex flex-col gap-2 sm:flex-row" role="radiogroup" aria-label="Cómo se cubre el tiempo">
+            {TRATAMIENTOS.map((t) => (
+              <button key={t.valor} type="button" role="radio" aria-checked={form.tratamiento === t.valor}
+                onClick={() => set("tratamiento")(t.valor)} className={opcion(form.tratamiento === t.valor)}>
+                <span className="block">{t.texto}</span>
+                <span className="block text-xs font-normal text-slate-500">{t.ayuda}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       <p className="text-xs text-slate-500">
         Se cuenta lo que realmente faltó según sus checadas, sin pasar del permiso. Lo que pase del permiso cuenta como retardo normal.
       </p>

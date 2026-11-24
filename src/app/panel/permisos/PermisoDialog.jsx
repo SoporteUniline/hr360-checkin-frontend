@@ -31,6 +31,12 @@ import PermisoCancelacionDiasPasadosDialog from "./PermisoCancelacionDiasPasados
 import { CalendarCheck2, Save } from "lucide-react";
 import CamposPermisoHoras, { datosPermisoHoras, erroresPermisoHoras } from "./CamposPermisoHoras";
 import { hhmm } from "@/lib/fechaHora.mjs";
+import useSWR from "swr";
+import { fetcherWithToken } from "@/lib/fetcher";
+import CamposMotivoGoce from "./CamposMotivoGoce";
+import {
+  camposSolicitud, esParcial, goceDe, motivoAOpcion, motivoFinal, normalizarTipo, puedeCambiar, tipoHorasDe, tiposParaPermiso,
+} from "@/lib/asistencia/tiposGoce.mjs";
 
 const esPorHoras = (item) => item?.modalidad === "horas";
 
@@ -64,8 +70,24 @@ export default function PermisoDialog({
     tratamiento: "",
     hora_inicio: "",
     hora_fin: "",
+    // Tipos de registro con goce: motivo del catálogo, goce del día y horas no trabajadas.
+    motivoSel: { opcion: "", texto: "" },
+    goce: "",
+    horas: "reponen",
   });
-  const porHoras = form.modalidad === "horas";
+  const tipoSel = (Array.isArray(tiposPermiso) ? tiposPermiso : []).find((t) => String(t.id) === String(form.id_tipo_permiso)) ?? null;
+  // Un tipo que abarca parte del día (entrada, salida o en medio) siempre es por horas y ya dice cuál; con los demás se
+  // elige «Días completos» o «Por horas» como siempre.
+  const parcial = Boolean(tipoSel && esParcial(tipoSel));
+  const porHoras = parcial || form.modalidad === "horas";
+  const { data: dataMotivos } = useSWR(open ? "/checador/motivos-permiso" : null, fetcherWithToken, { revalidateOnFocus: false });
+  const nuevos = () => camposSolicitud(tipoSel, { motivo: motivoFinal(form.motivoSel), goce: form.goce, horas: form.horas });
+  const elegirTipo = (v) => {
+    const t = (Array.isArray(tiposPermiso) ? tiposPermiso : []).find((x) => String(x.id) === v);
+    const n = normalizarTipo(t);
+    setForm((f) => ({ ...f, id_tipo_permiso: v, goce: n?.goce ?? "", horas: n?.horas ?? "reponen",
+      ...(n?.parcial ? { modalidad: "horas", tipo_horas: tipoHorasDe(t) } : {}) }));
+  };
 
   // Catálogo y selección de empleados
   const [empleados, setEmpleados] = useState([]); // [{ id, nombre }]
@@ -155,12 +177,18 @@ export default function PermisoDialog({
       tratamiento: editItem?.tratamiento || "",
       hora_inicio: hhmm(editItem?.hora_inicio) ?? "",
       hora_fin: hhmm(editItem?.hora_fin) ?? "",
+      motivoSel: motivoAOpcion(editItem?.motivo_permiso, dataMotivos),
+      goce: goceDe(editItem?.goce ?? editItem?.goce_sueldo) ?? normalizarTipo(tiposPermiso?.find?.((t) => String(t.id) === String(editItem?.id_tipo_permiso)))?.goce ?? "",
+      horas: editItem?.horas_no_trabajadas || "reponen",
     });
     setErrors([]);
     // Evitar fugas de estado entre ediciones (cancelación con días pasados).
     setDiasPasadosPayload(null);
     setFechasPasadasPendientes([]);
     setOpenCancelDiasPasados(false);
+    // Solo al abrir o cambiar de registro: si el catálogo de motivos llega después no se reinicia lo que el usuario escribió
+    // (CamposMotivoGoce reconoce un motivo del catálogo aunque haya llegado como «Otro…»).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editItem, open, idEmpresa, isEdit]);
 
   // Nota: antes se bloqueaba la edición cuando el periodo ya había finalizado.
@@ -170,8 +198,9 @@ export default function PermisoDialog({
     // Validaciones de formulario con mensajes amigables
     const errs = [];
     if (!form.id_tipo_permiso) errs.push("Selecciona el tipo de permiso.");
+    if (tipoSel && Number(tipoSel.descuenta_vacaciones) !== 1 && !motivoFinal(form.motivoSel)) errs.push("Elige el motivo del permiso.");
     if (porHoras) {
-      errs.push(...erroresPermisoHoras(form));
+      errs.push(...erroresPermisoHoras(form, { conTipo: parcial }));
     } else {
       if (!form.fecha_inicio) errs.push("La fecha de inicio es obligatoria.");
       if (!form.fecha_fin) errs.push("La fecha fin es obligatoria.");
@@ -213,6 +242,9 @@ export default function PermisoDialog({
             ? dayjs(editItem.fecha_fin).format("YYYY-MM-DD")
             : "") !== (form.fecha_fin || "") ||
           String(editItem.motivo || "") !== String(form.motivo || "") ||
+          String(editItem.motivo_permiso || "") !== motivoFinal(form.motivoSel) ||
+          (puedeCambiar(tipoSel).goce && (goceDe(editItem.goce ?? editItem.goce_sueldo) ?? "") !== form.goce) ||
+          (porHoras && String(editItem.horas_no_trabajadas || "") !== form.horas) ||
           (esPorHoras(editItem) ? "horas" : "dias") !== form.modalidad ||
           (porHoras && (
             String(editItem.tipo_horas || "") !== form.tipo_horas ||
@@ -230,15 +262,19 @@ export default function PermisoDialog({
             motivo: form.motivo || null,
             id_empresa: Number(idEmpresaSeleccionada),
             ...(porHoras ? datosPermisoHoras(form) : { modalidad: "dias" }),
+            ...nuevos(),
           });
         }
         // Si el estado cambió respecto al original, actualizar estado
         if (form.estado && form.estado !== editItem?.estado) {
           // Si se cancela y hay días pasados, mandamos el payload `dias_pasados` (si existe).
+          // Al aprobar, RH decide el goce (si el tipo lo deja cambiar): viaja con el cambio de estado.
           const extra =
             form.estado === "Cancelado" && Array.isArray(diasPasadosPayload)
               ? { dias_pasados: diasPasadosPayload }
-              : null;
+              : form.estado === "Aprobado" && puedeCambiar(tipoSel).goce && form.goce
+                ? { goce: form.goce }
+                : null;
           await permisosApi.actualizarEstado(
             editItem.id,
             form.estado,
@@ -257,6 +293,7 @@ export default function PermisoDialog({
             id_tipo_permiso: Number(form.id_tipo_permiso),
             motivo: form.motivo || null,
             ...datosPermisoHoras(form),
+            ...nuevos(),
           });
         }
         enqueueSnackbar(idsTarget.length === 1 ? "Permiso por horas creado." : `${idsTarget.length} permisos por horas creados.`, {
@@ -269,6 +306,7 @@ export default function PermisoDialog({
           fecha_inicio: form.fecha_inicio,
           fecha_fin: form.fecha_fin || null,
           motivo: form.motivo || null,
+          ...nuevos(),
         });
 
         enqueueSnackbar("Permiso(s) creado(s) correctamente.", {
@@ -294,9 +332,8 @@ export default function PermisoDialog({
     e.nombre.toLowerCase().includes(empleadosBusqueda.trim().toLowerCase()),
   );
 
-  const arrayFiltered = tiposPermiso.filter(
-    (permiso) => permiso.es_permiso === 1,
-  );
+  // Permisos del catálogo y faltas justificadas (p. ej. «me pide faltar la próxima semana por un viaje familiar»).
+  const arrayFiltered = tiposParaPermiso(tiposPermiso);
 
   // Tipos de registro para reclasificación (se usa el mismo catálogo `tiposPermiso`).
   // Importante: aquí NO filtramos por `es_permiso`, porque el admin necesita escoger
@@ -438,11 +475,9 @@ export default function PermisoDialog({
 
                 <Select
                   value={form.id_tipo_permiso}
-                  onValueChange={(v) =>
-                    setForm((f) => ({ ...f, id_tipo_permiso: v }))
-                  }
+                  onValueChange={elegirTipo}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger aria-label="Tipo de permiso">
                     <SelectValue placeholder="Seleccionar tipo..." />
                   </SelectTrigger>
                   <SelectContent
@@ -526,7 +561,14 @@ export default function PermisoDialog({
               </div>
             ) : null}
 
-            {/* Días completos o por horas */}
+            {tipoSel ? (
+              <CamposMotivoGoce tipo={tipoSel} motivos={dataMotivos} motivo={form.motivoSel}
+                onMotivo={(m) => setForm((f) => ({ ...f, motivoSel: m }))} goce={form.goce}
+                onGoce={(g) => setForm((f) => ({ ...f, goce: g }))} />
+            ) : null}
+
+            {/* Días completos o por horas (si el tipo abarca parte del día, ya lo dice el tipo). */}
+            {parcial ? null : (
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">Duración</Label>
               <div className="inline-flex w-full overflow-hidden rounded-lg border border-slate-200 sm:w-auto" role="radiogroup" aria-label="Duración del permiso">
@@ -539,8 +581,13 @@ export default function PermisoDialog({
                 ))}
               </div>
             </div>
+            )}
 
-            {porHoras && <CamposPermisoHoras form={form} setForm={setForm} />}
+            {porHoras && (
+              <CamposPermisoHoras form={form} setForm={setForm} tipoFijo={parcial}
+                horas={parcial ? { valor: puedeCambiar(tipoSel).horas ? form.horas : normalizarTipo(tipoSel).horas,
+                  bloqueado: !puedeCambiar(tipoSel).horas, onChange: (v) => setForm((f) => ({ ...f, horas: v })) } : null} />
+            )}
 
             {/* Fechas */}
             {!porHoras && (
@@ -637,7 +684,7 @@ export default function PermisoDialog({
             {/* Motivo y notas */}
             <div className="space-y-2">
               <Label className="text-sm font-medium text-gray-700">
-                Motivo / Observaciones
+                Observaciones
               </Label>
               <Textarea
                 rows={4}
