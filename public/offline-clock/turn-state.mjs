@@ -9,10 +9,14 @@ export const isTurnConflict = event => conflictCodes.has(event.errorCode) || leg
 
 const invalidCaptureCodes = new Set([
   'FACE_NOT_MATCHED', 'CODE_NOT_MATCHED', 'CODE_NOT_FOUND',
+  'CLOCK_AUTH_EXPIRED', 'LOCAL_FACE_AUTH_EXPIRED', 'LOCAL_FACE_DATA_EXPIRED',
   'METHOD_FACIAL_ONLY', 'METHOD_CODE_ONLY',
   'GPS_REQUIRED', 'GPS_REFRESH_REQUIRED', 'GPS_INACCURATE', 'GPS_OUTSIDE_AREA', 'OUTSIDE_AREA', 'AREA_INVALID',
 ]);
 const legacyInvalidCaptures = new Set([
+  'La autorización offline venció. El reloj necesita actualizar su conexión.',
+  'La autorización facial del dispositivo venció o no es válida',
+  'La captura está fuera del periodo de las referencias descargadas',
   'Código no encontrado o ambiguo en esta empresa',
   'Código de empleado incorrecto',
   // (INC-RELOJ-COMIDA-001) Opción de salida que no aplicaba al empleado: no se escribió nada; no debe atorar.
