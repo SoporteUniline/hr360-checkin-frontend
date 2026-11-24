@@ -19,7 +19,7 @@ import { ahoraEn, textoFechaHoy } from "@/lib/asistencia/hoy.mjs";
 import { hora12 } from "@/lib/hora12.mjs";
 import { cn } from "@/lib/utils";
 import { CuentaHorasProvider } from "@/app/panel/registro-asistencia/CuentaHorasContext";
-import EditarDiaAsistencia from "@/app/panel/registro-asistencia/EditarDiaAsistencia";
+import RelojDiaDialog from "@/app/panel/registro-asistencia/RelojDiaDialog";
 import VistaMonitor from "./VistaMonitor";
 
 dayjs.extend(utc);
@@ -66,15 +66,15 @@ export default function MonitorPage() {
   }, [data]);
   const hora = hora12(ahoraEn(zona, ahora).hora);
 
-  const [dia, setDia] = useState(null);
-  const abrirDia = (r) => setDia({ idEmpleado: r.id_empleado, nombre: nombreCompleto(r), fecha: String(r.fecha ?? "").slice(0, 10) });
+  // Tocar a una persona abre el reloj de su día: la misma ventana con la que se corrige en Asistencias.
+  const [relojDe, setRelojDe] = useState(null);
 
   const contenido = error && !registros.length
     ? <ErrorPage message="No se pudo cargar el Monitor" />
-    : <VistaMonitor registros={registros} zona={zona} cargando={isLoading || !idEmpresa} onAbrirDia={abrirDia} />;
+    : <VistaMonitor registros={registros} zona={zona} cargando={isLoading || !idEmpresa} onAbrirDia={setRelojDe} />;
 
-  const ventanaDia = dia ? (
-    <EditarDiaAsistencia idEmpresa={idEmpresa} {...dia} onCerrar={(huboCambios) => { setDia(null); if (huboCambios) mutate(); }} />
+  const ventanaDia = relojDe ? (
+    <RelojDiaDialog registro={relojDe} onCerrar={() => setRelojDe(null)} onGuardado={() => mutate()} />
   ) : null;
 
   // Un solo árbol para celular y escritorio: cruzar el punto de quiebre (girar una tableta) no reinicia filtros ni grupos.
@@ -102,4 +102,3 @@ export default function MonitorPage() {
   );
 }
 
-const nombreCompleto = (r) => [r.nombre, r.apellido_paterno].filter(Boolean).join(" ");

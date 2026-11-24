@@ -49,7 +49,7 @@ export const COLUMNAS_ASISTENCIA = [
   { key: "fecha", label: "Fecha", extra: false },
   { key: "entrada", label: "Entrada", extra: false },
   { key: "salida", label: "Salida", extra: false },
-  { key: "jornada", label: "Trabajadas", extra: false },
+  { key: "jornada", label: "Jornada", extra: false },
   { key: "comida", label: "Comida", extra: false },
   { key: "hrs_extra", label: "Horas extra", extra: false },
   { key: "dia", label: "Día (festivo / domingo)", extra: false },
@@ -905,7 +905,7 @@ export default function AsistenciaTable({
                     </div>
                   </TableHead>
                 )}
-                {colVisible("jornada") && <TableHead className={TH_STICKY}>Trabajadas</TableHead>}
+                {colVisible("jornada") && <TableHead className={TH_STICKY}>Jornada <span className="font-normal text-slate-400">trabajado de programado</span></TableHead>}
                 {colVisible("comida") && <TableHead className={`${TH_STICKY} text-center`}>Comida</TableHead>}
                 {colVisible("hrs_extra") && (
                   <TableHead className={TH_STICKY}>
@@ -935,7 +935,7 @@ export default function AsistenciaTable({
                 {colVisible("estado_asistencia") && (
                   <TableHead className={`${TH_STICKY} ${fijaEstado(colVisible("reloj"))} z-20`}>
                     <div className="flex items-center gap-1">
-                      <span>ESTADO · MOTIVO</span>
+                      <span>Estado · motivo</span>
                       <HeaderMultiFilter
                         selected={estadoAsistenciaSeleccionado}
                         onChange={setEstadoAsistenciaSeleccionado}

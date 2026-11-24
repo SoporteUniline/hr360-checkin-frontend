@@ -288,15 +288,29 @@ export function origenTexto(r, lado = "ini") {
 
 // ——— Estado del día sin checadas ———
 const num = (v) => Number(v ?? 0);
+// Tipos del catálogo para la fila sin checadas. «sinHoras»: no vino (falta, vacaciones, incapacidad…), se guarda directo.
+// «conHoras»: vino con permiso (cuenta como asistencia: visita al médico, entrada después de tiempo, salida antes…):
+// abre el reloj con ese motivo para poner sus horas. Fuera: «Cerrado por sistema» y «Asistencia» a secas.
+const SISTEMA = /cerrado por sistema|^\W*asistencia\W*$/i;
 export function tiposEstadoDia(tiposPermiso) {
-  const lista = Array.isArray(tiposPermiso) ? tiposPermiso : tiposPermiso?.tiposPermiso ?? [];
-  return lista.filter((t) => num(t.cuenta_como_asistencia) === 0 && !num(t.borrado) && !num(t.eliminado));
+  return gruposEstadoDia(tiposPermiso).sinHoras;
 }
-// Qué pide el tipo: «folio» (incapacidad), «motivo» (falta justificada y los demás) o nada (falta injustificada, descanso).
+export function gruposEstadoDia(tiposPermiso) {
+  const lista = (Array.isArray(tiposPermiso) ? tiposPermiso : tiposPermiso?.tiposPermiso ?? [])
+    .filter((t) => !num(t.borrado) && !num(t.eliminado) && !SISTEMA.test(String(t.nombre ?? "").trim()));
+  return {
+    sinHoras: lista.filter((t) => num(t.cuenta_como_asistencia) === 0),
+    conHoras: lista.filter((t) => num(t.cuenta_como_asistencia) === 1),
+  };
+}
+// Qué pide el tipo (igual que el servidor, relojDia.claseTipo): «folio» (incapacidad); nada para falta injustificada,
+// sin checar, descanso, festivo o vacaciones; «motivo» para lo demás (falta justificada, suspensión, permisos…).
 export function requisitoEstado(tipo) {
-  const n = String(tipo?.nombre ?? "").toLowerCase();
+  const n = String(`${tipo?.clave ?? ""} ${tipo?.nombre ?? ""}`).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (num(tipo?.descuenta_vacaciones) === 1) return null;
+  if (/descanso/.test(n) || num(tipo?.es_festivo) === 1 || /festivo/.test(n)) return null;
   if (/incapacidad/.test(n)) return "folio";
-  if (/injustificad|descanso/.test(n)) return null;
+  if (/injustificada|sin checar/.test(n) || /^\W*falta\W*$/.test(String(tipo?.nombre ?? "").toLowerCase())) return null;
   return "motivo";
 }
 export const checadasVivas = (fila) => (fila?.checadas_vivas != null ? Number(fila.checadas_vivas) : fila?.entrada || fila?.salida ? 1 : 0);
@@ -350,4 +364,14 @@ export function extraFila(fila) {
   if (pend > 0) return { tipo: "pendiente", texto: `${durTexto(pend)} por autorizar` };
   if (aut > 0) return { tipo: "autorizada", texto: `${durTexto(aut)} autorizadas` };
   return { tipo: "nada", texto: "—" };
+}
+
+// Estado como texto con icono, al estilo de la columna «Tipo» de antes («✅ Asistencia», «❌ Sin Checar»), sin cuadro.
+// Si el texto ya trae su emoji (nombres del catálogo), no se le pone otro.
+const ICONOS_ESTADO = { ok: "✅", falta: "❌", retardo: "🕒", antes: "🕒", sinsalida: "⚠️", just: "📝" };
+export function textoConIcono(texto, clave) {
+  const t = String(texto ?? "").trim();
+  if (!t || /^\p{Extended_Pictographic}/u.test(t)) return t;
+  const icono = ICONOS_ESTADO[String(clave ?? "")];
+  return icono ? `${icono} ${t}` : t;
 }

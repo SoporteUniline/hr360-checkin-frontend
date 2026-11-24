@@ -55,6 +55,8 @@ export default function AsistenciaRow({
   const minutosComida = registro.minutos_comida ?? minutosDescanso(registro);
   const esDescanso = /descanso/i.test(registro.tipo_registro_nombre ?? "");
   const sinChecadas = !registro.entrada && !registro.salida;
+  const avanceJornada = minutosTrabajados != null && minutosProgramados
+    ? Math.min(100, Math.round((minutosTrabajados / minutosProgramados) * 100)) : null;
   const { salidaDiaSiguiente } = herramientasHoras(registro, userTimezone);
   const horaVer = (valor) => (valor ? hora12(dayjs.tz(valor, DB_TIMEZONE).tz(userTimezone)) : "");
   const dia = diaFila(registro);
@@ -123,14 +125,24 @@ export default function AsistenciaRow({
           </TableCell>
         )}
         {isColVisible("jornada") && (
-          <TableCell>
-            {sinChecadas || minutosTrabajados == null ? (
+          <TableCell className="min-w-[150px]">
+            {esDescanso && sinChecadas ? (
+              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500">Descanso</span>
+            ) : sinChecadas ? (
+              <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500">Sin checadas</span>
+            ) : minutosTrabajados == null ? (
               <span className="text-slate-300">—</span>
             ) : (
-              <>
-                <b className="font-semibold text-slate-900">{durTexto(minutosTrabajados)}</b>
-                {minutosProgramados ? <span className="block text-[12px] text-slate-400">de {durTexto(minutosProgramados)} programado</span> : null}
-              </>
+              <div>
+                <span className="font-semibold text-slate-900">{formatearMinutos(minutosTrabajados)}</span>
+                {minutosProgramados != null && <span className="text-slate-400"> de {formatearMinutos(minutosProgramados)}</span>}
+                {avanceJornada != null && (
+                  <div className="mt-1 h-1 w-full rounded-full bg-slate-200" aria-hidden>
+                    <div className={`h-1 rounded-full ${minutosTrabajados - minutosProgramados < -10 ? "bg-red-400" : "bg-emerald-400"}`}
+                      style={{ width: `${avanceJornada}%` }} />
+                  </div>
+                )}
+              </div>
             )}
           </TableCell>
         )}

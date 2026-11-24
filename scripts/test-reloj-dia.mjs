@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   agregarComida, agregarRegistro, aMin, claseEstado, resumenServidor, conAutoriza, cuerpoPut, desdeApi, diaFila, durTexto, editado, errorDe, errores,
   erroresPorRenglon, estadoFila, extraFila, horarioNormal, minDeCampo, minutosProgramados, nuevoRenglon, ordenar,
-  origenTexto, etiquetaQuitar, planMasivo, puedeComida, quitarORestaurar, requisitoEstado, resumen, separarExtra, tiposEstadoDia,
+  origenTexto, etiquetaQuitar, planMasivo, puedeComida, quitarORestaurar, requisitoEstado, resumen, separarExtra, textoConIcono, tiposEstadoDia, gruposEstadoDia,
 } from "../src/lib/asistencia/relojDia.mjs";
 
 const F = "2026-11-23";
@@ -149,4 +149,25 @@ test("fila de la tabla: estado, día y horas extra (con respaldo de campos viejo
   assert.deepEqual(extraFila({ minutos_extra: 182, minutos_extra_por_autorizar: 182 }), { tipo: "pendiente", texto: "3 h 02 min por autorizar" });
   assert.deepEqual(extraFila({ minutos_extra: 60, minutos_extra_por_autorizar: 0 }), { tipo: "autorizada", texto: "1 h autorizadas" });
   assert.equal(extraFila({}).tipo, "nada");
+});
+
+test("estado como texto con icono, sin repetir el emoji del catálogo", () => {
+  assert.equal(textoConIcono("Asistió", "ok"), "✅ Asistió");
+  assert.equal(textoConIcono("Falta injustificada", "falta"), "❌ Falta injustificada");
+  assert.equal(textoConIcono("❌ Sin Checar", "falta"), "❌ Sin Checar");
+  assert.equal(textoConIcono("Retardo +18 min", "retardo"), "🕒 Retardo +18 min");
+  assert.equal(textoConIcono("Algo", ""), "Algo");
+});
+
+test("fila sin checadas: todos los tipos del catálogo; los que cuentan como asistencia van al reloj", () => {
+  const cat = [
+    { id: 1, nombre: "✅ Asistencia", cuenta_como_asistencia: 1 }, { id: 2, nombre: "❌ Sin Checar", cuenta_como_asistencia: 0 },
+    { id: 3, nombre: "🤖 Cerrado por Sistema", cuenta_como_asistencia: 0 }, { id: 4, nombre: "Visita al médico", cuenta_como_asistencia: 1 },
+    { id: 5, nombre: "⌚ Entrada después de tiempo", cuenta_como_asistencia: 1 }, { id: 6, nombre: "🏖️ Vacaciones", cuenta_como_asistencia: 0, descuenta_vacaciones: 1 },
+    { id: 7, nombre: "🚫 Suspensión Disciplinaria", cuenta_como_asistencia: 0 },
+  ];
+  const g = gruposEstadoDia(cat);
+  assert.deepEqual(g.sinHoras.map((t) => t.id), [2, 6, 7]);
+  assert.deepEqual(g.conHoras.map((t) => t.id), [4, 5]);
+  assert.deepEqual(g.sinHoras.map(requisitoEstado), [null, null, "motivo"]);
 });
