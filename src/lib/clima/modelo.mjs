@@ -190,6 +190,8 @@ export function nuevaPregunta(tipo = "escala", texto = "") {
 
 export const preguntasDe = (def) => (def?.secciones ?? []).flatMap((s) => s.preguntas ?? []);
 
+export const textoMinutos = (n) => (n === 1 ? "1 minuto" : `${n} minutos`);
+
 export function minutosEstimados(def) {
   const s = preguntasDe(def).reduce((t, q) => t + (q.tipo === "abierta" ? 45 : q.tipo === "opcion" ? 15 : 10), 0);
   return Math.max(1, Math.round(s / 60));

@@ -21,11 +21,17 @@ import {
   nuevaPregunta,
   preguntasDe,
   quitarPregunta,
+  textoMinutos,
 } from "@/lib/clima/modelo.mjs";
 import { Boton, Cargando, Tarjeta, Vacio, errorDe, get, ruta } from "./ui";
 import Contestar from "./Contestar";
 
 const campo = "h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm";
+// Las preguntas nuevas de la IA van a la última sección que no sea solo de preguntas abiertas.
+const seccionCerrada = (d) => {
+  const i = d.secciones.findLastIndex((s) => s.preguntas.some((q) => q.tipo !== "abierta"));
+  return i >= 0 ? i : d.secciones.length - 1;
+};
 
 function Pregunta({ q, numero, dimensiones, alCambiar, alMover, alQuitar, primera, ultima, extra }) {
   return (
@@ -193,6 +199,10 @@ export default function Editor({ id, idEmpresa, revision: RevisionIa = null }) {
     pendiente.current = setTimeout(guardar, 1200);
   };
   useEffect(() => () => clearTimeout(pendiente.current), []);
+  // Cada plantilla empieza sin la revisión de Adamia AI de otra.
+  useEffect(() => {
+    RevisionIa?.limpiar?.();
+  }, [RevisionIa]);
 
   if (error) return <Vacio titulo="No se pudo abrir la encuesta" texto={errorDe(error)} />;
   if (!p) return <Cargando />;
@@ -302,19 +312,20 @@ export default function Editor({ id, idEmpresa, revision: RevisionIa = null }) {
             </Boton>
             {RevisionIa ? (
               <RevisionIa.MasPreguntas
+                idEmpresa={idEmpresa}
                 definicion={def}
-                alAgregar={(qs) => conDef((d) => qs.reduce((x, q) => agregarPregunta(x, x.secciones.length - 1, q), d))}
+                alAgregar={(qs) => conDef((d) => qs.reduce((x, q) => agregarPregunta(x, seccionCerrada(x), q), d))}
               />
             ) : null}
           </div>
         </div>
         <aside className="min-w-0 space-y-4">
           {RevisionIa ? (
-            <RevisionIa.Panel definicion={def} />
+            <RevisionIa.Panel idEmpresa={idEmpresa} definicion={def} />
           ) : (
             <Tarjeta titulo="Resumen">
               <p className="text-sm text-slate-600">
-                {total} preguntas · unos {minutosEstimados(def)} minutos.
+                {total} preguntas · unos {textoMinutos(minutosEstimados(def))}.
               </p>
             </Tarjeta>
           )}

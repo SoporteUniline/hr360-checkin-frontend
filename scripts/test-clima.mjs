@@ -162,6 +162,8 @@ test("editor: agregar, cambiar tipo, mover, quitar y aplicar la propuesta de Ada
   assert.equal(M.preguntasDe(d)[0].requerida, false);
   d = M.quitarPregunta(d, "y");
   assert.equal(M.preguntasDe(d).length, 2);
+  assert.equal(M.textoMinutos(1), "1 minuto");
+  assert.equal(M.textoMinutos(7), "7 minutos");
   assert.equal(
     M.minutosEstimados({
       secciones: [

@@ -9,6 +9,7 @@ import { useSnackbar } from "notistack";
 import axios from "@/lib/axios";
 import { fechaCorta } from "@/lib/clima/modelo.mjs";
 import { Boton, Cargando, ChipEstado, ChipIA, Tarjeta, errorDe, get, ruta } from "./ui";
+import { CrearConIa } from "./IaEncuesta";
 
 const COLOR_CATEGORIA = {
   Obligatoria: "bg-red-100 text-red-800",
@@ -186,6 +187,7 @@ export default function Encuestas({ idEmpresa, inicio }) {
       <p className="text-[13.5px] text-slate-600">
         Empieza con una plantilla profesional (se puede editar todo) o pídele a Adamia AI que la arme contigo.
       </p>
+      <CrearConIa idEmpresa={idEmpresa} />
 
       <section aria-label="Plantillas profesionales">
         <div className="mb-2 flex flex-wrap items-baseline gap-2">
