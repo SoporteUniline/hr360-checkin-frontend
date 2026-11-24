@@ -42,9 +42,13 @@ function diasVacacionesLFT(anios) {
  * Componente para mostrar las vacaciones del empleado
  * Relacionado con: src/app/panel/panel-empleado/page.jsx
  */
-export default function PanelEmpleadoVacaciones({ datosEmpleado }) {
-  if (!datosEmpleado) return null;
+// El guard va en un envoltorio: los hooks de PanelEmpleadoVacacionesContenido no pueden ir tras un return condicional.
+export default function PanelEmpleadoVacaciones(props) {
+  if (!props.datosEmpleado) return null;
+  return <PanelEmpleadoVacacionesContenido {...props} />;
+}
 
+function PanelEmpleadoVacacionesContenido({ datosEmpleado }) {
   const balance = datosEmpleado.vacaciones?.balance || {};
   const historial = datosEmpleado.vacaciones?.historial || [];
 

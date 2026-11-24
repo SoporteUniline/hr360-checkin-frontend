@@ -34,7 +34,7 @@ import {
 import { administrativeMinutesApi } from "@/lib/administrativeMinutesApi";
 import { useSnackbar } from "notistack";
 
-const page = () => {
+const ActasAdministrativasPage = () => {
   const { enqueueSnackbar } = useSnackbar();
   const [empresaSeleccionada] = useState("all");
   const [page, setPage] = useState(1);
@@ -272,4 +272,4 @@ const page = () => {
   );
 };
 
-export default page;
+export default ActasAdministrativasPage;

@@ -83,7 +83,6 @@ export default function ContratosPage() {
         setOpenView(true);
       })
       .catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
   const [deleteRow, setDeleteRow] = useState(null);
   const [filterOptionsRows, setFilterOptionsRows] = useState([]);
