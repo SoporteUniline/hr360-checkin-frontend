@@ -126,6 +126,9 @@ async function instalarMocks(ctx) {
       return v ? json(detalle(v)) : json({ error: "Vacante no encontrada" }, 404);
     }
     if (p.startsWith("/vacantes/check-positions/")) return json({ available: true });
+    // Sesión abierta de RH o dueño viendo la página pública: sus postulaciones no le corresponden (403).
+    if (p === "/users/verify/token") return S.sesion ? json({ user: S.sesion, modulos: null }) : json({ error: "Sin sesión" }, 401);
+    if (p.startsWith("/postulaciones/by-correo/")) return json({ error: "No tienes permiso sobre este registro." }, 403);
     if (p === "/otp/send") { envios.otpSend.push(req.postDataJSON()); return json({ message: "Código de verificación enviado" }); }
     if (p === "/otp/verify") {
       const b = req.postDataJSON();
@@ -413,6 +416,16 @@ try {
   await revisar(pg, "vacante error", 1440);
   await pg.getByRole("button", { name: "Reintentar" }).click();
   await pg.getByRole("heading", { level: 1, name: /Cajera de piso/ }).waitFor({ timeout: 15000 });
+
+  // (25/11/2026) Con sesión de RH o dueño abierta, la consulta de «mis postulaciones» responde 403: la vacante se ve
+  // igual (antes salía «No pudimos cargar la vacante»).
+  S.sesion = { id_usuario: 5, tipo_usuario: "Recruiter", correo: "rh@prueba.invalid", nombre: "RH" };
+  await ctx.addCookies([{ name: "token", value: "sesion-rh-prueba", url: base }]);
+  await pg.goto(base + "/vacante/chofer-repartidor-monterrey", { waitUntil: "domcontentloaded" });
+  await pg.getByRole("heading", { level: 1, name: /Chofer/ }).waitFor({ timeout: 20000 });
+  assert.equal(await pg.getByRole("heading", { name: "No pudimos cargar la vacante" }).count(), 0, "con sesión de RH la vacante se ve");
+  await ctx.clearCookies();
+  S.sesion = null;
 
   // ═════════ Menú del sitio: «Bolsa de trabajo» desde el inicio (escritorio) ═════════
   await pg.goto(base + "/", { waitUntil: "domcontentloaded" });
