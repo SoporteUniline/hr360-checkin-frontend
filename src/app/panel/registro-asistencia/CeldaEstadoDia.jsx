@@ -38,8 +38,9 @@ function Debajo({ registro }) {
   );
 }
 
-// `soloNoVino`: dentro del reloj del día (sin checadas) solo se ofrece «No vino», con aspecto de campo.
-export default function CeldaEstadoDia({ registro, tiposPermiso, readOnly = false, onAbrirReloj, onGuardado, movil = false, soloNoVino = false }) {
+// `comoCampo`: dentro del reloj del día (sin checadas), con aspecto de campo; `soloNoVino` además quita «Sí vino».
+export default function CeldaEstadoDia({ registro, tiposPermiso, readOnly = false, onAbrirReloj, onGuardado, movil = false, soloNoVino = false, comoCampo = false }) {
+  const campoReloj = comoCampo || soloNoVino;
   const { enqueueSnackbar } = useSnackbar();
   const [pendiente, setPendiente] = useState(null); // { tipo, req, opcion, texto, goce }
   const [guardando, setGuardando] = useState(false);
@@ -99,12 +100,12 @@ export default function CeldaEstadoDia({ registro, tiposPermiso, readOnly = fals
   return (
     <span className="flex w-full min-w-[240px] flex-col gap-1.5" data-estado-fila data-no-row-click>
       {/* Se ve como texto (igual que el «Tipo» de antes); al tocarlo despliega las opciones. */}
-      <span className={`group relative inline-flex max-w-full items-center ${soloNoVino ? "w-full" : "w-fit"}`}>
+      <span className={`group relative inline-flex max-w-full items-center ${campoReloj ? "w-full" : "w-fit"}`}>
         <select aria-label={`Estado de ${nombre}`} value={valor} disabled={guardando} onChange={(e) => elegir(e.target.value)}
-          className={soloNoVino
+          className={campoReloj
             ? `${alto} w-full cursor-pointer appearance-none truncate rounded-lg border border-slate-200 bg-white py-0 pl-2.5 pr-7 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30`
             : `${alto} max-w-full cursor-pointer appearance-none truncate rounded-md border-0 bg-transparent py-0 pl-1 pr-6 text-slate-800 hover:bg-slate-100 focus:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/30`}>
-          {!actual && !pendiente ? <option value="">{soloNoVino ? "Elige el estado del día…" : permiso?.tipo || textoConIcono(estado.texto, falta ? "falta" : estado.clave) || "Elige el estado…"}</option> : null}
+          {!actual && !pendiente ? <option value="">{campoReloj ? "Elige qué pasó…" : permiso?.tipo || textoConIcono(estado.texto, falta ? "falta" : estado.clave) || "Elige el estado…"}</option> : null}
           <optgroup label="No vino">
             {tipos.map((t) => <option key={t.id} value={String(t.id)}>{t.nombre}{requisitoEstado(t) || puedeCambiar(t).goce ? "…" : ""}</option>)}
           </optgroup>

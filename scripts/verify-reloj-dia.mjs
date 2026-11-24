@@ -252,11 +252,10 @@ try {
   const dlgA = page.getByRole("dialog", { name: /Armando González/ });
   await dlgA.locator("[data-reloj-vacio]").waitFor({ timeout: 10000 });
   assert.match(await dlgA.locator("[data-reloj-vacio]").innerText(), /No tiene checadas\. ¿De qué hora a qué hora trabajó\?/);
-  // Sin checadas, el reloj también deja marcar que no vino (mismas opciones «No vino» que la fila, sin «Sí vino»).
-  const noVino = dlgA.locator("[data-reloj-no-vino]");
-  assert.match(await noVino.innerText(), /¿No vino\?/);
-  const opcionesNoVino = await noVino.locator("select").first().locator("option").allInnerTexts();
-  assert.ok(opcionesNoVino.some((t) => /Falta justificada/.test(t)) && !opcionesNoVino.some((t) => /Sí vino/.test(t)), `opciones de «No vino»: ${opcionesNoVino.join(" | ")}`);
+  // Sin checadas, el reloj ofrece el mismo desplegable que la fila: «No vino» y «Sí vino» en «Qué pasó».
+  const quePaso = dlgA.locator("[data-reloj-que-paso]");
+  const opcionesQuePaso = await quePaso.locator("select").first().locator("option").allInnerTexts();
+  assert.ok(opcionesQuePaso.some((t) => /Falta justificada/.test(t)) && opcionesQuePaso.some((t) => /Sí vino/.test(t)), `opciones de «Qué pasó»: ${opcionesQuePaso.join(" | ")}`);
   await dormir(500);
   const cajaA = await dlgA.boundingBox();
   assert.ok(cajaA.width >= 1000 && cajaA.width <= 1080, `modal amplio (${cajaA.width}px)`);

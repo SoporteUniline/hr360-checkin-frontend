@@ -17,7 +17,7 @@ import { useSnackbar } from "notistack";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Combobox } from "@/components/Combobox";
 import { BookOpen, Info } from "lucide-react";
-import { ALCANCES, ALCANCE_TXT, GOCES, HORAS, normalizarTipo } from "@/lib/asistencia/tiposGoce.mjs";
+import { ALCANCES, ALCANCE_TXT, GOCES, HORAS, claveDesdeNombre, normalizarTipo } from "@/lib/asistencia/tiposGoce.mjs";
 
 export default function TipoRegistroFormDialog({
   open,
@@ -101,8 +101,8 @@ export default function TipoRegistroFormDialog({
 
   const handleSubmit = async () => {
     // Un tipo del sistema es global (sin empresa): solo se configura cómo se paga.
-    if (!String(form.clave ?? "").trim() || !String(form.nombre ?? "").trim() || (!form.id_empresa && !delSistema)) {
-      setError("Clave, nombre y empresa son obligatorios.");
+    if (!String(form.nombre ?? "").trim() || (!form.id_empresa && !delSistema)) {
+      setError("Nombre y empresa son obligatorios.");
       return;
     }
 
@@ -132,8 +132,9 @@ export default function TipoRegistroFormDialog({
         horas_no_trabajadas: parcial ? form.horas_no_trabajadas || "reponen" : null,
         cambia_al_aplicar: Number(form.cambia_al_aplicar) ? 1 : 0,
       };
+      const { clave: _clave, aplica_a_empresa: _aplica, ...sinClave } = form;
       await axios[method](url, delSistema ? { ...config, ...(variasEmpresas && empresaConfig ? { id_empresa: Number(empresaConfig) } : {}) } : {
-        ...form,
+        ...sinClave,
         goce_sueldo: Number(form.goce_sueldo) ? 1 : 0,
         alcance: form.alcance,
         horas_no_trabajadas: parcial ? form.horas_no_trabajadas || "reponen" : null,
@@ -188,13 +189,14 @@ export default function TipoRegistroFormDialog({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="clave">Clave del Registro</Label>
+              {/* La genera el sistema a partir del nombre (backend services/claveTipo.js) y no se edita. */}
               <Input
                 id="clave"
-                disabled={delSistema}
-                placeholder="Ingrese clave"
-                value={form.clave}
-                onChange={(e) => handleChange("clave", e.target.value)}
+                readOnly
+                disabled
+                value={editRegistro ? form.clave : claveDesdeNombre(form.nombre) || "Se genera con el nombre"}
               />
+              <p className="text-[12px] text-slate-500">{editRegistro ? "La clave no se edita." : "Se genera sola con el nombre."}</p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="nombre">Nombre</Label>
@@ -230,15 +232,6 @@ export default function TipoRegistroFormDialog({
                 value={form.id_empresa}
                 onChange={(val) => handleChange("id_empresa", Number(val))}
                 disabled={!!editRegistro}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Aplica a Empresa (Visual)</Label>
-              <Input
-                value={form.aplica_a_empresa}
-                onChange={(e) =>
-                  handleChange("aplica_a_empresa", e.target.value)
-                }
               />
             </div>
           </div>}

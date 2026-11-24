@@ -242,3 +242,13 @@ export function camposSolicitud(tipo, { motivo, goce, horas, rh = true } = {}) {
     ...(n.parcial ? { horas_no_trabajadas: h, tipo_horas: tipoHorasDe(tipo), ...(TRATAMIENTO[h] ? { tratamiento: TRATAMIENTO[h] } : {}) } : {}),
   };
 }
+
+// Vista previa de la clave de un tipo nuevo (la genera el servidor igual: services/claveTipo.js del backend).
+// «Visita al médico» → «VISITA_AL_MEDICO». Si ya existe, el servidor le agrega _2, _3…
+export function claveDesdeNombre(nombre) {
+  const t = String(nombre ?? "").trim();
+  if (!t) return "";
+  const base = t.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\p{Extended_Pictographic}/gu, "")
+    .toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  return (base || "TIPO").slice(0, 30).replace(/_+$/, "");
+}
