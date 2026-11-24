@@ -108,8 +108,9 @@ export default function RelojChecador({
   const [subscriptionActive, setSubscriptionActive] = useState(false);
   const { getCurrentLocation, loading: loadingGPS } = useGPS();
   // Todo se registra en línea: el servidor identifica a la persona. En el kiosco la cara se busca en la empresa
-  // (o 1 a 1 si viene con código); en la app con sesión de empleado el servidor la compara solo con sus fotos.
-  const submitMovement = payload => registrarEnLinea(axiosInstance, payload);
+  // (o 1 a 1 si viene con código). En la app, `modo: "app"` hace que el servidor tome a la persona de la sesión y la
+  // compare solo con sus fotos. Los códigos (y el QR) siguen identificando a cualquiera de la empresa.
+  const submitMovement = payload => registrarEnLinea(axiosInstance, modoEmpleado && payload.descriptor_facial ? { ...payload, modo: "app" } : payload);
   // Reloj de la empresa (/<slug>): kiosco a pantalla completa, sin desplazar. El del empleado conserva su diseño.
   const kiosco = !modoEmpleado;
 

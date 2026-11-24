@@ -30,53 +30,39 @@ Lo que se manda al servidor:
 
 Si el servidor responde `409 ROSTRO_PARECIDO`, se muestra un mensaje genérico que no dice a quién se parece: «Tu rostro se parece mucho al de otra persona registrada…».
 
-## Comparar al checar
+## Checar: solo en línea (24/11/2026)
 
-`public/offline-clock/rostro-reglas.mjs` es el único módulo con las reglas. Lo usan el reloj sin conexión (`face.mjs`, también desde el service worker) y la app, que lo reexporta en `src/lib/rostro/reglas.mjs`. Los valores son los mismos del servidor:
+El dueño quitó el reloj sin conexión («Require internet for attendance clock registration», de Luis): ya no hay service
+worker de reloj, ni cola, ni comparación de la cara en el aparato. Todo va al servidor con
+`src/lib/reloj/registrarEnLinea.mjs`, y es el servidor el que compara (reglas en el backend:
+`services/rostroReglas.js` y `services/rostroEnLinea.js`; ver `hr360-checkin-backend/docs/rostro-referencias.md`).
 
-- `UMBRAL_EMPRESA` = 0.95
-- `MARGEN` = 0.02
-- `UMBRAL_1A1` = 0.92
+| Quién | Petición | Qué hace el servidor |
+|---|---|---|
+| Kiosco, cara sola | `POST /checador/reloj/registrar-facial` `{ id_empresa, descriptor_facial, captured_at, latitud_actual, … }` | Contra toda la empresa: umbral 0.95 y margen 0.02. «Código y cara» responde `CODE_REQUIRED`. |
+| Kiosco, «Código y cara» | Lo mismo + `codigo` (un solo POST) | 1 a 1 contra la persona de ese código (0.92). |
+| Kiosco, código solo | `POST /checador/reloj/registrar` `{ id_empresa, codigo, … }` | Si la persona es «Código y cara»: `METHOD_CODE_FACE`. |
+| App del empleado | `registrar-facial` + `modo: "app"` y su token | La persona y la empresa salen de la sesión; 1 a 1 solo contra sus fotos. Los códigos de compañeros siguen pasando por la empresa. |
 
-Cómo decide:
-
-- **Puntaje de una persona:** la más parecida de sus fotos. Si la persona no tiene fotos nuevas, se usa su `descriptor`/`descriptor_facial` de siempre.
-- **Kiosco, solo con la cara:** gana quien tiene el mayor puntaje, siempre que llegue al umbral y le saque el margen a la segunda persona. Si no le saca el margen, el resultado es `FACE_AMBIGUOUS`. Quien tiene «Código y cara» no entra solo con la cara: el resultado es `CODE_REQUIRED` y el reloj le abre el teclado.
-- **Kiosco, «Código y cara»:** el código elige a la persona y la cara se compara solo con ella (1 a 1, 0.92).
-  - Sin conexión al servidor o con las referencias descargadas, la captura se manda como `method:'facial'` con `code` y `local_verification`. El servidor revisa que el código sea de esa persona.
-  - Sin referencias descargadas, se manda `method:'facial'` con `descriptor`, `code` y `device_id`.
-- **App del empleado con sesión:** la cara se compara **solo** con las referencias de esa persona. Se usan la descarga personal (`/checador/reloj/offline/referencias`, `mode:'employee'`) y el alcance personal (`/checador/reloj/offline/sincronizar`). Los códigos de compañeros siguen pasando por la empresa.
+`src/lib/rostro/reglas.mjs` solo guarda las constantes (`UMBRAL_EMPRESA` 0.95, `MARGEN` 0.02, `UMBRAL_1A1` 0.92) y el
+puntaje por persona que usa «Probar rostro» en la ficha para decir lo mismo que dirá el checador.
 
 ## Kiosco: «Código y cara»
 
-Sobre la cámara aparece el botón «¿No te reconoce? Escribe tu código». Al tocarlo se abre un teclado grande con teclas de 64 px (`src/components/Clock/TecladoCodigoCara.jsx`) y luego la cámara compara 1 a 1. Si en 8 s la cara no coincide con ese código, el reloj lo dice.
-
-Antes de pasar a la cámara, el código se revisa con las referencias descargadas:
-
-- si el código no existe, lo dice al momento;
-- si la persona no tiene rostro registrado, también.
+Sobre la cámara aparece el botón «¿No te reconoce? Escribe tu código». Al tocarlo se abre un teclado grande con teclas de
+64 px (`src/components/Clock/TecladoCodigoCara.jsx`) y luego la cámara manda la cara junto con el código. Si en 8 s la
+cara no coincide con ese código, el reloj lo dice. Si el código no existe, si la persona no tiene rostro o si hay
+demasiados códigos equivocados (`429 CODE_ATTEMPTS_LOCKED`), el servidor lo responde y el reloj lo muestra.
 
 Dos casos abren el modo solo:
 
-- la cara es de una persona con «Código y cara»: se abre el teclado;
-- esa persona escribe solo su código y el servidor responde `METHOD_CODE_FACE`: la cámara pasa sola a confirmar la cara con ese código.
+- la cara es de una persona con «Código y cara» (`CODE_REQUIRED`): se abre el teclado;
+- esa persona escribe solo su código y el servidor responde `METHOD_CODE_FACE`: la cámara pasa sola a confirmar la cara
+  con ese código.
 
 ## Intentos fallidos
 
-El reloj guarda cada intento fallido que detecta él mismo y lo manda después:
-
-- **Motivos:** `sin_coincidencia`, `ambiguo`, `codigo_no_coincide`, `codigo_invalido` y `sin_referencias`.
-- **Qué se guarda:** el candidato, el motivo y los porcentajes. Nunca la huella.
-- **Cuándo cuenta:** solo cuando pasó el tiempo de gracia, para que un primer cuadro borroso no cuente.
-- **Límite:** un intento por candidato y motivo cada 30 s por dispositivo.
-- **Sin conexión:** los intentos se encolan en el almacén del reloj (`face:attempts:v1`, como mucho 100).
-
-El código está en `reportFaceAttempt` de `src/lib/offline-clock.js`. A dónde se mandan:
-
-- **Kiosco:** `POST /checador/reloj/offline/empresa/intentos` con `grant`.
-- **App:** `POST /checador/reloj/offline/intentos`. La persona sale de la sesión.
-
-Los intentos que detecta el servidor se guardan solos en el servidor.
+Los guarda el servidor al responder (`rostro_intentos`, con modo «kiosco» o «app»). El reloj ya no los manda.
 
 En la ficha, `RostroRhResumen.jsx` lee `GET /checador/mi-espacio/rostro/empleado/:id` (las `poses`) y `…/intentos`. Muestra:
 
@@ -85,18 +71,25 @@ En la ficha, `RostroRhResumen.jsx` lee `GET /checador/mi-espacio/rostro/empleado
 
 El método de checado de la ficha tiene la opción nueva «Código y cara» (`metodo_chequeo = 'codigo_cara'`).
 
+## Lo que se quitó del modo sin conexión
+
+- De este trabajo: el reporte de intentos desde el aparato (`reportFaceAttempt`), la revisión local del código
+  (`checkFaceCode`), la descarga personal de referencias y el uso de las reglas en `public/offline-clock/face.mjs`
+  (`public/offline-clock/rostro-reglas.mjs` pasó a `src/lib/rostro/reglas.mjs`).
+- `FaceReferenceSync.jsx` y `OfflineClockSetup.jsx`: ya nadie los usaba.
+- Del CI: `test-offline-clock-registration`, `test-automatic-clock`, `test-offline-clock` y `test-reloj-comida-cola`
+  (prueban la cola sin conexión, que ya no se usa). Entran `test-reloj-en-linea` y `test-retire-offline-worker`.
+- Siguen en el repositorio, sin usarse para checar: `src/lib/offline-clock.js` (la app aún lee las capturas guardadas
+  en el aparato para mostrarlas), `public/offline-clock/*` y `OfflineExperience.jsx`. Se pueden quitar cuando ya no haga
+  falta mostrar capturas viejas.
+
 ## Pruebas
 
 - **Unitarias** (en la línea «Asistencias — cálculo…» del CI):
   - `scripts/test-rostro-poses.mjs`: pose con caras sintéticas 3D, captura, saltar, otra persona.
-  - `scripts/test-rostro-reglas.mjs`: margen, 1 a 1, «Código y cara», app, límite, textos de RH, 409.
-  - `scripts/test-local-face.mjs`.
-  - `scripts/test-offline-clock-registration.mjs`: cuerpos de «Código y cara» y de intentos.
-- **En el navegador:** `scripts/verify-rostro-multi.mjs`, con el backend simulado según el contrato y face-api simulado con poses (`scripts/rostro-faceapi-poses.mjs`). Cubre:
-  - el kiosco a 1440 y 390;
-  - la app;
-  - Mi rostro;
-  - la ficha a 1440 y 390.
-
-  `verify-rostro-qr.mjs` y `verify-firma-pin.mjs` ya usan la captura guiada.
+  - `scripts/test-rostro-reglas.mjs`: constantes, puntaje con varias fotos, textos de RH, 409, «Probar rostro».
+  - `scripts/test-reloj-en-linea.mjs`: rutas en línea; «Código y cara» va en un solo POST a `registrar-facial`.
+- **En el navegador:** `scripts/verify-rostro-multi.mjs`, con el backend simulado con las reglas del servidor y face-api
+  simulado con poses (`scripts/rostro-faceapi-poses.mjs`). Cubre el kiosco a 1440 y 390, la app, Mi rostro y la ficha a
+  1440 y 390. `verify-rostro-qr.mjs` y `verify-firma-pin.mjs` ya usan la captura guiada.
 - **Lo que no se prueba aquí:** la detección real de face-api (la cámara es simulada). Los ángulos (unos 9° a 31° de giro y unos 9° a 30° de inclinación) salen de un modelo geométrico; conviene confirmarlos con personas reales y ajustar `LIMITES_POSE` si hace falta.
