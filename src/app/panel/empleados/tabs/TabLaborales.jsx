@@ -31,13 +31,13 @@ import { Combobox } from "@/components/Combobox";
 import { useEmpresaDependencias } from "@/hooks/useEmpresaDependencias";
 import { CreatableCombobox } from "@/components/CreatableCombobox";
 
-// (23/11/2026) Ficha en 5 pestañas: este componente pinta «Puesto y organización» (seccion="trabajo", pestaña Trabajo) o
+// Ficha en 5 pestañas: este componente pinta «Puesto y organización» (seccion="trabajo", pestaña Trabajo) o
 // «Checador y acceso» (seccion="checador"). Los campos personalizados siguen en su clave «laborales».
 export default function TabLaborales({ renderCampos = () => null, form, soloLectura, dataUser, editar, seccion = "todo", cambiarContrasena = null, sincronizarCampo }) {
   const ver = (s) => seccion === "todo" || seccion === s;
   const { enqueueSnackbar } = useSnackbar();
   const [areas, setAreas] = useState([]);
-  // (23/11/2026) Arranca con lo que ya tiene el formulario (no con []), para no marcar «cambios sin guardar» al volver a
+  // Arranca con lo que ya tiene el formulario (no con []), para no marcar «cambios sin guardar» al volver a
   // la pestaña mientras se consultan las áreas.
   const [areasAsignadas, setAreasAsignadas] = useState(() => form.getValues("areasAsignadas") || []);
   const [mostrarModalArea, setMostrarModalArea] = useState(false);

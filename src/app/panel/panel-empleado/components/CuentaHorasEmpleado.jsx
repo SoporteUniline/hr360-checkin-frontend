@@ -1,8 +1,7 @@
 "use client";
 
-// Cuenta de horas por reponer del empleado (permisos por horas, R1 20/11/2026).
-// Lo que debe = permisos que se reponen − reposiciones − cierres. RH la cierra a mano: Rebajar, Condonar u Otro.
-// Solo lectura si no hay permisos por horas; si el empleado está dado de baja con horas pendientes, se avisa.
+// Cuenta de horas por reponer: permisos que se reponen − reposiciones − cierres (Rebajar, Condonar u Otro).
+// Solo lectura si no hay permisos por horas; avisa si el empleado está de baja con horas pendientes.
 import { useState } from "react";
 import useSWR from "swr";
 import Cookies from "js-cookie";

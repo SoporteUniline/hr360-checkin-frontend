@@ -1,9 +1,7 @@
 "use client";
 
-// La MISMA ventana de edición de Asistencias (PanelEditarAsistencia), abierta desde otra pantalla para una persona y
-// un día (pedido del 21/11/2026: corregir desde la nómina sin salir de ella). Mismo guardado (useAsistenciaActions),
-// mismas correcciones de domingo/festivo y mismo candado del servidor. `onCerrar(huboCambios)` dice si se guardó
-// algo (la asistencia o una checada) para que la pantalla que la abrió recalcule.
+// La misma ventana de edición (PanelEditarAsistencia) para una persona y un día, abierta desde otra pantalla.
+// `onCerrar(huboCambios)` dice si se guardó algo para que la pantalla que la abrió recalcule.
 import { useEffect, useMemo, useRef } from "react";
 import useSWR from "swr";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";

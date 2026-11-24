@@ -1,8 +1,7 @@
 "use client";
 
-// Cambiar la contraseña de acceso de un empleado (23/11/2026, pedido del dueño: «falta un botón de actualizar
-// contraseña»). Solo cambia la contraseña (PUT /checador/empleados/:id/contrasena); el servidor valida permisos y reglas.
-// «Generar una» crea una segura y se puede copiar para dársela a la persona.
+// Cambia solo la contraseña de acceso (PUT /checador/empleados/:id/contrasena); el servidor valida permisos y reglas.
+// «Generar una» crea una segura para copiarla y dársela a la persona.
 import { useState } from "react";
 import { Copy, KeyRound, RefreshCw } from "lucide-react";
 import { useSnackbar } from "notistack";
@@ -48,7 +47,7 @@ export default function CambiarContrasenaEmpleado({ empleado, conTexto = false }
     if (!puede) return;
     setGuardando(true);
     try {
-      // (23/11/2026) Con tiempo límite: si el servidor no está disponible no se queda en «Guardando…» para siempre.
+      // Con tiempo límite: si el servidor no está disponible no se queda en «Guardando…» para siempre.
       const r = await axios.put(`/checador/empleados/${empleado.id_empleado}/contrasena`, { contrasena: nueva }, { timeout: 20000 });
       setListo({ correo: r.data?.correo, contrasena: nueva });
       enqueueSnackbar("Contraseña actualizada.", { variant: "success" });

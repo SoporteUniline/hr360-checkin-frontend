@@ -527,8 +527,8 @@ export default function CentroIncidenciasPage() {
     }
   };
 
-  // Autorizar / no autorizar: solo se envían los campos de horas extra (antes se
-  // reenviaba el registro completo con correccion = 1 y quedaba como «Editado»).
+  // Autorizar / no autorizar envía solo los campos de horas extra: reenviar el registro completo con
+  // correccion = 1 lo dejaba como «Editado».
   const autorizarExtra = (inc) =>
     hx.guardar(
       [{ registro: inc.registro, cambios: cambiosAutorizar({ idAutorizador: hx.usuario.idEmpleado }) }],

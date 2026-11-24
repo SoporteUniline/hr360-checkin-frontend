@@ -131,8 +131,7 @@ export default function AsistenciaRow({
       .join(" ");
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Clic en la fila: abre el panel con las checadas del reloj y la edición juntas
-  // (pedido del 19/11/2026: sin botón «Editar»). En solo lectura, solo las checadas.
+  // Clic en la fila: abre el panel con las checadas del reloj y la edición juntas. En solo lectura, solo las checadas.
   const handleRowClick = (e) => {
     if (isEditing) return;
     // No disparar desde elementos interactivos dentro de la fila.
@@ -271,8 +270,8 @@ export default function AsistenciaRow({
             )}
 
             {isColVisible("comida") && (
-              // (23/11/2026) Comida marcada con «Salir a comer»: horario, minutos de su tiempo y si se pasó.
-              // Solo el tiempo de comida; en rojo si se pasó (abierta o cerrada). Las horas en el tooltip (23/11/2026).
+              // Comida marcada con «Salir a comer»: horario, minutos de su tiempo y si se pasó.
+              // Solo el tiempo de comida; en rojo si se pasó (abierta o cerrada). Las horas en el tooltip.
               <TableCell className="min-w-[110px] text-center text-xs">
                 <CeldaComida c={celdaComida(registro.comida_checada, horaVer, ahoraBase())} />
               </TableCell>
@@ -386,7 +385,7 @@ export default function AsistenciaRow({
             )}
             {isColVisible("estado_asistencia") && (
               <TableCell className="text-center">
-                {/* Punto de color + palabra completa (antes la etiqueta en mayúsculas se cortaba). */}
+                {/* Punto de color + palabra completa: la etiqueta en mayúsculas se cortaba. */}
                 <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-700">
                   <span
                     aria-hidden

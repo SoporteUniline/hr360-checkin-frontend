@@ -3,9 +3,8 @@
 import { Eye } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-// Observaciones de la fila (19/11/2026): antes el texto completo hacía la fila muy alta.
-// Ahora una sola línea recortada y el ojo abre el texto completo. El clic en el ojo no abre la
-// edición de la fila.
+// Observaciones en una sola línea recortada (el texto completo hacía la fila muy alta); el ojo abre el texto y
+// su clic no abre la edición de la fila.
 export default function CeldaObservaciones({ notas, notasHorasExtra }) {
   const nota = String(notas ?? "").trim();
   const extra = String(notasHorasExtra ?? "").trim();

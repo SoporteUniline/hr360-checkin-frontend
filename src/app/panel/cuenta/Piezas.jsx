@@ -1,6 +1,6 @@
 "use client";
 
-// Piezas visuales de Mi cuenta (24/11/2026): una sola tarjeta blanca con borde sutil (como Nómina, Tareas y la ficha
+// Piezas visuales de Mi cuenta: una sola tarjeta blanca con borde sutil (como Nómina, Tareas y la ficha
 // del empleado), su encabezado de sección y la barra de guardado «Sin cambios» / «Cambios sin guardar» + «Guardar».
 import { Button } from "@/components/ui/button";
 import EstadoCambios from "@/components/cambios/EstadoCambios";

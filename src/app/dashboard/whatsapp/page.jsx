@@ -1,8 +1,8 @@
 "use client";
 
 // WhatsApp de reclutamiento por empresa (solo administradores de ADAMIA, R1).
-// 27/11/2026: paquetes de entrevistas: entrevistas del mes / incluidas, extras e importe estimado del mes.
-// P7 (01/12/2026): pestaña «Salud y cobro» (?vista=salud): semáforo del agente por empresa, última falla, costo de IA del
+// Paquetes de entrevistas: entrevistas del mes / incluidas, extras e importe estimado del mes.
+// P7: pestaña «Salud y cobro» (?vista=salud): semáforo del agente por empresa, última falla, costo de IA del
 // mes, entrevistas contra paquete y extras a cobrar. El aviso por correo de fallas enlaza aquí.
 import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";

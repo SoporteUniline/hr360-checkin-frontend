@@ -39,7 +39,7 @@ const sections = [
     label: "Anticipos y cobertura",
     icon: CalendarDays,
   },
-  // (03/12/2026) Módulos por empresa: extras y quitados (con nota) sobre lo que incluye su plan.
+  // Módulos por empresa: extras y quitados (con nota) sobre lo que incluye su plan.
   { value: "modulos", label: "Módulos", icon: LayoutGrid },
 ];
 

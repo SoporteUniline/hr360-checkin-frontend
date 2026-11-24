@@ -1,10 +1,8 @@
 "use client";
 import { useEffect, useState } from 'react';
 
-// Pantalla de error del panel. (21/11/2026) Dos mejoras:
-// 1) Si el error es porque se publicó una versión nueva mientras la página estaba abierta (los archivos de la versión
-//    anterior ya no existen: ChunkLoadError), se recarga sola una vez y abre la versión nueva.
-// 2) En cualquier otro error se muestra el detalle técnico para poder reportarlo (antes solo decía «no se pudo abrir»).
+// Si el error es un ChunkLoadError (se publicó una versión nueva con la página abierta), se recarga una vez.
+// En cualquier otro error se muestra el detalle técnico para poder reportarlo.
 const esVersionNueva = (e) => /ChunkLoadError|Loading (CSS )?chunk|dynamically imported module|Importing a module script failed/i.test(`${e?.name ?? ''} ${e?.message ?? ''}`);
 const CLAVE = 'adamia-recarga-version';
 

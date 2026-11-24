@@ -1021,7 +1021,7 @@ const QUICK_ACTIONS = [
 ];
 
 function QuickActions() {
-  // (03/12/2026) Módulos por empresa: solo accesos a lo que la empresa tiene activo (p. ej. Permisos).
+  // Módulos por empresa: solo accesos a lo que la empresa tiene activo (p. ej. Permisos).
   const { activos, opciones } = useModulosActivos();
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">

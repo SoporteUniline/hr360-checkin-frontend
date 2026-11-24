@@ -1,8 +1,7 @@
 "use client";
 
 // Ventana de la asistencia (clic en la fila): horario, checadas del reloj y edición juntos.
-// Pedido del 19/11/2026: ventana flotante centrada, como la de turnos/horarios.
-// Usa el mismo estado y guardado de useAsistenciaActions: solo se envían los campos cambiados.
+// Usa el estado y guardado de useAsistenciaActions: solo se envían los campos cambiados.
 
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -123,7 +122,7 @@ export default function PanelEditarAsistencia({
               <p className="text-[11px] text-slate-400">Con el lápiz corriges una checada; la hora original del reloj queda tachada.</p>
               {/* Agregar comida: disponible cuando el día tiene entrada y salida y un solo tramo
                   (o el servidor aún no manda tramos). Se valida otra vez en el servidor. */}
-              {/* (23/11/2026) Si ya checó su comida («Salir a comer»), no se ofrece agregarla. */}
+              {/* Si ya checó su comida («Salir a comer»), no se ofrece agregarla. */}
               {registro.entrada && registro.salida && !registro.comida_checada?.salida &&
                 (!Array.isArray(registro.tramos_checadas) || registro.tramos_checadas.length <= 1) && (
                 <BotonAgregarComida

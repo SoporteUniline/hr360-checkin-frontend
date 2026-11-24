@@ -1,6 +1,6 @@
 "use client";
 
-// Ficha → Checador y acceso → Reconocimiento facial (23/11/2026, pedido del dueño):
+// Ficha → Checador y acceso → Reconocimiento facial:
 // 1) Estado del rostro registrado con fecha y origen («Registrado desde el celular el 23 nov, 5:15 p.m.»), del historial
 //    rostro_actualizaciones (el mismo GET y la misma caché SWR que AvisoRostroApp).
 // 2) «Probar rostro»: enciende la cámara de la computadora y compara el rostro en vivo con el registrado, con la misma

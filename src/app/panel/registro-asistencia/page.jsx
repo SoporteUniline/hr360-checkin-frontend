@@ -51,7 +51,7 @@ import { hora12 } from "@/lib/hora12.mjs";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-// Pestañas de Asistencias (control segmentado de la maqueta «Hoy», 23/11/2026). En celular ocupan el ancho.
+// Pestañas de Asistencias (control segmentado). En celular ocupan el ancho.
 const PESTANAS = [
   ["envivo", "Hoy", "Quién está, quién falta, quién va tarde y quién salió antes"],
   ["registros", "Registros", "Ver y corregir checadas del periodo"],
@@ -98,7 +98,7 @@ export default function ControlAsistencia() {
     filtroDiasFestivos: false,
     filtroRequiereAutorizacion: false,
   });
-  // (22/11/2026) Asistencias abre en «Hoy» (en vivo: ayer y hoy, por los turnos nocturnos). Si llega con un enlace
+  // Asistencias abre en «Hoy» (en vivo: ayer y hoy, por los turnos nocturnos). Si llega con un enlace
   // a una fecha o persona (desde Horas, Incidencias o el buscador), abre en «Registros».
   const conEnlace = Boolean(searchParams.get("fecha") || searchParams.get("empleado") || searchParams.get("abrirEmpleado"));
   const ayerMx = dayjs().tz("America/Mexico_City").subtract(1, "day").format("YYYY-MM-DD");
@@ -137,7 +137,7 @@ export default function ControlAsistencia() {
   // Las columnas guardadas se cargan en cliente (localStorage no existe en SSR)
   useEffect(() => {
     const columnas = cargarColumnasGuardadas(COLUMNAS_ASISTENCIA);
-    // (23/11/2026) Columna nueva «Comida»: se muestra una vez aunque haya columnas guardadas; si la quitan, se respeta.
+    // Columna nueva «Comida»: se muestra una vez aunque haya columnas guardadas; si la quitan, se respeta.
     try {
       if (!window.localStorage.getItem("adamia-asistencia-col-comida")) {
         window.localStorage.setItem("adamia-asistencia-col-comida", "1");

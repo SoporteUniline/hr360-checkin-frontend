@@ -119,11 +119,11 @@ export default function FirmarDocumentoPage({ params }) {
   const [documentoListo, setDocumentoListo] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [firmado, setFirmado] = useState(false);
-  // (22/11/2026) Firmar con PIN: null = aún no elige; true = con su PIN (firma guardada, sin cámara); false = dibujar + foto.
+  // Firmar con PIN: null = aún no elige; true = con su PIN (firma guardada, sin cámara); false = dibujar + foto.
   const [pinInfo, setPinInfo] = useState(null);
   const [conPin, setConPin] = useState(null);
   const [pin, setPin] = useState("");
-  // (23/11/2026, pedido del dueño) La firma se dibuja a pantalla completa, en horizontal, y ahí mismo se firma.
+  // La firma se dibuja a pantalla completa, en horizontal, y ahí mismo se firma.
   const [pantallaFirma, setPantallaFirma] = useState(false);
   const [vertical, setVertical] = useState(false);
   const [vistaFirma, setVistaFirma] = useState("");

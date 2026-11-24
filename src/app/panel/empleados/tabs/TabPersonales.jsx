@@ -229,8 +229,8 @@ export default function TabPersonales({ renderCampos = () => null, form, soloLec
             )}
           />
           {renderCampos("nss")}
-          {/* (23/11/2026) CURP, RFC y NSS salían dos veces (aquí y en «Documentos oficiales»). Quedan una sola vez; los campos
-              personalizados que estaban colocados en aquella sección se muestran aquí. */}
+          {/* CURP, RFC y NSS van solo aquí (no en «Documentos oficiales»); los campos personalizados de aquella
+              sección se muestran aquí. */}
           {renderCampos("documento_curp")}
           {renderCampos("documento_rfc")}
           {renderCampos("documento_nss")}

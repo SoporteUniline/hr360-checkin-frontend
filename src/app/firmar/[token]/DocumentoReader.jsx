@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import styles from "./firma.module.css";
 
-// (23/11/2026) url = el PDF servido por nuestro servidor (en algunos celulares el enlace directo al almacenamiento no
+// url = el PDF servido por nuestro servidor (en algunos celulares el enlace directo al almacenamiento no
 // abría); urlExterna = el enlace para abrirlo aparte si el lector no puede.
 export default function DocumentoReader({ url, urlExterna, nombre, onReady }) {
   const viewportRef = useRef(null);

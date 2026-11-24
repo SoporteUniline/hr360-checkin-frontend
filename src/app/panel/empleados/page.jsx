@@ -116,7 +116,7 @@ export default function RegistroEmpleados() {
   useEffect(() => {
     const idParam = searchParams.get("id");
     if (!idParam) return;
-    // (23/11/2026) Siempre abre editable (también con ?modo=editar, que sigue funcionando).
+    // Siempre abre editable (también con ?modo=editar, que sigue funcionando).
     abrirFormulario({ id_empleado: idParam });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
@@ -189,7 +189,7 @@ export default function RegistroEmpleados() {
   };
   // console.log(dataUser);
 
-  // (23/11/2026) «En cuanto entre ya pueda editar»: un empleado existente abre directo en edición (sin el paso de solo
+  // «En cuanto entre ya pueda editar»: un empleado existente abre directo en edición (sin el paso de solo
   // lectura con botón «Editar»); sin empleado, abre el alta.
   const abrirFormulario = async (empleado = null) => {
     if (!empleado) {

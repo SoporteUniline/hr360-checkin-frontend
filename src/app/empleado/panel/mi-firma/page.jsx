@@ -1,6 +1,6 @@
 "use client";
 
-// Mi espacio → Mi firma y PIN (22/11/2026, pedido del dueño). La persona dibuja y guarda su firma y crea un PIN secreto de
+// Mi espacio → Mi firma y PIN. La persona dibuja y guarda su firma y crea un PIN secreto de
 // 6 dígitos; con ese PIN firma sus documentos (se estampa la firma guardada). Puede cambiar ambos cuando quiera.
 // El PIN nunca vuelve del servidor (solo se guarda su hash). Si lo olvidó, lo cambia con la contraseña de su cuenta.
 import { useEffect, useState } from "react";
@@ -40,7 +40,7 @@ function SeccionFirma({ estado, alGuardar }) {
     return () => { vivo = false; if (url) URL.revokeObjectURL(url); };
   }, [estado.tiene_firma, estado.firma_actualizada_en]);
 
-  // (23/11/2026) La firma se dibuja con FirmaGrande: en celular a pantalla completa en horizontal.
+  // La firma se dibuja con FirmaGrande: en celular a pantalla completa en horizontal.
   const guardar = async (png) => {
     setAviso(null);
     try {

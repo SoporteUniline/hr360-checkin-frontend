@@ -1,6 +1,6 @@
 "use client";
 
-// Consentimiento del empleado para usar su rostro al checar (21/11/2026). NO es obligatorio: sin firma, la ficha
+// Consentimiento del empleado para usar su rostro al checar. NO es obligatorio: sin firma, la ficha
 // muestra «Consentimiento pendiente» y todo sigue funcionando. Usa la firma digital existente (trazo + foto):
 // tipo CONSENTIMIENTO_BIOMETRICO, referencia = id del empleado. Texto en src/lib/legal/documentos.js.
 import { useCallback, useEffect, useState } from "react";
@@ -20,7 +20,7 @@ const ESTILO = {
   pendiente: "border-slate-200 bg-slate-50 text-slate-800",
 };
 
-// (23/11/2026) Formato homologado ADAMIA (logotipo, encabezado y pie con «Página X de Y»):
+// Formato homologado ADAMIA (logotipo, encabezado y pie con «Página X de Y»):
 // src/lib/legal/consentimientoRostroPdf.mjs.
 async function generarPdf({ nombre, empresa }) {
   const { jsPDF } = await import("jspdf");

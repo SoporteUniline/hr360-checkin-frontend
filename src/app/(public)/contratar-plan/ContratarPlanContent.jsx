@@ -116,7 +116,7 @@ export default function ContratarPlanContent() {
   const [form, setForm] = useState(initialForm);
   const [aceptaLegal, setAceptaLegal] = useState(false);
 
-  // (21/11/2026) Cupón que llega desde un pop-up de la página (?cupon=BUENFIN2026): queda escrito, listo para «Aplicar».
+  // Cupón que llega desde un pop-up de la página (?cupon=BUENFIN2026): queda escrito, listo para «Aplicar».
   useEffect(() => {
     const cupon = String(searchParams.get("cupon") ?? "").trim().toUpperCase();
     if (/^[A-Z0-9_-]{3,40}$/.test(cupon)) setForm((f) => (f.codigo_cupon ? f : { ...f, codigo_cupon: cupon }));
@@ -399,7 +399,7 @@ export default function ContratarPlanContent() {
   };
 
   return (
-    // Diseño del 21/11/2026: mismo estilo que el inicio. La lógica de registro, verificación y pago no cambió.
+    // Mismo estilo que el inicio. La lógica de registro, verificación y pago no cambió.
     <main className="lh ct">
       <Dialog open={successModalOpen} onOpenChange={setSuccessModalOpen}>
         <DialogContent className="sm:max-w-lg">

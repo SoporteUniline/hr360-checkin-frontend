@@ -1,4 +1,4 @@
-// Diapositivas del carrusel de la bolsa de trabajo (24/11/2026). Mismo formato que las de la portada
+// Diapositivas del carrusel de la bolsa de trabajo. Mismo formato que las de la portada
 // (src/components/landing/home/diapositivas.js) y las mismas fotos ilustrativas de public/landing (personas ficticias).
 // Textos sin cifras: solo lo que la bolsa hace hoy (búsqueda por puesto y ubicación, postulación sin cuenta con CV,
 // verificación del teléfono por SMS). `secundario: null` quita el botón claro.
