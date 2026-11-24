@@ -4,32 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
-  <title>Reloj sin conexión · ADAMIA</title>
-  <link rel="stylesheet" href="/offline-clock/style.css">
+  <title>Reloj checador · ADAMIA</title>
 </head>
 <body>
   <main>
-    <a href="/empleado/reloj-checador">← Volver al reloj en línea</a>
-    <h1>Reloj sin conexión</h1>
-    <p id="employee">Cargando configuración del celular…</p>
-    <p id="connection" role="status"></p>
-    <p class="notice">Este reloj offline admite únicamente código de empleado o el contenido numérico del QR, si tienes autorizado ese método. Las checadas se guardan en este celular y se validan al enviarlas. Para reconocimiento facial abre el reloj habitual con conexión. Conserva la fecha y hora correctas y vuelve a abrir el reloj al recuperar internet para sincronizar.</p>
-    <form id="clock" hidden>
-      <label for="action">Movimiento</label>
-      <select id="action" required></select>
-      <p>Para turnos automáticos usa Entrada / Salida. Para turnos manuales usa Entrada / Salida temporal / Cerrar turno.</p>
-      <label for="method">Método de checado</label>
-      <select id="method" required></select>
-      <div id="code-field"><label for="code">Tu código de empleado</label><input id="code" inputmode="numeric" autocomplete="off" type="password" maxlength="32"></div>
-      <div id="face-field" hidden><video id="video" autoplay muted playsinline></video><button type="button" id="camera">Activar cámara</button><p>La coincidencia del rostro se validará al sincronizar.</p></div>
-      <button type="submit" id="save">Guardar checada en el celular</button>
-    </form>
-    <p id="message" role="status" aria-live="polite"></p>
-    <button id="sync" type="button">Sincronizar pendientes</button>
-    <h2>Checadas de este celular</h2>
-    <p>No borres los datos de la aplicación o del navegador mientras tengas pendientes. Los registros de más de siete días requieren revisión de RH.</p>
-    <ul id="events"></ul>
+    <h1>Necesitas conexión a internet para checar</h1>
+    <a href="/empleado/reloj-checador">Abrir el reloj en línea</a>
   </main>
-  <script type="module" src="/offline-clock/app.mjs"></script>
 </body>
 </html>

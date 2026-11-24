@@ -2,13 +2,10 @@
 // title/aria-label y para lectores de pantalla; no se muestra para que el reloj se vea limpio.
 const COLORES = { listo: "bg-green-500", preparando: "bg-slate-300", sinConexion: "bg-amber-500" };
 
-export function estadoConexion({ offline, localFacesReady }) {
-  if (offline) return localFacesReady
-    ? { tono: "sinConexion", texto: "Sin conexión · Reconocimiento local listo · Pendiente de subir" }
-    : { tono: "sinConexion", texto: "Sin conexión · Código / QR · Rostro sin preparar" };
-  return localFacesReady
-    ? { tono: "listo", texto: "Reconocimiento offline preparado en este dispositivo" }
-    : { tono: "preparando", texto: "Los rostros de la empresa se descargan automáticamente con internet, sin iniciar sesión." };
+export function estadoConexion({ offline }) {
+  return offline
+    ? { tono: "sinConexion", texto: "Necesitas conexión a internet para checar." }
+    : { tono: "listo", texto: "Con conexión" };
 }
 
 export default function IndicadorConexion({ tono = "listo", texto = "", className = "" }) {

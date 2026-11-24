@@ -34,11 +34,10 @@ const base = process.env.TEST_BASE_URL || 'http://127.0.0.1:4491';
         if (p.endsWith('/vacaciones/mi-saldo')) return json({ dias_disponibles: 8, dias_cargados: 12, dias_tomados: 4 });
         if (p.includes('/solicitudes-permiso/empleado/101')) { const pageNo=Number(new URL(route.request().url()).searchParams.get('page') || 1); return json({results:requests.slice((pageNo-1)*5,pageNo*5),total:requests.length}); }
         if(p.includes('/holidays/')) return json({festivos:[]});
-        // Reloj del empleado: perfil del dispositivo y checada por código.
+        // Reloj del empleado: checada en línea por código.
         if (p.startsWith('/api/empresas/check-subscription/')) { if (suscripcionLenta) await new Promise(r => setTimeout(r, 3000)); return json({ hasActivePlan: true }); }
         if (p.endsWith('/empresas/id/10/slug')) return json({ slug: 'empresa-prueba' });
-        if (p.endsWith('/reloj/offline/empresa/perfil') || p.endsWith('/reloj/offline/perfil')) return json({ id_empresa: 10, id_empleado: 101, slug: 'empresa-prueba', nombre: 'Diego León', metodo: 'codigo', grant: 'g', prepared_at: new Date().toISOString() });
-        if (p.endsWith('/reloj/offline/empresa/sincronizar') || p.endsWith('/reloj/offline/sincronizar')) { checadas++; return json({ action: 'entrada', employee: { nombre: 'Diego León' }, message: 'Entrada registrada' }); }
+        if (p.endsWith('/reloj/registrar')) { checadas++; return json({ empleado: { nombre: 'Diego', apellido_paterno: 'León' }, message: 'Entrada registrada' }); }
         // (24/11/2026) Motivo del catálogo de motivos: el empleado elige tipo y motivo; el goce lo decide RH.
         if (p.endsWith('/motivos-permiso')) return json({ ok: true, motivos: [{ id: 1, nombre: 'Visita al médico', global: true }, { id: 6, nombre: 'Otro', global: true }] });
         if (p.endsWith('/tiposPermiso')) return json({ tiposPermiso: [{ id: 2, nombre: 'Vacaciones', es_permiso: 0, descuenta_vacaciones: 1 }, { id: 3, nombre: 'Permiso personal', es_permiso: 1, descuenta_vacaciones: 0 }] });

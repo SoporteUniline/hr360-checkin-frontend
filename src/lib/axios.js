@@ -6,7 +6,6 @@ let offlineReady;
 export function ensureOfflineCache() {
   if (typeof window === 'undefined') return Promise.resolve();
   if (!offlineReady) offlineReady = import(/* webpackIgnore: true */ '/offline-clock/app-cache.mjs?v=5')
-    .then(module => { module.installOfflineFetch(process.env.NEXT_PUBLIC_RUTA_BACKEND); return module; })
     .catch(() => { offlineReady = null; });
   return offlineReady;
 }
@@ -27,7 +26,7 @@ if (typeof window !== 'undefined') {
   axios.defaults.adapter = 'fetch';
   // fetch que no deja pasar DOMException a axios (ver./fetchSeguro.mjs).
   axios.defaults.env = { ...(axios.defaults.env || {}), fetch: fetchSeguro };
-  axios.interceptors.request.use(async config => { await ensureOfflineCache(); return agregarTokenAlBackend(config); });
+  axios.interceptors.request.use(agregarTokenAlBackend);
 }
 
 const instance = axios.create({
@@ -46,8 +45,7 @@ export const setAuthToken = (token) => {
   }
 };
 
-instance.interceptors.request.use(async (config) => {
-  await ensureOfflineCache();
+instance.interceptors.request.use((config) => {
   const token = Cookies.get("token");
 
   if (token) {

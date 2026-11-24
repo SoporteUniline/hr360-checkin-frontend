@@ -18,6 +18,7 @@ import { useRouter } from "next/navigation";
 import { validadaHoy, guardarValidada, olvidarValidada } from "@/lib/reloj/suscripcionDia.mjs";
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
+import axiosInstance from "@/lib/axios";
 import ErrorPage from "@/components/ErrorPage";
 import { useSnackbar } from "notistack";
 import FacialRecognitionPanel from "./FacialRecognitionPanel";
@@ -37,7 +38,7 @@ import timezone from "dayjs/plugin/timezone";
 import { useAuth } from "@/context/AuthContext";
 import QRScanner from "./QRScanner";
 import { Button } from "./ui/button";
-import { initializeClock, registerClockMovement, localFaceStatus } from '@/lib/offline-clock';
+import { registrarEnLinea } from '@/lib/reloj/registrarEnLinea.mjs';
 import ClockNavigation from './Clock/ClockNavigation';
 import { hora12 } from "@/lib/hora12.mjs";
 
@@ -78,14 +79,12 @@ export default function RelojChecador({
     return !actual;
   });
   const [offline, setOffline] = useState(false);
-  const [localFacesReady, setLocalFacesReady] = useState(false);
   useEffect(() => {
-    const update = event => setOffline(event.type === 'online' ? false : event.detail?.offline ?? (!navigator.onLine || window.__adamiaOffline === true));
-    update({});
+    const update = () => setOffline(!navigator.onLine);
+    update();
     window.addEventListener('online', update);
     window.addEventListener('offline', update);
-    window.addEventListener('adamia-network', update);
-    return () => { window.removeEventListener('online', update); window.removeEventListener('offline', update); window.removeEventListener('adamia-network', update); };
+    return () => { window.removeEventListener('online', update); window.removeEventListener('offline', update); };
   }, []);
   const [isMobile, setIsMobile] = useState(false);
   const [mostrarModalTurno, setMostrarModalTurno] = useState(false);
@@ -109,16 +108,7 @@ export default function RelojChecador({
   const { getCurrentLocation, loading: loadingGPS } = useGPS();
   // All methods identify the person checking in within this company. The
   // signed-in employee only controls which history is visible on this page.
-  const submitMovement = payload => registerClockMovement(payload, { company: idEmpresa, employee: null, slug: companySlug });
-  useEffect(() => {
-    let active = true;
-    const context = { company: idEmpresa, slug: companySlug };
-    const refresh = () => { void localFaceStatus(context).then(dataset => { if (active) setLocalFacesReady(!!dataset?.employees?.length); }).catch(() => { if (active) setLocalFacesReady(false); }); };
-    void initializeClock(context).catch(() => {}).finally(refresh);
-    refresh();
-    window.addEventListener('adamia-face-ready', refresh);
-    return () => { active = false; window.removeEventListener('adamia-face-ready', refresh); };
-  }, [idEmpresa, idEmpleado, modoEmpleado, companySlug, dataUser?.tipo_usuario]);
+  const submitMovement = payload => registrarEnLinea(axiosInstance, payload);
 
   // Prepare recognition while subscription and clock data are being checked.
   // Camera and GPS permissions are requested only by the visible facial panel.
@@ -217,12 +207,8 @@ export default function RelojChecador({
   }, []);
 
   useEffect(() => {
-    if (offline && !localFacesReady) {
-      setMostrarCamara(false);
-      if (metodo === 'facial') setMetodo('codigo');
-    }
-    else if (metodo !== "facial") setMostrarCamara(false);
-  }, [metodo, offline, localFacesReady]);
+    if (metodo !== "facial") setMostrarCamara(false);
+  }, [metodo]);
 
   useEffect(() => {
     setCodigoEmpleado("");
@@ -276,12 +262,6 @@ export default function RelojChecador({
 
     try {
       const payload = { codigo, id_empresa: idEmpresa, captured_at };
-      if (!navigator.onLine) {
-        const pos = await getCurrentLocation();
-        setUbicacionGPS(pos);
-        if (pos) Object.assign(payload, {latitud_actual: pos.lat, longitud_actual: pos.lng,
-          precision_metros: pos.accuracy, ubicacion_timestamp: pos.timestamp, captured_at: new Date().toISOString()});
-      }
       let response;
       try {
         response = await submitMovement(payload);
@@ -307,7 +287,7 @@ export default function RelojChecador({
       }
 
       if (data.requiereDecision) {
-        setPendiente({ tipo: "codigo", codigo, offline_event: data.offline_event, opciones: data.opciones, mensaje: data.message });
+        setPendiente({ tipo: "codigo", codigo, opciones: data.opciones, mensaje: data.message });
         setMostrarModalTurno(true);
         setRegistrando(false);
         return;
@@ -334,7 +314,6 @@ export default function RelojChecador({
       const payload = {
         id_empresa: idEmpresa,
         accion,
-        offline_event: pendiente.offline_event,
         ...(pendiente.repetir ? { repetir: true } : {}),
       };
 
@@ -376,7 +355,6 @@ export default function RelojChecador({
       setPendiente({
         tipo: "facial",
         descriptor_facial: data.descriptor_facial,
-        offline_event: data.offline_event,
         opciones: data.opciones,
         mensaje: data.message,
       });
@@ -396,7 +374,7 @@ export default function RelojChecador({
         // Cierre manual: después de «Sí, registrar» pregunta «salida temporal / cerrar turno»; la decisión
         // conserva repetir y el tipo (código o rostro) para no volver a chocar con el candado.
         const { codigo, descriptor_facial } = pregunta.reintentar;
-        setPendiente({ tipo: codigo ? "codigo" : "facial", codigo, descriptor_facial, offline_event: data.offline_event, repetir: true, opciones: data.opciones, mensaje: data.message });
+        setPendiente({ tipo: codigo ? "codigo" : "facial", codigo, descriptor_facial, repetir: true, opciones: data.opciones, mensaje: data.message });
         setMostrarModalTurno(true);
       } else {
         mostrarResultado(data);
@@ -410,7 +388,7 @@ export default function RelojChecador({
   };
 
   const abrirCamara = () => {
-    if (offline && !localFacesReady) return;
+    if (offline) return;
     setMostrarQR(false);
     setMostrarCamara(true);
   };
@@ -451,10 +429,7 @@ export default function RelojChecador({
       } catch (error) {
         console.error("Error validando suscripción:", error);
         globalThis.__adamiaDiag?.marca("suscripcion_fin", { error: true });
-        try {
-          const profile = await initializeClock({ company: idEmpresa, slug: companySlug });
-          setSubscriptionActive(Date.now() - Date.parse(profile.prepared_at) < 7 * 86400000);
-        } catch { setSubscriptionActive(false); }
+        setSubscriptionActive(false);
       } finally {
         setSubscriptionLoading(false);
       }
@@ -517,7 +492,7 @@ export default function RelojChecador({
 
   // Reloj de la empresa (/<slug>): kiosco a pantalla completa, sin desplazar. El del empleado conserva su diseño.
   const kiosco = !modoEmpleado;
-  const conexion = estadoConexion({ offline, localFacesReady });
+  const conexion = estadoConexion({ offline });
   const panelRostro = (
     <FacialRecognitionPanel
       isOpen={mostrarCamara}
@@ -550,7 +525,7 @@ export default function RelojChecador({
             registrando={registrando || loadingGPS}
             enqueueSnackbar={enqueueSnackbar}
             avisoUbicacion={ubicacionGPS ? `Última lectura: precisión ±${Math.ceil(ubicacionGPS.accuracy)} m. Usa ubicación precisa para checar.` : null}
-            camara={(!offline || localFacesReady) ? (
+            camara={!offline ? (
               <>
                 {panelRostro}
                 {/* Ajuste del aparato: discreto sobre el video (antes era una franja «Cámara siempre encendida»). */}
@@ -566,7 +541,7 @@ export default function RelojChecador({
               <div className="flex h-full flex-col items-center justify-center gap-2 bg-slate-100 p-6 text-center">
                 <Camera className="size-10 text-slate-400" aria-hidden="true" />
                 <p className="font-semibold text-slate-700">Rostro no disponible sin conexión</p>
-                <p className="text-sm text-slate-500">Registra con tu código o QR.</p>
+                <p className="text-sm text-slate-500">Restablece la conexión para registrar una checada.</p>
               </div>
             )}
             recientes={<UltimosRegistros movimientos={movimientos} isLoading={isLoading} formatearHora={formatearHora} empleadosActivos={empleadosActivos} totalRegistros={totalRegistros} />}
@@ -613,7 +588,7 @@ export default function RelojChecador({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src="/assets/adamia-logo-reloj.png" alt="ADAMIA" width={600} height={159} className="h-7 w-auto" />
                 </span>
-                {offline && <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">{localFacesReady ? "Sin conexión · rostro listo" : "Sin conexión"}</span>}
+                {offline && <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">Necesitas conexión para checar</span>}
                 <span onClick={tocarHora} className="shrink-0 select-none text-brand text-lg font-bold tabular-nums ">{horaCorta}</span>
               </div>
               {menuMovil && dataUser && (
@@ -643,7 +618,7 @@ export default function RelojChecador({
                 ].map((tab) => (
                   <button
                     key={tab.id}
-                    disabled={offline && !localFacesReady && tab.id === 'facial'}
+                    disabled={offline && tab.id === 'facial'}
                     onClick={() => {
                       setMetodo(tab.id);
                       if (tab.id === "facial") abrirCamara();
@@ -698,7 +673,7 @@ export default function RelojChecador({
 
               <div ref={areaRef} style={altoArea ? { height: altoArea } : undefined}
                 className="relative overflow-y-auto md:min-h-75 md:overflow-visible">
-                {(!offline || localFacesReady) && (metodo === "facial" || !isMobile) && (
+                {!offline && (metodo === "facial" || !isMobile) && (
                   <div
                     className={
                       metodo === "facial"

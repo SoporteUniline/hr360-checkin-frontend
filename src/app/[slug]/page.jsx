@@ -3,9 +3,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import axiosInstance from "@/lib/axios";
 import RelojChecador from "@/components/RelojChecador";
-import OfflineClockSetup from '@/components/Clock/OfflineClockSetup';
 import { loadBrowserFaceApi } from "@/lib/faceapi-browser";
-import { clockStore } from '@/lib/offline-clock';
 import { validadaHoy, validadaReciente, guardarValidada, olvidarValidada } from "@/lib/reloj/suscripcionDia.mjs";
 
 function RedirectingPage({ message }) {
@@ -99,11 +97,7 @@ export default function ChecadorPage() {
         if (err.response?.status === 404) {
           setError("Empresa no encontrada");
         } else {
-          const store = await clockStore();
-          const profiles = await store.allValues();
-          const saved = profiles.find(profile => profile?.scope === 'company' && profile.slug === slug && Date.now() - Date.parse(profile.prepared_at) < 7 * 86400000);
-          if (saved && !err.response) setIdEmpresa(saved.id_empresa);
-          else setError("Error de conexión");
+          setError("Error de conexión");
         }
       } finally {
         if (vigente) setLoading(false);
@@ -132,5 +126,5 @@ export default function ChecadorPage() {
     return <RedirectingPage message={error || "Empresa no encontrada"} />;
   }
 
-  return <><OfflineClockSetup companySlug={slug} companyId={idEmpresa} /><RelojChecador idEmpresa={idEmpresa} companySlug={slug} nombreEmpresa={nombreEmpresa} /></>;
+  return <RelojChecador idEmpresa={idEmpresa} companySlug={slug} nombreEmpresa={nombreEmpresa} />;
 }
