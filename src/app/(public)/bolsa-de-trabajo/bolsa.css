@@ -1,13 +1,28 @@
 /* Bolsa de trabajo (rediseño 23/11/2026): mismo lenguaje que el inicio, Funciones y Nosotros (.lh).
    Colores sólidos de la marca, sin degradados; Outfit en títulos, Inter en el texto. Prefijo bt-. */
 
-/* ——— Portada con buscador ——— */
-.lh .bt-hero { background: var(--blue); color: #fff; padding-block: 72px 0; position: relative; }
-.lh .bt-hero-in { display: grid; gap: 16px; justify-items: start; padding-bottom: 104px; }
-.lh .bt-hero .eyebrow { color: rgba(255, 255, 255, .8); }
-.lh .bt-hero h1 { color: #fff; font-size: clamp(2.5rem, 5.4vw, 4.2rem); line-height: 1; font-weight: 800; max-width: 14ch; }
-.lh .bt-hero .lead { margin: 0; color: rgba(255, 255, 255, .9); font-size: 1.15rem; max-width: 54ch; }
-.lh .bt-buscar-caja { position: relative; margin-top: -72px; z-index: 2; }
+/* ——— Portada: carrusel que se recorre de lado a lado (componente de la portada) + buscador fijo debajo ——— */
+.lh .bt-carr .slide { min-height: clamp(460px, 36vw, 540px); }
+.lh .bt-carr .slide-in { padding-bottom: 150px; }
+.lh .bt-carr .carr-ctl { bottom: 86px; }
+/* Puntos y pausa con área táctil de 44 px (la barra visible sigue igual de delgada). */
+.lh .bt-carr .carr-dots { gap: 2px; }
+.lh .bt-carr .carr-dots button { height: 44px; width: 34px; background: none; overflow: visible; }
+.lh .bt-carr .carr-dots button.on { width: 52px; }
+.lh .bt-carr .carr-dots button::before { content: ""; position: absolute; left: 4px; right: 4px; top: 50%; height: 5px; margin-top: -2.5px; border-radius: 99px; background: rgba(255, 255, 255, .35); }
+.lh .bt-carr .carr-dots button i { inset: auto; left: 4px; top: 50%; height: 5px; margin-top: -2.5px; z-index: 1; }
+.lh .bt-carr .carr-dots button.on i { animation-name: bt-llena; }
+.lh .bt-carr.parado .carr-dots button.on i { width: calc(100% - 8px); }
+@keyframes bt-llena { to { width: calc(100% - 8px); } }
+.lh .bt-carr .carr-dots button:focus-visible { outline: 2px solid #fff; outline-offset: -6px; border-radius: 10px; }
+.lh .bt-carr .carr-btn.pausa { width: 44px; height: 44px; }
+.lh .bt-carr .slide-txt .ctas .btn { flex: 0 1 auto; }
+/* De lado a lado: cada diapositiva se coloca a su distancia de la actual (--pos) y el carril se recorre. */
+.lh .carr.desliza .slide { opacity: 1; transform: translate3d(calc(var(--pos, 0) * 100%), 0, 0); transition: transform .85s var(--ease), visibility 0s linear .85s; }
+.lh .carr.desliza .slide.on { transition: transform .85s var(--ease); }
+.lh .bt-buscar-caja { position: relative; margin-top: -64px; z-index: 2; }
+.lh .bt-buscar-tit { grid-column: 1 / -1; font-size: clamp(1.35rem, 2.2vw, 1.7rem); line-height: 1.15; letter-spacing: -0.02em; font-weight: 800; color: var(--ink); margin: 0 0 4px; }
+.lh #vacantes { scroll-margin-top: 80px; }
 .lh .bt-buscar { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) auto; gap: 12px; align-items: end; background: #fff; border-radius: 24px; padding: 20px; box-shadow: var(--shadow); border: 1px solid var(--line); }
 .lh .bt-campo { display: grid; gap: 6px; min-width: 0; }
 .lh .bt-campo > span { font: 600 .86rem/1.2 var(--f); color: var(--ink); }
@@ -142,10 +157,19 @@
   .lh .bt-btn-filtros b { display: inline-grid; place-items: center; min-width: 22px; height: 22px; border-radius: 999px; background: var(--blue); color: #fff; font-size: .78rem; padding: 0 6px; }
   .lh .bt-empresas-in { grid-template-columns: minmax(0, 1fr); gap: 16px; }
   .lh .bt-cta .solid { grid-template-columns: minmax(0, 1fr); }
+  .lh .bt-carr .slide { min-height: 0; }
+  .lh .bt-carr .slide-in { padding-bottom: 136px; }
+  .lh .bt-carr .carr-ctl { bottom: 74px; }
 }
 @media (max-width: 720px) {
-  .lh .bt-hero { padding-top: 44px; }
-  .lh .bt-hero-in { padding-bottom: 92px; }
+  /* Carrusel compacto: el buscador asoma en la primera pantalla del celular. */
+  .lh .bt-buscar-caja { margin-top: -50px; }
+  .lh .bt-carr .slide-foto { height: 132px; }
+  .lh .bt-carr .slide-in { padding-top: 14px; padding-bottom: 116px; }
+  .lh .bt-carr .slide-txt { gap: 12px; }
+  .lh .bt-carr .slide-txt h1, .lh .bt-carr .slide-txt h2 { font-size: 1.85rem; }
+  .lh .bt-carr .slide-txt .lead { font-size: 1rem; }
+  .lh .bt-carr .carr-ctl { bottom: 62px; }
   .lh .bt-buscar { grid-template-columns: minmax(0, 1fr); padding: 16px; border-radius: 20px; }
   .lh .bt-buscar .btn { width: 100%; }
   /* Tira de empresas en una fila deslizable (no empuja la lista hacia abajo) */
@@ -171,4 +195,5 @@
 @media (prefers-reduced-motion: reduce) {
   .lh .bt-esq i, .lh .bt-logo-esq i { animation: none; }
   .lh .bt-logo, .lh .bt-vac, .lh .bt-lista { transition: none; }
+  .lh .carr.desliza .slide, .lh .carr.desliza .slide.on { transition: none; }
 }

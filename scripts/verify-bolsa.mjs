@@ -5,6 +5,9 @@
 // vacío y error con «Reintentar»; tira de empresas (?bolsa=1); hoja de filtros en celular; abrir una vacante y
 // postularse (preguntas propias, CV, OTP incorrecto y correcto, token y multipart); vacante inexistente y error;
 // controles de al menos 44 px; y que no aparezca «HR360» en el texto, el título ni las imágenes.
+// Carrusel de la portada (24/11/2026): avanza solo de lado a lado, puntos, flechas, teclado, pausa (botón, cursor y
+// tocar), deslizar con el dedo, «reducir movimiento», buscador fijo mientras cambian las diapositivas, y el enlace
+// «Bolsa de trabajo» del menú del sitio (escritorio y celular) lleva a /bolsa-de-trabajo.
 // Uso: NEXT_PUBLIC_RUTA_BACKEND=https://api.prueba.invalid/api NEXT_PUBLIC_RUTA_DOMAIN=https://dev.adamia.com.mx NEXT_PUBLIC_RECRUITMENT_ENABLED=true npm run build
 //      CAPTURAS=/ruta/capturas node scripts/verify-bolsa.mjs
 import { spawn } from "node:child_process";
@@ -145,6 +148,82 @@ async function esperarFiltro(predicado, msg) {
 }
 const q = (s) => new URLSearchParams(s);
 
+// ——— Carrusel ———
+const CARR = 'section[aria-roledescription="carrusel"]';
+const slideActual = (pg) => pg.evaluate((sel) => [...document.querySelectorAll(`${sel} .slide`)].findIndex((d) => d.classList.contains("on")), CARR);
+const esperarSlide = (pg, n, timeout = 4000) => pg.waitForFunction(([sel, i]) => document.querySelectorAll(`${sel} .slide`)[i]?.classList.contains("on"), [CARR, n], { timeout });
+// Desplazamiento horizontal (px) de cada diapositiva cuando termina la transición.
+const posiciones = (pg) => pg.evaluate((sel) => [...document.querySelectorAll(`${sel} .slide`)].map((d) => Math.round(new DOMMatrixReadOnly(getComputedStyle(d).transform).m41)), CARR);
+const cajaBuscador = async (pg) => { const b = await pg.locator(".bt-buscar").boundingBox(); return `${Math.round(b.x)},${Math.round(b.y)},${Math.round(b.width)},${Math.round(b.height)}`; };
+async function deslizar(pg, dx) {
+  await pg.evaluate(([sel, d]) => {
+    const el = document.querySelector(`${sel} .slide.on .slide-txt`);
+    const r = el.getBoundingClientRect();
+    const x = r.left + r.width / 2;
+    const y = r.top + 20;
+    const t = (cx) => new Touch({ identifier: 1, target: el, clientX: cx, clientY: y });
+    el.dispatchEvent(new TouchEvent("touchstart", { bubbles: true, cancelable: true, touches: [t(x)], changedTouches: [t(x)] }));
+    el.dispatchEvent(new TouchEvent("touchend", { bubbles: true, cancelable: true, touches: [], changedTouches: [t(x + d)] }));
+  }, [CARR, dx]);
+}
+async function revisarCarrusel(pg, ancho) {
+  const carr = pg.locator(CARR);
+  assert.equal(await carr.getAttribute("aria-label"), "Bolsa de trabajo de ADAMIA");
+  assert.equal(await carr.locator(".slide").count(), 4, "4 diapositivas");
+  assert.equal(await carr.locator('.slide[aria-roledescription="diapositiva"]').count(), 4);
+  for (const n of ["Anterior", "Siguiente", "Pausar"]) await carr.getByRole("button", { name: n }).waitFor();
+  assert.equal(await carr.getByRole("tab").count(), 4, "un punto por diapositiva");
+  // Solo la diapositiva visible está expuesta y sus botones se alcanzan con el tabulador.
+  assert.equal(await carr.locator('.slide[aria-hidden="false"]').count(), 1);
+  assert.equal(await carr.locator('.slide[aria-hidden="true"] a[tabindex="0"]').count(), 0);
+  // No hay imágenes externas: todas vienen de /landing o /assets.
+  for (const src of await carr.locator("img").evaluateAll((im) => im.map((i) => i.getAttribute("src")))) assert.match(src, /^\/(landing|assets)\//, `imagen externa en el carrusel: ${src}`);
+  const caja = await cajaBuscador(pg);
+  // Avanza solo (cursor fuera) y de lado a lado: la anterior queda a la izquierda y la siguiente a la derecha.
+  await pg.mouse.move(ancho - 5, 880 > ancho ? 830 : 880);
+  await pg.locator("body").evaluate(() => document.activeElement?.blur());
+  assert.equal(await slideActual(pg), 0);
+  await esperarSlide(pg, 1, 9000);
+  await dormir(1000);
+  const pos = await posiciones(pg);
+  assert.ok(pos[0] < 0 && pos[1] === 0 && pos[2] > 0, `se recorre de lado a lado: ${pos.join(", ")}`);
+  assert.equal(await cajaBuscador(pg), caja, "el buscador no se mueve con las diapositivas");
+  // Flechas (con vuelta al inicio) y puntos.
+  await carr.getByRole("button", { name: "Siguiente" }).click();
+  await esperarSlide(pg, 2);
+  await carr.getByRole("button", { name: "Anterior" }).click();
+  await esperarSlide(pg, 1);
+  await carr.getByRole("tab", { name: /^Ir a 4: ¿Tu empresa contrata\?/ }).click();
+  await esperarSlide(pg, 3);
+  assert.equal(await carr.getByRole("tab", { name: /^Ir a 4/ }).getAttribute("aria-selected"), "true");
+  const s4 = carr.locator(".slide.on");
+  assert.equal(await s4.getByRole("link", { name: /Solicitar demo/ }).getAttribute("href"), "/contacto");
+  assert.equal(await s4.getByRole("link", { name: "Contratar" }).getAttribute("href"), "/contratar-plan");
+  await carr.getByRole("button", { name: "Siguiente" }).click();
+  await esperarSlide(pg, 0);
+  await carr.getByRole("button", { name: "Anterior" }).click();
+  await esperarSlide(pg, 3);
+  // Teclado: flechas sobre el carrusel.
+  await carr.getByRole("tab", { name: /^Ir a 2/ }).focus();
+  await pg.keyboard.press("ArrowRight");
+  await esperarSlide(pg, 0);
+  await pg.keyboard.press("ArrowLeft");
+  await esperarSlide(pg, 3);
+  // Pausa con el botón: no avanza aunque pase el tiempo; «Reanudar» lo vuelve a mover.
+  await carr.getByRole("button", { name: "Pausar" }).click();
+  await carr.getByRole("button", { name: "Reanudar" }).waitFor();
+  await pg.mouse.move(ancho - 5, 600);
+  await pg.locator("body").evaluate(() => document.activeElement?.blur());
+  assert.match(await carr.getAttribute("class"), /parado/);
+  await dormir(6800);
+  assert.equal(await slideActual(pg), 3, "pausado no avanza");
+  await carr.getByRole("button", { name: "Reanudar" }).click();
+  await pg.mouse.move(ancho - 5, 880 > ancho ? 830 : 880);
+  await pg.locator("body").evaluate(() => document.activeElement?.blur());
+  await esperarSlide(pg, 0, 9000);
+  return caja;
+}
+
 // Sin desborde horizontal, controles de al menos 44 px (casillas: 24 px) y sin rastro de HR360 en texto ni imágenes.
 async function revisar(pg, pantalla, ancho) {
   const r = await pg.evaluate(() => {
@@ -208,6 +287,26 @@ try {
   assert.equal(await pg.locator(".bt-logo").count(), 4);
   await revisar(pg, "bolsa escritorio", 1440);
   await foto(pg, "bolsa-escritorio");
+  if (OUT) await pg.screenshot({ path: `${OUT}/bolsa-escritorio-portada.png` });
+
+  // Carrusel: avanza, flechas, puntos, teclado y pausa; el buscador queda fijo. Pausa con el cursor encima.
+  await revisarCarrusel(pg, 1440);
+  await pg.locator(CARR).hover();
+  assert.match(await pg.locator(CARR).getAttribute("class"), /parado/, "el cursor encima pausa");
+  const quieta = await slideActual(pg);
+  await dormir(6800);
+  assert.equal(await slideActual(pg), quieta, "con el cursor encima no avanza");
+  await pg.mouse.move(1435, 880);
+  await pg.locator(CARR).getByRole("tab", { name: /^Ir a 4/ }).click();
+  await esperarSlide(pg, 3);
+  await dormir(1000);
+  if (OUT) await pg.screenshot({ path: `${OUT}/bolsa-escritorio-empresas.png` });
+  await pg.locator(CARR).getByRole("tab", { name: /^Ir a 1/ }).click();
+  await esperarSlide(pg, 0);
+  // «Ver vacantes» baja a la lista.
+  await pg.locator(`${CARR} .slide.on`).getByRole("link", { name: /Ver vacantes/ }).click();
+  await pg.waitForFunction(() => { const b = document.getElementById("vacantes").getBoundingClientRect(); return b.top >= 0 && b.top < 200; }, null, { timeout: 5000 });
+  await pg.evaluate(() => window.scrollTo(0, 0));
 
   await pg.getByRole("button", { name: "Ver vacantes de Farmacias Lupita" }).click();
   await esperarFiltro((s) => q(s).get("id_empresa") === "2" && q(s).get("page") === "1", "id_empresa=2");
@@ -281,7 +380,7 @@ try {
   S.empresas = EMPRESAS;
 
   // CTA para empresas.
-  await pg.getByRole("heading", { name: "¿Tu empresa contrata? Publica tus vacantes con ADAMIA." }).waitFor();
+  await pg.locator(".bt-cta").getByRole("heading", { name: "¿Tu empresa contrata? Publica tus vacantes con ADAMIA." }).waitFor();
   assert.equal(await pg.locator(".bt-cta").getByRole("link", { name: /Solicitar demo/ }).getAttribute("href"), "/contacto");
   assert.equal(await pg.locator(".bt-cta").getByRole("link", { name: "Contratar" }).getAttribute("href"), "/contratar-plan");
 
@@ -313,7 +412,49 @@ try {
   await revisar(pg, "vacante error", 1440);
   await pg.getByRole("button", { name: "Reintentar" }).click();
   await pg.getByRole("heading", { level: 1, name: /Cajera de piso/ }).waitFor({ timeout: 15000 });
+
+  // ═════════ Menú del sitio: «Bolsa de trabajo» desde el inicio (escritorio) ═════════
+  await pg.goto(base + "/", { waitUntil: "domcontentloaded" });
+  const navEsc = pg.getByRole("navigation", { name: "Secciones" });
+  const enlaceEsc = navEsc.getByRole("link", { name: "Bolsa de trabajo" });
+  await enlaceEsc.waitFor({ timeout: 30000 });
+  assert.deepEqual(await navEsc.getByRole("link").allInnerTexts(), ["Funciones", "Cotizar", "Ley 2027", "Blog", "Bolsa de trabajo", "Nosotros"]);
+  await enlaceEsc.click();
+  await pg.waitForURL(/\/bolsa-de-trabajo$/, { timeout: 20000 });
+  await pg.getByRole("heading", { level: 1, name: "Encuentra tu próximo trabajo" }).waitFor({ timeout: 20000 });
+  assert.equal(await pg.getByRole("navigation", { name: "Secciones" }).getByRole("link", { name: "Bolsa de trabajo" }).getAttribute("aria-current"), "page");
+  // El menú con un enlace más cabe en anchos intermedios (antes de pasar al menú ☰ en 980 px).
+  for (const w of [1440, 1280, 1100, 1024, 990]) {
+    await pg.setViewportSize({ width: w, height: 900 });
+    await dormir(150);
+    const m = await pg.evaluate(() => {
+      const nav = document.querySelector(".top .nav").getBoundingClientRect();
+      const acc = document.querySelector(".top .top-actions").getBoundingClientRect();
+      const altos = [...document.querySelectorAll(".top .nav a")].map((a) => a.getBoundingClientRect().height);
+      return { navDer: nav.right, accIzq: acc.left, ancho: document.documentElement.scrollWidth, alto: Math.max(...altos) };
+    });
+    if (m.navDer > m.accIzq + 0.5) problemas.push(`encabezado ${w}: el menú se encima con los botones (${Math.round(m.navDer)} > ${Math.round(m.accIzq)})`);
+    if (m.ancho > w) problemas.push(`encabezado ${w}: desborde horizontal (${m.ancho})`);
+    if (m.alto > 30) problemas.push(`encabezado ${w}: un enlace del menú se parte en dos líneas`);
+  }
+  await pg.setViewportSize({ width: 1440, height: 900 });
   await ctx.close();
+
+  // ═════════ Reducir movimiento: no avanza solo ═════════
+  const cr = await browser.newContext({ viewport: { width: 1440, height: 900 }, locale: "es-MX", reducedMotion: "reduce" });
+  await instalarMocks(cr);
+  const pr = await cr.newPage();
+  pr.on("pageerror", (e) => errores.push(e.message));
+  await pr.goto(base + "/bolsa-de-trabajo", { waitUntil: "domcontentloaded" });
+  await pr.locator(CARR).waitFor({ timeout: 30000 });
+  await pr.mouse.move(1435, 880);
+  await pr.waitForFunction((sel) => document.querySelector(sel).classList.contains("parado"), CARR);
+  await dormir(6800);
+  assert.equal(await slideActual(pr), 0, "con reducir movimiento no avanza solo");
+  assert.equal(await pr.locator(`${CARR} .slide`).first().evaluate((d) => getComputedStyle(d).transitionDuration.split(",").every((t) => parseFloat(t) < 0.01)), true, "sin transición al cambiar");
+  await pr.locator(CARR).getByRole("button", { name: "Siguiente" }).click();
+  await esperarSlide(pr, 1);
+  await cr.close();
 
   // ═════════ Celular 390 ═════════
   const cm = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: "es-MX", timezoneId: "America/Mexico_City", hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
@@ -329,6 +470,38 @@ try {
   await pm.locator(".bt-pag .movil").getByText("Página 1 de 3").waitFor();
   await revisar(pm, "bolsa celular", 390);
   await foto(pm, "bolsa-celular");
+  if (OUT) await pm.screenshot({ path: `${OUT}/bolsa-celular-portada.png` });
+  // Carrusel en celular: deslizar con el dedo cambia de diapositiva y tocar lo pausa; el buscador no se mueve.
+  const cajaM = await cajaBuscador(pm);
+  assert.equal(await slideActual(pm), 0);
+  await deslizar(pm, -120);
+  await esperarSlide(pm, 1);
+  assert.equal(await pm.locator(CARR).getByRole("button", { name: "Reanudar" }).count(), 1, "tocar pausa el avance");
+  await deslizar(pm, -120);
+  await esperarSlide(pm, 2);
+  await deslizar(pm, 120);
+  await esperarSlide(pm, 1);
+  await deslizar(pm, -15); // un toque sin arrastrar no cambia
+  await dormir(300);
+  assert.equal(await slideActual(pm), 1);
+  await dormir(1000);
+  assert.equal(await cajaBuscador(pm), cajaM, "el buscador no se mueve con las diapositivas (celular)");
+  const anchoM = await pm.evaluate(() => document.documentElement.scrollWidth);
+  assert.ok(anchoM <= 390, `sin desborde con el carrusel recorrido (${anchoM})`);
+  if (OUT) await pm.screenshot({ path: `${OUT}/bolsa-celular-diapositiva-2.png` });
+  await pm.locator(CARR).getByRole("tab", { name: /^Ir a 4/ }).tap();
+  await esperarSlide(pm, 3);
+  await dormir(1000);
+  await revisar(pm, "bolsa celular empresas", 390);
+  if (OUT) await pm.screenshot({ path: `${OUT}/bolsa-celular-empresas.png` });
+  // El buscador sigue funcionando en celular.
+  await pm.getByRole("searchbox", { name: "Puesto" }).fill("cajera");
+  await pm.getByRole("button", { name: "Buscar", exact: true }).tap();
+  await esperarFiltro((s) => q(s).get("titulo") === "cajera", "titulo=cajera (celular)");
+  await pm.waitForFunction(() => /q=cajera/.test(location.search));
+  await pm.getByRole("searchbox", { name: "Puesto" }).fill("");
+  await pm.waitForFunction(() => !location.search, null, { timeout: 5000 });
+  await pm.evaluate(() => window.scrollTo(0, 0));
   await pm.getByRole("button", { name: /^Filtros/ }).click();
   const hojaF = pm.getByRole("dialog", { name: "Filtros" });
   await hojaF.waitFor();
@@ -414,11 +587,24 @@ try {
   assert.equal(await pm.getByRole("button", { name: "Postularme ahora" }).count(), 0, "después de enviar ya no se ofrece postularse otra vez");
   await revisar(pm, "vacante enviada", 390);
   await foto(pm, "vacante-celular-enviada");
+
+  // Menú ☰ del celular: «Bolsa de trabajo» desde el inicio.
+  await pm.goto(base + "/", { waitUntil: "domcontentloaded" });
+  await pm.getByRole("button", { name: "Abrir menú" }).waitFor({ timeout: 30000 });
+  assert.equal(await pm.getByRole("navigation", { name: "Secciones" }).isVisible(), false, "en celular el menú va dentro de ☰");
+  await pm.getByRole("button", { name: "Abrir menú" }).tap();
+  const menuM = pm.locator("#menu-movil");
+  await menuM.getByRole("link", { name: "Bolsa de trabajo" }).waitFor();
+  if (OUT) await pm.screenshot({ path: `${OUT}/menu-celular.png` });
+  await menuM.getByRole("link", { name: "Bolsa de trabajo" }).tap();
+  await pm.waitForURL(/\/bolsa-de-trabajo$/, { timeout: 20000 });
+  await pm.getByRole("heading", { level: 1, name: "Encuentra tu próximo trabajo" }).waitFor({ timeout: 20000 });
+  assert.equal(await pm.locator("#menu-movil").count(), 0, "el menú se cierra al navegar");
   await cm.close();
 
   assert.deepEqual(errores, [], `errores en la página: ${errores.join(" | ")}`);
   assert.deepEqual(problemas, [], `problemas:\n${problemas.join("\n")}`);
-  console.log(`OK verify-bolsa: ${filtros.length} consultas a /vacantes/filter, postulación con OTP y preguntas, escritorio 1440 y celular 390 sin desborde.`);
+  console.log(`OK verify-bolsa: ${filtros.length} consultas a /vacantes/filter, postulación con OTP y preguntas, carrusel (avance, flechas, puntos, teclado, pausa, dedo y reducir movimiento), menú «Bolsa de trabajo» en escritorio y celular, escritorio 1440 y celular 390 sin desborde.`);
 } catch (e) {
   console.error(e);
   if (problemas.length) console.error(problemas.join("\n"));

@@ -4,6 +4,7 @@ export const MENU = [
   { href: "/cotiza", texto: "Cotizar" },
   { href: "/#ley", texto: "Ley 2027" },
   { href: "/blog", texto: "Blog" },
+  { href: "/bolsa-de-trabajo", texto: "Bolsa de trabajo" },
   { href: "/quienes-somos", texto: "Nosotros" },
 ];
 
@@ -31,6 +32,7 @@ export const PIE = [
     titulo: "Recursos",
     enlaces: [
       { href: "/blog", texto: "Blog" },
+  { href: "/bolsa-de-trabajo", texto: "Bolsa de trabajo" },
       { href: "/blog/registro-electronico-jornada-2027", texto: "Guía Ley 2027" },
       { href: "/calculadora-aguinaldos", texto: "Calculadora de aguinaldos" },
       { href: "/bolsa-de-trabajo", texto: "Bolsa de trabajo" },
