@@ -173,7 +173,7 @@ export default function CeldaEstadoDia({ registro, tiposPermiso, readOnly = fals
           </span>
         ) : comoCampo && par.tipo === ASISTENCIA ? (
           <span className="text-[12.5px] text-slate-500">Pon sus horas abajo en «Checadas del reloj».</span>
-        ) : <Debajo registro={registro} conDetalle={!nuevo} goce={tipo && r.clase !== "parcial" && !r.acta && goce ? `${r.goceCambia ? "" : "🔒 "}${goceTxt(goce)}` : ""} />}
+        ) : <Debajo registro={registro} conDetalle={!nuevo} />}
         {!conMotivo && !pendiente && !actaFila(registro) && !registro.motivos_resumen ? <span className="text-slate-300">—</span> : null}
       </span>
     );

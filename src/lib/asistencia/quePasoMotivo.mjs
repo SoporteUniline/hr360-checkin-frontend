@@ -269,7 +269,9 @@ export function partesEstadoMotivo(fila, tipos = null) {
   const t = estadoMotivo(fila, tipos);
   if (!t) return null;
   const i = t.indexOf(" · ");
-  return i < 0 ? { estado: t, motivo: "" } : { estado: t.slice(0, i), motivo: t.slice(i + 3) };
+  // El goce va en su propia columna («Goce»): aquí solo el porqué y las horas.
+  const sinGoce = (m) => m.replace(/ · (con|sin) goce$/, "");
+  return i < 0 ? { estado: t, motivo: "" } : { estado: t.slice(0, i), motivo: sinGoce(t.slice(i + 3)) };
 }
 // Texto de la fila: el nuevo «estado · motivo» o, para lo demás (sin checar, asistió, tipos anteriores), el de siempre.
 export const textoEstadoFila = (fila, tipos, estado) => estadoMotivo(fila, tipos) ?? textoConIcono(estado?.texto, estado?.clave);

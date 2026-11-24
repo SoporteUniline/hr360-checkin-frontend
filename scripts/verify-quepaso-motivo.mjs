@@ -325,7 +325,11 @@ try {
   assert.equal(await page.getByLabel("Motivo de Pablo Soto").innerText(), "Injustificada");
   assert.equal(await filaDe("Pablo Soto").locator("[data-acta-enlace]").innerText(), "📄 Acta en borrador");
   assert.equal(await page.getByLabel("Motivo de Raúl Vega").innerText(), "Permiso personal");
-  assert.equal(await filaDe("Raúl Vega").locator("[data-goce-guardado]").innerText(), "Sin goce");
+  // (24/11/2026) El goce va en su propia columna «Goce» y «Editado» vuelve como columna con su «Qué cambió».
+  assert.equal((await filaDe("Raúl Vega").locator("[data-goce]").innerText()).trim(), "Sin goce");
+  const encabezadosQP = (await page.locator("thead th").allInnerTexts()).map((t) => t.trim());
+  assert.ok(encabezadosQP.includes("Goce") && encabezadosQP.includes("Editado"), `columnas Goce y Editado: ${encabezadosQP.join(" | ")}`);
+  assert.ok(!/goce/i.test(await filaDe("Raúl Vega").locator("[data-columna-motivo]").innerText()), "el goce ya no se repite en Motivo");
   // Registro viejo con un tipo oculto: se ve tal cual.
   assert.equal(await page.getByLabel("Qué pasó de Sofía Ramos").innerText(), "Visita al Médico");
   await parAlineado(filaDe("Raúl Vega"), "fila Raúl");
