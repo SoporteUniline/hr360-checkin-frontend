@@ -128,6 +128,11 @@ try {
   await page.goto(base + "/panel/registro-asistencia", { waitUntil: "domcontentloaded" });
   await page.getByRole("tab", { name: "Registros" }).click(); // (22/11/2026) Asistencias abre en «Hoy»
   await page.getByText("Empleado0", { exact: false }).first().waitFor({ timeout: 30000 });
+  // (24/11/2026) Con «Hoy» la tabla se divide por situación; esta prueba revisa columnas y orden, así que va sin agrupar
+  // (la división se verifica en verify-asistencias-hoy-grupos.mjs).
+  await page.getByRole("combobox").filter({ has: page.locator("svg.lucide-layers") }).click();
+  await page.getByRole("option", { name: "Sin agrupar", exact: true }).click();
+  await page.locator("tr[data-grupo]").first().waitFor({ state: "detached", timeout: 10000 });
 
   // (24/11/2026) «El día se corrige en el reloj»: la tabla ya no tiene Tipo, Editado, Balance, Asistió/Goce, pagos ni
   // botones de horas extra; las horas se corrigen en el reloj de cada fila y los masivos son «Marcar como…» y «Cargar
@@ -135,17 +140,17 @@ try {
   // 1) Horas en minutos: sin tramos del reloj, 08:07–17:20 = 9 h 13 min (la comida no checada no se descuenta);
   //    programado 8 h (horario 9 h − 1 h de comida).
   const fila0 = page.locator("tr", { hasText: "Empleado0" }).first();
-  assert.match(await fila0.innerText(), /9 h 13 min\s*de 8 h programado/);
+  assert.match(await fila0.innerText(), /9 h 13 min\s*de 8 h\b/);
   assert.match(await fila0.locator("td").first().getAttribute("class"), /sticky left-0/);
   // Horas en 12 h con a.m./p.m., sin segundos.
   assert.match(await fila0.innerText(), /\b8:07 a\.m\./);
   assert.doesNotMatch(await fila0.innerText(), /08:07:00/);
   // 2) Nocturno: 7 h exactas y marca "+1 día"; el registro viejo también da 7 h (antes negativo).
-  const noct = page.locator("tr", { hasText: "Nocturno" }).first();
-  assert.match(await noct.innerText(), /7 h\s*de 7 h programado/);
+  const noct = page.locator("tr", { hasText: "Nocturno Prueba" }).first();
+  assert.match(await noct.innerText(), /7 h\s*de 7 h\b/);
   assert.match(await noct.innerText(), /\+1 día/);
   const viejo = page.locator("tr", { hasText: "NocturnoViejo" }).first();
-  assert.match(await viejo.innerText(), /7 h\s*de 7 h programado/);
+  assert.match(await viejo.innerText(), /7 h\s*de 7 h\b/);
   // Cada fila tiene su reloj; el nombre sigue siendo enlace a la ficha.
   assert.equal(await noct.getByRole("button", { name: "Abrir el reloj de Nocturno Prueba" }).count(), 1);
   assert.equal(await noct.locator("td").first().getByRole("link").count(), 1, "el nombre abre la ficha");
@@ -153,9 +158,9 @@ try {
 
   // 2d) Ordenar por «Horas extra»: primero las por autorizar con más minutos (Extra: 2 h 35 min).
   await page.getByRole("button", { name: /^HORAS EXTRA/ }).click();
-  await page.waitForFunction(() => /Extra Prueba/.test(document.querySelector("tbody tr")?.innerText || ""), null, { timeout: 15000 });
+  await page.waitForFunction(() => /Extra Prueba/.test(document.querySelector("tbody tr:not([data-grupo])")?.innerText || ""), null, { timeout: 15000 });
   await page.getByRole("button", { name: /^HORAS EXTRA/ }).click(); // ascendente: las sin horas extra primero
-  await page.waitForFunction(() => /Nocturno/.test(document.querySelector("tbody tr")?.innerText || ""), null, { timeout: 15000 });
+  await page.waitForFunction(() => /Nocturno/.test(document.querySelector("tbody tr:not([data-grupo])")?.innerText || ""), null, { timeout: 15000 });
   await page.locator("th", { hasText: /^Fecha$/i }).first().click(); // regresa al orden por fecha
 
   // 3) Arranca en "Todos los registros": se ven los 25 con UNA sola descarga del periodo
@@ -205,7 +210,7 @@ try {
   await page.getByRole("button", { name: "Autorizar horas extra" }).first().click();
   for (let i = 0; i < 50 && !puts.length; i++) await dormir(100);
   assert.deepEqual(puts[0], { hrs_extra: 1, forma_pago_extras: "Pago de horas extras", extras_autorizadas_por: 7 });
-  const filaNoct = page.locator("tr", { hasText: "Nocturno" }).first();
+  const filaNoct = page.locator("tr", { hasText: "Nocturno Prueba" }).first();
   assert.match(await filaNoct.innerText(), /0 min/);
 
   assert.deepEqual(errores, [], "sin errores de JavaScript en la página");
