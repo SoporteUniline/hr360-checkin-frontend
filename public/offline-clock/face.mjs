@@ -1,4 +1,4 @@
-import { isTurnConflict, validClockState, blocksQueue } from './turn-state.mjs?v=3';
+import { isTurnConflict, validClockState, blocksQueue } from './turn-state.mjs?v=2';
 export const MODEL = 'face-api-0.22.2-128-cosine-v1';
 export function fail(message, code = 'LOCAL_FACE_INVALID') {
   throw Object.assign(new Error(message), { code, response: { status: 422, data: { error: message, code } } });
